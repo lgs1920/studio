@@ -309,6 +309,27 @@ export const ProfileChart = ({data, id, width, height, preview = false}) => {
         }
     }, [handleResize, $main, preview])
 
+    useEffect(() => {
+        if (!preview || !_instance.current) {
+            return
+        }
+        const chart = _instance.current.getEchartsInstance()
+        let raf1 = 0
+        let raf2 = 0
+        raf1 = requestAnimationFrame(() => {
+            chart.resize()
+            raf2 = requestAnimationFrame(() => chart.resize())
+        })
+        return () => {
+            if (raf1) {
+                cancelAnimationFrame(raf1)
+            }
+            if (raf2) {
+                cancelAnimationFrame(raf2)
+            }
+        }
+    }, [preview, width, height])
+
     /**
      * Unit & Dataset Synchronization
      * Direct ECharts API call to update data without full re-merge

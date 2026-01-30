@@ -42,12 +42,20 @@ export const ProfileWidgetEditor = ({entity}) => {
     const unitStore = useSnapshot(lgs.settings.unitSystem)
     const previewRef = useRef(null)
     const [previewSize, setPreviewSize] = useState({width: 0, height: 0})
+    const [previewRenderReady, setPreviewRenderReady] = useState(false)
 
     const swatches = useMemo(() => lgs.settings.getSwatches.list.join(';'), [])
     const previewBg = widgetStore.currentSnapshot?.image || null
     const previewStyle = useMemo(() => ({
         '--lgs-profile-preview-bg': previewBg ? `url(${previewBg})` : 'none',
     }), [previewBg])
+    const targetRatio = useMemo(() => {
+        if (profileState.width > 0 && profileState.height > 0) {
+            return profileState.width / profileState.height
+        }
+        return null
+    }, [profileState.width, profileState.height])
+
     const previewChartSize = useMemo(() => {
         const ratio = (profileState.width > 0 && profileState.height > 0)
                       ? (profileState.width / profileState.height)
@@ -67,6 +75,23 @@ export const ProfileWidgetEditor = ({entity}) => {
         }
         return {width, height}
     }, [profileState.width, profileState.height, previewSize.width, previewSize.height])
+
+    const previewRatioReady = useMemo(() => {
+        if (!previewChartSize) {
+            return false
+        }
+        if (!targetRatio) {
+            return true
+        }
+        const chartRatio = previewChartSize.width / previewChartSize.height
+        return Math.abs(chartRatio - targetRatio) < 0.05
+    }, [targetRatio, previewChartSize])
+
+    useEffect(() => {
+        if (previewChartSize && previewRatioReady && !previewRenderReady) {
+            setPreviewRenderReady(true)
+        }
+    }, [previewChartSize, previewRatioReady, previewRenderReady])
 
     useLayoutEffect(() => {
         if (!previewRef.current) {
@@ -328,7 +353,7 @@ export const ProfileWidgetEditor = ({entity}) => {
                         width:  `${previewChartSize.width}px`,
                         height: `${previewChartSize.height}px`,
                     } : undefined}>
-                        {previewChartSize && (
+                        {previewChartSize && previewRatioReady && previewRenderReady && (
                             <ProfileChart
                                 preview
                                 data={previewData}
