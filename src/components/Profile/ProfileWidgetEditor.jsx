@@ -15,6 +15,7 @@
  ******************************************************************************/
 
 import { LGSScrollbars }                                                             from '@Components/MainUI/LGSScrollbars'
+import { getPreviewChartSize } from '@Components/MainUI/widgets/editor/previewUtils'
 import { DISTANCE, ELEVATION, POINT, TIME }                                          from '@Core/ui/Profiler'
 import {
     SlColorPicker, SlDivider, SlInput, SlRange, SlSwitch,
@@ -49,49 +50,30 @@ export const ProfileWidgetEditor = ({entity}) => {
     const previewStyle = useMemo(() => ({
         '--lgs-profile-preview-bg': previewBg ? `url(${previewBg})` : 'none',
     }), [previewBg])
-    const targetRatio = useMemo(() => {
+    const previewRatio = useMemo(() => {
         if (profileState.width > 0 && profileState.height > 0) {
             return profileState.width / profileState.height
         }
-        return null
-    }, [profileState.width, profileState.height])
-
-    const previewChartSize = useMemo(() => {
-        const ratio = (profileState.width > 0 && profileState.height > 0)
-                      ? (profileState.width / profileState.height)
-                      : (previewSize.width > 0 && previewSize.height > 0
-                         ? (previewSize.width / previewSize.height)
-                         : (16 / 9))
-        const maxWidth = previewSize.width * 0.8
-        const maxHeight = previewSize.height * 0.8
-        if (!Number.isFinite(ratio) || ratio <= 0 || maxWidth <= 0 || maxHeight <= 0) {
-            return null
+        if (previewSize.width > 0 && previewSize.height > 0) {
+            return previewSize.width / previewSize.height
         }
-        let width = maxWidth
-        let height = width / ratio
-        if (height > maxHeight) {
-            height = maxHeight
-            width = height * ratio
-        }
-        return {width, height}
+        return 16 / 9
     }, [profileState.width, profileState.height, previewSize.width, previewSize.height])
 
-    const previewRatioReady = useMemo(() => {
-        if (!previewChartSize) {
-            return false
-        }
-        if (!targetRatio) {
-            return true
-        }
-        const chartRatio = previewChartSize.width / previewChartSize.height
-        return Math.abs(chartRatio - targetRatio) < 0.05
-    }, [targetRatio, previewChartSize])
+    const previewChartSize = useMemo(() => {
+        return getPreviewChartSize({
+                                       containerWidth:  previewSize.width,
+                                       containerHeight: previewSize.height,
+                                       ratio:           previewRatio,
+                                       scale:           0.8,
+                                   })
+    }, [previewSize.width, previewSize.height, previewRatio])
 
     useEffect(() => {
-        if (previewChartSize && previewRatioReady && !previewRenderReady) {
+        if (previewChartSize && !previewRenderReady) {
             setPreviewRenderReady(true)
         }
-    }, [previewChartSize, previewRatioReady, previewRenderReady])
+    }, [previewChartSize, previewRenderReady])
 
     useLayoutEffect(() => {
         if (!previewRef.current) {
@@ -353,7 +335,7 @@ export const ProfileWidgetEditor = ({entity}) => {
                         width:  `${previewChartSize.width}px`,
                         height: `${previewChartSize.height}px`,
                     } : undefined}>
-                        {previewChartSize && previewRatioReady && previewRenderReady && (
+                        {previewChartSize && previewRenderReady && (
                             <ProfileChart
                                 preview
                                 data={previewData}
