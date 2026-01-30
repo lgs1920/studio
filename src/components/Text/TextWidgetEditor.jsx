@@ -7,17 +7,16 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-25
- * Last modified: 2026-01-25
+ * Created on: 2026-01-30
+ * Last modified: 2026-01-30
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
+import { LGSScrollbars }                                                  from '@Components/MainUI/LGSScrollbars'
 import { TextEditorToolbar }                                              from '@Components/Text/TextEditorToolbar'
-import {
-    WIDGET_RADIUS, WIDGET_SYSTEM_FONT_STACK, WIDGETS_EDITOR_DRAWER,
-}                                                                         from '@Core/constants'
+import { WIDGET_RADIUS, WIDGET_SYSTEM_FONT_STACK, WIDGETS_EDITOR_DRAWER } from '@Core/constants'
 import {
     TextWidgetManager,
 }                                                                         from '@Core/ui/text-metrics/TextWidgetManager'
@@ -28,6 +27,7 @@ import {
 import { FA2SL }                                                          from '@Utils/FA2SL'
 import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSnapshot }                                                    from 'valtio'
+import './style.css'
 
 /**
  * Optimized TextArea component with transform override during active editing
@@ -232,13 +232,6 @@ export const TextWidgetEditor = ({entity}) => {
 
     return (
         <div className="lgs-card text-widget-editor" key={activeId}>
-            <header className="text-widget-editor-header">
-                <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between'}}>
-                    <TextEditorToolbar id={activeId} color={true} align={true} style={true}/>
-                </div>
-                <TextEditorToolbar id={activeId} fonts={true} color={false} align={false} style={false}/>
-            </header>
-
             <OptimizedTextArea
                 value={element.text}
                 onInput={(e) => {
@@ -253,168 +246,181 @@ export const TextWidgetEditor = ({entity}) => {
                 isEditing={isEditing}
                 dynamicVars={dynamicVars}
             />
-
-            <div className="editor-controls-wrapper">
-                <div className="drawer-horizontal-line" style={{alignItems: 'center', marginBottom: '10px'}}>
-                    <div className="drawer-horizontal-element">
-                        <SlInput
-                            align-right
-                            size="small"
-                            type="number"
-                            maxlength="2"
-                            step="1"
-                            min="-180" max="180"
-                            value={localRotation}
-                            onSlInput={(e) => applyRotation(parseFloat(e.target.value) || 0)}
-                        >
-                            <span slot="suffix">deg </span>
-                            <span slot="label">Rotation</span>
-                        </SlInput>
-                        <SlTooltip content="Reset">
-                            <SlButton size="small" onClick={() => applyRotation(0)} className="square-button small">
-                                <SlIcon slot="prefix" size="small" library="fa" name={FA2SL.set(faArrowRotateLeft)}/>
-                            </SlButton>
-                        </SlTooltip>
+            <div className="text-widget-editor-scroll">
+                <LGSScrollbars>
+                    <div className="text-widget-editor-header">
+                        <TextEditorToolbar id={activeId} color={true} align={true} style={true}/>
+                        <TextEditorToolbar id={activeId} fonts={true} color={false} align={false} style={false}/>
                     </div>
-                </div>
 
-                <SlDivider/>
 
-                {/* Text Elevation */}
-                <SlSwitch align-right size="x-small" checked={element.shadow?.show ?? false}
-                          onSlInput={(e) => fastUpdate('shadow.show', e.target.checked)}>
-                    <label>Text elevation</label>
-                </SlSwitch>
-
-                {element.shadow?.show && (
-                    <div className="drawer-horizontal-line three-columns">
-                        <div className="drawer-horizontal-element">
-                            <SlColorPicker size="small" swatches={swatches} value={getColor(element.shadow)}
-                                           onSlInput={(e) => fastUpdate('shadow.color', e.target.value)}/>
-                        </div>
-                        <div className="drawer-horizontal-element">
-                            <SlSelect hoist size="small" value={element.shadow?.value ?? 'normal'}
-                                      onSlChange={(e) => fastUpdate('shadow.value', e.target.value)}>
-                                <SlOption value="small">Small</SlOption>
-                                <SlOption value="normal">Medium</SlOption>
-                                <SlOption value="large">Large</SlOption>
-                            </SlSelect>
-                        </div>
-                        <div className="drawer-horizontal-element xlarge-element">
-                            <SlRange min="0.1" max="1" step="0.05" value={element.shadow?.opacity ?? 1}
-                                     onSlInput={(e) => fastUpdate('shadow.opacity', parseFloat(e.target.value))}/>
-                        </div>
-                    </div>
-                )}
-
-                <SlDivider/>
-
-                {/* Background */}
-                <SlSwitch align-right size="x-small" checked={element.background?.show ?? false}
-                          onSlInput={(e) => fastUpdate('background.show', e.target.checked)}>
-                    <label>Background</label>
-                </SlSwitch>
-
-                {element.background?.show && (
-                    <div className="drawer-horizontal-line three-columns">
-                        <div className="drawer-horizontal-element">
-                            <SlColorPicker size="small" swatches={swatches} value={getColor(element.background)}
-                                           onSlInput={(e) => fastUpdate('background.color', e.target.value)}/>
-                        </div>
-                        <div className="drawer-horizontal-element">
-                            <SlSwitch
-                                align-right
-                                size="x-small"
-                                checked={element.background.blur ?? false}
-                                onSlChange={(e) => fastUpdate('background.blur', e.target.checked)}
-                            >
-                                Blur&nbsp;
-                            </SlSwitch>
-                        </div>
-                        <div className="drawer-horizontal-element xlarge-element">
-                            <SlRange min="0.1" max="1" step="0.05" value={element.background.opacity ?? 0.5}
-                                     onSlInput={(e) => fastUpdate('background.opacity', parseFloat(e.target.value))}/>
-                        </div>
-                    </div>
-                )}
-
-                <SlDivider/>
-
-                {/* Border */}
-                <SlSwitch align-right size="x-small" checked={element.border?.show ?? false}
-                          onSlInput={(e) => fastUpdate('border.show', e.target.checked)}>
-                    <span>Border</span>
-                </SlSwitch>
-
-                {element.border?.show && (
-                    <>
-                        <div className="drawer-horizontal-line three-columns">
+                    <div className="editor-controls-wrapper">
+                        <div className="drawer-horizontal-line">
                             <div className="drawer-horizontal-element">
-                                <SlColorPicker size="small" swatches={swatches} value={getColor(element.border)}
-                                               onSlInput={(e) => fastUpdate('border.color', e.target.value)}/>
-                            </div>
-                            <div className="drawer-horizontal-element">
-                                <SlInput type="number" min="1" max="10" value={element.border.thickness ?? 1}
-                                         size="small"
-                                         onSlInput={(e) => fastUpdate('border.thickness', parseInt(e.target.value))}/>
-                            </div>
-                            <div className="drawer-horizontal-element xlarge-element">
-                                <SlRange min="0.1" max="1" step="0.05" value={element.border.opacity ?? 1}
-                                         onSlInput={(e) => fastUpdate('border.opacity', parseFloat(e.target.value))}/>
-                            </div>
-                        </div>
-
-                        <div className="drawer-horizontal-line three-columns">
-                            <div className="drawer-horizontal-element"/>
-                            <div className="drawer-horizontal-element"/>
-                            <div className="drawer-horizontal-element xlarge-element">
-                                Rounded <SlSelect hoist size="small"
-                                                  value={element.border.radius ?? 'none'}
-                                                  onSlChange={(e) => fastUpdate('border.radius', e.target.value)}>
-                                {[...WIDGET_RADIUS.entries()].map(([_key, _data]) => (
-                                    <SlOption key={_key} value={_key}>
-                                        {_data.name}
-                                    </SlOption>
-                                ))}
-                            </SlSelect>
+                                <div className="text-widget-rotation">
+                                    <SlInput
+                                        align-right
+                                        size="small"
+                                        type="number"
+                                        maxlength="2"
+                                        step="1"
+                                        min="-180" max="180"
+                                        value={localRotation}
+                                        onSlInput={(e) => applyRotation(parseFloat(e.target.value) || 0)}
+                                    >
+                                        <span slot="suffix">{'deg'} </span>
+                                        <span slot="label">{'Rotation'}</span>
+                                    </SlInput>
+                                    <SlTooltip content="Reset">
+                                        <SlButton size="small" onClick={() => applyRotation(0)}
+                                                  className="square-button small">
+                                            <SlIcon slot="prefix" size="small" library="fa"
+                                                    name={FA2SL.set(faArrowRotateLeft)}/>
+                                        </SlButton>
+                                    </SlTooltip>
+                                </div>
                             </div>
                         </div>
-                    </>
-                )}
 
-                {/* {hasVisibleContainer && ( */}
-                {/*     <> */}
-                {/*         <SlDivider/> */}
-                {/*         <SlSwitch align-right size="x-small" checked={element.background?.shadow?.show ?? false} */}
-                {/*                   onSlInput={(e) => fastUpdate('background.shadow.show', e.target.checked)}> */}
-                {/*             <label>Box elevation</label> */}
-                {/*         </SlSwitch> */}
+                        <SlDivider/>
 
-                {/*         {element.background?.shadow?.show && ( */}
-                {/*             <div className="drawer-horizontal-line three-columns"> */}
-                {/*                 <div className="drawer-horizontal-element"> */}
-                {/*                     <SlColorPicker size="small" swatches={swatches} */}
-                {/*                                    value={getColor(element.background.shadow)} */}
-                {/*                                    onSlInput={(e) => fastUpdate('background.shadow.color', e.target.value)}/> */}
-                {/*                 </div> */}
-                {/*                 <div className="drawer-horizontal-element"> */}
-                {/*                     <SlSelect hoist size="small" */}
-                {/*                               value={element.background.shadow?.value ?? 'normal'} */}
-                {/*                               onSlChange={(e) => fastUpdate('background.shadow.value', e.target.value)}> */}
-                {/*                         <SlOption value="small">Small</SlOption> */}
-                {/*                         <SlOption value="normal">Medium</SlOption> */}
-                {/*                         <SlOption value="large">Large</SlOption> */}
-                {/*                     </SlSelect> */}
-                {/*                 </div> */}
-                {/*                 <div className="drawer-horizontal-element xlarge-element"> */}
-                {/*                     <SlRange min="0.1" max="1" step="0.05" */}
-                {/*                              value={element.background.shadow?.opacity ?? 1} */}
-                {/*                              onSlInput={(e) => fastUpdate('background.shadow.opacity', parseFloat(e.target.value))}/> */}
-                {/*                 </div> */}
-                {/*             </div> */}
-                {/*         )} */}
-                {/*     </> */}
-                {/* )} */}
+                        {/* Text Elevation */}
+                        <SlSwitch align-right size="x-small" checked={element.shadow?.show ?? false}
+                                  onSlInput={(e) => fastUpdate('shadow.show', e.target.checked)}>
+                            <label>{'Text elevation'}</label>
+                        </SlSwitch>
+
+                        {element.shadow?.show && (
+                            <div className="drawer-horizontal-line three-columns">
+                                <div className="drawer-horizontal-element">
+                                    <SlColorPicker size="small" swatches={swatches} value={getColor(element.shadow)}
+                                                   onSlInput={(e) => fastUpdate('shadow.color', e.target.value)}/>
+                                </div>
+                                <div className="drawer-horizontal-element">
+                                    <SlSelect hoist size="small" value={element.shadow?.value ?? 'normal'}
+                                              onSlChange={(e) => fastUpdate('shadow.value', e.target.value)}>
+                                        <SlOption value="small">{'Small'}</SlOption>
+                                        <SlOption value="normal">{'Medium'}</SlOption>
+                                        <SlOption value="large">{'Large'}</SlOption>
+                                    </SlSelect>
+                                </div>
+                                <div className="drawer-horizontal-element xlarge-element">
+                                    <SlRange min="0.1" max="1" step="0.05" value={element.shadow?.opacity ?? 1}
+                                             onSlInput={(e) => fastUpdate('shadow.opacity', parseFloat(e.target.value))}/>
+                                </div>
+                            </div>
+                        )}
+
+                        <SlDivider/>
+
+                        {/* Background */}
+                        <SlSwitch align-right size="x-small" checked={element.background?.show ?? false}
+                                  onSlInput={(e) => fastUpdate('background.show', e.target.checked)}>
+                            <label>{'Background'}</label>
+                        </SlSwitch>
+
+                        {element.background?.show && (
+                            <div className="drawer-horizontal-line three-columns">
+                                <div className="drawer-horizontal-element">
+                                    <SlColorPicker size="small" swatches={swatches} value={getColor(element.background)}
+                                                   onSlInput={(e) => fastUpdate('background.color', e.target.value)}/>
+                                </div>
+                                <div className="drawer-horizontal-element">
+                                    <SlSwitch
+                                        align-right
+                                        size="x-small"
+                                        checked={element.background.blur ?? false}
+                                        onSlChange={(e) => fastUpdate('background.blur', e.target.checked)}
+                                    >
+                                        {'Blur'}&nbsp;
+                                    </SlSwitch>
+                                </div>
+                                <div className="drawer-horizontal-element xlarge-element">
+                                    <SlRange min="0.1" max="1" step="0.05" value={element.background.opacity ?? 0.5}
+                                             onSlInput={(e) => fastUpdate('background.opacity', parseFloat(e.target.value))}/>
+                                </div>
+                            </div>
+                        )}
+
+                        <SlDivider/>
+
+                        {/* Border */}
+                        <SlSwitch align-right size="x-small" checked={element.border?.show ?? false}
+                                  onSlInput={(e) => fastUpdate('border.show', e.target.checked)}>
+                            <span>{'Border'}</span>
+                        </SlSwitch>
+
+                        {element.border?.show && (
+                            <>
+                                <div className="drawer-horizontal-line three-columns">
+                                    <div className="drawer-horizontal-element">
+                                        <SlColorPicker size="small" swatches={swatches} value={getColor(element.border)}
+                                                       onSlInput={(e) => fastUpdate('border.color', e.target.value)}/>
+                                    </div>
+                                    <div className="drawer-horizontal-element">
+                                        <SlInput type="number" min="1" max="10" value={element.border.thickness ?? 1}
+                                                 size="small"
+                                                 onSlInput={(e) => fastUpdate('border.thickness', parseInt(e.target.value))}/>
+                                    </div>
+                                    <div className="drawer-horizontal-element xlarge-element">
+                                        <SlRange min="0.1" max="1" step="0.05" value={element.border.opacity ?? 1}
+                                                 onSlInput={(e) => fastUpdate('border.opacity', parseFloat(e.target.value))}/>
+                                    </div>
+                                </div>
+
+                                <div className="drawer-horizontal-line three-columns">
+                                    <div className="drawer-horizontal-element"/>
+                                    <div className="drawer-horizontal-element"/>
+                                    <div className="drawer-horizontal-element xlarge-element">
+                                        Rounded <SlSelect hoist size="small"
+                                                          value={element.border.radius ?? 'none'}
+                                                          onSlChange={(e) => fastUpdate('border.radius', e.target.value)}>
+                                        {[...WIDGET_RADIUS.entries()].map(([_key, _data]) => (
+                                            <SlOption key={_key} value={_key}>
+                                                {_data.name}
+                                            </SlOption>
+                                        ))}
+                                    </SlSelect>
+                                    </div>
+                                </div>
+                            </>
+                        )}
+
+                        {/* {hasVisibleContainer && ( */}
+                        {/*     <> */}
+                        {/*         <SlDivider/> */}
+                        {/*         <SlSwitch align-right size="x-small" checked={element.background?.shadow?.show ?? false} */}
+                        {/*                   onSlInput={(e) => fastUpdate('background.shadow.show', e.target.checked)}> */}
+                        {/*             <label>Box elevation</label> */}
+                        {/*         </SlSwitch> */}
+
+                        {/*         {element.background?.shadow?.show && ( */}
+                        {/*             <div className="drawer-horizontal-line three-columns"> */}
+                        {/*                 <div className="drawer-horizontal-element"> */}
+                        {/*                     <SlColorPicker size="small" swatches={swatches} */}
+                        {/*                                    value={getColor(element.background.shadow)} */}
+                        {/*                                    onSlInput={(e) => fastUpdate('background.shadow.color', e.target.value)}/> */}
+                        {/*                 </div> */}
+                        {/*                 <div className="drawer-horizontal-element"> */}
+                        {/*                     <SlSelect hoist size="small" */}
+                        {/*                               value={element.background.shadow?.value ?? 'normal'} */}
+                        {/*                               onSlChange={(e) => fastUpdate('background.shadow.value', e.target.value)}> */}
+                        {/*                         <SlOption value="small">Small</SlOption> */}
+                        {/*                         <SlOption value="normal">Medium</SlOption> */}
+                        {/*                         <SlOption value="large">Large</SlOption> */}
+                        {/*                     </SlSelect> */}
+                        {/*                 </div> */}
+                        {/*                 <div className="drawer-horizontal-element xlarge-element"> */}
+                        {/*                     <SlRange min="0.1" max="1" step="0.05" */}
+                        {/*                              value={element.background.shadow?.opacity ?? 1} */}
+                        {/*                              onSlInput={(e) => fastUpdate('background.shadow.opacity', parseFloat(e.target.value))}/> */}
+                        {/*                 </div> */}
+                        {/*             </div> */}
+                        {/*         )} */}
+                        {/*     </> */}
+                        {/* )} */}
+                    </div>
+                </LGSScrollbars>
             </div>
         </div>
     )
