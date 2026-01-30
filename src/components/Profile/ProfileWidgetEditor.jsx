@@ -329,8 +329,8 @@ export const ProfileWidgetEditor = ({entity}) => {
 
     return (
         <div className="lgs-card profile-widget-editor">
-            <div className="profile-widget-preview" style={previewStyle}>
-                <div className="profile-widget-preview-surface" ref={previewRef}>
+            <div className="profile-widget-preview">
+                <div className="profile-widget-preview-surface" ref={previewRef} style={previewStyle}>
                     <div className="profile-widget-preview-chart" style={previewChartSize ? {
                         width:  `${previewChartSize.width}px`,
                         height: `${previewChartSize.height}px`,

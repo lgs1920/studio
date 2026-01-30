@@ -92,9 +92,6 @@
     padding: var(--lgs-gutter-xs);
     border-radius: var(--sl-border-radius-medium);
     background-color: var(--sl-panel-background-color);
-    background-image: var(--lgs-profile-preview-bg);
-    background-position: center;
-    background-size: cover;
 }
 
 .profile-widget-preview-surface {
@@ -104,7 +101,11 @@
     justify-content: center;
     height: 220px;
     border-radius: var(--sl-border-radius-medium);
-    background: transparent;
+    background-color: var(--sl-panel-background-color);
+    background-image: var(--lgs-profile-preview-bg);
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: cover;
 }
 
 .profile-widget-preview-chart {
@@ -117,7 +118,6 @@
     flex: 1 1 auto;
     min-height: 0;
 }
-
 
 sl-input.widget-border-field-width::part(input) {
     width: 2.5rem;

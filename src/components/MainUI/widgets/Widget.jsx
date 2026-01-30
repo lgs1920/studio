@@ -172,29 +172,35 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
 
             const _sourceCanvas = lgs.canvas
             const _element = _widget.current
-            const PREVIEW_SIZE = 512
-
             if (_element && _sourceCanvas) {
                 lgs.scene.render()
 
                 const _canvasRect = _sourceCanvas.getBoundingClientRect()
                 const _widgetRect = _element.getBoundingClientRect()
+                const maxPreviewSize = Math.min(_canvasRect.width, _canvasRect.height, 1024)
+                const previewSize = Math.max(1, Math.round(maxPreviewSize))
+                const scaleX = _canvasRect.width > 0 ? (_sourceCanvas.width / _canvasRect.width) : 1
+                const scaleY = _canvasRect.height > 0 ? (_sourceCanvas.height / _canvasRect.height) : 1
 
                 const _centerX = (_widgetRect.left - _canvasRect.left) + (_widgetRect.width / 2)
                 const _centerY = (_widgetRect.top - _canvasRect.top) + (_widgetRect.height / 2)
 
-                const _sourceX = Math.max(0, Math.min(_centerX - (PREVIEW_SIZE / 2), _canvasRect.width - PREVIEW_SIZE))
-                const _sourceY = Math.max(0, Math.min(_centerY - (PREVIEW_SIZE / 2), _canvasRect.height - PREVIEW_SIZE))
+                const _sourceX = Math.max(0, Math.min(_centerX - (previewSize / 2), _canvasRect.width - previewSize))
+                const _sourceY = Math.max(0, Math.min(_centerY - (previewSize / 2), _canvasRect.height - previewSize))
+                const _canvasSourceX = _sourceX * scaleX
+                const _canvasSourceY = _sourceY * scaleY
+                const _canvasSourceWidth = previewSize * scaleX
+                const _canvasSourceHeight = previewSize * scaleY
 
                 const _tempCanvas = document.createElement('canvas')
-                _tempCanvas.width = PREVIEW_SIZE
-                _tempCanvas.height = PREVIEW_SIZE
+                _tempCanvas.width = previewSize
+                _tempCanvas.height = previewSize
                 const _ctx = _tempCanvas.getContext('2d')
 
                 _ctx.drawImage(
                     _sourceCanvas,
-                    _sourceX, _sourceY, PREVIEW_SIZE, PREVIEW_SIZE,
-                    0, 0, PREVIEW_SIZE, PREVIEW_SIZE,
+                    _canvasSourceX, _canvasSourceY, _canvasSourceWidth, _canvasSourceHeight,
+                    0, 0, previewSize, previewSize,
                 )
 
                 $widget.currentSnapshot = {

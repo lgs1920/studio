@@ -121,7 +121,7 @@
     background-image: var(--lgs-tx-tiles);
     background-repeat: no-repeat;
     background-position: center;
-    background-size: 512px 512px;
+    background-size: cover;
     place-items: center;
 
     --sl-input-focus-ring-color: transparent;
