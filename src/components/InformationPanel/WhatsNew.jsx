@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-01-30
+ * Last modified: 2026-01-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -76,7 +76,7 @@ export const WhatsNew = () => {
     const snap = useSnapshot(state)
 
     return (
-                <LGSScrollbars>
+        <LGSScrollbars>
                     <div className={'whats-new-list'} ref={newsList}>
 
                         {snap.data.map(file => (

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-01-30
+ * Last modified: 2026-01-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -25,7 +25,24 @@ export const LGSScrollbars = (props) => {
                     renderTrackVertical={props => <div {...props} className="track-vertical"/>}
                     renderThumbHorizontal={props => <div {...props} className="thumb-horizontal"/>}
                     renderThumbVertical={props => <div {...props} className="thumb-vertical"/>}
-                    renderView={props => <div {...props} className="view"/>}>
+                    renderView={props => {
+                        const viewStyle = props.style || {}
+                        const marginRight = Number(viewStyle.marginRight) || 0
+                        const marginBottom = Number(viewStyle.marginBottom) || 0
+                        return (
+                            <div
+                                {...props}
+                                className="view"
+                                style={{
+                                    ...viewStyle,
+                                    marginRight:   0,
+                                    marginBottom:  0,
+                                    paddingRight:  Math.max(0, -marginRight),
+                                    paddingBottom: Math.max(0, -marginBottom),
+                                }}
+                            />
+                        )
+                    }}>
             {props.children}
         </Scrollbars>
         </div>
