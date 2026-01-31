@@ -1,0 +1,146 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: style.css
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2026-02-01
+ * Last modified: 2026-02-01
+ *
+ *
+ * Copyright © 2026 LGS1920
+ ******************************************************************************/
+
+:root {
+    --track-widget-bg-color: transparent; /* #ffffff33;*/
+    --track-widget-stroke: var(--sl-color-neutral-200);
+    --track-widget-font: 'Roboto Condensed', sans-serif;
+    --track-widget-text-color: #ffffff;
+    --track-widget-divider: var(--sl-color-neutral-300);
+
+    --weight-label: 100;
+    --weight-data: 700;
+
+    --track-widget-border-color: #ffffff;
+    --track-widget-border: 1px;
+    --track-widget-border-radius: var(--lgs-border-radius);
+    --track-widget-blur: blur(var(--lgs-blur-s));
+
+    --track-widget-separator-color: #ffffff;
+}
+
+
+.track-data-widget {
+    display: flex;
+    flex-direction: column;
+    padding: var(--lgs-gutter);
+    color: var(--track-widget-text-color);
+    border: var(--track-widget-border) solid var(--track-widget-border);
+    border-radius: var(--track-widget-border-radius);
+    background-color: var(--track-widget-bg-color);
+    gap: var(--lgs-gutter-s);
+    backdrop-filter: var(--track-widget-blur);
+}
+
+.track-data-widget sl-divider {
+    --color: var(--track-widget-separator-color);
+}
+
+.track-data-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 0 var(--lgs-gutter);
+    gap: calc(2 * var(--lgs-gutter));
+}
+
+.track-data-summary-item {
+    line-height: 1;
+    display: flex;
+    flex-direction: column;
+    text-align: center;
+    text-transform: uppercase;
+    gap: var(--lgs-gutter-xs);
+}
+
+.track-summary-column {
+    flex: 0 0 calc((100% - var(--data)) / 3);
+    justify-content: center;
+    max-width: calc((100% - var(--data)) / 3);
+    --data: calc(4 * var(--lgs-gutter));
+}
+
+.track-data-text,
+.track-data-date,
+.track-data-label,
+.track-data-value,
+.track-data-val-huge,
+.track-data-label-bold,
+.track-data-unit-sub {
+    font-family: var(--track-widget-font);
+    line-height: 1;
+    display: flex;
+    flex: 0 0 calc((100% - var(--data)) / 4);
+    text-transform: uppercase;
+    --data: calc(4 * var(--lgs-gutter));
+    gap: var(--lgs-gutter-xs);
+}
+
+.track-data-label,
+.track-data-label-bold,
+.track-data-unit-sub,
+.track-data-date,
+.track-data-value .lgs-nvu-unit {
+    font-size: 12px;
+    font-weight: var(--weight-label);
+}
+
+.track-data-value,
+.track-data-val-huge,
+.track-data-text {
+    font-weight: var(--weight-data)
+}
+
+.track-data-label {
+    font-size: 16px;
+    align-self: flex-start;
+    flex: 0 0 calc((100% - var(--data)) / 2);
+    text-transform: uppercase;
+}
+
+.track-data-date {
+    font-size: 16px;
+    display: flex;
+    justify-content: center;
+    text-transform: uppercase;
+    gap: 2rem;
+}
+
+.track-data-value {
+    font-size: 16px;
+    --margin: 1.5rem
+}
+
+.track-data-value sl-icon {
+    font-size: 16px;
+    align-self: center;
+    width: var(--margin);
+}
+
+.track-data-value:not(:has(sl-icon)) {
+    padding-left: var(--margin);
+}
+
+.track-data-val-huge {
+    font-size: 48px;
+    letter-spacing: -0.04em
+}
+
+.track-data-label-bold {
+    font-size: 16px;
+    justify-content: center;
+    text-transform: uppercase;
+    text-wrap: nowrap;
+}

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-17
- * Last modified: 2026-01-17
+ * Created on: 2026-01-31
+ * Last modified: 2026-01-31
  *
  *
  * Copyright © 2026 LGS1920
@@ -140,8 +140,12 @@ export const WidgetsPanelContent = ({groups}) => {
     }
 
     // Recalculates the set of available widgets for the current render cycle
+    const hasJourney = Boolean(lgs.theJourney)
     ;[...theGroups().entries()].map(([groupKey, groupValue]) => {
         ;[...groupValue.widgets.entries()].map(([widgetKey, widgetDef]) => {
+            if (widgetKey === 'journey-stats-widget' && !hasJourney) {
+                return
+            }
             // Check if the maximum number of instances for this widget has been reached
             if (!__.ui.widgetManager.isMaxWidgetsReached(groupKey, widgetKey)) {
                 reached.add(widgetKey)
@@ -165,6 +169,9 @@ export const WidgetsPanelContent = ({groups}) => {
             {[...theGroups().entries()].map(([groupKey, groupValue]) => (
                 <section key={groupKey} className="widget-group">
                     {[...groupValue.widgets.entries()].map(([widgetKey, widgetDef]) => {
+                        if (widgetKey === 'journey-stats-widget' && !hasJourney) {
+                            return null
+                        }
                         // Check if the maximum number of instances for this widget has been reached
                         if (reached.has(widgetKey)) {
                             return (

@@ -23,7 +23,7 @@ widget-groups:
 widgets:
   compass-widget:
     id: "compass-widget"
-    name: "Compass Widget"
+    name: "Compass"
     description: "A compass widget"
     icon: "compass"
     mandatory: false
@@ -34,7 +34,7 @@ widgets:
 
   credits-widget:
     id: "credits-widget"
-    name: "Credits Widget"
+    name: "Credits"
     description: "A credits widget"
     icon: "user"
     mandatory: true
@@ -44,7 +44,7 @@ widgets:
 
   profile-widget:
     id: "profile-widget"
-    name: "Profile Widget"
+    name: "Profile"
     description: "The journey profile widget"
     icon: "chart-fft"
     mandatory: false
@@ -110,7 +110,7 @@ widgets:
 
   text-widget:
     id: "text-widget"
-    name: "Text Widget"
+    name: "Text"
     description: "The text widget"
     icon: "Text"
     mandatory: false
@@ -137,7 +137,7 @@ widgets:
           left: 5
         opacity: 1
         size: 16
-        fontFamily: "Roboto"
+        fontFamily: "Roboto Condensed"
         lineHeight: 1.2
         orientation: 0
         textAlign: "center"
@@ -152,3 +152,15 @@ widgets:
           shadow: false
       user:
       elements:
+
+  journey-stats-widget:
+    id: "journey-stats-widget"
+    name: "Stats"
+    description: "Track data rendered as SVG"
+    icon: "route"
+    mandatory: false
+    max: 1
+    component: "JourneyStatsWidget"
+    groups:
+      - "journey-widgets"
+      - "scene-widgets"

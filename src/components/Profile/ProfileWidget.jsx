@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-26
- * Last modified: 2026-01-26
+ * Created on: 2026-02-01
+ * Last modified: 2026-02-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -172,7 +172,7 @@ export const ProfileWidget = ({id, context}) => {
     return (
         <Widget isVisible={true} config={config}>
                 {data &&
-                        <ProfileChart data={data}
+                    <ProfileChart data={data} key={lgs.theJourney.slug}
                                       id={id}
                                       height={__.ui.css.getCSSVariable('--lgs-profile-chart-height')}
                                       width={profile.width}

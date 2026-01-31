@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-02-01
+ * Last modified: 2026-02-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -39,55 +39,63 @@ import { sprintf }             from 'sprintf-js'
  * @property {Function} callback                Used to format the value instead of sprintf
  *
  */
-export const NameValueUnit = function TextValueUI(props, _ref) {
+export const NameValueUnit = function TextValueUI({
+                                                      value,
+                                                      units = ['', ''],
+                                                      noUnit = false,
+                                                      format = '%\' .1f',
+                                                      precision,
+                                                      callback,
+                                                      className = null,
+                                                      id, text,
+                                                  }, _ref) {
 
-    let toShow = (typeof props.value === 'string') ? props.value : Number(props.value) ?? null
-    let units = props.units ?? ['', '']
+    let toShow = (typeof value === 'string') ? value : Number(value) ?? null
+    let unitsValues = units ?? ['', '']
+
 
     // Handle precision logic to override default format
     // If precision is defined (including 0), we construct the sprintf format
-    let format = props.format ?? '%\' .2f'
-    if (props.precision !== null && props.precision !== undefined) {
-        format = `%' .${props.precision}f`
+    let formatValue = format
+    if (precision !== null && precision !== undefined) {
+        formatValue = `%' .${precision}f`
     }
 
-    if (units instanceof Array) {
-        if (units.length === 1) {
-            units = [units[0], units[0]]
+    if (unitsValues instanceof Array) {
+        if (unitsValues.length === 1) {
+            unitsValues = [unitsValues[0], unitsValues[0]]
         }
     }
     else {
-        units = [units, units]
+        unitsValues = [unitsValues, unitsValues]
     }
 
     // lgs is a global variable
-    const [unitText, setUnit] = useState(units[lgs.settings?.unitSystem.current])
+    const [unitText, setUnit] = useState(unitsValues[lgs.settings?.unitSystem.current])
 
-    if (unitsList.includes(units[0])) {
-        // We assume __ is a global variable for the recorder/helper
-        toShow = __.convert(toShow).to(units[lgs.settings.getUnitSystem.current])
+    if (unitsList.includes(unitsValues[0])) {
+        toShow = __.convert(toShow).to(unitsValues[lgs.settings.getUnitSystem.current])
     }
 
-    if (toShow && props.callback) {
-        toShow = props.callback(toShow)
+    if (toShow && callback) {
+        toShow = callback(toShow)
     }
     else {
-        toShow = (typeof toShow === 'number') ? sprintf(format, toShow) : toShow
+        toShow = (typeof toShow === 'number') ? sprintf(formatValue, toShow) : toShow
     }
 
-    const classes = (props.className) ? props.className + ' ' : '' + 'lgs-text-value'
+    const classes = (className) ? className + ' ' : '' + 'lgs-text-value'
 
     useEffect(() => {
-        setUnit(units[lgs.settings.unitSystem.current])
+        setUnit(unitsValues[lgs.settings.unitSystem.current])
     }, [lgs.settings.unitSystem.current])
 
     return (
-        <div id={props.id} className={classes}>
-            {props.text && <span className="lgs-nvu-text">{props.text}</span>}
-            {toShow &&
-                <span className="lgs-nvu-value">{toShow}</span>
-            }
-            <span className="lgs-nvu-unit">{unitText}</span>
+        <div id={id} className={classes}>
+            {text && <span className="lgs-nvu-text">{text}</span>}
+            {toShow && <span className="lgs-nvu-value">{toShow}</span>}
+            {!noUnit && <span className="lgs-nvu-unit">{unitText}</span>}
+
         </div>
     )
 }

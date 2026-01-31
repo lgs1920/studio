@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-28
- * Last modified: 2026-01-28
+ * Created on: 2026-01-31
+ * Last modified: 2026-01-31
  *
  *
  * Copyright © 2026 LGS1920
@@ -21,7 +21,7 @@ import {
     faTelescope, faUnlock, faUser,
 }                                                 from '@fortawesome/duotone-regular-svg-icons'
 import { faAndroid, faApple, faLinux, faWindows } from '@fortawesome/free-brands-svg-icons'
-import { faCompass, faDesktop, faText }           from '@fortawesome/pro-regular-svg-icons'
+import { faCompass, faDesktop, faRoute, faText }  from '@fortawesome/pro-regular-svg-icons'
 import { faChartFft, faGavel }                    from '@fortawesome/pro-solid-svg-icons'
 
 
@@ -492,6 +492,12 @@ export const WIDGETS_CAPABILITIES = [
                                                       component: 'TextWidget',
                                                   },
                                                   ],
+                                                  [
+                                                      'journey-stats-widget', {
+                                                      icon:      faRoute,
+                                                      component: 'JourneyStatsWidget',
+                                                  },
+                                                  ],
                                               ]),
 
 
@@ -527,11 +533,13 @@ export const WIDGET_RADIUS = new Map([
 export const WIDGET_GOOGLE_FONTS = [
     'Abril Fatface',
     'Alumni Sans Pinstripe',
+    'Roboto Condensed',
     'Bangers',
     'Dancing Script',
     'Fredoka One',
     'Lobster',
     'Luckiest Guy',
+    'Nunito',
     'Open Sans',
     'Oswald',
     'Pacifico',

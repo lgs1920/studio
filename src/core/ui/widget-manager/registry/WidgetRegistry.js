@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-07
- * Last modified: 2026-01-07
+ * Created on: 2026-01-31
+ * Last modified: 2026-01-31
  *
  *
  * Copyright © 2026 LGS1920
@@ -36,6 +36,7 @@ export class WidgetRegistry {
                                              '/src/components/MainUI/widgets/list/**/*Widget*.jsx',
                                              '/src/components/Profile/*Widget*.jsx',
                                              '/src/components/Text/*Widget*.jsx',
+                                             '/src/components/Stats/*Widget*.jsx',
                                          ])
 
         this.#buildIndex()
