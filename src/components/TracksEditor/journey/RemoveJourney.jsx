@@ -7,14 +7,16 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-01-31
+ * Last modified: 2026-01-31
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { Utils }                                              from '@Editor/Utils'
+import { JOURNEY_WIDGETS }       from '@Core/constants'
+import { WidgetDynamicRenderer } from '@Core/ui/widget-manager/dynamic-render/WidgetDynamicRender'
 import { faTrashCan }                                         from '@fortawesome/pro-regular-svg-icons'
 import { SlButton, SlIcon, SlIconButton, SlPopup, SlTooltip } from '@shoelace-style/shoelace/dist/react'
 import { TrackUtils }                                         from '@Utils/cesium/TrackUtils'
@@ -109,6 +111,13 @@ export const RemoveJourney = (props) => {
             __.ui.drawerManager.close()
             $store.components.profile.show = false
             $store.canViewProfile = false
+            const journeyWidgets = __.ui.widgetCache.getAll({groups: [JOURNEY_WIDGETS]})
+            if (journeyWidgets?.size) {
+                const renderer = new WidgetDynamicRenderer()
+                for (const [widgetId] of journeyWidgets) {
+                    renderer.destroyWidget(widgetId)
+                }
+            }
 
             // Let's inform the user
             UIToast.warning({
