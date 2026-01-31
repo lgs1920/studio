@@ -1,0 +1,95 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: style.css
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2026-01-31
+ * Last modified: 2026-01-31
+ *
+ *
+ * Copyright © 2026 LGS1920
+ ******************************************************************************/
+
+:root {
+    --track-widget-bg: #d11f1f;
+    --track-widget-stroke: var(--sl-color-neutral-200);
+    --track-widget-font: 'Roboto Condensed', sans-serif;
+    --track-widget-text-color: #ffffff;
+    --track-widget-divider: var(--sl-color-neutral-300);
+
+    --track-widget-bg-opacity: 0.85;
+    --track-widget-text-opacity: 0.95;
+
+    --weight-label: 100;
+    --weight-data: 700;
+
+    --track-widget-border-color: #ffffff;
+    --track-widget-border-opacity: 0.25;
+    --track-widget-border-width: 1px;
+    --track-widget-border-radius: 18px;
+    --track-widget-blur: var(--lgs-blur-s);
+}
+
+.track-data-svg-bg {
+    fill: var(--track-widget-bg);
+    fill-opacity: var(--track-widget-bg-opacity);
+    stroke: color-mix(in srgb, var(--track-widget-border-color) calc(var(--track-widget-border-opacity) * 100%), transparent);
+    stroke-width: var(--track-widget-border-width);
+    rx: var(--track-widget-border-radius);
+    ry: var(--track-widget-border-radius);
+    filter: blur(var(--track-widget-blur))
+}
+
+.track-data-svg-text,
+.track-data-svg-label,
+.track-data-svg-value,
+.track-data-svg-date,
+.track-data-svg-val-huge,
+.track-data-svg-label-bold,
+.track-data-svg-unit-sub {
+    font-family: var(--track-widget-font);
+    fill: var(--track-widget-text-color);
+    fill-opacity: var(--track-widget-text-opacity)
+}
+
+.track-data-svg-label,
+.track-data-svg-label-bold,
+.track-data-svg-unit-sub,
+.track-data-svg-date {
+    font-weight: var(--weight-label)
+}
+
+.track-data-svg-value,
+.track-data-svg-val-huge,
+.track-data-svg-text {
+    font-weight: var(--weight-data)
+}
+
+.track-data-svg-label {
+    font-size: 16px /* Augmenté de 14px à 16px */
+}
+
+.track-data-svg-value {
+    font-size: 15px
+}
+
+.track-data-svg-divider {
+    stroke: var(--track-widget-divider);
+    stroke-width: 1px;
+    stroke-opacity: var(--track-widget-bg-opacity)
+}
+
+.track-data-svg-val-huge {
+    font-size: 48px;
+    letter-spacing: -0.04em
+}
+
+.track-data-svg-label-bold {
+    font-size: 13px; /* Légèrement augmenté aussi */
+    letter-spacing: 0.05em
+    text-transform: uppercase;
+}
