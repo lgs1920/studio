@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-28
- * Last modified: 2026-01-28
+ * Created on: 2026-02-01
+ * Last modified: 2026-02-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -149,13 +149,8 @@ export class CanvasOverlayComposer {
             rawHeight = rect.height
         }
 
-        const hasExplicitLogicalSize = typeof w === 'number' || typeof h === 'number' ||
-            typeof contentWidth === 'number' || typeof contentHeight === 'number'
-        const scaleFactor = hasExplicitLogicalSize
-                            ? 1
-                            : (el.classList?.contains('lgs-widget-canvas') ? LGS_WIDGET_SCALE_EFFECTIVE : 1)
+        const scaleFactor = LGS_WIDGET_SCALE_EFFECTIVE
         const imgAspectRatio = el.height / el.width
-
 
         const cssScale = typeof scale === 'object' ? (scale.x ?? 1) : scale
         // The content dimensions in logical pixel

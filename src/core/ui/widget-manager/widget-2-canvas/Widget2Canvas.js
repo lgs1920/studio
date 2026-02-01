@@ -7,15 +7,15 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-28
- * Last modified: 2026-01-28
+ * Created on: 2026-02-01
+ * Last modified: 2026-02-01
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { DYNAMIC_WIDGET_PART, LGS_WIDGET_SCALE_EFFECTIVE, STATIC_WIDGET_PART } from '@Core/constants'
-import { snapdom }                                                             from '@zumer/snapdom'
+import { DYNAMIC_WIDGET_PART, STATIC_WIDGET_PART } from '@Core/constants'
+import { snapdom }                                 from '@zumer/snapdom'
 
 /**
  * Widget2Canvas — Ultra-fast DOM-to-canvas mirror
@@ -120,8 +120,7 @@ export class Widget2Canvas {
             const $clone = el.cloneNode(true)
             const style = getComputedStyle(el)
 
-            // Custom scale for high-end export
-            const scale = options.scale || LGS_WIDGET_SCALE_EFFECTIVE
+            const scale = this.#options.scale
 
             // Get original bounding box dimensions
             const bbox = el.getBBox?.()
@@ -213,7 +212,9 @@ export class Widget2Canvas {
             this.#canvas.style.pointerEvents = 'none'
 
             // Insert into DOM only once
-            this.#original.before(this.#canvas)
+            if (this.#original) {
+                this.#original.before(this.#canvas)
+            }
         }
 
         // 2. Update physical dimensions only if they changed to avoid flickering
