@@ -89,7 +89,6 @@ const normalizeMetrics = (metrics) => {
 }
 
 const buildDateLines = (metrics) => {
-    console.log(metrics)
     if (Number.isNaN(metrics.duration)) {
         return []
     }
@@ -226,11 +225,11 @@ export const JourneyStatsWidget = memo(({id, context}) => {
                             <div className="track-data-label">{`Altitude (${units.elevation})`}</div>
                             <div className="track-data-value">
                                 <SlIcon variant="primary" library="fa" name={FA2SL.set(faArrowDownToLine)}/>
-                                <NameValueUnit value={metrics.minHeight} units={ELEVATION_UNITS} noUnit/>
+                                <NameValueUnit value={metrics.minHeight} units={ELEVATION_UNITS} noUnit precision="0"/>
                             </div>
                             <div className="track-data-value">
                                 <SlIcon variant="primary" library="fa" name={FA2SL.set(faArrowUpToLine)}/>
-                                <NameValueUnit value={metrics.maxHeight} units={ELEVATION_UNITS} noUnit/>
+                                <NameValueUnit value={metrics.maxHeight} units={ELEVATION_UNITS} noUnit precision="0"/>
                             </div>
                         </div>
                     </>
