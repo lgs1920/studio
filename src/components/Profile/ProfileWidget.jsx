@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-01
- * Last modified: 2026-02-01
+ * Created on: 2026-02-02
+ * Last modified: 2026-02-02
  *
  *
  * Copyright © 2026 LGS1920
@@ -170,9 +170,9 @@ export const ProfileWidget = ({id, context}) => {
 
     // Render the generic Widget wrapper with the determined config
     return (
-        <Widget isVisible={true} config={config}>
+        <Widget isVisible={true} config={config} key={lgs.theJourney.slug}>
                 {data &&
-                    <ProfileChart data={data} key={lgs.theJourney.slug}
+                    <ProfileChart data={data}
                                       id={id}
                                       height={__.ui.css.getCSSVariable('--lgs-profile-chart-height')}
                                       width={profile.width}
