@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-01
- * Last modified: 2026-02-01
+ * Created on: 2026-02-02
+ * Last modified: 2026-02-02
  *
  *
  * Copyright © 2026 LGS1920
@@ -138,6 +138,10 @@ export const JourneyStatsWidget = memo(({id, context}) => {
                 setContainer(element)
             }
         }
+
+        __.ui.ui.importFonts()
+
+
     }, [widgetsBoard])
 
     const metrics = normalizeMetrics(journeyMetricsRaw)
@@ -222,7 +226,7 @@ export const JourneyStatsWidget = memo(({id, context}) => {
                     <>
                         <SlDivider/>
                         <div className="track-data-row">
-                            <div className="track-data-label">{`Altitude (${units.elevation})`}</div>
+                            <div className="track-data-label">{'Altitude'}<span>{`(${units.elevation})`}</span></div>
                             <div className="track-data-value">
                                 <SlIcon variant="primary" library="fa" name={FA2SL.set(faArrowDownToLine)}/>
                                 <NameValueUnit value={metrics.minHeight} units={ELEVATION_UNITS} noUnit precision="0"/>
@@ -238,7 +242,7 @@ export const JourneyStatsWidget = memo(({id, context}) => {
                     <>
                         <SlDivider/>
                         <div className="track-data-row">
-                            <div className="track-data-label">{`Speed (${units.speed})`}</div>
+                            <div className="track-data-label">{'Speed'}<span>{`(${units.speed})`}</span></div>
 
                             <div className="track-data-value">
                                 <NameValueUnit value={metrics.averageSpeed} units={SPEED_UNITS} noUnit/>
@@ -249,7 +253,7 @@ export const JourneyStatsWidget = memo(({id, context}) => {
                             </div>
                         </div>
                         <div className="track-data-row">
-                            <div className="track-data-label">{`Pace (${units.pace})`}</div>
+                            <div className="track-data-label">{'Pace'}<span>{`(${units.pace})`}</span></div>
                             <div className="track-data-value">
                                 <NameValueUnit value={metrics.averagePace} units={PACE_UNITS} noUnit/>
                             </div>
