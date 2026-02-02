@@ -134,7 +134,7 @@
 }
 
 .track-data-value:not(:has(sl-icon)) {
-    padding-left: var(--margin);
+    padding-left: calc(var(--margin) + 0.5rem);
 }
 
 .track-data-val-huge {
