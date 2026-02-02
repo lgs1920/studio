@@ -7,13 +7,13 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-02-02
+ * Last modified: 2026-02-02
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
-import { COUNTRY_FLAGS_DIR } from '@Core/constants'
+import { COUNTRY_FLAGS_DIR, WIDGET_GOOGLE_FONTS } from '@Core/constants'
 
 export class UIUtils {
 
@@ -167,6 +167,19 @@ export class UIUtils {
      */
     static countryFlag(countryCode) {
         return `${COUNTRY_FLAGS_DIR}${countryCode.toLowerCase()}.svg`
+    }
+
+    static importFonts = () => {
+        const familiesParam = WIDGET_GOOGLE_FONTS.map(f => f.replace(/\s+/g, '+')).join('|')
+        const linkId = 'google-fonts'
+
+        if (!document.getElementById(linkId)) {
+            const link = document.createElement('link')
+            link.id = linkId
+            link.rel = 'stylesheet'
+            link.href = `https://fonts.googleapis.com/css?family=${familiesParam}&display=swap`
+            document.head.appendChild(link)
+        }
     }
 
 }

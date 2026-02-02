@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-21
- * Last modified: 2026-01-21
+ * Created on: 2026-02-02
+ * Last modified: 2026-02-02
  *
  *
  * Copyright © 2026 LGS1920
@@ -74,16 +74,7 @@ export const TextEditorToolbar = ({id, fonts = false, color = true, align = true
      * Injects selected Google Fonts into the document head
      */
     useEffect(() => {
-        const familiesParam = WIDGET_GOOGLE_FONTS.map(f => f.replace(/\s+/g, '+')).join('|')
-        const linkId = 'gfonts-toolbar-preview'
-
-        if (!document.getElementById(linkId)) {
-            const link = document.createElement('link')
-            link.id = linkId
-            link.rel = 'stylesheet'
-            link.href = `https://fonts.googleapis.com/css?family=${familiesParam}&display=swap`
-            document.head.appendChild(link)
-        }
+        __.ui.ui.importFonts()
     }, [])
 
     const alignmentDisabled = useMemo(() => {
