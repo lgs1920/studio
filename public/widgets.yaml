@@ -161,6 +161,18 @@ widgets:
     mandatory: false
     max: 1
     component: "JourneyStatsWidget"
+    path: "@Components/Stats"
+
     groups:
       - "journey-widgets"
       - "scene-widgets"
+    configuration:
+      border:
+        show: false
+        color: "#ffffff"
+        radius: none
+        thickness: 1
+        opacity: 1
+        shadow: false
+      user:
+      elements:

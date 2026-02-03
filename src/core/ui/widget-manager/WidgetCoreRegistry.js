@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-27
- * Last modified: 2026-01-27
+ * Created on: 2026-02-03
+ * Last modified: 2026-02-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -434,7 +434,6 @@ export class WidgetCoreRegistry {
 
         const leftRatio = containerRect.width > 0 ? (relativeCenterX / containerRect.width) * 100 : 0
         const topRatio = containerRect.height > 0 ? (relativeCenterY / containerRect.height) * 100 : 0
-
         const $scale = config.scale || {x: 1, y: 1}
 
         return {

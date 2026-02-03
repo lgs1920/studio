@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-30
- * Last modified: 2026-01-30
+ * Created on: 2026-02-03
+ * Last modified: 2026-02-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -18,9 +18,12 @@ import { usePointerInteractions } from '@Components/MainUI/context-menu/usePoint
 import {
     LGS_ANIMATION_DRAGGING, LGS_ANIMATION_RESIZING, LGS_TOOLBAR, LGS_VISUAL_WIDGET, LGS_WIDGET,
     LGS_WIDGET_SCALE_EFFECTIVE,
+    SCENE_WIDGETS_BOARD,
     WIDGET_EDITOR_POST_RENDER_EVENT,
     WIDGET_EDITOR_PRE_RENDER_EVENT,
     WIDGETS_CAPABILITIES, WIDGETS_EDITOR_DRAWER,
+    SCENE_WIDGETS,
+    JOURNEY_WIDGETS,
 } from '@Core/constants'
 import {
     ScreenMediaRecorder,
@@ -37,11 +40,12 @@ const DRAG_THRESHOLD = {touch: 30, mouse: 5}
 
 /**
  * Draggable, resizable and scalable widget with full pointer interaction support.
+ * Enhanced with MutationObserver to handle LazyComponents and dynamic board containers.
  *
  * @param {Object} props
  * @param {boolean} props.isVisible                 - Controls mounting of the widget
  * @param {string}  [props.className='']            - Additional CSS classes
- * @param {React.ReactNode} props.children         - Widget visual content
+ * @param {React.ReactNode} props.children          - Widget visual content
  * @param {Object} props.config                     - Complete widget configuration object
  * @param {React.RefObject} [props.childRef]        - Optional forwarded ref to inner content
  * @returns {JSX.Element|null}
@@ -57,6 +61,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
     const _dragStart = useRef({x: 0, y: 0})
     const _initialized = useRef(false)
     const _prevRotate = useRef(0)
+    const _w2c = useRef(null)
 
     // UI state
     const [bounds, setBounds] = useState({left: 0, top: 0, right: 0, bottom: 0})
@@ -66,6 +71,9 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
     const [isMouseOver, setIsMouseOver] = useState(false)
     const [isDragging, setIsDragging] = useState(false)
 
+    // Asynchronous container management
+    const [actualContainer, setActualContainer] = useState(null)
+
     // Global stores (valtio)
     const $widget = lgs.stores.ui.widget
     const widget = useSnapshot($widget)
@@ -73,11 +81,51 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
     const drawers = useSnapshot($drawers)
     const $video = lgs.stores.ui.video
     const video = useSnapshot($video)
-    const _w2c = useRef(null)
 
     const throttleRotate = 1
     const selectedId = widget.current?.id ?? null
     const isSelected = selectedId === config.id
+
+    /**
+     * Container detection logic.
+     * Uses MutationObserver to wait for the target board to be injected and ".defined".
+     */
+    useEffect(() => {
+        const {widgetsBoard} = config
+
+        if (!widgetsBoard || widgetsBoard === SCENE_WIDGETS_BOARD) {
+            setActualContainer(lgs.canvas)
+            return
+        }
+
+        const findTarget = () => {
+            const _el = document.querySelector(`#${widgetsBoard}.defined`)
+            if (_el) {
+                setActualContainer(_el)
+                return true
+            }
+            return false
+        }
+
+        if (findTarget()) {
+            return
+        }
+
+        const _observer = new MutationObserver(() => {
+            if (findTarget()) {
+                _observer.disconnect()
+            }
+        })
+
+        _observer.observe(document.body, {
+            childList:       true,
+            subtree:         true,
+            attributes:      true,
+            attributeFilter: ['class'],
+        })
+
+        return () => _observer.disconnect()
+    }, [config.widgetsBoard, config.container])
 
     // Interaction lock logic
     const interactionLocked =
@@ -99,7 +147,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
 
     // Guidelines computation
     const centerGuidelines = useMemo(() => {
-        const container = config?.container ?? lgs.canvas
+        const container = actualContainer ?? lgs.canvas
         if (!container) {
             return {verticalGuidelines: [], horizontalGuidelines: []}
         }
@@ -107,19 +155,17 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
         const cx = left + width / 2
         const cy = top + height / 2
         return {verticalGuidelines: [cx], horizontalGuidelines: [cy]}
-    }, [config?.container])
+    }, [actualContainer])
 
     const gridGuidelines = useMemo(() => {
         if (!config?.snapGrid || !lgs.canvas) {
             return {verticalGuidelines: [], horizontalGuidelines: []}
         }
-        const {x: gx = 0, y: gy = 0} = config.snapGrid
         const rect = lgs.canvas.getBoundingClientRect()
+        const {x: gx = 0, y: gy = 0} = config.snapGrid
         const cx = rect.left + rect.width / 2
         const cy = rect.top + rect.height / 2
-
-        const vertical = [cx]
-        const horizontal = [cy]
+        const vertical = [cx], horizontal = [cy]
 
         if (gx > 0) {
             for (let x = cx + gx; x <= rect.right; x += gx) {
@@ -137,11 +183,10 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                 horizontal.push(y)
             }
         }
-
         return {verticalGuidelines: vertical, horizontalGuidelines: horizontal}
     }, [config?.snapGrid])
 
-    // Sync guidelines and observers
+    // Sync guidelines
     useEffect(() => {
         const update = () => {
             const v = [...new Set([...centerGuidelines.verticalGuidelines, ...gridGuidelines.verticalGuidelines])].sort((a, b) => a - b)
@@ -151,18 +196,16 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
         }
         update()
 
-        const container = config?.container ?? lgs.canvas
+        const container = actualContainer ?? lgs.canvas
         if (!container) {
             return
         }
         const observer = new ResizeObserver(update)
         observer.observe(container)
         return () => observer.unobserve(container)
-    }, [centerGuidelines, gridGuidelines])
+    }, [centerGuidelines, gridGuidelines, actualContainer])
 
-    /**
-     * Listen for pre-render events to perform background capture.
-     */
+    // Pre-render capture logic
     useEffect(() => {
         const handlePreRender = (event) => {
             const {entity} = event.detail
@@ -174,23 +217,16 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
             const _element = _widget.current
             if (_element && _sourceCanvas) {
                 lgs.scene.render()
-
                 const _canvasRect = _sourceCanvas.getBoundingClientRect()
                 const _widgetRect = _element.getBoundingClientRect()
                 const maxPreviewSize = Math.min(_canvasRect.width, _canvasRect.height, 1024)
                 const previewSize = Math.max(1, Math.round(maxPreviewSize))
                 const scaleX = _canvasRect.width > 0 ? (_sourceCanvas.width / _canvasRect.width) : 1
                 const scaleY = _canvasRect.height > 0 ? (_sourceCanvas.height / _canvasRect.height) : 1
-
                 const _centerX = (_widgetRect.left - _canvasRect.left) + (_widgetRect.width / 2)
                 const _centerY = (_widgetRect.top - _canvasRect.top) + (_widgetRect.height / 2)
-
                 const _sourceX = Math.max(0, Math.min(_centerX - (previewSize / 2), _canvasRect.width - previewSize))
                 const _sourceY = Math.max(0, Math.min(_centerY - (previewSize / 2), _canvasRect.height - previewSize))
-                const _canvasSourceX = _sourceX * scaleX
-                const _canvasSourceY = _sourceY * scaleY
-                const _canvasSourceWidth = previewSize * scaleX
-                const _canvasSourceHeight = previewSize * scaleY
 
                 const _tempCanvas = document.createElement('canvas')
                 _tempCanvas.width = previewSize
@@ -199,7 +235,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
 
                 _ctx.drawImage(
                     _sourceCanvas,
-                    _canvasSourceX, _canvasSourceY, _canvasSourceWidth, _canvasSourceHeight,
+                    _sourceX * scaleX, _sourceY * scaleY, previewSize * scaleX, previewSize * scaleY,
                     0, 0, previewSize, previewSize,
                 )
 
@@ -208,25 +244,20 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                     offset:    {x: _sourceX, y: _sourceY},
                     widgetPos: {x: _widgetRect.left - _canvasRect.left, y: _widgetRect.top - _canvasRect.top},
                 }
-
                 _tempCanvas.width = 0
                 _tempCanvas.height = 0
             }
         }
-
         window.addEventListener(WIDGET_EDITOR_PRE_RENDER_EVENT, handlePreRender)
         return () => window.removeEventListener(WIDGET_EDITOR_PRE_RENDER_EVENT, handlePreRender)
     }, [config.id])
 
-    // Checks if the event path contains an sl-drawer element
     const hasDrawerInPath = (event) => {
         const path = event.composedPath()
-        return path.some(target =>
-                             target.tagName?.toLowerCase() === 'sl-drawer',
-        )
+        return path.some(target => target.tagName?.toLowerCase() === 'sl-drawer')
     }
 
-    // Visibility handlers for control box
+    // Interaction Handlers
     const handleMouseEnter = useCallback(() => {
         if (interactionLocked || (selectedId && !isSelected)) {
             return
@@ -247,14 +278,12 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
         __.ui.widgetManager.manageControlBox(_moveable, setControlBox, _controlBoxTimer, false, false)
     }, [interactionLocked, isSelected, selectedId])
 
-    // Drag lifecycle
     const handleDragStart = useCallback((event) => {
         const input = event?.inputEvent
         if (!input || hasDrawerInPath(input)) {
             event.stopDrag()
             return
         }
-
         setIsDragging(false)
         _dragConfirmed.current = false
         _dragStart.current = {
@@ -276,8 +305,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
         const clientX = input.touches?.[0]?.clientX ?? input.clientX ?? 0
         const clientY = input.touches?.[0]?.clientY ?? input.clientY ?? 0
 
-        if (!_dragConfirmed.current &&
-            (Math.abs(clientX - _dragStart.current.x) >= threshold || Math.abs(clientY - _dragStart.current.y) >= threshold)) {
+        if (!_dragConfirmed.current && (Math.abs(clientX - _dragStart.current.x) >= threshold || Math.abs(clientY - _dragStart.current.y) >= threshold)) {
             _dragConfirmed.current = true
             setIsDragging(true)
         }
@@ -288,14 +316,11 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
             element.style.transform = `translate(${event.translate[0]}px, ${event.translate[1]}px) rotate(${rotate}deg) scale(${scale.x}, ${scale.y})`
             event.target.style.transform = element.style.transform
             _moveable.current.updateRect()
-
             __.ui.widgetManager.applyPosition(element, element.style.transform, _moveable, true, setControlBox)
         }
-
         await __.ui.widgetManager.onDrag(event)
         _children.current?.handleDrag?.(event)
     }, [])
-
 
     const handleDragEnd = useCallback(async (event) => {
         __.ui.widgetManager.manageControlBox(_moveable, setControlBox, _controlBoxTimer, false, isMouseOver)
@@ -303,56 +328,39 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
         _dragConfirmed.current = false
         _moveable.current?.updateRect()
         await __.ui.widgetManager.onDragEnd(event)
-
     }, [isMouseOver])
 
-    const handleDoubleClick = useCallback((event) => {
+    const handleDoubleClick = useCallback(() => {
         if (interactionLocked) {
             return
         }
         lgs.stores.ui.widget.current = {id: config.id}
-
-        const hasCapabilities = __.ui.widgetManager.hasCapabilities(
-            config.contextMenu,
-            WIDGETS_CAPABILITIES,
-        )
-        if (!hasCapabilities || config.contextMenu?.canEdit !== true) {
+        if (!__.ui.widgetManager.hasCapabilities(config.contextMenu, WIDGETS_CAPABILITIES) || config.contextMenu?.canEdit !== true) {
             return
         }
 
-        const drawers = lgs.stores.ui.drawers
         const isCurrentEditor = drawers.open === WIDGETS_EDITOR_DRAWER && drawers.entity === config.id
-
         if (isCurrentEditor) {
             __.ui.drawerManager.close()
         }
         else {
-            window.dispatchEvent(new CustomEvent(WIDGET_EDITOR_PRE_RENDER_EVENT, {
-                detail: {entity: config.id},
-            }))
-            __.ui.drawerManager.open(WIDGETS_EDITOR_DRAWER, {
-                action: 'edit-current',
-                entity: config.id,
-            })
-            window.dispatchEvent(new CustomEvent(WIDGET_EDITOR_POST_RENDER_EVENT, {
-                detail: {entity: config.id},
-            }))
+            window.dispatchEvent(new CustomEvent(WIDGET_EDITOR_PRE_RENDER_EVENT, {detail: {entity: config.id}}))
+            __.ui.drawerManager.open(WIDGETS_EDITOR_DRAWER, {action: 'edit-current', entity: config.id})
+            window.dispatchEvent(new CustomEvent(WIDGET_EDITOR_POST_RENDER_EVENT, {detail: {entity: config.id}}))
         }
-    }, [interactionLocked, config.id, config.contextMenu])
+    }, [interactionLocked, config.id, config.contextMenu, drawers.open, drawers.entity])
 
     const openContextMenu = useCallback((event) => {
         if (interactionLocked) {
             return
         }
-
         const clientX = event.clientX ?? event.touches?.[0]?.clientX ?? 0
         const clientY = event.clientY ?? event.touches?.[0]?.clientY ?? 0
-
         lgs.stores.ui.contextMenu.visible = true
         lgs.stores.ui.contextMenu.type = 'widget'
         lgs.stores.ui.contextMenu.targetId = config.id
         lgs.stores.ui.contextMenu.position = {x: clientX, y: clientY}
-    }, [interactionLocked, config?.id])
+    }, [interactionLocked, config.id])
 
     const pointerInteractionsRef = usePointerInteractions({
                                                               onDoubleTap:           handleDoubleClick,
@@ -361,17 +369,14 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                                                               preventContextMenu:    true,
                                                           })
 
-    // Transform handlers
     const handleScale = useCallback((event) => __.ui.widgetManager.onScale(event, {
         widget: _widget,
         child:  _children,
     }, setPosition), [])
-
     const handleScaleStart = useCallback((event) => {
         _children.current?.onScaleStart?.(event)
         __.ui.widgetManager.onScaleStart(event)
     }, [])
-
     const handleScaleEnd = useCallback((event) => {
         _children.current?.onScaleEnd?.(event)
         __.ui.widgetManager.onScaleEnd(event)
@@ -383,45 +388,33 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
         event.target.style.height = `${event.height}px`
         __.ui.widgetManager.onResize(event, {widget: _widget, child: _children}, setPosition)
     }, [])
-
     const handleResizeStart = useCallback((event) => {
         _children.current?.onResizeStart?.(event)
         __.ui.widgetManager.onResizeStart(event)
     }, [])
-
     const handleResizeEnd = useCallback((event) => {
         _children.current?.onResizeEnd?.(event)
         __.ui.widgetManager.onResizeEnd(event)
         _moveable.current?.updateRect()
     }, [])
 
-    // Rotation handlers
     const handleRotateStart = useCallback((event) => {
         _children.current?.onRotateStart?.(event)
         __.ui.widgetManager.onRotateStart(event)
         _moveable.current?.updateRect()
-
-
     }, [])
-
     const handleRotate = useCallback((event) => {
         _children.current?.onRotate?.(event)
         __.ui.widgetManager.onRotate(event, {_prevRotate})
-        const {rotate} = event
-        lgs.stores.ui.widget.current.rotate = Math.ceil(rotate)
+        lgs.stores.ui.widget.current.rotate = Math.ceil(event.rotate)
     }, [])
-
     const handleRotateEnd = useCallback((event) => {
-        _moveable.current?.updateRect()
         _children.current?.onRotateEnd?.(event)
         __.ui.widgetManager.onRotateEnd(event)
         _moveable.current?.updateRect()
-
         if (event.lastEvent) {
             lgs.stores.ui.widget.current.rotate = event.lastEvent.rotate
         }
-
-
     }, [])
 
     const selectWidget = useCallback(() => {
@@ -429,13 +422,12 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
             return
         }
         const drawerEntity = typeof drawers.entity === 'string' ? drawers.entity : ''
-        const drawerBase = drawerEntity.split('#')[0]
-        const widgetBase = typeof config.id === 'string' ? config.id.split('#')[0] : ''
+        const drawerBase = drawerEntity.split('#')[0],
+              widgetBase = typeof config.id === 'string' ? config.id.split('#')[0] : ''
         if (drawers.open === WIDGETS_EDITOR_DRAWER && drawerBase && drawerBase !== widgetBase) {
             __.ui.drawerManager.close()
         }
-        if (drawers.open === WIDGETS_EDITOR_DRAWER && drawerBase && drawerBase === widgetBase &&
-            drawers.entity !== config.id) {
+        if (drawers.open === WIDGETS_EDITOR_DRAWER && drawerBase && drawerBase === widgetBase && drawers.entity !== config.id) {
             lgs.stores.ui.drawers.entity = config.id
         }
         lgs.stores.ui.widget.current = {id: config.id}
@@ -445,24 +437,13 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
     const handleBound = useCallback(() => __.ui.widgetManager.setBoundStatus(_widget.current), [])
 
     useEffect(() => {
-        return () => {
-            if (_resizeRaf.current) {
-                cancelAnimationFrame(_resizeRaf.current)
+        if (!isSelected) {
+            if (_controlBoxTimer.current) {
+                clearTimeout(_controlBoxTimer.current)
+                _controlBoxTimer.current = null
             }
-            _dragConfirmed.current = false
-            setIsDragging(false)
+            setControlBox({renderDirections: [], zoom: 0, opacity: 0})
         }
-    }, [])
-
-    useEffect(() => {
-        if (isSelected) {
-            return
-        }
-        if (_controlBoxTimer.current) {
-            clearTimeout(_controlBoxTimer.current)
-            _controlBoxTimer.current = null
-        }
-        setControlBox({renderDirections: [], zoom: 0, opacity: 0})
     }, [isSelected])
 
     useEffect(() => {
@@ -478,46 +459,30 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
             const isInDrawer = (() => {
                 const path = event.composedPath ? event.composedPath() : [target]
                 const elements = path.filter(node => node instanceof HTMLElement)
-                // Check light DOM ancestry
-                if (elements.some(el => el.closest?.('sl-drawer'))) {
-                    return true
-                }
-                // Check shadow host ancestry
-                if (elements.some(el => el.getRootNode?.()?.host?.tagName === 'SL-DRAWER')) {
-                    return true
-                }
-                // Check overlays/backdrops used by Shoelace drawer
-                if (elements.some(el => el.classList?.contains('drawer__overlay') ||
-                    el.classList?.contains('sl-drawer__overlay') ||
-                    el.classList?.contains('sl-backdrop'))) {
-                    return true
-                }
-                return false
+                return elements.some(el => el.closest?.('sl-drawer') || el.getRootNode?.()?.host?.tagName === 'SL-DRAWER' || el.classList?.contains('sl-backdrop'))
             })()
             if (isInDrawer) {
                 return
             }
             const elementTarget = target instanceof Element ? target : target.parentElement
-            const isMoveableControl = elementTarget?.closest('.lgs-widget-control-box') ||
-                elementTarget?.closest('.moveable-control') ||
-                elementTarget?.closest('.moveable-line')
+            const isMoveableControl = elementTarget?.closest('.lgs-widget-control-box') || elementTarget?.closest('.moveable-control') || elementTarget?.closest('.moveable-line')
             if (elementTarget && (widgetEl.contains(elementTarget) || isMoveableControl)) {
                 return
             }
             lgs.stores.ui.widget.current = {id: null}
-            if (_controlBoxTimer.current) {
-                clearTimeout(_controlBoxTimer.current)
-                _controlBoxTimer.current = null
-            }
-            setControlBox({renderDirections: [], zoom: 0, opacity: 0})
         }
         document.addEventListener('pointerdown', handleOutsidePointerDown, true)
         return () => document.removeEventListener('pointerdown', handleOutsidePointerDown, true)
     }, [isSelected])
 
-    // Lifecycle and registration
+    // Main Init and Persistence logic
     useEffect(() => {
-        if (!isVisible || !config) {
+        if (!isVisible || !config || !actualContainer) {
+            return
+        }
+
+        const isTargetingBoard = config.widgetsBoard && config.widgetsBoard !== SCENE_WIDGETS_BOARD
+        if (isTargetingBoard && actualContainer === lgs.canvas) {
             return
         }
 
@@ -531,12 +496,11 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
             if (cancelled || !_widget.current) {
                 return
             }
-
             const fullConfig = {
                 animationWhenDragging: config.animationWhenDragging ?? config.type === LGS_TOOLBAR,
                 attachTo: config.attachTo ?? 'top-left',
-                container:       config.container ?? lgs.canvas,
-                contextMenu:     __.ui.widgetManager.cloneContext(config?.contextMenu ?? {}, WIDGETS_CAPABILITIES),
+                container:   actualContainer,
+                contextMenu: __.ui.widgetManager.cloneContext(config?.contextMenu ?? {}, WIDGETS_CAPABILITIES),
                 cropDimensions:  config.cropDimensions ?? {left: 0, top: 0, width: 0, height: 0},
                 dynamic:         config.dynamic ?? false,
                 forceEven:       config.forceEven ?? false,
@@ -564,6 +528,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                 ttl:             config.ttl ?? null,
                 type:            config.type ?? LGS_WIDGET,
                 widgetsBoard: config.widgetsBoard || null,
+                width:       config.width,
             }
 
             const resolved = await __.ui.widgetManager.retrieveConfig(_widget.current, fullConfig)
@@ -572,6 +537,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
             if (success) {
                 _initialized.current = true
                 __.ui.widgetCache.mount(config.id)
+                // Registration into Valtio list if it doesn't exist
                 if (!$widget.list.has(config.id)) {
                     $widget.list.set(config.id, {})
                 }
@@ -580,16 +546,13 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
 
                 if (interactionLocked) {
                     if (!_w2c.current) {
-                        _w2c.current = new Widget2Canvas(
-                            _widget.current.querySelector(':scope >:not(.lgs-widget-inner-overlay)'),
-                            {
-                                embedFonts:      true,
-                                scale: LGS_WIDGET_SCALE_EFFECTIVE,
-                                type:            fullConfig.snap,
-                                outerTransforms: true,
-                                outerShadows:    true,
-                            },
-                        )
+                        _w2c.current = new Widget2Canvas(_widget.current.querySelector(':scope >:not(.lgs-widget-inner-overlay)'), {
+                            embedFonts:      true,
+                            scale:           LGS_WIDGET_SCALE_EFFECTIVE,
+                            type:            fullConfig.snap,
+                            outerTransforms: true,
+                            outerShadows:    true,
+                        })
                         await _w2c.current.init()
                     }
                     const canvas = _w2c.current.getCanvas?.()
@@ -602,11 +565,9 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                     __.recorder.addEventListener(ScreenMediaRecorder.events.STOP, clean)
                     __.recorder.addEventListener(ScreenMediaRecorder.events.CANCEL, clean)
                 }
-                else {
-                    if (_w2c.current) {
-                        _w2c.current.destroy()
-                        _w2c.current = null
-                    }
+                else if (_w2c.current) {
+                    _w2c.current.destroy()
+                    _w2c.current = null
                     _moveable.current?.updateRect()
                 }
             }
@@ -614,15 +575,11 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                 requestAnimationFrame(init)
             }
         }
-
         requestAnimationFrame(init)
 
-        if (config.type === LGS_VISUAL_WIDGET) {
-            const hasUUID = config.id && config.id.includes('#')
-            const id = hasUUID ? config.id : __.ui.widgetManager.defineElementId(config.group, config.id)
-            if (!$widget.list.has(id)) {
-                $widget.list.set(id, {})
-            }
+        // Pre-registration for visual widgets to allow Menu/Config rendering
+        if (config.type === LGS_VISUAL_WIDGET && !$widget.list.has(config.id)) {
+            $widget.list.set(config.id, {})
         }
 
         return () => {
@@ -633,47 +590,26 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                     __.ui.widgetManager.disposeElement(_widget.current)
                 }
                 catch (e) {
-                    console.error('[Widget] Disposal error:', e)
                 }
                 _initialized.current = false
             }
             __.recorder.removeEventListener(ScreenMediaRecorder.events.STOP, clean)
             __.recorder.removeEventListener(ScreenMediaRecorder.events.CANCEL, clean)
         }
-    }, [isVisible, config, video.preRecording, video.recording, video.snapshot])
-
-    useEffect(() => _moveable.current?.updateRect(), [bounds])
-
-    useEffect(() => {
-        return () => {
-            if (_w2c.current) {
-                _w2c.current.destroy()
-                _w2c.current = null
-            }
-        }
-    }, [])
+    }, [isVisible, config, video.preRecording, video.recording, video.snapshot, actualContainer])
 
     useEffect(() => {
         const canvas = _w2c.current?.getCanvas?.()
-        if (showGhostOnly) {
-            if (canvas) {
-                canvas.style.visibility = 'visible'
-            }
-            if (_widget.current) {
-                _widget.current.style.visibility = 'hidden'
-            }
+        if (canvas) {
+            canvas.style.visibility = showGhostOnly ? 'visible' : 'hidden'
         }
-        else {
-            if (canvas) {
-                canvas.style.visibility = 'hidden'
-            }
-            if (_widget.current) {
-                _widget.current.style.visibility = 'visible'
-            }
+        if (_widget.current) {
+            _widget.current.style.visibility = showGhostOnly ? 'hidden' : 'visible'
         }
     }, [showGhostOnly])
 
-    if (!isVisible || (config.type === LGS_VISUAL_WIDGET && !$widget.list.has(config?.id))) {
+    // Adjusted visibility check: we only return null if explicitly NOT visible
+    if (!isVisible) {
         return null
     }
 
@@ -701,12 +637,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
 
             <Moveable
                 className="lgs-widget-control-box"
-                style={{
-                    /* Désactive les pointerEvents sur Moveable si le widget n'est pas actif.
-                     Cela empêche Moveable d'intercepter le drag alors qu'on veut juste cliquer.
-                     */
-                    pointerEvents: isSelected ? 'auto' : 'none',
-                }}
+                style={{pointerEvents: isSelected ? 'auto' : 'none'}}
                 container={lgs.canvas}
                 origin={false}
                 ref={_moveable}
@@ -721,29 +652,23 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                 onBound={handleBound}
                 preventDefault={false}
                 stopPropagation={true}
-                keepRatio={Boolean(
-                    __.ui.widgetManager.getWidgetConfig(config?.id)?.ratio?.locked ?? config?.ratio?.locked,
-                )}
-
+                keepRatio={Boolean(__.ui.widgetManager.getWidgetConfig(config?.id)?.ratio?.locked ?? config?.ratio?.locked)}
                 resizable={!interactionLocked && (config?.resizable ?? false)}
                 onResize={handleResize}
                 onResizeStart={handleResizeStart}
                 onResizeEnd={handleResizeEnd}
                 throttleResize={2}
-
                 scalable={!interactionLocked && (config?.scalable ?? false)}
                 onScale={handleScale}
                 onScaleStart={handleScaleStart}
                 onScaleEnd={handleScaleEnd}
                 onBeforeScale={(event) => event.inputEvent.shiftKey && event.setFixedDirection([0, 0])}
-
                 rotatable={!interactionLocked && (config?.rotatable ?? false)}
                 throttleRotate={throttleRotate}
                 onRotateStart={handleRotateStart}
                 onRotate={handleRotate}
                 onRotateEnd={handleRotateEnd}
                 rotationPosition={'bottom'}
-
                 pinchable={true}
                 onPinchStart={({target}) => {
                     target.style.transformOrigin = '50% 50%'
@@ -751,7 +676,6 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                 onPinch={({target, transform}) => {
                     target.style.transform = transform
                 }}
-
                 bounds={bounds}
                 elementGuidelines={[lgs.canvas]}
                 horizontalGuidelines={guidelines.horizontalGuidelines}
@@ -764,16 +688,8 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                 snapRotationDegrees={[0, -30, -45, -60, -90, -120, -135, -150, -180]}
                 snappable={config?.snappable ?? true}
                 snapDirections={{top: true, right: true, bottom: true, left: true, center: true, middle: true}}
-                elementSnapDirections={{
-                    top:    true,
-                    left:   true,
-                    bottom: true,
-                    right:  true,
-                    center: true,
-                    middle: true,
-                }}
+                elementSnapDirections={{top: true, left: true, bottom: true, right: true, center: true, middle: true}}
                 maxSnapElementGuidelineDistance={10}
-
                 renderDirections={controlBox.renderDirections}
                 zoom={controlBox.zoom}
                 onRender={(event) => !config.isCropper && (event.target.style.cssText += event.cssText)}

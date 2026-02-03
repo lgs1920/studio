@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-27
- * Last modified: 2026-01-27
+ * Created on: 2026-02-03
+ * Last modified: 2026-02-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -26,28 +26,10 @@ export const TextWidget = ({id, context}) => {
     const {widgetEditor, widgetsBoard} = context
 
     /**
-     * Proxy for the profile component state, used to update values.
-     * Accessible only inside the component to prevent initial mounting errors.
-     * @type {{show: boolean, key: string}}
-     */
-    const $profile = lgs.stores.main.components.profile
-    /**
-     * Proxy for the video UI state (example of deep store access).
-     * @type {object}
-     */
-    const $video = lgs.stores.ui.video
-
-    /**
-     * Snapshot of the profile state, triggering re-renders on change (e.g., when profile.key changes).
-     * @type {{key: string}}
-     */
-    const profile = useSnapshot($profile)
-
-    /**
      * Snapshot of the video state (included for completeness).
      * @type {object}
      */
-    const video = useSnapshot($video)
+    const video = useSnapshot(lgs.stores.ui.video)
 
     /**
      * State for the container element where the widget should attach.
