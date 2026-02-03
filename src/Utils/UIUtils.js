@@ -7,13 +7,14 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-02
- * Last modified: 2026-02-02
+ * Created on: 2026-02-03
+ * Last modified: 2026-02-03
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 import { COUNTRY_FLAGS_DIR, WIDGET_GOOGLE_FONTS } from '@Core/constants'
+import { DateTime }                               from 'luxon'
 
 export class UIUtils {
 
@@ -182,6 +183,41 @@ export class UIUtils {
         }
     }
 
+
+    /**
+     * Formats journey dates into one or two strings depending on whether
+     * start and stop occur on the same day.
+     * * @param {Object} data - Object containing start and stop ISO strings.
+     * @returns {string[]} Array of formatted date/time strings.
+     */
+    static formatJourneyDurationDates = (data) => {
+        if (!data?.start || !data?.stop) {
+            return []
+        }
+
+        const startDT = DateTime.fromISO(data.start)
+        const stopDT = DateTime.fromISO(data.stop)
+
+        const start = {
+            date: startDT.toLocaleString(DateTime.DATE_FULL),
+            time: startDT.toLocaleString(DateTime.TIME_SIMPLE),
+        }
+        const stop = {
+            date: stopDT.toLocaleString(DateTime.DATE_FULL),
+            time: stopDT.toLocaleString(DateTime.TIME_SIMPLE),
+        }
+
+        const sameDay = start.date === stop.date
+
+        // Retourne [Date, "HeureDépart - HeureArrivée"] si même jour
+        // Sinon ["Date HeureDépart", "Date HeureArrivée"]
+        return {
+            sameDay,
+            prefix: sameDay ? start.date : `${start.date} ${start.time}`,
+            sufix:  sameDay ? `${start.time} - ${stop.time}` : `${stop.date} ${stop.time}`,
+        }
+
+    }
 }
 
 
