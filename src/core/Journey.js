@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-02-03
+ * Last modified: 2026-02-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -128,6 +128,28 @@ export class Journey extends MapElement {
         }
         catch (error) {
             console.error('Failed to initialize journey:', error)
+        }
+    }
+
+    /**
+     * Get metrics and union
+     *
+     * @return {{global: NodeJS.Global|{}, user: *|{}, union: *}}
+     */
+    getMetrics = () => {
+        const global = this.metrics.global
+        const user = this.metrics.user
+        const points = this.metrics.points
+        return {
+            global, user, points, metrics: {...global, ...user},
+        }
+    }
+
+    getDate = () => {
+        const {points} = this.getMetrics()
+        return {
+            start: points[0]?.time,
+            stop:  points[points.length - 1]?.time,
         }
     }
 
