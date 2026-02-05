@@ -167,12 +167,26 @@ widgets:
       - "journey-widgets"
       - "scene-widgets"
     configuration:
-      border:
-        show: false
-        color: "#ffffff"
-        radius: none
-        thickness: 1
-        opacity: 1
-        shadow: false
+      default:
+        background:
+          show: false
+          color: transparent
+          opacity: 0.15
+          blur: false
+        border:
+          show: false
+          color: "#ffffff"
+          radius: none
+          thickness: 1
+          opacity: 1
+          shadow: false
+        text:
+          color: "#ffffff"
+          shadow: false
+        separatorColor: "#ffffff"
+        date: false
+        altitude: false
+        performance: false
+
       user:
       elements:
