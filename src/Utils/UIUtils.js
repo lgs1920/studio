@@ -7,13 +7,14 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-03
- * Last modified: 2026-02-03
+ * Created on: 2026-02-05
+ * Last modified: 2026-02-05
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 import { COUNTRY_FLAGS_DIR, WIDGET_GOOGLE_FONTS } from '@Core/constants'
+import { colord }                                 from 'colord'
 import { DateTime }                               from 'luxon'
 
 export class UIUtils {
@@ -217,6 +218,26 @@ export class UIUtils {
             sufix:  sameDay ? `${start.time} - ${stop.time}` : `${stop.date} ${stop.time}`,
         }
 
+    }
+
+    /**
+     * Resolves a color string from a widget item, handling CSS variables,
+     * hex/rgb formats, and optional alpha transparency.
+     * * @param {Object} item - The item containing color and opacity properties.
+     * @param {boolean} [includeAlpha=false] - Whether to apply the item's opacity to the result.
+     * @returns {string} RGBA or RGB string, or transparent if invalid.
+     */
+    static resolveItemColor(item, includeAlpha = false) {
+        if (!item || !item.color) {
+            return 'transparent'
+        }
+
+        // Resolve CSS variable if the color string starts with the double-dash prefix
+        const raw = item.color.startsWith('--') ? __.ui.css.getCSSVariable(item.color) : item.color
+        const c = colord(raw)
+
+        // Return the color with applied alpha channel if requested and opacity exists
+        return includeAlpha ? c.alpha(item.opacity ?? 1).toRgbString() : c.toRgbString()
     }
 }
 
