@@ -27,9 +27,21 @@ import {
 import {
     ShadowElement,
 }                                                                   from '@Components/MainUI/widgets/editor/elements/ShadowElement'
-import { JourneyStats }                                             from '@Components/Stats/JourneyStats'
-import { SlColorPicker, SlDivider, SlInput, SlRange, SlSwitch }     from '@shoelace-style/shoelace/dist/react'
-import { DISTANCE_UNITS, ELEVATION_UNITS, PACE_UNITS, SPEED_UNITS } from '@Utils/UnitUtils'
+import {
+    JourneyStats,
+} from '@Components/Stats/JourneyStats'
+import {
+    faPenPaintbrush, faTableList,
+} from '@fortawesome/pro-regular-svg-icons'
+import {
+    SlColorPicker, SlDivider, SlIcon, SlInput, SlRange, SlSwitch, SlTab, SlTabGroup, SlTabPanel,
+} from '@shoelace-style/shoelace/dist/react'
+import {
+    FA2SL,
+} from '@Utils/FA2SL'
+import {
+    DISTANCE_UNITS, ELEVATION_UNITS, PACE_UNITS, SPEED_UNITS,
+} from '@Utils/UnitUtils'
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSnapshot }                                              from 'valtio'
 import './style.css'
@@ -155,73 +167,85 @@ export const JourneyStatsWidgetEditor = ({entity}) => {
                     </div>
                 </div>
             </div>
-            <div className="journey-stats-widget-editor-scroll">
-                <LGSScrollbars>
-                    <div className="lgs-widget-editor-controls-wrapper">
-                        <RotationElement element={element}
-                                         localRotation={localRotation}
-                                         applyRotation={applyRotation}
-                                         updateValue={updateValue}/>
 
-                        <SlDivider/>
-                        <div className="drawer-horizontal-line">
-                            <span style={{'lineHeight': 1}}>{'Text color'}<br/></span>
-                        </div>
-                        <div className="drawer-horizontal-line">
-                            <div className="drawer-horizontal-line three-columns">
-                                <div className="drawer-horizontal-element">
-                                    <SlColorPicker size="small" swatches={swatches}
-                                                   value={getColor(element.border)}
-                                                   onSlInput={(e) => updateValue('separator.color', e.target.value)}/>
-                                </div>
-                                <div className="drawer-horizontal-element xlarge-element"></div>
-                                <div className="drawer-horizontal-element xlarge-element">
-                                    <SlRange label="Opacity" min="0" max="1" step="0.05" align-right tooltip="top"
-                                             tooltipFormatter={value => `${Math.floor(value * 100)}%`}
-                                             value={element.border.opacity ?? 1}
-                                             onSlInput={(e) => updateValue('separator.opacity', parseFloat(e.target.value))}/>
+            <SlTabGroup>
+                <SlTab slot="nav" panel="style">
+                    <SlIcon size="small" library="fa" name={FA2SL.set(faPenPaintbrush)}/> {'Style'}
+                </SlTab>
+                <SlTab slot="nav" panel="data">
+                    <SlIcon size="small" library="fa" name={FA2SL.set(faTableList)}/> {'Data'}
+                </SlTab>
+                <SlTabPanel name="style" lassName="journey-stats-widget-editor-scroll">
+                    <LGSScrollbars>
+                        <div className="lgs-widget-editor-controls-wrapper">
+                            <RotationElement element={element}
+                                             localRotation={localRotation}
+                                             applyRotation={applyRotation}
+                                             updateValue={updateValue}/>
+
+                            <SlDivider/>
+                            <div className="drawer-horizontal-line">
+                                <span style={{'lineHeight': 1}}>{'Text color'}<br/></span>
+                            </div>
+                            <div className="drawer-horizontal-line">
+                                <div className="drawer-horizontal-line three-columns">
+                                    <div className="drawer-horizontal-element">
+                                        <SlColorPicker size="small" swatches={swatches}
+                                                       value={getColor(element.border)}
+                                                       onSlInput={(e) => updateValue('separator.color', e.target.value)}/>
+                                    </div>
+                                    <div className="drawer-horizontal-element xlarge-element"></div>
+                                    <div className="drawer-horizontal-element xlarge-element">
+                                        <SlRange label="Opacity" min="0" max="1" step="0.05" align-right tooltip="top"
+                                                 tooltipFormatter={value => `${Math.floor(value * 100)}%`}
+                                                 value={element.border.opacity ?? 1}
+                                                 onSlInput={(e) => updateValue('separator.opacity', parseFloat(e.target.value))}/>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
 
-                        <SlDivider/>
-                        <ShadowElement element={element} swatches={swatches} getColor={getColor}
-                                       updateValue={updateValue}/>
-
-                        <SlDivider/>
-                        <div className="drawer-horizontal-line">
-                            <SlSwitch align-right size="x-small" checked={element.separator?.show ?? false}
-                                      onSlInput={(e) => updateValue('separator.show', e.target.checked)}>
-                                <span>{'Separator'}</span>
-                            </SlSwitch>
-                        </div>
-
-                        {element.separator?.show && (
-                            <div className="drawer-horizontal-line three-columns">
-                                <div className="drawer-horizontal-element">
-                                    <SlColorPicker size="small" swatches={swatches}
-                                                   value={getColor(element.border)}
-                                                   onSlInput={(e) => updateValue('separator.color', e.target.value)}/>
-                                </div>
-                                <div className="drawer-horizontal-element xlarge-element"></div>
-                                <div className="drawer-horizontal-element xlarge-element">
-                                    <SlRange label="Opacity" min="0" max="1" step="0.05" align-right tooltip="top"
-                                             tooltipFormatter={value => `${Math.floor(value * 100)}%`}
-                                             value={element.border.opacity ?? 1}
-                                             onSlInput={(e) => updateValue('separator.opacity', parseFloat(e.target.value))}/>
-                                </div>
-                            </div>
-                        )}
-
-                        <SlDivider/>
-                        <BackgroundElement element={element} swatches={swatches} getColor={getColor}
+                            <SlDivider/>
+                            <ShadowElement element={element} swatches={swatches} getColor={getColor}
                                            updateValue={updateValue}/>
-                        <SlDivider/>
-                        <BorderElement element={element} swatches={swatches} getColor={getColor}
-                                       updateValue={updateValue}
-                                       showPill={false}/>
 
-                        <SlDivider/>
+                            <SlDivider/>
+                            <div className="drawer-horizontal-line">
+                                <SlSwitch align-right size="x-small" checked={element.separator?.show ?? false}
+                                          onSlInput={(e) => updateValue('separator.show', e.target.checked)}>
+                                    <span>{'Separator'}</span>
+                                </SlSwitch>
+                            </div>
+
+                            {element.separator?.show && (
+                                <div className="drawer-horizontal-line three-columns">
+                                    <div className="drawer-horizontal-element">
+                                        <SlColorPicker size="small" swatches={swatches}
+                                                       value={getColor(element.border)}
+                                                       onSlInput={(e) => updateValue('separator.color', e.target.value)}/>
+                                    </div>
+                                    <div className="drawer-horizontal-element xlarge-element"></div>
+                                    <div className="drawer-horizontal-element xlarge-element">
+                                        <SlRange label="Opacity" min="0" max="1" step="0.05" align-right tooltip="top"
+                                                 tooltipFormatter={value => `${Math.floor(value * 100)}%`}
+                                                 value={element.border.opacity ?? 1}
+                                                 onSlInput={(e) => updateValue('separator.opacity', parseFloat(e.target.value))}/>
+                                    </div>
+                                </div>
+                            )}
+
+                            <SlDivider/>
+                            <BackgroundElement element={element} swatches={swatches} getColor={getColor}
+                                               updateValue={updateValue}/>
+                            <SlDivider/>
+                            <BorderElement element={element} swatches={swatches} getColor={getColor}
+                                           updateValue={updateValue}
+                                           showPill={false}/>
+                        </div>
+                    </LGSScrollbars>
+                </SlTabPanel>
+
+                <SlTabPanel name="data" lassName="journey-stats-widget-editor-scroll">
+                    <LGSScrollbars>
                         <div className="journey-stats-widget-editor-data">
 
                             <SlSwitch align-right size="x-small" checked={element.date ?? false}
@@ -315,9 +339,11 @@ export const JourneyStatsWidgetEditor = ({entity}) => {
                                 </>
                             }
                         </div>
-                    </div>
-                </LGSScrollbars>
-            </div>
+                    </LGSScrollbars>
+                </SlTabPanel>
+            </SlTabGroup>
+
         </div>
+
     )
 }
