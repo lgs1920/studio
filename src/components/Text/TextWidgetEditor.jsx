@@ -15,6 +15,18 @@
  ******************************************************************************/
 
 import { LGSScrollbars }                                                  from '@Components/MainUI/LGSScrollbars'
+import {
+    BackgroundElement,
+} from '@Components/MainUI/widgets/editor/elements/BackgroundElement'
+import {
+    BorderElement,
+} from '@Components/MainUI/widgets/editor/elements/BorderElement'
+import {
+    RotationElement,
+} from '@Components/MainUI/widgets/editor/elements/RotationElement'
+import {
+    ShadowElement,
+} from '@Components/MainUI/widgets/editor/elements/ShadowElement'
 import { TextEditorToolbar }                                              from '@Components/Text/TextEditorToolbar'
 import { WIDGET_RADIUS, WIDGET_SYSTEM_FONT_STACK, WIDGETS_EDITOR_DRAWER } from '@Core/constants'
 import {
@@ -105,7 +117,7 @@ export const TextWidgetEditor = ({entity}) => {
         return __.ui.widgetManager.getMoveable(normalizedId)
     }, [isTextWidget, normalizedId])
 
-    const fastUpdate = useCallback((path, val) => {
+    const updateValue = useCallback((path, val) => {
         if (!isTextWidget || !$configuration || !normalizedId) {
             return
         }
@@ -202,7 +214,7 @@ export const TextWidgetEditor = ({entity}) => {
             <OptimizedTextArea
                 value={element.text.content}
                 onInput={(e) => {
-                    fastUpdate('text', e.target.value)
+                    updateValue('text', e.target.value)
                     scheduleMoveableUpdate()
                     if (isEditing) {
                         resetRotationTimer()
@@ -221,146 +233,22 @@ export const TextWidgetEditor = ({entity}) => {
                     </div>
 
                     <div className="lgs-widget-editor-controls-wrapper">
-
-                        {/* Rotation Header: Label + Input + Range + Switch */}
+                        <RotationElement element={element}
+                                         localRotation={localRotation}
+                                         applyRotation={applyRotation}
+                                         updateValue={updateValue}/>
                         <SlDivider/>
-                        <div className="drawer-horizontal-line">
-                            <div className="drawer-horizontal-element">
-                                <label>{'Rotation'}</label>
-                                <SlInput
-                                    size="small"
-                                    type="number"
-                                    value={-localRotation}
-                                    style={{marginLeft: 'auto', width: '5rem'}}
-                                    step="1" min="-180" max="180"
-                                    onSlInput={(e) => applyRotation(-parseFloat(e.target.value) || 0)}
-                                />
-                            </div>
-                            <div className="drawer-horizontal-element xlarge-element">
-                                <SlRange
-                                    min="-180" max="180" step="1" align-right
-                                    value={-localRotation}
-                                    tooltip="bottom"
-                                    style={{'--track-active-offset': '50%'}}
-                                    onSlInput={(e) => applyRotation(-parseFloat(e.target.value) || 0)}
-                                />
-                            </div>
-                            <div className="drawer-horizontal-element">
-                                <SlSwitch
-                                    align-right
-                                    size="x-small"
-                                    checked={localRotation !== 0}
-                                    disabled={localRotation === 0}
-                                    onSlChange={(e) => {
-                                        if (!e.target.checked) {
-                                            applyRotation(0)
-                                        }
-                                    }}
-                                />
-                            </div>
-                        </div>
+                        <ShadowElement element={element} swatches={swatches} getColor={getColor}
+                                       updateValue={updateValue}/>
 
                         <SlDivider/>
-
-                        {/* Text Elevation */}
-                        <SlSwitch align-right size="x-small" checked={element.shadow?.show ?? false}
-                                  onSlInput={(e) => fastUpdate('text.shadow.show', e.target.checked)}>
-                            <label>{'Text elevation'}</label>
-                        </SlSwitch>
-
-                        {element.shadow?.show && (
-                            <div className="drawer-horizontal-line three-columns">
-                                <div className="drawer-horizontal-element">
-                                    <SlColorPicker size="small" swatches={swatches} value={getColor(element.shadow)}
-                                                   onSlInput={(e) => fastUpdate('shadow.color', e.target.value)}/>
-                                </div>
-                                <div className="drawer-horizontal-element">
-                                    <SlSelect hoist size="small" value={element.shadow?.value ?? 'normal'}
-                                              style={{marginLeft: 'auto', width: '6rem'}}
-                                              onSlChange={(e) => fastUpdate('shadow.value', e.target.value)}>
-                                        <SlOption value="small">{'Small'}</SlOption>
-                                        <SlOption value="normal">{'Medium'}</SlOption>
-                                        <SlOption value="large">{'Large'}</SlOption>
-                                    </SlSelect>
-                                </div>
-                                <div className="drawer-horizontal-element xlarge-element">
-                                    <SlRange label="Opacity" min="0.1" max="1" step="0.05" align-right tooltip="bottom"
-                                             value={element.shadow?.opacity ?? 1}
-                                             onSlInput={(e) => fastUpdate('shadow.opacity', parseFloat(e.target.value))}/>
-                                </div>
-                            </div>
-                        )}
-
+                        <BorderElement element={element} swatches={swatches} getColor={getColor}
+                                       updateValue={updateValue}
+                                       showPill={true}/>
                         <SlDivider/>
+                        <BackgroundElement element={element} swatches={swatches} getColor={getColor}
+                                           updateValue={updateValue}/>
 
-                        {/* Background */}
-                        <SlSwitch align-right size="x-small" checked={element.background?.show ?? false}
-                                  onSlInput={(e) => fastUpdate('background.show', e.target.checked)}>
-                            <label>{'Background'}</label>
-                        </SlSwitch>
-
-                        {element.background?.show && (
-                            <div className="drawer-horizontal-line three-columns">
-                                <div className="drawer-horizontal-element">
-                                    <SlColorPicker size="small" swatches={swatches} value={getColor(element.background)}
-                                                   onSlInput={(e) => fastUpdate('background.color', e.target.value)}/>
-                                </div>
-                                <div className="drawer-horizontal-element">
-                                    <SlSwitch align-right size="x-small" checked={element.background.blur ?? false}
-                                              onSlChange={(e) => fastUpdate('background.blur', e.target.checked)}>
-                                        {'Blur'}&nbsp;
-                                    </SlSwitch>
-                                </div>
-                                <div className="drawer-horizontal-element xlarge-element">
-                                    <SlRange label="Opacity" min="0.1" max="1" step="0.05" align-right tooltip="bottom"
-                                             value={element.background.opacity ?? 0.5}
-                                             onSlInput={(e) => fastUpdate('background.opacity', parseFloat(e.target.value))}/>
-                                </div>
-                            </div>
-                        )}
-
-                        <SlDivider/>
-
-                        {/* Border */}
-                        <SlSwitch align-right size="x-small" checked={element.border?.show ?? false}
-                                  onSlInput={(e) => fastUpdate('border.show', e.target.checked)}>
-                            <span>{'Border'}</span>
-                        </SlSwitch>
-
-                        {element.border?.show && (
-                            <>
-                                <div className="drawer-horizontal-line three-columns">
-                                    <div className="drawer-horizontal-element">
-                                        <SlColorPicker size="small" swatches={swatches} value={getColor(element.border)}
-                                                       onSlInput={(e) => fastUpdate('border.color', e.target.value)}/>
-                                    </div>
-                                    <div className="drawer-horizontal-element xlarge-element">
-                                        <SlRange label="Width" min="1" max="20" step="1" align-right
-                                                 value={element.border.thickness ?? 1}
-                                                 onSlInput={(e) => fastUpdate('border.thickness', parseInt(e.target.value))}/>
-                                    </div>
-                                    <div className="drawer-horizontal-element xlarge-element">
-                                        <SlRange label="Opacity" min="0.1" max="1" step="0.05" align-right
-                                                 value={element.border.opacity ?? 1}
-                                                 onSlInput={(e) => fastUpdate('border.opacity', parseFloat(e.target.value))}/>
-                                    </div>
-                                </div>
-                                <div className="drawer-horizontal-line">
-                                    <div className="drawer-horizontal-element xlarge-element">
-                                        <SlSelect hoist size="small" label="Radius" align-right
-                                                  style={{marginLeft: 'auto', width: '10rem'}}
-                                                  value={element.border.radius ?? 'none'}
-                                                  onSlChange={(e) => fastUpdate('border.radius', e.target.value)}>
-                                            {[...WIDGET_RADIUS.entries()].map(([_key, _data]) => (
-                                                <SlOption key={_key} value={_key}>
-                                                    {_data.name}
-                                                </SlOption>
-                                            ))}
-                                        </SlSelect>
-                                    </div>
-                                </div>
-                            </>
-                        )}
                     </div>
                 </LGSScrollbars>
             </div>

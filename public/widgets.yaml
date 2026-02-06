@@ -137,11 +137,7 @@ widgets:
           color: "#ffffff"
           shadow:
             show: false
-            value: null
-          opacity: 1
-        separator:
-          show: true
-          color: "#ffffff"
+            value: normal
           opacity: 1
 
         size: 16
@@ -151,6 +147,7 @@ widgets:
         textAlign: "center"
         weight: "normal"
         style: "normal"
+
         border:
           show: false
           color: "#ffffff"
@@ -192,9 +189,13 @@ widgets:
           color: "#ffffff"
           shadow:
             show: false
-            value: null
+            value: normal
           opacity: 1
-        separatorColor: "#ffffff"
+        separator:
+          show: true
+          color: "#ffffff"
+          opacity: 1
+
         date: false
         altitude: false
         performance: false

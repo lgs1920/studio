@@ -27,7 +27,7 @@ export const ShadowElement = ({element, swatches, getColor, updateValue}) => (
         {element.text?.shadow?.show && (
             <div className="drawer-horizontal-line three-columns">
                 <div className="drawer-horizontal-element">
-                    <SlColorPicker size="small" swatches={swatches} value={getColor(element.text.shadow)}
+                    <SlColorPicker size="small" swatches={swatches} value={element.text.shadow.color}
                                    onSlInput={(e) => updateValue('text.shadow.color', e.target.value)}/>
                 </div>
                 <div className="drawer-horizontal-element">

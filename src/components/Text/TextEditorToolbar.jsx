@@ -147,7 +147,7 @@ export const TextEditorToolbar = ({id, fonts = false, color = true, align = true
             {color && (
                 <>
                     <SlColorPicker
-                        value={element?.text.color ?? '#000000'}
+                        value={element?.text.color ?? red}
                         onSlInput={handleColorChange}
                         size="small"
                         swatches={swatches}

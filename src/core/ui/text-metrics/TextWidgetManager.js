@@ -49,7 +49,7 @@ export class TextWidgetManager {
         }
 
         const bgShadowColor = this.getColor(element.background?.shadow, true)
-        const txShadowColor = this.getColor(element.shadow, true)
+        const txShadowColor = this.getColor(element.text.shadow, true)
         const hasVisibleContainer = element.background?.show || element.border?.show
 
         const fontSize = element.size ?? 16
@@ -74,13 +74,13 @@ export class TextWidgetManager {
             '--lgs-tx-padding-right':  `${paddingSide}px`,
             '--lgs-tx-padding-bottom': `${paddingBottom}px`,
             '--lgs-tx-padding-left':   `${paddingSide}px`,
-            '--lgs-tx-blur': (element.background?.show && element.background?.blur) ? 'var(--lgs-blur-s)' : '0',
+            '--lgs-tx-blur':   (element.background?.show && element.background?.blur) ? 'var(--lgs-blur-s)' : '0',
             '--lgs-bg-elevation': (element.background?.shadow?.show && hasVisibleContainer) ? (
                 element.background.shadow.value === 'small' ? `0 2px 8px ${bgShadowColor}` :
                 element.background.shadow.value === 'large' ? `0 16px 32px ${bgShadowColor}` :
                 `0 8px 16px ${bgShadowColor}`
             ) : 'none',
-            '--lgs-tx-shadow': element.text.shadow?.show ? (
+            '--lgs-tx-shadow': element.text.shadow?.value ? (
                 element.text.shadow.value === 'small' ? `0 1px 2px ${txShadowColor}` :
                 element.text.shadow.value === 'large' ? `0 4px 8px ${txShadowColor}` :
                 `0 2px 4px ${txShadowColor}`
