@@ -55,7 +55,6 @@ export const JourneyStatsWidgetEditor = ({entity}) => {
     const $configuration = lgs.settings.widgets['journey-stats-widget'].configuration
     const configuration = useSnapshot($configuration)
     const element = (configuration?.elements?.[entity] ?? configuration.user ?? configuration.default)
-    const $element = $configuration.elements?.[entity]
     const swatches = useMemo(() => lgs.settings.getSwatches.list.join(';'), [])
 
     const journeyMetrics = useMemo(() => {
@@ -65,20 +64,33 @@ export const JourneyStatsWidgetEditor = ({entity}) => {
         return {...lgs.theJourney.getMetrics()}
     }, [lgs.theJourney, unitSystem])
 
-    const updateValue = useCallback((path, value) => {
-        if (!$element) {
-            return
+    const updateValue = useCallback((path, val) => {
+        if (!$configuration.elements) {
+            $configuration.elements = {}
         }
-        const keys = path.split('.')
-        let curr = $element
-        for (let i = 0; i < keys.length - 1; i++) {
-            if (!curr[keys[i]]) {
-                curr[keys[i]] = {}
+        if (!$configuration.elements[entity]) {
+            $configuration.elements[entity] = JSON.parse(JSON.stringify(element))
+        }
+
+        const _keys = path.split('.')
+        let _curr = $configuration.elements[entity]
+        let _source = element
+
+        for (let i = 0; i < _keys.length - 1; i++) {
+            const _key = _keys[i]
+            if (!_curr[_key] || typeof _curr[_key] !== 'object') {
+                _curr[_key] = _source?.[_key] ? JSON.parse(JSON.stringify(_source[_key])) : {}
             }
-            curr = curr[keys[i]]
+            _curr = _curr[_key]
+            _source = _source?.[_key]
         }
-        curr[keys[keys.length - 1]] = value
-    }, [$element])
+
+        _curr[_keys[_keys.length - 1]] = val
+
+        if (_moveable?.current) {
+            _moveable.current.updateRect()
+        }
+    }, [$configuration, element, entity, _moveable])
 
     const units = useMemo(() => ({
         elevation: ELEVATION_UNITS[unitSystem],
@@ -178,7 +190,7 @@ export const JourneyStatsWidgetEditor = ({entity}) => {
 
                         <SlDivider/>
                         <div className="drawer-horizontal-line">
-                            <SlSwitch align-right size="x-small" checked={element.border?.show ?? false}
+                            <SlSwitch align-right size="x-small" checked={element.separator?.show ?? false}
                                       onSlInput={(e) => updateValue('separator.show', e.target.checked)}>
                                 <span>{'Separator'}</span>
                             </SlSwitch>
@@ -191,11 +203,7 @@ export const JourneyStatsWidgetEditor = ({entity}) => {
                                                    value={getColor(element.border)}
                                                    onSlInput={(e) => updateValue('separator.color', e.target.value)}/>
                                 </div>
-                                <div className="drawer-horizontal-element xlarge-element">
-                                    <SlRange label="Width" min="0" max="10" step="0.5" align-right tooltip="top"
-                                             value={element.border.thickness ?? 1}
-                                             onSlInput={(e) => updateValue('separator.thickness', parseFloat(e.target.value))}/>
-                                </div>
+                                <div className="drawer-horizontal-element xlarge-element"></div>
                                 <div className="drawer-horizontal-element xlarge-element">
                                     <SlRange label="Opacity" min="0" max="1" step="0.05" align-right tooltip="top"
                                              tooltipFormatter={value => `${Math.floor(value * 100)}%`}
