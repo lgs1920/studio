@@ -175,16 +175,31 @@
     width: 2rem;
 }
 
-.journey-stats-widget-editor-data {
+.journey-stats-widget-editor-data .drawer-horizontal-line {
     display: flex;
-    flex-direction: column;
-    gap: var(--lgs-gutter-xs)
+    align-items: flex-end;
+    flex-direction: row;
+    width: 100%;
+    gap: var(--lgs-gutter-xs);
+}
+
+.journey-stats-widget-editor-data .drawer-horizontal-element {
+    flex: 1;
+    min-width: 0;
+}
+
+.journey-stats-widget-editor-data sl-input {
+    width: 100%;
+}
+
+.journey-stats-widget-editor-data sl-input::part(base) {
+    width: 100%;
 }
 
 .journey-stats-widget-editor-data sl-input::part(input) {
-    width: 100%
+    width: 100%;
 }
 
-.journey-stats-widget-editor-data .drawer-horizontal-line :first-child {
-    align-self: flex-end;
+.journey-stats-widget-editor-data .drawer-horizontal-element:first-child:not(:has(sl-input)) {
+    transform: translateY(-3px); / / Text aligned to center of inputs line
 }
