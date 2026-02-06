@@ -31,8 +31,8 @@ export const RotationElement = ({
                                     element,
                                     localRotation,
                                     applyRotation,
-                                    min = -180,
-                                    max = 180,
+                                    min = -90,
+                                    max = 90,
                                     step = 1,
                                 }) => {
 
