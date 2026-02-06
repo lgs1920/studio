@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-22
- * Last modified: 2026-01-22
+ * Created on: 2026-02-06
+ * Last modified: 2026-02-06
  *
  *
  * Copyright © 2026 LGS1920
@@ -203,6 +203,7 @@ body {
 
 .drawer-horizontal-line {
     display: flex;
+    align-content: center;
     align-items: center;
     flex: 1;
     flex-direction: row;
@@ -228,7 +229,7 @@ body {
 }
 
 .three-columns .drawer-horizontal-element {
-    flex: 0 0 25%;
+    flex: 0 0 auto;
 }
 
 /*.three-columns .drawer-horizontal-element {*/
@@ -525,6 +526,21 @@ body {
     border-color: var(--lgs-card-on-map-disabled-border-color) !important;
     background: transparent !important;
 }
+
+/*******************************************************************************
+ * Widget Editor
+ ******************************************************************************/
+.lgs-widget-editor {
+    height: 100%;
+    min-height: 0;
+}
+
+.lgs-widget-editor, .lgs-widget-editor-controls-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: var(--lgs-gutter-s);
+}
+
 
 /*******************************************************************************
  * Skeleton

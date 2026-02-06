@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-05
- * Last modified: 2026-02-05
+ * Created on: 2026-02-06
+ * Last modified: 2026-02-06
  *
  *
  * Copyright © 2026 LGS1920
@@ -200,7 +200,7 @@ export const TextWidgetEditor = ({entity}) => {
     return (
         <div className="lgs-card lgs-widget-editor" key={activeId}>
             <OptimizedTextArea
-                value={element.text}
+                value={element.text.content}
                 onInput={(e) => {
                     fastUpdate('text', e.target.value)
                     scheduleMoveableUpdate()
@@ -264,7 +264,7 @@ export const TextWidgetEditor = ({entity}) => {
 
                         {/* Text Elevation */}
                         <SlSwitch align-right size="x-small" checked={element.shadow?.show ?? false}
-                                  onSlInput={(e) => fastUpdate('shadow.show', e.target.checked)}>
+                                  onSlInput={(e) => fastUpdate('text.shadow.show', e.target.checked)}>
                             <label>{'Text elevation'}</label>
                         </SlSwitch>
 
@@ -351,12 +351,12 @@ export const TextWidgetEditor = ({entity}) => {
                                                   style={{marginLeft: 'auto', width: '10rem'}}
                                                   value={element.border.radius ?? 'none'}
                                                   onSlChange={(e) => fastUpdate('border.radius', e.target.value)}>
-                                        {[...WIDGET_RADIUS.entries()].map(([_key, _data]) => (
-                                            <SlOption key={_key} value={_key}>
-                                                {_data.name}
-                                            </SlOption>
-                                        ))}
-                                    </SlSelect>
+                                            {[...WIDGET_RADIUS.entries()].map(([_key, _data]) => (
+                                                <SlOption key={_key} value={_key}>
+                                                    {_data.name}
+                                                </SlOption>
+                                            ))}
+                                        </SlSelect>
                                     </div>
                                 </div>
                             </>

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-03
- * Last modified: 2026-02-03
+ * Created on: 2026-02-06
+ * Last modified: 2026-02-06
  *
  *
  * Copyright © 2026 LGS1920
@@ -50,16 +50,17 @@ const formatDuration = (seconds) => {
  * Internal component to handle the statistical display logic.
  * Isolated to prevent parent Widget re-mounts on data updates.
  */
-export const JourneyStats = memo(({metrics, dateLines, units}) => {
+export const JourneyStats = memo(({metrics, units, style = {}}) => {
     const hasElevation = metrics?.negative?.elevation < 0 && metrics?.positive?.elevation > 0
     const hasDuration = metrics?.duration
 
+    const date = __.ui.ui.formatJourneyDurationDates(lgs.theJourney.getDate())
     return (
-        <div className="track-data-widget">
+        <div className="track-data-widget" style={style}>
             {hasDuration && (
                 <>
                     <div className="track-data-date">
-                        <span>{dateLines[0]}</span><span>{dateLines[1]}</span>
+                        <span>{date.prefix}</span><span>{date.sufix}</span>
                     </div>
                     <SlDivider/>
                 </>

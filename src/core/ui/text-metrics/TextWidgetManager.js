@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-23
- * Last modified: 2026-01-23
+ * Created on: 2026-02-06
+ * Last modified: 2026-02-06
  *
  *
  * Copyright © 2026 LGS1920
@@ -61,7 +61,7 @@ export class TextWidgetManager {
         return {
             '--lgs-tx-tiles':    bgSnapshot ? `url(${bgSnapshot})` : 'none',
             '--lgs-tx-bg-color': element.background?.show ? this.getColor(element.background, true) : 'transparent',
-            '--lgs-tx-color':    this.getColor(element, true),
+            '--lgs-tx-color':  this.getColor(element.text, true),
             '--lgs-tx-font':     element.fontFamily === 'System' ? systemStack : element.fontFamily,
             '--lgs-tx-align':    element.align ?? 'left',
             '--lgs-tx-size':     `${element.size ?? 16}px`,
@@ -80,9 +80,9 @@ export class TextWidgetManager {
                 element.background.shadow.value === 'large' ? `0 16px 32px ${bgShadowColor}` :
                 `0 8px 16px ${bgShadowColor}`
             ) : 'none',
-            '--lgs-tx-shadow': element.shadow?.show ? (
-                element.shadow.value === 'small' ? `0 1px 2px ${txShadowColor}` :
-                element.shadow.value === 'large' ? `0 4px 8px ${txShadowColor}` :
+            '--lgs-tx-shadow': element.text.shadow?.show ? (
+                element.text.shadow.value === 'small' ? `0 1px 2px ${txShadowColor}` :
+                element.text.shadow.value === 'large' ? `0 4px 8px ${txShadowColor}` :
                 `0 2px 4px ${txShadowColor}`
             ) : 'none',
         }

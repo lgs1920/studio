@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-02
- * Last modified: 2026-02-02
+ * Created on: 2026-02-06
+ * Last modified: 2026-02-06
  *
  *
  * Copyright © 2026 LGS1920
@@ -78,9 +78,9 @@ export const TextEditorToolbar = ({id, fonts = false, color = true, align = true
     }, [])
 
     const alignmentDisabled = useMemo(() => {
-        const text = element?.text ?? ''
+        const text = element?.text.content ?? ''
         return text.split('\n').filter(line => line.trim() !== '').length <= 1
-    }, [element?.text])
+    }, [element?.text.content])
 
     useEffect(() => {
         if (alignmentDisabled && $element && $element.align !== 'left') {
@@ -114,7 +114,7 @@ export const TextEditorToolbar = ({id, fonts = false, color = true, align = true
 
     const handleColorChange = useCallback((e) => {
         if ($element) {
-            $element.color = e.target.value
+            $element.text.color = e.target.value
             scheduleUpdate()
         }
     }, [$element, scheduleUpdate])
@@ -147,7 +147,7 @@ export const TextEditorToolbar = ({id, fonts = false, color = true, align = true
             {color && (
                 <>
                     <SlColorPicker
-                        value={element?.color ?? '#000000'}
+                        value={element?.text.color ?? '#000000'}
                         onSlInput={handleColorChange}
                         size="small"
                         swatches={swatches}

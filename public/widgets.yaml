@@ -122,9 +122,6 @@ widgets:
       - "scene-widgets"
     configuration:
       default:
-        text: "Enter text here"
-        color: "#ffffff"
-        shadow: false
         background:
           show: false
           color: transparent
@@ -135,7 +132,18 @@ widgets:
           right: 5
           bottom: 5
           left: 5
-        opacity: 1
+        text:
+          content: "Enter text here"
+          color: "#ffffff"
+          shadow:
+            show: false
+            value: null
+          opacity: 1
+        separator:
+          show: true
+          color: "#ffffff"
+          opacity: 1
+
         size: 16
         fontFamily: "Roboto Condensed"
         lineHeight: 1.2
@@ -182,7 +190,10 @@ widgets:
           shadow: false
         text:
           color: "#ffffff"
-          shadow: false
+          shadow:
+            show: false
+            value: null
+          opacity: 1
         separatorColor: "#ffffff"
         date: false
         altitude: false

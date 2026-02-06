@@ -7,21 +7,24 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-27
- * Last modified: 2026-01-27
+ * Created on: 2026-02-06
+ * Last modified: 2026-02-06
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
+
 import { WIDGETS_EDITOR_DRAWER } from '@Core/constants'
 import { TextWidgetManager }     from '@Core/ui/text-metrics/TextWidgetManager'
-import classNames                                      from 'classnames'
-import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react'
-import { useSnapshot }                                 from 'valtio'
+import classNames      from 'classnames'
+import React, {
+    useState, useRef, useEffect, useMemo, useCallback,
+}                      from 'react'
+import { useSnapshot } from 'valtio'
 
 /**
  * Inline text editor with dynamic font loading.
- * Ensures style consistency between display and edit modes by overriding browser defaults.
+ * Handles the new text object structure: { content, color, opacity, ... }
  */
 export const EditableText = ({id, scale = 1}) => {
     const $configuration = lgs.settings.widgets['text-widget']?.configuration
@@ -55,7 +58,6 @@ export const EditableText = ({id, scale = 1}) => {
             if (!node) {
                 return false
             }
-            // Native inputs/textareas
             if (node instanceof HTMLInputElement || node instanceof HTMLTextAreaElement) {
                 return true
             }
@@ -63,7 +65,6 @@ export const EditableText = ({id, scale = 1}) => {
                 if (node.isContentEditable) {
                     return true
                 }
-                // Shoelace hosts or descendants
                 if (node.closest && node.closest('sl-textarea, sl-input, input, textarea')) {
                     return true
                 }
@@ -73,12 +74,10 @@ export const EditableText = ({id, scale = 1}) => {
 
         const handleGlobalKeyDown = (e) => {
             const isCurrent = drawers.entity === id
-            // If the widget editor drawer is open on this entity, never intercept typing
             if (drawers.open === WIDGETS_EDITOR_DRAWER && isCurrent) {
                 return
             }
 
-            // Skip if focus is inside any typing surface (shadow or light DOM)
             const path = e.composedPath ? e.composedPath() : [e.target]
             const active = document.activeElement
             if (isTypingNode(e.target) || isTypingNode(active) || path.some(isTypingNode)) {
@@ -102,6 +101,7 @@ export const EditableText = ({id, scale = 1}) => {
         if (!element?.fontFamily || element.fontFamily === 'System') {
             return
         }
+
         const family = element.fontFamily
         const fontId = `gfont-${family.replace(/\s+/g, '-').toLowerCase()}`
 
@@ -147,12 +147,13 @@ export const EditableText = ({id, scale = 1}) => {
     }
 
     const handleStartEdit = (e) => {
-        if (!element) {
+        if (!element?.text) {
             return
         }
         ensureProxyElement()
 
-        let clickIndex = element.text.length
+        const content = element.text.content ?? ''
+        let clickIndex = content.length
         try {
             if (document.caretRangeFromPoint) {
                 const range = document.caretRangeFromPoint(e.clientX, e.clientY)
@@ -162,17 +163,17 @@ export const EditableText = ({id, scale = 1}) => {
             }
         }
         catch (err) {
-            clickIndex = element.text.length
+            clickIndex = content.length
         }
 
         _cursor.current = clickIndex
-        setEditingText(element.text)
+        setEditingText(content)
         setIsEditing(true)
     }
 
     const handleFinishEdit = () => {
         const $target = ensureProxyElement()
-        $target.text = editingText
+        $target.text.content = editingText
         setIsEditing(false)
         if (_moveable?.current) {
             _moveable.current.updateRect()
@@ -187,22 +188,22 @@ export const EditableText = ({id, scale = 1}) => {
 
     const displayValue = isEditing
                          ? (editingText.replace(/\n$/, '\n '))
-                         : element.text
+                         : (element.text?.content ?? '')
 
     const cssVars = widgetManager.generateCSSVariables(element)
 
-    const fontSize = element.size ?? 16
+    const fontSize = element?.size ?? element.size ?? 16
     const lineHeight = parseFloat(element.lineHeight ?? 1)
     const lineHeightPx = fontSize * lineHeight
 
     const commonStyles = {
-        font:       'inherit', // Force break from browser default font stacks
+        font:       'inherit',
         fontSize:   'var(--lgs-tx-size)',
         fontFamily: 'var(--lgs-tx-font)',
         fontWeight: 'var(--lgs-tx-weight)',
         fontStyle:  'var(--lgs-tx-style)',
         textAlign:  'var(--lgs-tx-align)',
-        lineHeight: `calc(${element.size}px * var(--lgs-tx-lh))`,
+        lineHeight: `calc(${fontSize}px * var(--lgs-tx-lh))`,
         whiteSpace: 'pre',
         margin:     '0',
         padding:    `${Math.max(4, lineHeightPx * 0.25)}px`,
@@ -212,6 +213,7 @@ export const EditableText = ({id, scale = 1}) => {
         overflow:   'visible',
         outline:    'none',
         caretColor: 'var(--lgs-tx-color)',
+        opacity:    element.text?.opacity ?? 1,
     }
 
     useEffect(() => {
@@ -221,7 +223,7 @@ export const EditableText = ({id, scale = 1}) => {
             })
             return () => cancelAnimationFrame(frame)
         }
-    }, [editingText, isEditing, element.text, _moveable])
+    }, [editingText, isEditing, element.text?.content, _moveable])
 
     return (
         <div
@@ -230,7 +232,6 @@ export const EditableText = ({id, scale = 1}) => {
             style={{
                 ...cssVars,
                 display:         'inline-block',
-                //    position:        'relative',
                 minWidth: '1ch',
                 backgroundColor: 'var(--lgs-tx-bg-color)',
                 backdropFilter: 'blur(var(--lgs-tx-blur))',
@@ -238,7 +239,7 @@ export const EditableText = ({id, scale = 1}) => {
                 borderRadius:    'var(--lgs-tx-radius)',
                 boxShadow: 'var(--lgs-bg-elevation)',
                 overflow: 'hidden',
-                opacity:  element.opacity, // Opacity applied here so it covers both states
+                opacity: element.opacity ?? 1,
             }}
         >
             <div
@@ -261,23 +262,22 @@ export const EditableText = ({id, scale = 1}) => {
                     style={{
                         ...commonStyles,
                         position:   'absolute',
-                        top:     '0',
-                        left:    '0',
-                        width:   '100%',
-                        height:  '100%',
+                        top:    '0',
+                        left:   '0',
+                        width:  '100%',
+                        height: '100%',
                         background: 'transparent',
                         border:     'none',
                         resize:     'none',
                         overflow: 'hidden',
                         display:    'block',
-                        padding: `${Math.max(4, lineHeightPx * 0.25)}px`, // Match ghost div padding exactly
                     }}
                     value={editingText}
                     onInput={(e) => {
                         const val = e.target.value
                         setEditingText(val)
                         const $target = ensureProxyElement()
-                        $target.text = val
+                        $target.text.content = val
                     }}
                     onBlur={handleFinishEdit}
                     onKeyDown={(e) => {

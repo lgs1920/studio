@@ -7,19 +7,26 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-05
- * Last modified: 2026-02-05
+ * Created on: 2026-02-06
+ * Last modified: 2026-02-06
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { LGSScrollbars }                                                             from '@Components/MainUI/LGSScrollbars'
-import { getPreviewChartSize }                                                       from '@Components/MainUI/widgets/editor/previewUtils'
-import { WIDGET_RADIUS }                                                             from '@Core/constants'
+import {
+    BackgroundElement,
+}                                                                                    from '@Components/MainUI/widgets/editor/elements/BackgroundElement'
+import {
+    BorderElement,
+}                                                                                    from '@Components/MainUI/widgets/editor/elements/BorderElement'
+import {
+    getPreviewChartSize,
+}                                                                                    from '@Components/MainUI/widgets/editor/previewUtils'
 import { DISTANCE, ELEVATION, POINT, TIME }                                          from '@Core/ui/Profiler'
 import {
-    SlColorPicker, SlDivider, SlInput, SlOption, SlRange, SlSelect, SlSwitch,
+    SlColorPicker, SlDivider, SlRange, SlSwitch,
 }                                                                                    from '@shoelace-style/shoelace/dist/react'
 import { colord }                                                                    from 'colord'
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
@@ -27,12 +34,6 @@ import { useSnapshot }                                                          
 import { ProfileChart }                                                              from './ProfileChart'
 import './style.css'
 
-/**
- * Editor for the Profile Widget configuration using a plain Object
- * @param {Object} props
- * @param {string} props.entity - The unique ID of the widget
- * @returns {JSX.Element}
- */
 export const ProfileWidgetEditor = ({entity}) => {
     const $configuration = lgs.settings.widgets['profile-widget'].configuration
     const configuration = useSnapshot($configuration)
@@ -46,6 +47,34 @@ export const ProfileWidgetEditor = ({entity}) => {
     const [previewRenderReady, setPreviewRenderReady] = useState(false)
 
     const swatches = useMemo(() => lgs.settings.getSwatches.list.join(';'), [])
+
+    const getColor = useCallback((item, alpha = false) => {
+        if (!item) {
+            return 'transparent'
+        }
+        let colorStr = item.color
+        if (colorStr.startsWith('--')) {
+            colorStr = __.ui.css.getCSSVariable(colorStr)
+        }
+        const c = colord(colorStr)
+        return (alpha ? c.alpha(item.opacity ?? 1) : c).toRgbString()
+    }, [])
+
+    const updateValue = useCallback((path, value) => {
+        if (!$element) {
+            return
+        }
+        const keys = path.split('.')
+        let curr = $element
+        for (let i = 0; i < keys.length - 1; i++) {
+            if (!curr[keys[i]]) {
+                curr[keys[i]] = {}
+            }
+            curr = curr[keys[i]]
+        }
+        curr[keys[keys.length - 1]] = value
+    }, [$element])
+
     const previewBg = widgetStore.currentSnapshot?.image || null
     const previewStyle = useMemo(() => ({
         '--lgs-profile-preview-bg': previewBg ? `url(${previewBg})` : 'none',
@@ -124,44 +153,49 @@ export const ProfileWidgetEditor = ({entity}) => {
         }
     }, [realData])
 
-    const previewEndpoints = useMemo(() => {
-        const firstDataset = realData?.dataset?.[0]
-        const firstRow = firstDataset?.source?.[0]
-        const lastRow = firstDataset?.source?.[firstDataset?.source?.length - 1]
-        return {
-            start: {x: firstRow?.[0], y: firstRow?.[1]},
-            end:   {x: lastRow?.[0], y: lastRow?.[1]},
-        }
-    }, [realData])
-
     const previewData = useMemo(() => {
         const unitSystem = unitStore.current
         const {x: bX, y: bY} = previewBounds
         const rangeX = bX.max - bX.min
         const rangeY = bY.max - bY.min
+
+        // Génération de points de simulation pour une belle courbe
         const points = [
-            {distance: previewEndpoints.start.x ?? bX.min, elevation: previewEndpoints.start.y ?? bY.min},
-            {distance: bX.min + rangeX * 0.18, elevation: bY.max},
-            {distance: bX.min + rangeX * 0.36, elevation: bY.min + rangeY * 0.35},
-            {distance: bX.min + rangeX * 0.52, elevation: bY.max - rangeY * 0.15},
-            {distance: bX.min + rangeX * 0.72, elevation: bY.min + rangeY * 0.6},
-            {distance: previewEndpoints.end.x ?? bX.max, elevation: previewEndpoints.end.y ?? bY.max},
+            {dist: bX.min, elev: bY.min + rangeY * 0.2},
+            {dist: bX.min + rangeX * 0.2, elev: bY.max * 0.8},
+            {dist: bX.min + rangeX * 0.4, elev: bY.min + rangeY * 0.4},
+            {dist: bX.min + rangeX * 0.6, elev: bY.max},
+            {dist: bX.min + rangeX * 0.8, elev: bY.min + rangeY * 0.6},
+            {dist: bX.max, elev: bY.min + rangeY * 0.3},
         ]
+
         return {
-            legend:    {data: ['Sample']},
+            legend:    {data: ['Preview']},
             dataset:   [
                 {
-                    id:     'sample-track',
-                    source: points.map(p => ([p.distance, p.elevation, null, {altitude: p.elevation}, unitSystem])),
+                    id:     'preview-track',
+                    source: points.map(p => ([
+                        p.dist,
+                        p.elev,
+                        null,
+                        {altitude: p.elev},
+                        unitSystem,
+                    ])),
                 },
             ],
-            options:   [{color: previewColor, name: 'Sample', dataset: 'sample-track'}],
+            options:   [
+                {
+                    color:   previewColor,
+                    name:    'Preview',
+                    dataset: 'preview-track',
+                },
+            ],
             axisNames: {x: '', y: ''},
             dimensions: [DISTANCE, ELEVATION, TIME, POINT],
             unitSystem,
             previewBounds,
         }
-    }, [unitStore.current, previewColor, previewBounds, previewEndpoints])
+    }, [unitStore.current, previewColor, previewBounds])
 
     useEffect(() => {
         if (!$configuration.elements) {
@@ -171,33 +205,6 @@ export const ProfileWidgetEditor = ({entity}) => {
             $configuration.elements[entity] = {...($configuration.user ?? $configuration.default)}
         }
     }, [entity, $configuration])
-
-    const updateValue = useCallback((path, value) => {
-        if (!$element) {
-            return
-        }
-        const keys = path.split('.')
-        let curr = $element
-        for (let i = 0; i < keys.length - 1; i++) {
-            if (!curr[keys[i]]) {
-                curr[keys[i]] = {}
-            }
-            curr = curr[keys[i]]
-        }
-        curr[keys[keys.length - 1]] = value
-    }, [$element])
-
-    const getColor = useCallback((item, alpha = false) => {
-        if (!item) {
-            return 'transparent'
-        }
-        let colorStr = item.color
-        if (colorStr.startsWith('--')) {
-            colorStr = __.ui.css.getCSSVariable(colorStr)
-        }
-        const c = colord(colorStr)
-        return (alpha ? c.alpha(item.opacity ?? 1) : c).toRgbString()
-    }, [])
 
     if (!element) {
         return null
@@ -223,78 +230,13 @@ export const ProfileWidgetEditor = ({entity}) => {
                 <LGSScrollbars>
                     <div className="lgs-widget-editor-controls-wrapper">
 
-                        {/* Background */}
-                        <SlSwitch align-right size="x-small" checked={element.background.show ?? false}
-                                  onSlInput={(e) => updateValue('background.show', e.target.checked)}>
-                            <label>{'Background'}</label>
-                        </SlSwitch>
-
-                        {element.background.show && (
-                            <div className="drawer-horizontal-line three-columns">
-                                <div className="drawer-horizontal-element">
-                                    <SlColorPicker size="small" swatches={swatches}
-                                                   value={getColor(element.background)}
-                                                   onSlInput={(e) => updateValue('background.color', e.target.value)}/>
-                                </div>
-                                <div className="drawer-horizontal-element">
-                                    {'Blur'}&nbsp;
-                                    <SlSwitch align-right size="x-small" checked={element.background.blur ?? false}
-                                              onSlChange={(e) => updateValue('background.blur', e.target.checked)}/>
-                                </div>
-                                <div className="drawer-horizontal-element xlarge-element">
-                                    <SlRange label="Opacity" min="0.1" max="1" step="0.05" align-right tooltip="bottom"
-                                             value={element.background.opacity ?? 0.5}
-                                             onSlInput={(e) => updateValue('background.opacity', parseFloat(e.target.value))}/>
-                                </div>
-                            </div>
-                        )}
-
+                        <BackgroundElement element={element} swatches={swatches} getColor={getColor}
+                                           updateValue={updateValue}/>
+                        <SlDivider/>
+                        <BorderElement element={element} swatches={swatches} getColor={getColor}
+                                       updateValue={updateValue} showRadius={false}/>
                         <SlDivider/>
 
-                        {/* Border */}
-                        <SlSwitch align-right size="x-small" checked={element.border.show}
-                                  onSlInput={(e) => updateValue('border.show', e.target.checked)}>
-                            <span>{'Border'}</span>
-                        </SlSwitch>
-
-                        {element.border.show && (
-                            <>
-                                <div className="drawer-horizontal-line three-columns">
-                                    <div className="drawer-horizontal-element">
-                                        <SlColorPicker size="small" swatches={swatches}
-                                                       value={getColor(element.border)}
-                                                       onSlInput={(e) => updateValue('border.color', e.target.value)}/>
-                                    </div>
-                                    <div className="drawer-horizontal-element xlarge-element">
-                                        <SlRange label="Width" min="1" max="10" step="0.5" align-right tooltip="bottom"
-                                                 value={element.border.thickness ?? 1}
-                                                 onSlInput={(e) => updateValue('border.thickness', parseFloat(e.target.value))}/>
-                                    </div>
-                                    <div className="drawer-horizontal-element xlarge-element">
-                                        <SlRange label="Opacity" min="0.1" max="1" step="0.05" align-right
-                                                 tooltip="bottom"
-                                                 value={element.border.opacity ?? 0.5}
-                                                 onSlInput={(e) => updateValue('border.opacity', parseFloat(e.target.value))}/>
-                                    </div>
-                                </div>
-                                <div className="drawer-horizontal-line">
-                                    <div className="drawer-horizontal-element xlarge-element">
-                                        <SlSelect hoist size="small" label="Radius" align-right
-                                                  style={{marginLeft: 'auto', width: '10rem'}}
-                                                  value={element.border.radius ?? 'none'}
-                                                  onSlChange={(e) => updateValue('border.radius', e.target.value)}>
-                                            {[...WIDGET_RADIUS.entries()].map(([_key, _data]) => (
-                                                <SlOption key={_key} value={_key}>{_data.name}</SlOption>
-                                            ))}
-                                        </SlSelect>
-                                    </div>
-                                </div>
-                            </>
-                        )}
-
-                        <SlDivider/>
-
-                        {/* Axis Configuration */}
                         <div className="drawer-horizontal-line">
                             <div className="drawer-horizontal-element xlarge-element">{'Distance:'}</div>
                             <div className="drawer-horizontal-line three-columns">
@@ -349,7 +291,6 @@ export const ProfileWidgetEditor = ({entity}) => {
                             </div>
                         </div>
 
-                        {/* Main Axis Details */}
                         {(element.xAxis.main || element.yAxis.main || element.xAxis.labels || element.yAxis.labels) && (
                             <>
                                 <SlDivider/>
@@ -362,13 +303,13 @@ export const ProfileWidgetEditor = ({entity}) => {
                                     </div>
                                     <div className="drawer-horizontal-element xlarge-element">
                                         <SlRange label="Width" min="0.5" max="10" step="0.5" align-right
-                                                 tooltip="bottom"
+                                                 tooltip="top"
                                                  value={element.mainAxis.thickness ?? 1}
                                                  onSlInput={(e) => updateValue('mainAxis.thickness', parseFloat(e.target.value))}/>
                                     </div>
                                     <div className="drawer-horizontal-element xlarge-element">
                                         <SlRange label="Opacity" min="0.1" max="1" step="0.05" align-right
-                                                 tooltip="bottom"
+                                                 tooltip="top"
                                                  value={element.mainAxis.opacity ?? 0.8}
                                                  onSlInput={(e) => updateValue('mainAxis.opacity', parseFloat(e.target.value))}/>
                                     </div>
@@ -376,7 +317,6 @@ export const ProfileWidgetEditor = ({entity}) => {
                             </>
                         )}
 
-                        {/* Secondary Axis Details */}
                         {(element.xAxis.second || element.yAxis.second) && (
                             <>
                                 <SlDivider/>
@@ -389,13 +329,14 @@ export const ProfileWidgetEditor = ({entity}) => {
                                     </div>
                                     <div className="drawer-horizontal-element xlarge-element">
                                         <SlRange label="Width" min="0.5" max="10" step="0.5" align-right
-                                                 tooltip="bottom"
+                                                 tooltip="top"
                                                  value={element.secondAxis.thickness ?? 0.5}
                                                  onSlInput={(e) => updateValue('secondAxis.thickness', parseFloat(e.target.value))}/>
                                     </div>
                                     <div className="drawer-horizontal-element xlarge-element">
                                         <SlRange label="Opacity" min="0.1" max="1" step="0.05" align-right
-                                                 tooltip="bottom"
+                                                 tooltipFormatter={value => `${Math.floor(value * 100)}%`}
+                                                 tooltip="top"
                                                  value={element.secondAxis.opacity ?? 0.5}
                                                  onSlInput={(e) => updateValue('secondAxis.opacity', parseFloat(e.target.value))}/>
                                     </div>
