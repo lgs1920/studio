@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-06
- * Last modified: 2026-02-06
+ * Created on: 2026-02-07
+ * Last modified: 2026-02-07
  *
  *
  * Copyright © 2026 LGS1920
@@ -105,7 +105,7 @@ export const TextWidgetEditor = ({entity}) => {
 
     const bgSnapshot = widgetStore.currentSnapshot
     const swatches = useMemo(() => lgs.settings.getSwatches.list.join(';'), [])
-    const widgetManager = useMemo(() => TextWidgetManager.instance, [])
+    const textWidgetManager = useMemo(() => TextWidgetManager.instance, [])
 
     const [localRotation, setLocalRotation] = useState(0)
     const [isEditing, setIsEditing] = useState(false)
@@ -200,10 +200,10 @@ export const TextWidgetEditor = ({entity}) => {
             return {}
         }
         return {
-            ...widgetManager.generateCSSVariables(element, bgSnapshot?.image, WIDGET_SYSTEM_FONT_STACK),
+            ...textWidgetManager.generateCSSVariables(element, bgSnapshot?.image, WIDGET_SYSTEM_FONT_STACK),
             '--lgs-tx-transform': `rotate(${localRotation}deg)`,
         }
-    }, [bgSnapshot?.image, element, isTextWidget, localRotation, widgetManager])
+    }, [bgSnapshot?.image, element, isTextWidget, localRotation, textWidgetManager])
 
     if (!isTextWidget || !element) {
         return null

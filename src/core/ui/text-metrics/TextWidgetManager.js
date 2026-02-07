@@ -7,15 +7,14 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-06
- * Last modified: 2026-02-06
+ * Created on: 2026-02-07
+ * Last modified: 2026-02-07
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { WIDGET_RADIUS } from '@Core/constants'
-import { colord }        from 'colord'
 
 export class TextWidgetManager {
     static #instance
@@ -35,12 +34,7 @@ export class TextWidgetManager {
     }
 
     getColor(item, alpha = false) {
-        if (!item || !item.color) {
-            return 'transparent'
-        }
-        const raw = item.color.startsWith('--') ? __.ui.css.getCSSVariable(item.color) : item.color
-        const c = colord(raw)
-        return alpha ? c.alpha(item.opacity ?? 1).toRgbString() : c.toRgbString()
+        return __.ui.ui.resolveItemColor(item, alpha)
     }
 
     generateCSSVariables(element, bgSnapshot = null, systemStack = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif') {
