@@ -155,6 +155,7 @@ widgets:
           thickness: 1
           opacity: 1
           shadow: false
+          pill: false
       user:
       elements:
 
@@ -185,6 +186,7 @@ widgets:
           thickness: 1
           opacity: 1
           shadow: false
+          pill: false
         text:
           color: "#ffffff"
           shadow:
