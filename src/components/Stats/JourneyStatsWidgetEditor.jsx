@@ -14,19 +14,20 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { LGSScrollbars }                                            from '@Components/MainUI/LGSScrollbars'
+import { DurationInput } from '@Components/DurationInput'
+import { LGSScrollbars } from '@Components/MainUI/LGSScrollbars'
 import {
     BackgroundElement,
-}                                                                   from '@Components/MainUI/widgets/editor/elements/BackgroundElement'
+}                        from '@Components/MainUI/widgets/editor/elements/BackgroundElement'
 import {
     BorderElement,
-}                                                                   from '@Components/MainUI/widgets/editor/elements/BorderElement'
+}                        from '@Components/MainUI/widgets/editor/elements/BorderElement'
 import {
     RotationElement,
-}                                                                   from '@Components/MainUI/widgets/editor/elements/RotationElement'
+}                        from '@Components/MainUI/widgets/editor/elements/RotationElement'
 import {
     ShadowElement,
-}                                                                   from '@Components/MainUI/widgets/editor/elements/ShadowElement'
+}                        from '@Components/MainUI/widgets/editor/elements/ShadowElement'
 import {
     JourneyStats,
 } from '@Components/Stats/JourneyStats'
@@ -40,7 +41,7 @@ import {
     FA2SL,
 } from '@Utils/FA2SL'
 import {
-    DISTANCE_UNITS, ELEVATION_UNITS, PACE_UNITS, SPEED_UNITS,
+    DISTANCE_UNITS, ELEVATION_UNITS, PACE_UNITS, SPEED_UNITS, UnitUtils,
 } from '@Utils/UnitUtils'
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSnapshot }                                              from 'valtio'
@@ -159,7 +160,7 @@ export const JourneyStatsWidgetEditor = ({entity}) => {
     const previewStyle = useMemo(() => ({
         '--lgs-journey-stats-preview-bg': previewBg ? `url(${previewBg})` : 'none',
     }), [previewBg])
-
+    console.log(journeyMetrics)
     return (
         <div className="lgs-card lgs-widget-editor" key={`journey-stats-widget-editor-${entity}`}>
 
@@ -268,18 +269,27 @@ export const JourneyStatsWidgetEditor = ({entity}) => {
                                     <SlInput label={`Distance (${units.distance})`}
                                              size="small"
                                              type="number"
+                                             value={UnitUtils.formatMetric(journeyMetrics.metrics.distance, {units: units.distance}).value}
+
                                     />
                                 </div>
                                 <div className="drawer-horizontal-element">
                                     <SlInput label={`Elevation (${units.elevation})`}
                                              size="small"
                                              type="number"
+                                             value={UnitUtils.formatMetric(journeyMetrics.metrics.positive.elevation, {
+                                                 units:     units.elevation,
+                                                 precision: 0,
+                                             }).value}
+
                                     />
                                 </div>
                                 <div className="drawer-horizontal-element">
-                                    <SlInput label={`Duration`}
+                                    <DurationInput label={`Duration`}
                                              size="small"
                                              type="number"
+                                                   value={UnitUtils.formatMetric(journeyMetrics.metrics.duration, {}).value}
+
                                     />
                                 </div>
                             </div>
@@ -297,12 +307,22 @@ export const JourneyStatsWidgetEditor = ({entity}) => {
                                         <SlInput label={`Min`}
                                                  size="small"
                                                  type="number"
+                                                 value={UnitUtils.formatMetric(journeyMetrics.metrics.minHeight, {
+                                                     units:     units.elevation,
+                                                     precision: 0,
+                                                 }).value}
+
                                         />
                                     </div>
                                     <div className="drawer-horizontal-element">
                                         <SlInput label={`Max`}
                                                  size="small"
                                                  type="number"
+                                                 value={UnitUtils.formatMetric(journeyMetrics.metrics.maxHeight, {
+                                                     units:     units.elevation,
+                                                     precision: 0,
+                                                 }).value}
+
                                         />
                                     </div>
                                 </div>
@@ -321,12 +341,15 @@ export const JourneyStatsWidgetEditor = ({entity}) => {
                                             <SlInput label={`Average`}
                                                      size="small"
                                                      type="number"
+                                                     value={UnitUtils.formatMetric(journeyMetrics.metrics.averageSpeed, {units: units.speed}).value}
+
                                             />
                                         </div>
                                         <div className="drawer-horizontal-element">
                                             <SlInput label={`Max`}
                                                      size="small"
                                                      type="number"
+                                                     value={UnitUtils.formatMetric(journeyMetrics.metrics.maxSpeed, {units: units.speed}).value}
                                             />
                                         </div>
                                     </div>
@@ -336,12 +359,14 @@ export const JourneyStatsWidgetEditor = ({entity}) => {
                                             <SlInput label={`Average`}
                                                      size="small"
                                                      type="number"
+                                                     value={UnitUtils.formatMetric(journeyMetrics.metrics.averagePace, {units: units.pace}).value}
                                             />
                                         </div>
                                         <div className="drawer-horizontal-element">
                                             <SlInput label={`Max`}
                                                      size="small"
                                                      type="number"
+                                                     value={UnitUtils.formatMetric(journeyMetrics.metrics.minPace, {units: units.pace}).value}
                                             />
                                         </div>
                                     </div>
@@ -351,7 +376,6 @@ export const JourneyStatsWidgetEditor = ({entity}) => {
                     </LGSScrollbars>
                 </SlTabPanel>
             </SlTabGroup>
-
         </div>
 
     )

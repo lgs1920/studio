@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-02-08
+ * Last modified: 2026-02-08
  *
  *
  * Copyright © 2026 LGS1920
@@ -169,6 +169,51 @@ export class UnitUtils {
     }
 
     static convertFeetToMeters = feet => feet / FOOT
+    /**
+     * Convert and format a physical metric (distance, elevation, speed)
+     * according to the current LGS unit system.
+     */
+    static formatMetric = (value, {
+        units: unitsArgs = ['', ''],
+        format = '%\' .1f',
+        precision,
+        callback,
+    } = {}) => {
+        const unitsList = units
+
+        let toShow = (typeof value === 'string') ? value : (Number(value) ?? null)
+
+        let unitsValues = Array.isArray(unitsArgs)
+                          ? (unitsArgs.length === 1 ? [unitsArgs[0], unitsArgs[0]] : unitsArgs)
+                          : [unitsArgs, unitsArgs]
+
+        // Direct access to store (non-reactive)
+        const currentSystem = lgs.settings.unitSystem.current
+        const unitText = unitsValues[currentSystem] ?? ''
+
+        // 1. Unit conversion logic
+        if (typeof toShow === 'number' && unitsList.includes(unitsValues[0])) {
+            toShow = __.convert(toShow).to(unitText)
+        }
+
+        // 2. Formatting logic
+        if (toShow !== null && callback) {
+            toShow = callback(toShow)
+        }
+        else if (typeof toShow === 'number') {
+            const formatStr = (precision !== null && precision !== undefined)
+                              ? `%' .${precision}f`
+                              : format
+            toShow = sprintf(formatStr, toShow)
+        }
+
+        return {
+            value: toShow,
+            unit:  unitText,
+            full:  `${toShow}${unitText ? ' ' + unitText : ''}`,
+        }
+    }
+
 }
 
 /** Units */
