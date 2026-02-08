@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-06
- * Last modified: 2026-02-06
+ * Created on: 2026-02-08
+ * Last modified: 2026-02-08
  *
  *
  * Copyright © 2026 LGS1920
@@ -33,30 +33,27 @@
 }
 
 
-.track-data-widget {
+.journey-stats-widget {
     display: flex;
     flex-direction: column;
     padding: var(--lgs-gutter);
     color: var(--track-widget-text-color);
     border: var(--track-widget-border) solid var(--track-widget-border);
-    border-radius: var(--track-widget-border-radius);
-    background-color: var(--track-widget-bg-color);
     gap: var(--lgs-gutter-s);
-    backdrop-filter: var(--track-widget-blur);
 }
 
-.track-data-widget sl-divider {
+.journey-stats-widget sl-divider {
     --color: var(--track-widget-separator-color);
 }
 
-.track-data-row {
+.journey-stats-row {
     display: flex;
     justify-content: space-between;
     padding: 0 var(--lgs-gutter);
     gap: calc(2 * var(--lgs-gutter));
 }
 
-.track-data-summary-item {
+.journey-stats-summary-item {
     line-height: 1;
     display: flex;
     flex-direction: column;
@@ -72,12 +69,12 @@
     --data: calc(4 * var(--lgs-gutter));
 }
 
-.track-data-text,
-.track-data-label,
-.track-data-value,
-.track-data-val-huge,
-.track-data-label-bold,
-.track-data-unit-sub {
+.journey-stats-text,
+.journey-stats-label,
+.journey-stats-value,
+.journey-stats-val-huge,
+.journey-stats-label-bold,
+.journey-stats-unit-sub {
     font-family: var(--track-widget-font);
     line-height: 1;
     display: flex;
@@ -87,22 +84,22 @@
     gap: var(--lgs-gutter-xs);
 }
 
-.track-data-label,
-.track-data-label-bold,
-.track-data-unit-sub,
-.track-data-date,
-.track-data-value .lgs-nvu-unit {
+.journey-stats-label,
+.journey-stats-label-bold,
+.journey-stats-unit-sub,
+.journey-stats-date,
+.journey-stats-value .lgs-nvu-unit {
     font-size: 12px;
     font-weight: var(--weight-label);
 }
 
-.track-data-value,
-.track-data-val-huge,
-.track-data-text {
+.journey-stats-value,
+.journey-stats-val-huge,
+.journey-stats-text {
     font-weight: var(--weight-data)
 }
 
-.track-data-label {
+.journey-stats-label {
     font-size: 16px;
     display: flex;
     flex: 0 0 calc((100% - var(--data)) / 2.5);
@@ -110,10 +107,11 @@
     text-transform: uppercase;
 }
 
-.track-data-label span {
+.journey-stats-label span {
     font-size: 12px;
 }
-.track-data-date {
+
+.journey-stats-date {
     font-family: var(--track-widget-font);
     font-size: 16px;
     display: flex;
@@ -122,27 +120,27 @@
     gap: 2rem;
 }
 
-.track-data-value {
+.journey-stats-value {
     font-size: 16px;
     --margin: 1.5rem
 }
 
-.track-data-value sl-icon {
+.journey-stats-value sl-icon {
     font-size: 16px;
     align-self: center;
     width: var(--margin);
 }
 
-.track-data-value:not(:has(sl-icon)) {
+.journey-stats-value:not(:has(sl-icon)) {
     padding-left: calc(var(--margin) + 0.5rem);
 }
 
-.track-data-val-huge {
+.journey-stats-val-huge {
     font-size: 48px;
     letter-spacing: -0.04em
 }
 
-.track-data-label-bold {
+.journey-stats-label-bold {
     font-size: 16px;
     justify-content: center;
     text-transform: uppercase;
@@ -157,11 +155,30 @@
 }
 
 .journey-stats-widget-preview-chart {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 250px;
     background: var(--lgs-journey-stats-preview-bg);
     background-size: cover;
+    gap: var(--lgs-gutter-xs);
 }
 
-.journey-stats-widget-preview-chart .track-data-widget {
+.journey-stats-widget-preview-chart {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 250px;
+    background: var(--lgs-journey-stats-preview-bg);
+    background-size: cover;
+    gap: var(--lgs-gutter-xs);
+}
+
+.journey-stats-widget-preview-chart .journey-stats-widget {
+    transform-origin: center center;
+}
+
+.journey-stats-widget-preview-chart .journey-stats-widget {
     transform: scale(0.7)
 }
 

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-06
- * Last modified: 2026-02-06
+ * Created on: 2026-02-08
+ * Last modified: 2026-02-08
  *
  *
  * Copyright © 2026 LGS1920
@@ -66,8 +66,14 @@ export const JourneyStatsWidgetEditor = ({entity}) => {
 
     const $configuration = lgs.settings.widgets['journey-stats-widget'].configuration
     const configuration = useSnapshot($configuration)
-    const element = (configuration?.elements?.[entity] ?? configuration.user ?? configuration.default)
     const swatches = useMemo(() => lgs.settings.getSwatches.list.join(';'), [])
+    /**
+     * Stabilize the element reference from the snapshot
+     * This ensures that when configuration changes, element is updated
+     */
+    const element = useMemo(() => {
+        return configuration.elements?.[entity] ?? configuration.user ?? configuration.default
+    }, [configuration, entity])
 
     const journeyMetrics = useMemo(() => {
         if (!lgs.theJourney?.metrics) {
@@ -76,25 +82,33 @@ export const JourneyStatsWidgetEditor = ({entity}) => {
         return {...lgs.theJourney.getMetrics()}
     }, [lgs.theJourney, unitSystem])
 
+
+    const units = useMemo(() => ({
+        elevation: ELEVATION_UNITS[unitSystem],
+        distance:  DISTANCE_UNITS[unitSystem],
+        pace:      PACE_UNITS[unitSystem],
+        speed:     SPEED_UNITS[unitSystem],
+    }), [unitSystem])
+
     const updateValue = useCallback((path, val) => {
         if (!$configuration.elements) {
             $configuration.elements = {}
         }
+
         if (!$configuration.elements[entity]) {
+            // On utilise la valeur actuelle de l'élément comme base
             $configuration.elements[entity] = JSON.parse(JSON.stringify(element))
         }
 
         const _keys = path.split('.')
         let _curr = $configuration.elements[entity]
-        let _source = element
 
         for (let i = 0; i < _keys.length - 1; i++) {
             const _key = _keys[i]
             if (!_curr[_key] || typeof _curr[_key] !== 'object') {
-                _curr[_key] = _source?.[_key] ? JSON.parse(JSON.stringify(_source[_key])) : {}
+                _curr[_key] = {}
             }
             _curr = _curr[_key]
-            _source = _source?.[_key]
         }
 
         _curr[_keys[_keys.length - 1]] = val
@@ -103,13 +117,6 @@ export const JourneyStatsWidgetEditor = ({entity}) => {
             _moveable.current.updateRect()
         }
     }, [$configuration, element, entity, _moveable])
-
-    const units = useMemo(() => ({
-        elevation: ELEVATION_UNITS[unitSystem],
-        distance:  DISTANCE_UNITS[unitSystem],
-        pace:      PACE_UNITS[unitSystem],
-        speed:     SPEED_UNITS[unitSystem],
-    }), [unitSystem])
 
     /**
      * Sync local rotation on activeId change or store rotation update
@@ -159,11 +166,11 @@ export const JourneyStatsWidgetEditor = ({entity}) => {
             <div className="journey-stats-widget-preview">
                 <div className="journey-stats-widget-preview-surface" ref={_previewer}>
                     <div className="journey-stats-widget-preview-chart" style={previewStyle}>
-                        <JourneyStats metrics={journeyMetrics?.metrics} units={units} preview
-                                      style={{
-                                          transform:       `scale(0.7) rotate(${localRotation}deg)`,
-                                          transformOrigin: 'center center',
-                                      }}/>
+                        <JourneyStats metrics={journeyMetrics?.metrics}
+                                      id={entity}
+                                      units={units}
+                                      preview
+                                      style={{transform: `scale(0.7) rotate(${localRotation}deg)`}}/>
                     </div>
                 </div>
             </div>
@@ -191,15 +198,15 @@ export const JourneyStatsWidgetEditor = ({entity}) => {
                                 <div className="drawer-horizontal-line three-columns">
                                     <div className="drawer-horizontal-element">
                                         <SlColorPicker size="small" swatches={swatches}
-                                                       value={getColor(element.border)}
-                                                       onSlInput={(e) => updateValue('separator.color', e.target.value)}/>
+                                                       value={element.text.color}
+                                                       onSlInput={(e) => updateValue('text.color', e.target.value)}/>
                                     </div>
                                     <div className="drawer-horizontal-element xlarge-element"></div>
                                     <div className="drawer-horizontal-element xlarge-element">
                                         <SlRange label="Opacity" min="0" max="1" step="0.05" align-right tooltip="top"
                                                  tooltipFormatter={value => `${Math.floor(value * 100)}%`}
-                                                 value={element.border.opacity ?? 1}
-                                                 onSlInput={(e) => updateValue('separator.opacity', parseFloat(e.target.value))}/>
+                                                 value={element.text.opacity ?? 1}
+                                                 onSlInput={(e) => updateValue('text.opacity', parseFloat(e.target.value))}/>
                                     </div>
                                 </div>
                             </div>
@@ -220,26 +227,28 @@ export const JourneyStatsWidgetEditor = ({entity}) => {
                                 <div className="drawer-horizontal-line three-columns">
                                     <div className="drawer-horizontal-element">
                                         <SlColorPicker size="small" swatches={swatches}
-                                                       value={getColor(element.border)}
+                                                       value={element.separator.color}
                                                        onSlInput={(e) => updateValue('separator.color', e.target.value)}/>
                                     </div>
                                     <div className="drawer-horizontal-element xlarge-element"></div>
                                     <div className="drawer-horizontal-element xlarge-element">
                                         <SlRange label="Opacity" min="0" max="1" step="0.05" align-right tooltip="top"
                                                  tooltipFormatter={value => `${Math.floor(value * 100)}%`}
-                                                 value={element.border.opacity ?? 1}
+                                                 value={element.separator.opacity ?? 1}
                                                  onSlInput={(e) => updateValue('separator.opacity', parseFloat(e.target.value))}/>
                                     </div>
                                 </div>
                             )}
 
                             <SlDivider/>
-                            <BackgroundElement element={element} swatches={swatches} getColor={getColor}
-                                               updateValue={updateValue}/>
-                            <SlDivider/>
                             <BorderElement element={element} swatches={swatches} getColor={getColor}
                                            updateValue={updateValue}
                                            showPill={false}/>
+
+                            <SlDivider/>
+                            <BackgroundElement element={element} swatches={swatches} getColor={getColor}
+                                               updateValue={updateValue}/>
+
                         </div>
                     </LGSScrollbars>
                 </SlTabPanel>
