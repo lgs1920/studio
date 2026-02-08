@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-06
- * Last modified: 2026-02-06
+ * Created on: 2026-02-08
+ * Last modified: 2026-02-08
  *
  *
  * Copyright © 2026 LGS1920
@@ -541,7 +541,17 @@ body {
     gap: var(--lgs-gutter-s);
 }
 
+.lgs-widget-preview {
+    height: 250px;
+    padding: var(--lgs-gutter-xs);
+    border-radius: var(--sl-border-radius-medium);
+    background-color: var(--sl-panel-background-color);
+}
 
+.lgs-widget-preview > div {
+    overflow: hidden;
+    height: 250px;
+}
 /*******************************************************************************
  * Skeleton
  ******************************************************************************/

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-07
- * Last modified: 2026-02-07
+ * Created on: 2026-02-08
+ * Last modified: 2026-02-08
  *
  *
  * Copyright © 2026 LGS1920
@@ -55,7 +55,7 @@ const OptimizedTextArea = memo(({value, onInput, dynamicVars, onFocus, onBlur, i
     }
 
     return (
-        <div style={style} className="text-widget-preview-container">
+        <div style={style} className="text-widget-preview-container lgs-widget-preview ">
             <SlTextarea
                 className="text-widget-preview-area"
                 size="small"

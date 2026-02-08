@@ -163,7 +163,7 @@ export const JourneyStatsWidgetEditor = ({entity}) => {
     return (
         <div className="lgs-card lgs-widget-editor" key={`journey-stats-widget-editor-${entity}`}>
 
-            <div className="journey-stats-widget-preview">
+            <div className="lgs-widget-preview ">
                 <div className="journey-stats-widget-preview-surface" ref={_previewer}>
                     <div className="journey-stats-widget-preview-chart" style={previewStyle}>
                         <JourneyStats metrics={journeyMetrics?.metrics}
