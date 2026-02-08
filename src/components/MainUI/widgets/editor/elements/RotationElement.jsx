@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-06
- * Last modified: 2026-02-06
+ * Created on: 2026-02-08
+ * Last modified: 2026-02-08
  *
  *
  * Copyright © 2026 LGS1920
@@ -37,7 +37,6 @@ export const RotationElement = ({
                                 }) => {
 
     const isRotated = localRotation !== 0
-    // On inverse la valeur pour l'affichage utilisateur (positif = horaire)
     const displayValue = -localRotation
 
     return (
