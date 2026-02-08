@@ -7,26 +7,17 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-30
- * Last modified: 2026-01-30
+ * Created on: 2026-02-08
+ * Last modified: 2026-02-08
  *
  *
  * Copyright © 2026 LGS1920
- ******************************************************************************/
-
-/*******************************************************************************
- *
- * This file is part of the LGS1920/studio project.
- *
- * File: ProfileChart.jsx
- *
  ******************************************************************************/
 
 import './style.css'
 import { CHART_ELEVATION_VS_DISTANCE, DISTANCE, ELEVATION } from '@Core/ui/Profiler'
 import { INTERNATIONAL } from '@Utils/UnitUtils'
 import { colord }        from 'colord'
-import convert           from 'convert'
 import ReactECharts                                         from 'echarts-for-react'
 import * as echarts                                         from 'echarts/core'
 import React, { useCallback, useEffect, useMemo, useRef } from 'react'
@@ -40,6 +31,7 @@ import { usePreviewChartResize } from '@Components/MainUI/widgets/editor/usePrev
  * @param {string} props.id - Entity ID for configuration lookup
  * @param {number|string} props.width
  * @param {number|string} props.height
+ * @param {boolean} props.preview
  * @returns {React.JSX.Element}
  */
 export const ProfileChart = ({data, id, width, height, preview = false}) => {
@@ -74,6 +66,9 @@ export const ProfileChart = ({data, id, width, height, preview = false}) => {
         elevation: unitSystem === INTERNATIONAL ? 'm' : 'ft',
     }), [unitSystem])
 
+    /**
+     * Resolve color from string or CSS variable
+     */
     const setColor = useCallback((item) => {
         if (!item) {
             return 'transparent'
@@ -84,6 +79,9 @@ export const ProfileChart = ({data, id, width, height, preview = false}) => {
         return colord(item.color).alpha(item.opacity ?? 1).toRgbString()
     }, [])
 
+    /**
+     * Generate common grid and axis styles based on widget config
+     */
     const getStyleOptions = useCallback((config) => {
         const mainColor = setColor(config.mainAxis)
         const mainWidth = config.mainAxis.thickness
@@ -175,13 +173,28 @@ export const ProfileChart = ({data, id, width, height, preview = false}) => {
         if (!data?.dataset) {
             return []
         }
-
-        // Data is already converted by prepareData() in Profiler.js
         return data.dataset
     }, [data])
 
-    const buildSerie = useCallback((params) => {
+    /**
+     * Build ECharts series object with optional gradient
+     */
+    const buildSerie = useCallback((params, config) => {
         const rgbColor = __.ui.ui.hexToRGBA(params.color, 'rgb')
+
+        // Handle optional gradient show/hide and custom color
+        const showGradient = config.gradient?.show ?? true
+        const gradientColor = config.gradient?.color
+                              ? __.ui.ui.hexToRGBA(config.gradient.color, 'rgb')
+                              : rgbColor
+
+        const areaStyle = showGradient ? {
+            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                {offset: 0.2, color: __.ui.ui.RGB2RGBA(gradientColor, 0.5)},
+                {offset: 1, color: __.ui.ui.RGB2RGBA(gradientColor, 0.0)},
+            ]),
+        } : undefined
+
         return {
             name:       params.name,
             type:       'line',
@@ -191,12 +204,7 @@ export const ProfileChart = ({data, id, width, height, preview = false}) => {
             showSymbol: false,
             emphasis:   {disabled: true},
             lineStyle:  {color: rgbColor, width: 2, type: 'solid', opacity: 1},
-            areaStyle:  {
-                color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                    {offset: 0.2, color: __.ui.ui.RGB2RGBA(rgbColor, 0.5)},
-                    {offset: 1, color: __.ui.ui.RGB2RGBA(rgbColor, 0.0)},
-                ]),
-            },
+            areaStyle: areaStyle,
             dimensions: params.dimensions,
         }
     }, [])
@@ -211,7 +219,7 @@ export const ProfileChart = ({data, id, width, height, preview = false}) => {
                                                                      dataset:    data.options[index].dataset,
                                                                      color:      data.options[index].color,
                                                                      dimensions: data.dimensions,
-                                                                 }))
+                                                                 }, element))
 
         const distances = data.dataset.map(ds => ({
             start: ds.source[0][0],
@@ -219,8 +227,8 @@ export const ProfileChart = ({data, id, width, height, preview = false}) => {
         }))
 
         const styles = getStyleOptions(element)
-        const yFloor = unitSystem === INTERNATIONAL ? 100 : 300 // Adapt floor based on meters vs feet
-        const xCeiling = unitSystem === INTERNATIONAL ? 1 : 1 // Round to next km or mile
+        const yFloor = unitSystem === INTERNATIONAL ? 100 : 300
+        const xCeiling = 1
 
         return {
             ...styles,
@@ -323,7 +331,7 @@ export const ProfileChart = ({data, id, width, height, preview = false}) => {
 
         const chart = _instance.current.getEchartsInstance()
         const yFloor = unitSystem === INTERNATIONAL ? 100 : 300
-        const xCeiling = unitSystem === INTERNATIONAL ? 1 : 1
+        const xCeiling = 1
 
         chart.setOption({
                             dataset: processedDataset,

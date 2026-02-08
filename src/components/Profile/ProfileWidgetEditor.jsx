@@ -14,6 +14,14 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: ProfileWidgetEditor.jsx
+ *
+ ******************************************************************************/
+
 import { LGSScrollbars }                                                             from '@Components/MainUI/LGSScrollbars'
 import {
     BackgroundElement,
@@ -26,11 +34,15 @@ import {
 }                                                                                    from '@Components/MainUI/widgets/editor/previewUtils'
 import { DISTANCE, ELEVATION, POINT, TIME }                                          from '@Core/ui/Profiler'
 import {
-    SlColorPicker, SlDivider, SlRange, SlSwitch,
-}                                                                                    from '@shoelace-style/shoelace/dist/react'
+    SlColorPicker, SlDivider, SlRange, SlSwitch, SlIconButton,
+}                from '@shoelace-style/shoelace/dist/react'
+import { FA2SL } from '@Utils/FA2SL'
 import { colord }                                                                    from 'colord'
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useSnapshot }                                                               from 'valtio'
+import {
+    faArrowRotateLeft,
+}                from '@fortawesome/pro-regular-svg-icons'
 import { ProfileChart }                                                              from './ProfileChart'
 import './style.css'
 
@@ -52,7 +64,7 @@ export const ProfileWidgetEditor = ({entity}) => {
         if (!item) {
             return 'transparent'
         }
-        let colorStr = item.color
+        let colorStr = item?.color ?? '#ffffff'
         if (colorStr.startsWith('--')) {
             colorStr = __.ui.css.getCSSVariable(colorStr)
         }
@@ -159,7 +171,6 @@ export const ProfileWidgetEditor = ({entity}) => {
         const rangeX = bX.max - bX.min
         const rangeY = bY.max - bY.min
 
-        // Génération de points de simulation pour une belle courbe
         const points = [
             {dist: bX.min, elev: bY.min + rangeY * 0.2},
             {dist: bX.min + rangeX * 0.2, elev: bY.max * 0.8},
@@ -290,6 +301,40 @@ export const ProfileWidgetEditor = ({entity}) => {
                                 </div>
                             </div>
                         </div>
+
+                        <SlDivider/>
+                        <SlSwitch align-right size="x-small" checked={element.gradient?.show ?? false}
+                                  onSlInput={(e) => updateValue('gradient.show', e.target.checked)}>
+                            <span>{'Gradient'}</span>
+                        </SlSwitch>
+
+
+                        {element.gradient?.show && (
+                            <div className="drawer-horizontal-line three-columns">
+                                <div className="drawer-horizontal-element">
+                                    <div style={{
+                                        display:    'flex',
+                                        alignItems: 'center',
+                                        gap:        'var(--sl-spacing-x-small)',
+                                    }}>
+                                        <SlColorPicker
+                                            size="small"
+                                            swatches={swatches}
+                                            value={element.gradient?.color ? getColor(element.gradient) : previewColor}
+                                            onSlInput={(e) => updateValue('gradient.color', e.target.value)}
+                                        />
+                                        {element.gradient?.color && (
+                                            <SlIconButton className="reset-profile-widget-color"
+                                                          library="fa"
+                                                          name={FA2SL.set(faArrowRotateLeft)}
+                                                          onClick={() => updateValue('gradient.color', null)}
+                                            />
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
 
                         {(element.xAxis.main || element.yAxis.main || element.xAxis.labels || element.yAxis.labels) && (
                             <>
