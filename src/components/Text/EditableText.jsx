@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-06
- * Last modified: 2026-02-06
+ * Created on: 2026-02-09
+ * Last modified: 2026-02-09
  *
  *
  * Copyright © 2026 LGS1920
@@ -126,7 +126,6 @@ export const EditableText = ({id, scale = 1}) => {
         if (_moveable?.current) {
             _moveable.current.updateRect()
         }
-
     }, [element?.fontFamily])
 
     useEffect(() => {
@@ -136,6 +135,9 @@ export const EditableText = ({id, scale = 1}) => {
         }
     }, [isEditing])
 
+    /**
+     * Ensures the proxy element and its text object exist with correct types
+     */
     const ensureProxyElement = () => {
         if (!$configuration.elements) {
             $configuration.elements = {}
@@ -143,16 +145,29 @@ export const EditableText = ({id, scale = 1}) => {
         if (!$configuration.elements[id]) {
             $configuration.elements[id] = JSON.parse(JSON.stringify(element))
         }
-        return $configuration.elements[id]
+
+        const $target = $configuration.elements[id]
+
+        // Fix: If 'text' is a string or invalid, convert it to the expected object structure
+        if (typeof $target.text !== 'object' || $target.text === null) {
+            const existingContent = typeof $target.text === 'string' ? $target.text : ''
+            $target.text = {
+                content: existingContent,
+                color:   element.text?.color ?? {r: 255, g: 255, b: 255, a: 1},
+                opacity: element.text?.opacity ?? 1,
+            }
+        }
+
+        return $target
     }
 
     const handleStartEdit = (e) => {
-        if (!element?.text) {
+        if (!element) {
             return
         }
         ensureProxyElement()
 
-        const content = element.text.content ?? ''
+        const content = element.text?.content ?? (typeof element.text === 'string' ? element.text : '')
         let clickIndex = content.length
         try {
             if (document.caretRangeFromPoint) {
@@ -188,11 +203,11 @@ export const EditableText = ({id, scale = 1}) => {
 
     const displayValue = isEditing
                          ? (editingText.replace(/\n$/, '\n '))
-                         : (element.text?.content ?? '')
+                         : (element.text?.content ?? (typeof element.text === 'string' ? element.text : ''))
 
     const cssVars = widgetManager.generateCSSVariables(element)
 
-    const fontSize = element?.size ?? element.size ?? 16
+    const fontSize = element?.size ?? 16
     const lineHeight = parseFloat(element.lineHeight ?? 1)
     const lineHeightPx = fontSize * lineHeight
 

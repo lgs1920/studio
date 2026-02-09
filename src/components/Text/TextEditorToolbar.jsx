@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-06
- * Last modified: 2026-02-06
+ * Created on: 2026-02-09
+ * Last modified: 2026-02-09
  *
  *
  * Copyright © 2026 LGS1920
@@ -147,7 +147,7 @@ export const TextEditorToolbar = ({id, fonts = false, color = true, align = true
             {color && (
                 <>
                     <SlColorPicker
-                        value={element?.text.color ?? red}
+                        value={element?.text.color ?? 'white'}
                         onSlInput={handleColorChange}
                         size="small"
                         swatches={swatches}

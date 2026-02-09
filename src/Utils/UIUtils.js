@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-05
- * Last modified: 2026-02-05
+ * Created on: 2026-02-09
+ * Last modified: 2026-02-09
  *
  *
  * Copyright © 2026 LGS1920
@@ -228,8 +228,8 @@ export class UIUtils {
      * @returns {string} RGBA or RGB string, or transparent if invalid.
      */
     static resolveItemColor(item, includeAlpha = false) {
-        if (!item || !item.color) {
-            return 'transparent'
+        if (!item || !item.color || typeof item.color !== 'string') {
+            return '#ffffff'
         }
 
         // Resolve CSS variable if the color string starts with the double-dash prefix

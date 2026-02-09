@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-08
- * Last modified: 2026-02-08
+ * Created on: 2026-02-09
+ * Last modified: 2026-02-09
  *
  *
  * Copyright © 2026 LGS1920
@@ -214,7 +214,7 @@ export const TextWidgetEditor = ({entity}) => {
             <OptimizedTextArea
                 value={element.text.content}
                 onInput={(e) => {
-                    updateValue('text', e.target.value)
+                    updateValue('text.content', e.target.value)
                     scheduleMoveableUpdate()
                     if (isEditing) {
                         resetRotationTimer()
