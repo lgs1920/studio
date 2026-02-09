@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-08
- * Last modified: 2026-02-08
+ * Created on: 2026-02-09
+ * Last modified: 2026-02-09
  *
  *
  * Copyright © 2026 LGS1920
@@ -33,22 +33,6 @@ import React, { memo, useEffect, useMemo } from 'react'
 import { useSnapshot }                     from 'valtio'
 
 /**
- * Custom duration formatter for Days, Hours, Minutes.
- */
-const formatDuration = (seconds) => {
-    if (!Number.isFinite(seconds) || seconds < 0) {
-        return '--:--'
-    }
-    const totalMinutes = Math.floor(seconds / 60)
-    const days = Math.floor(totalMinutes / (24 * 60))
-    const hours = Math.floor((totalMinutes - (days * 24 * 60)) / 60)
-    const mins = totalMinutes % 60
-    const hh = String(hours).padStart(2, '0')
-    const mm = String(mins).padStart(2, '0')
-    return days > 0 ? `${days}d ${hh}:${mm}` : `${hh}:${mm}`
-}
-
-/**
  * Internal component to handle the statistical display logic.
  * Isolated to prevent parent Widget re-mounts on data updates.
  */
@@ -57,16 +41,49 @@ export const JourneyStats = memo(({id, metrics, units, style = {}}) => {
     const configuration = useSnapshot($configuration)
 
     /**
+     * Localization detection
+     */
+    const $unitSystem = lgs.settings.unitSystem
+    const unitSystem = useSnapshot($unitSystem).current
+    const isImperial = unitSystem === 'imperial'
+
+    /**
      * Resolve the specific element configuration for this instance
      */
-
     const element = useMemo(() => {
-        // Si l'ID est fourni, on cherche dans elements
         if (id && configuration.elements?.[id]) {
             return configuration.elements[id]
         }
         return configuration.user ?? configuration.default
     }, [id, configuration])
+
+    /**
+     * Formats duration based on localization
+     * Metric: 123<span>h</span>45<span>m</span> | Imperial: 123:45
+     */
+    const formattedDuration = useMemo(() => {
+        const seconds = metrics?.duration
+        if (!Number.isFinite(seconds) || seconds < 0) {
+            return '--:--'
+        }
+
+        const totalMinutes = Math.floor(seconds / 60)
+        const hours = Math.floor(totalMinutes / 60)
+        const mins = totalMinutes % 60
+
+        const hh = String(hours).padStart(2, '0')
+        const mm = String(mins).padStart(2, '0')
+
+        if (isImperial) {
+            return `${hh}:${mm}`
+        }
+
+        return (
+            <>
+                {hh}<span className="duration-hour">h</span>{mm}<span className="duration-minute">m</span>
+            </>
+        )
+    }, [metrics?.duration, isImperial])
 
     const hasElevation = metrics?.negative?.elevation < 0 && metrics?.positive?.elevation > 0
     const hasDuration = metrics?.duration
@@ -90,8 +107,6 @@ export const JourneyStats = memo(({id, metrics, units, style = {}}) => {
 
     /**
      * Compute styles dynamically based on snapshot values
-     * We include element.text in the dependencies to force recalculation
-     * when the color/opacity changes in the store.
      */
     const mainStyle = useMemo(() => {
         return {
@@ -110,14 +125,14 @@ export const JourneyStats = memo(({id, metrics, units, style = {}}) => {
             borderRadius:   element.border?.show ? WIDGET_RADIUS.get(element.border.radius ?? 'none')?.value : '0',
 
         }
-    }, [style, element.text])
+    }, [style, element.text, element.border, element.background])
 
     const separatorStyle = useMemo(() => {
         return {
             '--color': __.ui.ui.resolveItemColor(element.separator, true),
             'display': element.separator.show ? 'block' : 'none',
         }
-    }, [style, element.text])
+    }, [element.separator])
 
 
     return (
@@ -149,13 +164,14 @@ export const JourneyStats = memo(({id, metrics, units, style = {}}) => {
                 <div className="journey-stats-summary-item track-summary-column">
                     {hasDuration &&
                         <div className="journey-stats-val-huge">
-                            {formatDuration(metrics.duration)}
+                            {formattedDuration}
                         </div>
                     }
                     <div className="journey-stats-label-bold">{'DURATION'}</div>
                 </div>
             </div>
 
+            {/* ... rest of the component remains unchanged ... */}
             {hasElevation && element?.altitude && (
                 <>
                     <SlDivider style={separatorStyle}/>

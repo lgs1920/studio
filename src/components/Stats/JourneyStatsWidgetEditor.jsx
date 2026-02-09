@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-08
- * Last modified: 2026-02-08
+ * Created on: 2026-02-09
+ * Last modified: 2026-02-09
  *
  *
  * Copyright © 2026 LGS1920
@@ -61,6 +61,7 @@ export const JourneyStatsWidgetEditor = ({entity}) => {
 
     const _moveable = __.ui.widgetManager.getMoveable(entity)
     const widget = __.ui.widgetManager.getElementById(entity)
+
     const $widgetStore = lgs.stores.ui.widget
     const widgetStore = useSnapshot($widgetStore)
     const $current = lgs.stores.ui.widget.current
@@ -68,21 +69,23 @@ export const JourneyStatsWidgetEditor = ({entity}) => {
     const $configuration = lgs.settings.widgets['journey-stats-widget'].configuration
     const configuration = useSnapshot($configuration)
     const swatches = useMemo(() => lgs.settings.getSwatches.list.join(';'), [])
+
     /**
-     * Stabilize the element reference from the snapshot
-     * This ensures that when configuration changes, element is updated
+     * Resolve the active element configuration
      */
     const element = useMemo(() => {
         return configuration.elements?.[entity] ?? configuration.user ?? configuration.default
     }, [configuration, entity])
 
+    /**
+     * Get current metrics with unit conversion
+     */
     const journeyMetrics = useMemo(() => {
         if (!lgs.theJourney?.metrics) {
             return null
         }
         return {...lgs.theJourney.getMetrics()}
     }, [lgs.theJourney, unitSystem])
-
 
     const units = useMemo(() => ({
         elevation: ELEVATION_UNITS[unitSystem],
@@ -91,13 +94,15 @@ export const JourneyStatsWidgetEditor = ({entity}) => {
         speed:     SPEED_UNITS[unitSystem],
     }), [unitSystem])
 
+    /**
+     * Update a specific path in the configuration store
+     */
     const updateValue = useCallback((path, val) => {
         if (!$configuration.elements) {
             $configuration.elements = {}
         }
 
         if (!$configuration.elements[entity]) {
-            // On utilise la valeur actuelle de l'élément comme base
             $configuration.elements[entity] = JSON.parse(JSON.stringify(element))
         }
 
@@ -120,6 +125,16 @@ export const JourneyStatsWidgetEditor = ({entity}) => {
     }, [$configuration, element, entity, _moveable])
 
     /**
+     * Debounced version of updateValue for text/number inputs
+     */
+    const updateMetrics = useMemo(
+        () => __.tools.debounce((path, val) => {
+            console.log(path, val)
+        }, 400),
+        [journeyMetrics],
+    )
+
+    /**
      * Sync local rotation on activeId change or store rotation update
      */
     useEffect(() => {
@@ -131,8 +146,8 @@ export const JourneyStatsWidgetEditor = ({entity}) => {
     const getColor = useCallback((item, alpha = false) => __.ui.ui.resolveItemColor(item, alpha), [])
 
     /**
-     * Update rotation in DOM and stores
-     * @param {number} val - The logical value (positive = clockwise)
+     * Apply rotation to both DOM and stores
+     * @param {number} val
      */
     const applyRotation = async (val) => {
         const clampedVal = parseFloat(val) || 0
@@ -160,7 +175,7 @@ export const JourneyStatsWidgetEditor = ({entity}) => {
     const previewStyle = useMemo(() => ({
         '--lgs-journey-stats-preview-bg': previewBg ? `url(${previewBg})` : 'none',
     }), [previewBg])
-    console.log(journeyMetrics)
+
     return (
         <div className="lgs-card lgs-widget-editor" key={`journey-stats-widget-editor-${entity}`}>
 
@@ -183,7 +198,7 @@ export const JourneyStatsWidgetEditor = ({entity}) => {
                 <SlTab slot="nav" panel="data">
                     <SlIcon size="small" library="fa" name={FA2SL.set(faTableList)}/> {'Data'}
                 </SlTab>
-                <SlTabPanel name="style" lassName="journey-stats-widget-editor-scroll">
+                <SlTabPanel name="style" className="journey-stats-widget-editor-scroll">
                     <LGSScrollbars>
                         <div className="lgs-widget-editor-controls-wrapper">
                             <RotationElement element={element}
@@ -253,24 +268,26 @@ export const JourneyStatsWidgetEditor = ({entity}) => {
                         </div>
                     </LGSScrollbars>
                 </SlTabPanel>
-
-                <SlTabPanel name="data" lassName="journey-stats-widget-editor-scroll">
+                <SlTabPanel name="data" className="journey-stats-widget-editor-scroll">
                     <LGSScrollbars>
                         <div className="journey-stats-widget-editor-data">
 
+                            {/* Toggle display of the date */}
                             <SlSwitch align-right size="x-small" checked={element.date ?? false}
                                       onSlInput={(e) => updateValue('date', e.target.checked)}>
                                 <span>{'Date'}</span>
                             </SlSwitch>
 
                             <SlDivider/>
+
+                            {/* Core journey metrics */}
                             <div className="drawer-horizontal-line three-columns">
                                 <div className="drawer-horizontal-element">
                                     <SlInput label={`Distance (${units.distance})`}
                                              size="small"
                                              type="number"
                                              value={UnitUtils.formatMetric(journeyMetrics.metrics.distance, {units: units.distance}).value}
-
+                                             onSlInput={(e) => updateMetrics('metrics.distance', parseFloat(e.target.value))}
                                     />
                                 </div>
                                 <div className="drawer-horizontal-element">
@@ -281,28 +298,29 @@ export const JourneyStatsWidgetEditor = ({entity}) => {
                                                  units:     units.elevation,
                                                  precision: 0,
                                              }).value}
-
+                                             onSlInput={(e) => updateMetrics('metrics.positive.elevation', parseFloat(e.target.value))}
                                     />
                                 </div>
                                 <div className="drawer-horizontal-element">
                                     <DurationInput label={`Duration`}
-                                             size="small"
-                                             type="number"
+                                                   size="small"
+                                                   type="number"
                                                    value={UnitUtils.formatMetric(journeyMetrics.metrics.duration, {}).value}
-
+                                                   onSlInput={(e) => updateMetrics('metrics.duration', parseFloat(e.target.value))}
                                     />
                                 </div>
                             </div>
 
                             <SlDivider/>
+
+                            {/* Altitude toggles and inputs */}
                             <SlSwitch align-right size="x-small" checked={element.altitude ?? false}
                                       onSlInput={(e) => updateValue('altitude', e.target.checked)}>
                                 <span>{'Altitude'}</span>
                             </SlSwitch>
                             {element.altitude &&
                                 <div className="drawer-horizontal-line three-columns">
-                                    <div
-                                        className="drawer-horizontal-element">{`Altitude (${units.elevation})`}</div>
+                                    <div className="drawer-horizontal-element">{`Altitude (${units.elevation})`}</div>
                                     <div className="drawer-horizontal-element">
                                         <SlInput label={`Min`}
                                                  size="small"
@@ -311,7 +329,7 @@ export const JourneyStatsWidgetEditor = ({entity}) => {
                                                      units:     units.elevation,
                                                      precision: 0,
                                                  }).value}
-
+                                                 onSlInput={(e) => updateMetrics('metrics.minHeight', parseFloat(e.target.value))}
                                         />
                                     </div>
                                     <div className="drawer-horizontal-element">
@@ -322,55 +340,64 @@ export const JourneyStatsWidgetEditor = ({entity}) => {
                                                      units:     units.elevation,
                                                      precision: 0,
                                                  }).value}
-
+                                                 onSlInput={(e) => updateMetrics('metrics.maxHeight', parseFloat(e.target.value))}
                                         />
                                     </div>
                                 </div>
                             }
 
                             <SlDivider/>
+
+                            {/* Performance (Speed and Pace) section */}
                             <SlSwitch align-right size="x-small" checked={element.performance ?? false}
                                       onSlInput={(e) => updateValue('performance', e.target.checked)}>
                                 <span>{'Speed/Pace'}</span>
                             </SlSwitch>
                             {element.performance &&
-                                <>
+                                <div className="journey-stats-widget-editor-performance">
+                                    <div className="drawer-horizontal-line three-columns">
+                                        <div className="drawer-horizontal-element"></div>
+                                        <div className="drawer-horizontal-element">{'Average'}</div>
+                                        <div className="drawer-horizontal-element">{'Max'}</div>
+                                    </div>
+
                                     <div className="drawer-horizontal-line three-columns">
                                         <div className="drawer-horizontal-element">{`Speed (${units.speed})`}</div>
                                         <div className="drawer-horizontal-element">
-                                            <SlInput label={`Average`}
-                                                     size="small"
+                                            <SlInput size="small"
                                                      type="number"
                                                      value={UnitUtils.formatMetric(journeyMetrics.metrics.averageSpeed, {units: units.speed}).value}
-
+                                                     onSlInput={(e) => updateMetrics('metrics.averageSpeed', parseFloat(e.target.value))}
                                             />
                                         </div>
                                         <div className="drawer-horizontal-element">
-                                            <SlInput label={`Max`}
-                                                     size="small"
+                                            <SlInput size="small"
                                                      type="number"
                                                      value={UnitUtils.formatMetric(journeyMetrics.metrics.maxSpeed, {units: units.speed}).value}
+                                                     onSlInput={(e) => updateMetrics('metrics.maxSpeed', parseFloat(e.target.value))}
                                             />
                                         </div>
                                     </div>
                                     <div className="drawer-horizontal-line three-columns">
                                         <div className="drawer-horizontal-element">{`Pace (${units.pace})`}</div>
                                         <div className="drawer-horizontal-element">
-                                            <SlInput label={`Average`}
+                                            <SlInput
                                                      size="small"
                                                      type="number"
                                                      value={UnitUtils.formatMetric(journeyMetrics.metrics.averagePace, {units: units.pace}).value}
+                                                     onSlInput={(e) => updateMetrics('metrics.averagePace', parseFloat(e.target.value))}
                                             />
                                         </div>
                                         <div className="drawer-horizontal-element">
-                                            <SlInput label={`Max`}
+                                            <SlInput
                                                      size="small"
                                                      type="number"
                                                      value={UnitUtils.formatMetric(journeyMetrics.metrics.minPace, {units: units.pace}).value}
+                                                     onSlInput={(e) => updateMetrics('metrics.minPace', parseFloat(e.target.value))}
                                             />
                                         </div>
                                     </div>
-                                </>
+                                </div>
                             }
                         </div>
                     </LGSScrollbars>
