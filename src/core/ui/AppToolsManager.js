@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-02-10
+ * Last modified: 2026-02-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -121,15 +121,30 @@ export class AppToolsManager {
             || rect.bottom > (container.innerHeight || document.documentElement.clientHeight)
             || rect.right > (container.innerWidth || document.documentElement.clientWidth))
     }
-
+    /**
+     * Enhanced debounce that supports cancellation.
+     * Safe for legacy use as it returns a callable function.
+     * * @param {Function} func - The function to debounce
+     * @param {number} wait - Time to wait in ms
+     * @returns {Function} - Debounced function with a .cancel() method
+     */
     debounce = (func, wait = 300) => {
         let timeout
-        return (...args) => {
+
+        // The actual function returned to the caller
+        const debounced = (...args) => {
             clearTimeout(timeout)
             timeout = setTimeout(() => {
                 func.apply(this, args)
             }, wait)
         }
+
+        // Attach the cancel method to the function object
+        debounced.cancel = () => {
+            clearTimeout(timeout)
+        }
+
+        return debounced
     }
 
     base64ToBlob = (base64) => {
