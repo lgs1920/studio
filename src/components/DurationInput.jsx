@@ -7,61 +7,48 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-09
- * Last modified: 2026-02-09
+ * Created on: 2026-02-10
+ * Last modified: 2026-02-10
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { SlInput }                                 from '@shoelace-style/shoelace/dist/react'
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: DurationInput.jsx
+ ******************************************************************************/
+
+import { SlInput } from '@shoelace-style/shoelace/dist/react'
 import React, { useCallback, useEffect, useState } from 'react'
 import { useSnapshot } from 'valtio'
 
-/**
- * DurationInput component
- * Handles duration in HHHhMMm or HHH:MM format based on unit system.
- * Input and Output values are managed in seconds.
- *
- * @param {Object} props
- * @param {string} props.size - Shoelace input size
- * @param {number} props.value - Duration in seconds
- * @param {Function} props.onChange - Callback returning the new duration in seconds
- * @param {string} props.label - Input label
- * @returns {JSX.Element}
- */
-export const DurationInput = ({size, value, onChange, label}) => {
+export const DurationInput = ({size, value, onSlInput, label, className}) => {
     const [tempValue, setTempValue] = useState('')
 
-    /**
-     * Subscribe to the global unit system setting
-     */
     const $unitSystem = lgs.settings.unitSystem
     const unitSystem = useSnapshot($unitSystem).current
     const isImperial = unitSystem === 'imperial'
 
     /**
-     * Converts seconds to a displayable string
-     * Metric: HHHhMMm | Imperial: HHH:MM
+     * Converts seconds from store to display format (00:00 or 00h00m).
      */
     const secondsToDisplay = useCallback((totalSeconds) => {
-        if (totalSeconds === null || totalSeconds === undefined || isNaN(totalSeconds)) {
+        if (totalSeconds === null || totalSeconds === undefined || isNaN(totalSeconds) || totalSeconds === 0) {
             return ''
         }
-
         const hours = Math.floor(totalSeconds / 3600)
         const minutes = Math.floor((totalSeconds % 3600) / 60)
 
-        if (isImperial) {
-            return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`
-        }
-
-        return `${String(hours).padStart(2, '0')}h${String(minutes).padStart(2, '0')}m`
+        return isImperial
+               ? `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`
+               : `${String(hours).padStart(2, '0')}h${String(minutes).padStart(2, '0')}m`
     }, [isImperial])
 
     /**
-     * Parses the string back to seconds
-     * Supports Hh, :, or . as separators and up to 3 digits for hours
+     * Parses the display string back to seconds.
      */
     const displayToSeconds = useCallback((displayStr) => {
         const str = displayStr.trim()
@@ -69,15 +56,13 @@ export const DurationInput = ({size, value, onChange, label}) => {
             return 0
         }
 
-        // Regex: 1-3 digits for hours, separator (h, H, :, .), 1-2 digits for minutes, optional m/M
+        // Supports: 01:30, 01h30, 01.30, 1:30, 1h30m
         const regex = /^(\d{1,3})[hH:.](\d{1,2})[mM]?$/
         const match = str.match(regex)
 
         if (match) {
             const hours = parseInt(match[1], 10)
             const minutes = parseInt(match[2], 10)
-
-            // Validate minute range
             if (minutes < 60) {
                 return (hours * 3600) + (minutes * 60)
             }
@@ -85,47 +70,36 @@ export const DurationInput = ({size, value, onChange, label}) => {
         return null
     }, [])
 
-    /**
-     * Sync local state with external store value on change
-     */
+    // Sync local display when external value change (e.g. source selection change)
     useEffect(() => {
         setTempValue(secondsToDisplay(value))
     }, [value, secondsToDisplay])
 
-    /**
-     * Handle live input and update parent if valid
-     */
     const handleInput = (e) => {
         const val = e.target.value
         setTempValue(val)
 
         const seconds = displayToSeconds(val)
-        if (seconds !== null && onChange) {
-            onChange(seconds)
+        // Only propagate if the format is valid (not null)
+        if (seconds !== null && onSlInput) {
+            onSlInput(seconds)
         }
     }
 
-    /**
-     * Clean up formatting on blur or revert to last valid store value
-     */
     const handleBlur = () => {
-        const seconds = displayToSeconds(tempValue)
-        if (seconds !== null) {
-            setTempValue(secondsToDisplay(seconds))
-        }
-        else {
-            setTempValue(secondsToDisplay(value))
-        }
+        // Re-format the display value on blur to ensure clean UI
+        setTempValue(secondsToDisplay(value))
     }
 
     return (
         <SlInput
-            size={size ?? 'medium'}
+            size={size ?? 'small'}
             label={label}
             value={tempValue}
-            placeholder={isImperial ? 'HHH:MM' : 'HHHhMMm'}
+            className={className}
             onSlInput={handleInput}
             onSlBlur={handleBlur}
+            placeholder={isImperial ? 'HH:MM' : 'HHhMMm'}
         />
     )
 }

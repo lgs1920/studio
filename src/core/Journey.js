@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-03
- * Last modified: 2026-02-03
+ * Created on: 2026-02-10
+ * Last modified: 2026-02-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -44,7 +44,7 @@ export class Journey extends MapElement {
     origin                                     // initial geoJson
     POIsVisible = true
 
-    metrics = {}
+    metrics = {global: {}, user: {}, eternal: {}, points: {}}
     camera = {}
     cameraOrigin = {}
 
@@ -138,10 +138,11 @@ export class Journey extends MapElement {
      */
     getMetrics = () => {
         const global = this.metrics.global
-        const user = this.metrics.user
+        const user = this.metrics.user ?? {}
+        const external = this.metrics.external ?? {}
         const points = this.metrics.points
         return {
-            global, user, points, metrics: {...global, ...user},
+            global, external, user, points, metrics: {...global, ...external, ...user},
         }
     }
 
@@ -721,7 +722,7 @@ export class Journey extends MapElement {
             return s + o.distance
         }, 0)
 
-        this.metrics = global
+        return global
     }
 
     /**
@@ -740,7 +741,7 @@ export class Journey extends MapElement {
             return
         }
         // For a multi track journey, let's compute journey level metrics
-        this.metrics = this.setGlobalMetrics()
+        this.metrics.global = this.setGlobalMetrics()
     }
 
     /**

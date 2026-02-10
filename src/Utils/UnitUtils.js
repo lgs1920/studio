@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-08
- * Last modified: 2026-02-08
+ * Created on: 2026-02-10
+ * Last modified: 2026-02-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -32,22 +32,30 @@ export const MB = KB * 1024
 export const GB = MB * 1024
 export const TB = GB * 1024
 
+/** Distance constants to convert from meter (International System) */
+export const METER = 1
+export const FOOT = 3.280839895             // foot
+export const KM = 0.001                     // meters to km
+export const KMH = 3.6                      // m/s to Km/h
+export const MPH = 2.236936                 // m/s to MPH
+export const MILE = 0.00062137119223        // meters to miles
+export const YARD = 1.09361                 // meters to yards
+export const INCHES = 39.3701               // meters to inches
+
 export class UnitUtils {
-    altitudes
 
     /**
-     * Converter from international system unit (ie m,s) to other.
-     *
-     * How to use: convert(myValue).to(KM) to convert myValue from meter to kilometers
-     *
-     * @param input always in metric-based unit
-     *
-     * @return {{source, to: data.to}}
+     * Converter from international system unit (ie m, s, m/s) to UI unit.
+     * @param {number} input - Value in metric-based unit
+     * @return {Object}
      */
     static convert = (input) => {
         return {
             source: input,
             to: (unit) => {
+                if (input === null || input === undefined) {
+                    return 0
+                }
                 switch (unit) {
                     case km:
                         return input * KM
@@ -55,12 +63,8 @@ export class UnitUtils {
                         return input * MILE
                     case kmh:
                         return input * KMH
-                    case mkm:
-                        return input / KM / MINUTE * MILLIS
                     case mph:
                         return input * MPH
-                    case mpmile:
-                        return input / MPH * MILE * HOUR
                     case foot:
                         return input * FOOT
                     case yard:
@@ -71,10 +75,11 @@ export class UnitUtils {
                         return Duration.fromMillis(input * MILLIS).toFormat('h:mm:ss')
                     case min:
                         return Duration.fromMillis(input * MILLIS).toFormat('m:ss')
+                    case mkm:
+                        return input / KM / MINUTE * MILLIS
+                    case mpmile:
+                        return input / MPH * MILE * HOUR
                     case dms: {
-                        if (!input) {
-                            return 'NaN'
-                        }
                         const degrees = Math.floor(input)
                         const minutesFloat = (input - degrees) * 60
                         const minutes = Math.floor(minutesFloat)
@@ -82,32 +87,21 @@ export class UnitUtils {
                         return `${degrees}° ${minutes}' ${seconds}"`
                     }
                     case dd:
-                        if (!input) {
-                            return 'NaN'
-                        }
-                        return sprintf('%.5f', input)
+                        return parseFloat(input).toFixed(5)
                     default:
-                        // metre, seconde
                         return input
                 }
             },
-            /**
-             * Convert input (in milliseconds) to a formatted time string (e.g., '1h 05m 05s' or '5m 05s')
-             * The first non-zero unit has no leading zero, while subsequent units have leading zeros.
-             * @param {boolean} showSeconds - Whether to include seconds in the output
-             * @returns {string} Formatted time string
-             */
+
             toTime: (showSeconds = true) => {
                 if (!input || isNaN(input) || input < 0) {
                     return '0s'
                 }
-
                 const duration = Duration.fromMillis(input)
                 if (!duration.isValid) {
                     return '0s'
                 }
 
-                // Build format string based on the first non-zero unit
                 let format = ''
                 let firstUnit = true
 
@@ -127,76 +121,99 @@ export class UnitUtils {
                     format += firstUnit ? 's\'s\'' : 'ss\'s\''
                 }
 
-                // Remove trailing space and handle empty format
                 format = format.trim()
-                if (!format) {
-                    return showSeconds ? '0s' : '0m'
-                }
-
-                return duration.toFormat(format)
+                return format ? duration.toFormat(format) : (showSeconds ? '0s' : '0m')
             },
-            /**
-             * Convert input (in bytes) to a formatted size string with a single unit (e.g., '12B', '1.4MB')
-             * Uses the largest appropriate unit (B, KB, MB, GB, TB) with no leading zero.
-             * MB, GB, TB show one decimal place; B, KB show no decimal places.
-             * @returns {string} Formatted size string
-             */
+
             toBytesUnit: () => {
                 if (!input || isNaN(input) || input < 0) {
                     return '0B'
                 }
-
-                const units = [
+                const unitsArr = [
                     {threshold: TB, label: 'TB', decimals: 2},
                     {threshold: GB, label: 'GB', decimals: 2},
                     {threshold: MB, label: 'MB', decimals: 2},
                     {threshold: KB, label: 'KB', decimals: 1},
                     {threshold: BYTE, label: 'B', decimals: 0},
                 ]
-
-                // Find the largest unit where value >= 1
-                const unit = units.find(u => input >= u.threshold) || units[units.length - 1]
+                const unit = unitsArr.find(u => input >= u.threshold) || unitsArr[unitsArr.length - 1]
                 const value = input / unit.threshold
-
-                // Format with no leading zero and appropriate decimals
                 const formattedValue = unit.decimals === 0
                                        ? Math.round(value)
                                        : value.toFixed(unit.decimals).replace(/^0+/, '')
-
                 return `${formattedValue}${unit.label}`
-            },
+            }
         }
     }
 
-    static convertFeetToMeters = feet => feet / FOOT
     /**
-     * Convert and format a physical metric (distance, elevation, speed)
-     * according to the current LGS unit system.
+     * Revert from UI unit back to international system (m, s, m/s).
+     * Prevents the "climbing numbers" bug by ensuring store storage is always metric.
+     * @param {number|string} input - The value from the UI input
+     * @param {string} unit - The unit label used for display
+     * @returns {number} The raw value in metric system
      */
+    static revert = (input, unit) => {
+        if (input === null || input === undefined || input === '') {
+            return 0
+        }
+
+        // Clean input: replace comma, remove non-numeric chars except dot and minus
+        const cleanInput = typeof input === 'string'
+                           ? input.replace(',', '.').replace(/[^\d.-]/g, '')
+                           : input
+
+        const val = parseFloat(cleanInput)
+        if (isNaN(val)) {
+            return 0
+        }
+
+        // Prevent division by zero for inverse units (Pace)
+        const safeVal = Math.abs(val) < 0.000001 ? 0.000001 : val
+
+        switch (unit) {
+            case km:
+                return val / KM
+            case mile:
+                return val / MILE
+            case kmh:
+                return val / KMH
+            case mph:
+                return val / MPH
+            case foot:
+                return val / FOOT
+            case yard:
+                return val / YARD
+            case inche:
+                return val / INCHES
+            // PACE (min/km -> m/s): 1 / (min * 60 * 0.001)
+            case mkm:
+                return (1 / (safeVal * 60)) / KM
+            case mpmile:
+                return (1 / (safeVal * 60)) / MILE
+            default:
+                return val
+        }
+    }
+
     static formatMetric = (value, {
         units: unitsArgs = ['', ''],
         format = '%\' .1f',
         precision,
         callback,
     } = {}) => {
-        const unitsList = units
-
         let toShow = (typeof value === 'string') ? value : (Number(value) ?? null)
-
         let unitsValues = Array.isArray(unitsArgs)
                           ? (unitsArgs.length === 1 ? [unitsArgs[0], unitsArgs[0]] : unitsArgs)
                           : [unitsArgs, unitsArgs]
 
-        // Direct access to store (non-reactive)
         const currentSystem = lgs.settings.unitSystem.current
         const unitText = unitsValues[currentSystem] ?? ''
 
-        // 1. Unit conversion logic
-        if (typeof toShow === 'number' && unitsList.includes(unitsValues[0])) {
-            toShow = __.convert(toShow).to(unitText)
+        if (typeof toShow === 'number' && units.includes(unitsValues[0])) {
+            toShow = UnitUtils.convert(toShow).to(unitText)
         }
 
-        // 2. Formatting logic
         if (toShow !== null && callback) {
             toShow = callback(toShow)
         }
@@ -213,10 +230,9 @@ export class UnitUtils {
             full:  `${toShow}${unitText ? ' ' + unitText : ''}`,
         }
     }
-
 }
 
-/** Units */
+/** Units Export */
 export const km = 'km'
 export const mile = 'mi'
 export const kmh = 'km/h'
@@ -235,16 +251,6 @@ export const meter = 'm'
 export const dd = DD
 export const dms = DMS
 export const units = [km, mile, kmh, hkm, mkm, mpmile, ms, mph, meter, foot, yard, inche, hour, min, sec, dd, dms]
-
-/** Distance constants to convert from meter */
-export const METER = 1
-export const FOOT = 3.280839895             // foot
-export const KM = 0.001                     // meters
-export const KMH = 3.6                      // m/s to Km/h
-export const MPH = 2.236936                 // m/s to MPH
-export const MILE = 0.00062137119223        // miles = MILE * kms
-export const YARD = 1.09361                 // meters to yards
-export const INCHES = 39.3701               // meters to inches
 
 export const ELEVATION_UNITS = [meter, foot]
 export const DISTANCE_UNITS = [km, mile]
