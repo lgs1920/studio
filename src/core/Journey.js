@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-10
- * Last modified: 2026-02-10
+ * Created on: 2026-02-11
+ * Last modified: 2026-02-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -141,8 +141,43 @@ export class Journey extends MapElement {
         const user = this.metrics.user ?? {}
         const external = this.metrics.external ?? {}
         const points = this.metrics.points
+
+        // Deep merge to properly handle nested objects like positive.elevation
+        const deepMerge = (target, ...sources) => {
+            if (!sources.length) {
+                return target
+            }
+            const source = sources.shift()
+
+            if (source === undefined || source === null) {
+                return deepMerge(target, ...sources)
+            }
+
+            for (const key in source) {
+                if (Object.prototype.hasOwnProperty.call(source, key)) {
+                    const sourceValue = source[key]
+                    const targetValue = target[key]
+
+                    // Skip empty objects - they should not override existing values
+                    if (sourceValue && typeof sourceValue === 'object' &&
+                        !Array.isArray(sourceValue) && Object.keys(sourceValue).length === 0) {
+                        continue
+                    }
+
+                    if (sourceValue && typeof sourceValue === 'object' && !Array.isArray(sourceValue)) {
+                        target[key] = deepMerge(targetValue && typeof targetValue === 'object' ? {...targetValue} : {}, sourceValue)
+                    }
+                    else {
+                        target[key] = sourceValue
+                    }
+                }
+            }
+
+            return deepMerge(target, ...sources)
+        }
+
         return {
-            global, external, user, points, metrics: {...global, ...external, ...user},
+            global, external, user, points, metrics: deepMerge({}, global, external, user),
         }
     }
 
