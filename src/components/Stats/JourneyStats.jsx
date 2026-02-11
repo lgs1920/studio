@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-09
- * Last modified: 2026-02-09
+ * Created on: 2026-02-11
+ * Last modified: 2026-02-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -34,22 +34,15 @@ import { useSnapshot }                     from 'valtio'
 
 /**
  * Internal component to handle the statistical display logic.
- * Isolated to prevent parent Widget re-mounts on data updates.
  */
 export const JourneyStats = memo(({id, metrics, units, style = {}}) => {
     const $configuration = lgs.settings.widgets['journey-stats-widget'].configuration
     const configuration = useSnapshot($configuration)
 
-    /**
-     * Localization detection
-     */
     const $unitSystem = lgs.settings.unitSystem
     const unitSystem = useSnapshot($unitSystem).current
     const isImperial = unitSystem === 'imperial'
 
-    /**
-     * Resolve the specific element configuration for this instance
-     */
     const element = useMemo(() => {
         if (id && configuration.elements?.[id]) {
             return configuration.elements[id]
@@ -59,7 +52,6 @@ export const JourneyStats = memo(({id, metrics, units, style = {}}) => {
 
     /**
      * Formats duration based on localization
-     * Metric: 123<span>h</span>45<span>m</span> | Imperial: 123:45
      */
     const formattedDuration = useMemo(() => {
         const seconds = metrics?.duration
@@ -85,29 +77,35 @@ export const JourneyStats = memo(({id, metrics, units, style = {}}) => {
         )
     }, [metrics?.duration, isImperial])
 
-    const hasElevation = metrics?.negative?.elevation < 0 && metrics?.positive?.elevation > 0
-    const hasDuration = metrics?.duration
+    /**
+     * Formats pace seconds into mm:ss
+     */
+    const formatPace = (paceSeconds) => {
+        if (!Number.isFinite(paceSeconds) || paceSeconds <= 0) {
+            return '--:--'
+        }
+        const m = Math.floor(paceSeconds / 60)
+        const s = Math.floor(paceSeconds % 60)
+        return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+    }
+
+    const paceValues = useMemo(() => ({
+        average: formatPace(metrics?.averagePace),
+        min:     formatPace(metrics?.minPace),
+    }), [metrics?.averagePace, metrics?.minPace])
+
+    const hasElevation = metrics?.positive?.elevation > 0
+    const hasDuration = metrics?.duration > 0
     const date = __.ui.ui.formatJourneyDurationDates(lgs.theJourney.getDate())
 
-    /**
-     * Access to the moveable reference from the widget manager
-     */
-    const _moveable = useMemo(() => {
-        return __.ui.widgetManager.getMoveable(id)
-    }, [id])
+    const _moveable = useMemo(() => __.ui.widgetManager.getMoveable(id), [id])
 
-    /**
-     * Synchronize the bounding box when the visible date content changes
-     */
     useEffect(() => {
         if (_moveable?.current) {
             _moveable.current.updateRect()
         }
     }, [_moveable, element?.date, element?.altitude, element?.performance, element.separator, element.border])
 
-    /**
-     * Compute styles dynamically based on snapshot values
-     */
     const mainStyle = useMemo(() => {
         return {
             ...style,
@@ -122,8 +120,7 @@ export const JourneyStats = memo(({id, metrics, units, style = {}}) => {
                             : 'none',
             background:     __.ui.ui.resolveItemColor(element.background, true),
             backdropFilter: (element.background?.show && element.background?.blur) ? 'blur(var(--lgs-blur-s))' : 'blur(0)',
-            borderRadius:   element.border?.show ? WIDGET_RADIUS.get(element.border.radius ?? 'none')?.value : '0',
-
+            borderRadius: element.border?.show ? WIDGET_RADIUS.get(element.border.radius ?? 'none')?.value : '0',
         }
     }, [style, element.text, element.border, element.background])
 
@@ -133,7 +130,6 @@ export const JourneyStats = memo(({id, metrics, units, style = {}}) => {
             'display': element.separator.show ? 'block' : 'none',
         }
     }, [element.separator])
-
 
     return (
         <div className="journey-stats-widget" style={mainStyle}>
@@ -153,25 +149,19 @@ export const JourneyStats = memo(({id, metrics, units, style = {}}) => {
                     <div className="journey-stats-label-bold">{`Distance (${units.distance})`}</div>
                 </div>
                 <div className="journey-stats-summary-item track-summary-column">
-                    {hasElevation &&
-                        <div className="journey-stats-val-huge">
-                            <NameValueUnit value={metrics.positive.elevation} units={ELEVATION_UNITS} noUnit
-                                           precision="0"/>
-                        </div>
-                    }
+                    <div className="journey-stats-val-huge">
+                        <NameValueUnit value={metrics.positive.elevation} units={ELEVATION_UNITS} noUnit precision="0"/>
+                    </div>
                     <div className="journey-stats-label-bold">{`Elevation (${units.elevation})`}</div>
                 </div>
                 <div className="journey-stats-summary-item track-summary-column">
-                    {hasDuration &&
-                        <div className="journey-stats-val-huge">
-                            {formattedDuration}
-                        </div>
-                    }
+                    <div className="journey-stats-val-huge">
+                        {formattedDuration}
+                    </div>
                     <div className="journey-stats-label-bold">{'DURATION'}</div>
                 </div>
             </div>
 
-            {/* ... rest of the component remains unchanged ... */}
             {hasElevation && element?.altitude && (
                 <>
                     <SlDivider style={separatorStyle}/>
@@ -188,7 +178,7 @@ export const JourneyStats = memo(({id, metrics, units, style = {}}) => {
                     </div>
                 </>
             )}
-            {hasElevation && hasDuration && element?.performance && (
+            {hasDuration && element?.performance && (
                 <>
                     <SlDivider style={separatorStyle}/>
                     <div className="journey-stats-row">
@@ -204,11 +194,11 @@ export const JourneyStats = memo(({id, metrics, units, style = {}}) => {
                     <div className="journey-stats-row">
                         <div className="journey-stats-label">{'Pace'}<span>{`(${units.pace})`}</span></div>
                         <div className="journey-stats-value">
-                            <NameValueUnit value={metrics.averagePace} units={PACE_UNITS} noUnit/>
+                            {paceValues.average}
                         </div>
                         <div className="journey-stats-value">
                             <SlIcon variant="primary" library="fa" name={FA2SL.set(faArrowUpToLine)}/>
-                            <NameValueUnit value={metrics.minPace} units={PACE_UNITS} noUnit/>
+                            {paceValues.min}
                         </div>
                     </div>
                 </>
