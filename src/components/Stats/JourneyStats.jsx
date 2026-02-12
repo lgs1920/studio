@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-11
- * Last modified: 2026-02-11
+ * Created on: 2026-02-12
+ * Last modified: 2026-02-12
  *
  *
  * Copyright © 2026 LGS1920
@@ -103,8 +103,8 @@ export const JourneyStats = memo(({id, metrics, units, style = {}}) => {
         min: formatPace(displayMetrics?.minPace),
     }), [displayMetrics?.averagePace, displayMetrics?.minPace])
 
-    const hasElevation = displayMetrics?.positive?.elevation > 0
-    const hasDuration = displayMetrics?.duration > 0
+    const hasDuration = lgs.theJourney.hasTime
+    const hasElevation = lgs.theJourney.hasAltitude
     const date = __.ui.ui.formatJourneyDurationDates(lgs.theJourney.getDate())
 
     const _moveable = useMemo(() => __.ui.widgetManager.getMoveable(id), [id])
@@ -136,7 +136,7 @@ export const JourneyStats = memo(({id, metrics, units, style = {}}) => {
 
     return (
         <div className="journey-stats-widget" style={mainStyle}>
-            {hasDuration && element?.date && (
+            {hasDuration || element?.date && (
                 <>
                     <div className="journey-stats-date">
                         <span>{date.prefix}</span><span>{date.sufix}</span>
@@ -144,7 +144,7 @@ export const JourneyStats = memo(({id, metrics, units, style = {}}) => {
                     <SlDivider style={separatorStyle}/>
                 </>
             )}
-            <div className="journey-stats-row">
+            <div className="journey-stats-row-center">
                 {displayMetrics.distance > 0 &&
                     <div className="journey-stats-summary-item track-summary-column">
                         <div className="journey-stats-val-huge">
@@ -169,16 +169,18 @@ export const JourneyStats = memo(({id, metrics, units, style = {}}) => {
                     </div>
                 }
             </div>
-            {hasElevation && element?.altitude && (
+            {hasElevation || element?.altitude && (
                 <>
                     <SlDivider style={separatorStyle}/>
                     <div className="journey-stats-row">
                         <div className="journey-stats-label">{'Altitude'}<span>{`(${units.elevation})`}</span></div>
+                        {displayMetrics.minHeight > 0 &&
                         <div className="journey-stats-value">
                             <SlIcon variant="primary" library="fa" name={FA2SL.set(faArrowDownToLine)}/>
                             <NameValueUnit value={displayMetrics.minHeight} units={ELEVATION_UNITS} noUnit
                                            precision="0"/>
                         </div>
+                        }
                         <div className="journey-stats-value">
                             <SlIcon variant="primary" library="fa" name={FA2SL.set(faArrowUpToLine)}/>
                             <NameValueUnit value={displayMetrics.maxHeight} units={ELEVATION_UNITS} noUnit
@@ -187,7 +189,7 @@ export const JourneyStats = memo(({id, metrics, units, style = {}}) => {
                     </div>
                 </>
             )}
-            {hasDuration && element?.performance && (
+            {element?.performance && (
                 <>
                     <SlDivider style={separatorStyle}/>
                     <div className="journey-stats-row">

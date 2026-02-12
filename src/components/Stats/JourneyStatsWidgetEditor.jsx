@@ -285,7 +285,7 @@ export const JourneyStatsWidgetEditor = ({entity}) => {
                                                            dataSource={dataSource}/>
                                         </div>
                                         <div className="drawer-horizontal-element">
-                                            <DurationInput label="Min" path="minPace" minutes dataSource={dataSource}/>
+                                            <DurationInput label="Max" path="minPace" minutes dataSource={dataSource}/>
                                         </div>
                                     </div>
                                 </div>
