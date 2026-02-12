@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-09
- * Last modified: 2026-02-09
+ * Created on: 2026-02-12
+ * Last modified: 2026-02-12
  *
  *
  * Copyright © 2026 LGS1920
@@ -110,6 +110,9 @@ export class UIUtils {
     }
 
     static RGB2RGBA = (rgbString, alpha = 1) => {
+        if (rgbString === 'transparent') {
+            return `rgba(255,255,255,${alpha})`
+        }
         let rgbValues = rgbString.match(/\d+/g)
         let r = rgbValues[0]
         let g = rgbValues[1]
