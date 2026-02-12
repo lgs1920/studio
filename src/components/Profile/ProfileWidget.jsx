@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-02
- * Last modified: 2026-02-02
+ * Created on: 2026-02-12
+ * Last modified: 2026-02-12
  *
  *
  * Copyright © 2026 LGS1920
@@ -164,7 +164,7 @@ export const ProfileWidget = ({id, context}) => {
 
     // Safety check: if the board is missing or the config generation failed, return null.
     // We check Object.keys(config).length for cases where config returned {} inside useMemo.
-    if (!widgetsBoard || Object.keys(config).length === 0) {
+    if (!widgetsBoard || Object.keys(config).length === 0 || !lgs.theJourney) {
         return null
     }
 
