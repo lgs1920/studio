@@ -32,8 +32,8 @@ import {
 import { JourneyStats }                                             from '@Components/Stats/JourneyStats'
 import { faPenPaintbrush, faTableList }                             from '@fortawesome/pro-regular-svg-icons'
 import {
-    SlDivider, SlIcon, SlTab, SlTabGroup, SlTabPanel, SlButton, SlButtonGroup, SlSwitch,
-}                                                                   from '@shoelace-style/shoelace/dist/react'
+    SlDivider, SlIcon, SlTab, SlTabGroup, SlTabPanel, SlButton, SlButtonGroup, SlSwitch, SlColorPicker, SlRange,
+} from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                                                    from '@Utils/FA2SL'
 import { DISTANCE_UNITS, ELEVATION_UNITS, PACE_UNITS, SPEED_UNITS } from '@Utils/UnitUtils'
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -210,6 +210,52 @@ export const JourneyStatsWidgetEditor = ({entity}) => {
                         <div className="lgs-widget-editor-controls-wrapper">
                             <RotationElement element={element} localRotation={localRotation}
                                              applyRotation={applyRotation} updateValue={updateValue}/>
+                            <SlDivider/>
+                            <div className="drawer-horizontal-line">
+                                <span style={{'lineHeight': 1}}>{'Text color'}<br/></span>
+                            </div>
+                            <div className="drawer-horizontal-line">
+                                <div className="drawer-horizontal-line three-columns">
+                                    <div className="drawer-horizontal-element">
+                                        <SlColorPicker size="small" swatches={swatches}
+                                                       value={getColor(element.text)}
+                                                       onSlInput={(e) => updateValue('text.color', e.target.value)}/>
+                                    </div>
+                                    <div className="drawer-horizontal-element xlarge-element"></div>
+                                    <div className="drawer-horizontal-element xlarge-element">
+                                        <SlRange label="Opacity" min="0" max="1" step="0.05" align-right tooltip="top"
+                                                 tooltipFormatter={value => `${Math.floor(value * 100)}%`}
+                                                 value={element.text.opacity ?? 1}
+                                                 onSlInput={(e) => updateValue('text.opacity', parseFloat(e.target.value))}/>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <SlDivider/>
+                            <div className="drawer-horizontal-line">
+                                <SlSwitch align-right size="x-small" checked={element.separator?.show ?? false}
+                                          onSlInput={(e) => updateValue('separator.show', e.target.checked)}>
+                                    <span>{'Separator'}</span>
+                                </SlSwitch>
+                            </div>
+
+                            {element.separator?.show && (
+                                <div className="drawer-horizontal-line three-columns">
+                                    <div className="drawer-horizontal-element">
+                                        <SlColorPicker size="small" swatches={swatches}
+                                                       value={getColor(element.separator)}
+                                                       onSlInput={(e) => updateValue('separator.color', e.target.value)}/>
+                                    </div>
+                                    <div className="drawer-horizontal-element xlarge-element"></div>
+                                    <div className="drawer-horizontal-element xlarge-element">
+                                        <SlRange label="Opacity" min="0" max="1" step="0.05" align-right tooltip="top"
+                                                 tooltipFormatter={value => `${Math.floor(value * 100)}%`}
+                                                 value={element.border.opacity ?? 1}
+                                                 onSlInput={(e) => updateValue('separator.opacity', parseFloat(e.target.value))}/>
+                                    </div>
+                                </div>
+                            )}
+
                             <SlDivider/><ShadowElement element={element} swatches={swatches} getColor={getColor}
                                                        updateValue={updateValue}/>
                             <SlDivider/><BorderElement element={element} swatches={swatches} getColor={getColor}
