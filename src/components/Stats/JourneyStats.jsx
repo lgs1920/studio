@@ -25,7 +25,7 @@ import { useSnapshot }                                  from 'valtio'
 
 /**
  * Statistical display component for journeys.
- * Uses reactive snapshots to merge Global, External, and User metrics.
+ * Maintains layout consistency by preserving slots even when values are zero.
  */
 export const JourneyStats = memo(({id, metrics, units, style = {}}) => {
     const $configuration = lgs.settings.widgets['journey-stats-widget'].configuration
@@ -45,9 +45,6 @@ export const JourneyStats = memo(({id, metrics, units, style = {}}) => {
         return configuration.user ?? configuration.default
     }, [id, configuration])
 
-    /**
-     * Data layer resolution with deep merging for nested objects.
-     */
     const displayMetrics = useMemo(() => {
         const source = element.dataSource || 'global'
         const global = metricsSnap.global
@@ -72,11 +69,14 @@ export const JourneyStats = memo(({id, metrics, units, style = {}}) => {
 
     const formattedDuration = useMemo(() => {
         const seconds = displayMetrics?.duration
-        if (!Number.isFinite(seconds) || seconds < 0) {
-            return '--:--'
+        if (!Number.isFinite(seconds) || seconds <= 0) {
+            return null
         }
         const hours = Math.floor(seconds / 3600)
         const mins = Math.floor((seconds % 3600) / 60)
+        if (hours === 0 && mins === 0) {
+            return null
+        }
         const hh = String(hours).padStart(2, '0')
         const mm = String(mins).padStart(2, '0')
         if (isImperial) {
@@ -91,10 +91,13 @@ export const JourneyStats = memo(({id, metrics, units, style = {}}) => {
 
     const formatPace = (paceSeconds) => {
         if (!Number.isFinite(paceSeconds) || paceSeconds <= 0) {
-            return '--:--'
+            return null
         }
         const m = Math.floor(paceSeconds / 60)
         const s = Math.floor(paceSeconds % 60)
+        if (m === 0 && s === 0) {
+            return null
+        }
         return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
     }
 
@@ -134,9 +137,13 @@ export const JourneyStats = memo(({id, metrics, units, style = {}}) => {
         'display': element.separator.show ? 'block' : 'none',
     }), [element.separator])
 
+    const showAltitudeRow = (hasElevation || element?.altitude) && (displayMetrics.minHeight > 0 || displayMetrics.maxHeight > 0)
+    const showSpeedRow = element?.performance && (displayMetrics.averageSpeed > 0 || displayMetrics.maxSpeed > 0)
+    const showPaceRow = element?.performance && (paceValues.average !== null || paceValues.min !== null)
+
     return (
         <div className="journey-stats-widget" style={mainStyle}>
-            {hasDuration || element?.date && (
+            {(hasDuration || element?.date) && (
                 <>
                     <div className="journey-stats-date">
                         <span>{date.prefix}</span><span>{date.sufix}</span>
@@ -144,6 +151,7 @@ export const JourneyStats = memo(({id, metrics, units, style = {}}) => {
                     <SlDivider style={separatorStyle}/>
                 </>
             )}
+
             <div className="journey-stats-row-center">
                 {displayMetrics.distance > 0 &&
                     <div className="journey-stats-summary-item track-summary-column">
@@ -162,55 +170,77 @@ export const JourneyStats = memo(({id, metrics, units, style = {}}) => {
                         <div className="journey-stats-label-bold">{`Elevation (${units.elevation})`}</div>
                     </div>
                 }
-                {displayMetrics.duration > 0 &&
+                {formattedDuration &&
                     <div className="journey-stats-summary-item track-summary-column">
                         <div className="journey-stats-val-huge">{formattedDuration}</div>
                         <div className="journey-stats-label-bold">{'DURATION'}</div>
                     </div>
                 }
             </div>
-            {hasElevation || element?.altitude && (
+
+            {showAltitudeRow && (
                 <>
                     <SlDivider style={separatorStyle}/>
                     <div className="journey-stats-row">
                         <div className="journey-stats-label">{'Altitude'}<span>{`(${units.elevation})`}</span></div>
-                        {displayMetrics.minHeight > 0 &&
                         <div className="journey-stats-value">
-                            <SlIcon variant="primary" library="fa" name={FA2SL.set(faArrowDownToLine)}/>
-                            <NameValueUnit value={displayMetrics.minHeight} units={ELEVATION_UNITS} noUnit
-                                           precision="0"/>
+                            {displayMetrics.minHeight > 0 &&
+                                <>
+                                    <SlIcon variant="primary" library="fa" name={FA2SL.set(faArrowDownToLine)}/>
+                                    <NameValueUnit value={displayMetrics.minHeight} units={ELEVATION_UNITS} noUnit
+                                                   precision="0"/>
+                                </>
+                            }
                         </div>
-                        }
                         <div className="journey-stats-value">
-                            <SlIcon variant="primary" library="fa" name={FA2SL.set(faArrowUpToLine)}/>
-                            <NameValueUnit value={displayMetrics.maxHeight} units={ELEVATION_UNITS} noUnit
-                                           precision="0"/>
+                            {displayMetrics.maxHeight > 0 &&
+                                <>
+                                    <SlIcon variant="primary" library="fa" name={FA2SL.set(faArrowUpToLine)}/>
+                                    <NameValueUnit value={displayMetrics.maxHeight} units={ELEVATION_UNITS} noUnit
+                                                   precision="0"/>
+                                </>
+                            }
                         </div>
                     </div>
                 </>
             )}
-            {element?.performance && (
-                <>
-                    <SlDivider style={separatorStyle}/>
-                    <div className="journey-stats-row">
-                        <div className="journey-stats-label">{'Speed'}<span>{`(${units.speed})`}</span></div>
-                        <div className="journey-stats-value">
+
+            {(showSpeedRow || showPaceRow) && <SlDivider style={separatorStyle}/>}
+
+            {showSpeedRow && (
+                <div className="journey-stats-row">
+                    <div className="journey-stats-label">{'Speed'}<span>{`(${units.speed})`}</span></div>
+                    <div className="journey-stats-value">
+                        {displayMetrics.averageSpeed > 0 &&
                             <NameValueUnit value={displayMetrics.averageSpeed} units={SPEED_UNITS} noUnit/>
-                        </div>
-                        <div className="journey-stats-value">
-                            <SlIcon variant="primary" library="fa" name={FA2SL.set(faArrowUpToLine)}/>
-                            <NameValueUnit value={displayMetrics.maxSpeed} units={SPEED_UNITS} noUnit/>
-                        </div>
+                        }
                     </div>
-                    <div className="journey-stats-row">
-                        <div className="journey-stats-label">{'Pace'}<span>{`(${units.pace})`}</span></div>
-                        <div className="journey-stats-value">{paceValues.average}</div>
-                        <div className="journey-stats-value">
-                            <SlIcon variant="primary" library="fa" name={FA2SL.set(faArrowUpToLine)}/>
-                            {paceValues.min}
-                        </div>
+                    <div className="journey-stats-value">
+                        {displayMetrics.maxSpeed > 0 &&
+                            <>
+                                <SlIcon variant="primary" library="fa" name={FA2SL.set(faArrowUpToLine)}/>
+                                <NameValueUnit value={displayMetrics.maxSpeed} units={SPEED_UNITS} noUnit/>
+                            </>
+                        }
                     </div>
-                </>
+                </div>
+            )}
+
+            {showPaceRow && (
+                <div className="journey-stats-row">
+                    <div className="journey-stats-label">{'Pace'}<span>{`(${units.pace})`}</span></div>
+                    <div className="journey-stats-value">
+                        {paceValues.average && paceValues.average}
+                    </div>
+                    <div className="journey-stats-value">
+                        {paceValues.min &&
+                            <>
+                                <SlIcon variant="primary" library="fa" name={FA2SL.set(faArrowUpToLine)}/>
+                                {paceValues.min}
+                            </>
+                        }
+                    </div>
+                </div>
             )}
         </div>
     )
