@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-11
- * Last modified: 2026-02-11
+ * Created on: 2026-02-12
+ * Last modified: 2026-02-12
  *
  *
  * Copyright © 2026 LGS1920
@@ -195,12 +195,12 @@ export const JourneyStatsWidgetEditor = ({entity}) => {
                         From
                         <SlButtonGroup size="small">
                             <SlButton size="small" variant={dataSource === 'global' ? 'primary' : 'default'}
-                                      onClick={() => updateValue('dataSource', 'global')}>Data</SlButton>
+                                      onClick={() => updateValue('dataSource', 'global')}>{'Data'}</SlButton>
                             {hasExternal &&
-                                <SlButton size="small" variant={dataSource === 'external' ? 'primary' : 'default'}
-                                          onClick={() => updateValue('dataSource', 'external')}>External</SlButton>}
-                            <SlButton size="small" variant={dataSource === 'user' ? 'primary' : 'default'}
-                                      onClick={() => updateValue('dataSource', 'user')}>User</SlButton>
+                                <SlButton size="small" variant={dataSource === 'external' ? 'warning' : 'neutral'}
+                                          onClick={() => updateValue('dataSource', 'external')}>{'External'}</SlButton>}
+                            <SlButton size="small" variant={dataSource === 'user' ? 'warning' : 'default'}
+                                      onClick={() => updateValue('dataSource', 'user')}>{'User'}</SlButton>
                         </SlButtonGroup>
                     </div>
                 )}
@@ -249,8 +249,7 @@ export const JourneyStatsWidgetEditor = ({entity}) => {
                             </SlSwitch>
                             {element.altitude && (
                                 <div className="drawer-horizontal-line three-columns">
-                                    <div className="drawer-horizontal-element"
-                                         style={{alignSelf: 'center'}}>{`Altitude (${units.elevation})`}</div>
+                                    <div className="drawer-horizontal-element">{`Altitude (${units.elevation})`}</div>
                                     <div className="drawer-horizontal-element">
                                         <JourneyMetricsInput label="Min" path="minHeight" unit={units.elevation}
                                                              precision={0} dataSource={dataSource}/>
@@ -269,8 +268,7 @@ export const JourneyStatsWidgetEditor = ({entity}) => {
                             {element.performance && (
                                 <div className="journey-stats-widget-editor-performance">
                                     <div className="drawer-horizontal-line three-columns">
-                                        <div className="drawer-horizontal-element"
-                                             style={{alignSelf: 'center'}}>{`Speed (${units.speed})`}</div>
+                                        <div className="drawer-horizontal-element">{`Speed (${units.speed})`}</div>
                                         <div className="drawer-horizontal-element">
                                             <JourneyMetricsInput label="Avg" path="averageSpeed" unit={units.speed}
                                                                  precision={1} dataSource={dataSource}/>
@@ -281,8 +279,7 @@ export const JourneyStatsWidgetEditor = ({entity}) => {
                                         </div>
                                     </div>
                                     <div className="drawer-horizontal-line three-columns">
-                                        <div className="drawer-horizontal-element"
-                                             style={{alignSelf: 'center'}}>{`Pace (${units.pace})`}</div>
+                                        <div className="drawer-horizontal-element">{`Pace (${units.pace})`}</div>
                                         <div className="drawer-horizontal-element">
                                             <DurationInput label="Avg" path="averagePace" minutes
                                                            dataSource={dataSource}/>
@@ -299,19 +296,4 @@ export const JourneyStatsWidgetEditor = ({entity}) => {
             </SlTabGroup>
         </div>
     )
-}/*******************************************************************************
- *
- * This file is part of the LGS1920/studio project.
- *
- * File: JourneyStatsWidgetEditor.jsx
- *
- * Author : LGS1920 Team
- * email: contact@lgs1920.fr
- *
- * Created on: 2026-02-11
- * Last modified: 2026-02-11
- *
- *
- * Copyright © 2026 LGS1920
- ******************************************************************************/
-
+}
