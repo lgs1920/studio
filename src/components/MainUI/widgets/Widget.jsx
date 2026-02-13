@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-03
- * Last modified: 2026-02-03
+ * Created on: 2026-02-13
+ * Last modified: 2026-02-13
  *
  *
  * Copyright © 2026 LGS1920
@@ -498,14 +498,15 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
             }
             const fullConfig = {
                 animationWhenDragging: config.animationWhenDragging ?? config.type === LGS_TOOLBAR,
-                attachTo: config.attachTo ?? 'top-left',
-                container:   actualContainer,
-                contextMenu: __.ui.widgetManager.cloneContext(config?.contextMenu ?? {}, WIDGETS_CAPABILITIES),
+                attachTo:     config.attachTo ?? 'top-left',
+                container:    actualContainer,
+                contextMenu:  __.ui.widgetManager.cloneContext(config?.contextMenu ?? {}, WIDGETS_CAPABILITIES),
                 cropDimensions:  config.cropDimensions ?? {left: 0, top: 0, width: 0, height: 0},
                 dynamic:         config.dynamic ?? false,
                 forceEven:       config.forceEven ?? false,
                 group:           config.group ?? null,
-                id: config.id,
+                handle:       config.handle ?? null,
+                id:           config.id,
                 isCropper:       config.isCropper ?? false,
                 left:            config.left,
                 margin:          config.margin ?? 0,
@@ -518,7 +519,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                 ratio:           config.ratio ?? null,
                 resizeFromCenter: config.resizeFromCenter ?? false,
                 resizable:       config.resizable ?? false,
-                rotatable: config.rotatable ?? false,
+                rotatable:    config.rotatable ?? false,
                 scalable:        config.scalable ?? false,
                 showControlBox:  true,
                 snap:            config.snap ?? false,
@@ -528,7 +529,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                 ttl:             config.ttl ?? null,
                 type:            config.type ?? LGS_WIDGET,
                 widgetsBoard: config.widgetsBoard || null,
-                width:       config.width,
+                width:        config.width,
             }
 
             const resolved = await __.ui.widgetManager.retrieveConfig(_widget.current, fullConfig)
@@ -642,6 +643,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                 origin={false}
                 ref={_moveable}
                 target={_widget}
+                dragTarget={config.handle}
                 draggable={!interactionLocked && (config?.draggable ?? true)}
                 edgeDraggable={true}
                 edge={['w', 'e', 's', 'n']}

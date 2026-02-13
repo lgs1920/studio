@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-12
- * Last modified: 2026-02-12
+ * Created on: 2026-02-13
+ * Last modified: 2026-02-13
  *
  *
  * Copyright © 2026 LGS1920
@@ -24,10 +24,10 @@ html {
 }
 
 body {
-    font-size: var(--lgs-font-size);
     font-family: var(--lgs-font-family);
-    color: var(--lgs-dark-ui-fg-color);
+    font-size: var(--lgs-font-size);
     overflow: hidden;
+    color: var(--lgs-dark-ui-fg-color);
 }
 
 .no-select {
@@ -111,12 +111,12 @@ body {
 
 .main-logo {
     position: relative;
-    --padding: calc(6 * var(--lgs-gutter));
-    padding: var(--padding);
-    aspect-ratio: 2.813;
     display: flex;
-    justify-content: center;
     align-items: center;
+    justify-content: center;
+    padding: var(--padding);
+    --padding: calc(6 * var(--lgs-gutter));
+    aspect-ratio: 2.813;
 }
 
 .main-logo.xlarge {
@@ -128,13 +128,13 @@ body {
 }
 
 .main-logo.small {
-    --padding: calc(2 * var(--lgs-gutter-xs));
     border-radius: var(--lgs-border-radius-xs);
+    --padding: calc(2 * var(--lgs-gutter-xs));
 }
 
 .main-logo.xsmall {
-    --padding: calc(var(--lgs-gutter-xs));
     border-radius: var(--lgs-border-radius-xs);
+    --padding: calc(var(--lgs-gutter-xs));
 }
 
 .main-logo img {
@@ -143,40 +143,40 @@ body {
 }
 
 .main-logo .the-slogan {
-    color: var(--lgs-slogan-color);
     font-family: var(--lgs-slogan-font-family);
     font-size: var(--lgs-slogan-font-size);
-    transform: rotate(-10deg) skew(-18deg);
-    margin-top: calc(2 * var(--lgs-gutter));
     width: 100%;
+    margin-top: calc(2 * var(--lgs-gutter));
+    transform: rotate(-10deg) skew(-18deg);
     text-align: center;
+    color: var(--lgs-slogan-color);
 }
 
 .main-logo .version-info, .main-logo .welcome-modal-timer {
-    display: flex;
-    gap: var(--lgs-gutter-xs);
-    align-items: center;
     font-size: var(--lgs-font-size-s);
     line-height: 1;
+    display: flex;
+    align-items: center;
+    gap: var(--lgs-gutter-xs);
 }
 
 .main-logo .welcome-modal-timer {
+    font-size: var(--lgs-font-size-s);
     position: absolute;
-    align-items: self-end;
-    left: unset;
     top: var(--lgs-gutter-s);
     right: var(--lgs-gutter-s);
-    font-size: var(--lgs-font-size-s);
+    left: unset;
+    align-items: self-end;
 }
 
 #camera-target {
+    font-size: 1.2rem;
+    line-height: 1;
     position: absolute;
     display: none !important;
     align-items: center;
     justify-content: center;
     transition: all 0.5s ease;
-    font-size: 1.2rem;
-    line-height: 1;
     filter: drop-shadow(0 0 5px black);
 }
 
@@ -188,12 +188,12 @@ body {
 
 .drawer-wrapper {
     position: fixed;
-    right: var(--right);
+    z-index: var(--sl-z-index-drawer);
     top: var(--top);
+    right: var(--right);
     width: calc(100vw - var(--right) - var(--left));
     height: calc(100dvh - var(--top) - var(--bottom));
     pointer-events: none;;
-    z-index: var(--sl-z-index-drawer);
 }
 
 .drawer-wrapper.horizontal {
@@ -327,6 +327,7 @@ body {
 .lgs-widget-control-box .moveable-bold.moveable-bounds {
     background-color: var(--lgs-first-color-90) !important;
 }
+
 /*******************************************************************************
  * VideoLayer component
  ******************************************************************************/
@@ -526,6 +527,72 @@ body {
     border-color: var(--lgs-card-on-map-disabled-border-color) !important;
     background: transparent !important;
 }
+
+/*******************************************************************************
+ * Widget Ordering
+ ******************************************************************************/
+.widget-ordering-panel {
+    flex-direction: column;
+    gap: var(--lgs-gutter-xs);
+}
+
+/* Container et Scroll */
+.widget-list-container {
+    touch-action: pan-y; /* Permet le scroll vertical tactile sur la liste */
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Poignée de tri (Internal Sort) */
+.reorder {
+    padding: 0 12px;
+    cursor: grab;
+    touch-action: none; /* Bloque le scroll et le drag parent pour prioriser SortableJS */
+}
+
+.reorder:active {
+    cursor: grabbing;
+}
+
+/* Titre du Widget (Parent Drag) */
+.widget-deck-title {
+    cursor: move; /* Indique visuellement que c'est la seule zone pour déplacer le panneau */
+}
+
+/* SortableJS Ghost */
+.sortable-ghost {
+    opacity: 0.2;
+    background: var(--lgs-primary-color) !important;
+}
+
+.widget-sortable-list {
+    display: flex;
+    flex-direction: column;
+    min-width: 10rem;
+    max-height: 230px;
+    text-wrap: nowrap;
+    gap: var(--lgs-gutter-xs);
+}
+
+.widget-ordering-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--lgs-gutter-xs);
+}
+
+.widget-ordering-row sl-icon {
+    width: var(--lgs-gutter, 1rem);
+}
+
+
+.widget-ordering-row .sortable-widget-info {
+    flex: 1;
+}
+
+.widget-ordering-row .sortable-widget-actions ::part(base) {
+    font-size: var(--lgs-font-size);
+}
+
 
 /*******************************************************************************
  * Widget Editor

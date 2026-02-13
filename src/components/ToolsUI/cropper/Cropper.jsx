@@ -7,14 +7,15 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-29
- * Last modified: 2026-01-29
+ * Created on: 2026-02-13
+ * Last modified: 2026-02-13
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { DynamicWidget } from '@Components/MainUI/widgets/DynamicWidget'
+import { WidgetsOrderingPanel } from '@Components/MainUI/widgets/ordering/WidgetsOrderingPanel'
 import { WidgetsPanel } from '@Components/MainUI/widgets/WidgetsPanel'
 import { CropRatioEditorWidget } from '@Components/ToolsUI/cropper/widgets/CropRatioEditorWidget'
 /**
@@ -81,6 +82,9 @@ export const Cropper = memo(({overlay = false, className = '', context, options 
                 {overlay && <div className="crop-overlay" ref={_overlay}/>}
                 {children}
                 <WidgetsPanel id="widget-deck" context={context} groups={[MULTI_PURPOSE_WIDGETS, JOURNEY_WIDGETS]}/>
+                <WidgetsOrderingPanel id="widget-ordering" context={context}
+                                      groups={[MULTI_PURPOSE_WIDGETS, JOURNEY_WIDGETS]}/>
+
                 {
                     Array.from(list.entries())
                         .filter(([key, props]) => props?.widgetsBoard === VIDEO_WIDGETS_BOARD)

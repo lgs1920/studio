@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-08
- * Last modified: 2026-02-08
+ * Created on: 2026-02-13
+ * Last modified: 2026-02-13
  *
  *
  * Copyright © 2026 LGS1920
@@ -32,17 +32,21 @@ import {
 import {
     getPreviewChartSize,
 }                                                                                    from '@Components/MainUI/widgets/editor/previewUtils'
+import {
+    WidgetsOrderingPanelContent,
+}                          from '@Components/MainUI/widgets/ordering/WidgetsOrderingPanelContent'
+import { VIDEO_CROP_ZONE } from '@Core/constants'
 import { DISTANCE, ELEVATION, POINT, TIME }                                          from '@Core/ui/Profiler'
 import {
     SlColorPicker, SlDivider, SlRange, SlSwitch, SlIconButton,
-}                from '@shoelace-style/shoelace/dist/react'
-import { FA2SL } from '@Utils/FA2SL'
+}                          from '@shoelace-style/shoelace/dist/react'
+import { FA2SL }           from '@Utils/FA2SL'
 import { colord }                                                                    from 'colord'
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useSnapshot }                                                               from 'valtio'
 import {
     faArrowRotateLeft,
-}                from '@fortawesome/pro-regular-svg-icons'
+}                          from '@fortawesome/pro-regular-svg-icons'
 import { ProfileChart }                                                              from './ProfileChart'
 import './style.css'
 
@@ -223,6 +227,7 @@ export const ProfileWidgetEditor = ({entity}) => {
 
     return (
         <div className="lgs-card profile-widget-editor" key={entity}>
+            <WidgetsOrderingPanelContent widgetsBoard={VIDEO_CROP_ZONE}/>
             <div className="lgs-widget-preview ">
                 <div className="profile-widget-preview-surface" ref={previewRef} style={previewStyle}>
                     <div className="profile-widget-preview-chart" style={previewChartSize ? {
