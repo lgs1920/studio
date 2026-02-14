@@ -7,14 +7,13 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-13
- * Last modified: 2026-02-13
+ * Created on: 2026-02-14
+ * Last modified: 2026-02-14
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { LGSScrollbars }              from '@Components/MainUI/LGSScrollbars'
 import { faAnglesUpDown }             from '@fortawesome/pro-regular-svg-icons'
 import { SlIcon }                     from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                      from '@Utils/FA2SL'
@@ -38,29 +37,26 @@ export const WidgetsOrderingPanelContent = ({widgetsBoard}) => {
     const widget = useSnapshot($widget)
 
     /**
-     * Filters and sorts active widgets from the store based on the board.
+     * Filters and sorts widgets.
+     * Priority: onTop (desc) > zIndex (desc).
      */
     const activeWidgets = useMemo(() => {
-        // Return early if the Valtio snapshot list is unavailable
         if (!widget.list) {
             return []
         }
 
-        // Filter IDs by widgetsBoard from the Valtio proxyMap snapshot
         const filteredIds = Array.from(widget.list.entries())
             .filter(([, w]) => w?.widgetsBoard === widgetsBoard)
             .map(([id]) => id)
 
-        // Map IDs to curated objects with  name fallbacks and icon
         const list = filteredIds.map(id => {
             const widgetType = id.split('#')[0]
             const instance = lgs.settings.widgets[widgetType]
             if (!instance) {
                 return null
             }
-            const {configuration} = instance
 
-            console.log(instance.name)
+            const {configuration} = instance
 
             const name = (configuration
                           ? (configuration.elements?.[id]?.text?.content
@@ -69,58 +65,70 @@ export const WidgetsOrderingPanelContent = ({widgetsBoard}) => {
                         ?? instance.name)
                           : instance.name)
                 ?? instance.name
+
             return {
                 id,
                 name,
                 icon:   instance.icon,
                 zIndex: instance.zIndex ?? 0,
                 type:   widgetType,
+                onTop: instance.alwaysOnTop ?? false,
+                fixed: instance.fixedPosition ?? false,
             }
-        })
-            .filter(Boolean) // Ensure no null instances persist in the list
+        }).filter(Boolean)
 
-        // 5. Sort by zIndex (descending order for layer management)
-        list.sort((a, b) => b.zIndex - a.zIndex)
-
-        // Production-oriented logging for debugging purposes
-        console.log('--- Active Widgets (Key/Object) ---')
-        list.forEach(item => {
-            console.log(`Key: ${item.id}`, item)
+        // Multi-level sort: onTop elements first, then by zIndex
+        list.sort((a, b) => {
+            if (a.onTop !== b.onTop) {
+                return b.onTop ? 1 : -1
+            }
+            return b.zIndex - a.zIndex
         })
 
         return list
     }, [widget.list, widgetsBoard])
 
     /**
-     * Initialize SortableJS on the scrollbar's view element.
+     * Initialize SortableJS with lock constraints for fixed elements.
      */
     useEffect(() => {
-        if (_viewRef.current && activeWidgets.length > 0) {
-            // Clean up previous instance if any
+        const el = _viewRef.current?.getScrollElement ? _viewRef.current.getScrollElement() : _viewRef.current
+
+        if (el && activeWidgets.length > 0) {
             if (_sortableInstance.current) {
                 _sortableInstance.current.destroy()
             }
-
-            _sortableInstance.current = new Sortable(_viewRef.current, {
-                animation:    150,
-                handle:       '.reorder',      // Only the grip triggers the sort
-                scroll:       true,            // Enable auto-scroll
-                bubbleScroll: true,
-                invertSwap:   true,
-                ghostClass:   'sortable-ghost',
-                // Prevents button clicks from initiating a drag
-                filter:          '.sortable-widget-actions',
+            _sortableInstance.current = new Sortable(el, {
+                animation:  150,
+                ghostClass: 'sortable-ghost',
+                filter:     '.widget-row-fixed, .sortable-widget-actions',
                 preventOnFilter: true,
+                onMove:     (evt) => {
+                    const isTargetFixed = evt.related.classList.contains('widget-row-fixed')
+                    const parentEl = evt.to
 
-                onEnd: (evt) => {
-                    const {oldIndex, newIndex} = evt
-                    if (oldIndex !== newIndex) {
-                        const movedId = activeWidgets[oldIndex].id
-                        const targetId = activeWidgets[newIndex].id
-
-                        // Production manager call to update z-indices
+                    if (isTargetFixed) {
+                        parentEl.classList.add('drop-is-forbidden')
+                        parentEl.classList.remove('drop-is-allowed')
+                        return false
+                    }
+                    else {
+                        parentEl.classList.add('drop-is-allowed')
+                        parentEl.classList.remove('drop-is-forbidden')
+                        return true
                     }
                 },
+
+                onEnd: (evt) => {
+                    const parentEl = evt.to
+                    parentEl.classList.remove('drop-is-forbidden', 'drop-is-allowed')
+
+                    const {oldIndex, newIndex} = evt
+                    if (oldIndex !== newIndex && !activeWidgets[oldIndex].fixed) {
+                        //_.ui.widgetManager.reorder(activeWidgets[oldIndex].id, activeWidgets[newIndex].id)
+                    }
+                },
+
             })
         }
 
@@ -137,23 +145,18 @@ export const WidgetsOrderingPanelContent = ({widgetsBoard}) => {
     }
 
     return (
-        <div className="widget-ordering-panel lgs-card on-map">
-            {/* This header is the 'handle' for the Parent Widget container
-             as defined in Widget.jsx (config.handle)
-             */}
+        <div className="widget-ordering-panel lgs-card">
             <div className="widget-deck-entry widget-deck-title">
                 <SlIcon library="fa" name={FA2SL.set(faAnglesUpDown)} className="icon-main-title"/>
                 <span>{'Widget Stack'}</span>
             </div>
 
             <div className="widget-list-container">
-                {/* <LGSScrollbars ref={_viewRef}> */}
-                <div className="widget-sortable-list">
+                <div className="widget-sortable-list" ref={_viewRef}>
                     {activeWidgets.map((w) => (
                         <SortableWidgetRow key={w.id} widget={w}/>
                     ))}
                 </div>
-                {/* </LGSScrollbars> */}
             </div>
         </div>
     )

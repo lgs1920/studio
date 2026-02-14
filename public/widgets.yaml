@@ -39,6 +39,8 @@ widgets:
     icon: "user"
     mandatory: true
     component: "CreditsWidget"
+    alwaysOnTop: true
+    fixedPosition: true
     groups:
       - "multi-purpose-widgets"
 

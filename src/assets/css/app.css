@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-13
- * Last modified: 2026-02-13
+ * Created on: 2026-02-14
+ * Last modified: 2026-02-14
  *
  *
  * Copyright © 2026 LGS1920
@@ -542,11 +542,10 @@ body {
     -webkit-overflow-scrolling: touch;
 }
 
-/* Poignée de tri (Internal Sort) */
 .reorder {
     padding: 0 12px;
     cursor: grab;
-    touch-action: none; /* Bloque le scroll et le drag parent pour prioriser SortableJS */
+    touch-action: none;
 }
 
 .reorder:active {
@@ -555,13 +554,7 @@ body {
 
 /* Titre du Widget (Parent Drag) */
 .widget-deck-title {
-    cursor: move; /* Indique visuellement que c'est la seule zone pour déplacer le panneau */
-}
-
-/* SortableJS Ghost */
-.sortable-ghost {
-    opacity: 0.2;
-    background: var(--lgs-primary-color) !important;
+    cursor: move;
 }
 
 .widget-sortable-list {
@@ -577,11 +570,11 @@ body {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: var(--lgs-gutter-xs);
+    gap: var(--lgs-gutter-xs);
 }
 
 .widget-ordering-row sl-icon {
-    width: var(--lgs-gutter, 1rem);
+    width: 1.2rem;
 }
 
 
@@ -593,6 +586,38 @@ body {
     font-size: var(--lgs-font-size);
 }
 
+.sortable-ghost {
+    opacity: 0.5;
+    border: var(--lgs-success-border-color) 1px solid !important;
+    background: var(--lgs-success-bg-color) !important;
+}
+
+.drop-is-forbidden .sortable-ghost {
+    opacity: 0.5;
+    border: var(--lgs-error-border-color) 1px solid !important;
+    background: var(--lgs-error-bg-color) !important;
+}
+
+.drop-is-allowed .sortable-ghost {
+    opacity: 0.5;
+    border: var(--lgs-success-border-color) 1px solid !important;
+    background: var(--lgs-success-bg-color) !important;
+}
+
+.sortable-chosen {
+    opacity: 0.5;
+    color: var(--lgs-information-color) !important;
+    border: var(--lgs-information-border-color) 1px solid !important;
+    background: var(--lgs-information-bg-color) !important;
+}
+
+.widget-row-fixed:hover {
+    cursor: not-allowed;
+    opacity: 0.5;
+    color: var(--lgs-error-color) !important;
+    border: var(--lgs-error-border-color) 1px solid !important;
+    background: var(--lgs-error-bg-color) !important;
+}
 
 /*******************************************************************************
  * Widget Editor
