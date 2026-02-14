@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-03
- * Last modified: 2026-02-03
+ * Created on: 2026-02-14
+ * Last modified: 2026-02-14
  *
  *
  * Copyright © 2026 LGS1920
@@ -336,6 +336,7 @@ export class WidgetCoreRegistry {
                 type:                   initialConfig.type ?? LGS_WIDGET,
                 useRatio:               initialConfig.useRatio ?? true,
                 widgetsBoard:           initialConfig.widgetsBoard,
+                zIndex: initialConfig.zIndex ?? 0,
             }
         }
         else {
@@ -399,6 +400,13 @@ export class WidgetCoreRegistry {
                 config.rotate = savedWidget.rotate || 0
                 config.ratio = savedWidget.ratio
                 config.attachTo = savedWidget.attachTo || config.attachTo || 'center'
+                // Prefer initialConfig.zIndex if explicitly provided (for newly added widgets)
+                if (initialConfig.zIndex !== undefined) {
+                    config.zIndex = initialConfig.zIndex
+                }
+                else if (savedWidget.zIndex !== undefined) {
+                    config.zIndex = savedWidget.zIndex
+                }
             }
         }
 
@@ -448,6 +456,7 @@ export class WidgetCoreRegistry {
             rotate:       config.rotate || 0,
             ratio:        config.ratio,
             attachTo:  config.attachTo || 'center',
+            zIndex: config.zIndex || 0,
         }
     }
 

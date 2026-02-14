@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-03
- * Last modified: 2026-02-03
+ * Created on: 2026-02-14
+ * Last modified: 2026-02-14
  *
  *
  * Copyright © 2026 LGS1920
@@ -21,7 +21,7 @@ import React, { useEffect, useMemo, useState }                                  
 import { useSnapshot }                                                            from 'valtio'
 import './style.css'
 
-export const TextWidget = ({id, context}) => {
+export const TextWidget = ({id, context, zIndex}) => {
     // Destructure context properties used as dependencies
     const {widgetEditor, widgetsBoard} = context
 
@@ -88,8 +88,9 @@ export const TextWidget = ({id, context}) => {
             stopPropagation: false,
             snap:            false,
             widgetsBoard:    widgetsBoard,
+            zIndex: zIndex,
         }
-    }, [widgetEditor, container, widgetsBoard, id]) // Include all dependencies to ensure accurate recalculation
+    }, [widgetEditor, container, widgetsBoard, id, zIndex]) // Include all dependencies to ensure accurate recalculation
 
     // Safety check: if the board is missing or the config generation failed, return null.
     // We check Object.keys(config).length for cases where config returned {} inside useMemo.

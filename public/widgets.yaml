@@ -29,6 +29,7 @@ widgets:
     mandatory: false
     max: 1
     component: "CompassWidget"
+    type: "lgs-visual-widget"
     groups:
       - "multi-purpose-widgets"
 
@@ -39,6 +40,7 @@ widgets:
     icon: "user"
     mandatory: true
     component: "CreditsWidget"
+    type: "lgs-visual-widget"
     alwaysOnTop: true
     fixedPosition: true
     groups:
@@ -52,6 +54,7 @@ widgets:
     mandatory: false
     max: 1
     component: "ProfileWidget"
+    type: "lgs-visual-widget"
     path: "@Components/Profile"
     groups:
       - "journey-widgets"
@@ -121,6 +124,7 @@ widgets:
     icon: "Text"
     mandatory: false
     component: "TextWidget"
+    type: "lgs-visual-widget"
     path: "@Components/Text"
     max: 1000
     groups:
@@ -173,6 +177,7 @@ widgets:
     mandatory: false
     max: 1
     component: "JourneyStatsWidget"
+    type: "lgs-visual-widget"
     path: "@Components/Stats"
 
     groups:

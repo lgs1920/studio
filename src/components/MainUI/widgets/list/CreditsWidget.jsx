@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-02-14
+ * Last modified: 2026-02-14
  *
  *
  * Copyright © 2026 LGS1920
@@ -27,7 +27,7 @@ import { useSnapshot } from 'valtio'
  * @param {Object} props.context - Valtio proxy context containing widgetsBoard and widgetEditor
  * @returns {JSX.Element|null} The credits widget or null if not in editor mode or container is not ready
  */
-export const CreditsWidget = ({id, context}) => {
+export const CreditsWidget = ({id, context, zIndex}) => {
     // Get snapshot of context
     const {widgetEditor, widgetsBoard} = useSnapshot(context ?? {widgetEditor: false, widgetsBoard: ''})
     const [_container, setContainer] = useState(null)
@@ -62,10 +62,9 @@ export const CreditsWidget = ({id, context}) => {
             mandatory:       true,
             stopPropagation: true,
             widgetsBoard:    widgetsBoard,
+            zIndex: zIndex,
         }
-
-        return {}
-    }, [widgetEditor, _container])
+    }, [widgetEditor, _container, zIndex])
 
     // Render only when widgetEditor is true and container is defined
     if (!widgetEditor || !_container) {

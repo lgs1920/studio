@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-08
- * Last modified: 2026-02-08
+ * Created on: 2026-02-14
+ * Last modified: 2026-02-14
  *
  *
  * Copyright © 2026 LGS1920
@@ -23,7 +23,7 @@ import React, { useEffect, useMemo, useState }                                  
 import { useSnapshot }                                                            from 'valtio'
 import './style.css'
 
-export const JourneyStatsWidget = ({id, context}) => {
+export const JourneyStatsWidget = ({id, context, zIndex}) => {
     const {widgetEditor, widgetsBoard} = context
 
     const unitSystem = useSnapshot(lgs.settings.unitSystem).current
@@ -93,8 +93,9 @@ export const JourneyStatsWidget = ({id, context}) => {
             stopPropagation: false,
             snap:            false,
             widgetsBoard:    widgetsBoard,
+            zIndex: zIndex,
         }
-    }, [container, widgetsBoard, id, widgetEditor])
+    }, [container, widgetsBoard, id, widgetEditor, zIndex])
 
     if (!widgetsBoard || Object.keys(config).length === 0) {
         return null

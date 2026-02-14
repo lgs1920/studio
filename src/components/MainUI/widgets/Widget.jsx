@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-13
- * Last modified: 2026-02-13
+ * Created on: 2026-02-14
+ * Last modified: 2026-02-14
  *
  *
  * Copyright © 2026 LGS1920
@@ -530,6 +530,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                 type:            config.type ?? LGS_WIDGET,
                 widgetsBoard: config.widgetsBoard || null,
                 width:        config.width,
+                zIndex: config.zIndex,
             }
 
             const resolved = await __.ui.widgetManager.retrieveConfig(_widget.current, fullConfig)

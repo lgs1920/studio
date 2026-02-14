@@ -7,14 +7,14 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-13
- * Last modified: 2026-02-13
+ * Created on: 2026-02-14
+ * Last modified: 2026-02-14
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { VIDEO_WIDGETS_BOARD, WIDGETS_CONFIGURATION } from '@Core/constants'
+import { VIDEO_WIDGETS_BOARD, WIDGETS_CONFIGURATION, LGS_VISUAL_WIDGET } from '@Core/constants'
 import { WidgetDynamicRenderer }                      from '@Core/ui/widget-manager/dynamic-render/WidgetDynamicRender'
 import { faBox }             from '@fortawesome/pro-regular-svg-icons'
 import { SlIcon, SlTooltip } from '@shoelace-style/shoelace/dist/react'
@@ -38,6 +38,7 @@ export const WidgetsPanelContent = ({groups}) => {
     const widget = useSnapshot($widget)
     const reached = new Set()
     const [isInitialized, setIsInitialized] = useState(false)
+    const widgetIndexRef = useRef(9999)
 
     /**
      * Filters and returns only valid groups from the global registry.
@@ -55,10 +56,24 @@ export const WidgetsPanelContent = ({groups}) => {
      */
     const addWidget = (group, key, props = {}) => {
         const id = !/#/.test(key) ? __.ui.widgetManager.defineElementId(group, key) : key
+
+        // Get widget definition to check its type
+        const groupsMap = widgetDynamicRenderer.theGroups([group])
+        const groupDef = groupsMap.get(group)
+        const widgetDef = groupDef?.widgets.get(key.split('#')[0])
+
+        // Only apply zIndex for visual widgets
+        const additionalProps = {}
+        if (widgetDef?.type === LGS_VISUAL_WIDGET) {
+            additionalProps.zIndex = widgetIndexRef.current
+            widgetIndexRef.current--
+        }
+
         widgetDynamicRenderer.renderWidget(group, id, {
             ...props,
             widgetsBoard: VIDEO_WIDGETS_BOARD,
             forceRefresh: true,
+            ...additionalProps,
         })
     }
 
