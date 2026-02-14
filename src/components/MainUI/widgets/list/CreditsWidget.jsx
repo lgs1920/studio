@@ -62,7 +62,7 @@ export const CreditsWidget = ({id, context, zIndex}) => {
             mandatory:       true,
             stopPropagation: true,
             widgetsBoard:    widgetsBoard,
-            zIndex: zIndex,
+            zIndex: 10000,
         }
     }, [widgetEditor, _container, zIndex])
 

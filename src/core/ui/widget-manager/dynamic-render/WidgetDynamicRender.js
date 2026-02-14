@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-13
- * Last modified: 2026-01-13
+ * Created on: 2026-02-15
+ * Last modified: 2026-02-15
  *
  *
  * Copyright © 2026 LGS1920
@@ -123,6 +123,7 @@ export class WidgetDynamicRenderer {
                     group,
                     component:    ResolvedComponent,
                     widgetsBoard: props.widgetsBoard,
+                    zIndex: props.zIndex,
                 })
 
                 // Only update the Valtio store once everything is ready in cache

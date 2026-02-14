@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-27
- * Last modified: 2026-01-27
+ * Created on: 2026-02-14
+ * Last modified: 2026-02-14
  *
  *
  * Copyright © 2026 LGS1920
@@ -459,14 +459,19 @@ export class WidgetManager {
      *
      * @param {string} widgetId - The widget ID
      * @param {Object} config - Widget configuration
+     * @param preparation
      * @returns {Promise<void>}
      */
-    saveWidgetPosition = async (widgetId, config) => {
-        const positionData = this.#registry.preparePositionDataForStorage(widgetId, config)
+    saveWidgetPosition = async (widgetId, config, preparation = true) => {
+
+        const positionData = preparation
+                             ? this.#registry.preparePositionDataForStorage(widgetId, config)
+                             : config
         if (!positionData) {
             return
         }
         await this.#widgetDB.saveWidgetPosition(widgetId, positionData)
+
     }
 
     /**

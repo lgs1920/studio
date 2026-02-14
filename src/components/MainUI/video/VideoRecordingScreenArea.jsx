@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-28
- * Last modified: 2026-01-28
+ * Created on: 2026-02-15
+ * Last modified: 2026-02-15
  *
  *
  * Copyright © 2026 LGS1920
@@ -176,6 +176,10 @@ export const VideoRecordingScreenArea = memo(() => {
         }
     }, [video.paused])
 
+    /**
+     * Prepares the recorder and composes the canvas overlays.
+     * Optimizes rendering by sorting widgets based on their DOM zIndex before composition.
+     */
     const initializeRecorder = useCallback(() => {
         $video.settings = {quality: $video.quality, fps: $video.fps}
 
@@ -211,11 +215,15 @@ export const VideoRecordingScreenArea = memo(() => {
         const composer = new CanvasOverlayComposer(lgs.canvas, {
             clip: {x, y, width, height},
             width, height,
-                  flushWebGLBuffer: () => lgs.scene.render(),
-              })
+            flushWebGLBuffer: () => lgs.scene.render(),
+        })
         _composer.current = composer
 
-        ;[...__.ui.widgetCache.getAll({widgetsBoard: VIDEO_WIDGETS_BOARD}).keys()].map(key => {
+        // 1. Collect all widget data and their DOM zIndex
+        const overlayData = []
+        const widgetKeys = [...__.ui.widgetCache.getAll({widgetsBoard: VIDEO_WIDGETS_BOARD}).keys()]
+
+        for (const key of widgetKeys) {
             const widgetEl = __.ui.widgetManager.getElementById(key)
             const canvasEl = widgetEl?.querySelector('.lgs-widget-canvas')
 
@@ -223,42 +231,44 @@ export const VideoRecordingScreenArea = memo(() => {
                 const config = __.ui.widgetManager.getWidgetConfig(key)
                 const styles = getStyles(widgetEl)
                 const shadowMargins = getShadowParameters(widgetEl)
-
-                // config.position contains coordinates relative to the Studio origin
-                // crop.left, crop.top are coordinates of the crop relative to the Studio origin
-                // The canvas includes the shadow, so we need to offset by shadow margins
-                const localX = config.position.left - crop.left - shadowMargins.left
-                const localY = config.position.top - crop.top - shadowMargins.top
-
-                // Get canvas CSS dimensions (logical pixels)
                 const canvasStyle = window.getComputedStyle(canvasEl)
-                const canvasWidth = parseFloat(canvasStyle.width)
-                const canvasHeight = parseFloat(canvasStyle.height)
                 const widgetScale = resolveWidgetScale(widgetEl, config.scale)
 
-                const contentWidth = Math.max(0, canvasWidth - (shadowMargins.left + shadowMargins.right))
-                const contentHeight = Math.max(0, canvasHeight - (shadowMargins.top + shadowMargins.bottom))
-                composer.addOverlay(canvasEl, {
-                    x:        localX,
-                    y:        localY,
-                    w:        canvasWidth,
-                    h:        canvasHeight,
-                    contentWidth,
-                    contentHeight,
-                    blur:     styles.blur,
-                    radius:   styles.radius,
-                    border: styles.border,
-                    rotate:   config.rotate || 0,
-                    scale: widgetScale,
-                    shadowMargins,
-                })
+                // Read zIndex from computed style for accurate DOM layering
+                const zIndex = parseInt(window.getComputedStyle(widgetEl).zIndex, 10) || 0
+
+                overlayData.push({
+                                     canvasEl,
+                                     zIndex,
+                                     params: {
+                                         x:             config.position.left - crop.left - shadowMargins.left,
+                                         y:             config.position.top - crop.top - shadowMargins.top,
+                                         w:             parseFloat(canvasStyle.width),
+                                         h:             parseFloat(canvasStyle.height),
+                                         contentWidth:  Math.max(0, parseFloat(canvasStyle.width) - (shadowMargins.left + shadowMargins.right)),
+                                         contentHeight: Math.max(0, parseFloat(canvasStyle.height) - (shadowMargins.top + shadowMargins.bottom)),
+                                         blur:          styles.blur,
+                                         radius:        styles.radius,
+                                         border:        styles.border,
+                                         rotate:        config.rotate || 0,
+                                         scale:         widgetScale,
+                                         shadowMargins,
+                                     },
+                                 })
             }
-        })
+        }
+
+        // 2. Sort by ascending zIndex to ensure correct painting order (painter's algorithm)
+        overlayData.sort((a, b) => a.zIndex - b.zIndex)
+
+        // 3. Add to composer in order
+        for (const item of overlayData) {
+            composer.addOverlay(item.canvasEl, item.params)
+        }
 
         __.recorder.setCanvas(composer.getCanvas())
 
-    }, [$video.ratio, disposeComposer, maxDuration, maxSize, $video.fps, $video.quality])
-
+    }, [$video.ratio, disposeComposer, maxDuration, maxSize, $video.fps, $video.quality, crop])
 
     const handleVideoRecording = useCallback(async () => {
         try {
@@ -289,7 +299,7 @@ export const VideoRecordingScreenArea = memo(() => {
         ;[...__.ui.widgetCache.getAll({widgetsBoard: VIDEO_WIDGETS_BOARD}).keys()].map(key => {
             const widgetEl = __.ui.widgetManager.getElementById(key)
             const canvasEl = widgetEl?.querySelector('.lgs-widget-canvas')
-
+            console.log('Adding overlay:', canvasEl.id)
             if (canvasEl instanceof HTMLCanvasElement) {
                 const config = __.ui.widgetManager.getWidgetConfig(key)
                 const styles = getStyles(widgetEl)

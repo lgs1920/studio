@@ -35,7 +35,7 @@ export const SortableWidgetRow = ({widget}) => {
             <SlIcon library="fa" name={FA2SL.set(iconToRender)} className="icon-widget"/>
 
             <div className="sortable-widget-info">
-                {widget.name.length > 15 ? `${widget.name.slice(0, 15)}...` : widget.name}
+                {widget.zIndex} {widget.name.length > 15 ? `${widget.name.slice(0, 15)}...` : widget.name}
             </div>
         </div>
     )

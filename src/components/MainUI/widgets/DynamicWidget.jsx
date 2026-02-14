@@ -7,14 +7,13 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-07
- * Last modified: 2026-01-07
+ * Created on: 2026-02-15
+ * Last modified: 2026-02-15
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { SCENE_WIDGETS_BOARD }           from '@Core/constants'
 import { WidgetDynamicRenderer }         from '@Core/ui/widget-manager/dynamic-render/WidgetDynamicRender'
 import { SlSpinner }                     from '@shoelace-style/shoelace/dist/react'
 import { Suspense, useEffect, useState } from 'react'
@@ -60,7 +59,8 @@ async function ensureWidget(id) {
     }
 
     const renderer = new WidgetDynamicRenderer()
-    const widgetsBoard = lgs.stores.ui.widget.list.get(id)?.widgetsBoard
+    const entity = lgs.stores.ui.widget.list.get(id)
+    const widgetsBoard = entity?.widgetsBoard
     const forceRefresh = true
     const LazyWidget = await renderer.renderWidget(cache.group, id, {widgetsBoard, forceRefresh})
     if (LazyWidget) {
@@ -69,6 +69,7 @@ async function ensureWidget(id) {
                                   group:     cache.group,
                                   mounted:   cache.mounted,
                                   widgetsBoard,
+            zIndex: entity.zIndex,
                               },
         )
     }

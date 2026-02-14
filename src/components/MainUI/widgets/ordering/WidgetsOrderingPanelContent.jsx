@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-14
- * Last modified: 2026-02-14
+ * Created on: 2026-02-15
+ * Last modified: 2026-02-15
  *
  *
  * Copyright © 2026 LGS1920
@@ -17,130 +17,188 @@
 import { faAnglesUpDown }             from '@fortawesome/pro-regular-svg-icons'
 import { SlIcon }                     from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                      from '@Utils/FA2SL'
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Sortable                       from 'sortablejs'
 import { useSnapshot }                from 'valtio'
 import { SortableWidgetRow }          from './SortableWidgetRow'
 
 /**
  * Main content for the widget ordering panel.
- * Uses SortableJS attached to the inner view of LGSScrollbars.
+ * Handles asynchronous widget position management and DOM notification for zIndex changes.
  * * @param {Object} props
  * @param {string} props.widgetsBoard - The target board ID to filter widgets
  */
 export const WidgetsOrderingPanelContent = ({widgetsBoard}) => {
     const _viewRef = useRef(null)
     const _sortableInstance = useRef(null)
+    const [_activeWidgets, _setActiveWidgets] = useState([])
 
-    // Valtio stores
     const $widget = lgs.stores.ui.widget
     const widget = useSnapshot($widget)
 
     /**
-     * Filters and sorts widgets.
-     * Priority: onTop (desc) > zIndex (desc).
+     * Updates the DOM element for a specific widget to reflect the new zIndex.
+     * This targets .lgs-widget-container elements with the matching data-widget attribute.
+     * * @param {string} id
+     * @param {number} zIndex
      */
-    const activeWidgets = useMemo(() => {
-        if (!widget.list) {
-            return []
+    const updateWidgetDOM = (id, zIndex) => {
+        const el = document.querySelector(`.lgs-widget-container[data-widget="${id}"]`)
+        if (el) {
+            el.style.zIndex = zIndex
+        }
+    }
+
+    /**
+     * Loads widget data asynchronously.
+     * Fetches positions using the async getWidgetPosition method.
+     */
+    useEffect(() => {
+        let isMounted = true
+
+        const loadWidgets = async () => {
+            if (!widget.list) {
+                return
+            }
+
+            const entries = Array.from(widget.list.entries())
+            const listPromises = entries
+                .filter(([, w]) => w?.widgetsBoard === widgetsBoard)
+                .map(async ([id], index) => {
+                    const widgetType = id.split('#')[0]
+                    const instance = lgs.settings.widgets[widgetType]
+
+                    if (!instance) {
+                        return null
+                    }
+
+                    const position = await __.ui.widgetManager.getWidgetPosition(id)
+                    const config = instance.configuration
+
+                    const instanceConfig = config?.elements?.[id]
+                        ?? config?.user
+                        ?? config?.default
+
+                    const name = instanceConfig?.text?.content
+                        ?? instance.name
+                        ?? widgetType
+
+                    const currentZ = (position?.zIndex && position.zIndex !== 0)
+                                     ? position.zIndex
+                                     : (10000 - index)
+
+                    return {
+                        id,
+                        name,
+                        icon:   instance.icon,
+                        zIndex: parseInt(currentZ),
+                        type:   widgetType,
+                        onTop:  instance.alwaysOnTop ?? false,
+                        fixed:  instance.fixedPosition ?? false,
+                    }
+                })
+
+            const resolvedList = (await Promise.all(listPromises)).filter(Boolean)
+
+            if (isMounted) {
+                _setActiveWidgets(resolvedList.sort((a, b) => b.zIndex - a.zIndex))
+            }
         }
 
-        const filteredIds = Array.from(widget.list.entries())
-            .filter(([, w]) => w?.widgetsBoard === widgetsBoard)
-            .map(([id]) => id)
-
-        const list = filteredIds.map(id => {
-            const widgetType = id.split('#')[0]
-            const instance = lgs.settings.widgets[widgetType]
-            if (!instance) {
-                return null
-            }
-
-            const {configuration} = instance
-
-            const name = (configuration
-                          ? (configuration.elements?.[id]?.text?.content
-                        ?? configuration.user?.text?.content
-                        ?? configuration.default?.text?.content
-                        ?? instance.name)
-                          : instance.name)
-                ?? instance.name
-
-            return {
-                id,
-                name,
-                icon:   instance.icon,
-                zIndex: instance.zIndex ?? 0,
-                type:   widgetType,
-                onTop: instance.alwaysOnTop ?? false,
-                fixed: instance.fixedPosition ?? false,
-            }
-        }).filter(Boolean)
-
-        // Multi-level sort: onTop elements first, then by zIndex
-        list.sort((a, b) => {
-            if (a.onTop !== b.onTop) {
-                return b.onTop ? 1 : -1
-            }
-            return b.zIndex - a.zIndex
-        })
-
-        return list
+        loadWidgets()
+        return () => {
+            isMounted = false
+        }
     }, [widget.list, widgetsBoard])
 
     /**
-     * Initialize SortableJS with lock constraints for fixed elements.
+     * Recalculates stack and saves via async saveWidgetPosition.
+     * Updates both the database and the active DOM elements.
+     */
+    const handleReorder = async (oldIndex, newIndex) => {
+        const newList = [..._activeWidgets]
+        const [movedItem] = newList.splice(oldIndex, 1)
+
+        if (movedItem.fixed) {
+            return
+        }
+
+        newList.splice(newIndex, 0, movedItem)
+
+        const TOP_Z_INDEX = 10000
+        const STEP = 1
+
+        const updatePromises = newList.map(async (item, index) => {
+            const targetZ = TOP_Z_INDEX - (index * STEP)
+            const currentPos = await __.ui.widgetManager.getWidgetPosition(item.id)
+
+            if (currentPos) {
+                // Update DOM immediately for visual feedback
+                updateWidgetDOM(item.id, targetZ)
+
+                // Persist change to database
+                return __.ui.widgetManager.saveWidgetPosition(item.id, {
+                    ...currentPos,
+                    zIndex: targetZ,
+                }, false)
+            }
+        })
+
+        await Promise.all(updatePromises)
+
+        _setActiveWidgets(newList.map((item, index) => ({
+            ...item,
+            zIndex: TOP_Z_INDEX - (index * STEP),
+        })))
+    }
+
+    /**
+     * SortableJS lifecycle management.
      */
     useEffect(() => {
-        const el = _viewRef.current?.getScrollElement ? _viewRef.current.getScrollElement() : _viewRef.current
+        const el = _viewRef.current
 
-        if (el && activeWidgets.length > 0) {
-            if (_sortableInstance.current) {
-                _sortableInstance.current.destroy()
-            }
+        if (el && _activeWidgets.length > 0) {
             _sortableInstance.current = new Sortable(el, {
                 animation:  150,
                 ghostClass: 'sortable-ghost',
                 filter:     '.widget-row-fixed, .sortable-widget-actions',
                 preventOnFilter: true,
-                onMove:     (evt) => {
-                    const isTargetFixed = evt.related.classList.contains('widget-row-fixed')
-                    const parentEl = evt.to
 
-                    if (isTargetFixed) {
-                        parentEl.classList.add('drop-is-forbidden')
-                        parentEl.classList.remove('drop-is-allowed')
+                onMove: (evt) => {
+                    if (evt.related.classList.contains('widget-row-fixed')) {
+                        evt.to.classList.add('drop-is-forbidden')
                         return false
                     }
-                    else {
-                        parentEl.classList.add('drop-is-allowed')
-                        parentEl.classList.remove('drop-is-forbidden')
-                        return true
-                    }
+                    evt.to.classList.remove('drop-is-forbidden')
+                    evt.to.classList.add('drop-is-allowed')
+                    return true
                 },
 
                 onEnd: (evt) => {
-                    const parentEl = evt.to
-                    parentEl.classList.remove('drop-is-forbidden', 'drop-is-allowed')
-
+                    evt.to.classList.remove('drop-is-forbidden', 'drop-is-allowed')
                     const {oldIndex, newIndex} = evt
-                    if (oldIndex !== newIndex && !activeWidgets[oldIndex].fixed) {
-                        //_.ui.widgetManager.reorder(activeWidgets[oldIndex].id, activeWidgets[newIndex].id)
+                    if (oldIndex !== newIndex) {
+                        handleReorder(oldIndex, newIndex)
                     }
-                },
-
+                }
             })
         }
 
         return () => {
             if (_sortableInstance.current) {
-                _sortableInstance.current.destroy()
+                try {
+                    _sortableInstance.current.destroy()
+                }
+                catch (e) {
+                    // silent catch
+                }
                 _sortableInstance.current = null
             }
         }
-    }, [activeWidgets])
+    }, [_activeWidgets])
 
-    if (activeWidgets.length === 0) {
+    if (_activeWidgets.length === 0) {
         return null
     }
 
@@ -153,7 +211,7 @@ export const WidgetsOrderingPanelContent = ({widgetsBoard}) => {
 
             <div className="widget-list-container">
                 <div className="widget-sortable-list" ref={_viewRef}>
-                    {activeWidgets.map((w) => (
+                    {_activeWidgets.map((w) => (
                         <SortableWidgetRow key={w.id} widget={w}/>
                     ))}
                 </div>

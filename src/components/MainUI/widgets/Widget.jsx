@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-14
- * Last modified: 2026-02-14
+ * Created on: 2026-02-15
+ * Last modified: 2026-02-15
  *
  *
  * Copyright © 2026 LGS1920
@@ -616,7 +616,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
     }
 
     return (
-        <div className="lgs-widget-container">
+        <div className="lgs-widget-container" data-widget={config.id} style={{zIndex: config.zIndex}}>
             <div
                 className={classNames(LGS_WIDGET, {
                     [className]:              !!className,
