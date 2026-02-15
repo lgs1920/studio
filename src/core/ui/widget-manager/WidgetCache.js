@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-02-15
+ * Last modified: 2026-02-15
  *
  *
  * Copyright © 2026 LGS1920
@@ -69,13 +69,14 @@ export class WidgetCache {
      * @param {Object} options - Entry metadata
      */
     set = (key, options) => {
-        const {group, component, mounted, widgetsBoard} = options
+        const {group, component, mounted, widgetsBoard, zIndex} = options
 
         this.#cache.set(key, {
             group:        group ?? null,
             component: component ?? null,
             mounted:      mounted ?? false,
             widgetsBoard: widgetsBoard ?? null,
+            zIndex: zIndex ?? 0,
         })
     }
 
