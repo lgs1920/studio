@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-01
- * Last modified: 2026-02-01
+ * Created on: 2026-02-16
+ * Last modified: 2026-02-16
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,13 +16,9 @@
 
 import { LGS_WIDGET_SCALE_EFFECTIVE } from '@Core/constants'
 
-// Build Metadata
-// Generated on: 2026-01-20 23:45:10
-// Build ID: LGS-COMP-20260120-2345-H01-FINAL
-
 /**
  * CanvasOverlayComposer
- * Version H01: Focus sur le respect du ratio d'aspect et la précision du tracé d'arc.
+ * Handles multi-layer composition with real-time backdrop blur support.
  */
 export class CanvasOverlayComposer {
     #sourceCanvas
@@ -64,7 +60,6 @@ export class CanvasOverlayComposer {
 
         this.#updateSourceDpr()
         this.#resizeOutputCanvas()
-        this.#draw()
         this.#loop()
     }
 
@@ -87,6 +82,9 @@ export class CanvasOverlayComposer {
 
     getCanvas = () => this.#outputCanvas
 
+    /**
+     * Traces a rounded rectangle path on the provided context.
+     */
     #traceRoundedRect(ctx, x, y, w, h, r) {
         ctx.beginPath()
         const radius = Math.max(0, Math.min(r, w / 2, h / 2))
@@ -104,6 +102,9 @@ export class CanvasOverlayComposer {
         ctx.closePath()
     }
 
+    /**
+     * Registers a new overlay to be rendered.
+     */
     addOverlay = (element, options = {}) => {
         const el = typeof element === 'function' ? element() : element
         if (!el) {
@@ -117,7 +118,6 @@ export class CanvasOverlayComposer {
                   radius        = 0,
                   rotate        = 0,
                   scale         = 1,
-                  border = 0,
                   shadowMargins = {top: 0, right: 0, bottom: 0, left: 0},
               } = options
 
@@ -126,7 +126,6 @@ export class CanvasOverlayComposer {
         const hasNumericHeight = typeof el.height === 'number'
         const elDpr = elRect && elRect.width > 0 && hasNumericWidth ? (el.width / elRect.width) : 1
         const elLogicalWidth = hasNumericWidth ? (el.width / elDpr) : (elRect?.width ?? 0)
-        const elLogicalHeight = hasNumericHeight ? (el.height / elDpr) : (elRect?.height ?? 0)
 
         let posX, posY, rawWidth, rawHeight
 
@@ -134,7 +133,7 @@ export class CanvasOverlayComposer {
             posX = x
             posY = y
             rawWidth = w ?? elLogicalWidth
-            rawHeight = h ?? elLogicalHeight
+            rawHeight = h ?? (elRect?.height ?? 0)
         }
         else {
             const rect = elRect
@@ -153,7 +152,6 @@ export class CanvasOverlayComposer {
         const imgAspectRatio = el.height / el.width
 
         const cssScale = typeof scale === 'object' ? (scale.x ?? 1) : scale
-        // The content dimensions in logical pixel
         const logicalContentW = typeof contentWidth === 'number'
                                 ? contentWidth
                                 : (rawWidth / scaleFactor)
@@ -161,11 +159,9 @@ export class CanvasOverlayComposer {
                                 ? contentHeight
                                 : ((rawHeight ?? (logicalContentW * imgAspectRatio)) / scaleFactor)
 
-        // Apply the shadow margins.
         const totalW = logicalContentW + (shadowMargins.left + shadowMargins.right)
         const totalH = logicalContentH + (shadowMargins.top + shadowMargins.bottom)
 
-        // Pivot centered on the full box (content + shadows)
         const cx = posX + totalW / 2
         const cy = posY + totalH / 2
 
@@ -179,18 +175,20 @@ export class CanvasOverlayComposer {
                                 blur,
                                 radius,
                                 rotate,
-                                border,
                                 scale:         cssScale,
                                 shadowMargins,
                             })
-
-        this.#draw()
     }
 
+    /**
+     * Main render cycle.
+     * Back-to-front composition with recursive backdrop sampling.
+     */
     #draw = () => {
         this.#flushWebGLBuffer?.()
         const ctx = this.#ctx
 
+        // Reset canvas with background
         ctx.clearRect(0, 0, this.#outW, this.#outH)
         ctx.fillStyle = '#000000'
         ctx.fillRect(0, 0, this.#outW, this.#outH)
@@ -203,56 +201,53 @@ export class CanvasOverlayComposer {
             srcH = this.#clip.height * this.#sourceDpr
         }
 
-        const drawMainSource = () => {
-            ctx.drawImage(this.#sourceCanvas, srcX, srcY, srcW, srcH, 0, 0, this.#outW, this.#outH)
-        }
-
-        drawMainSource()
+        // Initial background render
+        ctx.drawImage(this.#sourceCanvas, srcX, srcY, srcW, srcH, 0, 0, this.#outW, this.#outH)
 
         for (const overlay of this.#overlays) {
             const el = typeof overlay.element === 'function' ? overlay.element() : overlay.element
             if (!el) {
                 continue
             }
+
             const rad = (overlay.rotate * Math.PI) / 180
             const hw = overlay.contentWidth / 2
             const hh = overlay.contentHeight / 2
             const radius = Math.max(0, Math.min(overlay.radius * overlay.scale, hw, hh))
 
+            // Backdrop Blur Implementation
+            // We sample the current output canvas state before drawing the widget
+            if (overlay.blur > 0) {
+                ctx.save()
+                ctx.translate(overlay.cx, overlay.cy)
+                ctx.rotate(rad)
+                ctx.scale(overlay.scale, overlay.scale)
+                this.#traceRoundedRect(ctx, -hw, -hh, overlay.contentWidth, overlay.contentHeight, radius)
+                ctx.restore()
+
+                ctx.save()
+                ctx.clip()
+
+                // Apply blur to current frame buffer
+                ctx.filter = `blur(${overlay.blur}px)`
+                ctx.setTransform(1, 0, 0, 1, 0, 0)
+                ctx.drawImage(
+                    this.#outputCanvas,
+                    0, 0, this.#outputCanvas.width, this.#outputCanvas.height,
+                    0, 0, this.#outW, this.#outH,
+                )
+                ctx.restore()
+
+                // Restore transform for widget drawing
+                ctx.setTransform(this.#dpr, 0, 0, this.#dpr, 0, 0)
+            }
+
+            // Widget Content
             ctx.save()
             ctx.translate(overlay.cx, overlay.cy)
             ctx.rotate(rad)
-            const viewScale = overlay.scale
-            ctx.scale(viewScale, viewScale)
+            ctx.scale(overlay.scale, overlay.scale)
 
-            // Backdrop Blur
-            if (overlay.blur > 0) {
-                ctx.save()
-                this.#traceRoundedRect(ctx,
-                                       -hw, -hh,
-                                       overlay.contentWidth,
-                                       overlay.contentHeight,
-                                       radius)
-                ctx.clip()
-
-                ctx.resetTransform()
-                ctx.scale(this.#dpr, this.#dpr)
-                ctx.filter = `blur(${overlay.blur * this.#dpr}px)`
-                drawMainSource()
-                ctx.restore()
-            }
-
-            // Debug Border
-            ctx.strokeStyle = 'red'
-            ctx.lineWidth = 1 / overlay.scale
-            // this.#traceRoundedRect(ctx,
-            //                        -hw, -hh,
-            //                        overlay.contentWidth,
-            //                        overlay.contentHeight,
-            //                        radius)
-            //ctx.stroke()
-
-            // Snapshot
             const dx = -hw - overlay.shadowMargins.left
             const dy = -hh - overlay.shadowMargins.top
 
@@ -263,7 +258,6 @@ export class CanvasOverlayComposer {
             )
 
             ctx.restore()
-
         }
     }
 
