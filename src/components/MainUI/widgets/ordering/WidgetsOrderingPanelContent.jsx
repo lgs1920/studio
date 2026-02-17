@@ -14,6 +14,7 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
+import { LGSScrollbars } from '@Components/MainUI/LGSScrollbars'
 import { CREDITS_WIDGET, WIDGET_LAYER_START, WIDGET_LAYER_STEP, WIDGET_LAYER_TOP } from '@Core/constants'
 import {
     faAnglesUpDown,
@@ -23,6 +24,7 @@ import {
 }                                                                                  from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                                                                   from '@Utils/FA2SL'
 import { useEffect, useRef, useState } from 'react'
+import { Scrollbars }    from 'react-custom-scrollbars-2'
 import Sortable                                                                    from 'sortablejs'
 import { useSnapshot }                                                             from 'valtio'
 import { SortableWidgetRow }                                                       from './SortableWidgetRow'
@@ -30,11 +32,13 @@ import { SortableWidgetRow }                                                    
 /**
  * Main content for the widget ordering panel.
  * Synchronizes SortableJS drag-and-drop with Valtio store, Cache, and Persistence.
- * * @param {Object} props
+ * Uses react-custom-scrollbars-2 for the UI and SortableJS for interaction.
+ *
+ * @param {Object} props
  * @param {string} props.widgetsBoard - The target board ID to filter widgets
  */
 export const WidgetsOrderingPanelContent = ({widgetsBoard}) => {
-    const _viewRef = useRef(null)
+    const _scrollRef = useRef(null)
     const _sortableInstance = useRef(null)
     const [_activeWidgets, _setActiveWidgets] = useState([])
 
@@ -44,7 +48,7 @@ export const WidgetsOrderingPanelContent = ({widgetsBoard}) => {
     /**
      * Updates the DOM element for a specific widget container.
      * Provides immediate visual feedback before React re-renders.
-     * * @param {string} id
+     * @param {string} id
      * @param {number} zIndex
      */
     const updateWidgetDOM = (id, zIndex) => {
@@ -56,7 +60,6 @@ export const WidgetsOrderingPanelContent = ({widgetsBoard}) => {
 
     /**
      * Loads widget data and sorts them by zIndex.
-     * Initial sorting is critical to ensure array indexes match DOM indexes for SortableJS.
      */
     useEffect(() => {
         let isMounted = true
@@ -108,7 +111,7 @@ export const WidgetsOrderingPanelContent = ({widgetsBoard}) => {
             const resolvedList = (await Promise.all(listPromises)).filter(Boolean)
 
             if (isMounted) {
-                // Sorting is mandatory for index synchronization
+                // Sorting descending: first in list = highest zIndex
                 _setActiveWidgets(resolvedList.sort((a, b) => b.zIndex - a.zIndex))
             }
         }
@@ -121,15 +124,13 @@ export const WidgetsOrderingPanelContent = ({widgetsBoard}) => {
 
     /**
      * Recalculates stack and saves via async saveWidgetPosition.
-     * Updates the Valtio store, the internal cache, and the database.
-     * * @param {number} oldIndex
+     * @param {number} oldIndex
      * @param {number} newIndex
      */
     const handleReorder = async (oldIndex, newIndex) => {
         const newList = [..._activeWidgets]
         const [movedItem] = newList.splice(oldIndex, 1)
 
-        // Prevent moving fixed items
         if (movedItem.fixed) {
             return
         }
@@ -138,11 +139,10 @@ export const WidgetsOrderingPanelContent = ({widgetsBoard}) => {
 
         const totalItems = newList.length
 
-        // 1. Calculate new values: Top of list gets highest standard zIndex
+        // 1. Calculate new values based on visual order
         const updatedItems = newList.map((item, index) => {
             let newZ
 
-            // Specific rule: CREDITS_WIDGET always stays at the absolute top layer
             if (item.type === CREDITS_WIDGET) {
                 newZ = WIDGET_LAYER_TOP
             }
@@ -157,10 +157,10 @@ export const WidgetsOrderingPanelContent = ({widgetsBoard}) => {
             }
         })
 
-        // 2. Immediate local state update
+        // 2. Local state update
         _setActiveWidgets(updatedItems)
 
-        // 3. Synchronous memory layers update (Store, Cache & DOM)
+        // 3. Synchronous updates
         updatedItems.forEach(item => {
             const $item = $widget.list.get(item.id)
             if ($item) {
@@ -176,7 +176,7 @@ export const WidgetsOrderingPanelContent = ({widgetsBoard}) => {
             updateWidgetDOM(item.id, item.zIndex)
         })
 
-        // 4. Asynchronous database persistence
+        // 4. Persistence
         const persistencePromises = updatedItems.map(async (item) => {
             const currentPos = await __.ui.widgetManager.getWidgetPosition(item.id)
             if (currentPos) {
@@ -189,12 +189,21 @@ export const WidgetsOrderingPanelContent = ({widgetsBoard}) => {
 
         await Promise.all(persistencePromises)
     }
+
     /**
      * SortableJS lifecycle management.
+     * Targets the inner list while using the Scrollbars view for auto-scroll.
      */
     useEffect(() => {
-        const el = _viewRef.current
-        if (!el || _activeWidgets.length === 0) {
+        const scrollComponent = _scrollRef.current
+        if (!scrollComponent || _activeWidgets.length === 0) {
+            return
+        }
+
+        // Target the inner div containing the actual items
+        const el = scrollComponent.view.querySelector('.widget-sortable-list')
+
+        if (!el) {
             return
         }
 
@@ -203,6 +212,11 @@ export const WidgetsOrderingPanelContent = ({widgetsBoard}) => {
             ghostClass:      'sortable-ghost',
             filter:          '.widget-row-fixed, .sortable-widget-actions',
             preventOnFilter: true,
+
+            // Handle auto-scroll via the Scrollbars internal view
+            scroll:            scrollComponent.view,
+            scrollSensitivity: 50,
+            scrollSpeed:       15,
 
             onMove: (evt) => {
                 if (evt.related.classList.contains('widget-row-fixed')) {
@@ -234,18 +248,25 @@ export const WidgetsOrderingPanelContent = ({widgetsBoard}) => {
     }
 
     return (
-        <div className="widget-ordering-panel lgs-card">
+        <div className="widget-ordering-panel">
             <div className="widget-deck-entry widget-deck-title">
                 <SlIcon library="fa" name={FA2SL.set(faAnglesUpDown)} className="icon-main-title"/>
                 <span>Widget Stack</span>
             </div>
 
             <div className="widget-list-container">
-                <div className="widget-sortable-list" ref={_viewRef}>
-                    {_activeWidgets.map((w) => (
-                        <SortableWidgetRow key={w.id} widget={w}/>
-                    ))}
-                </div>
+                <LGSScrollbars
+                    ref={_scrollRef}
+                    autoHeight
+                    autoHeightMax={400}
+                    autoHide
+                >
+                    <div className="widget-sortable-list">
+                        {_activeWidgets.map((w) => (
+                            <SortableWidgetRow key={w.id} widget={w}/>
+                        ))}
+                    </div>
+                </LGSScrollbars>
             </div>
         </div>
     )

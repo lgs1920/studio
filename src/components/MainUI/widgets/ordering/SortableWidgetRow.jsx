@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-14
- * Last modified: 2026-02-14
+ * Created on: 2026-02-17
+ * Last modified: 2026-02-17
  *
  *
  * Copyright © 2026 LGS1920
@@ -27,8 +27,27 @@ import { FA2SL }                 from '@Utils/FA2SL'
 export const SortableWidgetRow = ({widget}) => {
     const widgetConf = WIDGETS_CONFIGURATION.get(widget.type)
     const iconToRender = widgetConf?.icon
+
+    /**
+     * Handles widget selection from the panel.
+     * @param {string} id
+     */
+    const selectWidget = (id) => {
+        // 1. Update your global selection store
+        lgs.stores.ui.widget.selected = id
+
+        // 2. Give React/Browser a tick to update the DOM
+        setTimeout(() => {
+            const moveable = __.ui.widgetManager.getMoveable(id)
+            console.log(moveable)
+            if (moveable?.current) {
+                moveable.current.updateRect()
+            }
+        }, 0)
+    }
+
     return (
-        <div
+        <div onClick={() => selectWidget(widget.id)}
             className={`widget-ordering-row lgs-one-line-card ${widget.fixed ? 'widget-row-fixed' : ''}`}
             data-id={widget.id}
         >

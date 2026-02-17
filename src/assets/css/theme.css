@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-14
- * Last modified: 2026-02-14
+ * Created on: 2026-02-17
+ * Last modified: 2026-02-17
  *
  *
  * Copyright © 2026 LGS1920
@@ -650,52 +650,66 @@ sl-card[variant="primary"]::part(base) {
 /*******************************************************************************
  * Scrollbars
  ******************************************************************************/
+
+/* * The view needs to maintain its negative margins to hide native bars.
+ * Avoid using !important on padding here as it can conflict with
+ * the library's inline calculations.
+ */
 .lgs-scrollbars .view {
-    padding-right: 15px !important;
-    padding-bottom: 15px !important;
+    /* Ensures content doesn't touch the custom scrollbar thumb */
+    overflow: scroll !important;
+    box-sizing: content-box !important;
+    /* Crucial: prevents ghost native bars on some browsers */
+    padding-right: 10px;
+    padding-bottom: 10px;
+}
+
+/* Common track styles */
+.lgs-scrollbars .track-vertical,
+.lgs-scrollbars .track-horizontal {
+    position: absolute;
+    z-index: 10;
+    transition: opacity 0.2s ease;
+    border-radius: 3px;
+    background-color: var(--lgs-scroolbar-track-color, rgba(0, 0, 0, 0.1));
 }
 
 .lgs-scrollbars .track-horizontal {
-    --thumb-color: var(--lgs-scroolbar-thumb-color);
-    --track-color: var(--lgs-scroolbar-track-color);
     right: 2px;
     bottom: 2px;
     left: 2px;
-    border-radius: 3px;
-    background-color: var(--track-color);
-}
-
-.lgs-scrollbars .track-vertical, .lgs-scrollbars .track-horizontal {
-    top: 2px;
-    right: 0;
-    bottom: 2px;
-    border-radius: 3px;
-    background-color: var(--track-color);
-    --thumb-color: var(--lgs-scroolbar-thumb-color);
-    --track-color: var(--lgs-scroolbar-track-color);
+    height: 6px !important;
 }
 
 .lgs-scrollbars .track-vertical {
     top: 2px;
     right: 2px;
-    bottom: 20;
-    border-radius: 3px;
-    background-color: var(--track-color);
-    --thumb-color: var(--lgs-scroolbar-thumb-color);
-    --track-color: var(--lgs-scroolbar-track-color);
+    bottom: 2px;
+    width: 6px !important;
 }
 
-.lgs-scrollbars .thumb-horizontal, .lgs-scrollbars .thumb-vertical {
+/* Thumb styles (the draggable part) */
+.lgs-scrollbars .thumb-horizontal,
+.lgs-scrollbars .thumb-vertical {
+    position: relative;
+    display: block;
     cursor: pointer;
-    border: 1px solid var(--lgs-light-color-50);;
+    transition: background-color 0.2s ease;
+    border: 1px solid var(--lgs-light-color-50);
     border-radius: inherit;
-    background-color: var(--lgs-dark-color-50);
+    background-color: var(--lgs-scrollbar-thumb-color, var(--lgs-dark-color-50));
 }
 
-.on-map .lgs-scrollbars .track-horizontal, .on-map .lgs-scrollbars .track-vertical {
-    --thumb-color: var(--lgs-text-on-color)
+.lgs-scrollbars .thumb-vertical:hover,
+.lgs-scrollbars .thumb-horizontal:hover {
+    background-color: var(--lgs-primary-color, #007bff);
 }
 
+/* Specific context: when panel is displayed 'on-map' */
+.on-map .lgs-scrollbars .track-horizontal,
+.on-map .lgs-scrollbars .track-vertical {
+    --lgs-scroolbar-thumb-color: var(--lgs-text-on-color);
+}
 
 /*******************************************************************************
  * Tooltips
