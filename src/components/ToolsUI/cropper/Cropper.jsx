@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-14
- * Last modified: 2026-02-14
+ * Created on: 2026-02-17
+ * Last modified: 2026-02-17
  *
  *
  * Copyright © 2026 LGS1920
@@ -85,6 +85,7 @@ export const Cropper = memo(({overlay = false, className = '', context, options 
                 {
                     Array.from(list.entries())
                         .filter(([key, props]) => props?.widgetsBoard === VIDEO_WIDGETS_BOARD)
+                        .sort(([, a], [, b]) => (b.zIndex || 0) - (a.zIndex || 0))
                         .map(([key, props]) => (
                             <DynamicWidget key={key} id={key} props={props} context={context}/>
                         ))

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-23
- * Last modified: 2026-01-23
+ * Created on: 2026-02-17
+ * Last modified: 2026-02-17
  *
  *
  * Copyright © 2026 LGS1920
@@ -275,9 +275,8 @@ export const LGS1920 = () => {
 
                 // Set camera focus
                 setCameraFocus(lgs, starter, focusTarget, cameraStore)
-
-                // Read widgets in db and mount them into the cache as components
-                await __.ui.widgetCache.readFromDB()
+                // Initialize the widget cache
+                await __.ui.widgetCache.init()
 
                 // Add font to snapdom cache
                 await preCache({

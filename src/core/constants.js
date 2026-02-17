@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-01
- * Last modified: 2026-02-01
+ * Created on: 2026-02-17
+ * Last modified: 2026-02-17
  *
  *
  * Copyright © 2026 LGS1920
@@ -460,7 +460,13 @@ export const VIDEO_TOOLS_WIDGETS   = 'video-tools-widgets',
              JOURNEY_WIDGETS       = 'journey-widgets',
              SCENE_WIDGETS         = 'scene-widgets'
 
-export const WIDGETS_CAPABILITIES = [
+export const COMPASS_WIDGET       = 'compass-widget',
+             CREDITS_WIDGET       = 'credits-widget',
+             PROFILE_WIDGET       = 'profile-widget',
+             TEXT_WIDGET          = 'text-widget',
+             JOURNEY_STATS_WIDGET = 'journey-stats-widget'
+
+export const WIDGETS_CAPABILITIES   = [
            'canRemove',
            'canReset',
            'canMaximize',
@@ -469,43 +475,48 @@ export const WIDGETS_CAPABILITIES = [
        ],
              WIDGETS_CONFIGURATION  = new Map([
                                                   [
-                                                      'compass-widget', {
+                                                      COMPASS_WIDGET, {
                                                       icon:      faCompass,
                                                       component: 'CompassWidget',
                                                   },
                                                   ],
                                                   [
-                                                      'credits-widget', {
+                                                      CREDITS_WIDGET, {
                                                       icon:      faGavel,
                                                       component: 'CreditsWidget',
                                                   },
                                                   ],
 
                                                   [
-                                                      'profile-widget', {
+                                                      PROFILE_WIDGET, {
                                                       icon:      faChartFft,
                                                       component: 'ProfileWidget',
                                                   },
                                                   ],
                                                   [
-                                                      'text-widget', {
+                                                      TEXT_WIDGET, {
                                                       icon:      faText,
                                                       component: 'TextWidget',
                                                   },
                                                   ],
                                                   [
-                                                      'journey-stats-widget', {
+                                                      JOURNEY_STATS_WIDGET, {
                                                       icon:      faRoute,
                                                       component: 'JourneyStatsWidget',
                                                   },
                                                   ],
                                               ]),
 
+             WIDGET_LAYER_START     = 9000,
+             WIDGET_LAYER_STEP      = 1,
+             WIDGET_LAYER_TOP       = 10000,
+
 
              DEFAULT_WIDGETS_LIST   = '@Components/MainUI/widgets/list',
              DEFAULT_WIDGET_CONTEXT = {
                  widgetEditor: false,
                  widgetsBoard: '',
+                 zIndex: WIDGET_LAYER_START,
              }
 
 export const SCENE_WIDGETS_BOARD = 'scene',
@@ -561,3 +572,5 @@ export const WIDGET_FONT_FAMILIES = ['System', ...WIDGET_GOOGLE_FONTS]
 
 export const WIDGET_EDITOR_PRE_RENDER_EVENT  = 'widget-editor-pre-render',
              WIDGET_EDITOR_POST_RENDER_EVENT = 'widget-editor-post-render'
+
+

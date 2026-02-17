@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-16
- * Last modified: 2026-02-16
+ * Created on: 2026-02-17
+ * Last modified: 2026-02-17
  *
  *
  * Copyright © 2026 LGS1920
@@ -129,8 +129,6 @@ export const VideoRecordingScreenArea = memo(() => {
         return [...__.ui.widgetCache.getAll({widgetsBoard: VIDEO_WIDGETS_BOARD}).entries()]
             .sort((a, b) => (a[1].zIndex || 0) - (b[1].zIndex || 0))
     }, [])
-
-    console.log('widgetCacheEntries', widgetCacheEntries)
 
     const isValidCrop = Number.isFinite(crop.left) && crop.width > 0
 

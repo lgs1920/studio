@@ -7,23 +7,14 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-15
- * Last modified: 2026-02-15
+ * Created on: 2026-02-17
+ * Last modified: 2026-02-17
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-/**
- * @typedef {Object} CacheEntry
- * @property {string} group - Group identifier
- * @property {React.LazyExoticComponent} component - Lazy-loaded component
- * @property {HTMLElement} [element] - Associated DOM element (optional)
- * @property {boolean} mounted - Indicates whether the widget is mounted for the current session
- * @property {string} widgetsBoard - The ID of the board containing the widget
- */
-
-import { WIDGETS_STORE } from '@Core/constants'
+import { VIDEO_WIDGETS_BOARD, WIDGETS_STORE } from '@Core/constants'
 
 /**
  * Utility class providing a clean, reactive API over the global Valtio proxy cache.
@@ -46,7 +37,7 @@ export class WidgetCache {
 
     /**
      * Retrieves the lazy-loaded component for a given key.
-     * @param {string} key - Unique widget instance ID
+     * @param {string} key
      * @returns {React.LazyExoticComponent|null}
      */
     getComponent = key => {
@@ -54,19 +45,14 @@ export class WidgetCache {
         return entry ? entry.component : null
     }
 
-    /**
-     * Retrieves the full cache entry.
-     * @param {string} key
-     * @returns {CacheEntry|null}
-     */
     get = key => {
         return this.#cache.get(key)
     }
 
     /**
      * Sets or updates a cache entry.
-     * @param {string} key - Unique widget instance ID
-     * @param {Object} options - Entry metadata
+     * @param {string} key
+     * @param {Object} options
      */
     set = (key, options) => {
         const {group, component, mounted, widgetsBoard, zIndex} = options
@@ -91,7 +77,7 @@ export class WidgetCache {
 
     /**
      * Validates if a widget exists based on key, group, and board.
-     * @param {string} key - Base key or full ID
+     * @param {string} key
      * @param {Object} [options={}]
      * @returns {boolean}
      */
@@ -118,21 +104,8 @@ export class WidgetCache {
         })
     }
 
-    /**
-     * Clears all entries.
-     */
     clear = () => this.#cache.clear()
 
-    /**
-     * Counts entries matching specific criteria.
-     * Essential for board-scoped quota management.
-     * @param {Object} filters
-     * @param {string} [filters.key] - Base key filter
-     * @param {string|string[]} [filters.groups] - Group filter
-     * @param {string} [filters.widgetsBoard] - Board filter
-     * @param {boolean} [filters.full=false] - Exact key match
-     * @returns {number}
-     */
     count = ({key, groups, widgetsBoard, full = false} = {}) => {
         let entries = Array.from(this.#cache.entries())
 
@@ -154,7 +127,6 @@ export class WidgetCache {
             entries = entries.filter(([, v]) => groupArray.includes(v.group))
         }
 
-        // Filtering by board ID to allow scoped quota calculations
         if (widgetsBoard) {
             entries = entries.filter(([, v]) => v.widgetsBoard === widgetsBoard)
         }
@@ -162,9 +134,6 @@ export class WidgetCache {
         return entries.length
     }
 
-    /**
-     * Returns a snapshot of the cache based on filters.
-     */
     getAll = ({groups = null, widgetsBoard = null} = {}) => {
         if (!groups && !widgetsBoard) {
             return new Map(this.#cache)
@@ -180,9 +149,6 @@ export class WidgetCache {
         return new Map(filteredEntries)
     }
 
-    /**
-     * UI related methods for DOM and mounting state.
-     */
     setElement = (key, element) => {
         const entry = this.#cache.get(key)
         if (entry) {
@@ -200,6 +166,7 @@ export class WidgetCache {
     #setMounted = (key, mounted) => {
         const entry = this.#cache.get(key)
         if (entry) {
+            entry.element = null
             entry.mounted = mounted
         }
     }
@@ -207,7 +174,7 @@ export class WidgetCache {
     isMounted = key => this.#cache.get(key)?.mounted
 
     /**
-     * Hydrates the cache and the store list from the indexedDB persistence.
+     * Performs initial hydration of the cache with meta-data from DB.
      */
     async readFromDB() {
         const $widget = lgs.stores.ui.widget
@@ -231,32 +198,53 @@ export class WidgetCache {
             }
         }
         catch (error) {
-            console.error('[WidgetCache] Failed to restore persisted widgets:', error)
+            console.error('[WidgetCache] Failed to read from DB:', error)
         }
     }
 
     /**
-     * Returns all widgets that have a defined widgetsBoard different from the excluded ones.
-     * @param {string|string[]} excludedBoardIds - Single board ID or array of board IDs to exclude
-     * @returns {Map<string, CacheEntry>}
+     * Full initialization flow.
+     * 1. Loads raw widget metadata from DB.
+     * 2. Enriches cache and reactive store with real persistent positions/zIndex.
      */
-    getAllExceptBoards = excludedBoardIds => {
-        const exclusions = Array.isArray(excludedBoardIds) ? excludedBoardIds : [excludedBoardIds]
+    async init() {
+        const widgets = await lgs.db.lgs1920.keys(WIDGETS_STORE)
+        const initWidgets = widgets.map(async (id) => {
+            // Retrieve persistent data through the manager
+            const position = await __.ui.widgetManager.getWidgetPosition(id)
+            const zIndex = position?.zIndex// ?? 0
+            // Update local cache
+            this.set(id, {
+                group:        position.group,
+                widgetsBoard: position.widgetsBoard,
+                zIndex:       zIndex,
+            })
+            // Create  global store
+            const item = {
+                widgetsBoard: position.widgetsBoard || 'scene',
+            }
+            // Add zIndex for video widgets
+            if (position.widgetsBoard === VIDEO_WIDGETS_BOARD) {
+                item.zIndex = zIndex
+            }
 
-        const filteredEntries = Array.from(this.#cache.entries()).filter(([, entry]) => {
-            // Check if widgetsBoard is defined and not in the exclusion list
-            return entry.widgetsBoard && !exclusions.includes(entry.widgetsBoard)
+            lgs.stores.ui.widget.list.set(id, item)
         })
 
-        return new Map(filteredEntries)
+        await Promise.all(initWidgets)
     }
 
     /**
-     * Hides all widgets that do not belong to the specified boards by moving them off-screen.
-     * Original positions are preserved in the $restrictions proxy for later restoration.
-     * Performance: Uses direct DOM manipulation to avoid unnecessary React re-renders.
-     * @param {string|string[]} excludeBoards - Board ID(s) to be kept visible.
+     * Board isolation and visibility methods.
      */
+    getAllExceptBoards = excludedBoardIds => {
+        const exclusions = Array.isArray(excludedBoardIds) ? excludedBoardIds : [excludedBoardIds]
+        const filteredEntries = Array.from(this.#cache.entries()).filter(([, entry]) => {
+            return entry.widgetsBoard && !exclusions.includes(entry.widgetsBoard)
+        })
+        return new Map(filteredEntries)
+    }
+
     hideAllExceptBoards = excludeBoards => {
         const widgets = this.getAllExceptBoards(excludeBoards)
         const $restrictions = lgs.stores.ui.widget.restrictions
@@ -264,71 +252,44 @@ export class WidgetCache {
         widgets.forEach((value, id) => {
             const element = __.ui.widgetManager.getElementById(id)
             if (element && !$restrictions.has(id)) {
-                // Save original state to Valtio proxy
                 $restrictions.set(id, {
                     top:   element.style.top,
                     left:  element.style.left,
                     board: value.widgetsBoard,
                 })
-
-                // Add CSS class to hide widget with !important rules
                 element.classList.add('lgs-widget-hidden')
             }
         })
     }
 
-    /**
-     * Restores all previously hidden widgets to their original positions.
-     * @param {string|string[]} excludeBoards - Optional. If specified, restore widgets that are NOT on these boards
-     *                                          (i.e., restore widgets that were hidden by hideAllExceptBoards with the
-     *     same parameter). If not specified, restores ALL hidden widgets.
-     */
     restoreAllHiddenWidgetsExcept = (excludeBoards) => {
         const $restrictions = lgs.stores.ui.widget.restrictions
         const boardsToExclude = excludeBoards ? (Array.isArray(excludeBoards) ? excludeBoards : [excludeBoards]) : null
-
         const idsToRestore = []
 
         $restrictions.forEach((pos, id) => {
-            // If excludeBoards is specified, only restore widgets that are NOT on those boards
-            // Use the board stored in restrictions for reliable filtering
-            if (boardsToExclude) {
-                if (!pos.board || boardsToExclude.includes(pos.board)) {
-                    return // Skip widgets that ARE on the excluded boards
-                }
+            if (boardsToExclude && pos.board && boardsToExclude.includes(pos.board)) {
+                return
             }
 
             const element = __.ui.widgetManager.getElementById(id)
             if (element) {
-                // Remove CSS class that hides the widget
                 element.classList.remove('lgs-widget-hidden')
-
-                // Restore original positions if they were set
                 if (pos.left) {
                     element.style.left = pos.left
                 }
                 if (pos.top) {
                     element.style.top = pos.top
                 }
-
                 idsToRestore.push(id)
             }
         })
 
-        // Remove only the restored widgets from restrictions
         idsToRestore.forEach(id => $restrictions.delete(id))
-
-        // If no board filter was specified, clear all restrictions
         if (!boardsToExclude) {
             $restrictions.clear()
         }
     }
 
-    /**
-     * Alias for backward compatibility
-     * @deprecated Use restoreAllHiddenWidgetsExcept instead
-     */
-    restoreAllHiddenWidgets = (excludeBoards) => {
-        return this.restoreAllHiddenWidgetsExcept(excludeBoards)
-    }
+    restoreAllHiddenWidgets = (excludeBoards) => this.restoreAllHiddenWidgetsExcept(excludeBoards)
 }
