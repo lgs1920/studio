@@ -7,15 +7,17 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-14
- * Last modified: 2026-02-14
+ * Created on: 2026-02-17
+ * Last modified: 2026-02-17
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { VIDEO_WIDGETS_BOARD, WIDGETS_CONFIGURATION, LGS_VISUAL_WIDGET } from '@Core/constants'
-import { WidgetDynamicRenderer }                      from '@Core/ui/widget-manager/dynamic-render/WidgetDynamicRender'
+import {
+    VIDEO_WIDGETS_BOARD, WIDGETS_CONFIGURATION, LGS_VISUAL_WIDGET, WIDGET_LAYER_START, WIDGET_LAYER_STEP,
+}                                from '@Core/constants'
+import { WidgetDynamicRenderer } from '@Core/ui/widget-manager/dynamic-render/WidgetDynamicRender'
 import { faBox }             from '@fortawesome/pro-regular-svg-icons'
 import { SlIcon, SlTooltip } from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }             from '@Utils/FA2SL'
@@ -38,7 +40,9 @@ export const WidgetsPanelContent = ({groups}) => {
     const widget = useSnapshot($widget)
     const reached = new Set()
     const [isInitialized, setIsInitialized] = useState(false)
-    const widgetIndexRef = useRef(9999)
+
+    // Counter to ensure new widgets are placed on top of the stack
+    const _widgetIndex = useRef(WIDGET_LAYER_START)
 
     /**
      * Filters and returns only valid groups from the global registry.
@@ -49,24 +53,45 @@ export const WidgetsPanelContent = ({groups}) => {
     }
 
     /**
+     * Synchronizes the global store map order with the zIndex values.
+     * Required for consistent rendering order in Valtio snapshots.
+     */
+    const sortWidgetStore = () => {
+        const $list = lgs.stores.ui.widget.list
+        const sortedEntries = Array.from($list.entries())
+            .sort(([, a], [, b]) => (a.zIndex || 0) - (b.zIndex || 0))
+
+        $list.clear()
+        for (const [id, data] of sortedEntries) {
+            $list.set(id, data)
+        }
+    }
+
+    /**
      * Adds a new instance of a widget to the map.
      * @param {string} group
      * @param {string} key
-     * @param {Object} [props={}]
+     * @param {Object} [props={}] - Existing widget properties (e.g. from DB)
      */
     const addWidget = (group, key, props = {}) => {
         const id = !/#/.test(key) ? __.ui.widgetManager.defineElementId(group, key) : key
 
-        // Get widget definition to check its type
+        // Fetch definition to determine if zIndex is applicable
         const groupsMap = widgetDynamicRenderer.theGroups([group])
         const groupDef = groupsMap.get(group)
         const widgetDef = groupDef?.widgets.get(key.split('#')[0])
 
-        // Only apply zIndex for visual widgets
         const additionalProps = {}
+
+        // Only apply zIndex to visual components
         if (widgetDef?.type === LGS_VISUAL_WIDGET) {
-            additionalProps.zIndex = widgetIndexRef.current
-            widgetIndexRef.current--
+            // Priority: 1. Existing zIndex from props | 2. Current ref counter
+            additionalProps.zIndex = props.zIndex || _widgetIndex.current
+
+            // Increment counter only if a new zIndex was generated
+            if (!props.zIndex) {
+                _widgetIndex.current += WIDGET_LAYER_STEP
+            }
         }
 
         widgetDynamicRenderer.renderWidget(group, id, {
@@ -75,11 +100,13 @@ export const WidgetsPanelContent = ({groups}) => {
             forceRefresh: true,
             ...additionalProps,
         })
+
+        // Ensure the global list Map is ordered correctly after insertion
+        sortWidgetStore()
     }
 
     /**
      * Stops event propagation for both mouse and touch interactions.
-     * Prevents parent draggable elements from capturing the event.
      * @param {MouseEvent|TouchEvent} e
      */
     const handleInteraction = (e) => {
@@ -106,19 +133,27 @@ export const WidgetsPanelContent = ({groups}) => {
     useEffect(() => {
         const targetedGroups = theGroups()
 
+        /**
+         * Load widgets already existing in the state/database.
+         */
         const displayWidgetsInBase = async () => {
             for (const [groupId] of targetedGroups.entries()) {
                 const widgets = await __.ui.widgetManager.getWidgetsByGroup(groupId)
                 for (const widgetToRender of widgets) {
-                    addWidget(groupId, widgetToRender.id)
+                    // Pass existing widget data to preserve its original zIndex
+                    addWidget(groupId, widgetToRender.id, widgetToRender)
                 }
             }
         }
 
+        /**
+         * Trigger rendering for mandatory widgets not yet present in the list.
+         */
         const displayMandatoryWidgets = () => {
             for (const [groupId, group] of targetedGroups.entries()) {
                 for (const [widgetId, widgetDef] of group.widgets) {
-                    if (widgetDef.mandatory) {
+                    const fullId = __.ui.widgetManager.defineElementId(groupId, widgetId)
+                    if (widgetDef.mandatory && !lgs.stores.ui.widget.list.has(fullId)) {
                         addWidget(groupId, widgetId)
                     }
                 }
@@ -139,8 +174,10 @@ export const WidgetsPanelContent = ({groups}) => {
     }
 
     const hasJourney = Boolean(lgs.theJourney)
-    ;[...theGroups().entries()].map(([groupKey, groupValue]) => {
-        ;[...groupValue.widgets.entries()].map(([widgetKey, widgetDef]) => {
+
+          // Logic to track which widgets can still be added
+    ;[...theGroups().entries()].forEach(([groupKey, groupValue]) => {
+        ;[...groupValue.widgets.entries()].forEach(([widgetKey, widgetDef]) => {
             if (widgetKey === 'journey-stats-widget' && !hasJourney) {
                 return
             }

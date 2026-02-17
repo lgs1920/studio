@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-15
- * Last modified: 2026-02-15
+ * Created on: 2026-02-17
+ * Last modified: 2026-02-17
  *
  *
  * Copyright © 2026 LGS1920
@@ -62,7 +62,7 @@ async function ensureWidget(id) {
     const entity = lgs.stores.ui.widget.list.get(id)
     const widgetsBoard = entity?.widgetsBoard
     const forceRefresh = true
-    const LazyWidget = await renderer.renderWidget(cache.group, id, {widgetsBoard, forceRefresh})
+    const LazyWidget = await renderer.renderWidget(cache.group, id, {widgetsBoard, forceRefresh, zIndex: entity.zIndex})
     if (LazyWidget) {
         __.ui.widgetCache.set(id, {
                                   component: LazyWidget,
