@@ -43,10 +43,11 @@
 
 .editor-preview-zone {
     display: flex;
+    overflow: hidden;
     align-items: center;
     justify-content: center;
     width: 100%;
-    min-height: 140px;
+    min-height: 250px;
 }
 
 .default-preview {
@@ -63,19 +64,36 @@
 
 .editor-actions-zone {
     display: flex;
+    flex-direction: column;
     min-height: 32px; /* Évite le saut si vide */
-    gap: 10px;
+    gap: var(--lgs-gutter-s);
 }
 
 .editor-body-zone {
     position: relative;
-    flex: 1 1 auto;
+    flex: 1;
     min-height: 0;
 }
 
 .editor-body-zone .lgs-scrollbars-container {
     width: 100%;
     height: 100%;
+}
+
+.editor-form-content {
+    display: flex;
+    overflow: hidden;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+}
+
+.lgs-widget-editor-controls-wrapper {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
 }
 
 .drawer-header-title {

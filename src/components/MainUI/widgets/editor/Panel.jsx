@@ -173,8 +173,7 @@ export const Panel = () => {
                         </SlTabGroup>
                     </div>
 
-                    <div className="editor-body-zone lgs-card">
-                        <LGSScrollbars>
+                    <div className="editor-body-zone">
                             <div className="editor-form-content">
                                 <Suspense fallback={<SlSpinner/>}>
                                     {EditorComponent ? (
@@ -190,7 +189,6 @@ export const Panel = () => {
                                      )}
                                 </Suspense>
                             </div>
-                        </LGSScrollbars>
                     </div>
                 </div>
                 <DrawerFooter slot="footer"/>
