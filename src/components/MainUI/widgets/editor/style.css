@@ -7,54 +7,79 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-11
- * Last modified: 2026-02-11
+ * Created on: 2026-02-18
+ * Last modified: 2026-02-18
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-.drawer-wrapper {
-    height: 100%;
-}
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: style.css
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2026-02-17
+ * Last modified: 2026-02-17
+ *
+ ******************************************************************************/
 
-#widgets-editor-drawer {
-
-}
-
-.lgs-widget-editor .source-selector-wrapper {
+.drawer-content.lgs-editor-layout {
     display: flex;
-    align-items: center;
-    margin-left: auto;
-}
-
-.lgs-widget-editor .source-selector-wrapper sl-button-group {
-    margin-left: var(--lgs-gutter-xs);
-}
-
-
-.lgs-widget-editor .source-selector-wrapper sl-button::part(label) {
-    margin: 0 var(--lgs-gutter-xs);
-    padding: 0;
-}
-
-
-#widgets-editor-drawer [slot="label"] {
-    display: inline-flex;
-    align-items: center;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
     gap: var(--lgs-gutter-xs);
 }
 
-#widgets-editor-drawer::part(body) {
+.editor-header-zones {
+    flex: 0 0 auto;
+}
+
+.editor-preview-zone {
     display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    min-height: 140px;
+}
+
+.default-preview {
+    display: flex;
+    align-items: center;
     flex-direction: column;
-    height: 100%;
+    opacity: 0.6;
+    color: var(--lgs-text-color-muted);
+}
+
+.default-preview sl-icon {
+    font-size: 2.5rem;
+}
+
+.editor-actions-zone {
+    display: flex;
+    min-height: 32px; /* Évite le saut si vide */
+    gap: 10px;
+}
+
+.editor-body-zone {
+    position: relative;
+    flex: 1 1 auto;
     min-height: 0;
 }
 
-#widgets-editor-drawer .drawer-content {
+.editor-body-zone .lgs-scrollbars-container {
+    width: 100%;
+    height: 100%;
+}
+
+.drawer-header-title {
     display: flex;
-    flex: 1 1 auto;
-    flex-direction: column;
-    min-height: 0;
+    align-items: center;
+    gap: 10px;
 }

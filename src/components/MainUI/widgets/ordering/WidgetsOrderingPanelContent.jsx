@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-17
- * Last modified: 2026-02-17
+ * Created on: 2026-02-18
+ * Last modified: 2026-02-18
  *
  *
  * Copyright © 2026 LGS1920
@@ -248,12 +248,7 @@ export const WidgetsOrderingPanelContent = ({widgetsBoard}) => {
     }
 
     return (
-        <div className="widget-ordering-panel">
-            <div className="widget-deck-entry widget-deck-title">
-                <SlIcon library="fa" name={FA2SL.set(faAnglesUpDown)} className="icon-main-title"/>
-                <span>Widget Stack</span>
-            </div>
-
+        <div className="widget-ordering-panel lgs-card">
             <div className="widget-list-container">
                 <LGSScrollbars
                     ref={_scrollRef}

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-17
- * Last modified: 2026-02-17
+ * Created on: 2026-02-18
+ * Last modified: 2026-02-18
  *
  *
  * Copyright © 2026 LGS1920
@@ -208,7 +208,7 @@ body {
     flex: 1;
     flex-direction: row;
     width: 100%;
-    gap: calc(2 * var(--lgs-gutter-s));
+    gap: calc(2 * var(--lgs-gutter-xs));
 }
 
 .drawer-align-right {
@@ -221,6 +221,11 @@ body {
     flex: 1;
     flex-direction: row;
     gap: var(--lgs-gutter-xs);
+}
+
+.drawer-horizontal-element.xlarge-element {
+    flex: 0 0 20%;
+    margin-left: auto;
 }
 
 .three-columns .drawer-horizontal-element.xlarge-element {
@@ -533,6 +538,7 @@ body {
  ******************************************************************************/
 .widget-ordering-panel {
     flex-direction: column;
+    height: 250px;
     gap: var(--lgs-gutter-xs);
 }
 
@@ -540,7 +546,6 @@ body {
 .widget-list-container {
     overflow-x: hidden;
     overflow-y: auto;
-    max-height: 250px;
     touch-action: pan-y;
     -webkit-overflow-scrolling: touch;
 }
@@ -564,7 +569,7 @@ body {
     display: flex;
     flex-direction: column;
     min-width: 10rem;
-    max-height: 230px;
+    max-height: 250px;
     margin-right: calc(-1 * var(--lgs-gutter-s));
     text-wrap: nowrap;
     gap: var(--lgs-gutter-xs);
@@ -637,6 +642,12 @@ body {
     gap: var(--lgs-gutter-s);
 }
 
+.lgs-widget-editor-controls-wrapper {
+    overflow-x: hidden;
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 100%;
+}
 .lgs-widget-preview {
     height: 250px;
     padding: var(--lgs-gutter-xs);

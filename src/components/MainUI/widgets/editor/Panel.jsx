@@ -7,54 +7,70 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-25
- * Last modified: 2026-01-25
+ * Created on: 2026-02-18
+ * Last modified: 2026-02-18
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: Panel.jsx
+ *
+ ******************************************************************************/
+
 import { EditorSkeleton } from '@Components/MainUI/widgets/editor/EditorSkeleton'
-import { SCENE_WIDGETS_BOARD, WIDGETS_CONFIGURATION, WIDGETS_EDITOR_DRAWER } from '@Core/constants'
+import { SCENE_WIDGETS_BOARD, WIDGETS_CONFIGURATION, WIDGETS_EDITOR_DRAWER, VIDEO_CROP_ZONE } from '@Core/constants'
 import {
     WidgetRegistry,
-}                                                                            from '@Core/ui/widget-manager/registry/WidgetRegistry'
-import { SlDrawer, SlIcon, SlSpinner }                         from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                                               from '@Utils/FA2SL'
+}                                                                                             from '@Core/ui/widget-manager/registry/WidgetRegistry'
+import {
+    WidgetsOrderingPanelContent,
+}                                                                                             from '@Components/MainUI/widgets/ordering/WidgetsOrderingPanelContent'
+import {
+    faImage, faLayer,
+}                                                                                             from '@fortawesome/pro-regular-svg-icons'
+import {
+    SlTabGroup, SlTab, SlTabPanel, SlDrawer, SlIcon, SlSpinner,
+}                                                                                             from '@shoelace-style/shoelace/dist/react'
+import { FA2SL }                                                                              from '@Utils/FA2SL'
 import { Suspense, useCallback, useEffect, useState, useMemo } from 'react'
-import { useSnapshot }                                         from 'valtio'
-import DrawerFooter                                            from '../../../DrawerFooter'
+import { useSnapshot }                                                                        from 'valtio'
+import DrawerFooter
+                                                                                              from '@Components/DrawerFooter'
+import {
+    LGSScrollbars,
+}                                                                                             from '@Components/MainUI/LGSScrollbars'
 import './style.css'
 
 /**
- * A memoized React component for rendering the Points of Interest (POI) editor panel.
- * @returns {JSX.Element|null} The rendered drawer panel
+ * Dynamic widget editor panel.
+ * Uses a Tab Group to switch between the Widget Preview and the Ordering Panel.
  */
 export const Panel = () => {
-    // Accessing global proxies
     const $ui = lgs.stores.ui
     const $drawers = $ui.drawers
     const $video = $ui.video
 
-    // Snapshots
+    const ui = useSnapshot($ui)
     const drawers = useSnapshot($drawers)
     const video = useSnapshot($video)
     const menuSettings = useSnapshot(lgs.editorSettingsProxy.menu)
 
-    // Local state
     const [widgetPosition, setWidgetPosition] = useState(null)
     const [data, setData] = useState({name: '', description: '', icon: '', type: ''})
     const [EditorComponent, setEditorComponent] = useState(null)
-    const cached = $ui.widget.cache.get(drawers.entity)
+    const [PreviewComponent, setPreviewComponent] = useState(null)
+
+    const cached = ui.widget.cache.get(drawers.entity)
     const widgetRegistry = useMemo(() => new WidgetRegistry(), [])
 
-    // Visibility logic
     const isVisible = drawers.open === WIDGETS_EDITOR_DRAWER && (video.editing || cached?.widgetsBoard === SCENE_WIDGETS_BOARD)
     const drawerPlacement = menuSettings.drawer
 
-    /**
-     * Close handler: updates the proxy store.
-     */
     const closeEditor = useCallback((event) => {
         if (event && event.target.tagName !== 'SL-DRAWER') {
             return
@@ -66,13 +82,8 @@ export const Panel = () => {
         window.dispatchEvent(new Event('resize'))
     }, [])
 
-    /**
-     * Handle Shoelace close requests.
-     */
     const handleRequestClose = useCallback((event) => {
         const src = event.detail?.source
-        // On touch devices, taps inside the drawer were bubbling as "overlay"/undefined and closing it.
-        // Only allow close when explicitly requested (close button or keyboard).
         if (src === 'close-button' || src === 'keyboard') {
             closeEditor()
             return
@@ -80,36 +91,34 @@ export const Panel = () => {
         event.preventDefault()
     }, [closeEditor])
 
-    /**
-     * Watcher for entity changes to load the correct widget editor.
-     */
     useEffect(() => {
+        const resolveContent = async () => {
+            if (drawers.entity && isVisible && cached) {
+                const type = drawers.entity.split('#')[0]
+                const theWidget = __.widgets.get(cached.group).widgets.get(type)
 
-        if (drawers.entity) {
-            if (isVisible) {
-                if (cached) {
-                    const type = drawers.entity.split('#')[0]
-                    const theWidget = __.widgets.get(cached.group).widgets.get(type)
+                setData({
+                            type,
+                            name:        theWidget.name,
+                            description: theWidget.description,
+                            icon:        FA2SL.set(WIDGETS_CONFIGURATION.get(type)?.icon),
+                        })
 
-                    setData({
-                                type,
-                                name:        theWidget.name,
-                                description: theWidget.description,
-                                icon:        FA2SL.set(WIDGETS_CONFIGURATION.get(type)?.icon),
-                            })
+                const pos = await __.ui.widgetManager.getWidgetPosition(drawers.entity)
+                setWidgetPosition(pos)
 
-                    setWidgetPosition(__.ui.widgetManager.getWidgetPosition(drawers.entity))
+                const editorName = __.app.pascalCase(`${type}Editor`)
+                const LazyEditor = widgetRegistry.getLazyComponent(editorName)
+                setEditorComponent(() => LazyEditor || null)
 
-                    // Using the specific naming convention (type + Editor)
-                    const componentName = __.app.pascalCase(`${type}Editor`)
-                    const LazyWidget = widgetRegistry.getLazyComponent(componentName)
-                    setEditorComponent(() => LazyWidget)
-                }
+                const previewName = __.app.pascalCase(`${type}Preview`)
+                const LazyPreview = widgetRegistry.getLazyComponent(previewName)
+                setPreviewComponent(() => LazyPreview || null)
             }
         }
-    }, [drawers.entity, isVisible, widgetRegistry, $ui.widget.cache])
+        resolveContent()
+    }, [drawers.entity, isVisible, widgetRegistry, ui.widget.cache])
 
-    // If not visible, we don't render the wrapper to allow a fresh mount later.
     if (!isVisible) {
         return null
     }
@@ -131,18 +140,58 @@ export const Panel = () => {
                     <span>{data.name}</span>
                 </div>
 
-                <div className="drawer-content">
-                        {EditorComponent ? (
-                            <EditorComponent
-                                entity={drawers.entity}
-                                widgetData={data}
-                                position={widgetPosition}
-                            />
-                        ) : (
-                             <div className="error-placeholder">
-                                 Component for "{data.type}" not found.
-                             </div>
-                         )}
+                <div className="drawer-content lgs-editor-layout">
+                    <div className="editor-header-zones">
+                        {/* 📑 Tab Group Replacement for Carousel */}
+                        <SlTabGroup className="editor-tabs">
+                            <SlTab slot="nav" panel="preview">
+                                <SlIcon size="small" library="fa" name={FA2SL.set(faImage)}/> Preview
+                            </SlTab>
+                            <SlTab slot="nav" panel="ordering">
+                                <SlIcon size="small" library="fa" name={FA2SL.set(faLayer)}/> Widgets stack
+                            </SlTab>
+
+                            <SlTabPanel name="preview">
+                                <section className="editor-preview-zone">
+                                    <Suspense fallback={<EditorSkeleton type="preview"/>}>
+                                        {PreviewComponent ? (
+                                            <PreviewComponent entity={drawers.entity} data={data}/>
+                                        ) : (
+                                             <div className="default-preview">
+                                                 <SlIcon library="fa" name={data.icon}/>
+                                             </div>
+                                         )}
+                                    </Suspense>
+                                </section>
+                            </SlTabPanel>
+
+                            <SlTabPanel name="ordering">
+                                <section className="editor-ordering-zone">
+                                    <WidgetsOrderingPanelContent widgetsBoard={VIDEO_CROP_ZONE}/>
+                                </section>
+                            </SlTabPanel>
+                        </SlTabGroup>
+                    </div>
+
+                    <div className="editor-body-zone lgs-card">
+                        <LGSScrollbars>
+                            <div className="editor-form-content">
+                                <Suspense fallback={<SlSpinner/>}>
+                                    {EditorComponent ? (
+                                        <EditorComponent
+                                            entity={drawers.entity}
+                                            widgetData={data}
+                                            position={widgetPosition}
+                                        />
+                                    ) : (
+                                         <div className="error-placeholder">
+                                             Component for "{data.type}" not found.
+                                         </div>
+                                     )}
+                                </Suspense>
+                            </div>
+                        </LGSScrollbars>
+                    </div>
                 </div>
                 <DrawerFooter slot="footer"/>
             </SlDrawer>
