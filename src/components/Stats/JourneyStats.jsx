@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-12
- * Last modified: 2026-02-12
+ * Created on: 2026-02-18
+ * Last modified: 2026-02-18
  *
  *
  * Copyright © 2026 LGS1920
@@ -143,7 +143,7 @@ export const JourneyStats = memo(({id, metrics, units, style = {}}) => {
 
     return (
         <div className="journey-stats-widget" style={mainStyle}>
-            {(hasDuration || element?.date) && (
+            {(hasDuration && element?.date) && (
                 <>
                     <div className="journey-stats-date">
                         <span>{date.prefix}</span><span>{date.sufix}</span>
