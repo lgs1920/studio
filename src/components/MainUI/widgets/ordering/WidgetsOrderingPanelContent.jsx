@@ -252,9 +252,8 @@ export const WidgetsOrderingPanelContent = ({widgetsBoard}) => {
             <div className="widget-list-container">
                 <LGSScrollbars
                     ref={_scrollRef}
-                    autoHeight
-                    autoHeightMax={400}
                     autoHide
+
                 >
                     <div className="widget-sortable-list">
                         {_activeWidgets.map((w) => (

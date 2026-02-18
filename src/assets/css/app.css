@@ -544,8 +544,8 @@ body {
 
 /* Container et Scroll */
 .widget-list-container {
-    overflow-x: hidden;
-    overflow-y: auto;
+    overflow: hidden;
+    height: 250px;
     touch-action: pan-y;
     -webkit-overflow-scrolling: touch;
 }
@@ -569,7 +569,7 @@ body {
     display: flex;
     flex-direction: column;
     min-width: 10rem;
-    max-height: 250px;
+    min-height: 100%;
     margin-right: calc(-1 * var(--lgs-gutter-s));
     text-wrap: nowrap;
     gap: var(--lgs-gutter-xs);
