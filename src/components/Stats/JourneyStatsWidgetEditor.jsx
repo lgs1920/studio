@@ -14,13 +14,6 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-/*******************************************************************************
- *
- * This file is part of the LGS1920/studio project.
- *
- * File: JourneyStatsWidgetEditor.jsx
- *
- ******************************************************************************/
 
 import { DurationInput }                                            from '@Components/MainUI/DurationInput'
 import { JourneyMetricsInput }                                      from '@Components/MainUI/JourneyMetricsInput'
@@ -37,7 +30,10 @@ import {
 import {
     ShadowElement,
 }                                                                   from '@Components/MainUI/widgets/editor/elements/ShadowElement'
-import { faPenPaintbrush, faTableList }                             from '@fortawesome/pro-regular-svg-icons'
+import {
+    WidgetsOrderingPanelContent,
+}                                           from '@Components/MainUI/widgets/ordering/WidgetsOrderingPanelContent'
+import { faPenPaintbrush, faMoneyCheckPen } from '@fortawesome/pro-regular-svg-icons'
 import {
     SlButton, SlButtonGroup, SlColorPicker, SlDivider, SlIcon, SlRange, SlSwitch, SlTab, SlTabGroup, SlTabPanel,
 }                                                           from '@shoelace-style/shoelace/dist/react'
@@ -141,7 +137,6 @@ export const JourneyStatsWidgetEditor = ({entity}) => {
 
     return (
         <div className="lgs-widget-editor" key={`editor-${entity}`}>
-            {/* On s'assure que le TabGroup occupe l'espace nécessaire */}
             <SlTabGroup
                 className="editor-tabs"
                 onSlTabShow={e => setActiveTab(e.detail.name)}
@@ -150,10 +145,9 @@ export const JourneyStatsWidgetEditor = ({entity}) => {
                     <SlIcon size="small" library="fa" name={FA2SL.set(faPenPaintbrush)}/> Style
                 </SlTab>
                 <SlTab slot="nav" panel="data">
-                    <SlIcon size="small" library="fa" name={FA2SL.set(faTableList)}/> Data
+                    <SlIcon size="small" library="fa" name={FA2SL.set(faMoneyCheckPen)}/> Data editor
                 </SlTab>
 
-                {/* Sélecteur de source déplacé en dehors du panel si nécessaire, ou intégré via slot nav */}
                 {(hasExternal || (metricsSnap.user && Object.keys(metricsSnap.user).length > 0)) && (
                     <div className="source-selector-wrapper" slot="nav" style={{
                         display:      activeTab === 'data' ? 'flex' : 'none',
