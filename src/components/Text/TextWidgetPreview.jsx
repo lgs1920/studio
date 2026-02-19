@@ -82,6 +82,9 @@ export const TextWidgetPreview = memo(({entity}) => {
         _timer.current = setTimeout(() => setIsEditing(false), 1000)
     }
 
+    /**
+     * Priority to live Valtio store if selected, otherwise use fetched initial rotation
+     */
     const isSelected = widget.current?.id === entity
     const activeRotation = isSelected && widget.current?.rotate !== undefined
                            ? Number(widget.current.rotate)
@@ -91,12 +94,8 @@ export const TextWidgetPreview = memo(({entity}) => {
         if (!element?.text) {
             return {}
         }
-        const vars = _textWidgetManager.generateCSSVariables(element, currentSnapshot?.image, WIDGET_SYSTEM_FONT_STACK)
-        return {
-            ...vars,
-            '--lgs-tx-transform': isEditing ? 'none' : `rotate(${activeRotation}deg)`,
-        }
-    }, [element, currentSnapshot?.image, activeRotation, isEditing, _textWidgetManager])
+        return _textWidgetManager.generateCSSVariables(element, currentSnapshot?.image, WIDGET_SYSTEM_FONT_STACK)
+    }, [element, currentSnapshot?.image, _textWidgetManager])
 
     const handleKeyDown = (e) => {
         if (e.key === 'Enter' || e.key === 'Backspace') {
@@ -109,7 +108,10 @@ export const TextWidgetPreview = memo(({entity}) => {
     }
 
     return (
-        <div style={dynamicVars}>
+        <div style={{
+            ...dynamicVars,
+            transform: isEditing ? 'none' : `rotate(${activeRotation}deg)`,
+        }}>
             <SlTextarea className="text-widget-preview-area"
                         size="small"
                         value={element.text.content || ''}

@@ -205,7 +205,6 @@ body {
     display: flex;
     align-content: center;
     align-items: center;
-    flex: 1;
     flex-direction: row;
     width: 100%;
     gap: calc(2 * var(--lgs-gutter-xs));
