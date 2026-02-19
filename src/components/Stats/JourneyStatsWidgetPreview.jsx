@@ -76,8 +76,6 @@ export const JourneyStatsWidgetPreview = ({entity}) => {
         speed:     SPEED_UNITS[currentUnit],
     }), [currentUnit])
 
-    const previewBg = widget.currentSnapshot?.image || null
-
     /**
      * Priority to live Valtio store if selected, otherwise use fetched initial rotation
      */
@@ -101,10 +99,7 @@ export const JourneyStatsWidgetPreview = ({entity}) => {
                 boxShadow:  element.shadow?.active ? `${element.shadow.x}px ${element.shadow.y}px ${element.shadow.blur}px ${__.ui.ui.resolveItemColor(element.shadow, true)}` : 'none',
             }}
         >
-            <div
-                className="journey-stats-widget-preview-chart"
-                style={{'--lgs-journey-stats-preview-bg': previewBg ? `url(${previewBg})` : 'none'}}
-            >
+            <div className="journey-stats-widget-preview-chart">
                 <div style={{transform: `scale(0.8) rotate(${activeRotation}deg)`}}>
                     <JourneyStats
                         metrics={journeyMetrics.metrics}

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-14
- * Last modified: 2026-02-14
+ * Created on: 2026-02-19
+ * Last modified: 2026-02-19
  *
  *
  * Copyright © 2026 LGS1920
@@ -48,8 +48,8 @@ import { Panel as MapPOIEditPanel }     from './MapPOI/Panel'
 import { PanelButton as POIEditButton } from './MapPOI/PanelButton'
 import { SceneModeSelector }            from './SceneModeSelector'
 import { SupportUI }                    from './SupportUI'
-import { SupportUIButton }              from './SupportUIButton'
-import { Panel as WidgetEditorPanel }   from './widgets/editor/Panel'
+import { SupportUIButton }   from './SupportUIButton'
+import { WidgetEditorPanel } from './widgets/editor/WidgetEditorPanel'
 
 import './style.css'
 

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-18
- * Last modified: 2026-02-18
+ * Created on: 2026-02-19
+ * Last modified: 2026-02-19
  *
  *
  * Copyright © 2026 LGS1920
@@ -644,10 +644,8 @@ body {
 }
 
 .lgs-widget-editor-controls-wrapper {
-    overflow-x: hidden;
-    box-sizing: border-box;
-    width: 100%;
-    max-width: 100%;
+    flex: 1;
+    height: 100%; /* When it is in a block, not a flex*/
 }
 .lgs-widget-preview {
     height: 250px;

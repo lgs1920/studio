@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-18
- * Last modified: 2026-02-18
+ * Created on: 2026-02-19
+ * Last modified: 2026-02-19
  *
  *
  * Copyright © 2026 LGS1920
@@ -156,15 +156,12 @@ export const ProfileWidgetPreview = ({entity}) => {
 
     // Height 100% removed as requested
     const previewStyle = {
-        '--lgs-profile-preview-bg': previewBg ? `url(${previewBg})` : 'none',
         width:                      '100%',
         display:                    'flex',
         alignItems:                 'center',
         justifyContent:             'center',
         position:                   'relative',
-        backgroundImage:            'var(--lgs-profile-preview-bg)',
-        backgroundSize:             'cover',
-        backgroundPosition:         'center',
+        background: 'transparent',
     }
 
     return (

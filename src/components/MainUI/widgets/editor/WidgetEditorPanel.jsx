@@ -2,13 +2,13 @@
  *
  * This file is part of the LGS1920/studio project.
  *
- * File: Panel.jsx
+ * File: WidgetEditorPanel.jsx
  *
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-18
- * Last modified: 2026-02-18
+ * Created on: 2026-02-19
+ * Last modified: 2026-02-19
  *
  *
  * Copyright © 2026 LGS1920
@@ -50,7 +50,7 @@ import './style.css'
  * Dynamic widget editor panel.
  * Uses a Tab Group to switch between the Widget Preview and the Ordering Panel.
  */
-export const Panel = () => {
+export const WidgetEditorPanel = () => {
     const $ui = lgs.stores.ui
     const $drawers = $ui.drawers
     const $video = $ui.video
@@ -70,6 +70,10 @@ export const Panel = () => {
 
     const isVisible = drawers.open === WIDGETS_EDITOR_DRAWER && (video.editing || cached?.widgetsBoard === SCENE_WIDGETS_BOARD)
     const drawerPlacement = menuSettings.drawer
+
+    const $widget = lgs.stores.ui.widget
+    const widget = useSnapshot($widget)
+    const previewBg = widget.currentSnapshot?.image || null
 
     const closeEditor = useCallback((event) => {
         if (event && event.target.tagName !== 'SL-DRAWER') {
@@ -152,7 +156,9 @@ export const Panel = () => {
                             </SlTab>
 
                             <SlTabPanel name="preview">
-                                <section className="editor-preview-zone">
+                                <section className="editor-preview-zone lgs-widget-preview"
+                                         style={{'--lgs-widget-preview-bg': previewBg ? `url(${previewBg})` : 'none'}}
+                                >
                                     <Suspense fallback={<EditorSkeleton type="preview"/>}>
                                         {PreviewComponent ? (
                                             <PreviewComponent entity={drawers.entity} data={data}/>
@@ -174,7 +180,7 @@ export const Panel = () => {
                     </div>
 
                     <div className="editor-body-zone">
-                            <div className="editor-form-content">
+                        <div className="editor-form-content">
                                 <Suspense fallback={<SlSpinner/>}>
                                     {EditorComponent ? (
                                         <EditorComponent
