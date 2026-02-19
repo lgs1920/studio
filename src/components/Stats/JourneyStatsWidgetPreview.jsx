@@ -92,7 +92,6 @@ export const JourneyStatsWidgetPreview = ({entity}) => {
         <div
             className="journey-stats-widget-preview-surface"
             style={{
-                background: __.ui.ui.resolveItemColor(element.background, true),
                 backgroundSize:     'cover',
                 backgroundPosition: 'center',
                 border:     element.border?.width ? `${element.border.width}px solid ${__.ui.ui.resolveItemColor(element.border, true)}` : 'none',
