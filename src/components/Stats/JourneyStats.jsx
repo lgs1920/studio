@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-18
- * Last modified: 2026-02-18
+ * Created on: 2026-02-19
+ * Last modified: 2026-02-19
  *
  *
  * Copyright © 2026 LGS1920
@@ -20,7 +20,7 @@ import { faArrowDownToLine, faArrowUpToLine }           from '@fortawesome/pro-r
 import { SlDivider, SlIcon }                            from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                                        from '@Utils/FA2SL'
 import { DISTANCE_UNITS, ELEVATION_UNITS, SPEED_UNITS } from '@Utils/UnitUtils'
-import React, { memo, useEffect, useMemo }              from 'react'
+import React, { memo, useEffect, useMemo, useRef } from 'react'
 import { useSnapshot }                                  from 'valtio'
 
 /**
@@ -31,12 +31,12 @@ export const JourneyStats = memo(({id, metrics, units, style = {}}) => {
     const $configuration = lgs.settings.widgets['journey-stats-widget'].configuration
     const configuration = useSnapshot($configuration)
 
-    const $metricsStore = lgs.theJourney.metrics
-    const metricsSnap = useSnapshot($metricsStore)
+    const $metrics = lgs.theJourney.metrics
+    const metricsSnap = useSnapshot($metrics)
 
     const $unitSystem = lgs.settings.unitSystem
-    const unitSystem = useSnapshot($unitSystem).current
-    const isImperial = unitSystem === 'imperial'
+    const unitSystem = useSnapshot($unitSystem)
+    const isImperial = unitSystem.current === 'imperial'
 
     const element = useMemo(() => {
         if (id && configuration.elements?.[id]) {
@@ -45,6 +45,9 @@ export const JourneyStats = memo(({id, metrics, units, style = {}}) => {
         return configuration.user ?? configuration.default
     }, [id, configuration])
 
+    /**
+     * Merges metrics based on defined data source (global, external, user)
+     */
     const displayMetrics = useMemo(() => {
         const source = element.dataSource || 'global'
         const global = metricsSnap.global
@@ -63,7 +66,7 @@ export const JourneyStats = memo(({id, metrics, units, style = {}}) => {
                 ...(global.positive || {}),
                 ...(source === 'external' ? (external.positive || {}) : {}),
                 ...(source === 'user' ? {...(external.positive || {}), ...(user.positive || {})} : {}),
-            },
+            }
         }
     }, [element.dataSource, metricsSnap])
 
@@ -72,16 +75,16 @@ export const JourneyStats = memo(({id, metrics, units, style = {}}) => {
         if (!Number.isFinite(seconds) || seconds <= 0) {
             return null
         }
+
         const hours = Math.floor(seconds / 3600)
         const mins = Math.floor((seconds % 3600) / 60)
-        if (hours === 0 && mins === 0) {
-            return null
-        }
         const hh = String(hours).padStart(2, '0')
         const mm = String(mins).padStart(2, '0')
+
         if (isImperial) {
             return `${hh}:${mm}`
         }
+
         return (
             <>
                 {hh}<span className="duration-hour">h</span>{mm}<span className="duration-minute">m</span>
@@ -95,9 +98,6 @@ export const JourneyStats = memo(({id, metrics, units, style = {}}) => {
         }
         const m = Math.floor(paceSeconds / 60)
         const s = Math.floor(paceSeconds % 60)
-        if (m === 0 && s === 0) {
-            return null
-        }
         return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
     }
 
@@ -112,6 +112,9 @@ export const JourneyStats = memo(({id, metrics, units, style = {}}) => {
 
     const _moveable = useMemo(() => __.ui.widgetManager.getMoveable(id), [id])
 
+    /**
+     * Synchronize Moveable rect when visual elements toggle
+     */
     useEffect(() => {
         if (_moveable?.current) {
             _moveable.current.updateRect()
