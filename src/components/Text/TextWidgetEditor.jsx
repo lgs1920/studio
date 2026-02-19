@@ -7,118 +7,57 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-09
- * Last modified: 2026-02-09
+ * Created on: 2026-02-19
+ * Last modified: 2026-02-19
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { LGSScrollbars }                                                  from '@Components/MainUI/LGSScrollbars'
-import {
-    BackgroundElement,
-} from '@Components/MainUI/widgets/editor/elements/BackgroundElement'
-import {
-    BorderElement,
-} from '@Components/MainUI/widgets/editor/elements/BorderElement'
-import {
-    RotationElement,
-} from '@Components/MainUI/widgets/editor/elements/RotationElement'
-import {
-    ShadowElement,
-} from '@Components/MainUI/widgets/editor/elements/ShadowElement'
-import { TextEditorToolbar }                                              from '@Components/Text/TextEditorToolbar'
-import { WIDGET_RADIUS, WIDGET_SYSTEM_FONT_STACK, WIDGETS_EDITOR_DRAWER } from '@Core/constants'
-import {
-    TextWidgetManager,
-}                                                                         from '@Core/ui/text-metrics/TextWidgetManager'
-import {
-    SlColorPicker, SlDivider, SlInput, SlOption, SlRange, SlSelect, SlSwitch, SlTextarea,
-}                                                                         from '@shoelace-style/shoelace/dist/react'
-import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useSnapshot }                                                    from 'valtio'
+import { LGSScrollbars }                          from '@Components/MainUI/LGSScrollbars'
+import { BackgroundElement }                      from '@Components/MainUI/widgets/editor/elements/BackgroundElement'
+import { BorderElement }                          from '@Components/MainUI/widgets/editor/elements/BorderElement'
+import { RotationElement }                        from '@Components/MainUI/widgets/editor/elements/RotationElement'
+import { ShadowElement }                          from '@Components/MainUI/widgets/editor/elements/ShadowElement'
+import { TextEditorToolbar }                      from '@Components/Text/TextEditorToolbar'
+import { SlDivider }                              from '@shoelace-style/shoelace/dist/react'
+import React, { useCallback, useEffect, useMemo } from 'react'
+import { useSnapshot }                            from 'valtio'
 import './style.css'
 
 /**
- * Optimized TextArea component with transform override during active editing
+ * Text Widget Property Editor.
+ * Normalized controls for text style and transformations.
  */
-const OptimizedTextArea = memo(({value, onInput, dynamicVars, onFocus, onBlur, isEditing}) => {
-    const handleKeyDown = (e) => {
-        if (e.key === 'Enter' || e.key === 'Backspace') {
-            e.stopPropagation()
-        }
-    }
-
-    const style = {
-        ...dynamicVars,
-        '--lgs-tx-transform': isEditing ? 'none' : dynamicVars['--lgs-tx-transform'],
-    }
-
-    return (
-        <div style={style} className="text-widget-preview-container lgs-widget-preview ">
-            <SlTextarea
-                className="text-widget-preview-area"
-                size="small"
-                value={value}
-                onSlInput={onInput}
-                onSlFocus={onFocus}
-                onSlBlur={onBlur}
-                onKeyDown={handleKeyDown}
-                enterkeyhint="enter"
-            />
-        </div>
-    )
-})
-
 export const TextWidgetEditor = ({entity}) => {
     const $configuration = lgs.settings.widgets['text-widget'].configuration
     const configuration = useSnapshot($configuration)
 
-    const $widgetStore = lgs.stores.ui.widget
-    const widgetStore = useSnapshot($widgetStore)
+    const $widget = lgs.stores.ui.widget
+    const widget = useSnapshot($widget)
 
     const entityId = typeof entity === 'string' ? entity : ''
-    const isEntityTextWidget = entityId.split('#')[0] === 'text-widget'
-    const activeId = isEntityTextWidget ? entityId : widgetStore.current?.id || entity
-    const normalizedId = typeof activeId === 'string' ? activeId : ''
-    const isTextWidget = normalizedId.split('#')[0] === 'text-widget'
-
-    const $current = lgs.stores.ui.widget.current
+    const isTextWidget = entityId.startsWith('text-widget')
+    const normalizedId = isTextWidget ? entityId : (widget.current?.id || '')
 
     useEffect(() => {
-        if (!isEntityTextWidget || !entityId || widgetStore.current?.id === entityId) {
+        if (!isTextWidget || !entityId || widget.current?.id === entityId) {
             return
         }
-        $widgetStore.current = {id: entityId}
-    }, [entityId, isEntityTextWidget, $widgetStore, widgetStore.current?.id])
+        $widget.current = {id: entityId}
+    }, [entityId, isTextWidget, widget.current?.id])
 
-    const element = isTextWidget
-                    ? (configuration?.elements?.[normalizedId] ?? configuration.user ?? configuration.default)
-                    : null
-
-    const widget = useMemo(() => {
-        if (!isTextWidget || !normalizedId) {
+    const element = useMemo(() => {
+        if (!normalizedId.startsWith('text-widget')) {
             return null
         }
-        return __.ui.widgetManager.getElementById(normalizedId)
-    }, [isTextWidget, normalizedId])
+        return configuration.elements?.[normalizedId] ?? configuration.user ?? configuration.default
+    }, [configuration, normalizedId])
 
-    const bgSnapshot = widgetStore.currentSnapshot
     const swatches = useMemo(() => lgs.settings.getSwatches.list.join(';'), [])
-    const textWidgetManager = useMemo(() => TextWidgetManager.instance, [])
-
-    const [localRotation, setLocalRotation] = useState(0)
-    const [isEditing, setIsEditing] = useState(false)
-    const _timer = useRef(null)
-    const _moveable = useMemo(() => {
-        if (!isTextWidget || !normalizedId) {
-            return null
-        }
-        return __.ui.widgetManager.getMoveable(normalizedId)
-    }, [isTextWidget, normalizedId])
 
     const updateValue = useCallback((path, val) => {
-        if (!isTextWidget || !$configuration || !normalizedId) {
+        if (!normalizedId.startsWith('text-widget') || !$configuration) {
             return
         }
 
@@ -144,34 +83,25 @@ export const TextWidgetEditor = ({entity}) => {
 
         _curr[_keys[_keys.length - 1]] = val
 
+        const _moveable = __.ui.widgetManager.getMoveable(normalizedId)
         if (_moveable?.current) {
             _moveable.current.updateRect()
         }
-    }, [$configuration, element, isTextWidget, normalizedId, _moveable])
-
-    useEffect(() => {
-        if (!isTextWidget || !widget) {
-            return
-        }
-        const transform = __.ui.widgetManager.getTransform(widget)
-        const currentRotate = widgetStore.current?.rotate ?? transform.rotate ?? 0
-        setLocalRotation(Math.ceil(currentRotate))
-    }, [isTextWidget, widget, widgetStore.current?.rotate])
+    }, [element, normalizedId, $configuration])
 
     const applyRotation = async (val) => {
-        if (!isTextWidget || !widget || !normalizedId) {
+        const _instance = __.ui.widgetManager.getElementById(normalizedId)
+        if (!isTextWidget || !_instance) {
             return
         }
-        const clampedVal = parseFloat(val) || 0
-        setLocalRotation(clampedVal)
-        const {translate, scale} = __.ui.widgetManager.getTransform(widget)
 
-        __.ui.widgetManager.setTransform(widget, {translate, scale, rotate: clampedVal})
-        if (_moveable?.current) {
-            _moveable.current.updateRect()
-        }
-        if ($current) {
-            $current.rotate = clampedVal
+        const clampedVal = parseFloat(val) || 0
+        const {translate, scale} = __.ui.widgetManager.getTransform(_instance)
+
+        __.ui.widgetManager.setTransform(_instance, {translate, scale, rotate: clampedVal})
+
+        if ($widget.current) {
+            $widget.current.rotate = clampedVal
         }
 
         const initConfig = await __.ui.widgetManager.getWidgetConfig(normalizedId)
@@ -180,75 +110,39 @@ export const TextWidgetEditor = ({entity}) => {
         __.ui.widgetManager.saveWidgetPosition(normalizedId, config)
     }
 
-    const resetRotationTimer = useCallback(() => {
-        if (_timer.current) {
-            clearTimeout(_timer.current)
-        }
-        _timer.current = setTimeout(() => setIsEditing(false), 1000)
-    }, [])
-
-    const scheduleMoveableUpdate = useCallback(() => {
-        if (_moveable?.current) {
-            requestAnimationFrame(() => _moveable.current.updateRect())
-        }
-    }, [_moveable])
-
     const getColor = useCallback((item, alpha = false) => __.ui.ui.resolveItemColor(item, alpha), [])
-
-    const dynamicVars = useMemo(() => {
-        if (!isTextWidget || !element) {
-            return {}
-        }
-        return {
-            ...textWidgetManager.generateCSSVariables(element, bgSnapshot?.image, WIDGET_SYSTEM_FONT_STACK),
-            '--lgs-tx-transform': `rotate(${localRotation}deg)`,
-        }
-    }, [bgSnapshot?.image, element, isTextWidget, localRotation, textWidgetManager])
 
     if (!isTextWidget || !element) {
         return null
     }
 
     return (
-        <div className="lgs-card lgs-widget-editor" key={activeId}>
-            <OptimizedTextArea
-                value={element.text.content}
-                onInput={(e) => {
-                    updateValue('text.content', e.target.value)
-                    scheduleMoveableUpdate()
-                    if (isEditing) {
-                        resetRotationTimer()
-                    }
-                }}
-                onFocus={() => setIsEditing(true)}
-                onBlur={resetRotationTimer}
-                isEditing={isEditing}
-                dynamicVars={dynamicVars}
-            />
+        <div className="lgs-card lgs-widget-editor">
             <div className="text-widget-editor-scroll">
                 <LGSScrollbars>
                     <div className="text-widget-editor-header">
-                        <TextEditorToolbar id={activeId} color={true} align={true} style={true}/>
-                        <TextEditorToolbar id={activeId} fonts={true} color={false} align={false} style={false}/>
+                        <TextEditorToolbar id={normalizedId} color={true} align={true} style={true}/>
+                        <TextEditorToolbar id={normalizedId} fonts={true} color={false} align={false} style={false}/>
                     </div>
 
                     <div className="lgs-widget-editor-controls-wrapper">
-                        <RotationElement element={element}
-                                         localRotation={localRotation}
-                                         applyRotation={applyRotation}
-                                         updateValue={updateValue}/>
+                        <SlDivider/>
+
+                        <RotationElement
+                            element={element}
+                            localRotation={widget.current?.rotate ?? 0}
+                            applyRotation={applyRotation}
+                            updateValue={updateValue}
+                        />
                         <SlDivider/>
                         <ShadowElement element={element} swatches={swatches} getColor={getColor}
                                        updateValue={updateValue}/>
-
                         <SlDivider/>
                         <BorderElement element={element} swatches={swatches} getColor={getColor}
-                                       updateValue={updateValue}
-                                       showPill={true}/>
+                                       updateValue={updateValue} showPill={true}/>
                         <SlDivider/>
                         <BackgroundElement element={element} swatches={swatches} getColor={getColor}
                                            updateValue={updateValue}/>
-
                     </div>
                 </LGSScrollbars>
             </div>
