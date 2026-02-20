@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-31
- * Last modified: 2026-01-31
+ * Created on: 2026-02-20
+ * Last modified: 2026-02-20
  *
  *
  * Copyright © 2026 LGS1920
@@ -34,9 +34,7 @@ export class WidgetRegistry {
         this.#modules = import.meta.glob([
                                              '/src/components/MainUI/widgets/list/*Widget*.jsx',
                                              '/src/components/MainUI/widgets/list/**/*Widget*.jsx',
-                                             '/src/components/Profile/*Widget*.jsx',
-                                             '/src/components/Text/*Widget*.jsx',
-                                             '/src/components/Stats/*Widget*.jsx',
+                                             '/src/components/*/*Widget*.jsx',
                                          ])
 
         this.#buildIndex()
