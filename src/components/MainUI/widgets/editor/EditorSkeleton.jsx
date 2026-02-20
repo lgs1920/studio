@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-13
- * Last modified: 2026-01-13
+ * Created on: 2026-02-20
+ * Last modified: 2026-02-20
  *
  *
  * Copyright © 2026 LGS1920
@@ -22,7 +22,7 @@ import { SlSkeleton } from '@shoelace-style/shoelace/dist/react'
  */
 export const EditorSkeleton = () => {
     return (
-        <div className="editor-skeleton-container"
+        <div className="editor-skeleton-container lgs-card"
              style={{display: 'flex', flexDirection: 'column', gap: 'var(--sl-spacing-large)'}}>
             {/* Simulation of a text input or toolbar area */}
             <div style={{display: 'flex', flexDirection: 'column', gap: 'var(--sl-spacing-x-small)'}}>
