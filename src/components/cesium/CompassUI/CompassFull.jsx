@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-04
- * Last modified: 2026-02-04
+ * Created on: 2026-02-20
+ * Last modified: 2026-02-20
  *
  *
  * Copyright © 2026 LGS1920
@@ -17,75 +17,114 @@
 import React from 'react'
 
 /**
- * CompassFull component
- * Needle is hard-coded vertically (North/South) to ensure pixel-perfect centering.
- * Base width: 80px | North color: Red (or currentColor) | South color: Darker.
- * * @param {Object} props
- * @param {string|number} props.width - Component width
- * @param {string|number} props.height - Component height
- * @param {React.Ref} props.ref - Ref for external rotation of the dial
+ * CompassFull component (React 19)
+ * Priority: colors prop > CSS Class.
  */
-export const CompassFull = ({width = '100%', height = '100%', ref}) => {
+export const CompassFull = ({
+                                width = '100%',
+                                height = '100%',
+                                colors = {},
+                                ref,
+                            }) => {
+    const _colors = colors || {}
+    const _needle = _colors.needle || {}
+
+    const dynamicStyle = {
+        display:  'block',
+        overflow: 'visible',
+        ...(_colors.background && {'--lgs-compass-background': _colors.background}),
+        ...(_colors.overBackground && {'--lgs-compass-over-background': _colors.overBackground}),
+        ...(_colors.poles && {'--lgs-compass-poles': _colors.poles}),
+        ...(_colors.text && {'--lgs-compass-text': _colors.text}),
+        ...(_needle.north && {'--lgs-compass-north': _needle.north}),
+        ...(_needle.south && {'--lgs-compass-south': _needle.south}),
+        ...(_needle.center && {'--lgs-compass-center': _needle.center}),
+    }
+
+    /**
+     * Helper to return style only if the value exists.
+     * Prevents rendering 'style' attribute if the color prop is missing.
+     */
+    const forceFill = (value, variable) => {
+        return value ? {style: {fill: `var(${variable})`}} : {}
+    }
+
     return (
         <svg
             height={height}
             width={width}
             viewBox="0 0 512 512"
             xmlns="http://www.w3.org/2000/svg"
-            style={{display: 'block', overflow: 'visible'}}
+            style={dynamicStyle}
         >
-            {/* Rotating Group (Dial and Labels) */}
             <g ref={ref} style={{transformOrigin: '256px 256px'}}>
 
-                {/* Background layers */}
-                <path className="lgs-compass-bg"
-                      d="M512,256c0,141.376-114.625,256-256,256c-40.96,0-79.698-9.605-113.99-26.751 c-49.85-24.846-90.413-65.409-115.259-115.26C9.605,335.698,0,296.959,0,256c0-7.144,0.317-14.13,0.873-21.115 C11.033,110.337,110.338,11.034,234.885,0.873C241.87,0.318,248.856,0,256,0c48.739,0,94.303,13.653,133.12,37.308 c34.927,21.274,64.298,50.644,85.572,85.572C498.346,161.697,512,207.261,512,256z"/>
-                <path className="lgs-compass-over-bg"
-                      d="M437.026,74.974L75.004,436.996c19.478,19.479,42.081,35.829,67.006,48.253 C176.302,502.395,215.04,512,256,512c141.375,0,256-114.624,256-256c0-48.739-13.654-94.303-37.309-133.12 C464.055,105.417,451.393,89.341,437.026,74.974z"/>
+                <path
+                    className="lgs-compass-background"
+                    {...forceFill(_colors.background, '--lgs-compass-background')}
+                    d="M512,256c0,141.376-114.625,256-256,256c-40.96,0-79.698-9.605-113.99-26.751 c-49.85-24.846-90.413-65.409-115.259-115.26C9.605,335.698,0,296.959,0,256c0-7.144,0.317-14.13,0.873-21.115 C11.033,110.337,110.338,11.034,234.885,0.873C241.87,0.318,248.856,0,256,0c48.739,0,94.303,13.653,133.12,37.308 c34.927,21.274,64.298,50.644,85.572,85.572C498.346,161.697,512,207.261,512,256z"
+                />
 
-                {/* Poles - 3px overlap with rounded arc bases */}
-                <g className="lgs-compass-poles" fill="currentColor">
-                    <path d="M230,143 A115,115 0 0,1 282,143 L256,76 Z"/>
-                    <path d="M282,369 A115,115 0 0,1 230,369 L256,436 Z"/>
-                    <path d="M369,230 A115,115 0 0,1 369,282 L436,256 Z"/>
-                    <path d="M143,282 A115,115 0 0,1 143,230 L76,256 Z"/>
+                <path
+                    className="lgs-compass-over-background"
+                    {...forceFill(_colors.overBackground, '--lgs-compass-over-background')}
+                    d="M437.026,74.974L75.004,436.996c19.478,19.479,42.081,35.829,67.006,48.253 C176.302,502.395,215.04,512,256,512c141.375,0,256-114.624,256-256c0-48.739-13.654-94.303-37.309-133.12 C464.055,105.417,451.393,89.341,437.026,74.974z"
+                />
+
+                <g className="lgs-compass-poles">
+                    <path {...forceFill(_colors.poles, '--lgs-compass-poles')}
+                          d="M230,143 A115,115 0 0,1 282,143 L256,76 Z"/>
+                    <path {...forceFill(_colors.poles, '--lgs-compass-poles')}
+                          d="M282,369 A115,115 0 0,1 230,369 L256,436 Z"/>
+                    <path {...forceFill(_colors.poles, '--lgs-compass-poles')}
+                          d="M369,230 A115,115 0 0,1 369,282 L436,256 Z"/>
+                    <path {...forceFill(_colors.poles, '--lgs-compass-poles')}
+                          d="M143,282 A115,115 0 0,1 143,230 L76,256 Z"/>
+                    <path
+                        className="lgs-compass-poles-circle"
+                        {...forceFill(_colors.poles, '--lgs-compass-poles')}
+                        d="M368.64,226.471c-2.937-11.193-7.541-21.75-13.415-31.356 c-9.605-15.638-22.782-28.815-38.341-38.34c-9.605-5.954-20.162-10.558-31.355-13.494c-9.446-2.461-19.369-3.81-29.529-3.81 c-10.161,0-20.004,1.349-29.45,3.731h-0.079c-40.563,10.716-72.553,42.705-83.19,83.269c-2.461,9.446-3.81,19.368-3.81,29.529 c0,10.161,1.349,20.083,3.81,29.529c2.937,11.272,7.462,21.829,13.415,31.434c9.605,15.559,22.782,28.736,38.341,38.262 c9.684,5.954,20.242,10.557,31.434,13.574h0.079c9.446,2.382,19.289,3.731,29.45,3.731c10.16,0,20.083-1.349,29.529-3.81 c40.563-10.637,72.474-42.627,83.111-83.19c2.461-9.446,3.81-19.368,3.81-29.529C372.45,245.839,371.101,235.917,368.64,226.471 z M256,337.762c-8.494,0-16.67-1.35-24.37-3.81h-0.079c-25.481-7.938-45.643-28.101-53.581-53.581v-0.079 c-2.461-7.701-3.731-15.876-3.731-24.291c0-45.087,36.674-81.762,81.762-81.762c8.494,0,16.67,1.27,24.37,3.731 c25.401,7.938,45.564,28.101,53.581,53.581v0.079c2.461,7.7,3.731,15.876,3.731,24.37 C337.682,301.087,301.008,337.762,256,337.762z"
+                    />
                 </g>
 
-                {/* Decorative Circle */}
-                <path className="lgs-compass-poles-circle"
-                      d="M368.64,226.471c-2.937-11.193-7.541-21.75-13.415-31.356 c-9.605-15.638-22.782-28.815-38.341-38.34c-9.605-5.954-20.162-10.558-31.355-13.494c-9.446-2.461-19.369-3.81-29.529-3.81 c-10.161,0-20.004,1.349-29.45,3.731h-0.079c-40.563,10.716-72.553,42.705-83.19,83.269c-2.461,9.446-3.81,19.368-3.81,29.529 c0,10.161,1.349,20.083,3.81,29.529c2.937,11.272,7.462,21.829,13.415,31.434c9.605,15.559,22.782,28.736,38.341,38.262 c9.684,5.954,20.242,10.557,31.434,13.574h0.079c9.446,2.382,19.289,3.731,29.45,3.731c10.16,0,20.083-1.349,29.529-3.81 c40.563-10.637,72.474-42.627,83.111-83.19c2.461-9.446,3.81-19.368,3.81-29.529C372.45,245.839,371.101,235.917,368.64,226.471 z M256,337.762c-8.494,0-16.67-1.35-24.37-3.81h-0.079c-25.481-7.938-45.643-28.101-53.581-53.581v-0.079 c-2.461-7.701-3.731-15.876-3.731-24.291c0-45.087,36.674-81.762,81.762-81.762c8.494,0,16.67,1.27,24.37,3.731 c25.401,7.938,45.564,28.101,53.581,53.581v0.079c2.461,7.7,3.731,15.876,3.731,24.37 C337.682,301.087,301.008,337.762,256,337.762z"
-                      fill="currentColor"/>
-
-                {/* Cardinal Labels */}
-                <g className="lgs-compass-text" fill="currentColor" style={{
-                    fontFamily: 'Arial, sans-serif',
-                    fontWeight: 'bold',
-                    fontSize:   '46px',
-                    textAnchor: 'middle',
-                }}>
-                    <text x="256" y="52">{'N'}</text>
-                    <text x="465" y="271">{'E'}</text>
-                    <text x="256" y="492">{'S'}</text>
-                    <text x="47" y="271">{'W'}</text>
+                <g
+                    className="lgs-compass-text"
+                    {...forceFill(_colors.text, '--lgs-compass-text')}
+                    style={{
+                        ...forceFill(_colors.text, '--lgs-compass-text').style,
+                        fontFamily: 'Arial, sans-serif',
+                        fontWeight: 'bold',
+                        fontSize:   '46px',
+                        textAnchor: 'middle',
+                    }}
+                >
+                    <text x="256" y="52">N</text>
+                    <text x="465" y="271">E</text>
+                    <text x="256" y="492">S</text>
+                    <text x="47" y="271">W</text>
                 </g>
             </g>
 
-            {/* 2. Needle - Hardcoded Vertical Alignment (Points North) */}
             <g className="lgs-compass-needle">
-                {/* North Half (Points North) - Using red if available, else currentColor */}
                 <path
                     className="lgs-compass-needle-north"
+                    {...forceFill(_needle.north, '--lgs-compass-north')}
                     d="M216,256 L256,120 L296,256 Z"
                 />
-                {/* South Half (Points South) - Dark contrast */}
                 <path
                     className="lgs-compass-needle-south"
+                    {...forceFill(_needle.south, '--lgs-compass-south')}
                     d="M296,256 L256,392 L216,256 Z"
                 />
             </g>
 
-            {/* 3. Center Cap */}
-            <circle cx="256" cy="256" r="22.8" fill="currentColor" className="lgs-compass-center"/>
+            <circle
+                cx="256"
+                cy="256"
+                r="22.8"
+                className="lgs-compass-center"
+                {...forceFill(_needle.center, '--lgs-compass-center')}
+            />
         </svg>
     )
 }
