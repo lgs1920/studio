@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-02-20
+ * Last modified: 2026-02-20
  *
  *
  * Copyright © 2026 LGS1920
@@ -24,20 +24,20 @@ import { proxy, subscribe }   from 'valtio'
  */
 export class SettingsSection {
     /**
-     * The key identifying the settings section.
+     * Identifying key for the settings section.
      * @type {string}
      */
     key
 
     /**
-     * The private content object, proxied for reactivity.
+     * Proxied content object for reactivity.
      * @type {object}
      * @private
      */
     #content
 
     /**
-     * Tracks changes (added, deleted, updated) in the section.
+     * Change tracking state for the section.
      * @type {{added: boolean, deleted: boolean, updated: boolean}}
      * @private
      */
@@ -45,31 +45,31 @@ export class SettingsSection {
 
     /**
      * Creates a new SettingsSection instance.
-     * @param {string} key - The key identifying the settings section.
+     * @param {string} key - The section identifier.
      */
     constructor(key) {
         this.key = key
     }
 
     /**
-     * Gets the content of the settings section, unproxied if necessary.
-     * @returns {object|any} The content of the section.
+     * Returns the unproxied content value.
+     * @returns {object|any} The section content.
      */
     get content() {
         return this.#content.__value !== undefined ? this.#content.__value : this.#content
     }
 
     /**
-     * Sets the content of the settings section, wrapping it in a proxy.
-     * @param {object|any} value - The new content value.
+     * Sets the section content and initializes the Valtio proxy.
+     * @param {object|any} value - The new content.
      */
     set content(value) {
         this.#content = proxy({__value: value})
     }
 
     /**
-     * Subscribes to changes in the content and saves them automatically.
-     * @returns {function} The subscription cleanup function.
+     * Subscribes to proxy changes to trigger automatic persistence.
+     * @returns {function} Cleanup function for the subscription.
      */
     subscribeToChange = () => {
         return subscribe(this.#content, async () => {
@@ -78,12 +78,13 @@ export class SettingsSection {
     }
 
     /**
-     * Initializes the settings section by loading from IndexedDB or configuration.
+     * Initializes the section by merging IndexedDB data with the base configuration.
      * @returns {Promise<void>}
      */
     init = async () => {
         const configFromJSON = JSON.parse(JSON.stringify(lgs.configuration[this.key]))
         const data = await this.read()
+
         if (data === null) {
             if (lgs.configuration[this.key] !== undefined) {
                 this.#content = proxy(
@@ -99,6 +100,7 @@ export class SettingsSection {
             const updated = this.update(data, configFromJSON)
             this.#content = proxy(updated instanceof Object ? updated : {__value: updated})
             lgs.configuration[this.key] = JSON.parse(JSON.stringify(updated))
+
             if (this.hasChanged()) {
                 await this.save()
             }
@@ -107,7 +109,7 @@ export class SettingsSection {
     }
 
     /**
-     * Saves the settings to IndexedDB, unproxying the content before saving.
+     * Persists the current content to IndexedDB and syncs the global configuration.
      * @returns {Promise<void>}
      */
     save = async () => {
@@ -116,15 +118,16 @@ export class SettingsSection {
     }
 
     /**
-     * Reads settings from IndexedDB, optionally for a specific parameter.
-     * @param {string} [parameter] - If specified, returns only the value for the given parameter.
-     * @returns {Promise<object|any|null>} The settings data or null if not found.
+     * Fetches settings from IndexedDB for the current key.
+     * @param {string} [parameter] - Optional specific parameter to retrieve.
+     * @returns {Promise<object|any|null>} The stored data.
      */
     read = async (parameter = undefined) => {
         const all = await lgs.db.settings.get(this.key, SETTINGS_STORE)
         if (!all) {
             return all
         }
+
         const value = parameter ? all[parameter] ?? undefined : all
         if (parameter) {
             lgs.configuration[this.key][parameter] = value.__value !== undefined ? value.__value : value
@@ -136,7 +139,7 @@ export class SettingsSection {
     }
 
     /**
-     * Resets the settings to their factory defaults.
+     * Reverts the section to factory default values.
      * @returns {Promise<void>}
      */
     reset = async () => {
@@ -145,19 +148,21 @@ export class SettingsSection {
     }
 
     /**
-     * Updates the configuration by applying differences between the origin and updated data.
-     * @param {object|any} origin - The current configuration (from IndexedDB).
-     * @param {object|any} updated - The new configuration (from JSON file).
-     * @returns {object|any} The updated configuration.
+     * Compares IndexedDB data with JSON template and applies safe updates.
+     * @param {object|any} origin - Data from IndexedDB.
+     * @param {object|any} updated - Data from JSON template.
+     * @returns {object|any} The merged configuration.
      */
     update = (origin, updated) => {
         const newConfig = JSON.parse(JSON.stringify(origin))
         const diffs = detailedDiff(origin, updated)
+
         this.#data = {
             added:   Object.keys(diffs.added).length > 0,
             deleted: Object.keys(diffs.deleted).length > 0,
             updated: Object.keys(diffs.updated).length > 0,
         }
+
         if (this.#data.added) {
             this.#syncAddedValues(newConfig, diffs.added, SETTING_EXCLUSIONS, this.key)
         }
@@ -167,41 +172,40 @@ export class SettingsSection {
         if (this.#data.updated && !SETTING_EXCLUSIONS.includes(this.key)) {
             this.#syncUpdatedValues(newConfig, diffs.updated, SETTING_EXCLUSIONS, this.key)
         }
+
         return newConfig
     }
 
     /**
-     * Checks if the section content has changed.
-     * @returns {boolean} True if the section has added, deleted, or updated values.
+     * Returns true if any changes were detected during update.
+     * @returns {boolean}
      */
     hasChanged = () => {
         return this.#data.added || this.#data.updated || this.#data.deleted
     }
 
     /**
-     * Syncs the target object with added values, respecting excluded keys.
-     * @param {object|any[]} target - The original object or array to modify.
-     * @param {object} toAdd - The added keys/values to sync.
-     * @param {string[]} excludeKeys - Keys to exclude from syncing.
-     * @param {string} parentKey - The parent key path for recursive calls.
-     * @returns {object|any[]} The modified target.
+     * Recursively adds missing keys from template to target.
+     * Allows traversal into excluded paths to add new attributes without overwriting.
      * @private
      */
     #syncAddedValues = (target, toAdd, excludeKeys = [], parentKey = '') => {
         for (const key in toAdd) {
             if (Object.hasOwnProperty.call(toAdd, key)) {
                 const fullKey = parentKey ? `${parentKey}.${key}` : key
-                if (excludeKeys.includes(fullKey) || excludeKeys.includes(this.key)) {
-                    continue
-                }
+
                 if (typeof toAdd[key] === 'object' && toAdd[key] !== null) {
+                    // Create branch if missing to allow deep attribute insertion
                     if (!target[key]) {
                         target[key] = Array.isArray(toAdd[key]) ? [] : {}
                     }
                     this.#syncAddedValues(target[key], toAdd[key], excludeKeys, fullKey)
                 }
                 else {
-                    target[key] = toAdd[key]
+                    // Add primitive only if it doesn't exist and isn't explicitly excluded
+                    if (!(key in target) && !excludeKeys.includes(fullKey)) {
+                        target[key] = toAdd[key]
+                    }
                 }
             }
         }
@@ -209,31 +213,30 @@ export class SettingsSection {
     }
 
     /**
-     * Syncs the target object with deleted values, respecting excluded keys.
-     * @param {object|any[]} target - The original object or array to modify.
-     * @param {object} toRemove - The keys/values to remove.
-     * @param {string[]} excludeKeys - Keys to exclude from syncing.
-     * @param {string} parentKey - The parent key path for recursive calls.
-     * @returns {object|any[]} The modified target.
+     * Removes keys present in target but missing in template.
+     * Strictly respects exclusions to prevent deletion of user-managed data.
      * @private
      */
     #syncDeletedValues = (target, toRemove, excludeKeys = [], parentKey = '') => {
         for (const key in toRemove) {
             if (Object.prototype.hasOwnProperty.call(toRemove, key)) {
                 const fullKey = parentKey ? `${parentKey}.${key}` : key
-                if (excludeKeys.includes(fullKey) || excludeKeys.includes(this.key)) {
+
+                // Halt deletion if the path or parent branch is excluded
+                if (excludeKeys.includes(fullKey) || excludeKeys.includes(parentKey)) {
                     continue
                 }
-                if (typeof toRemove[key] === 'object' && toRemove[key] !== null && toRemove[key] !== undefined) {
+
+                if (typeof toRemove[key] === 'object' && toRemove[key] !== null) {
                     if (target[key] && typeof target[key] === 'object') {
                         this.#syncDeletedValues(target[key], toRemove[key], excludeKeys, fullKey)
                     }
                 }
                 else {
-                    if (Array.isArray(target) && !isNaN(key)) {
-                        target.splice(Number(key), 1)
+                    if (Array.isArray(target)) {
+                        target[key] = undefined
                     }
-                    else if (typeof target === 'object') {
+                    else {
                         delete target[key]
                     }
                 }
@@ -243,21 +246,18 @@ export class SettingsSection {
     }
 
     /**
-     * Syncs the target object with updated values, respecting excluded keys.
-     * @param {object|any[]} target - The original object or array to modify.
-     * @param {object} toUpdate - The keys/values to update.
-     * @param {string[]} excludeKeys - Keys to exclude from syncing.
-     * @param {string} parentKey - The parent key path for recursive calls.
-     * @returns {object|any[]} The modified target.
+     * Updates existing keys in target with values from template.
+     * Respects exclusion list for the entire path.
      * @private
      */
     #syncUpdatedValues = (target, toUpdate, excludeKeys = [], parentKey = '') => {
         for (const key in toUpdate) {
             if (Object.prototype.hasOwnProperty.call(toUpdate, key)) {
                 const fullKey = parentKey ? `${parentKey}.${key}` : key
-                if (excludeKeys.includes(fullKey) || excludeKeys.includes(this.key)) {
+                if (excludeKeys.includes(fullKey)) {
                     continue
                 }
+
                 if (typeof toUpdate[key] === 'object' && toUpdate[key] !== null) {
                     if (!target[key]) {
                         target[key] = Array.isArray(toUpdate[key]) ? [] : {}
