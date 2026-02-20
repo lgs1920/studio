@@ -612,7 +612,6 @@ sl-card[variant="primary"]::part(base) {
     display: block;
     width: var(--lgs-compass-size);
     height: var(--lgs-compass-size);
-    /*margin: var(--lgs-gutter-s);*/
 }
 
 .lgs-compass.mode-light {
@@ -624,31 +623,44 @@ sl-card[variant="primary"]::part(base) {
 }
 
 .lgs-compass-needle-north {
-    fill: var(--sl-color-red-800);
+    fill: var(--lgs-compass-needle-north, var(--sl-color-red-800));
 }
 
 .lgs-compass-needle-south {
-    fill: var(--sl-color-amber-100);
+    fill: var(--lgs-compass-needle-south, var(--sl-color-amber-100));
 }
 
 .lgs-compass-text {
-    fill: var(--lgs-light-color);
+    fill: var(--lgs-compass-text, var(--lgs-light-color));
 }
 
 .lgs-compass-poles, .lgs-compass-poles-circle {
-    fill: var(--lgs-light-color-50);
+    fill: var(--lgs-compass-poles, var(--lgs-light-color-50));
 }
 
-.lgs-compass-center {
-    fill: var(--sl-color-amber-500);
+.lgs-compass-needle-center {
+    fill: var(--lgs-compass-needle-center, var(--sl-color-amber-500));
 }
 
 .lgs-compass-background {
-    fill: var(--lgs-dark-color-75);
+    fill: var(--lgs-compass-background, var(--lgs-dark-color-75));
 }
 
 .lgs-compass-over-background {
-    fill: var(--lgs-light-color-15);
+    fill: var(--lgs-compass-over-background, var(--lgs-light-color-15));
+}
+
+.compass-widget-preview {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+}
+
+.compass-widget-preview .lgs-compass {
+    width: 120px;
+    height: 120px;
 }
 
 /*******************************************************************************

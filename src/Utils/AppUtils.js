@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-02-20
+ * Last modified: 2026-02-20
  *
  *
  * Copyright © 2026 LGS1920
@@ -144,13 +144,24 @@ export class AppUtils {
 
 
     /**
-     * Converts a kebab-case string ro PascalCase
+     * Converts a kebab-case string to PascalCase
      * @param {string} string - The string to transform
      * @param {boolean} [upper=false] - If true, returns UpperCamelCase (PascalCase)
      * @returns {string}
      */
     static pascalCase = (string) => AppUtils.camelCase(string, true)
 
+    /**
+     * Converts a camelCase or PascalCase string to kebab-case
+     * @param {string} string - The string to transform
+     * @returns {string}
+     */
+    static kebabCase = (string) => {
+        return string
+            .replace(/([a-z0-9])([A-Z])/g, '$1-$2') // Insère un tiret entre une minuscule/chiffre et une majuscule
+            .replace(/([A-Z])([A-Z][a-z])/g, '$1-$2') // Gère les acronymes (ex: AppURL -> app-url)
+            .toLowerCase()
+    }
     /**
      * LGS1920Context initialisation
      *

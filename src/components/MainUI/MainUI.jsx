@@ -7,14 +7,14 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-19
- * Last modified: 2026-02-19
+ * Created on: 2026-02-20
+ * Last modified: 2026-02-20
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
-import { Compass } from '@Components/cesium/CompassUI/Compass'
-import { FullScreenButton }    from '@Components/FullScreenButton/FullScreenButton'
+import { Compass }          from '@Components/MainUI/compass/Compass'
+import { FullScreenButton } from '@Components/FullScreenButton/FullScreenButton'
 import { ContextMenuRenderer } from '@Components/MainUI/context-menu/ContextMenuRenderer'
 
 import { GeocodingButton }   from '@Components/MainUI/geocoding/GeocodingButton'

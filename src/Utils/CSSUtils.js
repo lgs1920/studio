@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-02-20
+ * Last modified: 2026-02-20
  *
  *
  * Copyright © 2026 LGS1920
@@ -18,28 +18,40 @@ export class CSSUtils {
 
 
     /**
-     * Get the value of the CSS Variable
+     * Get the value of a CSS Variable
      *
-     * @param variable {string}   can start with -- or not
+     * @param variable {string} - The variable name (with or without --)
+     * @param target {string|HTMLElement} - Optional: CSS selector or DOM element
      *
      * @return {string}
      */
-    static getCSSVariable = (variable) => {
-        variable = (variable.startsWith('--') ? variable : '--' + variable)
-        return window.getComputedStyle(document.documentElement).getPropertyValue(variable).trim()
+    static getCSSVariable = (variable, target = document.documentElement) => {
+        const name = variable.startsWith('--') ? variable : '--' + variable
+        const element = typeof target === 'string'
+                        ? document.querySelector(target)
+                        : target
+        const finalElement = element || document.documentElement
+
+        return window.getComputedStyle(finalElement).getPropertyValue(name).trim()
     }
 
     /**
-     * set a CSS Variable
+     * Set a CSS Variable
      *
-     * @param variable {string}     can start with -- or not
-     * @param value {any}           the value to assign
-     *
-     * @return {string}
+     * @param variable {string} - The variable name (with or without --)
+     * @param value {any}       - The value to assign
+     * @param target {string|HTMLElement} - Optional: CSS selector or DOM element
      */
-    static setCSSVariable = (variable, value) => {
-        variable = (variable.startsWith('--') ? variable : '--' + variable)
-        document.documentElement.style.setProperty(variable, value)
+    static setCSSVariable = (variable, value, target = document.documentElement) => {
+        const name = variable.startsWith('--') ? variable : '--' + variable
+
+        const element = typeof target === 'string'
+                        ? document.querySelector(target)
+                        : target
+
+        if (element) {
+            element.style.setProperty(name, value)
+        }
     }
 
     static rem2px = (remString, stringify = false) => {

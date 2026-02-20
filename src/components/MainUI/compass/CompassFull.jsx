@@ -36,9 +36,9 @@ export const CompassFull = ({
         ...(_colors.overBackground && {'--lgs-compass-over-background': _colors.overBackground}),
         ...(_colors.poles && {'--lgs-compass-poles': _colors.poles}),
         ...(_colors.text && {'--lgs-compass-text': _colors.text}),
-        ...(_needle.north && {'--lgs-compass-north': _needle.north}),
-        ...(_needle.south && {'--lgs-compass-south': _needle.south}),
-        ...(_needle.center && {'--lgs-compass-center': _needle.center}),
+        ...(_needle.north && {'--lgs-compass-needle-north': _needle.north}),
+        ...(_needle.south && {'--lgs-compass-needle-south': _needle.south}),
+        ...(_needle.center && {'--lgs-compass-needle-center': _needle.center}),
     }
 
     /**
@@ -108,12 +108,12 @@ export const CompassFull = ({
             <g className="lgs-compass-needle">
                 <path
                     className="lgs-compass-needle-north"
-                    {...forceFill(_needle.north, '--lgs-compass-north')}
+                    {...forceFill(_needle.north, '--lgs-compass-needle-north')}
                     d="M216,256 L256,120 L296,256 Z"
                 />
                 <path
                     className="lgs-compass-needle-south"
-                    {...forceFill(_needle.south, '--lgs-compass-south')}
+                    {...forceFill(_needle.south, '--lgs-compass-needle-south')}
                     d="M296,256 L256,392 L216,256 Z"
                 />
             </g>
@@ -122,8 +122,8 @@ export const CompassFull = ({
                 cx="256"
                 cy="256"
                 r="22.8"
-                className="lgs-compass-center"
-                {...forceFill(_needle.center, '--lgs-compass-center')}
+                className="lgs-compass-needle-center"
+                {...forceFill(_needle.center, '--lgs-compass-needle-center')}
             />
         </svg>
     )

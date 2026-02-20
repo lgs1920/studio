@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-02-20
+ * Last modified: 2026-02-20
  *
  *
  * Copyright © 2026 LGS1920
@@ -17,8 +17,8 @@
 import {
     SlDivider, SlRadio, SlRadioButton, SlRadioGroup,
 }                       from '@shoelace-style/shoelace/dist/react'
-import { CompassFull }  from '@Components/cesium/CompassUI/CompassFull'
-import { CompassLight } from '@Components/cesium/CompassUI/CompassLight'
+import { CompassFull }  from '@Components/MainUI/compass/CompassFull'
+import { CompassLight } from '@Components/MainUI/compass/CompassLight'
 import { useSnapshot }  from 'valtio'
 
 export const CompassSettings = (props) => {

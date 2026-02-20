@@ -30,8 +30,47 @@ widgets:
     max: 1
     component: "CompassWidget"
     type: "lgs-visual-widget"
+    path: "@Components/Compass"
     groups:
       - "multi-purpose-widgets"
+
+    ## Configuration
+    configuration:
+      default:
+        show: true
+        background:
+          show: true
+          color: --lgs-light-color-15
+          opacity: 1
+
+        overBackground:
+          show: true
+          color: --lgs-dark-color-75
+          opacity: 1
+
+        poles:
+          show: true
+          color: --lgs-light-color-50
+          opacity: 1
+        text:
+          show: true
+          color: --lgs-light-color
+          opacity: 1
+        needle:
+          north:
+            show: true
+            color: --sl-color-red-800
+            opacity: 1
+          south:
+            show: true
+            color: --sl-color-amber-100
+            opacity: 1
+          center:
+            show: true
+            color: --sl-color-amber-500
+            opacity: 1
+      user:
+      elements:
 
   credits-widget:
     id: "credits-widget"

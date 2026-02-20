@@ -34,9 +34,9 @@ export const CompassLight = ({
         display:   'block',
         overflow:  'visible',
         transform: 'rotate(-45deg)',
-        ...(_needle.north && {'--lgs-compass-north': _needle.north}),
-        ...(_needle.south && {'--lgs-compass-south': _needle.south}),
-        ...(_needle.center && {'--lgs-compass-center': _needle.center}),
+        ...(_needle.north && {'--lgs-compass-needle-north': _needle.north}),
+        ...(_needle.south && {'--lgs-compass-needle-south': _needle.south}),
+        ...(_needle.center && {'--lgs-compass-needle-center': _needle.center}),
     }
 
     /**
@@ -63,19 +63,19 @@ export const CompassLight = ({
                 >
                     <path
                         className="lgs-compass-needle-north"
-                        {...forceFill(_needle.north, '--lgs-compass-north')}
+                        {...forceFill(_needle.north, '--lgs-compass-needle-north')}
                         d="M296.327,296.354l-80.703-80.703l174.962-101.759c9.854-5.731,13.225-2.36,7.494,7.494 L296.327,296.354z"
                     />
                     <path
                         className="lgs-compass-needle-south"
-                        {...forceFill(_needle.south, '--lgs-compass-south')}
+                        {...forceFill(_needle.south, '--lgs-compass-needle-south')}
                         d="M296.327,296.354L121.36,398.108c-9.854,5.731-13.225,2.36-7.494-7.494l101.759-174.962 L296.327,296.354z"
                     />
                 </g>
 
                 <circle
                     className="lgs-compass-center"
-                    {...forceFill(_needle.center, '--lgs-compass-center')}
+                    {...forceFill(_needle.center, '--lgs-compass-needle-center')}
                     cx="255.973"
                     cy="256"
                     r="22.8"
