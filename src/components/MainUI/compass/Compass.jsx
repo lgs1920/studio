@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-20
- * Last modified: 2026-02-20
+ * Created on: 2026-02-21
+ * Last modified: 2026-02-21
  *
  *
  * Copyright © 2026 LGS1920
@@ -26,12 +26,27 @@ import { useSnapshot }                 from 'valtio'
 /**
  * Compass component that synchronizes with the camera heading.
  */
-export const Compass = ({fixed, colors = {}}) => {
+export const Compass = ({fixed, colors = {}, inWidget = false, entity}) => {
     const _needle = useRef(null)
     const _compass = useRef(null)
     const _doubleTapTimeout = useRef(null)
 
-    const compass = useSnapshot(lgs.settings.ui.compass)
+    // Global configuration proxy
+    const $globalCompass = lgs.settings.ui.compass
+
+    // Widget configuration proxy (handle potential undefined entity)
+    const $widgetConfig = lgs.settings.widgets['compass-widget'].configuration
+    const $widgetElement = entity
+                           ? ($widgetConfig.elements?.[entity] ?? $widgetConfig.user ?? $widgetConfig.default)
+                           : ($widgetConfig.user ?? $widgetConfig.default)
+
+    // Snapshots for reactivity
+    const globalCompass = useSnapshot($globalCompass)
+    const widgetElement = useSnapshot($widgetElement)
+
+    // Select the source of truth based on the context
+    // This ensures activeConfig is never null
+    const activeConfig = inWidget ? widgetElement : globalCompass
 
     useEffect(() => {
         /**
@@ -91,7 +106,6 @@ export const Compass = ({fixed, colors = {}}) => {
             rotateCompass()
         }
 
-
         return () => {
             if (compassElement) {
                 compassElement.removeEventListener('dblclick', resetToNorth)
@@ -99,17 +113,27 @@ export const Compass = ({fixed, colors = {}}) => {
             }
             lgs.camera.changed.removeEventListener(rotateCompass)
         }
-    }, [])
+    }, [fixed])
 
-    const modes = ['', 'mode-full', 'mode-light']
-    const currentMode = compass.mode.toString()
+    // Mode to class mapping
+    const modeClasses = {
+        [COMPASS_FULL]:  'mode-full',
+        [COMPASS_LIGHT]: 'mode-light',
+    }
+
+    // Use currentMode from the selected active configuration
+    const currentMode = activeConfig?.mode
+
+    if (!currentMode) {
+        return null
+    }
 
     return (
-        <div className={classNames('lgs-compass', modes[compass.mode])} ref={_compass}>
-            {currentMode === COMPASS_FULL.toString() && (
+        <div className={classNames('lgs-compass', modeClasses[currentMode])} ref={_compass}>
+            {currentMode.toString() === COMPASS_FULL.toString() && (
                 <CompassFull ref={_needle} colors={colors}/>
             )}
-            {currentMode === COMPASS_LIGHT.toString() && (
+            {currentMode.toString() === COMPASS_LIGHT.toString() && (
                 <CompassLight ref={_needle} colors={colors}/>
             )}
         </div>

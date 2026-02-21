@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-20
- * Last modified: 2026-02-20
+ * Created on: 2026-02-21
+ * Last modified: 2026-02-21
  *
  *
  * Copyright © 2026 LGS1920
@@ -131,7 +131,7 @@ export const WidgetEditorPanel = () => {
             {data.rawIcon && (
                 <FontAwesomeIcon
                     icon={data.rawIcon}
-                    beat
+                    beatFade
                     className="lgs-loader-beating-white"
                 />
             )}
