@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-18
- * Last modified: 2026-02-18
+ * Created on: 2026-02-22
+ * Last modified: 2026-02-22
  *
  *
  * Copyright © 2026 LGS1920
@@ -35,8 +35,10 @@ import { useSnapshot }                 from 'valtio'
 export const ProfileWidgetEditor = ({entity}) => {
     const $configuration = lgs.settings.widgets['profile-widget'].configuration
     const configuration = useSnapshot($configuration)
-    const $element = $configuration.elements?.[entity]
-    const element = configuration.elements?.[entity]
+
+    const element = useMemo(() => {
+        return configuration.elements?.[entity] ?? configuration.user ?? configuration.default
+    }, [configuration, entity])
 
     const swatches = useMemo(() => lgs.settings.getSwatches.list.join(';'), [])
 
@@ -53,11 +55,16 @@ export const ProfileWidgetEditor = ({entity}) => {
     }, [])
 
     const updateValue = useCallback((path, value) => {
-        if (!$element) {
-            return
+        if (!$configuration.elements) {
+            $configuration.elements = {}
         }
+
+        if (!$configuration.elements[entity]) {
+            $configuration.elements[entity] = JSON.parse(JSON.stringify(element))
+        }
+
         const keys = path.split('.')
-        let curr = $element
+        let curr = $configuration.elements[entity]
         for (let i = 0; i < keys.length - 1; i++) {
             if (!curr[keys[i]]) {
                 curr[keys[i]] = {}
@@ -65,7 +72,7 @@ export const ProfileWidgetEditor = ({entity}) => {
             curr = curr[keys[i]]
         }
         curr[keys[keys.length - 1]] = value
-    }, [$element])
+    }, [$configuration, element, entity])
 
     if (!element) {
         return null

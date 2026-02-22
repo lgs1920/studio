@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-08
- * Last modified: 2026-02-08
+ * Created on: 2026-02-22
+ * Last modified: 2026-02-22
  *
  *
  * Copyright © 2026 LGS1920
@@ -47,19 +47,11 @@ export const ProfileChart = ({data, id, width, height, preview = false}) => {
     const _instance = useRef(null)
 
     /**
-     * Ensure configuration element exists for the given ID
-     * Initialized via useEffect to avoid mutation during render phase
+     * Resolves the element to use based on configuration priority
      */
-    useEffect(() => {
-        if (!configuration.elements?.[id]) {
-            if (!$configuration.elements || typeof $configuration.elements !== 'object') {
-                $configuration.elements = {}
-            }
-            $configuration.elements[id] = $configuration.user ?? $configuration.default
-        }
-    }, [id, $configuration])
-
-    const element = configuration.elements?.[id]
+    const element = useMemo(() => {
+        return configuration.elements?.[id] ?? configuration.user ?? configuration.default
+    }, [configuration, id])
 
     const labels = useMemo(() => ({
         distance:  unitSystem === INTERNATIONAL ? 'km' : 'mi',
