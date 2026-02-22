@@ -37,10 +37,11 @@ export const CompassWidgetEditor = ({entity}) => {
     const configuration = useSnapshot($configuration)
 
     /**
-     * Identification of the specific proxy to mutate
+     * Resolves the element to display based on entity priority
      */
-    const $element = $configuration.elements?.[entity] ?? $configuration.user ?? $configuration.default
-    const element = useSnapshot($element)
+    const element = useMemo(() => {
+        return configuration.elements?.[entity] ?? configuration.user ?? configuration.default
+    }, [configuration, entity])
 
     /**
      * Recursively resolves CSS variables if the color string is a reference
@@ -89,41 +90,47 @@ export const CompassWidgetEditor = ({entity}) => {
      * Updates the proxy state and synchronizes the DOM visual state via CSS variables
      */
     const updateValue = useCallback((path, value) => {
-        if (!$element) {
-            return
+        if (!$configuration.elements) {
+            $configuration.elements = {}
         }
 
+        if (!$configuration.elements[entity]) {
+            $configuration.elements[entity] = JSON.parse(JSON.stringify(element))
+        }
+
+        // Update value in the store
         const keys = path.split('.')
-        let curr = $element
+        let curr = $configuration.elements[entity]
         for (let i = 0; i < keys.length - 1; i++) {
-            const key = keys[i]
-            if (!curr[key]) {
-                curr[key] = {}
+            if (!curr[keys[i]]) {
+                curr[keys[i]] = {}
             }
-            curr = curr[key]
+            curr = curr[keys[i]]
         }
         curr[keys[keys.length - 1]] = value
 
+        // Compute CSS variables
         const _sceneTarget = __.ui.widgetManager.getElementById(entity)
         const _previewTarget = document.querySelector(`.compass-widget-preview .lgs-compass`)
 
         const _rootPath = path.replace('.color', '').replace('.opacity', '')
         const variableName = `--lgs-compass-${__.app.kebabCase(_rootPath.replace(/\./g, '-'))}`
 
+        // Retrieve the freshly updated partial object (e.g., needle.north)
         const _keys = _rootPath.split('.')
-        let _part = $element
+        let _part = $configuration.elements[entity]
         for (const key of _keys) {
-            _part = _part[key]
+            _part = _part?.[key]
         }
 
         if (_part) {
-            const colorStr = _part.color || getColor(null, _rootPath)
-            const finalColor = colord(colorStr).alpha(_part.opacity ?? 1).toRgbString()
+            // Direct resolution to prevent snapshot latency issues
+            const rawColor = _part.color || resolveColor(`--lgs-compass-${_rootPath.replace(/\./g, '-')}`) || '#ffffff'
+            const finalColor = colord(rawColor).alpha(_part.opacity ?? 1).toRgbString()
 
             if (_sceneTarget) {
                 __.ui.css.setCSSVariable(variableName, finalColor, _sceneTarget)
             }
-
             if (_previewTarget) {
                 __.ui.css.setCSSVariable(variableName, finalColor, _previewTarget)
             }
@@ -132,29 +139,36 @@ export const CompassWidgetEditor = ({entity}) => {
         if (_moveable?.current) {
             _moveable.current.updateRect()
         }
-    }, [$element, entity, _moveable, getColor])
+    }, [$configuration, element, entity, _moveable])
 
     /**
      * Updates the compass visual model mode
      */
     const handleCompassMode = useCallback((event) => {
-        $element.mode = event.target.value
-    }, [$element])
+        updateValue('mode', event.target.value)
+    }, [updateValue])
 
     /**
      * Resets the element to factory default settings
      */
     const handleReset = useCallback(() => {
-        if (!$element || !configuration.default) {
+        if (!configuration.default) {
             return
         }
 
-        Object.assign($element, JSON.parse(JSON.stringify(configuration.default)))
+        // Reset entity-specific configuration if it exists
+        if ($configuration.elements?.[entity]) {
+            Object.assign($configuration.elements[entity], JSON.parse(JSON.stringify(configuration.default)))
+        }
+        else if ($configuration.user) {
+            // Fallback to resetting user configuration
+            Object.assign($configuration.user, JSON.parse(JSON.stringify(configuration.default)))
+        }
 
         if (_moveable?.current) {
             _moveable.current.updateRect()
         }
-    }, [$element, configuration.default, _moveable])
+    }, [$configuration, entity, configuration.default, _moveable])
 
     const swatches = useMemo(() => lgs.settings.getSwatches.list.join(';'), [])
 
@@ -192,8 +206,6 @@ export const CompassWidgetEditor = ({entity}) => {
             </div>
             <SlDivider/>
             <LGSScrollbars>
-
-
                 <div className="compass-widget-editor-colors">
                     {element.mode === COMPASS_FULL &&
                         <>

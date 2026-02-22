@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-21
- * Last modified: 2026-02-21
+ * Created on: 2026-02-22
+ * Last modified: 2026-02-22
  *
  *
  * Copyright © 2026 LGS1920
@@ -25,7 +25,7 @@ import React             from 'react'
 export const CompassWidgetPreview = ({entity}) => {
     return (
         <div className="compass-widget-preview">
-            <Compass fixed inWidget/>
+            <Compass fixed inWidget entity={entity}/>
         </div>
     )
 }

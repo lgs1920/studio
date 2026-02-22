@@ -36,14 +36,18 @@ export const Compass = ({fixed, inWidget = false, entity}) => {
     const $globalCompass = lgs.settings.ui.compass
     const $widgetConfig = lgs.settings.widgets['compass-widget'].configuration
 
-    // Configuration priority: entity-specific > user-defined > default
-    const $element = entity
-                     ? ($widgetConfig.elements?.[entity] ?? $widgetConfig.user ?? $widgetConfig.default)
-                     : ($widgetConfig.user ?? $widgetConfig.default)
-
     // Snapshots
     const globalCompass = useSnapshot($globalCompass)
-    const element = useSnapshot($element)
+    const widgetConfig = useSnapshot($widgetConfig)
+
+    // Configuration priority: entity-specific > user-defined > default
+    const element = useMemo(() => {
+        if (!entity) {
+            return widgetConfig.user ?? widgetConfig.default
+        }
+        return widgetConfig.elements?.[entity] ?? widgetConfig.user ?? widgetConfig.default
+    }, [entity, widgetConfig])
+
     const activeConfig = inWidget ? element : globalCompass
 
     /**

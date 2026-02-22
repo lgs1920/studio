@@ -75,7 +75,7 @@ export const CompassWidget = ({id, context, colors = {}, zIndex}) => {
 
     return (
         <Widget isVisible={true} config={config}>
-            <Compass inWidget/>
+            <Compass inWidget entity={id}/>
         </Widget>
     )
 }
