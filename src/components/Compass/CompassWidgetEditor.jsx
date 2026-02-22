@@ -164,36 +164,35 @@ export const CompassWidgetEditor = ({entity}) => {
 
     return (
         <div className="lgs-widget-editor-controls-wrapper lgs-card" key={`editor-${entity}`}>
+            <div className="drawer-horizontal-line">
+                <div className="drawer-horizontal-element">
+                    <SlRadioGroup
+                        label={'Model'}
+                        size="small"
+                        value={element.mode}
+                        onSlInput={handleCompassMode}
+                        align-right
+                    >
+                        <SlRadioButton size="small" value={COMPASS_FULL}>
+                            <SlIcon size="small" slot="prefix" library="fa" name={FA2SL.set(faCompass)}/>
+                            {'Full'}
+                        </SlRadioButton>
+                        <SlRadioButton size="small" value={COMPASS_LIGHT}>
+                            <SlIcon size="small" slot="prefix" library="fa" name={FA2SL.set(faLocationArrow)}/>
+                            {'Light'}
+                        </SlRadioButton>
+                    </SlRadioGroup>
+                </div>
+                <div className="drawer-horizontal-element">
+                    <SlButton size="small" onClick={handleReset}>
+                        <SlIcon size="small" slot="prefix" library="fa" name={FA2SL.set(faArrowRotateLeft)}/>
+                        {'Reset'}
+                    </SlButton>
+                </div>
+            </div>
+            <SlDivider/>
             <LGSScrollbars>
 
-                <div className="drawer-horizontal-line">
-                    <div className="drawer-horizontal-element">
-                        <SlRadioGroup
-                            label={'Model'}
-                            size="small"
-                            value={element.mode}
-                            onSlInput={handleCompassMode}
-                            align-right
-                        >
-                            <SlRadioButton size="small" value={COMPASS_FULL}>
-                                <SlIcon size="small" slot="prefix" library="fa" name={FA2SL.set(faCompass)}/>
-                                {'Full'}
-                            </SlRadioButton>
-                            <SlRadioButton size="small" value={COMPASS_LIGHT}>
-                                <SlIcon size="small" slot="prefix" library="fa" name={FA2SL.set(faLocationArrow)}/>
-                                {'Light'}
-                            </SlRadioButton>
-                        </SlRadioGroup>
-                    </div>
-                    <div className="drawer-horizontal-element">
-                        <SlButton size="small" onClick={handleReset}>
-                            <SlIcon size="small" slot="prefix" library="fa" name={FA2SL.set(faArrowRotateLeft)}/>
-                            {'Reset'}
-                        </SlButton>
-                    </div>
-                </div>
-
-                <SlDivider/>
 
                 <div className="compass-widget-editor-colors">
                     {element.mode === COMPASS_FULL &&
