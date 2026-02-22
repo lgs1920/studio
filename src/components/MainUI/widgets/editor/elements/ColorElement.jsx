@@ -16,7 +16,7 @@
 
 import { SlColorPicker, SlRange } from '@shoelace-style/shoelace/dist/react'
 import { colord }         from 'colord'
-import React, { useMemo } from 'react'
+import React, { useMemo, useCallback } from 'react'
 
 /**
  * Standardized color and opacity control element.
@@ -31,35 +31,43 @@ export const ColorElement = ({
                              }) => {
 
     /**
-     * Résolution de la couleur via le parent.
-     * getColor renvoie déjà une chaîne RGBA (ex: "rgba(255, 0, 0, 0.5)")
+     * Resolves the color via parent logic.
+     * returns an RGBA string.
      */
     const resolvedColor = useMemo(() => getColor(part, path), [part, path, getColor])
 
     /**
-     * Instance colord pour extraire les données proprement.
+     * Colord instance to extract data.
      */
     const colorObj = useMemo(() => colord(resolvedColor), [resolvedColor])
 
     /**
-     * Pour le picker, on force l'alpha à 1 (Hex) pour l'affichage de la pastille.
+     * Extracts current opacity for the slider and for color updates.
+     */
+    const currentOpacity = useMemo(() => {
+        if (part?.opacity !== undefined && part?.opacity !== null) {
+            return part.opacity
+        }
+        return colorObj.alpha()
+    }, [part?.opacity, colorObj])
+
+    /**
+     * Color for the picker (forced to alpha 1 for display consistency).
      */
     const colorForPicker = useMemo(() => {
         return colorObj.isValid() ? colorObj.alpha(1).toHex() : resolvedColor
     }, [colorObj, resolvedColor])
 
     /**
-     * CORRECTION : L'opacité pour le slider.
-     * Si le store (part.opacity) est défini, on l'utilise.
-     * Sinon, on extrait l'alpha de la couleur résolue (la variable CSS).
+     * Handles color change while preserving the current opacity.
      */
-    const opacityValue = useMemo(() => {
-        if (part.opacity !== undefined && part.opacity !== null) {
-            return part.opacity
-        }
-        return colorObj.alpha()
-    }, [part.opacity, colorObj])
-
+    const handleColorInput = useCallback((e) => {
+        const newColor = e.target.value
+        // We update the color but we also ensure the opacity is explicitly set
+        // to prevent syncCSS from falling back to 1.
+        updateValue(`${path}.color`, newColor)
+        updateValue(`${path}.opacity`, currentOpacity)
+    }, [path, updateValue, currentOpacity])
 
     return (
         <React.Fragment>
@@ -70,7 +78,7 @@ export const ColorElement = ({
                         size="small"
                         swatches={swatches}
                         value={colorForPicker}
-                        onSlInput={(e) => updateValue(`${path}.color`, e.target.value)}
+                        onSlInput={handleColorInput}
                     />
                 </div>
                 <div className="drawer-horizontal-element xlarge-element"></div>
@@ -83,7 +91,7 @@ export const ColorElement = ({
                         align-right
                         tooltip="top"
                         tooltipFormatter={v => `${Math.floor(v * 100)}%`}
-                        value={opacityValue}
+                        value={currentOpacity}
                         onSlInput={(e) => updateValue(`${path}.opacity`, parseFloat(e.target.value))}
                     />
                 </div>

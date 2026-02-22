@@ -22,83 +22,100 @@ import { COMPASS_FULL, COMPASS_LIGHT }                              from '@Core/
 import { faArrowRotateLeft, faCompass, faLocationArrow }            from '@fortawesome/pro-regular-svg-icons'
 import { SlButton, SlDivider, SlIcon, SlRadioButton, SlRadioGroup } from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                                                    from '@Utils/FA2SL'
-import { colord }                                                   from 'colord'
+import { colord, extend } from 'colord'
+import namesPlugin        from 'colord/plugins/names'
 import React, { useCallback, useMemo }                              from 'react'
 import { useSnapshot }                                              from 'valtio'
 
+extend([namesPlugin])
 
 export const CompassWidgetEditor = ({entity}) => {
     const _moveable = __.ui.widgetManager.getMoveable(entity)
     const $configuration = lgs.settings.widgets['compass-widget'].configuration
-
-    /**
-     * Snapshot of the global configuration for read access
-     */
     const configuration = useSnapshot($configuration)
 
-    /**
-     * Resolves the element to display based on entity priority
-     */
     const element = useMemo(() => {
         return configuration.elements?.[entity] ?? configuration.user ?? configuration.default
     }, [configuration, entity])
 
     /**
-     * Recursively resolves CSS variables if the color string is a reference
+     * Format path to kebab-case for CSS variables
      */
-    const resolveColor = (color) => {
-        if (!color || typeof color !== 'string') {
-            return color
-        }
-        let finalColor = color
-        while (typeof finalColor === 'string' && finalColor.startsWith('--')) {
-            const resolved = __.ui.css.getCSSVariable(finalColor)
-            if (!resolved || resolved === finalColor) {
-                break
-            }
-            finalColor = resolved
-        }
-        return finalColor
+    const toKebab = (str) => {
+        return str.replace(/([a-z0-9])([A-Z])/g, '$1-$2').replace(/\./g, '-').toLowerCase()
     }
 
     /**
-     * Resolves the color string by prioritizing the store value, then the CSS variable,
-     * and finally a safe fallback.
+     * Resolve CSS variables to actual hex/rgb strings
      */
-    const getColor = useCallback((item, path) => {
-        let colorStr = item?.color
-
-        // Fallback to CSS variable if no color is defined in the store
-        if (!colorStr) {
-            const formattedPath = (path || '').replace(/\./g, '-')
-            const variableName = `--lgs-compass-${formattedPath}`
-            colorStr = __.ui.css.getCSSVariable(variableName)
+    const resolveColor = useCallback((color) => {
+        if (!color || typeof color !== 'string') {
+            return color
         }
-
-        const resolved = resolveColor(colorStr)
-
-        // Avoid colord failing on empty strings which results in black
-        if (!resolved || resolved === '') {
-            return 'rgba(255, 255, 255, 1)'
+        if (color.startsWith('--') || color.startsWith('var(')) {
+            const cleanVar = color.startsWith('var(') ? color.replace(/^var\((--.*?)\)$/, '$1') : color
+            const resolved = __.ui.css.getCSSVariable(cleanVar)
+            if (!resolved || resolved === '' || resolved === cleanVar) {
+                return '#ffffff'
+            }
+            return resolveColor(resolved)
         }
-
-        const c = colord(resolved)
-        return c.alpha(item?.opacity ?? c.alpha()).toRgbString()
+        return color
     }, [])
 
     /**
-     * Updates the proxy state and synchronizes the DOM visual state via CSS variables
+     * Pure and simple color + opacity to RGBA string conversion
      */
+    const formatRGBA = useCallback((colorValue, opacityValue) => {
+        const c = colord(colorValue || '#ffffff')
+        // If color is invalid, colord still returns an object, but we force white
+        if (!c.isValid()) {
+            return 'rgba(255, 255, 255, 1)'
+        }
+
+        // If opacityValue is null/undefined, we keep the color's original alpha
+        const alpha = (opacityValue !== undefined && opacityValue !== null) ? Number(opacityValue) : c.alpha()
+        return c.alpha(alpha).toRgbString()
+    }, [])
+
+    /**
+     * Syncs store data with DOM CSS Variables
+     */
+    const syncCSS = useCallback((path, part) => {
+        if (!part) {
+            return
+        }
+        const _sceneTarget = __.ui.widgetManager.getElementById(entity)
+        const _previewTarget = document.querySelector('.compass-widget-preview .lgs-compass')
+        const variableName = `--lgs-compass-${toKebab(path)}`
+
+        const baseColor = resolveColor(part.color) || resolveColor(variableName)
+        const finalColor = formatRGBA(baseColor, part.opacity)
+
+        if (_sceneTarget) {
+            __.ui.css.setCSSVariable(variableName, finalColor, _sceneTarget)
+        }
+        if (_previewTarget) {
+            __.ui.css.setCSSVariable(variableName, finalColor, _previewTarget)
+        }
+    }, [entity, resolveColor, formatRGBA])
+
+    /**
+     * Provides the RGBA string for ColorElement preview
+     */
+    const getColor = useCallback((item, path) => {
+        const baseColor = resolveColor(item?.color) || resolveColor(`--lgs-compass-${toKebab(path)}`)
+        return formatRGBA(baseColor, item?.opacity)
+    }, [resolveColor, formatRGBA])
+
     const updateValue = useCallback((path, value) => {
         if (!$configuration.elements) {
             $configuration.elements = {}
         }
-
         if (!$configuration.elements[entity]) {
             $configuration.elements[entity] = JSON.parse(JSON.stringify(element))
         }
 
-        // Update value in the store
         const keys = path.split('.')
         let curr = $configuration.elements[entity]
         for (let i = 0; i < keys.length - 1; i++) {
@@ -109,66 +126,53 @@ export const CompassWidgetEditor = ({entity}) => {
         }
         curr[keys[keys.length - 1]] = value
 
-        // Compute CSS variables
-        const _sceneTarget = __.ui.widgetManager.getElementById(entity)
-        const _previewTarget = document.querySelector(`.compass-widget-preview .lgs-compass`)
-
         const _rootPath = path.replace('.color', '').replace('.opacity', '')
-        const variableName = `--lgs-compass-${__.app.kebabCase(_rootPath.replace(/\./g, '-'))}`
-
-        // Retrieve the freshly updated partial object (e.g., needle.north)
         const _keys = _rootPath.split('.')
         let _part = $configuration.elements[entity]
         for (const key of _keys) {
             _part = _part?.[key]
         }
 
-        if (_part) {
-            // Direct resolution to prevent snapshot latency issues
-            const rawColor = _part.color || resolveColor(`--lgs-compass-${_rootPath.replace(/\./g, '-')}`) || '#ffffff'
-            const finalColor = colord(rawColor).alpha(_part.opacity ?? 1).toRgbString()
-
-            if (_sceneTarget) {
-                __.ui.css.setCSSVariable(variableName, finalColor, _sceneTarget)
-            }
-            if (_previewTarget) {
-                __.ui.css.setCSSVariable(variableName, finalColor, _previewTarget)
-            }
+        if (_part && typeof _part === 'object' && _rootPath !== path) {
+            syncCSS(_rootPath, _part)
         }
 
         if (_moveable?.current) {
             _moveable.current.updateRect()
         }
-    }, [$configuration, element, entity, _moveable])
+    }, [$configuration, element, entity, _moveable, syncCSS])
 
-    /**
-     * Updates the compass visual model mode
-     */
-    const handleCompassMode = useCallback((event) => {
-        updateValue('mode', event.target.value)
-    }, [updateValue])
-
-    /**
-     * Resets the element to factory default settings
-     */
     const handleReset = useCallback(() => {
         if (!configuration.default) {
             return
         }
+        if (!$configuration.elements) {
+            $configuration.elements = {}
+        }
+        $configuration.elements[entity] = JSON.parse(JSON.stringify(configuration.default))
 
-        // Reset entity-specific configuration if it exists
-        if ($configuration.elements?.[entity]) {
-            Object.assign($configuration.elements[entity], JSON.parse(JSON.stringify(configuration.default)))
-        }
-        else if ($configuration.user) {
-            // Fallback to resetting user configuration
-            Object.assign($configuration.user, JSON.parse(JSON.stringify(configuration.default)))
-        }
+        const defaults = $configuration.elements[entity]
+        const paths = ['background', 'overBackground', 'poles', 'text', 'needle.north', 'needle.south', 'needle.center']
+
+        paths.forEach(path => {
+            const keys = path.split('.')
+            let val = defaults
+            for (const key of keys) {
+                val = val?.[key]
+            }
+            if (val) {
+                syncCSS(path, val)
+            }
+        })
 
         if (_moveable?.current) {
             _moveable.current.updateRect()
         }
-    }, [$configuration, entity, configuration.default, _moveable])
+    }, [$configuration, entity, configuration.default, _moveable, syncCSS])
+
+    const handleCompassMode = useCallback((event) => {
+        updateValue('mode', event.target.value)
+    }, [updateValue])
 
     const swatches = useMemo(() => lgs.settings.getSwatches.list.join(';'), [])
 
@@ -180,27 +184,22 @@ export const CompassWidgetEditor = ({entity}) => {
         <div className="lgs-widget-editor-controls-wrapper lgs-card" key={`editor-${entity}`}>
             <div className="drawer-horizontal-line">
                 <div className="drawer-horizontal-element">
-                    <SlRadioGroup
-                        label={'Model'}
-                        size="small"
-                        value={element.mode}
-                        onSlInput={handleCompassMode}
-                        align-right
-                    >
+                    <SlRadioGroup label="Model" size="small" value={element.mode} onSlInput={handleCompassMode}
+                                  align-right>
                         <SlRadioButton size="small" value={COMPASS_FULL}>
                             <SlIcon size="small" slot="prefix" library="fa" name={FA2SL.set(faCompass)}/>
-                            {'Full'}
+                            Full
                         </SlRadioButton>
                         <SlRadioButton size="small" value={COMPASS_LIGHT}>
                             <SlIcon size="small" slot="prefix" library="fa" name={FA2SL.set(faLocationArrow)}/>
-                            {'Light'}
+                            Light
                         </SlRadioButton>
                     </SlRadioGroup>
                 </div>
                 <div className="drawer-horizontal-element">
                     <SlButton size="small" onClick={handleReset}>
                         <SlIcon size="small" slot="prefix" library="fa" name={FA2SL.set(faArrowRotateLeft)}/>
-                        {'Reset'}
+                        Reset
                     </SlButton>
                 </div>
             </div>
@@ -209,43 +208,33 @@ export const CompassWidgetEditor = ({entity}) => {
                 <div className="compass-widget-editor-colors">
                     {element.mode === COMPASS_FULL &&
                         <>
-                            <ColorElement
-                                label="Background" path="background" part={element.background} swatches={swatches}
-                                getColor={(p) => getColor(p, 'background')} updateValue={updateValue}
-                            />
+                            <ColorElement label="Background" path="background" part={element.background}
+                                          swatches={swatches} getColor={(p) => getColor(p, 'background')}
+                                          updateValue={updateValue}/>
                             <SlDivider/>
-                            <ColorElement
-                                label="Over-Background" path="overBackground" part={element.overBackground}
-                                swatches={swatches}
-                                getColor={(p) => getColor(p, 'overBackground')} updateValue={updateValue}
-                            />
+                            <ColorElement label="Over-Background" path="overBackground" part={element.overBackground}
+                                          swatches={swatches} getColor={(p) => getColor(p, 'overBackground')}
+                                          updateValue={updateValue}/>
                             <SlDivider/>
-                            <ColorElement
-                                label="Poles" path="poles" part={element.poles} swatches={swatches}
-                                getColor={(p) => getColor(p, 'poles')} updateValue={updateValue}
-                            />
+                            <ColorElement label="Poles" path="poles" part={element.poles} swatches={swatches}
+                                          getColor={(p) => getColor(p, 'poles')} updateValue={updateValue}/>
                             <SlDivider/>
-                            <ColorElement
-                                label="Text" path="text" part={element.text} swatches={swatches}
-                                getColor={(p) => getColor(p, 'text')} updateValue={updateValue}
-                            />
+                            <ColorElement label="Text" path="text" part={element.text} swatches={swatches}
+                                          getColor={(p) => getColor(p, 'text')} updateValue={updateValue}/>
                             <SlDivider/>
                         </>
                     }
-                    <ColorElement
-                        label="Needle North" path="needle.north" part={element.needle.north} swatches={swatches}
-                        getColor={(p) => getColor(p, 'needle.north')} updateValue={updateValue}
-                    />
+                    <ColorElement label="Needle North" path="needle.north" part={element.needle.north}
+                                  swatches={swatches} getColor={(p) => getColor(p, 'needle.north')}
+                                  updateValue={updateValue}/>
                     <SlDivider/>
-                    <ColorElement
-                        label="Needle South" path="needle.south" part={element.needle.south} swatches={swatches}
-                        getColor={(p) => getColor(p, 'needle.south')} updateValue={updateValue}
-                    />
+                    <ColorElement label="Needle South" path="needle.south" part={element.needle.south}
+                                  swatches={swatches} getColor={(p) => getColor(p, 'needle.south')}
+                                  updateValue={updateValue}/>
                     <SlDivider/>
-                    <ColorElement
-                        label="Center Point" path="needle.center" part={element.needle.center} swatches={swatches}
-                        getColor={(p) => getColor(p, 'needle.center')} updateValue={updateValue}
-                    />
+                    <ColorElement label="Center Point" path="needle.center" part={element.needle.center}
+                                  swatches={swatches} getColor={(p) => getColor(p, 'needle.center')}
+                                  updateValue={updateValue}/>
                 </div>
             </LGSScrollbars>
         </div>
