@@ -7,15 +7,15 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-09
- * Last modified: 2026-02-09
+ * Created on: 2026-02-23
+ * Last modified: 2026-02-23
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import {
-    WIDGET_FONT_FAMILIES, WIDGET_GOOGLE_FONTS, WIDGET_SYSTEM_FONT_STACK,
+    WIDGET_FONT_FAMILIES, WIDGET_SYSTEM_FONT_STACK,
 }                                          from '@Core/constants'
 import {
     faAlignCenter, faAlignLeft, faAlignRight, faBold, faItalic,
@@ -28,17 +28,12 @@ import {
     SlButton, SlButtonGroup, SlIcon, SlSelect, SlOption, SlInput, SlColorPicker, SlRange,
 }                                          from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                           from '@Utils/FA2SL'
+import { colord }                          from 'colord'
 import { useEffect, useMemo, useCallback } from 'react'
 import { useSnapshot }                     from 'valtio'
 
 /**
  * Complete Text formatting toolbar
- * @param {Object} props
- * @param {string} props.id - Element identifier
- * @param {boolean} [props.fonts=false]
- * @param {boolean} [props.color=true]
- * @param {boolean} [props.align=true]
- * @param {boolean} [props.style=true]
  */
 export const TextEditorToolbar = ({id, fonts = false, color = true, align = true, style = true}) => {
     const $configuration = lgs.settings.widgets['text-widget'].configuration
@@ -50,25 +45,40 @@ export const TextEditorToolbar = ({id, fonts = false, color = true, align = true
     const element = configuration?.elements?.[id] ?? configuration.user ?? configuration.default
 
     const swatches = useMemo(() => lgs.settings.getSwatches.list.join(';'), [])
-
     const _moveable = __.ui.widgetManager.getMoveable(id)
+
+    /**
+     * Synchronizes visual color and opacity with CSS variables in the DOM
+     */
+    const syncCSS = useCallback((colorValue, opacityValue) => {
+        const _sceneTarget = __.ui.widgetManager.getElementById(id)
+        const _previewTarget = document.querySelector('.text-widget-preview .lgs-text-container')
+
+        const finalColor = colord(colorValue || '#ffffff')
+            .alpha(opacityValue !== undefined ? opacityValue : 1)
+            .toRgbString()
+
+        // We assume the widget uses --lgs-text-color for its rendering
+        if (_sceneTarget) {
+            __.ui.css.setCSSVariable('--lgs-text-color', finalColor, _sceneTarget)
+        }
+        if (_previewTarget) {
+            __.ui.css.setCSSVariable('--lgs-text-color', finalColor, _previewTarget)
+        }
+    }, [id])
 
     const scheduleUpdate = useCallback(() => {
         if (!_moveable?.current) {
             return
         }
 
-        // First update immediately
         requestAnimationFrame(() => {
             _moveable.current.updateRect()
-
-            // Second update slightly delayed to catch font-swaps or slow layout shifts
             setTimeout(() => {
                 _moveable.current?.updateRect()
             }, 50)
         })
     }, [_moveable])
-
 
     /**
      * Injects selected Google Fonts into the document head
@@ -78,18 +88,18 @@ export const TextEditorToolbar = ({id, fonts = false, color = true, align = true
     }, [])
 
     const alignmentDisabled = useMemo(() => {
-        const text = element?.text.content ?? ''
+        const text = element?.text?.content ?? ''
         return text.split('\n').filter(line => line.trim() !== '').length <= 1
-    }, [element?.text.content])
+    }, [element?.text?.content])
 
     useEffect(() => {
         if (alignmentDisabled && $element && $element.align !== 'left') {
             $element.align = 'left'
         }
-    }, [alignmentDisabled, $element, scheduleUpdate])
+    }, [alignmentDisabled, $element])
 
     /**
-     * Handlers using the correct mapping between proxy and snapshot
+     * Handlers
      */
     const handleFontChange = useCallback((e) => {
         if ($element) {
@@ -115,15 +125,18 @@ export const TextEditorToolbar = ({id, fonts = false, color = true, align = true
     const handleColorChange = useCallback((e) => {
         if ($element) {
             $element.text.color = e.target.value
+            syncCSS($element.text.color, $element.text.opacity)
             scheduleUpdate()
         }
-    }, [$element, scheduleUpdate])
+    }, [$element, syncCSS, scheduleUpdate])
 
     const handleOpacityChange = useCallback((e) => {
+        console.log(e.target.value)
         if ($element) {
-            $element.opacity = parseFloat(e.target.value)
+            $element.text.opacity = parseFloat(e.target.value)
+            syncCSS($element.text.color, $element.text.opacity)
         }
-    }, [$element, scheduleUpdate])
+    }, [$element, syncCSS])
 
     const toggleBold = useCallback(() => {
         if ($element) {
@@ -147,17 +160,19 @@ export const TextEditorToolbar = ({id, fonts = false, color = true, align = true
             {color && (
                 <>
                     <SlColorPicker
-                        value={element?.text.color ?? 'white'}
+                        value={element?.text?.color ?? 'white'}
                         onSlInput={handleColorChange}
                         size="small"
                         swatches={swatches}
                     />
                     <SlRange
-                        min="0.1"
+                        min="0"
                         max="1"
                         step="0.05"
-                        value={element?.opacity ?? 1}
+                        value={element?.text?.opacity ?? 1}
+                        tooltipFormatter={v => `${Math.floor(v * 100)}%`}
                         onSlInput={handleOpacityChange}
+                        style={{width: '100px'}}
                     />
                 </>
             )}
@@ -217,7 +232,7 @@ export const TextEditorToolbar = ({id, fonts = false, color = true, align = true
                         {WIDGET_FONT_FAMILIES.map(font => (
                             <SlOption key={font} value={font.replace(/\s/g, '_')}>
                                 <span
-                                    style={{fontFamily: font === 'System' ? WIDGET_SYSTEM_FONT_STACK : font}}>{'Typeface'}</span>
+                                    style={{fontFamily: font === 'System' ? WIDGET_SYSTEM_FONT_STACK : font}}>Typeface</span>
                             </SlOption>
                         ))}
                     </SlSelect>
@@ -227,7 +242,7 @@ export const TextEditorToolbar = ({id, fonts = false, color = true, align = true
                         size="small"
                         value={element?.lineHeight ?? '1'}
                         onSlChange={handleLineHeightChange}
-                        style={{flex: '1'}}
+                        style={{width: '100px'}}
                     >
                         <SlIcon slot="prefix" library="fa" name={FA2SL.set(faDistributeSpacingVertical)}/>
                         {[

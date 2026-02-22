@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-19
- * Last modified: 2026-02-19
+ * Created on: 2026-02-23
+ * Last modified: 2026-02-23
  *
  *
  * Copyright © 2026 LGS1920
@@ -164,8 +164,8 @@ export const TextWidgetEditor = ({entity}) => {
             <div className="text-widget-editor-scroll">
                 <LGSScrollbars>
                     <div className="text-widget-editor-header">
-                        <TextEditorToolbar id={normalizedId} color={true} align={true} style={true}/>
                         <TextEditorToolbar id={normalizedId} fonts={true} color={false} align={false} style={false}/>
+                        <TextEditorToolbar id={normalizedId} color={true} align={true} style={true}/>
                     </div>
                     <div className="lgs-widget-editor-controls-wrapper">
                         <SlDivider/>
