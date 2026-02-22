@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-21
- * Last modified: 2026-02-21
+ * Created on: 2026-02-22
+ * Last modified: 2026-02-22
  *
  *
  * Copyright © 2026 LGS1920
@@ -27,7 +27,7 @@ import { proxy, useSnapshot }                                                   
  * @param {Object} props.context - Valtio proxy context containing widgetsBoard and widgetEditor
  * @returns {JSX.Element|null} The compass widget or null if not in editor mode or container is not ready
  */
-export const CompassWidget = ({id, context, zIndex}) => {
+export const CompassWidget = ({id, context, colors = {}, zIndex}) => {
     // Get snapshot of context
     const {widgetEditor, widgetsBoard} = useSnapshot(context ?? {widgetEditor: false, widgetsBoard: ''})
     const [_container, setContainer] = useState(null)

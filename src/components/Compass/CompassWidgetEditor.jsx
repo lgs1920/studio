@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-21
- * Last modified: 2026-02-21
+ * Created on: 2026-02-22
+ * Last modified: 2026-02-22
  *
  *
  * Copyright © 2026 LGS1920
@@ -31,45 +31,68 @@ export const CompassWidgetEditor = ({entity}) => {
     const _moveable = __.ui.widgetManager.getMoveable(entity)
     const $configuration = lgs.settings.widgets['compass-widget'].configuration
 
-    // Global configuration snapshot for read-only access to defaults
+    /**
+     * Snapshot of the global configuration for read access
+     */
     const configuration = useSnapshot($configuration)
 
-    // Direct proxy reference for state mutations to avoid snapshot-to-proxy warnings
+    /**
+     * Identification of the specific proxy to mutate
+     */
     const $element = $configuration.elements?.[entity] ?? $configuration.user ?? $configuration.default
-    // Local snapshot for reactive UI rendering
     const element = useSnapshot($element)
 
-    const swatches = useMemo(() => lgs.settings.getSwatches.list.join(';'), [])
+    /**
+     * Recursively resolves CSS variables if the color string is a reference
+     */
+    const resolveColor = (color) => {
+        if (!color || typeof color !== 'string') {
+            return color
+        }
+        let finalColor = color
+        while (typeof finalColor === 'string' && finalColor.startsWith('--')) {
+            const resolved = __.ui.css.getCSSVariable(finalColor)
+            if (!resolved || resolved === finalColor) {
+                break
+            }
+            finalColor = resolved
+        }
+        return finalColor
+    }
 
     /**
-     * Resolves the color string from the store or falls back to computed CSS variables.
+     * Resolves the color string by prioritizing the store value, then the CSS variable,
+     * and finally a safe fallback.
      */
     const getColor = useCallback((item, path) => {
         let colorStr = item?.color
 
+        // Fallback to CSS variable if no color is defined in the store
         if (!colorStr) {
-            const _target = __.ui.widgetManager.getElementById(entity)
-            const variableName = `--lgs-compass-${__.app.kebabCase(path.replace(/\./g, '-'))}`
-            colorStr = __.ui.css.getCSSVariable(variableName, _target)
+            const formattedPath = (path || '').replace(/\./g, '-')
+            const variableName = `--lgs-compass-${formattedPath}`
+            colorStr = __.ui.css.getCSSVariable(variableName)
         }
 
-        if (!colorStr || colorStr === '') {
+        const resolved = resolveColor(colorStr)
+
+        // Avoid colord failing on empty strings which results in black
+        if (!resolved || resolved === '') {
             return 'rgba(255, 255, 255, 1)'
         }
 
-        const c = colord(colorStr)
-        return c.alpha(item?.opacity ?? 1).toRgbString()
-    }, [entity])
+        const c = colord(resolved)
+        return c.alpha(item?.opacity ?? c.alpha()).toRgbString()
+    }, [])
 
     /**
-     * Handles store mutation and synchronizes CSS variables for real-time preview updates.
+     * Updates the proxy state and synchronizes the DOM visual state via CSS variables
      */
     const updateValue = useCallback((path, value) => {
         if (!$element) {
             return
         }
 
-        // Deep property update on the Valtio proxy
         const keys = path.split('.')
         let curr = $element
         for (let i = 0; i < keys.length - 1; i++) {
@@ -81,7 +104,6 @@ export const CompassWidgetEditor = ({entity}) => {
         }
         curr[keys[keys.length - 1]] = value
 
-        // Synchronize computed styles across the scene and preview containers
         const _sceneTarget = __.ui.widgetManager.getElementById(entity)
         const _previewTarget = document.querySelector(`.compass-widget-preview .lgs-compass`)
 
@@ -107,34 +129,34 @@ export const CompassWidgetEditor = ({entity}) => {
             }
         }
 
-        // Refresh Moveable boundaries if active
         if (_moveable?.current) {
             _moveable.current.updateRect()
         }
     }, [$element, entity, _moveable, getColor])
 
     /**
-     * Updates the compass visual model.
+     * Updates the compass visual model mode
      */
     const handleCompassMode = useCallback((event) => {
         $element.mode = event.target.value
-    }, [updateValue])
+    }, [$element])
 
     /**
-     * Resets the element state to factory defaults.
+     * Resets the element to factory default settings
      */
     const handleReset = useCallback(() => {
         if (!$element || !configuration.default) {
             return
         }
 
-        // Hard reset of the proxy object using the default configuration snapshot
         Object.assign($element, JSON.parse(JSON.stringify(configuration.default)))
 
         if (_moveable?.current) {
             _moveable.current.updateRect()
         }
     }, [$element, configuration.default, _moveable])
+
+    const swatches = useMemo(() => lgs.settings.getSwatches.list.join(';'), [])
 
     if (!element) {
         return null

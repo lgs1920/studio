@@ -41,35 +41,35 @@ widgets:
         mode: 1        # 0: none, 1: full, 2:light
         background:
           show: true
-          color: --lgs-light-color-15
-          opacity: 1
+          color: --lgs-dark-color-75
+          opacity: null
 
         overBackground:
           show: true
-          color: --lgs-dark-color-75
-          opacity: 1
+          color: --lgs-light-color-15
+          opacity: null
 
         poles:
           show: true
           color: --lgs-light-color-50
-          opacity: 1
+          opacity: null
         text:
           show: true
           color: --lgs-light-color
-          opacity: 1
+          opacity: null
         needle:
           north:
             show: true
             color: --sl-color-red-800
-            opacity: 1
+            opacity: null
           south:
             show: true
             color: --sl-color-amber-100
-            opacity: 1
+            opacity: null
           center:
             show: true
             color: --sl-color-amber-500
-            opacity: 1
+            opacity: null
       user:
       elements:
 

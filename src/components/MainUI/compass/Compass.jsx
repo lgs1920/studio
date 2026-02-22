@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-21
- * Last modified: 2026-02-21
+ * Created on: 2026-02-22
+ * Last modified: 2026-02-22
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,69 +16,107 @@
 
 import { CompassFull }  from '@Components/MainUI/compass/CompassFull'
 import { CompassLight } from '@Components/MainUI/compass/CompassLight'
-
 import { COMPASS_FULL, COMPASS_LIGHT } from '@Core/constants'
 import { Math as CMath }               from 'cesium'
 import classNames                      from 'classnames'
-import { useEffect, useRef }           from 'react'
+import { colord }                                  from 'colord'
+import { useEffect, useRef, useMemo, useCallback } from 'react'
 import { useSnapshot }                 from 'valtio'
 
 /**
- * Compass component that synchronizes with the camera heading.
+ * Compass component.
+ * Synchronizes with the camera heading and resolves theme colors via global __ utility.
  */
-export const Compass = ({fixed, colors = {}, inWidget = false, entity}) => {
-    const _needle = useRef(null)
+export const Compass = ({fixed, inWidget = false, entity}) => {
+    const _rotatingPart = useRef(null)
     const _compass = useRef(null)
     const _doubleTapTimeout = useRef(null)
 
-    // Global configuration proxy
+    // Store Proxies
     const $globalCompass = lgs.settings.ui.compass
-
-    // Widget configuration proxy (handle potential undefined entity)
     const $widgetConfig = lgs.settings.widgets['compass-widget'].configuration
-    const $widgetElement = entity
-                           ? ($widgetConfig.elements?.[entity] ?? $widgetConfig.user ?? $widgetConfig.default)
-                           : ($widgetConfig.user ?? $widgetConfig.default)
 
-    // Snapshots for reactivity
+    // Configuration priority: entity-specific > user-defined > default
+    const $element = entity
+                     ? ($widgetConfig.elements?.[entity] ?? $widgetConfig.user ?? $widgetConfig.default)
+                     : ($widgetConfig.user ?? $widgetConfig.default)
+
+    // Snapshots
     const globalCompass = useSnapshot($globalCompass)
-    const widgetElement = useSnapshot($widgetElement)
+    const element = useSnapshot($element)
+    const activeConfig = inWidget ? element : globalCompass
 
-    // Select the source of truth based on the context
-    // This ensures activeConfig is never null
-    const activeConfig = inWidget ? widgetElement : globalCompass
+    /**
+     * Resolves a CSS variable string to its computed value recursively.
+     * Uses the global utility __.ui.css.getCSSVariable.
+     */
+    const resolveColor = (color) => {
+        if (!color || typeof color !== 'string') {
+            return color
+        }
+        let finalColor = color
+        while (typeof finalColor === 'string' && finalColor.startsWith('--')) {
+            const resolved = __.ui.css.getCSSVariable(finalColor)
+            if (!resolved || resolved === finalColor) {
+                break
+            }
+            finalColor = resolved
+        }
+        return finalColor
+    }
+
+    /**
+     * Updates the rotation of the referenced element based on camera heading.
+     */
+    const updateRotation = useCallback(() => {
+        if (_rotatingPart.current) {
+            const headingDegrees = -CMath.toDegrees(lgs.camera.heading) % 360
+            _rotatingPart.current.style.transform = `rotate(${headingDegrees}deg)`
+        }
+    }, [])
+
+    /**
+     * Maps store configuration to CSS variables.
+     * Preserves the original alpha of the resolved color if no store opacity is set.
+     */
+    const dynamicVars = useMemo(() => {
+        const paths = [
+            'background', 'overBackground', 'poles', 'text',
+            'needle.north', 'needle.south', 'needle.center',
+        ]
+        const vars = {}
+
+        paths.forEach(path => {
+            const keys = path.split('.')
+            let part = activeConfig
+            for (const key of keys) {
+                part = part?.[key]
+            }
+
+            if (part?.color) {
+                const varName = `--lgs-compass-${path.replace(/\./g, '-')}`
+                const colorObj = colord(resolveColor(part.color))
+
+                // If part.opacity is null/undefined, use the resolved color's native alpha
+                vars[varName] = colorObj.alpha(part.opacity ?? colorObj.alpha()).toRgbString()
+            }
+        })
+        return vars
+    }, [activeConfig])
 
     useEffect(() => {
         /**
-         * Synchronizes the compass needle with the camera's heading.
-         */
-        const rotateCompass = () => {
-            if (_needle.current) {
-                const headingDegrees = -CMath.toDegrees(lgs.camera.heading) % 360
-                _needle.current.style.transform = `rotate(${headingDegrees}deg)`
-            }
-        }
-
-        /**
-         * Resets camera heading to North (0°).
+         * Resets camera heading to North.
          */
         const resetToNorth = () => {
             if (__.ui.cameraManager.isRotating()) {
                 return
             }
-
             const camera = lgs.mainProxy.components.camera
             camera.position.heading = CMath.toRadians(0)
-
             __.ui.sceneManager.focus(camera.target, {
-                heading:    camera.position.heading,
-                pitch:      camera.position.pitch,
-                roll:       camera.position.roll,
-                range:      camera.position.range,
-                infinite:   true,
-                rotate:     false,
-                flyingTime: 0,
-                target:     null,
+                heading:  0, pitch: camera.position.pitch, roll: 0, range: camera.position.range,
+                infinite: true, rotate: false, flyingTime: 0, target: null,
             })
         }
 
@@ -95,46 +133,52 @@ export const Compass = ({fixed, colors = {}, inWidget = false, entity}) => {
             }
         }
 
-        const compassElement = _compass.current
-        if (compassElement) {
-            compassElement.addEventListener('dblclick', resetToNorth)
-            compassElement.addEventListener('touchend', handleDoubleTap)
+        const el = _compass.current
+        if (el) {
+            el.addEventListener('dblclick', resetToNorth)
+            el.addEventListener('touchend', handleDoubleTap)
         }
 
         if (!fixed) {
-            lgs.camera.changed.addEventListener(rotateCompass)
-            rotateCompass()
+            lgs.camera.changed.addEventListener(updateRotation)
+            updateRotation()
         }
 
         return () => {
-            if (compassElement) {
-                compassElement.removeEventListener('dblclick', resetToNorth)
-                compassElement.removeEventListener('touchend', handleDoubleTap)
+            if (el) {
+                el.removeEventListener('dblclick', resetToNorth)
+                el.removeEventListener('touchend', handleDoubleTap)
             }
-            lgs.camera.changed.removeEventListener(rotateCompass)
+            lgs.camera.changed.removeEventListener(updateRotation)
         }
-    }, [fixed])
+    }, [fixed, activeConfig.mode, updateRotation])
 
-    // Mode to class mapping
-    const modeClasses = {
-        [COMPASS_FULL]:  'mode-full',
-        [COMPASS_LIGHT]: 'mode-light',
-    }
+    // Post-render effect to maintain rotation during Valtio re-renders
+    useEffect(() => {
+        if (!fixed) {
+            updateRotation()
+        }
+    })
 
-    // Use currentMode from the selected active configuration
     const currentMode = activeConfig?.mode
-
     if (!currentMode) {
         return null
     }
 
     return (
-        <div className={classNames('lgs-compass', modeClasses[currentMode])} ref={_compass}>
+        <div
+            className={classNames('lgs-compass', {
+                'mode-full':  currentMode.toString() === COMPASS_FULL.toString(),
+                'mode-light': currentMode.toString() === COMPASS_LIGHT.toString(),
+            })}
+            ref={_compass}
+            style={dynamicVars}
+        >
             {currentMode.toString() === COMPASS_FULL.toString() && (
-                <CompassFull ref={_needle} colors={colors}/>
+                <CompassFull ref={_rotatingPart}/>
             )}
             {currentMode.toString() === COMPASS_LIGHT.toString() && (
-                <CompassLight ref={_needle} colors={colors}/>
+                <CompassLight ref={_rotatingPart}/>
             )}
         </div>
     )
