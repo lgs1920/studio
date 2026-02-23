@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-22
- * Last modified: 2026-02-22
+ * Created on: 2026-02-23
+ * Last modified: 2026-02-23
  *
  *
  * Copyright © 2026 LGS1920
@@ -23,9 +23,9 @@ import { faArrowRotateLeft, faCompass, faLocationArrow }            from '@forta
 import { SlButton, SlDivider, SlIcon, SlRadioButton, SlRadioGroup } from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                                                    from '@Utils/FA2SL'
 import { colord, extend } from 'colord'
-import namesPlugin        from 'colord/plugins/names'
-import React, { useCallback, useMemo }                              from 'react'
-import { useSnapshot }                                              from 'valtio'
+import namesPlugin                                from 'colord/plugins/names'
+import React, { useCallback, useEffect, useMemo } from 'react'
+import { useSnapshot }                            from 'valtio'
 
 extend([namesPlugin])
 
@@ -174,6 +174,16 @@ export const CompassWidgetEditor = ({entity}) => {
         updateValue('mode', event.target.value)
     }, [updateValue])
 
+    /**
+     * Trigger moveable resize when compass mode changes
+     * This ensures the handles match the new visual dimensions
+     */
+    useEffect(() => {
+        if (_moveable?.current) {
+            _moveable.current.updateRect()
+        }
+    }, [element.mode, _moveable])
+
     const swatches = useMemo(() => lgs.settings.getSwatches.list.join(';'), [])
 
     if (!element) {
@@ -188,19 +198,21 @@ export const CompassWidgetEditor = ({entity}) => {
                                   align-right>
                         <SlRadioButton size="small" value={COMPASS_FULL}>
                             <SlIcon size="small" slot="prefix" library="fa" name={FA2SL.set(faCompass)}/>
-                            Full
+                            {'Full'}
                         </SlRadioButton>
                         <SlRadioButton size="small" value={COMPASS_LIGHT}>
                             <SlIcon size="small" slot="prefix" library="fa" name={FA2SL.set(faLocationArrow)}/>
-                            Light
+                            {'Light'}
                         </SlRadioButton>
                     </SlRadioGroup>
                 </div>
                 <div className="drawer-horizontal-element">
+                    <div className="widget-editor-reset-menus">
                     <SlButton size="small" onClick={handleReset}>
                         <SlIcon size="small" slot="prefix" library="fa" name={FA2SL.set(faArrowRotateLeft)}/>
-                        Reset
+                        {'Reset'}
                     </SlButton>
+                    </div>
                 </div>
             </div>
             <SlDivider/>

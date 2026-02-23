@@ -7,26 +7,14 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-19
- * Last modified: 2026-02-19
+ * Created on: 2026-02-23
+ * Last modified: 2026-02-23
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-/*******************************************************************************
- *
- * This file is part of the LGS1920/studio project.
- *
- * File: style.css
- *
- * Author : LGS1920 Team
- * email: contact@lgs1920.fr
- *
- * Created on: 2026-02-17
- * Last modified: 2026-02-17
- *
- ******************************************************************************/
+
 
 .drawer-content.lgs-editor-layout {
     display: flex;
@@ -92,9 +80,14 @@
     min-height: 0;
 }
 
-
 .drawer-header-title {
     display: flex;
     align-items: center;
     gap: 10px;
+}
+
+.widget-editor-reset-menus {
+    display: flex;
+    margin-left: auto;
+    gap: var(--lgs-gutter-xs);
 }
