@@ -186,6 +186,7 @@ widgets:
           content: "Enter text here"
           color: "#ffffff"
           shadow:
+            color: "#000000"
             show: false
             value: normal
           opacity: 1
