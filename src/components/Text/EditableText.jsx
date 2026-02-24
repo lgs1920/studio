@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-09
- * Last modified: 2026-02-09
+ * Created on: 2026-02-24
+ * Last modified: 2026-02-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -229,6 +229,10 @@ export const EditableText = ({id, scale = 1}) => {
         outline:    'none',
         caretColor: 'var(--lgs-tx-color)',
         opacity:    element.text?.opacity ?? 1,
+        ...(element.text?.stroke?.show && {
+            WebkitTextStroke: 'var(--lgs-tx-stroke-width, 0px) var(--lgs-tx-stroke-color, transparent)',
+            paintOrder:       'var(--lgs-tx-paint-order,"fill stroke")',
+        }),
     }
 
     useEffect(() => {
