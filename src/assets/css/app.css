@@ -21,7 +21,7 @@ html {
 }
 
 body {
-    font-family: var(--lgs-font-family);
+    font-family: var(--lgs-font-family), sans-serif;
     font-size: var(--lgs-font-size);
     overflow: hidden;
     color: var(--lgs-dark-ui-fg-color);
