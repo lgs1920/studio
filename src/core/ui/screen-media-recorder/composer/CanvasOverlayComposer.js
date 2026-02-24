@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-16
- * Last modified: 2026-02-16
+ * Created on: 2026-02-24
+ * Last modified: 2026-02-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -213,7 +213,7 @@ export class CanvasOverlayComposer {
             const rad = (overlay.rotate * Math.PI) / 180
             const hw = overlay.contentWidth / 2
             const hh = overlay.contentHeight / 2
-            const radius = Math.max(0, Math.min(overlay.radius * overlay.scale, hw, hh))
+            const radius = Math.max(0, Math.min(overlay.radius, hw, hh))
 
             // Backdrop Blur Implementation
             // We sample the current output canvas state before drawing the widget
@@ -229,7 +229,7 @@ export class CanvasOverlayComposer {
                 ctx.clip()
 
                 // Apply blur to current frame buffer
-                ctx.filter = `blur(${overlay.blur}px)`
+                ctx.filter = `blur(${overlay.blur * this.#dpr * overlay.scale}px)`
                 ctx.setTransform(1, 0, 0, 1, 0, 0)
                 ctx.drawImage(
                     this.#outputCanvas,
