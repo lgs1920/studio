@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-17
- * Last modified: 2026-02-17
+ * Created on: 2026-02-24
+ * Last modified: 2026-02-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -368,7 +368,6 @@ export const VideoRecordingScreenArea = memo(() => {
                              className={classNames({'video-recording-in-progress': video.recording})}
                              infoComponent={<VideoSettingsInfo/>} ref={_cropZone}/>
             {widgetCacheEntries.map(([key, props]) => (
-                console.log('widgetCacheEntries', key, props),
                     <DynamicWidget
                         key={key}
                         id={key}
