@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-22
- * Last modified: 2026-02-22
+ * Created on: 2026-02-24
+ * Last modified: 2026-02-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -358,7 +358,7 @@ export const ProfileChart = ({data, id, width, height, preview = false}) => {
                 width:           width,
                 height:          height,
                 backgroundColor: element.background.show ? setColor(element.background) : 'transparent',
-                backdropFilter: element.background.blur ? 'blur(5px)' : 'none',
+                backdropFilter: element.background.blur ? 'blur(var(--lgs-blur-s))' : 'none',
                 border:          element.border.show
                                  ? `${element.border.thickness}px solid ${setColor(element.border)}`
                                  : 'none',
