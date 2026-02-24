@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-19
- * Last modified: 2026-02-19
+ * Created on: 2026-02-24
+ * Last modified: 2026-02-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -44,6 +44,10 @@ export class TextWidgetManager {
 
         const bgShadowColor = this.getColor(element.background?.shadow, true)
         const txShadowColor = this.getColor(element.text.shadow, true)
+
+        // Resolve stroke color with alpha support
+        const txStrokeColor = this.getColor(element.text.stroke, true)
+
         const hasVisibleContainer = element.background?.show || element.border?.show
 
         const fontSize = element.size ?? 16
@@ -79,6 +83,10 @@ export class TextWidgetManager {
                 element.text.shadow.value === 'large' ? `0 4px 8px ${txShadowColor}` :
                 `0 2px 4px ${txShadowColor}`
             ) : 'none',
+
+            '--lgs-tx-stroke-width': `${element.text.stroke?.show ? element.text.stroke.width : 0}px`,
+            '--lgs-tx-stroke-color': element.text.stroke?.show ? this.getColor(element.text.stroke, true) : 'transparent',
+            '--lgs-tx-paint-order':  'fill stroke',
         }
     }
 

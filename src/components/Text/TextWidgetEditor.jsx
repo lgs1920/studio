@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-23
- * Last modified: 2026-02-23
+ * Created on: 2026-02-24
+ * Last modified: 2026-02-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -27,6 +27,9 @@ import {
 import {
     ShadowElement,
 }                                                           from '@Components/MainUI/widgets/editor/elements/ShadowElement'
+import {
+    StrokeElement,
+} from '@Components/MainUI/widgets/editor/elements/StrokeElement'
 import { TextEditorToolbar }                                from '@Components/Text/TextEditorToolbar'
 import { SlDivider }                                        from '@shoelace-style/shoelace/dist/react'
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
@@ -166,6 +169,7 @@ export const TextWidgetEditor = ({entity}) => {
                     <div className="text-widget-editor-header">
                         <TextEditorToolbar id={normalizedId} fonts={true} color={false} align={false} style={false}/>
                         <TextEditorToolbar id={normalizedId} color={true} align={true} style={true}/>
+
                     </div>
                     <div className="lgs-widget-editor-controls-wrapper">
                         <SlDivider/>
@@ -173,6 +177,13 @@ export const TextWidgetEditor = ({entity}) => {
                             element={element}
                             localRotation={localRotation}
                             applyRotation={applyRotation}
+                            updateValue={updateValue}
+                        />
+                        <SlDivider/>
+                        <StrokeElement
+                            element={element}
+                            swatches={swatches}
+                            getColor={getColor}
                             updateValue={updateValue}
                         />
                         <SlDivider/>

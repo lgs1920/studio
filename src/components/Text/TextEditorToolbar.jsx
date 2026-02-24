@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-23
- * Last modified: 2026-02-23
+ * Created on: 2026-02-24
+ * Last modified: 2026-02-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -131,7 +131,6 @@ export const TextEditorToolbar = ({id, fonts = false, color = true, align = true
     }, [$element, syncCSS, scheduleUpdate])
 
     const handleOpacityChange = useCallback((e) => {
-        console.log(e.target.value)
         if ($element) {
             $element.text.opacity = parseFloat(e.target.value)
             syncCSS($element.text.color, $element.text.opacity)

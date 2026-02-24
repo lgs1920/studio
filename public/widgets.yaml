@@ -185,6 +185,11 @@ widgets:
         text:
           content: "Enter text here"
           color: "#ffffff"
+          stroke:
+            show: false
+            color: "#000000"
+            width: 1.5
+            opacity: 1
           shadow:
             color: "#000000"
             show: false
