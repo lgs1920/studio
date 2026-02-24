@@ -186,7 +186,7 @@
 
     -webkit-text-stroke: var(--lgs-tx-stroke-color);
     -webkit-text-stroke-width: var(--lgs-tx-stroke-width);
-
+    -webkit-text-fill-color: var(--lgs-tx-color) !important;
     paint-order: var(--lgs-tx-paint-order);
 
     --sl-input-color: var(--lgs-tx-color);

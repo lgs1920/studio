@@ -50,17 +50,14 @@ export const TextEditorToolbar = ({id, fonts = false, color = true, align = true
     const syncCSS = useCallback((colorValue, opacityValue) => {
         const _sceneTarget = __.ui.widgetManager.getElementById(id)
         const _previewTarget = document.querySelector('.text-widget-preview .lgs-text-container')
-
         const finalColor = colord(colorValue || '#ffffff')
             .alpha(opacityValue !== undefined ? opacityValue : 1)
             .toRgbString()
-
-        // We assume the widget uses --lgs-text-color for its rendering
         if (_sceneTarget) {
-            __.ui.css.setCSSVariable('--lgs-text-color', finalColor, _sceneTarget)
+            __.ui.css.setCSSVariable('--lgs-tx-color', finalColor, _sceneTarget)
         }
         if (_previewTarget) {
-            __.ui.css.setCSSVariable('--lgs-text-color', finalColor, _previewTarget)
+            __.ui.css.setCSSVariable('--lgs-tx-color', finalColor, _previewTarget)
         }
     }, [id])
 
