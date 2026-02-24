@@ -53,8 +53,9 @@ export class TextWidgetManager {
         const fontSize = element.size ?? 16
         const lineHeight = parseFloat(element.lineHeight ?? 1)
         const lineHeightPx = fontSize * lineHeight
-        const paddingSide = Math.max(4, lineHeightPx * 0.25)
-        const paddingBottom = Math.max(5, lineHeightPx * 0.35)
+        const basePadding = Math.max(4, lineHeightPx * 0.25)
+        const paddingBottom = Math.max(4, lineHeightPx * 0.25)
+        const paddingSide = element.border?.pill ? basePadding * 2.5 : basePadding
 
         return {
             '--lgs-widget-preview-bg': bgSnapshot ? `url(${bgSnapshot})` : 'none',
@@ -68,7 +69,7 @@ export class TextWidgetManager {
             '--lgs-tx-lh':       element.lineHeight ?? '1',
             '--lgs-tx-border':   element.border?.show ? `${element.border.thickness}px solid ${this.getColor(element.border, true)}` : 'none',
             '--lgs-tx-radius': element.border?.show ? WIDGET_RADIUS.get(element.border.radius ?? 'none')?.value : '0',
-            '--lgs-tx-padding-top':    `${paddingSide}px`,
+            '--lgs-tx-padding-top': `${paddingBottom}px`,
             '--lgs-tx-padding-right':  `${paddingSide}px`,
             '--lgs-tx-padding-bottom': `${paddingBottom}px`,
             '--lgs-tx-padding-left':   `${paddingSide}px`,
@@ -87,6 +88,7 @@ export class TextWidgetManager {
             '--lgs-tx-stroke-width': `${element.text.stroke?.show ? element.text.stroke.width : 0}px`,
             '--lgs-tx-stroke-color': element.text.stroke?.show ? this.getColor(element.text.stroke, true) : 'transparent',
             '--lgs-tx-paint-order':  'fill stroke',
+
         }
     }
 
