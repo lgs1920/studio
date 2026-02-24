@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-08
- * Last modified: 2026-02-08
+ * Created on: 2026-02-24
+ * Last modified: 2026-02-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -55,7 +55,7 @@ export const RotationElement = ({
                 />
             </div>
 
-            <div className="drawer-horizontal-element xlarge-element">
+            <div className="drawer-horizontal-element">
                 <SlRange
                     min={min}
                     max={max}

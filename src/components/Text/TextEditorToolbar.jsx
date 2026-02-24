@@ -14,23 +14,20 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
+import { WIDGET_FONT_FAMILIES, WIDGET_SYSTEM_FONT_STACK } from '@Core/constants'
 import {
-    WIDGET_FONT_FAMILIES, WIDGET_SYSTEM_FONT_STACK,
-}                                          from '@Core/constants'
+    faDistributeSpacingVertical, faText, faTextSize,
+}                                                         from '@fortawesome/pro-regular-svg-icons'
 import {
     faAlignCenter, faAlignLeft, faAlignRight, faBold, faItalic,
-}                                          from '@fortawesome/pro-solid-svg-icons'
+}                                                         from '@fortawesome/pro-solid-svg-icons'
 import {
-    faDistributeSpacingVertical,
-    faText, faTextSize,
-}                                          from '@fortawesome/pro-regular-svg-icons'
-import {
-    SlButton, SlButtonGroup, SlIcon, SlSelect, SlOption, SlInput, SlColorPicker, SlRange,
-}                                          from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                           from '@Utils/FA2SL'
-import { colord }                          from 'colord'
-import { useEffect, useMemo, useCallback } from 'react'
-import { useSnapshot }                     from 'valtio'
+    SlButton, SlButtonGroup, SlColorPicker, SlIcon, SlInput, SlOption, SlRange, SlSelect,
+}                                                         from '@shoelace-style/shoelace/dist/react'
+import { FA2SL }                                          from '@Utils/FA2SL'
+import { colord }                                         from 'colord'
+import { useCallback, useEffect, useMemo }                from 'react'
+import { useSnapshot }                                    from 'valtio'
 
 /**
  * Complete Text formatting toolbar
@@ -155,9 +152,10 @@ export const TextEditorToolbar = ({id, fonts = false, color = true, align = true
     const appliedFontStack = currentFont === 'System' ? WIDGET_SYSTEM_FONT_STACK : currentFont
 
     return (
-        <div className="text-widget-toolbar" style={{display: 'flex', gap: '8px', alignItems: 'center'}}>
+        <div className="drawer-horizontal-line three-columns">
+
             {color && (
-                <>
+                <div className="drawer-horizontal-element">
                     <SlColorPicker
                         value={element?.text?.color ?? 'white'}
                         onSlInput={handleColorChange}
@@ -173,98 +171,107 @@ export const TextEditorToolbar = ({id, fonts = false, color = true, align = true
                         onSlInput={handleOpacityChange}
                         style={{width: '100px'}}
                     />
-                </>
+                </div>
             )}
 
             {style && (
-                <SlButtonGroup size="small">
-                    <SlButton
-                        size="small"
-                        variant={element?.weight === 'bold' ? 'primary' : 'default'}
-                        onClick={toggleBold}
-                    >
-                        <SlIcon library="fa" name={FA2SL.set(faBold)}/>
-                    </SlButton>
-                    <SlButton
-                        size="small"
-                        variant={element?.style === 'italic' ? 'primary' : 'default'}
-                        onClick={toggleItalic}
-                    >
-                        <SlIcon library="fa" name={FA2SL.set(faItalic)}/>
-                    </SlButton>
-                </SlButtonGroup>
+                <div className="drawer-horizontal-element">
+                    <SlButtonGroup size="small">
+                        <SlButton
+                            size="small"
+                            variant={element?.weight === 'bold' ? 'primary' : 'default'}
+                            onClick={toggleBold}
+                        >
+                            <SlIcon library="fa" name={FA2SL.set(faBold)}/>
+                        </SlButton>
+                        <SlButton
+                            size="small"
+                            variant={element?.style === 'italic' ? 'primary' : 'default'}
+                            onClick={toggleItalic}
+                        >
+                            <SlIcon library="fa" name={FA2SL.set(faItalic)}/>
+                        </SlButton>
+                    </SlButtonGroup>
+                </div>
             )}
 
             {align && (
-                <SlButtonGroup size="small">
-                    {['left', 'center', 'right'].map((mode) => (
-                        <SlButton
-                            key={mode}
-                            size="small"
-                            disabled={alignmentDisabled}
-                            variant={!alignmentDisabled && element?.align === mode ? 'primary' : 'default'}
-                            onClick={() => {
-                                if ($element) {
-                                    $element.align = mode
-                                }
-                            }}
-                        >
-                            <SlIcon library="fa"
-                                    name={FA2SL.set(mode === 'left' ? faAlignLeft : mode === 'center' ? faAlignCenter : faAlignRight)}/>
-                        </SlButton>
-                    ))}
-                </SlButtonGroup>
+                <div className="drawer-horizontal-element">
+                    <SlButtonGroup size="small">
+                        {['left', 'center', 'right'].map((mode) => (
+                            <SlButton
+                                key={mode}
+                                size="small"
+                                disabled={alignmentDisabled}
+                                variant={!alignmentDisabled && element?.align === mode ? 'primary' : 'default'}
+                                onClick={() => {
+                                    if ($element) {
+                                        $element.align = mode
+                                    }
+                                }}
+                            >
+                                <SlIcon library="fa"
+                                        name={FA2SL.set(mode === 'left' ? faAlignLeft : mode === 'center' ? faAlignCenter : faAlignRight)}/>
+                            </SlButton>
+                        ))}
+                    </SlButtonGroup>
+                </div>
             )}
 
             {fonts && (
                 <>
-                    <SlSelect
-                        size="small"
-                        value={currentFont.replace(/\s/g, '_')}
-                        onSlChange={handleFontChange}
-                        style={{
-                            width:                    '130px',
-                            '--sl-input-font-family': appliedFontStack,
-                        }}
-                    >
-                        <SlIcon slot="prefix" library="fa" name={FA2SL.set(faText)}/>
-                        {WIDGET_FONT_FAMILIES.map(font => (
-                            <SlOption key={font} value={font.replace(/\s/g, '_')}>
+                    <div className="drawer-horizontal-element">
+
+                        <SlSelect
+                            size="small"
+                            value={currentFont.replace(/\s/g, '_')}
+                            onSlChange={handleFontChange}
+                            style={{
+                                width:                    '130px',
+                                '--sl-input-font-family': appliedFontStack,
+                            }}
+                        >
+                            <SlIcon slot="prefix" library="fa" name={FA2SL.set(faText)}/>
+                            {WIDGET_FONT_FAMILIES.map(font => (
+                                <SlOption key={font} value={font.replace(/\s/g, '_')}>
                                 <span
                                     style={{fontFamily: font === 'System' ? WIDGET_SYSTEM_FONT_STACK : font}}>Typeface</span>
-                            </SlOption>
-                        ))}
-                    </SlSelect>
-
-                    <SlSelect
-                        hoist
-                        size="small"
-                        value={element?.lineHeight ?? '1'}
-                        onSlChange={handleLineHeightChange}
-                        style={{width: '100px'}}
-                    >
-                        <SlIcon slot="prefix" library="fa" name={FA2SL.set(faDistributeSpacingVertical)}/>
-                        {[
-                            {v: '0.8', t: 'Compact'},
-                            {v: '1', t: 'Normal'},
-                            {v: '1.2', t: 'Comfort'},
-                            {v: '1.6', t: 'Wide'},
-                        ].map(opt => (
-                            <SlOption key={opt.v} value={opt.v}>{opt.t}</SlOption>
-                        ))}
-                    </SlSelect>
-
-                    <SlInput
-                        size="small"
-                        type="number"
-                        min="8"
-                        max="48"
-                        value={element?.size ?? 16}
-                        onSlInput={handleSizeChange}
-                        style={{width: '6rem'}}
-                    >
-                        <SlIcon slot="prefix" library="fa" name={FA2SL.set(faTextSize)}/>
-                    </SlInput>
+                                </SlOption>
+                            ))}
+                        </SlSelect>
+                    </div>
+                    <div className="drawer-horizontal-element">
+                        <SlSelect
+                            hoist
+                            size="small"
+                            value={element?.lineHeight ?? '1'}
+                            onSlChange={handleLineHeightChange}
+                            style={{width: '8rem'}}
+                        >
+                            <SlIcon slot="prefix" library="fa" name={FA2SL.set(faDistributeSpacingVertical)}/>
+                            {[
+                                {v: '0.8', t: 'Compact'},
+                                {v: '1', t: 'Normal'},
+                                {v: '1.2', t: 'Comfort'},
+                                {v: '1.6', t: 'Wide'},
+                            ].map(opt => (
+                                <SlOption key={opt.v} value={opt.v}>{opt.t}</SlOption>
+                            ))}
+                        </SlSelect>
+                    </div>
+                    <div className="drawer-horizontal-element">
+                        <SlInput
+                            size="small"
+                            type="number"
+                            min="8"
+                            max="48"
+                            value={element?.size ?? 16}
+                            onSlInput={handleSizeChange}
+                            style={{width: '6rem'}}
+                        >
+                            <SlIcon slot="prefix" library="fa" name={FA2SL.set(faTextSize)}/>
+                        </SlInput>
+                    </div>
                 </>
             )}
         </div>

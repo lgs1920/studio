@@ -66,10 +66,10 @@
     gap: var(--lgs-gutter-xs);
 }
 
-.text-widget-editor-header * {
+.text-widget-editor-header .drawer-horizontal-line .drawer-horizontal-element:last-child {
     margin-left: auto;
-}
 
+}
 .text-widget-editor-header sl-button:not(.square-button) sl-icon:first-child {
     margin-left: var(--lgs-gutter-s);
 }
