@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-17
- * Last modified: 2026-02-17
+ * Created on: 2026-02-24
+ * Last modified: 2026-02-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -558,6 +558,14 @@ export const WIDGET_GOOGLE_FONTS = [
     'Quicksand',
     'Roboto',
 ].sort((a, b) => a.localeCompare(b))
+
+/**
+ * Additional Google Fonts used by the app (not in widget selector)
+ */
+export const APP_GOOGLE_FONTS = [
+    'Cookie',
+    'Lato',
+]
 
 /**
  * System font stack for text widgets

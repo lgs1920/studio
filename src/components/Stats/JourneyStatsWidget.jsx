@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-14
- * Last modified: 2026-02-14
+ * Created on: 2026-02-24
+ * Last modified: 2026-02-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -60,7 +60,6 @@ export const JourneyStatsWidget = ({id, context, zIndex}) => {
         else {
             setContainer(lgs.canvas)
         }
-        __.ui.ui.importFonts()
     }, [widgetsBoard])
 
     const metrics = useMemo(() => journeyMetrics.metrics, [journeyMetrics])

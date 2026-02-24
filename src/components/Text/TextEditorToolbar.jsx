@@ -77,12 +77,6 @@ export const TextEditorToolbar = ({id, fonts = false, color = true, align = true
         })
     }, [_moveable])
 
-    /**
-     * Injects selected Google Fonts into the document head
-     */
-    useEffect(() => {
-        __.ui.ui.importFonts()
-    }, [])
 
     const alignmentDisabled = useMemo(() => {
         const text = element?.text?.content ?? ''

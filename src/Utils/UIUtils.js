@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-12
- * Last modified: 2026-02-12
+ * Created on: 2026-02-24
+ * Last modified: 2026-02-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -182,7 +182,7 @@ export class UIUtils {
             const link = document.createElement('link')
             link.id = linkId
             link.rel = 'stylesheet'
-            link.href = `https://fonts.googleapis.com/css?family=${familiesParam}&display=swap`
+            link.href = `https://fonts.googleapis.com/css2?${WIDGET_GOOGLE_FONTS.map(f => `family=${f.replace(/\s+/g, '+')}`).join('&')}&display=swap`
             document.head.appendChild(link)
         }
     }

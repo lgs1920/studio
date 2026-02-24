@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-02-24
+ * Last modified: 2026-02-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -20,6 +20,7 @@ import { createRoot } from 'react-dom/client'
 import { LGS1920 }    from './LGS1920.jsx'
 import './assets/css/app.css?v=1.0.5'
 import './assets/css/animations.css'
+import { UIUtils } from '@Utils/UIUtils'
 
 /**
  * Patch pour Shoelace ResizeObserver bug
@@ -31,6 +32,11 @@ ResizeObserver.prototype.unobserve = function (target) {
         originalUnobserve.call(this, target)
     }
 }
+
+/**
+ * Load Google Fonts once at startup
+ */
+UIUtils.importFonts()
 
 /**
  * Let's go
