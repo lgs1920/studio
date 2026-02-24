@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-20
- * Last modified: 2026-02-20
+ * Created on: 2026-02-24
+ * Last modified: 2026-02-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,7 +16,7 @@
 
 import {
     BUILD, CONFIGURATION, COUNTRIES, FREE_ANONYMOUS_ACCESS, LAYERS_TERRAINS_SETTINGS, LGS_CONTEXT_MENU_HOOK, MILLIS,
-    platforms, SERVERS, SETTINGS, SETTINGS_STORE, VAULT_STORE, WIDGETS,
+    platforms, SERVERS, SETTINGS, SETTINGS_STORE, VAULT_STORE, WIDGET_LAYER_TOP, WIDGETS,
 }                           from '@Core/constants'
 import { ElevationServer }  from '@Core/Elevation/ElevationServer'
 import { Settings }         from '@Core/settings/Settings'
@@ -286,6 +286,10 @@ export class AppUtils {
             m:  __.ui.css.rem2px(__.ui.css.getCSSVariable('--lgs-gutter-m')),
             n:  __.ui.css.rem2px(__.ui.css.getCSSVariable('--lgs-gutter')),
         }
+
+        // Widgets
+        __.ui.css.setCSSVariable('--lgs-above-widgets', WIDGET_LAYER_TOP + 1)
+
 
         /***************************************
          * Application settings

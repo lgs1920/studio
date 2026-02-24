@@ -507,9 +507,9 @@ export const WIDGETS_CAPABILITIES   = [
                                                   ],
                                               ]),
 
-             WIDGET_LAYER_START     = 9000,
+             WIDGET_LAYER_START = 4000,
              WIDGET_LAYER_STEP      = 1,
-             WIDGET_LAYER_TOP       = 10000,
+             WIDGET_LAYER_TOP   = 5000,
 
 
              DEFAULT_WIDGETS_LIST   = '@Components/MainUI/widgets/list',
@@ -580,5 +580,3 @@ export const WIDGET_FONT_FAMILIES = ['System', ...WIDGET_GOOGLE_FONTS]
 
 export const WIDGET_EDITOR_PRE_RENDER_EVENT  = 'widget-editor-pre-render',
              WIDGET_EDITOR_POST_RENDER_EVENT = 'widget-editor-post-render'
-
-

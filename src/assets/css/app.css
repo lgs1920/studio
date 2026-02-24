@@ -263,6 +263,9 @@ body {
  * Drag, Resize Rotate
  ******************************************************************************/
 
+.lgs-widget-control-box {
+    z-index: var(--lgs-above-widgets) !important;
+}
 
 .lgs-widget-control-box * {
     transition: opacity 0.2s ease-in-out;
