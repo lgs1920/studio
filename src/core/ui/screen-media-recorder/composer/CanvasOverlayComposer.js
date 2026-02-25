@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-24
- * Last modified: 2026-02-24
+ * Created on: 2026-02-25
+ * Last modified: 2026-02-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -216,9 +216,9 @@ export class CanvasOverlayComposer {
             const radius = Math.max(0, Math.min(overlay.radius, hw, hh))
 
             // Backdrop Blur Implementation
-            // We sample the current output canvas state before drawing the widget
             if (overlay.blur > 0) {
                 ctx.save()
+                // On applique la transformation pour définir la zone de clipping (path du widget)
                 ctx.translate(overlay.cx, overlay.cy)
                 ctx.rotate(rad)
                 ctx.scale(overlay.scale, overlay.scale)
@@ -226,19 +226,25 @@ export class CanvasOverlayComposer {
                 ctx.restore()
 
                 ctx.save()
+                // On restreint le dessin du flou à la zone du widget
                 ctx.clip()
 
-                // Apply blur to current frame buffer
-                ctx.filter = `blur(${overlay.blur * this.#dpr * overlay.scale}px)`
+                // Correction : Appliquer le flou sur le contenu déjà rendu.
+                // Le filtre doit être calibré sur les unités logiques car le contexte est déjà scalé par le dpr
+                // via la transformation par défaut définie dans #resizeOutputCanvas.
+                ctx.filter = `blur(${overlay.blur * overlay.scale}px)`
+
+                // On réinitialise la transformation à l'identité pour copier le buffer physique
+                // pixel pour pixel, mais on s'assure de couvrir toute la surface physique.
                 ctx.setTransform(1, 0, 0, 1, 0, 0)
                 ctx.drawImage(
                     this.#outputCanvas,
-                    0, 0, this.#outputCanvas.width, this.#outputCanvas.height,
-                    0, 0, this.#outW, this.#outH,
+                    0, 0, this.#outputCanvas.width, this.#outputCanvas.height, // Source physique
+                    0, 0, this.#outputCanvas.width, this.#outputCanvas.height,  // Destination physique
                 )
                 ctx.restore()
 
-                // Restore transform for widget drawing
+                // On restaure le scale DPR pour la suite du rendu (le widget lui-même)
                 ctx.setTransform(this.#dpr, 0, 0, this.#dpr, 0, 0)
             }
 
