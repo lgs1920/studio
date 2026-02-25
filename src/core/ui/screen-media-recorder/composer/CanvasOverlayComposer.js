@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-24
- * Last modified: 2026-02-24
+ * Created on: 2026-02-26
+ * Last modified: 2026-02-26
  *
  *
  * Copyright © 2026 LGS1920
@@ -18,7 +18,8 @@ import { LGS_WIDGET_SCALE_EFFECTIVE } from '@Core/constants'
 
 /**
  * CanvasOverlayComposer
- * Handles multi-layer composition with real-time backdrop blur support.
+ * Manages complex multi-layer composition including real-time backdrop blur effects.
+ * It synchronizes a source canvas (usually WebGL) with multiple 2D overlays.
  */
 export class CanvasOverlayComposer {
     #sourceCanvas
@@ -33,6 +34,10 @@ export class CanvasOverlayComposer {
     #sourceDpr = 1
     #flushWebGLBuffer = null
 
+    /**
+     * @param {HTMLCanvasElement} sourceCanvas - The primary source canvas to be composed.
+     * @param {Object} options - Configuration for clipping, dimensions, and buffer management.
+     */
     constructor(sourceCanvas, options = {}) {
         if (!(sourceCanvas instanceof HTMLCanvasElement)) {
             throw new Error('CanvasOverlayComposer: sourceCanvas must be an HTMLCanvasElement')
@@ -55,6 +60,7 @@ export class CanvasOverlayComposer {
         this.#outputCanvas = document.createElement('canvas')
         this.#ctx = this.#outputCanvas.getContext('2d', {alpha: false})
 
+        // High-quality interpolation for scaled overlays
         this.#ctx.imageSmoothingEnabled = true
         this.#ctx.imageSmoothingQuality = 'high'
 
@@ -63,11 +69,17 @@ export class CanvasOverlayComposer {
         this.#loop()
     }
 
+    /**
+     * Calculates the device pixel ratio of the source canvas based on its layout size.
+     */
     #updateSourceDpr = () => {
         const rect = this.#sourceCanvas.getBoundingClientRect()
         this.#sourceDpr = rect.width > 0 ? this.#sourceCanvas.width / rect.width : 1
     }
 
+    /**
+     * Updates physical canvas dimensions to match the display size multiplied by DPR.
+     */
     #resizeOutputCanvas = () => {
         const physicalW = Math.round(this.#outW * this.#dpr)
         const physicalH = Math.round(this.#outH * this.#dpr)
@@ -77,13 +89,18 @@ export class CanvasOverlayComposer {
         this.#outputCanvas.style.width = `${this.#outW}px`
         this.#outputCanvas.style.height = `${this.#outH}px`
 
+        // Apply global scale to match logical coordinate system
         this.#ctx.setTransform(this.#dpr, 0, 0, this.#dpr, 0, 0)
     }
 
+    /**
+     * Accessor for the resulting composed canvas.
+     */
     getCanvas = () => this.#outputCanvas
 
     /**
-     * Traces a rounded rectangle path on the provided context.
+     * Generates a rounded rectangle path.
+     * Used for clipping regions and backdrop-blur boundaries.
      */
     #traceRoundedRect(ctx, x, y, w, h, r) {
         ctx.beginPath()
@@ -103,7 +120,8 @@ export class CanvasOverlayComposer {
     }
 
     /**
-     * Registers a new overlay to be rendered.
+     * Adds an overlay to the composition stack.
+     * Handles both absolute positioning and relative positioning based on the source canvas.
      */
     addOverlay = (element, options = {}) => {
         const el = typeof element === 'function' ? element() : element
@@ -124,6 +142,8 @@ export class CanvasOverlayComposer {
         const elRect = el.getBoundingClientRect ? el.getBoundingClientRect() : null
         const hasNumericWidth = typeof el.width === 'number'
         const hasNumericHeight = typeof el.height === 'number'
+
+        // Calculate the internal scale of the element if it's a canvas
         const elDpr = elRect && elRect.width > 0 && hasNumericWidth ? (el.width / elRect.width) : 1
         const elLogicalWidth = hasNumericWidth ? (el.width / elDpr) : (elRect?.width ?? 0)
 
@@ -136,6 +156,7 @@ export class CanvasOverlayComposer {
             rawHeight = h ?? (elRect?.height ?? 0)
         }
         else {
+            // Coordinate transformation relative to source canvas viewport
             const rect = elRect
             const sourceRect = this.#sourceCanvas.getBoundingClientRect()
             posX = rect.left - sourceRect.left
@@ -162,6 +183,7 @@ export class CanvasOverlayComposer {
         const totalW = logicalContentW + (shadowMargins.left + shadowMargins.right)
         const totalH = logicalContentH + (shadowMargins.top + shadowMargins.bottom)
 
+        // Compute center for rotation and scaling transformations
         const cx = posX + totalW / 2
         const cy = posY + totalH / 2
 
@@ -181,14 +203,15 @@ export class CanvasOverlayComposer {
     }
 
     /**
-     * Main render cycle.
-     * Back-to-front composition with recursive backdrop sampling.
+     * Orchestrates the frame rendering.
+     * Implements a back-to-front draw order with support for dynamic backdrop sampling.
      */
     #draw = () => {
+        // Ensure WebGL sources are synchronized before sampling
         this.#flushWebGLBuffer?.()
         const ctx = this.#ctx
 
-        // Reset canvas with background
+        // Reset buffer with opaque background
         ctx.clearRect(0, 0, this.#outW, this.#outH)
         ctx.fillStyle = '#000000'
         ctx.fillRect(0, 0, this.#outW, this.#outH)
@@ -201,7 +224,7 @@ export class CanvasOverlayComposer {
             srcH = this.#clip.height * this.#sourceDpr
         }
 
-        // Initial background render
+        // Background composition
         ctx.drawImage(this.#sourceCanvas, srcX, srcY, srcW, srcH, 0, 0, this.#outW, this.#outH)
 
         for (const overlay of this.#overlays) {
@@ -215,10 +238,10 @@ export class CanvasOverlayComposer {
             const hh = overlay.contentHeight / 2
             const radius = Math.max(0, Math.min(overlay.radius, hw, hh))
 
-            // Backdrop Blur Implementation
-            // We sample the current output canvas state before drawing the widget
+            // BACKDROP BLUR PASS
             if (overlay.blur > 0) {
                 ctx.save()
+                // Define the clipping region for the blur effect
                 ctx.translate(overlay.cx, overlay.cy)
                 ctx.rotate(rad)
                 ctx.scale(overlay.scale, overlay.scale)
@@ -228,21 +251,23 @@ export class CanvasOverlayComposer {
                 ctx.save()
                 ctx.clip()
 
-                // Apply blur to current frame buffer
-                ctx.filter = `blur(${overlay.blur * this.#dpr * overlay.scale}px)`
+                // Filter calibrated to logical units; context is already scaled by DPR
+                ctx.filter = `blur(${overlay.blur * overlay.scale}px)`
+
+                // Resample the existing buffer to generate the blurred backdrop
                 ctx.setTransform(1, 0, 0, 1, 0, 0)
                 ctx.drawImage(
                     this.#outputCanvas,
                     0, 0, this.#outputCanvas.width, this.#outputCanvas.height,
-                    0, 0, this.#outW, this.#outH,
+                    0, 0, this.#outputCanvas.width, this.#outputCanvas.height,
                 )
                 ctx.restore()
 
-                // Restore transform for widget drawing
+                // Revert to logical transform for the foreground pass
                 ctx.setTransform(this.#dpr, 0, 0, this.#dpr, 0, 0)
             }
 
-            // Widget Content
+            // OVERLAY CONTENT PASS
             ctx.save()
             ctx.translate(overlay.cx, overlay.cy)
             ctx.rotate(rad)
@@ -261,11 +286,17 @@ export class CanvasOverlayComposer {
         }
     }
 
+    /**
+     * Internal animation loop.
+     */
     #loop = () => {
         this.#draw()
         this.#raf = requestAnimationFrame(this.#loop)
     }
 
+    /**
+     * Cleans up resources and stops the render loop.
+     */
     dispose = () => {
         if (this.#raf) {
             cancelAnimationFrame(this.#raf)
