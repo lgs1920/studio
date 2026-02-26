@@ -18,8 +18,8 @@ import { LGS_WIDGET_SCALE_EFFECTIVE } from '@Core/constants'
 
 /**
  * CanvasOverlayComposer
- * Composition engine using insertion order for Z-stacking.
- * Optimized for zero-allocation rendering.
+ * Moteur de composition haute performance avec gestion du Backdrop Blur dynamique.
+ * Optimisé pour limiter la pression sur le Garbage Collector via le pré-calcul des constantes.
  */
 export class CanvasOverlayComposer {
     #sourceCanvas
@@ -34,7 +34,7 @@ export class CanvasOverlayComposer {
     #sourceDpr = 1
     #flushWebGLBuffer = null
 
-    // Cached source geometry
+    // Cache des coordonnées source pour éviter l'instanciation d'objets dans la boucle
     #srcRect = {x: 0, y: 0, w: 0, h: 0}
 
     constructor(sourceCanvas, options = {}) {
@@ -119,9 +119,6 @@ export class CanvasOverlayComposer {
         ctx.closePath()
     }
 
-    /**
-     * Adds an overlay. Render order is strictly determined by insertion order.
-     */
     addOverlay = (element, options = {}) => {
         const elGetter = typeof element === 'function' ? element : () => element
         const initialEl = elGetter()
@@ -136,7 +133,7 @@ export class CanvasOverlayComposer {
                   radius        = 0,
                   rotate        = 0,
                   scale         = 1,
-                  zIndex = 0, // Kept as metadata only
+                  zIndex = 0,
                   shadowMargins = {top: 0, right: 0, bottom: 0, left: 0},
               } = options
 
@@ -176,7 +173,7 @@ export class CanvasOverlayComposer {
         const totalW = logicalContentW + (shadowMargins.left + shadowMargins.right)
         const totalH = logicalContentH + (shadowMargins.top + shadowMargins.bottom)
 
-        // Storing pre-calculated values in addition order
+        // Stockage des constantes pré-calculées pour éviter les calculs en boucle
         this.#overlays.push({
                                 getElement: elGetter,
                                 cx:         posX + totalW / 2,
@@ -199,6 +196,7 @@ export class CanvasOverlayComposer {
         this.#flushWebGLBuffer?.()
 
         const ctx = this.#ctx
+        const dpr = this.#dpr
         const physW = this.#outputCanvas.width
         const physH = this.#outputCanvas.height
 
@@ -206,6 +204,7 @@ export class CanvasOverlayComposer {
         ctx.fillStyle = '#000000'
         ctx.fillRect(0, 0, this.#outW, this.#outH)
 
+        // Rendu de la source principale
         ctx.drawImage(
             this.#sourceCanvas,
             this.#srcRect.x, this.#srcRect.y, this.#srcRect.w, this.#srcRect.h,
@@ -224,24 +223,36 @@ export class CanvasOverlayComposer {
             const hh = overlay.contentHeight / 2
 
             if (overlay.blur > 0) {
+                // PASSAGE BACKDROP BLUR
                 ctx.save()
+
+                // 1. Transformation en espace logique pour tracer le chemin
                 ctx.translate(overlay.cx, overlay.cy)
                 ctx.rotate(overlay.rad)
                 ctx.scale(overlay.scale, overlay.scale)
-                this.#traceRoundedRect(ctx, -hw, -hh, overlay.contentWidth, overlay.contentHeight, overlay.radius)
-                ctx.restore()
 
-                ctx.save()
+                this.#traceRoundedRect(ctx, -hw, -hh, overlay.contentWidth, overlay.contentHeight, overlay.radius)
+
+                // 2. CLIP IMMEDIAT : Fixe le masque avant le reset de la matrice
                 ctx.clip()
 
-                ctx.filter = `blur(${overlay.blur * overlay.scale}px)`
+                // 3. Reset vers référentiel physique pour l'échantillonnage du buffer
+                const totalScale = overlay.scale * dpr
                 ctx.setTransform(1, 0, 0, 1, 0, 0)
+
+                // 4. Calibration du flou sur les pixels physiques
+                ctx.filter = `blur(${overlay.blur * totalScale}px)`
+
+                // 5. Injection du buffer flouté dans le masque
                 ctx.drawImage(this.#outputCanvas, 0, 0, physW, physH, 0, 0, physW, physH)
+
                 ctx.restore()
 
-                ctx.setTransform(this.#dpr, 0, 0, this.#dpr, 0, 0)
+                // Reset pour le rendu du contenu
+                ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
             }
 
+            // PASSAGE CONTENT
             ctx.save()
             ctx.translate(overlay.cx, overlay.cy)
             ctx.rotate(overlay.rad)
