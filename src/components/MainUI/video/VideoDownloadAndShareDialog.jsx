@@ -329,7 +329,6 @@ export const VideoDownloadAndShareDialog = () => {
         }
     }, [handleCancel])
 
-    console.log('>>>>', lgs.settings.ui.video?.adaptiveQuality?.enabled)
     return (
         <SlDialog
             id="video-preview-dialog"
