@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-24
- * Last modified: 2026-02-24
+ * Created on: 2026-02-27
+ * Last modified: 2026-02-27
  *
  *
  * Copyright © 2026 LGS1920
@@ -32,52 +32,74 @@ import classNames                from 'classnames'
 import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSnapshot }           from 'valtio'
 
-const getStyles = (el, depth = 0) => {
+// Overlay refresh cadence (in ms). Balanced for smooth updates and low CPU.
+const OVERLAYS_REFRESH_MS = 250
+// Cache TTL for expensive DOM metrics (in ms).
+const METRICS_CACHE_TTL_MS = 750
+// Softer recorder timeslice to reduce INFO event overhead.
+const SOFT_TIMESLICE_MS = SECOND * 2
+
+/**
+ * Extract overlay metrics from DOM styles, with a shallow search on children.
+ * Handles CSS variables for blur (e.g. blur(var(--foo))).
+ */
+const getOverlayMetrics = (el, depth = 0) => {
     if (!el || depth > 2) {
-        return {blur: 0, radius: 0}
+        return {blur: 0, radius: 0, border: 0, margins: {top: 0, right: 0, bottom: 0, left: 0}}
     }
     const style = window.getComputedStyle(el)
     const filter = style.backdropFilter || style.webkitBackdropFilter
-    const blurMatch = filter?.match(/blur\(([\d.]+)px\)/)
-    const blur = blurMatch ? parseFloat(blurMatch[1]) : 0
+    let blur = 0
+    const blurMatch = filter?.match(/blur\(([^)]+)\)/)
+    if (blurMatch) {
+        const raw = blurMatch[1].trim()
+        if (raw.endsWith('px')) {
+            blur = parseFloat(raw) || 0
+        }
+        else if (raw.startsWith('var(')) {
+            const varName = raw.slice(4, -1).trim()
+            const varValue = style.getPropertyValue(varName).trim()
+            blur = varValue.endsWith('px') ? (parseFloat(varValue) || 0) : (parseFloat(varValue) || 0)
+        }
+        else {
+            blur = parseFloat(raw) || 0
+        }
+    }
     const radiusMatch = style.borderRadius?.match(/(\d+)px/)
     const radius = radiusMatch ? parseFloat(radiusMatch[1]) : 0
     const borderWidthMatch = style.borderWidth?.match(/([\d.]+)px/)
     const border = borderWidthMatch ? parseFloat(borderWidthMatch[1]) : 0
-    if (blur > 0 || radius > 0 || border > 0) {
-        return {blur, radius, border}
-    }
-    for (const child of el.children) {
-        const s = getStyles(child, depth + 1)
-        if (s.blur > 0 || s.radius > 0) {
-            return s
-        }
-    }
-    return {blur: 0, radius: 0, border: 0}
-}
 
-const getShadowParameters = (el, depth = 0) => {
-    if (!el || depth > 2) {
-        return {top: 0, right: 0, bottom: 0, left: 0}
-    }
-    const style = window.getComputedStyle(el)
+    let margins = {top: 0, right: 0, bottom: 0, left: 0}
     const shadow = style.boxShadow
     if (shadow && shadow !== 'none') {
         const values = shadow.match(/(-?[\d.]+)px/g)
         if (values && values.length >= 2) {
             const px = (v) => parseFloat(v) || 0
-            return __.ui.widgetManager.getShadowMargins(px(values[0]), px(values[1]), px(values[2]), px(values[3]))
+            margins = __.ui.widgetManager.getShadowMargins(px(values[0]), px(values[1]), px(values[2]), px(values[3]))
         }
     }
+
+    if (blur > 0 || radius > 0 || border > 0 || margins.top > 0 || margins.bottom > 0 || margins.left > 0 || margins.right > 0) {
+        return {blur, radius, border, margins}
+    }
+
     for (const child of el.children) {
-        const m = getShadowParameters(child, depth + 1)
-        if (m.top > 0 || m.bottom > 0 || m.right > 0 || m.left > 0) {
+        const m = getOverlayMetrics(child, depth + 1)
+        if (m.blur > 0 || m.radius > 0 || m.border > 0 || m.margins.top > 0 || m.margins.bottom > 0 || m.margins.left > 0 || m.margins.right > 0) {
             return m
         }
     }
-    return {top: 0, right: 0, bottom: 0, left: 0}
+
+    return {blur: 0, radius: 0, border: 0, margins: {top: 0, right: 0, bottom: 0, left: 0}}
 }
 
+/**
+ * Resolve the effective widget scale based on CSS transforms and layout.
+ * @param {HTMLElement} el
+ * @param {number|{x:number,y:number}} configScale
+ * @returns {{x:number,y:number}}
+ */
 const resolveWidgetScale = (el, configScale) => {
     const baseScaleX = typeof configScale === 'object' ? (configScale?.x ?? 1) : (configScale ?? 1)
     const baseScaleY = typeof configScale === 'object' ? (configScale?.y ?? baseScaleX) : (configScale ?? 1)
@@ -112,6 +134,9 @@ export const VideoRecordingScreenArea = memo(() => {
     const _cropZone = useRef(null)
     const _composer = useRef(null)
     const _pendingFinish = useRef(null)
+    const _overlaysRefreshRafId = useRef(null)
+    const _overlaysRefreshLast = useRef(0)
+    const _metricsCache = useRef(new Map())
     const [mountTimeoutOpen, setMountTimeoutOpen] = useState(false)
     const [mountTimeoutError, setMountTimeoutError] = useState({missing: [], timeoutMs: WIDGET_MOUNT_TIMEOUT})
     const [mountTimeoutAction, setMountTimeoutAction] = useState('record')
@@ -132,10 +157,87 @@ export const VideoRecordingScreenArea = memo(() => {
 
     const isValidCrop = Number.isFinite(crop.left) && crop.width > 0
 
+    // Dispose composer and release references.
     const disposeComposer = useCallback(() => {
         _composer.current?.dispose()
         _composer.current = null
     }, [])
+
+    // Stop live overlay refresh.
+    const stopOverlaysRefresh = useCallback(() => {
+        if (_overlaysRefreshRafId.current) {
+            cancelAnimationFrame(_overlaysRefreshRafId.current)
+            _overlaysRefreshRafId.current = null
+        }
+        _overlaysRefreshLast.current = 0
+        _metricsCache.current.clear()
+    }, [])
+
+    // Rebuild overlay list with pooled objects.
+    const buildComposerOverlays = useCallback((composer, cropRect, widgetKeys) => {
+        composer.beginUpdate()
+
+        const sortedWidgetKeys = (widgetKeys?.length ? widgetKeys : [...__.ui.widgetCache.getAll({widgetsBoard: VIDEO_WIDGETS_BOARD}).entries()]
+            .sort((a, b) => (a[1].zIndex || 0) - (b[1].zIndex || 0))
+            .map(entry => entry[0]))
+
+        for (const key of sortedWidgetKeys) {
+            const widgetEl = __.ui.widgetManager.getElementById(key)
+            const canvasEl = widgetEl?.querySelector('.lgs-widget-canvas')
+            if (canvasEl instanceof HTMLCanvasElement) {
+                const config = __.ui.widgetManager.getWidgetConfig(key)
+                const now = performance.now()
+                const cacheKey = key
+                const cached = _metricsCache.current.get(cacheKey)
+                const useCached = cached && (now - cached.time) < METRICS_CACHE_TTL_MS
+                const metrics = useCached ? cached.metrics : getOverlayMetrics(widgetEl)
+                if (!useCached) {
+                    _metricsCache.current.set(cacheKey, {time: now, metrics})
+                }
+                const {blur, radius, border, margins} = metrics
+                const canvasStyle = window.getComputedStyle(canvasEl)
+                const width = parseFloat(canvasStyle.width)
+                const height = parseFloat(canvasStyle.height)
+
+                composer.addOverlay(canvasEl, {
+                    x:             config.position.left - cropRect.left - margins.left,
+                    y:             config.position.top - cropRect.top - margins.top,
+                    w:             width,
+                    h:             height,
+                    contentWidth:  Math.max(0, width - (margins.left + margins.right)),
+                    contentHeight: Math.max(0, height - (margins.top + margins.bottom)),
+                    blur,
+                    radius,
+                    border,
+                    rotate:        config.rotate || 0,
+                    scale:         resolveWidgetScale(widgetEl, config.scale),
+                    shadowMargins: margins,
+                })
+            }
+        }
+
+        composer.endUpdate()
+    }, [])
+
+    // rAF-based refresh loop to avoid setInterval bursts.
+    const startOverlaysRefresh = useCallback((composer, cropRect) => {
+        stopOverlaysRefresh()
+        const tick = (time) => {
+            if (!_composer.current) {
+                _overlaysRefreshRafId.current = null
+                return
+            }
+            if (!_overlaysRefreshLast.current) {
+                _overlaysRefreshLast.current = time
+            }
+            if ((time - _overlaysRefreshLast.current) >= OVERLAYS_REFRESH_MS) {
+                _overlaysRefreshLast.current = time
+                buildComposerOverlays(composer, cropRect)
+            }
+            _overlaysRefreshRafId.current = requestAnimationFrame(tick)
+        }
+        _overlaysRefreshRafId.current = requestAnimationFrame(tick)
+    }, [buildComposerOverlays, stopOverlaysRefresh])
 
     const initializeRecorder = useCallback(async () => {
         $video.settings = {quality: $video.quality, fps: $video.fps}
@@ -151,6 +253,7 @@ export const VideoRecordingScreenArea = memo(() => {
                                    quality: ScreenMediaRecorder.QUALITY[$video.quality].value,
                                    filename:   APP_KEY,
                                    fps:        ScreenMediaRecorder.FPS[$video.fps],
+                                   timeslice: SOFT_TIMESLICE_MS,
                                    dimensions: {
                                        width: videoFrame.cropDimensions.width * __.device.dpr,
                                        height: videoFrame.cropDimensions.height * __.device.dpr,
@@ -162,43 +265,18 @@ export const VideoRecordingScreenArea = memo(() => {
 
         const {top: y, left: x, width, height} = videoFrame.cropDimensions
         disposeComposer()
+        stopOverlaysRefresh()
         const composer = new CanvasOverlayComposer(lgs.canvas, {
             clip: {x, y, width, height}, width, height,
+            fps: ScreenMediaRecorder.FPS[$video.fps],
             flushWebGLBuffer: () => lgs.scene.render(),
         })
         _composer.current = composer
 
-        // // Painter's Algorithm: Sort ASCENDING (Background to Foreground) for canvas drawing
-        const sortedWidgetKeys = [...__.ui.widgetCache.getAll({widgetsBoard: VIDEO_WIDGETS_BOARD}).entries()]
-            .sort((a, b) => (a[1].zIndex || 0) - (b[1].zIndex || 0))
-            .map(entry => entry[0])
-
-        for (const key of sortedWidgetKeys) {
-            const widgetEl = __.ui.widgetManager.getElementById(key)
-            const canvasEl = widgetEl?.querySelector('.lgs-widget-canvas')
-            if (canvasEl instanceof HTMLCanvasElement) {
-                const config = __.ui.widgetManager.getWidgetConfig(key)
-                const margins = getShadowParameters(widgetEl)
-                const styles = getStyles(widgetEl)
-
-                composer.addOverlay(canvasEl, {
-                    x:             config.position.left - crop.left - margins.left,
-                    y:             config.position.top - crop.top - margins.top,
-                    w:             parseFloat(window.getComputedStyle(canvasEl).width),
-                    h:             parseFloat(window.getComputedStyle(canvasEl).height),
-                    contentWidth:  Math.max(0, parseFloat(window.getComputedStyle(canvasEl).width) - (margins.left + margins.right)),
-                    contentHeight: Math.max(0, parseFloat(window.getComputedStyle(canvasEl).height) - (margins.top + margins.bottom)),
-                    blur:          styles.blur,
-                    radius:        styles.radius,
-                    border:        styles.border,
-                    rotate:        config.rotate || 0,
-                    scale:         resolveWidgetScale(widgetEl, config.scale),
-                    shadowMargins: margins,
-                })
-            }
-        }
+        buildComposerOverlays(composer, videoFrame.cropDimensions)
         __.recorder.setCanvas(composer.getCanvas())
-    }, [$video.quality, $video.fps, crop, maxDuration, maxSize, disposeComposer])
+        startOverlaysRefresh(composer, videoFrame.cropDimensions)
+    }, [$video.quality, $video.fps, maxDuration, maxSize, disposeComposer, stopOverlaysRefresh, buildComposerOverlays, startOverlaysRefresh])
 
     const handleVideoRecording = useCallback(async () => {
         try {
@@ -219,34 +297,11 @@ export const VideoRecordingScreenArea = memo(() => {
         const {top: y, left: x, width, height} = videoFrame.cropDimensions
         const composer = new CanvasOverlayComposer(lgs.canvas, {
             clip:             {x, y, width, height}, width, height,
+            fps: ScreenMediaRecorder.FPS[$video.fps],
             flushWebGLBuffer: () => lgs.scene.render(),
         })
 
-        // Painter's Algorithm: Sort ASCENDING for composer
-        const sortedWidgetKeys = [...__.ui.widgetCache.getAll({widgetsBoard: VIDEO_WIDGETS_BOARD}).entries()]
-            .sort((a, b) => (a[1].zIndex || 0) - (b[1].zIndex || 0))
-            .map(entry => entry[0])
-
-        for (const key of sortedWidgetKeys) {
-            const el = __.ui.widgetManager.getElementById(key)
-            const canvas = el?.querySelector('.lgs-widget-canvas')
-            if (canvas instanceof HTMLCanvasElement) {
-                const cfg = __.ui.widgetManager.getWidgetConfig(key)
-                const margins = getShadowParameters(el)
-                const styles = getStyles(el)
-
-                composer.addOverlay(canvas, {
-                    x:             cfg.position.left - x - margins.left,
-                    y:             cfg.position.top - y - margins.top,
-                    w:             parseFloat(window.getComputedStyle(canvas).width),
-                    h:             parseFloat(window.getComputedStyle(canvas).height),
-                    contentWidth:  Math.max(0, parseFloat(window.getComputedStyle(canvas).width) - (margins.left + margins.right)),
-                    contentHeight: Math.max(0, parseFloat(window.getComputedStyle(canvas).height) - (margins.top + margins.bottom)),
-                    blur:          styles.blur, radius: styles.radius, border: styles.border,
-                    rotate:        cfg.rotate || 0, scale: resolveWidgetScale(el, cfg.scale), shadowMargins: margins,
-                })
-            }
-        }
+        buildComposerOverlays(composer, videoFrame.cropDimensions)
 
         await initializeRecorder()
         try {
@@ -255,7 +310,7 @@ export const VideoRecordingScreenArea = memo(() => {
         finally {
             composer.dispose()
         }
-    }, [initializeRecorder])
+    }, [initializeRecorder, buildComposerOverlays])
 
     const waitingForAllWidgets = (widgets, onReady) => {
         if (!widgets?.length) {
@@ -327,24 +382,41 @@ export const VideoRecordingScreenArea = memo(() => {
     }, [handleVideoRecording, handlePhotoSnapshot, $video.preRecording, $video.snapshot])
 
     useEffect(() => {
-        const hStopped = () => disposeComposer()
+        const hStopped = () => {
+            disposeComposer()
+            stopOverlaysRefresh()
+        }
+        const hPaused = () => {
+            stopOverlaysRefresh()
+        }
+        const hResumed = () => {
+            if (_composer.current) {
+                startOverlaysRefresh(_composer.current, __.ui.widgetManager.getWidgetConfigByGroup(CROP_TOOLS_WIDGETS).find(c => c.id === VIDEO_CROP_ZONE)?.cropDimensions)
+            }
+        }
         __.recorder.addEventListener(ScreenMediaRecorder.events.STOP, hStopped)
         __.recorder.addEventListener(ScreenMediaRecorder.events.CANCEL, hStopped)
         __.recorder.addEventListener(ScreenMediaRecorder.events.FINALIZE, hStopped)
+        __.recorder.addEventListener(ScreenMediaRecorder.events.PAUSE, hPaused)
+        __.recorder.addEventListener(ScreenMediaRecorder.events.RESUME, hResumed)
         return () => {
             __.recorder.removeEventListener(ScreenMediaRecorder.events.STOP, hStopped)
             __.recorder.removeEventListener(ScreenMediaRecorder.events.CANCEL, hStopped)
             __.recorder.removeEventListener(ScreenMediaRecorder.events.FINALIZE, hStopped)
+            __.recorder.removeEventListener(ScreenMediaRecorder.events.PAUSE, hPaused)
+            __.recorder.removeEventListener(ScreenMediaRecorder.events.RESUME, hResumed)
         }
-    }, [disposeComposer])
+    }, [disposeComposer, stopOverlaysRefresh, startOverlaysRefresh])
 
     useEffect(() => {
         return () => {
             __.ui.widgetManager.disposeByGroup(VIDEO_TOOLS_WIDGETS, false)
             __.ui.widgetManager.disposeByGroup(CROP_TOOLS_WIDGETS, true)
             disposeComposer()
+            stopOverlaysRefresh()
+            _metricsCache.current.clear()
         }
-    }, [disposeComposer])
+    }, [disposeComposer, stopOverlaysRefresh])
 
     if (!isValidCrop) {
         return null
