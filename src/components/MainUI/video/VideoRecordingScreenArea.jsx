@@ -38,6 +38,19 @@ const OVERLAYS_REFRESH_MS = 250
 const METRICS_CACHE_TTL_MS = 750
 // Softer recorder timeslice to reduce INFO event overhead.
 const SOFT_TIMESLICE_MS = SECOND * 2
+// Adaptive quality sampling interval (in ms).
+const ADAPTIVE_QUALITY_SAMPLE_MS = 1000
+// Adaptive quality defaults.
+const ADAPTIVE_QUALITY_DEFAULTS = {
+    enabled:    false,
+    startIndex: 1, // medium
+    minIndex:   0,
+    maxIndex:   3,
+    overloadMs: 28,
+    coolMs:     16,
+    downHoldMs: 3000,
+    upHoldMs:   5000,
+}
 
 /**
  * Extract overlay metrics from DOM styles, with a shallow search on children.
@@ -130,13 +143,16 @@ const resolveWidgetScale = (el, configScale) => {
 export const VideoRecordingScreenArea = memo(() => {
     const $video = lgs.stores.ui.video
     const video = useSnapshot($video)
-    const {maxSize, maxDuration} = useSnapshot(lgs.settings.ui.video)
+    const {maxSize, maxDuration, adaptiveFps, adaptiveQuality} = useSnapshot(lgs.settings.ui.video)
     const _cropZone = useRef(null)
     const _composer = useRef(null)
     const _pendingFinish = useRef(null)
     const _overlaysRefreshRafId = useRef(null)
     const _overlaysRefreshLast = useRef(0)
     const _metricsCache = useRef(new Map())
+    const _adaptiveQualityTimer = useRef(null)
+    const _adaptiveQualityState = useRef({index: null, overloadSince: 0, coolSince: 0})
+    const _wakeLock = useRef(null)
     const [mountTimeoutOpen, setMountTimeoutOpen] = useState(false)
     const [mountTimeoutError, setMountTimeoutError] = useState({missing: [], timeoutMs: WIDGET_MOUNT_TIMEOUT})
     const [mountTimeoutAction, setMountTimeoutAction] = useState('record')
@@ -239,7 +255,113 @@ export const VideoRecordingScreenArea = memo(() => {
         _overlaysRefreshRafId.current = requestAnimationFrame(tick)
     }, [buildComposerOverlays, stopOverlaysRefresh])
 
+    const stopAdaptiveQuality = useCallback(() => {
+        if (_adaptiveQualityTimer.current) {
+            clearInterval(_adaptiveQualityTimer.current)
+            _adaptiveQualityTimer.current = null
+        }
+        _adaptiveQualityState.current = {index: null, overloadSince: 0, coolSince: 0}
+    }, [])
+
+    const requestWakeLock = useCallback(async () => {
+        try {
+            if (!('wakeLock' in navigator)) {
+                return
+            }
+            if (_wakeLock.current) {
+                return
+            }
+            _wakeLock.current = await navigator.wakeLock.request('screen')
+            _wakeLock.current.addEventListener('release', () => {
+                _wakeLock.current = null
+            })
+        }
+        catch (e) {
+            _wakeLock.current = null
+        }
+    }, [])
+
+    const releaseWakeLock = useCallback(async () => {
+        try {
+            await _wakeLock.current?.release?.()
+        }
+        catch (e) {
+        }
+        _wakeLock.current = null
+    }, [])
+
+    const startAdaptiveQuality = useCallback((composer) => {
+        stopAdaptiveQuality()
+        const config = {...ADAPTIVE_QUALITY_DEFAULTS, ...(typeof adaptiveQuality === 'object' ? adaptiveQuality : {})}
+        const enabled = (adaptiveQuality === true) ? true : config.enabled
+        if (!enabled) {
+            return
+        }
+        const startIndex = Math.min(config.maxIndex, Math.max(config.minIndex, config.startIndex))
+        if (_adaptiveQualityState.current.index == null) {
+            _adaptiveQualityState.current.index = startIndex
+            $video.quality = startIndex
+            __.recorder.setQualityIndex?.(startIndex)
+        }
+
+        _adaptiveQualityTimer.current = setInterval(() => {
+            if (!_composer.current) {
+                return
+            }
+            const {emaMs} = composer.getRenderStats?.() || {}
+            if (!emaMs) {
+                return
+            }
+            const now = performance.now()
+            if (emaMs > config.overloadMs) {
+                if (!_adaptiveQualityState.current.overloadSince) {
+                    _adaptiveQualityState.current.overloadSince = now
+                }
+                _adaptiveQualityState.current.coolSince = 0
+            }
+            else if (emaMs < config.coolMs) {
+                if (!_adaptiveQualityState.current.coolSince) {
+                    _adaptiveQualityState.current.coolSince = now
+                }
+                _adaptiveQualityState.current.overloadSince = 0
+            }
+            else {
+                _adaptiveQualityState.current.overloadSince = 0
+                _adaptiveQualityState.current.coolSince = 0
+            }
+
+            const currentIndex = _adaptiveQualityState.current.index ?? startIndex
+            if (_adaptiveQualityState.current.overloadSince &&
+                (now - _adaptiveQualityState.current.overloadSince) >= config.downHoldMs &&
+                currentIndex > config.minIndex) {
+                const next = currentIndex - 1
+                _adaptiveQualityState.current.index = next
+                _adaptiveQualityState.current.overloadSince = 0
+                $video.quality = next
+                __.recorder.setQualityIndex?.(next)
+                return
+            }
+
+            if (_adaptiveQualityState.current.coolSince &&
+                (now - _adaptiveQualityState.current.coolSince) >= config.upHoldMs &&
+                currentIndex < config.maxIndex) {
+                const next = currentIndex + 1
+                _adaptiveQualityState.current.index = next
+                _adaptiveQualityState.current.coolSince = 0
+                $video.quality = next
+                __.recorder.setQualityIndex?.(next)
+            }
+        }, ADAPTIVE_QUALITY_SAMPLE_MS)
+    }, [adaptiveQuality, stopAdaptiveQuality, $video])
+
     const initializeRecorder = useCallback(async () => {
+        const adaptiveConfig = {...ADAPTIVE_QUALITY_DEFAULTS, ...(typeof adaptiveQuality === 'object' ? adaptiveQuality : {})}
+        const adaptiveEnabled = (adaptiveQuality === true) ? true : adaptiveConfig.enabled
+        if (adaptiveEnabled) {
+            const startIndex = Math.min(adaptiveConfig.maxIndex, Math.max(adaptiveConfig.minIndex, adaptiveConfig.startIndex))
+            $video.quality = startIndex
+            _adaptiveQualityState.current.index = startIndex
+        }
         $video.settings = {quality: $video.quality, fps: $video.fps}
         const configs = __.ui.widgetManager.getWidgetConfigByGroup(CROP_TOOLS_WIDGETS)
         const videoFrame = configs.find(c => c.id === VIDEO_CROP_ZONE)
@@ -259,7 +381,12 @@ export const VideoRecordingScreenArea = memo(() => {
                                        height: videoFrame.cropDimensions.height * __.device.dpr,
                                    },
                                    ratio:      videoFrame.ratio.value,
-                                   metadata: {artist: lgs.servers.studio.name, date: new Date(), album: LGS_PROJECT},
+                                   metadata: {
+                                       artist:          lgs.servers.studio.name,
+                                       date:            new Date(),
+                                       album:           LGS_PROJECT,
+                                       adaptiveQuality: (adaptiveQuality === true) || (adaptiveQuality?.enabled === true),
+                                   },
                                    useWebGL:   true,
                                })
 
@@ -269,6 +396,7 @@ export const VideoRecordingScreenArea = memo(() => {
         const composer = new CanvasOverlayComposer(lgs.canvas, {
             clip: {x, y, width, height}, width, height,
             fps: ScreenMediaRecorder.FPS[$video.fps],
+            adaptiveFps,
             flushWebGLBuffer: () => lgs.scene.render(),
         })
         _composer.current = composer
@@ -276,7 +404,8 @@ export const VideoRecordingScreenArea = memo(() => {
         buildComposerOverlays(composer, videoFrame.cropDimensions)
         __.recorder.setCanvas(composer.getCanvas())
         startOverlaysRefresh(composer, videoFrame.cropDimensions)
-    }, [$video.quality, $video.fps, maxDuration, maxSize, disposeComposer, stopOverlaysRefresh, buildComposerOverlays, startOverlaysRefresh])
+        startAdaptiveQuality(composer)
+    }, [$video.quality, $video.fps, maxDuration, maxSize, adaptiveQuality, adaptiveFps, disposeComposer, stopOverlaysRefresh, buildComposerOverlays, startOverlaysRefresh, startAdaptiveQuality, $video])
 
     const handleVideoRecording = useCallback(async () => {
         try {
@@ -298,6 +427,7 @@ export const VideoRecordingScreenArea = memo(() => {
         const composer = new CanvasOverlayComposer(lgs.canvas, {
             clip:             {x, y, width, height}, width, height,
             fps: ScreenMediaRecorder.FPS[$video.fps],
+            adaptiveFps,
             flushWebGLBuffer: () => lgs.scene.render(),
         })
 
@@ -309,8 +439,9 @@ export const VideoRecordingScreenArea = memo(() => {
         }
         finally {
             composer.dispose()
+            stopAdaptiveQuality()
         }
-    }, [initializeRecorder, buildComposerOverlays])
+    }, [initializeRecorder, buildComposerOverlays, stopAdaptiveQuality])
 
     const waitingForAllWidgets = (widgets, onReady) => {
         if (!widgets?.length) {
@@ -385,28 +516,46 @@ export const VideoRecordingScreenArea = memo(() => {
         const hStopped = () => {
             disposeComposer()
             stopOverlaysRefresh()
+            stopAdaptiveQuality()
+            releaseWakeLock()
         }
         const hPaused = () => {
             stopOverlaysRefresh()
+            stopAdaptiveQuality()
+            releaseWakeLock()
         }
         const hResumed = () => {
             if (_composer.current) {
                 startOverlaysRefresh(_composer.current, __.ui.widgetManager.getWidgetConfigByGroup(CROP_TOOLS_WIDGETS).find(c => c.id === VIDEO_CROP_ZONE)?.cropDimensions)
+                startAdaptiveQuality(_composer.current)
             }
+            requestWakeLock()
+        }
+        const hStarted = () => {
+            requestWakeLock()
         }
         __.recorder.addEventListener(ScreenMediaRecorder.events.STOP, hStopped)
         __.recorder.addEventListener(ScreenMediaRecorder.events.CANCEL, hStopped)
         __.recorder.addEventListener(ScreenMediaRecorder.events.FINALIZE, hStopped)
         __.recorder.addEventListener(ScreenMediaRecorder.events.PAUSE, hPaused)
         __.recorder.addEventListener(ScreenMediaRecorder.events.RESUME, hResumed)
+        __.recorder.addEventListener(ScreenMediaRecorder.events.START, hStarted)
+        const handleVisibility = () => {
+            if (document.visibilityState === 'visible' && __.recorder.isRecording?.()) {
+                requestWakeLock()
+            }
+        }
+        document.addEventListener('visibilitychange', handleVisibility)
         return () => {
             __.recorder.removeEventListener(ScreenMediaRecorder.events.STOP, hStopped)
             __.recorder.removeEventListener(ScreenMediaRecorder.events.CANCEL, hStopped)
             __.recorder.removeEventListener(ScreenMediaRecorder.events.FINALIZE, hStopped)
             __.recorder.removeEventListener(ScreenMediaRecorder.events.PAUSE, hPaused)
             __.recorder.removeEventListener(ScreenMediaRecorder.events.RESUME, hResumed)
+            __.recorder.removeEventListener(ScreenMediaRecorder.events.START, hStarted)
+            document.removeEventListener('visibilitychange', handleVisibility)
         }
-    }, [disposeComposer, stopOverlaysRefresh, startOverlaysRefresh])
+    }, [disposeComposer, stopOverlaysRefresh, startOverlaysRefresh, stopAdaptiveQuality, startAdaptiveQuality, requestWakeLock, releaseWakeLock])
 
     useEffect(() => {
         return () => {
@@ -414,9 +563,11 @@ export const VideoRecordingScreenArea = memo(() => {
             __.ui.widgetManager.disposeByGroup(CROP_TOOLS_WIDGETS, true)
             disposeComposer()
             stopOverlaysRefresh()
+            stopAdaptiveQuality()
+            releaseWakeLock()
             _metricsCache.current.clear()
         }
-    }, [disposeComposer, stopOverlaysRefresh])
+    }, [disposeComposer, stopOverlaysRefresh, stopAdaptiveQuality, releaseWakeLock])
 
     if (!isValidCrop) {
         return null

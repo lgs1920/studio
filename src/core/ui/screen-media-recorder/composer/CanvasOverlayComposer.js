@@ -40,10 +40,19 @@ export class CanvasOverlayComposer {
     #raf = null
     #lastFrameTime = 0
     #minFrameMs = 0
+    #fixedMinFrameMs = 0
     #dpr = window.devicePixelRatio || 1
     #sourceDpr = 1
     #flushWebGLBuffer = null
     #blurBufferDirty = true
+    #running = false
+    #adaptiveEnabled = false
+    #adaptiveMinFps = 12
+    #adaptiveMaxFps = 30
+    #adaptiveTargetUtil = 0.85
+    #adaptiveEmaMs = 0
+    #adaptiveAlpha = 0.2
+    #lastRenderMs = 0
 
     // Cached source rect to avoid allocations inside the render loop.
     #srcRect = {x: 0, y: 0, w: 0, h: 0}
@@ -55,6 +64,11 @@ export class CanvasOverlayComposer {
      * @param {number} [options.width=1920] - Output width in CSS pixels.
      * @param {number} [options.height=1080] - Output height in CSS pixels.
      * @param {number} [options.fps=0] - Target FPS for composition (0 = no throttle).
+     * @param {Object|boolean} [options.adaptiveFps=false] - Enable adaptive FPS.
+     * @param {boolean} [options.adaptiveFps.enabled=true]
+     * @param {number} [options.adaptiveFps.minFps=12]
+     * @param {number} [options.adaptiveFps.maxFps=30]
+     * @param {number} [options.adaptiveFps.targetUtil=0.85] - Target render utilization (0..1).
      * @param {Function|null} [options.flushWebGLBuffer=null] - Optional callback to flush a WebGL scene.
      */
     constructor(sourceCanvas, options = {}) {
@@ -69,6 +83,7 @@ export class CanvasOverlayComposer {
                   width = 1920,
                   height = 1080,
                   fps = 0,
+                  adaptiveFps = false,
                   flushWebGLBuffer = null,
               } = options
 
@@ -76,7 +91,9 @@ export class CanvasOverlayComposer {
         this.#outW = width
         this.#outH = height
         this.#minFrameMs = (typeof fps === 'number' && fps > 0) ? (1000 / fps) : 0
+        this.#fixedMinFrameMs = this.#minFrameMs
         this.#flushWebGLBuffer = typeof flushWebGLBuffer === 'function' ? flushWebGLBuffer : null
+        this.setAdaptiveFps(adaptiveFps)
 
         this.#outputCanvas = document.createElement('canvas')
         this.#ctx = this.#outputCanvas.getContext('2d', {alpha: false})
@@ -91,6 +108,7 @@ export class CanvasOverlayComposer {
         this.#updateSourceDpr()
         this.#computeSourceRect()
         this.#resizeOutputCanvas()
+        this.#running = true
         this.#loop()
     }
 
@@ -150,7 +168,30 @@ export class CanvasOverlayComposer {
      * @param {number} fps
      */
     setFps = (fps = 0) => {
-        this.#minFrameMs = (typeof fps === 'number' && fps > 0) ? (1000 / fps) : 0
+        this.#fixedMinFrameMs = (typeof fps === 'number' && fps > 0) ? (1000 / fps) : 0
+        if (!this.#adaptiveEnabled) {
+            this.#minFrameMs = this.#fixedMinFrameMs
+        }
+    }
+
+    /**
+     * Enable/disable adaptive FPS.
+     * @param {Object|boolean} adaptive
+     */
+    setAdaptiveFps = (adaptive = false) => {
+        if (adaptive === false) {
+            this.#adaptiveEnabled = false
+            this.#adaptiveEmaMs = 0
+            this.#minFrameMs = this.#fixedMinFrameMs
+            return
+        }
+        const options = adaptive === true ? {} : adaptive
+        this.#adaptiveEnabled = options.enabled !== false
+        this.#adaptiveMinFps = Math.max(1, Math.floor(options.minFps ?? this.#adaptiveMinFps))
+        this.#adaptiveMaxFps = Math.max(this.#adaptiveMinFps, Math.floor(options.maxFps ?? this.#adaptiveMaxFps))
+        this.#adaptiveTargetUtil = Math.min(0.95, Math.max(0.5, options.targetUtil ?? this.#adaptiveTargetUtil))
+        this.#adaptiveEmaMs = 0
+        this.#minFrameMs = 1000 / this.#adaptiveMaxFps
     }
 
     #traceRoundedRect(ctx, x, y, w, h, r) {
@@ -267,6 +308,7 @@ export class CanvasOverlayComposer {
      * Draw order: background -> source -> overlay blur -> overlay content.
      */
     #draw = () => {
+        const start = performance.now()
         this.#flushWebGLBuffer?.()
 
         const ctx = this.#ctx
@@ -332,11 +374,39 @@ export class CanvasOverlayComposer {
             ctx.restore()
             this.#blurBufferDirty = true
         }
+
+        const renderMs = performance.now() - start
+        this.#lastRenderMs = renderMs
+        if (this.#adaptiveEmaMs === 0) {
+            this.#adaptiveEmaMs = renderMs
+        }
+        else {
+            this.#adaptiveEmaMs = (renderMs * this.#adaptiveAlpha) + (this.#adaptiveEmaMs * (1 - this.#adaptiveAlpha))
+        }
+        if (this.#adaptiveEnabled) {
+            const targetBudgetMs = this.#adaptiveEmaMs / this.#adaptiveTargetUtil
+            const desiredFps = Math.max(this.#adaptiveMinFps, Math.min(this.#adaptiveMaxFps, 1000 / targetBudgetMs))
+            this.#minFrameMs = 1000 / desiredFps
+        }
     }
+
+    /**
+     * @returns {{lastMs:number, emaMs:number}}
+     */
+    getRenderStats = () => ({
+        lastMs: this.#lastRenderMs,
+        emaMs:  this.#adaptiveEmaMs,
+    })
 
     /** Main rAF loop with optional FPS throttling. */
     #loop = () => {
+        if (!this.#running) {
+            return
+        }
         this.#raf = requestAnimationFrame((time) => {
+            if (!this.#running) {
+                return
+            }
             if (!this.#minFrameMs || (time - this.#lastFrameTime) >= this.#minFrameMs) {
                 this.#lastFrameTime = time
                 this.#draw()
@@ -347,10 +417,24 @@ export class CanvasOverlayComposer {
 
     /** Stop rendering and release references. */
     dispose = () => {
+        this.#running = false
         if (this.#raf) {
             cancelAnimationFrame(this.#raf)
         }
         this.#raf = null
+        if (this.#outputCanvas) {
+            this.#outputCanvas.width = 0
+            this.#outputCanvas.height = 0
+        }
+        if (this.#blurCanvas) {
+            this.#blurCanvas.width = 0
+            this.#blurCanvas.height = 0
+        }
+        this.#ctx = null
+        this.#blurCtx = null
+        this.#sourceCanvas = null
+        this.#outputCanvas = null
+        this.#blurCanvas = null
         this.#overlays = []
         this.#overlaysCount = 0
         this.#flushWebGLBuffer = null
