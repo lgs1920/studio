@@ -1,204 +1,244 @@
-# VideoRecorder & CanvasOverlayComposer
-
-**Système complet d’enregistrement vidéo en temps réel pour applications web.**
-
-Permet d’enregistrer :
-
-- Un **canvas WebGL** plein écran avec **zone de clipping définie**
-- **Plusieurs canvas d’overlay** positionnés en `top`, `left`, `width`, `height` **relatifs à la fenêtre**
-- **Canvas dynamiques** (ex: `OffscreenCanvas` mis à jour à intervalle)
-- Sortie en **MP4 (VP9)** avec métadonnées, qualité configurable, limites de durée/taille
-
+---
+title: CanvasOverlayComposer
 ---
 
-## Fonctionnalités
+# CanvasOverlayComposer — Detailed Guide
 
-- Clipping précis du canvas principal
-- Superposition intelligente des overlays (UI, chat, timer, webcam)
-- Conversion automatique des coordonnées `window` → zone de clipping
-- Support `OffscreenCanvas` et mises à jour fréquentes
-- Enregistrement fluide via `mediabunny`
-- Événements : `start`, `stop`, `info`, `error`, `download`, `pause`, `resume`
-- Pause/reprise avec calcul exact de durée
-- Limites automatiques (durée, taille)
-- Téléchargement local ou File System API
-- UI intégrée avec **Shoelace** + **FontAwesome**
-- Singleton, EventTarget, nettoyage complet via `dispose()`
+This document explains how `CanvasOverlayComposer` works, why it exists, and how it is wired into the recording flow. It
+is intentionally long and explicit so you can maintain it without re-reading the entire code.
 
----
+## Overview
 
-## Dépendances
+`CanvasOverlayComposer` is a high‑performance compositor used for recording:
 
-```bash
-bun add mediabunny luxon
-Bun est le runtime recommandé
+- It renders a **source canvas** (the main WebGL/scene output).
+- It draws **overlay canvases** (widgets) on top.
+- It optionally applies a **backdrop blur** inside rounded rectangles.
+- It produces a **single output canvas** for the recorder.
 
-Structure du projet
-textsrc/
-├── VideoRecorder.js           # Enregistrement MP4 + événements
-├── CanvasOverlayComposer.js   # Composition WebGL + overlays
-├── index.html                 # Interface Shoelace
-└── main.js                    # Démarrage
+The implementation is tuned for:
 
-Utilisation
-1. Initialiser l’enregistreur
-jsimport { VideoRecorder, QUALITY_HIGH } from './VideoRecorder.js'
+- Low GC pressure (object pooling + precomputed constants)
+- Stable performance (FPS throttling)
+- Correct compositing in screen‑recording context
 
-const recorder = new VideoRecorder()
+## Core Data Flow
 
-recorder.initialize({
-    fps: 30,
-    quality: QUALITY_HIGH,
-    maxDuration: 60_000, // 60s
-    maxSize: 500 * 1024 * 1024, // 500 Mo
-    metadata: { artist: 'LGS1920', date: new Date() }
+1. **Source canvas** is drawn into the output canvas.
+2. **Backdrop blur** is applied per overlay:
+    - A rounded rect clip is created in overlay space.
+    - The current output buffer is blurred and drawn inside the clip.
+3. **Overlay content** is drawn on top.
+
+The output canvas becomes the recording input (`ScreenMediaRecorder.setCanvas()`).
+
+## Key Concepts
+
+### 1) Output Canvas vs. Source Canvas
+
+- **Source canvas**: the original WebGL/scene canvas (`lgs.canvas`).
+- **Output canvas**: a new 2D canvas owned by `CanvasOverlayComposer`.
+- Only the output is passed to the recorder.
+
+### 2) Backdrop Blur
+
+The blur is a *post‑composition* effect:
+
+1. We draw the **current output** into an offscreen buffer.
+2. We blur that buffer.
+3. We draw the blurred buffer **inside a rounded rect clip**.
+
+This mimics a CSS `backdrop-filter` but is performed manually in the compositor.
+
+Important behavior:
+
+- The blur **is clipped by rounded corners**, not by actual overlay alpha.
+- If you use a semi‑transparent background, the blur is still visible in the clip area.
+- This is the same behavior as a plain rounded mask, not a per‑pixel alpha mask.
+
+### 3) Overlay Pooling
+
+`addOverlay()` reuses objects instead of allocating new ones:
+
+- `beginUpdate()` resets the *active* overlay count.
+- `addOverlay()` fills a pooled object at index `N`.
+- `endUpdate()` is a no‑op but keeps the API explicit.
+
+This avoids GC spikes when overlays are updated repeatedly.
+
+### 4) FPS Throttling
+
+The composer can throttle to a target FPS:
+
+- `fps = 0` → render every `requestAnimationFrame`.
+- `fps = 30` → render at most every 33.33 ms.
+
+This prevents composing more frames than the encoder can consume.
+
+## Public API
+
+### Constructor
+
+```js
+const composer = new CanvasOverlayComposer(sourceCanvas, {
+    clip:             {x, y, width, height},
+    width:            1920,
+    height:           1080,
+    fps:              30,
+    flushWebGLBuffer: () => lgs.scene.render()
 })
-2. Créer le compositeur
-jsimport { CanvasOverlayComposer } from './CanvasOverlayComposer.js'
+```
 
-const webglCanvas = document.getElementById('webgl')
+Options:
 
-const composer = new CanvasOverlayComposer(
-    webglCanvas,
-    { x: 320, y: 180, width: 1280, height: 720 }, // zone de clipping
-    1280, 720 // dimensions finales
-)
+- `clip`: crop region (CSS pixels) inside the source canvas.
+- `width`, `height`: output dimensions (CSS pixels).
+- `fps`: target composition FPS.
+- `flushWebGLBuffer`: optional callback to flush WebGL before 2D draw.
 
-// Ajouter des overlays
-composer.addOverlay(document.getElementById('timer'), {
-    top: 50, left: 100, width: 200, height: 60
+### beginUpdate / endUpdate
+
+```js
+composer.beginUpdate()
+// addOverlay calls...
+composer.endUpdate()
+```
+
+Use this pair every time you rebuild overlays.
+
+### addOverlay
+
+```js
+composer.addOverlay(canvasEl, {
+    x, y, w, h,
+    contentWidth, contentHeight,
+    blur:          6,
+    radius:        12,
+    rotate:        0,
+    scale:         1,
+    zIndex:        5,
+    shadowMargins: {top: 4, right: 4, bottom: 6, left: 4}
 })
+```
 
-composer.addOverlay(document.getElementById('chat'), {
-    top: 600, left: 900, width: 350, height: 400
-})
-3. Lancer l’enregistrement
-jsrecorder.setSource([composer.getCanvas()])
-recorder.start()
+Notes:
 
-Événements
-jsrecorder.addEventListener('video/start', () => console.log('Démarré'))
-recorder.addEventListener('video/info', e => updateProgress(e.detail))
-recorder.addEventListener('video/stop', async e => {
-    await recorder.download({ filename: 'studio-recording', type: 'local-filesystem' })
-})
-recorder.addEventListener('video/error', e => console.error(e.detail.error))
+- `contentWidth/Height` should exclude shadow margins.
+- `blur` and `radius` are in CSS pixels.
+- `scale` can be a number or `{x, y}`.
 
-UI Exemple (Shoelace + FontAwesome)
-html<sl-button id="recordBtn" variant="primary">
-    <fa-icon icon="fas-circle" slot="prefix"></fa-icon>
-    Record
-</sl-button>
+### setFps
 
-<sl-progress-bar id="progress" value="0"></sl-progress-bar>
-jsimport { fasCircle, fasStop } from '@fortawesome/pro-regular-svg-icons'
+```js
+composer.setFps(30)
+```
 
-const btn = document.getElementById('recordBtn')
-const progress = document.getElementById('progress')
+Updates the throttle target at runtime.
 
-let recording = false
+### getCanvas
 
-btn.addEventListener('click', () => {
-    if (recording) {
-        recorder.stop()
-        btn.innerHTML = '<fa-icon icon="fas-circle" slot="prefix"></fa-icon> Record'
-        btn.variant = 'primary'
-    } else {
-        recorder.start()
-        btn.innerHTML = '<fa-icon icon="fas-stop" slot="prefix"></fa-icon> Stop'
-        btn.variant = 'danger'
-    }
-    recording = !recording
-})
+```js
+const out = composer.getCanvas()
+recorder.setCanvas(out)
+```
 
-recorder.addEventListener('video/info', e => {
-    progress.value = (e.detail.duration / 60000) * 100
-})
+Returns the output canvas used by the recorder.
 
-API Résumé
-VideoRecorder
+### dispose
 
+Stops the rAF loop and releases references.
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-MéthodeDescriptioninitialize(options)Configure FPS, qualité, limitessetSource([canvas])Définit la source (1 seul canvas)start()Démarrepause() / resume()Contrôlestop()Finalise → Blobcancel()Annule sans fichierdownload(options)Local / File Systemdispose()Nettoie tout
-CanvasOverlayComposer
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-MéthodeDescriptionaddOverlay(canvas, {top,left,width,height})Ajoute un overlayremoveOverlay(canvas)SupprimegetCanvas()Canvas finaldispose()Nettoie
-
-Performances
-
-1 seul canvas final → optimal pour mediabunny
-requestAnimationFrame → fluide
-devicePixelRatio géré
-Zéro fuite mémoire avec dispose()
-
-
-Nettoyage
-jsrecorder.dispose()
+```js
 composer.dispose()
+```
 
-Licence
-© 2025 LGS1920 – Tous droits réservés
-text---
+## How It Is Used in Recording
+
+In `VideoRecordingScreenArea.jsx`:
+
+- The recorder is initialized with:
+    - `fps` from user settings
+    - `timeslice` (softened to reduce event overhead)
+- The composer is created once per record/snapshot.
+- Overlays are rebuilt on a **rAF‑controlled timer** (every `OVERLAYS_REFRESH_MS`).
+- Overlay metrics (blur/radius/shadow) are cached for `METRICS_CACHE_TTL_MS`.
+
+This keeps the overlay list fresh without constant allocations.
+
+## Handling CSS Variables for Blur
+
+`getOverlayMetrics()` supports CSS variables:
+
+```css
+.widget {
+    backdrop-filter: blur(var(--lgs-blur-s));
+}
+```
+
+The code resolves `--lgs-blur-s` via `getComputedStyle(el)`.
+
+## Example: Basic Recording Setup
+
+```js
+const composer = new CanvasOverlayComposer(lgs.canvas, {
+    clip:             {x, y, width, height},
+    width,
+    height,
+    fps:              ScreenMediaRecorder.FPS[$video.fps],
+    flushWebGLBuffer: () => lgs.scene.render()
+})
+
+composer.beginUpdate()
+widgets.forEach(widget => {
+    composer.addOverlay(widget.canvas, widget.options)
+})
+composer.endUpdate()
+
+recorder.setCanvas(composer.getCanvas())
+recorder.startVideo()
+```
+
+## Example: Live Overlay Refresh
+
+```js
+const refresh = () => {
+    composer.beginUpdate()
+    widgets.forEach(widget => composer.addOverlay(widget.canvas, widget.options))
+    composer.endUpdate()
+}
+
+let last = 0
+const tick = (t) => {
+    if (t - last > 250) {
+        last = t
+        refresh()
+    }
+    requestAnimationFrame(tick)
+}
+
+requestAnimationFrame(tick)
+```
+
+This refreshes overlay positions/sizes without GC spikes.
+
+## Known Limitations
+
+- Backdrop blur is **clipped to a rounded rect**, not to per‑pixel alpha.
+- If your widget uses a semi‑transparent background, the blur is still visible
+  inside the rounded rect even in fully transparent sub‑areas.
+- This matches the current implementation and keeps the blur fast.
+
+## Tips
+
+- If a widget does not blur, check:
+    - `backdrop-filter` resolves to a numeric value (CSS variables are supported).
+    - The overlay element used for metrics actually has the blur style.
+- If performance drops:
+    - Increase `OVERLAYS_REFRESH_MS`.
+    - Increase `METRICS_CACHE_TTL_MS`.
+    - Lower composition FPS via `setFps()`.
+
+---
+
+If you need a version that masks blur by actual alpha, it will require a separate
+alpha mask render pass (more expensive). The current version favors stability.

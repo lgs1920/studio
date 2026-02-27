@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-26
- * Last modified: 2026-02-26
+ * Created on: 2026-02-27
+ * Last modified: 2026-02-27
  *
  *
  * Copyright © 2026 LGS1920
@@ -18,25 +18,58 @@ import { LGS_WIDGET_SCALE_EFFECTIVE } from '@Core/constants'
 
 /**
  * CanvasOverlayComposer
- * Manages complex multi-layer composition including real-time backdrop blur effects.
- * It synchronizes a source canvas (usually WebGL) with multiple 2D overlays.
+ * High-performance compositor for recording. It draws a main source canvas and
+ * optional overlay canvases, including a clipped backdrop blur region.
+ *
+ * Design goals:
+ * - Keep GC pressure low by reusing overlay objects.
+ * - Avoid redundant work by precomputing constants per overlay.
+ * - Allow FPS throttling so composition matches recording FPS.
  */
 export class CanvasOverlayComposer {
     #sourceCanvas
     #outputCanvas
     #ctx
+    #blurCanvas
+    #blurCtx
     #outW = 1920
     #outH = 1080
     #clip = null
     #overlays = []
+    #overlaysCount = 0
     #raf = null
+    #lastFrameTime = 0
+    #minFrameMs = 0
+    #fixedMinFrameMs = 0
     #dpr = window.devicePixelRatio || 1
     #sourceDpr = 1
     #flushWebGLBuffer = null
+    #blurBufferDirty = true
+    #running = false
+    #adaptiveEnabled = false
+    #adaptiveMinFps = 12
+    #adaptiveMaxFps = 30
+    #adaptiveTargetUtil = 0.85
+    #adaptiveEmaMs = 0
+    #adaptiveAlpha = 0.2
+    #lastRenderMs = 0
+
+    // Cached source rect to avoid allocations inside the render loop.
+    #srcRect = {x: 0, y: 0, w: 0, h: 0}
 
     /**
-     * @param {HTMLCanvasElement} sourceCanvas - The primary source canvas to be composed.
-     * @param {Object} options - Configuration for clipping, dimensions, and buffer management.
+     * @param {HTMLCanvasElement} sourceCanvas - Source canvas to composite.
+     * @param {Object} options
+     * @param {{x:number,y:number,width:number,height:number}|null} [options.clip=null] - Crop region in CSS pixels.
+     * @param {number} [options.width=1920] - Output width in CSS pixels.
+     * @param {number} [options.height=1080] - Output height in CSS pixels.
+     * @param {number} [options.fps=0] - Target FPS for composition (0 = no throttle).
+     * @param {Object|boolean} [options.adaptiveFps=false] - Enable adaptive FPS.
+     * @param {boolean} [options.adaptiveFps.enabled=true]
+     * @param {number} [options.adaptiveFps.minFps=12]
+     * @param {number} [options.adaptiveFps.maxFps=30]
+     * @param {number} [options.adaptiveFps.targetUtil=0.85] - Target render utilization (0..1).
+     * @param {Function|null} [options.flushWebGLBuffer=null] - Optional callback to flush a WebGL scene.
      */
     constructor(sourceCanvas, options = {}) {
         if (!(sourceCanvas instanceof HTMLCanvasElement)) {
@@ -49,37 +82,56 @@ export class CanvasOverlayComposer {
                   clip = null,
                   width = 1920,
                   height = 1080,
+                  fps = 0,
+                  adaptiveFps = false,
                   flushWebGLBuffer = null,
               } = options
 
         this.#clip = clip ? {...clip} : null
         this.#outW = width
         this.#outH = height
+        this.#minFrameMs = (typeof fps === 'number' && fps > 0) ? (1000 / fps) : 0
+        this.#fixedMinFrameMs = this.#minFrameMs
         this.#flushWebGLBuffer = typeof flushWebGLBuffer === 'function' ? flushWebGLBuffer : null
+        this.setAdaptiveFps(adaptiveFps)
 
         this.#outputCanvas = document.createElement('canvas')
         this.#ctx = this.#outputCanvas.getContext('2d', {alpha: false})
+        this.#blurCanvas = document.createElement('canvas')
+        this.#blurCtx = this.#blurCanvas.getContext('2d', {alpha: false})
 
-        // High-quality interpolation for scaled overlays
         this.#ctx.imageSmoothingEnabled = true
         this.#ctx.imageSmoothingQuality = 'high'
+        this.#ctx.fillStyle = '#000000'
+        this.#ctx.fillStyle = '#000000'
 
         this.#updateSourceDpr()
+        this.#computeSourceRect()
         this.#resizeOutputCanvas()
+        this.#running = true
         this.#loop()
     }
 
-    /**
-     * Calculates the device pixel ratio of the source canvas based on its layout size.
-     */
     #updateSourceDpr = () => {
         const rect = this.#sourceCanvas.getBoundingClientRect()
         this.#sourceDpr = rect.width > 0 ? this.#sourceCanvas.width / rect.width : 1
     }
 
-    /**
-     * Updates physical canvas dimensions to match the display size multiplied by DPR.
-     */
+    #computeSourceRect = () => {
+        if (this.#clip) {
+            this.#srcRect.x = this.#clip.x * this.#sourceDpr
+            this.#srcRect.y = this.#clip.y * this.#sourceDpr
+            this.#srcRect.w = this.#clip.width * this.#sourceDpr
+            this.#srcRect.h = this.#clip.height * this.#sourceDpr
+        }
+        else {
+            this.#srcRect.x = 0
+            this.#srcRect.y = 0
+            this.#srcRect.w = this.#sourceCanvas.width
+            this.#srcRect.h = this.#sourceCanvas.height
+        }
+    }
+
     #resizeOutputCanvas = () => {
         const physicalW = Math.round(this.#outW * this.#dpr)
         const physicalH = Math.round(this.#outH * this.#dpr)
@@ -89,19 +141,59 @@ export class CanvasOverlayComposer {
         this.#outputCanvas.style.width = `${this.#outW}px`
         this.#outputCanvas.style.height = `${this.#outH}px`
 
-        // Apply global scale to match logical coordinate system
+        this.#blurCanvas.width = physicalW
+        this.#blurCanvas.height = physicalH
+
         this.#ctx.setTransform(this.#dpr, 0, 0, this.#dpr, 0, 0)
+        this.#blurCtx.setTransform(1, 0, 0, 1, 0, 0)
     }
 
-    /**
-     * Accessor for the resulting composed canvas.
-     */
+    /** @returns {HTMLCanvasElement} Output canvas used for recording. */
     getCanvas = () => this.#outputCanvas
 
     /**
-     * Generates a rounded rectangle path.
-     * Used for clipping regions and backdrop-blur boundaries.
+     * Start an overlay update batch. Use with addOverlay(), then endUpdate().
+     * This resets the active overlay count while keeping pooled objects alive.
      */
+    beginUpdate = () => {
+        this.#overlaysCount = 0
+    }
+
+    /** End an overlay update batch. Kept for API clarity. */
+    endUpdate = () => {
+    }
+
+    /**
+     * Set composition FPS. If set to 0, renders every rAF tick.
+     * @param {number} fps
+     */
+    setFps = (fps = 0) => {
+        this.#fixedMinFrameMs = (typeof fps === 'number' && fps > 0) ? (1000 / fps) : 0
+        if (!this.#adaptiveEnabled) {
+            this.#minFrameMs = this.#fixedMinFrameMs
+        }
+    }
+
+    /**
+     * Enable/disable adaptive FPS.
+     * @param {Object|boolean} adaptive
+     */
+    setAdaptiveFps = (adaptive = false) => {
+        if (adaptive === false) {
+            this.#adaptiveEnabled = false
+            this.#adaptiveEmaMs = 0
+            this.#minFrameMs = this.#fixedMinFrameMs
+            return
+        }
+        const options = adaptive === true ? {} : adaptive
+        this.#adaptiveEnabled = options.enabled !== false
+        this.#adaptiveMinFps = Math.max(1, Math.floor(options.minFps ?? this.#adaptiveMinFps))
+        this.#adaptiveMaxFps = Math.max(this.#adaptiveMinFps, Math.floor(options.maxFps ?? this.#adaptiveMaxFps))
+        this.#adaptiveTargetUtil = Math.min(0.95, Math.max(0.5, options.targetUtil ?? this.#adaptiveTargetUtil))
+        this.#adaptiveEmaMs = 0
+        this.#minFrameMs = 1000 / this.#adaptiveMaxFps
+    }
+
     #traceRoundedRect(ctx, x, y, w, h, r) {
         ctx.beginPath()
         const radius = Math.max(0, Math.min(r, w / 2, h / 2))
@@ -120,12 +212,26 @@ export class CanvasOverlayComposer {
     }
 
     /**
-     * Adds an overlay to the composition stack.
-     * Handles both absolute positioning and relative positioning based on the source canvas.
+     * Add an overlay. Overlay objects are pooled to reduce allocations.
+     * @param {HTMLCanvasElement|Function} element - Canvas or getter returning a canvas.
+     * @param {Object} options
+     * @param {number} [options.x] - Left in CSS pixels relative to clip.
+     * @param {number} [options.y] - Top in CSS pixels relative to clip.
+     * @param {number} [options.w] - Width in CSS pixels.
+     * @param {number} [options.h] - Height in CSS pixels.
+     * @param {number} [options.contentWidth] - Content width (excluding shadows).
+     * @param {number} [options.contentHeight] - Content height (excluding shadows).
+     * @param {number} [options.blur=0] - Backdrop blur radius in CSS pixels.
+     * @param {number} [options.radius=0] - Corner radius in CSS pixels.
+     * @param {number} [options.rotate=0] - Rotation in degrees.
+     * @param {number|{x:number,y:number}} [options.scale=1] - Scale factor.
+     * @param {number} [options.zIndex=0] - Z order.
+     * @param {{top:number,right:number,bottom:number,left:number}} [options.shadowMargins]
      */
     addOverlay = (element, options = {}) => {
-        const el = typeof element === 'function' ? element() : element
-        if (!el) {
+        const elGetter = typeof element === 'function' ? element : () => element
+        const initialEl = elGetter()
+        if (!initialEl) {
             return
         }
 
@@ -136,16 +242,15 @@ export class CanvasOverlayComposer {
                   radius        = 0,
                   rotate        = 0,
                   scale         = 1,
+                  zIndex = 0,
                   shadowMargins = {top: 0, right: 0, bottom: 0, left: 0},
               } = options
 
-        const elRect = el.getBoundingClientRect ? el.getBoundingClientRect() : null
-        const hasNumericWidth = typeof el.width === 'number'
-        const hasNumericHeight = typeof el.height === 'number'
+        const elRect = initialEl.getBoundingClientRect ? initialEl.getBoundingClientRect() : null
+        const hasNumericWidth = typeof initialEl.width === 'number'
 
-        // Calculate the internal scale of the element if it's a canvas
-        const elDpr = elRect && elRect.width > 0 && hasNumericWidth ? (el.width / elRect.width) : 1
-        const elLogicalWidth = hasNumericWidth ? (el.width / elDpr) : (elRect?.width ?? 0)
+        const elDpr = elRect && elRect.width > 0 && hasNumericWidth ? (initialEl.width / elRect.width) : 1
+        const elLogicalWidth = hasNumericWidth ? (initialEl.width / elDpr) : (elRect?.width ?? 0)
 
         let posX, posY, rawWidth, rawHeight
 
@@ -156,153 +261,182 @@ export class CanvasOverlayComposer {
             rawHeight = h ?? (elRect?.height ?? 0)
         }
         else {
-            // Coordinate transformation relative to source canvas viewport
-            const rect = elRect
             const sourceRect = this.#sourceCanvas.getBoundingClientRect()
-            posX = rect.left - sourceRect.left
-            posY = rect.top - sourceRect.top
+            posX = elRect.left - sourceRect.left
+            posY = elRect.top - sourceRect.top
             if (this.#clip) {
                 posX -= this.#clip.x
                 posY -= this.#clip.y
             }
-            rawWidth = rect.width
-            rawHeight = rect.height
+            rawWidth = elRect.width
+            rawHeight = elRect.height
         }
 
         const scaleFactor = LGS_WIDGET_SCALE_EFFECTIVE
-        const imgAspectRatio = el.height / el.width
-
+        const imgAspectRatio = initialEl.height / initialEl.width
         const cssScale = typeof scale === 'object' ? (scale.x ?? 1) : scale
-        const logicalContentW = typeof contentWidth === 'number'
-                                ? contentWidth
-                                : (rawWidth / scaleFactor)
-        const logicalContentH = typeof contentHeight === 'number'
-                                ? contentHeight
-                                : ((rawHeight ?? (logicalContentW * imgAspectRatio)) / scaleFactor)
+
+        const logicalContentW = typeof contentWidth === 'number' ? contentWidth : (rawWidth / scaleFactor)
+        const logicalContentH = typeof contentHeight === 'number' ? contentHeight : ((rawHeight ?? (logicalContentW * imgAspectRatio)) / scaleFactor)
 
         const totalW = logicalContentW + (shadowMargins.left + shadowMargins.right)
         const totalH = logicalContentH + (shadowMargins.top + shadowMargins.bottom)
 
-        // Compute center for rotation and scaling transformations
-        const cx = posX + totalW / 2
-        const cy = posY + totalH / 2
+        // Pooling: reuse overlay objects to limit allocations.
+        const index = this.#overlaysCount++
+        const overlay = this.#overlays[index] ?? (this.#overlays[index] = {})
 
-        this.#overlays.push({
-                                element,
-                                cx, cy,
-                                w:             totalW,
-                                h:             totalH,
-                                contentWidth:  logicalContentW,
-                                contentHeight: logicalContentH,
-                                blur,
-                                radius,
-                                rotate,
-                                scale:         cssScale,
-                                shadowMargins,
-                            })
+        overlay.getElement = elGetter
+        overlay.cx = posX + totalW / 2
+        overlay.cy = posY + totalH / 2
+        overlay.w = totalW
+        overlay.h = totalH
+        overlay.contentWidth = logicalContentW
+        overlay.contentHeight = logicalContentH
+        overlay.blur = blur
+        overlay.blurPx = blur > 0 ? (blur * this.#dpr * cssScale) : 0
+        overlay.radius = radius
+        overlay.rad = (rotate * Math.PI) / 180
+        overlay.scale = cssScale
+        overlay.zIndex = zIndex
+        overlay.dx = -(logicalContentW / 2) - shadowMargins.left
+        overlay.dy = -(logicalContentH / 2) - shadowMargins.top
     }
 
     /**
-     * Orchestrates the frame rendering.
-     * Implements a back-to-front draw order with support for dynamic backdrop sampling.
+     * Composite one frame into the output canvas.
+     * Draw order: background -> source -> overlay blur -> overlay content.
      */
     #draw = () => {
-        // Ensure WebGL sources are synchronized before sampling
+        const start = performance.now()
         this.#flushWebGLBuffer?.()
+
         const ctx = this.#ctx
+        const dpr = this.#dpr
+        const physW = this.#outputCanvas.width
+        const physH = this.#outputCanvas.height
 
-        // Reset buffer with opaque background
-        ctx.clearRect(0, 0, this.#outW, this.#outH)
-        ctx.fillStyle = '#000000'
         ctx.fillRect(0, 0, this.#outW, this.#outH)
+        this.#blurBufferDirty = true
 
-        let srcX = 0, srcY = 0, srcW = this.#sourceCanvas.width, srcH = this.#sourceCanvas.height
-        if (this.#clip) {
-            srcX = this.#clip.x * this.#sourceDpr
-            srcY = this.#clip.y * this.#sourceDpr
-            srcW = this.#clip.width * this.#sourceDpr
-            srcH = this.#clip.height * this.#sourceDpr
-        }
+        // Main source render.
+        ctx.drawImage(
+            this.#sourceCanvas,
+            this.#srcRect.x, this.#srcRect.y, this.#srcRect.w, this.#srcRect.h,
+            0, 0, this.#outW, this.#outH,
+        )
 
-        // Background composition
-        ctx.drawImage(this.#sourceCanvas, srcX, srcY, srcW, srcH, 0, 0, this.#outW, this.#outH)
-
-        for (const overlay of this.#overlays) {
-            const el = typeof overlay.element === 'function' ? overlay.element() : overlay.element
+        const len = this.#overlaysCount
+        for (let i = 0; i < len; i++) {
+            const overlay = this.#overlays[i]
+            const el = overlay.getElement()
             if (!el) {
                 continue
             }
 
-            const rad = (overlay.rotate * Math.PI) / 180
             const hw = overlay.contentWidth / 2
             const hh = overlay.contentHeight / 2
-            const radius = Math.max(0, Math.min(overlay.radius, hw, hh))
 
-            // BACKDROP BLUR PASS
             if (overlay.blur > 0) {
-                ctx.save()
-                // Define the clipping region for the blur effect
-                ctx.translate(overlay.cx, overlay.cy)
-                ctx.rotate(rad)
-                ctx.scale(overlay.scale, overlay.scale)
-                this.#traceRoundedRect(ctx, -hw, -hh, overlay.contentWidth, overlay.contentHeight, radius)
-                ctx.restore()
+                // Backdrop blur, clipped to the rounded rect.
+                if (this.#blurBufferDirty) {
+                    this.#blurCtx.drawImage(this.#outputCanvas, 0, 0, physW, physH, 0, 0, physW, physH)
+                    this.#blurBufferDirty = false
+                }
 
                 ctx.save()
+                ctx.translate(overlay.cx, overlay.cy)
+                ctx.rotate(overlay.rad)
+                ctx.scale(overlay.scale, overlay.scale)
+                this.#traceRoundedRect(ctx, -hw, -hh, overlay.contentWidth, overlay.contentHeight, overlay.radius)
                 ctx.clip()
 
-                // Filter calibrated to logical units; context is already scaled by DPR
-                ctx.filter = `blur(${overlay.blur * overlay.scale}px)`
-
-                // Resample the existing buffer to generate the blurred backdrop
                 ctx.setTransform(1, 0, 0, 1, 0, 0)
-                ctx.drawImage(
-                    this.#outputCanvas,
-                    0, 0, this.#outputCanvas.width, this.#outputCanvas.height,
-                    0, 0, this.#outputCanvas.width, this.#outputCanvas.height,
-                )
-                ctx.restore()
+                ctx.filter = `blur(${overlay.blurPx}px)`
+                ctx.drawImage(this.#blurCanvas, 0, 0, physW, physH, 0, 0, physW, physH)
 
-                // Revert to logical transform for the foreground pass
-                ctx.setTransform(this.#dpr, 0, 0, this.#dpr, 0, 0)
+                ctx.restore()
+                ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
             }
 
-            // OVERLAY CONTENT PASS
+            // Overlay content.
             ctx.save()
             ctx.translate(overlay.cx, overlay.cy)
-            ctx.rotate(rad)
+            ctx.rotate(overlay.rad)
             ctx.scale(overlay.scale, overlay.scale)
-
-            const dx = -hw - overlay.shadowMargins.left
-            const dy = -hh - overlay.shadowMargins.top
 
             ctx.drawImage(
                 el,
                 0, 0, el.width, el.height,
-                dx, dy, overlay.w, overlay.h,
+                overlay.dx, overlay.dy, overlay.w, overlay.h,
             )
 
             ctx.restore()
+            this.#blurBufferDirty = true
+        }
+
+        const renderMs = performance.now() - start
+        this.#lastRenderMs = renderMs
+        if (this.#adaptiveEmaMs === 0) {
+            this.#adaptiveEmaMs = renderMs
+        }
+        else {
+            this.#adaptiveEmaMs = (renderMs * this.#adaptiveAlpha) + (this.#adaptiveEmaMs * (1 - this.#adaptiveAlpha))
+        }
+        if (this.#adaptiveEnabled) {
+            const targetBudgetMs = this.#adaptiveEmaMs / this.#adaptiveTargetUtil
+            const desiredFps = Math.max(this.#adaptiveMinFps, Math.min(this.#adaptiveMaxFps, 1000 / targetBudgetMs))
+            this.#minFrameMs = 1000 / desiredFps
         }
     }
 
     /**
-     * Internal animation loop.
+     * @returns {{lastMs:number, emaMs:number}}
      */
+    getRenderStats = () => ({
+        lastMs: this.#lastRenderMs,
+        emaMs:  this.#adaptiveEmaMs,
+    })
+
+    /** Main rAF loop with optional FPS throttling. */
     #loop = () => {
-        this.#draw()
-        this.#raf = requestAnimationFrame(this.#loop)
+        if (!this.#running) {
+            return
+        }
+        this.#raf = requestAnimationFrame((time) => {
+            if (!this.#running) {
+                return
+            }
+            if (!this.#minFrameMs || (time - this.#lastFrameTime) >= this.#minFrameMs) {
+                this.#lastFrameTime = time
+                this.#draw()
+            }
+            this.#loop()
+        })
     }
 
-    /**
-     * Cleans up resources and stops the render loop.
-     */
+    /** Stop rendering and release references. */
     dispose = () => {
+        this.#running = false
         if (this.#raf) {
             cancelAnimationFrame(this.#raf)
         }
         this.#raf = null
+        if (this.#outputCanvas) {
+            this.#outputCanvas.width = 0
+            this.#outputCanvas.height = 0
+        }
+        if (this.#blurCanvas) {
+            this.#blurCanvas.width = 0
+            this.#blurCanvas.height = 0
+        }
+        this.#ctx = null
+        this.#blurCtx = null
+        this.#sourceCanvas = null
+        this.#outputCanvas = null
+        this.#blurCanvas = null
         this.#overlays = []
+        this.#overlaysCount = 0
         this.#flushWebGLBuffer = null
     }
 }

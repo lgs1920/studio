@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-02-27
+ * Last modified: 2026-02-27
  *
  *
  * Copyright © 2026 LGS1920
@@ -179,6 +179,26 @@ export class ScreenMediaRecorder extends EventTarget {
         this.#type = type
     }
 
+    /**
+     * Update quality preset (and encoder bitrate if possible).
+     * Safe to call during recording; will no-op if not supported.
+     * @param {number} index
+     */
+    setQualityIndex = (index) => {
+        const q = ScreenMediaRecorder.QUALITY[index]
+        if (!q) {
+            return
+        }
+        this.#quality = q
+        if (this.#videoSource && 'bitrate' in this.#videoSource) {
+            try {
+                this.#videoSource.bitrate = q.value
+            }
+            catch (e) {
+            }
+        }
+    }
+
     async url() {
         if (this.isVideo()) {
             if (!this.#blob) {
@@ -224,7 +244,7 @@ export class ScreenMediaRecorder extends EventTarget {
         this.#maxDuration = maxDuration
         this.#maxSize = maxSize
         this.#timeslice = timeslice
-        this.#metadata = metadata || {date: new Date()}
+        this.#metadata = {...(metadata || {date: new Date()})}
         this.#ratio = lgs.configuration.videoFormats.find(f => f.value === ratio)
 
     }

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-02-27
+ * Last modified: 2026-02-27
  *
  *
  * Copyright © 2026 LGS1920
@@ -37,6 +37,7 @@ export const VideoPresetToolbar = memo(() => {
     // Access reactive cropper and video states
     const $video = lgs.stores.ui.video
     const video = useSnapshot($video)
+    const videoSettings = useSnapshot(lgs.settings.ui.video || {})
     const [preset, setPreset] = useState(null)
     const [open, setOpen] = useState(false)
 
@@ -59,17 +60,21 @@ export const VideoPresetToolbar = memo(() => {
      * Initialize default FPS from settings
      */
     useEffect(() => {
-
-
         $video.fps = lgs.settings.ui.video.fps ?? ScreenMediaRecorder.FPS[ScreenMediaRecorder.DEFAULT_FPS_INDEX]
         $video.quality = lgs.settings.ui.video.quality ?? ScreenMediaRecorder.QUALITY[ScreenMediaRecorder.DEFAULT_QUALITY_INDEX]
 
+        if (videoSettings?.adaptiveQuality?.enabled) {
+            console.log('Orese auto')
+            setPreset('auto')
+            setOpen(false)
+            return
+        }
         const current = getPresets($video.fps, $video.quality)
         setPreset(current.key)
         if (current.key !== 'custom') {
             setOpen(false)
         }
-    }, [$video.fps, $video.quality])
+    }, [$video.fps, $video.quality, videoSettings?.adaptiveQuality?.enabled])
 
 
     /**
@@ -79,12 +84,20 @@ export const VideoPresetToolbar = memo(() => {
      * @param {Event} event - Click event from icon
      */
     const handleChangePreset = useCallback(key => {
+        if (key === 'auto') {
+            const current = lgs.settings.ui.video.adaptiveQuality || {}
+            lgs.settings.ui.video.adaptiveQuality = {...current, enabled: true}
+            const adaptiveFps = lgs.settings.ui.video.adaptiveFps || {}
+            lgs.settings.ui.video.adaptiveFps = {...adaptiveFps, enabled: true}
+            setPreset('auto')
+            setOpen(false)
+            return
+        }
         const {fps, quality} = ScreenMediaRecorder.VIDEO_PRESETS.get(key)
         setPreset(key)
 
         if (key === 'custom') {
             setOpen(prev => !prev)
-
         }
         else {
             setOpen(false)
@@ -94,6 +107,9 @@ export const VideoPresetToolbar = memo(() => {
             lgs.stores.ui.video.quality = quality
             lgs.settings.ui.video.quality = quality
             $video.quality = quality
+        }
+        if (lgs.settings.ui.video.adaptiveQuality?.enabled) {
+            lgs.settings.ui.video.adaptiveQuality = {...lgs.settings.ui.video.adaptiveQuality, enabled: false}
         }
     }, [])
 
@@ -133,6 +149,14 @@ export const VideoPresetToolbar = memo(() => {
                             </div>
                         </SlTooltip>
                     ))}
+                    <SlTooltip content="Adaptive quality" placement="top">
+                        <div
+                            className={classNames('lgs-one-line-card on-map', {'selected': preset === 'auto'})}
+                            onClick={event => handleChangePreset('auto', event)}
+                        >
+                            {'Auto'}
+                        </div>
+                    </SlTooltip>
                 </div>
 
             </div>
