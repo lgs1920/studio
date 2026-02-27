@@ -381,12 +381,7 @@ export const VideoRecordingScreenArea = memo(() => {
                                        height: videoFrame.cropDimensions.height * __.device.dpr,
                                    },
                                    ratio:      videoFrame.ratio.value,
-                                   metadata: {
-                                       artist:          lgs.servers.studio.name,
-                                       date:            new Date(),
-                                       album:           LGS_PROJECT,
-                                       adaptiveQuality: (adaptiveQuality === true) || (adaptiveQuality?.enabled === true),
-                                   },
+                                   metadata: {artist: lgs.servers.studio.name, date: new Date(), album: LGS_PROJECT},
                                    useWebGL:   true,
                                })
 

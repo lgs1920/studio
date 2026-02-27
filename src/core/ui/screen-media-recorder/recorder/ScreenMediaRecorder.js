@@ -244,10 +244,7 @@ export class ScreenMediaRecorder extends EventTarget {
         this.#maxDuration = maxDuration
         this.#maxSize = maxSize
         this.#timeslice = timeslice
-        const adaptiveQuality =
-                  (metadata && typeof metadata === 'object' && 'adaptiveQuality' in metadata) ? metadata.adaptiveQuality :
-                  (lgs?.settings?.ui?.video?.adaptiveQuality?.enabled === true || lgs?.settings?.ui?.video?.adaptiveQuality === true)
-        this.#metadata = {...(metadata || {date: new Date()}), adaptiveQuality}
+        this.#metadata = {...(metadata || {date: new Date()})}
         this.#ratio = lgs.configuration.videoFormats.find(f => f.value === ratio)
 
     }

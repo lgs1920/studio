@@ -64,6 +64,7 @@ export const VideoPresetToolbar = memo(() => {
         $video.quality = lgs.settings.ui.video.quality ?? ScreenMediaRecorder.QUALITY[ScreenMediaRecorder.DEFAULT_QUALITY_INDEX]
 
         if (videoSettings?.adaptiveQuality?.enabled) {
+            console.log('Orese auto')
             setPreset('auto')
             setOpen(false)
             return
