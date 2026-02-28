@@ -50,7 +50,7 @@
     "@turf/transform-rotate": "^7.3.4",
     "@zumer/snapdom": "2.0.2",
     "argparse": "^2.0.1",
-    "axios": "^1.13.5",
+    "axios": "^1.13.6",
     "babel-plugin-module-resolver": "^5.0.2",
     "canvg": "^4.0.3",
     "cesium": "~1.138.0",
