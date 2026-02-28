@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-02-28
+ * Last modified: 2026-02-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -389,11 +389,11 @@ export class POIUtils {
         const cartesian = Cartesian3.fromDegrees(point.longitude, point.latitude,
                                                  __.ui.sceneManager.noRelief() ? 0 : point.simulatedHeight ?? point.height)
 
-        if (lgs.mainProxy.components.camera.position.longitude && lgs.mainProxy.components.camera.position.latitude && lgs.mainProxy.components.camera.position.height) {
+        if (lgs.stores.main.components.camera.position.longitude && lgs.stores.main.components.camera.position.latitude && lgs.stores.main.components.camera.position.height) {
             const cameraPosition = Cartesian3.fromDegrees(
-                lgs.mainProxy.components.camera.position.longitude,
-                lgs.mainProxy.components.camera.position.latitude,
-                lgs.mainProxy.components.camera.position.height,
+                lgs.stores.main.components.camera.position.longitude,
+                lgs.stores.main.components.camera.position.latitude,
+                lgs.stores.main.components.camera.position.height,
             )
             return Cartesian3.distance(cartesian, cameraPosition)
         }

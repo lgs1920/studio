@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-02-28
+ * Last modified: 2026-02-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -138,9 +138,9 @@ export class CameraUtils {
         }
         else {
             return {
-                latitude:  lgs.mainProxy.components.camera.target.latitude,
-                longitude: lgs.mainProxy.components.camera.target.longitude,
-                height:    lgs.mainProxy.components.camera.target.height,
+                latitude:  lgs.stores.main.components.camera.target.latitude,
+                longitude: lgs.stores.main.components.camera.target.longitude,
+                height:    lgs.stores.main.components.camera.target.height,
                 range:     lgs.camera.position,
             }
         }

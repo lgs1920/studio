@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-02-28
+ * Last modified: 2026-02-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -33,7 +33,7 @@ import { FA2SL }                                 from '@Utils/FA2SL'
  */
 export const MapPOICategorySelectorFilter = memo(({onChange, handleCategories, handleExclusion, size = 'small'}) => {
     const settings = useSnapshot(lgs.settings.poi)
-    const $pois = lgs.mainProxy.components.pois
+    const $pois = lgs.stores.main.components.pois
     const pois = useSnapshot($pois)
 
     // Memoized clear icon

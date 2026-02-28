@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-02-28
+ * Last modified: 2026-02-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -24,11 +24,13 @@ import { JOURNEY_EDITOR_DRAWER }                           from '@Core/constants
 import { faSquare, faSquareCheck }                         from '@fortawesome/pro-regular-svg-icons'
 import { SlDivider, SlSwitch }                             from '@shoelace-style/shoelace/dist/react'
 
-// Pre-defined icons to avoid repeated references
+/**
+ * Pre-defined icons to avoid repeated references
+ */
 const ICONS = {
     true: faSquareCheck,
     false: faSquare,
-};
+}
 
 /**
  * A memoized React component for editing POI settings, including bulk actions and filters.
@@ -39,52 +41,58 @@ const ICONS = {
 export const MapPOIEditSettings = memo(({globals = true}) => {
     const $pois = lgs.stores.main.components.pois
     const pois = useSnapshot($pois)
-    const drawers = useSnapshot(lgs.stores.ui.drawers)
 
-    // Memoized onlyJourney calculation
+    const $drawers = lgs.stores.ui.drawers
+    const drawers = useSnapshot($drawers)
+
+    /**
+     * Check if we are currently in the journey editor context
+     */
     const onlyJourney = useMemo(() => drawers.open === JOURNEY_EDITOR_DRAWER, [drawers.open])
 
     const [allSelected, setAllSelected] = useState(false)
 
-    // Memoized switchValue function
-    const switchValue = useCallback((event) => {
-        return event.target.checked ?? false
-    }, []);
-
-    // Memoized changeAll function to toggle all POIs in bulkList
+    /**
+     * Toggles all POIs in the current list (journey or global)
+     */
     const changeAll = useCallback(
         (state) => {
             $pois.bulkList.clear()
             const targetList = onlyJourney ? $pois.filtered.journey : $pois.filtered.global
+
             if (targetList.size === 0) {
                 return
-            } // Early return if list is empty
+            }
+
             targetList.forEach(poi => {
                 $pois.bulkList.set(poi.id, state)
             })
         },
         [onlyJourney, $pois.bulkList, $pois.filtered.journey, $pois.filtered.global]
-    );
-
-    // Memoized focusOnEdit handler
-    const handleFocusOnEdit = useCallback(
-        (event) => {
-            lgs.settings.ui.poi.focusOnEdit = switchValue(event)
-        },
-        [switchValue],
     )
 
-    // Update allSelected based on bulkList state
+    /**
+     * Updates the focus on edit setting
+     */
+    const handleFocusOnEdit = useCallback(
+        (event) => {
+            lgs.settings.ui.poi.focusOnEdit = event.target.checked ?? false
+        },
+        [],
+    )
+
+    /**
+     * Sync the allSelected state with the bulkList content
+     */
     useEffect(() => {
-        const list = Array.from($pois.bulkList.values())
-        if (list.length === 0) {
-            setAllSelected(false) // No items selected if bulkList is empty
+        if (pois.bulkList.size === 0) {
+            setAllSelected(false)
             return
         }
 
-        setAllSelected(list.every(value => value === true))
-
-    }, [pois.bulkList]);
+        const values = Array.from(pois.bulkList.values())
+        setAllSelected(values.every(v => v === true))
+    }, [pois.bulkList])
 
     return (
         <div id="map-poi-edit-settings">
@@ -100,7 +108,7 @@ export const MapPOIEditSettings = memo(({globals = true}) => {
                     <MapPOIBulkActionsMenu/>
                 </div>
                 <SlSwitch
-                    size="small"
+                    size="x-small"
                     align-right
                     checked={lgs.settings.ui.poi.focusOnEdit}
                     onSlChange={handleFocusOnEdit}
@@ -108,9 +116,8 @@ export const MapPOIEditSettings = memo(({globals = true}) => {
                     {'Focus on POI'}
                 </SlSwitch>
             </div>
-            {/* <MapPOIEditSettings/> */}
 
             <SlDivider/>
         </div>
-    );
-});
+    )
+})

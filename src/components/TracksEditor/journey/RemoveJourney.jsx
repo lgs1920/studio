@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-31
- * Last modified: 2026-01-31
+ * Created on: 2026-02-28
+ * Last modified: 2026-02-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -59,7 +59,7 @@ export const RemoveJourney = (props) => {
 
         hideRemoveDialog()
 
-        const $store = lgs.mainProxy
+        const $store = lgs.stores.main
         const $pois = $store.components.pois.list
 
         const journey = lgs.getJourneyBySlug(editorStore.journey.slug)

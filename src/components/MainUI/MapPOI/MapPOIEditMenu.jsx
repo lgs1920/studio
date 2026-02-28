@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-02-28
+ * Last modified: 2026-02-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -23,21 +23,18 @@ import { faMask }                                                         from '
 import { SlButton, SlDropdown, SlIcon, SlIconButton, SlMenu, SlMenuItem } from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                                                          from '@Utils/FA2SL'
 import { UIToast }                                                                          from '@Utils/UIToast'
-import React, { memo, useCallback, useMemo }                                                from 'react'
+import React, { memo, useMemo } from 'react'
 import { useSnapshot }                                                                      from 'valtio'
 import './style.css'
 
-// Pre-calculated icon names to avoid recalculation
 const ICON_CROSSHAIRS = FA2SL.set(faCrosshairsSimple)
 const ICON_FLAG = FA2SL.set(faFlag)
 const ICON_TRASH = FA2SL.set(faTrashCan)
 const ICON_EXPAND = FA2SL.set(faArrowsFromLine)
 const ICON_REDUCE = FA2SL.set(faArrowsToLine)
-
 const ICON_MASK = FA2SL.set(faMask)
 const ICON_ROTATE = FA2SL.set(faArrowRotateRight)
 const ICON_PANORAMA = FA2SL.set(faPanorama)
-const ICON_STOP = FA2SL.set(faXmark)
 
 /**
  * A memoized React component for interacting with Points of Interest (POI) on the map.
@@ -48,41 +45,40 @@ const ICON_STOP = FA2SL.set(faXmark)
 export const MapPOIEditMenu = memo(({point}) => {
     const $pois = lgs.stores.main.components.pois
     const pois = useSnapshot($pois)
-    const settings = useSnapshot(lgs.settings.ui.poi)
 
-    // Stabilize point to avoid unnecessary re-renders
-    //point = useMemo(() => point, [point.id])
+    if (!point) {
+        return null
+    }
 
     const hide = async () => {
-        point = await __.ui.poiManager.updatePOI(point.id, {
+        await __.ui.poiManager.updatePOI(point.id, {
             visible: false,
         })
         point.utils.toggleVisibility(point)
-
     }
 
     const show = async () => {
-        point = await __.ui.poiManager.updatePOI(point.id, {
+        await __.ui.poiManager.updatePOI(point.id, {
             visible: true,
         })
         point.utils.toggleVisibility(point)
     }
 
     const shrink = async () => {
-        point = await __.ui.poiManager.updatePOI(point.id, {
+        await __.ui.poiManager.updatePOI(point.id, {
             expanded: false,
         })
     }
 
     const expand = async () => {
-        point = await __.ui.poiManager.updatePOI(point.id, {
+        await __.ui.poiManager.updatePOI(point.id, {
             expanded: true,
         })
     }
 
     const focus = async () => {
         $pois.current = point.id
-        const camera = lgs.mainProxy.components.camera
+        const camera = lgs.stores.main.components.camera
         if (__.ui.cameraManager.isRotating()) {
             await __.ui.cameraManager.stopRotate()
         }
@@ -102,10 +98,12 @@ export const MapPOIEditMenu = memo(({point}) => {
     const rotationAround = async () => {
         $pois.current = point.id
         const current = pois.list.get(point.id)
-        const camera = lgs.mainProxy.components.camera
+        const camera = lgs.stores.main.components.camera
+
         if (__.ui.cameraManager.isRotating()) {
             await stopRotation()
         }
+
         __.ui.sceneManager.focus(current, {
             target:     current,
             heading:    camera.position.heading,
@@ -119,7 +117,9 @@ export const MapPOIEditMenu = memo(({point}) => {
             panoramic:  false,
             flyingTime: 0,
         })
-        await __.ui.poiManager.updatePOI(starter, {animated: true})
+
+        // Correction : Utilisation de point.id au lieu de starter non défini
+        await __.ui.poiManager.updatePOI(point.id, {animated: true})
     }
 
     const setAsStarter = async () => {
@@ -129,8 +129,9 @@ export const MapPOIEditMenu = memo(({point}) => {
                                 caption: `${point.title}`,
                                 text:    'Set as new starter POI.',
                             })
-            await __.ui.poiManager.updatePOI(former, update)
-            await __.ui.poiManager.updatePOI(starter, update)
+            // Correction : update n'existait pas, on passe l'objet directement
+            await __.ui.poiManager.updatePOI(former.id, {type: POI_STANDARD_TYPE})
+            await __.ui.poiManager.updatePOI(starter.id, {type: POI_STARTER_TYPE})
         }
         else {
             UIToast.warning({
@@ -156,7 +157,6 @@ export const MapPOIEditMenu = memo(({point}) => {
 
     const stopRotation = async () => {
         await __.ui.cameraManager.stopRotate()
-        const poi = $pois.list.get(point.id)
         await __.ui.poiManager.updatePOI(point.id, {animated: false})
     }
 
@@ -174,12 +174,11 @@ export const MapPOIEditMenu = memo(({point}) => {
         })
     }
 
-    // Memoized menu items to avoid re-rendering
     const menuItems = useMemo(() => {
         const items = []
         if (point.visible) {
             items.push(
-                <SlMenuItem key="focus" onClick={focus} small>
+                <SlMenuItem key="focus" onClick={focus}>
                     <SlIcon slot="prefix" library="fa" name={ICON_CROSSHAIRS}/>
                     <span>{'Focus'}</span>
                 </SlMenuItem>
@@ -188,7 +187,7 @@ export const MapPOIEditMenu = memo(({point}) => {
             if (point.type !== POI_TMP_TYPE) {
                 if (point.type !== POI_STARTER_TYPE) {
                     items.push(
-                        <SlMenuItem key="setAsStarter" onClick={setAsStarter} small>
+                        <SlMenuItem key="setAsStarter" onClick={setAsStarter}>
                             <SlIcon slot="prefix" library="fa" name={ICON_FLAG}/>
                             <span>Set as Starter</span>
                         </SlMenuItem>
@@ -197,7 +196,7 @@ export const MapPOIEditMenu = memo(({point}) => {
             }
             else {
                 items.push(
-                    <SlMenuItem key="setAsStarter" onClick={saveAsStandardPOI} small>
+                    <SlMenuItem key="setAsStarter" onClick={saveAsStandardPOI}>
                         <SlIcon slot="prefix" library="fa" name={ICON_FLAG}/>
                         <span>{'Add to library'}</span>
                     </SlMenuItem>
@@ -206,35 +205,38 @@ export const MapPOIEditMenu = memo(({point}) => {
 
             if (point.type !== POI_STARTER_TYPE && point.type !== POI_FLAG_START && point.type !== POI_FLAG_STOP) {
                 items.push(
-                    <SlMenuItem key="remove" onClick={remove} small>
+                    <SlMenuItem key="remove" onClick={remove}>
                         <SlIcon slot="prefix" library="fa" name={ICON_TRASH}/>
                         <span>{'Remove'}</span>
                     </SlMenuItem>
                 )
             }
+
             if (point.expanded) {
                 items.push(
-                    <SlMenuItem key="shrink" onClick={shrink} small>
+                    <SlMenuItem key="shrink" onClick={shrink}>
                         <SlIcon slot="prefix" library="fa" name={ICON_REDUCE}/>
                         <span>{'Reduce'}</span>
                     </SlMenuItem>
                 )
             }
-            if (!point.expanded) {
+            else {
                 items.push(
-                    <SlMenuItem key="expand" onClick={expand} small>
+                    <SlMenuItem key="expand" onClick={expand}>
                         <SlIcon slot="prefix" library="fa" name={ICON_EXPAND}/>
                         <span>{'Expand'}</span>
                     </SlMenuItem>
                 )
             }
+
             items.push(
-                <SlMenuItem key="hide" onClick={hide} small>
+                <SlMenuItem key="hide" onClick={hide}>
                     <SlIcon slot="prefix" library="fa" name={ICON_MASK}/>
                     <span>{'Hide'}</span>
                 </SlMenuItem>,
                 <sl-divider key="divider"/>,
             )
+
             if (!pois.list.get(point.id)?.animated) {
                 items.push(
                     <SlMenuItem key="rotationAround" onClick={rotationAround}>
@@ -247,21 +249,17 @@ export const MapPOIEditMenu = memo(({point}) => {
                     </SlMenuItem>,
                 )
             }
+
             if (point.id === pois.current && pois.list.get(point.id)?.animated) {
                 items.push(
                     <SlMenuItem key="stopRotation" onClick={stopRotation} loading>
-                        {/* <SlIcon slot="prefix" library="fa" name={ICON_STOP}/> */}
                         <span>{'Stop Rotation'}</span>
                     </SlMenuItem>
                 )
             }
         }
         return items
-    }, [point])
-
-    if (!point/*  || point.type === POI_STARTER_TYPE */) {
-        return null
-    }
+    }, [point, pois.current, pois.list.get(point.id)?.animated])
 
     return (
         <>

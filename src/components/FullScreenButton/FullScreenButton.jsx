@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-02-28
+ * Last modified: 2026-02-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -25,7 +25,7 @@ import { useSnapshot }                        from 'valtio'
 
 export const FullScreenButton = () => {
 
-    const mainStore = lgs.mainProxy
+    const mainStore = lgs.stores.main
     const mainSnap = useSnapshot(mainStore)
 
         const toggleFullSize = () => {

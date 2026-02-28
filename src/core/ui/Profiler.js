@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-02-28
+ * Last modified: 2026-02-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -295,10 +295,7 @@ ${sprintf('%\' .1f', elevation ?? 0)} ${ELEVATION_UNITS[lgs.settings.unitSystem.
      */
     draw = async () => {
 
-        lgs.mainProxy.components.profile.key++
-        if (lgs.settings.getProfile.marker.track.show) {
-            //  await lgs.theTrack?.marker.draw()
-        }
+        lgs.stores.main.components.profile.key++
         this.resetZoom()
     }
 
@@ -329,7 +326,7 @@ ${sprintf('%\' .1f', elevation ?? 0)} ${ELEVATION_UNITS[lgs.settings.unitSystem.
     }
 
     resetZoom = () => {
-        const proxy = lgs.mainProxy
+        const proxy = lgs.stores.main
         proxy.components.profile.zoom = false
     }
 
@@ -344,7 +341,7 @@ ${sprintf('%\' .1f', elevation ?? 0)} ${ELEVATION_UNITS[lgs.settings.unitSystem.
             journey !== undefined &&                                              // During init
             journey !== null &&                                                   // same
             journey.visible &&                                                    // Journey visible
-            lgs.mainProxy.canViewJourneyData &&                                   // can view data
+            lgs.stores.main.canViewJourneyData &&                                   // can view data
             Array.from(journey.tracks.values())                                   // Has Altitude for each track
                 .every(track => track.hasAltitude)
     }

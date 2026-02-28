@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-02-28
+ * Last modified: 2026-02-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -23,7 +23,7 @@ import { useSnapshot }                                    from 'valtio/index'
 import { LGSScrollbars }                                  from '../LGSScrollbars'
 
 export const SelectLocation = ({select, address, submit}) => {
-    const store = lgs.mainProxy.components.geocoder
+    const store = lgs.stores.main.components.geocoder
     const snap = useSnapshot(store)
     const scrollbars = useRef(null)
 

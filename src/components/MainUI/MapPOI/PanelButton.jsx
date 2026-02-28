@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-02-28
+ * Last modified: 2026-02-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -22,7 +22,7 @@ import { useSnapshot }                 from 'valtio'
 
 
 export const PanelButton = (props) => {
-    const store = lgs.mainProxy.components.pois.editor
+    const store = lgs.stores.main.components.pois.editor
     const snap = useSnapshot(store)
 
     const handleClick = () => {

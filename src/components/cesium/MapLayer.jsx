@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-02-28
+ * Last modified: 2026-02-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -35,7 +35,7 @@ export const MAPTILER = 'maptiler'
 export const MapLayer = (props) => {
 
     const layers = useSnapshot(lgs.settings.layers)
-    const main = useSnapshot(lgs.mainProxy)
+    const main = useSnapshot(lgs.stores.main)
 
     const isBase = props.type === BASE_ENTITY
     const manager = __.layersAndTerrainManager
@@ -51,11 +51,11 @@ export const MapLayer = (props) => {
         let settings = lgs.settings.layers
         const snapLayer = isBase ? settings.base : settings.overlay
         if (isBase) {
-            lgs.mainProxy.theLayer = manager.getEntityProxy(snapLayer)
+            lgs.stores.main.theLayer = manager.getEntityProxy(snapLayer)
         }
         else {
-            lgs.mainProxy.theLayerOverlay = snapLayer ? manager.getEntityProxy(snapLayer) : null
-            if (!lgs.mainProxy.theLayerOverlay) {
+            lgs.stores.main.theLayerOverlay = snapLayer ? manager.getEntityProxy(snapLayer) : null
+            if (!lgs.stores.main.theLayerOverlay) {
                 lgs.viewer.imageryLayers.remove(lgs.viewer.imageryLayers.get(OVERLAY_INDEX), true)
             }
         }
@@ -70,11 +70,11 @@ export const MapLayer = (props) => {
     // Get the right layer
     let theLayer
     if (isBase) {
-        lgs.mainProxy.theLayer = manager.getEntityProxy(snapLayer)
+        lgs.stores.main.theLayer = manager.getEntityProxy(snapLayer)
         theLayer = main.theLayer
     }
     else {
-        lgs.mainProxy.theLayerOverlay = manager.getEntityProxy(snapLayer)
+        lgs.stores.main.theLayerOverlay = manager.getEntityProxy(snapLayer)
         theLayer = main.theLayerOverlay
     }
 

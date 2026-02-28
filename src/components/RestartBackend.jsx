@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-02-28
+ * Last modified: 2026-02-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -36,7 +36,7 @@ export const RestartBackend = (props) => {
         }
     }
 
-    const check = useSnapshot(lgs.mainProxy)
+    const check = useSnapshot(lgs.stores.main)
     console.log(check.backendRestart)
     return (
         <SlDialog label={`Trying to restart the backend...`}

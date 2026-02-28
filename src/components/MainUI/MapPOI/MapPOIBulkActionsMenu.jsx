@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-02-28
+ * Last modified: 2026-02-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -37,7 +37,7 @@ import './style.css'
 export const MapPOIBulkActionsMenu = React.memo((globals) => {
 
     // Access global proxies and snapshots
-    const $pois = lgs.mainProxy.components.pois
+    const $pois = lgs.stores.main.components.pois
     const pois = useSnapshot($pois)
     const drawers = useSnapshot(lgs.stores.ui.drawers)
 

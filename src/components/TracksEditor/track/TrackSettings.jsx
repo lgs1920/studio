@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-02-28
+ * Last modified: 2026-02-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -131,7 +131,7 @@ export const TrackSettings = () => {
                             </div>
 
                             <div className={'settings-panel'} id={'editor-track-settings-panel'}
-                                 key={lgs.mainProxy.components.journeyEditor.keys.journey.track}>
+                                 key={lgs.stores.main.components.journeyEditor.keys.journey.track}>
                                 {journeyEditor.track.visible &&
                                     <>
                                         {journeyEditor.activeTab === DATA_PANEL && <TrackData/>}

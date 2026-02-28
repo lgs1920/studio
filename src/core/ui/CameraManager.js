@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-02-28
+ * Last modified: 2026-02-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -43,7 +43,7 @@ export class CameraManager {
         this.settings = settings
 
         this.clockwise = CameraManager.CLOCKWISE
-        this.store = lgs.mainProxy.components.camera
+        this.store = lgs.stores.main.components.camera
         this.move = {type: null, stopWatching: null, animation: null}
 
 
@@ -213,7 +213,7 @@ export class CameraManager {
 
         // Update Journey Camera if needed
         if (lgs.theJourney) {
-            lgs.theJourney.camera = snapshot(lgs.mainProxy.components.camera)
+            lgs.theJourney.camera = snapshot(lgs.stores.main.components.camera)
         }
     }
 
@@ -221,8 +221,8 @@ export class CameraManager {
      * Clone the position
      */
     clone = () => {
-        lgs.mainProxy.components.camera.position = deepClone(this.position)
-        lgs.mainProxy.components.camera.target = deepClone(this.target)
+        lgs.stores.main.components.camera.position = deepClone(this.position)
+        lgs.stores.main.components.camera.target = deepClone(this.target)
     }
 
 

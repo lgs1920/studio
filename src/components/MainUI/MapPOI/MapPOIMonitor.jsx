@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-02-28
+ * Last modified: 2026-02-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -36,7 +36,7 @@ export const MapPOIMonitor = () => {
     // Get reactive snapshot of the POI list from Valtio store
     const $pois = lgs.stores.main.components.pois
     const pois = useSnapshot($pois)
-    const currentList = pois.list
+    const currentList = useSnapshot($pois.list)
     // Store previous POI list state for comparison
     const _previousList = useRef(new Map())
     let current = null

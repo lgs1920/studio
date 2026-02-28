@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-02-28
+ * Last modified: 2026-02-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -39,12 +39,13 @@ const filterAndSortPois = (onlyJourney, filterSettings = {}, list) => {
               byName       = '',
               byCategories = [],
               exclude      = false,
-              alphabetic   = true,
+              alphabetic = true,
           } = filterSettings
 
     const {theJourney} = lgs
     const manager = __.ui.poiManager
 
+    console.log(list)
     if (onlyJourney && theJourney?.poisLoaded !== true) {
         return []
     }
@@ -91,7 +92,7 @@ const filterAndSortPois = (onlyJourney, filterSettings = {}, list) => {
         sorted.sort((a, b) =>
                         alphabetic
                         ? a.title.localeCompare(b.title)
-                        : b.title.localeCompare(a.title),
+                        : b.title.localeCompare(a.title)
         )
     }
 
@@ -101,7 +102,6 @@ const filterAndSortPois = (onlyJourney, filterSettings = {}, list) => {
 /**
  * Handles all reactive logic (snapshots, filtering, sorting, bulk list synchronization).
  * Renders the MapPOIListItem components using the resulting filtered list.
- * This component is NOT memoized and will re-render whenever necessary.
  *
  * @component
  * @returns {JSX.Element}
@@ -109,18 +109,20 @@ const filterAndSortPois = (onlyJourney, filterSettings = {}, list) => {
 export const MapPOIFilteredList = () => {
     const $pois = lgs.stores.main.components.pois
     const pois = useSnapshot($pois)
+
+    // Using snapshots for reactivity
     const list = useSnapshot($pois.list)
     const settings = useSnapshot(lgs.settings.poi)
-    const drawers = useSnapshot(lgs.stores.ui.drawers)
+    const $drawers = lgs.stores.ui.drawers
+    const drawers = useSnapshot($drawers)
 
     const {filter: poiFilter} = settings
     const onlyJourney = useMemo(() => drawers.open === JOURNEY_EDITOR_DRAWER, [drawers.open])
 
-    const poiKeysHash = useMemo(() => {
-        return Array.from(pois.list.keys()).join(',')
-    }, [pois.list])
-
-    /** Filtered & sorted POI IDs. */
+    /**
+     * Filtered & sorted POI IDs.
+     * Dependencies optimized to avoid unnecessary re-calculations.
+     */
     const filteredPois = useMemo(
         () => filterAndSortPois(onlyJourney, poiFilter, list),
         [
@@ -130,34 +132,35 @@ export const MapPOIFilteredList = () => {
             poiFilter.global,
             poiFilter.alphabetic,
             poiFilter.exclude,
-            JSON.stringify(poiFilter.byCategories),
-            poiKeysHash,
+            poiFilter.byCategories, // Valtio snapshots are proxy-wrapped, careful with object refs
             list,
-        ],
+        ]
     )
 
-    /** Keep Valtio filtered collections & bulk selection in sync with current list */
+    /** * Sync filtered collections and bulk list with the current UI state.
+     * Production note: Clears previous filtered sets before populating.
+     */
     useEffect(() => {
-        const target = onlyJourney ? $pois.filtered.journey : $pois.filtered.global
+        const $target = onlyJourney ? $pois.filtered.journey : $pois.filtered.global
         const $bulkList = $pois.bulkList
 
+        // Batch updates to the proxy stores
+        $target.clear()
         $bulkList.clear()
-        target.clear()
+
         filteredPois.forEach((id) => {
-            const poi = list.get(id)
-            target.set(id, poi)
-            $bulkList.set(id, false)
+            const poi = $pois.list.get(id)
+            if (poi) {
+                $target.set(id, poi)
+                $bulkList.set(id, false)
+            }
         })
-    }, [
-                  filteredPois,
-                  onlyJourney,
-                  $pois.filtered.journey,
-                  $pois.filtered.global,
-                  $pois.bulkList,
-                  list,
-              ])
-    if (filteredPois.length) {
-        return filteredPois.map((id) => <MapPOIListItem key={id} id={id}/>)
+    }, [filteredPois, onlyJourney, $pois.filtered, $pois.bulkList, $pois.list])
+
+    if (filteredPois.length > 0) {
+        return filteredPois.map((id) => (
+            <MapPOIListItem key={id} id={id}/>
+        ))
     }
 
     return (

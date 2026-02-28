@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-22
- * Last modified: 2026-02-22
+ * Created on: 2026-02-28
+ * Last modified: 2026-02-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -116,7 +116,7 @@ export const Compass = ({fixed, inWidget = false, entity}) => {
             if (__.ui.cameraManager.isRotating()) {
                 return
             }
-            const camera = lgs.mainProxy.components.camera
+            const camera = lgs.stores.main.components.camera
             camera.position.heading = CMath.toRadians(0)
             __.ui.sceneManager.focus(camera.target, {
                 heading:  0, pitch: camera.position.pitch, roll: 0, range: camera.position.range,

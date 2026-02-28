@@ -7,14 +7,14 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-02-28
+ * Last modified: 2026-02-28
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { Track } from '@Core/Track'
+import { Track }                                           from '@Core/Track'
 import { NOT_AN_ENTITY, OTHER_TYPE, POI_TYPE, TRACK_TYPE } from './EntitiesUtils'
 import { TrackUtils }                                      from './TrackUtils'
 
@@ -90,7 +90,7 @@ export class MouseUtils {
      */
     static showMenu = (type) => {
 
-        const menuStore = lgs.mainProxy.components.floatingMenu
+        const menuStore = lgs.stores.main.components.floatingMenu
         menuStore.type = type
         menuStore.show = true
     }

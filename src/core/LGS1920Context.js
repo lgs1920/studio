@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-02-28
+ * Last modified: 2026-02-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -358,10 +358,10 @@ export class LGS1920Context {
         lgs.theJourney = null
         lgs.theTrack = null
         lgs.cleanEditor()
-        lgs.mainProxy.canViewJourneyData = false
-        lgs.mainProxy.components.profile.show = false
-        lgs.mainProxy.canViewProfile = false
-        lgs.mainProxy.theJourney = null
+        lgs.stores.main.canViewJourneyData = false
+        lgs.stores.main.components.profile.show = false
+        lgs.stores.main.canViewProfile = false
+        lgs.stores.main.theJourney = null
     }
 
     addToEditor = (journey) => {

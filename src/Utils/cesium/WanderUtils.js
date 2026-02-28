@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-02-28
+ * Last modified: 2026-02-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -24,7 +24,7 @@ export class WanderUtils {
     static initWanderMode = () => {
         __.ui.wanderer.update({
             coordinates:__.ui.wanderer.prepareData(),
-            duration:parseInt(lgs.mainProxy.components.wanderer.duration),
+                                  duration: parseInt(lgs.stores.main.components.wanderer.duration),
             events: new Map(
                 [
                     // args[0] = index,
@@ -46,7 +46,7 @@ export class WanderUtils {
                     }],
                     [Wanderer.STOP_TICK_EVENT, () => {
                        // Change UI
-                        lgs.mainProxy.components.wanderer.run = undefined
+                        lgs.stores.main.components.wanderer.run = undefined
                     }],
                 ]
             ),

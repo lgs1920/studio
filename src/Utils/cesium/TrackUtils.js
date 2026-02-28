@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-02-28
+ * Last modified: 2026-02-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -407,7 +407,7 @@ export class TrackUtils {
 
         // Bail early if there's nothing to read
         if (journeys.length === 0) {
-            lgs.mainProxy.readyForTheShow = true
+            lgs.stores.main.readyForTheShow = true
             lgs.theJourney = null
             lgs.theTrack = null
             lgs.thePOI = null
@@ -427,7 +427,7 @@ export class TrackUtils {
 
         if (currentJourney) {
             lgs.theJourney = currentJourney
-            lgs.mainProxy.readyForTheShow = true
+            lgs.stores.main.readyForTheShow = true
             await TrackUtils.setTheTrack()
         }
         else {
@@ -680,7 +680,7 @@ export class TrackUtils {
     static loadJourneyFromFile = async (journey) => {
 
         // uploading a file exits full screen mode, so we force the state
-        const mainStore = lgs.mainProxy
+        const mainStore = lgs.stores.main
         mainStore.fullSize = false
 
         try {

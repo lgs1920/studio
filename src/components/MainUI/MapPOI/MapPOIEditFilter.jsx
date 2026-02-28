@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-02-28
+ * Last modified: 2026-02-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -31,7 +31,7 @@ import { useSnapshot }                           from 'valtio'
 export const MapPOIEditFilter = memo(() => {
   // Stabilize Valtio proxies with useSnapshot for minimal reactivity
   const settings = useSnapshot(lgs.settings.poi, {sync: true})
-  const store = lgs.mainProxy.components.pois
+  const store = lgs.stores.main.components.pois
   const pois = useSnapshot(store)
   const drawers = useSnapshot(lgs.stores.ui.drawers)
 
@@ -192,7 +192,7 @@ export const MapPOIEditFilter = memo(() => {
           {!onlyJourney && (
               <>
                 <SlSwitch
-                    size="small"
+                    size="x-small"
                     align-right
                     checked={settings.filter.global}
                     onSlChange={handleGlobal}
@@ -201,7 +201,7 @@ export const MapPOIEditFilter = memo(() => {
                 </SlSwitch>
                 {lgs.theJourney && (
                     <SlSwitch
-                        size="small"
+                        size="x-small"
                         align-right
                         checked={settings.filter.journey}
                         onSlChange={handleJourney}

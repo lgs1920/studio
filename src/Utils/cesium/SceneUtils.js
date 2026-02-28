@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-02-28
+ * Last modified: 2026-02-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -339,7 +339,7 @@ export class SceneUtils {
         const [longitude, latitude] = centroid(track.content).geometry.coordinates
         let height = 0
         try {
-            height = await __.ui.poiManager.getElevationFromTerrain({longitude: longitude, latitude: latitude})
+            height = await __.ui.poiManager.getHeightFromTerrain({longitude: longitude, latitude: latitude})
         }
         catch (error) {
             console.error(error)

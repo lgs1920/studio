@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-02-28
+ * Last modified: 2026-02-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -97,7 +97,7 @@ const POIDetailsWrapper = ({id, poi, classes, styles, preventDrawerClose}) => {
 
         // Camera focus + optional rotation when editing
         if (lgs.settings.ui.poi.focusOnEdit && isGlobalDrawer) {
-            const camera = lgs.mainProxy.components.camera
+            const camera = lgs.stores.main.components.camera
 
             if (__.ui.cameraManager.isRotating()) {
                 await __.ui.cameraManager.stopRotate()
