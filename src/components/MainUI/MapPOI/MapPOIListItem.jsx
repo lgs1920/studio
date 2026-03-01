@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-28
- * Last modified: 2026-02-28
+ * Created on: 2026-03-01
+ * Last modified: 2026-03-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -81,10 +81,6 @@ const POIDetailsWrapper = ({id, poi, classes, styles, preventDrawerClose}) => {
 
     /** Select this POI – focus camera, scroll into view, update global current */
     const selectPOI = useCallback(async () => {
-        if (current === id) {
-            return
-        }
-
         Object.assign($pois, {current: id})
 
         if (poi) {
@@ -127,7 +123,18 @@ const POIDetailsWrapper = ({id, poi, classes, styles, preventDrawerClose}) => {
         const element = document.getElementById(`edit-map-poi-${id}`)
         element?.scrollIntoView({behavior: 'smooth', block: 'start'})
         element?.focus()
-    }, [id, current, isGlobalDrawer, $pois, poi])
+    }, [id, isGlobalDrawer, $pois, poi])
+
+    /** Toggle selection from the list summary (fully controlled open state) */
+    const handleSummaryClick = useCallback((event) => {
+        event.preventDefault()
+        event.stopPropagation()
+        if (current === id) {
+            $pois.current = false
+            return
+        }
+        selectPOI()
+    }, [current, id, selectPOI])
 
     /** Conditional rendering of the edit form (only when current) */
     const editContent = useMemo(() => {
@@ -145,10 +152,9 @@ const POIDetailsWrapper = ({id, poi, classes, styles, preventDrawerClose}) => {
             style={styles}
             open={isCurrent}
             small
-            onSlShow={selectPOI}
             onSlAfterHide={preventDrawerClose}
         >
-            <div slot="summary" onClick={selectPOI}>
+            <div slot="summary" onClick={handleSummaryClick}>
                 <div>
                     <MapPOIContent poi={id} useInMenu={true}/>
                     <span>{poi.title}</span>

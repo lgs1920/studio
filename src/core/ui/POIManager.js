@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-28
- * Last modified: 2026-02-28
+ * Created on: 2026-03-01
+ * Last modified: 2026-03-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -98,6 +98,8 @@ export class POIManager {
         }
 
         Object.assign(poi, updates)
+        // Trigger Valtio proxyMap update for reactivity
+        this.list.set(poi.id, poi)
 
         if (!skipPersist) {
             if (immediate) {

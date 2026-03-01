@@ -7,13 +7,14 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-03-01
+ * Last modified: 2026-03-01
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
+import { LGSScrollbars } from '@Components/MainUI/LGSScrollbars'
 import { MapPOIEditFilter }   from '@Components/MainUI/MapPOI/MapPOIEditFilter'
 import { MapPOIEditSettings } from '@Components/MainUI/MapPOI/MapPOIEditSettings'
 import { MapPOIEditToggleFilter } from '@Components/MainUI/MapPOI/MapPOIEditToggleFilter'
@@ -21,9 +22,10 @@ import { MapPOIList }         from '@Components/MainUI/MapPOI/MapPOIList'
 import { POIS_EDITOR_DRAWER } from '@Core/constants'
 import { SlDrawer }           from '@shoelace-style/shoelace/dist/react'
 import { memo, useCallback, useEffect, useMemo } from 'react'
+import { Scrollbars }    from 'react-custom-scrollbars'
 import { useSnapshot }        from 'valtio'
 import { proxyMap }           from 'valtio/utils'
-import DrawerFooter from '../../DrawerFooter'
+import DrawerFooter      from '../../DrawerFooter'
 import './style.css'
 
 /**
@@ -146,9 +148,13 @@ export const Panel = memo(() => {
                         <>
                             <span slot="label">{'Points Of Interest'}</span>
                             <MapPOIEditToggleFilter/>
+                            <div className="lgs-scrollbars">
+                                <LGSScrollbars>
                             <MapPOIEditFilter/>
                             <MapPOIEditSettings/>
                             <MapPOIList/>
+                                </LGSScrollbars>
+                            </div>
                             <DrawerFooter/>
                         </>
                     </SlDrawer>

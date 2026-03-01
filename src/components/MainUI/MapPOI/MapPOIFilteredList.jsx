@@ -7,15 +7,15 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-28
- * Last modified: 2026-02-28
+ * Created on: 2026-03-01
+ * Last modified: 2026-03-01
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { MapPOIListItem }                       from '@Components/MainUI/MapPOI/MapPOIListItem'
-import { GLOBAL_PARENT, JOURNEY_EDITOR_DRAWER } from '@Core/constants'
+import { JOURNEY_EDITOR_DRAWER } from '@Core/constants'
 import { faTriangleExclamation }                from '@fortawesome/pro-regular-svg-icons'
 import { SlAlert, SlIcon }                      from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                                from '@Utils/FA2SL'
@@ -43,23 +43,31 @@ const filterAndSortPois = (onlyJourney, filterSettings = {}, list) => {
           } = filterSettings
 
     const {theJourney} = lgs
-    const manager = __.ui.poiManager
-
-    console.log(list)
     if (onlyJourney && theJourney?.poisLoaded !== true) {
         return []
     }
 
     const ids = new Set()
+    const journeySlug = theJourney?.slug ?? null
 
-    if (global && !onlyJourney) {
-        const globalIndex = manager.index(GLOBAL_PARENT)
-        globalIndex?.forEach(id => ids.add(id))
-    }
+    for (const poi of list.values()) {
+        if (!poi?.id) {
+            continue
+        }
 
-    if (onlyJourney || journey) {
-        const journeyIndex = manager.index(theJourney?.slug)
-        journeyIndex?.forEach(id => ids.add(id))
+        const isGlobal = poi.parent == null
+        let isJourney = false
+        if (!isGlobal && journeySlug) {
+            const journeyRef = lgs.getJourneyByTrackSlug(poi.parent)
+            isJourney = journeyRef?.slug === journeySlug
+        }
+
+        if (!onlyJourney && global && isGlobal) {
+            ids.add(poi.id)
+        }
+        if ((onlyJourney || journey) && isJourney) {
+            ids.add(poi.id)
+        }
     }
 
     const lowerName = byName.toLowerCase()
@@ -109,9 +117,7 @@ const filterAndSortPois = (onlyJourney, filterSettings = {}, list) => {
 export const MapPOIFilteredList = () => {
     const $pois = lgs.stores.main.components.pois
     const pois = useSnapshot($pois)
-
-    // Using snapshots for reactivity
-    const list = useSnapshot($pois.list)
+    const list = pois.list
     const settings = useSnapshot(lgs.settings.poi)
     const $drawers = lgs.stores.ui.drawers
     const drawers = useSnapshot($drawers)
@@ -132,8 +138,8 @@ export const MapPOIFilteredList = () => {
             poiFilter.global,
             poiFilter.alphabetic,
             poiFilter.exclude,
-            poiFilter.byCategories, // Valtio snapshots are proxy-wrapped, careful with object refs
-            list,
+            poiFilter.byCategories?.join('|') ?? '',
+            list.size,
         ]
     )
 
