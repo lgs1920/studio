@@ -7,280 +7,238 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-28
- * Last modified: 2026-02-28
+ * Created on: 2026-03-02
+ * Last modified: 2026-03-02
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { POI_FLAG_START, POI_FLAG_STOP, POI_STANDARD_TYPE, POI_STARTER_TYPE, POI_TMP_TYPE } from '@Core/constants'
-import {
-    faArrowRotateRight, faArrowsFromLine, faArrowsToLine, faCrosshairsSimple, faFlag, faLocationDot, faPanorama,
-    faTrashCan, faXmark,
-}                                                                                           from '@fortawesome/pro-regular-svg-icons'
-import { faMask }                                                         from '@fortawesome/pro-solid-svg-icons'
-import { SlButton, SlDropdown, SlIcon, SlIconButton, SlMenu, SlMenuItem } from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                                                          from '@Utils/FA2SL'
-import { UIToast }                                                                          from '@Utils/UIToast'
-import React, { memo, useMemo } from 'react'
-import { useSnapshot }                                                                      from 'valtio'
-import './style.css'
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: MapPOIEditMenu.jsx
+ ******************************************************************************/
 
-const ICON_CROSSHAIRS = FA2SL.set(faCrosshairsSimple)
+import {
+    POI_FLAG_START, POI_FLAG_STOP, POI_STANDARD_TYPE, POI_STARTER_TYPE, POI_TMP_TYPE,
+}                                                      from '@Core/constants'
+import {
+    faArrowRotateRight, faArrowsFromLine, faArrowsToLine, faCopy, faCrosshairsSimple, faFlag, faLocationDot, faPanorama,
+    faTrashCan, faEye, faEyeSlash,
+}                                                      from '@fortawesome/pro-regular-svg-icons'
+import {
+    SlButton, SlDivider, SlDropdown, SlIcon, SlMenu, SlMenuItem,
+}                                                      from '@shoelace-style/shoelace/dist/react'
+import { FA2SL }                                       from '@Utils/FA2SL'
+import { UIToast }                                     from '@Utils/UIToast'
+import React, { memo, useMemo, useCallback, useState } from 'react'
+import { useSnapshot }                                 from 'valtio'
+
+const ICON_FOCUS = FA2SL.set(faCrosshairsSimple)
 const ICON_FLAG = FA2SL.set(faFlag)
 const ICON_TRASH = FA2SL.set(faTrashCan)
 const ICON_EXPAND = FA2SL.set(faArrowsFromLine)
 const ICON_REDUCE = FA2SL.set(faArrowsToLine)
-const ICON_MASK = FA2SL.set(faMask)
+const ICON_MASK = FA2SL.set(faEyeSlash)
 const ICON_ROTATE = FA2SL.set(faArrowRotateRight)
 const ICON_PANORAMA = FA2SL.set(faPanorama)
+const ICON_SHOW = FA2SL.set(faEye)
+const ICON_COPY = FA2SL.set(faCopy)
+const ICON_LOCATION = FA2SL.set(faLocationDot)
 
-/**
- * A memoized React component for interacting with Points of Interest (POI) on the map.
- * @param {Object} props - Component props
- * @param {Object} props.point - The POI object to interact with
- * @returns {JSX.Element|null} The rendered dropdown menu or null if no point
- */
-export const MapPOIEditMenu = memo(({point}) => {
+export const MapPOIEditMenu = memo(({poiId}) => {
     const $pois = lgs.stores.main.components.pois
-    const pois = useSnapshot($pois)
+    const $camera = lgs.stores.main.components.camera
 
-    if (!point) {
+    /**
+     * Subscribe to POI proxy directly so property changes (visible/animated/etc.)
+     * trigger UI updates without relying on list-level epoch changes.
+     */
+    const poisSnap = useSnapshot($pois, {sync: true})
+    const $point = $pois.list.get(poiId)
+    const pointSnap = useSnapshot($point || {})
+
+    if (!pointSnap || !$point) {
         return null
     }
 
-    const hide = async () => {
-        await __.ui.poiManager.updatePOI(point.id, {
-            visible: false,
-        })
-        point.utils.toggleVisibility(point)
-    }
+    const [isVisible, setIsVisible] = useState(pointSnap.visible ?? true)
+    const isAnimated = pointSnap.animated
+    const isCurrent = poisSnap.current === pointSnap?.id
 
-    const show = async () => {
-        await __.ui.poiManager.updatePOI(point.id, {
-            visible: true,
-        })
-        point.utils.toggleVisibility(point)
-    }
+    const stopRotation = useCallback(async () => {
+        await __.ui.cameraManager.stopRotate()
+        $point.animated = false
+    }, [$point])
 
-    const shrink = async () => {
-        await __.ui.poiManager.updatePOI(point.id, {
-            expanded: false,
-        })
-    }
+    /**
+     * Toggles visibility and prevents event bubbling to avoid SlDetails toggling
+     */
+    const toggleVisibility = useCallback(async (e) => {
+        e?.preventDefault()
+        e?.stopPropagation()
 
-    const expand = async () => {
-        await __.ui.poiManager.updatePOI(point.id, {
-            expanded: true,
-        })
-    }
+        const nextState = !isVisible
 
-    const focus = async () => {
-        $pois.current = point.id
-        const camera = lgs.stores.main.components.camera
-        if (__.ui.cameraManager.isRotating()) {
-            await __.ui.cameraManager.stopRotate()
-        }
-        __.ui.sceneManager.focus(point, {
-            target: point,
-            heading:    camera.position.heading,
-            pitch:      camera.position.pitch,
-            roll:       camera.position.roll,
-            range:      camera.position.range,
-            infinite:   true,
-            rotate:     false,
-            panoramic:  false,
-            flyingTime: 2,
-        })
-    }
-
-    const rotationAround = async () => {
-        $pois.current = point.id
-        const current = pois.list.get(point.id)
-        const camera = lgs.stores.main.components.camera
-
-        if (__.ui.cameraManager.isRotating()) {
-            await stopRotation()
-        }
-
-        __.ui.sceneManager.focus(current, {
-            target:     current,
-            heading:    camera.position.heading,
-            pitch:      camera.position.pitch,
-            roll:       camera.position.roll,
-            range:      camera.position.range,
-            infinite:   true,
-            rpm:        lgs.settings.ui.poi.rpm,
-            rotations: 1,
-            rotate:     true,
-            panoramic:  false,
-            flyingTime: 0,
-        })
-
-        // Correction : Utilisation de point.id au lieu de starter non défini
-        await __.ui.poiManager.updatePOI(point.id, {animated: true})
-    }
-
-    const setAsStarter = async () => {
-        const {former, starter} = await __.ui.poiManager.setStarter(point)
-        if (starter) {
-            UIToast.success({
-                                caption: `${point.title}`,
-                                text:    'Set as new starter POI.',
-                            })
-            // Correction : update n'existait pas, on passe l'objet directement
-            await __.ui.poiManager.updatePOI(former.id, {type: POI_STANDARD_TYPE})
-            await __.ui.poiManager.updatePOI(starter.id, {type: POI_STARTER_TYPE})
+        $point.visible = nextState
+        if (nextState) {
+            $point.show()
         }
         else {
-            UIToast.warning({
-                                caption: `${point.title}`,
-                                text:    'Change failed.',
-                            })
+            $point.hide()
         }
-    }
 
-    const saveAsStandardPOI = () => {
-        __.ui.poiManager.updatePOI(point.id, {
-            type:     POI_STANDARD_TYPE,
-            category: POI_STANDARD_TYPE,
-        })
-    }
+        setIsVisible(nextState)
+        await __.ui.poiManager.updatePOI(pointSnap.id, {visible: nextState})
+    }, [pointSnap.id, isVisible, $point])
 
-    const panoramic = async () => {
+    const focus = useCallback(async (e) => {
+        e?.stopPropagation()
+        $pois.current = pointSnap.id
         if (__.ui.cameraManager.isRotating()) {
             await __.ui.cameraManager.stopRotate()
         }
-        __.ui.cameraManager.panoramic()
-    }
+        __.ui.sceneManager.focus($point, {
+            target:  $point,
+            heading: $camera.position.heading,
+            pitch:   $camera.position.pitch,
+            range:   $camera.position.range,
+            flyingTime: 2,
+        })
+    }, [pointSnap.id, $point, $camera.position, $pois])
 
-    const stopRotation = async () => {
-        await __.ui.cameraManager.stopRotate()
-        await __.ui.poiManager.updatePOI(point.id, {animated: false})
-    }
-
-    const remove = async () => {
+    const rotationAround = useCallback(async (e) => {
+        e?.stopPropagation()
+        $pois.current = pointSnap.id
         if (__.ui.cameraManager.isRotating()) {
             await stopRotation()
         }
-        __.ui.poiManager.remove({id: point.id}).then((result) => {
+        __.ui.sceneManager.focus($point, {
+            target:  $point,
+            heading: $camera.position.heading,
+            pitch:   $camera.position.pitch,
+            range:   $camera.position.range,
+            infinite:   true,
+            rpm:        lgs.settings.ui.poi.rpm,
+            rotate:     true,
+            flyingTime: 0,
+        })
+        $point.animated = true
+    }, [pointSnap.id, $point, $camera.position, $pois, stopRotation])
+
+    const copyCoordinates = useCallback((e) => {
+        e?.stopPropagation()
+        __.ui.poiManager.copyCoordinatesToClipboard($point).then(() => {
+            UIToast.success({caption: pointSnap.title, text: 'Coordinates copied to clipboard'})
+        })
+    }, [$point, pointSnap.title])
+
+    const remove = useCallback(async (e) => {
+        e?.stopPropagation()
+        if (__.ui.cameraManager.isRotating()) {
+            await stopRotation()
+        }
+        __.ui.poiManager.remove({id: pointSnap.id}).then((result) => {
             if (result.success) {
                 $pois.filtered.global.delete(result.id)
-                $pois.filtered.journey.delete(result.id)
                 $pois.bulkList.delete(result.id)
                 $pois.current = false
             }
         })
-    }
+    }, [pointSnap.id, $pois, stopRotation])
 
     const menuItems = useMemo(() => {
-        const items = []
-        if (point.visible) {
-            items.push(
-                <SlMenuItem key="focus" onClick={focus}>
-                    <SlIcon slot="prefix" library="fa" name={ICON_CROSSHAIRS}/>
-                    <span>{'Focus'}</span>
-                </SlMenuItem>
-            )
-
-            if (point.type !== POI_TMP_TYPE) {
-                if (point.type !== POI_STARTER_TYPE) {
-                    items.push(
-                        <SlMenuItem key="setAsStarter" onClick={setAsStarter}>
-                            <SlIcon slot="prefix" library="fa" name={ICON_FLAG}/>
-                            <span>Set as Starter</span>
-                        </SlMenuItem>
-                    )
-                }
-            }
-            else {
-                items.push(
-                    <SlMenuItem key="setAsStarter" onClick={saveAsStandardPOI}>
-                        <SlIcon slot="prefix" library="fa" name={ICON_FLAG}/>
-                        <span>{'Add to library'}</span>
-                    </SlMenuItem>
-                )
-            }
-
-            if (point.type !== POI_STARTER_TYPE && point.type !== POI_FLAG_START && point.type !== POI_FLAG_STOP) {
-                items.push(
-                    <SlMenuItem key="remove" onClick={remove}>
-                        <SlIcon slot="prefix" library="fa" name={ICON_TRASH}/>
-                        <span>{'Remove'}</span>
-                    </SlMenuItem>
-                )
-            }
-
-            if (point.expanded) {
-                items.push(
-                    <SlMenuItem key="shrink" onClick={shrink}>
-                        <SlIcon slot="prefix" library="fa" name={ICON_REDUCE}/>
-                        <span>{'Reduce'}</span>
-                    </SlMenuItem>
-                )
-            }
-            else {
-                items.push(
-                    <SlMenuItem key="expand" onClick={expand}>
-                        <SlIcon slot="prefix" library="fa" name={ICON_EXPAND}/>
-                        <span>{'Expand'}</span>
-                    </SlMenuItem>
-                )
-            }
-
-            items.push(
-                <SlMenuItem key="hide" onClick={hide}>
-                    <SlIcon slot="prefix" library="fa" name={ICON_MASK}/>
-                    <span>{'Hide'}</span>
-                </SlMenuItem>,
-                <sl-divider key="divider"/>,
-            )
-
-            if (!pois.list.get(point.id)?.animated) {
-                items.push(
-                    <SlMenuItem key="rotationAround" onClick={rotationAround}>
-                        <SlIcon slot="prefix" library="fa" name={ICON_ROTATE}/>
-                        <span>{'Rotate Around'}</span>
-                    </SlMenuItem>,
-                    <SlMenuItem key="panoramic" onClick={panoramic}>
-                        <SlIcon slot="prefix" library="fa" name={ICON_PANORAMA}/>
-                        <span>{'Panoramic'}</span>
-                    </SlMenuItem>,
-                )
-            }
-
-            if (point.id === pois.current && pois.list.get(point.id)?.animated) {
-                items.push(
-                    <SlMenuItem key="stopRotation" onClick={stopRotation} loading>
-                        <span>{'Stop Rotation'}</span>
-                    </SlMenuItem>
-                )
-            }
+        if (!isVisible) {
+            return []
         }
-        return items
-    }, [point, pois.current, pois.list.get(point.id)?.animated])
+        const items = []
 
+        items.push(
+            <SlMenuItem key="focus" onClick={focus}>
+                <SlIcon slot="prefix" library="fa" name={ICON_FOCUS}/>
+                <span>{'Focus'}</span>
+            </SlMenuItem>,
+        )
+
+        if (pointSnap.type !== POI_STARTER_TYPE && pointSnap.type !== POI_FLAG_START && pointSnap.type !== POI_FLAG_STOP) {
+            items.push(
+                <SlMenuItem key="remove" onClick={remove}>
+                    <SlIcon slot="prefix" library="fa" name={ICON_TRASH}/>
+                    <span>{'Remove'}</span>
+                </SlMenuItem>,
+            )
+        }
+
+        items.push(
+            <SlMenuItem key="copy-coords" onClick={copyCoordinates}>
+                <SlIcon slot="prefix" library="fa" name={ICON_COPY}/>
+                <span>{'Copy Coords'}</span>
+            </SlMenuItem>,
+            <SlMenuItem key="toggle-exp"
+                        onClick={() => __.ui.poiManager.updatePOI(pointSnap.id, {expanded: !pointSnap.expanded})}>
+                <SlIcon slot="prefix" library="fa" name={pointSnap.expanded ? ICON_REDUCE : ICON_EXPAND}/>
+                <span>{pointSnap.expanded ? 'Reduce' : 'Expand'}</span>
+            </SlMenuItem>,
+            <SlMenuItem key="hide" onClick={toggleVisibility}>
+                <SlIcon slot="prefix" library="fa" name={ICON_MASK}/>
+                <span>{'Hide'}</span>
+            </SlMenuItem>,
+            <SlDivider key="div-1"/>,
+        )
+
+        if (!isAnimated) {
+            items.push(
+                <SlMenuItem key="rot-around" onClick={rotationAround}>
+                    <SlIcon slot="prefix" library="fa" name={ICON_ROTATE}/>
+                    <span>{'Rotate Around'}</span>
+                </SlMenuItem>,
+            )
+
+            items.push(
+                <SlMenuItem key="rot-panorama" onClick={stopRotation}>
+                    <SlIcon slot="prefix" library="fa" name={ICON_PANORAMA}/>
+                    <span>{'Panoramic'}</span>
+                </SlMenuItem>,
+            )
+        }
+        else if (isCurrent) {
+            items.push(
+                <SlMenuItem key="stop-rot" onClick={stopRotation}>
+                    <SlIcon slot="prefix" library="fa" name={ICON_ROTATE}/>
+                    <span>{'Stop Rotation'}</span>
+                </SlMenuItem>,
+            )
+
+        }
+
+        return items
+    }, [pointSnap, isCurrent, isAnimated, isVisible, focus, remove, rotationAround, stopRotation, copyCoordinates, toggleVisibility])
+
+    /**
+     * UI BRANCHING:
+     * If hidden -> Single Button
+     * If visible -> Dropdown Menu
+     */
     return (
-        <>
-            {point.visible ? (
-                <SlDropdown className="edit-poi-menu">
-                    <SlButton slot="trigger" caret size="small">
-                        <SlIconButton size="small" slot="prefix"
-                                      library="fa"
-                                      name={FA2SL.set(faLocationDot)}
-                        />{'Select an action'}
-                    </SlButton>
-                    <SlMenu>{menuItems}</SlMenu>
-                </SlDropdown>
+        <div
+            key={`${pointSnap.id}-${isVisible ? 'visible' : 'hidden'}`}
+            className="poi-edit-menu-container"
+            onClick={(e) => e.stopPropagation()}
+        >
+            {!isVisible ? (
+                <SlButton size="small" onClick={toggleVisibility}>
+                    <SlIcon slot="prefix" size={'small'} library="fa" name={ICON_SHOW}/>{'Show'}
+                </SlButton>
             ) : (
-                 <SlButton onClick={show} size="small">
-                     <SlIconButton size="small" slot="prefix"
-                                   library="fa"
-                                   name={FA2SL.set(faLocationDot)}
-                     />{'Show'}
-                 </SlButton>
+                 <SlDropdown className="edit-poi-menu">
+                     <SlButton slot="trigger" caret size="small">
+                         <SlIcon slot="prefix" size={'small'} library="fa" name={ICON_LOCATION}/>{'Select an action'}
+                     </SlButton>
+                     <SlMenu>{menuItems}</SlMenu>
+                 </SlDropdown>
              )}
-        </>
+        </div>
     )
 })
