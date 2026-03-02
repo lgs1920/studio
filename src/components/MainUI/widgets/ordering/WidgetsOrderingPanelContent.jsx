@@ -7,11 +7,18 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-24
- * Last modified: 2026-02-24
+ * Created on: 2026-03-02
+ * Last modified: 2026-03-02
  *
  *
  * Copyright © 2026 LGS1920
+ ******************************************************************************/
+
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: WidgetsOrderingPanelContent.jsx
  ******************************************************************************/
 
 import { LGSScrollbars } from '@Components/MainUI/LGSScrollbars'
@@ -29,6 +36,9 @@ export const WidgetsOrderingPanelContent = ({widgetsBoard}) => {
     const $widget = lgs.stores.ui.widget
     const widget = useSnapshot($widget)
 
+    /**
+     * Direct DOM update for z-index to avoid re-render flicker
+     */
     const updateWidgetDOM = (id, zIndex) => {
         const el = document.querySelector(`.lgs-widget-container[data-widget="${id}"]`)
         if (el) {
@@ -46,7 +56,11 @@ export const WidgetsOrderingPanelContent = ({widgetsBoard}) => {
 
             const entries = Array.from(widget.list.entries())
             const listPromises = entries
-                .filter(([, w]) => w?.widgetsBoard === widgetsBoard)
+                .filter(([id, w]) => {
+                    const widgetType = id.split('#')[0]
+                    // We hide CREDITS_WIDGET from the sorting list
+                    return w?.widgetsBoard === widgetsBoard && widgetType !== CREDITS_WIDGET
+                })
                 .map(async ([id], index) => {
                     const widgetType = id.split('#')[0]
                     const instance = lgs.settings.widgets[widgetType]
@@ -55,11 +69,10 @@ export const WidgetsOrderingPanelContent = ({widgetsBoard}) => {
                     }
 
                     const position = await __.ui.widgetManager.getWidgetPosition(id)
-                    const currentZ = widgetType === CREDITS_WIDGET
-                                     ? WIDGET_LAYER_TOP
-                                     : (position?.zIndex && position.zIndex !== 0)
-                                       ? position.zIndex
-                                       : (WIDGET_LAYER_START + index * WIDGET_LAYER_STEP)
+                    // Original logic for zIndex calculation
+                    const currentZ = (position?.zIndex && position.zIndex !== 0)
+                                     ? position.zIndex
+                                     : (WIDGET_LAYER_START + index * WIDGET_LAYER_STEP)
 
                     return {
                         id,
@@ -81,6 +94,9 @@ export const WidgetsOrderingPanelContent = ({widgetsBoard}) => {
         }
     }, [widget.list, widgetsBoard])
 
+    /**
+     * Reorder items and update persistence layers
+     */
     const handleReorder = async (oldIndex, newIndex) => {
         const newList = [..._activeWidgets]
         const [movedItem] = newList.splice(oldIndex, 1)
@@ -93,6 +109,7 @@ export const WidgetsOrderingPanelContent = ({widgetsBoard}) => {
 
         const updatedItems = newList.map((item, index) => {
             let newZ
+            // Even if hidden from list, we keep the safety check for TOP layer types
             if (item.type === CREDITS_WIDGET) {
                 newZ = WIDGET_LAYER_TOP
             }

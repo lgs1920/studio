@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-25
- * Last modified: 2026-02-25
+ * Created on: 2026-03-02
+ * Last modified: 2026-03-02
  *
  *
  * Copyright © 2026 LGS1920
@@ -606,6 +606,42 @@ body {
     opacity: 0.5;
     border: var(--lgs-success-border-color) 1px solid !important;
     background: var(--lgs-success-bg-color) !important;
+}
+
+/**
+ * Draggable items in the ordering list
+ */
+.widget-sortable-list > div {
+    cursor: grab !important; /* Force open hand on hover */
+    cursor: -webkit-grab !important;
+    user-select: none; /* Prevent text selection which breaks dragging */
+}
+
+/* While the mouse is pressed down on the item */
+.widget-sortable-list > div:active {
+    cursor: grabbing !important; /* Force closed hand */
+    cursor: -webkit-grabbing !important;
+}
+
+/* The item being dragged (the one following the mouse) */
+.sortable-fallback {
+    cursor: grabbing !important;
+}
+
+/* The item currently selected in the list */
+.sortable-chosen {
+    cursor: grabbing !important;
+    background-color: var(--lgs-second-color-15); /* Optional: visual feedback */
+}
+
+/* The ghost (the empty space left behind) */
+.sortable-ghost {
+    cursor: grabbing !important;
+    opacity: 0.4;
+}
+
+.widget-sortable-list > div {
+    user-select: none;
 }
 
 .drop-is-forbidden .sortable-ghost {
