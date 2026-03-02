@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-01
- * Last modified: 2026-03-01
+ * Created on: 2026-03-02
+ * Last modified: 2026-03-02
  *
  *
  * Copyright © 2026 LGS1920
@@ -133,19 +133,43 @@
     --lgs-blur-s: 2px;
 
     --lgs-error-color: var(--sl-color-red-500);
+    --lgs-error-color-90: hsla(0 84.2% 60.2% / 0.9);
+    --lgs-error-color-75: hsla(0 84.2% 60.2% / 0.75);
+    --lgs-error-color-50: hsla(0 84.2% 60.2% / 0.5);
+    --lgs-error-color-25: hsla(0 84.2% 60.2% / 0.25);
+    --lgs-error-color-15: hsla(0 84.2% 60.2% / 0.15);
+
     --lgs-error-bg-color: hsla(0 84.2% 60.2%/0.5);
     --lgs-error-border-color: hsla(0 93.3% 94.1%/0.18);
 
 
     --lgs-success-color: var(--sl-color-green-500);
+    --lgs-success-color-90: hsla(142.1 70.6% 45.3% / 0.9);
+    --lgs-success-color-75: hsla(142.1 70.6% 45.3% / 0.75);
+    --lgs-success-color-50: hsla(142.1 70.6% 45.3% / 0.5);
+    --lgs-success-color-25: hsla(142.1 70.6% 45.3% / 0.25);
+    --lgs-success-color-15: hsla(142.1 70.6% 45.3% / 0.15);
+
     --lgs-success-bg-color: hsla(142.1 70.6% 45.3% / 0.8);
     --lgs-success-border-color: hsla(140.6 84.2% 92.5%/0.25);
 
     --lgs-warning-color: var(--sl-color-orange-500);
+    --lgs-warning-color-90: hsla(24 100% 50% / 0.9);
+    --lgs-warning-color-75: hsla(24 100% 50% / 0.75);
+    --lgs-warning-color-50: hsla(24 100% 50% / 0.5);
+    --lgs-warning-color-25: hsla(24 100% 50% / 0.25);
+    --lgs-warning-color-15: hsla(24 100% 50% / 0.15);
+
     --lgs-warning-bg-color: hsla(24 100% 50%/ 0.8);
     --lgs-warning-border-color: hsla(32.1 97.7% 83.1% / 0.25);
 
     --lgs-information-color: var(--sl-color-blue-500);
+    --lgs-information-color-90: hsla(217.2 91.2% 59.8% / 0.9);
+    --lgs-information-color-75: hsla(217.2 91.2% 59.8% / 0.75);
+    --lgs-information-color-50: hsla(217.2 91.2% 59.8% / 0.5);
+    --lgs-information-color-25: hsla(217.2 91.2% 59.8% / 0.25);
+    --lgs-information-color-15: hsla(217.2 91.2% 59.8% / 0.15);
+
     --lgs-information-bg-color: hsla(217.2 91.2% 59.8%/0.8);
     --lgs-information-border-color: hsla(214.3 94.6% 92.7%/0.25);
 
