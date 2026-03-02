@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-01
- * Last modified: 2026-03-01
+ * Created on: 2026-03-02
+ * Last modified: 2026-03-02
  *
  *
  * Copyright © 2026 LGS1920
@@ -33,6 +33,10 @@ const ICON_WARNING = FA2SL.set(faTriangleExclamation)
 
 /**
  * Filter and sort logic that preserves hidden POIs for UI management
+ * @param {boolean} onlyJourney
+ * @param {object} filterSettings
+ * @param {Map} list
+ * @returns {string[]}
  */
 const filterAndSortPois = (onlyJourney, filterSettings, list) => {
     const {
@@ -75,7 +79,6 @@ const filterAndSortPois = (onlyJourney, filterSettings, list) => {
 
     for (const id of ids) {
         const poi = list.get(id)
-        // Hidden POIs are NOT filtered out to allow reactivation via the "Show" button
         if (!poi?.title || (lowerName && !poi.title.toLowerCase().includes(lowerName))) {
             continue
         }
@@ -112,11 +115,27 @@ export const MapPOIFilteredList = () => {
     )
 
     /**
+     * Synchronize the store's filtered maps with the current UI results
+     * This allows the bulk actions checkbox to know exactly which POIs are targeted
+     */
+    useEffect(() => {
+        const targetMap = onlyJourney ? $pois.filtered.journey : $pois.filtered.global
+
+        // Update the specific map
+        targetMap.clear()
+        filteredPois.forEach(id => {
+            targetMap.set(id, true)
+        })
+
+        // Production note: also clean the other map if needed or leave as is for persistence
+    }, [filteredPois, onlyJourney, $pois.filtered])
+
+    /**
      * Automatic scroll to the currently selected POI
      */
     useEffect(() => {
         if (pois.current) {
-            const element = document.querySelector(`[data-poi-id="${pois.current}"]`)
+            const element = document.getElementById(`edit-map-poi-${pois.current}`)
             if (element) {
                 element.scrollIntoView({behavior: 'smooth', block: 'nearest'})
             }
@@ -136,7 +155,9 @@ export const MapPOIFilteredList = () => {
     return (
         <SlAlert variant="warning" open>
             <SlIcon slot="icon" library="fa" name={ICON_WARNING}/>
-            {'There are no results matching your filter criteria.'}
+            {' '}{'There are no results matching your filter criteria.'}{' '}
         </SlAlert>
     )
 }
+
+MapPOIFilteredList.displayName = 'MapPOIFilteredList'

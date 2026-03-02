@@ -7,117 +7,113 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-28
- * Last modified: 2026-02-28
+ * Created on: 2026-03-02
+ * Last modified: 2026-03-02
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { MapPOIEditToggleFilter } from '@Components/MainUI/MapPOI/MapPOIEditToggleFilter'
-import { memo, useCallback, useEffect, useMemo, useState } from 'react'
-import { useSnapshot }                                     from 'valtio'
-import { MapPOIBulkActionsMenu }                           from '@Components/MainUI/MapPOI/MapPOIBulkActionsMenu'
-import { MapPOIEditFilter }                                from '@Components/MainUI/MapPOI/MapPOIEditFilter'
-import { ToggleStateIcon }                                 from '@Components/ToggleStateIcon'
-import { JOURNEY_EDITOR_DRAWER }                           from '@Core/constants'
-import { faSquare, faSquareCheck }                         from '@fortawesome/pro-regular-svg-icons'
-import { SlDivider, SlSwitch }                             from '@shoelace-style/shoelace/dist/react'
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: MapPOIEditSettings.jsx
+ ******************************************************************************/
 
-/**
- * Pre-defined icons to avoid repeated references
- */
-const ICONS = {
-    true: faSquareCheck,
-    false: faSquare,
-}
+import { MapPOIBulkActionsMenu }      from '@Components/MainUI/MapPOI/MapPOIBulkActionsMenu'
+import { JOURNEY_EDITOR_DRAWER }      from '@Core/constants'
+import { SlDivider, SlSwitch }        from '@shoelace-style/shoelace/dist/react'
+import { FontAwesomeIcon }            from '@fortawesome/react-fontawesome'
+import {
+    faSquareCheck,
+    faSquareMinus,
+    faSquare,
+}                                     from '@fortawesome/pro-duotone-svg-icons'
+import classNames                     from 'classnames'
+import { memo, useCallback, useMemo } from 'react'
+import { useSnapshot }                from 'valtio'
 
-/**
- * A memoized React component for editing POI settings, including bulk actions and filters.
- * @param {Object} props - Component props
- * @param {boolean} [props.globals=true] - Whether to show global POI settings
- * @returns {JSX.Element} The rendered settings component
- */
 export const MapPOIEditSettings = memo(({globals = true}) => {
     const $pois = lgs.stores.main.components.pois
     const pois = useSnapshot($pois)
+    const {open: drawerOpen} = useSnapshot(lgs.stores.ui.drawers)
 
-    const $drawers = lgs.stores.ui.drawers
-    const drawers = useSnapshot($drawers)
+    const onlyJourney = useMemo(() => drawerOpen === JOURNEY_EDITOR_DRAWER, [drawerOpen])
 
-    /**
-     * Check if we are currently in the journey editor context
-     */
-    const onlyJourney = useMemo(() => drawers.open === JOURNEY_EDITOR_DRAWER, [drawers.open])
+    const {isAnySelected, isAllSelected, targetList} = useMemo(() => {
+        const list = onlyJourney ? pois.filtered.journey : pois.filtered.global
+        const total = list.size
 
-    const [allSelected, setAllSelected] = useState(false)
-
-    /**
-     * Toggles all POIs in the current list (journey or global)
-     */
-    const changeAll = useCallback(
-        (state) => {
-            $pois.bulkList.clear()
-            const targetList = onlyJourney ? $pois.filtered.journey : $pois.filtered.global
-
-            if (targetList.size === 0) {
-                return
-            }
-
-            targetList.forEach(poi => {
-                $pois.bulkList.set(poi.id, state)
-            })
-        },
-        [onlyJourney, $pois.bulkList, $pois.filtered.journey, $pois.filtered.global]
-    )
-
-    /**
-     * Updates the focus on edit setting
-     */
-    const handleFocusOnEdit = useCallback(
-        (event) => {
-            lgs.settings.ui.poi.focusOnEdit = event.target.checked ?? false
-        },
-        [],
-    )
-
-    /**
-     * Sync the allSelected state with the bulkList content
-     */
-    useEffect(() => {
-        if (pois.bulkList.size === 0) {
-            setAllSelected(false)
-            return
+        if (total === 0) {
+            return {isAnySelected: false, isAllSelected: false, targetList: list}
         }
 
-        const values = Array.from(pois.bulkList.values())
-        setAllSelected(values.every(v => v === true))
-    }, [pois.bulkList])
+        let count = 0
+        list.forEach((_, id) => {
+            if (pois.bulkList.has(id)) {
+                count++
+            }
+        })
+
+        return {
+            isAnySelected: count > 0,
+            isAllSelected: count === total,
+            targetList:    list,
+        }
+    }, [onlyJourney, pois.filtered, pois.bulkList])
+
+    const handleToggleAll = useCallback(() => {
+        const list = onlyJourney ? $pois.filtered.journey : $pois.filtered.global
+        if (isAnySelected) {
+            list.forEach((_, id) => $pois.bulkList.delete(id))
+        }
+        else {
+            list.forEach((_, id) => $pois.bulkList.set(id, true))
+        }
+    }, [isAnySelected, onlyJourney, $pois])
+
+    /**
+     * Determine which icon to show
+     */
+    const bulkIcon = useMemo(() => {
+        if (isAllSelected) {
+            return faSquareCheck
+        }
+        if (isAnySelected) {
+            return faSquareMinus
+        }
+        return faSquare
+    }, [isAnySelected, isAllSelected])
 
     return (
         <div id="map-poi-edit-settings">
             <div className="map-poi-edit-row">
                 <div className="map-poi-bulk-actions">
-                    <ToggleStateIcon
-                        initial={allSelected}
-                        className="map-poi-bulk-indicator"
-                        icons={ICONS}
-                        id="map-poi-bulk-action-global"
-                        onChange={changeAll}
-                    />
+                    <div
+                        className={classNames('map-poi-bulk-master-icon', {
+                            'is-partial': isAnySelected && !isAllSelected,
+                            'is-all':     isAllSelected,
+                        })}
+                        onClick={handleToggleAll}
+                    >
+                        <FontAwesomeIcon icon={bulkIcon}/>
+                    </div>
                     <MapPOIBulkActionsMenu/>
                 </div>
                 <SlSwitch
                     size="x-small"
-                    align-right
                     checked={lgs.settings.ui.poi.focusOnEdit}
-                    onSlChange={handleFocusOnEdit}
+                    onSlChange={(e) => {
+                        lgs.settings.ui.poi.focusOnEdit = e.target.checked
+                    }}
                 >
                     {'Focus on POI'}
                 </SlSwitch>
             </div>
-
             <SlDivider/>
         </div>
     )
 })
+
+MapPOIEditSettings.displayName = 'MapPOIEditSettings'
