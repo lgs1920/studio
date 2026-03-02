@@ -7,11 +7,11 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-10
- * Last modified: 2025-12-10
+ * Created on: 2026-03-02
+ * Last modified: 2026-03-02
  *
  *
- * Copyright © 2025 LGS1920
+ * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 :root {
@@ -27,9 +27,11 @@
     --lgs-inner-width: calc(100vw - var(--left) - var(--right));
     --lgs-inner-height: calc(100dvh - var(--top) - var(--bottom));
 
+    --lgs-border-radius-l: 1rem;
     --lgs-border-radius: 0.5rem;
     --lgs-border-radius-s: 0.25rem;
     --lgs-border-radius-xs: 0.15rem;
+    --lgs-border-radius-pill: 50%;
 
     --lgs-font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
     --lgs-font-line-height: 1.2;
@@ -56,8 +58,9 @@
     --lgs-font-size-l: 1.5rem;
     --lgs-font-size-xl: 2rem;
 
-    --lgs-ui-layer-zindex: 2000;
-    --lgs-tools-ui-zindex: 2500;
+    --lgs-main-ui-zindex: 800;
+    --lgs-ui-layer-zindex: 5000;
+    --lgs-tools-ui-zindex: calc(var(--lgs-ui-layer-zindex) - 1);
     --lgs-drop-zone-zindex: 10;
     --lgs-context-menu-zindex: calc(var(--lgs-tools-ui-zindex) + 100);
 
@@ -126,23 +129,47 @@
 
     --lgs-text-on-color: var(--lgs-light-color);
     --lgs-border-on-color: hsla(0 0% 98% / 0.25);
-    --lgs-blur: 5px;
-    --lgs-blur-s: 1px;
+    --lgs-blur: 4px;
+    --lgs-blur-s: 2px;
 
     --lgs-error-color: var(--sl-color-red-500);
+    --lgs-error-color-90: hsla(0 84.2% 60.2% / 0.9);
+    --lgs-error-color-75: hsla(0 84.2% 60.2% / 0.75);
+    --lgs-error-color-50: hsla(0 84.2% 60.2% / 0.5);
+    --lgs-error-color-25: hsla(0 84.2% 60.2% / 0.25);
+    --lgs-error-color-15: hsla(0 84.2% 60.2% / 0.15);
+
     --lgs-error-bg-color: hsla(0 84.2% 60.2%/0.5);
     --lgs-error-border-color: hsla(0 93.3% 94.1%/0.18);
 
 
     --lgs-success-color: var(--sl-color-green-500);
+    --lgs-success-color-90: hsla(142.1 70.6% 45.3% / 0.9);
+    --lgs-success-color-75: hsla(142.1 70.6% 45.3% / 0.75);
+    --lgs-success-color-50: hsla(142.1 70.6% 45.3% / 0.5);
+    --lgs-success-color-25: hsla(142.1 70.6% 45.3% / 0.25);
+    --lgs-success-color-15: hsla(142.1 70.6% 45.3% / 0.15);
+
     --lgs-success-bg-color: hsla(142.1 70.6% 45.3% / 0.8);
     --lgs-success-border-color: hsla(140.6 84.2% 92.5%/0.25);
 
     --lgs-warning-color: var(--sl-color-orange-500);
+    --lgs-warning-color-90: hsla(24 100% 50% / 0.9);
+    --lgs-warning-color-75: hsla(24 100% 50% / 0.75);
+    --lgs-warning-color-50: hsla(24 100% 50% / 0.5);
+    --lgs-warning-color-25: hsla(24 100% 50% / 0.25);
+    --lgs-warning-color-15: hsla(24 100% 50% / 0.15);
+
     --lgs-warning-bg-color: hsla(24 100% 50%/ 0.8);
     --lgs-warning-border-color: hsla(32.1 97.7% 83.1% / 0.25);
 
     --lgs-information-color: var(--sl-color-blue-500);
+    --lgs-information-color-90: hsla(217.2 91.2% 59.8% / 0.9);
+    --lgs-information-color-75: hsla(217.2 91.2% 59.8% / 0.75);
+    --lgs-information-color-50: hsla(217.2 91.2% 59.8% / 0.5);
+    --lgs-information-color-25: hsla(217.2 91.2% 59.8% / 0.25);
+    --lgs-information-color-15: hsla(217.2 91.2% 59.8% / 0.15);
+
     --lgs-information-bg-color: hsla(217.2 91.2% 59.8%/0.8);
     --lgs-information-border-color: hsla(214.3 94.6% 92.7%/0.25);
 
@@ -349,6 +376,13 @@ sl-icon-button[size="small"], sl-icon[size="small"] {
 }
 
 /*******************************************************************************
+ * Color Picker
+ ******************************************************************************/
+
+sl-color-picker[size="small"]::part(trigger) {
+    margin-top: 5px;
+}
+/*******************************************************************************
  * Icons
  ******************************************************************************/
 sl-icon.is-duotone svg[part="svg"] {
@@ -427,7 +461,7 @@ sl-menu-item::part(spinner)::part(base) {
  ******************************************************************************/
 :root {
     --lgs-vertical-panel-width: var(--lgs-width-unit);
-    --lgs-vertical-panel-height: 70%;
+    --lgs-vertical-panel-height: 85%;
 
     --lgs-horizontal-panel-width: 100%;
     --lgs-horizontal-panel-left: 0;
@@ -451,6 +485,10 @@ sl-drawer::part(header) {
     font-weight: 700 !important;
 }
 
+sl-drawer section {
+    width: 100%;
+}
+
 .mobile.portrait sl-drawer {
     --size: var(--lgs-vertical-panel-height)
 }
@@ -459,8 +497,12 @@ sl-drawer::part(panel) {
     border-radius: var(--sl-border-radius-medium);
 }
 
+sl-drawer::part(body) {
+    overflow: hidden;
+}
 sl-tab-panel {
     overflow-y: hidden;
+    --padding: var(--lgs-gutter-s) 0 0
 }
 
 sl-drawer sl-tab-group::part(base),
@@ -472,9 +514,12 @@ sl-drawer sl-tab-panel, sl-tab-group {
     max-height: 100%;
 }
 
+.tab-group--top ::slotted(sl-tab-panel) {
+    --padding: var(--lgs-gutter-s) 0;
+}
 sl-drawer:not([placement="bottom"]):not([placement="top"]) sl-tab-panel::part(base) {
-    padding-bottom: 1px;
     overflow-x: hidden;
+    padding-bottom: 1px;
 }
 
 .drawer-pane-footer {
@@ -594,7 +639,6 @@ sl-card[variant="primary"]::part(base) {
     display: block;
     width: var(--lgs-compass-size);
     height: var(--lgs-compass-size);
-    /*margin: var(--lgs-gutter-s);*/
 }
 
 .lgs-compass.mode-light {
@@ -606,68 +650,116 @@ sl-card[variant="primary"]::part(base) {
 }
 
 .lgs-compass-needle-north {
-    fill: var(--sl-color-red-800);
+    fill: var(--lgs-compass-needle-north, var(--sl-color-red-800));
 }
 
 .lgs-compass-needle-south {
-    fill: var(--sl-color-amber-100);
+    fill: var(--lgs-compass-needle-south, var(--sl-color-amber-100));
 }
 
 .lgs-compass-text {
-    fill: var(--lgs-light-color);
+    fill: var(--lgs-compass-text, var(--lgs-light-color));
 }
 
 .lgs-compass-poles, .lgs-compass-poles-circle {
-    fill: var(--lgs-light-color-50);
+    fill: var(--lgs-compass-poles, var(--lgs-light-color-50));
 }
 
-.lgs-compass-center {
-    fill: var(--sl-color-amber-500);
+.lgs-compass-needle-center {
+    fill: var(--lgs-compass-needle-center, var(--sl-color-amber-500));
 }
 
-.lgs-compass-bg {
-    fill: var(--lgs-dark-color-75);
+.lgs-compass-background {
+    fill: var(--lgs-compass-background, var(--lgs-dark-color-75));
 }
 
-.lgs-compass-over-bg {
-    fill: var(--lgs-light-color-15);
+.lgs-compass-over-background {
+    fill: var(--lgs-compass-over-background, var(--lgs-light-color-15));
+}
+
+.compass-widget-preview {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+}
+
+.compass-widget-preview .lgs-compass {
+    width: 160px;
+    height: 160px;
 }
 
 /*******************************************************************************
  * Scrollbars
  ******************************************************************************/
 
+/* * The view needs to maintain its negative margins to hide native bars.
+ * Avoid using !important on padding here as it can conflict with
+ * the library's inline calculations.
+ */
+
+.lgs-scrollbars {
+    overflow: hidden !important;
+    width: 100%;
+    height: 100%;
+    padding-bottom: 20px;
+}
+.lgs-scrollbars .view {
+    /* Ensures content doesn't touch the custom scrollbar thumb */
+    overflow: scroll !important;
+    box-sizing: content-box !important;
+    /* Crucial: prevents ghost native bars on some browsers */
+    padding-right: 10px;
+    padding-bottom: 10px;
+}
+
+/* Common track styles */
+.lgs-scrollbars .track-vertical,
 .lgs-scrollbars .track-horizontal {
-    --thumb-color: var(--lgs-scroolbar-thumb-color);
-    --track-color: var(--lgs-scroolbar-track-color);
+    position: absolute;
+    z-index: 10;
+    transition: opacity 0.2s ease;
+    border-radius: 3px;
+    background-color: var(--lgs-scroolbar-track-color, rgba(0, 0, 0, 0.1));
+}
+
+.lgs-scrollbars .track-horizontal {
     right: 2px;
     bottom: 2px;
     left: 2px;
-    border-radius: 3px;
-    background-color: var(--track-color);
+    height: 6px !important;
 }
 
 .lgs-scrollbars .track-vertical {
-    --thumb-color: var(--lgs-scroolbar-thumb-color);
-    --track-color: var(--lgs-scroolbar-track-color);
+    top: 2px;
     right: 2px;
     bottom: 2px;
-    top: 2px;
-    border-radius: 3px;
-    background-color: var(--track-color);
+    width: 6px !important;
 }
 
-.lgs-scrollbars .thumb-horizontal, .lgs-scrollbars .thumb-vertical {
+/* Thumb styles (the draggable part) */
+.lgs-scrollbars .thumb-horizontal,
+.lgs-scrollbars .thumb-vertical {
+    position: relative;
+    display: block;
     cursor: pointer;
-    border: 1px solid var(--lgs-light-color-50);;
+    transition: background-color 0.2s ease;
+    border: 1px solid var(--lgs-light-color-50);
     border-radius: inherit;
-    background-color: var(--lgs-dark-color-50);
+    background-color: var(--lgs-scrollbar-thumb-color, var(--lgs-dark-color-50));
 }
 
-.on-map .lgs-scrollbars .track-horizontal, .on-map .lgs-scrollbars .track-vertical {
-    --thumb-color: var(--lgs-text-on-color)
+.lgs-scrollbars .thumb-vertical:hover,
+.lgs-scrollbars .thumb-horizontal:hover {
+    background-color: var(--lgs-primary-color, #007bff);
 }
 
+/* Specific context: when panel is displayed 'on-map' */
+.on-map .lgs-scrollbars .track-horizontal,
+.on-map .lgs-scrollbars .track-vertical {
+    --lgs-scroolbar-thumb-color: var(--lgs-text-on-color);
+}
 
 /*******************************************************************************
  * Tooltips
@@ -885,9 +977,9 @@ sl-details [slot="prefix"], sl-details [slot="suffix"] {
  ******************************************************************************/
 [align-right]::part(form-control) {
     display: flex;
-    flex-wrap: wrap;
-    gap: var(--lgs-gutter-s);
+    /*flex-wrap: wrap;*/
     align-items: center;
+    gap: var(--lgs-gutter-s);
 }
 
 [align-right]::part(form-control-input) {
@@ -916,10 +1008,10 @@ sl-input [slot="suffix"] {
  ******************************************************************************/
 
 sl-range {
+    width: 100%;
     --track-color-active: var(--lgs-track-color-active);
     --track-color-inactive: var(--lgs-track-color-inactive);
-    --thumb-size: var(--lgs-font-size-m);
-    width: 100%;
+    --thumb-size: var(--lgs-font-size);
 }
 
 .lgs-range {
@@ -953,11 +1045,14 @@ sl-range {
 /*******************************************************************************
  * Switches
  ******************************************************************************/
-sl-switch[align-right]::part(base) {
+sl-switch[align-right] {
+    width: 100%;
+}
+
+sl-switch::part(base) {
     display: flex;
     align-items: center;
     gap: var(--sl-spacing-3x-small) var(--gap-width);
-    --thumb-size: var(--height)
 }
 
 sl-switch[align-right]::part(label) {
@@ -970,9 +1065,22 @@ sl-switch[align-right]::part(control) {
     margin-left: auto
 }
 
-sl-switch[size="x-small"] {
+sl-switch {
     --height: 10px;
     --width: calc(2 * var(--height));
+}
+
+sl-switch[size="x-small"]
+sl-switch[size="x-small"] label {
+    width: 6rem
+}
+
+sl-switch[size="x-small"]::part(base) {
+    --thumb-size: var(--height)
+}
+
+sl-switch[size="x-small"]::part(label) slot {
+    margin-right: var(lgs-gutter-s)
 }
 
 /*******************************************************************************
@@ -1186,7 +1294,13 @@ hr {
     pointer-events: auto;
     opacity: 0;
     gap: var(--lgs-gutter-xs);
-    touchAction: 'pan-x pan-y';
+    touchAction: 'pan-x pan-y'
+}
+
+.lgs-widget.lgs-widget-hidden {
+    top: -9999px !important;
+    left: -9999px !important;
+    visibility: hidden !important;
 }
 
 .lgs-widget * {
@@ -1207,7 +1321,9 @@ hr {
 }
 
 .lgs-visual-widget {
-    margin: 0 !important
+    margin: 0 !important;
+    transition: transform 0s ease-in-out;
+    transform: var(--lgs-tx-transform);
 }
 
 .lgs-visual-widget.lgs-widget-inner-overlay.no-propagation {
@@ -1286,6 +1402,11 @@ hr {
     opacity: 1;
     contain: layout style paint;
 }
+
+.lgs-widget.recording-locked {
+    user-select: none;
+    pointer-events: none;
+}
 /*******************************************************************************
  * Cesium Selection indicator
  ******************************************************************************/
@@ -1353,7 +1474,7 @@ hr {
 
 
 /*******************************************************************************
- * Cameraaaaaflsh
+ * Camera flash
  ******************************************************************************/
 .lgs-flash-effect::after {
     position: absolute;
@@ -1389,4 +1510,15 @@ hr {
     color: var(--sl-color-gray-100);
     border-radius: var(--lgs-border-radius-xs);
     background-color: var(--sl-color-gray-800);
+}
+
+/*******************************************************************************
+ * Specific inputs
+ ******************************************************************************/
+.lgs-journey-metrics-origine-user::part(base) {
+    border-color: var(--lgs-warning-bg-color) !important;
+}
+
+.lgs-journey-metrics-origine-user sl-icon-button::part(base) {
+    color: var(--lgs-warning-color) !important;
 }

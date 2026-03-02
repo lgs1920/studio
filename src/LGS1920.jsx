@@ -7,40 +7,71 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-19
- * Last modified: 2025-11-19
+ * Created on: 2026-02-17
+ * Last modified: 2026-02-17
  *
  *
- * Copyright © 2025 LGS1920
+ * Copyright © 2026 LGS1920
  ******************************************************************************/
 
+import { AppUpdate }    from '@Components/AppUpdate'
 /**
  * Main application component for LGS1920 Studio
  * Initializes the application context, managers, layers, and camera settings
  * Renders the map, UI components, and PWA installation button
  * @returns {JSX.Element} The LGS1920 component
  */
-import { MapLayer }            from '@Components/cesium/MapLayer'
-import { Viewer }              from '@Components/cesium/Viewer'
-import { InitErrorMessage }        from '@Components/InitErrorMessage'
-import { MainUI }                  from '@Components/MainUI/MainUI.jsx'
-import '@shoelace-style/shoelace/dist/themes/light.css'
-import ResponsiveDevice        from '@Components/MainUI/ResponsiveDevice'
-import { SelectionIndicator }      from '@Components/MainUI/SelectionIndicator'
-import { ToolsUI } from '@Components/MainUI/ToolsUI'
-import { WelcomeModal }            from '@Components/MainUI/WelcomeModal'
-import { AppUpdate }           from '@Components/AppUpdate'
 import {
-    APP_EVENT, BASE_ENTITY, BOTTOM, CURRENT_JOURNEY, FOCUS_LAST, FOCUS_STARTER,
-    MOBILE_MAX, OVERLAY_ENTITY, POI_STARTER_TYPE,
-}                              from '@Core/constants'
-import { LGS1920Context }      from '@Core/LGS1920Context'
-import { MapTarget }           from '@Core/MapTarget'
-import { LayersAndTerrainManager } from '@Core/ui/LayerAndTerrainManager'
-import { TerrainUtils }        from '@Utils/cesium/TerrainUtils'
-import { TrackUtils }          from '@Utils/cesium/TrackUtils'
-import { UIToast }             from '@Utils/UIToast'
-import { useEffect, useState } from 'react'
+    MapLayer,
+}                       from '@Components/cesium/MapLayer'
+import {
+    Viewer,
+}                       from '@Components/cesium/Viewer'
+import {
+    InitErrorMessage,
+}                       from '@Components/InitErrorMessage'
+import {
+    MainUI,
+}                       from '@Components/MainUI/MainUI.jsx'
+import '@shoelace-style/shoelace/dist/themes/light.css'
+import ResponsiveDevice from '@Components/MainUI/ResponsiveDevice'
+import {
+    SelectionIndicator,
+}                       from '@Components/MainUI/SelectionIndicator'
+import {
+    ToolsUI,
+}                       from '@Components/MainUI/ToolsUI'
+import {
+    WelcomeModal,
+}                       from '@Components/MainUI/WelcomeModal'
+import {
+    APP_EVENT, BASE_ENTITY, CURRENT_JOURNEY, FOCUS_LAST, FOCUS_STARTER, OVERLAY_ENTITY, POI_STARTER_TYPE,
+    WIDGET_GOOGLE_FONTS,
+}                       from '@Core/constants'
+import {
+    LGS1920Context,
+}                       from '@Core/LGS1920Context'
+import {
+    MapTarget,
+}                       from '@Core/MapTarget'
+import {
+    LayersAndTerrainManager,
+}                       from '@Core/ui/LayerAndTerrainManager'
+import {
+    TerrainUtils,
+}                       from '@Utils/cesium/TerrainUtils'
+import {
+    TrackUtils,
+}                       from '@Utils/cesium/TrackUtils'
+import {
+    UIToast,
+}                       from '@Utils/UIToast'
+import {
+    preCache,
+}                       from '@zumer/snapdom'
+import {
+    useEffect, useState,
+}                       from 'react'
 
 export const LGS1920 = () => {
     // State to track initialization status and errors
@@ -244,6 +275,19 @@ export const LGS1920 = () => {
 
                 // Set camera focus
                 setCameraFocus(lgs, starter, focusTarget, cameraStore)
+                // Initialize the widget cache
+                await __.ui.widgetCache.init()
+
+                // Add font to snapdom cache
+                await preCache({
+                                   root:       document.body,
+                                   embedFonts: true,
+                                   localFonts: WIDGET_GOOGLE_FONTS.map(family => ({
+                                       family,
+                                       src:    `https://fonts.googleapis.com/css2?family=${family.replace(/\s+/g, '+')}:wght@400;700&display=swap`,
+                                       weight: 400,
+                                   })),
+                               })
 
                 // Mark UI as initialized
                 __.app.uiInit = true
@@ -270,15 +314,16 @@ export const LGS1920 = () => {
             {!initStatus && initError && <InitErrorMessage message={initError.message}/>}
             {initStatus && (
                 <>
+                    <ToolsUI/>
+                    <MainUI/>
                     <ResponsiveDevice/>
                     <AppUpdate/>
                     <WelcomeModal/>
                     <MapLayer type={BASE_ENTITY}/>
                     <MapLayer type={OVERLAY_ENTITY}/>
                     <Viewer/>
-                    <MainUI/>
                     <SelectionIndicator/>
-                    <ToolsUI/>
+
                 </>
             )}
         </>

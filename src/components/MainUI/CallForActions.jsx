@@ -7,11 +7,11 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-07-05
- * Last modified: 2025-07-05
+ * Created on: 2026-02-28
+ * Last modified: 2026-02-28
  *
  *
- * Copyright © 2025 LGS1920
+ * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { faRegularRouteCirclePlus } from '@awesome.me/kit-eb5c406148/icons/kit/custom'
@@ -22,7 +22,7 @@ import { useEffect, useRef }        from 'react'
 
 export const CallForActions = (props) => {
     const cfa = useRef(null)
-    const main = lgs.mainProxy
+    const main = lgs.stores.main
 
     const loadJourney = () => {
         hide()

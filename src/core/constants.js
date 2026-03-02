@@ -7,11 +7,11 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-07
- * Last modified: 2025-12-07
+ * Created on: 2026-02-24
+ * Last modified: 2026-02-24
  *
  *
- * Copyright © 2025 LGS1920
+ * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { CESIUM_EVENTS as $CESIUM_EVENTS }        from '@Core/events/cesiumEvents'
@@ -21,8 +21,8 @@ import {
     faTelescope, faUnlock, faUser,
 }                                                 from '@fortawesome/duotone-regular-svg-icons'
 import { faAndroid, faApple, faLinux, faWindows } from '@fortawesome/free-brands-svg-icons'
-import { faCompass, faDesktop }                   from '@fortawesome/pro-regular-svg-icons'
-import { faGavel }                                from '@fortawesome/pro-solid-svg-icons'
+import { faCompass, faDesktop, faRoute, faText }  from '@fortawesome/pro-regular-svg-icons'
+import { faChartFft, faGavel }                    from '@fortawesome/pro-solid-svg-icons'
 
 
 export const SLOGAN = 'Replay the World Outdoors!'
@@ -124,36 +124,6 @@ export const COLOR_SWATCHES_NONE = 'none'
 export const COLOR_SWATCHES_SEQUENCE = 'sequence'
 export const COLOR_SWATCHES_RANDOM = 'random'
 
-// List of settings exclusions (ie we keep the user choice)
-// This array is then sorted alphabetically by object depth.
-export const SETTING_EXCLUSIONS = [
-    'layers.base', 'layers.terrain', 'layers.overlay',
-    'layers.filter', 'layers.colorSettings',
-    'app', 'scene', 'starter', 'coordinateSystem', 'unitSystem', 'poi.filter',
-    'ui.camera', 'ui.welcome', 'swatches.current',
-    'ui.menu', 'ui.poi.rotate', 'ui.poi.focusOnEdit', 'ui.journeyToolbar',
-    'ui.compass.mode', 'ui.video.fps', 'ui.video.quality', 'ui.video.ratio', 'ui.pwa',
-].sort((a, b) => {
-    const segmentsA = a.split('.')
-    const segmentsB = b.split('.')
-
-    for (let i = 0; i < Math.max(segmentsA.length, segmentsB.length); i++) {
-        if (segmentsA[i] === undefined) {
-            return -1
-        }
-        if (segmentsB[i] === undefined) {
-            return 1
-        }
-        if (segmentsA[i] < segmentsB[i]) {
-            return -1
-        }
-        if (segmentsA[i] > segmentsB[i]) {
-            return 1
-        }
-    }
-    return 0
-})
-
 /**
  * Layers and Terrains
  */
@@ -175,7 +145,6 @@ export const DEFAULT_LAYERS_COLOR_SETTINGS = {
     colorToAlphaThreshold: 0,
     colorToAlpha:          '#ffffff',
 }
-
 export const LAYERS_THUMBS_DIR = '/assets/images/layers/thumbnails'
 export const PREMIUM_ACCESS = 'premium'
 export const FREEMIUM_ACCESS = 'freemium'
@@ -289,7 +258,7 @@ export const LAYERS_DRAWER = 'layers-drawer'
 export const JOURNEY_EDITOR_DRAWER = 'journey-editor-drawer'
 export const SETTINGS_EDITOR_DRAWER = 'settings-editor-drawer'
 export const POIS_EDITOR_DRAWER = 'pois-editor-drawer'
-
+export const WIDGETS_EDITOR_DRAWER = 'widgets-editor-drawer'
 
 /** Jaurney, Track, POI **/
 
@@ -477,28 +446,137 @@ export const LGS_VISUAL_WIDGET = 'lgs-visual-widget'
 export const LGS_ANIMATION_DRAGGING = 'lgs-animation-dragging'
 export const LGS_ANIMATION_RESIZING = 'lgs-animation-resizing'
 export const LGS_ANIMATION_SCALING = 'lgs-animation-scaling'
-export const LGS_WIDGET_SCALE_FACTOR = 1
+export const LGS_WIDGET_SCALE_BASE = 4
+const LGS_WIDGET_DPR = (typeof window !== 'undefined' && window.devicePixelRatio) ? window.devicePixelRatio : 1
+export const LGS_WIDGET_SCALE_EFFECTIVE = Math.min(LGS_WIDGET_SCALE_BASE, LGS_WIDGET_SCALE_BASE / LGS_WIDGET_DPR)
+export const LGS_WIDGET_SCALE_FACTOR = LGS_WIDGET_SCALE_EFFECTIVE
+console.log()
+export const WIDGET_MOUNT_TIMEOUT = 15000
 
 export const VIDEO_CROP_ZONE = 'video-crop-zone'
-export const VIDEO_TOOLS_WIDGETS = 'video-tools-widgets'
-export const CROP_TOOLS_WIDGETS = 'crop-tools-widgets'
-export const MULTI_PURPOSE_WIDGETS = 'multi-purpose-widgets'
+export const VIDEO_TOOLS_WIDGETS   = 'video-tools-widgets',
+             CROP_TOOLS_WIDGETS    = 'crop-tools-widgets',
+             MULTI_PURPOSE_WIDGETS = 'multi-purpose-widgets',
+             JOURNEY_WIDGETS       = 'journey-widgets',
+             SCENE_WIDGETS         = 'scene-widgets'
 
-export const WIDGETS_CAPABILITIES  = ['canRemove', 'canReset', 'canMaximize', 'canPosition', 'canEdit'],
-             WIDGETS_CONFIGURATION = new Map([
-                                                 [
-                                                     'compass-widget', {
-                                                     icon:      faCompass,
-                                                     component: null,
-                                                 },
-                                                 ],
-                                                 [
-                                                     'credits-widget', {
-                                                     icon:      faGavel,
-                                                     component: null,
-                                                 },
-                                                 ],
-                                             ],
-             )
+export const COMPASS_WIDGET       = 'compass-widget',
+             CREDITS_WIDGET       = 'credits-widget',
+             PROFILE_WIDGET       = 'profile-widget',
+             TEXT_WIDGET          = 'text-widget',
+             JOURNEY_STATS_WIDGET = 'journey-stats-widget'
+
+export const WIDGETS_CAPABILITIES   = [
+           'canRemove',
+           'canReset',
+           'canMaximize',
+           'canPosition',
+           'canEdit',
+       ],
+             WIDGETS_CONFIGURATION  = new Map([
+                                                  [
+                                                      COMPASS_WIDGET, {
+                                                      icon:      faCompass,
+                                                      component: 'CompassWidget',
+                                                  },
+                                                  ],
+                                                  [
+                                                      CREDITS_WIDGET, {
+                                                      icon:      faGavel,
+                                                      component: 'CreditsWidget',
+                                                  },
+                                                  ],
+
+                                                  [
+                                                      PROFILE_WIDGET, {
+                                                      icon:      faChartFft,
+                                                      component: 'ProfileWidget',
+                                                  },
+                                                  ],
+                                                  [
+                                                      TEXT_WIDGET, {
+                                                      icon:      faText,
+                                                      component: 'TextWidget',
+                                                  },
+                                                  ],
+                                                  [
+                                                      JOURNEY_STATS_WIDGET, {
+                                                      icon:      faRoute,
+                                                      component: 'JourneyStatsWidget',
+                                                  },
+                                                  ],
+                                              ]),
+
+             WIDGET_LAYER_START = 4000,
+             WIDGET_LAYER_STEP      = 1,
+             WIDGET_LAYER_TOP   = 5000,
+
+
+             DEFAULT_WIDGETS_LIST   = '@Components/MainUI/widgets/list',
+             DEFAULT_WIDGET_CONTEXT = {
+                 widgetEditor: false,
+                 widgetsBoard: '',
+                 zIndex: WIDGET_LAYER_START,
+             }
+
+export const SCENE_WIDGETS_BOARD = 'scene',
+             VIDEO_WIDGETS_BOARD = VIDEO_CROP_ZONE
+
 export const DYNAMIC_WIDGET_PART = 'dynamic-widget-part',
              STATIC_WIDGET_PART  = 'static-widget-part'
+
+export const WIDGET_SHADOWS = new Map([
+                                          ['small', ' var(--sl-shadow-medium)'],
+                                          ['normal', ' var(--sl-shadow-large)'],
+                                          ['large', ' var(--sl-shadow-x-large)'],
+                                      ])
+export const WIDGET_RADIUS = new Map([
+                                         ['none', {name: 'None', value: '0'}],
+                                         ['small', {name: 'Small', value: ' var(--lgs-border-radius-s)'}],
+                                         ['medium', {name: 'Medium', value: ' var(--lgs-border-radius)'}],
+                                         ['large', {name: 'Large', value: ' var(--lgs-border-radius-l)'}],
+                                         ['pill', {name: 'Pill', value: ' 9999px'}],
+                                     ])
+
+/**
+ * Google Fonts available for text widgets
+ * Alphabetically sorted list of fonts loaded from Google Fonts
+ */
+export const WIDGET_GOOGLE_FONTS = [
+    'Abril Fatface',
+    'Alumni Sans Pinstripe',
+    'Roboto Condensed',
+    'Bangers',
+    'Dancing Script',
+    'Fredoka One',
+    'Lobster',
+    'Luckiest Guy',
+    'Nunito',
+    'Open Sans',
+    'Oswald',
+    'Pacifico',
+    'Quicksand',
+    'Roboto',
+].sort((a, b) => a.localeCompare(b))
+
+/**
+ * Additional Google Fonts used by the app (not in widget selector)
+ */
+export const APP_GOOGLE_FONTS = [
+    'Cookie',
+    'Lato',
+]
+
+/**
+ * System font stack for text widgets
+ */
+export const WIDGET_SYSTEM_FONT_STACK = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif'
+
+/**
+ * Complete list of font families for text widgets
+ * Includes system font and Google Fonts
+ */
+export const WIDGET_FONT_FAMILIES = ['System', ...WIDGET_GOOGLE_FONTS]
+
+export const WIDGET_EDITOR_PRE_RENDER_EVENT  = 'widget-editor-pre-render',
+             WIDGET_EDITOR_POST_RENDER_EVENT = 'widget-editor-post-render'

@@ -1,3 +1,19 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: MarkerMenu.js
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2026-02-28
+ * Last modified: 2026-02-28
+ *
+ *
+ * Copyright © 2026 LGS1920
+ ******************************************************************************/
+
 import { POI_TYPE }   from '@Utils/cesium/EntitiesUtils'
 import { MouseUtils } from '@Utils/cesium/MouseUtils'
 import * as Cesium    from 'cesium'
@@ -5,7 +21,7 @@ import * as Cesium    from 'cesium'
 export class MarkerMenu {
     static show = (data) => {
 
-        const menuStore = lgs.mainProxy.components.floatingMenu
+        const menuStore = lgs.stores.main.components.floatingMenu
 
         if (data.picked.type !== POI_TYPE) {
             return

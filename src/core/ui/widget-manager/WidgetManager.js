@@ -7,25 +7,27 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-19
- * Last modified: 2025-11-19
+ * Created on: 2026-02-14
+ * Last modified: 2026-02-14
  *
  *
- * Copyright © 2025 LGS1920
+ * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 /**
  * Singleton class acting as an interface for managing draggable and resizable widgets.
  * Delegates functionality to specialized classes.
  */
-import { WidgetDBManager } from '@Core/ui/widget-manager/WidgetDBManager'
-import { WidgetCore }      from './WidgetCore'
-import { WidgetCropper }   from './WidgetCropper'
-import { WidgetDraggable } from './WidgetDraggable'
-import { WidgetPosition }  from './WidgetPosition'
-import { WidgetResizable } from './WidgetResizable'
-import { WidgetScalable }  from './WidgetScalable'
-import { WidgetTransform } from './WidgetTransform'
+import { WidgetDBManager }    from '@Core/ui/widget-manager/WidgetDBManager'
+import { WidgetRotatable }    from '@Core/ui/widget-manager/WidgetRotatable'
+import { WidgetCoreControls } from './WidgetCoreControls'
+import { WidgetCoreRegistry } from './WidgetCoreRegistry'
+import { WidgetCropper }      from './WidgetCropper'
+import { WidgetDraggable }    from './WidgetDraggable'
+import { WidgetPosition }     from './WidgetPosition'
+import { WidgetResizable }    from './WidgetResizable'
+import { WidgetScalable }     from './WidgetScalable'
+import { WidgetTransform }    from './WidgetTransform'
 
 export class WidgetManager {
     // Singleton instance
@@ -46,21 +48,28 @@ export class WidgetManager {
     /** @type {WidgetScalable} Instance of WidgetScalable */
     #scalable
 
+    /** @type {WidgetRotatable} Instance of WidgetRotatable */
+    #rotatable
+
     /** @type {WidgetTransform} Instance of WidgetTransform */
     #transform
 
     /** @type {WidgetPosition} Instance of WidgetPosition */
     #position
 
-    /** @type {WidgetCore} Instance of WidgetCore */
-    #core
+    /** @type {WidgetCoreRegistry} Instance of WidgetCoreRegistry */
+    #registry
+
+    /** @type {WidgetCoreControls} Instance of WidgetCoreControls */
+    #controls
 
     WIDGET_RENDERED_EVENT = 'widget-rendered'
     ALL_WIDGETS_RENDERED_EVENT = 'all-widgets-rendered'
+    WIDGET_NOT_MOUNTED = 'widget-not-mounted'
 
     /**
      * Creates or returns the singleton instance of WidgetManager.
-     * @param {Object} store - Application store (currently unused)
+     * @param {Object} store - Application store
      */
     constructor(store) {
         if (WidgetManager.#instance) {
@@ -72,10 +81,13 @@ export class WidgetManager {
         this.#draggable = new WidgetDraggable(this, this.#cropper, this.#transform)
         this.#resizable = new WidgetResizable(this, this.#cropper)
         this.#scalable = new WidgetScalable(this, this.#cropper, this.#transform)
+        this.#rotatable = new WidgetRotatable(this, this.#transform)
         this.#position = new WidgetPosition(this)
-        this.#core = new WidgetCore(this, this.#transform, this.#widgetDB)
+        this.#registry = new WidgetCoreRegistry()
+        this.#controls = new WidgetCoreControls(this.#registry)
         WidgetManager.#instance = this
     }
+
 
     /**
      * Gets the transform helper instance.
@@ -86,11 +98,91 @@ export class WidgetManager {
     }
 
     /**
+     * Getter for isResizing property
+     * @returns {boolean} Whether a widget is being resized
+     */
+    get isResizing() {
+        return this.#registry.isResizing
+    }
+
+    /**
+     * Setter for isResizing property
+     * @param {boolean} value - New value for isResizing
+     */
+    set isResizing(value) {
+        this.#registry.isResizing = value
+    }
+
+    /**
+     * Getter for isDragging property
+     * @returns {boolean} Whether a widget is being dragged
+     */
+    get isDragging() {
+        return this.#registry.isDragging
+    }
+
+    /**
+     * Setter for isDragging property
+     * @param {boolean} value - New value for isDragging
+     */
+    set isDragging(value) {
+        this.#registry.isDragging = value
+    }
+
+    /**
+     * Getter for windowResizing property
+     * @returns {boolean} Whether window resizing has an impact
+     */
+    get windowResizing() {
+        return this.#registry.windowResizing
+    }
+
+    /**
+     * Setter for windowResizing property
+     * @param {boolean} value - New value for windowResizing
+     */
+    set windowResizing(value) {
+        this.#registry.windowResizing = value
+    }
+
+    /**
+     * Getter for widgets list property
+     * @returns {[]} List of widget elements
+     */
+    get widgets() {
+        return this.#registry.widgets
+    }
+
+    /**
+     * Getter for isScaling property
+     * @returns {boolean} Whether a widget is being scaled
+     */
+    get isScaling() {
+        return this.#registry.isScaling
+    }
+
+    /**
+     * Setter for isScaling property
+     * @param {boolean} value - New value for isScaling
+     */
+    set isScaling(value) {
+        this.#registry.isScaling = value
+    }
+
+    /**
+     * Getter used to retrieves the widget ID key.
+     * @returns {string} The widget ID key
+     */
+    get widgetIDKey() {
+        return this.#registry.getWidgetIDKey()
+    }
+
+    /**
      * Retrieves the element ID from its data attribute.
      * @param {HTMLElement} element - The DOM element
      * @returns {string|null} The element's ID or null if not found
      */
-    retrieveElementId = element => this.#core.retrieveElementId(element)
+    retrieveElementId = element => this.#registry.retrieveElementId(element)
 
     /**
      * Sets up a DOM element as a widget with moveable functionality.
@@ -102,7 +194,7 @@ export class WidgetManager {
      * @returns {Promise<boolean>} True if setup is successful, false otherwise
      */
     setupElement = async (element, initialConfig, setBounds, setPosition, moveable) =>
-        await this.#core.setupElement(element, initialConfig, setBounds, setPosition, moveable)
+        await this.#controls.setupElement(element, initialConfig, setBounds, setPosition, moveable)
 
     /**
      * Applies position to an element, updating its style and configuration.
@@ -113,7 +205,7 @@ export class WidgetManager {
      * @param {Function} setControlBoxProps - Function to set control box properties
      */
     applyPosition = (element, position, moveable, isDragging, setControlBoxProps) =>
-        this.#core.applyPosition(element, position, moveable, isDragging, setControlBoxProps)
+        this.#controls.applyPosition(element, position, moveable, isDragging, setControlBoxProps)
 
     /**
      * Manages the visibility of the control box.
@@ -124,14 +216,14 @@ export class WidgetManager {
      * @param {boolean} isMouseOver - Whether mouse is over the element
      */
     manageControlBox = (moveable, setControlBoxProps, _controlBoxTimer, show, isMouseOver) =>
-        this.#core.manageControlBox(moveable, setControlBoxProps, _controlBoxTimer, show, isMouseOver)
+        this.#controls.manageControlBox(moveable, setControlBoxProps, _controlBoxTimer, show, isMouseOver)
 
     /**
      * Retrieves video format ratio configuration.
      * @param {string} ratio - Ratio identifier (e.g., '16x9')
      * @returns {Object} Ratio configuration object
      */
-    getRatio = ratio => this.#core.getRatio(ratio)
+    getRatio = ratio => this.#registry.getRatio(ratio)
 
     /**
      * Computes initial position for a widget based on configuration.
@@ -141,7 +233,7 @@ export class WidgetManager {
      * @returns {Object} Position object with left and top coordinates
      */
     computeInitialPosition = (config, element, isResize = false) =>
-        this.#core.computeInitialPosition(config, element, isResize)
+        this.#controls.computeInitialPosition(config, element, isResize)
 
     /**
      * Refreshes container bounds based on current container size.
@@ -149,7 +241,13 @@ export class WidgetManager {
      * @param {Object} moveable - Moveable instance
      * @returns {Object} Updated bounds object
      */
-    refreshBounds = (config, moveable) => this.#core.refreshBounds(config, moveable)
+    refreshBounds = (config, moveable) => this.#controls.refreshBounds(config, moveable)
+
+    /**
+     * Handles drag events, updating crop overlay in real-time.
+     * @param {Object} event - Drag event from Moveable
+     */
+    onDrag = event => this.#draggable.onDrag(event)
 
     /**
      * Sets boundary status indicating if widget touches container edges.
@@ -157,62 +255,62 @@ export class WidgetManager {
      * @param {Object} config - Widget configuration
      * @returns {Object} Boundary status object
      */
-    setBoundStatus = (element, config) => this.#core.setBoundStatus(element, config)
+    setBoundStatus = (element, config) => this.#controls.setBoundStatus(element, config)
 
     /**
      * Retrieves widget configuration by element ID.
      * @param {string} elementId - The element ID
      * @returns {Object|undefined} Widget configuration or undefined if not found
      */
-    getWidgetConfig = elementId => this.#core.getWidgetConfig(elementId)
+    getWidgetConfig = elementId => this.#registry.getWidgetConfig(elementId)
 
     /**
      * Retrieves the widget element by ID.
      * @param {string} id - The widget ID
      * @returns {HTMLElement|null} The DOM element or null if not found
      */
-    getElementById = id => this.#core.getElementById(id)
+    getElementById = id => this.#registry.getElementById(id)
 
     /**
      * Retrieves the widget ID from an element.
      * @param {HTMLElement} element - The DOM element
      * @returns {string|null} The widget ID or null if not found
      */
-    getIdFromElement = element => this.#core.getIdFromElement(element)
+    getIdFromElement = element => this.#registry.getIdFromElement(element)
 
     /**
      * Retrieves the inner overlay element for a widget.
      * @param {HTMLElement} element - The DOM element
      * @returns {HTMLElement|undefined} Overlay element or undefined
      */
-    getInnerOverlay = element => this.#core.getInnerOverlay(element)
+    getInnerOverlay = element => this.#registry.getInnerOverlay(element)
 
     /**
      * Sets widget configuration for an element ID.
      * @param {string} elementId - The element ID
      * @param {Object} config - Widget configuration
      */
-    setConfig = (elementId, config) => this.#core.setConfig(elementId, config)
+    setConfig = (elementId, config) => this.#registry.setConfig(elementId, config)
 
     /**
      * Retrieves widget configurations by group ID.
      * @param {string} groupId - The group identifier
      * @returns {Object[]} Array of widget configurations
      */
-    getWidgetConfigByGroup = groupId => this.#core.getWidgetConfigByGroup(groupId)
+    getWidgetConfigByGroup = groupId => this.#registry.getWidgetConfigByGroup(groupId)
 
     /**
      * Disposes a single widget element, cleaning up resources.
      * @param {HTMLElement} element - The DOM element
      */
-    disposeElement = element => this.#core.disposeElement(element)
+    disposeElement = element => this.#registry.disposeElement(element)
 
     /**
      * Disposes all widgets in a group, respecting persist flag.
      * @param {string} groupId - The group identifier
      * @param {boolean} usePersist - Whether to respect persist flag
      */
-    disposeByGroup = (groupId, usePersist = false) => this.#core.disposeByGroup(groupId, usePersist)
+    disposeByGroup = (groupId, usePersist = false) => this.#registry.disposeByGroup(groupId, usePersist)
 
     /**
      * Monitors container resize events and updates widget bounds and position.
@@ -223,111 +321,7 @@ export class WidgetManager {
      * @param {Function} setPosition - Function to set position
      */
     monitorContainerResize = (config, setBounds, moveable, element, setPosition) =>
-        this.#core.monitorContainerResize(config, setBounds, moveable, element, setPosition)
-
-    /**
-     * Handles drag events, updating crop overlay in real-time.
-     * @param {Object} event - Drag event from Moveable
-     */
-    onDrag = event => this.#draggable.onDrag(event)
-
-    /**
-     * Getter for isResizing property
-     * @returns {boolean} Whether a widget is being resized
-     */
-    get isResizing() {
-        return this.#core.isResizing
-    }
-
-    /**
-     * Setter for isResizing property
-     * @param {boolean} value - New value for isResizing
-     */
-    set isResizing(value) {
-        this.#core.isResizing = value
-    }
-
-    /**
-     * Getter for isDragging property
-     * @returns {boolean} Whether a widget is being dragged
-     */
-    get isDragging() {
-        return this.#core.isDragging
-    }
-
-    /**
-     * Setter for isDragging property
-     * @param {boolean} value - New value for isDragging
-     */
-    set isDragging(value) {
-        this.#core.isDragging = value
-    }
-
-    /**
-     * Getter for windowResizing property
-     * @returns {boolean} Whether window resizing has an impact
-     */
-    get windowResizing() {
-        return this.#core.windowResizing
-    }
-
-    /**
-     * Getter for widgets list property
-     * @returns {[]} List of widget elements
-     */
-    get widgets() {
-        return this.#core.widgets
-    }
-
-    /**
-     * Creates a perfect 1:1 clone of an element
-     * - Identical DOM structure
-     * - Identical class list
-     * - Identical inline styles
-     * - Identical computed styles
-     *
-     * The clone has the additional class lgs-widget-clone
-     *
-     * @param {HTMLElement} element Source element
-     * @returns {HTMLElement} Perfect clone
-     */
-    clone = (element) => this.#core.clone(element)
-
-    /**
-     * Generates a unique element ID based on a widget group and identifier.
-     *
-     * @param {string|null} group - The widget group name used to locate configuration. If null or falsy, the ID is
-     *     returned as-is.
-     * @param {string|null} [id=null] - The base identifier. If null, a UUID is generated.
-     * @returns {string} A unique identifier string, either:
-     * - the original ID,
-     * - a generated UUID,
-     * - or a composite ID in the format `<id>#<uuid>` if the widget is not mandatory and its usage count is not 1.
-     *
-     * The function checks the app configuration for widget settings. If the widget exists and is not mandatory and not
-     *     single-use, it appends a UUID to the ID to ensure uniqueness. If no widget is found, or the conditions
-     *     aren't met, the original ID is used.
-     */
-    defineElementId = (group, id = null) => this.#core.defineElementId(group, id)
-
-    /**
-     * Clones a context menu configuration object by ensuring all expected boolean attributes are defined.
-     * If an attribute is missing in the source object, it will be set to false in the clone.
-     *
-     * @param {Object} source - The object to clone.
-     * @param {string[]} attrs - List of expected boolean attribute names.
-     * @returns {Object} A new object with all attributes from `attrs`, defaulting to false if undefined in `source`.
-     */
-    cloneContext = (source, attrs) => this.#core.cloneContext(source, attrs)
-
-    /**
-     * Checks whether at least one of the specified capability attributes is truthy in the source object.
-     *
-     * @param {Object} source - The object to inspect.
-     * @param {string[]} attrs - List of capability attribute names to check.
-     * @returns {boolean} True if at least one attribute is truthy in `source`, otherwise false.
-     */
-    hasCapabilities = (source, attrs) => this.#core.hasCapabilities(source, attrs)
+        this.#controls.monitorContainerResize(config, setBounds, moveable, element, setPosition)
 
     /**
      * Handles the start of a scale event.
@@ -361,42 +355,54 @@ export class WidgetManager {
     clampScale = (scale, config) => this.#scalable.clampScale(scale, config)
 
     /**
-     * Setter for windowResizing property
-     * @param {boolean} value - New value for windowResizing
+     * Creates a perfect 1:1 clone of an element
+     * - Identical DOM structure
+     * - Identical class list
+     * - Identical inline styles
+     * - Identical computed styles
+     *
+     * The clone has the additional class lgs-widget-clone
+     *
+     * @param {HTMLElement} element Source element
+     * @returns {HTMLElement} Perfect clone
      */
-    set windowResizing(value) {
-        this.#core.windowResizing = value
-    }
+    clone = (element) => this.#controls.clone(element)
 
     /**
-     * Getter for isScaling property
-     * @returns {boolean} Whether a widget is being scaled
+     * Generates a unique element ID based on a widget group and identifier.
+     *
+     * @param {string|null} group - The widget group name used to locate configuration. If null or falsy, the ID is
+     *     returned as-is.
+     * @param {string|null} [id=null] - The base identifier. If null, a UUID is generated.
+     * @returns {string} A unique identifier string, either:
+     * - the original ID,
+     * - a generated UUID,
+     * - or a composite ID in the format `<id>#<uuid>` if the widget is not mandatory and its usage count is not 1.
+     *
+     * The function checks the app configuration for widget settings. If the widget exists and is not mandatory and not
+     *     single-use, it appends a UUID to the ID to ensure uniqueness. If no widget is found, or the conditions
+     *     aren't met, the original ID is used.
      */
-    get isScaling() {
-        return this.#core.isScaling
-    }
+    defineElementId = (group, id = null) => this.#registry.defineElementId(group, id)
 
     /**
-     * Setter for isScaling property
-     * @param {boolean} value - New value for isScaling
+     * Clones a context menu configuration object by ensuring all expected boolean attributes are defined.
+     * If an attribute is missing in the source object, it will be set to false in the clone.
+     *
+     * @param {Object} source - The object to clone.
+     * @param {string[]} attrs - List of expected boolean attribute names.
+     * @returns {Object} A new object with all attributes from `attrs`, defaulting to false if undefined in `source`.
      */
-    set isScaling(value) {
-        this.#core.isScaling = value
-    }
+    cloneContext = (source, attrs) => this.#registry.cloneContext(source, attrs)
 
     /**
-     * Getter used to retrieves the widget ID key.
-     * @returns {string} The widget ID key
+     * Checks whether at least one of the specified capability attributes is truthy in the source object.
+     *
+     * @param {Object} source - The object to inspect.
+     * @param {string[]} attrs - List of capability attribute names to check.
+     * @returns {boolean} True if at least one attribute is truthy in `source`, otherwise false.
      */
-    get widgetIDKey() {
-        return this.#core.getWidgetIDKey()
-    }
-
-    /**
-     * Applies crop dimensions to the overlay element.
-     * @param {Object} config - Widget configuration
-     */
-    applyCropToOverlay = config => this.#cropper.applyCropToOverlay(config)
+    hasCapabilities = (source, attrs) => this.#registry.hasCapabilities(source, attrs)
 
     /**
      * Retrieves or creates widget configuration for an element, including saved positions from browser DB.
@@ -404,15 +410,69 @@ export class WidgetManager {
      * @param {Object} initialConfig - Initial configuration
      * @returns {Promise<Object>} Widget configuration
      */
-    retrieveConfig = async (element, initialConfig) => this.#core.retrieveConfig(element, initialConfig)
+    retrieveConfig = async (element, initialConfig) => this.#registry.retrieveConfig(element, initialConfig)
+    /**
+     * Counts the instances of a widget that are present for a given group.
+     * The count is based on the widget ID (i.e. the left part before #).
+     *
+     * @param group - group id
+     * @param widget - widget id
+     * @returns {number} number of instances
+     *
+     */
+    countWidgets = (group, widget) => this.#registry.countWidgets(group, widget)
+    /**
+     * Checks if a widget has reached its maximum allowed instances.
+     *
+     * @param {string} group - Group ID.
+     * @param {string} widget - Widget ID (can include ID prefixed, e.g., 'myWidget#uuid').
+     * @returns {boolean} True if the max is reached, false otherwise.
+     */
+    isMaxWidgetsReached = (group, widget) => this.#registry.isMaxWidgetsReached(group, widget)
+    /**
+     * Returns maximum allowed widget instances.
+     *
+     * @param {string} group - Group ID.
+     * @param {string} widget - Widget ID (can include ID prefixed, e.g., 'myWidget#uuid').
+     * @returns {number} the maximum  allowed instances
+     */
+    maxWidgets = (group, widget) => this.#registry.maxWidgets(group, widget)
+
+    /**
+     * Applies crop dimensions to the overlay element.
+     * @param {Object} config - Widget configuration
+     */
+
+    /**
+     * Checks how many instances of a widget remain for a given group.
+     *
+     * @param {string} group - Group ID.
+     * @param {string} widget - Widget ID (can include ID prefixed, e.g., 'myWidget#uuid').
+     * @returns {number} The remaining number of instances.
+     */
+    remainingWidgets = (group, widget) => this.#registry.remainingWidgets(group, widget)
+
+    applyCropToOverlay = config => this.#cropper.applyCropToOverlay(config)
 
     /**
      * Saves widget position and dimensions to the widgets DB.
+     *
      * @param {string} widgetId - The widget ID
      * @param {Object} config - Widget configuration
+     * @param preparation
      * @returns {Promise<void>}
      */
-    saveWidgetPosition = async (widgetId, config) => this.#widgetDB.saveWidgetPosition(widgetId, config)
+    saveWidgetPosition = async (widgetId, config, preparation = true) => {
+
+        const positionData = preparation
+                             ? this.#registry.preparePositionDataForStorage(widgetId, config)
+                             : config
+        if (!positionData) {
+            return
+        }
+        await this.#widgetDB.saveWidgetPosition(widgetId, positionData)
+
+    }
 
     /**
      * Handles the start of a drag event.
@@ -528,6 +588,13 @@ export class WidgetManager {
     updateCropRatio = (cropzoneId, value, aspectRatio, lockRatio) => this.#cropper.updateCropRatio(cropzoneId, value, aspectRatio, lockRatio)
 
     /**
+     * Dispatches a crop update event to listeners.
+     * @param {Object} config - Widget configuration
+     * @param {string} phase - Update phase
+     */
+    dispatchCropUpdate = (config, phase) => this.#cropper.dispatchCropUpdate(config, phase)
+
+    /**
      * Computes crop dimensions.
      * @param {Object} config - Widget configuration
      * @param {boolean} maximize - Whether to maximize crop
@@ -575,20 +642,20 @@ export class WidgetManager {
      * @param {string} elementId - The element ID
      * @returns {Object|undefined} Moveable reference or undefined if not found
      */
-    getMoveable = elementId => this.#core.getMoveable(elementId)
+    getMoveable = elementId => this.#registry.getMoveable(elementId)
 
     /**
      * Sets the moveable reference for an element ID.
      * @param {string} elementId - The element ID
      * @param {Object} moveable - Moveable instance reference
      */
-    setMoveable = (elementId, moveable) => this.#core.setMoveable(elementId, moveable)
+    setMoveable = (elementId, moveable) => this.#registry.setMoveable(elementId, moveable)
 
     /**
      * Removes the moveable instance for an element ID from the moveables Map.
      * @param {string} elementId - The element ID
      */
-    removeMoveable = elementId => this.#core.removeMoveable(elementId)
+    removeMoveable = elementId => this.#registry.removeMoveable(elementId)
 
     /**
      * Constrains position within container bounds
@@ -598,7 +665,7 @@ export class WidgetManager {
      * @return {*|{x: *, y: *}|{x: *, y: *}} - scale
      * @return {{left: *, top: *}}
      */
-    adaptPositionToContainer = (config, container) => this.#core.adaptPositionToContainer(config, container)
+    adaptPositionToContainer = (config, container) => this.#controls.adaptPositionToContainer(config, container)
 
     /**
      * Adapts widget size to container size. It provides a new scale value.
@@ -607,7 +674,18 @@ export class WidgetManager {
      * @param config - Widget configuration
      * @return {*|{x: *, y: *}|{x: *, y: *}} - scale
      */
-    adaptScaleToContainer = (container, config) => this.#core.adaptScaleToContainer(container, config)
+    adaptScaleToContainer = (config, container) => this.#controls.adaptScaleToContainer(config, container)
+
+    /**
+     * Calculates logical shadow margins for the composer.
+     * No scale needed here as addOverlay handles it internally.
+     * * @param {number} x - Offset X (e.g., 0)
+     * @param {number} y - Offset Y (e.g., 1)
+     * @param {number} blur - Blur radius (e.g., 2)
+     * @param {number} [spread=0] - Spread radius
+     * @returns {Object} { top, right, bottom, left }
+     */
+    getShadowMargins = (x, y, blur, spread = 0) => this.#controls.getShadowMargins(x, y, blur, spread)
 
     /**
      * Builds a transform string from individual transformation values.
@@ -628,6 +706,17 @@ export class WidgetManager {
      * @returns {Object} Object containing translate, scale, rotate values
      */
     parseTransform = transformString => this.#transform.parseTransform(transformString)
+
+    /**
+     * Updates multiple transform values at once and applies them to the element.
+     * Useful for batch updates or complex operations like combined scaling and rotation.
+     * * @param {HTMLElement} element - The DOM element.
+     * @param {Object} transforms - The transform values to update.
+     * @param {Object} [transforms.translate] - Optional translate {x, y}.
+     * @param {Object} [transforms.scale] - Optional scale {x, y}.
+     * @param {number} [transforms.rotate] - Optional rotation in degrees.
+     */
+    setTransform = (element, transforms) => this.#transform.setTransform(element, transforms)
 
     /**
      * Updates the scale values in the widget's transform.
@@ -684,4 +773,23 @@ export class WidgetManager {
      * @returns {{x: number, y: number}} The transform origin in pixels.
      */
     getTransformOriginFromString = (origin, rect) => this.#transform.getTransformOriginFromString(origin, rect)
+
+    /**
+     * Handles rotation interaction.
+     * @param {Object} event - Moveable rotate event
+     * @param {Object} refs - Object containing references like _prevRotate
+     */
+    onRotate = (event, refs) => this.#rotatable.onRotate(event, refs)
+
+    /**
+     * Handles the end of a rotation event.
+     * @param {Object} event - Moveable rotateEnd event
+     */
+    onRotateEnd = event => this.#rotatable.onRotateEnd(event)
+
+    /**
+     * Handles the start of a rotation event.
+     * @param {Object} event - Moveable rotateStart event
+     */
+    onRotateStart = event => this.#rotatable.onRotateStart(event)
 }

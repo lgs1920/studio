@@ -7,11 +7,11 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-28
- * Last modified: 2025-11-28
+ * Created on: 2026-02-27
+ * Last modified: 2026-02-27
  *
  *
- * Copyright © 2025 LGS1920
+ * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 /**
@@ -329,7 +329,6 @@ export const VideoDownloadAndShareDialog = () => {
         }
     }, [handleCancel])
 
-
     return (
         <SlDialog
             id="video-preview-dialog"
@@ -386,8 +385,15 @@ export const VideoDownloadAndShareDialog = () => {
                                 <SlIcon library="fa" name={FA2SL.set(faHourglass)}/>
                                 {__.convert(_mediaData.current.duration).toTime()}
                             </div>
-                            <div>FPS: {_mediaData.current.fps}</div>
-                            <div>{_mediaData.current.quality.name}</div>
+                            {lgs.settings.ui.video?.adaptiveQuality?.enabled
+                             ? (<div>{'Auto'}</div>)
+                             : (
+                                 <>
+                                     <div>{`FPS: ${_mediaData.current.fps}`}</div>
+                                     <div>{_mediaData.current.quality?.name}</div>
+                                 </>
+                             )
+                            }
                         </>
                     }
                 </div>

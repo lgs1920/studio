@@ -7,15 +7,15 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-08
- * Last modified: 2025-11-08
+ * Created on: 2026-02-20
+ * Last modified: 2026-02-20
  *
  *
- * Copyright © 2025 LGS1920
+ * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { Compass }                                        from '@Components/cesium/CompassUI/Compass'
-import { Widget }                                         from '@Components/MainUI/widgets/Widget'
+import { Compass } from '@Components/MainUI/compass/Compass'
+import { Widget }  from '@Components/MainUI/widgets/Widget'
 import { WidgetsPanelContent }                            from '@Components/MainUI/widgets/WidgetsPanelContent'
 import { HOUR, LGS_VISUAL_WIDGET, MULTI_PURPOSE_WIDGETS } from '@Core/constants'
 import React, { useEffect, useMemo, useState }            from 'react'

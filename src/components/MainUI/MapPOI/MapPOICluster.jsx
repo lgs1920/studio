@@ -1,3 +1,19 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: MapPOICluster.jsx
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2026-02-28
+ * Last modified: 2026-02-28
+ *
+ *
+ * Copyright © 2026 LGS1920
+ ******************************************************************************/
+
 import { useSnapshot } from 'valtio'
 import { MapPOI }      from '../../cesium/MapPOI'
 import './style.css'
@@ -10,7 +26,7 @@ import { memo, useRef, useState, useEffect } from 'react'
  */
 export const MapPOICluster = () => {
     // Utiliser useSnapshot uniquement sur les keys pour la réactivité de la structure
-    const list = useSnapshot(lgs.mainProxy.components.pois.list)
+    const list = useSnapshot(lgs.stores.main.components.pois.list)
     return (
         <div id="poi-list">
             {__.ui.sceneManager.is3D && Array.from(list.keys()).map((id) => (

@@ -1,0 +1,93 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: style.css
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2026-02-23
+ * Last modified: 2026-02-23
+ *
+ *
+ * Copyright © 2026 LGS1920
+ ******************************************************************************/
+
+
+
+.drawer-content.lgs-editor-layout {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    gap: var(--lgs-gutter-xs);
+}
+
+.editor-header-zones {
+    flex: 0 0 auto;
+}
+
+.editor-preview-zone {
+    display: flex;
+    overflow: hidden;
+    align-items: center;
+    flex: 1;
+    justify-content: center;
+    min-height: 250px;
+    border-radius: var(--lgs-border-radius);
+    background: var(--lgs-widget-preview-bg);
+    background-position: center;
+    background-size: cover;
+}
+
+.default-preview {
+    display: flex;
+    align-items: center;
+    flex-direction: column;
+    opacity: 0.6;
+    color: var(--lgs-text-color-muted);
+}
+
+.default-preview sl-icon {
+    font-size: 2.5rem;
+}
+
+.editor-actions-zone {
+    display: flex;
+    flex-direction: column;
+    min-height: 32px; /* Évite le saut si vide */
+    gap: var(--lgs-gutter-s);
+}
+
+.editor-body-zone {
+    position: relative;
+    flex: 1;
+    min-height: 0;
+}
+
+.editor-body-zone .lgs-scrollbars-container {
+    width: 100%;
+    height: 100%;
+}
+
+.editor-form-content {
+    display: flex;
+    overflow: hidden;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+}
+
+.drawer-header-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.widget-editor-reset-menus {
+    display: flex;
+    margin-left: auto;
+    gap: var(--lgs-gutter-xs);
+}

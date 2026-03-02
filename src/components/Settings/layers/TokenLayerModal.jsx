@@ -1,3 +1,19 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: TokenLayerModal.jsx
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2026-02-28
+ * Last modified: 2026-02-28
+ *
+ *
+ * Copyright © 2026 LGS1920
+ ******************************************************************************/
+
 import { BASE_ENTITY, TERRAIN_ENTITY, VAULT_STORE }        from '@Core/constants'
 import { faCheck, faEye, faEyeSlash, faTrashCan, faXmark } from '@fortawesome/pro-regular-svg-icons'
 import { SlBadge, SlButton, SlDialog, SlIcon, SlInput }    from '@shoelace-style/shoelace/dist/react'
@@ -44,10 +60,10 @@ export const TokenLayerModal = (props) => {
             tmp.usage.unlocked = true
 
             if (tmp.type === BASE_ENTITY) {
-                lgs.mainProxy.theLayer = tmp
+                lgs.stores.main.theLayer = tmp
             }
             else {
-                lgs.mainProxy.theLayerOverlay = tmp
+                lgs.stores.main.theLayerOverlay = tmp
 
                 // Set by default
                 lgs.settings.layers[snap.layer.tmpEntity.type] = snap.layer.tmpEntity.id

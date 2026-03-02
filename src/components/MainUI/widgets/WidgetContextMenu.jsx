@@ -7,76 +7,120 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-03
- * Last modified: 2025-12-03
+ * Created on: 2026-01-13
+ * Last modified: 2026-01-13
  *
  *
- * Copyright © 2025 LGS1920
+ * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { WIDGETS_CAPABILITIES } from '@Core/constants'
+import { faRegularSquareCircleMinus, faRegularSquareCirclePlus } from '@awesome.me/kit-eb5c406148/icons/kit/custom'
 import {
-    faRegularSquareCirclePlus,
-    faRegularSquareCircleMinus,
-}                               from '@awesome.me/kit-eb5c406148/icons/kit/custom'
+    WIDGET_EDITOR_POST_RENDER_EVENT, WIDGET_EDITOR_PRE_RENDER_EVENT, WIDGETS_CAPABILITIES, WIDGETS_EDITOR_DRAWER,
+}                                                                from '@Core/constants'
 import {
-    faArrowDown,
-    faArrowDownLeft,
-    faArrowDownRight,
-    faArrowLeft,
-    faArrowRight,
-    faArrowUp,
-    faArrowUpLeft,
-    faArrowUpRight,
-    faCompress,
-    faPlus,
-    faTrashCan,
-}                               from '@fortawesome/pro-regular-svg-icons'
-import { SlIcon, SlTooltip } from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                from '@Utils/FA2SL'
-import React                    from 'react'
+    WidgetDynamicRenderer,
+}                                                                from '@Core/ui/widget-manager/dynamic-render/WidgetDynamicRender'
+import {
+    faArrowDown, faArrowDownLeft, faArrowDownRight, faArrowLeft, faArrowRight, faArrowUp, faArrowUpLeft, faArrowUpRight,
+    faCompress, faPaintbrushPencil, faPlus, faTrashCan,
+}                                                                from '@fortawesome/pro-regular-svg-icons'
+import {
+    SlIcon, SlTooltip,
+}                                                                from '@shoelace-style/shoelace/dist/react'
+import { FA2SL }                                                 from '@Utils/FA2SL'
+import React, { useMemo } from 'react'
+import { useSnapshot }                                           from 'valtio'
 
 const PERCENTAGE = 0.1
 
 /**
- * Pure UI component that renders the context menu for a widget.
- * Receives only the widget ID (targetId) – no knowledge of positioning or visibility.
- * All actions close the global context menu via the shared store.
+ * Renders the context menu for a specific widget.
  *
- * @param {{ targetId: string | number }} props
- * @returns {JSX.Element|null} The menu markup or null if nothing can be shown
+ * @param {Object} props
+ * @param {string|number} props.targetId - Unique ID of the targeted widget
+ * @param {React.RefObject} props.menuRef - Ref for the menu container
  */
 export const WidgetContextMenu = ({targetId, menuRef}) => {
-    // Retrieve DOM element and configuration for the targeted widget
+    // Shared store state
+    const drawers = useSnapshot(lgs.stores.ui.drawers)
+
+    // Core widget data
     const element = __.ui.widgetManager.getElementById(targetId)
     const config = __.ui.widgetManager.getWidgetConfig(targetId)
 
-    // Early return if the widget no longer exists or has no context-menu config
-    if (!element || !config?.contextMenu) {
+    // Memoized capabilities for performance
+    const capabilities = useMemo(() => {
+        if (!config?.contextMenu) {
+            return {}
+        }
+        return {
+            hasAny:      __.ui.widgetManager.hasCapabilities(config.contextMenu, WIDGETS_CAPABILITIES),
+            canReset:    config.contextMenu.canReset,
+            canEdit:     config.contextMenu.canEdit,
+            canRemove:   config.contextMenu.canRemove,
+            canPosition: config.contextMenu.canPosition,
+        }
+    }, [config])
+
+    // Early return if widget is invalid
+    if (!element || !config || !capabilities.hasAny) {
         return null
     }
 
-    const hasCapabilities = __.ui.widgetManager.hasCapabilities(
-        config.contextMenu,
-        WIDGETS_CAPABILITIES,
-    )
+    const closeMenu = () => __.ui.contextMenu.hide()
 
-    // Helper to close the global context menu (shared store)
-    const closeMenu = () => {
-        __.ui.contextMenu.hide()
-    }
-
-    /** Completely removes the widget from cache, store and DOM */
+    /**
+     * Triggers widget deletion and cleans up associated UI state
+     */
     const removeWidget = () => {
-        __.ui.widgetCache.delete(targetId)
-        lgs.stores.ui.widget.list.delete(targetId)
+        new WidgetDynamicRenderer().destroyWidget(targetId)
+
+        // Cleanup settings persistence
+        const type = targetId.split('#')[0]
+        const elements = lgs.settings.widgets[type]?.configuration?.elements
+        if (elements && elements[targetId]) {
+            delete elements[targetId]
+        }
+
         element && __.ui.widgetManager.disposeElement(element)
+
+        if (drawers.open === WIDGETS_EDITOR_DRAWER && drawers.entity === targetId) {
+            __.ui.drawerManager.close()
+        }
+
         closeMenu()
     }
 
     /**
-     * Resizes the widget by a relative factor.
-     * Factor = 1 → reset to original size.
+     * Toggles or opens the editor drawer for the current entity
+     */
+    const editWidget = () => {
+        const isCurrentlyEditing = drawers.open === WIDGETS_EDITOR_DRAWER && drawers.entity === targetId
+
+        if (isCurrentlyEditing) {
+            __.ui.drawerManager.close()
+        }
+        else {
+
+            window.dispatchEvent(new CustomEvent(WIDGET_EDITOR_PRE_RENDER_EVENT, {
+                detail: {entity: targetId},
+            }))
+            __.ui.drawerManager.open(WIDGETS_EDITOR_DRAWER, {
+                action: 'edit-current',
+                entity: targetId,
+            })
+            window.dispatchEvent(new CustomEvent(WIDGET_EDITOR_POST_RENDER_EVENT, {
+                detail: {entity: targetId},
+            }))
+
+        }
+        closeMenu()
+    }
+
+    /**
+     * Handles relative scaling operations
+     * @param {number} factor - Scale multiplier or 1 for reset
      */
     const resetSize = (factor) => {
         const elementId = __.ui.widgetManager.retrieveElementId(element)
@@ -95,16 +139,13 @@ export const WidgetContextMenu = ({targetId, menuRef}) => {
             )
         }
 
-        // Adapt scale & position to current container bounds
         config.scale = __.ui.widgetManager.adaptScaleToContainer(config, container)
         config.position = __.ui.widgetManager.adaptPositionToContainer(config, container)
 
-        // Persist if needed
         if (config.persist) {
             __.ui.widgetManager.saveWidgetPosition(elementId, config)
         }
 
-        // Apply visual changes
         __.ui.widgetManager.setScale(element, config.scale.x, config.scale.y)
         __.ui.widgetManager.applyPosition(element, config.position)
 
@@ -113,21 +154,16 @@ export const WidgetContextMenu = ({targetId, menuRef}) => {
         }
     }
 
-    /** Moves the widget to one of the predefined snap positions */
     const moveTo = (methodName) => {
         __.ui.widgetManager[methodName](element, lgs.gutter.xs)
         closeMenu()
     }
 
-    // --------------------------------------------------------------------- //
-    // Render
-    // --------------------------------------------------------------------- //
-
     return (
         <div className="lgs-context-menu widget-context-menu lgs-card on-map" ref={menuRef}>
             <ul>
-                {/* ----- Size controls ----- */}
-                {hasCapabilities && config.contextMenu.canReset && (
+                {/* Size controls */}
+                {capabilities.canReset && (
                     <li className="widget-grid-one-line widget-no-hover buttons-bar-on-map">
                         <SlTooltip content="Reset size" placement="top">
                             <SlIcon
@@ -158,8 +194,18 @@ export const WidgetContextMenu = ({targetId, menuRef}) => {
                     </li>
                 )}
 
-                {/* ----- Remove widget ----- */}
-                {hasCapabilities && config.contextMenu.canRemove && (
+                {/* Edit action - Only show if not already being edited in the current entity context */}
+                {capabilities.canEdit && (drawers.open !== WIDGETS_EDITOR_DRAWER || drawers.entity !== targetId) && (
+                    <li onClick={editWidget}>
+                        <SlIcon library="fa" name={FA2SL.set(faPaintbrushPencil)}/>
+                        <SlTooltip content="Edit Widget" placement="left">
+                            <span>Edit</span>
+                        </SlTooltip>
+                    </li>
+                )}
+
+                {/* Remove action */}
+                {capabilities.canRemove && (
                     <li onClick={removeWidget}>
                         <SlIcon library="fa" name={FA2SL.set(faTrashCan)}/>
                         <SlTooltip content="Remove Widget" placement="left">
@@ -168,8 +214,8 @@ export const WidgetContextMenu = ({targetId, menuRef}) => {
                     </li>
                 )}
 
-                {/* ----- Snap positioning grid ----- */}
-                {hasCapabilities && config.contextMenu.canPosition && (
+                {/* Positioning Grid */}
+                {capabilities.canPosition && (
                     <li className="widget-grid-position widget-no-hover buttons-bar-on-map">
                         <SlTooltip content="Top left">
                             <SlIcon library="fa" name={FA2SL.set(faArrowUpLeft)} className="lgs-one-line-card on-map"

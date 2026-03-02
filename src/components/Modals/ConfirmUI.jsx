@@ -1,3 +1,19 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: ConfirmUI.jsx
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2026-01-06
+ * Last modified: 2026-01-06
+ *
+ *
+ * Copyright © 2026 LGS1920
+ ******************************************************************************/
+
 import { faXmark }                    from '@fortawesome/pro-regular-svg-icons'
 import { faCheck }                    from '@fortawesome/pro-solid-svg-icons'
 import { SlButton, SlDialog, SlIcon } from '@shoelace-style/shoelace/dist/react'

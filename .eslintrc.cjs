@@ -1,3 +1,19 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: .eslintrc.cjs
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2026-01-06
+ * Last modified: 2026-01-06
+ *
+ *
+ * Copyright © 2026 LGS1920
+ ******************************************************************************/
+
 module.exports = {
   root: true,
   env: { browser: true, es2020: true },

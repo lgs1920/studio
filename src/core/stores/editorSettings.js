@@ -1,3 +1,19 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: editorSettings.js
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2026-01-06
+ * Last modified: 2026-01-06
+ *
+ *
+ * Copyright © 2026 LGS1920
+ ******************************************************************************/
+
 import { BASE_ENTITY } from '@Core/constants'
 
 
@@ -17,6 +33,7 @@ export const editorSettings = {
             lgs1920:  false,
             settings: false,
             vault:    false,
+            widgets: false,
         },
         test:  true,
     },

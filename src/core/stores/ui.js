@@ -7,11 +7,11 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-01
- * Last modified: 2025-12-01
+ * Created on: 2026-01-15
+ * Last modified: 2026-01-15
  *
  *
- * Copyright © 2025 LGS1920
+ * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { proxyMap } from 'valtio/utils'
@@ -32,6 +32,7 @@ export const ui = {
         open:   null,
         over:   false,
         action: null,
+        entity: null,
     },
 
     modals: {
@@ -86,7 +87,7 @@ export const ui = {
             qualityEditor: true,
             fpsEditor: true,
             widgetEditor: false,
-            cropZone:  null,
+            widgetsBoard: null,
             forceEven: true,
             id:        'video-crop-zone',
         },
@@ -114,11 +115,10 @@ export const ui = {
     widget: {
         current: {
             id:                    null,
-            canDisplayContextMenu: false,
-            position:              {x: 0, y: 0},
         },
         list:    new proxyMap(),
         cache: new proxyMap(),
+        restrictions: new proxyMap(),
     },
 
     appUpdate: {

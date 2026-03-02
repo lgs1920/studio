@@ -7,19 +7,24 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-07-22
- * Last modified: 2025-07-22
+ * Created on: 2026-03-02
+ * Last modified: 2026-03-02
  *
  *
- * Copyright © 2025 LGS1920
+ * Copyright © 2026 LGS1920
+ ******************************************************************************/
+
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: main.js
  ******************************************************************************/
 
 import { proxyMap } from 'valtio/utils'
 
 export const main = {
     components: {
-        // mainUI, welcome, informationPanel moved to lgs.stores.ui.informationPanel
-
         fileLoader: {
             accepted: 0,
             error:    '',
@@ -70,14 +75,32 @@ export const main = {
                 journey: new proxyMap(),
             },
             visibleList: new proxyMap(),
+
+            /**
+             * Valorize filtered maps based on current POI states
+             * Must be called after data load or visibility changes
+             */
+            updateFiltered() {
+                this.filtered.global.clear()
+                this.filtered.journey.clear()
+
+                this.list.forEach(($poi, id) => {
+                    // Global list: usually based on visibility
+                    if ($poi.visible !== false) {
+                        this.filtered.global.set(id, true)
+                    }
+
+                    // Journey list: based on inJourney flag
+                    if ($poi.inJourney) {
+                        this.filtered.journey.set(id, true)
+                    }
+                })
+            },
         },
 
         profile: {
-            visible: false,
-            show:  false,
-            key:   0,
-            width: '100%',
-            height: '100%',
+            width:  '500px',
+            height: '200px',
             zoom:  false,
         },
 
@@ -110,9 +133,6 @@ export const main = {
             },
         },
     },
-
-    // drawers moved to lgs.stores.ui.informationPanel
-    // modals moved to lgs.stores.ui.informationPanel (except altitudeChoice which is kept here for now)
 
     theJourney:     null,
     readyForTheShow: false,

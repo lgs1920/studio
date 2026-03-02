@@ -7,11 +7,11 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-27
- * Last modified: 2025-11-27
+ * Created on: 2026-02-27
+ * Last modified: 2026-02-27
  *
  *
- * Copyright © 2025 LGS1920
+ * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { ScreenMediaRecorder } from '@Core/ui/screen-media-recorder/recorder/ScreenMediaRecorder'
@@ -41,7 +41,14 @@ export const VideoSettingsInfo = () => {
 
     return (
         <>
-            <span>{`${fps} FPS`}</span><span>{quality?.name}</span><span>{ratio}</span>
+
+            <span>
+                {lgs.settings.ui.video?.adaptiveQuality?.enabled
+                 ? 'Auto'
+                 : `${fps} FPS ${quality?.name}`
+                }
+            </span>
+            <span>{ratio}</span>
         </>
     )
 }

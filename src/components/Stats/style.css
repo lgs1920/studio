@@ -1,0 +1,241 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *  
+ * File: style.css
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2026-02-19
+ * Last modified: 2026-02-19
+ *
+ *
+ * Copyright © 2026 LGS1920
+ ******************************************************************************/
+
+:root {
+    --track-widget-bg-color: transparent; /* #ffffff33;*/
+    --track-widget-stroke: var(--sl-color-neutral-200);
+    --track-widget-font: 'Roboto Condensed', sans-serif;
+    --track-widget-text-color: #ffffff;
+    --track-widget-divider: var(--sl-color-neutral-300);
+
+    --weight-label: 100;
+    --weight-data: 700;
+
+    --track-widget-border-color: #ffffff;
+    --track-widget-border: 1px;
+    --track-widget-border-radius: var(--lgs-border-radius);
+    --track-widget-blur: blur(var(--lgs-blur-s));
+
+    --track-widget-separator-color: #ffffff;
+}
+
+
+.journey-stats-widget {
+    display: flex;
+    flex-direction: column;
+    padding: var(--lgs-gutter);
+    color: var(--track-widget-text-color);
+    border: var(--track-widget-border) solid var(--track-widget-border);
+    gap: var(--lgs-gutter-s);
+}
+
+.journey-stats-widget sl-divider {
+    --color: var(--track-widget-separator-color);
+}
+
+.journey-stats-row, .journey-stats-row-center {
+    display: flex;
+    justify-content: space-between;
+    padding: 0 var(--lgs-gutter);
+    gap: calc(2 * var(--lgs-gutter));
+}
+
+.journey-stats-row-center {
+    justify-content: center;
+}
+
+.journey-stats-summary-item {
+    line-height: 1;
+    display: flex;
+    flex-direction: column;
+    text-align: center;
+    text-transform: uppercase;
+    gap: var(--lgs-gutter-xs);
+}
+
+.track-summary-column {
+    flex: 0 0 calc((100% - var(--data)) / 3);
+    justify-content: center;
+    --data: calc(4 * var(--lgs-gutter));
+}
+
+.journey-stats-text,
+.journey-stats-label,
+.journey-stats-value,
+.journey-stats-val-huge,
+.journey-stats-label-bold,
+.journey-stats-unit-sub {
+    font-family: var(--track-widget-font);
+    line-height: 1;
+    display: flex;
+    flex: 0 0 calc((100% - var(--data)) / 4);
+    text-transform: uppercase;
+    --data: calc(4 * var(--lgs-gutter));
+    gap: var(--lgs-gutter-xs);
+}
+
+.journey-stats-label,
+.journey-stats-label-bold,
+.journey-stats-unit-sub,
+.journey-stats-date,
+.journey-stats-value .lgs-nvu-unit {
+    font-size: 12px;
+    font-weight: var(--weight-label);
+}
+
+.journey-stats-value,
+.journey-stats-val-huge,
+.journey-stats-text {
+    font-weight: var(--weight-data)
+}
+
+.journey-stats-label {
+    font-size: 16px;
+    display: flex;
+    flex: 0 0 calc((100% - var(--data)) / 2.5);
+    justify-content: space-between;
+    text-transform: uppercase;
+}
+
+.journey-stats-label span {
+    font-size: 12px;
+}
+
+.journey-stats-date {
+    font-family: var(--track-widget-font);
+    font-size: 16px;
+    display: flex;
+    justify-content: center;
+    text-transform: uppercase;
+    gap: 2rem;
+}
+
+.journey-stats-value {
+    font-size: 16px;
+    --margin: 1.5rem
+}
+
+.journey-stats-value sl-icon {
+    font-size: 16px;
+    align-self: center;
+    width: var(--margin);
+}
+
+.journey-stats-value:not(:has(sl-icon)) {
+    padding-left: calc(var(--margin) + 0.5rem);
+}
+
+.journey-stats-val-huge {
+    font-size: 48px;
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    letter-spacing: -0.04em;
+    text-transform: lowercase;
+}
+
+.journey-stats-val-huge .duration-hour {
+    font-size: 32px;
+}
+
+.journey-stats-val-huge .duration-minute {
+    display: none;
+}
+
+.journey-stats-label-bold {
+    font-size: 16px;
+    justify-content: center;
+    text-transform: uppercase;
+    text-wrap: nowrap;
+}
+
+.journey-stats-widget-editor {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    gap: var(--lgs-gutter-xs);
+}
+
+.journey-stats-widget-preview-chart {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 250px;
+    background-size: cover;
+    gap: var(--lgs-gutter-xs);
+}
+
+.journey-stats-widget-preview-chart {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 250px;
+    background-size: cover;
+    gap: var(--lgs-gutter-xs);
+}
+
+.journey-stats-widget-preview-chart .journey-stats-widget {
+    transform-origin: center center;
+}
+
+.journey-stats-widget-preview-chart .journey-stats-widget {
+    transform: scale(0.7)
+}
+
+.journey-stats-widget-editor-scroll {
+    flex: 1 1 auto;
+    height: 100%;
+    min-height: 0;
+}
+
+.journey-stats-widget-editor sl-input::part(input) {
+    width: 2rem;
+}
+
+.journey-stats-widget-editor-data .drawer-horizontal-line {
+    display: flex;
+    align-items: flex-end;
+    flex-direction: row;
+    width: 100%;
+    gap: var(--lgs-gutter-xs);
+}
+
+.journey-stats-widget-editor-data .drawer-horizontal-element {
+    flex: 1;
+    min-width: 0;
+}
+
+.journey-stats-widget-editor-data sl-input {
+    width: 100%;
+}
+
+.journey-stats-widget-editor-data sl-input::part(base) {
+    width: 100%;
+}
+
+.journey-stats-widget-editor-data sl-input::part(input) {
+    width: 100%;
+}
+
+.journey-stats-widget-editor-data .drawer-horizontal-element:first-child:not(:has(sl-input)) {
+    transform: translateY(-3px); / / Text aligned to center of inputs line
+}
+
+.journey-stats-widget-editor-performance {
+    display: flex;
+    flex-direction: column;
+    gap: var(--lgs-gutter-xs);
+}

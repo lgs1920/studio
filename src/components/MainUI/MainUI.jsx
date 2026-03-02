@@ -7,35 +7,32 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-02
- * Last modified: 2025-12-02
+ * Created on: 2026-02-20
+ * Last modified: 2026-02-20
  *
  *
- * Copyright © 2025 LGS1920
+ * Copyright © 2026 LGS1920
  ******************************************************************************/
-
-import { Compass }                      from '@Components/cesium/CompassUI/Compass'
-import { FullScreenButton }    from '@Components/FullScreenButton/FullScreenButton'
+import { Compass }          from '@Components/MainUI/compass/Compass'
+import { FullScreenButton } from '@Components/FullScreenButton/FullScreenButton'
 import { ContextMenuRenderer } from '@Components/MainUI/context-menu/ContextMenuRenderer'
 
-import { GeocodingButton }     from '@Components/MainUI/geocoding/GeocodingButton'
+import { GeocodingButton }   from '@Components/MainUI/geocoding/GeocodingButton'
 import { GeocodingUI }                          from '@Components/MainUI/geocoding/GeocodingUI'
-import { MapPOIMonitor }                from '@Components/MainUI/MapPOI/MapPOIMonitor'
-import { RotateButton }                 from '@Components/MainUI/RotateButton'
-import { TrackEditorButton }            from '@Components/MainUI/TrackEditorButton'
+import { MapPOIMonitor }     from '@Components/MainUI/MapPOI/MapPOIMonitor'
+import { RotateButton }      from '@Components/MainUI/RotateButton'
+import { TrackEditorButton } from '@Components/MainUI/TrackEditorButton'
 import { VideoButton }                 from '@Components/MainUI/video/VideoButton'
 import { VideoDownloadAndShareDialog } from '@Components/MainUI/video/VideoDownloadAndShareDialog'
-import { Profile }              from '@Components/Profile/Profile'
 import { ProfileButton }                        from '@Components/Profile/ProfileButton'
+import { TextButton }        from '@Components/Text/TextButton'
 import { TracksEditor }                         from '@Components/TracksEditor/TracksEditor'
 import {
     BOTTOM, END, EVENTS, MENU_BOTTOM_END, MENU_BOTTOM_START, MENU_END_END, MENU_END_START, MENU_START_END,
     MENU_START_START, SCENE_MODE_2D, SECOND, START, TOP,
-}                                       from '@Core/constants'
-import { JourneyToolbar }                       from '@Editor/JourneyToolbar'
+}                            from '@Core/constants'
 import { memo, useCallback, useEffect, useRef } from 'react'
 import { subscribe, useSnapshot }               from 'valtio'
-import { CameraAndTargetPanel }                 from '../cesium/CameraAndTargetPanel/CameraAndTargetPanel'
 import { JourneyLoaderUI }                      from '../FileLoader/JourneyLoaderUI'
 import { Panel as InformationPanel }            from '../InformationPanel/Panel'
 import { PanelButton as InformationButton } from '../InformationPanel/PanelButton'
@@ -43,14 +40,16 @@ import { Panel as LayersPanel }                 from '../Settings/layers/Panel'
 import { PanelButton as LayersButton }          from '../Settings/layers/PanelButton'
 import { Panel as SettingsPanel }               from '../Settings/Panel'
 import { PanelButton as SettingsButton }        from '../Settings/PanelButton'
-import { CallForActions }                       from './CallForActions'
-import { CameraTarget }                         from './CameraTarget'
-import { CreditsBar }                           from './credits/CreditsBar'
-import { Panel as MapPOIEditPanel }             from './MapPOI/Panel'
-import { PanelButton as POIEditButton }         from './MapPOI/PanelButton'
-import { SceneModeSelector }                    from './SceneModeSelector'
-import { SupportUI }                            from './SupportUI'
-import { SupportUIButton }                      from './SupportUIButton'
+
+import { CallForActions }               from './CallForActions'
+import { CameraTarget }                 from './CameraTarget'
+import { CreditsBar }                   from './credits/CreditsBar'
+import { Panel as MapPOIEditPanel }     from './MapPOI/Panel'
+import { PanelButton as POIEditButton } from './MapPOI/PanelButton'
+import { SceneModeSelector }            from './SceneModeSelector'
+import { SupportUI }                    from './SupportUI'
+import { SupportUIButton }   from './SupportUIButton'
+import { WidgetEditorPanel } from './widgets/editor/WidgetEditorPanel'
 
 import './style.css'
 
@@ -207,6 +206,7 @@ export const MainUI = memo(() => {
                             <POIEditButton tooltip={tooltipDir}/>
                             <TrackEditorButton tooltip="top"/>
                             <ProfileButton tooltip={tooltipDir}/>
+                            <TextButton tooltip={tooltipDir}/>
                             <InformationButton tooltip={tooltipDir}/>
                             <SupportUIButton tooltip={tooltipDir}/>
                         </div>
@@ -227,25 +227,28 @@ export const MainUI = memo(() => {
 
                 {!video.editing && (
                     <>
-                <CameraTarget/>
-                <div id="bottom-left-ui">
-                    {lgs.platform !== 'production' && (
-                        <div id="used-platform" className="lgs-card on-map">
-                            {lgs.platform}-{lgs.versions.studio}
+                        <CameraTarget/>
+                        <div id="bottom-left-ui">
+
                         </div>
-                    )}
-                </div>
-                <div id="bottom-right-ui">
-                    {!video.recording && <CreditsBar/>}
-                </div>
+                        <div id="bottom-right-ui">
+                            {!video.recording && <CreditsBar/>}
+                        </div>
                     </>
                 )}
-                <Profile/>
+
+                {lgs.platform !== 'production' && (
+                    <div id="used-platform">
+                        {lgs.platform}-{lgs.versions.studio}
+                    </div>
+                )}
                 <InformationPanel/>
                 <SettingsPanel/>
                 <LayersPanel/>
                 <TracksEditor/>
                 <MapPOIEditPanel/>
+                <WidgetEditorPanel/>
+
             </div>
             <SupportUI/>
             <JourneyLoaderUI multiple/>

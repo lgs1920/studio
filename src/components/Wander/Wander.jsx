@@ -1,3 +1,19 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: Wander.jsx
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2026-02-28
+ * Last modified: 2026-02-28
+ *
+ *
+ * Copyright © 2026 LGS1920
+ ******************************************************************************/
+
 import { faRegularArrowsRepeatSlash } from '@awesome.me/kit-eb5c406148/icons/kit/custom'
 import {
     faArrowRotateLeft, faArrowRotateRight, faArrowsRepeat, faPause, faPlay,
@@ -18,7 +34,7 @@ import {
 export const Wander = (props) => {
 
 
-    const wanderStore = lgs.mainProxy.components.wanderer
+    const wanderStore = lgs.stores.main.components.wanderer
     const wanderSnapshot = useSnapshot(wanderStore)
 
     // Use the first as default if needed

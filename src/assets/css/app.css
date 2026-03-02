@@ -1,21 +1,18 @@
 /*******************************************************************************
  *
  * This file is part of the LGS1920/studio project.
- *
+ *  
  * File: app.css
  *
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-04
- * Last modified: 2025-12-04
+ * Created on: 2026-03-02
+ * Last modified: 2026-03-02
  *
  *
- * Copyright © 2025 LGS1920
+ * Copyright © 2026 LGS1920
  ******************************************************************************/
-
-@import url('https://fonts.googleapis.com/css2?family=Cookie&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Lato:wght@100;400;700&family=Open+Sans:ital,wght@0,300..800;1,300..800&display=swap');
 
 @import-normalize; /* bring in normalize.css styles */
 
@@ -24,10 +21,10 @@ html {
 }
 
 body {
+    font-family: var(--lgs-font-family), sans-serif;
     font-size: var(--lgs-font-size);
-    font-family: var(--lgs-font-family);
-    color: var(--lgs-dark-ui-fg-color);
     overflow: hidden;
+    color: var(--lgs-dark-ui-fg-color);
 }
 
 .no-select {
@@ -48,11 +45,12 @@ body {
 
 #lgs-tools-ui {
     position: absolute;
+    /*z-index: var(--lgs-tools-ui-zindex);*/
     top: calc(-1 * var(--top));
     right: calc(-1 * var(--right));
     bottom: calc(-1 * var(--bottom));
     left: calc(-1 * var(--left));
-    pointer-events: auto;
+    /*pointer-events: none;*/
 }
 
 #cesium-viewer {
@@ -110,15 +108,15 @@ body {
 
 .main-logo {
     position: relative;
-    --padding: calc(6 * var(--lgs-gutter));
-    padding: var(--padding);
-    aspect-ratio: 2.813;
     display: flex;
-    justify-content: center;
     align-items: center;
+    justify-content: center;
+    padding: var(--padding);
+    --padding: calc(6 * var(--lgs-gutter));
+    aspect-ratio: 2.813;
 }
 
-main-logo.xlarge {
+.main-logo.xlarge {
     --padding: calc(6 * var(--lgs-gutter));
 }
 
@@ -127,13 +125,13 @@ main-logo.xlarge {
 }
 
 .main-logo.small {
-    --padding: calc(2 * var(--lgs-gutter-xs));
     border-radius: var(--lgs-border-radius-xs);
+    --padding: calc(2 * var(--lgs-gutter-xs));
 }
 
 .main-logo.xsmall {
-    --padding: calc(var(--lgs-gutter-xs));
     border-radius: var(--lgs-border-radius-xs);
+    --padding: calc(var(--lgs-gutter-xs));
 }
 
 .main-logo img {
@@ -142,40 +140,40 @@ main-logo.xlarge {
 }
 
 .main-logo .the-slogan {
-    color: var(--lgs-slogan-color);
     font-family: var(--lgs-slogan-font-family);
     font-size: var(--lgs-slogan-font-size);
-    transform: rotate(-10deg) skew(-18deg);
-    margin-top: calc(2 * var(--lgs-gutter));
     width: 100%;
+    margin-top: calc(2 * var(--lgs-gutter));
+    transform: rotate(-10deg) skew(-18deg);
     text-align: center;
+    color: var(--lgs-slogan-color);
 }
 
 .main-logo .version-info, .main-logo .welcome-modal-timer {
-    display: flex;
-    gap: var(--lgs-gutter-xs);
-    align-items: center;
     font-size: var(--lgs-font-size-s);
     line-height: 1;
+    display: flex;
+    align-items: center;
+    gap: var(--lgs-gutter-xs);
 }
 
 .main-logo .welcome-modal-timer {
+    font-size: var(--lgs-font-size-s);
     position: absolute;
-    align-items: self-end;
-    left: unset;
     top: var(--lgs-gutter-s);
     right: var(--lgs-gutter-s);
-    font-size: var(--lgs-font-size-s);
+    left: unset;
+    align-items: self-end;
 }
 
 #camera-target {
+    font-size: 1.2rem;
+    line-height: 1;
     position: absolute;
     display: none !important;
     align-items: center;
     justify-content: center;
     transition: all 0.5s ease;
-    font-size: 1.2rem;
-    line-height: 1;
     filter: drop-shadow(0 0 5px black);
 }
 
@@ -187,12 +185,12 @@ main-logo.xlarge {
 
 .drawer-wrapper {
     position: fixed;
-    right: var(--right);
+    z-index: var(--sl-z-index-drawer);
     top: var(--top);
+    right: var(--right);
     width: calc(100vw - var(--right) - var(--left));
     height: calc(100dvh - var(--top) - var(--bottom));
     pointer-events: none;;
-    z-index: var(--sl-z-index-drawer);
 }
 
 .drawer-wrapper.horizontal {
@@ -200,9 +198,75 @@ main-logo.xlarge {
     max-width: var(--lgs-horizontal-panel-width);
 }
 
+.drawer-horizontal-line {
+    display: flex;
+    align-content: center;
+    align-items: center;
+    flex-direction: row;
+    width: 100%;
+    gap: calc(2 * var(--lgs-gutter-xs));
+}
+
+.drawer-align-right {
+    margin-left: auto;
+}
+
+.drawer-horizontal-element {
+    display: flex;
+    align-items: center;
+    flex: 1;
+    flex-direction: row;
+    gap: var(--lgs-gutter-xs);
+}
+
+.drawer-horizontal-element.xlarge-element {
+    flex: 0 0 20%;
+    margin-left: auto;
+}
+
+
+.drawer-horizontal-element.free-element {
+    justify-content: space-between;
+    margin-left: auto;
+}
+
+.three-columns .drawer-horizontal-element.xlarge-element {
+    flex: 0 0 40%;
+    margin-left: auto;
+}
+
+.three-columns .drawer-horizontal-element {
+    flex: 0 0 auto;
+}
+
+/*.three-columns .drawer-horizontal-element {*/
+/*    display: flex;*/
+/*    flex-direction: row;*/
+/*    justify-content: space-between;*/
+/*    gap: var(--lgs-gutter-xs);*/
+/*}*/
+
+.vertical-centered {
+    align-items: center;
+}
+
+.drawer-horizontal-line.two-columns > * {
+    flex-grow: 1
+}
+
+
+.drawer-horizontal-line.two-columns sl-radio {
+    padding-left: var(--lgs-gutter);
+}
+
 /*******************************************************************************
  * Drag, Resize Rotate
  ******************************************************************************/
+
+.lgs-widget-control-box {
+    z-index: var(--lgs-above-widgets) !important;
+}
+
 .lgs-widget-control-box * {
     transition: opacity 0.2s ease-in-out;
 }
@@ -210,7 +274,6 @@ main-logo.xlarge {
 .dragging .lgs-draggable-widget .moveable-control-box {
     opacity: 0;
 }
-
 
 .lgs-widget-control-box .moveable-control {
     width: var(--width) !important;
@@ -233,9 +296,33 @@ main-logo.xlarge {
     --height: calc(2 * var(--lgs-gutter)) !important;
 }
 
+/**
+ * Style override for Moveable origin point
+ * Using Font Awesome Free/Pro Unicode
+ */
+.moveable-control.moveable-origin {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    border-color: var(--lgs-light-color-75) !important;
+    background: var(--lgs-dark-color-50) !important;
+}
+
 .lgs-widget-control-box .moveable-line {
     /* Always transparent whatever show control box parameter */
-    background: transparent !important /*var(--lgs-light-color-75) !important;*/
+    background: transparent !important;
+}
+
+.lgs-visual-widget:not(:has(.lgs-widget-menu)) + .lgs-widget-control-box .moveable-line {
+    /* except for layout widgets */
+    background: var(--lgs-light-color-75) !important;
+}
+
+/**
+ * Customize the Moveable rotation handle
+ */
+.moveable-control-box .moveable-control.moveable-rotation-control {
+    background: var(--lgs-light-color) !important;
 }
 
 .lgs-widget-control-box .moveable-guideline {
@@ -251,6 +338,7 @@ main-logo.xlarge {
 .lgs-widget-control-box .moveable-bold.moveable-bounds {
     background-color: var(--lgs-first-color-90) !important;
 }
+
 /*******************************************************************************
  * VideoLayer component
  ******************************************************************************/
@@ -405,6 +493,7 @@ main-logo.xlarge {
 .widget-deck-panel section {
     display: flex;
     flex-direction: column;
+    width: 100%;
     gap: var(--lgs-gutter-xs);
 }
 
@@ -436,9 +525,209 @@ main-logo.xlarge {
     height: calc(var(--lgs-font-size-s) + 6px);
 }
 
+.widget-deck-entry span {
+    display: block;
+    width: 100%;
+    white-space: nowrap;
+
+}
+
 .widget-menu-disabled {
     cursor: not-allowed !important;
     color: var(--lgs-card-on-map-disabled-color) !important;
     border-color: var(--lgs-card-on-map-disabled-border-color) !important;
     background: transparent !important;
+}
+
+/*******************************************************************************
+ * Widget Ordering
+ ******************************************************************************/
+.widget-ordering-panel {
+    flex-direction: column;
+    height: 250px;
+    gap: var(--lgs-gutter-xs);
+}
+
+/* Container et Scroll */
+.widget-list-container {
+    overflow: hidden;
+    height: 250px;
+    touch-action: pan-y;
+    -webkit-overflow-scrolling: touch;
+}
+
+.reorder {
+    padding: 0 12px;
+    cursor: grab;
+    touch-action: none;
+}
+
+.reorder:active {
+    cursor: grabbing;
+}
+
+/* Titre du Widget (Parent Drag) */
+.widget-deck-title {
+    cursor: move;
+}
+
+.widget-sortable-list {
+    display: flex;
+    flex-direction: column;
+    min-width: 10rem;
+    min-height: 100%;
+    margin-right: calc(-1 * var(--lgs-gutter-s));
+    text-wrap: nowrap;
+    gap: var(--lgs-gutter-xs);
+}
+
+.widget-ordering-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--lgs-gutter-s);
+    gap: var(--lgs-gutter-xs);
+}
+
+.widget-ordering-row sl-icon {
+    width: 1.2rem;
+}
+
+
+.widget-ordering-row .sortable-widget-info {
+    flex: 1;
+}
+
+.widget-ordering-row .sortable-widget-actions ::part(base) {
+    font-size: var(--lgs-font-size);
+}
+
+.sortable-ghost {
+    opacity: 0.5;
+    border: var(--lgs-success-border-color) 1px solid !important;
+    background: var(--lgs-success-bg-color) !important;
+}
+
+/**
+ * Draggable items in the ordering list
+ */
+.widget-sortable-list > div {
+    cursor: grab !important; /* Force open hand on hover */
+    cursor: -webkit-grab !important;
+    user-select: none; /* Prevent text selection which breaks dragging */
+}
+
+/* While the mouse is pressed down on the item */
+.widget-sortable-list > div:active {
+    cursor: grabbing !important; /* Force closed hand */
+    cursor: -webkit-grabbing !important;
+}
+
+/* The item being dragged (the one following the mouse) */
+.sortable-fallback {
+    cursor: grabbing !important;
+}
+
+/* The item currently selected in the list */
+.sortable-chosen {
+    cursor: grabbing !important;
+    background-color: var(--lgs-second-color-15); /* Optional: visual feedback */
+}
+
+/* The ghost (the empty space left behind) */
+.sortable-ghost {
+    cursor: grabbing !important;
+    opacity: 0.4;
+}
+
+.widget-sortable-list > div {
+    user-select: none;
+}
+
+.drop-is-forbidden .sortable-ghost {
+    opacity: 0.5;
+    border: var(--lgs-error-border-color) 1px solid !important;
+    background: var(--lgs-error-bg-color) !important;
+}
+
+.drop-is-allowed .sortable-ghost {
+    opacity: 0.5;
+    border: var(--lgs-success-border-color) 1px solid !important;
+    background: var(--lgs-success-bg-color) !important;
+}
+
+.sortable-chosen {
+    opacity: 0.5;
+    color: var(--lgs-information-color) !important;
+    border: var(--lgs-information-border-color) 1px solid !important;
+    background: var(--lgs-information-bg-color) !important;
+}
+
+.widget-row-fixed:hover {
+    cursor: not-allowed;
+    opacity: 0.5;
+    color: var(--lgs-error-color) !important;
+    border: var(--lgs-error-border-color) 1px solid !important;
+    background: var(--lgs-error-bg-color) !important;
+}
+
+/*******************************************************************************
+ * Widget Editor
+ ******************************************************************************/
+.lgs-widget-editor {
+    height: 100%;
+    min-height: 0;
+}
+
+.lgs-widget-editor, .lgs-widget-editor-controls-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: var(--lgs-gutter-s);
+}
+
+.lgs-widget-editor-controls-wrapper {
+    flex: 1;
+    height: 100%; /* When it is in a block, not a flex*/
+}
+.lgs-widget-preview {
+    height: 250px;
+    padding: var(--lgs-gutter-xs);
+    border-radius: var(--sl-border-radius-medium);
+    background-color: var(--sl-panel-background-color);
+}
+
+.lgs-widget-preview > div {
+    overflow: hidden;
+    height: 250px;
+}
+
+/*******************************************************************************
+ * Color Picker
+ ******************************************************************************/
+sl-color-picker::part(format-button), sl-color-picker::part(input), sl-color-picker::part(eye-dropper-button) {
+    display: none;
+}
+
+/*******************************************************************************
+ * Skeleton
+ ******************************************************************************/
+
+sl-skeleton {
+    --border-radius: var(--lgs-border-radius-s);
+    --color: var(--lgs-dark-color-25);
+}
+
+.lgs-preview-loader-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+}
+
+.lgs-loader-beating-white {
+    font-size: 3.5rem;
+    color: white;
+    /* Optional: boost the glow for the "white" effect */
+    filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.4));
 }

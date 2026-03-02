@@ -7,11 +7,11 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-02
- * Last modified: 2025-11-02
+ * Created on: 2026-01-26
+ * Last modified: 2026-01-26
  *
  *
- * Copyright © 2025 LGS1920
+ * Copyright © 2026 LGS1920
  ******************************************************************************/
 import { HOUR, WIDGETS_STORE } from '@Core/constants'
 
@@ -33,28 +33,21 @@ export class WidgetDBManager {
 
     /**
      * Saves widget position and dimensions to the widgets DB.
+     *
+     * MODIFICATION: Cette classe reste agnostique - elle ne fait QUE stocker les données.
+     * Les calculs de conversion pixels->ratios sont faits dans WidgetCore.preparePositionDataForStorage()
+     *
+     * Les données stockées contiennent maintenant:
+     * - leftRatio: Position left en pourcentage (%) par rapport au conteneur
+     * - topRatio: Position top en pourcentage (%) par rapport au conteneur
+     * - Au lieu de left/top en pixels comme avant
+     *
      * @param {string} widgetId - The widget ID
-     * @param {Object} config - Widget configuration
+     * @param {Object} positionData - Position data to store (already formatted with ratios)
      * @returns {Promise<void>}
      */
-    saveWidgetPosition = async (widgetId, config) => {
-
-        const scale = config.scale || {x: 1, y: 1}
-        const record = {
-            id:        widgetId,
-            group:     config.group || null,
-            left:  config.position.left,
-            top:   config.position.top,
-            width:     config.cropDimensions?.width || config.dimensions.width,
-            height:    config.cropDimensions?.height || config.dimensions.height,
-            transient: config.transient,
-            ttl:       config.ttl || null,
-            scale: scale,
-            ratio:    config.ratio,
-            attachTo: config.attachTo,
-        }
-        await lgs.db.lgs1920.put(widgetId, record, WIDGETS_STORE, record.ttl)
-
+    saveWidgetPosition = async (widgetId, positionData) => {
+        await lgs.db.lgs1920.put(widgetId, positionData, WIDGETS_STORE, positionData.ttl)
     }
 
     /**

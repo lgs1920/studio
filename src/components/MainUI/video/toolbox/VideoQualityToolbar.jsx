@@ -7,11 +7,11 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-30
- * Last modified: 2025-11-30
+ * Created on: 2026-02-27
+ * Last modified: 2026-02-27
  *
  *
- * Copyright © 2025 LGS1920
+ * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 /**
@@ -40,7 +40,11 @@ export const VideoQualityToolbar = () => {
     const handleChangeQuality = useCallback((index, event) => {
         lgs.stores.ui.video.quality = index
         lgs.settings.ui.video.quality = index
+        if (lgs.settings.ui.video.adaptiveQuality?.enabled) {
+            lgs.settings.ui.video.adaptiveQuality = {...lgs.settings.ui.video.adaptiveQuality, enabled: false}
+        }
     }, [])
+
 
     /**
      * Initialize default Quality from settings

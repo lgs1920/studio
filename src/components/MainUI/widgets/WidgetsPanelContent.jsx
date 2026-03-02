@@ -7,185 +7,197 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-14
- * Last modified: 2025-11-14
+ * Created on: 2026-02-17
+ * Last modified: 2026-02-17
  *
  *
- * Copyright © 2025 LGS1920
+ * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { WIDGETS_CONFIGURATION }   from '@Core/constants'
-import { faBox }                   from '@fortawesome/pro-regular-svg-icons'
-import { SlIcon, SlTooltip }       from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                   from '@Utils/FA2SL'
-import classNames                  from 'classnames'
-import { lazy, useEffect, useRef } from 'react'
-import { useSnapshot }             from 'valtio'
+import {
+    VIDEO_WIDGETS_BOARD, WIDGETS_CONFIGURATION, LGS_VISUAL_WIDGET, WIDGET_LAYER_START, WIDGET_LAYER_STEP,
+}                                from '@Core/constants'
+import { WidgetDynamicRenderer } from '@Core/ui/widget-manager/dynamic-render/WidgetDynamicRender'
+import { faBox }             from '@fortawesome/pro-regular-svg-icons'
+import { SlIcon, SlTooltip } from '@shoelace-style/shoelace/dist/react'
+import { FA2SL }             from '@Utils/FA2SL'
+import classNames                                     from 'classnames'
+import { useEffect, useRef, useState }                from 'react'
+import { useSnapshot }                                from 'valtio'
 
 /**
  * Widget panel that shows available widgets grouped by category.
- * Lets users add widgets to the map if they haven't reached the limit.
+ * Handles event propagation to avoid conflicts with draggable parent containers.
  *
  * @param {Object} props
  * @param {Iterable<string>} props.groups - Group IDs to show in the panel
- * @returns {JSX.Element}
+ * @returns {JSX.Element | null}
  */
 export const WidgetsPanelContent = ({groups}) => {
     const _widgetDeckPanel = useRef(null)
+    const widgetDynamicRenderer = new WidgetDynamicRenderer()
     const $widget = lgs.stores.ui.widget
     const widget = useSnapshot($widget)
+    const reached = new Set()
+    const [isInitialized, setIsInitialized] = useState(false)
+
+    // Counter to ensure new widgets are placed on top of the stack
+    const _widgetIndex = useRef(WIDGET_LAYER_START)
 
     /**
-     * Filters and returns only valid groups from the global registry
+     * Filters and returns only valid groups from the global registry.
      * @returns {Map<string, Object>}
      */
     const theGroups = () => {
-        const subGroups = new Map()
-        for (const group of groups) {
-            if (__.widgets.has(group)) {
-                subGroups.set(group, __.widgets.get(group))
-            }
-        }
-        return subGroups
+        return widgetDynamicRenderer.theGroups(groups)
     }
 
     /**
-     * Checks if a widget has reached its max allowed instances
-     *
-     * @param {string} groupKey - Group ID
-     * @param {string} widgetKey - Widget ID
-     * @returns {boolean}
+     * Synchronizes the global store map order with the zIndex values.
+     * Required for consistent rendering order in Valtio snapshots.
      */
-    const isMaxReached = (groupKey, widgetKey) => {
-        const group = __.widgets.get(groupKey)
-        const widgetDef = group?.widgets?.get(widgetKey)
-        const baseKey = widgetKey.split('#')[0]
+    const sortWidgetStore = () => {
+        const $list = lgs.stores.ui.widget.list
+        const sortedEntries = Array.from($list.entries())
+            .sort(([, a], [, b]) => (a.zIndex || 0) - (b.zIndex || 0))
 
-        const count = [...widget.list.keys()]
-            .map(k => k.split('#')[0])
-            .filter(k => k === baseKey).length
-
-        const max = widgetDef?.max ?? 1
-        return count >= max
-    }
-
-    /**
-     * Loads and renders a widget component if allowed
-     *
-     * @param {string} group - Group ID
-     * @param {string} id - Widget ID
-     * @param {Object} extraProps - Optional props to pass to the widget
-     */
-    const renderMyComponent = async (group, id, extraProps = {}) => {
-        const groupsMap = theGroups()
-        if (!groupsMap.has(group)) {
-            return
-        }
-
-        const key = id.split('#')[0]
-        const theId = (key === id) ? __.ui.widgetManager.defineElementId(group, key) : id
-        const theWidget = groupsMap.get(group).widgets.get(key)
-
-        const count = [...$widget.list.keys()]
-            .map(k => k.split('#')[0])
-            .filter(k => k === key).length
-
-        const max = theWidget?.max ?? 1
-        const canAddWidget = count < max
-
-        if (!__.ui.widgetCache.has(theId) && canAddWidget) {
-            if (theWidget?.component) {
-                const LazyWidget = lazy(() =>
-                                            import(`./list/${theWidget.component}.jsx`)
-                                                .then(module => {
-                                                    if (module.default) {
-                                                        return module
-                                                    }
-                                                    if (module[theWidget.component]) {
-                                                        return {default: module[theWidget.component]}
-                                                    }
-                                                    throw new Error(`Component ${theWidget.component} not found`)
-                                                })
-                                                .catch(() => ({
-                                                    default: () => (
-                                                        <div className="widget-load-error">
-                                                            Failed to load {theWidget.component}
-                                                        </div>
-                                                    )
-                                                }))
-                )
-                __.ui.widgetCache.set(theId, group, LazyWidget)
-                $widget.list.set(theId, extraProps)
-            }
+        $list.clear()
+        for (const [id, data] of sortedEntries) {
+            $list.set(id, data)
         }
     }
 
     /**
-     * Adds a widget to the map
-     *
-     * @param {string} group - Group ID
-     * @param {string} key - Widget ID
+     * Adds a new instance of a widget to the map.
+     * @param {string} group
+     * @param {string} key
+     * @param {Object} [props={}] - Existing widget properties (e.g. from DB)
      */
-    const addWidget = (group, key) => {
-        renderMyComponent(group, key, {})
+    const addWidget = (group, key, props = {}) => {
+        const id = !/#/.test(key) ? __.ui.widgetManager.defineElementId(group, key) : key
+
+        // Fetch definition to determine if zIndex is applicable
+        const groupsMap = widgetDynamicRenderer.theGroups([group])
+        const groupDef = groupsMap.get(group)
+        const widgetDef = groupDef?.widgets.get(key.split('#')[0])
+
+        const additionalProps = {}
+
+        // Only apply zIndex to visual components
+        if (widgetDef?.type === LGS_VISUAL_WIDGET) {
+            // Priority: 1. Existing zIndex from props | 2. Current ref counter
+            additionalProps.zIndex = props.zIndex || _widgetIndex.current
+
+            // Increment counter only if a new zIndex was generated
+            if (!props.zIndex) {
+                _widgetIndex.current += WIDGET_LAYER_STEP
+            }
+        }
+
+        widgetDynamicRenderer.renderWidget(group, id, {
+            ...props,
+            widgetsBoard: VIDEO_WIDGETS_BOARD,
+            forceRefresh: true,
+            ...additionalProps,
+        })
+
+        // Ensure the global list Map is ordered correctly after insertion
+        sortWidgetStore()
     }
 
-    useEffect(() => {
-        const targetedGroups = theGroups()
+    /**
+     * Stops event propagation for both mouse and touch interactions.
+     * @param {MouseEvent|TouchEvent} e
+     */
+    const handleInteraction = (e) => {
+        e.stopPropagation()
+    }
 
-        const displayWidgetsInBase = async () => {
-            for (const [id, group] of targetedGroups.entries()) {
-                const widgets = await __.ui.widgetManager.getWidgetsByGroup(id)
-                for (const widget of widgets) {
-                    renderMyComponent(id, widget.id, {})
-                    $widget.list.set(widget.id, widget)
-                }
-            }
-        }
-
-        const displayMandatoryWidgets = () => {
-            for (const [groupId, group] of targetedGroups.entries()) {
-                for (const [id, widget] of group.widgets) {
-                    if (!$widget.list.has(id) && widget.mandatory) {
-                        renderMyComponent(groupId, id, {})
-                        $widget.list.set(id, widget)
-                    }
-                }
-            }
-        }
-
-        displayWidgetsInBase()
-        displayMandatoryWidgets()
-    }, [])
-    const getTooltipText = (groupKey, widgetKey, widgetDef) => {
-        const baseKey = widgetKey.split('#')[0]
-
-        const count = [...widget.list.keys()]
-            .map(k => k.split('#')[0])
-            .filter(k => k === baseKey).length
-
-        const max = widgetDef?.max ?? 1
-        const remaining = max - count
-
-        let tooltipText = widgetDef.description || ''
-        if (max > 1 && remaining > 0) {
+    /**
+     * Computes the tooltip text.
+     * @param {string} groupKey
+     * @param {string} widgetKey
+     * @param {Object} widgetDesc
+     * @returns {string}
+     */
+    const getTooltipText = (groupKey, widgetKey, widgetDesc) => {
+        const remaining = __.ui.widgetManager.remainingWidgets(groupKey, widgetKey)
+        const max = __.ui.widgetManager.maxWidgets(groupKey, widgetKey)
+        let tooltipText = widgetDesc.description || ''
+        if (max > 1 && max < 10 && remaining > 0) {
             tooltipText += ` (${remaining} remaining)`
         }
         return tooltipText
     }
 
-    // TODO mandatory for widget mirroring but may be
-    // TODO it will be usefully in some cases
+    useEffect(() => {
+        const targetedGroups = theGroups()
 
-    // useEffect(() => {
-    //     return () => {
-    //         __.ui.widgetCache.clear()
-    //         $widget.list.clear()
-    //     }
-    // }, [])
+        /**
+         * Load widgets already existing in the state/database.
+         */
+        const displayWidgetsInBase = async () => {
+            for (const [groupId] of targetedGroups.entries()) {
+                const widgets = await __.ui.widgetManager.getWidgetsByGroup(groupId)
+                for (const widgetToRender of widgets) {
+                    // Pass existing widget data to preserve its original zIndex
+                    addWidget(groupId, widgetToRender.id, widgetToRender)
+                }
+            }
+        }
+
+        /**
+         * Trigger rendering for mandatory widgets not yet present in the list.
+         */
+        const displayMandatoryWidgets = () => {
+            for (const [groupId, group] of targetedGroups.entries()) {
+                for (const [widgetId, widgetDef] of group.widgets) {
+                    const fullId = __.ui.widgetManager.defineElementId(groupId, widgetId)
+                    if (widgetDef.mandatory && !lgs.stores.ui.widget.list.has(fullId)) {
+                        addWidget(groupId, widgetId)
+                    }
+                }
+            }
+        }
+
+        const initializePanel = async () => {
+            await displayWidgetsInBase()
+            displayMandatoryWidgets()
+            setIsInitialized(true)
+        }
+
+        initializePanel()
+    }, [])
+
+    if (!isInitialized) {
+        return null
+    }
+
+    const hasJourney = Boolean(lgs.theJourney)
+
+          // Logic to track which widgets can still be added
+    ;[...theGroups().entries()].forEach(([groupKey, groupValue]) => {
+        ;[...groupValue.widgets.entries()].forEach(([widgetKey, widgetDef]) => {
+            if (widgetKey === 'journey-stats-widget' && !hasJourney) {
+                return
+            }
+            if (!__.ui.widgetManager.isMaxWidgetsReached(groupKey, widgetKey)) {
+                reached.add(widgetKey)
+            }
+        })
+    })
+
+    if (reached.size === 0) {
+        return null
+    }
 
     return (
-        <div className="widget-deck-panel lgs-card on-map" ref={_widgetDeckPanel}>
+        <div
+            className="lgs-widget-menu widget-deck-panel lgs-card on-map"
+            ref={_widgetDeckPanel}
+            onMouseDown={handleInteraction}
+            onTouchStart={handleInteraction}
+        >
             <div className="widget-deck-entry widget-deck-title">
                 <SlIcon library="fa" name={FA2SL.set(faBox)}/>
                 <span>Widgets</span>
@@ -193,29 +205,33 @@ export const WidgetsPanelContent = ({groups}) => {
 
             {[...theGroups().entries()].map(([groupKey, groupValue]) => (
                 <section key={groupKey} className="widget-group">
-                    {[...groupValue.widgets.entries()].map(([widgetKey, widget]) => {
-                        const reached = isMaxReached(groupKey, widgetKey)
-
-                        return (
-                            <SlTooltip key={widgetKey} hoist placement="right"
-                                       content={getTooltipText(groupKey, widgetKey, widget)}
-                            >
-                                <div
-                                    onClick={() => addWidget(groupKey, widgetKey)}
-                                    className={classNames(
-                                        'widget-deck-entry', 'small',
-                                        'lgs-one-line-card on-map',
-                                        {'widget-menu-disabled': reached},
-                                    )}
+                    {[...groupValue.widgets.entries()].map(([widgetKey, widgetDef]) => {
+                        if (widgetKey === 'journey-stats-widget' && !hasJourney) {
+                            return null
+                        }
+                        if (reached.has(widgetKey)) {
+                            return (
+                                <SlTooltip key={widgetKey} hoist placement="right"
+                                           content={getTooltipText(groupKey, widgetKey, widgetDef)}
                                 >
-                                    <SlIcon
-                                        library="fa"
-                                        name={FA2SL.set(WIDGETS_CONFIGURATION.get(widgetKey)?.icon)}
-                                    />
-                                    <span className="widget-name">{widget.name}</span>
-                                </div>
-                            </SlTooltip>
-                        )
+                                    <div
+                                        onClick={() => addWidget(groupKey, widgetKey)}
+                                        onMouseDown={handleInteraction}
+                                        onTouchStart={handleInteraction}
+                                        className={classNames(
+                                            'widget-deck-entry', 'small',
+                                            'lgs-one-line-card on-map',
+                                        )}
+                                    >
+                                        <SlIcon
+                                            library="fa"
+                                            name={FA2SL.set(WIDGETS_CONFIGURATION.get(widgetKey)?.icon)}
+                                        />
+                                        <span className="widget-name">{widgetDef.name}</span>
+                                    </div>
+                                </SlTooltip>
+                            )
+                        }
                     })}
                 </section>
             ))}

@@ -7,11 +7,11 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-07-04
- * Last modified: 2025-07-04
+ * Created on: 2026-01-06
+ * Last modified: 2026-01-06
  *
  *
- * Copyright © 2025 LGS1920
+ * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { faGlobe, faRuler, faRulerCombined }      from '@fortawesome/pro-regular-svg-icons'
@@ -33,6 +33,7 @@ export const UnitsSystemSettings = (props) => {
 
     const handleDistanceUnits = (event) => {
         lgs.settings.unitSystem.current = event.target.value * 1
+        __.ui.profiler?.draw()
     }
     const handleCoordinateUnits = (event) => {
         lgs.settings.coordinateSystem.current = event.target.value
@@ -42,7 +43,7 @@ export const UnitsSystemSettings = (props) => {
         <>
             <span slot="summary"><FontAwesomeIcon icon={faRuler}/>{'Units System'}</span>
             <SlDivider/>
-            <div className="horizontal-alignment two-columns">
+            <div className="drawer-horizontal-line two-columns">
 
                 <SlRadioGroup value={us.current} align-right
                               size={'small'} onSlChange={handleDistanceUnits}
@@ -53,7 +54,7 @@ export const UnitsSystemSettings = (props) => {
                 </SlRadioGroup>
             </div>
 
-            <div className="horizontal-alignment two-columns">
+            <div className="drawer-horizontal-line two-columns">
                 <SlRadioGroup value={cs.current} align-right
                               size={'small'} onSlChange={handleCoordinateUnits}
                 >

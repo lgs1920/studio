@@ -1,3 +1,19 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: DragNDropFile.jsx
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2026-02-28
+ * Last modified: 2026-02-28
+ *
+ *
+ * Copyright © 2026 LGS1920
+ ******************************************************************************/
+
 import { useEffect, useRef } from 'react'
 import { useSnapshot }       from 'valtio'
 import {
@@ -14,7 +30,7 @@ import {
 
 export const DragNDropFile = (props) => {
 
-    const setState = lgs.mainProxy.components.fileLoader
+    const setState = lgs.stores.main.components.fileLoader
     const getState = useSnapshot(setState)
     var fileList = setState.fileList
 

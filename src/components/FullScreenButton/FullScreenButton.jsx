@@ -1,3 +1,19 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: FullScreenButton.jsx
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2026-02-28
+ * Last modified: 2026-02-28
+ *
+ *
+ * Copyright © 2026 LGS1920
+ ******************************************************************************/
+
 import { faExpand, faCompress } from '@fortawesome/pro-regular-svg-icons'
 import { SlButton, SlIcon, SlTooltip }        from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                              from '@Utils/FA2SL'
@@ -9,7 +25,7 @@ import { useSnapshot }                        from 'valtio'
 
 export const FullScreenButton = () => {
 
-    const mainStore = lgs.mainProxy
+    const mainStore = lgs.stores.main
     const mainSnap = useSnapshot(mainStore)
 
         const toggleFullSize = () => {

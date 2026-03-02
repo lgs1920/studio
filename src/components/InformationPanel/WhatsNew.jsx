@@ -7,11 +7,11 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-07-01
- * Last modified: 2025-07-01
+ * Created on: 2026-01-30
+ * Last modified: 2026-01-30
  *
  *
- * Copyright © 2025 LGS1920
+ * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { LGSScrollbars } from '@Components/MainUI/LGSScrollbars'
@@ -76,7 +76,7 @@ export const WhatsNew = () => {
     const snap = useSnapshot(state)
 
     return (
-                <LGSScrollbars>
+        <LGSScrollbars>
                     <div className={'whats-new-list'} ref={newsList}>
 
                         {snap.data.map(file => (

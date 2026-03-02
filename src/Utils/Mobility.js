@@ -1,8 +1,24 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: Mobility.js
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2026-02-11
+ * Last modified: 2026-02-11
+ *
+ *
+ * Copyright © 2026 LGS1920
+ ******************************************************************************/
+
+import { MILLIS }        from '@Core/constants'
 import * as turfDistance from '@turf/distance'
 
 import { DateTime }   from 'luxon'
 import * as turfPoint from 'turf-point'
-import { MILLIS } from '@Core/constants'
 
 export class Mobility {
     /**
@@ -44,11 +60,10 @@ export class Mobility {
      *
      * @param {number} distance in meters
      * @param {number} duration in second
-     * @param {boolean} kms unit in kms by default, else miles
      *
-     * @return {number} speed in kms/hour or miles/hour
+     * @return {number} speed in meters/second
      */
-    static speed = (distance, duration, kms = true) => {
+    static speed = (distance, duration) => {
         if (duration === 0) {
             return 0
         }
@@ -59,12 +74,11 @@ export class Mobility {
      * Return the pace
      *
      * @param {number} distance in meters
-     * @param {number} duration in millisecond
-     * @param {boolean} km unit per km by default, else mile
+     * @param {number} duration in second
      *
-     * @return {number} pace in minutes/km or minutes/mile
+     * @return {number} pace in second/meter
      */
-    static pace = (distance, duration, km = true) => {
+    static pace = (distance, duration) => {
         if (distance === 0) {
             return 0
         }

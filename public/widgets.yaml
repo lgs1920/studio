@@ -1,22 +1,263 @@
-multi-purpose-widgets:
-  id: "multi-purpose-widgets"
-  name: "Multi-purpose Widgets"
-  description: "A collection of widgets"
-  icon: "puzzle-piece"
-  widgets:
-    compass-widget:
-      id: "compass-widget"
-      name: "Compass"
-      description: "A compass widget"
-      icon: "compass"
-      mandatory: false
-      max: 1
-      component: "CompassWidget"
-    credits-widget:
-      id: "credits-widget"
-      name: "Credits"
-      description: "A credits widget"
-      icon: "user"
-      mandatory: true
-      component: "CreditsWidget"
+# Groups and widgets
 
+# Icons should be defined twice, here and in constants.js
+widget-groups:
+  multi-purpose-widgets:
+    id: "multi-purpose-widgets"
+    name: "Multi-purpose Widgets"
+    description: "A collection of widgets"
+    icon: "puzzle-piece"
+
+  journey-widgets:
+    id: "journey-widgets"
+    name: "Journey Widgets"
+    description: "Widgets related to journeys"
+    icon: "route"
+
+  scene-widgets:
+    id: "scene-widgets"
+    name: "Scene Widgets"
+    description: "Widgets available on the scene"
+    icon: "image-landscape"
+
+widgets:
+  compass-widget:
+    id: "compass-widget"
+    name: "Compass"
+    description: "A compass widget"
+    icon: "compass"
+    mandatory: false
+    max: 1
+    component: "CompassWidget"
+    type: "lgs-visual-widget"
+    path: "@Components/Compass"
+    groups:
+      - "multi-purpose-widgets"
+
+    ## Configuration
+    configuration:
+      default:
+        show: true
+        mode: 1        # 0: none, 1: full, 2:light
+        background:
+          show: true
+          color: --lgs-dark-color-75
+          opacity: null
+
+        overBackground:
+          show: true
+          color: --lgs-light-color-15
+          opacity: null
+
+        poles:
+          show: true
+          color: --lgs-light-color-50
+          opacity: null
+        text:
+          show: true
+          color: --lgs-light-color
+          opacity: null
+        needle:
+          north:
+            show: true
+            color: --sl-color-red-800
+            opacity: null
+          south:
+            show: true
+            color: --sl-color-amber-100
+            opacity: null
+          center:
+            show: true
+            color: --sl-color-amber-500
+            opacity: null
+      user:
+      elements:
+
+  credits-widget:
+    id: "credits-widget"
+    name: "Credits"
+    description: "A credits widget"
+    icon: "user"
+    mandatory: true
+    component: "CreditsWidget"
+    type: "lgs-visual-widget"
+    alwaysOnTop: true
+    fixedPosition: true
+    groups:
+      - "multi-purpose-widgets"
+
+  profile-widget:
+    id: "profile-widget"
+    name: "Profile"
+    description: "The journey profile widget"
+    icon: "chart-fft"
+    mandatory: false
+    max: 1
+    component: "ProfileWidget"
+    type: "lgs-visual-widget"
+    path: "@Components/Profile"
+    groups:
+      - "journey-widgets"
+      - "scene-widgets"
+
+    ## Configuration
+    configuration:
+      default:
+        show: true
+
+        background:
+          show: true
+          color: "#ffffff"
+          opacity: 0.15
+          blur: true
+          shadow:
+            show: true
+            value: normal
+            color: "#000000"
+            opacity: 0.5
+
+        border:
+          show: true
+          color: "#ffffff"
+          opacity: 0.5
+          thickness: 1
+
+        xAxis:
+          main: true
+          second: true
+          labels: true
+          units: true
+
+        yAxis:
+          main: true
+          second: true
+          labels: true
+          units: true
+
+        mainAxis:
+          color: "--lgs-dark-color" #CSS variable
+          opacity: 0.8
+          thickness: 1
+
+        secondAxis:
+          color: "--lgs-light-color" #CSS variable
+          opacity: 0.6
+          thickness: 0.5
+
+        shadow:
+          show: true
+          value: 'normal'
+          color: "#000000"
+          opacity: 0.5
+
+        gradient:
+          show: true
+          color: null
+
+      user:
+      elements:
+
+  text-widget:
+    id: "text-widget"
+    name: "Text"
+    description: "The text widget"
+    icon: "Text"
+    mandatory: false
+    component: "TextWidget"
+    type: "lgs-visual-widget"
+    path: "@Components/Text"
+    max: 1000
+    groups:
+      - "journey-widgets"
+      - "scene-widgets"
+    configuration:
+      default:
+        background:
+          show: false
+          color: transparent
+          opacity: 0.15
+          blur: false
+        padding:
+          top: 5
+          right: 5
+          bottom: 5
+          left: 5
+        text:
+          content: "Enter text here"
+          color: "#ffffff"
+          stroke:
+            show: false
+            color: "#000000"
+            width: 1.5
+            opacity: 1
+          shadow:
+            color: "#000000"
+            show: false
+            value: normal
+          opacity: 1
+
+        size: 16
+        fontFamily: "Roboto Condensed"
+        lineHeight: 1.2
+        orientation: 0
+        textAlign: "center"
+        weight: "normal"
+        style: "normal"
+
+        border:
+          show: false
+          color: "#ffffff"
+          radius: none
+          thickness: 1
+          opacity: 1
+          shadow: false
+          pill: false
+      user:
+      elements:
+
+  journey-stats-widget:
+    id: "journey-stats-widget"
+    name: "Stats"
+    description: "Track data rendered as SVG"
+    icon: "route"
+    mandatory: false
+    max: 1
+    component: "JourneyStatsWidget"
+    type: "lgs-visual-widget"
+    path: "@Components/Stats"
+
+    groups:
+      - "journey-widgets"
+      - "scene-widgets"
+    configuration:
+      default:
+        background:
+          show: false
+          color: transparent
+          opacity: 0.15
+          blur: false
+        border:
+          show: false
+          color: "#ffffff"
+          radius: none
+          thickness: 1
+          opacity: 1
+          shadow: false
+          pill: false
+        text:
+          color: "#ffffff"
+          shadow:
+            show: false
+            value: normal
+          opacity: 1
+        separator:
+          show: true
+          color: "#ffffff"
+          opacity: 1
+
+        date: false
+        altitude: false
+        performance: false
+
+      user:
+      elements:

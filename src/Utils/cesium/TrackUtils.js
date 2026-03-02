@@ -7,11 +7,11 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-07-02
- * Last modified: 2025-07-02
+ * Created on: 2026-02-28
+ * Last modified: 2026-02-28
  *
  *
- * Copyright © 2025 LGS1920
+ * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import {
@@ -407,7 +407,7 @@ export class TrackUtils {
 
         // Bail early if there's nothing to read
         if (journeys.length === 0) {
-            lgs.mainProxy.readyForTheShow = true
+            lgs.stores.main.readyForTheShow = true
             lgs.theJourney = null
             lgs.theTrack = null
             lgs.thePOI = null
@@ -427,7 +427,7 @@ export class TrackUtils {
 
         if (currentJourney) {
             lgs.theJourney = currentJourney
-            lgs.mainProxy.readyForTheShow = true
+            lgs.stores.main.readyForTheShow = true
             await TrackUtils.setTheTrack()
         }
         else {
@@ -654,12 +654,12 @@ export class TrackUtils {
      * @return {boolean}
      */
     static setProfileVisibility(journey) {
-        lgs.mainProxy.canViewProfile =
-            lgs.settings.getProfile.show &&              // By configuration
+        lgs.stores.main.canViewProfile =
+            lgs.settings.widgets['profile-widget'].configuration.default.show &&              // By configuration
             journey !== undefined &&                        // During init
             journey !== null &&                             // same
             journey.visible &&                              // Journey visible
-            lgs.mainProxy.canViewJourneyData &&            // can view data
+            lgs.stores.main.canViewJourneyData &&            // can view data
             Array.from(journey.tracks.values())             // Has Altitude for each track
                 .every(track => track.hasAltitude)
 
@@ -680,7 +680,7 @@ export class TrackUtils {
     static loadJourneyFromFile = async (journey) => {
 
         // uploading a file exits full screen mode, so we force the state
-        const mainStore = lgs.mainProxy
+        const mainStore = lgs.stores.main
         mainStore.fullSize = false
 
         try {

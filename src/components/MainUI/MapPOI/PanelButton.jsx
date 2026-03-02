@@ -1,3 +1,19 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: PanelButton.jsx
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2026-02-28
+ * Last modified: 2026-02-28
+ *
+ *
+ * Copyright © 2026 LGS1920
+ ******************************************************************************/
+
 import { POIS_EDITOR_DRAWER }          from '@Core/constants'
 import { faLocationDot }               from '@fortawesome/pro-regular-svg-icons'
 import { SlButton, SlIcon, SlTooltip } from '@shoelace-style/shoelace/dist/react'
@@ -6,7 +22,7 @@ import { useSnapshot }                 from 'valtio'
 
 
 export const PanelButton = (props) => {
-    const store = lgs.mainProxy.components.pois.editor
+    const store = lgs.stores.main.components.pois.editor
     const snap = useSnapshot(store)
 
     const handleClick = () => {

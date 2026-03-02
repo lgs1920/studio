@@ -77,6 +77,21 @@ The second phase will expand the platform's capabilities with video generation f
 - Custom export options with styling preservation
 - Clipboard integration for quick sharing
 
+### Widgets & Data Visualization
+
+- Customizable dashboard widgets for journey statistics
+- Real-time journey metrics (distance, elevation, duration)
+- Interactive charts and graphs for track analysis
+- Configurable widget layout and display options
+
+### Video Creation & Sharing
+
+- Generate animated journey videos with custom camera paths
+- Export videos with POI highlights and transitions
+- Share journeys directly to social networks
+- Collaborative journey sharing with other users
+- Public and private journey visibility options
+
 ## Technology Stack
 
 - **Frontend Language**: JavaScript
@@ -101,6 +116,7 @@ The application follows a modular architecture with several key components:
 - **Journey**: The main container for geographical data, containing tracks and POIs
 - **Track**: Represents a path or route with styling and metadata
 - **POI (Point of Interest)**: Markers on the map with additional information
+- **Widgets**: Customizable dashboard components (
 - **Event Management**: Custom event system for handling mouse and touch interactions
 - **Store Management**: Reactive state management using Valtio
 
@@ -191,6 +207,46 @@ The upcoming video creation module will allow users to transform their journeys 
 - Integrated preview of video segments
 - Direct export to common video platforms
 
+## Contributing
+
+We welcome contributions to LGS1920 Studio! However, before contributing, please note:
+
+**All contributors must accept and sign the Contributor License Agreement (CLA)** before their contributions can be
+merged into the project. This agreement ensures that:
+
+- You grant LGS1920 the necessary rights to use and distribute your contributions
+- You confirm that you have the right to submit the contribution
+- Your contributions remain available under the project's license terms
+
+To contribute:
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Submit a pull request
+5. Sign the CLA when prompted
+
+For questions about contributing or the CLA, please contact: contact@lgs1920.fr
+
 ## License
 
-© 2025 LGS1920. All rights reserved.
+This project is licensed under the **PolyForm Noncommercial License 1.0.0**.
+
+### Permitted Uses
+
+- Personal research, experimentation, and testing
+- Non-commercial projects and hobby development
+- Educational and charitable purposes
+- Use by government and public safety organizations
+
+### Restrictions
+
+**Commercial use is not permitted** without obtaining a separate commercial license from LGS1920.
+
+For the complete license terms, see [LICENSE.md](LICENSE.md) or visit:
+https://polyformproject.org/licenses/noncommercial/1.0.0
+
+---
+
+**Required Notice:**
+Copyright © 2025 LGS1920 (contact@lgs1920.fr)

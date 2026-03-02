@@ -1,3 +1,19 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: SelectLocation.jsx
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2026-02-28
+ * Last modified: 2026-02-28
+ *
+ *
+ * Copyright © 2026 LGS1920
+ ******************************************************************************/
+
 import { faChevronRight, faTriangleExclamation, faXmark } from '@fortawesome/pro-regular-svg-icons'
 import { faBomb, faSearch }                               from '@fortawesome/pro-solid-svg-icons'
 import { SlAlert, SlButton, SlDivider, SlIcon }           from '@shoelace-style/shoelace/dist/react'
@@ -7,7 +23,7 @@ import { useSnapshot }                                    from 'valtio/index'
 import { LGSScrollbars }                                  from '../LGSScrollbars'
 
 export const SelectLocation = ({select, address, submit}) => {
-    const store = lgs.mainProxy.components.geocoder
+    const store = lgs.stores.main.components.geocoder
     const snap = useSnapshot(store)
     const scrollbars = useRef(null)
 

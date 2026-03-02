@@ -7,11 +7,11 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-09
- * Last modified: 2025-12-09
+ * Created on: 2026-03-01
+ * Last modified: 2026-03-01
  *
  *
- * Copyright © 2025 LGS1920
+ * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { FontAwesomeIcon }                                         from '@Components/FontAwesomeIcon'
@@ -205,7 +205,7 @@ export const MapPOIEditContent = memo(({poi}) => {
             }
 
             <div className="edit-map-poi-wrapper" id={`edit-map-poi-content-${id}`}>
-                <div className="map-poi-color-actions">
+                <div className="map-poi-header-actions">
                     {point.visible &&
                         <>
                             <SlTooltip content="Background Color">
@@ -234,7 +234,7 @@ export const MapPOIEditContent = memo(({poi}) => {
                             </SlTooltip>
                         </>
                     }
-                    <MapPOIEditMenu point={point}/>
+                    <MapPOIEditMenu poiId={id}/>
                 </div>
 
                 <SlInput

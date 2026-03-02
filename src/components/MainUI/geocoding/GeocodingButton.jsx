@@ -1,3 +1,19 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: GeocodingButton.jsx
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2026-02-28
+ * Last modified: 2026-02-28
+ *
+ *
+ * Copyright © 2026 LGS1920
+ ******************************************************************************/
+
 import { faMapLocationDot }            from '@fortawesome/pro-regular-svg-icons'
 import { SlButton, SlIcon, SlTooltip } from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                       from '@Utils/FA2SL.js'
@@ -5,7 +21,7 @@ import { useSnapshot }                 from 'valtio'
 
 
 export const GeocodingButton = (props) => {
-    const store = lgs.mainProxy.components.geocoder
+    const store = lgs.stores.main.components.geocoder
     const snap = useSnapshot(store)
 
     const handleClick = () => {

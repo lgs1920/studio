@@ -1,3 +1,19 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: SelectLayerType.jsx
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2026-01-06
+ * Last modified: 2026-01-06
+ *
+ *
+ * Copyright © 2026 LGS1920
+ ******************************************************************************/
+
 import { faBringForward, faMountains, faSendBackward } from '@fortawesome/pro-regular-svg-icons'
 import { SlIcon, SlOption, SlSelect }                  from '@shoelace-style/shoelace/dist/react'
 import React                                           from 'react'

@@ -7,11 +7,11 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-27
- * Last modified: 2025-06-27
+ * Created on: 2026-02-11
+ * Last modified: 2026-02-11
  *
  *
- * Copyright © 2025 LGS1920
+ * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import {
@@ -44,7 +44,7 @@ export class Journey extends MapElement {
     origin                                     // initial geoJson
     POIsVisible = true
 
-    metrics = {}
+    metrics = {global: {}, user: {}, eternal: {}, points: {}}
     camera = {}
     cameraOrigin = {}
 
@@ -128,6 +128,64 @@ export class Journey extends MapElement {
         }
         catch (error) {
             console.error('Failed to initialize journey:', error)
+        }
+    }
+
+    /**
+     * Get metrics and union
+     *
+     * @return {{global: NodeJS.Global|{}, user: *|{}, union: *}}
+     */
+    getMetrics = () => {
+        const global = this.metrics.global
+        const user = this.metrics.user ?? {}
+        const external = this.metrics.external ?? {}
+        const points = this.metrics.points
+
+        // Deep merge to properly handle nested objects like positive.elevation
+        const deepMerge = (target, ...sources) => {
+            if (!sources.length) {
+                return target
+            }
+            const source = sources.shift()
+
+            if (source === undefined || source === null) {
+                return deepMerge(target, ...sources)
+            }
+
+            for (const key in source) {
+                if (Object.prototype.hasOwnProperty.call(source, key)) {
+                    const sourceValue = source[key]
+                    const targetValue = target[key]
+
+                    // Skip empty objects - they should not override existing values
+                    if (sourceValue && typeof sourceValue === 'object' &&
+                        !Array.isArray(sourceValue) && Object.keys(sourceValue).length === 0) {
+                        continue
+                    }
+
+                    if (sourceValue && typeof sourceValue === 'object' && !Array.isArray(sourceValue)) {
+                        target[key] = deepMerge(targetValue && typeof targetValue === 'object' ? {...targetValue} : {}, sourceValue)
+                    }
+                    else {
+                        target[key] = sourceValue
+                    }
+                }
+            }
+
+            return deepMerge(target, ...sources)
+        }
+
+        return {
+            global, external, user, points, metrics: deepMerge({}, global, external, user),
+        }
+    }
+
+    getDate = () => {
+        const {points} = this.getMetrics()
+        return {
+            start: points[0]?.time,
+            stop:  points[points.length - 1]?.time,
         }
     }
 
@@ -699,7 +757,7 @@ export class Journey extends MapElement {
             return s + o.distance
         }, 0)
 
-        this.metrics = global
+        return global
     }
 
     /**
@@ -718,7 +776,7 @@ export class Journey extends MapElement {
             return
         }
         // For a multi track journey, let's compute journey level metrics
-        this.metrics = this.setGlobalMetrics()
+        this.metrics.global = this.setGlobalMetrics()
     }
 
     /**

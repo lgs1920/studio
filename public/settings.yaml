@@ -196,33 +196,6 @@ poi:
       slug: picnic-area
 
 ########################################
-# Profile
-########################################
-profile:
-  show: true
-  ## Line chart
-  line:
-    width: 2   # pixels
-  ## Marker
-  marker:
-    ## On track
-    track:
-      show: true
-      size: 13          # Pixels
-      color: '#f2c55c'
-      border:
-        color: '#fff'
-        width: 2        # Pixels
-    ## On chart
-    chart:
-      size: 8           # Pixels
-      color: '#f2c55c'
-      border:
-        color: '#fff'
-        width: 2        # Pixel
-  minInterval: 150      # TODO
-
-########################################
 # Metrics and computations
 ########################################
 metrics:
@@ -330,12 +303,10 @@ ui:
     image: png         # for Image
     maxDuration: 5     # minutes
     maxSize: 200       # MB
-    fps: 1             # 0:15, 1:30, 3:45, 4:60 => VideoRecorder.FPS
-    quality: 1         # 0: low, 1: medium, 2: high, 3: very high => VideoRecorder.QUALITY
+    fps: 1             # 0:15, 1:30, 2:45, 3:60 => VideoRecorder.FPS
+    quality: 1         # 0: low, 1: medium, 2: high, 3: Ultra high => VideoRecorder.QUALITY
     ratio: null        # 16x9,9x16 ...
 
-    ## PWA
+  ## PWA
   pwa:
     canInstall: true
-
-

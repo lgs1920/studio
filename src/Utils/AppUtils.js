@@ -7,16 +7,16 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-03
- * Last modified: 2025-12-03
+ * Created on: 2026-02-24
+ * Last modified: 2026-02-24
  *
  *
- * Copyright © 2025 LGS1920
+ * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import {
     BUILD, CONFIGURATION, COUNTRIES, FREE_ANONYMOUS_ACCESS, LAYERS_TERRAINS_SETTINGS, LGS_CONTEXT_MENU_HOOK, MILLIS,
-    platforms, SERVERS, SETTINGS, SETTINGS_STORE, VAULT_STORE, WIDGETS,
+    platforms, SERVERS, SETTINGS, SETTINGS_STORE, VAULT_STORE, WIDGET_LAYER_TOP, WIDGETS,
 }                           from '@Core/constants'
 import { ElevationServer }  from '@Core/Elevation/ElevationServer'
 import { Settings }         from '@Core/settings/Settings'
@@ -117,25 +117,51 @@ export class AppUtils {
     }
 
     /**
-     * CamelCase a string ( aaa-bbb => aaaBbb, aaa-bbbCcc => aaaBbbCcc)
-     *
-     * @param string {string}
-     * @return {string}
+     * Converts a kebab-case string to camelCase or UpperCamelCase
+     * @param {string} string - The string to transform
+     * @param {boolean} [upper=false] - If true, returns UpperCamelCase (PascalCase)
+     * @returns {string}
      */
-    static camelCase = (string) => {
+    static camelCase = (string, upper = false) => {
         return string
             .split('-')
             .map((s, index) => {
-                if (index === 0) {
-                    return s[0].toLowerCase() + s.slice(1)
+                // Return empty string if segment is empty
+                if (!s) {
+                    return s
                 }
-                else {
+
+                // Force uppercase for the first letter if it is not the first segment or if upper is requested
+                if (index > 0 || upper) {
                     return s[0].toUpperCase() + s.slice(1)
                 }
+
+                // Default behavior for the first segment in lowerCamelCase
+                return s[0].toLowerCase() + s.slice(1)
             })
             .join('')
     }
 
+
+    /**
+     * Converts a kebab-case string to PascalCase
+     * @param {string} string - The string to transform
+     * @param {boolean} [upper=false] - If true, returns UpperCamelCase (PascalCase)
+     * @returns {string}
+     */
+    static pascalCase = (string) => AppUtils.camelCase(string, true)
+
+    /**
+     * Converts a camelCase or PascalCase string to kebab-case
+     * @param {string} string - The string to transform
+     * @returns {string}
+     */
+    static kebabCase = (string) => {
+        return string
+            .replace(/([a-z0-9])([A-Z])/g, '$1-$2') // Insère un tiret entre une minuscule/chiffre et une majuscule
+            .replace(/([A-Z])([A-Z][a-z])/g, '$1-$2') // Gère les acronymes (ex: AppURL -> app-url)
+            .toLowerCase()
+    }
     /**
      * LGS1920Context initialisation
      *
@@ -165,17 +191,31 @@ export class AppUtils {
             .then(res => res.text())
             .then(text => YAML.parse(text),
             )
-        __.widgets = new Map()
 
-        for (const [groupKey, groupValue] of Object.entries(raw)) {
-            const widgets = new Map()
-            for (const [widgetKey, widgetValue] of Object.entries(groupValue.widgets)) {
-                widgets.set(widgetKey, widgetValue)
-            }
-            const groupCopy = {...groupValue, widgets: widgets}
-            __.widgets.set(groupKey, groupCopy)
+        // add settings section
+        settings.widgets = raw.widgets
+
+
+        // Initialize groups with their metadata
+        __.widgets = new Map()
+        for (const [groupKey, groupValue] of Object.entries(raw['widget-groups'])) {
+            __.widgets.set(groupKey, {
+                ...groupValue,
+                widgets: new Map(),
+            })
         }
 
+        // Assign widgets to their groups
+        for (const [widgetKey, widgetValue] of Object.entries(raw.widgets)) {
+            if (widgetValue.groups && Array.isArray(widgetValue.groups)) {
+                for (const groupId of widgetValue.groups) {
+                    const group = __.widgets.get(groupId)
+                    if (group) {
+                        group.widgets.set(widgetKey, widgetValue)
+                    }
+                }
+            }
+        }
 
         // Get the setting sections ID
         lgs.settingSections = Object.keys(settings)
@@ -246,6 +286,10 @@ export class AppUtils {
             m:  __.ui.css.rem2px(__.ui.css.getCSSVariable('--lgs-gutter-m')),
             n:  __.ui.css.rem2px(__.ui.css.getCSSVariable('--lgs-gutter')),
         }
+
+        // Widgets
+        __.ui.css.setCSSVariable('--lgs-above-widgets', WIDGET_LAYER_TOP + 1)
+
 
         /***************************************
          * Application settings

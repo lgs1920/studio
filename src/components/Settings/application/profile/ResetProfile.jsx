@@ -7,15 +7,16 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-10
- * Last modified: 2025-06-09
+ * Created on: 2026-01-06
+ * Last modified: 2026-01-06
  *
  *
- * Copyright © 2025 LGS1920
+ * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { faSquareCheck }  from '@fortawesome/duotone-regular-svg-icons'
-import { faArrowsRotate } from '@fortawesome/pro-regular-svg-icons'
+import { WIDGETS_STORE }                        from '@Core/constants'
+import { faSquareCheck, faArrowsRotate, faBox } from '@fortawesome/duotone-regular-svg-icons'
+import {}                                       from '@fortawesome/pro-regular-svg-icons'
 
 import { FontAwesomeIcon }                       from '@fortawesome/react-fontawesome'
 import { SlButton, SlDetails, SlIcon, SlSwitch } from '@shoelace-style/shoelace/dist/react'
@@ -26,26 +27,30 @@ import { useConfirm }                            from '../../../Modals/ConfirmUI
 import './style.css'
 
 export const ResetProfile = () => {
-    const editor = lgs.editorSettingsProxy.account
-    const snap = useSnapshot(editor)
+    const $account = lgs.stores.editorSettings.account
+    const account = useSnapshot($account)
 
     const reset = async () => {
         if (await confirmReset()) {
-            if (snap.reset.lgs1920) {
+            if (account.reset.lgs1920) {
                 await lgs.db.lgs1920.deleteDB()
             }
-            if (snap.reset.settings) {
+            if (account.reset.settings) {
                 await lgs.db.settings.deleteDB()
             }
-            if (snap.reset.vault) {
+            if (account.reset.vault) {
                 await lgs.db.vault.deleteDB()
+            }
+
+            if (account.reset.widgets) {
+                await lgs.db.lgs1920.clear(WIDGETS_STORE)
             }
             // Reload the app, the DB will be recreated with defaults
             location.reload()
         }
     }
     const toggleProfileData = (type) => {
-        editor.reset[type] = !editor.reset[type]
+        $account.reset[type] = !$account.reset[type]
     }
 
     const change = (event, type) => {
@@ -57,20 +62,26 @@ export const ResetProfile = () => {
             <div className="manage-profile-ui">
                 {'Are you sure you want to reset the data below?'}
                 <ul>
-                    {snap.reset.lgs1920 &&
+                    {account.reset.lgs1920 &&
                         <li key={'reset-profile-lgs1920-confirm'}>
                             <FontAwesomeIcon icon={faSquareCheck}/> My journeys, POIs,...
                         </li>
                     }
-                    {snap.reset.settings &&
+                    {account.reset.widgets &&
+                        <li key={'reset-profile-widgets-confirm'}>
+                            <FontAwesomeIcon icon={faBox}/> All my widgets
+                        </li>
+                    }
+                    {account.reset.settings &&
                         <li key={'reset-profile-settings-confirm'}>
                             <FontAwesomeIcon icon={faSquareCheck}/> My settings
                         </li>
-                    }{snap.reset.vault &&
-                    <li key={'reset-profile-vault-confirm'}>
-                        <FontAwesomeIcon icon={faSquareCheck}/> My Tokens
-                    </li>
-                }
+                    }
+                    {account.reset.vault &&
+                        <li key={'reset-profile-vault-confirm'}>
+                            <FontAwesomeIcon icon={faSquareCheck}/> My Tokens
+                        </li>
+                    }
                 </ul>
             </div>
         </>)
@@ -87,29 +98,33 @@ export const ResetProfile = () => {
                 <SlIcon library="fa" name={FA2SL.set(faArrowsRotate)}/> {'Reset My Profile'}
             </span>
             <div className="manage-profile-ui">
-                {'Please select the profile data you wish to reset:'}
+                {'Please select the profile data to reset:'}
 
-                <SlSwitch align-right size="small" checked={snap.reset.lgs1920}
+                <SlSwitch align-right size="small" checked={account.reset.lgs1920}
                           onSlChange={(event) => change(event, 'lgs1920')}>
-                    Your journeys
+                    My journeys
                     <span slot="help-text">{'Remove my journeys, pois..'}</span>
                 </SlSwitch>
 
-
-                <SlSwitch align-right size="small" checked={snap.reset.settings}
+                <SlSwitch align-right size="small" checked={account.reset.widgets}
+                          onSlChange={(event) => change(event, 'widgets')}>
+                    My widgets
+                    <span slot="help-text">{'Remove my widgets, pois..'}</span>
+                </SlSwitch>
+                <SlSwitch align-right size="small" checked={account.reset.settings}
                           onSlChange={(event) => change(event, 'settings')}>
-                    Your settings
+                    My settings
                     <span slot="help-text">{'Reset all my settings and default data.'}</span>
                 </SlSwitch>
 
-                <SlSwitch align-right size="small" checked={snap.reset.vault}
+                <SlSwitch align-right size="small" checked={account.reset.vault}
                           onSlChange={(event) => change(event, 'vault')}>
-                    Your Tokens
+                    My Tokens
                     <span slot="help-text">{'Clear all my tokens for freemium/premium access.'}</span>
                 </SlSwitch>
 
                 <SlButton variant="primary" onClick={reset}
-                          disabled={!(Object.values(snap.reset).some(value => value === true))}>
+                          disabled={!(Object.values(account.reset).some(value => value === true))}>
                     <SlIcon slot="prefix" library="fa"
                             name={FA2SL.set(faArrowsRotate)}></SlIcon>{'Reset My Profile'}
                 </SlButton>

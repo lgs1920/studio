@@ -1,3 +1,19 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: style.css
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2026-02-24
+ * Last modified: 2026-02-24
+ *
+ *
+ * Copyright © 2026 LGS1920
+ ******************************************************************************/
+
 :root {
     --lgs-profile-pane-height: 280px;
     --lgs-profile-chart-height: 200px;
@@ -28,10 +44,6 @@
     display: none;
 }
 
-#profile-container .apexcharts-canvas {
-    overflow: hidden;
-}
-
 .profile-wrapper {
     display: flex;
     flex-direction: column;
@@ -59,6 +71,51 @@
 
 #profile-pane header::part(title) {
     display: none;
+}
+
+.widget-background-section {
+    display: flex;
+    flex-direction: column;
+    gap: var(--lgs-gutter-xs);
+}
+
+.profile-widget-editor {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+    gap: var(--lgs-gutter);
+}
+
+.profile-widget-preview-surface {
+    display: flex;
+    overflow: hidden;
+    align-items: center;
+    justify-content: center;
+    height: 250px;
+
+    border-radius: var(--sl-border-radius-medium);
+    background-color: var(--sl-panel-background-color);
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: cover;
+}
+
+.profile-widget-preview-chart {
+    display: block;
+    max-width: 100%;
+    max-height: 100%;
+}
+
+.profile-widget-editor-scroll {
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+sl-input.widget-border-field-width::part(input) {
+    width: 2.5rem;
+    padding-right: 0;
+    padding-left: 5px
 }
 
 .lgs-ui-toolbar.lgs-ui-dropdown-toolbar {
@@ -189,3 +246,16 @@
     width: 1027px;
     background: antiquewhite;
 }
+
+.profile-chart-container {
+    padding: var(--lgs-gutter-s);
+    border: 1px solid #ffffffaa;
+    border-radius: var(--lgs-border-radius-s);
+    background: #ffffff66;
+    backdrop-filter: blur(var(--lgs-blur-s));
+}
+
+.reset-profile-widget-color {
+    font-size: var(--lgs-font-size);
+}
+

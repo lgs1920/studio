@@ -7,11 +7,11 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-25
- * Last modified: 2025-10-25
+ * Created on: 2026-02-28
+ * Last modified: 2026-02-28
  *
  *
- * Copyright © 2025 LGS1920
+ * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { FAButton }                                                  from '@Components/FAButton'
@@ -40,7 +40,7 @@ export const JourneyToolbar = (props) => {
     const _journeyToolbar = useRef(null)
     const _journeySelector = useRef(null)
 
-    const $journeyEditor = lgs.mainProxy.components.journeyEditor
+    const $journeyEditor = lgs.stores.main.components.journeyEditor
     const journeyEditor = useSnapshot($journeyEditor)
 
     const $rotate = lgs.stores.ui.mainUI.rotate

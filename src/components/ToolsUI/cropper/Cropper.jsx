@@ -7,17 +7,15 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-15
- * Last modified: 2025-11-15
+ * Created on: 2026-02-17
+ * Last modified: 2026-02-17
  *
  *
- * Copyright © 2025 LGS1920
+ * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { CompassWidget }  from '@Components/MainUI/widgets/list/CompassWidget'
-import { CreditsWidget }  from '@Components/MainUI/widgets/list/CreditsWidget'
 import { DynamicWidget } from '@Components/MainUI/widgets/DynamicWidget'
-import { WidgetsPanel }   from '@Components/MainUI/widgets/WidgetsPanel'
+import { WidgetsPanel } from '@Components/MainUI/widgets/WidgetsPanel'
 import { CropRatioEditorWidget } from '@Components/ToolsUI/cropper/widgets/CropRatioEditorWidget'
 /**
  * Cropper component for interactive crop region selection over canvas, video, or image elements.
@@ -32,10 +30,10 @@ import { CropRatioEditorWidget } from '@Components/ToolsUI/cropper/widgets/CropR
  * @param {JSX.Element|string} [props.children] - Additional UI elements (e.g., CTA buttons)
  * @returns {JSX.Element|null} Cropper UI or null if source is not loaded
  */
-import { DefinedCropZone }                          from '@Components/ToolsUI/cropper/widgets/DefinedCropZone'
-import { MULTI_PURPOSE_WIDGETS } from '@Core/constants'
-import React, { memo, useEffect, useRef, useState } from 'react'
-import { useSnapshot }                              from 'valtio'
+import { DefinedCropZone }                                                                  from '@Components/ToolsUI/cropper/widgets/DefinedCropZone'
+import { JOURNEY_WIDGETS, MULTI_PURPOSE_WIDGETS, SCENE_WIDGETS_BOARD, VIDEO_WIDGETS_BOARD } from '@Core/constants'
+import React, { memo, useEffect, useMemo, useRef, useState }                                from 'react'
+import { useSnapshot }                                                                      from 'valtio'
 import { CropZoneWidget }        from './widgets/CropZoneWidget'
 import './style.css'
 
@@ -53,7 +51,6 @@ export const Cropper = memo(({overlay = false, className = '', context, options 
             setOverlayElement(_overlay.current)
         }
     }, [overlay])
-
 
     return (
         <>
@@ -83,10 +80,16 @@ export const Cropper = memo(({overlay = false, className = '', context, options 
                 ) : null}
                 {overlay && <div className="crop-overlay" ref={_overlay}/>}
                 {children}
-                <WidgetsPanel id="widget-deck" context={context} groups={[MULTI_PURPOSE_WIDGETS]}/>
-                {Array.from(list.entries()).map(([key, props]) => (
-                    <DynamicWidget key={key} id={key} props={props} context={context}/>
-                ))}
+                <WidgetsPanel id="widget-deck" context={context} groups={[MULTI_PURPOSE_WIDGETS, JOURNEY_WIDGETS]}/>
+
+                {
+                    Array.from(list.entries())
+                        .filter(([key, props]) => props?.widgetsBoard === VIDEO_WIDGETS_BOARD)
+                        .sort(([, a], [, b]) => (b.zIndex || 0) - (a.zIndex || 0))
+                        .map(([key, props]) => (
+                            <DynamicWidget key={key} id={key} props={props} context={context}/>
+                        ))
+                }
             </div>
         </>
     )

@@ -7,15 +7,15 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-23
- * Last modified: 2025-11-23
+ * Created on: 2026-01-06
+ * Last modified: 2026-01-06
  *
  *
- * Copyright © 2025 LGS1920
+ * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { VideoMessage }                          from '@Components/MainUI/video/VideoMessage'
-import { VIDEO_CROP_ZONE }                       from '@Core/constants'
+import { VIDEO_CROP_ZONE, VIDEO_WIDGETS_BOARD } from '@Core/constants'
 import React, { useCallback, useEffect, useRef } from 'react'
 import { useSnapshot }                           from 'valtio'
 import { CropZoneInfo }                          from './CropZoneInfo'

@@ -1,16 +1,18 @@
-/**********************************************************************************************************************
- *                                                                                                                    *
- * Project : dashboard                                                                                                *
- * File : EventEmitter.js                                                                                             *
- *                                                                                                                    *
- * @author: Christian Denat                                                                                           *
- * @email: contact@noleam.fr                                                                                          *
- *                                                                                                                    *
- * Last updated on : 24/02/2023  16:07                                                                                *
- *                                                                                                                    *
- * Copyright (c) 2023 - noleam.fr                                                                                     *
- *                                                                                                                    *
- **********************************************************************************************************************/
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: EventEmitter.js
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2026-01-06
+ * Last modified: 2026-01-06
+ *
+ *
+ * Copyright © 2026 LGS1920
+ ******************************************************************************/
 
 /**
  * Fork of https://github.com/dimitrilahaye/vanilla-js-es6-event-emitter

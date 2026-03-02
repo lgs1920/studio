@@ -7,11 +7,11 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-05
- * Last modified: 2025-12-05
+ * Created on: 2026-02-28
+ * Last modified: 2026-02-28
  *
  *
- * Copyright © 2025 LGS1920
+ * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import './style.css'
@@ -50,7 +50,7 @@ const CameraDataPanel = ({icon, children, play, onDoubleClick}) => (
  */
 export const CameraAndTargetPanel = () => {
     // Snapshots for reactive state from Valtio
-    const camera = useSnapshot(lgs.mainProxy.components.camera)
+    const camera = useSnapshot(lgs.stores.main.components.camera)
     const $ui = lgs.settings.ui
     const ui = useSnapshot($ui)
     const panelRef = useRef(null)

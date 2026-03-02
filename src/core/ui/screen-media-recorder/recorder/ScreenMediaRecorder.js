@@ -7,11 +7,11 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-30
- * Last modified: 2025-11-30
+ * Created on: 2026-02-27
+ * Last modified: 2026-02-27
  *
  *
- * Copyright © 2025 LGS1920
+ * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 /*******************************************************************************
@@ -56,7 +56,7 @@ export class ScreenMediaRecorder extends EventTarget {
         {value: QUALITY_LOW, name: 'Low Quality', short: 'L'},
         {value: QUALITY_MEDIUM, name: 'Medium Quality', short: 'M'},
         {value: QUALITY_HIGH, name: 'High Quality', short: 'H'},
-        {value: QUALITY_VERY_HIGH, name: 'Very High Quality', short: 'V'},
+        {value: QUALITY_VERY_HIGH, name: 'Ultra High Quality', short: 'V'},
     ]
     /** Supported output frame rates */
     static FPS = [15, 30, 45, 60]
@@ -85,6 +85,14 @@ export class ScreenMediaRecorder extends EventTarget {
                                            fps:         2,
                                            name:        'High',
                                            description: 'Very High quality',
+                                       },
+                                       ],
+                                       [
+                                           'Ultra', {
+                                           quality:     3,
+                                           fps:         3,
+                                           name:        'Ultra',
+                                           description: 'Ultra High quality',
                                        },
                                        ],
                                        [
@@ -171,6 +179,26 @@ export class ScreenMediaRecorder extends EventTarget {
         this.#type = type
     }
 
+    /**
+     * Update quality preset (and encoder bitrate if possible).
+     * Safe to call during recording; will no-op if not supported.
+     * @param {number} index
+     */
+    setQualityIndex = (index) => {
+        const q = ScreenMediaRecorder.QUALITY[index]
+        if (!q) {
+            return
+        }
+        this.#quality = q
+        if (this.#videoSource && 'bitrate' in this.#videoSource) {
+            try {
+                this.#videoSource.bitrate = q.value
+            }
+            catch (e) {
+            }
+        }
+    }
+
     async url() {
         if (this.isVideo()) {
             if (!this.#blob) {
@@ -216,7 +244,7 @@ export class ScreenMediaRecorder extends EventTarget {
         this.#maxDuration = maxDuration
         this.#maxSize = maxSize
         this.#timeslice = timeslice
-        this.#metadata = metadata || {date: new Date()}
+        this.#metadata = {...(metadata || {date: new Date()})}
         this.#ratio = lgs.configuration.videoFormats.find(f => f.value === ratio)
 
     }

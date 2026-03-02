@@ -7,11 +7,11 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-09
- * Last modified: 2025-12-09
+ * Created on: 2026-02-28
+ * Last modified: 2026-02-28
  *
  *
- * Copyright © 2025 LGS1920
+ * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import {
@@ -148,10 +148,10 @@ export const MapPOIContextMenu = (props) => {
         else {
             __.ui.sceneManager.focus(currentPoi, {
                 target: currentPoi,
-                heading:   lgs.mainProxy.components.camera.position.heading,
-                pitch:     lgs.mainProxy.components.camera.position.pitch,
-                roll:      lgs.mainProxy.components.camera.position.roll,
-                range:     lgs.mainProxy.components.camera.position.range,
+                heading: lgs.stores.main.components.camera.position.heading,
+                pitch:   lgs.stores.main.components.camera.position.pitch,
+                roll:    lgs.stores.main.components.camera.position.roll,
+                range:   lgs.stores.main.components.camera.position.range,
                 infinite:  true,
                 rotate:    true,
                 rpm:       lgs.settings.ui.poi.rpm,

@@ -7,66 +7,64 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-29
- * Last modified: 2025-11-29
+ * Created on: 2026-02-14
+ * Last modified: 2026-02-14
  *
  *
- * Copyright © 2025 LGS1920
+ * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { CreditsBar }                          from '@Components/MainUI/credits/CreditsBar'
 import { Widget }                              from '@Components/MainUI/widgets/Widget'
 import { HOUR, LGS_VISUAL_WIDGET, MULTI_PURPOSE_WIDGETS } from '@Core/constants'
 import React, { useEffect, useMemo, useState } from 'react'
-import { useSnapshot }                                 from 'valtio'
+import { useSnapshot } from 'valtio'
 
 /**
  * CreditsWidget component to display a compass in the widget editor
  * @param {Object} props - Component props
  * @param {string} props.id - Unique identifier for the widget
- * @param {Object} props.context - Valtio proxy context containing cropZone and widgetEditor
+ * @param {Object} props.context - Valtio proxy context containing widgetsBoard and widgetEditor
  * @returns {JSX.Element|null} The credits widget or null if not in editor mode or container is not ready
  */
-export const CreditsWidget = ({id, context}) => {
+export const CreditsWidget = ({id, context, zIndex}) => {
     // Get snapshot of context
-    const {widgetEditor, cropZone} = useSnapshot(context ?? {widgetEditor: false, cropZone: ''})
+    const {widgetEditor, widgetsBoard} = useSnapshot(context ?? {widgetEditor: false, widgetsBoard: ''})
     const [_container, setContainer] = useState(null)
 
-    // Set container when cropZone changes
+    // Set container when widgetsBoard changes
     useEffect(() => {
-        const element = document.querySelector(`#${cropZone}.defined`)
+        const element = document.querySelector(`#${widgetsBoard}.defined`)
         setContainer(element)
-    }, [cropZone])
+    }, [widgetsBoard])
 
     // Memoize widget configuration
     const config = useMemo(() => {
-        if (widgetEditor && _container) {
-            return {
-                container: _container,
-                contextMenu: {
-                    canReset:    false,
-                    canMaximize: false,
-                    canPosition: true,
-                },
-                top:       '100%',
-                left:      '0px',
-                type: LGS_VISUAL_WIDGET,
-                group: MULTI_PURPOSE_WIDGETS,
-                margin:    5,
-                attachTo: 'bottom',
-                scalable:    false,
-                id,
-                persist:   true,
-                transient: true,
-                dynamic:   true,
-                ttl:       HOUR,
-                mandatory:   true,
-                stopPropagation: true,
-            }
+        return {
+            container:       _container,
+            contextMenu:     {
+                canReset:    false,
+                canMaximize: false,
+                canPosition: true,
+            },
+            top:             '100%',
+            left:            '0px',
+            type:            LGS_VISUAL_WIDGET,
+            group:           MULTI_PURPOSE_WIDGETS,
+            margin:          5,
+            attachTo:        'bottom',
+            scalable:        false,
+            id,
+            persist:         true,
+            transient:       true,
+            dynamic:         true,
+            ttl:             HOUR,
+            mandatory:       true,
+            stopPropagation: true,
+            widgetsBoard:    widgetsBoard,
+            zIndex: 10000,
         }
-
-        return {}
-    }, [widgetEditor, _container])
+    }, [widgetEditor, _container, zIndex])
 
     // Render only when widgetEditor is true and container is defined
     if (!widgetEditor || !_container) {

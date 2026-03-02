@@ -7,11 +7,11 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-07
- * Last modified: 2025-11-07
+ * Created on: 2026-02-28
+ * Last modified: 2026-02-28
  *
  *
- * Copyright © 2025 LGS1920
+ * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 
@@ -28,7 +28,7 @@ import { useSnapshot }       from 'valtio'
  */
 export const JourneyToolbarWidget = ({id}) => {
 
-    const $journeyEditor = lgs.mainProxy.components.journeyEditor
+    const $journeyEditor = lgs.stores.main.components.journeyEditor
     const journeyEditor = useSnapshot($journeyEditor)
 
     const $journeyToolbar = lgs.settings.ui.journeyToolbar

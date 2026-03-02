@@ -7,13 +7,15 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-09
- * Last modified: 2025-12-09
+ * Created on: 2026-02-24
+ * Last modified: 2026-02-24
  *
  *
- * Copyright © 2025 LGS1920
+ * Copyright © 2026 LGS1920
  ******************************************************************************/
-import { COUNTRY_FLAGS_DIR } from '@Core/constants'
+import { COUNTRY_FLAGS_DIR, WIDGET_GOOGLE_FONTS } from '@Core/constants'
+import { colord }                                 from 'colord'
+import { DateTime }                               from 'luxon'
 
 export class UIUtils {
 
@@ -32,47 +34,52 @@ export class UIUtils {
     })
 
     /**
-     * Transform a color in hexa to rgb() or rgba()
-     *
-     * @param hex {string}  #RRGGBBAA,#RGB ou #RRGGBB
-     * @param format        output format (rgb | rgba), default rgba
-     * @return {string}       rgb() or rgba()
+     * Transforms a hex color string to rgb() or rgba() format
+     * Supports #RGB, #RRGGBB, and #RRGGBBAA
+     * * @param {string} hex - Color in hex format
+     * @param {'rgb' | 'rgba'} format - Output format
+     * @param {number} intensity - Manual alpha override (0 to 1)
+     * @returns {string} Functional CSS color string
      */
     static hexToRGBA = (hex, format = 'rgba', intensity = 1) => {
-        hex = hex.replace(/^#/, '0x')
+        let r, g, b, a
+        let cleanHex = hex.replace(/^#/, '')
 
-        // Transform #RGB to #RRGGBB orRRRRRGBFF
-        if (hex.length === 5) {
-            hex = hex.split('').map(char => char + char).join('')
-            if (format === 'rgba') {
-                hex += 'FF'
-            }
+        // Handle short format #RGB or #RGBA
+        if (cleanHex.length === 3 || cleanHex.length === 4) {
+            cleanHex = cleanHex.split('').map(char => char + char).join('')
         }
 
-        const alpha = hex.length === 10
+        if (cleanHex.length === 6) {
+            // Standard #RRGGBB
+            const intValue = parseInt(cleanHex, 16)
+            r = (intValue >> 16) & 0xff
+            g = (intValue >> 8) & 0xff
+            b = intValue & 0xff
+            a = 1
+        }
+        else if (cleanHex.length === 8) {
+            // #RRGGBBAA - Use unsigned right shift or separate parsing to avoid sign issues
+            r = parseInt(cleanHex.slice(0, 2), 16)
+            g = parseInt(cleanHex.slice(2, 4), 16)
+            b = parseInt(cleanHex.slice(4, 6), 16)
+            a = parseInt(cleanHex.slice(6, 8), 16) / 255
+        }
+        else {
+            // Fallback for invalid formats
+            return 'transparent'
+        }
 
-        // Extract colors
-        const r = hex >> (alpha ? 24 : 16) & 0xff
-        const g = hex >> (alpha ? 16 : 8) & 0xff
-        const b = hex >> (alpha ? 8 : 0) & 0xff
+        // Override alpha if intensity is specifically provided and not default
+        const alphaValue = (intensity !== 1) ? intensity : a
 
         if (format === 'rgb') {
-            return `rgb(${r},${g},${b})`
+            return `rgb(${r}, ${g}, ${b})`
         }
 
-        if (intensity && intensity !== 1) {
-            return `rgba(${r},${g},${b},${intensity})`
-        }
-
-        // and alpha,if it exists
-        if (alpha) {
-            const a = (hex & 0xff) / 0xff
-            return `rgba(${r},${g},${b},${a})`
-        }
-
-
+        // Format to fixed decimal to avoid long floating point strings
+        return `rgba(${r}, ${g}, ${b}, ${parseFloat(alphaValue.toFixed(3))})`
     }
-
     static hsla2Hex = (h, s, l, a) => {
         s /= 100
         l /= 100
@@ -103,6 +110,9 @@ export class UIUtils {
     }
 
     static RGB2RGBA = (rgbString, alpha = 1) => {
+        if (rgbString === 'transparent') {
+            return `rgba(255,255,255,${alpha})`
+        }
         let rgbValues = rgbString.match(/\d+/g)
         let r = rgbValues[0]
         let g = rgbValues[1]
@@ -164,6 +174,74 @@ export class UIUtils {
         return `${COUNTRY_FLAGS_DIR}${countryCode.toLowerCase()}.svg`
     }
 
+    static importFonts = () => {
+        const familiesParam = WIDGET_GOOGLE_FONTS.map(f => f.replace(/\s+/g, '+')).join('|')
+        const linkId = 'google-fonts'
+
+        if (!document.getElementById(linkId)) {
+            const link = document.createElement('link')
+            link.id = linkId
+            link.rel = 'stylesheet'
+            link.href = `https://fonts.googleapis.com/css2?${WIDGET_GOOGLE_FONTS.map(f => `family=${f.replace(/\s+/g, '+')}`).join('&')}&display=swap`
+            document.head.appendChild(link)
+        }
+    }
+
+
+    /**
+     * Formats journey dates into one or two strings depending on whether
+     * start and stop occur on the same day.
+     * * @param {Object} data - Object containing start and stop ISO strings.
+     * @returns {string[]} Array of formatted date/time strings.
+     */
+    static formatJourneyDurationDates = (data) => {
+        if (!data?.start || !data?.stop) {
+            return []
+        }
+
+        const startDT = DateTime.fromISO(data.start)
+        const stopDT = DateTime.fromISO(data.stop)
+
+        const start = {
+            date: startDT.toLocaleString(DateTime.DATE_FULL),
+            time: startDT.toLocaleString(DateTime.TIME_SIMPLE),
+        }
+        const stop = {
+            date: stopDT.toLocaleString(DateTime.DATE_FULL),
+            time: stopDT.toLocaleString(DateTime.TIME_SIMPLE),
+        }
+
+        const sameDay = start.date === stop.date
+
+        // Retourne [Date, "HeureDépart - HeureArrivée"] si même jour
+        // Sinon ["Date HeureDépart", "Date HeureArrivée"]
+        return {
+            sameDay,
+            prefix: sameDay ? start.date : `${start.date} ${start.time}`,
+            sufix:  sameDay ? `${start.time} - ${stop.time}` : `${stop.date} ${stop.time}`,
+        }
+
+    }
+
+    /**
+     * Resolves a color string from a widget item, handling CSS variables,
+     * hex/rgb formats, and optional alpha transparency.
+     * * @param {Object} item - The item containing color and opacity properties.
+     * @param {boolean} [includeAlpha=false] - Whether to apply the item's opacity to the result.
+     * @returns {string} RGBA or RGB string, or transparent if invalid.
+     */
+    static resolveItemColor(item, includeAlpha = false) {
+        if (!item || !item.color || typeof item.color !== 'string') {
+            return '#ffffff'
+        }
+
+        // Resolve CSS variable if the color string starts with the double-dash prefix
+        const raw = item.color.startsWith('--') ? __.ui.css.getCSSVariable(item.color) : item.color
+        const c = colord(raw)
+
+        // Return the color with applied alpha channel if requested and opacity exists
+        return includeAlpha ? c.alpha(item.opacity ?? 1).toRgbString() : c.toRgbString()
+    }
 }
 
 

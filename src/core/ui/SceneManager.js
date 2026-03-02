@@ -7,15 +7,15 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-30
- * Last modified: 2025-06-30
+ * Created on: 2026-02-28
+ * Last modified: 2026-02-28
  *
  *
- * Copyright © 2025 LGS1920
+ * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import {
-    NO_FOCUS, REFRESH_DRAWING, SCENE_MODE_2D, SCENE_MODE_3D, SCENE_MODE_COLUMBUS, SCENE_MODES,
+    HIGH_TERRAIN_PRECISION, NO_FOCUS, REFRESH_DRAWING, SCENE_MODE_2D, SCENE_MODE_3D, SCENE_MODE_COLUMBUS, SCENE_MODES,
 }                                  from '@Core/constants'
 import { MapTarget }               from '@Core/MapTarget'
 import { SceneUtils }              from '@Utils/cesium/SceneUtils'
@@ -214,11 +214,11 @@ export class SceneManager {
      * @return {Array|number} altitude
      */
     getHeightFromTerrain = async ({coordinates, precision = HIGH_TERRAIN_PRECISION, level = 11}) => {
-        return await this.utils.getHeightFromTerrain({
-                                                         coordinates: coordinates,
-                                                         precision:   precision,
-                                                         level:       level,
-                                                     })
+        return this.utils.getHeightFromTerrain({
+                                                   coordinates: coordinates,
+                                                   precision:   precision,
+                                                   level:       level,
+                                               })
     }
 
 

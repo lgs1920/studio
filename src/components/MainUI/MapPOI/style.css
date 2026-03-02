@@ -7,11 +7,11 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-09
- * Last modified: 2025-12-09
+ * Created on: 2026-03-02
+ * Last modified: 2026-03-02
  *
  *
- * Copyright © 2025 LGS1920
+ * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 /*******************************************************************************
@@ -113,7 +113,7 @@
     margin-left: calc(1 * var(--poi-menu-icons-column-width));
     border: var(--poi-border-width) solid var(--lgs-poi-border-color);
     border-radius: var(--lgs-border-radius-s);
-    backdrop-filter: blur(var(--lgs-blur-s));
+    backdrop-filter: blur(var(--lgs-blur));
 }
 
 .poi-shrinked .poi-card-inner {
@@ -233,24 +233,38 @@
     gap: var(--lgs-gutter-xs);
 }
 
-.map-poi-bulk-indicator {
-    width: var(--lgs-gutter)
+.map-poi-item-checkbox, .map-poi-bulk-master-icon {
+    font-size: calc(1.25 * var(--lgs-font-size));
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    --fa-primary-color: var(--lgs-disabled-color);
+    --fa-primary-opacity: 1;
+    --fa-secondary-color: var(--lgs-disabled-bg-color);
+    --fa-secondary-opacity: 1;
 }
-
-.map-poi-bulk-indicator sl-icon-button {
-    font-size: var(--lgs-font-size);
-}
-
-.map-poi-bulk-indicator sl-icon-button::part(base) {
-    padding-top: 1rem;
-    padding-right: 0;
-    padding-left: 0;
-}
-
 .map-poi-bulk-actions {
     display: flex;
     align-items: center;
     gap: var(--lgs-gutter-xs);
+    --fa-primary-color: var(--lgs-disabled-color);
+    --fa-secondary-color: var(--lgs-disabled-bg-color);
+}
+
+.map-poi-bulk-master-icon.is-partial {
+    --fa-primary-color: #ffffff;
+    --fa-secondary-color: var(--lgs-success-color-50);
+}
+
+.map-poi-bulk-master-icon.is-all {
+    --fa-primary-color: #ffffff;
+    --fa-secondary-color: var(--lgs-success-color);
+}
+
+.map-poi-item-checkbox .is-active {
+    --fa-secondary-opacity: 1;
+    --fa-primary-color: #ffffff;
+    --fa-secondary-color: var(--lgs-information-color);
 }
 
 #edit-map-poi-list {
@@ -328,18 +342,19 @@
     width: 9rem;
 }
 
-.map-poi-color-actions {
+.map-poi-header-actions {
     display: flex;
+    align-items: center;
     margin-bottom: -2rem; /** TODO Found where this has been set */
     margin-left: auto;
     gap: var(--lgs-gutter-xs);
 }
 
-.map-poi-color-actions .label-on-left {
+.map-poi-header-actions .label-on-left {
     align-self: center;
 }
 
-.map-poi-color-actions sl-button {
+.map-poi-header-actions sl-button {
     margin-bottom: var(--lgs-gutter-xs);
 }
 

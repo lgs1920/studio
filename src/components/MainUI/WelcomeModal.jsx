@@ -7,11 +7,11 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-30
- * Last modified: 2025-06-30
+ * Created on: 2026-02-28
+ * Last modified: 2026-02-28
  *
  *
- * Copyright © 2025 LGS1920
+ * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { APP_EVENT, INFO_DRAWER, MILLIS, SECOND, SLOGAN } from '@Core/constants'
@@ -26,7 +26,7 @@ export const WelcomeModal = () => {
     const [show, setShow] = useState(false)
     const welcomeModal = useRef(null)
     const infoPanel = lgs.stores.ui.informationPanel
-    const main = lgs.mainProxy
+    const main = lgs.stores.main
 
     const [closure, setClosure] = useState(lgs.settings.ui.welcome.displayTime)
 

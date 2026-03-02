@@ -7,11 +7,11 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-30
- * Last modified: 2025-06-30
+ * Created on: 2026-02-28
+ * Last modified: 2026-02-28
  *
  *
- * Copyright © 2025 LGS1920
+ * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import './style.css'
@@ -45,7 +45,7 @@ export const JourneyLoaderUI = (props) => {
     const journeyLoaderStore = lgs.stores.ui.mainUI.journeyLoader
     const journeyLoaderSnap= useSnapshot(journeyLoaderStore)
 
-    const setState = lgs.mainProxy.components.fileLoader
+    const setState = lgs.stores.main.components.fileLoader
     const getState = useSnapshot(setState)
     const fileList = setState.fileList
 

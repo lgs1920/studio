@@ -7,11 +7,11 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-23
- * Last modified: 2025-11-23
+ * Created on: 2026-01-06
+ * Last modified: 2026-01-06
  *
  *
- * Copyright © 2025 LGS1920
+ * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 /*******************************************************************************
@@ -46,13 +46,15 @@ export const DefinedCropZone = memo(function DefinedCropZone({
     // Store the crop zone DOM element in Valtio store when mounted
     useEffect(() => {
         if (_definedCropZone.current) {
-            context.cropZone = _definedCropZone.current.id
+            context.widgetsBoard = _definedCropZone.current.id
             context.resizable = $video.resizable
             context.widgetEditor = true
         }
+
+
         return () => {
             if (context) {
-                context.cropZone = null
+                context.widgetsBoard = null
                 // we need widgetEditor later...
             }
         }

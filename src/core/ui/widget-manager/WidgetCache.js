@@ -7,154 +7,148 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-28
- * Last modified: 2025-11-28
+ * Created on: 2026-02-17
+ * Last modified: 2026-02-17
  *
  *
- * Copyright © 2025 LGS1920
+ * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-/**
- * @typedef {Object} CacheEntry
- * @property {string} group - Group identifier
- * @property {Promise<React.Component>} component - Lazy-loaded component
- * @property {HTMLElement} [element] - Associated DOM element (optional)
- * @property {boolean} mounted - Indicates whether the widget is mounted for the current video
- * @property {proxySet<string>} [synced] - proxySet of keys this entry must stay in sync with (added for mob store
- *     proxySet)
- */
-
-import { proxySet } from 'valtio/utils'
+import { VIDEO_WIDGETS_BOARD, WIDGETS_STORE } from '@Core/constants'
 
 /**
  * Utility class providing a clean, reactive API over the global Valtio proxy cache.
- * The proxy is stored in a private class field `#cache` for internal use.
- * All methods are arrow functions.
- *
- * Added getter/setter for `synced` to support the new `proxySet` in mob store.
  */
 export class WidgetCache {
     /** @type {WidgetCache|null} */
     static #instance = null
 
-    /** @type {import('valtio').Proxy<Map<string, CacheEntry>>} */
+    /** @type {Map<string, CacheEntry>} */
     #cache
 
     constructor() {
         if (WidgetCache.#instance) {
             return WidgetCache.#instance
         }
-        // Valtio proxy is a plain object with Map-like methods (get, set, has, delete, clear, entries, keys)
+        // References the global Valtio proxy store
         this.#cache = lgs.stores.ui.widget.cache
         WidgetCache.#instance = this
     }
 
     /**
      * Retrieves the lazy-loaded component for a given key.
-     * @param {string} key - Full widget key
-     * @returns {Promise<React.Component>|null}
+     * @param {string} key
+     * @returns {React.LazyExoticComponent|null}
      */
     getComponent = key => {
         const entry = this.#cache.get(key)
         return entry ? entry.component : null
     }
 
-    /**
-     * Retrieves the cache element for a given key.
-     * @param {string} key - Full widget key
-     * @returns {Promise<React.Component>|null}
-     */
     get = key => {
         return this.#cache.get(key)
     }
 
     /**
-     * Stores or updates a cache entry.
-     * @param {string} key - Key (`<key>` or `<key>#<uuid>`)
-     * @param {string} group - Group identifier
-     * @param {Promise<React.Component>} lazyComponent - Lazy component
-     * @param {boolean} [mounted=false] - Initial mounted state for video
-     * @param {proxySet<string>} [synced=new proxySet()] - Keys to sync with (for mob store proxySet)
+     * Sets or updates a cache entry.
+     * @param {string} key
+     * @param {Object} options
      */
-    set = (key, group, lazyComponent, mounted = false, synced = new proxySet()) => {
+    set = (key, options) => {
+        const {group, component, mounted, widgetsBoard, zIndex} = options
+
         this.#cache.set(key, {
-            group,
-            component: lazyComponent,
-            mounted,
-            synced,
+            group:        group ?? null,
+            component: component ?? null,
+            mounted:      mounted ?? false,
+            widgetsBoard: widgetsBoard ?? null,
+            zIndex: zIndex ?? 0,
         })
     }
 
     /**
-     * Deletes an entry by its key.
-     * @param {string} key - Full key
+     * Deletes an entry and its persistence in DB.
+     * @param {string} key
      */
-    delete = key => this.#cache.delete(key)
+    delete = async key => {
+        this.#cache.delete(key)
+        await lgs.db.lgs1920.delete(key, WIDGETS_STORE)
+    }
 
     /**
-     * Checks if a key exists in the cache.
-     * @param {string} key - Full or base key
-     * @param {boolean} [full=false] - If true, exact key match only
+     * Validates if a widget exists based on key, group, and board.
+     * @param {string} key
+     * @param {Object} [options={}]
      * @returns {boolean}
      */
-    has = (key, full = false) => {
-        if (full) {
-            return this.#cache.has(key)
+    has = (key, options = {}) => {
+        const {group, full = false, widgetsBoard} = options
+
+        const isValidMatch = (value) => {
+            const groupMatch = group === undefined || (value && value.group === group)
+            const boardMatch = widgetsBoard === undefined || (value && value.widgetsBoard === widgetsBoard)
+            return groupMatch && boardMatch
         }
-        return Array.from(this.#cache.keys()).some(k => k === key || k.startsWith(`${key}#`))
+
+        if (full) {
+            const cachedValue = this.#cache.get(key)
+            return !!(cachedValue && isValidMatch(cachedValue))
+        }
+
+        return Array.from(this.#cache.keys()).some(k => {
+            if (k.startsWith(key)) {
+                const cachedValue = this.#cache.get(k)
+                return isValidMatch(cachedValue)
+            }
+            return false
+        })
     }
 
-    /**
-     * Clears the entire cache.
-     */
     clear = () => this.#cache.clear()
 
-    /**
-     * Clears all entries belonging to a specific group.
-     * @param {string} group - Group identifier
-     */
-    clearByGroup = group => {
-        for (const [key, value] of this.#cache) {
-            if (value.group === group) {
-                this.#cache.delete(key)
-            }
-        }
-    }
-
-    /**
-     * Counts entries matching the specified criteria.
-     * @param {string} [key] - Base key filter
-     * @param {string|string[]} [groups] - Group(s) filter
-     * @param {boolean} [full=false] - Exact key count
-     * @returns {number}
-     */
-    count = (key, groups, full = false) => {
+    count = ({key, groups, widgetsBoard, full = false} = {}) => {
         let entries = Array.from(this.#cache.entries())
 
         if (full && key) {
-            return this.#cache.has(key) ? 1 : 0
+            const entry = this.#cache.get(key)
+            if (!entry) {
+                return 0
+            }
+            const boardMatch = !widgetsBoard || entry.widgetsBoard === widgetsBoard
+            return boardMatch ? 1 : 0
         }
+
         if (key) {
             entries = entries.filter(([k]) => k === key || k.startsWith(`${key}#`))
         }
+
         if (groups) {
             const groupArray = Array.isArray(groups) ? groups : [groups]
             entries = entries.filter(([, v]) => groupArray.includes(v.group))
         }
+
+        if (widgetsBoard) {
+            entries = entries.filter(([, v]) => v.widgetsBoard === widgetsBoard)
+        }
+
         return entries.length
     }
 
-    /**
-     * Returns a read-only snapshot of the cache.
-     * @returns {Map<string, CacheEntry>}
-     */
-    getAll = () => new Map(this.#cache)
+    getAll = ({groups = null, widgetsBoard = null} = {}) => {
+        if (!groups && !widgetsBoard) {
+            return new Map(this.#cache)
+        }
+        const groupsFilter = groups ? (Array.isArray(groups) ? groups : [groups]) : null
 
-    /**
-     * Associates an HTMLElement with an existing entry.
-     * @param {string} key - Widget key
-     * @param {HTMLElement} element - DOM element
-     */
+        const filteredEntries = Array.from(this.#cache).filter(([, entry]) => {
+            const matchGroup = !groupsFilter || groupsFilter.includes(entry.group)
+            const matchBoard = !widgetsBoard || entry.widgetsBoard === widgetsBoard
+            return matchGroup && matchBoard
+        })
+
+        return new Map(filteredEntries)
+    }
+
     setElement = (key, element) => {
         const entry = this.#cache.get(key)
         if (entry) {
@@ -162,105 +156,140 @@ export class WidgetCache {
         }
     }
 
-    /**
-     * Marks the widget as mounted
-     * @param {string} key - Widget key
-     * @param {function} callback - Called once the widget has veen mounted
-     */
     mount = (key, callback = null) => {
         this.#setMounted(key, true)
         callback?.(key)
     }
 
-    /**
-     * Marks the widget as unmounted
-     * @param {string} key - Widget key
-     */
-    unmount = key => {
-        this.#setMounted(key, false)
-    }
+    unmount = key => this.#setMounted(key, false)
 
-    /**
-     * Updates the video-mounted state of an entry.
-     * @param {string} key - Widget key
-     * @param {boolean} mounted - New mounted state
-     * @private
-     */
     #setMounted = (key, mounted) => {
         const entry = this.#cache.get(key)
         if (entry) {
+            entry.element = null
             entry.mounted = mounted
         }
     }
 
-    /**
-     * Gets the video-mounted state of an entry.
-     * @param {string} key - Widget key
-     * @returns {boolean|undefined}
-     */
     isMounted = key => this.#cache.get(key)?.mounted
 
     /**
-     * Gets the synced proxySet for a given key.
-     * @param {string} key - Widget key
-     * @returns {proxySet<string>|undefined}
+     * Performs initial hydration of the cache with meta-data from DB.
      */
-    getSynced = key => {
-        const entry = this.#cache.get(key)
-        return entry?.synced
+    async readFromDB() {
+        const $widget = lgs.stores.ui.widget
+        try {
+            const keys = await lgs.db.lgs1920.keys(WIDGETS_STORE)
+            for (const widgetId of keys) {
+                const widgetData = await lgs.db.lgs1920.get(widgetId, WIDGETS_STORE)
+                if (!widgetData || !widgetData.group) {
+                    continue
+                }
+
+                this.set(widgetId, {
+                    group:        widgetData.group,
+                    component: null,
+                    widgetsBoard: widgetData.widgetsBoard,
+                })
+
+                $widget.list.set(widgetId, {
+                    widgetsBoard: widgetData.widgetsBoard || 'scene',
+                })
+            }
+        }
+        catch (error) {
+            console.error('[WidgetCache] Failed to read from DB:', error)
+        }
     }
 
     /**
-     * proxySets or replaces the synced proxySet for a given key.
-     * @param {string} key - Widget key
-     * @param {proxySet<string>} synced - New sync set
+     * Full initialization flow.
+     * 1. Loads raw widget metadata from DB.
+     * 2. Enriches cache and reactive store with real persistent positions/zIndex.
      */
-    setSynced = (key, synced) => {
-        const entry = this.#cache.get(key)
-        if (entry) {
-            entry.synced = synced
-        }
+    async init() {
+        const widgets = await lgs.db.lgs1920.keys(WIDGETS_STORE)
+        const initWidgets = widgets.map(async (id) => {
+            // Retrieve persistent data through the manager
+            const position = await __.ui.widgetManager.getWidgetPosition(id)
+            const zIndex = position?.zIndex// ?? 0
+            // Update local cache
+            this.set(id, {
+                group:        position.group,
+                widgetsBoard: position.widgetsBoard,
+                zIndex:       zIndex,
+            })
+            // Create  global store
+            const item = {
+                widgetsBoard: position.widgetsBoard || 'scene',
+            }
+            // Add zIndex for video widgets
+            if (position.widgetsBoard === VIDEO_WIDGETS_BOARD) {
+                item.zIndex = zIndex
+            }
+
+            lgs.stores.ui.widget.list.set(id, item)
+        })
+
+        await Promise.all(initWidgets)
     }
 
     /**
-     * Adds one or more keys to the synced proxySet of an entry.
-     * @param {string} key - Widget key
-     * @param {string|string[]} keysToAdd - Key(s) to add to sync
+     * Board isolation and visibility methods.
      */
-    addToSynced = (key, keysToAdd) => {
-        const entry = this.#cache.get(key)
-        if (!entry) {
-            return
-        }
-        if (!entry.synced) {
-            entry.synced = new proxySet()
-        }
-        const toAdd = Array.isArray(keysToAdd) ? keysToAdd : [keysToAdd]
-        toAdd.forEach(k => entry.synced.add(k))
+    getAllExceptBoards = excludedBoardIds => {
+        const exclusions = Array.isArray(excludedBoardIds) ? excludedBoardIds : [excludedBoardIds]
+        const filteredEntries = Array.from(this.#cache.entries()).filter(([, entry]) => {
+            return entry.widgetsBoard && !exclusions.includes(entry.widgetsBoard)
+        })
+        return new Map(filteredEntries)
     }
 
-    /**
-     * Removes one or more keys from the synced proxySet of an entry.
-     * @param {string} key - Widget key
-     * @param {string|string[]} keysToRemove - Key(s) to remove from sync
-     */
-    removeFromSynced = (key, keysToRemove) => {
-        const entry = this.#cache.get(key)
-        if (!entry?.synced) {
-            return
-        }
-        const toRemove = Array.isArray(keysToRemove) ? keysToRemove : [keysToRemove]
-        toRemove.forEach(k => entry.synced.delete(k))
+    hideAllExceptBoards = excludeBoards => {
+        const widgets = this.getAllExceptBoards(excludeBoards)
+        const $restrictions = lgs.stores.ui.widget.restrictions
+
+        widgets.forEach((value, id) => {
+            const element = __.ui.widgetManager.getElementById(id)
+            if (element && !$restrictions.has(id)) {
+                $restrictions.set(id, {
+                    top:   element.style.top,
+                    left:  element.style.left,
+                    board: value.widgetsBoard,
+                })
+                element.classList.add('lgs-widget-hidden')
+            }
+        })
     }
 
-    /**
-     * Clears the synced proxySet for a given key.
-     * @param {string} key - Widget key
-     */
-    clearSynced = key => {
-        const entry = this.#cache.get(key)
-        if (entry?.synced) {
-            entry.synced.clear()
+    restoreAllHiddenWidgetsExcept = (excludeBoards) => {
+        const $restrictions = lgs.stores.ui.widget.restrictions
+        const boardsToExclude = excludeBoards ? (Array.isArray(excludeBoards) ? excludeBoards : [excludeBoards]) : null
+        const idsToRestore = []
+
+        $restrictions.forEach((pos, id) => {
+            if (boardsToExclude && pos.board && boardsToExclude.includes(pos.board)) {
+                return
+            }
+
+            const element = __.ui.widgetManager.getElementById(id)
+            if (element) {
+                element.classList.remove('lgs-widget-hidden')
+                if (pos.left) {
+                    element.style.left = pos.left
+                }
+                if (pos.top) {
+                    element.style.top = pos.top
+                }
+                idsToRestore.push(id)
+            }
+        })
+
+        idsToRestore.forEach(id => $restrictions.delete(id))
+        if (!boardsToExclude) {
+            $restrictions.clear()
         }
     }
+
+    restoreAllHiddenWidgets = (excludeBoards) => this.restoreAllHiddenWidgetsExcept(excludeBoards)
 }

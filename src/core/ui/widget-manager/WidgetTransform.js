@@ -7,11 +7,11 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-02
- * Last modified: 2025-11-02
+ * Created on: 2026-01-27
+ * Last modified: 2026-01-27
  *
  *
- * Copyright © 2025 LGS1920
+ * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 /**
@@ -269,7 +269,7 @@ export class WidgetTransform {
             const newTop = currentTop + transforms.translate.y
 
             // Update element style and config position
-            element.style.transformOrigin = '0 0'
+            //element.style.transformOrigin = '50% 50%'
             element.style.left = `${newLeft}px`
             element.style.top = `${newTop}px`
 
@@ -384,7 +384,6 @@ export class WidgetTransform {
      * @example
      * const rect = element.getBoundingClientRect();
      * const origin = getTransformOriginFromString({ x: '100%', y: '0%' }, rect);
-     * console.log(origin); // { x: rect.width, y: 0 }
      */
     getTransformOriginFromString = (origin, rect) => {
         const parse = (value, size) => {
@@ -400,5 +399,45 @@ export class WidgetTransform {
         }
     }
 
+    /**
+     * Updates multiple transform values at once and applies them to the element.
+     * Useful for batch updates or complex operations like combined scaling and rotation.
+     * * @param {HTMLElement} element - The DOM element.
+     * @param {Object} transforms - The transform values to update.
+     * @param {Object} [transforms.translate] - Optional translate {x, y}.
+     * @param {Object} [transforms.scale] - Optional scale {x, y}.
+     * @param {number} [transforms.rotate] - Optional rotation in degrees.
+     */
+    setTransform = (element, transforms = {}) => {
+        const elementId = this.#widgetManager.retrieveElementId(element)
+        const config = this.#widgetManager.getWidgetConfig(elementId)
 
+        if (!config) {
+            return
+        }
+
+        // Get current state to ensure we don't lose existing transformations not provided in the call
+        const currentTransform = this.parseTransform(element.style.transform)
+
+        // Merge new values if provided
+        if (transforms.translate) {
+            currentTransform.translate = {...transforms.translate}
+            config.translate = currentTransform.translate
+        }
+
+        if (transforms.scale) {
+            currentTransform.scale = {...transforms.scale}
+            config.scale = currentTransform.scale
+        }
+
+        if (transforms.rotate !== undefined) {
+            currentTransform.rotate = transforms.rotate
+            config.rotate = currentTransform.rotate
+        }
+
+        // Apply to DOM and update config string
+        const newTransformString = this.buildTransform(currentTransform)
+        element.style.transform = newTransformString
+        config.transform = newTransformString
+    }
 }

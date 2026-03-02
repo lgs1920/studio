@@ -1,3 +1,19 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: PanelButton.jsx
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2026-02-28
+ * Last modified: 2026-02-28
+ *
+ *
+ * Copyright © 2026 LGS1920
+ ******************************************************************************/
+
 import { LAYERS_DRAWER }               from '@Core/constants'
 import { faLayerGroup }                from '@fortawesome/pro-regular-svg-icons'
 import { SlButton, SlIcon, SlTooltip } from '@shoelace-style/shoelace/dist/react'
@@ -9,7 +25,7 @@ import { useSnapshot }                 from 'valtio'
 
 export const PanelButton = (props) => {
 
-    const mainStore = lgs.mainProxy.components.layers
+    const mainStore = lgs.stores.main.components.layers
     const mainSnap = useSnapshot(mainStore)
 
     return (

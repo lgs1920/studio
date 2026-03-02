@@ -7,11 +7,11 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-28
- * Last modified: 2025-11-28
+ * Created on: 2026-02-12
+ * Last modified: 2026-02-12
  *
  *
- * Copyright © 2025 LGS1920
+ * Copyright © 2026 LGS1920
  ******************************************************************************/
 import { encodeSync } from 'png-chunk-itxt'
 import encode         from 'png-chunks-encode'
@@ -84,6 +84,9 @@ export class AppToolsManager {
     }
 
     RGB2RGBA = (rgbString, alpha = 1) => {
+        if (rgbString === 'transparent') {
+            return `rgba(255,255,255,${alpha})`
+        }
         let rgbValues = rgbString.match(/\d+/g)
         let r = rgbValues[0]
         let g = rgbValues[1]
@@ -121,15 +124,30 @@ export class AppToolsManager {
             || rect.bottom > (container.innerHeight || document.documentElement.clientHeight)
             || rect.right > (container.innerWidth || document.documentElement.clientWidth))
     }
-
+    /**
+     * Enhanced debounce that supports cancellation.
+     * Safe for legacy use as it returns a callable function.
+     * * @param {Function} func - The function to debounce
+     * @param {number} wait - Time to wait in ms
+     * @returns {Function} - Debounced function with a .cancel() method
+     */
     debounce = (func, wait = 300) => {
         let timeout
-        return (...args) => {
+
+        // The actual function returned to the caller
+        const debounced = (...args) => {
             clearTimeout(timeout)
             timeout = setTimeout(() => {
                 func.apply(this, args)
             }, wait)
         }
+
+        // Attach the cancel method to the function object
+        debounced.cancel = () => {
+            clearTimeout(timeout)
+        }
+
+        return debounced
     }
 
     base64ToBlob = (base64) => {

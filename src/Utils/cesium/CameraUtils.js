@@ -1,3 +1,19 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: CameraUtils.js
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2026-02-28
+ * Last modified: 2026-02-28
+ *
+ *
+ * Copyright © 2026 LGS1920
+ ******************************************************************************/
+
 import * as Cesium from 'cesium'
 import {
     Cartesian2, Cartesian3, Cartographic, Ellipsoid, HeadingPitchRange, Math as M, Matrix4, SceneMode, Transforms,
@@ -122,9 +138,9 @@ export class CameraUtils {
         }
         else {
             return {
-                latitude:  lgs.mainProxy.components.camera.target.latitude,
-                longitude: lgs.mainProxy.components.camera.target.longitude,
-                height:    lgs.mainProxy.components.camera.target.height,
+                latitude:  lgs.stores.main.components.camera.target.latitude,
+                longitude: lgs.stores.main.components.camera.target.longitude,
+                height:    lgs.stores.main.components.camera.target.height,
                 range:     lgs.camera.position,
             }
         }

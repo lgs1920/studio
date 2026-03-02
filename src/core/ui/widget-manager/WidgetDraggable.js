@@ -7,11 +7,11 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-30
- * Last modified: 2025-10-30
+ * Created on: 2026-01-25
+ * Last modified: 2026-01-25
  *
  *
- * Copyright © 2025 LGS1920
+ * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 /**
@@ -96,8 +96,9 @@ export class WidgetDraggable {
         this.#widgetTransform.commitTranslateToPosition(event.target)
 
         config.element = event.target
-        const left = __.app.parsePx(event.target.style.left || '0')
-        const top = __.app.parsePx(event.target.style.top || '0')
+        // Use the updated position from config after commitTranslateToPosition
+        const left = config.position.left
+        const top = config.position.top
         const width = __.app.parsePx(event.target.style.width || '0') || event.target.getBoundingClientRect().width || 200
         const height = __.app.parsePx(event.target.style.height || '0') || event.target.getBoundingClientRect().height || 200
 
