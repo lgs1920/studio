@@ -7,15 +7,15 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-03-06
+ * Last modified: 2026-03-06
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { TERRAIN_FROM_CESIUM, TERRAIN_FROM_CESIUM_ELLIPSOID, TERRAIN_FROM_URL, URL_AUTHENT_KEY } from '@Core/constants'
-import { CesiumTerrainProvider, EllipsoidTerrainProvider, IonResource, Terrain }                  from 'cesium'
+import { CesiumTerrainProvider, EllipsoidTerrainProvider, IonResource, Terrain }                 from 'cesium'
 
 export class TerrainUtils {
 
@@ -30,6 +30,9 @@ export class TerrainUtils {
         const theEntity = (typeof entity === 'string') ? __.layersAndTerrainManager.getEntityProxy(entity) : entity
 
         // Set the right terrain
+        if (!theEntity) {
+            return null
+        }
 
         // We know the URL
         if (theEntity?.url && theEntity.terrainType === TERRAIN_FROM_URL) {
