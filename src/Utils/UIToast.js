@@ -31,7 +31,7 @@ export const LGS_ERROR_TOAST = 'danger'
 export class UIToast {
 
     /** @type {number} Default display duration */
-    static DURATION = 4000 * SECOND
+    static DURATION = 4 * SECOND
     /** * @type {Object} Icon mapping using standard Font Awesome names.
      * Web Awesome 3 resolves these names via the registered icon library.
      */

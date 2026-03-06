@@ -1121,7 +1121,7 @@ sl-alert::part(message) {
 
 .lgs-toaster wa-toast-item::part(toast-item) {
     margin: 0;
-    padding: var(--lgs-gutter-xs);
+    padding: 0;
     border: 1px solid;
     box-shadow: var(--sl-shadow-large);
     backdrop-filter: blur(var(--lgs-blur));
