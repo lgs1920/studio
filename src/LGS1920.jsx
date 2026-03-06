@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-17
- * Last modified: 2026-02-17
+ * Created on: 2026-03-06
+ * Last modified: 2026-03-06
  *
  *
  * Copyright © 2026 LGS1920
@@ -66,6 +66,7 @@ import {
 import {
     UIToast,
 }                       from '@Utils/UIToast'
+import { WaToast } from '@web.awesome.me/webawesome-pro/dist/react'
 import {
     preCache,
 }                       from '@zumer/snapdom'
@@ -311,6 +312,8 @@ export const LGS1920 = () => {
 
     return (
         <>
+            <WaToast placement="bottom-start" className="lgs-toaster"/>
+
             {!initStatus && initError && <InitErrorMessage message={initError.message}/>}
             {initStatus && (
                 <>
@@ -323,6 +326,7 @@ export const LGS1920 = () => {
                     <MapLayer type={OVERLAY_ENTITY}/>
                     <Viewer/>
                     <SelectionIndicator/>
+                    <WaToast/>
 
                 </>
             )}
