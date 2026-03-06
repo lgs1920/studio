@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-11
- * Last modified: 2026-01-11
+ * Created on: 2026-03-06
+ * Last modified: 2026-03-06
  *
  *
  * Copyright © 2026 LGS1920
@@ -23,6 +23,7 @@ import data from './public/version.json' with {type: 'json'}
 import {execSync} from 'child_process'
 import fs from 'fs'
 import path from 'path'
+import serveStatic from 'serve-static'
 
 /**
  * Injects current git branch name into a local JSON file for development tracking.
@@ -52,12 +53,64 @@ function saveBranchInLocal() {
     }
 }
 
+/**
+ * Dev-only fallback to ensure Cesium static assets are served at /cesium/.
+ * This avoids SPA fallback returning index.html for Cesium JSON assets.
+ */
+function serveCesiumDev() {
+    return {
+        name: 'serve-cesium-dev',
+        apply: 'serve' as const,
+        configureServer({middlewares}) {
+            const engineSource = path.resolve(__dirname, 'node_modules/@cesium/engine/Source')
+            const widgetsSource = path.resolve(__dirname, 'node_modules/@cesium/widgets/Source')
+            const serveEngine = serveStatic(engineSource, {
+                setHeaders: (res) => {
+                    res.setHeader('Access-Control-Allow-Origin', '*')
+                },
+            })
+            const serveWidgets = serveStatic(widgetsSource, {
+                setHeaders: (res) => {
+                    res.setHeader('Access-Control-Allow-Origin', '*')
+                },
+            })
+
+            middlewares.use((req, res, next) => {
+                if (!req.url) return next()
+
+                if (req.url.startsWith('/cesium/Widgets/')) {
+                    const originalUrl = req.url
+                    req.url = req.url.replace('/cesium/Widgets', '')
+                    return serveWidgets(req, res, (err) => {
+                        req.url = originalUrl
+                        if (err) return next(err)
+                        return next()
+                    })
+                }
+
+                if (req.url.startsWith('/cesium/')) {
+                    const originalUrl = req.url
+                    req.url = req.url.replace('/cesium', '')
+                    return serveEngine(req, res, (err) => {
+                        req.url = originalUrl
+                        if (err) return next(err)
+                        return next()
+                    })
+                }
+
+                return next()
+            })
+        },
+    }
+}
+
 const version = data.studio
 
 export default defineConfig({
     plugins: [
-        react(),
         cesium(),
+        serveCesiumDev(),
+        react(),
         VitePWA({
             /* Immediate update for mobile devices to prevent stale CSS/JS cache */
             registerType: 'autoUpdate',
