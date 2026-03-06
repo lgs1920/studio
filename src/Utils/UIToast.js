@@ -7,99 +7,121 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-03-06
+ * Last modified: 2026-03-06
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { SECOND }                                                     from '@Core/constants'
-import { faBomb, faCircleCheck, faCircleInfo, faTriangleExclamation } from '@fortawesome/pro-solid-svg-icons'
-import {
-    backOutLeft,
-}                                                                     from '@shoelace-style/animations/dist/back_exits/backOutLeft'
-import {
-    slideInUp,
-}                                                                     from '@shoelace-style/animations/dist/sliding_entrances/slideInUp'
-import {
-    setAnimation,
-}                                                                     from '@shoelace-style/shoelace/dist/utilities/animation-registry'
-import { FA2SL }                                                      from '@Utils/FA2SL'
+import { SECOND } from '@Core/constants'
 
-export const LGS_INFORMATION_TOAST = 'information'
+/**
+ * Toast notification variants mapping to Web Awesome variants
+ */
+export const LGS_INFORMATION_TOAST = 'primary'
 export const LGS_SUCCESS_TOAST = 'success'
 export const LGS_WARNING_TOAST = 'warning'
 export const LGS_ERROR_TOAST = 'danger'
 
+/**
+ * UIToast handles application-wide notifications using Web Awesome components.
+ * It interfaces with the <wa-toast> container rendered in the React tree.
+ */
 export class UIToast {
 
-    static DURATION = 4 * SECOND
-
+    /** @type {number} Default display duration */
+    static DURATION = 4000 * SECOND
+    /** * @type {Object} Icon mapping using standard Font Awesome names.
+     * Web Awesome 3 resolves these names via the registered icon library.
+     */
     static LGS_TOAST_ICONS = {
-        [LGS_INFORMATION_TOAST]: faCircleInfo,
-        [LGS_SUCCESS_TOAST]: faCircleCheck,
-        [LGS_WARNING_TOAST]: faTriangleExclamation,
-        [LGS_ERROR_TOAST]: faBomb,
+        [LGS_INFORMATION_TOAST]: 'circle-info',
+        [LGS_SUCCESS_TOAST]:     'circle-check',
+        [LGS_WARNING_TOAST]:     'triangle-exclamation',
+        [LGS_ERROR_TOAST]:       'bomb',
     }
 
+    /**
+     * Getter to dynamically retrieve the toast container from the DOM.
+     * This avoids null references if called before React mount.
+     * @private
+     * @returns {HTMLElement|null}
+     */
+    static get #container() {
+        return document.querySelector('wa-toast')
+    }
+
+    /**
+     * Internal notification logic.
+     * Creates a 'wa-toast-item' and appends it to the global 'wa-toast' container.
+     * @private
+     * @param {string|Object} message - Message content
+     * @param {string} type - Variant type
+     * @param {number} duration - Visibility duration
+     */
     static #notify = (message, type = LGS_INFORMATION_TOAST, duration = this.DURATION) => {
         if (typeof message === 'string') {
             message = {caption: message}
         }
-        const alert = Object.assign(document.createElement('sl-alert'), {
+
+        const container = UIToast.#container
+
+        if (!container) {
+            // Production log to warn if the UI container is missing
+            console.warn('UIToast: wa-toast container not found in DOM. Message dropped:', message.caption)
+            return
+        }
+
+        const toastItem = Object.assign(document.createElement('wa-toast-item'), {
             variant: type,
             closable: true,
             duration: duration,
             innerHTML: `
-              <sl-icon slot='icon' library="fa" name="${FA2SL.set(UIToast.LGS_TOAST_ICONS[type])}"></sl-icon>
-
-        ${(UIToast.#setNotificationContent(message))}
-      
-      `,
+                <wa-icon slot="icon" name="${UIToast.LGS_TOAST_ICONS[type]}"></wa-icon>
+                ${(UIToast.#setNotificationContent(message))}
+            `
         })
 
-        // Add animations
-        setAnimation(alert, 'alert.hide', {
-            keyframes: backOutLeft,
-            options: {
-                duration: 200,
-            },
-        })
-        setAnimation(alert, 'alert.show', {
-            keyframes: slideInUp,
-            options: {
-                duration: 400,
-            },
-        })
-
-        document.body.append(alert)
-        return alert.toast()
+        // Web Awesome 3 handles the stack management automatically via append
+        container.append(toastItem)
     }
 
+    /** @public */
     static notify = (message, duration = UIToast.DURATION) => {
         UIToast.#notify(message, LGS_INFORMATION_TOAST, duration)
     }
+
+    /** @public */
     static success = (message, duration = UIToast.DURATION) => {
         UIToast.#notify(message, LGS_SUCCESS_TOAST, duration)
     }
+
+    /** @public */
     static warning = (message, duration = UIToast.DURATION) => {
         UIToast.#notify(message, LGS_WARNING_TOAST, duration)
     }
+
+    /** @public */
     static error = (message, duration = UIToast.DURATION) => {
         UIToast.#notify(message, LGS_ERROR_TOAST, duration)
     }
 
+    /**
+     * Builds the HTML content for the notification.
+     * @private
+     * @param {Object} message
+     * @returns {string} HTML string with spacing markers
+     */
     static #setNotificationContent = (message = {}) => {
         let content = message.caption ? `<div class="toast-caption">${message.caption}</div>` : ''
         content += message.text ? `<div class="toast-text">${message.text}</div>` : ''
-        let errors = message.errors ??[]
+
+        let errors = message.errors ?? []
         if (!Array.isArray(errors)) {
             errors = [errors]
         }
-        //errors.forEach(error => {
-       //    content +=` <div class="toast-error">${error.message}</div>`
-        // })
+
         return content
     }
 }

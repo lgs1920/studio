@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-02
- * Last modified: 2026-03-02
+ * Created on: 2026-03-06
+ * Last modified: 2026-03-06
  *
  *
  * Copyright © 2026 LGS1920
@@ -1101,78 +1101,85 @@ sl-alert::part(message) {
  ******************************************************************************/
 
 
-.sl-toast-stack {
+.lgs-toaster {
     z-index: calc(var(--lgs-ui-layer-zindex) + 1) !important;
     top: auto !important;
     right: auto !important;
-    bottom: var(--lgs-gutter-xs) !important;
-    left: var(--lgs-gutter-xs) !important;
+    bottom: var(--bottom) !important;
+    left: var(--left) !important;
     overflow: hidden !important;
     width: var(--lgs-max-mobile-width) !important;
-}
-
-.sl-toast-stack sl-alert {
-    margin: var(--lgs-gutter-xs) var(--left) var(--lgs-gutter-xs) var(--left) !important;
-}
-
-.sl-toast-stack sl-alert::part(base) {
-    margin: 0 0 var(--lgs-gutter-xs);
+    margin: var(--left);
     padding: 0;
-    color: var(--lgs-text-on-color);
+    --gap: var(--lgs-gutter-s);
+    --width: var(--lgs-max-mobile-width);
+}
+
+.lgs-toaster wa-toast-item {
+    margin: 0;
+}
+
+.lgs-toaster wa-toast-item::part(toast-item) {
+    margin: 0;
+    padding: var(--lgs-gutter-xs);
     border: 1px solid;
-    background-color: rgba(255, 255, 255, 0.5);
     box-shadow: var(--sl-shadow-large);
     backdrop-filter: blur(var(--lgs-blur));
 }
 
-.sl-toast-stack sl-alert:last-child::part(base) {
+.lgs-toaster wa-toast-item::part(content) {
+    padding: 0 var(--lgs-gutter);
+    color: var(--lgs-text-on-color);
+}
+
+.lgs-toaster wa-toast-item:first-child::part(toast-item) {
     margin-bottom: 0;
 }
 
-.sl-toast-stack sl-alert[variant="success"]::part(base) {
-    background: var(--lgs-success-bg-color);
+.lgs-toaster wa-toast-item[variant="success"]::part(toast-item) {
+    color: var(--lgs-success-text-color);
     border-color: var(--lgs-success-border-color);
+    background: var(--lgs-success-bg-color);
 }
 
-.sl-toast-stack sl-alert[variant="warning"]::part(base) {
-    background: var(--lgs-warning-bg-color);
+.lgs-toaster wa-toast-item[variant="warning"]::part(toast-item) {
     border-color: var(--lgs-warning-border-color);
+    background: var(--lgs-warning-bg-color);
 }
 
-.sl-toast-stack sl-alert[variant="danger"]::part(base) {
-    background: var(--lgs-error-bg-color);
+.lgs-toaster wa-toast-item[variant="danger"]::part(toast-item) {
     border-color: var(--lgs-error-border-color);
+    background: var(--lgs-error-bg-color);
 }
 
-.sl-toast-stack sl-alert[variant="information"]::part(base) {
-    background: var(--lgs-information-bg-color);
+.lgs-toaster wa-toast-item[variant="information"]::part(toast-item) {
+    padding: 0;
     border-color: var(--lgs-information-border-color);
+    background: var(--lgs-information-bg-color);
 }
 
-.sl-toast-stack sl-alert::part(icon) {
-    padding-inline-start: var(--lgs-gutter-s);
+.lgs-toaster wa-toast-item::part(icon) {
+    padding-inline-start: var(--lgs-gutter);
 }
 
-.sl-toast-stack sl-alert sl-icon {
-    background: rgba(255, 255, 255, 0.65);
-    border-radius: var(--lgs-border-radius-xs);
+.lgs-toaster wa-toast-item wa-icon {
     padding: var(--lgs-gutter-s);
 }
 
-.sl-toast-stack sl-alert::part(message) {
+.lgs-toaster wa-toast-item::part(message) {
     padding: var(--lgs-gutter-xs);
     padding-left: var(--lgs-gutter);
 }
 
-.sl-toast-stack sl-alert::part(close-button__base) {
-    padding-inline-end: var(--lgs-gutter-s);
-    color: white !important;
+.lgs-toaster wa-toast-item::part(close-button) {
     opacity: 0.6;
+    color: var(--lgs-text-on-color);
+    padding-inline-end: var(--lgs-gutter);
 }
 
-.sl-toast-stack sl-alert::part(close-button__base):hover {
+.lgs-toaster wa-toast-item::part(close-button):hover {
+    opacity: 1;
     color: white !important;
-    opacity: 1
 }
 
 .toast-caption {
