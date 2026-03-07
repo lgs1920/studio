@@ -15,8 +15,6 @@
   "dependencies": {
     "@awesome.me/kit-eb5c406148": "^1.0.93",
     "@eslint/migrate-config": "^2.0.2",
-    "@ffmpeg/ffmpeg": "^0.12.15",
-    "@ffmpeg/util": "^0.12.2",
     "@fortawesome/duotone-light-svg-icons": "^7.2.0",
     "@fortawesome/duotone-regular-svg-icons": "^7.2.0",
     "@fortawesome/duotone-thin-svg-icons": "^7.2.0",

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-06
- * Last modified: 2026-03-06
+ * Created on: 2026-03-07
+ * Last modified: 2026-03-07
  *
  *
  * Copyright © 2026 LGS1920
@@ -196,13 +196,5 @@ export default defineConfig({
                 replacement: path.resolve(__dirname, 'src/locales')
             }
         ]
-    },
-
-    optimizeDeps: {
-        exclude: [
-            '@ffmpeg/core',
-            '@ffmpeg/ffmpeg',
-            '@ffmpeg/util',
-        ],
     },
 })
