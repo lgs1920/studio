@@ -1114,10 +1114,6 @@ sl-alert::part(message) {
     --accent-width: var(--lgs-gutter-s);
 }
 
-.lgs-toaster wa-toast-item::part(toast-item) {
-    backdrop-filter: blur(var(--lgs-blur));
-}
-
 .lgs-toaster wa-toast-item::part(content) {
     padding: 0 var(--lgs-gutter);
     color: var(--lgs-text-on-color);
