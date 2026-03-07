@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-06
- * Last modified: 2026-03-06
+ * Created on: 2026-03-07
+ * Last modified: 2026-03-07
  *
  *
  * Copyright © 2026 LGS1920
@@ -1103,12 +1103,6 @@ sl-alert::part(message) {
 
 .lgs-toaster {
     z-index: calc(var(--lgs-ui-layer-zindex) + 1) !important;
-    top: auto !important;
-    right: auto !important;
-    bottom: var(--bottom) !important;
-    left: var(--left) !important;
-    overflow: hidden !important;
-    width: var(--lgs-max-mobile-width) !important;
     margin: var(--left);
     padding: 0;
     --gap: var(--lgs-gutter-s);
@@ -1117,13 +1111,10 @@ sl-alert::part(message) {
 
 .lgs-toaster wa-toast-item {
     margin: 0;
+    --accent-width: var(--lgs-gutter-s);
 }
 
 .lgs-toaster wa-toast-item::part(toast-item) {
-    margin: 0;
-    padding: 0;
-    border: 1px solid;
-    box-shadow: var(--sl-shadow-large);
     backdrop-filter: blur(var(--lgs-blur));
 }
 
@@ -1137,25 +1128,25 @@ sl-alert::part(message) {
 }
 
 .lgs-toaster wa-toast-item[variant="success"]::part(toast-item) {
-    color: var(--lgs-success-text-color);
-    border-color: var(--lgs-success-border-color);
-    background: var(--lgs-success-bg-color);
+    /*color: var(--lgs-success-text-color);*/
+    /*border-color: var(--lgs-success-border-color);*/
+    /*background: var(--lgs-success-bg-color);*/
 }
 
 .lgs-toaster wa-toast-item[variant="warning"]::part(toast-item) {
-    border-color: var(--lgs-warning-border-color);
-    background: var(--lgs-warning-bg-color);
+    /*border-color: var(--lgs-warning-border-color);*/
+    /*background: var(--lgs-warning-bg-color);*/
 }
 
 .lgs-toaster wa-toast-item[variant="danger"]::part(toast-item) {
-    border-color: var(--lgs-error-border-color);
-    background: var(--lgs-error-bg-color);
+    /*border-color: var(--lgs-error-border-color);*/
+    /*background: var(--lgs-error-bg-color);*/
 }
 
 .lgs-toaster wa-toast-item[variant="information"]::part(toast-item) {
-    padding: 0;
-    border-color: var(--lgs-information-border-color);
-    background: var(--lgs-information-bg-color);
+    /*padding: 0;*/
+    /*border-color: var(--lgs-information-border-color);*/
+    /*background: var(--lgs-information-bg-color);*/
 }
 
 .lgs-toaster wa-toast-item::part(icon) {
@@ -1172,9 +1163,7 @@ sl-alert::part(message) {
 }
 
 .lgs-toaster wa-toast-item::part(close-button) {
-    opacity: 0.6;
     color: var(--lgs-text-on-color);
-    padding-inline-end: var(--lgs-gutter);
 }
 
 .lgs-toaster wa-toast-item::part(close-button):hover {

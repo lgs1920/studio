@@ -7,20 +7,23 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-24
- * Last modified: 2026-02-24
+ * Created on: 2026-03-07
+ * Last modified: 2026-03-07
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import './assets/css/theme.css'
-import './assets/css/light.css'
 import { createRoot } from 'react-dom/client'
 import { LGS1920 }    from './LGS1920.jsx'
 import './assets/css/app.css?v=1.0.5'
 import './assets/css/animations.css'
 import { UIUtils } from '@Utils/UIUtils'
+
+import '@web.awesome.me/webawesome-pro/dist/styles/themes/premium.css'
+import '@web.awesome.me/webawesome-pro/dist/styles/color/palettes/anodized.css'
+
 
 /**
  * Patch pour Shoelace ResizeObserver bug
