@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-06
- * Last modified: 2026-03-06
+ * Created on: 2026-03-07
+ * Last modified: 2026-03-07
  *
  *
  * Copyright © 2026 LGS1920
@@ -31,7 +31,7 @@ export const LGS_ERROR_TOAST = 'danger'
 export class UIToast {
 
     /** @type {number} Default display duration */
-    static DURATION = 4 * SECOND
+    static DURATION = 4000 * SECOND
     /** * @type {Object} Icon mapping using standard Font Awesome names.
      * Web Awesome 3 resolves these names via the registered icon library.
      */
@@ -78,7 +78,7 @@ export class UIToast {
             closable: true,
             duration: duration,
             innerHTML: `
-                <wa-icon slot="icon" name="${UIToast.LGS_TOAST_ICONS[type]}"></wa-icon>
+                <wa-icon slot="icon" name="${UIToast.LGS_TOAST_ICONS[type]} size="small"></wa-icon>
                 ${(UIToast.#setNotificationContent(message))}
             `
         })
