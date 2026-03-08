@@ -15,9 +15,9 @@
  ******************************************************************************/
 
 import { LGSScrollbars }                from '@Components/MainUI/LGSScrollbars'
-import { ChangelogManager }             from '@Core/ui/ChangelogManager'
-import { WaCard, WaDetails, WaDivider } from '@web.awesome.me/webawesome-pro/dist/react'
-import { DateTime }                     from 'luxon'
+import { ChangelogManager }                         from '@Core/ui/ChangelogManager'
+import { WaCard, WaDetails, WaDivider, WaScroller } from '@web.awesome.me/webawesome-pro/dist/react'
+import { DateTime }                                 from 'luxon'
 import React, { useEffect, useRef } from 'react'
 import { default as ReactMarkdown } from 'react-markdown'
 import { proxy, useSnapshot }       from 'valtio'
@@ -73,8 +73,9 @@ export const WhatsNew = () => {
 
     return (
         <LGSScrollbars>
-            <div className={'whats-new-list'} ref={newsList}>
-                {snap.data.map(file => (
+            <div className="lgs--details-list" ref={newsList}>
+
+            {snap.data.map(file => (
                     <WaDetails small
                                appearance="Filled-outlined"
                                open={file.open}

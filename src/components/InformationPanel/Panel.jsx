@@ -1,7 +1,7 @@
 /*******************************************************************************
  *
  * This file is part of the LGS1920/studio project.
- *
+ *  
  * File: Panel.jsx
  *
  * Author : LGS1920 Team
@@ -14,14 +14,14 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import DrawerFooter from '@Components/DrawerFooter'
-import ThemeSelector                               from '@Components/Theme Selector'
-import { INFO_DRAWER }                             from '@Core/constants'
-import { WaDrawer, WaTab, WaTabGroup, WaTabPanel } from '@web.awesome.me/webawesome-pro/dist/react'
+import DrawerFooter                                            from '@Components/DrawerFooter'
+import ThemeSelector                                           from '@Components/Theme Selector'
+import { INFO_DRAWER }                                         from '@Core/constants'
+import { WaDrawer, WaScroller, WaTab, WaTabGroup, WaTabPanel } from '@web.awesome.me/webawesome-pro/dist/react'
 
-import React, { useEffect, useRef }                from 'react'
-import { createPortal }                            from 'react-dom'
-import { useSnapshot }                             from 'valtio'
+import React, { useEffect, useRef } from 'react'
+import { createPortal }             from 'react-dom'
+import { useSnapshot }              from 'valtio'
 import './style.css'
 
 import { CreditsPanel } from './CreditsPanel'
@@ -85,24 +85,26 @@ export const Panel = () => {
                   ref={_drawerRef}
                   lightDismiss
                   placement={useSnapshot(lgs.editorSettingsProxy.menu).drawer}
-            >
+        >
             <ThemeSelector/>
             <WaTabGroup>
                 <WaTab slot="nav" panel="tab-whats-new">
-                        What's New ?
+                    What's New ?
                 </WaTab>
                 <WaTab slot="nav" panel="tab-credits">
-                        Credits
+                    Credits
                 </WaTab>
                 <WaTabPanel name="tab-credits">
+                    <WaScroller orientation="vertical">
                         <CreditsPanel/>
+                    </WaScroller>
                 </WaTabPanel>
                 <WaTabPanel name="tab-whats-new">
                         <WhatsNew/>
                 </WaTabPanel>
             </WaTabGroup>
 
-                <DrawerFooter/>
+            <DrawerFooter/>
 
         </WaDrawer>
     )

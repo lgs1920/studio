@@ -476,12 +476,17 @@ wa-drawer {
     }
 
     & strong {
-        color: var(--wa-color-brand-70);
+        color: var(--wa-color-brand-60);
     }
 
     & ul {
-        margin-right: var(--lgs-gutter-s);
-        margin-left: var(--lgs-gutter);
+        padding-right: var(--lgs-gutter);
+        list-style-position: inside;
+
+        & li {
+            padding-left: 0;
+        }
+
     }
 }
 
@@ -585,14 +590,12 @@ wa-drawer:not([placement="bottom"]):not([placement="top"]) wa-tab-panel::part(ba
  * Cards
  ******************************************************************************/
 
-sl-card[variant="primary"]::part(base) {
-    /*--size: TODO define a default size if needed */
-    --padding: var(--lgs-gutter-s);
-    margin: 0;
-    background-color: var(--lgs-card-ui-bg-color);
-    color: var(--lgs-card-ui-color);
-    opacity: var(--lgs-card-ui-opacity);
-    --border-color: var(--lgs-card-ui-border-color);
+wa-card {
+    --wa-panel-border-radius: var(--lgs-border-radius-s);
+}
+
+wa-card::part(body) {
+    --spacing: var(--lgs-gutter-s);
 }
 
 .lgs-card, .lgs-card::part(base), .lgs-one-line-card, .lgs-one-line-card::part(base) {
@@ -602,7 +605,6 @@ sl-card[variant="primary"]::part(base) {
     border-radius: var(--lgs-border-radius-s);
     background-color: rgba(255, 255, 255, 0.15);
 }
-
 
 .lgs-one-line-card {
     line-height: 1;
@@ -786,6 +788,11 @@ sl-card[variant="primary"]::part(base) {
     --lgs-scroolbar-thumb-color: var(--lgs-text-on-color);
 }
 
+wa-scroller {
+    height: 100%;
+    --shadow-size: 4rem;
+}
+
 /*******************************************************************************
  * Tooltips
  ******************************************************************************/
@@ -873,14 +880,21 @@ wa-details::part(header) {
     padding: var(--lgs-gutter-s) var(--lgs-gutter-xs)
 }
 
+wa-details [slot="summary"] {
+    margin-left: var(--lgs-gutter-xs);
+}
+
 wa-details [slot="summary"] > svg,
 wa-details [slot="summary"] > span > svg:first-child {
     margin-right: var(--lgs-gutter-s);
 }
 
 wa-details::part(base) {
-    padding: 0 var(--lgs-gutter-s);
     border-radius: var(--lgs-border-radius-s);
+}
+
+wa-details::part(base):hover {
+    background-color: var(--wa-color-brand-fill-quiet);
 }
 
 wa-details::part(content) {
@@ -901,6 +915,12 @@ wa-details::part(content) svg {
 
 wa-details [slot="prefix"], wa-details [slot="suffix"] {
     margin-right: 0;
+}
+
+.lgs--details-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--lgs-gutter-xs);
 }
 
 /*******************************************************************************
