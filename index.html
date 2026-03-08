@@ -7,15 +7,15 @@
   ~ Author : LGS1920 Team
   ~ email: contact@lgs1920.fr
   ~
-  ~ Created on: 2026-03-07
-  ~ Last modified: 2026-03-07
+  ~ Created on: 2026-03-08
+  ~ Last modified: 2026-03-08
   ~
   ~
   ~ Copyright © 2026 LGS1920
   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
 
 <!doctype html>
-<html class="wa-theme-premium wa-palette-anodized wa-brand-orange wa-dark" lang="en">
+<html class="wa-theme-premium wa-palette-anodized" lang="en">
 <head>
     <meta charset="UTF-8"/>
     <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
@@ -48,6 +48,15 @@
 
     <!-- Web Awesome -->
     <script crossorigin="anonymous" src="https://kit.webawesome.com/e55a0a6efad544ac.js"></script>
+    <script>
+        (function () {
+            const storedTheme = localStorage.getItem('theme') || 'system'
+            const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
+            const isDark = storedTheme === 'dark' || (storedTheme === 'system' && mediaQuery.matches)
+            document.documentElement.classList.toggle('wa-dark', isDark)
+            document.documentElement.classList.toggle('wa-light', !isDark)
+        })()
+    </script>
 
     <!-- Favicon for browsers -->
     <link href="/assets/images/favicon.png" rel="icon"/>

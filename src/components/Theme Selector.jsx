@@ -1,0 +1,78 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: Theme Selector.jsx
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2026-03-08
+ * Last modified: 2026-03-08
+ *
+ *
+ * Copyright © 2026 LGS1920
+ ******************************************************************************/
+
+import { WaButton, WaDropdown, WaDropdownItem, WaIcon } from '@web.awesome.me/webawesome-pro/dist/react'
+import React, { useEffect, useState }                   from 'react'
+
+/**
+ * Theme Selector component
+ * @returns {JSX.Element}
+ */
+const ThemeSelector = () => {
+    const [theme, setTheme] = useState(localStorage.getItem('theme') || 'system')
+    const [isDark, setIsDark] = useState(false)
+
+    useEffect(() => {
+        const $root = document.documentElement
+        const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
+
+        const updateTheme = () => {
+            const currentIsDark = theme === 'dark' || (theme === 'system' && mediaQuery.matches)
+            setIsDark(currentIsDark)
+            $root.classList.toggle('wa-dark', currentIsDark)
+            $root.classList.toggle('wa-light', !currentIsDark)
+        }
+
+        updateTheme()
+        localStorage.setItem('theme', theme)
+
+        if (theme === 'system') {
+            mediaQuery.addEventListener('change', updateTheme)
+            return () => mediaQuery.removeEventListener('change', updateTheme)
+        }
+    }, [theme])
+
+    /**
+     * Handle the selection event
+     * @param {CustomEvent} event
+     */
+    const handleSelect = (event) => {
+        setTheme(event.detail.item.value)
+    }
+
+    return (
+        <WaDropdown onWaSelect={handleSelect} slot={'header-actions'} appearance="filled-outlined"
+                    className="lgs--theme-selector">
+            <WaButton slot={'trigger'} appearance="plain" variant={'neutral'}>
+                <WaIcon name={isDark ? 'moon-stars' : 'sun-bright'}/>
+            </WaButton>
+
+            <WaDropdownItem value={'light'}>
+                <WaIcon name={'sun-bright'}/>{' Light '}
+            </WaDropdownItem>
+
+            <WaDropdownItem value={'dark'}>
+                <WaIcon name={'moon-stars'}/>{' Dark '}
+            </WaDropdownItem>
+
+            <WaDropdownItem value={'system'}>
+                <WaIcon name="cog"/>{' System '}
+            </WaDropdownItem>
+        </WaDropdown>
+    )
+}
+
+export default ThemeSelector
