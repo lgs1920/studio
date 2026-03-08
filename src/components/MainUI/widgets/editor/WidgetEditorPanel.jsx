@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-21
- * Last modified: 2026-02-21
+ * Created on: 2026-03-08
+ * Last modified: 2026-03-07
  *
  *
  * Copyright © 2026 LGS1920
@@ -32,8 +32,9 @@ import {
     FontAwesomeIcon,
 }                                                                                             from '@fortawesome/react-fontawesome'
 import {
-    SlDrawer, SlIcon, SlTab, SlTabGroup, SlTabPanel,
-}                                                                                             from '@shoelace-style/shoelace/dist/react'
+    SlIcon, SlTab, SlTabGroup, SlTabPanel,
+}                   from '@shoelace-style/shoelace/dist/react'
+import { WaDrawer } from '@web.awesome.me/webawesome-pro/dist/react'
 import { FA2SL }                                                                              from '@Utils/FA2SL'
 import { Suspense, useCallback, useEffect, useMemo, useState }                                from 'react'
 import { useSnapshot }                                                                        from 'valtio'
@@ -69,7 +70,7 @@ export const WidgetEditorPanel = () => {
     const previewBg = widget.currentSnapshot?.image || null
 
     const closeEditor = useCallback((event) => {
-        if (event && event.target.tagName !== 'SL-DRAWER') {
+        if (event && event.target.tagName !== 'WA-DRAWER') {
             return
         }
 
@@ -139,16 +140,15 @@ export const WidgetEditorPanel = () => {
     )
 
     return (
-        <div className="drawer-wrapper">
-            <SlDrawer
+        <WaDrawer
                 id={WIDGETS_EDITOR_DRAWER}
                 label={data.name}
                 open={isVisible}
+                modal={false}
                 className="lgs-theme"
                 placement={drawerPlacement}
                 onSlRequestClose={handleRequestClose}
                 onSlHide={closeEditor}
-                contained
             >
                 <div slot="label" className="drawer-header-title">
                     <SlIcon library="fa" name={data.icon}/>
@@ -209,7 +209,6 @@ export const WidgetEditorPanel = () => {
                     </div>
                 </div>
                 <DrawerFooter slot="footer"/>
-            </SlDrawer>
-        </div>
+        </WaDrawer>
     )
 }

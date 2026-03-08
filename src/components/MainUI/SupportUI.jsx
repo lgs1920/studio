@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-03-08
+ * Last modified: 2026-03-07
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,6 +16,7 @@
 
 import { faXmark }                    from '@fortawesome/pro-regular-svg-icons'
 import { SlButton, SlDialog, SlIcon } from '@shoelace-style/shoelace/dist/react'
+import { WaDialog } from '@web.awesome.me/webawesome-pro/dist/react'
 import { default as ReactMarkdown }   from 'react-markdown'
 import { useSnapshot }                from 'valtio'
 import { markdown as support } from '../../../src/assets/modals/support.md'
@@ -27,7 +28,7 @@ export const SupportUI = () => {
     const getSupport = useSnapshot(setSupport)
     return (
         <>
-            <SlDialog open={getSupport.visible}
+            <WaDialog open={getSupport.visible}
                       no-header
                       id={'support-modal'}
                       className={'lgs-theme'}
@@ -45,7 +46,7 @@ export const SupportUI = () => {
                     </div>
                 </div>
 
-            </SlDialog>
+            </WaDialog>
         </>
     )
 }

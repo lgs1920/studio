@@ -7,7 +7,7 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-07
+ * Created on: 2026-03-08
  * Last modified: 2026-03-07
  *
  *
@@ -16,7 +16,7 @@
 
 import './assets/css/theme.css'
 import { createRoot } from 'react-dom/client'
-import { LGS1920 }    from './LGS1920.jsx'
+import { LGS1920 } from '@Components/LGS1920.jsx'
 import './assets/css/app.css?v=1.0.5'
 import './assets/css/animations.css'
 import { UIUtils } from '@Utils/UIUtils'

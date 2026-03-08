@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-06
- * Last modified: 2026-03-06
+ * Created on: 2026-03-08
+ * Last modified: 2026-03-08
  *
  *
  * Copyright © 2026 LGS1920
@@ -26,7 +26,6 @@ body {
     overflow: hidden;
     height: 100%;
     margin: 0;
-    color: var(--lgs-dark-ui-fg-color);
 }
 
 .no-select {
@@ -191,13 +190,17 @@ body {
 /** Drawers **/
 
 .drawer-wrapper {
-    position: fixed;
-    z-index: var(--sl-z-index-drawer);
-    top: var(--top);
-    right: var(--right);
-    width: calc(100vw - var(--right) - var(--left));
-    height: calc(100dvh - var(--top) - var(--bottom));
-    pointer-events: none;;
+    /*position: fixed;*/
+    /*z-index: var(--wa-z-index-drawer);*/
+    /*top: var(--top);*/
+    /*right: var(--right);*/
+    /*width: calc(100vw - var(--right) - var(--left));*/
+    /*height: calc(100dvh - var(--top) - var(--bottom));*/
+    /*pointer-events: none;;*/
+}
+
+.drawer-wrapper > wa-drawer {
+    pointer-events: auto;
 }
 
 .drawer-wrapper.horizontal {

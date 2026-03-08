@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-03-08
+ * Last modified: 2026-03-08
  *
  *
  * Copyright © 2026 LGS1920
@@ -135,7 +135,7 @@ html {
     align-items: normal;
 }
 
-.lgs-ui-toolbar sl-divider {
+.lgs-ui-toolbar wa-divider {
     height: 1rem;
     --spacing: 0
 }
@@ -160,12 +160,8 @@ html {
 
 .journey-toolbar .journey-title {
     max-height: calc(var(--lgs-line-dimension) - 2 * var(--lgs-gutter-xs));
-    color: var(--lgs-dark-ui-fg-color);
 }
 
-.journey-toolbar .journey-title, .journey-toolbar .journey-selector {
-    color: var(--lgs-dark-ui-fg-color);
-}
 
 /***************************************
  * Dropdown Toolbar

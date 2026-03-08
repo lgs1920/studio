@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-17
- * Last modified: 2026-02-17
+ * Created on: 2026-03-08
+ * Last modified: 2026-03-07
  *
  *
  * Copyright © 2026 LGS1920
@@ -234,7 +234,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
         return () => window.removeEventListener(WIDGET_EDITOR_PRE_RENDER_EVENT, handlePreRender)
     }, [config.id])
 
-    const hasDrawerInPath = (event) => event.composedPath().some(target => target.tagName?.toLowerCase() === 'sl-drawer')
+    const hasDrawerInPath = (event) => event.composedPath().some(target => target.tagName?.toLowerCase() === 'wa-drawer')
 
     const handleMouseEnter = useCallback(() => {
         if (interactionLocked || (selectedId && !isSelected)) {
@@ -439,7 +439,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
             const isInDrawer = (() => {
                 const path = event.composedPath ? event.composedPath() : [target]
                 const elements = path.filter(node => node instanceof HTMLElement)
-                return elements.some(el => el.closest?.('sl-drawer') || el.getRootNode?.()?.host?.tagName === 'SL-DRAWER' || el.classList?.contains('sl-backdrop'))
+                return elements.some(el => el.closest?.('wa-drawer') || el.getRootNode?.()?.host?.tagName === 'WA-DRAWER' || el.classList?.contains('sl-backdrop'))
             })()
             if (isInDrawer) {
                 return

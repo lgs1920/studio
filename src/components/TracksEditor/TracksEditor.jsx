@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-03-08
+ * Last modified: 2026-03-07
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,7 +16,9 @@
 
 import { JourneyLoaderButton }   from '@Components/FileLoader/JourneyLoaderButton'
 import { JOURNEY_EDITOR_DRAWER } from '@Core/constants'
-import { SlDrawer, SlSwitch }    from '@shoelace-style/shoelace/dist/react'
+import { SlSwitch } from '@shoelace-style/shoelace/dist/react'
+import { WaDrawer } from '@web.awesome.me/webawesome-pro/dist/react'
+
 import './style.css'
 import { memo, useCallback }     from 'react'
 import { useSnapshot }           from 'valtio'
@@ -106,7 +108,7 @@ export const TracksEditor = memo(() => {
         <>
             {drawerOpen === JOURNEY_EDITOR_DRAWER &&
                 <div className="drawer-wrapper">
-                    <SlDrawer
+                    <WaDrawer
                         id={JOURNEY_EDITOR_DRAWER}
                         open={true}
                         onSlRequestClose={handleRequestClose}
@@ -123,7 +125,7 @@ export const TracksEditor = memo(() => {
                         />
                         {hasJourneys && <JourneyContent journeyVisible={journeyVisible}/>}
                         <div id="journey-editor-footer" slot="footer"/>
-                    </SlDrawer>
+                    </WaDrawer>
                 </div>
             }
         </>

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-07
- * Last modified: 2026-03-07
+ * Created on: 2026-03-08
+ * Last modified: 2026-03-08
  *
  *
  * Copyright © 2026 LGS1920
@@ -49,7 +49,6 @@
     --lgs-dark-ui-5th-color: var(--sl-color-sky-200);
 
     --lgs-dark-ui-bg-color: var(--lgs-dark-ui-5th-color);
-    --lgs-dark-ui-fg-color: var(--lgs-dark-ui-primary-color);
 
     --lgs-font-size: 0.9rem;
     --lgs-font-size-s: 0.75rem;
@@ -229,25 +228,12 @@
     --lgs-video-warning-bg-color: var(--sl-color-orange-500);
 }
 
-.lgs-theme, .lgs-theme::part(panel) {
-    background: var(--lgs-theme-background-color);
-    /*background-image: var(--lgs-theme-background-image);*/
-    /*box-shadow: var(--sl-shadow-x-large);*/
-    /*backdrop-filter: blur( var(--lgs-blur) );*/
-    /*border-radius: 10px;*/
-    /*border: 1px solid rgba( 255, 255, 255,  );*/
-    /*color:#fff*/
-}
-
-.sl-theme-light {
-    font-size: var(--lgs-font-size);
-    line-height: calc(var(--sl-input-height-small) - var(--sl-input-border-width) * 2);
-    border-radius: var(--sl-input-border-radius-small);
-    --sl-input-border-width-small: 4px;
-    --test: var(--lgs-border-radius-s);
-    --sl-input-border-width: var(--lgs-border-width-s);
-    --sl-input-height-small: var(--lgs-input-height-s);
-    --sl-z-index-toast: var(--lgs-ui-layer-zindex);
+/*******************************************************************************
+ * Theme Selector
+ ******************************************************************************/
+.lgs--theme-selector {
+    font-size: var(--lgs-font-size-s);
+    font-weight: normal;
 }
 
 /*******************************************************************************
@@ -257,6 +243,7 @@ canvas {
     image-rendering: crisp-edges !important;
     will-change: 'transform';
 }
+
 
 
 /*******************************************************************************
@@ -473,61 +460,98 @@ sl-menu-item::part(spinner)::part(base) {
     --lgs-horizontal-panel-offset-right: var(--lgs-vertical-panel-offset-right);
 }
 
-sl-drawer {
+wa-drawer {
     --size: var(--lgs-vertical-panel-width);
-    --header-spacing: var(--lgs-gutter-s) var(--lgs-gutter);
-    --body-spacing: var(--lgs-gutter);
-    --footer-spacing: var(--lgs-gutter-s) var(--lgs-gutter);
+    --spacing: var(--lgs-gutter);
+
+
+    & h1,
+    & h2 {
+        margin: var(--lgs-gutter) 0;
+        color: var(--wa-color-brand-60);
+    }
+
+    & h3 {
+        margin: var(--lgs-gutter) 0;
+    }
+
+    & strong {
+        color: var(--wa-color-brand-70);
+    }
+
+    & ul {
+        margin-right: var(--lgs-gutter-s);
+        margin-left: var(--lgs-gutter);
+    }
 }
 
-sl-drawer::part(header) {
+wa-drawer::part(base) {
+    pointer-events: auto
+}
+
+wa-drawer::part(dialog)::backdrop {
+    z-index: auto !important;
+    pointer-events: none;
+    background-color: transparent;
+}
+
+
+wa-drawer::part(header) {
     font-family: "Open Sans", var(--sl-font-sans);
     font-weight: 700 !important;
 }
 
-sl-drawer section {
+wa-drawer section {
     width: 100%;
 }
 
-.mobile.portrait sl-drawer {
+.mobile.portrait wa-drawer {
     --size: var(--lgs-vertical-panel-height)
 }
 
-sl-drawer::part(panel) {
+wa-drawer::part(panel) {
+    z-index: 1;
+    pointer-events: auto;
     border-radius: var(--sl-border-radius-medium);
 }
 
-sl-drawer::part(body) {
+wa-drawer::part(body) {
     overflow: hidden;
 }
-sl-tab-panel {
+
+wa-drawer ::backdrop {
+    background: red;
+}
+
+wa-tab-panel {
     overflow-y: hidden;
     --padding: var(--lgs-gutter-s) 0 0
 }
 
-sl-drawer sl-tab-group::part(base),
-sl-drawer sl-tab-group::part(body),
-sl-drawer sl-tab-panel::part(base),
-sl-drawer sl-tab-panel::part(body),
-sl-drawer sl-tab-panel, sl-tab-group {
+wa-drawer wa-tab-group::part(base),
+wa-drawer wa-tab-group::part(body),
+wa-drawer wa-tab-panel::part(base),
+wa-drawer wa-tab-panel::part(body),
+wa-drawer wa-tab-panel, wa-tab-group {
     height: 100%;
     max-height: 100%;
 }
 
-.tab-group--top ::slotted(sl-tab-panel) {
+.tab-group--top ::slotted(wa-tab-panel) {
     --padding: var(--lgs-gutter-s) 0;
 }
-sl-drawer:not([placement="bottom"]):not([placement="top"]) sl-tab-panel::part(base) {
+
+wa-drawer:not([placement="bottom"]):not([placement="top"]) wa-tab-panel::part(base) {
     overflow-x: hidden;
     padding-bottom: 1px;
 }
 
 .drawer-pane-footer {
-    font-size: var(--sl-font-size-small);
+    font-size: var(--lgs-font-size-s);
     display: flex;
     align-items: center;
-    gap: var(--lgs-gutter);
     width: 100%;
+    gap: var(--lgs-gutter);
 }
 
 .drawer-pane-footer strong {
@@ -555,6 +579,7 @@ sl-drawer:not([placement="bottom"]):not([placement="top"]) sl-tab-panel::part(ba
 .credits-pane-footer {
     flex-direction: row !important;
 }
+
 
 /*******************************************************************************
  * Cards
@@ -841,42 +866,40 @@ sl-dialog::part(title) {
 
 
 /*******************************************************************************
- * Sl Details
+ * Wa Details
  ******************************************************************************/
 
-sl-details {
-    --sl-spacing-medium: var(--lgs-gutter-xs);
+wa-details::part(header) {
+    padding: var(--lgs-gutter-s) var(--lgs-gutter-xs)
 }
 
-sl-details::part(header) {
-    padding: var(--lgs-gutter-xs)
-}
-
-sl-details [slot="summary"] > svg,
-sl-details [slot="summary"] > span > svg:first-child {
-    margin-right: var(--lgs-gutter-xs);
-}
-
-
-sl-details::part(base) {
-    padding: 0;
-    --spacing: 0;
-}
-
-
-sl-details::part(content) {
-    margin-top: calc(-1 * var(--lgs-gutter-s));
-    padding: var(--lgs-gutter-s);
-    display: flex;
-    gap: var(--lgs-gutter-s);
-    flex-direction: column;
-}
-
-sl-details::part(content) svg {
+wa-details [slot="summary"] > svg,
+wa-details [slot="summary"] > span > svg:first-child {
     margin-right: var(--lgs-gutter-s);
 }
 
-sl-details [slot="prefix"], sl-details [slot="suffix"] {
+wa-details::part(base) {
+    padding: 0 var(--lgs-gutter-s);
+    border-radius: var(--lgs-border-radius-s);
+}
+
+wa-details::part(content) {
+    display: flex;
+    flex-direction: column;
+    margin-top: calc(-1 * var(--lgs-gutter-s));
+    padding: var(--lgs-gutter-s);
+    gap: var(--lgs-gutter-s);
+}
+
+wa-details > wa-divider {
+    margin-bottom: 0
+}
+
+wa-details::part(content) svg {
+    margin-right: var(--lgs-gutter-s);
+}
+
+wa-details [slot="prefix"], wa-details [slot="suffix"] {
     margin-right: 0;
 }
 
@@ -964,7 +987,7 @@ sl-details [slot="prefix"], sl-details [slot="suffix"] {
     background: var(--lgs-hover-context-menu-bg-color);
 }
 
-.lgs-context-menu sl-divider {
+.lgs-context-menu wa-divider {
     --color: var(--lgs-card-on-map-border-color);
 }
 
@@ -995,7 +1018,7 @@ sl-details [slot="prefix"], sl-details [slot="suffix"] {
     width: 5rem;
 }
 
-sl-divider {
+wa-divider {
     --spacing: var(--lgs-gutter-xs);
 }
 

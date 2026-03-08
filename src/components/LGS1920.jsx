@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-06
- * Last modified: 2026-03-06
+ * Created on: 2026-03-08
+ * Last modified: 2026-03-08
  *
  *
  * Copyright © 2026 LGS1920
@@ -312,7 +312,6 @@ export const LGS1920 = () => {
 
     return (
         <>
-            <WaToast placement="bottom-start" className="lgs-toaster"/>
 
             {!initStatus && initError && <InitErrorMessage message={initError.message}/>}
             {initStatus && (
@@ -322,6 +321,7 @@ export const LGS1920 = () => {
                     <ResponsiveDevice/>
                     <AppUpdate/>
                     <WelcomeModal/>
+                    <div id="drawer-root" className="drawer-wrapper"/>
                     <MapLayer type={BASE_ENTITY}/>
                     <MapLayer type={OVERLAY_ENTITY}/>
                     <Viewer/>

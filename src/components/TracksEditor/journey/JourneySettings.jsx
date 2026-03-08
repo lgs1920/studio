@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-03-08
+ * Last modified: 2026-03-07
  *
  *
  * Copyright © 2026 LGS1920
@@ -497,7 +497,7 @@ export const JourneySettings = () => {
     const initTab = event => {
         __.ui.drawerManager.tab = event.detail.name
         journeyEditorStore.activeTab = event.detail.name
-        journeyEditorStore.showPOIsFilter = event.detail.name === POIS && event.type === 'sl-tab-show'
+        journeyEditorStore.showPOIsFilter = event.detail.name === POIS && event.type === 'wa-tab-show'
     }
 
     /**

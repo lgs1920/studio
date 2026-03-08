@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-03-08
+ * Last modified: 2026-03-07
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,7 +16,8 @@
 
 import { SETTINGS_EDITOR_DRAWER }                                from '@Core/constants'
 import { faCircleUser, faScrewdriverWrench, faPaintbrushPencil } from '@fortawesome/pro-solid-svg-icons'
-import { SlDrawer, SlIcon, SlTab, SlTabGroup, SlTabPanel, SlTooltip } from '@shoelace-style/shoelace/dist/react'
+import { SlIcon, SlTab, SlTabGroup, SlTabPanel, SlTooltip } from '@shoelace-style/shoelace/dist/react'
+import { WaDrawer }                                         from '@web.awesome.me/webawesome-pro/dist/react'
 import { FA2SL }                                                      from '@Utils/FA2SL'
 import React                                                     from 'react'
 import { useSnapshot }                                           from 'valtio'
@@ -42,7 +43,7 @@ export const Panel = () => {
         <>
             {drawers.open === SETTINGS_EDITOR_DRAWER &&
                 <div className={'drawer-wrapper'}>
-                    <SlDrawer id="settings-pane"
+                    <WaDrawer id="settings-pane"
                               placement={placement}
                               open={true}
                               onSlRequestClose={closePanel}
@@ -72,7 +73,7 @@ export const Panel = () => {
                         </SlTabGroup>
                         <DrawerFooter/>
 
-                    </SlDrawer>
+                    </WaDrawer>
                 </div>
             }
         </>

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-13
- * Last modified: 2026-01-13
+ * Created on: 2026-03-08
+ * Last modified: 2026-03-07
  *
  *
  * Copyright © 2026 LGS1920
@@ -167,7 +167,7 @@ export class PanelManager {
      * @returns {boolean}
      */
     check = (event) => {
-        if (event.target.nodeName !== 'SL-DRAWER') {
+        if (event.target.nodeName !== 'WA-DRAWER') {
             event.preventDefault()
             return false
         }
@@ -189,7 +189,7 @@ export class PanelManager {
      * Initializes event listeners for drawers and their nested tab groups.
      */
     attachEvents = () => {
-        document.querySelectorAll('sl-drawer').forEach((drawer) => {
+        document.querySelectorAll('wa-drawer').forEach((drawer) => {
             drawer.addEventListener('mouseleave', this.mouseLeave)
             drawer.addEventListener('mouseenter', this.mouseEnter)
 
@@ -202,9 +202,9 @@ export class PanelManager {
                 drawer.dispatchEvent(event)
             })
 
-            const tabgroups = drawer.querySelectorAll('sl-tab-group')
+            const tabgroups = drawer.querySelectorAll('wa-tab-group')
             tabgroups.forEach(tabgroup => {
-                tabgroup.addEventListener('sl-tab-show', (event) => {
+                tabgroup.addEventListener('wa-tab-show', (event) => {
                     this.tab = event.detail.name
                 })
             })
@@ -230,11 +230,11 @@ export class PanelManager {
         }
 
         const tabGroups = Array.from(
-            document.querySelectorAll(`sl-drawer[id="${this.drawers.open}"] sl-tab-group`),
+            document.querySelectorAll(`wa-drawer[id="${this.drawers.open}"] wa-tab-group`),
         )
 
         for (const tabGroup of tabGroups) {
-            const tab = tabGroup.querySelector(`sl-tab[panel="${activeTab}"]`)
+            const tab = tabGroup.querySelector(`wa-tab[panel="${activeTab}"]`)
             if (tab) {
                 tabGroup.show(activeTab)
             }

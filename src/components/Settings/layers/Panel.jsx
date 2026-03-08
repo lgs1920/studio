@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-03-08
+ * Last modified: 2026-03-07
  *
  *
  * Copyright © 2026 LGS1920
@@ -17,7 +17,8 @@
 import DrawerFooter from '@Components/DrawerFooter'
 import { LAYERS_DRAWER }          from '@Core/constants'
 import { faCircleInfo }           from '@fortawesome/pro-regular-svg-icons'
-import { SlDrawer, SlIconButton } from '@shoelace-style/shoelace/dist/react'
+import { SlIconButton } from '@shoelace-style/shoelace/dist/react'
+import { WaDrawer }     from '@web.awesome.me/webawesome-pro/dist/react'
 import { FA2SL }                  from '@Utils/FA2SL'
 import React                      from 'react'
 import { useSnapshot }            from 'valtio'
@@ -43,7 +44,7 @@ export const Panel = () => {
         <>
             {drawers.open === LAYERS_DRAWER &&
             <div className={'drawer-wrapper'}>
-                <SlDrawer id={LAYERS_DRAWER}
+                <WaDrawer id={LAYERS_DRAWER}
                           open={true}
                           onSlRequestClose={closePanel}
                           placement={placement}
@@ -55,7 +56,7 @@ export const Panel = () => {
                     <LayersAndTerrains/>
                     <DrawerFooter/>
                     <InfoLayerModal/>
-                </SlDrawer>
+                </WaDrawer>
             </div>
             }
         </>

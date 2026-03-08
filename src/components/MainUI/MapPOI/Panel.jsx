@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-01
- * Last modified: 2026-03-01
+ * Created on: 2026-03-08
+ * Last modified: 2026-03-07
  *
  *
  * Copyright © 2026 LGS1920
@@ -20,7 +20,7 @@ import { MapPOIEditSettings } from '@Components/MainUI/MapPOI/MapPOIEditSettings
 import { MapPOIEditToggleFilter } from '@Components/MainUI/MapPOI/MapPOIEditToggleFilter'
 import { MapPOIList }         from '@Components/MainUI/MapPOI/MapPOIList'
 import { POIS_EDITOR_DRAWER } from '@Core/constants'
-import { SlDrawer }           from '@shoelace-style/shoelace/dist/react'
+import { WaDrawer } from '@web.awesome.me/webawesome-pro/dist/react'
 import { memo, useCallback, useEffect, useMemo } from 'react'
 import { Scrollbars }    from 'react-custom-scrollbars'
 import { useSnapshot }        from 'valtio'
@@ -70,7 +70,7 @@ export const Panel = memo(() => {
         , [])
 
     /**
-     * Handles the sl-request-close event from <SlDrawer>.
+     * Handles the sl-request-close event from <WaDrawer>.
      * Prevents closing if the source is 'overlay' (e.g., click outside) but allows close button/Esc.
      * @param {CustomEvent} event - Shoelace sl-request-close event
      * @returns {void}
@@ -136,7 +136,7 @@ export const Panel = memo(() => {
         <>
             {drawerOpen &&
                 <div className="drawer-wrapper">
-                    <SlDrawer
+                    <WaDrawer
                         id={POIS_EDITOR_DRAWER}
                         open={true}
                         onSlRequestClose={handleRequestClose}
@@ -157,7 +157,7 @@ export const Panel = memo(() => {
                             </div>
                             <DrawerFooter/>
                         </>
-                    </SlDrawer>
+                    </WaDrawer>
                 </div>
             }
         </>
