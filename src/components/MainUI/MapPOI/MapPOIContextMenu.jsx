@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-28
- * Last modified: 2026-02-28
+ * Created on: 2026-03-09
+ * Last modified: 2026-03-09
  *
  *
  * Copyright © 2026 LGS1920
@@ -25,6 +25,7 @@ import { faMask as faMaskSolid }                  from '@fortawesome/pro-solid-s
 import { SlDivider, SlIcon, SlSpinner }           from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                                  from '@Utils/FA2SL'
 import { UIToast }                                from '@Utils/UIToast'
+import { WaSpinner } from '@web.awesome.me/webawesome-pro/dist/react'
 import React, { useCallback, useEffect, useMemo } from 'react'
 import { useSnapshot }                            from 'valtio'
 
@@ -281,7 +282,7 @@ export const MapPOIContextMenu = (props) => {
                 {/* Rotation / Panoramic Options */}
                 {showRotationItem ? (
                     <li onClick={toggleRotation}>
-                        <SlSpinner/>
+                        <WaSpinner/>
                         <span>Stop Rotation</span>
                     </li>
                 ) : (

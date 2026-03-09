@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-03-09
+ * Last modified: 2026-03-09
  *
  *
  * Copyright © 2026 LGS1920
@@ -211,7 +211,7 @@ export const GeocodingUI = () => {
 
                             </SlInput>
                             <SlTooltip placement="top" open={!geocoder.dialog.submitDisabled}>
-                                <SlButton size={'small'} className={'square-button'} type="submit"
+                                <SlButton size={'small'} className="square-button" type="submit"
                                           id="geocoder-search-location-submit"
                                           loading={geocoder.dialog.loading}
                                           disabled={geocoder.dialog.submitDisabled}>

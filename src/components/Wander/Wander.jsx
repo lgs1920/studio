@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-28
- * Last modified: 2026-02-28
+ * Created on: 2026-03-09
+ * Last modified: 2026-03-09
  *
  *
  * Copyright © 2026 LGS1920
@@ -89,7 +89,7 @@ export const Wander = (props) => {
     return (<div className={"wander-menu"} id={props.id}>
         {!wanderSnapshot.run &&
             <SlTooltip hoist placement={tooltip} content="Play">
-                <SlButton key={wanderSnapshot.run} size={'small'} className={'square-button'} onClick={toggleWander}>
+                <SlButton key={wanderSnapshot.run} size={'small'} className="square-button" onClick={toggleWander}>
                     <SlIcon slot="prefix" library="fa" name={FA2SL.set(faPlay)}/>
                 </SlButton>
             </SlTooltip>
@@ -98,12 +98,12 @@ export const Wander = (props) => {
         {wanderSnapshot.run &&
             <>
             <SlTooltip hoist placement={tooltip} content="Stop">
-                <SlButton key={wanderSnapshot.run} size={'small'} className={'square-button'} onClick={toggleWander}>
+                <SlButton key={wanderSnapshot.run} size={'small'} className="square-button" onClick={toggleWander}>
                     <SlIcon slot="prefix"library="fa" name={FA2SL.set(faStop)}/>
                 </SlButton>
             </SlTooltip>
             <SlTooltip hoist placement={tooltip} content="Pause">
-                <SlButton key={wanderSnapshot.run} size={'small'} className={'square-button'} onClick={pauseWander}>
+                <SlButton key={wanderSnapshot.run} size={'small'} className="square-button" onClick={pauseWander}>
                     <SlIcon slot="prefix" library="fa" name={FA2SL.set(faPause)}/>
                 </SlButton>
             </SlTooltip>
@@ -111,7 +111,7 @@ export const Wander = (props) => {
 }
 
     <SlTooltip hoist placement={tooltip} content="Reverse direction">
-        <SlButton size={'small'} className={'square-button'} onClick={toggleDirection}>
+        <SlButton size={'small'} className="square-button" onClick={toggleDirection}>
                 <SlIcon slot="prefix" library="fa" name={FA2SL.set(
                     wanderSnapshot.forward ? faArrowRotateRight : faArrowRotateLeft,
                 )}
@@ -131,7 +131,7 @@ export const Wander = (props) => {
         </SlSelect>
 
         <SlTooltip hoist placement={tooltip} content={wanderSnapshot.loop?'Stop Loop':'Loop'}>
-            <SlButton size={'small'} className={'square-button'} onClick={toggleLoop}>
+            <SlButton size={'small'} className="square-button" onClick={toggleLoop}>
                 <SlIcon slot="prefix" library="fa" name={FA2SL.set(
                     wanderSnapshot.loop?faRegularArrowsRepeatSlash:faArrowsRepeat
                 )}

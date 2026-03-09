@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-28
- * Last modified: 2026-02-28
+ * Created on: 2026-03-09
+ * Last modified: 2026-03-09
  *
  *
  * Copyright © 2026 LGS1920
@@ -18,6 +18,7 @@ import { POIS_EDITOR_DRAWER }          from '@Core/constants'
 import { faLocationDot }               from '@fortawesome/pro-regular-svg-icons'
 import { SlButton, SlIcon, SlTooltip } from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                       from '@Utils/FA2SL.js'
+import { WaButton, WaIcon, WaTooltip } from '@web.awesome.me/webawesome-pro/dist/react'
 import { useSnapshot }                 from 'valtio'
 
 
@@ -30,12 +31,14 @@ export const PanelButton = (props) => {
     }
     return (
         <>
-            <SlTooltip hoist placement={props.tooltip} content="Edit POIs">
-                <SlButton size={'small'} className={'square-button'} id={'launch-the-pois'}
-                          onClick={() => __.ui.drawerManager.toggle(POIS_EDITOR_DRAWER)}>
-                    <SlIcon slot="prefix" library="fa" name={FA2SL.set(faLocationDot)}></SlIcon>
-                </SlButton>
-            </SlTooltip>
+            <WaTooltip for="launch-the-pois" placement={props.tooltip}>{'Edit POIs'}</WaTooltip>
+            <WaButton className="square-button"
+                      id="launch-the-pois"
+                      onClick={() => __.ui.drawerManager.toggle(POIS_EDITOR_DRAWER)}
+                      variant={'brand'}
+                      appearance="Filled">
+                <WaIcon name="location-dot" variant="regular"/>
+            </WaButton>
         </>
     )
 }

@@ -7,15 +7,15 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-08
- * Last modified: 2026-03-08
+ * Created on: 2026-03-09
+ * Last modified: 2026-03-09
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import DrawerFooter                                            from '@Components/DrawerFooter'
-import ThemeSelector                                           from '@Components/Theme Selector'
+import ThemeSelector from '@Components/ThemeSelector'
 import { INFO_DRAWER }                                         from '@Core/constants'
 import { WaDrawer, WaScroller, WaTab, WaTabGroup, WaTabPanel } from '@web.awesome.me/webawesome-pro/dist/react'
 

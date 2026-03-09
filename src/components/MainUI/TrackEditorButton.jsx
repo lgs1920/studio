@@ -7,18 +7,15 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-03-09
+ * Last modified: 2026-03-09
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { faRegularRouteCirclePlus }              from '@awesome.me/kit-eb5c406148/icons/kit/custom'
 import { JOURNEY_EDITOR_DRAWER, REMOVE_JOURNEY_IN_TOOLBAR } from '@Core/constants'
-import { faRoute } from '@fortawesome/pro-regular-svg-icons'
-import { SlButton, SlIcon, SlTooltip }           from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                                 from '@Utils/FA2SL'
+import { WaButton, WaIcon, WaTooltip } from '@web.awesome.me/webawesome-pro/dist/react'
 import { memo, useCallback, useEffect, useMemo } from 'react'
 import { useSnapshot }                           from 'valtio'
 
@@ -44,7 +41,7 @@ export const TrackEditorButton = memo(() => {
     const iconName = useMemo(() => {
         // Fallback to 0 if lgs.journeys is undefined or null
         const journeyCount = lgs.journeys?.size ?? 0
-        return FA2SL.set(journeyCount ? faRoute : faRegularRouteCirclePlus)
+        return journeyCount ? 'route' : 'regular-route-circle-plus'
     }, [lgs.journeys?.size])
 
     /**
@@ -76,11 +73,16 @@ export const TrackEditorButton = memo(() => {
         }
     }, [mainUI])
 
-    return (
-        <SlTooltip hoist placement={tooltipPlacement} content={hasJourney ? 'Edit the Journey' : 'Add a journey'}>
-            <SlButton size="small" className="square-button" onClick={openEditorOrLoader}>
-                <SlIcon slot="prefix" library="fa" name={iconName}/>
-            </SlButton>
-        </SlTooltip>
+    return (<>
+            <WaTooltip for="open-journey-editor"
+                       placement={tooltipPlacement}>{hasJourney ? 'Edit the Journey' : 'Add a journey'}</WaTooltip>
+            <WaButton id="open-journey-editor"
+                      className="square-button"
+                      onClick={openEditorOrLoader}
+                      variant={'brand'}
+                      appearance="Filled">
+                <WaIcon name="route-circle-plus" variant="regular"/>
+            </WaButton>
+        </>
     )
 })

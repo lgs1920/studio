@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-08
- * Last modified: 2026-03-08
+ * Created on: 2026-03-09
+ * Last modified: 2026-03-09
  *
  *
  * Copyright © 2026 LGS1920
@@ -229,6 +229,35 @@
 }
 
 /*******************************************************************************
+ * Globals
+ ******************************************************************************/
+body {
+    & h1,
+    & h2 {
+        margin: var(--lgs-gutter) 0;
+        color: var(--wa-color-brand-60);
+    }
+
+    & h3 {
+        margin: var(--lgs-gutter) 0;
+    }
+
+    & strong {
+        color: var(--wa-color-brand-60);
+    }
+
+    & ul {
+        padding-right: var(--lgs-gutter);
+        list-style-position: inside;
+
+        & li {
+            padding-left: 0;
+        }
+
+    }
+}
+
+/*******************************************************************************
  * Theme Selector
  ******************************************************************************/
 .lgs--theme-selector {
@@ -250,26 +279,27 @@ canvas {
  * Buttons
  ******************************************************************************/
 
-.sl-button::part(base) {
-    background-color: var(--lgs-button-bg-color) !important;
-    border-color: var(--lgs-button-border-color);
-    color: var(--lgs-button-color);
+.wa-button::part(base) {
     display: flex;
-    gap: var(--lgs-gutter-s);
     align-items: center;
-}
-
-.sl-button::part(base):hover:not(.button--disabled) {
-    background-color: var(--lgs-button-bg-hover-color);
-    border-color: var(--lgs-button-border-hover-color);
-    color: var(--lgs-button-hover-color);
-}
-
-sl-button::part(label) {
-    display: flex;
+    color: var(--lgs-button-color);
+    border-color: var(--lgs-button-border-color);
+    background-color: var(--lgs-button-bg-color) !important;
     gap: var(--lgs-gutter-s);
+}
+
+.wa-button::part(base):hover:not(.button--disabled) {
+    color: var(--lgs-button-hover-color);
+    border-color: var(--lgs-button-border-hover-color);
+    background-color: var(--lgs-button-bg-hover-color);
+}
+
+wa-button::part(label) {
+    display: flex;
     align-items: center;
     padding-left: 0;
+    text-transform: capitalize;
+    gap: var(--lgs-gutter-s);
 }
 
 .buttons-bar {
@@ -290,6 +320,7 @@ sl-button::part(label) {
 }
 
 .square-button.small {
+    font-size: var(--sl-font-size-small) !important;
     --lgs-square-dimension: var(--lgs-dimension-s);
 }
 
@@ -299,31 +330,9 @@ sl-button::part(label) {
     padding: 0;
 }
 
-.square-button[disabled]::part(base) {
-    color: var(--lgs-disabled-color)
+.square-button wa-icon::part(svg) {
+    height: var(--lgs-font-size-m);
 }
-
-.square-button::part(label) {
-    font-size: var(--lgs-line-dimension);
-    line-height: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding-right: 0;
-}
-
-.square-button.small::part(prefix) {
-    font-size: var(--sl-font-size-small) !important;
-}
-
-sl-button::part(prefix), sl-icon-button {
-    font-size: var(--sl-font-size-large);
-}
-
-sl-icon-button[size="small"] {
-    font-size: var(--sl-font-size-large);
-}
-
 
 sl-button:not(.square-button) sl-icon:first-child {
     margin-right: var(--lgs-gutter-s);
@@ -383,7 +392,7 @@ sl-icon.is-duotone svg[part="svg"] {
     --map-rotation-speed: 60s
 }
 
-sl-button::part(spinner) {
+wa-button::part(spinner) {
     font-size: var(--lgs-font-size-l);
 }
 
@@ -396,13 +405,12 @@ sl-menu-item::part(spinner)::part(base) {
 }
 
 ::part(spinner) {
-    --indicator-color: var(--lgs-information-color);
-    --track-color: var(--lgs-information-border-color);
+    font-size: var(--lgs-font-size-l);
     --track-width: 3px;
     --speed: var(--map-rotation-speed);
 }
 
-.on-map sl-spinner, .on-map ::part(spinner) {
+.on-map wa-spinner, .on-map ::part(spinner) {
     --indicator-color: var(--lgs-light-color);
     --track-color: var(--lgs-light-color-25);
     --track-width: 2px;
@@ -463,32 +471,8 @@ sl-menu-item::part(spinner)::part(base) {
 wa-drawer {
     --size: var(--lgs-vertical-panel-width);
     --spacing: var(--lgs-gutter);
-
-
-    & h1,
-    & h2 {
-        margin: var(--lgs-gutter) 0;
-        color: var(--wa-color-brand-60);
-    }
-
-    & h3 {
-        margin: var(--lgs-gutter) 0;
-    }
-
-    & strong {
-        color: var(--wa-color-brand-60);
-    }
-
-    & ul {
-        padding-right: var(--lgs-gutter);
-        list-style-position: inside;
-
-        & li {
-            padding-left: 0;
-        }
-
-    }
 }
+
 
 wa-drawer::part(base) {
     pointer-events: auto
@@ -796,27 +780,27 @@ wa-scroller {
 /*******************************************************************************
  * Tooltips
  ******************************************************************************/
-sl-tooltip {
-    --sl-tooltip-border-radius: var(--lgs-border-radius-xs);
-    --sl-tooltip-background-color: var(--lgs-tooltip-bg-color);
-    --sl-tooltip-color: var(--lgs-text-on-color);
-    --sl-tooltip-font-family: var(--sl-font-sans);
-    --sl-tooltip-font-weight: var(--sl-font-weight-normal);
-    --sl-tooltip-font-size: var(--lgs-font-size-s);
-    --sl-tooltip-line-height: var(--sl-line-height-dense);
-    --sl-tooltip-padding: var(--lgs-gutter-xs);
-    --sl-tooltip-arrow-size: 0;
+wa-tooltip {
+    /*--sl-tooltip-border-radius: var(--lgs-border-radius-xs);*/
+    /*--sl-tooltip-background-color: var(--lgs-tooltip-bg-color);*/
+    /*--sl-tooltip-color: var(--lgs-text-on-color);*/
+    /*--sl-tooltip-font-family: var(--sl-font-sans);*/
+    /*--sl-tooltip-font-weight: var(--sl-font-weight-normal);*/
+    /*--sl-tooltip-font-size: var(--lgs-font-size-s);*/
+    /*--sl-tooltip-line-height: var(--sl-line-height-dense);*/
+    /*--sl-tooltip-padding: var(--lgs-gutter-xs);*/
+    /*--sl-tooltip-arrow-size: 0;*/
 
-    box-shadow: var(--sl-shadow-large);
-    border-color: var(--lgs-tooltip-border-color);
+    /*box-shadow: var(--sl-shadow-large);*/
+    /*border-color: var(--lgs-tooltip-border-color);*/
     --hide-delay: 0.2s;
 }
 
-sl-tooltip::part(body)::first-letter {
+wa-tooltip::part(body)::first-letter {
     text-transform: capitalize;
 }
 
-sl-tooltip.tooltip-help ::part(base) {
+wa-tooltip.tooltip-help ::part(base) {
     cursor: help !important;
 }
 
@@ -825,15 +809,15 @@ sl-tooltip.tooltip-help ::part(base) {
  * Dialogs / Modals
  ******************************************************************************/
 
-sl-dialog {
+wa-dialog {
     --header-spacing: var(--body-spacing) var(--body-spacing) 0 var(--body-spacing)
 }
 
-sl-dialog::part(base) {
+wa-dialog::part(base) {
     z-index: calc(var(--lgs-ui-layer-zindex) + 1)
 }
 
-sl-dialog [slot="label"] {
+wa-dialog [slot="label"] {
     display: flex;
     overflow: hidden;
     align-items: center;
@@ -841,15 +825,11 @@ sl-dialog [slot="label"] {
     text-overflow: ellipsis;
 }
 
-sl-dialog [slot="label"] sl-icon {
+wa-dialog [slot="label"] sl-icon {
     margin-right: var(--lgs-gutter-s);
 }
 
-sl-dialog::part(title) {
-    /*white-space: nowrap; !* Empêche le texte de passer à la ligne *!*/
-    /*overflow: hidden; !* Cache le contenu qui déborde *!*/
-    /*text-overflow: ellipsis; !* Ajoute des points de suspension lorsque le texte déborde *!*/
-    /*min-width: 0;*/
+wa-dialog::part(title) {
     width: 100%;
 }
 
@@ -1011,7 +991,7 @@ wa-details [slot="prefix"], wa-details [slot="suffix"] {
     --color: var(--lgs-card-on-map-border-color);
 }
 
-.lgs-context-menu sl-icon, .lgs-context-menu svg, .lgs-context-menu sl-spinner {
+.lgs-context-menu sl-icon, .lgs-context-menu svg, .lgs-context-menu wa-spinner {
     margin-right: var(--lgs-gutter-s);
 }
 

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-03-09
+ * Last modified: 2026-03-09
  *
  *
  * Copyright © 2026 LGS1920
@@ -28,6 +28,7 @@ import otherInstructions                                        from '@Locales/e
 import safariMacOSInstructions                                  from '@Locales/en/pwa-instructions/safari-macos.md?raw'
 import { SlButton, SlDialog, SlIcon, SlSpinner } from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                                                from '@Utils/FA2SL'
+import { WaSpinner } from '@web.awesome.me/webawesome-pro/dist/react'
 import classNames                                               from 'classnames'
 import { useEffect, useState }                                  from 'react'
 import ReactMarkdown          from 'react-markdown'
@@ -336,7 +337,7 @@ export const AppUpdate = ({mode = 'banner'}) => {
                 ) : (
                      // Display spinner during installation
                      <>
-                         <SlSpinner style={{fontSize: '2em', '--track-width': '5px'}}/>
+                         <WaSpinner style={{fontSize: '2em', '--track-width': '5px'}}/>
                          <span>{`Installing ${APP_STUDIO} version ${lgs?.versions?.studio}... Please wait`}</span>
                      </>
                  )}

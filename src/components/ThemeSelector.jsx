@@ -2,20 +2,20 @@
  *
  * This file is part of the LGS1920/studio project.
  *
- * File: Theme Selector.jsx
+ * File: ThemeSelector.jsx
  *
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-08
- * Last modified: 2026-03-08
+ * Created on: 2026-03-09
+ * Last modified: 2026-03-09
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { WaButton, WaDropdown, WaDropdownItem, WaIcon } from '@web.awesome.me/webawesome-pro/dist/react'
-import React, { useEffect, useState }                   from 'react'
+import { WaButton, WaDivider, WaDropdown, WaDropdownItem, WaIcon } from '@web.awesome.me/webawesome-pro/dist/react'
+import React, { useEffect, useState }                              from 'react'
 
 /**
  * Theme Selector component
@@ -67,7 +67,7 @@ const ThemeSelector = () => {
             <WaDropdownItem value={'dark'}>
                 <WaIcon name={'moon-stars'}/>{' Dark '}
             </WaDropdownItem>
-
+            <WaDivider/>
             <WaDropdownItem value={'system'}>
                 <WaIcon name="cog"/>{' System '}
             </WaDropdownItem>

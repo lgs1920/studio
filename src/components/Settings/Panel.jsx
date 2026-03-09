@@ -7,18 +7,19 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-08
- * Last modified: 2026-03-07
+ * Created on: 2026-03-09
+ * Last modified: 2026-03-09
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
+import ThemeSelector from '@Components/ThemeSelector'
 import { SETTINGS_EDITOR_DRAWER }                                from '@Core/constants'
 import { faCircleUser, faScrewdriverWrench, faPaintbrushPencil } from '@fortawesome/pro-solid-svg-icons'
 import { SlIcon, SlTab, SlTabGroup, SlTabPanel, SlTooltip } from '@shoelace-style/shoelace/dist/react'
 import { WaDrawer }                                         from '@web.awesome.me/webawesome-pro/dist/react'
-import { FA2SL }                                                      from '@Utils/FA2SL'
+import { FA2SL }     from '@Utils/FA2SL'
 import React                                                     from 'react'
 import { useSnapshot }                                           from 'valtio'
 import './style.css'
@@ -49,6 +50,7 @@ export const Panel = () => {
                               onSlRequestClose={closePanel}
                               contained
                               className={'lgs-theme'}>
+                        <ThemeSelector/>
                         <SlTabGroup>
                             <SlTab slot="nav" panel="tab-tools">
                                 <SlIcon library="fa" name={FA2SL.set(faScrewdriverWrench)}/> {'Global Settings'}

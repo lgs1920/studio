@@ -7,32 +7,34 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-03-09
+ * Last modified: 2026-03-09
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { INFO_DRAWER }                 from '@Core/constants'
-import { faCircleInfo }                from '@fortawesome/pro-regular-svg-icons'
-import { SlButton, SlIcon, SlTooltip } from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                       from '@Utils/FA2SL'
+import { WaButton, WaIcon, WaTooltip } from '@web.awesome.me/webawesome-pro/dist/react'
 import React                           from 'react'
 import './style.css'
-import { useSnapshot } from 'valtio'
+import { useSnapshot }                 from 'valtio'
 
 export const PanelButton = () => {
     const infoPanelStore = lgs.stores.ui.informationPanel
     const settings = useSnapshot(lgs.settings.ui.menu)
 
     return (<>
-        <SlTooltip hoist placement={settings.toolBar.fromStart ? 'right' : 'left'} content="Show Information">
-            <SlButton className={'square-button'} size="small" id={'open-info-panel'}
-                      onClick={() => __.ui.drawerManager.toggle(INFO_DRAWER)}>
-                <SlIcon slot="prefix" library="fa" name={FA2SL.set(faCircleInfo)}></SlIcon>
-            </SlButton>
-        </SlTooltip>
+        <WaTooltip for="open-info-panel"
+                   placement={settings.toolBar.fromStart ? 'right' : 'left'}>{'Show Information'}</WaTooltip>
+        <WaButton className="square-button"
+                  id="open-info-panel"
+                  onClick={() => __.ui.drawerManager.toggle(INFO_DRAWER)}
+                  variant={'brand'}
+                  appearance="Filled">
+            <WaIcon name="circle-info" variant="regular"></WaIcon>
+        </WaButton>
+
 
     </>)
 }

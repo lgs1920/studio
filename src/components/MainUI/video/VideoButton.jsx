@@ -7,16 +7,14 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-03-09
+ * Last modified: 2026-03-09
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { faVideoPlus } from '@fortawesome/pro-regular-svg-icons'
-import { SlButton, SlIcon, SlTooltip } from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                       from '@Utils/FA2SL.js'
+import { WaButton, WaIcon, WaTooltip } from '@web.awesome.me/webawesome-pro/dist/react'
 import { useSnapshot }                 from 'valtio'
 
 
@@ -30,12 +28,17 @@ export const VideoButton = (props) => {
     return (
         <>
             {!video.recording && !video.preRecording && !video.snapshot &&
-                <SlTooltip hoist placement={props.tooltip} content="Make a new video">
-                    <SlButton size={'small'} className={'square-button'} id={'launch-the-video-editor'}
-                              onClick={handleClick}>
-                        <SlIcon slot="prefix" library="fa" name={FA2SL.set(faVideoPlus)}></SlIcon>
-                    </SlButton>
-                </SlTooltip>
+                <>
+                    <WaTooltip for={'launch-the-video-editor'}
+                               placement={props.tooltip}>{'Make a new video'}</WaTooltip>
+                    <WaButton className={'square-button'}
+                              id={'launch-the-video-editor'}
+                              onClick={handleClick}
+                              variant={'brand'}
+                              appearance="Filled">
+                        <WaIcon name="video-plus" variant="regular"/>
+                    </WaButton>
+                </>
             }
         </>
     )

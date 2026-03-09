@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-03-09
+ * Last modified: 2026-03-09
  *
  *
  * Copyright © 2026 LGS1920
@@ -17,12 +17,11 @@
 import { NONE, POI_STANDARD_TYPE } from '@Core/constants'
 import { SlButton, SlIcon, SlTooltip } from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }       from '@Utils/FA2SL.js'
-import { faArrowRotateRight } from '@fortawesome/pro-regular-svg-icons'
-import { memo, useCallback, useMemo } from 'react'
+import { faArrowRotateRight }          from '@fortawesome/pro-regular-svg-icons'
+import { WaButton, WaIcon, WaTooltip } from '@web.awesome.me/webawesome-pro/dist/react'
+import { memo, useCallback, useMemo }  from 'react'
 import { useSnapshot } from 'valtio'
 
-/** @constant {string} ICON_NAME - Memoized FontAwesome icon name for rotation */
-const ICON_NAME = FA2SL.set(faArrowRotateRight)
 /** @constant {string} FOCUS_TARGET - Target identifier for camera focus */
 const FOCUS_TARGET = 'target'
 /** @constant {string} TOOLTIP_STOP - Tooltip text when rotation is active */
@@ -85,17 +84,18 @@ export const RotateButton = memo(({tooltip = 'top'}) => {
         }
     }, [rotate.running, target, position, current, isPOITarget])
 
-    return (
-        <SlTooltip hoist placement={tooltip} content={rotate.running ? TOOLTIP_STOP : TOOLTIP_START}>
-            <SlButton
-                size="small"
+    return (<>
+            <WaTooltip for="launch-rotation"
+                       placement={tooltip}>{rotate.running ? TOOLTIP_STOP : TOOLTIP_START}</WaTooltip>
+            <WaButton
                 className="square-button rotation-button"
                 id="launch-rotation"
                 onClick={handleRotation}
-                loading={rotate.running}
+                variant={'brand'}
+                appearance="Filled"
             >
-                <SlIcon slot="prefix" library="fa" name={ICON_NAME}/>
-            </SlButton>
-        </SlTooltip>
+                <WaIcon name="arrows-rotate" animation={rotate.running ? 'spin' : 'none'} variant="regular"/>
+            </WaButton>
+        </>
     )
 })

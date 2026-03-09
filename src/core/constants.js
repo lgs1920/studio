@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-24
- * Last modified: 2026-02-24
+ * Created on: 2026-03-09
+ * Last modified: 2026-03-09
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,9 +16,8 @@
 
 import { CESIUM_EVENTS as $CESIUM_EVENTS }        from '@Core/events/cesiumEvents'
 import {
-    faBuildingColumns, faBuildings, faCampground, faCross, faCrown, faEarthEurope, faFlagPennant, faFlagSwallowtail,
-    faFort, faHouseBlank, faLock, faMap, faMountains, faPlaceOfWorship, faRoad, faSquareParking, faTablePicnic,
-    faTelescope, faUnlock, faUser,
+    faBuildingColumns, faBuildings, faCampground, faCross, faCrown, faFlagPennant, faFlagSwallowtail, faFort,
+    faHouseBlank, faLock, faMountains, faPlaceOfWorship, faSquareParking, faTablePicnic, faTelescope, faUnlock, faUser,
 }                                                 from '@fortawesome/duotone-regular-svg-icons'
 import { faAndroid, faApple, faLinux, faWindows } from '@fortawesome/free-brands-svg-icons'
 import { faCompass, faDesktop, faRoute, faText }  from '@fortawesome/pro-regular-svg-icons'
@@ -236,13 +235,13 @@ export const APP_EVENT = {
 /** Scene Mode **/
 
 export const SCENE_MODE_2D = {
-    value: 2, label: '2D', title: 'Map View', icon: faMap,
+    value: 2, label: '2D', title: 'Map View', icon: 'map',
 }
 export const SCENE_MODE_3D = {
-    value: 3, label: '3D', title: 'Globe View', icon: faEarthEurope,
+    value: 3, label: '3D', title: 'Globe View', icon: 'earth-europe',
 }
 export const SCENE_MODE_COLUMBUS = {
-    value: 2.5, label: '2.5D', title: 'Columbus View', icon: faRoad,
+    value: 2.5, label: '2.5D', title: 'Columbus View', icon: 'road',
 }
 
 export const SCENE_MODES = new Map([

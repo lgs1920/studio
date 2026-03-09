@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-08
- * Last modified: 2026-03-07
+ * Created on: 2026-03-09
+ * Last modified: 2026-03-09
  *
  *
  * Copyright © 2026 LGS1920
@@ -216,7 +216,7 @@ export const MainUI = memo(() => {
                                 <SceneModeSelector tooltip={toolBar.fromStart ? 'left' : 'right'}/>
                                 <GeocodingButton tooltip={toolBar.fromStart ? 'left' : 'right'}/>
                                 <RotateButton tooltip={toolBar.fromStart ? 'left' : 'right'}/>
-                                <FullScreenButton/>
+                                <FullScreenButton tooltip={toolBar.fromStart ? 'left' : 'right'}/>
                                 <VideoButton tooltip={toolBar.fromStart ? 'left' : 'right'}/>
                                 <GeocodingUI/>
                             </div>

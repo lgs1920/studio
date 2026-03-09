@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-08
- * Last modified: 2026-03-08
+ * Created on: 2026-03-09
+ * Last modified: 2026-03-09
  *
  *
  * Copyright © 2026 LGS1920
@@ -105,7 +105,7 @@ body {
     gap: var(--lgs-gutter);
 }
 
-.installing-dialog > sl-spinner {
+.installing-dialog > wa-spinner {
     font-size: var(--lgs-font-size-xl);
     --track-width: var(--lgs-gutter-xs);
     --indicator-color: black;

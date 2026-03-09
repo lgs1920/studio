@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-08
- * Last modified: 2026-03-08
+ * Created on: 2026-03-09
+ * Last modified: 2026-03-09
  *
  *
  * Copyright © 2026 LGS1920
@@ -49,16 +49,17 @@ html {
 }
 
 #primary-buttons-bar {
-    pointer-events: auto;
-    display: flex;
-    flex-direction: column;
     position: absolute;
     top: var(--top);
-    margin: 0 var(--right) 0 var(--left);
-    max-width: calc(100% - var(--left) - var(--right));
-    left: var(--primary-buttons-bar-left);
     right: var(--primary-buttons-bar-right);
+    left: var(--primary-buttons-bar-left);
+    display: flex;
+    flex-direction: column;
+    max-width: calc(100% - var(--left) - var(--right));
+    margin: 0 var(--right) 0 var(--left);
+    pointer-events: auto;
     --lgs-animation-duration: 1s;
+    gap: var(--lgs-gutter-xs) !important;
 }
 
 #secondary-buttons-bar {
@@ -69,7 +70,7 @@ html {
     flex-direction: column;
     margin-left: var(--secondary-buttons-bar-margin-left);
     pointer-events: none;
-    gap: 0 !important;
+    gap: var(--lgs-gutter-xs) !important;
 }
 
 

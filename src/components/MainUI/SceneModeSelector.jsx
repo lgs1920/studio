@@ -7,68 +7,84 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-03-09
+ * Last modified: 2026-03-09
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { SCENE_MODES }                 from '@Core/constants'
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { SlButton, SlIcon, SlTooltip } from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                       from '@Utils/FA2SL'
-import { useRef, useState }            from 'react'
-import { useSnapshot }                 from 'valtio/index'
+import { SCENE_MODES }                                             from '@Core/constants'
+import { WaButton, WaDropdown, WaDropdownItem, WaIcon, WaTooltip } from '@web.awesome.me/webawesome-pro/dist/react'
+import { useRef }                                                  from 'react'
+import { useSnapshot }                                             from 'valtio/index'
 
+/**
+ * Component to select the scene mode via a Web Awesome dropdown.
+ * @param {Object} props - Component properties.
+ * @param {string} [props.tooltip='right'] - Tooltip placement.
+ * @returns {JSX.Element} The rendered dropdown selector.
+ */
 export const SceneModeSelector = (props) => {
-    const settings = useSnapshot(lgs.settings.scene)
+    // Valtio snapshots named after the store attribute
+    const scene = useSnapshot(lgs.settings.scene)
     const mainUI = useSnapshot(lgs.stores.ui.mainUI)
-    const buttonGroup = useRef(null)
-    const placement = props.tooltip ?? 'right'
-    const [waitingMode, setWaitingMode] = useState(false)
 
-    const selectSceneMode = (event) => {
-        if (waitingMode) {
-            __.ui.sceneManager.morph(parseInt(event.target.dataset.sceneMode), __.ui.sceneManager.afterMorphing)
-            handleOut(event)
-        }
-        else {
-            handleHover(event)
-        }
+    // Ref using the underscore prefix
+    const _dropdown = useRef(null)
+    const placement = props.tooltip ?? 'right'
+    const dropdownPlacement = placement === 'right' ? 'right-start' : 'left-start'
+
+    /**
+     * Handles the selection of a new scene mode.
+     * @param {CustomEvent} event - The selection event.
+     */
+    const handleSelect = (event) => {
+        const selectedMode = parseInt(event.detail.item.value)
+        __.ui.sceneManager.morph(selectedMode, __.ui.sceneManager.afterMorphing)
     }
-    const handleOut = (event) => {
-        setWaitingMode(false)
-    }
-    const handleHover = (event) => {
-        setWaitingMode(true)
-        event.preventDefault()
-    }
+
+    const currentModeInfo = SCENE_MODES.get(scene.mode.value)
 
     return (
-        <div ref={buttonGroup} className={'scene-mode-selector'} onMouseLeave={handleOut}
-             waiting-mode={waitingMode ? 'true' : 'false'}>
+        <div className={'scene-mode-selector'}>
+            <WaDropdown ref={_dropdown}
+                        onWaSelect={handleSelect}
+                        placement={dropdownPlacement}
+                        distance={lgs.gutter.xs}
+            >
+                <WaTooltip for="scene-mode-trigger" placement={placement}>{currentModeInfo.title}</WaTooltip>
+                <WaButton slot={'trigger'}
+                          size={'small'}
+                          className={'square-button'}
+                          disabled={mainUI.rotate.running}
+                          id="scene-mode-trigger"
+                          variant={'brand'}
+                          appearance="Filled"
+                >
+                    <WaIcon name={currentModeInfo.icon} variant="regular"/>
+                </WaButton>
 
-            {
-                settings.mode.available.map(mode => (
-                    <SlTooltip key={`scene-mode-${SCENE_MODES.get(mode).value}`}
-                               placement={placement} hoist content={SCENE_MODES.get(mode).title}>
-                        <SlButton size={'small'}
-                                  visible={settings.mode.value === SCENE_MODES.get(mode).value}
-                                  className={'square-button'} onclick={selectSceneMode}
-                                  data-scene-mode={SCENE_MODES.get(mode).value}
-                                  disabled={mainUI.rotate.running}>
-                            <FontAwesomeIcon slot="prefix" icon={SCENE_MODES.get(mode).icon}
-                                             style={{
-                                                 '--fa-secondary-color':   lgs.colors.ocean,
-                                                 '--fa-secondary-opacity': 1,
-                                                 '--fa-primary-color':     lgs.colors.ground,
-                                                 '--fa-primary-opacity':   1,
-                                             }}/>
-                        </SlButton>
-                    </SlTooltip>
-                ))
-            }
+
+                {
+                    scene.mode.available.map(mode => {
+                        const modeData = SCENE_MODES.get(mode)
+                        return (
+                            <>
+                                <WaTooltip placement={placement}
+                                           for={`scene-mode-${modeData.value}`}>{modeData.title}</WaTooltip>
+                                <WaDropdownItem
+                                    id={`scene-mode-${modeData.value}`}
+                                    key={`scene-mode-${modeData.value}`}
+                                    value={modeData.value.toString()}
+                                >
+                                    <WaIcon name={modeData.icon} variant="regular"/>
+                                </WaDropdownItem>
+                            </>
+                        )
+                    })
+                }
+            </WaDropdown>
         </div>
     )
 }

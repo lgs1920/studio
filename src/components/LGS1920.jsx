@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-08
- * Last modified: 2026-03-08
+ * Created on: 2026-03-09
+ * Last modified: 2026-03-09
  *
  *
  * Copyright © 2026 LGS1920
@@ -326,7 +326,7 @@ export const LGS1920 = () => {
                     <MapLayer type={OVERLAY_ENTITY}/>
                     <Viewer/>
                     <SelectionIndicator/>
-                    <WaToast/>
+                    <WaToast placement="bottom-start"/>
 
                 </>
             )}

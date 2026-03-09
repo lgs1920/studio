@@ -7,15 +7,15 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-17
- * Last modified: 2026-02-17
+ * Created on: 2026-03-09
+ * Last modified: 2026-03-09
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { WidgetDynamicRenderer }         from '@Core/ui/widget-manager/dynamic-render/WidgetDynamicRender'
-import { SlSpinner }                     from '@shoelace-style/shoelace/dist/react'
+import { WaSpinner } from '@web.awesome.me/webawesome-pro/dist/react'
 import { Suspense, useEffect, useState } from 'react'
 
 
@@ -46,7 +46,7 @@ export const DynamicWidget = ({id, context, props = {}}) => {
     const Component = LazyWidget
 
     return (
-        <Suspense fallback={<SlSpinner style={{fontSize: '2rem'}}/>}>
+        <Suspense fallback={<WaSpinner style={{fontSize: '2rem'}}/>}>
             <Component id={id} {...props} context={context || props}/>
         </Suspense>
     )
