@@ -7,22 +7,22 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-03-11
+ * Last modified: 2026-03-11
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { AppUpdate } from '@Components/AppUpdate'
-import { SlDivider } from '@shoelace-style/shoelace/dist/react'
+import { WaDivider } from '@web.awesome.me/webawesome-pro/dist/react'
 import React         from 'react'
 
 export const PWASettings = () => {
     return (
         <>
             <span slot="summary">{'App installation'}</span>
-            <SlDivider/>
+            <WaDivider/>
             <AppUpdate mode="settings"/>
         </>
     )

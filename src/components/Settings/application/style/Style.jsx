@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-03-11
+ * Last modified: 2026-03-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -20,53 +20,63 @@ import { EditorSettings } from '@Components/Settings/application/style/EditorSet
 import { MenuSettings }      from '@Components/Settings/application/style/MenuSettings'
 import { PWASettings } from '@Components/Settings/application/style/PWASettings'
 import { SlDetails }         from '@shoelace-style/shoelace/dist/react'
+import { WaDetails } from '@web.awesome.me/webawesome-pro/dist/react'
 import { useEffect, useRef } from 'react'
 import { WelcomeModal }      from './WelcomeModal'
 
 export const Style = () => {
     const styleSettings = useRef(null)
+    const _cantClose = useRef(false)
+    const handleClose = event => {
+        if (_cantClose.current) {
+            event.preventDefault()
+        }
 
-    useEffect(() => {
-        __.ui.ui.initDetailsGroup(styleSettings.current)
-    }, [])
+    }
 
     return (
 
-        <div ref={styleSettings} id="style-settings">
-            <SlDetails id="ui-welcome-modal-settings"
+        <div ref={styleSettings} id="style-settings" className="lgs--details-list">
+            <WaDetails id="ui-welcome-modal-settings"
                        small open={false}
+                       name="style-settings"
                        className="lgs-theme"
             >
                 <WelcomeModal/>
-            </SlDetails>
+            </WaDetails>
 
-            <SlDetails id="ui-menu-settings"
+            <WaDetails id="ui-menu-settings"
                        small open={false}
                        className="lgs-theme"
+                       name="style-settings"
+                       onWaHide={handleClose}
             >
-                <MenuSettings/>
-            </SlDetails>
+                <MenuSettings ref={_cantClose}/>
+            </WaDetails>
 
-            <SlDetails id="ui-compass-settings"
+            <WaDetails id="ui-compass-settings"
                        small open={false}
                        className="lgs-theme"
+                       name="style-settings"
             >
                 <CompassSettings/>
-            </SlDetails>
+            </WaDetails>
 
-            <SlDetails id="ui-editor-settings"
+            <WaDetails id="ui-editor-settings"
                        small open={false}
                        className="lgs-theme"
+                       name="style-settings"
             >
                 <EditorSettings/>
-            </SlDetails>
+            </WaDetails>
 
-            <SlDetails id="ui-pwa-settings"
+            <WaDetails id="ui-pwa-settings"
                        small open={false}
                        className="lgs-theme"
+                       name="style-settings"
             >
                 <PWASettings/>
-            </SlDetails>
+            </WaDetails>
 
         </div>
 

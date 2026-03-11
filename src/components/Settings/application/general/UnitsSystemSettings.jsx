@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-03-11
+ * Last modified: 2026-03-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,23 +16,17 @@
 
 import { faGlobe, faRuler, faRulerCombined }      from '@fortawesome/pro-regular-svg-icons'
 import { FontAwesomeIcon }                        from '@fortawesome/react-fontawesome'
-import { SlDivider, SlRadioButton, SlRadioGroup } from '@shoelace-style/shoelace/dist/react'
-import { DD, DMS, IMPERIAL, INTERNATIONAL }       from '@Utils/UnitUtils'
-import { useSnapshot }                            from 'valtio/index'
+import { DD, DMS, IMPERIAL, INTERNATIONAL }         from '@Utils/UnitUtils'
+import { WaDivider, WaIcon, WaRadio, WaRadioGroup } from '@web.awesome.me/webawesome-pro/dist/react'
+import { useSnapshot }                              from 'valtio/index'
 
 export const UnitsSystemSettings = (props) => {
-
-    const switchValue = (event) => {
-        if (window.isOK(event)) {
-            return event.target.checked
-        }
-    }
 
     const us = useSnapshot(lgs.settings.unitSystem)
     const cs = useSnapshot(lgs.settings.coordinateSystem)
 
     const handleDistanceUnits = (event) => {
-        lgs.settings.unitSystem.current = event.target.value * 1
+        lgs.settings.unitSystem.current = parseInt(event.target.value, 10)
         __.ui.profiler?.draw()
     }
     const handleCoordinateUnits = (event) => {
@@ -41,27 +35,33 @@ export const UnitsSystemSettings = (props) => {
 
     return (
         <>
-            <span slot="summary"><FontAwesomeIcon icon={faRuler}/>{'Units System'}</span>
-            <SlDivider/>
-            <div className="drawer-horizontal-line two-columns">
-
-                <SlRadioGroup value={us.current} align-right
-                              size={'small'} onSlChange={handleDistanceUnits}
+            <span slot="summary"><WaIcon name="ruler"/> {'Units System'}</span>
+            <WaDivider/>
+            <div className="drawer-horizontal-line">
+                <WaRadioGroup value={us.current}
+                              label-at-start
+                              orientation="horizontal"
+                              size="xsmall"
+                              onChange={handleDistanceUnits}
                 >
                     <label slot="label">{'Distances/Elevations:'}</label>
-                    <SlRadioButton value={INTERNATIONAL}>{'Metric'}</SlRadioButton>
-                    <SlRadioButton value={IMPERIAL}>{'Impérial'}</SlRadioButton>
-                </SlRadioGroup>
+                    <WaRadio value={INTERNATIONAL.toString()}>{'Metric'}</WaRadio>
+                    <WaRadio value={IMPERIAL.toString()}>{'Impérial'}</WaRadio>
+                </WaRadioGroup>
             </div>
 
-            <div className="drawer-horizontal-line two-columns">
-                <SlRadioGroup value={cs.current} align-right
-                              size={'small'} onSlChange={handleCoordinateUnits}
+            <div className="drawer-horizontal-line">
+                <WaRadioGroup value={cs.current}
+                              label-at-start
+                              orientation="horizontal"
+                              className="label-at-start"
+                              size={'xsmall'}
+                              onChange={handleCoordinateUnits}
                 >
                     <label slot="label">{'Coordinates:'}</label>
-                    <SlRadioButton value={DD}>{'Digital Degrees'}</SlRadioButton>
-                    <SlRadioButton value={DMS}>{'Degrees Minutes Seconds'}</SlRadioButton>
-                </SlRadioGroup>
+                    <WaRadio value={DD}>{'DD (decimal)'}</WaRadio>
+                    <WaRadio value={DMS}>{'DMS (sexagesimal)'}</WaRadio>
+                </WaRadioGroup>
             </div>
 
         </>

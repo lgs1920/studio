@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-03-11
+ * Last modified: 2026-03-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,8 +16,9 @@
 
 import { FAButton }                                from '@Components/FAButton'
 import { faArrowsRotate }                          from '@fortawesome/pro-regular-svg-icons'
-import { SlDivider, SlRange, SlSwitch, SlTooltip } from '@shoelace-style/shoelace/dist/react'
-import React, { useEffect }                        from 'react'
+import { SlDivider, SlRange, SlSwitch, SlTooltip }                    from '@shoelace-style/shoelace/dist/react'
+import { WaButton, WaDivider, WaIcon, WaSlider, WaSwitch, WaTooltip } from '@web.awesome.me/webawesome-pro/dist/react'
+import React, { useEffect }                                           from 'react'
 import { useSnapshot }                             from 'valtio'
 
 export const EditorSettings = (props) => {
@@ -44,28 +45,32 @@ export const EditorSettings = (props) => {
     return (
         <>
             <span slot="summary">{'Editors Settings'}</span>
-            <SlDivider/>
+            <WaDivider/>
             <div className="journey-editor-settings">
-                <h3>Journeys</h3>
-                <SlSwitch size="small" align-right checked={journeyToolbar.usage}
-                          onSlChange={(event) => {
-                              event.stopImmediatePropagation()
+                <WaSwitch size="xsmall" label-at-start
+                          checked={journeyToolbar.usage}
+                          onChange={(event) => {
                               $journeyToolbar.usage = switchValue(event)
                               event.preventDefault()
                           }}>
                     {'Add Journey Toolbar'}
-                </SlSwitch>
-                <h3>Toolbars</h3>
+                </WaSwitch>
                 <div id="toolbars-opacity">
-                        <span>Floating Toolbar Opacity</span>
-                        <span><SlTooltip content="Reset to default">
-                        <FAButton icon={faArrowsRotate} id={'toolbars-opacity-reset'}
-                                  onClick={resetToolbarOpacity}></FAButton>
-                        </SlTooltip>
-                        <SlRange value={toolbars.opacity * 1.0}
-                                 onSlInput={setToolbarOpacity}
-                                 min={0.3} max={1} step={0.05} tooltip="top"/>
-                    </span>
+                    {'Floating Toolbar Opacity'}
+                    <WaTooltip for="toolbars-opacity-reset">{'Reset to default'}</WaTooltip>
+                    <WaButton onClick={resetToolbarOpacity}
+                              size="small"
+                              appearance="plain" variant="brand">
+                        <WaIcon name="arrows-rotate" variant="brand" id={'toolbars-opacity-reset'}>
+                        </WaIcon>
+                    </WaButton>
+                    <WaSlider value={toolbars.opacity * 1.0}
+                              size="small"
+                              label-at-right
+                              onInput={setToolbarOpacity}
+                              min={0.3} max={1} step={0.05} withTooltip
+                              valueFormatter={(value) => `${Math.round(value * 100)}%`}
+                    />
                     </div>
             </div>
         </>

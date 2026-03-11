@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-09
- * Last modified: 2026-03-09
+ * Created on: 2026-03-11
+ * Last modified: 2026-03-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -246,7 +246,7 @@ body {
         color: var(--wa-color-brand-60);
     }
 
-    & ul {
+    & ul, & ol {
         padding-right: var(--lgs-gutter);
         list-style-position: inside;
 
@@ -272,8 +272,6 @@ canvas {
     image-rendering: crisp-edges !important;
     will-change: 'transform';
 }
-
-
 
 /*******************************************************************************
  * Buttons
@@ -378,6 +376,7 @@ sl-icon-button[size="small"], sl-icon[size="small"] {
 sl-color-picker[size="small"]::part(trigger) {
     margin-top: 5px;
 }
+
 /*******************************************************************************
  * Icons
  ******************************************************************************/
@@ -716,6 +715,7 @@ wa-card::part(body) {
     height: 100%;
     padding-bottom: 20px;
 }
+
 .lgs-scrollbars .view {
     /* Ensures content doesn't touch the custom scrollbar thumb */
     overflow: scroll !important;
@@ -873,7 +873,14 @@ wa-details::part(base) {
     border-radius: var(--lgs-border-radius-s);
 }
 
-wa-details::part(base):hover {
+wa-details[appearance="outlined"]:hover::part(base)
+
+)
+details {
+    border-color: var(--wa-color-brand-fill-quiet);;
+}
+
+wa-details:not([open])::part(base):hover {
     background-color: var(--wa-color-brand-fill-quiet);
 }
 
@@ -998,43 +1005,99 @@ wa-details [slot="prefix"], wa-details [slot="suffix"] {
 /*******************************************************************************
  * Form elements
  ******************************************************************************/
-[align-right]::part(form-control) {
-    display: flex;
-    /*flex-wrap: wrap;*/
-    align-items: center;
-    gap: var(--lgs-gutter-s);
-}
-
-[align-right]::part(form-control-input) {
-    margin-left: auto;
-}
-
-[align-right]::part(form-control-help-text) {
-    flex-basis: 100%;
-    font-size: var(--sl-input-help-text-font-size-small);
-}
 
 [small]::part(input) {
-    width: 5rem;
+    width: 4rem;
 }
 
 wa-divider {
     --spacing: var(--lgs-gutter-xs);
 }
 
-sl-input [slot="suffix"] {
+wa-input, wa-number-input {
+    font-size: var(--lgs-font-size) !important;
+    color: var(--wa-color-brand-fill-loud);
+}
+
+wa-input.lgs--short-input::part(input), wa-number-input.lgs--short-input::part(input) {
+    width: 3rem;
+}
+
+wa-number-input {
+    padding: 0
+}
+
+.wa-dark wa-input::part(input),
+.wa-dark wa-number-input::part(input),
+.wa-dark wa-number-input::part(stepper),
+.wa-dark wa-number-input::part(start),
+.wa-dark wa-number-input::part(start),
+.wa-dark wa-number-input::part(end),
+.wa-dark wa-number-input::part(end) {
+    color: var(--wa-color-brand-fill-loud)
+}
+
+wa-input[label-at-start], wa-number-input[label-at-start] {
+    display: flex;
+    align-items: center;
+    flex-direction: row;
+    justify-content: space-between;
+    width: 100%;
+    gap: var(--lgs-gutter-s);
+}
+
+wa-input.lgs--short-input[label-at-start], wa-number-input.lgs--short-input[label-at-start] {
+    flex: none;
+}
+
+:is([part~='form-control-label'], [part~='label']):has(*:not(:empty)), :is([part~='form-control-label'], [part~='label']).has-label {
+    font-weight: normal !important;
+    line-height: var(--wa-form-control-label-line-height);
+    margin-block-end: 0 !important
+}
+
+wa-input[label-at-start] label, wa-number-input[label-at-start] label {
+    font-size: var(--lgs-font-size) !important;
+    flex: none;
+    width: auto;
+    margin-block-end: 0 !important;
+}
+
+wa-input[label-at-start]::part(base), wa-number-input[label-at-start]::part(base) {
+    flex: none;
+    width: auto;
+}
+
+
+wa-input [slot="suffix"] {
     margin: 0 var(--lgs-gutter-xs);
 }
 
+wa-number-input[no-end]::part(end), wa-number-input[no-start]::part(start) {
+    display: none;
+}
+
 /*******************************************************************************
- * Ranges
+ * Sliders
  ******************************************************************************/
 
-sl-range {
+wa-slider {
     width: 100%;
     --track-color-active: var(--lgs-track-color-active);
     --track-color-inactive: var(--lgs-track-color-inactive);
     --thumb-size: var(--lgs-font-size);
+}
+
+wa-slider::part(track) {
+    background-color: var(--wa-color-brand-fill-quiet);
+}
+
+wa-slider::part(thumb) {
+    background-color: var(--wa-color-brand-fill-loud);
+}
+
+wa-slider::part(indicator) {
+    background-color: var(--wa-color-brand-fill-loud);
 }
 
 .lgs-range {
@@ -1043,17 +1106,17 @@ sl-range {
     justify-content: flex-end;
 }
 
-.lgs-range sl-range [slot='label'] {
+.lgs-range wa-range [slot='label'] {
     width: 100%;
 }
 
-.lgs-range sl-range::part(form-control-label) {
+.lgs-range wa-range::part(form-control-label) {
     display: flex;
     align-items: center;
-    flex-direction: row;
-    gap: var(--lgs-gutter-s);
-    justify-content: space-between;
     flex: 1;
+    flex-direction: row;
+    justify-content: space-between;
+    gap: var(--lgs-gutter-s);
 }
 
 .lgs-range sl-input::part(form-control-input) {
@@ -1068,42 +1131,137 @@ sl-range {
 /*******************************************************************************
  * Switches
  ******************************************************************************/
-sl-switch[align-right] {
+
+wa-switch[label-at-start], wa-switch[label-at-end] {
     width: 100%;
 }
 
-sl-switch::part(base) {
-    display: flex;
-    align-items: center;
-    gap: var(--sl-spacing-3x-small) var(--gap-width);
+wa-switch[label-at-start]::part(control) {
+    order: 2;
+    margin-left: auto;
 }
 
-sl-switch[align-right]::part(label) {
+wa-switch[label-at-start]::part(label) {
+    display: contents;
+    order: 1;
+}
+
+wa-switch[label-at-end]::part(control) {
     display: contents;
     order: 2;
 }
 
-sl-switch[align-right]::part(control) {
+wa-switch[label-at-end]::part(label) {
     order: 1;
-    margin-left: auto
+    margin-left: auto;
 }
 
-sl-switch {
-    --height: 10px;
-    --width: calc(2 * var(--height));
+wa-switch[size="xsmall"] {
+    --width: 24px; --height: 12px; --thumb-size: 8px;
 }
 
-sl-switch[size="x-small"]
-sl-switch[size="x-small"] label {
-    width: 6rem
+wa-switch {
+    --wa-form-control-activated-color: var(--wa-color-brand-fill-loud);
+    --wa-color-surface-default: var(--wa-color-brand-40);
 }
 
-sl-switch[size="x-small"]::part(base) {
-    --thumb-size: var(--height)
+/*******************************************************************************
+ * Radios
+ */
+wa-radio {
+    --checked-icon-color: var(--wa-color-brand-40);
+    --wa-form-control-border-color: var(--wa-color-brand-50);
+    --wa-form-control-border-width: 3px;
+    --wa-form-control-activated-color: var(--wa-color-brand-fill-loud)
 }
 
-sl-switch[size="x-small"]::part(label) slot {
-    margin-right: var(lgs-gutter-s)
+wa-radio[size="xsmall"], [size="xsmall"] > wa-radio {
+    --wa-form-control-toggle-size: 16px
+}
+
+wa-radio, & input[type="radio"] {
+    &:checked, &:state(checked)::part(control) {
+        background-color: var(--wa-color-brand-40);
+    }
+}
+
+/**
+ * Global width for the component
+ */
+wa-radio-group[label-at-start],
+wa-radio-group[label-at-end] {
+    width: 100%;
+}
+
+/**
+ * Generic layout for WaRadioGroup with integrated Hint.
+ * Refined vertical spacing to prevent the hint from being too far down.
+ */
+
+wa-radio-group[label-at-start],
+wa-radio-group[label-at-end] {
+    width: 100%;
+}
+
+wa-radio-group[label-at-start]::part(form-control),
+wa-radio-group[label-at-end]::part(form-control) {
+    display: grid;
+    /* Use column-gap for horizontal spacing and a smaller row-gap for the hint */
+    align-items: center;
+    width: 100%;
+    column-gap: var(--lgs-gutter);
+    row-gap: 4px; /* Reduced vertical gap for the hint */
+}
+
+/* --- CASE: LABEL AT START --- */
+
+wa-radio-group[label-at-start]::part(form-control) {
+    grid-template-columns: auto 1fr;
+}
+
+wa-radio-group[label-at-start]::part(form-control-label) {
+    grid-column: 1;
+    grid-row: 1;
+    justify-self: start;
+}
+
+wa-radio-group[label-at-start]::part(form-control-input) {
+    grid-column: 2;
+    grid-row: 1;
+    justify-self: end;
+}
+
+wa-radio-group[label-at-start]::part(hint) {
+    margin-top: 0;
+    grid-column: 1 / -1;
+    grid-row: 2;
+    /* Ensure the hint text doesn't inherit unnecessary top margins */
+    justify-self: start;
+}
+
+/* --- CASE: LABEL AT END --- */
+
+wa-radio-group[label-at-end]::part(form-control) {
+    grid-template-columns: 1fr auto;
+}
+
+wa-radio-group[label-at-end]::part(form-control-label) {
+    grid-column: 2;
+    grid-row: 1;
+    justify-self: end;
+}
+
+wa-radio-group[label-at-end]::part(form-control-input) {
+    grid-column: 1;
+    grid-row: 1;
+    justify-self: start;
+}
+
+wa-radio-group[label-at-end]::part(hint) {
+    margin-top: 0;
+    grid-column: 1 / -1;
+    grid-row: 2;
+    justify-self: end;
 }
 
 /*******************************************************************************
@@ -1422,6 +1580,7 @@ hr {
     user-select: none;
     pointer-events: none;
 }
+
 /*******************************************************************************
  * Cesium Selection indicator
  ******************************************************************************/
@@ -1515,6 +1674,7 @@ hr {
     /* décroissance */
     100% { opacity: 0; }
 }
+
 /*******************************************************************************
  * Console
  ******************************************************************************/
@@ -1536,4 +1696,6 @@ hr {
 
 .lgs-journey-metrics-origine-user sl-icon-button::part(base) {
     color: var(--lgs-warning-color) !important;
+}
+
 }

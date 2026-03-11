@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-09
- * Last modified: 2026-03-09
+ * Created on: 2026-03-11
+ * Last modified: 2026-03-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,7 +16,7 @@
 
 import { SCENE_MODES }                                             from '@Core/constants'
 import { WaButton, WaDropdown, WaDropdownItem, WaIcon, WaTooltip } from '@web.awesome.me/webawesome-pro/dist/react'
-import { useRef }                                                  from 'react'
+import { Fragment, useRef } from 'react'
 import { useSnapshot }                                             from 'valtio/index'
 
 /**
@@ -70,7 +70,7 @@ export const SceneModeSelector = (props) => {
                     scene.mode.available.map(mode => {
                         const modeData = SCENE_MODES.get(mode)
                         return (
-                            <>
+                            <Fragment key={`scene-mode-${modeData.value}`}>
                                 <WaTooltip placement={placement}
                                            for={`scene-mode-${modeData.value}`}>{modeData.title}</WaTooltip>
                                 <WaDropdownItem
@@ -80,7 +80,7 @@ export const SceneModeSelector = (props) => {
                                 >
                                     <WaIcon name={modeData.icon} variant="regular"/>
                                 </WaDropdownItem>
-                            </>
+                            </Fragment>
                         )
                     })
                 }

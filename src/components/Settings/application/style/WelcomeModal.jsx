@@ -7,62 +7,65 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-03-11
+ * Last modified: 2026-03-11
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { SlDivider, SlInput, SlSwitch } from '@shoelace-style/shoelace/dist/react'
-import React                            from 'react'
+import { WaDivider, WaInput, WaNumberInput, WaSwitch } from '@web.awesome.me/webawesome-pro/dist/react'
+import React                                           from 'react'
 import { useSnapshot }                  from 'valtio'
 
+/**
+ * WelcomeModal component manages UI preferences via valtio proxy.
+ * Ensure lgs.stores.editorSettings is initialized as a proxy.
+ */
 export const WelcomeModal = (props) => {
-    const welcome = useSnapshot(lgs.editorSettingsProxy.welcome)
-    const switchValue = (event = false) => {
-        if (window.isOK(event)) {
-            return event.target.checked
-        }
-    }
-    lgs.editorSettingsProxy.welcome.autoClose = lgs.settings.ui.welcome.autoClose
-    lgs.editorSettingsProxy.welcome.showIntro = lgs.settings.ui.welcome.showIntro
+    const $welcome = lgs.settings.ui.welcome
+    const welcome = useSnapshot($welcome)
 
     return (
         <>
             <span slot="summary">{'Welcome Modal'}</span>
-            <SlDivider/>
-            <SlSwitch size="small" align-right checked={lgs.settings.ui.welcome.showIntro}
-                      onSlChange={
-                          (event) => {
-                              lgs.settings.ui.welcome.showIntro = switchValue(event)
-                              lgs.editorSettingsProxy.welcome.showIntro = lgs.settings.ui.welcome.showIntro
-                          }
-                      }>
+            <WaDivider/>
+            <WaSwitch
+                size="xsmall"
+                label-at-start
+                checked={welcome.showIntro}
+                onChange={(event) => {
+                    $welcome.showIntro = event.target.checked
+                }}>
                 {'Show Introduction'}
-                <span slot="help-text">{'Each time you launch the application.'}</span>
-            </SlSwitch>
+            </WaSwitch>
 
             {welcome.showIntro &&
                 <>
-                    <SlSwitch size="small" align-right checked={lgs.settings.ui.welcome.autoClose}
-                              onSlChange={(event) => {
-                                  lgs.settings.ui.welcome.autoClose = switchValue(event)
-                                  lgs.editorSettingsProxy.welcome.autoClose = lgs.settings.ui.welcome.autoClose
-                                  event.preventDefault()
-                              }}>
+                    <WaSwitch
+                        size="xsmall"
+                        label-at-start
+                        checked={welcome.autoClose}
+                        onChange={(event) => {
+                            $welcome.autoClose = event.target.checked
+                        }}>
                         {'Auto Close'}
-                        <span slot="help-text">{'Allow modal to close automatically'}</span>
-                    </SlSwitch>
+                    </WaSwitch>
 
                     {welcome.autoClose &&
-                        <SlInput align-right min={10} small valueAsNumber={lgs.settings.ui.welcome.displayTime}
-                                 type="number"
-                                 helpText={'Display duration before closing'}
-                                 onInput={(event) => lgs.settings.ui.welcome.displayTime = event.target.value * 1}>
-                            <label slot="label">{'Display Time'}</label>
+                        <WaNumberInput
+                            className="lgs--short-input lgs--no-margin"
+                            label-at-start no-start
+                            min="5" max="30"
+                            size="small"
+                            value={welcome.displayTime}
+                            appearance="filled"
+                            onInput={(event) => {
+                                $welcome.displayTime = event.target.value
+                            }}>
+                            <div slot="label">{'Display Time (seconds)'}</div>
                             <div slot="suffix">{'s'}</div>
-                        </SlInput>
+                        </WaNumberInput>
                     }
                 </>
             }

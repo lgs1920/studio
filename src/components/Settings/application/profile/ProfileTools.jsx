@@ -7,16 +7,17 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-03-11
+ * Last modified: 2026-03-11
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { faUserGear }               from '@fortawesome/pro-regular-svg-icons'
-import { SlDetails, SlIcon }        from '@shoelace-style/shoelace/dist/react'
+import { SlIcon }            from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                    from '@Utils/FA2SL'
+import { WaDetails, WaIcon } from '@web.awesome.me/webawesome-pro/dist/react'
 import React, { useEffect, useRef } from 'react'
 import { RemoveProfile }            from './RemoveProfile'
 import { ResetProfile }             from './ResetProfile'
@@ -28,13 +29,16 @@ export const ProfileTools = () => {
         __.ui.ui.initDetailsGroup(profileDetails.current)
     }, [])
     return (
-        <SlDetails small key={'tools-profile'} className={'lgs-theme'} ref={profileDetails}>
+        <div className="lgs--details-list">
+
+            <WaDetails small key={'tools-profile'} className={'lgs-theme'} ref={profileDetails}>
             <span slot="summary">
-                <SlIcon library="fa" name={FA2SL.set(faUserGear)}/> {'My Profile'}
+                <WaIcon name="user-gear" variant={'regular'}/> {'My Profile'}
             </span>
-            <ResetProfile/>
-            <RemoveProfile/>
-        </SlDetails>
+                <ResetProfile/>
+                <RemoveProfile/>
+            </WaDetails>
+        </div>
 
     )
 }

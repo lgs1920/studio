@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-28
- * Last modified: 2026-02-28
+ * Created on: 2026-03-11
+ * Last modified: 2026-03-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -97,7 +97,7 @@ export const MapPOIEditFilter = memo(() => {
    * @param {Event} event - The category selection event
    */
   const handleCategories = useCallback(event => {
-    if (event.target.nodeName !== 'SL-SWITCH') {
+    if (event.target.nodeName !== 'wa-switch') {
       lgs.settings.poi.filter.byCategories = event.target.value ?? []
     }
   }, [])

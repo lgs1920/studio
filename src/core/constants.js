@@ -7,21 +7,20 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-09
- * Last modified: 2026-03-09
+ * Created on: 2026-03-11
+ * Last modified: 2026-03-11
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { CESIUM_EVENTS as $CESIUM_EVENTS }        from '@Core/events/cesiumEvents'
+import { CESIUM_EVENTS as $CESIUM_EVENTS } from '@Core/events/cesiumEvents'
 import {
     faBuildingColumns, faBuildings, faCampground, faCross, faCrown, faFlagPennant, faFlagSwallowtail, faFort,
     faHouseBlank, faLock, faMountains, faPlaceOfWorship, faSquareParking, faTablePicnic, faTelescope, faUnlock, faUser,
-}                                                 from '@fortawesome/duotone-regular-svg-icons'
-import { faAndroid, faApple, faLinux, faWindows } from '@fortawesome/free-brands-svg-icons'
-import { faCompass, faDesktop, faRoute, faText }  from '@fortawesome/pro-regular-svg-icons'
-import { faChartFft, faGavel }                    from '@fortawesome/pro-solid-svg-icons'
+}                                          from '@fortawesome/duotone-regular-svg-icons'
+import { faCompass, faRoute, faText }      from '@fortawesome/pro-regular-svg-icons'
+import { faChartFft, faGavel }             from '@fortawesome/pro-solid-svg-icons'
 
 
 export const SLOGAN = 'Replay the World Outdoors!'
@@ -399,12 +398,12 @@ export const OS = {
 }
 
 export const OS_ICONS = {
-    windows: faWindows,
-    linux:   faLinux,
-    macos: faApple,
-    android: faAndroid,
-    ios:   faApple,
-    unknown: faDesktop,
+    windows: ['windows', 'brands'],
+    linux:   ['linux', 'brands'],
+    macos:   ['apple', 'brands'],
+    android: ['android', 'brands'],
+    ios:     ['apple', 'brands'],
+    unknown: ['desktop', 'regular'],
 }
 
 export const ORIENTATION = {
@@ -420,12 +419,12 @@ export const DEVICE_TYPE = {
 }
 
 export const NAVIGATOR = {
-    chrome:  'Chrome',
-    firefox: 'Firefox',
-    safari:  'Safari',
-    edge:    'Edge',
-    opera:   'Opera',
-    unknown: 'unknown',
+    chrome:  ['Chrome', 'brands'],
+    firefox: ['Firefox', 'brands'],
+    safari:  ['Safari', 'brands'],
+    edge:    ['Edge', 'brands'],
+    opera:   ['Opera', 'brands'],
+    unknown: ['unknown', 'regular'],
 }
 
 /*******************************************************************************

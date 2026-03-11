@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-03-11
+ * Last modified: 2026-03-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -17,6 +17,7 @@
 import { CameraSettings }      from '@Components/Settings/application/general/CameraSettings'
 import { UnitsSystemSettings } from '@Components/Settings/application/general/UnitsSystemSettings'
 import { SlDetails }           from '@shoelace-style/shoelace/dist/react'
+import { WaDetails } from '@web.awesome.me/webawesome-pro/dist/react'
 import { useEffect, useRef }   from 'react'
 
 export const GlobalSettings = () => {
@@ -29,20 +30,22 @@ export const GlobalSettings = () => {
 
     return (
 
-        <div ref={generalTools} id={'global-style-settings'}>
-            <SlDetails id={'tools-unit-system'}
+        <div ref={generalTools} id={'global-style-settings'} className={'lgs--details-list'}>
+            <WaDetails id={'tools-unit-system'}
                        small open={false}
                        className={'lgs-theme'}
+                       name="global-settings"
             >
                 <UnitsSystemSettings/>
-            </SlDetails>
+            </WaDetails>
 
-            <SlDetails id={'ui-camera-settings'}
+            <WaDetails id={'ui-camera-settings'}
                        small open={false}
                        className={'lgs-theme'}
+                       name="global-settings"
             >
                 <CameraSettings/>
-            </SlDetails>
+            </WaDetails>
 
         </div>
 
