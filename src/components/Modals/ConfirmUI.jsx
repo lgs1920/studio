@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-03-12
+ * Last modified: 2026-03-12
  *
  *
  * Copyright © 2026 LGS1920
@@ -17,6 +17,7 @@
 import { faXmark }                    from '@fortawesome/pro-regular-svg-icons'
 import { faCheck }                    from '@fortawesome/pro-solid-svg-icons'
 import { SlButton, SlDialog, SlIcon } from '@shoelace-style/shoelace/dist/react'
+import { WaButton, WaDialog, WaIcon } from '@web.awesome.me/webawesome-pro/dist/react'
 import parse                          from 'html-react-parser'
 import { useState }                   from 'react'
 import { FA2SL } from '@Utils/FA2SL'
@@ -37,12 +38,12 @@ export const useConfirm = (title, Message, confirmButton, cancelButton) => {
     const [queue, setQueue] = useState([])
     const [open, setOpen] = useState(false)
 
-    const confirmIcon = confirmButton?.icon ?? faCheck
+    const confirmIcon = confirmButton?.icon ?? 'check'
     const confirmText = confirmButton?.text ?? 'Yes'
-    const confirmVariant = confirmButton?.variant ?? 'primary'
-    const cancelIcon = cancelButton?.icon ?? faXmark
-    const cancelText = cancelButton?.text ?? 'No'
-    const cancelVariant = cancelButton?.variant ?? 'default'
+    const confirmVariant = confirmButton?.variant ?? 'brand'
+    const cancelIcon = cancelButton?.icon ?? 'xmark'
+    const cancelText = cancelButton?.text ?? 'Cancel'
+    const cancelVariant = cancelButton?.variant ?? ''
 
     const confirm = () => new Promise((resolve, reject) => {
         setQueue(prevQueue => [...prevQueue, {resolve}])
@@ -78,25 +79,25 @@ export const useConfirm = (title, Message, confirmButton, cancelButton) => {
         handleClose()
     }
     const ConfirmationDialog = () => (
-        <SlDialog open={open} onSlRequestClose={handleRequestClose}
-                  onSlAfterHide={() => setOpen(false)}
+        <WaDialog open={open} onWaHide={handleRequestClose}
+                  onWaAfterHide={() => setOpen(false)}
                   className={'lgs-theme'}
         >
             <div slot="label">{parse(title)}</div>
             <Message/>
             <div slot="footer">
                 <div className="buttons-bar">
-                    <SlButton onClick={handleCancel} variant={cancelVariant}>
-                        <SlIcon slot="prefix" library="fa" name={FA2SL.set(cancelIcon)}></SlIcon>
+                    <WaButton onClick={handleCancel} variant={cancelVariant} appearance="outlined">
+                        <WaIcon name={cancelIcon}/>
                         {parse(cancelText)}
-                    </SlButton>
-                    <SlButton variant={confirmVariant} onClick={handleConfirm}>
-                        <SlIcon slot="prefix" library="fa" name={FA2SL.set(confirmIcon)}></SlIcon>
+                    </WaButton>
+                    <WaButton variant={confirmVariant} onClick={handleConfirm} appearance="filled">
+                        <WaIcon name={confirmIcon}/>
                         {parse(confirmText)}
-                    </SlButton>
+                    </WaButton>
                 </div>
             </div>
-        </SlDialog>
+        </WaDialog>
     )
     return [ConfirmationDialog, confirm]
 }

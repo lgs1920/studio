@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-03-12
+ * Last modified: 2026-03-12
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,8 +16,9 @@
 
 import { faTrashAlt, faWarning }                from '@fortawesome/pro-regular-svg-icons'
 import { SlAlert, SlButton, SlDetails, SlIcon } from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                                from '@Utils/FA2SL'
-import React                                    from 'react'
+import { FA2SL }                                             from '@Utils/FA2SL'
+import { WaButton, WaCallout, WaDetails, WaDivider, WaIcon } from '@web.awesome.me/webawesome-pro/dist/react'
+import React                                                 from 'react'
 import { useSnapshot }                          from 'valtio/index'
 import { useConfirm }                           from '../../../Modals/ConfirmUI'
 import './style.css'
@@ -40,39 +41,40 @@ export const RemoveProfile = () => {
         return (
             <div className="manage-profile-ui">
                 {'Are you sure you want to remove your account?'}
-                <SlAlert open variant="danger">
-                    <SlIcon slot="icon" library="fa" name={FA2SL.set(faWarning)}></SlIcon>
+                <WaCallout open variant="danger">
+                    <WaIcon slot="icon" name="warning"/>
                     {'If you confirm your action, you will be redirected to our site.'}<br/>
                     {'None of our data will be stored in your browser.'}<br/>
-                </SlAlert>
+                </WaCallout>
             </div>
         )
     }
 
     const [ConfirmRemoveDialog, confirmRemove] = useConfirm(`Remove My Profile`, ConfirmationDialogMessage,
-                                                            {icon:       faTrashAlt,
+                                                            {
                                                                 text: 'Remove My Profile',
                                                                 variant: 'danger',
+                                                                icon: 'trash-alt',
                                                             })
 
     return (
-        <SlDetails small className={'lgs-theme'}>
+        <WaDetails small className={'lgs-theme'} name="profile-tools">
             <span slot="summary">
-                <SlIcon library="fa" name={FA2SL.set(faTrashAlt)}/> {'Remove My Profile'}
+                <WaIcon name="trash-alt"/> {'Remove Profile'}
             </span>
             <div className="manage-profile-ui">
-                <SlAlert open variant="warning">
-                    <SlIcon slot="icon" library="fa" name={FA2SL.set(faWarning)}></SlIcon>
+                <WaDivider/>
+                <WaCallout open variant="warning" appearance="filled-outlined">
+                    <WaIcon slot="icon" name="warning"/>
                     {'You will delete all the data and databases that your browser has stored on your device in order to manage LGS1920 Studio application.'}<br/>
                     {'It includes journeys, POIS, settings, tokens ...'}<br/>
-                </SlAlert>
+                </WaCallout>
 
-                <SlButton variant="warning" onClick={remove}>
-                    <SlIcon slot="prefix" library="fa"
-                            name={FA2SL.set(faTrashAlt)}></SlIcon>{'Remove My Profile'}
-                </SlButton>
+                <WaButton variant="danger" onClick={remove}>
+                    <WaIcon name="trash-alt"/>{'Remove Profile'}
+                </WaButton>
             </div>
             <ConfirmRemoveDialog/>
-        </SlDetails>
+        </WaDetails>
     )
 }

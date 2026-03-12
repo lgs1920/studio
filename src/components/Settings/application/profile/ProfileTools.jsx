@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-11
- * Last modified: 2026-03-11
+ * Created on: 2026-03-12
+ * Last modified: 2026-03-12
  *
  *
  * Copyright © 2026 LGS1920
@@ -31,7 +31,7 @@ export const ProfileTools = () => {
     return (
         <div className="lgs--details-list">
 
-            <WaDetails small key={'tools-profile'} className={'lgs-theme'} ref={profileDetails}>
+            <WaDetails small key={'tools-profile'} className={'lgs-theme'} ref={profileDetails} open>
             <span slot="summary">
                 <WaIcon name="user-gear" variant={'regular'}/> {'My Profile'}
             </span>
