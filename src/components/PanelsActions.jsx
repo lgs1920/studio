@@ -2,77 +2,33 @@
  *
  * This file is part of the LGS1920/studio project.
  *
- * File: ThemeSelector.jsx
+ * File: PanelsActions.jsx
  *
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-09
- * Last modified: 2026-03-09
+ * Created on: 2026-03-14
+ * Last modified: 2026-03-14
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { WaButton, WaDivider, WaDropdown, WaDropdownItem, WaIcon } from '@web.awesome.me/webawesome-pro/dist/react'
-import React, { useEffect, useState }                              from 'react'
+import ThemeSelector from '@Components/ThemeSelector'
+import React         from 'react'
 
 /**
- * Theme Selector component
+ * Panel Actions component
  * @returns {JSX.Element}
  */
-const ThemeSelector = () => {
-    const [theme, setTheme] = useState(localStorage.getItem('theme') || 'system')
-    const [isDark, setIsDark] = useState(false)
-
-    useEffect(() => {
-        const $root = document.documentElement
-        const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
-
-        const updateTheme = () => {
-            const currentIsDark = theme === 'dark' || (theme === 'system' && mediaQuery.matches)
-            setIsDark(currentIsDark)
-            $root.classList.toggle('wa-dark', currentIsDark)
-            $root.classList.toggle('wa-light', !currentIsDark)
-        }
-
-        updateTheme()
-        localStorage.setItem('theme', theme)
-
-        if (theme === 'system') {
-            mediaQuery.addEventListener('change', updateTheme)
-            return () => mediaQuery.removeEventListener('change', updateTheme)
-        }
-    }, [theme])
-
-    /**
-     * Handle the selection event
-     * @param {CustomEvent} event
-     */
-    const handleSelect = (event) => {
-        setTheme(event.detail.item.value)
-    }
+const PanelActions = ({children}) => {
 
     return (
-        <WaDropdown onWaSelect={handleSelect} slot={'header-actions'} appearance="filled-outlined"
-                    className="lgs--theme-selector">
-            <WaButton slot={'trigger'} appearance="plain" variant={'neutral'}>
-                <WaIcon name={isDark ? 'moon-stars' : 'sun-bright'}/>
-            </WaButton>
-
-            <WaDropdownItem value={'light'}>
-                <WaIcon name={'sun-bright'}/>{' Light '}
-            </WaDropdownItem>
-
-            <WaDropdownItem value={'dark'}>
-                <WaIcon name={'moon-stars'}/>{' Dark '}
-            </WaDropdownItem>
-            <WaDivider/>
-            <WaDropdownItem value={'system'}>
-                <WaIcon name="cog"/>{' System '}
-            </WaDropdownItem>
-        </WaDropdown>
+        <div slot={'header-actions'}>
+            {children}
+            <ThemeSelector/>
+        </div>
     )
 }
 
-export default ThemeSelector
+export default PanelActions

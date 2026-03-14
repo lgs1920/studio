@@ -7,13 +7,14 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-11
- * Last modified: 2026-03-11
+ * Created on: 2026-03-14
+ * Last modified: 2026-03-14
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
+import PanelActions from '@Components/PanelsActions'
 import ThemeSelector                                                  from '@Components/ThemeSelector'
 import { SETTINGS_EDITOR_DRAWER }                                     from '@Core/constants'
 import { faPaintbrushPencil, faScrewdriverWrench }                    from '@fortawesome/pro-solid-svg-icons'
@@ -49,7 +50,7 @@ export const Panel = () => {
                               onSlRequestClose={closePanel}
                               contained
                               className={'lgs-theme'}>
-                        <ThemeSelector/>
+                        <PanelActions/>
                         <WaTabGroup>
                             <WaTab panel="tab-tools">
                                 <WaIcon name="screwdriver-wrench" variant="regular"/> {'Global Settings'}

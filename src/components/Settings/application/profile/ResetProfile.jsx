@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-12
- * Last modified: 2026-03-12
+ * Created on: 2026-03-14
+ * Last modified: 2026-03-14
  *
  *
  * Copyright © 2026 LGS1920
@@ -69,22 +69,22 @@ export const ResetProfile = () => {
                 <ul>
                     {account.reset.lgs1920 &&
                         <li key={'reset-profile-lgs1920-confirm'}>
-                            <WaIcon name="square-check"/> {'My journeys, POIs,...'}
+                            <WaIcon name="square-check" variant="regular"/> {'My journeys, POIs,...'}
                         </li>
                     }
                     {account.reset.widgets &&
                         <li key={'reset-profile-widgets-confirm'}>
-                            <WaIcon name="box"/> {'All my widgets'}
+                            <WaIcon name="box" variant="regular"/> {'All my widgets'}
                         </li>
                     }
                     {account.reset.settings &&
                         <li key={'reset-profile-settings-confirm'}>
-                            <WaIcon name="square-check"/> {'My settings'}
+                            <WaIcon name="square-check" variant="regular"/> {'My settings'}
                         </li>
                     }
                     {account.reset.vault &&
                         <li key={'reset-profile-vault-confirm'}>
-                            <WaIcon name="square-check"/> {'My Tokens'}
+                            <WaIcon name="square-check" variant="regular"/> {'My Tokens'}
                         </li>
                     }
                 </ul>
@@ -111,7 +111,7 @@ export const ResetProfile = () => {
     return (
         <WaDetails small className={'lgs-theme'} name="profile-tools">
             <span slot="summary">
-                <WaIcon name="arrows-rotate"/> {'Profile Reset'}
+                <WaIcon name="arrows-rotate" variant="regular"/> {'Profile Reset'}
             </span>
             <div className="manage-profile-ui">
                 <WaDivider/>
@@ -171,7 +171,7 @@ export const ResetProfile = () => {
                     onClick={reset}
                     disabled={isResetDisabled}
                 >
-                    <WaIcon name="arrows-rotate"/>
+                    <WaIcon name="arrows-rotate" variant="regular"/>
                     {'Reset Profile'}
                 </WaButton>
             </div>

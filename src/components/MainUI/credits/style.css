@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-08
- * Last modified: 2026-03-08
+ * Created on: 2026-03-14
+ * Last modified: 2026-03-14
  *
  *
  * Copyright © 2026 LGS1920
@@ -60,10 +60,6 @@
 
 .credits-bar .cesium-credits img {
     height: calc(100% - 2 * var(--padding));
-}
-
-.credits-bar wa-divider {
-    --color: var('red')
 }
 
 .lgs-credits {

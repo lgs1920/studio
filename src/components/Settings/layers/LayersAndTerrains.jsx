@@ -7,35 +7,25 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-03-14
+ * Last modified: 2026-03-14
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { faRegularSlidersSlash } from '@awesome.me/kit-eb5c406148/icons/kit/custom'
-import { LGSScrollbars }         from '@Components/MainUI/LGSScrollbars'
 import { ALL, BASE_ENTITY, FREE_ANONYMOUS_ACCESS, OVERLAY_ENTITY, TERRAIN_ENTITY, UNLOCKED } from '@Core/constants'
 import {
-    faArrowDownAZ,
-    faArrowDownBigSmall,
-    faArrowDownWideShort,
-    faArrowDownZA,
-    faFilter,
-    faFilterSlash,
-    faGrid2,
-    faList,
-    faSliders,
-}                                from '@fortawesome/pro-regular-svg-icons'
-import { SlIconButton, SlTab, SlTabGroup, SlTabPanel, SlTooltip } from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                 from '@Utils/FA2SL'
-import { useSnapshot }           from 'valtio'
-import { ToggleStateIcon }       from '../../ToggleStateIcon'
-import { FilterEntities }        from './FilterEntities'
-import { LayerSettings }         from './LayerSettings'
-import { SelectEntity }          from './SelectEntity'
-import { TokenLayerModal }       from './TokenLayerModal'
+    WaButton, WaIcon, WaTab, WaTabGroup, WaTabPanel, WaTooltip,
+}                          from '@web.awesome.me/webawesome-pro/dist/react'
+import { useSnapshot }     from 'valtio'
+import {
+    ToggleStateIcon,
+}                          from '../../ToggleStateIcon'
+import { FilterEntities }  from './FilterEntities'
+import { LayerSettings }   from './LayerSettings'
+import { SelectEntity }    from './SelectEntity'
+import { TokenLayerModal } from './TokenLayerModal'
 
 // Filter operator constants
 const AND = '&'
@@ -113,10 +103,10 @@ export const LayersAndTerrains = () => {
                     list.push(layer)
                 }
             }
-        });
+        })
 
         return list.sort(sortByProvider)
-    };
+    }
 
     /**
      * Sorts layers by provider or name based on filter settings
@@ -179,70 +169,97 @@ export const LayersAndTerrains = () => {
         <div id="layers-and-terrains-settings">
             <FilterEntities/>
             <LayerSettings visible={canViewSettings}/>
-            <SlTabGroup>
-                <SlTab slot="nav" panel="tab-bases" onClick={() => ($editor.layer.selectedType = BASE_ENTITY)}>
+            <WaTabGroup>
+                <WaTab panel="tab-bases" onClick={() => ($editor.layer.selectedType = BASE_ENTITY)}>
                     {'Bases'}
-                </SlTab>
-                <SlTab slot="nav" panel="tab-overlays" onClick={() => ($editor.layer.selectedType = OVERLAY_ENTITY)}>
+                </WaTab>
+                <WaTab panel="tab-overlays" onClick={() => ($editor.layer.selectedType = OVERLAY_ENTITY)}>
                     {'Overlays'}
-                </SlTab>
-                <SlTab slot="nav" panel="tab-terrains" onClick={() => ($editor.layer.selectedType = TERRAIN_ENTITY)}>
+                </WaTab>
+                <WaTab panel="tab-terrains" onClick={() => ($editor.layer.selectedType = TERRAIN_ENTITY)}>
                     {'Terrains'}
-                </SlTab>
+                </WaTab>
 
-                <div slot="nav" id="layers-and-terrains-filter">
-                    <SlTooltip hoist content={layers.filter.thumbnail ? 'Display List' : 'Display Thumbnails'}>
-                        <ToggleStateIcon
-                            icons={{shown: faGrid2, hidden: faList}}
-                            initial={layers.filter.thumbnail}
-                            onChange={handleThumbnail}
-                        />
-                    </SlTooltip>
-                    <SlTooltip hoist content={layers.filter.provider ? 'By Layer' : 'By Provider'}>
-                        <ToggleStateIcon
-                            icons={{shown: faArrowDownWideShort, hidden: faArrowDownBigSmall}}
-                            initial={layers.filter.provider}
-                            onChange={handleProvider}
-                        />
-                    </SlTooltip>
-                    <SlTooltip hoist content={layers.filter.alphabetic ? 'Reverse Alphabetic' : 'Alphabetic'}>
-                        <ToggleStateIcon
-                            icons={{shown: faArrowDownAZ, hidden: faArrowDownZA}}
-                            initial={layers.filter.alphabetic}
-                            onChange={handleAlphabetic}
-                        />
-                    </SlTooltip>
-                    <SlTooltip hoist content={editor.openSettings ? 'Hide Settings' : 'Show Settings'}>
-                        <SlIconButton
-                            library="fa"
-                            disabled={!canViewSettings()}
-                            name={FA2SL.set(editor.openSettings && canViewSettings() ? faRegularSlidersSlash : faSliders)}
-                            onClick={handleSettings}
-                            className={layers.filter.active ? 'layer-settings-active' : 'layer-settings-inactive'}
-                        />
-                    </SlTooltip>
-                    <SlTooltip hoist content={editor.openFilter ? 'Hide Filters' : 'Show Filters'}>
-                        <SlIconButton
-                            library="fa"
-                            name={FA2SL.set(editor.openFilter ? faFilterSlash : faFilter)}
-                            onClick={handleFilter}
-                            className={layers.filter.active ? 'layer-filter-active' : 'layer-filter-inactive'}
-                        />
-                    </SlTooltip>
+                <div id="layers-and-terrains-filter" slot="nav">
+                    <WaTooltip for="lgs--layers-list-or-grid">
+                        {layers.filter.thumbnail ? 'Display List' : 'Display Thumbnails'}
+                    </WaTooltip>
+                    <ToggleStateIcon
+                        id="lgs--layers-list-or-grid"
+                        icons={{shown: 'grid-2', hidden: 'list'}}
+                        initial={layers.filter.thumbnail}
+                        onChange={handleThumbnail}
+                        buttonVariant="brand"
+                        iconVariant="regular"
+                        iconFamily="regular"
+                    />
+
+                    <WaTooltip for="lgs--layers-layers-or-providers">
+                        {layers.filter.provider ? 'By Layer' : 'By Provider'}
+                    </WaTooltip>
+                    <ToggleStateIcon
+                        id="lgs--layers-layers-or-providers"
+                        icons={{shown: 'arrow-down-wide-short', hidden: 'arrow-down-big-small'}}
+                        initial={layers.filter.provider}
+                        onChange={handleProvider}
+                        buttonVariant="brand"
+                        iconVariant="regular"
+                        iconFamily="regular"
+                    />
+
+                    <WaTooltip for="lgs--layers-alphabetic-order">
+                        {layers.filter.alphabetic ? 'Reverse Alphabetic' : 'Alphabetic'}
+                    </WaTooltip>
+                    <ToggleStateIcon
+                        id="lgs--layers-alphabetic-order"
+                        icons={{shown: 'arrow-down-a-z', hidden: 'arrow-down-z-a'}}
+                        initial={layers.filter.alphabetic}
+                        onChange={handleAlphabetic}
+                        buttonVariant="brand"
+                        iconVariant="regular"
+                        iconFamily="regular"
+                    />
+
+                    <WaTooltip for="lgs--layers-settings-button">
+                        {editor.openSettings ? 'Hide Settings' : 'Show Settings'}
+                    </WaTooltip>
+                    <WaButton id="lgs--layers-settings-button"
+                              disabled={!canViewSettings()}
+                              variant="brand"
+                              appearance="plain"
+                              onClick={handleSettings}
+                              className={layers.filter.active ? 'layer-settings-active' : 'layer-settings-inactive'}>
+                        <WaIcon id="lgs--layers-settings-button"
+                                variant={'regular'}
+                                name={editor.openSettings && canViewSettings() ? 'regular-sliders-slash' : 'sliders'}/>
+                    </WaButton>
+
+                    <WaTooltip for="lgs--layers-filter-button">
+                        {`${editor.openFilter ? 'Hide Filters' : 'Show Filters'}${layers.filter.active ? ': Filter is active' : ''}`}
+                    </WaTooltip>
+                    <WaButton id="lgs--layers-filter-button"
+                              appearance={layers.filter.active ? 'filled' : 'plain'}
+                              onClick={handleFilter}
+                              variant={layers.filter.active ? 'danger' : 'brand'}>
+                        <WaIcon variant="regular"
+                                name={editor.openFilter ? 'filter-slash' : 'filter'}/>
+                    </WaButton>
+
                 </div>
 
-                <SlTabPanel name="tab-bases">
+                <WaTabPanel name="tab-bases">
                     <SelectEntity key={getEntityKey(BASE_ENTITY)} type={BASE_ENTITY} list={buildList(BASE_ENTITY)}/>
-                </SlTabPanel>
-                <SlTabPanel name="tab-overlays">
+                </WaTabPanel>
+                <WaTabPanel name="tab-overlays">
                     <SelectEntity key={getEntityKey(OVERLAY_ENTITY)} type={OVERLAY_ENTITY}
                                   list={buildList(OVERLAY_ENTITY)}/>
-                </SlTabPanel>
-                <SlTabPanel name="tab-terrains">
+                </WaTabPanel>
+                <WaTabPanel name="tab-terrains">
                     <SelectEntity key={getEntityKey(TERRAIN_ENTITY)} type={TERRAIN_ENTITY}
                                   list={buildList(TERRAIN_ENTITY)}/>
-                </SlTabPanel>
-            </SlTabGroup>
+                </WaTabPanel>
+            </WaTabGroup>
+
             <TokenLayerModal/>
         </div>
     )

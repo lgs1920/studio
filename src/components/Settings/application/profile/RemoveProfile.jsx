@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-12
- * Last modified: 2026-03-12
+ * Created on: 2026-03-14
+ * Last modified: 2026-03-14
  *
  *
  * Copyright © 2026 LGS1920
@@ -42,7 +42,7 @@ export const RemoveProfile = () => {
             <div className="manage-profile-ui">
                 {'Are you sure you want to remove your account?'}
                 <WaCallout open variant="danger">
-                    <WaIcon slot="icon" name="warning"/>
+                    <WaIcon slot="icon" name="warning" variant="regular"/>
                     {'If you confirm your action, you will be redirected to our site.'}<br/>
                     {'None of our data will be stored in your browser.'}<br/>
                 </WaCallout>
@@ -60,18 +60,18 @@ export const RemoveProfile = () => {
     return (
         <WaDetails small className={'lgs-theme'} name="profile-tools">
             <span slot="summary">
-                <WaIcon name="trash-alt"/> {'Remove Profile'}
+                <WaIcon name="trash-alt" variant="regular"/> {'Remove Profile'}
             </span>
             <div className="manage-profile-ui">
                 <WaDivider/>
                 <WaCallout open variant="danger" appearance="filled-outlined">
-                    <WaIcon slot="icon" name="warning"/>
+                    <WaIcon slot="icon" name="warning" variant="regular"/>
                     {'You will delete all the data and databases that your browser has stored on your device in order to manage LGS1920 Studio application.'}<br/>
                     {'It includes journeys, POIS, settings, tokens ...'}<br/>
                 </WaCallout>
 
                 <WaButton variant="danger" onClick={remove}>
-                    <WaIcon name="trash-alt"/>{'Remove Profile'}
+                    <WaIcon name="trash-alt" variant="regular"/>{'Remove Profile'}
                 </WaButton>
             </div>
             <ConfirmRemoveDialog/>

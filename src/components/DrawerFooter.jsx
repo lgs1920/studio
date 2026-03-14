@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-11
- * Last modified: 2026-03-11
+ * Created on: 2026-03-14
+ * Last modified: 2026-03-14
  *
  *
  * Copyright © 2026 LGS1920
@@ -41,7 +41,7 @@ const DrawerFooter = React.memo(() => (
                 target="_blank"
                 href={__.app.buildUrl(lgs?.configuration?.website || 'https://lgs1920.fr')}
                       title={'LGS1920 project Web site'}>
-                <WaIcon name="globe-pointer"/>
+                <WaIcon name="globe-pointer" variant="regular"/>
             </WaButton>
 
             <WaButton appearance="plain" variant="brand"
