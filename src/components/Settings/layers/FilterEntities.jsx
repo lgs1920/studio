@@ -7,25 +7,25 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-03-15
+ * Last modified: 2026-03-15
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { ALL, LOCKED, UNLOCKED, WORLD } from '@Core/constants'
-import { faFilterCircleXmark }          from '@fortawesome/pro-regular-svg-icons'
+import { ALL, LOCKED, UNLOCKED } from '@Core/constants'
 import {
-    SlButton, SlIcon,
-    SlIconButton, SlInput, SlOption, SlRadioButton, SlRadioGroup, SlSelect, SlTooltip,
-}                                       from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                                                         from '@Utils/FA2SL'
-import { useRef, useEffect }            from 'react'
-import { useSnapshot }                                                   from 'valtio/index'
+    WaButton, WaDivider, WaIcon, WaInput, WaOption, WaRadio, WaRadioGroup, WaSelect, WaTooltip,
+} from '@web.awesome.me/webawesome-pro/dist/react'
+import { useRef }                from 'react'
+import { useSnapshot }           from 'valtio/index'
 
+/**
+ * FilterEntities component for managing layer filtering criteria.
+ * Ensures consistent state between filter inputs and the active filter flag.
+ */
 export const FilterEntities = (props) => {
-
     const $editor = lgs.editorSettingsProxy
     const editor = useSnapshot($editor)
 
@@ -33,126 +33,121 @@ export const FilterEntities = (props) => {
     const layers = useSnapshot($layers)
     const _byCountries = useRef(null)
 
+    /**
+     * Re-evaluates the active filter state based on current criteria.
+     */
+    const updateActiveState = () => {
+        const isActive = $layers.filter.byUsage !== ALL ||
+            $layers.filter.byName !== '' ||
+            ($layers.filter.byCountries && $layers.filter.byCountries.length > 0)
+
+        $layers.filter.active = isActive
+    }
+
     const handleUsage = (event) => {
         $layers.filter.byUsage = event.target.value
-        $layers.filter.active = true
+        updateActiveState()
     }
 
     const handleName = (event) => {
         $layers.filter.byName = event.target.value
-
-        if ($layers.filter.byUsage === ALL && $layers.filter.byName === '') {
-            disableFilter(false)
-        }
-        else {
-            $layers.filter.active = true
-        }
+        updateActiveState()
     }
 
     const handleCountries = (event) => {
         $layers.filter.byCountries = event.target.value
+        updateActiveState()
     }
 
-    const disableFilter = (closeFilter = true) => {
+    /**
+     * Resets all filters to initial state.
+     */
+    const disableFilter = () => {
         $layers.filter.byUsage = ALL
         $layers.filter.byName = ''
-        $layers.filter.active = false
         $layers.filter.byCountries = []
-        $editor.openFilter = !closeFilter
+        $layers.filter.active = fals
     }
-    useEffect(() => {
-        const select = _byCountries.current
-        if (!select) {
-            return
-        }
-
-        // Surcharge de la méthode getTag (si disponible)
-        select.getTag = (option, index) => {
-            // Récupérer l'élément du slot prefix
-            const prefixElement = option.querySelector('[slot="prefix"]')
-
-            // Retourner un HTMLElement (sl-tag)
-            const tag = document.createElement('sl-tag')
-            tag.setAttribute('removable', '')
-            tag.setAttribute('size', select.size || 'medium')
-
-            // Ajouter le contenu du prefix cloné (si présent)
-            if (prefixElement) {
-                tag.appendChild(prefixElement.cloneNode(true))
-            }
-
-            // Ajouter le texte de l'option
-            const text = document.createTextNode(option.getTextLabel())
-            tag.appendChild(text)
-
-            return tag
-        }
-
-        // Forcer un rafraîchissement pour appliquer les nouveaux tags
-        select.requestUpdate()
-
-        return () => {
-            // Nettoyage si nécessaire
-            delete select.getTag
-        }
-    }, [$layers.filter.byCountries])
-
+    /**
+     * Closes the settings panel and resets modification flags.
+     */
+    const close = () => {
+        $editor.openFilter = false
+    }
     return (
         <>
-            {
-                editor.openFilter &&
-                <div id="filter-entities" key={'filter-entities'} className="lgs-slide-down lgs-card">
-                    <div>
-                    <SlTooltip content={'By Layer Usage'}>
-                        <SlRadioGroup name="a"
-                                      onSlChange={handleUsage}
-                                      value={layers.filter.byUsage} size="small">
-                            <SlRadioButton value={ALL} size="small">{'All'}</SlRadioButton>
-                            <SlRadioButton value={UNLOCKED} size="small">{'Unlocked'}</SlRadioButton>
-                            <SlRadioButton value={LOCKED} size="small">{'Locked'}</SlRadioButton>
-                        </SlRadioGroup>
-                    </SlTooltip>
-                    </div>
+            {editor.openFilter &&
+                <wa-card id={'filter-entities'} key={'filter-entities'} className={'lgs-slide-down'}>
+                    <h3 slot={'header'}>
+                        <WaIcon name="filter" variant="regular"/> {'Filter Entities'}
+                    </h3>
+                    <WaTooltip for={'lgs--layers-filter-by-usage'}>{'By Layer Usage'}</WaTooltip>
+                    <WaRadioGroup name={'a'} orientation={'horizontal'} label-at-start
+                                  id={'lgs--layers-filter-by-usage'}
+                                  onChange={handleUsage}
+                                  value={layers.filter.byUsage} size={'small'}>
+                        <span slot={'label'}>{'By Usage'}</span>
+                        <WaRadio value={ALL} appearance={'button'}>{'All'}</WaRadio>
+                        <WaRadio value={UNLOCKED} appearance={'button'}>{'Unlocked'}</WaRadio>
+                        <WaRadio value={LOCKED} appearance={'button'}>{'Locked'}</WaRadio>
+                    </WaRadioGroup>
 
-                    <SlTooltip content={'By Countries'}>
-                        <SlSelect id={'filter-by-countries'} hoist multiple ref={_byCountries}
-                                  onSlChange={handleCountries} size="small"
-                                  value={layers.filter.byCountries ?? []}
-                                  key={'filter-by-countries'}
-                                  placeholder={'By countries'}
-                        >
-                            {__.layersAndTerrainManager.countries.map((country) => {
-                                const info = __.countries.get(country)
-                                if (info) {
-                                    return <SlOption key={info.code} value={info.code}>
+                    <WaTooltip for={'lgs--layers-filter-by-countries'}>{'By Countries'}</WaTooltip>
+                    <WaSelect multiple with-clear ref={_byCountries}
+                              onChange={handleCountries} size={'small'}
+                              id={'lgs--layers-filter-by-countries'}
+                              value={layers.filter.byCountries ?? []}
+                              key={'filter-by-countries'}
+                              placeholder={'By countries'}
+                    >
+                        {__.layersAndTerrainManager.countries.map((country) => {
+                            const info = __.countries.get(country)
+                            if (info) {
+                                return (
+                                    <WaOption key={info.code} value={info.code}>
                                         <img src={__.ui.ui.countryFlag(info.code)} alt={info.name}
-                                             slot="prefix" className="country-flag"/>
+                                             slot={'start'} className={'country-flag'}/>
                                         {info.name}
-                                    </SlOption>
-                                }
-                            })
+                                    </WaOption>
+                                )
                             }
-                        </SlSelect>
-                    </SlTooltip>
+                            return null
+                        })}
+                    </WaSelect>
+
                     <div>
-                    <SlTooltip content={'By Layer Name'}>
-                        <SlInput placeholder={'By name'} id={'filter-by-name'}
-                                 onSlInput={handleName} size="small"
+                        <WaTooltip for={'lgs--layers-filter-by-name'}>{'By Layer Name'}</WaTooltip>
+                        <WaInput placeholder={'By name'}
+                                 id={'lgs--layers-filter-by-name'}
+                                 onInput={handleName} size={'small'}
                                  value={layers.filter.byName}
                                  key={'filter-by-name'}
                         />
-                    </SlTooltip>
-                        <SlTooltip content={'Reset Filters'}>
-                            <SlButton size="small" onClick={disableFilter}>
-                                <SlIcon library="fa" slot="prefix" size={'small'}
-                                        name={FA2SL.set(faFilterCircleXmark)}
-                                        disabled={layers.filter.byUsage === ALL && layers.filter.byName === ''}/>
-                                {'Reset Filters'}
-                            </SlButton>
-                        </SlTooltip>
-                    </div>
 
-                </div>
+
+                    </div>
+                    <WaDivider/>
+                    <div className={'buttons-bar'}>
+                        <WaTooltip for={'lgs--reset-layer-settings-to-factory'}>{'Reset Filters'}</WaTooltip>
+                        <WaButton id={'lgs--reset-filter-to-factory'}
+                                  size={'small'} onClick={disableFilter}
+                                  appearance={'outlined'}
+                                  variant={'brand'}
+                        >
+                            <WaIcon size={'small'} name={'arrow-rotate-left'}/> {'Reset'}
+                        </WaButton>
+
+                        <div className={'buttons-bar'}>
+                            <WaTooltip for={'lgs--close-layer-settings'}>{'Close settings'}</WaTooltip>
+                            <WaButton id={'lgs--close-layer-settings'}
+                                      size={'small'}
+                                      variant={'brand'}
+                                      onClick={close}>
+                                <WaIcon size={'small'} name={'xmark'} variant={'regular'}/> {'Close'}
+                            </WaButton>
+                        </div>
+                    </div>
+                </wa-card>
             }
         </>
     )

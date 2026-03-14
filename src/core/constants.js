@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-11
- * Last modified: 2026-03-11
+ * Created on: 2026-03-14
+ * Last modified: 2026-03-14
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,8 +16,8 @@
 
 import { CESIUM_EVENTS as $CESIUM_EVENTS } from '@Core/events/cesiumEvents'
 import {
-    faBuildingColumns, faBuildings, faCampground, faCross, faCrown, faFlagPennant, faFlagSwallowtail, faFort,
-    faHouseBlank, faLock, faMountains, faPlaceOfWorship, faSquareParking, faTablePicnic, faTelescope, faUnlock, faUser,
+    faBuildingColumns, faBuildings, faCampground, faCross, faFlagPennant, faFlagSwallowtail, faFort, faHouseBlank,
+    faMountains, faPlaceOfWorship, faSquareParking, faTablePicnic, faTelescope,
 }                                          from '@fortawesome/duotone-regular-svg-icons'
 import { faCompass, faRoute, faText }      from '@fortawesome/pro-regular-svg-icons'
 import { faChartFft, faGavel }             from '@fortawesome/pro-solid-svg-icons'
@@ -160,27 +160,27 @@ export const HIGH_TERRAIN_PRECISION = 2
 
 export const ACCESS_ICONS = {
     [FREEMIUM_ACCESS]:       {
-        icon: faCrown,
-        text: 'Freemium Access',
+        icon: 'crown',
+        text: 'Freemium Access - Click to unlock',
     },
     [PREMIUM_ACCESS]:        {
-        icon: faCrown,
-        text: 'Premium Access',
+        icon: 'crown',
+        text: 'Premium Access - Click to unlock',
     },
     [FREE_ANONYMOUS_ACCESS]: {
-        icon: faUnlock,
+        icon: 'unlock',
         text: '',
     },
     [FREE_ACCOUNT_ACCESS]:   {
-        icon: faUser,
-        text: 'Need account',
+        icon: 'user',
+        text: 'Need account - Click to Sign Up',
     },
     [UNLOCKED_ACCESS]:       {
-        icon: faUnlock,
+        icon: 'unlock',
         text: 'Unlocked',
     },
     [LOCKED_ACCESS]:         {
-        icon: faLock,
+        icon: 'lock',
         text: 'locked',
     },
 }

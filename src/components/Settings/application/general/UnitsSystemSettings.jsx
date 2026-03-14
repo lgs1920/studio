@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-11
- * Last modified: 2026-03-11
+ * Created on: 2026-03-14
+ * Last modified: 2026-03-14
  *
  *
  * Copyright © 2026 LGS1920
@@ -35,7 +35,7 @@ export const UnitsSystemSettings = (props) => {
 
     return (
         <>
-            <span slot="summary"><WaIcon name="ruler"/> {'Units System'}</span>
+            <span slot="summary"><WaIcon name="ruler" variant="regular"/> {'Units System'}</span>
             <WaDivider/>
             <div className="drawer-horizontal-line">
                 <WaRadioGroup value={us.current}

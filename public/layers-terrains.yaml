@@ -424,12 +424,12 @@ providers:
 
         usage:
           type: freemium
-          doc: 'https://cloud.maptiler.com/maps/winter-v2/'
+          doc: 'https://cloud.maptiler.com/maps/winter-v4/'
           signin: 'https://cloud.maptiler.com/maps/'
           name: key
 
         tile: maptiler
-        url: 'https://api.maptiler.com/maps/winter-v2/256/{z}/{x}/{y}@2x.png?{%authent%}'
+        url: 'https://api.maptiler.com/maps/winter-v4/256/{z}/{x}/{y}@2x.png?{%authent%}'
         doc: ''
         type: base
 

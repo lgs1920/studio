@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-12
- * Last modified: 2026-03-12
+ * Created on: 2026-03-14
+ * Last modified: 2026-03-14
  *
  *
  * Copyright © 2026 LGS1920
@@ -40,10 +40,10 @@ export const useConfirm = (title, Message, confirmButton, cancelButton) => {
 
     const confirmIcon = confirmButton?.icon ?? 'check'
     const confirmText = confirmButton?.text ?? 'Yes'
-    const confirmVariant = confirmButton?.variant ?? 'brand'
+    const confirmVariant = confirmButton?.variant ? confirmButton?.variant : 'brand'
     const cancelIcon = cancelButton?.icon ?? 'xmark'
     const cancelText = cancelButton?.text ?? 'Cancel'
-    const cancelVariant = cancelButton?.variant ?? ''
+    const cancelVariant = cancelButton?.variant ? cancelButton?.variant : ''
 
     const confirm = () => new Promise((resolve, reject) => {
         setQueue(prevQueue => [...prevQueue, {resolve}])
@@ -88,11 +88,11 @@ export const useConfirm = (title, Message, confirmButton, cancelButton) => {
             <div slot="footer">
                 <div className="buttons-bar">
                     <WaButton onClick={handleCancel} variant={cancelVariant} appearance="outlined">
-                        <WaIcon name={cancelIcon}/>
+                        <WaIcon name={cancelIcon} variant="regular"/>
                         {parse(cancelText)}
                     </WaButton>
-                    <WaButton variant={confirmVariant} onClick={handleConfirm} appearance="filled">
-                        <WaIcon name={confirmIcon}/>
+                    <WaButton variant={confirmVariant} onClick={handleConfirm}>
+                        <WaIcon name={confirmIcon} variant="regular"/>
                         {parse(confirmText)}
                     </WaButton>
                 </div>

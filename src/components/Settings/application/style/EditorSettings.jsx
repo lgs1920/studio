@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-11
- * Last modified: 2026-03-11
+ * Created on: 2026-03-14
+ * Last modified: 2026-03-14
  *
  *
  * Copyright © 2026 LGS1920
@@ -61,7 +61,7 @@ export const EditorSettings = (props) => {
                     <WaButton onClick={resetToolbarOpacity}
                               size="small"
                               appearance="plain" variant="brand">
-                        <WaIcon name="arrows-rotate" variant="brand" id={'toolbars-opacity-reset'}>
+                        <WaIcon name="arrows-rotate" variant="regular" id={'toolbars-opacity-reset'}>
                         </WaIcon>
                     </WaButton>
                     <WaSlider value={toolbars.opacity * 1.0}

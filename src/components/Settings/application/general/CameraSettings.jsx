@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-12
- * Last modified: 2026-03-12
+ * Created on: 2026-03-14
+ * Last modified: 2026-03-14
  *
  *
  * Copyright © 2026 LGS1920
@@ -149,7 +149,7 @@ export const CameraSettings = (props) => {
     return (
         <>
             <span slot="summary">
-                <FontAwesomeIcon icon={faVideo}/>
+                <WaIcon name="video" variant="regular"/>
                 {' Camera Settings '}
             </span>
             <WaDivider/>

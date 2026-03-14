@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-12
- * Last modified: 2026-03-12
+ * Created on: 2026-03-14
+ * Last modified: 2026-03-14
  *
  *
  * Copyright © 2026 LGS1920
@@ -80,7 +80,7 @@
 
     --lgs-input-height-s: 1.5rem;
     --lgs-border-width-s: 1px;
-    --lgs-border-s: var(--lgs-border-width-s) solid var(--sl-color-gray-400);
+    --lgs-border-s: var(--lgs-border-width-s) solid var(--wa-color-surface-border);
 
     /* === LIGHT COLOR === */
     --lgs-light-color: hsla(39 100% 87% / 1);
@@ -253,7 +253,6 @@ body {
         & li {
             padding-left: 0;
         }
-
     }
 }
 
@@ -286,7 +285,7 @@ canvas {
     gap: var(--lgs-gutter-s);
 }
 
-.wa-button::part(base):hover:not(.button--disabled) {
+.wa-button:not(.button--disabled):hover::part(base) {
     color: var(--lgs-button-hover-color);
     border-color: var(--lgs-button-border-hover-color);
     background-color: var(--lgs-button-bg-hover-color);
@@ -399,7 +398,7 @@ sl-menu-item::part(spinner) {
     font-size: var(--lgs-font-size-m);
 }
 
-sl-menu-item::part(spinner)::part(base) {
+sl-menu-item::part(spinner) {
     margin-right: 2px
 }
 
@@ -574,11 +573,25 @@ wa-drawer:not([placement="bottom"]):not([placement="top"]) wa-tab-panel::part(ba
  ******************************************************************************/
 
 wa-card {
+    box-shadow: none;
     --wa-panel-border-radius: var(--lgs-border-radius-s);
 }
 
 wa-card::part(body) {
+    display: flex;
+    padding: var(--lgs-gutter-s);
     --spacing: var(--lgs-gutter-s);
+}
+
+wa-card.lgs--card-hoverable:hover {
+    outline: 2px solid var(--wa-color-brand-50);
+    outline-offset: 2px;
+    box-shadow: var(--wa-shadow-l);
+}
+
+wa-card.lgs--card-selected {
+    outline: 2px solid var(--wa-color-brand);
+    outline-offset: 2px;
 }
 
 .lgs-card, .lgs-card::part(base), .lgs-one-line-card, .lgs-one-line-card::part(base) {
@@ -872,9 +885,6 @@ wa-details::part(base) {
     border-radius: var(--lgs-border-radius-s);
 }
 
-wa-details[appearance="outlined"]:hover::part(base)
-
-)
 details {
     border-color: var(--wa-color-brand-fill-quiet);;
 }
@@ -895,10 +905,6 @@ wa-details > wa-divider {
     margin-bottom: 0
 }
 
-wa-details::part(content) svg {
-    margin-right: var(--lgs-gutter-s);
-}
-
 wa-details [slot="prefix"], wa-details [slot="suffix"] {
     margin-right: 0;
 }
@@ -907,24 +913,6 @@ wa-details [slot="prefix"], wa-details [slot="suffix"] {
     display: flex;
     flex-direction: column;
     gap: var(--lgs-gutter-xs);
-}
-
-/*******************************************************************************
- * Dropdowns
- ******************************************************************************/
-
-.dropdown-trigger-icon {
-    border: 1px solid;
-    background-color: var(--sl-color-neutral-0);
-    border-color: var(--sl-input-border-color);
-    color: var(--sl-color-neutral-700);
-    border-radius: var(--lgs-border-radius-s);
-}
-
-.dropdown-trigger-icon:hover {
-    background-color: var(--sl-color-primary-50);
-    border-color: var(--sl-color-primary-300);
-    color: var(--sl-color-primary-700);
 }
 
 /*******************************************************************************
@@ -1026,9 +1014,6 @@ wa-input, wa-number-input {
 
 wa-input.lgs--short-input::part(input), wa-number-input.lgs--short-input::part(input) {
     width: 3rem;
-}
-
-wa-number-input {
     padding: 0
 }
 
@@ -1088,9 +1073,12 @@ wa-number-input[no-end]::part(end), wa-number-input[no-start]::part(start) {
 
 wa-slider {
     width: 100%;
-    --track-color-active: var(--lgs-track-color-active);
-    --track-color-inactive: var(--lgs-track-color-inactive);
-    --thumb-size: var(--lgs-font-size);
+}
+
+wa-slider[size="small"] {
+    --track-size: var(--lgs-gutter-xs);
+    --thumb-width: calc(var(--lgs-gutter) * 1.2);
+    --thumb-height: calc(var(--lgs-gutter) * 1.2);
 }
 
 wa-slider::part(track) {
@@ -1105,32 +1093,36 @@ wa-slider::part(indicator) {
     background-color: var(--wa-color-brand-fill-loud);
 }
 
-.lgs-range {
+.lgs--range-container {
     display: flex;
     align-items: center;
-    justify-content: flex-end;
-}
-
-.lgs-range wa-range [slot='label'] {
     width: 100%;
-}
-
-.lgs-range wa-range::part(form-control-label) {
-    display: flex;
-    align-items: center;
-    flex: 1;
-    flex-direction: row;
-    justify-content: space-between;
     gap: var(--lgs-gutter-s);
 }
 
-.lgs-range sl-input::part(form-control-input) {
-    width: 3.5rem;
-    margin-left: auto;
+.lgs--range-label {
+
+    overflow: hidden;
+    flex: 0 0 30%;
+    white-space: nowrap;
+    text-overflow: ellipsis;
 }
 
-.lgs-range sl-input::part(input) {
-    padding: 0 var(--lgs-gutter-xs);
+.lgs--range-controls {
+    display: flex;
+    align-items: center;
+    flex: 1;
+    gap: var(--lgs-gutter-s);
+}
+
+.lgs--range-slider {
+    flex: 1;
+    margin: 0 var(--lgs-gutter);
+}
+
+/* Remove default margins from WebAwesome components if necessary */
+.lgs--range-slider::part(base) {
+    margin: 0;
 }
 
 /*******************************************************************************
@@ -1704,6 +1696,4 @@ hr {
 
 .lgs-journey-metrics-origine-user sl-icon-button::part(base) {
     color: var(--lgs-warning-color) !important;
-}
-
 }

@@ -7,22 +7,20 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-03-14
+ * Last modified: 2026-03-14
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { faEye, faEyeSlash }          from '@fortawesome/pro-regular-svg-icons'
-import { SlIconButton, SlTooltip }                                from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                      from '@Utils/FA2SL'
+import { WaButton, WaIcon } from '@web.awesome.me/webawesome-pro/dist/react'
 import React, { memo, useCallback, useEffect, useMemo, useState } from 'react'
 
 // Default icons - pre-calculated for better performance
 const DEFAULT_ICONS = {
-    false: faEye,
-    true:  faEyeSlash,
+    false: 'eye',
+    true:  'eyeSlash',
 }
 
 /**
@@ -45,11 +43,15 @@ export const ToggleStateIcon = memo((props) => {
               initial   = true,
               icons: customIcons,
               id,
+              appearance,
               style,
-              size      = '',
+              size          = false,
               className = '',
               tooltip,
               disabled  = false,
+              buttonVariant = 'brand',
+              iconVariant   = 'regular',
+              family        = false,
               ...restProps
           } = props
 
@@ -94,18 +96,10 @@ export const ToggleStateIcon = memo((props) => {
         const currentIcon = icons[state]
         if (!currentIcon) {
             console.error('ToggleStateIcon: Current icon is undefined for state:', state)
-            return FA2SL.set(DEFAULT_ICONS[state])
+            return DEFAULT_ICONS[state]
         }
-        return FA2SL.set(currentIcon)
+        return currentIcon
     }, [icons, state])
-
-    // Memoize tooltip content
-    const tooltipContent = useMemo(() => {
-        if (!tooltip) {
-            return null
-        }
-        return tooltip[state] || tooltip[state ? 'true' : 'false']
-    }, [tooltip, state])
 
     // Optimized toggle handler
     const toggleState = useCallback(async (event) => {
@@ -133,31 +127,26 @@ export const ToggleStateIcon = memo((props) => {
         setState(initial)
     }, [initial])
 
-    // Memoize the button component
     const buttonComponent = useMemo(() => (
-        <SlIconButton
-            library="fa"
+        <WaButton
             name={currentIconName}
             size={size}
             disabled={disabled}
             onClick={toggleState}
             className={`toggle-state-icon-${state}`}
+            {...(size && {size})}
             {...(id && {id})}
             {...(style && {style})}
             {...restProps}
-        />
+            appearance={appearance ?? 'plain'}
+            variant={buttonVariant}
+        >
+            <WaIcon name={currentIconName}
+                    {...(family && {family})}
+                    variant={iconVariant}/>
+        </WaButton>
     ), [currentIconName, size, disabled, toggleState, state, id, style, restProps])
 
-    // Render with or without tooltip
-    if (tooltipContent) {
-        return (
-            <div className={`toggle-state-icon ${className} ${size}`}>
-                <SlTooltip content={tooltipContent}>
-                    {buttonComponent}
-                </SlTooltip>
-            </div>
-        )
-    }
 
     return (
         <div className={`toggle-state-icon ${className} ${size}`}>

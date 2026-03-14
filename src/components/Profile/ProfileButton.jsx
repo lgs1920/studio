@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-09
- * Last modified: 2026-03-09
+ * Created on: 2026-03-14
+ * Last modified: 2026-03-14
  *
  *
  * Copyright © 2026 LGS1920
@@ -100,7 +100,7 @@ export const ProfileButton = (props) => {
                         variant={'brand'}
                         appearance="Filled"
                     >
-                        <WaIcon name="chart-line"/>
+                        <WaIcon name="chart-line" variant="regular"/>
                     </WaButton>
                 </>
             )}
