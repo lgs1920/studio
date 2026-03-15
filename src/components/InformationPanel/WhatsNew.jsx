@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-08
- * Last modified: 2026-03-08
+ * Created on: 2026-03-15
+ * Last modified: 2026-03-15
  *
  *
  * Copyright © 2026 LGS1920
@@ -81,7 +81,7 @@ export const WhatsNew = () => {
                                open={file.open}
                                key={file.name}
                                name="whats-new-list"
-                               className={file.open ? 'wa-details-open' : ''}
+                               className={`lgs--details-hoverable ${file.open ? 'wa-details-open' : ''}`}
                     >
                         <span slot="summary"><strong>{file.version}</strong> - {file.date}</span>
                         <WaDivider/>

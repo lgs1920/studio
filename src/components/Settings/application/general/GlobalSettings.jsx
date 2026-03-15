@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-11
- * Last modified: 2026-03-11
+ * Created on: 2026-03-15
+ * Last modified: 2026-03-15
  *
  *
  * Copyright © 2026 LGS1920
@@ -35,6 +35,7 @@ export const GlobalSettings = () => {
                        small open={false}
                        className={'lgs-theme'}
                        name="global-settings"
+                       className="lgs--details-hoverable"
             >
                 <UnitsSystemSettings/>
             </WaDetails>
@@ -43,6 +44,7 @@ export const GlobalSettings = () => {
                        small open={false}
                        className={'lgs-theme'}
                        name="global-settings"
+                       className="lgs--details-hoverable"
             >
                 <CameraSettings/>
             </WaDetails>

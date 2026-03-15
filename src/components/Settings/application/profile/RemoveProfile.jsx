@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-14
- * Last modified: 2026-03-14
+ * Created on: 2026-03-15
+ * Last modified: 2026-03-15
  *
  *
  * Copyright © 2026 LGS1920
@@ -58,7 +58,7 @@ export const RemoveProfile = () => {
                                                             })
 
     return (
-        <WaDetails small className={'lgs-theme'} name="profile-tools">
+        <WaDetails small className={'lgs--details-hoverable'} name="profile-tools">
             <span slot="summary">
                 <WaIcon name="trash-alt" variant="regular"/> {'Remove Profile'}
             </span>

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-11
- * Last modified: 2026-03-11
+ * Created on: 2026-03-15
+ * Last modified: 2026-03-15
  *
  *
  * Copyright © 2026 LGS1920
@@ -40,7 +40,7 @@ export const Style = () => {
             <WaDetails id="ui-welcome-modal-settings"
                        small open={false}
                        name="style-settings"
-                       className="lgs-theme"
+                       className="lgs--details-hoverable"
             >
                 <WelcomeModal/>
             </WaDetails>
@@ -49,6 +49,7 @@ export const Style = () => {
                        small open={false}
                        className="lgs-theme"
                        name="style-settings"
+                       className="lgs--details-hoverable"
                        onWaHide={handleClose}
             >
                 <MenuSettings ref={_cantClose}/>
@@ -58,13 +59,14 @@ export const Style = () => {
                        small open={false}
                        className="lgs-theme"
                        name="style-settings"
+                       className="lgs--details-hoverable"
             >
                 <CompassSettings/>
             </WaDetails>
 
             <WaDetails id="ui-editor-settings"
                        small open={false}
-                       className="lgs-theme"
+                       className="lgs--details-hoverable"
                        name="style-settings"
             >
                 <EditorSettings/>
@@ -72,7 +74,7 @@ export const Style = () => {
 
             <WaDetails id="ui-pwa-settings"
                        small open={false}
-                       className="lgs-theme"
+                       className="lgs--details-hoverable"
                        name="style-settings"
             >
                 <PWASettings/>
