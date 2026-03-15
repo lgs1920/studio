@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-14
- * Last modified: 2026-03-14
+ * Created on: 2026-03-15
+ * Last modified: 2026-03-15
  *
  *
  * Copyright © 2026 LGS1920
@@ -34,9 +34,11 @@ export const Panel = () => {
     const placement = useSnapshot(lgs.stores.editorSettings.menu).drawer
 
     const closePanel = (event) => {
-        window.dispatchEvent(new Event('resize'))
-        if (__.ui.drawerManager.isCurrent(SETTINGS_EDITOR_DRAWER)) {
-            __.ui.drawerManager.close()
+        if (event.target.tagName === 'WA-DRAWER') {
+            window.dispatchEvent(new Event('resize'))
+            if (__.ui.drawerManager.isCurrent(SETTINGS_EDITOR_DRAWER)) {
+                __.ui.drawerManager.close()
+            }
         }
     }
 
@@ -47,7 +49,7 @@ export const Panel = () => {
                     <WaDrawer id="settings-pane"
                               placement={placement}
                               open={true}
-                              onSlRequestClose={closePanel}
+                              onWaAfterHide={closePanel}
                               contained
                               className={'lgs-theme'}>
                         <PanelActions/>

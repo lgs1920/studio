@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-14
- * Last modified: 2026-03-14
+ * Created on: 2026-03-15
+ * Last modified: 2026-03-15
  *
  *
  * Copyright © 2026 LGS1920
@@ -82,7 +82,7 @@ export const Panel = () => {
     const content = (
         <WaDrawer id={INFO_DRAWER}
                   open={snap.open === INFO_DRAWER}
-                  onSlRequestClose={closePanel}
+                  onWaAfterHide={closePanel}
                   ref={_drawerRef}
                   lightDismiss
                   placement={useSnapshot(lgs.editorSettingsProxy.menu).drawer}

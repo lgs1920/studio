@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-08
- * Last modified: 2026-03-07
+ * Created on: 2026-03-15
+ * Last modified: 2026-03-15
  *
  *
  * Copyright © 2026 LGS1920
@@ -139,7 +139,7 @@ export const Panel = memo(() => {
                     <WaDrawer
                         id={POIS_EDITOR_DRAWER}
                         open={true}
-                        onSlRequestClose={handleRequestClose}
+                        onWaAfterHide={handleRequestClose}
                         onSlAfterHide={closePOIsEditor}
                         contained
                         className="lgs-theme"
