@@ -242,12 +242,16 @@
 }
 
 
-#lgs--layers-manage-authent::part(trigger) wa-icon::part(svg) {
-    height: 24px;
-    color: var(--wa-color-text-normal);
+#lgs--layers-manage-authent::part(trigger) {
+    --height: 24px;
 }
 
-.wa-dark .by-thumbnail #lgs--layers-manage-authent :not(wa-dropdown-item) wa-icon::part(svg) {
+#lgs--layers-manage-authent wa-icon::part(svg) {
+    height: var(--height);
+    color: var(--wa-color-brand-on-normal);
+}
+
+.wa-dark .by-thumbnail #lgs--layers-manage-authent wa-icon::part(svg) {
     color: var(--wa-color-surface-default);
 }
 
