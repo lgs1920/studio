@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-03-16
+ * Last modified: 2026-03-16
  *
  *
  * Copyright © 2026 LGS1920
@@ -45,15 +45,14 @@ export class AppUpdateManager {
     }
 
     #initialize = () => {
-        // Ensure store exists
         if (typeof lgs?.stores?.ui?.appUpdate === 'undefined') {
             return
         }
         this.#store = lgs.stores.ui.appUpdate
         this.#store.promptInstall = this.promptInstall
         this.#store.applyUpdate = this.applyUpdate
+        this.#store.applyUpdateWithCacheReset = this.applyUpdateWithCacheReset
 
-        // Set up callbacks
         this.setInstallCallback(({isAvailable, outcome}) => {
             if (this.#store) {
                 this.#store.isInstallPromptAvailable = isAvailable
@@ -73,9 +72,9 @@ export class AppUpdateManager {
             }
         })
 
-        // Setup event listeners
         this.#setupInstallPromptListener()
         this.#setupSWUpdateListener()
+        this.#setupCacheEventListener()
     }
 
     setInstallCallback = callback => {
@@ -87,7 +86,6 @@ export class AppUpdateManager {
     }
 
     #setupInstallPromptListener = () => {
-        // Check if beforeinstallprompt is supported
         if (!window || !window.addEventListener) {
             return
         }
@@ -113,7 +111,7 @@ export class AppUpdateManager {
     }
 
     promptInstall = async () => {
-        if (!this.#installPrompt || !this.#installPrompt.prompt) {
+        if (!this.#installPrompt?.prompt) {
             return
         }
 
@@ -137,33 +135,32 @@ export class AppUpdateManager {
             if (event.data?.[AppUpdateManager.typeKey] === AppUpdateManager.newVersionMessage) {
                 this.#updateCallback?.({
                                            isAvailable: true,
-                                           tag:         event.data[AppUpdateManager.tagKey] || 'unknown',
+                                           tag: event.data[AppUpdateManager.tagKey] || 'unknown',
                                        })
             }
         }, {passive: true})
 
         navigator.serviceWorker.register('/service-worker-pwa.js')
             .then(registration => {
-                if (!registration.addEventListener) {
-                    return
-                }
                 registration.addEventListener('updatefound', () => {
                     const newWorker = registration.installing
-                    if (newWorker?.addEventListener) {
-                        newWorker.addEventListener('statechange', () => {
-                            if (newWorker.state === 'installed') {
-                                this.#updateCallback?.({
-                                                           isAvailable: true,
-                                                           tag:         'new-version-ready',
-                                                       })
-                            }
-                        }, {passive: true})
-                    }
+                    newWorker?.addEventListener('statechange', () => {
+                        if (newWorker.state === 'installed') {
+                            this.#updateCallback?.({isAvailable: true, tag: 'new-version-ready'})
+                        }
+                    }, {passive: true})
                 }, {passive: true})
             })
             .catch(() => {
-                // Silently handle registration failure
             })
+    }
+
+    #setupCacheEventListener = () => {
+        window.addEventListener('lgs:cache-cleared', () => {
+            if (this.#store) {
+                this.#store.isCachePurged = true
+            }
+        })
     }
 
     applyUpdate = async () => {
@@ -173,13 +170,24 @@ export class AppUpdateManager {
 
         try {
             const reg = await navigator.serviceWorker.getRegistration()
-            if (reg?.waiting && reg.waiting.postMessage) {
+            if (reg?.waiting?.postMessage) {
                 reg.waiting.postMessage({[AppUpdateManager.typeKey]: AppUpdateManager.skipWaitingMessage})
                 this.#updateCallback?.({isAvailable: false})
             }
         }
         catch (error) {
-            // Silently handle errors
         }
+    }
+
+    applyUpdateWithCacheReset = async () => {
+        await this.applyUpdate()
+
+        // Purge Cesium tiles if they exist globally
+        if (window.__?.app?.cesiumCache) {
+            window.__.app.cesiumCache.clear()
+        }
+
+        // Force refresh to apply new assets
+        window.location.reload()
     }
 }

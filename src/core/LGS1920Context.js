@@ -7,16 +7,17 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-28
- * Last modified: 2026-02-28
+ * Created on: 2026-03-18
+ * Last modified: 2026-03-18
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
+import { CacheManager }        from '@Core/cache/CacheManager'
 import {
-    APP_KEY, CONFIGURATION, CURRENT_JOURNEY, CURRENT_STORE, CURRENT_TRACK, GLOBAL_PARENT, JOURNEYS_STORE, ORIGIN_STORE,
-    platforms, POIS_STORE, SERVERS, SETTINGS_STORE, VAULT_STORE, WIDGETS_STORE,
+    APP_KEY, CONFIGURATION, CURRENT_JOURNEY, CURRENT_STORE, CURRENT_TRACK, GLOBAL_PARENT, JOURNEYS_STORE, MONTH,
+    ORIGIN_STORE, platforms, POIS_STORE, SERVERS, SETTINGS_STORE, VAULT_STORE, WIDGETS_STORE,
 }                              from '@Core/constants'
 import { StoresManager }       from '@Core/stores/StoresManager'
 import { AppToolsManager }     from '@Core/ui/AppToolsManager'
@@ -373,6 +374,23 @@ export class LGS1920Context {
     }
 
     initManagers = async () => {
+
+        __.app.cesiumCache = new CacheManager({
+                                                  cacheName: 'cesium-ion-assets',
+                                                  maxQuota:  500 * 1024 * 1024,
+                                                  ttl:       MONTH,
+                                              })
+        // 2. Monitoring simple et efficace
+        const startCacheMonitoring = () => {
+            setInterval(async () => {
+                const bytes = await __.app.cesiumCache.getUsage()
+                const mo = (bytes / (1024 * 1024)).toFixed(2)
+                console.log(`Cache Cesium : ${mo} Mo`)
+            }, 5000)
+        }
+
+        // 3. Lancement
+        startCacheMonitoring()
 
         __.ui.profiler = new Profiler(this)
         __.ui.editor = {
