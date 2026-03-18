@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-08
- * Last modified: 2026-03-08
+ * Created on: 2026-03-18
+ * Last modified: 2026-03-18
  *
  *
  * Copyright © 2026 LGS1920
@@ -27,7 +27,7 @@ export const CreditsPanel = () => {
 
     return (
         <LGSScrollbars>
-            <WaCard>
+            <WaCard className="lgs--credits-list">
             <h1>{'Credits'}</h1>
             <ReactMarkdown children={engine}/>
             <ReactMarkdown children={providers}/>
