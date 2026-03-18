@@ -51,7 +51,7 @@ export const Panel = () => {
                               placement={placement}
                               open={true}
                               modal="false"
-                              onWaAfterHide={closePanel} onClick={(event) => console.log(event)}>
+                              onWaAfterHide={closePanel}>
                         <PanelActions/>
                         <WaTabGroup>
                             <WaTab panel="tab-tools">
