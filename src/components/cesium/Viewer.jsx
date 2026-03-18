@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-03-18
+ * Last modified: 2026-03-18
  *
  *
  * Copyright © 2026 LGS1920
@@ -21,7 +21,11 @@ import { SceneUtils }                                                           
 import { ImageryLayerCollection, ScreenSpaceEventType, Viewer as CesiumViewer, WebMercatorProjection } from 'cesium'
 import { useEffect }                                                                                   from 'react'
 
-export function Viewer() {
+let layersInitialized = false
+let cameraUpdateHandlerAttached = false
+let canvasEventsInitialized = false
+
+export const ensureViewer = () => {
 
     const coordinates = {
         position: {
@@ -85,16 +89,29 @@ export function Viewer() {
 
 
     //Layers
-    const layerCollection = new ImageryLayerCollection()
-    layerCollection.layerAdded = LayersUtils.layerOrder
+    if (!layersInitialized) {
+        const layerCollection = new ImageryLayerCollection()
+        layerCollection.layerAdded = LayersUtils.layerOrder
+        layersInitialized = true
+    }
 
     // Manage Camera
-    lgs.camera.changed.addEventListener(raiseCameraUpdateEvent)
+    if (!cameraUpdateHandlerAttached) {
+        lgs.camera.changed.addEventListener(raiseCameraUpdateEvent)
+        cameraUpdateHandlerAttached = true
+    }
 
     // Manage events
-    __.canvasEvents = new CanvasEventManager(lgs.viewer)
+    if (!canvasEventsInitialized) {
+        __.canvasEvents = new CanvasEventManager(lgs.viewer)
+        canvasEventsInitialized = true
+    }
+}
 
+export function Viewer() {
+    useEffect(() => {
+        ensureViewer()
+    }, [])
 
     return (<></>)
 }
-

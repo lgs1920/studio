@@ -25,6 +25,7 @@ import {
     MapLayer,
 }                       from '@Components/cesium/MapLayer'
 import {
+    ensureViewer,
     Viewer,
 }                       from '@Components/cesium/Viewer'
 import {
@@ -84,6 +85,9 @@ export const LGS1920 = () => {
      * @returns {LGS1920Context} The initialized context
      */
     const initializeContext = () => {
+        if (window.lgs) {
+            return window.lgs
+        }
         window.lgs = new LGS1920Context()
         return window.lgs
     }
@@ -113,6 +117,7 @@ export const LGS1920 = () => {
     const initializeManagersAndLayers = async lgs => {
         await lgs.initManagers()
         __.layersAndTerrainManager = new LayersAndTerrainManager()
+        ensureViewer()
     }
 
     /**
@@ -234,6 +239,10 @@ export const LGS1920 = () => {
     /**
      * Initializes the application on component mount
      */
+    if (!window.lgs) {
+        initializeContext()
+    }
+
     useEffect(() => {
         /**
          * Main initialization function
@@ -241,7 +250,7 @@ export const LGS1920 = () => {
         const initialize = async () => {
             try {
                 // Initialize context
-                const lgs = initializeContext()
+                const lgs = window.lgs
 
                 // Initialize app
                 const initResult = await initializeApp()
