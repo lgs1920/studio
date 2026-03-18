@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-15
- * Last modified: 2026-03-15
+ * Created on: 2026-03-18
+ * Last modified: 2026-03-18
  *
  *
  * Copyright © 2026 LGS1920
@@ -19,8 +19,10 @@ import ThemeSelector                                                  from '@Com
 import { SETTINGS_EDITOR_DRAWER }                                     from '@Core/constants'
 import { faPaintbrushPencil, faScrewdriverWrench }                    from '@fortawesome/pro-solid-svg-icons'
 import { FA2SL }                                                      from '@Utils/FA2SL'
-import { WaDrawer, WaIcon, WaTab, WaTabGroup, WaTabPanel, WaTooltip } from '@web.awesome.me/webawesome-pro/dist/react'
+import WaDrawer                                             from '@Components/WaDrawerNonModal'
+import { WaIcon, WaTab, WaTabGroup, WaTabPanel, WaTooltip } from '@web.awesome.me/webawesome-pro/dist/react'
 import React                                                          from 'react'
+import { createPortal }                                     from 'react-dom'
 import { useSnapshot }                                                from 'valtio'
 import './style.css'
 import DrawerFooter                                                   from '../DrawerFooter'
@@ -41,17 +43,15 @@ export const Panel = () => {
             }
         }
     }
-
-    return (
+    const drawerRoot = __.ui.drawerManager.drawerRoot
+    const content = (
         <>
             {drawers.open === SETTINGS_EDITOR_DRAWER &&
-                <div className={'drawer-wrapper'}>
                     <WaDrawer id="settings-pane"
                               placement={placement}
                               open={true}
-                              onWaAfterHide={closePanel}
-                              contained
-                              className={'lgs-theme'}>
+                              modal="false"
+                              onWaAfterHide={closePanel} onClick={(event) => console.log(event)}>
                         <PanelActions/>
                         <WaTabGroup>
                             <WaTab panel="tab-tools">
@@ -70,8 +70,10 @@ export const Panel = () => {
                         </WaTabGroup>
                         <DrawerFooter/>
                     </WaDrawer>
-                </div>
             }
         </>
     )
+
+    return drawerRoot ? createPortal(content, drawerRoot) : content
+
 }

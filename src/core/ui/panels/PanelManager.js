@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-08
- * Last modified: 2026-03-07
+ * Created on: 2026-03-18
+ * Last modified: 2026-03-18
  *
  *
  * Copyright © 2026 LGS1920
@@ -48,6 +48,10 @@ export class PanelManager {
         }
 
         PanelManager.instance = this
+    }
+
+    get drawerRoot() {
+        return typeof document !== 'undefined' ? document.getElementById('drawer-root') : null
     }
 
     /**
@@ -193,7 +197,7 @@ export class PanelManager {
             drawer.addEventListener('mouseleave', this.mouseLeave)
             drawer.addEventListener('mouseenter', this.mouseEnter)
 
-            drawer.addEventListener('sl-after-show', () => {
+            drawer.addEventListener('wa-after-show', () => {
                 const event = new CustomEvent('drawer-open', {
                     detail: {drawerId: drawer.id},
                     bubbles: true,

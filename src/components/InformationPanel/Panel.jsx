@@ -7,18 +7,19 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-15
- * Last modified: 2026-03-15
+ * Created on: 2026-03-18
+ * Last modified: 2026-03-18
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import DrawerFooter                                            from '@Components/DrawerFooter'
+import DrawerFooter                                  from '@Components/DrawerFooter'
 import PanelActions from '@Components/PanelsActions'
 import ThemeSelector from '@Components/ThemeSelector'
-import { INFO_DRAWER }                                         from '@Core/constants'
-import { WaDrawer, WaScroller, WaTab, WaTabGroup, WaTabPanel } from '@web.awesome.me/webawesome-pro/dist/react'
+import WaDrawer                                      from '@Components/WaDrawerNonModal'
+import { INFO_DRAWER }                               from '@Core/constants'
+import { WaScroller, WaTab, WaTabGroup, WaTabPanel } from '@web.awesome.me/webawesome-pro/dist/react'
 
 import React, { useEffect, useRef } from 'react'
 import { createPortal }             from 'react-dom'
@@ -77,7 +78,7 @@ export const Panel = () => {
     }, [])
 
 
-    const drawerRoot = typeof document !== 'undefined' ? document.getElementById('drawer-root') : null
+    const drawerRoot = __.ui.drawerManager.drawerRoot
 
     const content = (
         <WaDrawer id={INFO_DRAWER}

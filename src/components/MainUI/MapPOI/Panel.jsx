@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-15
- * Last modified: 2026-03-15
+ * Created on: 2026-03-18
+ * Last modified: 2026-03-18
  *
  *
  * Copyright © 2026 LGS1920
@@ -20,7 +20,7 @@ import { MapPOIEditSettings } from '@Components/MainUI/MapPOI/MapPOIEditSettings
 import { MapPOIEditToggleFilter } from '@Components/MainUI/MapPOI/MapPOIEditToggleFilter'
 import { MapPOIList }         from '@Components/MainUI/MapPOI/MapPOIList'
 import { POIS_EDITOR_DRAWER } from '@Core/constants'
-import { WaDrawer } from '@web.awesome.me/webawesome-pro/dist/react'
+import WaDrawer from '@Components/WaDrawerNonModal'
 import { memo, useCallback, useEffect, useMemo } from 'react'
 import { Scrollbars }    from 'react-custom-scrollbars'
 import { useSnapshot }        from 'valtio'
