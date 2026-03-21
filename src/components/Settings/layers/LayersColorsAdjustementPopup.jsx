@@ -2,30 +2,30 @@
  *
  * This file is part of the LGS1920/studio project.
  *
- * File: LayerSettings.jsx
+ * File: LayersColorsAdjustementPopup.jsx
  *
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-15
- * Last modified: 2026-03-15
+ * Created on: 2026-03-21
+ * Last modified: 2026-03-21
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { Range }                                  from '@Components/Range'
-import { DEFAULT_LAYERS_COLOR_SETTINGS }                  from '@Core/constants'
-import { WaButton, WaCard, WaDivider, WaIcon, WaTooltip } from '@web.awesome.me/webawesome-pro/dist/react'
-import { useEffect }                                      from 'react'
-import { useSnapshot }                            from 'valtio/index'
-import { LayersUtils }                                    from '@Utils/cesium/LayersUtils'
+import { Range }                               from '@Components/Range'
+import { DEFAULT_LAYERS_COLOR_SETTINGS }       from '@Core/constants'
+import { LayersUtils }                         from '@Utils/cesium/LayersUtils'
+import { WaButton, WaCard, WaIcon, WaTooltip } from '@web.awesome.me/webawesome-pro/dist/react'
+import { useEffect }                           from 'react'
+import { useSnapshot }                         from 'valtio/index'
 
 /**
  * Component to manage layer-specific visual settings like hue, saturation, etc.
  * Uses Valtio proxies for global state management.
  */
-export const LayerSettings = (props) => {
+export const LayersColorsAdjustementPopup = (props) => {
     const $editor = lgs.editorSettingsProxy
     const editor = useSnapshot($editor)
 
@@ -98,73 +98,83 @@ export const LayerSettings = (props) => {
     return (
         <>
             {editor.openSettings && props.visible() &&
-                <WaCard id={'layer-settings'} key={'layer-entities'} className={'lgs-slide-down'}
+                <WaCard id="layer-settings" key="layer-entities"
+                        className="lgs--popup-in-drawer lgs-slide-down fix-margin"
                         appearance="outlined">
-                    <h3 slot={'header'}>
+                    <WaButton appearance="plain"
+                              slot="header-actions"
+                              onClick={close}>
+                        <WaIcon size="small" name="xmark" variant="regular"/>
+                    </WaButton>
+
+                    <h3 slot="header">
                         <WaIcon name="sliders" variant="regular"/> {'Color Adjustement'}
                     </h3>
-                    <Range label={'Hue'}
+
+                    <Range label="Hue"
                            value={layers.colorSettings[layers[editor.layer.selectedType]].hue}
                            min={0} max={359} step={1} onChange={changeHandler}
-                           name={'hue'}
+                           name="hue"
                     />
-                    <Range label={'Saturation'}
+                    <Range label="Saturation"
                            value={layers.colorSettings[layers[editor.layer.selectedType]].saturation}
                            min={0} max={100} step={1} onChange={changeHandler}
-                           name={'saturation'}
+                           name="saturation"
                     />
-                    <Range label={'Alpha'}
+                    <Range label="Alpha"
                            value={layers.colorSettings[layers[editor.layer.selectedType]].alpha}
                            min={0} max={3} step={0.05} onChange={changeHandler}
-                           name={'alpha'}
+                           name="alpha"
                     />
-                    <Range label={'Gamma'}
+                    <Range label="Gamma"
                            value={layers.colorSettings[layers[editor.layer.selectedType]].gamma}
                            min={0} max={3} step={0.05} onChange={changeHandler}
-                           name={'gamma'}
+                           name="gamma"
                     />
-                    <Range label={'Contrast'}
+                    <Range label="Contrast"
                            value={layers.colorSettings[layers[editor.layer.selectedType]].contrast}
                            min={0} max={3} step={0.05} onChange={changeHandler}
-                           name={'contrast'}
+                           name="contrast"
                     />
-                    <Range label={'Brightness'}
+                    <Range label="Brightness"
                            value={layers.colorSettings[layers[editor.layer.selectedType]].brightness}
                            min={0} max={10} step={0.05} onChange={changeHandler}
-                           name={'brightness'}
+                           name="brightness"
                     />
 
-                    <WaDivider/>
-                    <div className={'buttons-bar'}>
-                        <WaTooltip for={'lgs--reset-layer-settings-to-factory'}>{'Reset to factory'}</WaTooltip>
-                        <WaButton id={'lgs--reset-layer-settings-to-factory'}
-                                  size={'small'} onClick={resetToFactory}
-                                  appearance={'outlined'}
-                                  variant={'brand'}
-                        >
-                            <WaIcon size={'small'} name={'arrow-rotate-left'}/> {'Reset'}
-                        </WaButton>
-
-                        <div className={'buttons-bar'}>
-                            <WaTooltip for={'lgs--undo-layer-settings-last-changes'}>{'Undo Last Changes'}</WaTooltip>
-                            <WaButton id={'lgs--undo-layer-settings-last-changes'}
-                                      size={'small'}
-                                      appearance="plain"
-                                      disabled={!editor.layer.settingsChanged} onClick={undoChanges}>
-                                <WaIcon size={'small'} name={'arrow-u-turn-up-left'} variant={'regular'}/> {'Undo'}
+                    <div slot="footer">
+                        <div className="lgs--popup-in-drawer-footer">
+                            <WaTooltip for="lgs--reset-layer-settings-to-factory">{'Reset to factory'}</WaTooltip>
+                            <WaButton id="lgs--reset-layer-settings-to-factory"
+                                      size="small" onClick={resetToFactory}
+                                      appearance="outlined"
+                                      variant="brand"
+                            >
+                                <WaIcon size="small" name="arrow-rotate-left"/> {'Reset'}
                             </WaButton>
 
-                            <WaTooltip for={'lgs--close-layer-settings'}>{'Close settings'}</WaTooltip>
-                            <WaButton id={'lgs--close-layer-settings'}
-                                      size={'small'}
-                                      variant={'brand'}
-                                      onClick={close}>
-                                <WaIcon size={'small'} name={'xmark'} variant={'regular'}/> {'Close'}
-                            </WaButton>
+                            <div className="buttons-bar">
+                                <WaTooltip for="lgs--undo-layer-settings-last-changes">{'Undo Last Changes'}</WaTooltip>
+                                <WaButton id="lgs--undo-layer-settings-last-changes"
+                                          size="small"
+                                          appearance="plain"
+                                          disabled={!editor.layer.settingsChanged} onClick={undoChanges}>
+                                    <WaIcon size="small" name="arrow-u-turn-up-left" variant="regular"/> {'Undo'}
+                                </WaButton>
+
+                                <WaTooltip for="lgs--close-layer-settings">{'Close settings'}</WaTooltip>
+                                <WaButton id="lgs--close-layer-settings"
+                                          size="small"
+                                          variant="brand"
+                                          onClick={close}>
+                                    <WaIcon size="small" name="xmark" variant="regular"/> {'Close'}
+                                </WaButton>
+                            </div>
                         </div>
                     </div>
                 </WaCard>
             }
         </>
     )
+
 }

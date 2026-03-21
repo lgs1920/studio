@@ -7,25 +7,26 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-15
- * Last modified: 2026-03-15
+ * Created on: 2026-03-21
+ * Last modified: 2026-03-21
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
+import { PopupAnchor }                  from '@Components/PopupAnchor'
 import { ALL, BASE_ENTITY, FREE_ANONYMOUS_ACCESS, OVERLAY_ENTITY, TERRAIN_ENTITY, UNLOCKED } from '@Core/constants'
 import {
     WaButton, WaIcon, WaPopup, WaTab, WaTabGroup, WaTabPanel, WaTooltip,
-}                 from '@web.awesome.me/webawesome-pro/dist/react'
-import { useRef } from 'react'
-import { useSnapshot }     from 'valtio'
+}                                       from '@web.awesome.me/webawesome-pro/dist/react'
+import { useRef }                       from 'react'
+import { useSnapshot }                  from 'valtio'
 import {
     ToggleStateIcon,
-}                          from '../../ToggleStateIcon'
-import { FilterEntities }  from './FilterEntities'
-import { LayerSettings }   from './LayerSettings'
-import { SelectEntity }    from './SelectEntity'
+}                                       from '@Components/ToggleStateIcon'
+import { LayersFilterPopup }            from './LayersFilterPopup'
+import { LayersColorsAdjustementPopup } from './LayersColorsAdjustementPopup'
+import { SelectEntity }                 from './SelectEntity'
 import { TokenLayerModal } from './TokenLayerModal'
 
 // Filter operator constants
@@ -41,8 +42,6 @@ export const LayersAndTerrains = () => {
     const editor = useSnapshot($editor)
     const $layers = lgs.settings.layers
     const layers = useSnapshot($layers)
-    const _filterButton = useRef(null)
-    const _settingsButton = useRef(null)
 
     /**
      * Toggles the filter panel visibility and ensures settings are closed.
@@ -179,21 +178,22 @@ export const LayersAndTerrains = () => {
 
     return (
         <div id="layers-and-terrains-settings">
-            <WaPopup active={editor.openFilter} anchor={_filterButton.current}
+            <WaPopup active={editor.openFilter} anchor="layers-and-terrains-filter-separator"
                      distance={lgs.gutter.s}
-                     placement="bottom" flip shift>
-            <FilterEntities/>
+                     placement="top" flip shift>
+                <LayersFilterPopup/>
             </WaPopup>
 
-            <WaPopup active={editor.openSettings} anchor={_settingsButton.current}
+            <WaPopup active={editor.openSettings} anchor="layers-and-terrains-filter-separator"
                      distance={lgs.gutter.s}
-                     placement="bottom" flip shift>
-            <LayerSettings visible={canViewSettings}/>
+                     placement="top" flip shift>
+                <LayersColorsAdjustementPopup visible={canViewSettings}/>
             </WaPopup>
 
 
-            <WaTabGroup>
-                <WaTab panel="tab-bases" onClick={() => ($editor.layer.selectedType = BASE_ENTITY)}>
+            <WaTabGroup className="lgs--layers-and-terrains-tabs">
+                <WaTab panel="tab-bases"
+                       onClick={() => ($editor.layer.selectedType = BASE_ENTITY)}>
                     {'Bases'}
                 </WaTab>
                 <WaTab panel="tab-overlays" onClick={() => ($editor.layer.selectedType = OVERLAY_ENTITY)}>
@@ -229,7 +229,6 @@ export const LayersAndTerrains = () => {
                         iconVariant="regular"
                         iconFamily="regular"
                     />
-
                     <WaTooltip for="lgs--layers-alphabetic-order">
                         {layers.filter.alphabetic ? 'Reverse Alphabetic' : 'Alphabetic'}
                     </WaTooltip>
@@ -247,7 +246,6 @@ export const LayersAndTerrains = () => {
                         {editor.openSettings ? 'Hide Settings' : 'Show Settings'}
                     </WaTooltip>
                     <WaButton id="lgs--layers-settings-button"
-                              ref={_settingsButton}
                               disabled={!canViewSettings()}
                               variant="brand"
                               appearance="plain"
@@ -262,7 +260,6 @@ export const LayersAndTerrains = () => {
                         {`${editor.openFilter ? 'Hide Filters' : 'Show Filters'}${layers.filter.active ? ': Filter is active' : ''}`}
                     </WaTooltip>
                     <WaButton id="lgs--layers-filter-button"
-                              ref={_filterButton}
                               appearance={layers.filter.active ? 'filled' : 'plain'}
                               onClick={handleFilter}
                               variant={layers.filter.active ? 'danger' : 'brand'}>
@@ -271,6 +268,8 @@ export const LayersAndTerrains = () => {
                     </WaButton>
 
                 </div>
+
+                <PopupAnchor id="layers-and-terrains-filter-separator"/>
 
                 <WaTabPanel name="tab-bases">
                     <SelectEntity key={getEntityKey(BASE_ENTITY)} type={BASE_ENTITY} list={buildList(BASE_ENTITY)}/>
