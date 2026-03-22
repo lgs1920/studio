@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-14
- * Last modified: 2026-03-14
+ * Created on: 2026-03-22
+ * Last modified: 2026-03-22
  *
  *
  * Copyright © 2026 LGS1920
@@ -88,11 +88,11 @@ export const useConfirm = (title, Message, confirmButton, cancelButton) => {
             <div slot="footer">
                 <div className="buttons-bar">
                     <WaButton onClick={handleCancel} variant={cancelVariant} appearance="outlined">
-                        <WaIcon name={cancelIcon} variant="regular"/>
+                        <WaIcon slot="start" name={cancelIcon} variant="regular"/>
                         {parse(cancelText)}
                     </WaButton>
                     <WaButton variant={confirmVariant} onClick={handleConfirm}>
-                        <WaIcon name={confirmIcon} variant="regular"/>
+                        <WaIcon slot="start" name={confirmIcon} variant="regular"/>
                         {parse(confirmText)}
                     </WaButton>
                 </div>

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-21
- * Last modified: 2026-03-21
+ * Created on: 2026-03-22
+ * Last modified: 2026-03-22
  *
  *
  * Copyright © 2026 LGS1920
@@ -104,11 +104,11 @@ export const LayersColorsAdjustementPopup = (props) => {
                     <WaButton appearance="plain"
                               slot="header-actions"
                               onClick={close}>
-                        <WaIcon size="small" name="xmark" variant="regular"/>
+                        <WaIcon slot="start" size="small" name="xmark" variant="regular"/>
                     </WaButton>
 
                     <h3 slot="header">
-                        <WaIcon name="sliders" variant="regular"/> {'Color Adjustement'}
+                        <WaIcon slot="start" name="sliders" variant="regular"/> {'Color Adjustement'}
                     </h3>
 
                     <Range label="Hue"
@@ -150,7 +150,7 @@ export const LayersColorsAdjustementPopup = (props) => {
                                       appearance="outlined"
                                       variant="brand"
                             >
-                                <WaIcon size="small" name="arrow-rotate-left"/> {'Reset'}
+                                <WaIcon slot="start" size="small" name="arrow-rotate-left"/> {'Reset'}
                             </WaButton>
 
                             <div className="buttons-bar">
@@ -159,7 +159,8 @@ export const LayersColorsAdjustementPopup = (props) => {
                                           size="small"
                                           appearance="plain"
                                           disabled={!editor.layer.settingsChanged} onClick={undoChanges}>
-                                    <WaIcon size="small" name="arrow-u-turn-up-left" variant="regular"/> {'Undo'}
+                                    <WaIcon slot="start" size="small" name="arrow-u-turn-up-left"
+                                            variant="regular"/> {'Undo'}
                                 </WaButton>
 
                                 <WaTooltip for="lgs--close-layer-settings">{'Close settings'}</WaTooltip>
@@ -167,7 +168,7 @@ export const LayersColorsAdjustementPopup = (props) => {
                                           size="small"
                                           variant="brand"
                                           onClick={close}>
-                                    <WaIcon size="small" name="xmark" variant="regular"/> {'Close'}
+                                    <WaIcon slot="start" size="small" name="xmark" variant="regular"/> {'Close'}
                                 </WaButton>
                             </div>
                         </div>

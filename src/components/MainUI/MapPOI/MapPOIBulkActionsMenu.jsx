@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-28
- * Last modified: 2026-02-28
+ * Created on: 2026-03-22
+ * Last modified: 2026-03-22
  *
  *
  * Copyright © 2026 LGS1920
@@ -20,8 +20,9 @@ import {
 }                                                                         from '@fortawesome/pro-regular-svg-icons'
 import { faEye, faMask }                                               from '@fortawesome/pro-solid-svg-icons'
 import { SlButton, SlDropdown, SlIcon, SlIconButton, SlMenu, SlMenuItem } from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                                                          from '@Utils/FA2SL'
-import React, { useEffect, useState, useCallback }                        from 'react'
+import { FA2SL }                                        from '@Utils/FA2SL'
+import { WaButton, WaDropdown, WaDropdownItem, WaIcon } from '@web.awesome.me/webawesome-pro/dist/react'
+import React, { useEffect, useState, useCallback }      from 'react'
 import { useSnapshot }                                                    from 'valtio'
 import './style.css'
 
@@ -173,41 +174,31 @@ export const MapPOIBulkActionsMenu = React.memo((globals) => {
     }
 
     return (
-        <SlDropdown disabled={disabled} onSlAfterHide={handleAfterHide}>
-            <SlButton slot="trigger" size="small" caret disabled={disabled}>
-                <SlIconButton size="small" slot="prefix"
-                              library="fa"
-                              name={FA2SL.set(faLocationDot)}
-                />{'Select an action'}
-            </SlButton>
+        <WaDropdown disabled={disabled} onSlAfterHide={handleAfterHide} size="small">
+            <WaButton slot="trigger" size="small" caret disabled={disabled} variant="plain" withCaret>
+                <WaIcon slot="start" name="location-dot" variant="regular"/>{'Select an action'}
+            </WaButton>
 
-            <SlMenu small>
-                <SlMenuItem onClick={remove}>
-                    <SlIcon slot="prefix" library="fa" name={FA2SL.set(faTrashCan)}></SlIcon>
-                    <span>Remove</span>
-                </SlMenuItem>
+            <WaDropdownItem onClick={remove}>
+                <WaIcon slot="icon" variant="regular" name="trash-can"></WaIcon>{'Remove'}
+            </WaDropdownItem>
 
-                <SlMenuItem onClick={shrink}>
-                    <SlIcon slot="prefix" library="fa" name={FA2SL.set(faArrowsToLine)}></SlIcon>
-                    <span>Reduce</span>
-                </SlMenuItem>
+            <WaDropdownItem onClick={shrink}>
+                <WaIcon slot="icon" variant="regular" name="arrows-to-line"></WaIcon>{'Reduce'}
+            </WaDropdownItem>
 
-                <SlMenuItem onClick={expand}>
-                    <SlIcon slot="prefix" library="fa" name={FA2SL.set(faArrowsFromLine)}></SlIcon>
-                    <span>Expand</span>
-                </SlMenuItem>
+            <WaDropdownItem onClick={expand}>
+                <WaIcon slot="icon" variant="regular" name="arrows-from-line"></WaIcon>{'Expand'}
+            </WaDropdownItem>
 
-                <SlMenuItem onClick={hide}>
-                    <SlIcon slot="prefix" library="fa" name={FA2SL.set(faMask)}></SlIcon>
-                    <span>Hide</span>
-                </SlMenuItem>
+            <WaDropdownItem onClick={hide}>
+                <WaIcon slot="icon" variant="regular" name="mask"></WaIcon>{'Hide'}
+            </WaDropdownItem>
 
-                <SlMenuItem onClick={show}>
-                    <SlIcon slot="prefix" library="fa" name={FA2SL.set(faEye)}></SlIcon>
-                    <span>Show</span>
-                </SlMenuItem>
+            <WaDropdownItem onClick={show}>
+                <WaIcon slot="icon" variant="regular" name="eye"></WaIcon>{'Show'}
+            </WaDropdownItem>
 
-            </SlMenu>
-        </SlDropdown>
+        </WaDropdown>
     )
 })

@@ -7,7 +7,7 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-16
+ * Created on: 2026-03-22
  * Last modified: 2026-03-16
  *
  *
@@ -36,11 +36,13 @@ export class CacheManager {
      * @private
      */
     _initListeners() {
+        // Correct target: navigator.serviceWorker
         if (!('serviceWorker' in navigator)) {
             return
         }
 
-        navigator.addEventListener('message', (event) => {
+        // Utilisation de navigator.serviceWorker au lieu de navigator
+        navigator.serviceWorker.addEventListener('message', (event) => {
             if (event.data?.source !== this.sourceTag) {
                 return
             }

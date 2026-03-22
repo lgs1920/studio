@@ -7,14 +7,13 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-01
- * Last modified: 2026-03-01
+ * Created on: 2026-03-22
+ * Last modified: 2026-03-22
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { FontAwesomeIcon }                                         from '@Components/FontAwesomeIcon'
 import {
     MapPOICategorySelector,
 }                                                                  from '@Components/MainUI/MapPOI/MapPOICategorySelector'
@@ -22,26 +21,17 @@ import {
     MapPOIEditMenu,
 }                                                                  from '@Components/MainUI/MapPOI/MapPOIEditMenu'
 import { POI_STANDARD_TYPE, POI_TMP_TYPE }                         from '@Core/constants'
-import {
-    faClock, faCircleCheck, faCopy, faSquareQuestion, faLocationExclamation, faLocationDot,
-}                                                                  from '@fortawesome/pro-regular-svg-icons'
-import {
-    SlAlert, SlButton,
-    SlColorPicker, SlDivider, SlIcon, SlIconButton, SlInput, SlTextarea, SlTooltip,
-}                                                                  from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                                                   from '@Utils/FA2SL'
+
 import { UIToast }                                                 from '@Utils/UIToast'
-import { ELEVATION_UNITS, IMPERIAL, UnitUtils }                    from '@Utils/UnitUtils'
-import classNames                                                  from 'classnames'
+import { ELEVATION_UNITS, IMPERIAL, UnitUtils } from '@Utils/UnitUtils'
+import {
+    WaButton, WaCallout, WaColorPicker, WaDivider, WaIcon, WaInput, WaTextarea, WaTooltip,
+}                                               from '@web.awesome.me/webawesome-pro/dist/react'
+import classNames                               from 'classnames'
 import parse                                                       from 'html-react-parser'
 import { DateTime }                                                from 'luxon'
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSnapshot }                                             from 'valtio'
-
-// Pre-calculated icons
-const ICON_COPY = FA2SL.set(faCopy)
-const ICON_HELP = FA2SL.set(faSquareQuestion)
-const ICON_COPIED = FA2SL.set(faCircleCheck)
 
 /**
  * Edit content for a POI using only its ID to ensure instant reactivity with Valtio.
@@ -169,78 +159,79 @@ export const MapPOIEditContent = memo(({poi}) => {
             <div className="map-poi-edit-item label-on-left">
                 {simulated ? 'Simulated alt.' : 'Altitude'}
             </div>
-            <SlInput
+            <WaInput
                 className={classNames('map-poi-edit-item', 'map-poi', {'map-poi-edit-warning-altitude': simulated})}
                 size="small"
-                type="number"
+                withoutSpinButtons
+                type="number" inputMode="numeric"
                 value={Math.round(height ?? simulatedHeight ?? 0)}
-                onSlInput={handleChangeAltitude}
-                onSlChange={handleChangeAltitude}
+                onInput={handleChangeAltitude}
+                onChange={handleChangeAltitude}
                 disabled={!point.visible}
             >
-                <span slot="suffix">{parse(ELEVATION_UNITS[unitSystem])}</span>
-            </SlInput>
+                <span slot="end">{parse(ELEVATION_UNITS[unitSystem])}</span>
+            </WaInput>
             {simulated && point.visible && (
-                <SlTooltip content="Enter the real altitude to replace the simulated value.">
-                    <SlIconButton library="fa" name={ICON_HELP}/>
-                </SlTooltip>
+                <>
+                    <WaTooltip content="Enter the real altitude to replace the simulated value."></WaTooltip>
+                    <WaIcon name="circle-help" variant="regular"/>
+                </>
             )}
         </div>
     ), [simulated, height, point.visible, simulatedHeight, unitSystem, handleChangeAltitude])
     return (
         <>
-            <SlDivider/>
+            <WaDivider/>
 
             {point.type === POI_TMP_TYPE &&
-                <SlAlert variant="warning" className="edit-map-poi-warning" open>
-                    <SlIcon library="fa" slot="icon"
-                            name={FA2SL.set(faLocationExclamation)}/>
+                <WaCallout variant="warning" className="edit-map-poi-warning" open>
+                    <WaIcon slot="icon" variant="regular" name="location-exclamation"/>
                     <div>
                         {'This POI is temporary and won\'t be saved. Add it to the library to save it.'}
-                        <SlButton size="small" variant="warning" onClick={handleAddToLibrary}>
-                            <SlIcon size="small" library="fa" slot="prefix"
-                                    name={FA2SL.set(faLocationDot)}/>{'Add it'}</SlButton>
+                        <WaButton size="small" slot="end" variant="warning" onClick={handleAddToLibrary}>
+                            <WaIcon slot="start" name="location-dot" variant="regular"/>{'Add it'}
+                        </WaButton>
                     </div>
-                </SlAlert>
+                </WaCallout>
             }
 
             <div className="edit-map-poi-wrapper" id={`edit-map-poi-content-${id}`}>
                 <div className="map-poi-header-actions">
                     {point.visible &&
                         <>
-                            <SlTooltip content="Background Color">
-                                <SlColorPicker
+                            <WaTooltip content="Background Color">
+                                <WaColorPicker
                                     size="small"
                                     value={bgColor ?? lgs.colors.poiDefaultBackground}
                                     swatches={swatches}
-                                    onSlChange={handleChangeColor}
+                                    onChange={handleChangeColor}
                                     disabled={!visible}
                                     noFormatToggle
                                     ref={_poiBgColor}
                                     hoist
                                 />
-                            </SlTooltip>
-                            <SlTooltip content="Foreground Color">
-                                <SlColorPicker
+                            </WaTooltip>
+                            <WaTooltip content="Foreground Color">
+                                <WaColorPicker
                                     size="small"
                                     value={color ?? lgs.colors.poiDefault}
                                     swatches={swatches}
-                                    onSlChange={handleChangeColor}
+                                    onChange={handleChangeColor}
                                     disabled={!visible}
                                     noFormatToggle
                                     ref={_poiColor}
                                     hoist
                                 />
-                            </SlTooltip>
+                            </WaTooltip>
                         </>
                     }
                     <MapPOIEditMenu poiId={id}/>
                 </div>
 
-                <SlInput
+                <WaInput
                     size="small"
                     value={title}
-                    onSlChange={handleChangeTitle}
+                    onChange={handleChangeTitle}
                     className="edit-title-map-poi-input"
                     label="Title"
                     disabled={!point.visible}
@@ -249,10 +240,10 @@ export const MapPOIEditContent = memo(({poi}) => {
                     <MapPOICategorySelector point={point}/>
                 }
 
-                <SlTextarea
+                <WaTextarea
                     size="small"
                     value={description}
-                    onSlChange={handleChangeDescription}
+                    onChange={handleChangeDescription}
                     className="edit-title-map-poi-input"
                     label="Description"
                     disabled={!point.visible}
@@ -260,37 +251,41 @@ export const MapPOIEditContent = memo(({poi}) => {
 
                 {time && (
                     <div className="poi-time">
-                        <FontAwesomeIcon icon={faClock}/>
-                        {DateTime.fromISO(time).toLocaleString(DateTime.DATE_FULL)} - {DateTime.fromISO(time).toLocaleString(DateTime.TIME_SIMPLE)}
+                        <WaIcon name="clock" variant="regular"/>
+                        &nbsp;{DateTime.fromISO(time).toLocaleString(DateTime.DATE_FULL)} - {DateTime.fromISO(time).toLocaleString(DateTime.TIME_SIMPLE)}
                     </div>
                 )}
 
                 <div className="map-poi-edit-row-coordinates">
-                    <SlInput
+                    <WaInput
                         size="small"
-                        type="number"
+                        type="number" inputMode="decimal"
                         step="any"
-                        noSpinButtons
+                        withoutSpinButtons
                         value={latitude ?? ''}
-                        onSlChange={handleChangeLatitude}
+                        onChange={handleChangeLatitude}
                         label="Latitude"
                         disabled={!point.visible}
                     />
-                    <SlInput
+                    <WaInput
                         size="small"
-                        type="number"
+                        type="number" inputMode="decimal"
                         step="any"
-                        noSpinButtons
+                        withoutSpinButtons
                         value={longitude ?? ''}
-                        onSlChange={handleChangeLongitude}
+                        onChange={handleChangeLongitude}
                         label="Longitude"
                         disabled={!point.visible}
                     />
-                    <SlTooltip content="Copy Coordinates">
-                        <SlIconButton onClick={handleCopy} library="fa"
-                                      name={copied ? ICON_COPIED : ICON_COPY}
-                                      className={classNames({'altitude-copied': copied})}/>
-                    </SlTooltip>
+                    <WaTooltip for="ma-poi-copy-coordinates">{'Copy Coordinates'}</WaTooltip>
+                    <WaButton size="small"
+                              variant={copied ? 'success' : 'brand'}
+                              onClick={handleCopy}
+                              id="ma-poi-copy-coordinates">
+                        <WaIcon name={copied ? 'circle-check' : 'copy'}
+                                variant={'regular'}
+                                className={classNames({'altitude-copied': copied})}/>
+                    </WaButton>
                 </div>
 
                 {altitudeInput}

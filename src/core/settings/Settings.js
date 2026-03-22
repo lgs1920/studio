@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-03-22
+ * Last modified: 2026-03-18
  *
  *
  * Copyright © 2026 LGS1920
@@ -38,6 +38,11 @@ export class Settings {
      * @param {object} section
      */
     add = (section) => {
+        if (this.#sections.has(section.key)) {
+            this.#sections.set(section.key, section)
+            return
+        }
+
         this.#sections.set(section.key, section)
         // key
         Object.defineProperty(this, section.key, {

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-11
- * Last modified: 2026-03-11
+ * Created on: 2026-03-22
+ * Last modified: 2026-03-22
  *
  *
  * Copyright © 2026 LGS1920
@@ -271,7 +271,7 @@ export const AppUpdate = ({mode = 'banner'}) => {
                                 outline
                                 onClick={handleDismiss} // Permanent dismissal for install
                             >
-                                <WaIcon slot="prefix" name="xmark" variant="regular"/>
+                                <WaIcon slot="start" name="xmark" variant="regular"/>
                                 {'Dismiss'}
                             </WaButton>
                         )}
@@ -283,7 +283,7 @@ export const AppUpdate = ({mode = 'banner'}) => {
                                 variant="default"
                                 onClick={() => setShowUnifiedBanner(false)}
                             >
-                                <WaIcon name={isUpdate ? 'xmark' : 'hourglass-half'} variant="regular"/>
+                                <WaIcon slot="start" name={isUpdate ? 'xmark' : 'hourglass-half'} variant="regular"/>
                                 {updateError ? 'Close' : 'Later'}
                             </WaButton>
                         )}
@@ -295,7 +295,7 @@ export const AppUpdate = ({mode = 'banner'}) => {
                                 onClick={handlePrimaryAction}
                                 variant="brand"
                             >
-                                <WaIcon name="mobile-arrow-down" variant="regular"/>
+                                <WaIcon slot="start" name="mobile-arrow-down" variant="regular"/>
                                 {primaryActionText}
                             </WaButton>
                         )}
@@ -358,7 +358,7 @@ export const AppUpdate = ({mode = 'banner'}) => {
                 variant="brand"
                 onClick={() => setShowInstructionsDialog(false)}
             >
-                <WaIcon name="xmark" variant="regular"/>{'Close'}
+                <WaIcon slot="start" name="xmark" variant="regular"/>{'Close'}
             </WaButton>
         </WaDialog>
     )

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-14
- * Last modified: 2026-03-14
+ * Created on: 2026-03-22
+ * Last modified: 2026-03-22
  *
  *
  * Copyright © 2026 LGS1920
@@ -44,7 +44,7 @@ export const InfoLayerModal = () => {
                 </div>
             </LGSScrollbars>
             <WaButton slot="footer" variant="brand" onClick={closeInfoModal}>
-                <WaIcon name="check" variant={'regular'}/>{'Close'}
+                <WaIcon slot="start" name="check" variant={'regular'}/>{'Close'}
             </WaButton>
         </WaDialog>
     )

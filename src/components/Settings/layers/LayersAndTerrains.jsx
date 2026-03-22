@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-21
- * Last modified: 2026-03-21
+ * Created on: 2026-03-22
+ * Last modified: 2026-03-22
  *
  *
  * Copyright © 2026 LGS1920
@@ -243,7 +243,7 @@ export const LayersAndTerrains = () => {
                     />
 
                     <WaTooltip for="lgs--layers-settings-button">
-                        {editor.openSettings ? 'Hide Settings' : 'Show Settings'}
+                        {editor.openSettings ? 'Hide Color Adjustements' : 'Show Color Adjustements'}
                     </WaTooltip>
                     <WaButton id="lgs--layers-settings-button"
                               disabled={!canViewSettings()}

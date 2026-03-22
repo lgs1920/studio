@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-14
- * Last modified: 2026-03-14
+ * Created on: 2026-03-22
+ * Last modified: 2026-03-22
  *
  *
  * Copyright © 2026 LGS1920
@@ -57,19 +57,19 @@ const ThemeSelector = () => {
         <WaDropdown onWaSelect={handleSelect} slot={'header-actions'} appearance="filled-outlined"
                     className="lgs--theme-selector">
             <WaButton slot={'trigger'} appearance="plain" variant={'neutral'}>
-                <WaIcon name={isDark ? 'moon-stars' : 'sun-bright'} variant="regular"/>
+                <WaIcon slot="start" name={isDark ? 'moon-stars' : 'sun-bright'} variant="regular"/>
             </WaButton>
 
             <WaDropdownItem value={'light'}>
-                <WaIcon name={'sun-bright'} variant="regular"/>{' Light '}
+                <WaIcon slot="icon" name={'sun-bright'} variant="regular"/>{' Light '}
             </WaDropdownItem>
 
             <WaDropdownItem value={'dark'}>
-                <WaIcon name={'moon-stars'} variant="regular"/>{' Dark '}
+                <WaIcon slot="icon" name={'moon-stars'} variant="regular"/>{' Dark '}
             </WaDropdownItem>
             <WaDivider/>
             <WaDropdownItem value={'system'}>
-                <WaIcon name="cog" variant="regular"/>{' System '}
+                <WaIcon slot="icon" name="cog" variant="regular"/>{' System '}
             </WaDropdownItem>
         </WaDropdown>
     )

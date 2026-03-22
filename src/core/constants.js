@@ -7,18 +7,14 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-14
- * Last modified: 2026-03-14
+ * Created on: 2026-03-22
+ * Last modified: 2026-03-19
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { CESIUM_EVENTS as $CESIUM_EVENTS } from '@Core/events/cesiumEvents'
-import {
-    faBuildingColumns, faBuildings, faCampground, faCross, faFlagPennant, faFlagSwallowtail, faFort, faHouseBlank,
-    faMountains, faPlaceOfWorship, faSquareParking, faTablePicnic, faTelescope,
-}                                          from '@fortawesome/duotone-regular-svg-icons'
 import { faCompass, faRoute, faText }      from '@fortawesome/pro-regular-svg-icons'
 import { faChartFft, faGavel }             from '@fortawesome/pro-solid-svg-icons'
 
@@ -324,24 +320,25 @@ export const FOCUS_CENTROID = 'center'
  * - FontAwesome Icons: Represented as `{faIconName}` objects.
  * - Custom SVGs: File paths for custom icons, represented as strings in arrays.
  */
+export const ICONS_PATH = '/assets/icons/'
 export const POI_CATEGORY_ICONS = new Map([
-                                              [POI_STANDARD_TYPE, {faFlagSwallowtail}],
-                                              [POI_FLAG_START, {faFlagPennant}],
-                                              [POI_FLAG_STOP, {faFlagPennant}],
-                                              ['shelter', {faHouseBlank}],
-                                              ['refuge', ['house-bed.svg']],
-                                              ['building', {faBuildings}],
-                                              ['viewpoint', {faTelescope}],
-                                              ['summit', {faMountains}],
-                                              ['cave', ['cave-in-mountains.svg']],
-                                              ['car-park', {faSquareParking}],
-                                              ['castle', {faFort}],
-                                              ['place-of-worship', {faPlaceOfWorship}],
-                                              ['cross', {faCross}],
-                                              ['monument', {faBuildingColumns}],
-                                              ['ruins', ['ruins.svg']],
-                                              ['campground', {faCampground}],
-                                              ['picnic-area', {faTablePicnic}],
+                                              [POI_STANDARD_TYPE, 'flag-swallowtail'],
+                                              [POI_FLAG_START, 'flag-pennant'],
+                                              [POI_FLAG_STOP, 'flag-pennant'],
+                                              ['shelter', 'house-blank'],
+                                              ['refuge', 'house-bed.svg'],
+                                              ['building', 'building'],
+                                              ['viewpoint', 'telescope'],
+                                              ['summit', 'mountains'],
+                                              ['cave', 'cave-in-mountains.svg'],
+                                              ['car-park', 'square-parking'],
+                                              ['castle', 'fort'],
+                                              ['place-of-worship', 'place-of-worship'],
+                                              ['cross', 'cross'],
+                                              ['monument', 'building-columns'],
+                                              ['ruins', 'ruins.svg'],
+                                              ['campground', 'campground'],
+                                              ['picnic-area', 'table-picnic'],
                                           ])
 
 

@@ -7,25 +7,26 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-18
- * Last modified: 2026-03-18
+ * Created on: 2026-03-22
+ * Last modified: 2026-03-21
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { LGSScrollbars } from '@Components/MainUI/LGSScrollbars'
-import { MapPOIEditFilter }   from '@Components/MainUI/MapPOI/MapPOIEditFilter'
-import { MapPOIEditSettings } from '@Components/MainUI/MapPOI/MapPOIEditSettings'
-import { MapPOIEditToggleFilter } from '@Components/MainUI/MapPOI/MapPOIEditToggleFilter'
-import { MapPOIList }         from '@Components/MainUI/MapPOI/MapPOIList'
-import { POIS_EDITOR_DRAWER } from '@Core/constants'
-import WaDrawer from '@Components/WaDrawerNonModal'
-import { memo, useCallback, useEffect, useMemo } from 'react'
-import { Scrollbars }    from 'react-custom-scrollbars'
-import { useSnapshot }        from 'valtio'
-import { proxyMap }           from 'valtio/utils'
-import DrawerFooter      from '../../DrawerFooter'
+import { LGSScrollbars }                                from '@Components/MainUI/LGSScrollbars'
+import { MapPOIEditFilterPopup }                        from '@Components/MainUI/MapPOI/MapPOIEditFilterPopup'
+import { MapPOIEditListActions }                        from '@Components/MainUI/MapPOI/MapPOIEditListActions'
+import { MapPOIEditFilterButton }                       from '@Components/MainUI/MapPOI/MapPOIEditFilterButton'
+import { MapPOIList }                                   from '@Components/MainUI/MapPOI/MapPOIList'
+import PanelActions                                     from '@Components/PanelsActions'
+import WaDrawer                                         from '@Components/WaDrawerNonModal'
+import { POIS_EDITOR_DRAWER, SETTINGS_EDITOR_DRAWER }   from '@Core/constants'
+import React, { memo, useCallback, useEffect, useMemo } from 'react'
+import { createPortal }                                 from 'react-dom'
+import { useSnapshot }                                  from 'valtio'
+import { proxyMap }                                     from 'valtio/utils'
+import DrawerFooter                                     from '../../DrawerFooter'
 import './style.css'
 
 /**
@@ -59,34 +60,16 @@ export const Panel = memo(() => {
      * Assumes global function __.ui.drawerManager.close() handles the state mutation.
      * @returns {void}
      */
-    const closePOIsEditor = useCallback(() => {
-                                            // Only proceed if this specific drawer is currently open
-                                            if (__.ui.drawerManager.isCurrent(POIS_EDITOR_DRAWER)) {
-                                                __.ui.drawerManager.close()
-                                            }
-                                            // Dispatch resize event (keep only if mandatory for scene/layout refresh)
-                                            window.dispatchEvent(new Event('resize'))
-                                        }
-        , [])
-
-    /**
-     * Handles the sl-request-close event from <WaDrawer>.
-     * Prevents closing if the source is 'overlay' (e.g., click outside) but allows close button/Esc.
-     * @param {CustomEvent} event - Shoelace sl-request-close event
-     * @returns {void}
-     */
-    const handleRequestClose = useCallback((event) => {
-                                               // Prevent closing if the user clicks outside the drawer (overlay)
-                                               if (event.detail.source === 'overlay') {
-                                                   event.preventDefault()
-                                               }
-                                               else {
-                                                   // Allow closing via internal mechanism (e.g., Esc key, internal
-                                                   // close button)
-                                                   closePOIsEditor()
-                                               }
+    const closePanel = useCallback((event) => {
+                                       if (event.target.tagName === 'WA-DRAWER') {
+                                           if (__.ui.drawerManager.isCurrent(POIS_EDITOR_DRAWER)) {
+                                               __.ui.drawerManager.close()
                                            }
-        , [closePOIsEditor])
+                                           // Dispatch resize event (keep only if mandatory for scene/layout refresh)
+                                           window.dispatchEvent(new Event('resize'))
+                                       }
+                                   }
+        , [])
 
     // --- CATEGORY LOGIC ---
 
@@ -132,34 +115,29 @@ export const Panel = memo(() => {
         , [categories, $pois])
 
 
-    return (
+    const drawerRoot = __.ui.drawerManager.drawerRoot
+    const content = (
         <>
             {drawerOpen &&
-                <div className="drawer-wrapper">
                     <WaDrawer
                         id={POIS_EDITOR_DRAWER}
                         open={true}
-                        onWaAfterHide={handleRequestClose}
-                        onSlAfterHide={closePOIsEditor}
+                        onWaHide={closePanel}
                         contained
                         className="lgs-theme"
                         placement={drawerPlacement}
                     >
-                        <>
+                        <PanelActions/>
                             <span slot="label">{'Points Of Interest'}</span>
-                            <MapPOIEditToggleFilter/>
-                            <div className="lgs-scrollbars">
                                 <LGSScrollbars>
-                            <MapPOIEditFilter/>
-                            <MapPOIEditSettings/>
-                            <MapPOIList/>
+                                    <MapPOIEditListActions/>
+                                    <MapPOIList/>
                                 </LGSScrollbars>
-                            </div>
                             <DrawerFooter/>
-                        </>
                     </WaDrawer>
-                </div>
             }
         </>
     )
+    return drawerRoot ? createPortal(content, drawerRoot) : content
+
 })

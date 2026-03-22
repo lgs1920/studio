@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-18
- * Last modified: 2026-03-18
+ * Created on: 2026-03-22
+ * Last modified: 2026-03-22
  *
  *
  * Copyright © 2026 LGS1920
@@ -57,7 +57,7 @@ export const Panel = () => {
                         <WaTooltip for="lgs-disclaimer-button" placement={'top'}>{'Disclaimer'}</WaTooltip>
                         <WaButton id="lgs-disclaimer-button" onClick={openInfoModal} appearance={'plain'}
                                   variant="brand">
-                            <WaIcon name="bell-exclamation" variant="regular"/>
+                            <WaIcon slot="start" name="bell-exclamation" variant="regular"/>
                         </WaButton>
                     </PanelActions>
                     <LayersAndTerrains/>

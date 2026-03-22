@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-09
- * Last modified: 2026-03-09
+ * Created on: 2026-03-22
+ * Last modified: 2026-03-18
  *
  *
  * Copyright © 2026 LGS1920
@@ -79,6 +79,7 @@ export const MainUI = memo(() => {
         if (event.key === 'Escape') {
             closeDrawer()
         }
+        console.log(event.key)
     }, [closeDrawer])
 
     const arrangeDrawers = useCallback(() => {
@@ -248,7 +249,6 @@ export const MainUI = memo(() => {
                 <TracksEditor/>
                 <MapPOIEditPanel/>
                 <WidgetEditorPanel/>
-
             </div>
             <SupportUI/>
             <JourneyLoaderUI multiple/>

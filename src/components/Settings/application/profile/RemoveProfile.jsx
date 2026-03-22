@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-15
- * Last modified: 2026-03-15
+ * Created on: 2026-03-22
+ * Last modified: 2026-03-22
  *
  *
  * Copyright © 2026 LGS1920
@@ -71,7 +71,7 @@ export const RemoveProfile = () => {
                 </WaCallout>
 
                 <WaButton variant="danger" onClick={remove}>
-                    <WaIcon name="trash-alt" variant="regular"/>{'Remove Profile'}
+                    <WaIcon slot="start" name="trash-alt" variant="regular"/>{'Remove Profile'}
                 </WaButton>
             </div>
             <ConfirmRemoveDialog/>

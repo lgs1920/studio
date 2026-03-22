@@ -7,37 +7,35 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-08
- * Last modified: 2026-03-07
+ * Created on: 2026-03-22
+ * Last modified: 2026-03-21
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
+import { MapPOIEditListActions } from '@Components/MainUI/MapPOI/MapPOIEditListActions'
 import { Fragment, useEffect, useMemo, useRef } from 'react'
 import {
     useSnapshot,
-}                                                      from 'valtio'
+}                                from 'valtio'
 import {
     sprintf,
-}                                                      from 'sprintf-js'
-import classNames                                      from 'classnames'
-import parse                                           from 'html-react-parser'
+}                                from 'sprintf-js'
+import classNames                from 'classnames'
+import parse                     from 'html-react-parser'
 import {
     FAButton,
-}                                                      from '@Components/FAButton'
+}                                from '@Components/FAButton'
 import {
     LGSScrollbars,
-}                                                      from '@Components/MainUI/LGSScrollbars'
+}                                from '@Components/MainUI/LGSScrollbars'
 import {
-    MapPOIEditFilter,
-}                                                      from '@Components/MainUI/MapPOI/MapPOIEditFilter'
+    MapPOIEditFilterPopup,
+}                                from '@Components/MainUI/MapPOI/MapPOIEditFilterPopup'
 import {
-    MapPOIEditSettings,
-}                                                      from '@Components/MainUI/MapPOI/MapPOIEditSettings'
-import {
-    MapPOIEditToggleFilter,
-}                                                      from '@Components/MainUI/MapPOI/MapPOIEditToggleFilter'
+    MapPOIEditFilterButton,
+}                                from '@Components/MainUI/MapPOI/MapPOIEditFilterButton'
 import {
     MapPOIList,
 }                                                      from '@Components/MainUI/MapPOI/MapPOIList'
@@ -172,8 +170,8 @@ const EditTabPanel = ({journey, onTitleChange, onDescriptionChange}) => (
 const PoisTabPanel = () => (
     <SlTabPanel name={POIS}>
         <div className="panel-wrapper">
-            <MapPOIEditFilter/>
-            <MapPOIEditSettings/>
+            <MapPOIEditFilterPopup/>
+            <MapPOIEditListActions/>
             <LGSScrollbars>
                 <MapPOIList/>
             </LGSScrollbars>
@@ -541,7 +539,7 @@ export const JourneySettings = () => {
                             <SlTab slot="nav" panel={POIS} active={isTabActive(POIS)}>
                                 <SlIcon library="fa" name={FA2SL.set(faLocationDot)}/> POIs
                             </SlTab>
-                            <MapPOIEditToggleFilter slot="nav"/>
+                            <MapPOIEditFilterButton slot="nav"/>
                             <DataTabPanel journey={journey} isProcessing={isProcessing} serverList={serverList}
                                           onElevationChange={computeElevation}/>
                             <EditTabPanel journey={journey} onTitleChange={setTitle}

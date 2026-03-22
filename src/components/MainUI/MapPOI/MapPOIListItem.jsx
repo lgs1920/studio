@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-02
- * Last modified: 2026-03-02
+ * Created on: 2026-03-22
+ * Last modified: 2026-03-22
  *
  *
  * Copyright © 2026 LGS1920
@@ -27,6 +27,7 @@ import { POI_STARTER_TYPE, POI_TMP_TYPE, POIS_EDITOR_DRAWER } from '@Core/consta
 import { SlDetails }               from '@shoelace-style/shoelace/dist/react'
 import { FontAwesomeIcon }         from '@fortawesome/react-fontawesome'
 import { faSquareCheck, faSquare } from '@fortawesome/pro-duotone-svg-icons'
+import { WaDetails, WaIcon } from '@web.awesome.me/webawesome-pro/dist/react'
 import classNames                  from 'classnames'
 import { memo, useCallback, useMemo } from 'react'
 import { useSnapshot }             from 'valtio'
@@ -48,8 +49,8 @@ const POIBulkToggle = memo(({id}) => {
 
     return (
         <div className="map-poi-item-checkbox" onClick={toggle}>
-            <FontAwesomeIcon
-                icon={isSelected ? faSquareCheck : faSquare}
+            <WaIcon name={isSelected ? 'square-check' : 'square'}
+                    variant="regular"
                 className={classNames({'is-active': isSelected})}
             />
         </div>
@@ -58,7 +59,7 @@ const POIBulkToggle = memo(({id}) => {
 
 POIBulkToggle.displayName = 'POIBulkToggle'
 
-export const MapPOIListItem = memo(({id}) => {
+export const MapPOIListItem = memo(({id, canSelect}) => {
     const $pois = lgs.stores.main.components.pois
     const $poi = $pois.list.get(id)
     const {current, bulkList} = useSnapshot($pois)
@@ -93,9 +94,9 @@ export const MapPOIListItem = memo(({id}) => {
 
     return (
         <div className={classNames('edit-map-poi-item-wrapper', {'is-selected': isSelected})}>
-            <POIBulkToggle id={id}/>
-            <SlDetails
-                className={classNames('edit-map-poi-item', {'map-poi-hidden': !poi.visible})}
+            {canSelect && <POIBulkToggle id={id}/>}
+            <WaDetails
+                className={classNames('edit-map-poi-item', {'map-poi-hidden': !poi.visible}, 'lgs--details-hoverable')}
                 style={styles}
                 open={isCurrent}
             >
@@ -106,7 +107,7 @@ export const MapPOIListItem = memo(({id}) => {
                     </div>
                 </div>
                 {isCurrent && <MapPOIEditContent poi={id}/>}
-            </SlDetails>
+            </WaDetails>
         </div>
     )
 })

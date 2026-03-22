@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-03-22
+ * Last modified: 2026-03-19
  *
  *
  * Copyright © 2026 LGS1920
@@ -65,38 +65,52 @@ export class FA2SL {
             families = [families]
         }
 
+        // Persist registration across HMR to avoid duplicate library errors.
+        const registry = (globalThis.__lgsFa2slRegistry ??= new Set())
+
         families.forEach((family) => {
+            if (registry.has(family)) {
+                return
+            }
             /**
              * @param {string} family : the icon family (fab,fas,fass,fad ...)
              */
-            registerIconLibrary(family, {
-                /**
-                 * Resolver
-                 *
-                 * @param name {string}     <family>-<icon-name>
-                 * @return {string}         Encoded IconURL
-                 */
-                resolver: name => {
-                    // extract prefix and iconName from name
-                    // name is
-                    const dashIndex = name.indexOf('-')
-                    const prefix = name.slice(0, dashIndex)
-                    const iconName = name.slice(dashIndex + 1)
-                    // Find the right icon in the icon library
-                    const faIcon = findIconDefinition({prefix: prefix, iconName: iconName})
-                    // And return it as encoded URL
-                    return `data:image/svg+xml,${encodeURIComponent(icon(faIcon).html)}`
-                },
-                /**
-                 * Mutator
-                 *
-                 * @param svg
-                 */
-                mutator: svg => {
-                    svg.setAttribute('fill', 'currentColor')
-                    svg.setAttribute('part', 'svg')
-                },
-            })
+            try {
+                registerIconLibrary(family, {
+                    /**
+                     * Resolver
+                     *
+                     * @param name {string}     <family>-<icon-name>
+                     * @return {string}         Encoded IconURL
+                     */
+                    resolver: name => {
+                        // extract prefix and iconName from name
+                        // name is
+                        const dashIndex = name.indexOf('-')
+                        const prefix = name.slice(0, dashIndex)
+                        const iconName = name.slice(dashIndex + 1)
+                        // Find the right icon in the icon library
+                        const faIcon = findIconDefinition({prefix: prefix, iconName: iconName})
+                        // And return it as encoded URL
+                        return `data:image/svg+xml,${encodeURIComponent(icon(faIcon).html)}`
+                    },
+                    /**
+                     * Mutator
+                     *
+                     * @param svg
+                     */
+                    mutator: svg => {
+                        svg.setAttribute('fill', 'currentColor')
+                        svg.setAttribute('part', 'svg')
+                    },
+                })
+                registry.add(family)
+            }
+            catch (error) {
+                // If already registered (HMR), mark as registered and continue.
+                registry.add(family)
+                console.warn('[FA2SL] Icon library already registered:', family, error)
+            }
         })
 
     })

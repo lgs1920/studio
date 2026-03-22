@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-09
- * Last modified: 2026-03-09
+ * Created on: 2026-03-22
+ * Last modified: 2026-03-22
  *
  *
  * Copyright © 2026 LGS1920
@@ -38,7 +38,7 @@ export const SupportUI = () => {
                 <div slot="footer">
                         <div className="buttons-bar">
                             <WaButton variant="brand" autofocus onClick={() => setSupport.visible = false}>
-                                <WaIcon name="xmark" variant="regular"></WaIcon>{'Close'}</WaButton>
+                                <WaIcon slot="start" name="xmark" variant="regular"></WaIcon>{'Close'}</WaButton>
                         </div>
                 </div>
 

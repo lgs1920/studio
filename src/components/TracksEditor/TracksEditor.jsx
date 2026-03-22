@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-15
- * Last modified: 2026-03-15
+ * Created on: 2026-03-22
+ * Last modified: 2026-03-18
  *
  *
  * Copyright © 2026 LGS1920
@@ -17,7 +17,7 @@
 import { JourneyLoaderButton }   from '@Components/FileLoader/JourneyLoaderButton'
 import { JOURNEY_EDITOR_DRAWER } from '@Core/constants'
 import { SlSwitch } from '@shoelace-style/shoelace/dist/react'
-import { WaDrawer } from '@web.awesome.me/webawesome-pro/dist/react'
+import WaDrawer from '@Components/WaDrawerNonModal'
 
 import './style.css'
 import { memo, useCallback }     from 'react'

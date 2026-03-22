@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-15
- * Last modified: 2026-03-15
+ * Created on: 2026-03-22
+ * Last modified: 2026-03-22
  *
  *
  * Copyright © 2026 LGS1920
@@ -171,7 +171,7 @@ export const ResetProfile = () => {
                     onClick={reset}
                     disabled={isResetDisabled}
                 >
-                    <WaIcon name="arrows-rotate" variant="regular"/>
+                    <WaIcon slot="start" name="arrows-rotate" variant="regular"/>
                     {'Reset Profile'}
                 </WaButton>
             </div>

@@ -1,14 +1,14 @@
 /*******************************************************************************
  *
  * This file is part of the LGS1920/studio project.
- *
+ *  
  * File: style.css
  *
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-14
- * Last modified: 2026-03-14
+ * Created on: 2026-03-22
+ * Last modified: 2026-03-22
  *
  *
  * Copyright © 2026 LGS1920
@@ -26,6 +26,8 @@
     --poi-expanded-dimension: 140px;
     --triangle-size: calc(3 * var(--poi-border-width));
     --poi-padding: var(--lgs-gutter-xs);
+    --poi-primary-default-color: var(--wa-color-yellow-60);
+    --poi-secondary-default-color: var(--wa-color-gray-10);
 }
 
 .poi-icon-wrapper {
@@ -256,15 +258,13 @@
     --fa-secondary-color: var(--lgs-success-color-50);
 }
 
-.map-poi-bulk-master-icon.is-all {
-    --fa-primary-color: #ffffff;
-    --fa-secondary-color: var(--lgs-success-color);
+.map-poi-bulk-master-icon.is-disabled {
+    pointer-events: none;
+    color: transparent;
 }
 
 .map-poi-item-checkbox .is-active {
-    --fa-secondary-opacity: 1;
-    --fa-primary-color: #ffffff;
-    --fa-secondary-color: var(--lgs-information-color);
+    color: var(--wa-color-brand);
 }
 
 #edit-map-poi-list {
@@ -313,6 +313,7 @@
 .edit-map-poi-wrapper {
     display: flex;
     flex-direction: column;
+    gap: var(--lgs-gutter-s);
 }
 
 .edit-map-poi-item {
@@ -333,7 +334,7 @@
     display: grid;
     align-items: flex-end;
     justify-content: start;
-    gap: var(--lgs-gutter-xs);
+    gap: var(--lgs-gutter-s);
     grid-template-columns: 9rem 9rem  32px;
 }
 
@@ -362,18 +363,10 @@
     padding-left: var(--sl-input-spacing-small);
 }
 
-.map-poi-edit-warning-altitude span:not([part]) {
-    color: var(--lgs-warning-color)
+.map-poi-edit-warning-altitude::part(base) {
+    background-color: var(--wa-color-brand-fill-loud);
 }
 
-.map-poi-edit-warning-altitude::part(input) {
-    background: var(--lgs-warning-bg-color);
-}
-
-.map-poi-edit-warning-altitude::part(suffix) {
-    color: var(--sl-input-color);
-    background: var(--lgs-warning-bg-color);
-}
 
 .map-poi-edit-warning-altitude::part(label) {
     display: flex;
@@ -383,7 +376,8 @@
 #map-poi-edit-settings {
     display: flex;
     flex-direction: column;
-    width: 100%;
+    width: calc(100% - 4px);
+    margin-left: 4px;
 }
 
 #map-poi-edit-settings wa-switch {
@@ -407,10 +401,8 @@
 }
 
 .edit-map-poi-warning {
-    display: block;
     margin: 0;
     padding: 0;
-    color: var(--lgs-warning-color);
 }
 
 .edit-map-poi-warning > div {
@@ -418,8 +410,6 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin: 0;
-    padding: var(--lgs-gutter-xs);
     gap: var(--lgs-gutter-xs);
 }
 
@@ -432,10 +422,8 @@
     margin-left: var(--lgs-gutter-xs);
 }
 
-.map-poi-edit-filter {
-    display: flex;
-    flex-direction: column;
-    gap: var(--lgs-gutter-xs);
+.map-poi-edit-filter::part(body) {
+    gap: var(--lgs-gutter-s);
 }
 
 #map-poi-edit-filter-trigger {
@@ -454,16 +442,34 @@
     margin: 0 0 var(--lgs-gutter-xs) auto;
 }
 
+
+.map-poi-category-selector-filter wa-icon {
+    /* color: var(--poi-primary-default-color) !important;*/
+
+    /* Variables for Duotone (Font & SVG) */
+    --fa-primary-color: var(--poi-primary-default-color) !important;
+    --fa-secondary-color: var(--poi-secondary-default-color) !important;
+
+    /* Opacities */
+    --fa-primary-opacity: 1 !important;
+    --fa-secondary-opacity: 0.6 !important;
+}
+
+/* Force standard SVG fill if not using Duotone vars */
+.map-poi-category-selector-filter wa-icon::part(svg) {
+    fill: currentColor !important;
+}
 .map-poi-filter-by-type {
     display: flex;
+    justify-content: space-between;
     width: 100%;
-    gap: var(--lgs-gutter-s);
+    gap: var(--lgs-gutter);
 }
 
 
 .map-poi-filter-by-type wa-switch {
-    width: 50% !important;
-    margin-left: auto;
+    width: 40% !important;
+    margin-left: 0 !important;
 }
 
 .map-poi-filter-by-name {
@@ -480,11 +486,6 @@
     margin-left: auto;
 }
 
-
-.map-poi-filter-active {
-    color: var(--lgs-success-color)
-}
-
 .map-poi-category-selector sl-option::part(prefix), .map-poi-category-selector::part(prefix) {
     margin-right: var(--lgs-gutter-s);
 }
@@ -496,10 +497,13 @@
 .map-poi-category-filter {
     display: flex;
     align-content: center;
+    align-items: center;
     gap: var(--lgs-gutter-s);
 }
 
 .map-poi-category-filter wa-switch {
+    font-weight: normal;
+    width: 25% !important;
     margin-left: auto;
 }
 
@@ -544,4 +548,16 @@
 
 }
 
-.map-
+.map-poi-filter-count-info {
+    width: 100%;
+    padding: var(--lgs-gutter-xs);
+    gap: var(--lgs-gutter-xs);
+}
+
+.map-poi-filter-count-info div {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--lgs-gutter-xs);
+
+}

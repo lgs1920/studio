@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-14
- * Last modified: 2026-03-14
+ * Created on: 2026-03-22
+ * Last modified: 2026-03-22
  *
  *
  * Copyright © 2026 LGS1920
@@ -47,7 +47,7 @@ const DrawerFooter = React.memo(() => (
             <WaButton appearance="plain" variant="brand"
                 target="_blank"
                 href={lgs?.configuration?.githubURL || 'https://github.com/lgs1920'}
-                      title={'Our GitHub repos'}>
+                      title={'Our Github repos'}>
                 <WaIcon name="github" family="brands"/>
             </WaButton>
         </div>

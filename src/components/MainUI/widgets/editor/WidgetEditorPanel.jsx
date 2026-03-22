@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-15
- * Last modified: 2026-03-15
+ * Created on: 2026-03-22
+ * Last modified: 2026-03-18
  *
  *
  * Copyright © 2026 LGS1920
@@ -34,7 +34,7 @@ import {
 import {
     SlIcon, SlTab, SlTabGroup, SlTabPanel,
 }                   from '@shoelace-style/shoelace/dist/react'
-import { WaDrawer } from '@web.awesome.me/webawesome-pro/dist/react'
+import WaDrawer from '@Components/WaDrawerNonModal'
 import { FA2SL }                                                                              from '@Utils/FA2SL'
 import { Suspense, useCallback, useEffect, useMemo, useState }                                from 'react'
 import { useSnapshot }                                                                        from 'valtio'

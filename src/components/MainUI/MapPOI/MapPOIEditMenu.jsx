@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-02
- * Last modified: 2026-03-02
+ * Created on: 2026-03-22
+ * Last modified: 2026-03-22
  *
  *
  * Copyright © 2026 LGS1920
@@ -24,29 +24,12 @@
 import {
     POI_FLAG_START, POI_FLAG_STOP, POI_STANDARD_TYPE, POI_STARTER_TYPE, POI_TMP_TYPE,
 }                                                      from '@Core/constants'
-import {
-    faArrowRotateRight, faArrowsFromLine, faArrowsToLine, faCopy, faCrosshairsSimple, faFlag, faLocationDot, faPanorama,
-    faTrashCan, faEye, faEyeSlash,
-}                                                      from '@fortawesome/pro-regular-svg-icons'
-import {
-    SlButton, SlDivider, SlDropdown, SlIcon, SlMenu, SlMenuItem,
-}                                                      from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                                       from '@Utils/FA2SL'
+
 import { UIToast }                                     from '@Utils/UIToast'
+import { WaButton, WaDivider, WaDropdown, WaDropdownItem, WaIcon } from '@web.awesome.me/webawesome-pro/dist/react'
 import React, { memo, useMemo, useCallback, useState } from 'react'
 import { useSnapshot }                                 from 'valtio'
 
-const ICON_FOCUS = FA2SL.set(faCrosshairsSimple)
-const ICON_FLAG = FA2SL.set(faFlag)
-const ICON_TRASH = FA2SL.set(faTrashCan)
-const ICON_EXPAND = FA2SL.set(faArrowsFromLine)
-const ICON_REDUCE = FA2SL.set(faArrowsToLine)
-const ICON_MASK = FA2SL.set(faEyeSlash)
-const ICON_ROTATE = FA2SL.set(faArrowRotateRight)
-const ICON_PANORAMA = FA2SL.set(faPanorama)
-const ICON_SHOW = FA2SL.set(faEye)
-const ICON_COPY = FA2SL.set(faCopy)
-const ICON_LOCATION = FA2SL.set(faLocationDot)
 
 export const MapPOIEditMenu = memo(({poiId}) => {
     const $pois = lgs.stores.main.components.pois
@@ -156,59 +139,59 @@ export const MapPOIEditMenu = memo(({poiId}) => {
         const items = []
 
         items.push(
-            <SlMenuItem key="focus" onClick={focus}>
-                <SlIcon slot="prefix" library="fa" name={ICON_FOCUS}/>
+            <WaDropdownItem key="focus" onClick={focus}>
+                <WaIcon slot="prefix" name={'crosshairs-simple'}/>
                 <span>{'Focus'}</span>
-            </SlMenuItem>,
+            </WaDropdownItem>,
         )
 
         if (pointSnap.type !== POI_STARTER_TYPE && pointSnap.type !== POI_FLAG_START && pointSnap.type !== POI_FLAG_STOP) {
             items.push(
-                <SlMenuItem key="remove" onClick={remove}>
-                    <SlIcon slot="prefix" library="fa" name={ICON_TRASH}/>
+                <WaDropdownItem key="remove" onClick={remove}>
+                    <WaIcon slot="prefix" name={'trash-can'}/>
                     <span>{'Remove'}</span>
-                </SlMenuItem>,
+                </WaDropdownItem>,
             )
         }
 
         items.push(
-            <SlMenuItem key="copy-coords" onClick={copyCoordinates}>
-                <SlIcon slot="prefix" library="fa" name={ICON_COPY}/>
+            <WaDropdownItem key="copy-coords" onClick={copyCoordinates}>
+                <WaIcon slot="prefix" name={'copy'}/>
                 <span>{'Copy Coords'}</span>
-            </SlMenuItem>,
-            <SlMenuItem key="toggle-exp"
+            </WaDropdownItem>,
+            <WaDropdownItem key="toggle-exp"
                         onClick={() => __.ui.poiManager.updatePOI(pointSnap.id, {expanded: !pointSnap.expanded})}>
-                <SlIcon slot="prefix" library="fa" name={pointSnap.expanded ? ICON_REDUCE : ICON_EXPAND}/>
+                <WaIcon slot="prefix" name={pointSnap.expanded ? 'arrows-to-line' : 'arrows-from-line'}/>
                 <span>{pointSnap.expanded ? 'Reduce' : 'Expand'}</span>
-            </SlMenuItem>,
-            <SlMenuItem key="hide" onClick={toggleVisibility}>
-                <SlIcon slot="prefix" library="fa" name={ICON_MASK}/>
+            </WaDropdownItem>,
+            <WaDropdownItem key="hide" onClick={toggleVisibility}>
+                <WaIcon slot="prefix" name={'eye-slash'}/>
                 <span>{'Hide'}</span>
-            </SlMenuItem>,
-            <SlDivider key="div-1"/>,
+            </WaDropdownItem>,
+            <WaDivider key="div-1"/>,
         )
 
         if (!isAnimated) {
             items.push(
-                <SlMenuItem key="rot-around" onClick={rotationAround}>
-                    <SlIcon slot="prefix" library="fa" name={ICON_ROTATE}/>
+                <WaDropdownItem key="rot-around" onClick={rotationAround}>
+                    <WaIcon slot="prefix" name={'arrow-rotate-right'}/>
                     <span>{'Rotate Around'}</span>
-                </SlMenuItem>,
+                </WaDropdownItem>,
             )
 
             items.push(
-                <SlMenuItem key="rot-panorama" onClick={stopRotation}>
-                    <SlIcon slot="prefix" library="fa" name={ICON_PANORAMA}/>
+                <WaDropdownItem key="rot-panorama" onClick={stopRotation}>
+                    <WaIcon slot="prefix" name={'panorama'}/>
                     <span>{'Panoramic'}</span>
-                </SlMenuItem>,
+                </WaDropdownItem>,
             )
         }
         else if (isCurrent) {
             items.push(
-                <SlMenuItem key="stop-rot" onClick={stopRotation}>
-                    <SlIcon slot="prefix" library="fa" name={ICON_ROTATE}/>
+                <WaDropdownItem key="stop-rot" onClick={stopRotation}>
+                    <WaIcon slot="prefix" name={'arrow-rotate-right'}/>
                     <span>{'Stop Rotation'}</span>
-                </SlMenuItem>,
+                </WaDropdownItem>,
             )
 
         }
@@ -228,16 +211,16 @@ export const MapPOIEditMenu = memo(({poiId}) => {
             onClick={(e) => e.stopPropagation()}
         >
             {!isVisible ? (
-                <SlButton size="small" onClick={toggleVisibility}>
-                    <SlIcon slot="prefix" size={'small'} library="fa" name={ICON_SHOW}/>{'Show'}
-                </SlButton>
+                <WaButton size="small" onClick={toggleVisibility} variant="brand">
+                    <WaIcon slot="prefix" size={'small'} name={'eye'}/>{'Show'}
+                </WaButton>
             ) : (
-                 <SlDropdown className="edit-poi-menu">
-                     <SlButton slot="trigger" caret size="small">
-                         <SlIcon slot="prefix" size={'small'} library="fa" name={ICON_LOCATION}/>{'Select an action'}
-                     </SlButton>
-                     <SlMenu>{menuItems}</SlMenu>
-                 </SlDropdown>
+                 <WaDropdown className="edit-poi-menu" size="small">
+                     <WaButton slot="trigger" withcaret variant="brand">
+                         <WaIcon slot="start" variant="regular" name="location-dot"/>{'Select an action'}
+                     </WaButton>
+                     {menuItems}
+                 </WaDropdown>
              )}
         </div>
     )

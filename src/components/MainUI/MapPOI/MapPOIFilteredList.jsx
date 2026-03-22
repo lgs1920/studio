@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-02
- * Last modified: 2026-03-02
+ * Created on: 2026-03-22
+ * Last modified: 2026-03-22
  *
  *
  * Copyright © 2026 LGS1920
@@ -25,8 +25,9 @@ import { MapPOIListItem }        from '@Components/MainUI/MapPOI/MapPOIListItem'
 import { JOURNEY_EDITOR_DRAWER } from '@Core/constants'
 import { faTriangleExclamation } from '@fortawesome/pro-regular-svg-icons'
 import { SlAlert, SlIcon }       from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                 from '@Utils/FA2SL'
-import { useEffect, useMemo }    from 'react'
+import { FA2SL }                       from '@Utils/FA2SL'
+import { WaButton, WaCallout, WaIcon } from '@web.awesome.me/webawesome-pro/dist/react'
+import { useEffect, useMemo }          from 'react'
 import { useSnapshot }           from 'valtio'
 
 const ICON_WARNING = FA2SL.set(faTriangleExclamation)
@@ -74,7 +75,7 @@ const filterAndSortPois = (onlyJourney, filterSettings, list) => {
         }
     }
 
-    const lowerName = byName.toLowerCase()
+    const lowerName = byName.trim().toLowerCase()
     const sorted = []
 
     for (const id of ids) {
@@ -144,19 +145,23 @@ export const MapPOIFilteredList = () => {
 
     if (filteredPois.length > 0) {
         return (
-            <>
+            <div className="lgs--details-list">
                 {filteredPois.map((id) => (
-                    <MapPOIListItem key={id} id={id}/>
+                    <MapPOIListItem key={id} id={id} canSelect={filteredPois.length > 1}/>
                 ))}
-            </>
+            </div>
         )
     }
 
     return (
-        <SlAlert variant="warning" open>
-            <SlIcon slot="icon" library="fa" name={ICON_WARNING}/>
-            {' '}{'There are no results matching your filter criteria.'}{' '}
-        </SlAlert>
+        <WaCallout
+            size="small"
+            variant="danger"
+            className="map-poi-filter-count-info"
+        >
+            <WaIcon slot="icon" size="small" name="warning"/>
+            <span>{'No POIs match the current filter criteria.'}</span>
+        </WaCallout>
     )
 }
 

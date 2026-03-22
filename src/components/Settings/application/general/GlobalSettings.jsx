@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-15
- * Last modified: 2026-03-15
+ * Created on: 2026-03-22
+ * Last modified: 2026-03-22
  *
  *
  * Copyright © 2026 LGS1920
@@ -33,7 +33,6 @@ export const GlobalSettings = () => {
         <div ref={generalTools} id={'global-style-settings'} className={'lgs--details-list'}>
             <WaDetails id={'tools-unit-system'}
                        small open={false}
-                       className={'lgs-theme'}
                        name="global-settings"
                        className="lgs--details-hoverable"
             >

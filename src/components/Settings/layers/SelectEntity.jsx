@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-15
- * Last modified: 2026-03-15
+ * Created on: 2026-03-22
+ * Last modified: 2026-03-22
  *
  *
  * Copyright © 2026 LGS1920
@@ -284,7 +284,7 @@ export const SelectEntity = (props) => {
                             <WaButton size="small"
                                       onClick={() => $editor.openFilter = true}
                                       variant="brand">
-                                <WaIcon name="filter" variant="regular"/>
+                                <WaIcon slot="start" name="filter" variant="regular"/>
                                 {'Open Filters'}
                             </WaButton>
                         }

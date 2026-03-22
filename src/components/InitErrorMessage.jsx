@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-18
- * Last modified: 2026-03-18
+ * Created on: 2026-03-22
+ * Last modified: 2026-03-22
  *
  *
  * Copyright © 2026 LGS1920
@@ -78,7 +78,7 @@ export const InitErrorMessage = ({error}) => {
                 <div id={'footer'}>
                     <div className="buttons-bar">
                         <WaButton autofocus variant="brand" onClick={() => window.location.reload()}>
-                            <WaIcon name="arrows-rotate" variant="regular"></WaIcon>{'Retry'}
+                            <WaIcon slot="start" name="arrows-rotate" variant="regular"></WaIcon>{'Retry'}
                         </WaButton>
                     </div>
                 </div>
