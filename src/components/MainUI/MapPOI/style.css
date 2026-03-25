@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-22
- * Last modified: 2026-03-22
+ * Created on: 2026-03-25
+ * Last modified: 2026-03-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -28,6 +28,8 @@
     --poi-padding: var(--lgs-gutter-xs);
     --poi-primary-default-color: var(--wa-color-yellow-60);
     --poi-secondary-default-color: var(--wa-color-gray-10);
+    --poi-primary-default-opacity: 1;
+    --poi-secondary-default-opacity: 0.6;
 }
 
 .poi-icon-wrapper {
@@ -63,6 +65,30 @@
     --dimension: var(--poi-in-menu-dimension);
 }
 
+.poi-icon-wrapper.poi-pre-snap-debug {
+    position: fixed;
+    z-index: 12000;
+    top: calc(var(--lgs-gutter) * 2);
+    left: calc(var(--lgs-gutter) * 2);
+    pointer-events: none;
+    opacity: 1;
+    border-radius: var(--lgs-border-radius-s);
+    background: color-mix(in srgb, var(--lgs-bg-color) 90%, transparent);
+}
+
+.poi-icon-wrapper.poi-pre-snap-debug::before {
+    font-size: var(--lgs-font-size-s);
+    position: absolute;
+    z-index: 12001;
+    top: calc(var(--lgs-gutter-xs) * -1);
+    left: 0;
+    padding: 0 var(--lgs-gutter-xs);
+    content: "Pre-snapdom";
+    color: var(--wa-color-warning-on-normal);
+    border-radius: var(--lgs-border-radius-xs);
+    background: var(--wa-color-warning-fill-normal);
+}
+
 
 .poi-card {
     display: flex;
@@ -70,15 +96,6 @@
     width: calc(var(--poi-expanded-dimension) + var(--poi-menu-icons-column-width));
     pointer-events: none;
     opacity: 1;
-}
-
-.map-poi-category-selector .poi-card {
-    box-shadow: 0 0 3px rgba(200, 200, 200, 0.5);
-}
-
-.map-poi-category-selector sl-options {
-    display: flex;
-    gap: var(--lgs-gutter-xs);
 }
 
 .used-in-menu .poi-card {
@@ -109,7 +126,7 @@
 .poi-card-inner {
     display: flex;
     flex-direction: column;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     width: var(--poi-expanded-dimension);
     margin-bottom: var(--triangle-size);
     margin-left: calc(1 * var(--poi-menu-icons-column-width));
@@ -143,6 +160,9 @@
 }
 
 .poi-icon-wrapper:not(.poi-shrinked) .poi-card-inner {
+    display: flex;
+    align-items: flex-start;
+    flex-direction: column;
     padding: var(--poi-padding);
     color: var(--lgs-poi-color);
 }
@@ -163,8 +183,8 @@
 .poi-card-inner h3 {
     font-size: calc(1.1 * var(--lgs-font-size));
     font-weight: 500;
-    line-height: 1;
-    display: flex;
+    line-height: normal;
+    display: block;
     max-width: 100%;
     margin: 0;
     text-wrap: wrap;
@@ -172,7 +192,7 @@
 }
 
 .poi-card-inner .poi-elevation {
-    line-height: 1;
+    line-height: normal;
     margin-top: var(--lgs-gutter-s);
 }
 
@@ -240,22 +260,22 @@
     display: flex;
     align-items: center;
     cursor: pointer;
-    --fa-primary-color: var(--lgs-disabled-color);
-    --fa-primary-opacity: 1;
-    --fa-secondary-color: var(--lgs-disabled-bg-color);
-    --fa-secondary-opacity: 1;
+    --primary-color: var(--lgs-disabled-color);
+    --primary-opacity: 1;
+    --secondary-color: var(--lgs-disabled-bg-color);
+    --secondary-opacity: 1;
 }
 .map-poi-bulk-actions {
     display: flex;
     align-items: center;
     gap: var(--lgs-gutter-xs);
-    --fa-primary-color: var(--lgs-disabled-color);
-    --fa-secondary-color: var(--lgs-disabled-bg-color);
+    --primary-color: var(--lgs-disabled-color);
+    --secondary-color: var(--lgs-disabled-bg-color);
 }
 
 .map-poi-bulk-master-icon.is-partial {
-    --fa-primary-color: #ffffff;
-    --fa-secondary-color: var(--lgs-success-color-50);
+    --primary-color: #ffffff;
+    --secondary-color: var(--lgs-success-color-50);
 }
 
 .map-poi-bulk-master-icon.is-disabled {
@@ -273,37 +293,20 @@
     gap: var(--lgs-gutter-xs);
 }
 
-.edit-map-poi-item:hover {
-    box-shadow: var(--sl-shadow-x-large);
-}
-
-.edit-map-poi-item [slot="summary"],
-.edit-map-poi-item [slot="summary"] > div {
-    display: flex;
-    align-items: center;
-    gap: var(--lgs-gutter-xs);
-}
-
-.edit-map-poi-item [slot="summary"] > div:first-child {
-    width: 90%;
-    max-width: 20rem;
-}
-
-.edit-map-poi-item [slot="summary"] > div:first-child span {
+.edit-map-poi-item [slot="summary"] > div:first-child span > span {
+    display: inline-block;
     overflow: hidden;
-    width: 100%;
+    width: 15rem;
     white-space: nowrap;
     text-overflow: ellipsis;
 }
 
 .edit-map-poi-item [slot="summary"] {
+    display: flex;
     align-items: center;
     justify-content: space-between;
     width: 100%;
-}
-
-.map-poi-hidden::part(header) {
-    background: var(--lgs-disabled-bg-color);
+    gap: var(--lgs-gutter-xs);
 }
 
 ::part(header) {
@@ -345,12 +348,17 @@
 
 .map-poi-header-actions {
     display: flex;
-    align-items: center;
-    margin-bottom: -2rem; /** TODO Found where this has been set */
-    margin-left: auto;
+    align-items: flex-end;
+    justify-content: space-between;
+    width: 100%;
     gap: var(--lgs-gutter-xs);
 }
 
+.map-poi-header-actions > div {
+    font-weight: normal;
+    display: flex;
+    gap: var(--lgs-gutter-xs);
+}
 .map-poi-header-actions .label-on-left {
     align-self: center;
 }
@@ -391,6 +399,12 @@
 
 .edit-title-map-poi-input::part(form-control-label) {
     width: 100%;
+    pointer-events: auto;
+}
+
+.edit-title-map-poi-input .poi-edit-menu-container,
+.edit-title-map-poi-input .poi-edit-menu-container * {
+    pointer-events: auto;
 }
 
 .edit-title-map-poi {
@@ -442,23 +456,28 @@
     margin: 0 0 var(--lgs-gutter-xs) auto;
 }
 
-
-.map-poi-category-selector-filter wa-icon {
-    /* color: var(--poi-primary-default-color) !important;*/
-
-    /* Variables for Duotone (Font & SVG) */
-    --fa-primary-color: var(--poi-primary-default-color) !important;
-    --fa-secondary-color: var(--poi-secondary-default-color) !important;
-
-    /* Opacities */
-    --fa-primary-opacity: 1 !important;
-    --fa-secondary-opacity: 0.6 !important;
+.map-poi-edit-summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
 }
 
-/* Force standard SVG fill if not using Duotone vars */
-.map-poi-category-selector-filter wa-icon::part(svg) {
-    fill: currentColor !important;
+.map-poi-edit-summary span {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--lgs-gutter-xs);
 }
+
+.map-poi-category-selector wa-icon,
+.map-poi-category-selector .poi-duotone-icon,
+.map-poi-edit-summary .poi-duotone-icon {
+    --primary-color: var(--poi-primary-default-color) !important;
+    --secondary-color: var(--poi-secondary-default-color) !important;
+    --primary-opacity: 1 !important;
+    --secondary-opacity: 0.6 !important;
+}
+
 .map-poi-filter-by-type {
     display: flex;
     justify-content: space-between;
@@ -486,14 +505,6 @@
     margin-left: auto;
 }
 
-.map-poi-category-selector sl-option::part(prefix), .map-poi-category-selector::part(prefix) {
-    margin-right: var(--lgs-gutter-s);
-}
-
-.map-poi-category-selector sl-option::part(label) {
-    display: flex;
-    gap: var(--lgs-gutter-xs);
-}
 .map-poi-category-filter {
     display: flex;
     align-content: center;
@@ -507,19 +518,23 @@
     margin-left: auto;
 }
 
-.map-poi-category-selector-filter {
+.map-poi-category-selector {
     width: 100%;
+    --primary-color: var(--poi-primary-default-color) !important;
+    --secondary-color: var(--poi-secondary-default-color) !important;
+    --primary-opacity: 1 !important;
+    --secondary-opacity: 0.6 !important;
 }
 
-.map-poi-category-selector-filter + wa-divider {
+.map-poi-category-selector + wa-divider {
     /* margin-top: var(--lgs-gutter-s);*/
 }
 
-.map-poi-category-selector-filter::part(form-control-label) {
+.map-poi-category-selector::part(form-control-label) {
     width: 100%;
 }
 
-.map-poi-category-selector-filter wa-switch {
+.map-poi-category-selector wa-switch {
     width: 30%;
 }
 

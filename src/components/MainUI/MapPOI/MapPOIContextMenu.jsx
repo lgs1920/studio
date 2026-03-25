@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-09
- * Last modified: 2026-03-09
+ * Created on: 2026-03-25
+ * Last modified: 2026-03-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -17,6 +17,7 @@
 import {
     POI_FLAG_START, POI_FLAG_STOP, POI_STANDARD_TYPE, POI_STARTER_TYPE, POI_TMP_TYPE, POIS_EDITOR_DRAWER,
 }                                                 from '@Core/constants'
+import { stopRotationAndSync } from '@Components/MainUI/MapPOI/rotationSyncUtils'
 import {
     faArrowRotateRight, faArrowsFromLine, faArrowsToLine, faCopy, faFlag, faLocationDot, faLocationPen, faPanorama,
     faTrashCan,
@@ -92,7 +93,7 @@ export const MapPOIContextMenu = (props) => {
     const removePOI = useCallback(async () => {
         // Stop camera rotation if active before removal
         if (__.ui.cameraManager.isRotating()) {
-            await __.ui.cameraManager.stopRotate()
+            await stopRotationAndSync()
         }
 
         const result = await __.ui.poiManager.remove({id: thePOI})
@@ -124,10 +125,10 @@ export const MapPOIContextMenu = (props) => {
     }, [thePOI, currentPoi.expanded, hideMenu])
 
     /** Hides the current POI from the map. */
-    const hidePOI = useCallback(() => {
-        currentPoi.hide()
+    const hidePOI = useCallback(async () => {
+        await __.ui.poiManager.updatePOI(thePOI, {visible: false})
         hideMenu()
-    }, [currentPoi, hideMenu])
+    }, [thePOI, hideMenu])
 
     /** Copies the POI coordinates to the clipboard. */
     const copyCoordinates = useCallback(() => {
@@ -143,8 +144,10 @@ export const MapPOIContextMenu = (props) => {
     /** Toggles camera rotation around the current POI. */
     const toggleRotation = useCallback(async () => {
         if (__.ui.cameraManager.isRotating()) {
-            await __.ui.cameraManager.stopRotate()
-            currentPoi.stopAnimation()
+            await stopRotationAndSync()
+            if (currentPoi?.animated) {
+                await __.ui.poiManager.updatePOI(thePOI, {animated: false})
+            }
         }
         else {
             __.ui.sceneManager.focus(currentPoi, {
@@ -159,19 +162,20 @@ export const MapPOIContextMenu = (props) => {
                 panoramic: false,
                 flyingTime: 0,
             })
-            currentPoi.startAnimation()
+            await __.ui.poiManager.updatePOI(thePOI, {animated: true})
         }
         hideMenu()
-    }, [currentPoi, hideMenu])
+    }, [currentPoi, hideMenu, thePOI])
 
     /** Starts a panoramic rotation of the camera. */
     const startPanoramic = useCallback(async () => {
         if (__.ui.cameraManager.isRotating()) {
-            await __.ui.cameraManager.stopRotate()
+            await stopRotationAndSync()
         }
+        await __.ui.poiManager.updatePOI(thePOI, {animated: false})
         __.ui.cameraManager.panoramic()
         hideMenu()
-    }, [hideMenu])
+    }, [hideMenu, thePOI])
 
     // --- Menu Rendering Logic ---
 

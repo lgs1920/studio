@@ -7,14 +7,15 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-22
- * Last modified: 2026-03-22
+ * Created on: 2026-03-25
+ * Last modified: 2026-03-25
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { JOURNEY_EDITOR_DRAWER } from '@Core/constants'
+import { stopRotationAndSync } from '@Components/MainUI/MapPOI/rotationSyncUtils'
 import {
     faArrowsFromLine, faArrowsToLine, faLocationDot, faTrashCan,
 }                                                                         from '@fortawesome/pro-regular-svg-icons'
@@ -51,28 +52,28 @@ export const MapPOIBulkActionsMenu = React.memo((globals) => {
     /**
      * Hides all Points of Interest currently selected for bulk action.
      */
-    const hide = useCallback(() => {
+    const hide = useCallback(async () => {
+        const actions = []
         $pois.bulkList.forEach((canHide, id) => {
             if (canHide) {
-                // Accessing the proxy directly to ensure reactive state mutation
-                const $poi = $pois.list.get(id)
-                $poi.hide()
+                actions.push(__.ui.poiManager.updatePOI(id, {visible: false}))
             }
         })
+        await Promise.all(actions)
         $pois.bulkList.clear()
     }, [])
 
     /**
      * Shows all Points of Interest currently selected for bulk action.
      */
-    const show = useCallback(() => {
+    const show = useCallback(async () => {
+        const actions = []
         $pois.bulkList.forEach((canShow, id) => {
             if (canShow) {
-                // Accessing the proxy directly to ensure reactive state mutation
-                const $poi = $pois.list.get(id)
-                $poi.show()
+                actions.push(__.ui.poiManager.updatePOI(id, {visible: true}))
             }
         })
+        await Promise.all(actions)
         $pois.bulkList.clear()
     }, [])
 
@@ -110,7 +111,7 @@ export const MapPOIBulkActionsMenu = React.memo((globals) => {
      */
     const remove = useCallback(async () => {
         if (__.ui.cameraManager.isRotating()) {
-            await __.ui.cameraManager.stopRotate()
+            await stopRotationAndSync()
         }
         // Check if current POI is in the bulk list
         const needToChangeCurrent = $pois.bulkList.has(pois.current)
@@ -175,7 +176,7 @@ export const MapPOIBulkActionsMenu = React.memo((globals) => {
 
     return (
         <WaDropdown disabled={disabled} onSlAfterHide={handleAfterHide} size="small">
-            <WaButton slot="trigger" size="small" caret disabled={disabled} variant="plain" withCaret>
+            <WaButton slot="trigger" size="small" disabled={disabled} variant="brand" withCaret>
                 <WaIcon slot="start" name="location-dot" variant="regular"/>{'Select an action'}
             </WaButton>
 

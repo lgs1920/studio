@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-22
- * Last modified: 2026-03-22
+ * Created on: 2026-03-25
+ * Last modified: 2026-03-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -92,6 +92,9 @@ export const MapPOIEditContent = memo(({poi}) => {
         if (!window.isOK) {
             return
         }
+        event.stopPropagation()
+        event.preventDefault()
+
         const update = {}
         if (event.target === _poiColor.current) {
             update.color = event.target.value
@@ -196,46 +199,50 @@ export const MapPOIEditContent = memo(({poi}) => {
             }
 
             <div className="edit-map-poi-wrapper" id={`edit-map-poi-content-${id}`}>
-                <div className="map-poi-header-actions">
-                    {point.visible &&
-                        <>
-                            <WaTooltip content="Background Color">
-                                <WaColorPicker
-                                    size="small"
-                                    value={bgColor ?? lgs.colors.poiDefaultBackground}
-                                    swatches={swatches}
-                                    onChange={handleChangeColor}
-                                    disabled={!visible}
-                                    noFormatToggle
-                                    ref={_poiBgColor}
-                                    hoist
-                                />
-                            </WaTooltip>
-                            <WaTooltip content="Foreground Color">
-                                <WaColorPicker
-                                    size="small"
-                                    value={color ?? lgs.colors.poiDefault}
-                                    swatches={swatches}
-                                    onChange={handleChangeColor}
-                                    disabled={!visible}
-                                    noFormatToggle
-                                    ref={_poiColor}
-                                    hoist
-                                />
-                            </WaTooltip>
-                        </>
-                    }
-                    <MapPOIEditMenu poiId={id}/>
-                </div>
-
                 <WaInput
                     size="small"
                     value={title}
                     onChange={handleChangeTitle}
                     className="edit-title-map-poi-input"
-                    label="Title"
-                    disabled={!point.visible}
-                />
+                    readOnly={!point.visible}
+                >
+                    <div className="map-poi-header-actions" slot="label">
+                        {'Title'}
+                        <div>
+                            {point.visible &&
+                                <>
+                                    <WaTooltip for={`map-poi-bg-${poi.id}`}>{'Background Color'}</WaTooltip>
+                                    <WaColorPicker
+                                        id={`map-poi-bg-${poi.id}`}
+                                        size="small"
+                                        value={bgColor ?? lgs.colors.poiDefaultBackground}
+                                        swatches={swatches}
+                                        onChange={handleChangeColor}
+                                        disabled={!visible}
+                                        noFormatToggle
+                                        ref={_poiBgColor}
+                                        hoist
+                                    />
+
+                                    <WaTooltip for={`map-poi-fg-${poi.id}`}>{'Foreground Color'}</WaTooltip>
+                                    <WaColorPicker
+                                        id={`map-poi-fg-${poi.id}`}
+                                        size="small"
+                                        value={color ?? lgs.colors.poiDefault}
+                                        swatches={swatches}
+                                        onChange={handleChangeColor}
+                                        disabled={!visible}
+                                        noFormatToggle
+                                        ref={_poiColor}
+                                        hoist
+                                    />
+
+                                </>
+                            }
+                            <MapPOIEditMenu poiId={id}/>
+                        </div>
+                    </div>
+                </WaInput>
                 {point.visible &&
                     <MapPOICategorySelector point={point}/>
                 }

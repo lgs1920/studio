@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-22
- * Last modified: 2026-03-21
+ * Created on: 2026-03-25
+ * Last modified: 2026-03-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -18,6 +18,7 @@ import { WaCombobox, WaIcon, WaOption, WaSwitch } from '@web.awesome.me/webaweso
 import { memo, useEffect, useMemo }               from 'react'
 import { useSnapshot }                            from 'valtio'
 import { ICONS_PATH, POI_CATEGORY_ICONS }         from '@Core/constants'
+import { applyPOIDuotoneIconStyles } from '@Components/MainUI/MapPOI/duotoneIconUtils'
 
 /**
  * A memoized React component for selecting and filtering POI categories.
@@ -44,14 +45,23 @@ export const MapPOICategorySelectorFilter = memo(({
                         slot="start"
                         src={isSvg ? `${ICONS_PATH}/${iconName}` : ''}
                         name={!isSvg ? iconName : ''}
+                        className="poi-duotone-icon"
                         variant="regular"
                         family="duotone"
+                        onWaLoad={applyPOIDuotoneIconStyles}
                     />
                     {category.title}
                 </WaOption>
             )
         })
     }, [pois.categories])
+
+    const duotoneVars = useMemo(() => ({
+        '--primary-color':     'var(--poi-primary-default-color)',
+        '--secondary-color':   'var(--poi-secondary-default-color)',
+        '--primary-opacity':   'var(--poi-primary-default-opacity)',
+        '--secondary-opacity': 'var(--poi-secondary-default-opacity)',
+    }), [])
 
     const labelSlot = useMemo(() => (
         <div
@@ -86,7 +96,8 @@ export const MapPOICategorySelectorFilter = memo(({
         <WaCombobox
             value={settings.filter.byCategories}
             size={size}
-            className="map-poi-category-selector-filter"
+            className="map-poi-category-selector"
+            style={duotoneVars}
             multiple
             onChange={handleCategories}
             placeholder="Select categories"

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-22
- * Last modified: 2026-03-22
+ * Created on: 2026-03-25
+ * Last modified: 2026-03-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -23,6 +23,7 @@
 
 import { MapPOIContent }           from '@Components/MainUI/MapPOI/MapPOIContent'
 import { MapPOIEditContent }       from '@Components/MainUI/MapPOI/MapPOIEditContent'
+import { MapPOISummary } from '@Components/MainUI/MapPOI/MapPOISummary'
 import { POI_STARTER_TYPE, POI_TMP_TYPE, POIS_EDITOR_DRAWER } from '@Core/constants'
 import { SlDetails }               from '@shoelace-style/shoelace/dist/react'
 import { FontAwesomeIcon }         from '@fortawesome/react-fontawesome'
@@ -97,14 +98,10 @@ export const MapPOIListItem = memo(({id, canSelect}) => {
             {canSelect && <POIBulkToggle id={id}/>}
             <WaDetails
                 className={classNames('edit-map-poi-item', {'map-poi-hidden': !poi.visible}, 'lgs--details-hoverable')}
-                style={styles}
                 open={isCurrent}
             >
                 <div slot="summary" onClick={handleSummaryClick}>
-                    <div className="map-poi-summary-content">
-                        <MapPOIContent poi={id} useInMenu={true}/>
-                        <span>{' '}{poi.title}{' '}</span>
-                    </div>
+                    <MapPOISummary poi={id} useInMenu={true}/>
                 </div>
                 {isCurrent && <MapPOIEditContent poi={id}/>}
             </WaDetails>

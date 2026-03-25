@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-22
- * Last modified: 2026-03-22
+ * Created on: 2026-03-25
+ * Last modified: 2026-03-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -76,7 +76,7 @@ export const MapPOIEditFilterButton = memo(() => {
                     size="small"
                     appearance={poi.filter.active ? 'filled' : 'plain'}
                     variant={poi.filter.active ? 'danger' : 'brand'}>
-                    <WaIcon slot="start" size="small" name={iconName} variant="regular"/>
+                    <WaIcon size="small" name={iconName} variant="regular"/>
                 </WaButton>
             </div>
         </>

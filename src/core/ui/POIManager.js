@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-22
- * Last modified: 2026-03-22
+ * Created on: 2026-03-25
+ * Last modified: 2026-03-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -18,7 +18,7 @@ import {
     ADD_POI_EVENT, GLOBAL_PARENT, POI_STARTER_TYPE, POI_THRESHOLD_DISTANCE, POI_TMP_TYPE, POIS_STORE, REMOVE_POI_EVENT,
 }                     from '@Core/constants'
 import { MapPOI }     from '@Core/MapPOI'
-import { Export } from '@Core/ui/Export'
+import { Export }     from '@Core/ui/Export'
 import { POIUtils }   from '@Utils/cesium/POIUtils'
 import { KM }         from '@Utils/UnitUtils'
 import { v4 as uuid } from 'uuid'
@@ -102,7 +102,14 @@ export class POIManager {
             return null
         }
 
+        const hasVisibilityUpdate = Object.prototype.hasOwnProperty.call(updates, 'visible')
+        const previousVisible = poi.visible
         Object.assign(poi, updates)
+
+        if (hasVisibilityUpdate && previousVisible !== poi.visible) {
+            poi.toggleVisibility()
+        }
+
         // Trigger Valtio proxyMap update for reactivity
         this.list.set(poi.id, poi)
 
