@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-22
- * Last modified: 2026-03-22
+ * Created on: 2026-03-26
+ * Last modified: 2026-03-26
  *
  *
  * Copyright © 2026 LGS1920
@@ -23,11 +23,6 @@ import { useEffect, useRef }   from 'react'
 export const GlobalSettings = () => {
     const generalTools = useRef(null)
 
-    useEffect(() => {
-        __.ui.ui.initDetailsGroup(generalTools.current)
-    }, [])
-
-
     return (
 
         <div ref={generalTools} id={'global-style-settings'} className={'lgs--details-list'}>
@@ -41,7 +36,6 @@ export const GlobalSettings = () => {
 
             <WaDetails id={'ui-camera-settings'}
                        small open={false}
-                       className={'lgs-theme'}
                        name="global-settings"
                        className="lgs--details-hoverable"
             >

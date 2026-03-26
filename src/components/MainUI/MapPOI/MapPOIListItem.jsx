@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-25
- * Last modified: 2026-03-25
+ * Created on: 2026-03-26
+ * Last modified: 2026-03-26
  *
  *
  * Copyright © 2026 LGS1920
@@ -21,16 +21,11 @@
  * File: MapPOIListItem.jsx
  ******************************************************************************/
 
-import { MapPOIContent }           from '@Components/MainUI/MapPOI/MapPOIContent'
 import { MapPOIEditContent }       from '@Components/MainUI/MapPOI/MapPOIEditContent'
 import { MapPOISummary } from '@Components/MainUI/MapPOI/MapPOISummary'
-import { POI_STARTER_TYPE, POI_TMP_TYPE, POIS_EDITOR_DRAWER } from '@Core/constants'
-import { SlDetails }               from '@shoelace-style/shoelace/dist/react'
-import { FontAwesomeIcon }         from '@fortawesome/react-fontawesome'
-import { faSquareCheck, faSquare } from '@fortawesome/pro-duotone-svg-icons'
 import { WaDetails, WaIcon } from '@web.awesome.me/webawesome-pro/dist/react'
 import classNames                  from 'classnames'
-import { memo, useCallback, useMemo } from 'react'
+import { memo, useCallback } from 'react'
 import { useSnapshot }             from 'valtio'
 
 const POIBulkToggle = memo(({id}) => {
@@ -64,30 +59,30 @@ export const MapPOIListItem = memo(({id, canSelect}) => {
     const $pois = lgs.stores.main.components.pois
     const $poi = $pois.list.get(id)
     const {current, bulkList} = useSnapshot($pois)
-    const {open: drawerOpen} = useSnapshot(lgs.stores.ui.drawers)
     const poi = useSnapshot($poi || {})
 
     const isCurrent = current === id
     const isSelected = bulkList.has(id)
 
-    const handleSummaryClick = useCallback((e) => {
-        e.preventDefault()
-        e.stopPropagation()
-        $pois.current = isCurrent ? false : id
-        // engine focus logic omitted for brevity, keep your existing selectPOI here
-    }, [isCurrent, id, $pois])
+    const handleDetailsShow = useCallback((event) => {
+        if (event?.target !== event?.currentTarget) {
+            return
+        }
+        if ($pois.current !== id) {
+            $pois.current = id
+        }
+    }, [$pois, id])
 
-    const styles = useMemo(() => {
-        if (!poi.id) {
-            return {}
+    const handleDetailsHide = useCallback((event) => {
+        if (event?.target !== event?.currentTarget) {
+            return
         }
-        const bg = poi.bgColor ?? lgs.colors.poiDefaultBackground
-        return {
-            '--map-poi-bg-header':  __.ui.ui.hexToRGBA(bg, 'rgba', 0.2),
-            '--fa-primary-color':   poi.color,
-            '--fa-secondary-color': bg,
-        }
-    }, [poi.id, poi.bgColor, poi.color])
+        queueMicrotask(() => {
+            if ($pois.current === id) {
+                $pois.current = false
+            }
+        })
+    }, [$pois, id])
 
     if (!poi.id) {
         return null
@@ -99,8 +94,10 @@ export const MapPOIListItem = memo(({id, canSelect}) => {
             <WaDetails
                 className={classNames('edit-map-poi-item', {'map-poi-hidden': !poi.visible}, 'lgs--details-hoverable')}
                 open={isCurrent}
+                onWaShow={handleDetailsShow}
+                onWaHide={handleDetailsHide}
             >
-                <div slot="summary" onClick={handleSummaryClick}>
+                <div slot="summary">
                     <MapPOISummary poi={id} useInMenu={true}/>
                 </div>
                 {isCurrent && <MapPOIEditContent poi={id}/>}

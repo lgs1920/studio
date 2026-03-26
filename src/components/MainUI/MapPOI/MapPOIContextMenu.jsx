@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-25
- * Last modified: 2026-03-25
+ * Created on: 2026-03-26
+ * Last modified: 2026-03-26
  *
  *
  * Copyright © 2026 LGS1920
@@ -17,13 +17,12 @@
 import {
     POI_FLAG_START, POI_FLAG_STOP, POI_STANDARD_TYPE, POI_STARTER_TYPE, POI_TMP_TYPE, POIS_EDITOR_DRAWER,
 }                                                 from '@Core/constants'
-import { stopRotationAndSync } from '@Components/MainUI/MapPOI/rotationSyncUtils'
 import {
     faArrowRotateRight, faArrowsFromLine, faArrowsToLine, faCopy, faFlag, faLocationDot, faLocationPen, faPanorama,
     faTrashCan,
 }                                                 from '@fortawesome/pro-regular-svg-icons'
 import { faMask as faMaskSolid }                  from '@fortawesome/pro-solid-svg-icons'
-import { SlDivider, SlIcon, SlSpinner }           from '@shoelace-style/shoelace/dist/react'
+import { SlDivider, SlIcon } from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                                  from '@Utils/FA2SL'
 import { UIToast }                                from '@Utils/UIToast'
 import { WaSpinner } from '@web.awesome.me/webawesome-pro/dist/react'
@@ -50,15 +49,12 @@ export const MapPOIContextMenu = (props) => {
     const _menuRef = props.menuRef
     const thePOI = props.targetId?.id
     const $pois = lgs.stores.main.components.pois
-    const pois = useSnapshot($pois)
+    const rotateState = useSnapshot(lgs.stores.ui.mainUI.rotate)
 
     // If no target ID is provided, do not render the menu component.
     if (!thePOI) {
         return null
     }
-
-    // Set the global POI current ID based on the target prop.
-    $pois.current = thePOI
 
     // POI Data Access
     const $targetPoi = $pois.list.get(thePOI)
@@ -93,7 +89,7 @@ export const MapPOIContextMenu = (props) => {
     const removePOI = useCallback(async () => {
         // Stop camera rotation if active before removal
         if (__.ui.cameraManager.isRotating()) {
-            await stopRotationAndSync()
+            await __.ui.poiManager.stopRotationAndSync()
         }
 
         const result = await __.ui.poiManager.remove({id: thePOI})
@@ -143,34 +139,14 @@ export const MapPOIContextMenu = (props) => {
 
     /** Toggles camera rotation around the current POI. */
     const toggleRotation = useCallback(async () => {
-        if (__.ui.cameraManager.isRotating()) {
-            await stopRotationAndSync()
-            if (currentPoi?.animated) {
-                await __.ui.poiManager.updatePOI(thePOI, {animated: false})
-            }
-        }
-        else {
-            __.ui.sceneManager.focus(currentPoi, {
-                target: currentPoi,
-                heading: lgs.stores.main.components.camera.position.heading,
-                pitch:   lgs.stores.main.components.camera.position.pitch,
-                roll:    lgs.stores.main.components.camera.position.roll,
-                range:   lgs.stores.main.components.camera.position.range,
-                infinite:  true,
-                rotate:    true,
-                rpm:       lgs.settings.ui.poi.rpm,
-                panoramic: false,
-                flyingTime: 0,
-            })
-            await __.ui.poiManager.updatePOI(thePOI, {animated: true})
-        }
+        await __.ui.poiManager.toggleRotationAroundPOI(thePOI)
         hideMenu()
-    }, [currentPoi, hideMenu, thePOI])
+    }, [hideMenu, thePOI])
 
     /** Starts a panoramic rotation of the camera. */
     const startPanoramic = useCallback(async () => {
         if (__.ui.cameraManager.isRotating()) {
-            await stopRotationAndSync()
+            await __.ui.poiManager.stopRotationAndSync()
         }
         await __.ui.poiManager.updatePOI(thePOI, {animated: false})
         __.ui.cameraManager.panoramic()
@@ -181,6 +157,12 @@ export const MapPOIContextMenu = (props) => {
 
     // Ensure the menu element is initialized in the ContextMenu singleton on first mount/ref set.
     // This is crucial for the show/hide logic managed by the singleton.
+    useEffect(() => {
+        if ($pois.current !== thePOI) {
+            $pois.current = thePOI
+        }
+    }, [thePOI, $pois])
+
     useEffect(() => {
         if (_menuRef.current) {
             __.ui.contextMenu.initialize(_menuRef.current)
@@ -201,14 +183,17 @@ export const MapPOIContextMenu = (props) => {
 
 
     // Pre-computed flags (using currentPoi snapshot data) to avoid inline logic in JSX
-    const isRotating = __.ui.cameraManager.isRotating()
+    const isPOIRotating = useMemo(
+        () => __.ui.poiManager.isPOIRotating(thePOI),
+        [thePOI, rotateState.running, rotateState.target?.element, rotateState.target?.slug, rotateState.target?.id],
+    )
     const canSaveAsStandard = currentPoi?.type === undefined
     const canSetAsStarter = currentPoi?.type !== POI_STARTER_TYPE && !canSaveAsStandard
     const canRemove = currentPoi?.type !== POI_STARTER_TYPE &&
         currentPoi?.type !== POI_FLAG_START &&
         currentPoi?.type !== POI_FLAG_STOP
     const canEdit = currentPoi?.type !== POI_TMP_TYPE
-    const showRotationItem = currentPoi?.animated || isRotating
+    const showRotationItem = isPOIRotating
 
     // Safety check: if the POI doesn't exist in the list (though targetPoiId should prevent this), return null.
     if (!currentPoi.id) {

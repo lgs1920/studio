@@ -411,7 +411,8 @@
 }
 
 #map-poi-edit-settings wa-switch {
-    width: 35%;
+    width: auto;
+    margin-right: var(--lgs-gutter-s);
     margin-left: auto;
 }
 

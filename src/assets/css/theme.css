@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-22
- * Last modified: 2026-03-22
+ * Created on: 2026-03-26
+ * Last modified: 2026-03-26
  *
  *
  * Copyright © 2026 LGS1920
@@ -1175,6 +1175,15 @@ wa-switch[label-at-start], wa-switch[label-at-end] {
     width: 100%;
 }
 
+wa-switch[label-at-start][width-auto], wa-switch[label-at-end][width-auto] {
+    width: auto;
+}
+
+wa-switch[label-at-start][width-auto]::part(control), wa-switch[label-at-end][width-auto]::part(control) {
+    margin-left: var(--lgs-gutter-s);
+}
+
+
 wa-switch[label-at-start]::part(control) {
     order: 2;
     margin-left: auto;
@@ -1248,7 +1257,7 @@ wa-radio-group[label-at-end]::part(form-control) {
     /* Use column-gap for horizontal spacing and a smaller row-gap for the hint */
     align-items: center;
     width: 100%;
-    column-gap: var(--lgs-gutter);
+    column-gap: var(--lgs-gutter-s);
     row-gap: 4px; /* Reduced vertical gap for the hint */
 }
 

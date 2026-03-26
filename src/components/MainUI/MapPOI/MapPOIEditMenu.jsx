@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-25
- * Last modified: 2026-03-25
+ * Created on: 2026-03-26
+ * Last modified: 2026-03-26
  *
  *
  * Copyright © 2026 LGS1920
@@ -22,10 +22,9 @@
  ******************************************************************************/
 
 import {
-    POI_FLAG_START, POI_FLAG_STOP, POI_STANDARD_TYPE, POI_STARTER_TYPE, POI_TMP_TYPE,
+    POI_FLAG_START, POI_FLAG_STOP, POI_STARTER_TYPE,
 }                                                      from '@Core/constants'
 
-import { stopRotationAndSync }               from '@Components/MainUI/MapPOI/rotationSyncUtils'
 import { UIToast }                                     from '@Utils/UIToast'
 import { WaButton, WaDivider, WaDropdown, WaDropdownItem, WaIcon } from '@web.awesome.me/webawesome-pro/dist/react'
 import React, { memo, useMemo, useCallback } from 'react'
@@ -34,13 +33,12 @@ import { useSnapshot }                                 from 'valtio'
 
 export const MapPOIEditMenu = memo(({poiId}) => {
     const $pois = lgs.stores.main.components.pois
-    const $camera = lgs.stores.main.components.camera
+    const rotateState = useSnapshot(lgs.stores.ui.mainUI.rotate)
 
     /**
      * Subscribe to POI proxy directly so property changes (visible/animated/etc.)
      * trigger UI updates without relying on list-level epoch changes.
      */
-    const poisSnap = useSnapshot($pois, {sync: true})
     const $point = $pois.list.get(poiId)
     const pointSnap = useSnapshot($point || {})
 
@@ -49,15 +47,14 @@ export const MapPOIEditMenu = memo(({poiId}) => {
     }
 
     const isVisible = pointSnap.visible ?? true
-    const isAnimated = pointSnap.animated
-    const isCurrent = poisSnap.current === pointSnap?.id
+    const isPOIRotating = useMemo(
+        () => __.ui.poiManager.isPOIRotating(pointSnap.id),
+        [pointSnap.id, rotateState.running, rotateState.target?.element, rotateState.target?.slug, rotateState.target?.id],
+    )
 
     const stopRotation = useCallback(async () => {
-        await stopRotationAndSync()
-        if ($point.animated) {
-            await __.ui.poiManager.updatePOI(pointSnap.id, {animated: false})
-        }
-    }, [$point, pointSnap.id])
+        await __.ui.poiManager.stopRotationAndSync()
+    }, [])
 
     /**
      * Toggles visibility and prevents event bubbling to avoid SlDetails toggling
@@ -73,45 +70,21 @@ export const MapPOIEditMenu = memo(({poiId}) => {
     const focus = useCallback(async (e) => {
         e?.stopPropagation()
         $pois.current = pointSnap.id
-        if (__.ui.cameraManager.isRotating()) {
-            await stopRotationAndSync()
-        }
-        __.ui.sceneManager.focus($point, {
-            target:  $point,
-            heading: $camera.position.heading,
-            pitch:   $camera.position.pitch,
-            range:   $camera.position.range,
-            flyingTime: 2,
-        })
-    }, [pointSnap.id, $point, $camera.position, $pois])
+        await __.ui.poiManager.focusPOI(pointSnap.id, {flyingTime: 2})
+    }, [pointSnap.id, $pois])
 
     const rotationAround = useCallback(async (e) => {
         e?.stopPropagation()
         $pois.current = pointSnap.id
-        if (__.ui.cameraManager.isRotating()) {
-            await stopRotation()
-        }
-        __.ui.sceneManager.focus($point, {
-            target:  $point,
-            heading: $camera.position.heading,
-            pitch:   $camera.position.pitch,
-            range:   $camera.position.range,
-            infinite:   true,
-            rpm:        lgs.settings.ui.poi.rpm,
-            rotate:     true,
-            flyingTime: 0,
-        })
-        await __.ui.poiManager.updatePOI(pointSnap.id, {animated: true})
-    }, [pointSnap.id, $point, $camera.position, $pois, stopRotation])
+        await __.ui.poiManager.rotateAroundPOI(pointSnap.id)
+    }, [pointSnap.id, $pois])
 
     const startPanoramic = useCallback(async (e) => {
         e?.stopPropagation()
-        if (__.ui.cameraManager.isRotating()) {
-            await stopRotation()
-        }
+        await __.ui.poiManager.stopRotationAndSync()
         await __.ui.poiManager.updatePOI(pointSnap.id, {animated: false})
         __.ui.cameraManager.panoramic()
-    }, [pointSnap.id, stopRotation])
+    }, [pointSnap.id])
 
     const copyCoordinates = useCallback((e) => {
         e?.stopPropagation()
@@ -173,7 +146,15 @@ export const MapPOIEditMenu = memo(({poiId}) => {
             <WaDivider key="div-1"/>,
         )
 
-        if (!isAnimated) {
+        if (isPOIRotating) {
+            items.push(
+                <WaDropdownItem key="stop-rot" onClick={stopRotation}>
+                    <WaIcon slot="icon" name={'arrow-rotate-right'}/>
+                    <span>{'Stop Rotation'}</span>
+                </WaDropdownItem>,
+            )
+        }
+        else {
             items.push(
                 <WaDropdownItem key="rot-around" onClick={rotationAround}>
                     <WaIcon slot="icon" name={'arrow-rotate-right'}/>
@@ -188,18 +169,9 @@ export const MapPOIEditMenu = memo(({poiId}) => {
                 </WaDropdownItem>,
             )
         }
-        else if (isCurrent) {
-            items.push(
-                <WaDropdownItem key="stop-rot" onClick={stopRotation}>
-                    <WaIcon slot="icon" name={'arrow-rotate-right'}/>
-                    <span>{'Stop Rotation'}</span>
-                </WaDropdownItem>,
-            )
-
-        }
 
         return items
-    }, [pointSnap, isCurrent, isAnimated, isVisible, focus, remove, rotationAround, stopRotation, copyCoordinates, toggleVisibility, startPanoramic])
+    }, [pointSnap, isPOIRotating, isVisible, focus, remove, rotationAround, stopRotation, copyCoordinates, toggleVisibility, startPanoramic])
 
     /**
      * UI BRANCHING:

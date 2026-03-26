@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-14
- * Last modified: 2026-03-14
+ * Created on: 2026-03-26
+ * Last modified: 2026-03-26
  *
  *
  * Copyright © 2026 LGS1920
@@ -56,7 +56,7 @@ export const CameraSettings = (props) => {
                                 {' Show Position '}
                                 <span slot="hint">{' Longitude, Latitude, Altitude '}</span>
                             </WaSwitch>
-
+                            <WaDivider orientation="vertical"/>
                             <WaSwitch size="xsmall" label-at-start checked={camera.showHPR}
                                       onChange={(event) => $camera.showHPR = event.target.checked}>
                                 {' Show HPR '}
@@ -82,7 +82,7 @@ export const CameraSettings = (props) => {
                             <WaIcon name="arrows-to-circle" variant="regular"/>
                         </span>
                     </WaSwitch>
-
+                    <WaDivider orientation="vertical"/>
                     <WaSwitch size="xsmall" label-at-start checked={camera.showTargetPosition} ref={_targetPosition}
                               onChange={(event) => $camera.showTargetPosition = event.target.checked}>
                         {' Show Target Position '}

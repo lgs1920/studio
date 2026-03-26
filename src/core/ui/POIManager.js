@@ -15,7 +15,8 @@
  ******************************************************************************/
 
 import {
-    ADD_POI_EVENT, GLOBAL_PARENT, POI_STARTER_TYPE, POI_THRESHOLD_DISTANCE, POI_TMP_TYPE, POIS_STORE, REMOVE_POI_EVENT,
+    ADD_POI_EVENT, CURRENT_POI, GLOBAL_PARENT, POI_STARTER_TYPE, POI_THRESHOLD_DISTANCE, POI_TMP_TYPE, POIS_STORE,
+    REMOVE_POI_EVENT,
 }                     from '@Core/constants'
 import { MapPOI }     from '@Core/MapPOI'
 import { Export }     from '@Core/ui/Export'
@@ -373,4 +374,95 @@ export class POIManager {
             }
         }
     }
+
+
+    clearRotatingPoiAnimation = async () => {
+        const rotatingId = this.getRotatingPoiId()
+        if (!rotatingId) {
+            return
+        }
+
+        const rotatingPoi = lgs.stores.main.components.pois.list.get(rotatingId)
+        if (rotatingPoi?.animated) {
+            await this.updatePOI(rotatingId, {animated: false})
+        }
+    }
+
+    getRotatingPoiId = () => {
+        const target = lgs.stores.ui.mainUI.rotate.target
+        if (!target || target.element !== CURRENT_POI) {
+            return null
+        }
+        return target.slug ?? target.id ?? null
+    }
+
+    isPOIRotating = (poiId) => {
+        if (!poiId) {
+            return false
+        }
+        return __.ui.cameraManager.isRotating() && this.getRotatingPoiId() === poiId
+    }
+
+    focusPOI = async (poiId, options = {}) => {
+        const point = this.list.get(poiId)
+        if (!point) {
+            return false
+        }
+        const camera = lgs.stores.main.components.camera.position
+        __.ui.sceneManager.focus(point, {
+            target:  point,
+            heading: camera.heading,
+            pitch:   camera.pitch,
+            roll:    camera.roll,
+            range:   camera.range,
+            ...options,
+        })
+        return true
+    }
+
+    rotateAroundPOI = async (poiId) => {
+        const point = this.list.get(poiId)
+        if (!point) {
+            return false
+        }
+
+        if (__.ui.cameraManager.isRotating()) {
+            await this.stopRotationAndSync()
+        }
+
+        await this.focusPOI(poiId, {
+            infinite:   true,
+            rpm:        lgs.settings.ui.poi.rpm,
+            rotate:     true,
+            flyingTime: 0,
+        })
+        await this.updatePOI(poiId, {animated: true})
+        return true
+    }
+
+    toggleRotationAroundPOI = async (poiId) => {
+        if (!poiId) {
+            return false
+        }
+        if (this.isPOIRotating(poiId)) {
+            await this.stopRotationAndSync()
+            return false
+        }
+        return this.rotateAroundPOI(poiId)
+    }
+
+    stopRotationAndSync = async () => {
+        const rotatingId = this.getRotatingPoiId()
+        if (__.ui.cameraManager.isRotating()) {
+            await __.ui.cameraManager.stopRotate()
+        }
+
+        if (rotatingId) {
+            const rotatingPoi = this.list.get(rotatingId)
+            if (rotatingPoi?.animated) {
+                await this.updatePOI(rotatingId, {animated: false})
+            }
+        }
+    }
+
 }

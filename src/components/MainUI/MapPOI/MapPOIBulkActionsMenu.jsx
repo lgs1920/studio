@@ -7,21 +7,14 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-25
- * Last modified: 2026-03-25
+ * Created on: 2026-03-26
+ * Last modified: 2026-03-26
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { JOURNEY_EDITOR_DRAWER } from '@Core/constants'
-import { stopRotationAndSync } from '@Components/MainUI/MapPOI/rotationSyncUtils'
-import {
-    faArrowsFromLine, faArrowsToLine, faLocationDot, faTrashCan,
-}                                                                         from '@fortawesome/pro-regular-svg-icons'
-import { faEye, faMask }                                               from '@fortawesome/pro-solid-svg-icons'
-import { SlButton, SlDropdown, SlIcon, SlIconButton, SlMenu, SlMenuItem } from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                                        from '@Utils/FA2SL'
 import { WaButton, WaDropdown, WaDropdownItem, WaIcon } from '@web.awesome.me/webawesome-pro/dist/react'
 import React, { useEffect, useState, useCallback }      from 'react'
 import { useSnapshot }                                                    from 'valtio'
@@ -111,7 +104,7 @@ export const MapPOIBulkActionsMenu = React.memo((globals) => {
      */
     const remove = useCallback(async () => {
         if (__.ui.cameraManager.isRotating()) {
-            await stopRotationAndSync()
+            await __.ui.poiManager.stopRotationAndSync()
         }
         // Check if current POI is in the bulk list
         const needToChangeCurrent = $pois.bulkList.has(pois.current)
