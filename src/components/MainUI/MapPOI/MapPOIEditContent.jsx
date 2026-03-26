@@ -459,7 +459,6 @@ export const MapPOIEditContent = memo(({poi}) => {
                                                               onInput={handleChangeLatitude}
                                                               label="Latitude"
                                                               disabled={!visible}
-                                                              pattern={LATITUDE_FORMAT}
                                                           />
                                                           <WaInput
                                                               className={classNames({'map-poi-edit-warning-coordinate': coordinateError.longitude})}
@@ -470,7 +469,6 @@ export const MapPOIEditContent = memo(({poi}) => {
                                                               onInput={handleChangeLongitude}
                                                               label="Longitude"
                                                               disabled={!visible}
-                                                              pattern={LONGITUDE_FORMAT}
                                                           />
 
                                                           <WaCopyButton
