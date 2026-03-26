@@ -7,15 +7,15 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-10
- * Last modified: 2026-02-10
+ * Created on: 2026-03-26
+ * Last modified: 2026-03-26
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { DAY, HOUR, MILLIS, MINUTE } from '@Core/constants'
-import { Duration }                  from 'luxon'
+import { DAY, HOUR, LATITUDE_FORMAT, LONGITUDE_FORMAT, MILLIS, MINUTE } from '@Core/constants'
+import { Duration }                                                     from 'luxon'
 
 // Unit system constants
 export const INTERNATIONAL = 0
@@ -142,7 +142,7 @@ export class UnitUtils {
                                        ? Math.round(value)
                                        : value.toFixed(unit.decimals).replace(/^0+/, '')
                 return `${formattedValue}${unit.label}`
-            }
+            },
         }
     }
 
@@ -229,6 +229,134 @@ export class UnitUtils {
             unit:  unitText,
             full:  `${toShow}${unitText ? ' ' + unitText : ''}`,
         }
+    }
+
+    /**
+     * Convert Latitude or Longitude string (DD or DMS) to decimal float
+     * @param {string} value - The input coordinate string
+     * @param {boolean} isLatitude - True for latitude, false for longitude
+     * @returns {number|null} The coordinate in DD format or null if invalid
+     */
+    static convertToDD = (value, isLatitude = true) => {
+        if (!value) {
+            return null
+        }
+
+        const $regex = new RegExp(isLatitude ? LATITUDE_FORMAT : LONGITUDE_FORMAT, 'i')
+        const $match = value.trim().match($regex)
+
+        if (!$match) {
+            return null
+        }
+
+        // Case 1: Already in DD format (Match group 1 or 3 for Lat, 1 or 3-5 for Lng)
+        // If the DMS specific groups are undefined, it's DD
+        if ($match[4] === undefined && $match[7] === undefined) {
+            return parseFloat(value.replace(',', '.'))
+        }
+
+        // Case 2: DMS format
+        // Groups for DMS start after the DD alternatives in the regex
+        const $offset = isLatitude ? 4 : 7
+        const $deg = parseFloat($match[$offset]) || 0
+        const $min = parseFloat($match[$offset + 1]) || 0
+        const $sec = parseFloat($match[$offset + 2]) || 0
+        const $hemisphere = value.slice(-1).toUpperCase()
+
+        let $dd = $deg + ($min / 60) + ($sec / 3600)
+
+        // Apply negative sign for South, West or if the string starts with '-'
+        if ($hemisphere === 'S' || $hemisphere === 'W' || value.startsWith('-')) {
+            $dd = $dd * -1
+        }
+
+        // Return fixed to 6 decimals as requested
+        return parseFloat($dd.toFixed(6))
+    }
+
+    /**
+     * Validate coordinate input while typing and detect when it is fully valid.
+     * This is designed for live handlers (onInput).
+     *
+     * @param {string} rawValue
+     * @param {boolean} isLatitude
+     * @returns {{
+     *  accepted: boolean,
+     *  completeValid: boolean,
+     *  decimalValue: number|null,
+     *  typedFormat: string|null
+     * }}
+     */
+    static parseCoordinateInput = (rawValue, isLatitude = true) => {
+        const value = `${rawValue ?? ''}`
+        const trimmedValue = value.trim()
+
+        const allowedChars = /^[0-9+\-.,\sNSEWnsew°'"]*$/
+        if (!allowedChars.test(value)) {
+            return {accepted: false, completeValid: false, decimalValue: null, typedFormat: null}
+        }
+
+        const hemisphereMatches = value.toUpperCase().match(/[NSEW]/g) ?? []
+        const invalidHemisphere = hemisphereMatches.some((hemisphere) => {
+            if (isLatitude) {
+                return hemisphere === 'E' || hemisphere === 'W'
+            }
+            return hemisphere === 'N' || hemisphere === 'S'
+        })
+        if (invalidHemisphere || hemisphereMatches.length > 1) {
+            return {accepted: false, completeValid: false, decimalValue: null, typedFormat: null}
+        }
+        if (hemisphereMatches.length === 1 && trimmedValue) {
+            const hemisphere = hemisphereMatches[0]
+            if (!new RegExp(`${hemisphere}\\s*$`, 'i').test(trimmedValue)) {
+                return {accepted: false, completeValid: false, decimalValue: null, typedFormat: null}
+            }
+        }
+
+        const signMatches = trimmedValue.match(/[+-]/g) ?? []
+        if (signMatches.length > 1 || (signMatches.length === 1 && !/^[+-]/.test(trimmedValue))) {
+            return {accepted: false, completeValid: false, decimalValue: null, typedFormat: null}
+        }
+
+        if (/\s{2,}/.test(value)) {
+            return {accepted: false, completeValid: false, decimalValue: null, typedFormat: null}
+        }
+
+        const numericPart = trimmedValue.replace(/[^\d.,]/g, '')
+        const separators = numericPart.match(/[.,]/g) ?? []
+        if ((numericPart.includes('.') && numericPart.includes(',')) || separators.length > 1) {
+            return {accepted: false, completeValid: false, decimalValue: null, typedFormat: null}
+        }
+
+        if (!trimmedValue) {
+            return {accepted: true, completeValid: false, decimalValue: null, typedFormat: null}
+        }
+
+        const format = isLatitude ? LATITUDE_FORMAT : LONGITUDE_FORMAT
+        const regex = new RegExp(format, 'i')
+        if (!regex.test(trimmedValue)) {
+            return {accepted: true, completeValid: false, decimalValue: null, typedFormat: null}
+        }
+
+        const val = UnitUtils.convertToDD(trimmedValue, isLatitude)
+        if (!Number.isFinite(val)) {
+            return {accepted: false, completeValid: false, decimalValue: null, typedFormat: null}
+        }
+
+        return {
+            accepted:      true,
+            completeValid: true,
+            decimalValue:  val,
+            typedFormat:   /[NSEWnsew°'"]/.test(trimmedValue) ? DMS : DD,
+        }
+    }
+
+    static formatCoordinate = (ddValue, targetFormat = DD) => {
+        if (!Number.isFinite(ddValue)) {
+            return '0'
+        }
+        const safeTargetFormat = targetFormat === DMS ? DMS : DD
+        return `${UnitUtils.convert(ddValue).to(safeTargetFormat)}`
     }
 }
 

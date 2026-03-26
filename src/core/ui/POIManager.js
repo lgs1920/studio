@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-25
- * Last modified: 2026-03-25
+ * Created on: 2026-03-26
+ * Last modified: 2026-03-26
  *
  *
  * Copyright © 2026 LGS1920
@@ -102,9 +102,22 @@ export class POIManager {
             return null
         }
 
-        const hasVisibilityUpdate = Object.prototype.hasOwnProperty.call(updates, 'visible')
+        const safeUpdates = {...updates}
+        if (Object.prototype.hasOwnProperty.call(safeUpdates, 'height')
+            && !Number.isFinite(safeUpdates.height)) {
+            delete safeUpdates.height
+        }
+        if (Object.prototype.hasOwnProperty.call(safeUpdates, 'simulatedHeight')
+            && !Number.isFinite(safeUpdates.simulatedHeight)) {
+            delete safeUpdates.simulatedHeight
+        }
+        if (Object.keys(safeUpdates).length === 0) {
+            return poi
+        }
+
+        const hasVisibilityUpdate = Object.prototype.hasOwnProperty.call(safeUpdates, 'visible')
         const previousVisible = poi.visible
-        Object.assign(poi, updates)
+        Object.assign(poi, safeUpdates)
 
         if (hasVisibilityUpdate && previousVisible !== poi.visible) {
             poi.toggleVisibility()

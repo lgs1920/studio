@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-25
- * Last modified: 2026-03-25
+ * Created on: 2026-03-26
+ * Last modified: 2026-03-26
  *
  *
  * Copyright © 2026 LGS1920
@@ -41,9 +41,6 @@ export const MapPOIContent = ({poi, useInMenu = false, style}) => {
     const $pois = lgs.stores.main.components.pois
     const poisSnap = useSnapshot($pois)
 
-    const preSnapDebug = useMemo(() => {
-        return new URLSearchParams(window.location.search).get('preSnapPoi') === '1'
-    }, [])
 
     /** * Direct reactive access to the point from the snapshot.
      */
@@ -51,7 +48,6 @@ export const MapPOIContent = ({poi, useInMenu = false, style}) => {
     const $point = $pois.list.get(poi)
 
     const $contextMenu = lgs.stores.ui.contextMenu
-    const showPreSnapDebug = preSnapDebug && !useInMenu && poisSnap.current === poi
     const iconName = point?.categoryIcon(point?.category)
     const isSvgIcon = iconName?.endsWith('.svg')
 
@@ -205,7 +201,6 @@ export const MapPOIContent = ({poi, useInMenu = false, style}) => {
                 'poi-icon-wrapper',
                 (!point?.expanded || useInMenu) && 'poi-shrinked',
                 useInMenu && 'used-in-menu',
-                showPreSnapDebug && 'poi-pre-snap-debug',
             )}
             style={{
                 '--lgs-poi-background-color': point?.bgColor ?? lgs.colors.poiDefaultBackground,

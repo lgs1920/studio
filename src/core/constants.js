@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-22
- * Last modified: 2026-03-19
+ * Created on: 2026-03-26
+ * Last modified: 2026-03-26
  *
  *
  * Copyright © 2026 LGS1920
@@ -575,3 +575,23 @@ export const WIDGET_FONT_FAMILIES = ['System', ...WIDGET_GOOGLE_FONTS]
 
 export const WIDGET_EDITOR_PRE_RENDER_EVENT  = 'widget-editor-pre-render',
              WIDGET_EDITOR_POST_RENDER_EVENT = 'widget-editor-post-render'
+
+
+/**
+ * Pattern for Latitude
+ * DD: -90 to 90 with 0 to 6 decimals
+ * DMS: 0-90° 0-59' 0-59" (N, S, or sign)
+ */
+export const LATITUDE_FORMAT = '^[-+]?([1-8]?\\d(\\.\\d{1,6})?|90(\\.0{1,6})?)$|^([1-8]?\\d|90)[\\u00B0\\s]\\s*([0-5]?\\d)[\'\\s]\\s*([0-5]?\\d(\\.\\d+)?)"?\\s*[NS]?$'
+/**
+ * Pattern for Longitude
+ * DD: -180 to 180 with 0 to 6 decimals
+ * DMS: 0-180° 0-59' 0-59" (E, W, or sign)
+ */
+export const LONGITUDE_FORMAT = '^[-+]?(180(\\.0{1,6})?|((1[0-7]\\d)|([1-9]?\\d))(\\.\\d{1,6})?)$|^([1-7]?\\d\\d?|180)[\\u00B0\\s]\\s*([0-5]?\\d)[\'\\s]\\s*([0-5]?\\d(\\.\\d+)?)"?\\s*[EW]?$'
+
+/**
+ * Coordinate input UX timings (milliseconds)
+ */
+export const COORDINATE_INPUT_ERROR_DURATION_MS = 1200
+export const COORDINATE_INPUT_NORMALIZE_DELAY_MS = 2000
