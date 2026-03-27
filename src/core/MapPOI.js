@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-25
- * Last modified: 2026-03-25
+ * Created on: 2026-03-27
+ * Last modified: 2026-03-27
  *
  *
  * Copyright © 2026 LGS1920
@@ -17,6 +17,7 @@
 import { CURRENT_POI, POI_CATEGORY_ICONS, POI_STANDARD_TYPE, POI_TMP_TYPE, POIS_STORE } from '@Core/constants'
 import { MapElement }                                                                   from '@Core/MapElement'
 import { POIUtils }                                                                     from '@Utils/cesium/POIUtils'
+import { v4 as uuid }                                                                   from 'uuid'
 
 export class MapPOI extends MapElement {
     /**
