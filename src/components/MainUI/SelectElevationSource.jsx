@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-03-27
+ * Last modified: 2026-03-27
  *
  *
  * Copyright © 2026 LGS1920
@@ -17,6 +17,7 @@
 import { faChevronDown }              from '@fortawesome/pro-regular-svg-icons'
 import { SlIcon, SlOption, SlSelect } from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                      from '@Utils/FA2SL'
+import { WaIcon, WaOption, WaSelect } from '@web.awesome.me/webawesome-pro/dist/react'
 
 /**
  *
@@ -29,27 +30,36 @@ import { FA2SL }                      from '@Utils/FA2SL'
  * @constructor
  */
 export const SelectElevationSource = (props) => {
-
     const handleRequestClose = event => {
         event.preventDefault()
     }
     return (
         <>
-            <SlSelect hoist label={props.label}
-                      value={props.default}
-                      onSlChange={props.onChange}
-                      onSlSelect={handleRequestClose}>
-                <SlIcon library="fa" name={FA2SL.set(faChevronDown)} slot={'expand-icon'}/>
+            <WaSelect
+                label={props.label}
+                value={props.default}
+                onChange={props.onChange}
+                onSelect={handleRequestClose}
+            >
+                {props.servers.map(server => {
+                    const isSelected = props.default === server.id
 
-                { // Loop on all servers
-                    props.servers.map(server => (
-                        <SlOption key={server.id} value={server.id}>
-                            <SlIcon library="fa" name={FA2SL.set(props.default === server.id?server.iconSelection??server.icon:server.icon)} slot={'prefix'}/>
-                            {props.default === server.id?server.labelSelection??server.label:server.label}
-                        </SlOption>
-                    ))
-                }
-            </SlSelect>
+                    /**
+                     * Resolve display values based on selection state
+                     */
+                    const icon = isSelected ? (server.iconSelection ?? server.icon) : server.icon
+                    const label = isSelected ? (server.labelSelection ?? server.label) : server.label
+                    return (
+                        <WaOption key={server.id} value={server.id} selected={isSelected}>
+                            <WaIcon
+                                name={icon}
+                                slot="start"
+                            />
+                            {label}
+                        </WaOption>
+                    )
+                })}
+            </WaSelect>
         </>
     )
 

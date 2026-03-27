@@ -7,21 +7,19 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-22
- * Last modified: 2026-03-21
+ * Created on: 2026-03-27
+ * Last modified: 2026-03-27
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { LGSScrollbars }                                from '@Components/MainUI/LGSScrollbars'
-import { MapPOIEditFilterPopup }                        from '@Components/MainUI/MapPOI/MapPOIEditFilterPopup'
 import { MapPOIEditListActions }                        from '@Components/MainUI/MapPOI/MapPOIEditListActions'
-import { MapPOIEditFilterButton }                       from '@Components/MainUI/MapPOI/MapPOIEditFilterButton'
 import { MapPOIList }                                   from '@Components/MainUI/MapPOI/MapPOIList'
 import PanelActions                                     from '@Components/PanelsActions'
 import WaDrawer                                         from '@Components/WaDrawerNonModal'
-import { POIS_EDITOR_DRAWER, SETTINGS_EDITOR_DRAWER }   from '@Core/constants'
+import { POIS_EDITOR_DRAWER } from '@Core/constants'
 import React, { memo, useCallback, useEffect, useMemo } from 'react'
 import { createPortal }                                 from 'react-dom'
 import { useSnapshot }                                  from 'valtio'
@@ -119,22 +117,21 @@ export const Panel = memo(() => {
     const content = (
         <>
             {drawerOpen &&
-                    <WaDrawer
-                        id={POIS_EDITOR_DRAWER}
-                        open={true}
-                        onWaHide={closePanel}
-                        contained
-                        className="lgs-theme"
-                        placement={drawerPlacement}
-                    >
-                        <PanelActions/>
-                            <span slot="label">{'Points Of Interest'}</span>
-                                <LGSScrollbars>
-                                    <MapPOIEditListActions/>
-                                    <MapPOIList/>
-                                </LGSScrollbars>
-                            <DrawerFooter/>
-                    </WaDrawer>
+                <WaDrawer
+                    id={POIS_EDITOR_DRAWER}
+                    open={true}
+                    onWaHide={closePanel}
+                    placement={drawerPlacement}
+                >
+                    <PanelActions/>
+                    <span slot="label">{'Points Of Interest'}</span>
+
+                    <MapPOIEditListActions/>
+                    <LGSScrollbars>
+                        <MapPOIList/>
+                    </LGSScrollbars>
+                    <DrawerFooter/>
+                </WaDrawer>
             }
         </>
     )

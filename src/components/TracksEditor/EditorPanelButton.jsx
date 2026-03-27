@@ -2,13 +2,13 @@
  *
  * This file is part of the LGS1920/studio project.
  *
- * File: TrackEditorButton.jsx
+ * File: EditorPanelButton.jsx
  *
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-09
- * Last modified: 2026-03-09
+ * Created on: 2026-03-27
+ * Last modified: 2026-03-27
  *
  *
  * Copyright © 2026 LGS1920
@@ -24,7 +24,7 @@ import { useSnapshot }                           from 'valtio'
  * @param {Object} props - Component props (currently unused)
  * @returns {JSX.Element} The rendered TrackEditorButton component
  */
-export const TrackEditorButton = memo(() => {
+export const EditorPanelButton = memo(() => {
     // Granular snapshots to minimize re-renders
     const {toolBar} = useSnapshot(lgs.settings.ui.menu)
     // Derive boolean to avoid reactivity to nested theJourney properties
@@ -81,7 +81,7 @@ export const TrackEditorButton = memo(() => {
                       onClick={openEditorOrLoader}
                       variant={'brand'}
                       appearance="Filled">
-                <WaIcon name="route-circle-plus" variant="regular"/>
+                <WaIcon name={hasJourney ? 'route' : 'circle-plus'} variant="regular"/>
             </WaButton>
         </>
     )

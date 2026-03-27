@@ -7,15 +7,12 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-03-27
+ * Last modified: 2026-03-27
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
-
-import { faRegularMountainsSlash }                   from '@awesome.me/kit-eb5c406148/icons/kit/custom'
-import { faFileWaveform, faMapLocation, faTrashCan } from '@fortawesome/pro-regular-svg-icons'
 
 export class ElevationServer {
 
@@ -38,7 +35,7 @@ export class ElevationServer {
                                           {
                                               label: 'No Elevation Data',
                                               id:    ElevationServer.NONE,
-                                              icon:  faRegularMountainsSlash,
+                                              icon: 'regular-mountain-slash',
                                           },
                                       ],
 
@@ -47,9 +44,9 @@ export class ElevationServer {
                                           {
                                               label: 'Remove Elevation Data',
                                               id:    ElevationServer.CLEAR,
-                                              icon:  faTrashCan,
+                                              icon:          'trash-can',
                                               labelSelection: 'No Elevation Data',
-                                              iconSelection:  faRegularMountainsSlash,
+                                              iconSelection: 'regular-mountain-slash',
                                           },
                                       ],
 
@@ -58,7 +55,7 @@ export class ElevationServer {
                                           {
                                               label: 'Use File Elevation Data',
                                               id:     ElevationServer.FILE_CONTENT,
-                                              icon:   faFileWaveform,
+                                              icon: 'file-waveform',
                                               origin: true,
                                           },
                                       ],
@@ -74,7 +71,7 @@ export class ElevationServer {
                     id:    ElevationServer.OPEN_ELEVATION,
                     doc:   'https://github.com/Jorl17/open-elevation/blob/master/docs/api.md',
                     url:   'https://api.open-elevation.com/api/v1/lookup',
-                    icon:  faMapLocation,
+                    icon: 'map-location',
                 },
             ],
 
@@ -86,7 +83,7 @@ export class ElevationServer {
                     doc:         'https://geoservices.ign.fr/documentation/services/services-deprecies/calcul-altimetrique-rest',
                     url:         'https://data.geopf.fr/altimetrie/1.0/calcul/alti/rest/elevation.json',
                     maxPerQuery: 5000,
-                    icon:        faMapLocation,
+                    icon: 'map-location',
                 },
             ],
         ],

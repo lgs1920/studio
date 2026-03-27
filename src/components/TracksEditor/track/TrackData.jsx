@@ -7,13 +7,14 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-03-27
+ * Last modified: 2026-03-27
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
+import { WaCard } from '@web.awesome.me/webawesome-pro/dist/react'
 import { memo, useEffect, useMemo }  from 'react'
 import { useSnapshot }               from 'valtio'
 import { SlCard, SlDivider, SlIcon } from '@shoelace-style/shoelace/dist/react'
@@ -92,7 +93,7 @@ export const TrackData = memo(() => {
     const hasAltitude = !isNaN(metrics.minHeight) && !isNaN(metrics.maxHeight)
 
     return (
-        <SlCard className="element-data">
+        <WaCard className="element-data">
             {hasDuration && <DateInfo date={trackDate}/>}
 
             <div className="element-row">
@@ -260,6 +261,6 @@ export const TrackData = memo(() => {
                     )}
                 </>
             )}
-        </SlCard>
+        </WaCard>
     )
 })

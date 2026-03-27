@@ -7,23 +7,22 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-28
- * Last modified: 2026-02-28
+ * Created on: 2026-03-27
+ * Last modified: 2026-03-27
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { Utils }                                              from '@Editor/Utils'
-import { JOURNEY_WIDGETS }       from '@Core/constants'
-import { WidgetDynamicRenderer } from '@Core/ui/widget-manager/dynamic-render/WidgetDynamicRender'
-import { faTrashCan }                                         from '@fortawesome/pro-regular-svg-icons'
-import { SlButton, SlIcon, SlIconButton, SlPopup, SlTooltip } from '@shoelace-style/shoelace/dist/react'
-import { TrackUtils }                                         from '@Utils/cesium/TrackUtils'
-import { FA2SL }                                              from '@Utils/FA2SL'
-import { UIToast }                                            from '@Utils/UIToast'
-import React, { useEffect, useRef }                           from 'react'
-import { useSnapshot }                                        from 'valtio'
+import { JOURNEY_WIDGETS }                              from '@Core/constants'
+import {
+    WidgetDynamicRenderer,
+}                                                       from '@Core/ui/widget-manager/dynamic-render/WidgetDynamicRender'
+import { Utils }                                        from '@Editor/Utils'
+import { UIToast }                                      from '@Utils/UIToast'
+import { WaButton, WaCard, WaIcon, WaPopup, WaTooltip } from '@web.awesome.me/webawesome-pro/dist/react'
+import React, { useRef, useState }                      from 'react'
+import { useSnapshot }                                  from 'valtio'
 
 export const RemoveJourney = (props) => {
     const mainUI = lgs.stores.ui.mainUI
@@ -32,24 +31,16 @@ export const RemoveJourney = (props) => {
 
     const removeButton = useRef(null)
     const tooltipElement = useRef(null)
-    const distance = 0
     const tooltip = props?.tooltip ?? 'top-start'
     const settings = useSnapshot(lgs.settings.ui.menu)
-    const placement = props.placement ?? (settings.toolBar.fromStart ? 'top-start' : 'top-end')
-
+    const placement = props.placement ?? (settings.toolBar.fromStart ? 'bottom-end' : 'bottom-start')
+    const [dialog, setDialog] = useState(false)
 
     const hideRemoveDialog = () => {
-        mainUI.removeJourneyDialog.active.set(props.name, false)
-        // clearTimeout(timer)
+        setDialog(false)
     }
     const toggleRemoveDialog = (event) => {
-        if (mainUI.removeJourneyDialog.active.get(props.name)) {
-            hideRemoveDialog()
-        }
-        else {
-            mainUI.removeJourneyDialog.active.set(props.name, true)
-            tooltipElement.current.hide()
-        }
+        setDialog(!dialog)
     }
 
     /**
@@ -127,44 +118,36 @@ export const RemoveJourney = (props) => {
         }
     }
 
-
-    useEffect(() => {
-        mainUI.removeJourneyDialog.active.set(props.name, false)
-        return () => {
-            mainUI.removeJourneyDialog.active.set(props.name, false)
-        }
-    }, [])
     return (
         <>
+            <WaTooltip placement={tooltip} for={removeButton}
+                       ref={tooltipElement}>{'Remove the current journey'}</WaTooltip>
+            <WaButton ref={removeButton} variant="brand" appearance="plain"
+                      onClick={toggleRemoveDialog}>
+                <WaIcon name="trash-can"/>
+            </WaButton>
 
-            <SlTooltip hoist content={'Remove the current journey'} placement={tooltip} ref={tooltipElement}>
-                {props.style !== 'button' &&
-                    <SlIconButton ref={removeButton}
-                                  onClick={toggleRemoveDialog}
-                                  library="fa" name={FA2SL.set(faTrashCan)}/>
-                }
-                {props.style === 'button' &&
 
-                    <SlButton ref={removeButton} size={'small'} className={'square-button'}
-                              onClick={toggleRemoveDialog}
-                    >
-                        <SlIcon slot="prefix" library="fa" name={FA2SL.set(faTrashCan)}/>
-                    </SlButton>
-                }
-            </SlTooltip>
-                <SlPopup anchor={removeButton.current}
-                         active={snap.removeJourneyDialog.active.get(props.name)}
-                         hover-bridge="true" shift="true"
-                         placement={placement}
-                         distance={distance}
-                >
-                    <div className="lgs-one-line-card lgs-mini-remove-dialog">
-                        {'Remove this journey ?'}
-                        <SlButton variant="danger" size={'small'} onClick={removeJourney}>
-                            <SlIcon slot="prefix" library="fa" name={FA2SL.set(faTrashCan)}/> {'Yes'}
-                        </SlButton>
+            <WaPopup anchor={removeButton.current}
+                     active={dialog}
+                     hover-bridge="true" shift="true"
+                     placement={placement}
+                     distance={lgs.gutter.xs}
+            >
+                <WaCard className="lgs--popup-in-drawer lgs--popup-in-drawer-small lgs-slide-down">
+                    {'Are you sure to remove this journey ?'}
+                    <div slot="footer">
+                        <div className="lgs--popup-in-drawer-footer">
+                            <WaButton variant="neutral" appearance="outlined" size={'small'} onClick={hideRemoveDialog}>
+                                <WaIcon name="xmark"/> {'No'}
+                            </WaButton>
+                            <WaButton variant="danger" appearance="" size={'small'} onClick={removeJourney}>
+                                <WaIcon name="trash-can"/> {'Yes'}
+                            </WaButton>
+                        </div>
                     </div>
-                </SlPopup>
+                </WaCard>
+            </WaPopup>
 
 
         </>

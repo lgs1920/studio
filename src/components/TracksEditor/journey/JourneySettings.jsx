@@ -7,14 +7,19 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-22
- * Last modified: 2026-03-21
+ * Created on: 2026-03-27
+ * Last modified: 2026-03-27
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { MapPOIEditListActions } from '@Components/MainUI/MapPOI/MapPOIEditListActions'
+import PopupAnchor    from '@Components/PopupAnchor'
+import {
+    WaIcon, WaInput, WaProgressBar, WaTab, WaTabGroup, WaTabPanel, WaTextarea, WaTooltip,
+}                     from '@web.awesome.me/webawesome-pro/dist/react'
+import * as PropTypes from 'prop-types'
 import { Fragment, useEffect, useMemo, useRef } from 'react'
 import {
     useSnapshot,
@@ -121,15 +126,20 @@ const {DATA, EDIT, POINTS, POIS} = PANELS
  * @param {Function} props.onElevationChange - Callback for elevation server change
  * @returns {JSX.Element} Data tab panel component
  */
-const DataTabPanel = ({journey, isProcessing, serverList, onElevationChange}) => (
-    <SlTabPanel name={DATA}>
+
+const DataTabPanel = ({journey, isProcessing, serverList, onElevationChange}) => (<WaTabPanel name={DATA}>
+        <LGSScrollbars>
         <div className="select-elevation-source">
-            <SelectElevationSource default={journey.elevationServer} label="Elevation:" onChange={onElevationChange}
+            <SelectElevationSource default={journey.elevationServer}
+                                   label={'Elevation:'}
+                                   onChange={onElevationChange}
                                    servers={serverList}/>
-            {isProcessing && <SlProgressBar indeterminate/>}
+            {isProcessing && <WaProgressBar indeterminate/>}
+
         </div>
         {journey.tracks.size === 1 ? <TrackData/> : <JourneyData/>}
-    </SlTabPanel>
+        </LGSScrollbars>
+    </WaTabPanel>
 )
 
 /**
@@ -140,15 +150,14 @@ const DataTabPanel = ({journey, isProcessing, serverList, onElevationChange}) =>
  * @param {Function} props.onDescriptionChange - Callback for description changes
  * @returns {JSX.Element} Edit tab panel component
  */
-const EditTabPanel = ({journey, onTitleChange, onDescriptionChange}) => (
-    <SlTabPanel name={EDIT}>
+const EditTabPanel = ({journey, onTitleChange, onDescriptionChange}) => (<WaTabPanel name={EDIT}>
         <div id="journey-text-description">
-            <SlTooltip content="Title">
-                <SlInput id="journey-title" aria-label="Journey Title" value={journey.title}
+            <WaTooltip content="Title">
+                <WaInput id="journey-title" aria-label="Journey Title" value={journey.title}
                          onSlChange={onTitleChange}/>
-            </SlTooltip>
-            <SlTooltip hoist content="Description">
-                <SlTextarea
+            </WaTooltip>
+            <WaTooltip hoist content="Description">
+                <WaTextarea
                     row={2}
                     size="small"
                     id="journey-description"
@@ -157,18 +166,17 @@ const EditTabPanel = ({journey, onTitleChange, onDescriptionChange}) => (
                     onSlChange={onDescriptionChange}
                     placeholder="Journey description"
                 />
-            </SlTooltip>
+            </WaTooltip>
             {journey.tracks.size === 1 && <TrackStyleSettings/>}
         </div>
-    </SlTabPanel>
+    </WaTabPanel>
 )
 
 /**
  * POIs tab panel component for managing Points of Interest
  * @returns {JSX.Element} POIs tab panel component
  */
-const PoisTabPanel = () => (
-    <SlTabPanel name={POIS}>
+const PoisTabPanel = () => (<WaTabPanel name={POIS}>
         <div className="panel-wrapper">
             <MapPOIEditFilterPopup/>
             <MapPOIEditListActions/>
@@ -176,19 +184,25 @@ const PoisTabPanel = () => (
                 <MapPOIList/>
             </LGSScrollbars>
         </div>
-    </SlTabPanel>
+    </WaTabPanel>
 )
 
 /**
  * Points tab panel component for managing track points
  * @returns {JSX.Element} Points tab panel component
  */
-const PointsTabPanel = () => (
-    <SlTabPanel name={POINTS}>
+const PointsTabPanel = () => (<WaTabPanel name={POINTS}>
         <TrackPoints/>
-    </SlTabPanel>
+    </WaTabPanel>
 )
 
+function WaIconButton(props) {
+    return null
+}
+
+WaIconButton.propTypes = {
+    onClick: PropTypes.func, library: PropTypes.string, name: PropTypes.string,
+}
 /**
  * Main journey settings component providing comprehensive journey editing interface
  * Features include:
@@ -525,20 +539,20 @@ export const JourneySettings = () => {
     }, [])
 
     return (
-        <Fragment>
+        <>
             {shouldRender && (
                 <div id="journey-settings" key={lgs.stores.main.components.journeyEditor.keys.journey.settings}>
                     <div className="settings-panel" id="editor-journey-settings-panel">
-                        <SlTabGroup className="menu-panel" ref={_tabGroup} onSlTabShow={initTab} onSlTabHide={initTab}>
-                            <SlTab slot="nav" panel={DATA} active={isTabActive(DATA)}>
-                                <SlIcon library="fa" name={FA2SL.set(faRectangleList)}/> Data
-                            </SlTab>
-                            <SlTab slot="nav" panel={EDIT} active={isTabActive(EDIT)}>
-                                <SlIcon library="fa" name={FA2SL.set(faPaintbrushPencil)}/> Edit
-                            </SlTab>
-                            <SlTab slot="nav" panel={POIS} active={isTabActive(POIS)}>
-                                <SlIcon library="fa" name={FA2SL.set(faLocationDot)}/> POIs
-                            </SlTab>
+                        <WaTabGroup className="menu-panel" ref={_tabGroup} onSlTabShow={initTab} onSlTabHide={initTab}>
+                            <WaTab slot="nav" panel={DATA} active={isTabActive(DATA)}>
+                                <WaIcon name="rectangle-list" variant="regular"/> Data
+                            </WaTab>
+                            <WaTab slot="nav" panel={EDIT} active={isTabActive(EDIT)}>
+                                <WaIcon name="paintbrush-pencil" variant="regular"/> Edit
+                            </WaTab>
+                            <WaTab slot="nav" panel={POIS} active={isTabActive(POIS)}>
+                                <WaIcon name="location-dot" variant="regular"/> POIs
+                            </WaTab>
                             <MapPOIEditFilterButton slot="nav"/>
                             <DataTabPanel journey={journey} isProcessing={isProcessing} serverList={serverList}
                                           onElevationChange={computeElevation}/>
@@ -546,13 +560,12 @@ export const JourneySettings = () => {
                                           onDescriptionChange={setDescription}/>
                             <PoisTabPanel/>
                             <PointsTabPanel/>
-                        </SlTabGroup>
-                        <div id="journey-visibility" className="editor-vertical-menu">
+                        </WaTabGroup>
+                        <div className="editor-vertical-menu">
                             <div>
                                 {journey.visible && (
                                     <>
-                                        {!autoRotateJourney && (
-                                            <SlTooltip hoist
+                                        {!autoRotateJourney && (<WaTooltip hoist
                                                        content={running && target.instanceOf(CURRENT_JOURNEY) ? 'Stop rotation' : 'Start rotation'}
                                                        placement="left">
                                                 <FAButton
@@ -561,9 +574,9 @@ export const JourneySettings = () => {
                                                     icon={faArrowRotateRight}
                                                     className={classNames({'fa-spin': running && target.instanceOf(CURRENT_JOURNEY)})}
                                                 />
-                                            </SlTooltip>
+                                            </WaTooltip>
                                         )}
-                                        <SlTooltip hoist
+                                        <WaTooltip hoist
                                                    content={running && target.instanceOf(CURRENT_JOURNEY) ? 'Stop rotation' : 'Focus on journey'}
                                                    placement="left">
                                             <FAButton
@@ -571,26 +584,28 @@ export const JourneySettings = () => {
                                                 icon={running && autoRotateJourney && target.instanceOf(CURRENT_JOURNEY) ? faArrowRotateRight : faCrosshairsSimple}
                                                 className={classNames({'fa-spin': running && autoRotateJourney && target.instanceOf(CURRENT_JOURNEY)})}
                                             />
-                                        </SlTooltip>
+                                        </WaTooltip>
                                     </>
                                 )}
-                                <SlTooltip hoist content={textVisibilityJourney} placement="left">
+                                <WaTooltip hoist content={textVisibilityJourney} placement="left">
                                     <ToggleStateIcon onChange={setJourneyVisibility} initial={journey.visible}/>
-                                </SlTooltip>
+                                </WaTooltip>
                             </div>
-                            {journey.pois.size > 1 && (
-                                <SlTooltip hoist content={textVisibilityPOIs} placement="left">
+                            {journey.pois.size > 1 && (<>
+                                    <WaTooltip placement="left"
+                                               id="toggle-all-pois-visibility">{textVisibilityPOIs}</WaTooltip>
                                     <ToggleStateIcon
+                                        id="toggle-all-pois-visibility"
                                         onChange={setAllPOIsVisibility}
                                         initial={journey.POIsVisible}
-                                        icons={{shown: faLocationDot, hidden: faLocationDotSlash}}
+                                        icons={{shown: 'location-dot', hidden: 'location-dot-slash'}}
                                     />
-                                </SlTooltip>
+                                </>
                             )}
                             <div>
-                                <SlTooltip hoist content="Export" placement="left">
-                                    <SlIconButton onClick={exportJourney} library="fa" name={FA2SL.set(faDownload)}/>
-                                </SlTooltip>
+                                <WaTooltip hoist content="Export" placement="left">
+                                    <WaIconButton onClick={exportJourney} library="fa" name={FA2SL.set(faDownload)}/>
+                                </WaTooltip>
                                 <RemoveJourney tooltip="left-start" name={REMOVE_JOURNEY_IN_EDIT}/>
                             </div>
                         </div>
@@ -598,6 +613,6 @@ export const JourneySettings = () => {
                     <ConfirmExportJourneyDialog/>
                 </div>
             )}
-        </Fragment>
+        </>
     )
 }

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-22
- * Last modified: 2026-03-18
+ * Created on: 2026-03-27
+ * Last modified: 2026-03-27
  *
  *
  * Copyright © 2026 LGS1920
@@ -21,8 +21,8 @@ import { GeocodingButton }   from '@Components/MainUI/geocoding/GeocodingButton'
 import { GeocodingUI }                          from '@Components/MainUI/geocoding/GeocodingUI'
 import { MapPOIMonitor }     from '@Components/MainUI/MapPOI/MapPOIMonitor'
 import { RotateButton }      from '@Components/MainUI/RotateButton'
-import { TrackEditorButton } from '@Components/MainUI/TrackEditorButton'
-import { VideoButton }                 from '@Components/MainUI/video/VideoButton'
+import { EditorPanelButton } from '@Editor/EditorPanelButton'
+import { VideoButton }       from '@Components/MainUI/video/VideoButton'
 import { VideoDownloadAndShareDialog } from '@Components/MainUI/video/VideoDownloadAndShareDialog'
 import { ProfileButton }                        from '@Components/Profile/ProfileButton'
 import { TextButton }        from '@Components/Text/TextButton'
@@ -205,7 +205,7 @@ export const MainUI = memo(() => {
                             <SettingsButton tooltip={tooltipDir}/>
                             <LayersButton tooltip={tooltipDir}/>
                             <POIEditButton tooltip={tooltipDir}/>
-                            <TrackEditorButton tooltip="top"/>
+                            <EditorPanelButton tooltip="top"/>
                             <ProfileButton tooltip={tooltipDir}/>
                             <TextButton tooltip={tooltipDir}/>
                             <InformationButton tooltip={tooltipDir}/>

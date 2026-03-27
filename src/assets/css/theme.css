@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-26
- * Last modified: 2026-03-26
+ * Created on: 2026-03-27
+ * Last modified: 2026-03-27
  *
  *
  * Copyright © 2026 LGS1920
@@ -482,10 +482,6 @@ wa-drawer::part(dialog) {
     border-radius: var(--lgs-border-radius);
 }
 
-wa-drawer::part(header) {
-    font-family: "Open Sans", var(--sl-font-sans);
-    font-weight: 700 !important;
-}
 
 wa-drawer section {
     width: 100%;
@@ -547,6 +543,11 @@ wa-drawer:not([placement="bottom"]):not([placement="top"]) wa-tab-panel::part(ba
     --spacing: var(--lgs-gutter);
     --margin: calc(var(--lgs-gutter) - var(--lgs-gutter-xs));
     --width-popup: calc(var(--lgs-vertical-panel-width) - 2 * var(--margin));
+
+}
+
+.lgs--popup-in-drawer-small {
+    --width-popup: 15rem /*calc(var(--lgs-vertical-panel-width) - 2 * var(--margin));*/
 
 }
 
@@ -893,17 +894,11 @@ wa-dialog::part(title) {
 }
 
 
-.lgs-mini-remove-dialog {
-    position: relative;
-    z-index: 10;
+.lgs-mini-remove-dialog::part('footer') {
     display: flex;
-    justify-content: space-between;
-    min-width: 15rem;
-    margin: 0 0 var(--lgs-gutter-xs) 0;
+    margin-left: auto;
     gap: var(--lgs-gutter-xs);
-
 }
-
 
 /*******************************************************************************
  * Wa Details
@@ -1419,34 +1414,34 @@ wa-callout::part(message) {
 /*******************************************************************************
  * Progress Bars
  ******************************************************************************/
-sl-progress-bar {
+wa-progress-bar {
     margin-top: var(--lgs-gutter-xs);
     margin-bottom: var(--lgs-gutter-xs);
-    --height: var(--lgs-gutter-s);
+    --track-height: var(--lgs-gutter-s);
 }
 
-sl-progress-bar.normal {
-    --height: var(--lgs-gutter)
+wa-progress-bar.normal {
+    --track-height: var(--lgs-gutter)
 }
 
 /*******************************************************************************
  * Toggle State Icon
  ******************************************************************************/
-.toggle-state-icon sl-icon-button {
-    font-size: var(--lgs-font-size-m);
-}
+/*.toggle-state-icon wa-button {*/
+/*    font-size: var(--lgs-font-size-m);*/
+/*}*/
 
-.toggle-state-icon.small sl-icon-button {
-    font-size: var(--lgs-font-size-s);
-}
+/*.toggle-state-icon.small sl-icon-button {*/
+/*    font-size: var(--lgs-font-size-s);*/
+/*}*/
 
-.toggle-state-icon.medium sl-icon-button {
-    font-size: var(--lgs-font-size-m);
-}
+/*.toggle-state-icon.medium sl-icon-button {*/
+/*    font-size: var(--lgs-font-size-m);*/
+/*}*/
 
-.toggle-state-icon.large sl-icon-button {
-    font-size: var(--lgs-font-size-l);
-}
+/*.toggle-state-icon.large sl-icon-button {*/
+/*    font-size: var(--lgs-font-size-l);*/
+/*}*/
 
 /*******************************************************************************
  * Misc.

@@ -7,21 +7,16 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-03-27
+ * Last modified: 2026-03-27
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import './style.css'
-import { faRegularRouteCirclePlus }                             from '@awesome.me/kit-eb5c406148/icons/kit/custom'
-import { FAButton }                                             from '@Components/FAButton'
-import { faArrowRotateRight, faCrosshairsSimple, faSquarePlus } from '@fortawesome/pro-regular-svg-icons'
-import { SlButton, SlIcon, SlTooltip }                          from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                                                from '@Utils/FA2SL'
-import classNames                                               from 'classnames'
-import React                                                    from 'react'
+import { WaButton, WaIcon, WaTooltip } from '@web.awesome.me/webawesome-pro/dist/react'
+import React                           from 'react'
 
 export const JourneyLoaderButton = (props) => {
 
@@ -34,18 +29,16 @@ export const JourneyLoaderButton = (props) => {
 
     return (
         <>
-            <SlTooltip hoist placement={props.tooltip} content="Add a Journey">
-                {props.mini &&
-                    <FAButton onClick={toggleVisibilityLoader} icon={faRegularRouteCirclePlus}
-                              className={props.className}/>
-                }
-                {!props.mini &&
-                    <SlButton size={'small'} className={classNames('square-button', props.className)}
-                              onClick={toggleVisibilityLoader}>
-                        <SlIcon slot="prefix" library="fa" name={FA2SL.set(faRegularRouteCirclePlus)}/>
-                </SlButton>
-                }
-            </SlTooltip>
+            <WaTooltip placement={props.tooltip} for="create-new-journey-in-panel">{'Add a Journey'}</WaTooltip>
+            <WaButton id="create-new-journey-in-panel"
+                      className={props.className ?? ''}
+                      appearance="plain"
+                      variant="brand"
+                      onClick={toggleVisibilityLoader}>
+
+                <WaIcon name="circle-plus" variant="regular"/>
+            </WaButton>
+
         </>
     )
 

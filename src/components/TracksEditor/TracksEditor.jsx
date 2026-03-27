@@ -7,20 +7,23 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-22
- * Last modified: 2026-03-18
+ * Created on: 2026-03-27
+ * Last modified: 2026-03-27
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { JourneyLoaderButton }   from '@Components/FileLoader/JourneyLoaderButton'
+import PanelActions     from '@Components/PanelsActions'
 import { JOURNEY_EDITOR_DRAWER } from '@Core/constants'
 import { SlSwitch } from '@shoelace-style/shoelace/dist/react'
 import WaDrawer from '@Components/WaDrawerNonModal'
 
 import './style.css'
+import { WaSwitch }     from '@web.awesome.me/webawesome-pro/dist/react'
 import { memo, useCallback }     from 'react'
+import { createPortal } from 'react-dom'
 import { useSnapshot }           from 'valtio'
 import { JourneySelector }       from './journey/JourneySelector'
 import { JourneySettings }       from './journey/JourneySettings'
@@ -33,16 +36,14 @@ const ToolbarHeader = memo(({show, usage, onToggle}) => {
         return null
     }
     return (
-        <div slot="header-actions">
-            <SlSwitch
-                align-right
-                size="x-small"
+        <WaSwitch
+            label-at-start width-auto
+            size="xsmall"
                 checked={show}
-                onSlChange={onToggle}
+            onChange={onToggle}
             >
                 Toolbar
-            </SlSwitch>
-        </div>
+        </WaSwitch>
     )
 })
 
@@ -84,7 +85,7 @@ export const TracksEditor = memo(() => {
     }, [lgs.settings.ui.journeyToolbar.show])
 
     const handleRequestClose = useCallback((event) => {
-        if (event.detail.source === 'overlay') {
+        if (event.target.tagName !== 'WA-DRAWER') {
             event.preventDefault()
         }
         else {
@@ -104,30 +105,33 @@ export const TracksEditor = memo(() => {
         return null
     }
 
-    return (
+    const drawerRoot = __.ui.drawerManager.drawerRoot
+    const content = (
         <>
             {drawerOpen === JOURNEY_EDITOR_DRAWER &&
-                <div className="drawer-wrapper">
                     <WaDrawer
                         id={JOURNEY_EDITOR_DRAWER}
                         open={true}
                         onWaAfterHide={handleRequestClose}
                         onSlAfterHide={closeTracksEditor}
-                        contained
-                        className="lgs-theme"
                         placement={drawerPlacement}
                     >
+
                         <span slot="label">{'Edit the Journey'}</span>
-                        <ToolbarHeader
+                        <PanelActions>
+                            <ToolbarHeader
                             show={toolbarShow}
                             usage={toolbarUsage}
                             onToggle={toggleToolbar}
                         />
+                        </PanelActions>
                         {hasJourneys && <JourneyContent journeyVisible={journeyVisible}/>}
                         <div id="journey-editor-footer" slot="footer"/>
                     </WaDrawer>
-                </div>
             }
         </>
     )
+    console.log(drawerRoot)
+    return drawerRoot ? createPortal(content, drawerRoot) : content
+
 })

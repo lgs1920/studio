@@ -7,27 +7,20 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-03-27
+ * Last modified: 2026-03-27
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { FontAwesomeIcon } from '@Components/FontAwesomeIcon'
+import { FontAwesomeIcon }                    from '@Components/FontAwesomeIcon'
+import { WaCard, WaIcon, WaOption, WaSelect } from '@web.awesome.me/webawesome-pro/dist/react'
 import { memo, useCallback, useRef, useEffect, useMemo } from 'react'
 import { useSnapshot }     from 'valtio'
 import { SlIcon, SlOption, SlSelect } from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }           from '@Utils/FA2SL'
-import { faChevronDown }   from '@fortawesome/pro-regular-svg-icons'
-import { faMask, faSquare } from '@fortawesome/pro-solid-svg-icons'
 import classNames          from 'classnames'
-
-// Static icon names to avoid recalculation
-const ICON_CHEVRON_DOWN = faChevronDown
-const ICON_MULTI = 'multi-tracks.svg'
-const ICON_MASK = faMask
-const ICON_SQUARE = faSquare
 
 /**
  * A memoized React component for selecting or displaying a journey.
@@ -75,15 +68,6 @@ export const JourneySelector = memo(({label, size = 'medium', onChange, single, 
     }, [onChange])
 
     /**
-     * Determines the icon based on the number of tracks in the journey.
-     * @param {Object} [journey] - The journey object
-     * @return {string|Object} The icon to use
-     */
-    const icon = (journey = theJourney) => {
-        return journey.tracks.size === 1 ? ICON_SQUARE : ICON_MULTI
-    }
-
-    /**
      * Computes the icon style based on journey visibility and track colors.
      * @param {Object} [journey] - The journey object
      * @return {Object} The style object for the icon
@@ -116,57 +100,49 @@ export const JourneySelector = memo(({label, size = 'medium', onChange, single, 
         return null
     }
 
-    const isStyledCard = style === 'card'
 
     return (
         <>
             {journeys.length > 1 && (
-                <SlSelect
+                <WaSelect
                     label={label}
                     size={size}
                     value={theJourney.slug || ''}
-                    onSlChange={handleChange}
+                    onChange={handleChange}
                     key={keys.journey.list}
-                    className={classNames('journey-selector', {masked: !theJourney.visible})}
+                    className={classNames({masked: !theJourney.visible})}
                     ref={ref}
                 >
-                    <FontAwesomeIcon
-                        icon={theJourney.visible ? icon() : ICON_MASK}
-                        slot="prefix"
+                    <WaIcon
+                        name={theJourney.visible ? 'square' : 'mask'}
+                        slot="start"
                         style={getIconStyle()}
                     />
-                    <SlIcon library="fa" name={FA2SL.set(ICON_CHEVRON_DOWN)} slot="expand-icon"/>
                     {journeys.map(journey => (
-                        <SlOption
+                        <WaOption
                             key={journey.slug}
                             value={journey.slug}
                             className={classNames('journey-title', {masked: !journey.visible})}
                         >
-                            <FontAwesomeIcon
-                                icon={journey.visible ? icon(journey) : ICON_MASK}
-                                slot="prefix"
+                            <WaIcon
+                                name={journey.visible ? 'square' : 'mask'}
+                                slot="start"
                                 style={getIconStyle(journey)}
                             />
                             {journey.title}
-                        </SlOption>
+                        </WaOption>
                     ))}
-                </SlSelect>
+                </WaSelect>
             )}
             {journeys.length === 1 && single && (
-                <div
-                    className={classNames(
-                        'journey-title', 'lgs-one-line-card',
-                        {masked: !theJourney.visible},
-                    )}
-                >
-                    <FontAwesomeIcon
-                        className="journey-title-prefix"
-                        icon={theJourney.visible ? icon() : ICON_MASK}
-                        slot="prefix"
+                <WaCard className="journey-title">
+                    <span>
+                    <WaIcon
+                        name={theJourney.visible ? 'square' : 'mask'}
                         style={getIconStyle()}
-                    />
-                    {theJourney.title}
-                </div>
+                    /> {theJourney.title}
+                    </span>
+                </WaCard>
             )}
         </>
     )
