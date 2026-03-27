@@ -47,7 +47,7 @@
     "@turf/point-to-line-distance": "^7.3.4",
     "@turf/transform-rotate": "^7.3.4",
     "@web.awesome.me/webawesome-pro": "3.4.0",
-    "@zumer/snapdom": "2.6.0",
+    "@zumer/snapdom": "2.7.0",
     "argparse": "^2.0.1",
     "axios": "^1.13.6",
     "babel-plugin-module-resolver": "^5.0.3",
@@ -117,7 +117,7 @@
     "@typescript-eslint/eslint-plugin": "^8.57.2",
     "@typescript-eslint/parser": "^8.57.2",
     "@vitejs/plugin-react": "^6.0.1",
-    "baseline-browser-mapping": "^2.10.10",
+    "baseline-browser-mapping": "^2.10.11",
     "eslint": "^10.1.0",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.5.2",
@@ -125,7 +125,7 @@
     "typescript": "^6.0.2",
     "vite": "^8.0.3",
     "vite-plugin-markdown": "^2.2.0",
-    "vitest": "^4.1.1"
+    "vitest": "^4.1.2"
   },
   "module": "index.ts",
   "trustedDependencies": [
