@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-26
- * Last modified: 2026-03-26
+ * Created on: 2026-03-28
+ * Last modified: 2026-03-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -19,7 +19,7 @@ import { MapPOIEditFilterButton }              from '@Components/MainUI/MapPOI/M
 import { MapPOIEditFilterPopup }               from '@Components/MainUI/MapPOI/MapPOIEditFilterPopup'
 import { PopupAnchor }                         from '@Components/PopupAnchor'
 import { JOURNEY_EDITOR_DRAWER }               from '@Core/constants'
-import { WaButton, WaIcon, WaPopup, WaSwitch } from '@web.awesome.me/webawesome-pro/dist/react'
+import { WaIcon, WaPopup, WaSwitch } from '@web.awesome.me/webawesome-pro/dist/react'
 import classNames                              from 'classnames'
 import { memo, useCallback, useMemo, useRef }  from 'react'
 import { useSnapshot }                         from 'valtio'
@@ -38,8 +38,6 @@ export const MapPOIEditListActions = memo(({globals = true}) => {
 
     const $pois = lgs.stores.main.components.pois
     const pois = useSnapshot($pois)
-
-    const _anchor = useRef(null)
 
     const {open: drawerOpen} = useSnapshot(lgs.stores.ui.drawers)
 

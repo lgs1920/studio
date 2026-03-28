@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-26
- * Last modified: 2026-03-26
+ * Created on: 2026-03-28
+ * Last modified: 2026-03-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -252,6 +252,7 @@
 .edit-map-poi-item-wrapper {
     display: flex;
     justify-content: space-between;
+    min-width: 0;
     gap: var(--lgs-gutter-xs);
 }
 
@@ -289,14 +290,30 @@
 
 #edit-map-poi-list {
     display: flex;
+    overflow: hidden;
     flex-direction: column;
+    box-sizing: border-box;
+    min-height: 100%;
     gap: var(--lgs-gutter-xs);
+}
+
+#pois-editor-drawer::part(body) {
+    display: flex;
+    overflow: hidden;
+    flex-direction: column;
+    min-height: 0;
+}
+
+#pois-editor-drawer .lgs-scrollbars-container {
+    flex: 1 1 auto;
+    min-height: 0;
 }
 
 .edit-map-poi-item [slot="summary"] > div:first-child span > span {
     display: inline-block;
     overflow: hidden;
-    width: 15rem;
+    width: min(15rem, 100%);
+    min-width: 0;
     white-space: nowrap;
     text-overflow: ellipsis;
 }
@@ -321,6 +338,7 @@
 
 .edit-map-poi-item {
     flex: 1;
+    min-width: 0;
 }
 
 
@@ -484,12 +502,64 @@
     align-items: center;
     justify-content: space-between;
     width: 100%;
+    min-width: 0;
 }
 
 .map-poi-edit-summary span {
     display: inline-flex;
     align-items: center;
     gap: var(--lgs-gutter-xs);
+}
+
+.map-poi-edit-summary > span:first-child {
+    overflow: hidden;
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.map-poi-edit-summary > span:first-child > span {
+    display: block;
+    overflow: hidden;
+    min-width: 0;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+@media (max-width: 768px) {
+    #edit-map-poi-list .lgs--details-list {
+        box-sizing: border-box;
+        padding-right: 12px;
+        padding-bottom: 10px;
+    }
+
+    #edit-map-poi-list .edit-map-poi-item-wrapper,
+    #edit-map-poi-list .edit-map-poi-item {
+        box-sizing: border-box;
+        width: 100%;
+    }
+
+    #edit-map-poi-list .map-poi-edit-row-coordinates {
+        justify-content: stretch;
+        width: 100%;
+        gap: calc(var(--lgs-gutter-xs) * 0.75);
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 28px;
+    }
+
+    #edit-map-poi-list .map-poi-edit-row-coordinates > wa-input,
+    #edit-map-poi-list .map-poi-edit-row-coordinates > .map-poi-edit-item {
+        width: 100%;
+        min-width: 0;
+    }
+
+    #edit-map-poi-list .map-poi-edit-row-coordinates > .map-poi-edit-item {
+        width: auto;
+    }
+
+    #edit-map-poi-list .map-poi-edit-row-coordinates > wa-input::part(form-control-label) {
+        white-space: nowrap;
+    }
+
+
 }
 
 .map-poi-category-selector wa-icon,

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-26
- * Last modified: 2026-03-26
+ * Created on: 2026-03-28
+ * Last modified: 2026-03-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -29,7 +29,7 @@ export const MapPOIList = memo(() => {
     }, [])
 
     return (
-        <div id="edit-map-poi-list" className="lgs-scrollbars">
+        <div id="edit-map-poi-list">
             <MapPOIFilteredList/>
         </div>
     )
