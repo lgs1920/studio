@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-27
- * Last modified: 2026-03-27
+ * Created on: 2026-03-28
+ * Last modified: 2026-03-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -166,15 +166,27 @@ self.addEventListener('activate', event => {
 })
 
 self.addEventListener('fetch', event => {
-    const url = new URL(event.request.url)
+    let url
+    try {
+        url = new URL(event.request.url)
+    }
+    catch {
+        return
+    }
 
     if (url.hostname === 'assets.ion.cesium.com') {
-        event.respondWith(handleCesiumFetch(event))
+        event.respondWith(handleCesiumFetch(event).catch(() => new Response('Offline', {
+            status:     503,
+            statusText: 'Offline',
+        })))
         return
     }
 
     if (event.request.method === 'GET' && url.protocol.startsWith('http')) {
-        event.respondWith(handleAppFetch(event))
+        event.respondWith(handleAppFetch(event).catch(() => new Response('Offline', {
+            status:     503,
+            statusText: 'Offline',
+        })))
     }
 })
 
@@ -190,15 +202,20 @@ async function handleCesiumFetch(event) {
         return cachedResp
     }
 
-    const networkResp = await fetch(request)
-    if (networkResp && (networkResp.ok || networkResp.type === 'opaque')) {
-        event.waitUntil(
-            cache.put(request, networkResp.clone())
-                .then(() => trimCacheByEntries(cache, MAX_CESIUM_ENTRIES))
-                .catch(() => null),
-        )
+    try {
+        const networkResp = await fetch(request)
+        if (networkResp && (networkResp.ok || networkResp.type === 'opaque')) {
+            event.waitUntil(
+                cache.put(request, networkResp.clone())
+                    .then(() => trimCacheByEntries(cache, MAX_CESIUM_ENTRIES))
+                    .catch(() => null),
+            )
+        }
+        return networkResp
     }
-    return networkResp
+    catch {
+        return new Response('Offline', {status: 503, statusText: 'Offline'})
+    }
 }
 
 /**
@@ -213,7 +230,12 @@ async function handleAppFetch(event) {
     }
 
     if (!shouldCacheRequest(request)) {
-        return fetch(request)
+        try {
+            return await fetch(request)
+        }
+        catch {
+            return new Response('Offline', {status: 503, statusText: 'Offline'})
+        }
     }
 
     return staleWhileRevalidate(event)
