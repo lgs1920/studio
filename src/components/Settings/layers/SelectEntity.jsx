@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-22
- * Last modified: 2026-03-22
+ * Created on: 2026-03-28
+ * Last modified: 2026-03-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -255,7 +255,7 @@ export const SelectEntity = (props) => {
     return (
         <LGSScrollbars ref={_scrollRef}>
             {fill &&
-                <WaCard ref={_cardRef} className={classes.join(' ')}>
+                <WaCard appearance="filled" ref={_cardRef} className={classes.join(' ')}>
                     {list.map((entity, index) => {
                         let previousProviderName = index > 0 ? list[index - 1].providerName : null
                         return (
