@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-14
- * Last modified: 2026-03-14
+ * Created on: 2026-03-28
+ * Last modified: 2026-03-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -20,7 +20,7 @@ import React, { memo, useCallback, useEffect, useMemo, useState } from 'react'
 // Default icons - pre-calculated for better performance
 const DEFAULT_ICONS = {
     false: 'eye',
-    true:  'eyeSlash',
+    true: 'eye-slash',
 }
 
 /**
