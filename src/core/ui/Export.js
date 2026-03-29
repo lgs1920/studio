@@ -66,12 +66,12 @@ export class Export {
             doc.save(fileName)
         })
     }
-    static toPNG = async (element, file) => {
+    static toPNG = async (element, file, scale = 1) => {
         if (typeof element === 'string') {
             element = document.querySelector(element)
         }
         element.parentElement.classList.toggle('snapshot-in-progress')
-        snapdom(element, {scale: 4}).then(snap => snap.toCanvas()).then((canvas) => {
+        snapdom(element, {scale}).then(snap => snap.toCanvas()).then((canvas) => {
             canvas.toBlob((blob) => Export.toFile(blob, `${file}.png`))
             element.parentElement.classList.toggle('snapshot-in-progress')
         })
