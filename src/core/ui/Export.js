@@ -7,13 +7,14 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-03-29
+ * Last modified: 2026-03-29
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
+import { snapdom }                from '@zumer/snapdom'
 import { default as html2canvas } from 'html2canvas'
 import { DateTime }               from 'luxon'
 
@@ -70,13 +71,9 @@ export class Export {
             element = document.querySelector(element)
         }
         element.parentElement.classList.toggle('snapshot-in-progress')
-        await html2canvas(element, {
-            dpi: 600,
-        }).then((canvas) => {
-            const orientation = canvas.width >= canvas.height ? 'l' : 'p'
+        snapdom(element, {scale: 4}).then(snap => snap.toCanvas()).then((canvas) => {
             canvas.toBlob((blob) => Export.toFile(blob, `${file}.png`))
             element.parentElement.classList.toggle('snapshot-in-progress')
-
         })
 
     }
