@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-27
- * Last modified: 2026-03-27
+ * Created on: 2026-03-28
+ * Last modified: 2026-03-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,8 +16,8 @@
 
 import { faChevronDown }              from '@fortawesome/pro-regular-svg-icons'
 import { SlIcon, SlOption, SlSelect } from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                      from '@Utils/FA2SL'
-import { WaIcon, WaOption, WaSelect } from '@web.awesome.me/webawesome-pro/dist/react'
+import { FA2SL }                              from '@Utils/FA2SL'
+import { WaCard, WaIcon, WaOption, WaSelect } from '@web.awesome.me/webawesome-pro/dist/react'
 
 /**
  *
@@ -34,9 +34,9 @@ export const SelectElevationSource = (props) => {
         event.preventDefault()
     }
     return (
-        <>
-            <WaSelect
+        <WaSelect size="small"
                 label={props.label}
+                  hint={props.hint ?? ''}
                 value={props.default}
                 onChange={props.onChange}
                 onSelect={handleRequestClose}
@@ -54,13 +54,13 @@ export const SelectElevationSource = (props) => {
                             <WaIcon
                                 name={icon}
                                 slot="start"
+                                variant="regular"
                             />
                             {label}
                         </WaOption>
                     )
                 })}
             </WaSelect>
-        </>
     )
 
 }
