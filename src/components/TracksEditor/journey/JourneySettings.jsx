@@ -161,7 +161,6 @@ export const JourneySettings = () => {
         })
 
         updated.getTracksFromGeoJson(true)
-        console.log()
         await updated.getPOIsFromGeoJson()
         await updated.extractMetrics()
         updated.addToContext()

@@ -87,7 +87,7 @@ export const JourneySelector = memo(({label, size = 'medium', onChange, single, 
                     ref={ref}
                     value={theJourney.slug}
                 >
-                    <div slot="start" className="lgs--track-colors-in-settings">
+                    <div slot="end" className="lgs--track-colors-in-settings">
                         {Array.from(lgs.theJourney.tracks.values()).slice(0, 2).map(track => (
                             <WaIcon
                                 name={theJourney.visible ? 'square' : 'mask'}
@@ -102,7 +102,7 @@ export const JourneySelector = memo(({label, size = 'medium', onChange, single, 
                             value={journey.slug}
                             className={classNames('journey-title', {masked: !journey.visible})}
                         >
-                            <div slot="start" className="lgs--track-colors-in-settings">
+                            <div slot="end" className="lgs--track-colors-in-settings">
                                 {journey.visible ?
                                  (Array.from(journey.tracks.values()).slice(0, 2).map(track => (
                                      <WaIcon

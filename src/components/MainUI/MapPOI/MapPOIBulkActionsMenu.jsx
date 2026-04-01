@@ -7,17 +7,19 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-26
- * Last modified: 2026-03-26
+ * Created on: 2026-04-01
+ * Last modified: 2026-04-01
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { JOURNEY_EDITOR_DRAWER } from '@Core/constants'
-import { WaButton, WaDropdown, WaDropdownItem, WaIcon } from '@web.awesome.me/webawesome-pro/dist/react'
-import React, { useEffect, useState, useCallback }      from 'react'
-import { useSnapshot }                                                    from 'valtio'
+import { JOURNEY_EDITOR_DRAWER, POI_FLAG_START, POI_FLAG_STOP, POI_STARTER_TYPE } from '@Core/constants'
+import {
+    WaButton, WaDropdown, WaDropdownItem, WaIcon,
+}                                                                                 from '@web.awesome.me/webawesome-pro/dist/react'
+import React, { useCallback, useEffect, useState }                                from 'react'
+import { useSnapshot }                                                            from 'valtio'
 import './style.css'
 
 /**
@@ -108,11 +110,18 @@ export const MapPOIBulkActionsMenu = React.memo((globals) => {
         }
         // Check if current POI is in the bulk list
         const needToChangeCurrent = $pois.bulkList.has(pois.current)
+        console.log(pois.current)
         const actions = []
 
-        $pois.bulkList.forEach((canRemove, id) => {
-            if (canRemove) {
-                actions.push(__.ui.poiManager.remove({id: id}))
+        $pois.bulkList.forEach((removeCandidate, id) => {
+            if (removeCandidate) {
+                const poi = $pois.list.get(id)
+                const canRemove = poi?.type !== POI_STARTER_TYPE &&
+                    poi?.type !== POI_FLAG_START &&
+                    poi?.type !== POI_FLAG_STOP
+                if (canRemove) {
+                    actions.push(__.ui.poiManager.remove({id: id}))
+                }
             }
         })
 

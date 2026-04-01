@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-26
- * Last modified: 2026-03-26
+ * Created on: 2026-04-01
+ * Last modified: 2026-04-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -21,12 +21,13 @@
  * File: MapPOIListItem.jsx
  ******************************************************************************/
 
-import { MapPOIEditContent }       from '@Components/MainUI/MapPOI/MapPOIEditContent'
-import { MapPOISummary } from '@Components/MainUI/MapPOI/MapPOISummary'
-import { WaDetails, WaIcon } from '@web.awesome.me/webawesome-pro/dist/react'
-import classNames                  from 'classnames'
-import { memo, useCallback } from 'react'
-import { useSnapshot }             from 'valtio'
+import { MapPOIEditContent }                               from '@Components/MainUI/MapPOI/MapPOIEditContent'
+import { MapPOISummary }                                   from '@Components/MainUI/MapPOI/MapPOISummary'
+import { POI_FLAG_START, POI_FLAG_STOP, POI_STARTER_TYPE } from '@Core/constants'
+import { WaDetails, WaIcon }                               from '@web.awesome.me/webawesome-pro/dist/react'
+import classNames                                          from 'classnames'
+import { memo, useCallback }                               from 'react'
+import { useSnapshot }                                     from 'valtio'
 
 const POIBulkToggle = memo(({id}) => {
     const $pois = lgs.stores.main.components.pois
@@ -47,7 +48,7 @@ const POIBulkToggle = memo(({id}) => {
         <div className="map-poi-item-checkbox" onClick={toggle}>
             <WaIcon name={isSelected ? 'square-check' : 'square'}
                     variant="regular"
-                className={classNames({'is-active': isSelected})}
+                    className={classNames({'is-active': isSelected})}
             />
         </div>
     )
