@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-11
- * Last modified: 2026-02-11
+ * Created on: 2026-04-01
+ * Last modified: 2026-04-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -399,166 +399,156 @@ export class Journey extends MapElement {
     }
 
     /**
-     * Extract pois from GeoJson
-     *
+     * Extract POIs from GeoJson with coordinate-based synchronization.
+     * Updates existing POIs if they match the same location to preserve identity.
+     * Manages Start/Stop flag visibility based on journey limits.
+     * * @async
+     * @function getPOIsFromGeoJson
+     * @returns {Promise<void>}
      */
     getPOIsFromGeoJson = async () => {
-        if (this.geoJson.type === FEATURE_COLLECTION) {
-            // Extracts all POIs from FEATURE_POINT data and adds
-            // POI on track limits
+        if (this.geoJson.type !== FEATURE_COLLECTION) {
+            return
+        }
 
-            for (const feature of this.geoJson.features) {
-                const index = this.geoJson.features.indexOf(feature)
-                const geometry = getGeom(feature)
+        // Precision helper for coordinate comparison (approx. 1cm)
+        const getCoordKey = (lon, lat) => `${Number(lon).toFixed(7)}_${Number(lat).toFixed(7)}`
 
-                const common = {
-                    description: feature.properties.desc, visible: true,
+        // Build spatial index for existing POIs linked to this journey or its tracks
+        const trackSlugs = Array.from(this.tracks.keys())
+        const existingLookup = new Map(
+            Array.from(__.ui.poiManager.list.values())
+                .filter(p => p.parent === this.slug || trackSlugs.includes(p.parent))
+                .map(p => [getCoordKey(p.longitude, p.latitude), p]),
+        )
+
+        for (const feature of this.geoJson.features) {
+            const geometry = getGeom(feature)
+            const common = {
+                description: feature.properties.desc ?? feature.properties.description ?? '',
+                visible:     true,
+            }
+
+            switch (geometry.type) {
+                case FEATURE_POINT: {
+                    const [lon, lat, z] = geometry.coordinates
+                    const key = getCoordKey(lon, lat)
+                    const existingPoi = existingLookup.get(key)
+
+                    const clampedHeight = await __.ui.poiManager.getHeightFromTerrain({
+                                                                                          coordinates: {
+                                                                                              longitude: lon,
+                                                                                              latitude:  lat,
+                                                                                              height:    z ?? 0,
+                                                                                          },
+                                                                                      })
+
+                    if (existingPoi) {
+                        existingPoi.height = z ?? undefined
+                        existingPoi.simulatedHeight = clampedHeight
+                        existingPoi.title = feature.properties.name
+                        existingPoi.description = common.description
+                    }
+                    else {
+                        const poi = new MapPOI({
+                                                   ...common,
+                                                   parent:          this.slug,
+                                                   type:            POI_STANDARD_TYPE,
+                                                   title:           feature.properties.name,
+                                                   longitude:       lon,
+                                                   latitude:        lat,
+                                                   height:          z ?? undefined,
+                                                   simulatedHeight: clampedHeight,
+                                                   visible:         true,
+                                               })
+                        await __.ui.poiManager.add(poi, false)
+                    }
+                    break
                 }
 
-                // We need to change coordinates array if it is a line string
-                let coordinates = []
-                let times = []
-                switch (geometry.type) {
-                    case FEATURE_LINE_STRING :
-                        coordinates = [geometry.coordinates]
-                        times = [feature?.properties?.coordinateProperties?.times]
-                        break
-                    case FEATURE_MULTILINE_STRING :
-                        coordinates = geometry.coordinates
-                        times = feature?.properties?.coordinateProperties?.times
-                        break
-                }
+                case FEATURE_LINE_STRING:
+                case FEATURE_MULTILINE_STRING: {
+                    const trackSlug = this.#setTrackSlug({
+                                                             content: [this.slug, feature.properties.name],
+                                                         })
+                    const track = this.tracks.get(trackSlug)
+                    if (!track) {
+                        continue
+                    }
 
-                // We build the POI
-                switch (geometry.type) {
-                    case FEATURE_POINT: {
-                        // Create a POI
-                        const point = geometry.coordinates
+                    const coords = geometry.type === FEATURE_LINE_STRING ? [geometry.coordinates] : geometry.coordinates
+
+                    const processFlag = async (isStart) => {
+                        const segment = isStart ? coords[0] : coords[coords.length - 1]
+                        const point = isStart ? segment[0] : segment[segment.length - 1]
+                        const [lon, lat, z] = point
+
+                        const key = getCoordKey(lon, lat)
+                        const type = isStart ? POI_FLAG_START : POI_FLAG_STOP
+
+                        // Priority to lookup key, then fallback to existing track flag ID
+                        const existingPoi = existingLookup.get(key) || __.ui.poiManager.list.get(isStart ? track.flags.start : track.flags.stop)
+
                         const clampedHeight = await __.ui.poiManager.getHeightFromTerrain({
                                                                                               coordinates: {
-                                                                                                  longitude: point[0],
-                                                                                                  latitude:  point[1],
-                                                                                                  height:    point[2] ?? 0,
+                                                                                                  longitude: lon,
+                                                                                                  latitude:  lat,
+                                                                                                  height:    z ?? 0,
                                                                                               },
                                                                                           })
-                        const parameters = {
-                            parent:      this.slug,
-                            type:            POI_STANDARD_TYPE,
-                            title:           feature.properties.name,
-                            description: feature.properties.description ?? '',
-                            longitude:       point[0],
-                            latitude:        point[1],
-                            height:          point[2] ?? undefined,
-                            simulatedHeight: clampedHeight,
 
-                            time:     feature.properties?.time ?? undefined,
-                            expanded: false,
-                            visible:  true,
+                        if (existingPoi) {
+                            existingPoi.longitude = lon
+                            existingPoi.latitude = lat
+                            existingPoi.height = z ?? undefined
+                            existingPoi.simulatedHeight = clampedHeight
                         }
-                        const poi = new MapPOI({...common, ...parameters})
-                        await __.ui.poiManager.add(poi, false)
-                        break
+                        else {
+                            const newPoi = new MapPOI({
+                                                          ...common,
+                                                          parent:          trackSlug,
+                                                          type:            type,
+                                                          title:           isStart ? 'Start' : 'End',
+                                                          longitude:       lon,
+                                                          latitude:        lat,
+                                                          height:          z ?? undefined,
+                                                          simulatedHeight: clampedHeight,
+                                                          color:           isStart ? lgs.settings.journey.pois.start.color : lgs.settings.journey.pois.stop.color,
+                                                      })
+                            await __.ui.poiManager.add(newPoi, false)
+
+                            if (isStart) {
+                                track.flags.start = newPoi.id
+                            }
+                            else {
+                                track.flags.stop = newPoi.id
+                            }
+                        }
                     }
-                    case FEATURE_LINE_STRING :
-                    case FEATURE_MULTILINE_STRING: {
-                        const parentSlug = this.#setTrackSlug({
-                                                                  content: [
-                                                                      this.slug,
-                                                                      feature.properties.name,
-                                                                  ],
-                                                              })
-                        // Create Track Start Flag
-                        const start = coordinates[0][0]
-                        const timeStart = this.#hasTime(feature.properties) ? times[0][0] : undefined
-                        const clampedStart = await __.ui.poiManager.getHeightFromTerrain({
-                                                                                             coordinates: {
-                                                                                                 longitude: start[0],
-                                                                                                 latitude:  start[1],
-                                                                                                 height:    start[2] ?? 0,
-                                                                                             },
-                                                                                         })
-                        const startParameters = {
-                            parent: parentSlug,
-                            type:        POI_FLAG_START,
-                            title:       'Start',
-                            description: 'Track start',
 
-                            longitude:       start[0],
-                            latitude:        start[1],
-                            height:          start[2] ?? undefined,
-                            simulatedHeight: clampedStart,
-
-                            time:     timeStart,
-                            distance: 0,
-
-                            color:   lgs.settings.journey.pois.start.color,
-                            bgColor: lgs.settings.journey.pois.start.bgColor,
-                            expanded: false,
-                            visible: true,
-                        }
-                        const startFlag = new MapPOI({...common, ...startParameters})
-                        await __.ui.poiManager.add(startFlag, false)
-                        this.tracks.get(parentSlug).flags.start = startFlag.id
-
-                        // Create Track Stop Flag
-                        const length = coordinates.length - 1
-                        const last = coordinates[length].length - 1
-                        const stop = coordinates[length][last]
-
-                        const timeStop = this.#hasTime(feature.properties) ? times[length][last] : undefined
-                        const clampedStop = await __.ui.poiManager.getHeightFromTerrain({
-                                                                                            coordinates: {
-                                                                                                longitude: stop[0],
-                                                                                                latitude:  stop[1],
-                                                                                                height:    stop[2] ?? 0,
-                                                                                            },
-                                                                                        })
-                        const stopParameters = {
-                            parent: parentSlug,
-                            type:        POI_FLAG_STOP,
-                            title:       'End',
-                            description: 'Track end',
-
-                            longitude:       stop[0],
-                            latitude:        stop[1],
-                            height:          stop[2] ?? undefined,
-                            simulatedHeight: clampedStop,
-
-                            time: timeStop,
-                            distance: 0,
-
-                            icon:     POI_FLAG_STOP,
-                            color:    lgs.settings.journey.pois.stop.color,
-                            bgColor:  lgs.settings.journey.pois.stop.bgColor,
-                            expanded: false,
-                            visible:  true,
-                        }
-
-                        const stopFlag = new MapPOI({...common, ...stopParameters})
-                        await __.ui.poiManager.add(stopFlag, false)
-                        this.tracks.get(parentSlug).flags.stop = stopFlag.id
-                    }
-                        break
+                    await processFlag(true)  // Start
+                    await processFlag(false) // Stop
+                    break
                 }
             }
-            this.poisLoaded = true
-
-            // If we need to have Flags  on limits only (ie first on first track, last of last track)
-            // we adapt the visibility for the flagged POIs
-            if (this.poisOnLimits) {
-                Array.from(this.tracks.values()).forEach((track, index) => {
-                    Object.assign(__.ui.poiManager.list.get(track.flags.start), {
-                        visible: index === 0,
-                    })
-                    Object.assign(__.ui.poiManager.list.get(track.flags.stop), {
-                        visible: index === this.tracks.size - 1,
-                    })
-
-                })
-            }
-
-
         }
+
+        // Adjust visibility for flagged POIs if limited to journey boundaries
+        if (this.poisOnLimits) {
+            Array.from(this.tracks.values()).forEach((track, index) => {
+                const startPoi = __.ui.poiManager.list.get(track.flags.start)
+                const stopPoi = __.ui.poiManager.list.get(track.flags.stop)
+
+                if (startPoi) {
+                    startPoi.visible = index === 0
+                }
+                if (stopPoi) {
+                    stopPoi.visible = index === this.tracks.size - 1
+                }
+            })
+        }
+
+        this.poisLoaded = true
     }
 
     /**
