@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-28
- * Last modified: 2026-03-28
+ * Created on: 2026-04-01
+ * Last modified: 2026-04-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -372,7 +372,7 @@ sl-icon-button[size="small"], sl-icon[size="small"] {
  * Color Picker
  ******************************************************************************/
 
-sl-color-picker[size="small"]::part(trigger) {
+wa-color-picker[size="small"]::part(trigger) {
     margin-top: 5px;
 }
 
@@ -499,10 +499,6 @@ wa-drawer::part(panel) {
 
 wa-drawer::part(body) {
     overflow: hidden;
-}
-
-wa-drawer ::backdrop {
-    background: red;
 }
 
 wa-tab-panel {
@@ -1077,12 +1073,12 @@ wa-input.lgs--short-input[label-at-start], wa-number-input.lgs--short-input[labe
     flex: none;
 }
 
-:is([part~='form-control-label'], [part~='label']):has(*:not(:empty)), :is([part~='form-control-label'], [part~='label']).has-label {
+:is([part~='form-control-label'], [part~='label']):has(:not(:empty)), :is([part~='form-control-label'], [part~='label']).has-label {
+    font-size: var(--lgs-font-size) !important;
     font-weight: normal !important;
     line-height: var(--wa-form-control-label-line-height);
     margin-block-end: 0 !important
 }
-
 wa-input[label-at-start] label, wa-number-input[label-at-start] label {
     font-size: var(--lgs-font-size) !important;
     flex: none;
@@ -1109,15 +1105,27 @@ wa-number-input[no-end]::part(end), wa-number-input[no-start]::part(start) {
  ******************************************************************************/
 
 wa-slider {
+
     width: 100%;
+
+}
+
+wa-slider[label-at-start] {
+    display: grid;
+    align-items: center;
+    flex: 1;
+    grid-template-columns: 50% 50%;
+    gap: var(--lgs-gutter-s);
 }
 
 wa-slider[size="small"] {
-    --track-size: var(--lgs-gutter-xs);
     --thumb-width: calc(var(--lgs-gutter) * 1.2);
     --thumb-height: calc(var(--lgs-gutter) * 1.2);
 }
 
+wa-slider[label-at-start]::part(label) {
+    margin-block-end: 0;
+}
 wa-slider::part(track) {
     background-color: var(--wa-color-brand-fill-normal);
 }

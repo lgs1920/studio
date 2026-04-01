@@ -1,14 +1,14 @@
 /*******************************************************************************
  *
  * This file is part of the LGS1920/studio project.
- *
+ *  
  * File: style.css
  *
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-26
- * Last modified: 2026-03-26
+ * Created on: 2026-04-01
+ * Last modified: 2026-04-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -154,6 +154,7 @@ html {
 }
 
 .journey-toolbar .journey-selector {
+    width: 20rem;
     min-width: 15rem;
     max-width: min(20rem, 100%);
 }

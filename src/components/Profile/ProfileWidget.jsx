@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-14
- * Last modified: 2026-02-14
+ * Created on: 2026-04-01
+ * Last modified: 2026-04-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -168,7 +168,6 @@ export const ProfileWidget = ({id, context, zIndex}) => {
     if (!widgetsBoard || Object.keys(config).length === 0 || !lgs.theJourney) {
         return null
     }
-
     // Render the generic Widget wrapper with the determined config
     return (
         <Widget isVisible={true} config={config} key={lgs.theJourney.slug}>

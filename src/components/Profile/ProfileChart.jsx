@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-24
- * Last modified: 2026-02-24
+ * Created on: 2026-04-01
+ * Last modified: 2026-04-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -23,6 +23,7 @@ import * as echarts                                         from 'echarts/core'
 import React, { useCallback, useEffect, useMemo, useRef } from 'react'
 import { useSnapshot }                                      from 'valtio'
 import { usePreviewChartResize } from '@Components/MainUI/widgets/editor/usePreviewChartResize'
+import { v4 as uuid } from 'uuid'
 
 /**
  * ProfileChart component to render elevation vs distance using ECharts
@@ -68,6 +69,7 @@ export const ProfileChart = ({data, id, width, height, preview = false}) => {
         if (item.color.startsWith('--')) {
             return colord(__.ui.css.getCSSVariable(item.color)).alpha(item.opacity ?? 1).toRgbString()
         }
+
         return colord(item.color).alpha(item.opacity ?? 1).toRgbString()
     }, [])
 
@@ -172,12 +174,12 @@ export const ProfileChart = ({data, id, width, height, preview = false}) => {
      * Build ECharts series object with optional gradient
      */
     const buildSerie = useCallback((params, config) => {
-        const rgbColor = __.ui.ui.hexToRGBA(params.color, 'rgb')
+        const rgbColor = colord(params.color).toRgbString()
 
         // Handle optional gradient show/hide and custom color
         const showGradient = config.gradient?.show ?? true
         const gradientColor = config.gradient?.color
-                              ? __.ui.ui.hexToRGBA(config.gradient.color, 'rgb')
+                              ? colord(config.gradient).toRgbString()
                               : rgbColor
 
         const areaStyle = showGradient ? {
@@ -227,15 +229,12 @@ export const ProfileChart = ({data, id, width, height, preview = false}) => {
             toolbox:  {show: false},
             title:    {show: false},
             animation: preview ? false : undefined,
-            tooltip:   preview ? {show: false} : {
-                trigger:     'axis',
-                axisPointer: {type: 'line'},
-                formatter:   (params) => __.ui.profiler.tooltipElevationVsDistance([
-                                                                                       params[0].seriesIndex, params[0].dataIndex, ...params[0].data, distances, unitSystem,
-                                                                                   ]),
-                padding:     0,
-                enterable:   true,
-            },
+            // tooltip:   preview ? {show: false} : {
+            //     trigger:     'axis',
+            //     axisPointer: {type: 'line'},
+            //     formatter:   (params) => __.ui.profiler.tooltipElevationVsDistance([
+            //                                                                            params[0].seriesIndex,
+            // params[0].dataIndex, ...params[0].data, distances, unitSystem, ]), padding:     0, enterable:   true, },
             xAxis:    [
                 {
                     ...styles.xAxis[0],
@@ -352,7 +351,7 @@ export const ProfileChart = ({data, id, width, height, preview = false}) => {
     }
 
     return (
-        <div
+        <div id={id ?? `profile-${uuid()}`}
             className="profile-chart-container"
             style={{
                 width:           width,

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-28
- * Last modified: 2026-03-28
+ * Created on: 2026-04-01
+ * Last modified: 2026-04-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -114,7 +114,7 @@ export const MapPOIEditListActions = memo(({globals = true}) => {
                                     })}
                                     onClick={handleToggleAll}
                                 >
-                                    <WaIcon slot="start" name={bulkIcon} variant="regular"/>
+                                    <WaIcon name={bulkIcon} variant="regular"/>
                                 </div>
                                 <MapPOIBulkActionsMenu/>
                             </>

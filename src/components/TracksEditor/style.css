@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-27
- * Last modified: 2026-03-27
+ * Created on: 2026-04-01
+ * Last modified: 2026-04-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -101,10 +101,8 @@ wa-tab sl-icon {
     text-overflow: ellipsis;
 }
 
-.journey
-
 #journey-settings {
-
+    height: 100%;
 }
 
 .settings-panel {
@@ -123,18 +121,53 @@ wa-tab sl-icon {
     margin-bottom: var(--lgs-gutter-xs);
 }
 
-#track-line-settings, #track-line-settings > div {
+#track-line-settings {
     display: flex;
-    gap: var(--lgs-gutter-s);
-    width: 100%;
     align-items: center;
+    flex-wrap: wrap;
+    width: 100%;
+    gap: var(--lgs-gutter);
+    --delta: 4rem;
+}
+
+#track-line-settings label {
+    display: flex;
+    align-items: center;
+    flex: 0 0 100%;
     justify-content: space-between;
 }
 
+
 #test-line {
-    width: 6rem;
-    border-radius: 3px;
+    width: 40%;
     transition: all ease-in-out;
+    border-radius: 10px;
+}
+
+.lgs--track-style-settings > div {
+    display: flex;
+    align-items: center;
+    flex-direction: column;
+    flex-grow: 1;
+    padding: 0 var(--lgs-gutter-s);
+    gap: var(--lgs-gutter-xs);
+}
+
+.lgs--track-style-settings > div wa-slider {
+    flex-grow: 1;
+
+    grid-template-columns: 1fr 15rem;
+}
+
+.lgs--track-style-settings > div wa-slider::part(label) {
+    font-weight: normal;
+}
+
+.lgs--track-colors-in-settings {
+    display: flex;
+    align-items: center;
+    flex-direction: row;
+    gap: 0;
 }
 
 wa-tab::part(base) {
@@ -142,11 +175,15 @@ wa-tab::part(base) {
 }
 
 
-.element-data {
+.lgs--track-data {
     width: 100%;
     --padding: var(--lgs-gutter-s);
 }
 
+.lgs--track-data::part(body) {
+    flex-direction: column;
+    gap: var(--lgs-gutter-s);
+}
 .element-row {
     width: 100%;
     display: flex;
@@ -164,7 +201,6 @@ wa-tab::part(base) {
 
 .element-item.title {
     width: var(--indent);
-    font-weight: 700;
 }
 
 .element-item.indented {
@@ -185,6 +221,13 @@ wa-tab::part(base) {
     flex-direction: column;
     gap: var(--lgs-gutter-s);
     margin-bottom: var(--lgs-gutter);
+}
+
+.journey-profile-chart-menu {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--lgs-gutter-s);
 }
 
 /***************************************

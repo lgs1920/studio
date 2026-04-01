@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-27
- * Last modified: 2026-03-27
+ * Created on: 2026-04-01
+ * Last modified: 2026-04-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -26,10 +26,9 @@ export class ElevationServer {
     static IGN_GEOPORTAIL = 'ign-geoportail'
 
     /**
-     * Define elevation servers
+     * Define elevation servers metadata
      */
-    static FAKE_SERVERS = new Map(
-        [
+    static FAKE_SERVERS = new Map([
                                       [
                                           ElevationServer.NONE,
                                           {
@@ -38,64 +37,56 @@ export class ElevationServer {
                                               icon: 'regular-mountain-slash',
                                           },
                                       ],
-
                                       [
                                           ElevationServer.CLEAR,
                                           {
-                                              label: 'Remove Elevation Data',
+                                              label: 'No Elevation Data',
                                               id:    ElevationServer.CLEAR,
                                               icon:          'trash-can',
                                               labelSelection: 'No Elevation Data',
                                               iconSelection: 'regular-mountain-slash',
                                           },
                                       ],
-
                                       [
                                           ElevationServer.FILE_CONTENT,
                                           {
-                                              label: 'Use File Elevation Data',
-                                              id:     ElevationServer.FILE_CONTENT,
-                                              icon: 'file-waveform',
+                                              label: 'File Elevation Data',
+                                              id:    ElevationServer.FILE_CONTENT,
+                                              icon:  'file-waveform',
                                               origin: true,
                                           },
                                       ],
-        ]
-    )
+                                  ])
 
-    static SERVERS = new Map(
-        [
-            [
-                ElevationServer.OPEN_ELEVATION,
-                {
-                    label: 'From Open-Elevation (Worldwide, 30m)',
-                    id:    ElevationServer.OPEN_ELEVATION,
-                    doc:   'https://github.com/Jorl17/open-elevation/blob/master/docs/api.md',
-                    url:   'https://api.open-elevation.com/api/v1/lookup',
-                    icon: 'map-location',
-                },
-            ],
-
-            [
-                ElevationServer.IGN_GEOPORTAIL,
-                {
-                    label:       'From IGN GeoPortail (France, 2.5m)',
-                    id:          'ign-geoportail',
-                    doc:         'https://geoservices.ign.fr/documentation/services/services-deprecies/calcul-altimetrique-rest',
-                    url:         'https://data.geopf.fr/altimetrie/1.0/calcul/alti/rest/elevation.json',
-                    maxPerQuery: 5000,
-                    icon: 'map-location',
-                },
-            ],
-        ],
-    )
+    static SERVERS = new Map([
+                                 [
+                                     ElevationServer.OPEN_ELEVATION,
+                                     {
+                                         label: 'Open-Elevation (Worldwide, 30m)',
+                                         id:    ElevationServer.OPEN_ELEVATION,
+                                         doc:   'https://github.com/Jorl17/open-elevation/blob/master/docs/api.md',
+                                         url:   'https://api.open-elevation.com/api/v1/lookup',
+                                         icon:  'map-location',
+                                     },
+                                 ],
+                                 [
+                                     ElevationServer.IGN_GEOPORTAIL,
+                                     {
+                                         label:       'IGN GeoPortail (France, 2.5m)',
+                                         id:          'ign-geoportail',
+                                         doc:         'https://geoservices.ign.fr/documentation/services/services-deprecies/calcul-altimetrique-rest',
+                                         url:         'https://data.geopf.fr/altimetrie/1.0/calcul/alti/rest/elevation.json',
+                                         maxPerQuery: 5000,
+                                         icon:        'map-location',
+                                     },
+                                 ],
+                             ])
 
     static ERROR_DATA = -99999.0
     static WRONG_DATA_ERROR = new Error('The data is inconsistent. <br/>Elevation Server data probably not available for this part of the globe!')
 
     constructor(id) {
-        // Get the right info
         this.instance = ElevationServer.getServer(id)
-        // Fix missing attributes
         this.instance.maxPerQuery = this.instance?.maxPerQuery ?? 10000000
         this.fetchElevation = null
     }
@@ -104,22 +95,105 @@ export class ElevationServer {
         return ElevationServer.SERVERS.get(id) ?? ElevationServer.FAKE_SERVERS.get(id)
     }
 
+    /**
+     * IGN GeoPortail Implementation
+     */
+    static fetchIGNGeoportail = async (coordinates) => {
+        const lat = [], lon = []
+        coordinates.forEach(c => {
+            lon.push(c[0])
+            lat.push(c[1])
+        })
+
+        const payload = {
+            lon:      lon.join('|'),
+            lat:      lat.join('|'),
+            zonly:    'true',
+            resource: 'ign_rge_alti_wld',
+        }
+
+        try {
+            const response = await lgs.axios.post(ElevationServer.SERVERS.get(ElevationServer.IGN_GEOPORTAIL).url, payload)
+            const data = response.data.elevations.map((point, index) => {
+                if (point === ElevationServer.ERROR_DATA) {
+                    throw ElevationServer.WRONG_DATA_ERROR
+                }
+                return [lon[index], lat[index], point]
+            })
+            return {coordinates: data, hasElevation: true}
+        }
+        catch (error) {
+            return {errors: [error]}
+        }
+    }
 
     /**
-     *
-     * @param coordinates = [{lat,lon},...]
-     *
-     * @return {data|errors}
-     *      an object with
-     *        data:[{lon,lat,elevations}]
-     *        or
-     *        errors:[error]
+     * Open Elevation Implementation
+     */
+    static fetchOpenElevation = async (coordinates) => {
+        const payload = {
+            locations: coordinates.map(c => ({longitude: c[0], latitude: c[1]})),
+        }
+
+        try {
+            const response = await lgs.axios({
+                                                 method:  'post',
+                                                 url:     ElevationServer.SERVERS.get(ElevationServer.OPEN_ELEVATION).url,
+                                                 data:    payload,
+                                                 headers: {
+                                                     'content-type': 'application/json',
+                                                     'Accept':       'application/json',
+                                                 },
+                                             })
+            const data = response.data.results.map(p => [p.longitude, p.latitude, p.elevation])
+            return {coordinates: data, hasElevation: true}
+        }
+        catch (error) {
+            return {errors: [error]}
+        }
+    }
+
+    /**
+     * Clear elevation data (Remove Z index)
+     */
+    static clearElevation = async (coordinates) => {
+        const data = coordinates.map(c => [c[0], c[1]])
+        return {
+            coordinates:  data,
+            hasElevation: false, // Explicitly tell the UI we have no elevation
+        }
+    }
+
+    /**
+     * Reset to original file data
+     */
+    static resetToFileElevation = async (coordinates, origin) => {
+        const data = coordinates.map((c, index) => {
+            const elevation = origin[index]?.[2]
+            return elevation !== undefined ? [c[0], c[1], elevation] : [c[0], c[1]]
+        })
+
+        // We consider it has elevation if the first point has a Z value
+        const hasElevation = data[0]?.length > 2
+        return {coordinates: data, hasElevation}
+    }
+
+    /**
+     * Main entry point to get elevation
+     * @param {Array} coordinates - [[lon, lat], ...]
+     * @param {Array} origin - Original coordinates for reset
+     * @returns {Promise} Resolves with {coordinates, hasElevation, errors}
      */
     getElevation = (coordinates, origin = []) => {
         return new Promise((resolve, reject) => {
-        if (this.instance.id !== ElevationServer.NONE) {
+            if (this.instance.id === ElevationServer.NONE) {
+                return resolve({
+                                   coordinates:  coordinates,
+                                   hasElevation: true,
+                                   errors:       null,
+                               })
+            }
 
-            // According selected option, we set the right mthode to call
             switch (this.instance.id) {
                 case ElevationServer.CLEAR:
                     this.fetchElevation = ElevationServer.clearElevation
@@ -134,174 +208,53 @@ export class ElevationServer {
                     this.fetchElevation = ElevationServer.fetchIGNGeoportail
                     break
             }
-            let chunks = [[], []]
 
-            // We cut the array by slice of maxPerQuery
+            let chunks = [[], []]
             for (let cursor = 0; cursor < coordinates.length; cursor += this.instance.maxPerQuery) {
                 chunks[0].push(coordinates.slice(cursor, cursor + this.instance.maxPerQuery))
                 chunks[1].push(origin.slice(cursor, cursor + this.instance.maxPerQuery))
             }
 
-            // Now let's run queries in parallel
-            let promises = chunks[0].map((coordinates, index) => this.fetchElevation(coordinates, chunks[1][index]))
+            let promises = chunks[0].map((coords, index) => this.fetchElevation(coords, chunks[1][index]))
 
-            // then wait they are resolved
-            return Promise.allSettled(promises).then((results) => {
-                                                  const data = {
-                                                      coordinates: [],
-                                                      errors:      [],
-                                                  }
-                                                  results.forEach(result => {
-                                                      if (result.status === 'fulfilled') {
-                                                          if (result.value.coordinates) {
-                                                              data.coordinates.push(...result.value.coordinates)
-                                                          }
-                                                          if (result.value.errors) {
-                                                              data.errors.push(result.value.errors)
-                                                          }
-                                                      }
-                                                      else { // rejected or undefined
-                                                          data.errors = result?.reason?.errors ?? result?.errors
-                                                      }
-                                                  })
+            Promise.allSettled(promises).then((results) => {
+                const data = {
+                    coordinates:  [],
+                    errors:       [],
+                    hasElevation: true,
+                }
 
-                                                  if (data.errors && data.errors.length > 0) {
-                                                      reject({errors: data.errors})
-                                                  }
-                                                  else {
-                                                      resolve({
-                                                                  coordinates: data.coordinates,
-                                                                  errors:      null,
-                                                              })
-                                                  }
-                                              },
-            ).catch((error) => {
-                reject({
-                           errors: error,
-                       })
-            })
-        }
-        // Nothing to do, return coordinates without change
-            resolve({
-                        coordinates: coordinates,
-                        errors:      null,
-                    })
-        })
-    }
-
-    /**
-     * Get elevation from IGN Geo Portail
-     *
-     * @param coordinates
-     * @return {Promise<{data: []} | {error: *}>}
-     */
-    static fetchIGNGeoportail = async (coordinates) => {
-
-        // Get latitudes and Longitude
-        const lat=[],lon=[]
-        coordinates.forEach(coordinate => {
-            lon.push(coordinate[0])
-            lat.push(coordinate[1])
-        })
-
-        // Then build the payload
-        const payload = {
-            lon:   lon.join('|'),
-            lat:lat.join('|'),
-            zonly:"true",
-            resource:'ign_rge_alti_wld'
-        }
-
-        return new Promise((resolve, reject) => {
-            lgs.axios.post(ElevationServer.SERVERS.get(ElevationServer.IGN_GEOPORTAIL).url, payload)
-                .then(function (response) {
-                    const data = []
-                    response.data.elevations.forEach((point, index) => {
-                        if (point === ElevationServer.ERROR_DATA) {
-                            throw ElevationServer.WRONG_DATA_ERROR
+                results.forEach(result => {
+                    if (result.status === 'fulfilled') {
+                        if (result.value.coordinates) {
+                            data.coordinates.push(...result.value.coordinates)
                         }
-                        data.push([lon[index], lat[index], point])
-                    })
-                    resolve({coordinates: data})
+                        // If one chunk says no elevation, the whole set is flagged
+                        if (result.value.hasElevation === false) {
+                            data.hasElevation = false
+                        }
+                        if (result.value.errors) {
+                            data.errors.push(...result.value.errors)
+                        }
+                    }
+                    else {
+                        data.errors.push(result.reason?.errors ?? result.reason)
+                    }
                 })
-                .catch(error => {
-                    reject({errors: [error]})
-                })
-        })
-    }
 
-    /**
-     * Get elevation from Open Elevation
-     *
-     * @param coordinates
-     * @return {Promise<{data: []} | {error: *}>}
-     */
-    static fetchOpenElevation = async (coordinates) => {
-
-        const payload = {locations: []}
-        coordinates.forEach(coordinate => {
-            payload.locations.push({
-                                       longitude: coordinate[0],
-                                       latitude:  coordinate[1],
-                                   })
-        })
-
-        return new Promise((resolve, reject) => {
-            lgs.axios({
-                      method:  'post',
-                      url:     ElevationServer.SERVERS.get(ElevationServer.OPEN_ELEVATION).url,
-                      data:    payload,
-                      headers: {
-                          'content-type': 'application/json',
-                          'Accept':       'application/json',
-                      },
-                  })
-                .then(function (response) {
-                    const data = []
-                    response.data.results.forEach(point => {
-                        data.push([point.longitude, point.latitude, point.elevation])
-                    })
-                    resolve({coordinates: data})
-                })
-                .catch(error => {
-                    reject({errors: [error]})
-                })
-        })
-    }
-    /**
-     * Clear elevation data
-     *
-     * @param coordinates
-     * @return {Promise<{data: *[]}>}
-     */
-    static clearElevation = async (coordinates) => {
-        const data = []
-        coordinates.forEach(coordinate => {
-            if (coordinate.length > 2) {
-                coordinate.pop()
-            }
-            data.push(coordinate)
-        })
-        return new Promise((resolve) => {
-            resolve ({coordinates: data})
-        })
-    }
-
-    /**
-     * Reset Elevations to file content when loaded
-     *
-     * @param coordinates
-     * @param origin
-     * @return {Promise<{data: *[]}>}
-     */
-    static resetToFileElevation = async (coordinates, origin) => {
-        const data = []
-        coordinates.forEach((coordinate, index) => {
-            coordinate[2] = origin[index][2]
-            data.push(coordinate)
-        })
-            return new Promise((resolve) => {
-                resolve({coordinates: data})
+                if (data.errors.length > 0) {
+                    reject({errors: data.errors})
+                }
+                else {
+                    resolve({
+                                coordinates:  data.coordinates,
+                                hasElevation: data.hasElevation,
+                                errors:       null,
+                            })
+                }
+            }).catch((error) => {
+                reject({errors: error})
             })
+        })
     }
 }

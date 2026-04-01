@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-28
- * Last modified: 2026-02-28
+ * Created on: 2026-04-01
+ * Last modified: 2026-04-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -75,13 +75,17 @@ export class Profiler {
                     source: [],
                 }
                 track.metrics.points.forEach(point => {
-                    distance += point.distance
+                    distance += point.distance ?? 0
+                    const elevation = Number(point.altitude)
+                    if (!Number.isFinite(elevation)) {
+                        return
+                    }
                     let coords = []
                     switch (type) {
                         case ELEVATION_VS_DISTANCE : {
                             coords = [
                                 __.convert(distance).to(units.x[lgs.settings.unitSystem.current]),
-                                __.convert(point.altitude).to(units.y[lgs.settings.unitSystem.current]),
+                                __.convert(elevation).to(units.y[lgs.settings.unitSystem.current]),
                                 null, //TODO Time
                                 point,
                                 lgs.settings.unitSystem.current,  // unit system
@@ -90,13 +94,15 @@ export class Profiler {
                     }
                     trackDataset.source.push(coords)
                 })
-                data.dataset.push(trackDataset)
-                data.options.push({
-                                      color: track.color,
-                                      name:  track.title,
-                                      //  marker:  track.marker.foregroundColor,
-                                      dataset: track.slug,
-                                  })
+                if (trackDataset.source.length > 0) {
+                    data.dataset.push(trackDataset)
+                    data.options.push({
+                                          color: track.color,
+                                          name:  track.title,
+                                          //  marker:  track.marker.foregroundColor,
+                                          dataset: track.slug,
+                                      })
+                }
 
             }
         })
@@ -123,7 +129,7 @@ export class Profiler {
         }
 
         // Show on map
-        if (lgs.settings.getProfile.marker.track.show) {
+        if (lgs.settings?.getProfile.marker.track.show || false) {
             this.showOnMap(serie, point.longitude, point.latitude, elevation)
         }
 

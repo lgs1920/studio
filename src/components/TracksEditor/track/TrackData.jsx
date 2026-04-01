@@ -7,49 +7,27 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-27
- * Last modified: 2026-03-27
+ * Created on: 2026-04-01
+ * Last modified: 2026-04-01
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { WaCard } from '@web.awesome.me/webawesome-pro/dist/react'
-import { memo, useEffect, useMemo }  from 'react'
-import { useSnapshot }               from 'valtio'
-import { SlCard, SlDivider, SlIcon } from '@shoelace-style/shoelace/dist/react'
-import { NameValueUnit } from '@Components/DataDisplay/NameValueUnit'
-import { DateInfo }                  from '../DateInfo'
-import { TrackUtils }                from '@Utils/cesium/TrackUtils'
-import { FA2SL }                     from '@Utils/FA2SL'
+import { NameValueUnit }                                            from '@Components/DataDisplay/NameValueUnit'
+import { ProfileChart }                                             from '@Components/Profile/ProfileChart'
 import {
-    faRoute,
-    faArrowUpRight,
-    faArrowDownRight,
-    faClockDesk,
-    faPersonHiking,
-    faPause,
+    faArrowDownRight, faArrowUpRight, faClockDesk, faDownToLine, faGaugeSimpleHigh, faPause, faPersonHiking, faRoute,
     faUpToLine,
-    faDownToLine,
-    faGaugeSimpleHigh,
-}                                    from '@fortawesome/pro-regular-svg-icons'
-import {
-    DISTANCE_UNITS,
-    ELEVATION_UNITS,
-    SPEED_UNITS,
-    PACE_UNITS,
-}                                    from '@Utils/UnitUtils'
-
-// Static icon names to avoid recalculation
-const ICON_ROUTE = FA2SL.set(faRoute)
-const ICON_UP_RIGHT = FA2SL.set(faArrowUpRight)
-const ICON_DOWN_RIGHT = FA2SL.set(faArrowDownRight)
-const ICON_CLOCK = FA2SL.set(faClockDesk)
-const ICON_HIKING = FA2SL.set(faPersonHiking)
-const ICON_PAUSE = FA2SL.set(faPause)
-const ICON_UP_TO_LINE = FA2SL.set(faUpToLine)
-const ICON_DOWN_TO_LINE = FA2SL.set(faDownToLine)
-const ICON_GAUGE = FA2SL.set(faGaugeSimpleHigh)
+}                                                                   from '@fortawesome/pro-regular-svg-icons'
+import { SlDivider, SlIcon }                                        from '@shoelace-style/shoelace/dist/react'
+import { TrackUtils }                                               from '@Utils/cesium/TrackUtils'
+import { FA2SL }                                                    from '@Utils/FA2SL'
+import { DISTANCE_UNITS, ELEVATION_UNITS, PACE_UNITS, SPEED_UNITS } from '@Utils/UnitUtils'
+import { WaButton, WaDivider, WaIcon, WaSwitch, WaTooltip }         from '@web.awesome.me/webawesome-pro/dist/react'
+import React, { memo, useEffect, useMemo }                          from 'react'
+import { useSnapshot }                                              from 'valtio'
+import { DateInfo }                                                 from '../DateInfo'
 
 // Static divider style to avoid object recreation
 const DIVIDER_STYLE = {'--width': '1px'}
@@ -92,25 +70,44 @@ export const TrackData = memo(() => {
     const hasElevation = metrics.negative?.elevation < 0 && metrics.positive?.elevation > 0
     const hasAltitude = !isNaN(metrics.minHeight) && !isNaN(metrics.maxHeight)
 
+
     return (
-        <WaCard className="element-data">
+        <>
+            <label>{'Main stats'}</label>
+            <div className="journey-profile-chart-menu">
+                <WaSwitch size="xsmall" label-at-start width-auto checked={true}
+                          onChange={() => {
+                          }}>
+                    {'Add widget on scene'}
+                </WaSwitch>
+
+                <WaTooltip for="export-chart-button-in-settings">{'Export profile to image'}</WaTooltip>
+                <WaButton appearance="plain"
+                          variant="brand"
+                          id="export-chart-button-in-settings"
+                          onChange={() => {
+                          }}>
+                    <WaIcon variant="regular" name="file-arrow-down"/>
+                </WaButton>
+            </div>
+            <WaDivider/>
             {hasDuration && <DateInfo date={trackDate}/>}
 
             <div className="element-row">
-                <div className="element-item title">Distance</div>
+                <div className="element-item title">{'Distance'}</div>
                 <div className="element-item">
-                    <SlIcon variant="primary" library="fa" name={ICON_ROUTE}/>
+                    <WaIcon variant="regular" name={'route'}/>
                     <NameValueUnit value={metrics.distance} units={DISTANCE_UNITS}/>
                 </div>
             </div>
             {metrics.positive && (
                 <div className="element-row">
                     <div className="element-item indented">
-                        <SlIcon variant="primary" library="fa" name={ICON_UP_RIGHT}/>
+                        <WaIcon variant="regular" name={'arrow-up-right'}/>
                         <NameValueUnit value={metrics.positive.distance} units={DISTANCE_UNITS}/>
                     </div>
                     <div className="element-item">
-                        <SlIcon variant="primary" library="fa" name={ICON_DOWN_RIGHT}/>
+                        <WaIcon variant="regular" name={'arrow-down-right'}/>
                         <NameValueUnit value={metrics.negative.distance} units={DISTANCE_UNITS}/>
                     </div>
                 </div>
@@ -119,22 +116,22 @@ export const TrackData = memo(() => {
             {hasDuration && (
                 <>
                     <div className="element-row">
-                        <div className="element-item title">Duration</div>
+                        <div className="element-item title">{'Duration'}</div>
                         <div className="element-item">
-                            <SlIcon variant="primary" library="fa" name={ICON_CLOCK}/>
+                            <WaIcon variant="regular" name={'clock-desk'}/>
                             <NameValueUnit value={__.convert(metrics.duration).toTime()} id="cursor-duration"/>
                         </div>
                     </div>
                     <div className="element-row">
                         <div className="element-item indented">
-                            <SlIcon variant="primary" library="fa" name={ICON_HIKING}/>
+                            <WaIcon variant="regular" name={'person-hiking'}/>
                             <NameValueUnit
                                 value={__.convert(metrics.duration - metrics.idleTime).toTime()}
                                 id="cursor-duration"
                             />
                         </div>
                         <div className="element-item">
-                            <SlIcon variant="primary" library="fa" name={ICON_PAUSE}/>
+                            <WaIcon variant="regular" name={'pause'}/>
                             <NameValueUnit value={__.convert(metrics.idleTime).toTime()} id="cursor-duration"/>
                         </div>
                     </div>
@@ -143,19 +140,21 @@ export const TrackData = memo(() => {
 
             {hasElevation && (
                 <>
-                    <SlDivider style={DIVIDER_STYLE}/>
+                    <WaDivider/>
                     <div className="element-row">
                         <div className="element-item title">{'Elevation'}</div>
                         {metrics.positive.elevation > 0 && (
                             <div className="element-item">
-                                <SlIcon variant="primary" library="fa" name={ICON_UP_RIGHT}/>
-                                <NameValueUnit value={metrics.positive.elevation} units={ELEVATION_UNITS} format="%d"/>
+                                <WaIcon variant="regular" name={'arrow-up-right'}/>
+                                <NameValueUnit value={metrics.positive.elevation} units={ELEVATION_UNITS}
+                                               format="%d"/>
                             </div>
                         )}
                         {metrics.negative.elevation < 0 && (
                             <div className="element-item">
-                                <SlIcon variant="primary" library="fa" name={ICON_DOWN_RIGHT}/>
-                                <NameValueUnit value={metrics.negative.elevation} units={ELEVATION_UNITS} format="%d"/>
+                                <WaIcon variant="regular" name={'arrow-down-right'}/>
+                                <NameValueUnit value={metrics.negative.elevation} units={ELEVATION_UNITS}
+                                               format="%d"/>
                             </div>
                         )}
                     </div>
@@ -164,13 +163,13 @@ export const TrackData = memo(() => {
 
             {hasAltitude && (
                 <div className="element-row">
-                    <div className="element-item title">Altitude</div>
+                    <div className="element-item title">{'Altitude'}</div>
                     <div className="element-item">
-                        <SlIcon variant="primary" library="fa" name={ICON_DOWN_TO_LINE}/>
+                        <WaIcon variant="regular" name={'arrow-down-to-line'}/>
                         <NameValueUnit value={metrics.minHeight} units={ELEVATION_UNITS} format="%d"/>
                     </div>
                     <div className="element-item">
-                        <SlIcon variant="primary" library="fa" name={ICON_UP_TO_LINE}/>
+                        <WaIcon variant="regular" name={'arrow-up-to-line'}/>
                         <NameValueUnit value={metrics.maxHeight} units={ELEVATION_UNITS} format="%d"/>
                     </div>
                 </div>
@@ -178,25 +177,25 @@ export const TrackData = memo(() => {
 
             {hasDuration && (
                 <>
-                    <SlDivider style={DIVIDER_STYLE}/>
+                    <WaDivider/>
                     <div className="element-row">
-                        <div className="element-item title">Speed</div>
+                        <div className="element-item title">{'Speed'}</div>
                         <div className="element-item">
-                            <SlIcon variant="primary" library="fa" name={ICON_GAUGE}/>
+                            <WaIcon variant="regular" name={'gauge-simple-high'}/>
                             <NameValueUnit value={metrics.averageSpeed} units={SPEED_UNITS}/>
                         </div>
                         <div className="element-item">
-                            <SlIcon variant="primary" library="fa" name={ICON_HIKING}/>
+                            <WaIcon variant="regular" name={'person-hiking'}/>
                             <NameValueUnit value={metrics.averageSpeedMoving} units={SPEED_UNITS}/>
                         </div>
                     </div>
                     <div className="element-row">
                         <div className="element-item indented">
-                            <SlIcon variant="primary" library="fa" name={ICON_DOWN_TO_LINE}/>
+                            <WaIcon variant="regular" name={'arrow-down-to-line'}/>
                             <NameValueUnit value={metrics.minSpeed} units={SPEED_UNITS}/>
                         </div>
                         <div className="element-item">
-                            <SlIcon variant="primary" library="fa" name={ICON_UP_TO_LINE}/>
+                            <WaIcon variant="regular" name={'arrow-up-to-line'}/>
                             <NameValueUnit value={metrics.maxSpeed} units={SPEED_UNITS}/>
                         </div>
                     </div>
@@ -204,13 +203,13 @@ export const TrackData = memo(() => {
                         <div className="element-row">
                             {metrics.positive.elevation > 0 && (
                                 <div className="element-item indented">
-                                    <SlIcon variant="primary" library="fa" name={ICON_UP_RIGHT}/>
+                                    <WaIcon variant="regular" name={'arrow-up-right'}/>
                                     <NameValueUnit value={metrics.positive.speed} units={SPEED_UNITS}/>
                                 </div>
                             )}
                             {metrics.negative.elevation < 0 && (
                                 <div className="element-item">
-                                    <SlIcon variant="primary" library="fa" name={ICON_DOWN_RIGHT}/>
+                                    <WaIcon variant="regular" name={'arrow-down-right'}/>
                                     <NameValueUnit value={metrics.negative.speed} units={SPEED_UNITS}/>
                                 </div>
                             )}
@@ -221,39 +220,39 @@ export const TrackData = memo(() => {
 
             {hasDuration && (
                 <>
-                    <SlDivider style={DIVIDER_STYLE}/>
+                    <WaDivider/>
                     <div className="element-row">
-                        <div className="element-item title">Pace</div>
+                        <div className="element-item title">{'Pace'}</div>
                         <div className="element-item">
-                            <SlIcon variant="primary" library="fa" name={ICON_GAUGE}/>
+                            <WaIcon variant="regular" name={'gauge-simple-high'}/>
                             <NameValueUnit value={metrics.averagePace} units={PACE_UNITS}/>
                         </div>
                         <div className="element-item">
-                            <SlIcon variant="primary" library="fa" name={ICON_HIKING}/>
+                            <WaIcon variant="regular" name={'person-hiking'}/>
                             <NameValueUnit value={metrics.averageSpeedMoving} units={PACE_UNITS}/>
                         </div>
                     </div>
                     <div className="element-row">
                         <div className="element-item indented">
-                            <SlIcon variant="primary" library="fa" name={ICON_DOWN_TO_LINE}/>
-                            <NameValueUnit value={metrics.minPace} units={PACE_UNITS}/>
+                            <WaIcon variant="regular" name={'arrow-down-to-line'}/>
+                            <NameValueUnit value={metrics.maxPace} units={PACE_UNITS}/>
                         </div>
                         <div className="element-item">
-                            <SlIcon variant="primary" library="fa" name={ICON_UP_TO_LINE}/>
-                            <NameValueUnit value={metrics.maxPace} units={PACE_UNITS}/>
+                            <WaIcon variant="regular" name={'arrow-up-to-line'}/>
+                            <NameValueUnit value={metrics.minPace} units={PACE_UNITS}/>
                         </div>
                     </div>
                     {!isNaN(metrics.minHeight) && (
                         <div className="element-row">
                             {metrics.positive.elevation > 0 && (
                                 <div className="element-item indented">
-                                    <SlIcon variant="primary" library="fa" name={ICON_UP_RIGHT}/>
+                                    <WaIcon variant="regular" name={'arrow-up-right'}/>
                                     <NameValueUnit value={metrics.positive.pace} units={PACE_UNITS}/>
                                 </div>
                             )}
                             {metrics.negative.elevation < 0 && (
                                 <div className="element-item">
-                                    <SlIcon variant="primary" library="fa" name={ICON_DOWN_RIGHT}/>
+                                    <WaIcon variant="regular" name={'arrow-down-right'}/>
                                     <NameValueUnit value={metrics.negative.pace} units={PACE_UNITS}/>
                                 </div>
                             )}
@@ -261,6 +260,6 @@ export const TrackData = memo(() => {
                     )}
                 </>
             )}
-        </WaCard>
+        </>
     )
 })

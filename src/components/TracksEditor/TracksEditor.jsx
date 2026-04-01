@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-27
- * Last modified: 2026-03-27
+ * Created on: 2026-04-01
+ * Last modified: 2026-04-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -131,7 +131,6 @@ export const TracksEditor = memo(() => {
             }
         </>
     )
-    console.log(drawerRoot)
     return drawerRoot ? createPortal(content, drawerRoot) : content
 
 })

@@ -7,139 +7,187 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-04-01
+ * Last modified: 2026-04-01
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { DRAW_THEN_SAVE, DRAW_WITHOUT_SAVE, SECOND } from '@Core/constants'
-import { SlColorPicker, SlDivider, SlRange, SlTooltip } from '@shoelace-style/shoelace/dist/react'
-import { TrackUtils }                                from '@Utils/cesium/TrackUtils'
-import { useEffect, useRef, useState }               from 'react'
-import { useSnapshot }                               from 'valtio'
-import { Utils }                                        from '../Utils'
+import { DRAW_THEN_SAVE }                           from '@Core/constants'
+import { TrackUtils }                               from '@Utils/cesium/TrackUtils'
+import { WaColorPicker, WaDivider, WaSlider }       from '@web.awesome.me/webawesome-pro/dist/react'
+import { colord }                                   from 'colord'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { useSnapshot }                              from 'valtio'
+import { Utils }                                    from '../Utils'
 
-export const TrackStyleSettings = function TrackSettings() {
+/**
+ * Component to manage track visual settings (color, opacity, thickness)
+ * Optimized for high-performance dragging
+ * @returns {JSX.Element|null}
+ */
+export const TrackStyleSettings = () => {
+    const $editor = lgs.theJourneyEditorProxy
+    const {track} = useSnapshot($editor)
 
-    const editorStore = lgs.theJourneyEditorProxy
-    const [update, setUpdate] = useState(false)
-    const [updateDone, setUpdateDone] = useState(false)
+    const _saveTimeoutRef = useRef(null)
+    const _thicknessRef = useRef(null)
+    const _opacityRef = useRef(null)
 
-    const timeoutRef = useRef(null)
-
-    // If we're editing a single track journey, we need
-    // to know the track
-    if (editorStore.track === null || editorStore.track === undefined) {
-        (async () => await TrackUtils.setTheTrack(false))()
-    }
-    const editorSnapshot = useSnapshot(editorStore)
-
-    /**
-     * Change track Color
-     *
-     * @param {CustomEvent} event
-     *
-     */
-    const setColor = (async event => {
-        editorStore.track.color = event.target.value
-        await Utils.updateTrack(event.type === 'sl-input' ? DRAW_WITHOUT_SAVE : DRAW_THEN_SAVE)
-        __.ui.profiler.updateColor()
-        __.ui.wanderer.updateColor()
-    })
-
-
-    /**
-     * Change track thickness
-     *
-     * @param {CustomEvent} event
-     */
-    const setThickness = (async event => {
-        editorStore.track.thickness = event.target.value
-        if (!timeoutRef.current) {
-            await Utils.updateTrack(DRAW_THEN_SAVE)
+    const [trackColor, setTrackColor] = useState(() => {
+        const initialColor = colord($editor.track?.color ?? '#ffffff')
+        return {
+            color:   initialColor.alpha(1).toRgbString(),
+            opacity: initialColor.alpha(),
         }
     })
 
-    const requestRender = () => {
-        setUpdate(false)
-        lgs.scene.requestRender()
-        if (!timeoutRef.current) {
-            timeoutRef.current = setTimeout(() => {
-                lgs.scene.postUpdate.removeEventListener(requestRender)
-                timeoutRef.current = null
-            }, 0.2 * SECOND)
-        }
-    }
-
-    const postRenderHandler = () => {
-        setUpdate(false)
-        if (timeoutRef.current) {
-            clearTimeout(timeoutRef.current)
-            timeoutRef.current = null
-        }
-    }
-
-    const handleCameraMove = () => {
-        if (timeoutRef.current) {
-            clearTimeout(timeoutRef.current)
-            timeoutRef.current = null
-        }
-        lgs.scene.postUpdate.removeEventListener(requestRender) // Retirer PostUpdate
-        lgs.scene.camera.changed.removeEventListener(handleCameraMove) // Nettoyage
-    }
     useEffect(() => {
-        setUpdate(true)
-        timeoutRef.current = null
-
-        lgs.scene.postUpdate.addEventListener(requestRender)
-        lgs.scene.camera.changed.addEventListener(handleCameraMove)
-
-        return () => {
-            if (timeoutRef.current) {
-                clearTimeout(timeoutRef.current)
-                timeoutRef.current = null
-            }
-            lgs.scene.postUpdate.removeEventListener(requestRender)
-            lgs.scene.camera.changed.removeEventListener(handleCameraMove)
-            lgs.scene.postRender.removeEventListener(postRenderHandler)
+        if (!$editor.track) {
+            TrackUtils.setTheTrack(false)
         }
-    }, [editorSnapshot.track.color, editorSnapshot.track.thickness])
+    }, [$editor])
+
+    /**
+     * Sync sliders only when external changes occur (Initial mount or undo/redo)
+     */
+    useEffect(() => {
+        if (_thicknessRef.current) {
+            _thicknessRef.current.value = track?.thickness
+        }
+        if (_opacityRef.current) {
+            _opacityRef.current.value = colord(track?.color).alpha()
+        }
+    }, [track?.thickness, track?.color])
+
+    /**
+     * High-performance thickness update
+     */
+    const handleThicknessInput = (event) => {
+        const val = parseFloat(event.target.value)
+
+        // 1. Immediate visual feedback on the scene (Proxy)
+        $editor.track.thickness = val
+
+        // 2. Debounce the heavy save operation
+        if (_saveTimeoutRef.current) {
+            clearTimeout(_saveTimeoutRef.current)
+        }
+        _saveTimeoutRef.current = setTimeout(async () => {
+            await Utils.updateTrack(DRAW_THEN_SAVE)
+            _saveTimeoutRef.current = null
+        }, 150)
+    }
+
+    /**
+     * High-performance color/opacity update
+     */
+    const handleColorInput = (event) => {
+        const isSlider = event.target.nodeName === 'WA-SLIDER'
+        const val = event.target.value
+
+        let newColor = colord(trackColor.color)
+        let newOpacity = trackColor.opacity
+
+        if (isSlider) {
+            newOpacity = parseFloat(val)
+        }
+        else {
+            newColor = colord(val)
+        }
+
+        const finalRgba = newColor.alpha(newOpacity).toRgbString()
+
+        // Update Proxy for real-time scene rendering
+        $editor.track.color = finalRgba
+
+        // Update local state for the ColorPicker and UI logic
+        setTrackColor({
+                          color:   newColor.alpha(1).toRgbString(),
+                          opacity: newOpacity,
+                      })
+
+        if (_saveTimeoutRef.current) {
+            clearTimeout(_saveTimeoutRef.current)
+        }
+        _saveTimeoutRef.current = setTimeout(async () => {
+            await Utils.updateTrack(DRAW_THEN_SAVE)
+            __.ui.profiler?.updateColor()
+            _saveTimeoutRef.current = null
+        }, 150)
+    }
+
+    /**
+     * Scene render loop
+     */
+    const requestRender = useCallback(() => {
+        lgs.scene.requestRender()
+    }, [])
+
+    useEffect(() => {
+        lgs.scene.postUpdate.addEventListener(requestRender)
+        return () => lgs.scene.postUpdate.removeEventListener(requestRender)
+    }, [requestRender])
+
+    if (!track?.visible) {
+        return null
+    }
 
     return (
         <div id="track-line-settings">
-            <SlTooltip hoist content="Color">
-                <SlColorPicker opacity
-                               size={'small'}
-                               label={'Color'}
-                               value={editorSnapshot.track.color}
-                               swatches={lgs.settings.getSwatches.list.join(';')}
-                               onSlChange={setColor}
-                    // onSlInput={setColor}
-                               disabled={!editorSnapshot.track.visible}
-                               noFormatToggle
+            <label>
+                {'Track style'}
+                <WaDivider
+                    id="test-line"
+                    style={{
+                        '--color':   track.color,
+                        '--width':   `${track.thickness}px`,
+                        '--spacing': 0,
+                    }}
                 />
-            </SlTooltip>
-            <SlTooltip hoist content="Thickness">
-                <SlRange min={1} max={10} step={1}
-                         value={editorSnapshot.track.thickness}
-                         onSlInput={setThickness}
-                    //  onSlChange={setThickness}
-                         disabled={!editorSnapshot.track.visible}
-                         tooltip={'bottom'}
-                         hoist
-                />
-            </SlTooltip>
+            </label>
 
-            <SlDivider id="test-line" style={{
-                '--color': editorSnapshot.track.visible ? editorSnapshot.track.color : 'transparent',
-                '--width': `${editorSnapshot.track.thickness}px`,
-                '--spacing': 0,
-            }}
-                       disabled={!editorSnapshot.track.visible}
-            />
+            <div className="drawer-horizontal-line lgs--track-style-settings">
+                <WaColorPicker
+                    opacity={false}
+                    size="small"
+                    value={trackColor.color}
+                    swatches={lgs.settings.getSwatches.list.join(';')}
+                    onChange={handleColorInput}
+                    withoutFormatToggle
+                />
+
+                <div>
+                    <WaSlider
+                        ref={_opacityRef}
+                        min={0.05}
+                        max={1}
+                        step={0.05}
+                        label-at-start
+                        size="small"
+                        label="Opacity"
+                        defaultValue={trackColor.opacity}
+                        onInput={handleColorInput}
+                        valueFormatter={value => `${Math.round(value * 100)}%`}
+                        placement="bottom"
+                        withTooltip
+                />
+                    <WaSlider
+                        ref={_thicknessRef}
+                        min={0.5}
+                        max={15}
+                        step={0.1} // Finer steps for smoother drag
+                        label-at-start
+                        size="small"
+                        label="Thickness"
+                        defaultValue={track.thickness}
+                        onInput={handleThicknessInput}
+                        placement="bottom"
+                        withTooltip
+                    />
+                </div>
+            </div>
         </div>
     )
-
 }

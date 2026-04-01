@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-22
- * Last modified: 2026-02-22
+ * Created on: 2026-04-01
+ * Last modified: 2026-04-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -186,6 +186,7 @@ export const ProfileWidgetEditor = ({entity}) => {
                                 </div>
                                 <div className="drawer-horizontal-element xlarge-element">
                                     <SlRange label="Opacity" min="0.1" max="1" step="0.05" align-right
+                                             tooltipFormatter={value => `${Math.floor(value * 100)}%`}
                                              value={element.mainAxis.opacity ?? 0.8}
                                              onSlInput={(e) => updateValue('mainAxis.opacity', parseFloat(e.target.value))}/>
                                 </div>
@@ -211,6 +212,7 @@ export const ProfileWidgetEditor = ({entity}) => {
                                 <div className="drawer-horizontal-element xlarge-element">
                                     <SlRange label="Opacity" min="0.1" max="1" step="0.05" align-right
                                              value={element.secondAxis.opacity ?? 0.5}
+                                             tooltipFormatter={value => `${Math.floor(value * 100)}%`}
                                              onSlInput={(e) => updateValue('secondAxis.opacity', parseFloat(e.target.value))}/>
                                 </div>
                             </div>

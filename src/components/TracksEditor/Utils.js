@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-04-01
+ * Last modified: 2026-04-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -42,9 +42,7 @@ export class Utils {
     }
 
     static initJourneyEdition = async (event = undefined) => {
-        if (window.isOK(event)) {
             Utils.updateJourneyEditor(event.target.value, {})
-        }
     }
     static updateJourneyEditor = async (journeySlug, {
         rotate = lgs.settings.ui.camera.start.rotate.journey,

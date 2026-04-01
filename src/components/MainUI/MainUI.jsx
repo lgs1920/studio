@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-27
- * Last modified: 2026-03-27
+ * Created on: 2026-04-01
+ * Last modified: 2026-04-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -206,7 +206,7 @@ export const MainUI = memo(() => {
                             <LayersButton tooltip={tooltipDir}/>
                             <POIEditButton tooltip={tooltipDir}/>
                             <EditorPanelButton tooltip="top"/>
-                            <ProfileButton tooltip={tooltipDir}/>
+                            {/* <ProfileButton tooltip={tooltipDir}/> */}
                             <TextButton tooltip={tooltipDir}/>
                             <InformationButton tooltip={tooltipDir}/>
                             <SupportUIButton tooltip={tooltipDir}/>

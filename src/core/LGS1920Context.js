@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-18
- * Last modified: 2026-03-18
+ * Created on: 2026-04-01
+ * Last modified: 2026-04-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -380,7 +380,6 @@ export class LGS1920Context {
                                                   maxQuota:  500 * 1024 * 1024,
                                                   ttl:       MONTH,
                                               })
-        // 2. Monitoring simple et efficace
         const startCacheMonitoring = () => {
             setInterval(async () => {
                 const bytes = await __.app.cesiumCache.getUsage()
@@ -389,8 +388,7 @@ export class LGS1920Context {
             }, 5000)
         }
 
-        // 3. Lancement
-        startCacheMonitoring()
+        //startCacheMonitoring()
 
         __.ui.profiler = new Profiler(this)
         __.ui.editor = {
