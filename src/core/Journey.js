@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-01
- * Last modified: 2026-04-01
+ * Created on: 2026-04-06
+ * Last modified: 2026-04-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -776,6 +776,10 @@ export class Journey extends MapElement {
      */
     hasOneTrack = () => {
         return this.tracks.size === 1
+    }
+
+    hasSeveralTracks = () => {
+        return this.tracks.size > 1
     }
 
     remove = async () => {

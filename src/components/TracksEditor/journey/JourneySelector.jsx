@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-01
- * Last modified: 2026-04-01
+ * Created on: 2026-04-06
+ * Last modified: 2026-04-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -41,9 +41,6 @@ export const JourneySelector = memo(({label, size = 'medium', onChange, single, 
     const theJourney = useSnapshot($journeyStore)
     const editorStore = useSnapshot($editorProxy)
 
-    // Handle ref naming convention
-    const _internalRef = useRef(null)
-
     // Memoized sorted journeys
     const journeys = useMemo(() => {
         const journeyList = Array.from(list, slug => lgs.getJourneyBySlug(slug)).filter(Boolean)
@@ -68,7 +65,9 @@ export const JourneySelector = memo(({label, size = 'medium', onChange, single, 
      * @return {Object} The style object for the icon
      */
     const getTrackIconStyle = useCallback((journey = theJourney, track = null) => {
-        return {color: track ? track.color : journey.tracks.values().next().value.color}
+        return {
+            color: track ? track.color : journey.tracks.values().next().value.color,
+        }
     }, [theJourney, editorStore.track])
 
     if (journeys.length === 0) {
@@ -83,17 +82,18 @@ export const JourneySelector = memo(({label, size = 'medium', onChange, single, 
                     size={size}
                     onChange={handleChange}
                     key={keys.journey.list}
-                    className={classNames({masked: !theJourney.visible})}
+                    className={classNames('journey-selector', {masked: !theJourney.visible})}
                     ref={ref}
                     value={theJourney.slug}
                 >
-                    <div slot="end" className="lgs--track-colors-in-settings">
-                        {Array.from(lgs.theJourney.tracks.values()).slice(0, 2).map(track => (
-                            <WaIcon
-                                name={theJourney.visible ? 'square' : 'mask'}
-                                style={getTrackIconStyle(lgs.theJourney, track)}
-                                variant="solid"
-                            />
+                    <div slot="start" className="lgs--track-colors-in-settings">
+                        {Array.from(lgs.theJourney.tracks.values()).slice(0, theJourney.visible ? 3 : 1).map(track => (
+                            track.visible && (
+                                < WaIcon
+                                    name={theJourney.visible ? 'hexagon' : 'mask'}
+                                    style={getTrackIconStyle(lgs.theJourney, track)}
+                                    variant="solid"
+                                />)
                         ))}
                     </div>
                     {journeys.map(journey => (
@@ -102,11 +102,11 @@ export const JourneySelector = memo(({label, size = 'medium', onChange, single, 
                             value={journey.slug}
                             className={classNames('journey-title', {masked: !journey.visible})}
                         >
-                            <div slot="end" className="lgs--track-colors-in-settings">
+                            <div slot="start" className="lgs--track-colors-in-settings">
                                 {journey.visible ?
-                                 (Array.from(journey.tracks.values()).slice(0, 2).map(track => (
+                                 (Array.from(journey.tracks.values()).slice(0, journey.visible ? 3 : 1).map(track => (
                                      <WaIcon
-                                         name="square"
+                                         name="hexagon"
                                          style={getTrackIconStyle(journey, track)}
                                          variant="solid"
                                      />
@@ -117,17 +117,17 @@ export const JourneySelector = memo(({label, size = 'medium', onChange, single, 
                                          variant="solid"
                                      />)}
                             </div>
-                            {journey.title}
+                            <div>{journey.title}</div>
                         </WaOption>
                     ))}
                 </WaSelect>
             )}
 
             {journeys.length === 1 && single && (
-                <WaCard className="journey-title">
+                <WaCard className="journey-title" appearance="plain">
                     <span>
                         <WaIcon
-                            name={theJourney.visible ? 'square' : 'mask'}
+                            name={theJourney.visible ? 'hexagon' : 'mask'}
                             style={getTrackIconStyle()}
                         /> {theJourney.title}
                     </span>

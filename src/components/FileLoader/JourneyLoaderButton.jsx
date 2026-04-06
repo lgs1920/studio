@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-27
- * Last modified: 2026-03-27
+ * Created on: 2026-04-06
+ * Last modified: 2026-04-02
  *
  *
  * Copyright © 2026 LGS1920
@@ -32,11 +32,11 @@ export const JourneyLoaderButton = (props) => {
             <WaTooltip placement={props.tooltip} for="create-new-journey-in-panel">{'Add a Journey'}</WaTooltip>
             <WaButton id="create-new-journey-in-panel"
                       className={props.className ?? ''}
-                      appearance="plain"
+                      appearance="filled-outlined"
                       variant="brand"
                       onClick={toggleVisibilityLoader}>
-
-                <WaIcon name="circle-plus" variant="regular"/>
+                <WaIcon name="circle-plus" variant="regular" slot="start"/>
+                {'Add'}
             </WaButton>
 
         </>

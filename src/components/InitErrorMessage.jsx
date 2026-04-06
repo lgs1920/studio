@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-22
- * Last modified: 2026-03-22
+ * Created on: 2026-04-06
+ * Last modified: 2026-04-05
  *
  *
  * Copyright © 2026 LGS1920
@@ -38,6 +38,11 @@ export const InitErrorMessage = ({error}) => {
                   id={'init-error-modal'}
                   className={'lgs-theme'}
         >
+            <div slot="footer" className="buttons-bar">
+                <WaButton variant="brand" onClick={() => window.location.reload()}>
+                    <WaIcon slot="start" name="arrows-rotate" variant="regular"/>{'Retry'}
+                </WaButton>
+            </div>
             <div className="lgs--init-error-message">
 
                 <div>
@@ -74,15 +79,7 @@ export const InitErrorMessage = ({error}) => {
                 </WaDetails>
 
             </div>
-            <div slot="footer">
-                <div id={'footer'}>
-                    <div className="buttons-bar">
-                        <WaButton autofocus variant="brand" onClick={() => window.location.reload()}>
-                            <WaIcon slot="start" name="arrows-rotate" variant="regular"></WaIcon>{'Retry'}
-                        </WaButton>
-                    </div>
-                </div>
-            </div>
+
 
         </WaDialog>
     )

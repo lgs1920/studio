@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-01
- * Last modified: 2026-04-01
+ * Created on: 2026-04-06
+ * Last modified: 2026-04-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -17,11 +17,12 @@
 import './style.css'
 import { CHART_ELEVATION_VS_DISTANCE, DISTANCE, ELEVATION } from '@Core/ui/Profiler'
 import { INTERNATIONAL } from '@Utils/UnitUtils'
+import { WaSpinner }                                                from '@web.awesome.me/webawesome-pro/dist/react'
 import { colord }        from 'colord'
 import ReactECharts                                         from 'echarts-for-react'
-import * as echarts                                         from 'echarts/core'
-import React, { useCallback, useEffect, useMemo, useRef } from 'react'
-import { useSnapshot }                                      from 'valtio'
+import * as echarts                                                 from 'echarts/core'
+import React, { Suspense, useCallback, useEffect, useMemo, useRef } from 'react'
+import { useSnapshot }                                              from 'valtio'
 import { usePreviewChartResize } from '@Components/MainUI/widgets/editor/usePreviewChartResize'
 import { v4 as uuid } from 'uuid'
 
@@ -364,7 +365,8 @@ export const ProfileChart = ({data, id, width, height, preview = false}) => {
                 overflow:        'hidden',
             }}
         >
-            <ReactECharts
+            <Suspense fallback={<WaSpinner style={{fontSize: '2rem'}}/>}>
+                <ReactECharts
                 option={baseOptions}
                 style={{width: '100%', height: '100%'}}
                 opts={{renderer: 'svg'}}
@@ -373,6 +375,7 @@ export const ProfileChart = ({data, id, width, height, preview = false}) => {
                 notMerge={false}
                 lazyUpdate={preview}
             />
+            </Suspense>
         </div>
     )
 }

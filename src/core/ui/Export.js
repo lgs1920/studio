@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-29
- * Last modified: 2026-03-29
+ * Created on: 2026-04-06
+ * Last modified: 2026-04-06
  *
  *
  * Copyright © 2026 LGS1920
@@ -159,5 +159,51 @@ export class Export {
         await URL.revokeObjectURL(link.href)
     }
 
+    /**
+     * Advanced text extraction for rows and items with title handling.
+     * Titles force a newline BEFORE themselves to create clear sections.
+     * @param {string} selector - CSS selector for the rows
+     * @param {string} titleClass - Class name identifying title items
+     * @param {ParentNode} root - DOM scope used for the query
+     * @returns {string|false}
+     */
+    static toText = (selector, titleClass = 'title', root = document) => {
+        const _rows = root.querySelectorAll(selector)
+        if (_rows.length === 0) {
+            return false
+        }
 
+        return Array.from(_rows)
+            .map(($row) => {
+                const _items = $row.querySelectorAll('.element-item')
+
+                if (_items.length === 0) {
+                    return $row.innerText.trim().replace(/\s+/g, ' ')
+                }
+
+                return Array.from(_items)
+                    .map(($item, index) => {
+                        // Extract text from child nodes to avoid merging
+                        const _content = Array.from($item.childNodes)
+                            .map(($node) => $node.textContent.trim())
+                            .filter((_text) => _text !== '')
+                            .join(' ')
+
+                        const _isTitle = $item.classList.contains(titleClass)
+                        const _isLast = index === _items.length - 1
+
+                        // If it's a title, we want a newline BEFORE it to separate blocks
+                        // We also add a ":" after the title for clarity
+                        if (_isTitle) {
+                            return `\n${_content}: `
+                        }
+
+                        // Otherwise, it's a value, we just add a tab if it's not the last item
+                        return _isLast ? _content : `${_content} \t `
+                    })
+                    .join('')
+            })
+            .join('\n')
+            .trim() // Removes leading/trailing whitespace including the first potential \n
+    }
 }

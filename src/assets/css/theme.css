@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-01
- * Last modified: 2026-04-01
+ * Created on: 2026-04-06
+ * Last modified: 2026-04-06
  *
  *
  * Copyright © 2026 LGS1920
@@ -517,6 +517,13 @@ wa-drawer wa-tab-panel, wa-tab-group {
 
 .tab-group--top ::slotted(wa-tab-panel) {
     --padding: var(--lgs-gutter-s) 0;
+}
+
+wa-tab-group .lgs--tabs-right-menu {
+    display: flex;
+    align-items: center;
+    margin-left: auto;
+    gap: 0;
 }
 
 wa-drawer:not([placement="bottom"]):not([placement="top"]) wa-tab-panel::part(base) {
@@ -1038,6 +1045,11 @@ wa-details.lgs--details-hoverable:not([open]):hover {
 
 wa-divider {
     --spacing: var(--lgs-gutter-xs);
+}
+
+.wa-dark wa-divider {
+    --color: var(--track-color);
+
 }
 
 wa-input, wa-number-input {
@@ -1750,4 +1762,36 @@ hr {
 
 .lgs-journey-metrics-origine-user sl-icon-button::part(base) {
     color: var(--lgs-warning-color) !important;
+}
+
+/*******************************************************************************
+ * Screen readers
+ ******************************************************************************/
+.screen-reader-only {
+    position: absolute;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0); /* Legacy support */
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    white-space: nowrap;
+    border: 0;
+    clip-path: inset(50%); /* Modern clipping */
+}
+
+/*******************************************************************************
+ * wa-copy-button
+ ******************************************************************************/
+
+wa-copy-button[variant="brand"] {
+    color: var(--wa-color-brand);
+}
+
+wa-copy-button::part(button) {
+    font-size: var(--wa-font-size-m) !important;
+}
+
+wa-copy-button[variant="brand"]::part(button):hover {
+    background-color: var(--wa-color-brand-fill-quiet);
 }

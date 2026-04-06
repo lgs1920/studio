@@ -7,57 +7,70 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-01
- * Last modified: 2026-04-01
+ * Created on: 2026-04-06
+ * Last modified: 2026-04-03
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { MapPOIEditListActions } from '@Components/MainUI/MapPOI/MapPOIEditListActions'
-import {
-    WaCard,
-    WaIcon, WaInput, WaProgressBar, WaTab, WaTabGroup, WaTabPanel, WaTextarea, WaTooltip,
-}                                     from '@web.awesome.me/webawesome-pro/dist/react'
-import * as PropTypes from 'prop-types'
-import { useEffect, useMemo, useRef } from 'react'
-import { useSnapshot }                from 'valtio'
-import { sprintf }                    from 'sprintf-js'
-import classNames                     from 'classnames'
-import parse                          from 'html-react-parser'
 import { FAButton }                   from '@Components/FAButton'
-import { LGSScrollbars }              from '@Components/MainUI/LGSScrollbars'
-import { MapPOIEditFilterPopup }      from '@Components/MainUI/MapPOI/MapPOIEditFilterPopup'
-import { MapPOIEditFilterButton }     from '@Components/MainUI/MapPOI/MapPOIEditFilterButton'
-import { MapPOIList }                 from '@Components/MainUI/MapPOI/MapPOIList'
-import { useConfirm }                 from '@Components/Modals/ConfirmUI'
-import { ToggleStateIcon }            from '@Components/ToggleStateIcon'
 import {
-    CURRENT_JOURNEY,
-    JOURNEY_EDITOR_DRAWER,
-    ORIGIN_STORE,
-    REFRESH_DRAWING,
-    REMOVE_JOURNEY_IN_EDIT,
-    SIMULATE_ALTITUDE,
+    LGSScrollbars,
+}                                     from '@Components/MainUI/LGSScrollbars'
+import {
+    MapPOIEditListActions,
+}                                     from '@Components/MainUI/MapPOI/MapPOIEditListActions'
+import {
+    MapPOIList,
+}                                     from '@Components/MainUI/MapPOI/MapPOIList'
+import {
+    useConfirm,
+}                                     from '@Components/Modals/ConfirmUI'
+import {
+    ToggleStateIcon,
+}                                     from '@Components/ToggleStateIcon'
+import {
+    CURRENT_JOURNEY, JOURNEY_EDITOR_DRAWER, ORIGIN_STORE, REFRESH_DRAWING, REMOVE_JOURNEY_IN_EDIT, SIMULATE_ALTITUDE,
     UPDATE_JOURNEY_SILENTLY,
-} from '@Core/constants'
-import { ElevationServer }            from '@Core/Elevation/ElevationServer'
+}                                     from '@Core/constants'
+import {
+    ElevationServer,
+}                                     from '@Core/Elevation/ElevationServer'
 import { Journey }                    from '@Core/Journey'
-import { RemoveJourney }              from '@Editor/journey/RemoveJourney'
-import { TrackData }                  from '@Editor/track/TrackData'
-import { TrackPoints }                from '@Editor/track/TrackPoints'
-import { TrackStyleSettings }         from '@Editor/track/TrackStyleSettings'
+import {
+    RemoveJourney,
+}                                     from '@Editor/journey/RemoveJourney'
+import {
+    TrackData,
+}                                     from '@Editor/track/TrackData'
+import {
+    TrackPoints,
+}                                     from '@Editor/track/TrackPoints'
+import { TrackSettings }              from '@Editor/track/TrackSettings'
+import {
+    TrackStyleSettings,
+}                                     from '@Editor/track/TrackStyleSettings'
 import { Utils }                      from '@Editor/Utils'
 import {
-    faArrowRotateRight, faCrosshairsSimple, faDownload, faLocationDot, faLocationDotSlash, faPaintbrushPencil,
-    faRectangleList,
+    faDownload,
 }                                     from '@fortawesome/pro-regular-svg-icons'
 import {
     FEATURE_MULTILINE_STRING, FEATURE_POINT, TrackUtils,
 }                                     from '@Utils/cesium/TrackUtils'
-import { FA2SL }                      from '@Utils/FA2SL'
-import { UIToast }                    from '@Utils/UIToast'
-import { ElevationProfile }           from '../../MainUI/ElevationProfile'
+import {
+    UIToast,
+}                                     from '@Utils/UIToast'
+import {
+    WaButton, WaCard, WaIcon, WaInput, WaTab, WaTabGroup, WaTabPanel, WaTextarea, WaTooltip,
+}                                     from '@web.awesome.me/webawesome-pro/dist/react'
+import parse                          from 'html-react-parser'
+import { useEffect, useMemo, useRef } from 'react'
+import { sprintf }                    from 'sprintf-js'
+import { useSnapshot }                from 'valtio'
+import {
+    ElevationProfile,
+}                                     from '../../MainUI/ElevationProfile'
 import { JourneyData }                from './JourneyData'
 
 const PANELS = {
@@ -301,13 +314,14 @@ export const JourneySettings = () => {
     }
 
     const initTab = (e) => {
+        console.log('initTab', e)
         const tabName = e.detail.name
         __.ui.drawerManager.tab = tabName
         $journeyEditor.activeTab = tabName
         $journeyEditor.showPOIsFilter = tabName === POIS && e.type === 'wa-tab-show'
     }
 
-    const [ConfirmExportJourneyDialog, confirmExportJourney] = useConfirm(`Export <strong>${journey?.title}</strong> ?`, () => <>Not
+    const [ConfirmExportJourneyDialog, confirmExportJourney] = useConfirm(`${'Export'}&nbsp;<strong>${journey?.title}</strong> ?`, () => <>Not
         Yet. Sorry.</>)
 
     useEffect(() => {
@@ -328,7 +342,7 @@ export const JourneySettings = () => {
             {shouldRender && (
                 <div id="journey-settings" key={lgs.theJourney.slug}>
                     <div className="settings-panel">
-                        <WaTabGroup className="menu-panel" ref={_tabGroup} onTabShow={initTab} onTabHide={initTab}>
+                        <WaTabGroup className="menu-panel" ref={_tabGroup} onWaTabShow={initTab} onWaTabHide={initTab}>
                             <WaTab slot="nav" panel={DATA} active={__.ui.drawerManager.tabActive(DATA)}>
                                 <WaIcon name="rectangle-list" variant="regular"/> Data
                             </WaTab>
@@ -338,8 +352,6 @@ export const JourneySettings = () => {
                             <WaTab slot="nav" panel={POIS} active={__.ui.drawerManager.tabActive(POIS)}>
                                 <WaIcon name="location-dot" variant="regular"/> POIs
                             </WaTab>
-
-                            <MapPOIEditFilterButton slot="nav"/>
 
                             {/* Data Panel */}
                             <WaTabPanel name={DATA}>
@@ -352,15 +364,17 @@ export const JourneySettings = () => {
                                             servers={serverList}
                                         />
                                         {journey.tracks.size === 1 ? <TrackData/> : <JourneyData/>}
+                                        <TrackSettings/>
                                     </WaCard>
                                 </LGSScrollbars>
                             </WaTabPanel>
 
                             {/* Edit Panel */}
                             <WaTabPanel name={EDIT}>
-                                <div id="journey-text-description">
+                                <LGSScrollbars>
+                                    <WaCard className="lgs--track-data" appearance="filled">
                                     <WaInput
-                                        label={'Title'}
+                                        label={journey.tracks.size === 1 ? 'Title' : 'Journey Title'}
                                         id={'journey-title-in-settings'}
                                         ref={_title}
                                         value={journey.title}
@@ -368,7 +382,7 @@ export const JourneySettings = () => {
                                     />
 
                                     <WaTextarea
-                                        label={'Description'}
+                                        label={journey.tracks.size === 1 ? 'Description' : 'Journey Description'}
                                         ref={_description}
                                         rows={3}
                                         size="small"
@@ -377,13 +391,14 @@ export const JourneySettings = () => {
                                     />
 
                                     {journey.tracks.size === 1 && <TrackStyleSettings/>}
-                                </div>
+                                        <TrackSettings/>
+                                    </WaCard>
+                                </LGSScrollbars>
                             </WaTabPanel>
 
                             {/* POIs Panel */}
                             <WaTabPanel name={POIS}>
                                 <div className="panel-wrapper">
-                                    <MapPOIEditFilterPopup/>
                                     <MapPOIEditListActions/>
                                     <LGSScrollbars><MapPOIList/></LGSScrollbars>
                                 </div>
@@ -393,59 +408,86 @@ export const JourneySettings = () => {
                             <WaTabPanel name={POINTS}>
                                 <TrackPoints/>
                             </WaTabPanel>
-                        </WaTabGroup>
-
-                        <div className="editor-vertical-menu">
-                            <div>
+                            <div className="lgs--tabs-right-menu " slot="nav">
                                 {journey.visible && (
                                     <>
-                                        {!autoRotateJourney && (
-                                            <WaTooltip hoist
-                                                       content={running && target.instanceOf(CURRENT_JOURNEY) ? 'Stop rotation' : 'Start rotation'}
-                                                       placement="left">
-                                                <FAButton
+                                        {!autoRotateJourney && (<>
+                                                <WaTooltip
+                                                    placement="bottom"
+                                                    for="rotation-in-settings"
+                                                >
+                                                    {running && target.instanceOf(CURRENT_JOURNEY) ? 'Stop rotation' : 'Start rotation'}
+                                                </WaTooltip>
+                                                <WaButton
+                                                    size="small"
                                                     onClick={forceRotate}
                                                     ref={_manualRotate}
-                                                    icon={faArrowRotateRight}
-                                                    className={classNames({'fa-spin': running && target.instanceOf(CURRENT_JOURNEY)})}
-                                                />
-                                            </WaTooltip>
+                                                    id="rotation-in-settings"
+                                                    variant="brand"
+                                                    appearance="plain">
+                                                    <WaIcon name="arrow-rotate-right"
+                                                            variant="regular"
+                                                            animation={running && target.instanceOf(CURRENT_JOURNEY) ? 'spin' : ''}/>
+                                                </WaButton>
+                                            </>
                                         )}
-                                        <WaTooltip hoist
-                                                   content={running && target.instanceOf(CURRENT_JOURNEY) ? 'Stop' : 'Focus'}
-                                                   placement="left">
-                                            <FAButton
-                                                onClick={maybeRotate}
-                                                icon={running && autoRotateJourney && target.instanceOf(CURRENT_JOURNEY) ? faArrowRotateRight : faCrosshairsSimple}
-                                                className={classNames({'fa-spin': running && autoRotateJourney && target.instanceOf(CURRENT_JOURNEY)})}
-                                            />
+                                        <WaTooltip
+                                            for="auto-rotate-in-settings"
+                                            placement="bottom">
+                                            {running && target.instanceOf(CURRENT_JOURNEY) ? 'Stop rotation' : 'Focus on Journey'}
                                         </WaTooltip>
+                                        <WaButton id="auto-rotate-in-settings"
+                                                  size="small"
+                                                  onClick={maybeRotate}
+                                                  id="auto-rotate-in-settings"
+                                                  variant="brand"
+                                                  appearance="plain">
+                                            <WaIcon
+                                                variant="regular"
+                                                name={running && autoRotateJourney && target.instanceOf(CURRENT_JOURNEY) ? 'arrow-rotate-right' : 'crosshairs-simple'}
+                                                animation={running && autoRotateJourney && target.instanceOf(CURRENT_JOURNEY) ? 'spin' : ''}
+                                            />
+                                        </WaButton>
+
                                     </>
                                 )}
-                                <WaTooltip hoist content={textVisibilityJourney} placement="left">
-                                    <ToggleStateIcon onChange={setJourneyVisibility} initial={journey.visible}/>
+                                <WaTooltip placement="bottom"
+                                           for="journey-visibility-in-settings">
+                                    {textVisibilityJourney}
                                 </WaTooltip>
-                            </div>
-                            {journey.pois.size > 1 && (
-                                <WaTooltip hoist content={textVisibilityPOIs} placement="left">
+                                <ToggleStateIcon id="journey-visibility-in-settings" onChange={setJourneyVisibility}
+                                                 initial={journey.visible}/>
+
+                                {journey.pois.size > 1 && (<>
+
+                                        <WaTooltip for="pois-visibility-in-settings"
+                                                   placement="left">{textVisibilityPOIs}</WaTooltip>
                                     <ToggleStateIcon
                                         onChange={setAllPOIsVisibility}
                                         initial={journey.POIsVisible}
+                                        id="pois-visibility-in-settings"
                                         icons={{shown: 'location-dot', hidden: 'location-dot-slash'}}
                                     />
-                                </WaTooltip>
+                                    </>
                             )}
                             <div>
-                                <WaTooltip hoist content="Export" placement="left">
-                                    <FAButton onClick={confirmExportJourney} icon={faDownload}/>
-                                </WaTooltip>
+                                <WaTooltip placement="bottom"
+                                           for="export-journey-in-settings">{'Export Journey'}</WaTooltip>
+                                <WaButton onClick={confirmExportJourney}
+                                          id="export-journey-in-settings"
+                                          size="small"
+                                          appearance="plain"
+                                          variant="brand">
+                                    <WaIcon name="download" variant="regular"/>
+                                </WaButton>
                                 <RemoveJourney tooltip="left-start" name={REMOVE_JOURNEY_IN_EDIT}/>
                             </div>
                         </div>
+                        </WaTabGroup>
                     </div>
-                    <ConfirmExportJourneyDialog/>
                 </div>
             )}
+            <ConfirmExportJourneyDialog/>
         </>
     )
 }

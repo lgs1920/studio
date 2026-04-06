@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-22
- * Last modified: 2026-03-22
+ * Created on: 2026-04-06
+ * Last modified: 2026-04-02
  *
  *
  * Copyright © 2026 LGS1920
@@ -81,7 +81,6 @@ export const useConfirm = (title, Message, confirmButton, cancelButton) => {
     const ConfirmationDialog = () => (
         <WaDialog open={open} onWaHide={handleRequestClose}
                   onWaAfterHide={() => setOpen(false)}
-                  className={'lgs-theme'}
         >
             <div slot="label">{parse(title)}</div>
             <Message/>

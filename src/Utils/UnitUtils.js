@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-26
- * Last modified: 2026-03-26
+ * Created on: 2026-04-06
+ * Last modified: 2026-04-06
  *
  *
  * Copyright © 2026 LGS1920
@@ -34,19 +34,51 @@ export const TB = GB * 1024
 
 /** Distance constants to convert from meter (International System) */
 export const METER = 1
-export const FOOT = 3.280839895             // foot
-export const KM = 0.001                     // meters to km
-export const KMH = 3.6                      // m/s to Km/h
-export const MPH = 2.236936                 // m/s to MPH
-export const MILE = 0.00062137119223        // meters to miles
-export const YARD = 1.09361                 // meters to yards
-export const INCHES = 39.3701               // meters to inches
+export const FOOT = 3.280839895
+export const KM = 0.001
+export const KMH = 3.6
+export const MPH = 2.236936
+export const MILE = 0.00062137119223
+export const YARD = 1.09361
+export const INCHES = 39.3701
+
+/** Units Definition */
+export const km = 'km'
+export const mile = 'mi'
+export const kmh = 'km/h'
+export const hkm = 'h/km'
+export const mkm = 'min/km'
+export const mpmile = 'min/mile'
+export const ms = 'm/s'
+export const mph = 'mph'
+export const foot = 'ft'
+export const yard = 'yd'
+export const inche = 'in'
+export const hour = 'hr'
+export const min = 'mn'
+export const sec = 's'
+export const meter = 'm'
+export const dd = DD
+export const dms = DMS
+export const units = [km, mile, kmh, hkm, mkm, mpmile, ms, mph, meter, foot, yard, inche, hour, min, sec, dd, dms]
+
+export const ELEVATION_UNITS = [meter, foot]
+export const DISTANCE_UNITS = [km, mile]
+export const SPEED_UNITS = [kmh, mph]
+export const PACE_UNITS = [mkm, mpmile]
+
+export const byte = 'B'
+export const kb = 'KB'
+export const mb = 'MB'
+export const gb = 'GB'
+export const tb = 'TB'
+export const BYTE_UNITS = [byte, kb, mb, gb, tb]
 
 export class UnitUtils {
 
     /**
      * Converter from international system unit (ie m, s, m/s) to UI unit.
-     * @param {number} input - Value in metric-based unit
+     * @param {number|string} input - Value in metric-based unit or DOM selector
      * @return {Object}
      */
     static convert = (input) => {
@@ -144,11 +176,10 @@ export class UnitUtils {
                 return `${formattedValue}${unit.label}`
             },
         }
-    }
+    } // End of convert
 
     /**
      * Revert from UI unit back to international system (m, s, m/s).
-     * Prevents the "climbing numbers" bug by ensuring store storage is always metric.
      * @param {number|string} input - The value from the UI input
      * @param {string} unit - The unit label used for display
      * @returns {number} The raw value in metric system
@@ -158,7 +189,6 @@ export class UnitUtils {
             return 0
         }
 
-        // Clean input: replace comma, remove non-numeric chars except dot and minus
         const cleanInput = typeof input === 'string'
                            ? input.replace(',', '.').replace(/[^\d.-]/g, '')
                            : input
@@ -168,7 +198,6 @@ export class UnitUtils {
             return 0
         }
 
-        // Prevent division by zero for inverse units (Pace)
         const safeVal = Math.abs(val) < 0.000001 ? 0.000001 : val
 
         switch (unit) {
@@ -186,7 +215,6 @@ export class UnitUtils {
                 return val / YARD
             case inche:
                 return val / INCHES
-            // PACE (min/km -> m/s): 1 / (min * 60 * 0.001)
             case mkm:
                 return (1 / (safeVal * 60)) / KM
             case mpmile:
@@ -226,17 +254,11 @@ export class UnitUtils {
 
         return {
             value: toShow,
-            unit:  unitText,
-            full:  `${toShow}${unitText ? ' ' + unitText : ''}`,
+            unit: unitText,
+            full: `${toShow}${unitText ? ' ' + unitText : ''}`,
         }
     }
 
-    /**
-     * Convert Latitude or Longitude string (DD or DMS) to decimal float
-     * @param {string} value - The input coordinate string
-     * @param {boolean} isLatitude - True for latitude, false for longitude
-     * @returns {number|null} The coordinate in DD format or null if invalid
-     */
     static convertToDD = (value, isLatitude = true) => {
         if (!value) {
             return null
@@ -249,14 +271,10 @@ export class UnitUtils {
             return null
         }
 
-        // Case 1: Already in DD format (Match group 1 or 3 for Lat, 1 or 3-5 for Lng)
-        // If the DMS specific groups are undefined, it's DD
         if ($match[4] === undefined && $match[7] === undefined) {
             return parseFloat(value.replace(',', '.'))
         }
 
-        // Case 2: DMS format
-        // Groups for DMS start after the DD alternatives in the regex
         const $offset = isLatitude ? 4 : 7
         const $deg = parseFloat($match[$offset]) || 0
         const $min = parseFloat($match[$offset + 1]) || 0
@@ -265,89 +283,49 @@ export class UnitUtils {
 
         let $dd = $deg + ($min / 60) + ($sec / 3600)
 
-        // Apply negative sign for South, West or if the string starts with '-'
         if ($hemisphere === 'S' || $hemisphere === 'W' || value.startsWith('-')) {
             $dd = $dd * -1
         }
 
-        // Return fixed to 6 decimals as requested
         return parseFloat($dd.toFixed(6))
     }
 
-    /**
-     * Validate coordinate input while typing and detect when it is fully valid.
-     * This is designed for live handlers (onInput).
-     *
-     * @param {string} rawValue
-     * @param {boolean} isLatitude
-     * @returns {{
-     *  accepted: boolean,
-     *  completeValid: boolean,
-     *  decimalValue: number|null,
-     *  typedFormat: string|null
-     * }}
-     */
     static parseCoordinateInput = (rawValue, isLatitude = true) => {
         const value = `${rawValue ?? ''}`
         const trimmedValue = value.trim()
 
         const allowedChars = /^[0-9+\-.,\sNSEWnsew°'"]*$/
         if (!allowedChars.test(value)) {
-            return {accepted: false, completeValid: false, decimalValue: null, typedFormat: null}
+            return {accepted: false}
         }
 
         const hemisphereMatches = value.toUpperCase().match(/[NSEW]/g) ?? []
-        const invalidHemisphere = hemisphereMatches.some((hemisphere) => {
-            if (isLatitude) {
-                return hemisphere === 'E' || hemisphere === 'W'
-            }
-            return hemisphere === 'N' || hemisphere === 'S'
-        })
+        const invalidHemisphere = hemisphereMatches.some((h) => isLatitude ? (h === 'E' || h === 'W') : (h === 'N' || h === 'S'))
+
         if (invalidHemisphere || hemisphereMatches.length > 1) {
-            return {accepted: false, completeValid: false, decimalValue: null, typedFormat: null}
-        }
-        if (hemisphereMatches.length === 1 && trimmedValue) {
-            const hemisphere = hemisphereMatches[0]
-            if (!new RegExp(`${hemisphere}\\s*$`, 'i').test(trimmedValue)) {
-                return {accepted: false, completeValid: false, decimalValue: null, typedFormat: null}
-            }
-        }
-
-        const signMatches = trimmedValue.match(/[+-]/g) ?? []
-        if (signMatches.length > 1 || (signMatches.length === 1 && !/^[+-]/.test(trimmedValue))) {
-            return {accepted: false, completeValid: false, decimalValue: null, typedFormat: null}
-        }
-
-        if (/\s{2,}/.test(value)) {
-            return {accepted: false, completeValid: false, decimalValue: null, typedFormat: null}
-        }
-
-        const numericPart = trimmedValue.replace(/[^\d.,]/g, '')
-        const separators = numericPart.match(/[.,]/g) ?? []
-        if ((numericPart.includes('.') && numericPart.includes(',')) || separators.length > 1) {
-            return {accepted: false, completeValid: false, decimalValue: null, typedFormat: null}
+            return {accepted: false}
         }
 
         if (!trimmedValue) {
-            return {accepted: true, completeValid: false, decimalValue: null, typedFormat: null}
+            return {accepted: true, completeValid: false}
         }
 
         const format = isLatitude ? LATITUDE_FORMAT : LONGITUDE_FORMAT
         const regex = new RegExp(format, 'i')
         if (!regex.test(trimmedValue)) {
-            return {accepted: true, completeValid: false, decimalValue: null, typedFormat: null}
+            return {accepted: true, completeValid: false}
         }
 
         const val = UnitUtils.convertToDD(trimmedValue, isLatitude)
         if (!Number.isFinite(val)) {
-            return {accepted: false, completeValid: false, decimalValue: null, typedFormat: null}
+            return {accepted: false}
         }
 
         return {
-            accepted:      true,
+            accepted:     true,
             completeValid: true,
-            decimalValue:  val,
-            typedFormat:   /[NSEWnsew°'"]/.test(trimmedValue) ? DMS : DD,
+            decimalValue: val,
+            typedFormat:  /[NSEWnsew°'"]/.test(trimmedValue) ? DMS : DD,
         }
     }
 
@@ -359,35 +337,3 @@ export class UnitUtils {
         return `${UnitUtils.convert(ddValue).to(safeTargetFormat)}`
     }
 }
-
-/** Units Export */
-export const km = 'km'
-export const mile = 'mi'
-export const kmh = 'km/h'
-export const hkm = 'h/km'
-export const mkm = 'min/km'
-export const mpmile = 'min/mile'
-export const ms = 'm/s'
-export const mph = 'mph'
-export const foot = 'ft'
-export const yard = 'yd'
-export const inche = 'in'
-export const hour = 'hr'
-export const min = 'mn'
-export const sec = 's'
-export const meter = 'm'
-export const dd = DD
-export const dms = DMS
-export const units = [km, mile, kmh, hkm, mkm, mpmile, ms, mph, meter, foot, yard, inche, hour, min, sec, dd, dms]
-
-export const ELEVATION_UNITS = [meter, foot]
-export const DISTANCE_UNITS = [km, mile]
-export const SPEED_UNITS = [kmh, mph]
-export const PACE_UNITS = [mkm, mpmile]
-
-export const byte = 'B'
-export const kb = 'KB'
-export const mb = 'MB'
-export const gb = 'GB'
-export const tb = 'TB'
-export const BYTE_UNITS = [byte, kb, mb, gb, tb]

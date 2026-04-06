@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-27
- * Last modified: 2026-03-27
+ * Created on: 2026-04-06
+ * Last modified: 2026-04-02
  *
  *
  * Copyright © 2026 LGS1920
@@ -120,9 +120,13 @@ export const RemoveJourney = (props) => {
 
     return (
         <>
-            <WaTooltip placement={tooltip} for={removeButton}
-                       ref={tooltipElement}>{'Remove the current journey'}</WaTooltip>
-            <WaButton ref={removeButton} variant="brand" appearance="plain"
+            <WaTooltip placement="bottom" for="remove-journey-in-settings"
+                       ref={tooltipElement}>{'Remove journey'}</WaTooltip>
+            <WaButton ref={removeButton}
+                      size="small"
+                      id="remove-journey-in-settings"
+                      variant="brand"
+                      appearance="plain"
                       onClick={toggleRemoveDialog}>
                 <WaIcon name="trash-can"/>
             </WaButton>
@@ -141,7 +145,8 @@ export const RemoveJourney = (props) => {
                             <WaButton variant="neutral" appearance="outlined" size={'small'} onClick={hideRemoveDialog}>
                                 <WaIcon name="xmark"/> {'No'}
                             </WaButton>
-                            <WaButton variant="danger" appearance="" size={'small'} onClick={removeJourney}>
+                            <WaButton variant="danger" appearance="filled-outlined" size={'small'}
+                                      onClick={removeJourney}>
                                 <WaIcon name="trash-can"/> {'Yes'}
                             </WaButton>
                         </div>

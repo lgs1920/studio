@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-01
- * Last modified: 2026-04-01
+ * Created on: 2026-04-06
+ * Last modified: 2026-04-02
  *
  *
  * Copyright © 2026 LGS1920
@@ -21,8 +21,8 @@ import { SlSwitch } from '@shoelace-style/shoelace/dist/react'
 import WaDrawer from '@Components/WaDrawerNonModal'
 
 import './style.css'
-import { WaSwitch }     from '@web.awesome.me/webawesome-pro/dist/react'
-import { memo, useCallback }     from 'react'
+import { WaButton, WaIcon, WaSwitch } from '@web.awesome.me/webawesome-pro/dist/react'
+import { memo, useCallback }          from 'react'
 import { createPortal } from 'react-dom'
 import { useSnapshot }           from 'valtio'
 import { JourneySelector }       from './journey/JourneySelector'
@@ -62,7 +62,6 @@ const JourneyContent = memo(({journeyVisible}) => (
             />
         </div>
         <JourneySettings/>
-        <TrackSettings/>
     </div>
 ))
 

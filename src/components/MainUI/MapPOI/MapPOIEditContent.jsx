@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-26
- * Last modified: 2026-03-26
+ * Created on: 2026-04-06
+ * Last modified: 2026-04-05
  *
  *
  * Copyright © 2026 LGS1920
@@ -238,9 +238,6 @@ export const MapPOIEditContent = memo(({poi}) => {
                                               }
                                           }, [poi])
 
-                                          /**
-                                           * Feedback after successful coordinate copy
-                                           */
                                           const handleCopySuccess = useCallback(() => {
                                               UIToast.success({
                                                                   caption: title ?? 'POI', text: 'Coordinates copied<br/>Format: latitude, longitude',

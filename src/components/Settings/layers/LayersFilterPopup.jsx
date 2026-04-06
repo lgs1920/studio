@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-22
- * Last modified: 2026-03-22
+ * Created on: 2026-04-06
+ * Last modified: 2026-04-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -168,7 +168,7 @@ export const LayersFilterPopup = () => {
                     <WaButton appearance="plain"
                               slot="header-actions"
                               onClick={close}>
-                        <WaIcon slot="start" size="small" name="xmark" variant="regular"/>
+                        <WaIcon size="small" name="xmark" variant="regular"/>
                     </WaButton>
 
                     <h3 slot="header">

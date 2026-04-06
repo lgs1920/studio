@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-01
- * Last modified: 2026-04-01
+ * Created on: 2026-04-06
+ * Last modified: 2026-04-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -136,18 +136,6 @@ export const TrackStyleSettings = () => {
 
     return (
         <div id="track-line-settings">
-            <label>
-                {'Track style'}
-                <WaDivider
-                    id="test-line"
-                    style={{
-                        '--color':   track.color,
-                        '--width':   `${track.thickness}px`,
-                        '--spacing': 0,
-                    }}
-                />
-            </label>
-
             <div className="drawer-horizontal-line lgs--track-style-settings">
                 <WaColorPicker
                     opacity={false}
@@ -157,7 +145,6 @@ export const TrackStyleSettings = () => {
                     onChange={handleColorInput}
                     withoutFormatToggle
                 />
-
                 <div>
                     <WaSlider
                         ref={_opacityRef}

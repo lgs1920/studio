@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-28
- * Last modified: 2026-02-28
+ * Created on: 2026-04-06
+ * Last modified: 2026-04-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -201,7 +201,7 @@ export const JourneyToolbar = (props) => {
                     </SlTooltip>
 
                     <JourneySelector onChange={newJourneySelection}
-                                     single="true" size="small" style="card" ref={_journeySelector}/>
+                                     single="true" size="small" ref={_journeySelector}/>
 
                     <SlTooltip hoist content={'Add a journey'} placement="top">
                         <SlIconButton library="fa" onClick={journeyLoader} name={FA2SL.set(faSquarePlus)}/>

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-28
- * Last modified: 2026-02-28
+ * Created on: 2026-04-06
+ * Last modified: 2026-04-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -17,17 +17,17 @@
 import { faChevronDown, faEye, faEyeSlash } from '@fortawesome/pro-regular-svg-icons'
 import { faRoute, faSquare, faMask }             from '@fortawesome/pro-solid-svg-icons'
 import { SlIcon, SlOption, SlSelect }            from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                                 from '@Utils/FA2SL'
-import { useSnapshot }                           from 'valtio'
+import { FA2SL }                      from '@Utils/FA2SL'
+import { WaIcon, WaOption, WaSelect } from '@web.awesome.me/webawesome-pro/dist/react'
+import { useSnapshot }                from 'valtio'
 import { useEffect, useMemo, useCallback, memo } from 'react'
 
 export const TrackSelector = memo(({label, onChange}) => {
     const $journeyEditor = lgs.stores.main.components.journeyEditor
-    const journeyEditorSnapshot = useSnapshot($journeyEditor)
-    const $editor = lgs.theJourneyEditorProxy
+    const journeyEditor = useSnapshot($journeyEditor)
+    const $editor = lgs.stores.journeyEditor
     const editor = useSnapshot($editor)
-    const {tracks} = $editor.journey
-
+    const {tracks} = lgs.theJourney
     useEffect(() => {
         if (!$editor.track && tracks.size > 0) {
             $editor.track = Array.from(tracks.values())[0]
@@ -47,32 +47,32 @@ export const TrackSelector = memo(({label, onChange}) => {
     }
 
     return (
-        <SlSelect
-            hoist
+        <WaSelect
+            size="small"
             label={label}
             value={editor.track.slug}
-            onSlChange={memoizedOnChange}
-            key={`track-selector-${journeyEditorSnapshot.keys.track.list}`}
-            onSlRequestClose={handleRequestClose}
+            onChange={memoizedOnChange}
+            key={`track-selector-${journeyEditor.keys.track.list}`}
+            onWaRequestClose={handleRequestClose}
         >
-            <SlIcon
-                library="fa"
-                name={FA2SL.set(editor.track.visible ? faSquare : faMask)}
-                slot="prefix"
-                style={trackIconStyle}
+            <div slot="start" className="lgs--track-colors-in-settings">
+                <WaIcon
+                    name={lgs.theTrack.visible ? 'hexagon' : 'mask'}
+                    style={trackIconStyle}
             />
-            <SlIcon library="fa" name={FA2SL.set(faChevronDown)} slot="expand-icon"/>
+            </div>
+
             {trackList.map(track => (
-                <SlOption key={track.slug} value={track.slug}>
-                    <SlIcon
-                        library="fa"
-                        name={FA2SL.set(track.visible ? faSquare : faMask)}
-                        slot="prefix"
-                        style={{color: track.color}}
+                <WaOption key={track.slug} value={track.slug}>
+                    <div slot="start" className="lgs--track-colors-in-settings">
+                        <WaIcon
+                            name={track.visible ? 'hexagon' : 'mask'}
+                            style={{color: track.color}}
                     />
+                    </div>
                     {track.title}
-                </SlOption>
+                </WaOption>
             ))}
-        </SlSelect>
+        </WaSelect>
     )
 });
