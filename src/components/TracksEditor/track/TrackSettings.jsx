@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-06
- * Last modified: 2026-04-03
+ * Created on: 2026-04-08
+ * Last modified: 2026-04-08
  *
  *
  * Copyright © 2026 LGS1920
@@ -125,10 +125,10 @@ export const TrackSettings = () => {
                         <TrackSelector onChange={Utils.initTrackEdition} label={'Select one track'}/>
                         <div className="editor-vertical-menu">
                             <WaTooltip placement="bottom"
-                                       for="track-vivibility-in-settings">{textVisibilityTrack}</WaTooltip>
+                                       for="track-visibility-in-settings">{textVisibilityTrack}</WaTooltip>
                             <ToggleStateIcon onChange={setTrackVisibility}
                                              initial={journeyEditor.track.visible}
-                                             id="track-vivibility-in-settings"
+                                             id="track-visibility-in-settings"
                             />
 
                         </div>

@@ -7,320 +7,272 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-01
- * Last modified: 2026-04-01
+ * Created on: 2026-04-08
+ * Last modified: 2026-04-08
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { ProfileChart }                                              from '@Components/Profile/ProfileChart'
-import { SCENE_WIDGETS, SCENE_WIDGETS_BOARD, WIDGETS_EDITOR_DRAWER } from '@Core/constants'
-import { ElevationServer }                                           from '@Core/Elevation/ElevationServer'
+/*******************************************************************************
+ * File: ElevationProfile.jsx
+ ******************************************************************************/
+
+import { ProfileChart }                                             from '@Components/Profile/ProfileChart'
+import {
+    SCENE_WIDGETS,
+    SCENE_WIDGETS_BOARD,
+    WIDGET_EDITOR_POST_RENDER_EVENT,
+    WIDGET_EDITOR_PRE_RENDER_EVENT,
+    WIDGETS_EDITOR_DRAWER,
+}                                                                   from '@Core/constants'
+import {
+    ElevationServer,
+}                                                                   from '@Core/Elevation/ElevationServer'
 import { Export }                                                    from '@Core/ui/Export'
 import {
     WidgetDynamicRenderer,
-}                                                                    from '@Core/ui/widget-manager/dynamic-render/WidgetDynamicRender'
+}                                                                   from '@Core/ui/widget-manager/dynamic-render/WidgetDynamicRender'
 import { TrackUtils }                                                from '@Utils/cesium/TrackUtils'
 import { UIToast }                                                   from '@Utils/UIToast'
 import {
     WaButton, WaIcon, WaOption, WaProgressBar, WaSelect, WaSwitch, WaTooltip,
 }                                                                    from '@web.awesome.me/webawesome-pro/dist/react'
-import React, { useEffect, useMemo, useRef, useState }               from 'react'
+import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import { useSnapshot }                                               from 'valtio'
 
-/**
- * ElevationProfile component to display and switch elevation data sources
- *
- * @param {object} props - Component props
- * @returns {JSX.Element}
- */
 export const ElevationProfile = (props) => {
-    // Proxies
     const $profile = lgs.stores.main.components.profile
     const $unitStore = lgs.settings.unitSystem
     const $journeyEditor = lgs.stores.journeyEditor
 
-    // Snapshots
+    // On récupère l'objet complet pour éviter les erreurs de référence
     const profile = useSnapshot($profile)
-    const unitStore = useSnapshot($unitStore)
+    const {current: unitSystem} = useSnapshot($unitStore)
     const {journey, isProcessing} = useSnapshot($journeyEditor)
 
-    // Refs
-    const _selectRef = useRef(null)
-    const _bootstrapDrawRef = useRef('')
     const _bootstrapComputeRef = useRef('')
-
-    // State to manage the visibility of the progress bar during the rendering phase
     const [canShowProgress, setCanShowProgress] = useState(false)
-
-    // Access the singleton correctly
     const renderer = WidgetDynamicRenderer.instance
 
     const WIDGET_KEY = 'profile-widget'
     const GROUP = SCENE_WIDGETS
+    const HIDDEN_CLASS = 'lgs-widget-hidden'
 
     /**
-     * Sync the profile.show proxy with the actual DOM state on mount
+     * Initial sync of the toggle state
      */
     useEffect(() => {
-        const syncVisibility = () => {
-            const existingId = renderer.findExistingInList(WIDGET_KEY, SCENE_WIDGETS_BOARD)
-
-            if (!existingId) {
-                $profile.show = false
-                return
-            }
-
-            const widgetElement = __.ui.widgetManager.getElementById(existingId)
-            if (widgetElement) {
-                const isHidden = widgetElement.classList.contains('lgs-widget-hidden')
-                $profile.show = !isHidden
-            }
+        const _id = renderer.findExistingInList(WIDGET_KEY, SCENE_WIDGETS_BOARD)
+        if (!_id) {
+            $profile.show = false
+            return
         }
 
-        // Execution with a slight delay to ensure the renderer/DOM is populated
-        const _timeout = setTimeout(syncVisibility, 100)
-        return () => clearTimeout(_timeout)
+        const _el = __.ui.widgetManager.getElementById(_id)
+        if (_el) {
+            $profile.show = !_el.classList.contains(HIDDEN_CLASS)
+        }
     }, [])
-
-    /**
-     * Toggle the profile widget visibility and persist the state
-     */
-    const toggleProfileButton = async () => {
-        const existing = renderer.findExistingInList(WIDGET_KEY, SCENE_WIDGETS_BOARD)
-
-        if (!existing) {
-            // Add and persist
-            await addWidget(GROUP, WIDGET_KEY, {forceRefresh: true})
-            $profile.show = true
-        }
-        else {
-            const widgetElement = __.ui.widgetManager.getElementById(existing)
-            const $restrictions = lgs.stores.ui.widget.restrictions
-
-            if ($restrictions.has(existing)) {
-                return
-            }
-
-            // To make it persist, we should remove it from the board or update its visibility in the store
-            if (widgetElement && widgetElement.classList.contains('lgs-widget-hidden')) {
-                widgetElement.classList.remove('lgs-widget-hidden')
-                $profile.show = true
-                __.ui.widgetManager.updateWidgetVisibility(existing, true)
-            }
-            else {
-                if (widgetElement) {
-                    widgetElement.classList.add('lgs-widget-hidden')
-                }
-                $profile.show = false
-                __.ui.widgetManager.updateWidgetVisibility(existing, false)
-
-                if (lgs.stores.ui.drawers.open === WIDGETS_EDITOR_DRAWER) {
-                    lgs.stores.ui.drawers.open = null
-                }
-            }
-        }
-    }
-
-    const addWidget = async (group, key, options = {}) => {
-        await renderer.renderWidget(group, key, {
-            ...options,
-            widgetsBoard: SCENE_WIDGETS_BOARD,
-        })
-    }
-
-    TrackUtils.setProfileVisibility(lgs.theJourney)
-
-    /**
-     * Resolve the currently selected server ID based on journey state or props
-     */
-    const selectedServer = useMemo(() => {
-        const serverIds = props.servers.map(server => server.id)
-        const candidate = journey?.elevationServer ?? props.default
-        if (candidate && serverIds.includes(candidate)) {
-            return candidate
-        }
-        if (journey?.hasElevation !== false && serverIds.includes(ElevationServer.FILE_CONTENT)) {
-            return ElevationServer.FILE_CONTENT
-        }
-        return props.servers?.[0]?.id ?? ''
-    }, [journey?.elevationServer, journey?.hasElevation, props.default, props.servers])
-
-    /**
-     * Unique key for the select component to force refresh on server list change
-     */
-    const selectKey = useMemo(() => `elevation-source-${selectedServer}-${props.servers.map(s => s.id).join('-')}`, [selectedServer, props.servers])
-
-    /**
-     * Handle the progress bar lifecycle using RequestAnimationFrame (RAF).
-     */
-    useEffect(() => {
-        if (!isProcessing && canShowProgress) {
-            const _rafHandle = requestAnimationFrame(() => {
-                setCanShowProgress(false)
-            })
-            return () => cancelAnimationFrame(_rafHandle)
-        }
-    }, [isProcessing, canShowProgress])
-
-    /**
-     * Synchronize the select DOM element value with the internal state
-     */
-    useEffect(() => {
-        const select = _selectRef.current
-        if (!select || !selectedServer) {
-            return
-        }
-        if (select.value !== selectedServer) {
-            select.value = selectedServer
-        }
-    }, [selectedServer])
-
-    /**
-     * Sync the selected server back to the journey editor proxy
-     */
-    useEffect(() => {
-        if (!journey || !selectedServer || isProcessing) {
-            return
-        }
-        if (journey.elevationServer !== selectedServer) {
-            $journeyEditor.journey.elevationServer = selectedServer
-        }
-    }, [journey, selectedServer, isProcessing, $journeyEditor])
 
     /**
      * Prepare data for the profile chart
      */
     const data = useMemo(() => {
-        const preparedData = __.ui.profiler?.prepareData()
+        const _raw = __.ui.profiler?.prepareData()
         return {
-            dataset:      preparedData,
-            hasElevation: preparedData?.dataset?.length > 0,
+            dataset:      _raw,
+            hasElevation: _raw?.dataset?.length > 0,
         }
     }, [
                              profile.key,
                              profile.elevationData,
-                             unitStore.current,
+                             unitSystem,
                              journey?.elevationServer,
                              isProcessing,
                          ])
 
     /**
-     * Initialize drawing logic for the profiler
+     * If no elevation data is available, we automatically hide the widget
      */
     useEffect(() => {
-        if (!journey?.slug || isProcessing) {
-            return
+        if (!isProcessing && !data.hasElevation && profile.show) {
+            const _id = renderer.findExistingInList(WIDGET_KEY, SCENE_WIDGETS_BOARD)
+            if (_id) {
+                const _el = __.ui.widgetManager.getElementById(_id)
+                if (_el && !_el.classList.contains(HIDDEN_CLASS)) {
+                    _el.classList.add(HIDDEN_CLASS)
+                    $profile.show = false
+                }
+            }
         }
-        const drawKey = `${journey.slug}:${selectedServer}`
-        if (_bootstrapDrawRef.current === drawKey) {
-            return
-        }
-        _bootstrapDrawRef.current = drawKey
-    }, [journey?.slug, selectedServer, isProcessing, journey])
+    }, [data.hasElevation, isProcessing, profile.show])
 
     /**
-     * Notify parent component of server changes and manage progress bar state
+     * Toggles the profile widget visibility
      */
+    const toggleProfileButton = useCallback(async () => {
+        const _id = renderer.findExistingInList(WIDGET_KEY, SCENE_WIDGETS_BOARD)
+
+        if (!_id) {
+            await renderer.renderWidget(GROUP, WIDGET_KEY, {
+                forceRefresh: true,
+                widgetsBoard: SCENE_WIDGETS_BOARD,
+            })
+            $profile.show = true
+            return
+        }
+
+        if (lgs.stores.ui.widget.restrictions.has(_id)) {
+            return
+        }
+
+        const _el = __.ui.widgetManager.getElementById(_id)
+        const _nextState = !profile.show
+
+        if (_el) {
+            _el.classList.toggle(HIDDEN_CLASS, !_nextState)
+        }
+
+        $profile.show = _nextState
+        __.ui.widgetManager.updateWidgetVisibility(_id, _nextState)
+
+        if (!_nextState && lgs.stores.ui.drawers.open === WIDGETS_EDITOR_DRAWER) {
+            lgs.stores.ui.drawers.open = null
+        }
+    }, [profile.show])
+
+    const selectedServer = useMemo(() => {
+        const _ids = props.servers.map(s => s.id)
+        if (journey?.elevationServer && _ids.includes(journey.elevationServer)) {
+            return journey.elevationServer
+        }
+        if (journey?.hasElevation !== false && _ids.includes(ElevationServer.FILE_CONTENT)) {
+            return ElevationServer.FILE_CONTENT
+        }
+        return props.default || _ids[0] || ''
+    }, [journey?.elevationServer, journey?.hasElevation, props.default, props.servers])
+
+    useEffect(() => {
+        if (!isProcessing && canShowProgress) {
+            const _id = requestAnimationFrame(() => setCanShowProgress(false))
+            return () => cancelAnimationFrame(_id)
+        }
+    }, [isProcessing, canShowProgress])
+
+    useEffect(() => {
+        if (journey && selectedServer && !isProcessing && journey.elevationServer !== selectedServer) {
+            $journeyEditor.journey.elevationServer = selectedServer
+        }
+    }, [selectedServer, isProcessing])
+
     useEffect(() => {
         if (!journey?.slug || isProcessing || !props.onChange) {
             return
         }
-        if (!selectedServer || [ElevationServer.NONE, ElevationServer.CLEAR].includes(selectedServer)) {
+        const _key = `${journey.slug}:${selectedServer}`
+        if (_bootstrapComputeRef.current === _key || [ElevationServer.NONE, ElevationServer.CLEAR].includes(selectedServer)) {
             return
         }
 
-        const computeKey = `${journey.slug}:${selectedServer}`
-        if (_bootstrapComputeRef.current === computeKey) {
-            return
-        }
-        _bootstrapComputeRef.current = computeKey
-
+        _bootstrapComputeRef.current = _key
         props.onChange({detail: {value: selectedServer, force: true}})
-    }, [journey?.slug, selectedServer, isProcessing, props.onChange])
+    }, [journey?.slug, selectedServer, isProcessing])
 
-    /**
-     * Handle manual server change from the UI
-     * @param {CustomEvent} event
-     */
-    const handleServerChange = (event) => {
-        const selected = event.target.value
-        if (!selected || selected === selectedServer) {
+    const handleServerChange = (e) => {
+        const _val = e.target.value
+        if (!_val || _val === selectedServer) {
             return
         }
-
-        const server = props.servers.find(s => s.id === selected)
-        setCanShowProgress(!!(server?.url ?? server?.origin))
-
+        const _server = props.servers.find(s => s.id === _val)
+        setCanShowProgress(!!(_server?.url || _server?.origin))
         if (props.onChange) {
-            props.onChange(event)
+            props.onChange(e)
         }
     }
 
     const exportChartToPNG = () => {
-        const fileName = `${journey.title}-profile`
-        Export.toPNG('#journey-profile-chart-in-settings', fileName, 2).then(() => {
-            UIToast.success({
-                                caption: `Profile chart has been exported successfully!`,
-                                text:    `File name: ${fileName}.png`,
-                            })
+        const _name = `${journey.title}-profile`
+        Export.toPNG('#journey-profile-chart-in-settings', _name, 2).then(() => {
+            UIToast.success({caption: 'Export success', text: `${_name}.png`})
         })
     }
 
+    const openWidgetProfileEditor = async () => {
+        let entity = renderer.findExistingInList(WIDGET_KEY, SCENE_WIDGETS_BOARD)
+
+        if (!entity) {
+            await renderer.renderWidget(GROUP, WIDGET_KEY, {
+                forceRefresh: true,
+                widgetsBoard: SCENE_WIDGETS_BOARD,
+            })
+            entity = renderer.findExistingInList(WIDGET_KEY, SCENE_WIDGETS_BOARD)
+        }
+
+        if (!entity) {
+            return
+        }
+
+        window.dispatchEvent(new CustomEvent(WIDGET_EDITOR_PRE_RENDER_EVENT, {
+            detail: {entity},
+        }))
+        __.ui.drawerManager.open(WIDGETS_EDITOR_DRAWER, {
+            action:  'edit-current',
+            entity,
+            stacked: true,
+        })
+        window.dispatchEvent(new CustomEvent(WIDGET_EDITOR_POST_RENDER_EVENT, {
+            detail: {entity},
+        }))
+    }
+
+    TrackUtils.setProfileVisibility(lgs.theJourney)
+
     return (
         <>
-            <WaSelect
-                key={selectKey}
-                ref={_selectRef}
-                size="small"
-                label={props.label}
-                hint={props.hint ?? ''}
-                value={selectedServer}
-                onChange={handleServerChange}
-            >
-                {props.servers.map(server => {
-                    const isSelected = selectedServer === server.id
-                    const icon = isSelected ? (server.iconSelection ?? server.icon) : server.icon
-                    const label = isSelected ? (server.labelSelection ?? server.label) : server.label
-
-                    return (
-                        <WaOption key={server.id} value={server.id}>
-                            <WaIcon name={icon} slot="start" variant="regular"/>
-                            {label}
-                        </WaOption>
-                    )
-                })}
+            <WaSelect size="small" label={props.label} value={selectedServer} onChange={handleServerChange}>
+                {props.servers.map(s => (
+                    <WaOption key={s.id} value={s.id}>
+                        <WaIcon name={selectedServer === s.id ? (s.iconSelection || s.icon) : s.icon} slot="start"
+                                variant="regular"/>
+                        {selectedServer === s.id ? (s.labelSelection || s.label) : s.label}
+                    </WaOption>
+                ))}
             </WaSelect>
 
-            {canShowProgress
-             ? (<WaProgressBar indeterminate/>)
-             : (<div className="journey-profile-chart-menu">
-                    <WaSwitch size="xsmall" label-at-start width-auto checked={profile.show}
-                              onChange={toggleProfileButton}>
-                        {'Add widget on scene'}
-                    </WaSwitch>
-                    {data.hasElevation &&
-                        <>
-                            <WaTooltip for="export-chart-button-in-settings">{'Export profile to image'}</WaTooltip>
-                            <WaButton appearance="plain"
-                                      variant="brand"
-                                      id="export-chart-button-in-settings"
-                                      onClick={exportChartToPNG}>
-                                <WaIcon variant="regular" name="camera"/>
-                            </WaButton>
-                        </>
-                    }
-                </div>)
-            }
+            {canShowProgress ? (
+                <WaProgressBar indeterminate/>
+            ) : (
+                 <div className="journey-profile-chart-menu">
+                     <WaSwitch
+                         size="xsmall"
+                         label-at-start
+                         width-auto
+                         disabled={!data.hasElevation}
+                         checked={profile.show && data.hasElevation}
+                         onChange={toggleProfileButton}
+                     >
+                         {'Add Profile widget on scene'}
+                     </WaSwitch>
+                     {data.hasElevation && (
+                         <>
+                             <WaTooltip for="edit-profile-widget-in-settings">{'Edit widget'}</WaTooltip>
+                             <WaButton id="edit-profile-widget-in-settings" appearance="plain" variant="brand"
+                                       onClick={openWidgetProfileEditor}>
+                                 <WaIcon variant="regular" name="pen-ruler"/>
+                             </WaButton>
+                             <WaTooltip for="snap-profile-widget-in-settings">{'Export to image'}</WaTooltip>
+                             <WaButton id="snap-profile-widget-in-settings" appearance="plain" variant="brand"
+                                       onClick={exportChartToPNG}>
+                                 <WaIcon variant="regular" name="camera"/>
+                             </WaButton>
+                         </>
+                     )}
+                 </div>
+             )}
 
             {!isProcessing && data.hasElevation && (
-                <ProfileChart
-                    id="journey-profile-chart-in-settings"
-                    data={data.dataset}
-                    height="180px"
-                    width="100%"
-                />
+                <ProfileChart id="journey-profile-chart-in-settings" data={data.dataset} height="180px" width="100%"/>
             )}
         </>
     )
