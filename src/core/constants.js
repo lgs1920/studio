@@ -7,16 +7,14 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-26
- * Last modified: 2026-03-26
+ * Created on: 2026-04-08
+ * Last modified: 2026-04-08
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { CESIUM_EVENTS as $CESIUM_EVENTS } from '@Core/events/cesiumEvents'
-import { faCompass, faRoute, faText }      from '@fortawesome/pro-regular-svg-icons'
-import { faChartFft, faGavel }             from '@fortawesome/pro-solid-svg-icons'
 
 
 export const SLOGAN = 'Replay the World Outdoors!'
@@ -471,32 +469,20 @@ export const WIDGETS_CAPABILITIES   = [
              WIDGETS_CONFIGURATION  = new Map([
                                                   [
                                                       COMPASS_WIDGET, {
-                                                      icon:      faCompass,
+                                                      icon: 'compass',
                                                       component: 'CompassWidget',
                                                   },
                                                   ],
                                                   [
                                                       CREDITS_WIDGET, {
-                                                      icon:      faGavel,
+                                                      icon: '\'gavel',
                                                       component: 'CreditsWidget',
                                                   },
                                                   ],
 
                                                   [
                                                       PROFILE_WIDGET, {
-                                                      icon:      faChartFft,
-                                                      component: 'ProfileWidget',
-                                                  },
-                                                  ],
-                                                  [
-                                                      TEXT_WIDGET, {
-                                                      icon:      faText,
-                                                      component: 'TextWidget',
-                                                  },
-                                                  ],
-                                                  [
-                                                      JOURNEY_STATS_WIDGET, {
-                                                      icon:      faRoute,
+                                                      icon: 'chart-fft',
                                                       component: 'JourneyStatsWidget',
                                                   },
                                                   ],

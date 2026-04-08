@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-18
- * Last modified: 2026-03-18
+ * Created on: 2026-04-08
+ * Last modified: 2026-04-08
  *
  *
  * Copyright © 2026 LGS1920
@@ -35,6 +35,13 @@ export class PanelManager {
      * @type {Map<string, string>}
      */
     #tabs = new Map()
+
+    /**
+     * Stack history to manage stacked drawers.
+     * @private
+     * @type {Array<Object>}
+     */
+    #stack = []
 
     /**
      * Creates a new instance of PanelManager or returns the existing instance.
@@ -96,6 +103,17 @@ export class PanelManager {
     }
 
     /**
+     * Checks if the specified drawer is currently in a stacked state.
+     * A drawer is stacked if it's currently open and there's history in the stack.
+     *
+     * @param {string} id
+     * @returns {boolean}
+     */
+    isStacked = (id) => {
+        return this.drawers.open === id && this.#stack.length > 0
+    }
+
+    /**
      * Validates if a drawer can be opened or updated.
      * Returns true if:
      * - The requested ID is not the current one (handles null initial state).
@@ -106,12 +124,10 @@ export class PanelManager {
      * @returns {boolean}
      */
     canOpen = (id, entity = null) => {
-        // If drawer is not open or a different one is requested
         if (!this.isCurrent(id)) {
             return true
         }
 
-        // If it's the same drawer, only allow re-opening if the entity is different
         return entity !== null && ui.drawers.entity !== entity
     }
 
@@ -133,10 +149,22 @@ export class PanelManager {
 
     /**
      * Configures and displays the specified drawer.
+     * Pushes current state to the stack if stacked option is true.
      * @param {string} id
      * @param {Object} [options]
      */
     open = (id, options = {}) => {
+        if (options.stacked && ui.drawers.open && ui.drawers.open !== id) {
+            this.#stack.push({
+                                 id:     ui.drawers.open,
+                                 action: ui.drawers.action,
+                                 entity: ui.drawers.entity,
+                             })
+        }
+        else if (!options.stacked) {
+            this.#stack = []
+        }
+
         ui.drawers.open = id
         ui.drawers.action = options.action ?? ''
         ui.drawers.entity = options.entity ?? null
@@ -157,12 +185,28 @@ export class PanelManager {
     }
 
     /**
-     * Closes the drawer and resets store state.
+     * Closes the current drawer.
+     * Restores the previous drawer from the stack if available.
      */
     close = () => {
-        document.activeElement?.blur()
-        ui.drawers.open = null
-        ui.drawers.entity = null
+        if (this.#stack.length > 0) {
+            const previous = this.#stack.pop()
+
+            ui.drawers.open = previous.id
+            ui.drawers.action = previous.action
+            ui.drawers.entity = previous.entity
+
+            const tabToActivate = this.#tabs.get(previous.id)
+            if (tabToActivate) {
+                this.openTab(tabToActivate)
+            }
+        }
+        else {
+            document.activeElement?.blur()
+            ui.drawers.open = null
+            ui.drawers.entity = null
+            ui.drawers.action = null
+        }
     }
 
     /**

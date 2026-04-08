@@ -76,7 +76,7 @@ widgets:
   credits-widget:
     id: "credits-widget"
     name: "Credits"
-    description: "A credits widget"
+    description: "The app credits widget"
     icon: "user"
     mandatory: true
     component: "CreditsWidget"
@@ -88,8 +88,8 @@ widgets:
 
   profile-widget:
     id: "profile-widget"
-    name: "Profile"
-    description: "The journey profile widget"
+    name: "Elevation Profile"
+    description: "The journey elevation profile widget"
     icon: "chart-fft"
     mandatory: false
     max: 1

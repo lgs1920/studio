@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-22
- * Last modified: 2026-03-18
+ * Created on: 2026-04-08
+ * Last modified: 2026-04-08
  *
  *
  * Copyright © 2026 LGS1920
@@ -21,23 +21,25 @@ import {
 import {
     WidgetsOrderingPanelContent,
 }                                                                                             from '@Components/MainUI/widgets/ordering/WidgetsOrderingPanelContent'
+import PanelActions
+                                                                      from '@Components/PanelsActions'
 import { SCENE_WIDGETS_BOARD, VIDEO_CROP_ZONE, WIDGETS_CONFIGURATION, WIDGETS_EDITOR_DRAWER } from '@Core/constants'
 import {
     WidgetRegistry,
 }                                                                                             from '@Core/ui/widget-manager/registry/WidgetRegistry'
-import {
-    faImage, faLayer,
-}                                                                                             from '@fortawesome/pro-regular-svg-icons'
-import {
-    FontAwesomeIcon,
-}                                                                                             from '@fortawesome/react-fontawesome'
-import {
-    SlIcon, SlTab, SlTabGroup, SlTabPanel,
-}                   from '@shoelace-style/shoelace/dist/react'
+
 import WaDrawer from '@Components/WaDrawerNonModal'
-import { FA2SL }                                                                              from '@Utils/FA2SL'
-import { Suspense, useCallback, useEffect, useMemo, useState }                                from 'react'
-import { useSnapshot }                                                                        from 'valtio'
+import {
+    WaButton,
+    WaIcon,
+    WaTab,
+    WaTabGroup,
+    WaTabPanel, WaTooltip,
+}                                                                     from '@web.awesome.me/webawesome-pro/dist/react'
+import classNames                                                     from 'classnames'
+import React, { Suspense, useCallback, useEffect, useMemo, useState } from 'react'
+import { createPortal }                                               from 'react-dom'
+import { useSnapshot }                                                from 'valtio'
 import './style.css'
 
 /**
@@ -66,9 +68,14 @@ export const WidgetEditorPanel = () => {
     const _widgetRegistry = useMemo(() => new WidgetRegistry(), [])
 
     const isVisible = drawers.open === WIDGETS_EDITOR_DRAWER && (video.editing || cached?.widgetsBoard === SCENE_WIDGETS_BOARD)
+    // Check stacked state via manager instead of snapshot property
+    const isStacked = __.ui.drawerManager.isStacked(WIDGETS_EDITOR_DRAWER)
     const drawerPlacement = menuSettings.drawer
     const previewBg = widget.currentSnapshot?.image || null
 
+    /**
+     * Closes the editor and handles the stack via the manager.
+     */
     const closeEditor = useCallback((event) => {
         if (event && event.target.tagName !== 'WA-DRAWER') {
             return
@@ -77,10 +84,16 @@ export const WidgetEditorPanel = () => {
         if (__.ui.drawerManager.isCurrent(WIDGETS_EDITOR_DRAWER)) {
             __.ui.drawerManager.close()
         }
-        $drawers.open = null
-        window.dispatchEvent(new Event('resize'))
-    }, [])
+        else if (!isStacked) {
+            $drawers.open = null
+        }
 
+        window.dispatchEvent(new Event('resize'))
+    }, [isStacked, $drawers])
+
+    /**
+     * Prevents default shoelace close behavior to let the manager handle it.
+     */
     const handleRequestClose = useCallback((event) => {
         const src = event.detail?.source
         if (src === 'close-button' || src === 'keyboard') {
@@ -101,7 +114,7 @@ export const WidgetEditorPanel = () => {
                             type,
                             name:    theWidget.name,
                             description: theWidget.description,
-                            icon:    FA2SL.set(configIcon),
+                            icon: configIcon,
                             rawIcon: configIcon,
                         })
 
@@ -125,90 +138,94 @@ export const WidgetEditorPanel = () => {
     }
 
     /**
-     * Fallback UI for preview loading using FontAwesome native beat animation
+     * Fallback UI for preview loading
      */
     const PreviewLoadingFallback = (
         <div className="lgs-preview-loader-container">
             {data.rawIcon && (
-                <FontAwesomeIcon
-                    icon={data.rawIcon}
-                    beatFade
-                    className="lgs-loader-beating-white"
-                />
+                <WaIcon name={data.rawIcon} beatFade className="lgs-loader-beating-white"/>
             )}
         </div>
     )
 
-    return (
+    const drawerRoot = __.ui.drawerManager.drawerRoot
+    const content = (
         <WaDrawer
-                id={WIDGETS_EDITOR_DRAWER}
-                label={data.name}
-                open={isVisible}
-                modal={false}
-                className="lgs-theme"
-                placement={drawerPlacement}
-                onWaAfterHide={handleRequestClose}
-                onSlHide={closeEditor}
-            >
-                <div slot="label" className="drawer-header-title">
-                    <SlIcon library="fa" name={data.icon}/>
-                    <span>{data.name}</span>
+            id={WIDGETS_EDITOR_DRAWER}
+            label={data.name}
+            open={isVisible}
+            modal={false}
+            className={classNames({'drawer-is-stacked': isStacked})}
+            placement={drawerPlacement}
+            onWaAfterHide={handleRequestClose}
+            onWaHide={closeEditor}
+        >
+            {/* Show back icon instead of close if stacked */}
+            {isStacked && (
+                <WaIcon slot="close-icon" name="arrow-left"/>
+            )}
+
+            <div slot="label" className="drawer-header-title">
+                <WaIcon name={data.icon}/>
+                <span>{data.name}</span>
+            </div>
+            <PanelActions stackedPanel={true}/>
+            <div className="drawer-content lgs-editor-layout">
+                <div className="editor-header-zones">
+                    <WaTabGroup className="editor-tabs">
+                        <WaTab slot="nav" panel="preview">
+                            <WaIcon size="small" name="image"/> Preview
+                        </WaTab>
+                        <WaTab slot="nav" panel="ordering">
+                            <WaIcon size="small" name="layer"/> Widgets stack
+                        </WaTab>
+
+                        <WaTabPanel name="preview">
+                            <section
+                                className="editor-preview-zone lgs-widget-preview"
+                                style={{'--lgs-widget-preview-bg': previewBg ? `url(${previewBg})` : 'none'}}
+                            >
+                                <Suspense fallback={PreviewLoadingFallback}>
+                                    {PreviewComponent ? (
+                                        <PreviewComponent entity={drawers.entity} data={data}/>
+                                    ) : (
+                                         <div className="default-preview">
+                                             <WaIcon library="fa" name={data.icon}/>
+                                         </div>
+                                     )}
+                                </Suspense>
+                            </section>
+                        </WaTabPanel>
+
+                        <WaTabPanel name="ordering">
+                            <section className="editor-ordering-zone">
+                                <WidgetsOrderingPanelContent widgetsBoard={VIDEO_CROP_ZONE}/>
+                            </section>
+                        </WaTabPanel>
+                    </WaTabGroup>
                 </div>
 
-                <div className="drawer-content lgs-editor-layout">
-                    <div className="editor-header-zones">
-                        <SlTabGroup className="editor-tabs">
-                            <SlTab slot="nav" panel="preview">
-                                <SlIcon size="small" library="fa" name={FA2SL.set(faImage)}/> Preview
-                            </SlTab>
-                            <SlTab slot="nav" panel="ordering">
-                                <SlIcon size="small" library="fa" name={FA2SL.set(faLayer)}/> Widgets stack
-                            </SlTab>
-
-                            <SlTabPanel name="preview">
-                                <section
-                                    className="editor-preview-zone lgs-widget-preview"
-                                    style={{'--lgs-widget-preview-bg': previewBg ? `url(${previewBg})` : 'none'}}
-                                >
-                                    <Suspense fallback={PreviewLoadingFallback}>
-                                        {PreviewComponent ? (
-                                            <PreviewComponent entity={drawers.entity} data={data}/>
-                                        ) : (
-                                             <div className="default-preview">
-                                                 <SlIcon library="fa" name={data.icon}/>
-                                             </div>
-                                         )}
-                                    </Suspense>
-                                </section>
-                            </SlTabPanel>
-
-                            <SlTabPanel name="ordering">
-                                <section className="editor-ordering-zone">
-                                    <WidgetsOrderingPanelContent widgetsBoard={VIDEO_CROP_ZONE}/>
-                                </section>
-                            </SlTabPanel>
-                        </SlTabGroup>
-                    </div>
-
-                    <div className="editor-body-zone">
-                        <div className="editor-form-content">
-                            <Suspense fallback={<EditorSkeleton type="preview"/>}>
-                                {EditorComponent ? (
-                                    <EditorComponent
-                                        entity={drawers.entity}
-                                        widgetData={data}
-                                        position={widgetPosition}
-                                    />
-                                ) : (
-                                     <div className="error-placeholder">
-                                         Component for "{data.type}" not found.
-                                     </div>
-                                 )}
-                            </Suspense>
-                        </div>
+                <div className="editor-body-zone">
+                    <div className="editor-form-content">
+                        <Suspense fallback={<EditorSkeleton type="preview"/>}>
+                            {EditorComponent ? (
+                                <EditorComponent
+                                    entity={drawers.entity}
+                                    widgetData={data}
+                                    position={widgetPosition}
+                                />
+                            ) : (
+                                 <div className="error-placeholder">
+                                     Component for "{data.type}" not found.
+                                 </div>
+                             )}
+                        </Suspense>
                     </div>
                 </div>
-                <DrawerFooter slot="footer"/>
+            </div>
+            <DrawerFooter slot="footer"/>
         </WaDrawer>
     )
+    return drawerRoot ? createPortal(content, drawerRoot) : content
+
 }
