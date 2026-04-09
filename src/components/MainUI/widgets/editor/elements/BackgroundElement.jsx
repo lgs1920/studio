@@ -7,17 +7,46 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-06
- * Last modified: 2026-02-06
+ * Created on: 2026-04-09
+ * Last modified: 2026-04-09
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { SlColorPicker, SlRange, SlSwitch } from '@shoelace-style/shoelace/dist/react'
-import React                                from 'react'
+import { WaColorPicker, WaSlider, WaSwitch } from '@web.awesome.me/webawesome-pro/dist/react'
+import React                                 from 'react'
 
-export const BackgroundElement = ({element, swatches, getColor, updateValue}) => {
+const fallbackSliderValue = (rawValue, fallback, options = {}) => {
+    const value = Array.isArray(rawValue) ? rawValue[0] : rawValue
+    const numericValue = Number(value)
+
+    if (!Number.isFinite(numericValue)) {
+        return fallback
+    }
+
+    const min = Number(options.min)
+    const max = Number(options.max)
+    let finalValue = numericValue
+
+    if (Number.isFinite(min)) {
+        finalValue = Math.max(min, finalValue)
+    }
+
+    if (Number.isFinite(max)) {
+        finalValue = Math.min(max, finalValue)
+    }
+
+    return finalValue
+}
+
+export const BackgroundElement = ({
+                                      element,
+                                      swatches,
+                                      getColor,
+                                      updateValue,
+                                      sanitizeSliderValue = fallbackSliderValue,
+                                  }) => {
 
     /**
      * Handle the main background toggle logic
@@ -33,28 +62,36 @@ export const BackgroundElement = ({element, swatches, getColor, updateValue}) =>
 
     return (
         <>
-            <SlSwitch align-right size="x-small" checked={element.background?.show ?? false}
-                      onSlInput={(e) => handleToggle(e.target.checked)}>
+            <WaSwitch label-at-start size="xsmall" checked={element.background?.show ?? false}
+                      onInput={(e) => handleToggle(e.target.checked)}>
                 <label>{'Background'}</label>
-            </SlSwitch>
+            </WaSwitch>
 
             {element.background?.show && (
                 <div className="drawer-horizontal-line three-columns">
                     <div className="drawer-horizontal-element">
-                        <SlColorPicker size="small" swatches={swatches}
+                        <WaColorPicker size="small" swatches={swatches}
                                        value={getColor(element.background)}
-                                       onSlInput={(e) => updateValue('background.color', e.target.value)}/>
+                                       onInput={(e) => updateValue('background.color', e.target.value)}/>
                     </div>
                     <div className="drawer-horizontal-element">
                         {'Blur'}&nbsp;
-                        <SlSwitch align-right size="x-small" checked={element.background.blur ?? false}
-                                  onSlChange={(e) => updateValue('background.blur', e.target.checked)}/>
+                        <WaSwitch label-at-start size="xsmall" checked={element.background.blur ?? false}
+                                  onChange={(e) => updateValue('background.blur', e.target.checked)}/>
                     </div>
                     <div className="drawer-horizontal-element xlarge-element">
-                        <SlRange label="Opacity" min="0" max="1" step="0.05" align-right tooltip="top"
-                                 tooltipFormatter={value => `${Math.floor(value * 100)}%`}
-                                 value={element.background.opacity ?? 0.5}
-                                 onSlInput={(e) => updateValue('background.opacity', parseFloat(e.target.value))}/>
+                        <WaSlider label="Opacity"
+                                  min="0" max="1" step="0.05"
+                                  label-at-start
+                                  placement="top"
+                                  size="small"
+                                  withTooltip
+                                  valueFormatter={value => `${Math.floor(value * 100)}%`}
+                                  value={sanitizeSliderValue(element.background?.opacity, 0.5, {min: 0, max: 1})}
+                                  onInput={(e) => updateValue(
+                                      'background.opacity',
+                                      sanitizeSliderValue(e.target.value, 0.5, {min: 0, max: 1}),
+                                  )}/>
                     </div>
                 </div>
             )}

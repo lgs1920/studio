@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-08
- * Last modified: 2026-04-08
+ * Created on: 2026-04-09
+ * Last modified: 2026-04-09
  *
  *
  * Copyright © 2026 LGS1920
@@ -53,17 +53,24 @@ export const ElevationProfile = (props) => {
 
     const _bootstrapComputeRef = useRef('')
     const [canShowProgress, setCanShowProgress] = useState(false)
+    const [profileChartConfigId, setProfileChartConfigId] = useState(null)
     const renderer = WidgetDynamicRenderer.instance
 
     const WIDGET_KEY = 'profile-widget'
     const GROUP = SCENE_WIDGETS
     const HIDDEN_CLASS = 'lgs-widget-hidden'
 
+    const syncProfileChartConfigId = useCallback(() => {
+        const entity = renderer.findExistingInList(WIDGET_KEY, SCENE_WIDGETS_BOARD)
+        setProfileChartConfigId(entity ?? null)
+        return entity
+    }, [renderer])
+
     /**
      * Initial sync of the toggle state
      */
     useEffect(() => {
-        const _id = renderer.findExistingInList(WIDGET_KEY, SCENE_WIDGETS_BOARD)
+        const _id = syncProfileChartConfigId()
         if (!_id) {
             $profile.show = false
             return
@@ -73,7 +80,7 @@ export const ElevationProfile = (props) => {
         if (_el) {
             $profile.show = !_el.classList.contains(HIDDEN_CLASS)
         }
-    }, [])
+    }, [syncProfileChartConfigId])
 
     /**
      * Prepare data for the profile chart
@@ -119,6 +126,7 @@ export const ElevationProfile = (props) => {
                 forceRefresh: true,
                 widgetsBoard: SCENE_WIDGETS_BOARD,
             })
+            syncProfileChartConfigId()
             $profile.show = true
             return
         }
@@ -134,13 +142,14 @@ export const ElevationProfile = (props) => {
             _el.classList.toggle(HIDDEN_CLASS, !_nextState)
         }
 
+        syncProfileChartConfigId()
         $profile.show = _nextState
         __.ui.widgetManager.updateWidgetVisibility(_id, _nextState)
 
         if (!_nextState && lgs.stores.ui.drawers.open === WIDGETS_EDITOR_DRAWER) {
             lgs.stores.ui.drawers.open = null
         }
-    }, [profile.show])
+    }, [profile.show, syncProfileChartConfigId])
 
     const selectedServer = useMemo(() => {
         const _ids = props.servers.map(s => s.id)
@@ -213,6 +222,8 @@ export const ElevationProfile = (props) => {
             return
         }
 
+        setProfileChartConfigId(entity)
+
         window.dispatchEvent(new CustomEvent(WIDGET_EDITOR_PRE_RENDER_EVENT, {
             detail: {entity},
         }))
@@ -272,7 +283,13 @@ export const ElevationProfile = (props) => {
              )}
 
             {!isProcessing && data.hasElevation && (
-                <ProfileChart id="journey-profile-chart-in-settings" data={data.dataset} height="180px" width="100%"/>
+                <ProfileChart
+                    id="journey-profile-chart-in-settings"
+                    configId={profileChartConfigId}
+                    data={data.dataset}
+                    height="180px"
+                    width="100%"
+                />
             )}
         </>
     )

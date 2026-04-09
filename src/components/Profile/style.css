@@ -1,14 +1,14 @@
 /*******************************************************************************
  *
  * This file is part of the LGS1920/studio project.
- *
+ *  
  * File: style.css
  *
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-08
- * Last modified: 2026-03-08
+ * Created on: 2026-04-09
+ * Last modified: 2026-04-09
  *
  *
  * Copyright © 2026 LGS1920
@@ -257,5 +257,13 @@ sl-input.widget-border-field-width::part(input) {
 
 .reset-profile-widget-color {
     font-size: var(--lgs-font-size);
+}
+
+.profile-chart-switches {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    gap: 2rem
 }
 

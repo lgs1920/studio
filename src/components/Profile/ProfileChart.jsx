@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-06
- * Last modified: 2026-04-03
+ * Created on: 2026-04-09
+ * Last modified: 2026-04-09
  *
  *
  * Copyright © 2026 LGS1920
@@ -30,13 +30,14 @@ import { v4 as uuid } from 'uuid'
  * ProfileChart component to render elevation vs distance using ECharts
  * @param {Object} props
  * @param {Object} props.data - Dataset and options for the chart
- * @param {string} props.id - Entity ID for configuration lookup
+ * @param {string} props.id - DOM ID for the chart container
+ * @param {string} [props.configId] - Entity ID for widget configuration lookup
  * @param {number|string} props.width
  * @param {number|string} props.height
  * @param {boolean} props.preview
  * @returns {React.JSX.Element}
  */
-export const ProfileChart = ({data, id, width, height, preview = false}) => {
+export const ProfileChart = ({data, id, configId, width, height, preview = false}) => {
     const $main = lgs.stores.main
     const main = useSnapshot($main)
     const $configuration = lgs.settings.widgets['profile-widget'].configuration
@@ -47,13 +48,14 @@ export const ProfileChart = ({data, id, width, height, preview = false}) => {
     const unitSystem = unitStore.current
 
     const _instance = useRef(null)
+    const configKey = configId ?? id
 
     /**
      * Resolves the element to use based on configuration priority
      */
     const element = useMemo(() => {
-        return configuration.elements?.[id] ?? configuration.user ?? configuration.default
-    }, [configuration, id])
+        return configuration.elements?.[configKey] ?? configuration.user ?? configuration.default
+    }, [configuration, configKey])
 
     const labels = useMemo(() => ({
         distance:  unitSystem === INTERNATIONAL ? 'km' : 'mi',
@@ -65,6 +67,9 @@ export const ProfileChart = ({data, id, width, height, preview = false}) => {
      */
     const setColor = useCallback((item) => {
         if (!item) {
+            return 'transparent'
+        }
+        if (!item.color) {
             return 'transparent'
         }
         if (item.color.startsWith('--')) {
@@ -180,7 +185,7 @@ export const ProfileChart = ({data, id, width, height, preview = false}) => {
         // Handle optional gradient show/hide and custom color
         const showGradient = config.gradient?.show ?? true
         const gradientColor = config.gradient?.color
-                              ? colord(config.gradient).toRgbString()
+                              ? colord(setColor(config.gradient)).toRgbString()
                               : rgbColor
 
         const areaStyle = showGradient ? {
