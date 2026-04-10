@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-24
- * Last modified: 2026-02-24
+ * Created on: 2026-04-10
+ * Last modified: 2026-04-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -31,7 +31,7 @@ import {
     StrokeElement,
 } from '@Components/MainUI/widgets/editor/elements/StrokeElement'
 import { TextEditorToolbar }                                from '@Components/Text/TextEditorToolbar'
-import { SlDivider }                                        from '@shoelace-style/shoelace/dist/react'
+import { WaDivider } from '@web.awesome.me/webawesome-pro/dist/react'
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { useSnapshot }                                      from 'valtio'
 import './style.css'
@@ -108,6 +108,9 @@ export const TextWidgetEditor = ({entity}) => {
         if (!normalizedId.startsWith('text-widget') || !$configuration) {
             return
         }
+        if (typeof val === 'number' && Number.isNaN(val)) {
+            return
+        }
         if (!$configuration.elements) {
             $configuration.elements = {}
         }
@@ -172,28 +175,28 @@ export const TextWidgetEditor = ({entity}) => {
 
                     </div>
                     <div className="lgs-widget-editor-controls-wrapper">
-                        <SlDivider/>
+                        <WaDivider/>
                         <RotationElement
                             element={element}
                             localRotation={localRotation}
                             applyRotation={applyRotation}
                             updateValue={updateValue}
                         />
-                        <SlDivider/>
+                        <WaDivider/>
                         <StrokeElement
                             element={element}
                             swatches={swatches}
                             getColor={getColor}
                             updateValue={updateValue}
                         />
-                        <SlDivider/>
+                        <WaDivider/>
                         <ShadowElement
                             element={element}
                             swatches={swatches}
                             getColor={getColor}
                             updateValue={updateValue}
                         />
-                        <SlDivider/>
+                        <WaDivider/>
                         <BorderElement
                             element={element}
                             swatches={swatches}
@@ -201,7 +204,7 @@ export const TextWidgetEditor = ({entity}) => {
                             updateValue={updateValue}
                             showPill={true}
                         />
-                        <SlDivider/>
+                        <WaDivider/>
                         <BackgroundElement
                             element={element}
                             swatches={swatches}

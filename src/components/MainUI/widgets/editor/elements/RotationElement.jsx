@@ -7,15 +7,15 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-24
- * Last modified: 2026-02-24
+ * Created on: 2026-04-10
+ * Last modified: 2026-04-10
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { SlInput, SlRange, SlSwitch } from '@shoelace-style/shoelace/dist/react'
-import React                          from 'react'
+import { WaInput, WaSlider, WaSwitch } from '@web.awesome.me/webawesome-pro/dist/react'
+import React, { useCallback, useMemo } from 'react'
 
 /**
  * Reusable rotation control element for widget editors.
@@ -35,15 +35,27 @@ export const RotationElement = ({
                                     max = 90,
                                     step = 1,
                                 }) => {
+    const sanitizeRotationValue = useCallback((rawValue) => {
+        const numericValue = Number(rawValue)
+
+        if (!Number.isFinite(numericValue)) {
+            return 0
+        }
+
+        return Math.min(max, Math.max(min, numericValue))
+    }, [max, min])
 
     const isRotated = localRotation !== 0
-    const displayValue = -localRotation
+    const displayValue = useMemo(() => sanitizeRotationValue(-localRotation), [localRotation, sanitizeRotationValue])
+    const handleRotationInput = useCallback((rawValue) => {
+        applyRotation(-sanitizeRotationValue(rawValue))
+    }, [applyRotation, sanitizeRotationValue])
 
     return (
         <div className="drawer-horizontal-line">
             <div className="drawer-horizontal-element">
                 <label>{'Rotation'}</label>
-                <SlInput
+                <WaInput
                     size="small"
                     type="number"
                     value={displayValue}
@@ -51,29 +63,31 @@ export const RotationElement = ({
                     step={step}
                     min={min}
                     max={max}
-                    onSlInput={(e) => applyRotation(-parseFloat(e.target.value) || 0)}
+                    onInput={(e) => handleRotationInput(e.target.value)}
                 />
             </div>
 
             <div className="drawer-horizontal-element">
-                <SlRange
+                <WaSlider
+                    size="small"
                     min={min}
                     max={max}
                     step={step}
-                    value={displayValue}
-                    tooltip="bottom"
+                    defaultValue={displayValue}
+                    placement="bottom"
+                    withTooltip
                     style={{'--track-active-offset': '50%'}}
-                    onSlInput={(e) => applyRotation(-parseFloat(e.target.value) || 0)}
+                    onInput={(e) => handleRotationInput(e.target.value)}
                 />
             </div>
 
             <div className="drawer-horizontal-element">
-                <SlSwitch
-                    align-right
-                    size="x-small"
+                <WaSwitch
+                    size="xsmall"
+                    label-at-start
                     checked={isRotated}
                     disabled={!isRotated}
-                    onSlChange={(e) => {
+                    onInput={(e) => {
                         if (!e.target.checked) {
                             applyRotation(0)
                         }

@@ -7,40 +7,17 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-09
- * Last modified: 2026-04-09
+ * Created on: 2026-04-10
+ * Last modified: 2026-04-10
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { WIDGET_RADIUS }                                        from '@Core/constants'
-import { SlColorPicker, SlOption, SlRange, SlSelect, SlSwitch }  from '@shoelace-style/shoelace/dist/react'
 import { WaColorPicker, WaOption, WaSelect, WaSlider, WaSwitch } from '@web.awesome.me/webawesome-pro/dist/react'
+import { sanitizeNumericControlValue } from './sliderUtils'
 import React                                                     from 'react'
-
-const fallbackSliderValue = (rawValue, fallback, options = {}) => {
-    const value = Array.isArray(rawValue) ? rawValue[0] : rawValue
-    const numericValue = Number(value)
-
-    if (!Number.isFinite(numericValue)) {
-        return fallback
-    }
-
-    const min = Number(options.min)
-    const max = Number(options.max)
-    let finalValue = numericValue
-
-    if (Number.isFinite(min)) {
-        finalValue = Math.max(min, finalValue)
-    }
-
-    if (Number.isFinite(max)) {
-        finalValue = Math.min(max, finalValue)
-    }
-
-    return finalValue
-}
 
 /**
  * Common border & radius editor element
@@ -54,7 +31,7 @@ export const BorderElement = ({
                                   updateValue,
                                   showPill = false,
                                   showRadius = true,
-                                  sanitizeSliderValue = fallbackSliderValue,
+                                  sanitizeSliderValue = sanitizeNumericControlValue,
                               }) => {
     const currentRadius = element.border?.radius ?? 'none'
 

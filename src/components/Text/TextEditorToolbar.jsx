@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-24
- * Last modified: 2026-02-24
+ * Created on: 2026-04-10
+ * Last modified: 2026-04-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -24,6 +24,7 @@ import {
 import {
     SlButton, SlButtonGroup, SlColorPicker, SlIcon, SlInput, SlOption, SlRange, SlSelect,
 }                                                         from '@shoelace-style/shoelace/dist/react'
+import { sanitizeNumericControlValue } from '@Components/MainUI/widgets/editor/elements/sliderUtils'
 import { FA2SL }                                          from '@Utils/FA2SL'
 import { colord }                                         from 'colord'
 import { useCallback, useEffect, useMemo }                from 'react'
@@ -98,7 +99,7 @@ export const TextEditorToolbar = ({id, fonts = false, color = true, align = true
 
     const handleSizeChange = useCallback((e) => {
         if ($element) {
-            $element.size = Number(e.target.value)
+            $element.size = sanitizeNumericControlValue(e.target.value, 16, {min: 8, max: 48})
             scheduleUpdate()
         }
     }, [$element, scheduleUpdate])
@@ -120,7 +121,7 @@ export const TextEditorToolbar = ({id, fonts = false, color = true, align = true
 
     const handleOpacityChange = useCallback((e) => {
         if ($element) {
-            $element.text.opacity = parseFloat(e.target.value)
+            $element.text.opacity = sanitizeNumericControlValue(e.target.value, 1, {min: 0, max: 1})
             syncCSS($element.text.color, $element.text.opacity)
         }
     }, [$element, syncCSS])
@@ -141,6 +142,26 @@ export const TextEditorToolbar = ({id, fonts = false, color = true, align = true
 
     const currentFont = element?.fontFamily ?? 'System'
     const appliedFontStack = currentFont === 'System' ? WIDGET_SYSTEM_FONT_STACK : currentFont
+    const textOpacity = useMemo(() => sanitizeNumericControlValue(element?.text?.opacity, 1, {min: 0, max: 1}), [
+        element?.text?.opacity,
+    ])
+    const fontSize = useMemo(() => sanitizeNumericControlValue(element?.size, 16, {min: 8, max: 48}), [
+        element?.size,
+    ])
+
+    useEffect(() => {
+        if ($element?.text && element?.text?.opacity !== undefined && element.text.opacity !== textOpacity) {
+            $element.text.opacity = textOpacity
+            syncCSS($element.text.color, textOpacity)
+        }
+    }, [$element, element?.text?.opacity, syncCSS, textOpacity])
+
+    useEffect(() => {
+        if ($element && element?.size !== undefined && element.size !== fontSize) {
+            $element.size = fontSize
+            scheduleUpdate()
+        }
+    }, [$element, element?.size, fontSize, scheduleUpdate])
 
     return (
         <div className="drawer-horizontal-line three-columns">
@@ -157,7 +178,7 @@ export const TextEditorToolbar = ({id, fonts = false, color = true, align = true
                         min="0"
                         max="1"
                         step="0.05"
-                        value={element?.text?.opacity ?? 1}
+                        value={textOpacity}
                         tooltipFormatter={v => `${Math.floor(v * 100)}%`}
                         onSlInput={handleOpacityChange}
                         style={{width: '100px'}}
@@ -256,7 +277,7 @@ export const TextEditorToolbar = ({id, fonts = false, color = true, align = true
                             type="number"
                             min="8"
                             max="48"
-                            value={element?.size ?? 16}
+                            value={fontSize}
                             onSlInput={handleSizeChange}
                             style={{width: '6rem'}}
                         >

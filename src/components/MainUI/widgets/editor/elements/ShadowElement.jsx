@@ -7,44 +7,72 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-23
- * Last modified: 2026-02-23
+ * Created on: 2026-04-10
+ * Last modified: 2026-04-10
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { SlColorPicker, SlOption, SlRange, SlSelect, SlSwitch } from '@shoelace-style/shoelace/dist/react'
-import React                                                    from 'react'
+import { WaColorPicker, WaOption, WaSelect, WaSlider, WaSwitch } from '@web.awesome.me/webawesome-pro/dist/react'
+import React, { useEffect, useRef }                              from 'react'
+import { sanitizeNumericControlValue }                           from './sliderUtils'
 
 export const ShadowElement = ({element, swatches, getColor, updateValue}) => {
+    const sliderRef = useRef(null)
+    const opacityValue = sanitizeNumericControlValue(element.text?.shadow?.opacity, 1, {min: 0, max: 1})
+
+    useEffect(() => {
+        if (sliderRef.current) {
+            sliderRef.current.value = opacityValue
+        }
+
+        if (element.text?.shadow?.opacity !== undefined && element.text?.shadow?.opacity !== null && element.text?.shadow?.opacity !== opacityValue) {
+            updateValue('text.shadow.opacity', opacityValue)
+        }
+    }, [element.text?.shadow?.opacity, opacityValue, updateValue])
+
     return (
         <>
-            <SlSwitch align-right size="x-small" checked={element.text?.shadow?.show ?? false}
-                      onSlInput={(e) => updateValue('text.shadow.show', e.target.checked)}>
+            <WaSwitch label-at-start
+                      size="xsmall"
+                      checked={element.text?.shadow?.show ?? false}
+                      onInput={(e) => updateValue('text.shadow.show', e.target.checked)}>
                 <label>{'Text elevation'}</label>
-            </SlSwitch>
+            </WaSwitch>
 
             {element.text?.shadow?.show && (
                 <div className="drawer-horizontal-line three-columns">
                     <div className="drawer-horizontal-element">
-                        <SlColorPicker size="small" swatches={swatches} value={element.text.shadow.color}
-                                       onSlInput={(e) => updateValue('text.shadow.color', e.target.value)}/>
+                        <WaColorPicker size="small" swatches={swatches} value={element.text.shadow.color}
+                                       onInput={(e) => updateValue('text.shadow.color', e.target.value)}/>
                     </div>
                     <div className="drawer-horizontal-element">
-                        <SlSelect hoist size="small" value={element.text.shadow?.value ?? 'normal'}
+                        <WaSelect size="small" value={element.text.shadow?.value ?? 'normal'}
+                                  label-at-start
                                   style={{marginLeft: 'auto', width: '6.5rem'}}
-                                  onSlChange={(e) => updateValue('text.shadow.value', e.target.value)}>
-                            <SlOption value="small">{'Small'}</SlOption>
-                            <SlOption value="normal">{'Medium'}</SlOption>
-                            <SlOption value="large">{'Large'}</SlOption>
-                        </SlSelect>
+                                  onChange={(e) => updateValue('text.shadow.value', e.target.value)}>
+                            <WaOption value="small">{'Small'}</WaOption>
+                            <WaOption value="normal">{'Medium'}</WaOption>
+                            <WaOption value="large">{'Large'}</WaOption>
+                        </WaSelect>
                     </div>
                     <div className="drawer-horizontal-element xlarge-element">
-                        <SlRange label="Opacity" align-right tooltip="top" min="0" max="1" step="0.05"
-                                 tooltipFormatter={value => `${Math.floor(value * 100)}%`}
-                                 value={element.text.shadow?.opacity ?? 1}
-                                 onSlInput={(e) => updateValue('text.shadow.opacity', parseFloat(e.target.value))}/>
+                        <WaSlider ref={sliderRef}
+                                  size="small"
+                                  label="Opacity"
+                                  min="0"
+                                  max="1"
+                                  step="0.05"
+                                  label-at-start
+                                  placement="top"
+                                  withTooltip
+                                  valueFormatter={value => `${Math.floor(value * 100)}%`}
+                                  defaultValue={opacityValue}
+                                  onInput={(e) => updateValue(
+                                      'text.shadow.opacity',
+                                      sanitizeNumericControlValue(e.target.value, 1, {min: 0, max: 1}),
+                                  )}/>
                     </div>
                 </div>
             )}

@@ -7,46 +7,26 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-09
- * Last modified: 2026-04-09
+ * Created on: 2026-04-10
+ * Last modified: 2026-04-10
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { WaColorPicker, WaSlider, WaSwitch } from '@web.awesome.me/webawesome-pro/dist/react'
-import React                                 from 'react'
-
-const fallbackSliderValue = (rawValue, fallback, options = {}) => {
-    const value = Array.isArray(rawValue) ? rawValue[0] : rawValue
-    const numericValue = Number(value)
-
-    if (!Number.isFinite(numericValue)) {
-        return fallback
-    }
-
-    const min = Number(options.min)
-    const max = Number(options.max)
-    let finalValue = numericValue
-
-    if (Number.isFinite(min)) {
-        finalValue = Math.max(min, finalValue)
-    }
-
-    if (Number.isFinite(max)) {
-        finalValue = Math.min(max, finalValue)
-    }
-
-    return finalValue
-}
+import { sanitizeNumericControlValue } from './sliderUtils'
+import React, { useEffect, useRef }    from 'react'
 
 export const BackgroundElement = ({
                                       element,
                                       swatches,
                                       getColor,
                                       updateValue,
-                                      sanitizeSliderValue = fallbackSliderValue,
+                                      sanitizeSliderValue = sanitizeNumericControlValue,
                                   }) => {
+    const sliderRef = useRef(null)
+    const opacityValue = sanitizeSliderValue(element.background?.opacity, 0.5, {min: 0, max: 1})
 
     /**
      * Handle the main background toggle logic
@@ -59,6 +39,16 @@ export const BackgroundElement = ({
             updateValue('background.opacity', 0)
         }
     }
+
+    useEffect(() => {
+        if (sliderRef.current) {
+            sliderRef.current.value = opacityValue
+        }
+
+        if (element.background?.opacity !== undefined && element.background?.opacity !== null && element.background?.opacity !== opacityValue) {
+            updateValue('background.opacity', opacityValue)
+        }
+    }, [element.background?.opacity, opacityValue, updateValue])
 
     return (
         <>
@@ -77,17 +67,18 @@ export const BackgroundElement = ({
                     <div className="drawer-horizontal-element">
                         {'Blur'}&nbsp;
                         <WaSwitch label-at-start size="xsmall" checked={element.background.blur ?? false}
-                                  onChange={(e) => updateValue('background.blur', e.target.checked)}/>
+                                  onInput={(e) => updateValue('background.blur', e.target.checked)}/>
                     </div>
                     <div className="drawer-horizontal-element xlarge-element">
-                        <WaSlider label="Opacity"
+                        <WaSlider ref={sliderRef}
+                                  label="Opacity"
                                   min="0" max="1" step="0.05"
                                   label-at-start
                                   placement="top"
                                   size="small"
                                   withTooltip
                                   valueFormatter={value => `${Math.floor(value * 100)}%`}
-                                  value={sanitizeSliderValue(element.background?.opacity, 0.5, {min: 0, max: 1})}
+                                  defaultValue={opacityValue}
                                   onInput={(e) => updateValue(
                                       'background.opacity',
                                       sanitizeSliderValue(e.target.value, 0.5, {min: 0, max: 1}),
