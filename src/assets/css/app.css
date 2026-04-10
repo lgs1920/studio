@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-09
- * Last modified: 2026-04-09
+ * Created on: 2026-04-10
+ * Last modified: 2026-04-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -751,9 +751,16 @@ sl-color-picker::part(format-button), sl-color-picker::part(input), sl-color-pic
  * Skeleton
  ******************************************************************************/
 
-sl-skeleton {
-    --border-radius: var(--lgs-border-radius-s);
-    --color: var(--lgs-dark-color-25);
+
+.lgs--skeleton-container::part(body) {
+    display: flex;
+    flex-direction: column;
+    gap: var(--lgs-gutter-s);
+}
+
+wa-skeleton::part(indicator) {
+    border-radius: var(--lgs-border-radius-s);
+    --color: var(--wa-color-brand);
 }
 
 .lgs-preview-loader-container {
