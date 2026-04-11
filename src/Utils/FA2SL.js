@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-22
- * Last modified: 2026-03-19
+ * Created on: 2026-04-11
+ * Last modified: 2026-04-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -35,7 +35,7 @@ import { registerIconLibrary }               from '@shoelace-style/shoelace'
  *  import {SlIcon}                     from '@shoelace-style/shoelace/dist/react'
  *
  *  import {FA2SL}                      from '../FA2SL'
- *  FA2SL.useFontAwesomeInShoelace('fa')  // This should be done once in your app.
+ *  FA2SL.registerFontAwesomeInShoelace('fa')  // This should be done once in your app.
  *
  *  return (
  *      <>
@@ -59,7 +59,7 @@ export class FA2SL {
      * @param {Array|String} families
      * @type {function(*): void}
      */
-    static useFontAwesomeInShoelace = ((families) => {
+    static registerFontAwesomeInShoelace = ((families) => {
         // Maybe we need to convert to array
         if (typeof families === 'string') {
             families = [families]

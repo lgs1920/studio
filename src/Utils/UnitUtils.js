@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-06
- * Last modified: 2026-04-06
+ * Created on: 2026-04-11
+ * Last modified: 2026-04-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,6 +16,7 @@
 
 import { DAY, HOUR, LATITUDE_FORMAT, LONGITUDE_FORMAT, MILLIS, MINUTE } from '@Core/constants'
 import { Duration }                                                     from 'luxon'
+import { sprintf }                                                      from 'sprintf-js'
 
 // Unit system constants
 export const INTERNATIONAL = 0

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-10
- * Last modified: 2026-04-10
+ * Created on: 2026-04-11
+ * Last modified: 2026-04-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -581,7 +581,8 @@ body {
 /*******************************************************************************
  * Widget Ordering
  ******************************************************************************/
-.widget-ordering-panel {
+.widget-ordering-panel::part(body) {
+    display: flex;
     flex-direction: column;
     height: 250px;
     gap: var(--lgs-gutter-xs);
@@ -620,7 +621,7 @@ body {
     gap: var(--lgs-gutter-xs);
 }
 
-.widget-ordering-row {
+.widget-ordering-row::part(body) {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -628,7 +629,7 @@ body {
     gap: var(--lgs-gutter-xs);
 }
 
-.widget-ordering-row sl-icon {
+.widget-ordering-row wa-icon {
     width: 1.2rem;
 }
 
@@ -652,14 +653,12 @@ body {
  */
 .widget-sortable-list > div {
     cursor: grab !important; /* Force open hand on hover */
-    cursor: -webkit-grab !important;
     user-select: none; /* Prevent text selection which breaks dragging */
 }
 
 /* While the mouse is pressed down on the item */
 .widget-sortable-list > div:active {
     cursor: grabbing !important; /* Force closed hand */
-    cursor: -webkit-grabbing !important;
 }
 
 /* The item being dragged (the one following the mouse) */

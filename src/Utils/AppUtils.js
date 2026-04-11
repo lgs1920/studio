@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-24
- * Last modified: 2026-02-24
+ * Created on: 2026-04-11
+ * Last modified: 2026-04-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -251,7 +251,7 @@ export class AppUtils {
         lgs.setDefaultPOIConfiguration()
 
         // Register Font Awesome icons in ShoeLace
-        FA2SL.useFontAwesomeInShoelace('fa')
+        FA2SL.registerFontAwesomeInShoelace('fa')
 
         // Backend
         lgs.BACKEND_API = `${lgs.servers.studio.proxy}${lgs.servers.backend.protocol}://${lgs.servers.backend.domain}:${lgs.servers.backend.port}`
@@ -336,7 +336,7 @@ export class AppUtils {
                     .normalize('NFKD')                  // Removes accents and special Unicode characters
                     .replace(/[\u0300-\u036f]/g, '')    // Strips diacritics (accent marks)
                     .trim()                             // Removes leading and trailing spaces
-                    .replace(/[\/\\:*?"<>|]/g, '_')     // Replaces forbidden filename characters
+                    .replace(/[/\\:*?"<>|]/g, '_')      // Replaces forbidden filename characters
                     .replace(/[\s]+/g, '_')             // Converts multiple spaces to a single underscore
                     .replace(/_+/g, '_')                // Collapses consecutive underscores
                     .replace(/^_+|_+$/g, '')           // Removes leading and trailing underscores
@@ -686,7 +686,7 @@ export class AppUtils {
                 const testFile = new File(['test'], 'test.mp4', {type: 'video/mp4'})
                 return navigator.canShare({files: [testFile]})
             }
-            catch (e) {
+            catch {
                 return false
             }
         }

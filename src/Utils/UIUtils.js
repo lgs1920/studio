@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-08
- * Last modified: 2026-03-07
+ * Created on: 2026-04-11
+ * Last modified: 2026-04-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -175,7 +175,6 @@ export class UIUtils {
     }
 
     static importFonts = () => {
-        const familiesParam = WIDGET_GOOGLE_FONTS.map(f => f.replace(/\s+/g, '+')).join('|')
         const linkId = 'google-fonts'
 
         if (!document.getElementById(linkId)) {

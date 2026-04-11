@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-22
- * Last modified: 2026-03-22
+ * Created on: 2026-04-11
+ * Last modified: 2026-04-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -18,21 +18,18 @@
 
 import {
     APP_STUDIO, BANNER_HIDE_DELAY, BANNER_HIDE_DELAY_INSTALL, BANNER_SHOW_DELAY, NAVIGATOR, OS_ICONS, SECOND,
-}                                                               from '@Core/constants'
-import { faHourglassHalf, faMobileArrowDown, faXmark, faCheck } from '@fortawesome/pro-regular-svg-icons'
-import androidInstructions                                      from '@Locales/en/pwa-instructions/android.md?raw'
-import chromeEdgeInstructions                                   from '@Locales/en/pwa-instructions/chrome-edge.md?raw'
-import firefoxInstructions                                      from '@Locales/en/pwa-instructions/firefox.md?raw'
-import iosInstructions                                          from '@Locales/en/pwa-instructions/ios.md?raw'
-import otherInstructions                                        from '@Locales/en/pwa-instructions/other.md?raw'
-import safariMacOSInstructions                                  from '@Locales/en/pwa-instructions/safari-macos.md?raw'
-import { SlButton, SlDialog, SlIcon, SlSpinner } from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                                 from '@Utils/FA2SL'
+}                              from '@Core/constants'
+import androidInstructions     from '@Locales/en/pwa-instructions/android.md?raw'
+import chromeEdgeInstructions  from '@Locales/en/pwa-instructions/chrome-edge.md?raw'
+import firefoxInstructions     from '@Locales/en/pwa-instructions/firefox.md?raw'
+import iosInstructions         from '@Locales/en/pwa-instructions/ios.md?raw'
+import otherInstructions       from '@Locales/en/pwa-instructions/other.md?raw'
+import safariMacOSInstructions from '@Locales/en/pwa-instructions/safari-macos.md?raw'
 import { WaButton, WaDialog, WaIcon, WaSpinner } from '@web.awesome.me/webawesome-pro/dist/react'
 import classNames                                from 'classnames'
-import { useEffect, useState }                                  from 'react'
-import ReactMarkdown          from 'react-markdown'
-import { proxy, useSnapshot } from 'valtio'
+import { useEffect, useState } from 'react'
+import ReactMarkdown           from 'react-markdown'
+import { proxy, useSnapshot }  from 'valtio'
 
 // Define the custom event name for consistency
 const CUSTOM_UPDATE_EVENT = 'lgs-update-available'
@@ -261,7 +258,7 @@ export const AppUpdate = ({mode = 'banner'}) => {
             )}>
                 <div className="lgs-install-banner-content">
                     <WaIcon name="mobile-arrow-down" variant="regular"/>
-                        <span>{contentText}</span>
+                    <span>{contentText}</span>
                     <div className="buttons-bar">
                         {/* Dismiss Button (Install only, in standard banner flow) */}
                         {!isUpdate && isStandardBannerFlow && (
