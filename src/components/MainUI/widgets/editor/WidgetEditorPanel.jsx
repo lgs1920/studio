@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-10
- * Last modified: 2026-04-10
+ * Created on: 2026-04-11
+ * Last modified: 2026-04-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -108,14 +108,12 @@ export const WidgetEditorPanel = () => {
             if (drawers.entity && isVisible && cached) {
                 const type = drawers.entity.split('#')[0]
                 const theWidget = __.widgets.get(cached.group).widgets.get(type)
-                const configIcon = WIDGETS_CONFIGURATION.get(type)?.icon
-
                 setData({
                             type,
                             name:    theWidget.name,
                             description: theWidget.description,
-                            icon: configIcon,
-                            rawIcon: configIcon,
+                            icon:    theWidget.icon,
+                            rawIcon: theWidget.icon,
                         })
 
                 const pos = await __.ui.widgetManager.getWidgetPosition(drawers.entity)
@@ -199,7 +197,7 @@ export const WidgetEditorPanel = () => {
 
                         <WaTabPanel name="ordering">
                             <section className="editor-ordering-zone">
-                                <WidgetsOrderingPanelContent widgetsBoard={VIDEO_CROP_ZONE}/>
+                                <WidgetsOrderingPanelContent widgetsBoard={cached.widgetsBoard}/>
                             </section>
                         </WaTabPanel>
                     </WaTabGroup>

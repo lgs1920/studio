@@ -7,31 +7,26 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-02
- * Last modified: 2026-03-02
+ * Created on: 2026-04-11
+ * Last modified: 2026-04-11
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-/*******************************************************************************
- *
- * This file is part of the LGS1920/studio project.
- *
- * File: WidgetsOrderingPanelContent.jsx
- ******************************************************************************/
-
 import { LGSScrollbars } from '@Components/MainUI/LGSScrollbars'
 import { CREDITS_WIDGET, WIDGET_LAYER_START, WIDGET_LAYER_STEP, WIDGET_LAYER_TOP } from '@Core/constants'
-import { useEffect, useRef, useState } from 'react'
+import { WaCard, WaDivider }                        from '@web.awesome.me/webawesome-pro/dist/react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import Sortable              from 'sortablejs'
 import { useSnapshot }       from 'valtio'
 import { SortableWidgetRow } from './SortableWidgetRow'
 
 export const WidgetsOrderingPanelContent = ({widgetsBoard}) => {
-    const _scrollRef = useRef(null)
-    const _sortableInstance = useRef(null)
-    const [_activeWidgets, _setActiveWidgets] = useState([])
+    const _scroll = useRef(null)
+    const _sortable = useRef(null)
+    const _list = useRef(null)
+    const [activeWidgets, setActiveWidgets] = useState([])
 
     const $widget = lgs.stores.ui.widget
     const widget = useSnapshot($widget)
@@ -40,156 +35,138 @@ export const WidgetsOrderingPanelContent = ({widgetsBoard}) => {
      * Direct DOM update for z-index to avoid re-render flicker
      */
     const updateWidgetDOM = (id, zIndex) => {
-        const el = document.querySelector(`.lgs-widget-container[data-widget="${id}"]`)
-        if (el) {
-            el.style.zIndex = zIndex
+        const _el = document.querySelector(`.lgs-widget-container[data-widget="${id}"]`)
+        if (_el) {
+            _el.style.zIndex = zIndex
         }
     }
 
-    useEffect(() => {
-        let isMounted = true
-
-        const loadWidgets = async () => {
-            if (!widget.list) {
-                return
-            }
-
-            const entries = Array.from(widget.list.entries())
-            const listPromises = entries
-                .filter(([id, w]) => {
-                    const widgetType = id.split('#')[0]
-                    // We hide CREDITS_WIDGET from the sorting list
-                    return w?.widgetsBoard === widgetsBoard && widgetType !== CREDITS_WIDGET
-                })
-                .map(async ([id], index) => {
-                    const widgetType = id.split('#')[0]
-                    const instance = lgs.settings.widgets[widgetType]
-                    if (!instance) {
-                        return null
-                    }
-
-                    const position = await __.ui.widgetManager.getWidgetPosition(id)
-                    // Original logic for zIndex calculation
-                    const currentZ = (position?.zIndex && position.zIndex !== 0)
-                                     ? position.zIndex
-                                     : (WIDGET_LAYER_START + index * WIDGET_LAYER_STEP)
-
-                    return {
-                        id,
-                        zIndex: parseInt(currentZ),
-                        type:   widgetType,
-                        fixed:  instance.fixedPosition ?? false,
-                    }
-                })
-
-            const resolvedList = (await Promise.all(listPromises)).filter(Boolean)
-            if (isMounted) {
-                _setActiveWidgets(resolvedList.sort((a, b) => b.zIndex - a.zIndex))
-            }
+    const buildActiveWidgets = useCallback(() => {
+        if (!widget.list) {
+            return []
         }
 
-        loadWidgets()
-        return () => {
-            isMounted = false
-        }
+        return Array.from(widget.list.entries())
+            .filter(([id, entry]) => {
+                const _widgetType = id.split('#')[0]
+                return entry?.widgetsBoard === widgetsBoard && _widgetType !== CREDITS_WIDGET
+            })
+            .map(([id, entry], index) => {
+                const _widgetType = id.split('#')[0]
+                const _instance = lgs.settings.widgets[_widgetType]
+                if (!_instance) {
+                    return null
+                }
+
+                const _cacheEntry = __.ui.widgetCache.get(id)
+                const _currentZ = Number(entry?.zIndex ?? _cacheEntry?.zIndex)
+                    || (WIDGET_LAYER_START + index * WIDGET_LAYER_STEP)
+
+                return {
+                    id,
+                    zIndex: parseInt(_currentZ, 10),
+                    type:   _widgetType,
+                    fixed:  _instance.fixedPosition ?? false,
+                }
+            })
+            .filter(Boolean)
+            .sort((a, b) => b.zIndex - a.zIndex)
     }, [widget.list, widgetsBoard])
 
     /**
-     * Reorder items and update persistence layers
+     * Keeps the sortable list aligned with the reactive store.
+     * The store is the source of truth for the current order; persistence follows asynchronously.
      */
-    const handleReorder = async (oldIndex, newIndex) => {
-        const newList = [..._activeWidgets]
-        const [movedItem] = newList.splice(oldIndex, 1)
-        if (movedItem.fixed) {
-            return
-        }
-
-        newList.splice(newIndex, 0, movedItem)
-        const totalItems = newList.length
-
-        const updatedItems = newList.map((item, index) => {
-            let newZ
-            // Even if hidden from list, we keep the safety check for TOP layer types
-            if (item.type === CREDITS_WIDGET) {
-                newZ = WIDGET_LAYER_TOP
-            }
-            else {
-                const reversedIndex = totalItems - 1 - index
-                newZ = WIDGET_LAYER_START + (reversedIndex * WIDGET_LAYER_STEP)
-            }
-            return {...item, zIndex: newZ}
-        })
-
-        _setActiveWidgets(updatedItems)
-
-        updatedItems.forEach(item => {
-            const $item = $widget.list.get(item.id)
-            if ($item) {
-                $item.zIndex = item.zIndex
-            }
-
-            const currentCache = __.ui.widgetCache.get(item.id) || {}
-            __.ui.widgetCache.set(item.id, {...currentCache, zIndex: item.zIndex})
-
-            updateWidgetDOM(item.id, item.zIndex)
-        })
-
-        const persistencePromises = updatedItems.map(async (item) => {
-            const currentPos = await __.ui.widgetManager.getWidgetPosition(item.id)
-            if (currentPos) {
-                return __.ui.widgetManager.saveWidgetPosition(item.id, {
-                    ...currentPos,
-                    zIndex: item.zIndex,
-                }, false)
-            }
-        })
-        await Promise.all(persistencePromises)
-    }
-
     useEffect(() => {
-        const scrollComponent = _scrollRef.current
-        if (!scrollComponent || _activeWidgets.length === 0) {
+        setActiveWidgets(buildActiveWidgets())
+    }, [buildActiveWidgets])
+
+    /**
+     * Finalizes the new order by updating all layers (state, store, cache, disk)
+     */
+    const finalizeReorder = useCallback(async (newOrderedIds) => {
+        const _totalItems = newOrderedIds.length
+
+        // 1. Create the new sorted array based on DOM order
+        const _updatedItems = newOrderedIds.map((id, index) => {
+            const _item = activeWidgets.find(w => w.id === id)
+            const _reversedIndex = _totalItems - 1 - index
+            const _newZ = (_item?.type === CREDITS_WIDGET)
+                          ? WIDGET_LAYER_TOP
+                          : WIDGET_LAYER_START + (_reversedIndex * WIDGET_LAYER_STEP)
+
+            return {..._item, zIndex: _newZ}
+        }).filter(Boolean)
+
+        // 2. Update React State immediately
+        setActiveWidgets(_updatedItems)
+
+        // 3. Update reactive sources synchronously to avoid intermediate re-sorts
+        for (const _item of _updatedItems) {
+            const $target = $widget.list.get(_item.id)
+            if ($target) {
+                $target.zIndex = _item.zIndex
+            }
+
+            const _cache = __.ui.widgetCache.get(_item.id) || {}
+            __.ui.widgetCache.set(_item.id, {..._cache, zIndex: _item.zIndex})
+
+            updateWidgetDOM(_item.id, _item.zIndex)
+        }
+
+        // 4. Persist the final order after the UI/store state is already coherent
+        await Promise.all(_updatedItems.map(async (_item) => {
+            const _pos = await __.ui.widgetManager.getWidgetPosition(_item.id)
+            if (_pos) {
+                await __.ui.widgetManager.saveWidgetPosition(_item.id, {..._pos, zIndex: _item.zIndex}, false)
+            }
+        }))
+    }, [activeWidgets, $widget])
+
+    /**
+     * SortableJS Initialization
+     */
+    useEffect(() => {
+        if (!_list.current || activeWidgets.length === 0) {
+            return
+        }
+        if (_sortable.current) {
             return
         }
 
-        const el = scrollComponent.view.querySelector('.widget-sortable-list')
-        if (!el) {
-            return
-        }
-
-        _sortableInstance.current = new Sortable(el, {
-            animation:  150,
+        _sortable.current = new Sortable(_list.current, {
+            animation:   150,
+            dataIdAttr:  'data-id',
+            handle:      '.widget-ordering-row', // Drag on the whole row
+            filter:      '.widget-row-fixed',
             ghostClass: 'sortable-ghost',
-            filter:     '.widget-row-fixed, .sortable-widget-actions',
-            preventOnFilter: true,
-            scroll:     scrollComponent.view,
-            scrollSensitivity: 50,
-            scrollSpeed: 15,
-            onEnd: (evt) => {
-                const {oldIndex, newIndex} = evt
-                if (oldIndex !== newIndex) {
-                    handleReorder(oldIndex, newIndex)
-                }
+            chosenClass: 'sortable-chosen',
+            dragClass:   'sortable-drag',
+            onEnd:       () => {
+                // We get the IDs from the DOM nodes as they are NOW
+                const _newIds = _sortable.current.toArray()
+                finalizeReorder(_newIds)
             },
         })
 
         return () => {
-            _sortableInstance.current?.destroy()
-            _sortableInstance.current = null
+            _sortable.current?.destroy()
+            _sortable.current = null
         }
-    }, [_activeWidgets])
+    }, [activeWidgets, finalizeReorder]) // We re-init or keep alive based on the list
 
     return (
-        <div className="widget-ordering-panel lgs-card">
+        <WaCard appearance="filled-outlined" className="widget-ordering-panel">
             <div className="widget-list-container">
-                <LGSScrollbars ref={_scrollRef} autoHide>
-                    <div className="widget-sortable-list">
-                        {_activeWidgets.map((w) => (
+                <LGSScrollbars ref={_scroll} autoHide>
+                    <div ref={_list} className="widget-sortable-list">
+                        {activeWidgets.map((w) => (
                             <SortableWidgetRow key={w.id} widget={w}/>
                         ))}
                     </div>
                 </LGSScrollbars>
             </div>
-        </div>
+            <WaDivider/>
+        </WaCard>
     )
 }

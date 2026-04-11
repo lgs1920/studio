@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-17
- * Last modified: 2026-02-17
+ * Created on: 2026-04-11
+ * Last modified: 2026-04-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -18,9 +18,7 @@ import {
     VIDEO_WIDGETS_BOARD, WIDGETS_CONFIGURATION, LGS_VISUAL_WIDGET, WIDGET_LAYER_START, WIDGET_LAYER_STEP,
 }                                from '@Core/constants'
 import { WidgetDynamicRenderer } from '@Core/ui/widget-manager/dynamic-render/WidgetDynamicRender'
-import { faBox }             from '@fortawesome/pro-regular-svg-icons'
-import { SlIcon, SlTooltip } from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }             from '@Utils/FA2SL'
+import { WaIcon } from '@web.awesome.me/webawesome-pro/dist/react'
 import classNames                                     from 'classnames'
 import { useEffect, useRef, useState }                from 'react'
 import { useSnapshot }                                from 'valtio'
@@ -199,7 +197,7 @@ export const WidgetsPanelContent = ({groups}) => {
             onTouchStart={handleInteraction}
         >
             <div className="widget-deck-entry widget-deck-title">
-                <SlIcon library="fa" name={FA2SL.set(faBox)}/>
+                <WaIcon name="box"/>
                 <span>Widgets</span>
             </div>
 
@@ -211,9 +209,6 @@ export const WidgetsPanelContent = ({groups}) => {
                         }
                         if (reached.has(widgetKey)) {
                             return (
-                                <SlTooltip key={widgetKey} hoist placement="right"
-                                           content={getTooltipText(groupKey, widgetKey, widgetDef)}
-                                >
                                     <div
                                         onClick={() => addWidget(groupKey, widgetKey)}
                                         onMouseDown={handleInteraction}
@@ -223,13 +218,10 @@ export const WidgetsPanelContent = ({groups}) => {
                                             'lgs-one-line-card on-map',
                                         )}
                                     >
-                                        <SlIcon
-                                            library="fa"
-                                            name={FA2SL.set(WIDGETS_CONFIGURATION.get(widgetKey)?.icon)}
+                                        <WaIcon name={widgetDef.icon}
                                         />
                                         <span className="widget-name">{widgetDef.name}</span>
                                     </div>
-                                </SlTooltip>
                             )
                         }
                     })}

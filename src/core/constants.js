@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-08
- * Last modified: 2026-04-08
+ * Created on: 2026-04-11
+ * Last modified: 2026-04-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -469,28 +469,35 @@ export const WIDGETS_CAPABILITIES   = [
              WIDGETS_CONFIGURATION  = new Map([
                                                   [
                                                       COMPASS_WIDGET, {
-                                                      icon: 'compass',
                                                       component: 'CompassWidget',
                                                   },
                                                   ],
                                                   [
                                                       CREDITS_WIDGET, {
-                                                      icon: '\'gavel',
                                                       component: 'CreditsWidget',
                                                   },
                                                   ],
 
                                                   [
                                                       PROFILE_WIDGET, {
-                                                      icon: 'chart-fft',
+                                                      component: 'ProfileWidget',
+                                                  },
+                                                  ],
+                                                  [
+                                                      JOURNEY_STATS_WIDGET, {
                                                       component: 'JourneyStatsWidget',
+                                                  },
+                                                  ],
+                                                  [
+                                                      TEXT_WIDGET, {
+                                                      component: 'TextWidget',
                                                   },
                                                   ],
                                               ]),
 
-             WIDGET_LAYER_START = 4000,
+             WIDGET_LAYER_START     = 4000,
              WIDGET_LAYER_STEP      = 1,
-             WIDGET_LAYER_TOP   = 5000,
+             WIDGET_LAYER_TOP       = 5000,
 
 
              DEFAULT_WIDGETS_LIST   = '@Components/MainUI/widgets/list',

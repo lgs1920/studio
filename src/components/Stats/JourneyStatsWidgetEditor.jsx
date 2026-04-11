@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-10
- * Last modified: 2026-04-10
+ * Created on: 2026-04-11
+ * Last modified: 2026-04-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -33,7 +33,7 @@ import { DISTANCE_UNITS, ELEVATION_UNITS, PACE_UNITS, SPEED_UNITS } from '@Utils
 import {
     WaButton, WaButtonGroup, WaCard, WaColorPicker, WaDivider, WaIcon, WaSlider, WaSwitch, WaTab,
     WaTabGroup,
-    WaTabPanel, WaTag,
+    WaTabPanel,
 }                                                                   from '@web.awesome.me/webawesome-pro/dist/react'
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { subscribe, useSnapshot }                           from 'valtio'

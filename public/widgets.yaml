@@ -217,7 +217,7 @@ widgets:
 
   journey-stats-widget:
     id: "journey-stats-widget"
-    name: "Stats"
+    name: "Journey Stats"
     description: "Track data rendered as SVG"
     icon: "route"
     mandatory: false
