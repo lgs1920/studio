@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-07
- * Last modified: 2026-03-07
+ * Created on: 2026-04-11
+ * Last modified: 2026-04-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -34,20 +34,17 @@ function saveBranchInLocal() {
         name: 'inject-git-branch',
         apply: 'serve' as const,
         configureServer() {
-            const branchPath = path.resolve(__dirname, 'public/branch.json')
-            const branch = execSync('git rev-parse --abbrev-ref HEAD').toString().trim()
+            const _branchPath = path.resolve(__dirname, 'public/branch.json')
+            const _branch = execSync('git rev-parse --abbrev-ref HEAD').toString().trim()
 
-            let branchData: any = {}
-            if (fs.existsSync(branchPath)) {
-                branchData = JSON.parse(fs.readFileSync(branchPath, 'utf-8'))
+            let _branchData: { branch?: string } = {}
+            if (fs.existsSync(_branchPath)) {
+                _branchData = JSON.parse(fs.readFileSync(_branchPath, 'utf-8'))
             }
 
-            if (branchData.branch !== branch) {
-                branchData.branch = branch
-                fs.writeFileSync(branchPath, JSON.stringify(branchData, null, 2))
-                console.log(`✅ Git branch "${branch}" injected into branch.json`)
-            } else {
-                console.log(`ℹ️ Git branch "${branch}" already present in branch.json`)
+            if (_branchData.branch !== _branch) {
+                _branchData.branch = _branch
+                fs.writeFileSync(_branchPath, JSON.stringify(_branchData, null, 2))
             }
         }
     }
@@ -62,14 +59,16 @@ function serveCesiumDev() {
         name: 'serve-cesium-dev',
         apply: 'serve' as const,
         configureServer({middlewares}) {
-            const engineSource = path.resolve(__dirname, 'node_modules/@cesium/engine/Source')
-            const widgetsSource = path.resolve(__dirname, 'node_modules/@cesium/widgets/Source')
-            const serveEngine = serveStatic(engineSource, {
+            const _engineSource = path.resolve(__dirname, 'node_modules/@cesium/engine/Source')
+            const _widgetsSource = path.resolve(__dirname, 'node_modules/@cesium/widgets/Source')
+
+            const _serveEngine = serveStatic(_engineSource, {
                 setHeaders: (res) => {
                     res.setHeader('Access-Control-Allow-Origin', '*')
                 },
             })
-            const serveWidgets = serveStatic(widgetsSource, {
+
+            const _serveWidgets = serveStatic(_widgetsSource, {
                 setHeaders: (res) => {
                     res.setHeader('Access-Control-Allow-Origin', '*')
                 },
@@ -79,20 +78,20 @@ function serveCesiumDev() {
                 if (!req.url) return next()
 
                 if (req.url.startsWith('/cesium/Widgets/')) {
-                    const originalUrl = req.url
+                    const _originalUrl = req.url
                     req.url = req.url.replace('/cesium/Widgets', '')
-                    return serveWidgets(req, res, (err) => {
-                        req.url = originalUrl
+                    return _serveWidgets(req, res, (err) => {
+                        req.url = _originalUrl
                         if (err) return next(err)
                         return next()
                     })
                 }
 
                 if (req.url.startsWith('/cesium/')) {
-                    const originalUrl = req.url
+                    const _originalUrl = req.url
                     req.url = req.url.replace('/cesium', '')
-                    return serveEngine(req, res, (err) => {
-                        req.url = originalUrl
+                    return _serveEngine(req, res, (err) => {
+                        req.url = _originalUrl
                         if (err) return next(err)
                         return next()
                     })
@@ -112,13 +111,11 @@ export default defineConfig({
         serveCesiumDev(),
         react(),
         VitePWA({
-            /* Immediate update for mobile devices to prevent stale CSS/JS cache */
             registerType: 'autoUpdate',
             strategies: 'injectManifest',
             filename: 'service-worker-pwa.js',
             srcDir: 'public',
             injectManifest: {
-                /* Set to undefined as manifest logic is handled manually in service-worker-pwa.js */
                 injectionPoint: undefined,
             },
             manifest: false,
@@ -139,8 +136,9 @@ export default defineConfig({
         ],
         host: 'dev.lgs1920.fr',
         port: 5173,
+        /** Force WebStorm (WSL) as editor for the error overlay */
+        launchEditor: 'webstorm',
         strictPort: true,
-        /* Strict cache control headers to force mobile browsers to fetch latest assets during dev */
         headers: {
             'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
             'Pragma': 'no-cache',
@@ -156,7 +154,6 @@ export default defineConfig({
         outDir: `./dist/${version}`,
         rollupOptions: {
             output: {
-                /* Ensure unique filenames with hashes to invalidate CDN and browser caches on production */
                 chunkFileNames: 'assets/js/[name]-[hash].js',
                 entryFileNames: 'assets/js/[name]-[hash].js',
                 assetFileNames: ({name}) => {
