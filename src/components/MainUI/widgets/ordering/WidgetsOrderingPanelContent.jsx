@@ -138,11 +138,11 @@ export const WidgetsOrderingPanelContent = ({widgetsBoard}) => {
             animation:   150,
             forceFallback: true,
             dataIdAttr:  'data-id',
-            handle:      '.widget-ordering-row', // Drag on the whole row
+            handle:      '.widget-ordering-row',
             filter:      '.widget-row-fixed',
-            ghostClass:    'widget-ghost',
-            chosenClass:   'widget-chosen',
-            dragClass:     'widget-drag',
+            ghostClass:  'widget-row-ghost',
+            chosenClass: 'widget-row-chosen',
+            dragClass:   'widget-row-drag',
             onEnd:       () => {
                 // We get the IDs from the DOM nodes as they are NOW
                 const _newIds = _sortable.current.toArray()
