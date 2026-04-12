@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-11
- * Last modified: 2026-04-11
+ * Created on: 2026-04-12
+ * Last modified: 2026-04-12
  *
  *
  * Copyright © 2026 LGS1920
@@ -136,12 +136,13 @@ export const WidgetsOrderingPanelContent = ({widgetsBoard}) => {
 
         _sortable.current = new Sortable(_list.current, {
             animation:   150,
+            forceFallback: true,
             dataIdAttr:  'data-id',
             handle:      '.widget-ordering-row', // Drag on the whole row
             filter:      '.widget-row-fixed',
-            ghostClass: 'sortable-ghost',
-            chosenClass: 'sortable-chosen',
-            dragClass:   'sortable-drag',
+            ghostClass:    'widget-ghost',
+            chosenClass:   'widget-chosen',
+            dragClass:     'widget-drag',
             onEnd:       () => {
                 // We get the IDs from the DOM nodes as they are NOW
                 const _newIds = _sortable.current.toArray()
@@ -156,7 +157,7 @@ export const WidgetsOrderingPanelContent = ({widgetsBoard}) => {
     }, [activeWidgets, finalizeReorder]) // We re-init or keep alive based on the list
 
     return (
-        <WaCard appearance="filled-outlined" className="widget-ordering-panel">
+        <WaCard appearance="plain" className="widget-ordering-panel">
             <div className="widget-list-container">
                 <LGSScrollbars ref={_scroll} autoHide>
                     <div ref={_list} className="widget-sortable-list">

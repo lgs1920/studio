@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-11
- * Last modified: 2026-04-11
+ * Created on: 2026-04-12
+ * Last modified: 2026-04-12
  *
  *
  * Copyright © 2026 LGS1920
@@ -602,14 +602,15 @@ body {
     touch-action: none;
 }
 
-.reorder:active {
-    cursor: grabbing;
-}
+/*.reorder:active {*/
+/*    cursor: grabbing;*/
+/*}*/
 
 /* Titre du Widget (Parent Drag) */
 .widget-deck-title {
     cursor: move;
 }
+
 
 .widget-sortable-list {
     display: flex;
@@ -619,6 +620,15 @@ body {
     margin-right: calc(-1 * var(--lgs-gutter-s));
     text-wrap: nowrap;
     gap: var(--lgs-gutter-xs);
+
+    & > div {
+        user-select: none;
+    }
+}
+
+.widget-ordering-row {
+    cursor: grab;
+    user-select: none;
 }
 
 .widget-ordering-row::part(body) {
@@ -633,82 +643,51 @@ body {
     width: 1.2rem;
 }
 
-
 .widget-ordering-row .sortable-widget-info {
     flex: 1;
 }
 
-.widget-ordering-row .sortable-widget-actions ::part(base) {
-    font-size: var(--lgs-font-size);
+.widget-ordering-row:hover {
+    color: var(--wa-color-brand-on-normal) !important;
+    border-color: var(--wa-color-brand-border-normal) !important;
+    background-color: var(--wa-color-brand-fill-quiet) !important;
 }
 
-.sortable-ghost {
-    opacity: 0.5;
-    border: var(--lgs-success-border-color) 1px solid !important;
-    background: var(--lgs-success-bg-color) !important;
+
+.drop-is-forbidden .widget-ghost {
+    color: var(--wa-color-success-border-loud) !important;
+    border-color: var(--wa-color-success-border-loud) !important;
+    background-color: var(--wa-color-success-border-quiet) !important;
 }
 
-/**
- * Draggable items in the ordering list
- */
-.widget-sortable-list > div {
-    cursor: grab !important; /* Force open hand on hover */
-    user-select: none; /* Prevent text selection which breaks dragging */
+.widget-ordering-row:active {
+    cursor: grabbing;
 }
 
-/* While the mouse is pressed down on the item */
-.widget-sortable-list > div:active {
-    cursor: grabbing !important; /* Force closed hand */
-}
-
-/* The item being dragged (the one following the mouse) */
-.sortable-fallback {
+.widget-chosen {
     cursor: grabbing !important;
+    color: var(--wa-color-brand-on-quiet) !important;
+    border-color: var(--wa-color-brand-border-quiet) !important;
+    background-color: var(--wa-color-brand-fill-loud) !important;
 }
 
-/* The item currently selected in the list */
-.sortable-chosen {
-    cursor: grabbing !important;
-    background-color: var(--lgs-second-color-15); /* Optional: visual feedback */
+.widget-drag {
+    opacity: 1 !important;
+    color: var(--wa-color-brand-on-loud) !important;
+    border-color: var(--wa-color-brand-border-loud) !important;
+    background-color: var(--wa-color-brand-border-quiet) !important;
 }
 
-/* The ghost (the empty space left behind) */
-.sortable-ghost {
-    cursor: grabbing !important;
-    opacity: 0.4;
+.widget-ghost {
+    opacity: 0.7 !important;
+    color: var(--wa-color-success-on-loud) !important;
+    border-color: var(--wa-color-success-border-loud) !important;
+    background-color: var(--wa-color-success-border-quiet) !important;
 }
 
-.widget-sortable-list > div {
-    user-select: none;
+.widget-row-fixed {
+    cursor: not-allowed !important;
 }
-
-.drop-is-forbidden .sortable-ghost {
-    opacity: 0.5;
-    border: var(--lgs-error-border-color) 1px solid !important;
-    background: var(--lgs-error-bg-color) !important;
-}
-
-.drop-is-allowed .sortable-ghost {
-    opacity: 0.5;
-    border: var(--lgs-success-border-color) 1px solid !important;
-    background: var(--lgs-success-bg-color) !important;
-}
-
-.sortable-chosen {
-    opacity: 0.5;
-    color: var(--lgs-information-color) !important;
-    border: var(--lgs-information-border-color) 1px solid !important;
-    background: var(--lgs-information-bg-color) !important;
-}
-
-.widget-row-fixed:hover {
-    cursor: not-allowed;
-    opacity: 0.5;
-    color: var(--lgs-error-color) !important;
-    border: var(--lgs-error-border-color) 1px solid !important;
-    background: var(--lgs-error-bg-color) !important;
-}
-
 /*******************************************************************************
  * Widget Editor
  ******************************************************************************/

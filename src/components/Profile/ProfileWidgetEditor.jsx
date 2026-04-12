@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-09
- * Last modified: 2026-04-09
+ * Created on: 2026-04-12
+ * Last modified: 2026-04-12
  *
  *
  * Copyright © 2026 LGS1920
@@ -210,7 +210,7 @@ export const ProfileWidgetEditor = ({entity}) => {
 
     return (
         <LGSScrollbars>
-            <WaCard className="lgs-widget-editor-controls-wrapper" appearance="filled" orientation="vertical">
+            <WaCard className="lgs-widget-editor-controls-wrapper" appearance="plain" orientation="vertical">
                 {/* Visual Base Elements */}
                 <BackgroundElement element={element} swatches={swatches} getColor={getColor}
                                    updateValue={updateValue} sanitizeSliderValue={sanitizeSliderValue}/>
