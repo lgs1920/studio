@@ -648,6 +648,7 @@ wa-card::part(body) {
 }
 
 wa-card.lgs--card-hoverable:hover {
+    color: var(--wa-color-brand-on-normal);
     outline: 2px solid var(--wa-color-brand-50);
     outline-offset: 2px;
     box-shadow: var(--wa-shadow-l);
@@ -964,11 +965,20 @@ wa-details > wa-divider {
 .lgs--details-list {
     display: flex;
     flex-direction: column;
-    padding: 4px; /* space outline */
+    padding: 4px;
+    transition: outline-color 0.3s ease,
+    outline-offset 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 0.3s ease,
+    transform 0.2s ease;
+    border-radius: var(--lgs-border-radius-s);
+    outline: 4px solid transparent;
+    outline-offset: 4px;
     gap: var(--lgs-gutter-xs);
+    backface-visibility: hidden;
 }
 
 wa-details.lgs--details-hoverable:not([open]):hover {
+    color: var(--wa-color-brand-on-normal);
     border-radius: var(--lgs-border-radius-s);
     outline: 2px solid var(--wa-color-brand-50);
     outline-offset: 2px;
