@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-28
- * Last modified: 2026-03-28
+ * Created on: 2026-04-12
+ * Last modified: 2026-04-12
  *
  *
  * Copyright © 2026 LGS1920
@@ -161,7 +161,8 @@ export const SelectEntity = (props) => {
                         {ACCESS_ICONS[type].text}
                     </div>
                 </WaTooltip>
-                <WaCard id={$entity.id} className={classes.join(' ')} onClick={props.onClick} type={$entity.type}
+                <WaCard appearance="outlined" id={$entity.id} className={classes.join(' ')} onClick={props.onClick}
+                        type={$entity.type}
                         name={$entity.id}>
                     <div className={`thumbnail-background${layers.filter.thumbnail ? '' : ' lgs-card'}`}
                          style={{backgroundImage: thumbnailBackground(props.entity.image)}}
@@ -255,7 +256,7 @@ export const SelectEntity = (props) => {
     return (
         <LGSScrollbars ref={_scrollRef}>
             {fill &&
-                <WaCard appearance="filled" ref={_cardRef} className={classes.join(' ')}>
+                <WaCard appearance="plain" ref={_cardRef} className={classes.join(' ')}>
                     {list.map((entity, index) => {
                         let previousProviderName = index > 0 ? list[index - 1].providerName : null
                         return (

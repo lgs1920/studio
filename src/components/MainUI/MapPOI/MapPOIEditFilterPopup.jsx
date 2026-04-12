@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-01
- * Last modified: 2026-04-01
+ * Created on: 2026-04-12
+ * Last modified: 2026-04-12
  *
  *
  * Copyright © 2026 LGS1920
@@ -142,7 +142,7 @@ export const MapPOIEditFilterPopup = memo(() => {
     }
 
     return (
-        <WaCard className="lgs--popup-in-drawer lgs-slide-down" appearance="outlined">
+        <WaCard className="lgs--popup-in-drawer lgs-slide-down" appearance="plain">
             <WaButton appearance="plain" slot="header-actions" onClick={handleClose}>
                 <WaIcon size="small" name="xmark" variant="regular"/>
             </WaButton>

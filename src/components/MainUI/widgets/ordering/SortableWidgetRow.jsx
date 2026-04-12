@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-11
- * Last modified: 2026-04-11
+ * Created on: 2026-04-12
+ * Last modified: 2026-04-12
  *
  *
  * Copyright © 2026 LGS1920
@@ -70,7 +70,7 @@ export const SortableWidgetRow = ({widget}) => {
     return (
         <WaCard appearance="outlined"
                 onClick={() => selectWidget(widget.id)}
-                className={`widget-ordering-row ${widget.fixed ? 'widget-row-fixed' : ''}`}
+                className={`lgs--card-hoverable widget-ordering-row ${widget.fixed ? 'widget-row-fixed' : ''}`}
                 data-id={widget.id}
         >
             <WaIcon name="grip-dots-vertical" variant="solid" className="icon-widget"/>&nbsp;

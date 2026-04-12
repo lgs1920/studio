@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-06
- * Last modified: 2026-04-03
+ * Created on: 2026-04-12
+ * Last modified: 2026-04-12
  *
  *
  * Copyright © 2026 LGS1920
@@ -356,7 +356,7 @@ export const JourneySettings = () => {
                             {/* Data Panel */}
                             <WaTabPanel name={DATA}>
                                 <LGSScrollbars>
-                                    <WaCard className="lgs--track-data" appearance="filled">
+                                    <WaCard className="lgs--track-data" appearance="plain">
                                         <ElevationProfile
                                             default={journey.elevationServer}
                                             label={'Elevation Source:'}
@@ -372,7 +372,7 @@ export const JourneySettings = () => {
                             {/* Edit Panel */}
                             <WaTabPanel name={EDIT}>
                                 <LGSScrollbars>
-                                    <WaCard className="lgs--track-data" appearance="filled">
+                                    <WaCard className="lgs--track-data" appearance="plain">
                                     <WaInput
                                         label={journey.tracks.size === 1 ? 'Title' : 'Journey Title'}
                                         id={'journey-title-in-settings'}

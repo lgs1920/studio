@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-10
- * Last modified: 2026-04-10
+ * Created on: 2026-04-12
+ * Last modified: 2026-04-12
  *
  *
  * Copyright © 2026 LGS1920
@@ -23,7 +23,7 @@ import { WaCard, WaSkeleton } from '@web.awesome.me/webawesome-pro/dist/react'
  */
 export const EditorSkeleton = () => {
     return (
-        <WaCard className="lgs--skeleton-container" appearance="filled">
+        <WaCard className="lgs--skeleton-container" appearance="plain">
             {/* Simulation of a text input or toolbar area */}
             <div style={{display: 'flex', flexDirection: 'column', gap: 'var(--sl-spacing-x-small)'}}>
                 <WaSkeleton effect="pulse" style={{width: '30%', height: '1rem'}}/>

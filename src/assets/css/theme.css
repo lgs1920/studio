@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-09
- * Last modified: 2026-04-09
+ * Created on: 2026-04-12
+ * Last modified: 2026-04-12
  *
  *
  * Copyright © 2026 LGS1920
@@ -635,6 +635,16 @@ wa-card::part(body) {
     display: flex;
     padding: var(--lgs-gutter-s);
     --spacing: var(--lgs-gutter-s);
+}
+
+.wa-card.lgs--card-hoverable {
+    transition: outline-color 0.3s ease,
+    outline-offset 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 0.3s ease,
+    transform 0.2s ease;
+    outline: 4px solid transparent;
+    outline-offset: 4px;
+    backface-visibility: hidden;
 }
 
 wa-card.lgs--card-hoverable:hover {

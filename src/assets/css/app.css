@@ -618,8 +618,10 @@ body {
     min-width: 10rem;
     min-height: 100%;
     margin-right: calc(-1 * var(--lgs-gutter-s));
+    padding: var(--lgs-gutter-xs);
     text-wrap: nowrap;
-    gap: var(--lgs-gutter-xs);
+    gap: var(--lgs-gutter-s);
+
 
     & > div {
         user-select: none;
@@ -649,8 +651,6 @@ body {
 
 .widget-ordering-row:hover {
     color: var(--wa-color-brand-on-normal) !important;
-    border-color: var(--wa-color-brand-border-normal) !important;
-    background-color: var(--wa-color-brand-fill-quiet) !important;
 }
 
 
