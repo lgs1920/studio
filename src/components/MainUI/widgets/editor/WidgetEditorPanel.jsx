@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-11
- * Last modified: 2026-04-11
+ * Created on: 2026-04-12
+ * Last modified: 2026-04-12
  *
  *
  * Copyright © 2026 LGS1920
@@ -158,16 +158,13 @@ export const WidgetEditorPanel = () => {
             onWaAfterHide={handleRequestClose}
             onWaHide={closeEditor}
         >
-            {/* Show back icon instead of close if stacked */}
-            {isStacked && (
-                <WaIcon slot="close-icon" name="arrow-left"/>
-            )}
-
             <div slot="label" className="drawer-header-title">
                 <WaIcon name={data.icon}/>
                 <span>{data.name}</span>
             </div>
-            <PanelActions stackedPanel={true}/>
+
+            <PanelActions stackedPanel={isStacked}/>
+
             <div className="drawer-content lgs-editor-layout">
                 <div className="editor-header-zones">
                     <WaTabGroup className="editor-tabs">
