@@ -7,15 +7,15 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-10
- * Last modified: 2026-04-10
+ * Created on: 2026-04-13
+ * Last modified: 2026-04-13
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { WaInput, WaSlider, WaSwitch } from '@web.awesome.me/webawesome-pro/dist/react'
-import React, { useCallback, useMemo } from 'react'
+import { useCallback, useEffect, useMemo, useRef } from 'react'
 
 /**
  * Reusable rotation control element for widget editors.
@@ -28,13 +28,14 @@ import React, { useCallback, useMemo } from 'react'
  * @param {number} [props.step=1]
  */
 export const RotationElement = ({
-                                    element,
                                     localRotation,
                                     applyRotation,
                                     min = -90,
                                     max = 90,
                                     step = 1,
                                 }) => {
+    const sliderRef = useRef(null)
+
     const sanitizeRotationValue = useCallback((rawValue) => {
         const numericValue = Number(rawValue)
 
@@ -50,6 +51,17 @@ export const RotationElement = ({
     const handleRotationInput = useCallback((rawValue) => {
         applyRotation(-sanitizeRotationValue(rawValue))
     }, [applyRotation, sanitizeRotationValue])
+
+    useEffect(() => {
+        const slider = sliderRef.current
+        const nextValue = sanitizeRotationValue(displayValue)
+
+        if (!slider || Number(slider.value) === nextValue) {
+            return
+        }
+
+        slider.value = nextValue
+    }, [displayValue, sanitizeRotationValue])
 
     return (
         <div className="drawer-horizontal-line">
@@ -69,6 +81,7 @@ export const RotationElement = ({
 
             <div className="drawer-horizontal-element">
                 <WaSlider
+                    ref={sliderRef}
                     size="small"
                     min={min}
                     max={max}

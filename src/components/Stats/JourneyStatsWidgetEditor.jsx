@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-11
- * Last modified: 2026-04-11
+ * Created on: 2026-04-13
+ * Last modified: 2026-04-13
  *
  *
  * Copyright © 2026 LGS1920
@@ -35,8 +35,8 @@ import {
     WaTabGroup,
     WaTabPanel,
 }                                                                   from '@web.awesome.me/webawesome-pro/dist/react'
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { subscribe, useSnapshot }                           from 'valtio'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { subscribe, useSnapshot }                            from 'valtio'
 
 /**
  * Configuration for slider elements in the editor
@@ -70,7 +70,6 @@ export const JourneyStatsWidgetEditor = ({entity}) => {
     const sliderRefs = useRef({})
 
     const _moveable = __.ui.widgetManager.getMoveable(entity)
-    const widget = __.ui.widgetManager.getElementById(entity)
 
     const $widgetStore = lgs.stores.ui.widget
     const widgetStore = useSnapshot($widgetStore)
@@ -146,6 +145,7 @@ export const JourneyStatsWidgetEditor = ({entity}) => {
         if (_moveable?.current) {
             _moveable.current.updateRect()
         }
+
     }, [$configuration, element, entity, _moveable])
 
     const setSliderRef = useCallback((path) => {
@@ -189,62 +189,98 @@ export const JourneyStatsWidgetEditor = ({entity}) => {
         return () => unsub()
     }, [$metrics, dataSource, updateValue])
 
-    useEffect(() => {
-        const transform = __.ui.widgetManager.getTransform(widget)
-        setLocalRotation(Math.ceil(widgetStore.current?.rotate ?? transform.rotate ?? 0))
-    }, [widget, widgetStore.current?.rotate])
 
     /**
-     * Sync slider values with element configuration
+     * Applies rotation to the widget and updates persistent configuration
+     * @param {number|string} val - The rotation angle
      */
-    useEffect(() => {
-        Object.entries(JOURNEY_STATS_SLIDERS).forEach(([path, config]) => {
-            const rawValue = config.getValue(element)
-            const sanitizedValue = sanitizeSliderValue(rawValue, config.fallback, config)
-            const slider = sliderRefs.current[path]
+    const applyRotation = useCallback(async (val) => {
+        const parsedAngle = parseFloat(val)
+        const angle = Number.isFinite(parsedAngle) ? parsedAngle : 0
+        setLocalRotation(angle)
 
-            if (slider) {
-                slider.value = sanitizedValue
+        const target = __.ui.widgetManager.getElementById(entity)
+        if (target) {
+            const transform = await __.ui.widgetManager.getTransform(target)
+            await __.ui.widgetManager.setTransform(target, {
+                ...transform,
+                rotate: angle,
+            })
+
+            const config = __.ui.widgetManager.getWidgetConfig(entity)
+            if (config?.persist) {
+                await __.ui.widgetManager.saveWidgetPosition(entity, config)
             }
+        }
 
-            if (rawValue !== undefined && rawValue !== null && rawValue !== sanitizedValue) {
-                updateValue(path, sanitizedValue)
-            }
-        })
-    }, [element, sanitizeSliderValue, updateValue])
-
-    const getColor = (item, alpha = false) => __.ui.ui.resolveItemColor(item, alpha)
-
-    /**
-     * Applies rotation to the widget and updates store
-     */
-    const applyRotation = async (val) => {
-        const clampedVal = parseFloat(val) || 0
-        setLocalRotation(clampedVal)
-        const {translate, scale} = __.ui.widgetManager.getTransform(widget)
-        __.ui.widgetManager.setTransform(widget, {translate, scale, rotate: clampedVal})
         if (_moveable?.current) {
             _moveable.current.updateRect()
         }
-        if ($widgetStore.current) {
-            $widgetStore.current.rotate = clampedVal
-        }
-    }
 
-    const hasExternal = useMemo(() => {
+        // Update ephemeral store for UI sync
+        $widgetStore.current = {
+            id:     entity,
+            rotate: angle,
+        }
+
+        // Persist the value to the configuration store
+        updateValue('rotate', angle)
+    }, [entity, _moveable, $widgetStore, updateValue])
+
+    /**
+     * Initializes the editor from persisted widget state.
+     */
+    useEffect(() => {
+        let isMounted = true
+
+        const syncInitialState = async () => {
+            const position = await __.ui.widgetManager.getWidgetPosition(entity)
+
+            if (!isMounted) {
+                return
+            }
+
+            const angle = position?.rotate !== undefined ? Number(position.rotate) : Number(element?.rotate ?? 0)
+            const normalizedAngle = Number.isFinite(angle) ? angle : 0
+
+            setLocalRotation(Math.ceil(normalizedAngle))
+            $widgetStore.current = {
+                id:     entity,
+                rotate: normalizedAngle,
+            }
+        }
+
+        syncInitialState()
+
+        return () => {
+            isMounted = false
+        }
+    }, [entity, element?.rotate, $widgetStore])
+
+    const resolvedRotation = useMemo(() => {
+        if (widgetStore.current?.id !== entity || widgetStore.current?.rotate === undefined) {
+            return localRotation
+        }
+
+        const angle = Number(widgetStore.current.rotate)
+        return Math.ceil(Number.isFinite(angle) ? angle : 0)
+    }, [entity, localRotation, widgetStore])
+
+    const getColor = (item, alpha = false) => __.ui.ui.resolveItemColor(item, alpha)
+
+
+    const hasExternal = (() => {
         const m = lgs.theJourney.getMetrics()
         return m?.external && Object.keys(m.external).length > 0
-    }, [unitSystem])
+    })()
 
     // Logic to determine if the source selector should be displayed
     const hasUserData = metricsSnap.user && Object.keys(metricsSnap.user).length > 0
     const isDataTabWithExternal = activeTab === 'data' && hasExternal
     const isUserOrExternalAvailable = (metricsSnap.user || hasExternal) && hasUserData
 
-    let sourceSelector = null
-
-    if (isDataTabWithExternal || isUserOrExternalAvailable) {
-        sourceSelector = (
+    const sourceSelector = isDataTabWithExternal || isUserOrExternalAvailable
+                           ? (
             <div className="source-selector-wrapper" style={{marginLeft: 'auto'}}>
                 <WaButtonGroup size="small">
                     <WaButton
@@ -272,14 +308,12 @@ export const JourneyStatsWidgetEditor = ({entity}) => {
                     </WaButton>
                 </WaButtonGroup>
             </div>
-        )
-    }
-    else {
-        sourceSelector = (
-            <div className="source-selector-wrapper" style={{marginLeft: 'auto'}}>
-                <WaButton disabled size="small" variant="brand">{'Data'}</WaButton>
-            </div>)
-    }
+                           )
+                           : (
+                               <div className="source-selector-wrapper" style={{marginLeft: 'auto'}}>
+                                   <WaButton disabled size="small" variant="brand">{'Data'}</WaButton>
+                               </div>
+                           )
 
     return (
         <div className="lgs-widget-editor" key={`editor-${entity}`}>
@@ -298,8 +332,9 @@ export const JourneyStatsWidgetEditor = ({entity}) => {
                     <LGSScrollbars>
                         <WaCard appearance="filled" orientation="vertical"
                                 className="lgs-widget-editor-controls-wrapper">
-                            <RotationElement element={element} localRotation={localRotation}
-                                             applyRotation={applyRotation} updateValue={updateValue}/>
+                            <RotationElement localRotation={resolvedRotation}
+                                             applyRotation={applyRotation}
+                            />
                             <WaDivider/>
                             <div className="drawer-horizontal-line"><span>Text color</span></div>
                             <div className="drawer-horizontal-line three-columns">
