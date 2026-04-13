@@ -58,7 +58,7 @@
     "colord": "^2.9.3",
     "convert": "^7.0.0",
     "deep-object-diff": "^1.1.9",
-    "dotenv": "^17.4.1",
+    "dotenv": "^17.4.2",
     "easy-file-picker": "^1.2.0",
     "echarts": "^6.0.0",
     "echarts-for-react": "^3.0.6",
