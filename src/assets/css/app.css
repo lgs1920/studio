@@ -694,12 +694,12 @@ body {
 /*******************************************************************************
  * Widget Editor
  ******************************************************************************/
-.lgs-widget-editor {
+.lgs-widget-editor::part(body) {
     height: 100%;
     min-height: 0;
 }
 
-.lgs-widget-editor, .lgs-widget-editor-controls-wrapper::part(body) {
+.lgs-widget-editor::part(body), .lgs-widget-editor-controls-wrapper::part(body) {
     display: flex;
     flex-direction: column;
     gap: var(--lgs-gutter-s);

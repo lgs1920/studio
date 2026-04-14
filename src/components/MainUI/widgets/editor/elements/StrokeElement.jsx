@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-10
- * Last modified: 2026-04-10
+ * Created on: 2026-04-14
+ * Last modified: 2026-04-14
  *
  *
  * Copyright © 2026 LGS1920
@@ -60,7 +60,7 @@ export const StrokeElement = ({
     }, [stroke.width, stroke.opacity, strokeWidth, strokeOpacity, updateValue])
 
     return (
-        <React.Fragment>
+        <>
             <WaSwitch
                 label-at-start
                 size="xsmall"
@@ -71,7 +71,7 @@ export const StrokeElement = ({
             </WaSwitch>
 
             {stroke.show && (
-                <React.Fragment>
+                <>
                     <div className="drawer-horizontal-line three-columns">
                         <div className="drawer-horizontal-element">
                             <WaColorPicker
@@ -87,6 +87,7 @@ export const StrokeElement = ({
                         </div>
                         <div className="drawer-horizontal-element xlarge-element">
                             <WaSlider
+                                size="small"
                                 ref={widthRef}
                                 label="Width"
                                 min="0"
@@ -104,6 +105,7 @@ export const StrokeElement = ({
                         </div>
                         <div className="drawer-horizontal-element xlarge-element">
                             <WaSlider
+                                size="small"
                                 ref={opacityRef}
                                 label="Opacity"
                                 min="0"
@@ -121,8 +123,8 @@ export const StrokeElement = ({
                             />
                         </div>
                     </div>
-                </React.Fragment>
+                </>
             )}
-        </React.Fragment>
+        </>
     )
 }

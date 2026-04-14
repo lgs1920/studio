@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-24
- * Last modified: 2026-02-24
+ * Created on: 2026-04-14
+ * Last modified: 2026-04-14
  *
  *
  * Copyright © 2026 LGS1920
@@ -65,7 +65,7 @@ export const EditableText = ({id, scale = 1}) => {
                 if (node.isContentEditable) {
                     return true
                 }
-                if (node.closest && node.closest('sl-textarea, sl-input, input, textarea')) {
+                if (node.closest && node.closest('wa-textarea, wa-input, input, textarea')) {
                     return true
                 }
             }

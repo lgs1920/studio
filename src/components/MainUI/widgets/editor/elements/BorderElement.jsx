@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-10
- * Last modified: 2026-04-10
+ * Created on: 2026-04-14
+ * Last modified: 2026-04-14
  *
  *
  * Copyright © 2026 LGS1920
@@ -109,7 +109,7 @@ export const BorderElement = ({
 
                     {showRadius && (
                         <div className="drawer-horizontal-line">
-                            <div className="drawer-horizontal-element xlarge-element">
+                            {/* <div className="drawer-horizontal-element xlarge-element"> */}
                                 <WaSelect
                                     size="small"
                                     label={'Radius'}
@@ -129,7 +129,7 @@ export const BorderElement = ({
                                         )
                                     })}
                                 </WaSelect>
-                            </div>
+                            {/* </div> */}
                         </div>
                     )}
                 </>

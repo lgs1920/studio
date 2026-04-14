@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-12
- * Last modified: 2026-04-12
+ * Created on: 2026-04-14
+ * Last modified: 2026-04-14
  *
  *
  * Copyright © 2026 LGS1920
@@ -1822,4 +1822,14 @@ wa-copy-button::part(button) {
 
 wa-copy-button[variant="brand"]::part(button):hover {
     background-color: var(--wa-color-brand-fill-quiet);
+}
+
+/*******************************************************************************
+ * wa-select
+ ******************************************************************************/
+
+wa-select[label-at-start]::part(form-control) {
+    display: flex;
+    align-items: center;
+    gap: var(--lgs-gutter-s);
 }

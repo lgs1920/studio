@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-10
- * Last modified: 2026-04-10
+ * Created on: 2026-04-14
+ * Last modified: 2026-04-14
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,11 +16,20 @@
 
 import { LGSScrollbars }                                    from '@Components/MainUI/LGSScrollbars'
 import {
+    AlignElement,
+} from '@Components/MainUI/widgets/editor/elements/AlignElement'
+import {
     BackgroundElement,
 }                                                           from '@Components/MainUI/widgets/editor/elements/BackgroundElement'
 import {
     BorderElement,
 }                                                           from '@Components/MainUI/widgets/editor/elements/BorderElement'
+import {
+    FontSizeElement,
+} from '@Components/MainUI/widgets/editor/elements/FontSizeElement'
+import {
+    LineHeightElement,
+} from '@Components/MainUI/widgets/editor/elements/LineHeightElement'
 import {
     RotationElement,
 }                                                           from '@Components/MainUI/widgets/editor/elements/RotationElement'
@@ -30,8 +39,17 @@ import {
 import {
     StrokeElement,
 } from '@Components/MainUI/widgets/editor/elements/StrokeElement'
-import { TextEditorToolbar }                                from '@Components/Text/TextEditorToolbar'
-import { WaDivider } from '@web.awesome.me/webawesome-pro/dist/react'
+import {
+    StyleElement,
+} from '@Components/MainUI/widgets/editor/elements/StyleElement'
+import {
+    TextColorElement,
+} from '@Components/MainUI/widgets/editor/elements/TextColorElement'
+import {
+    TypefaceElement,
+} from '@Components/MainUI/widgets/editor/elements/TypefaceElement'
+
+import { WaCard, WaDivider } from '@web.awesome.me/webawesome-pro/dist/react'
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { useSnapshot }                                      from 'valtio'
 import './style.css'
@@ -159,6 +177,19 @@ export const TextWidgetEditor = ({entity}) => {
         }
     }
 
+    const scheduleUpdate = useCallback(() => {
+        if (!_moveable?.current) {
+            return
+        }
+
+        requestAnimationFrame(() => {
+            _moveable.current.updateRect()
+            setTimeout(() => {
+                _moveable.current?.updateRect()
+            }, 50)
+        })
+    }, [_moveable])
+
     const getColor = useCallback((item, alpha = false) => __.ui.ui.resolveItemColor(item, alpha), [])
 
     if (!isTextWidget || !element) {
@@ -166,54 +197,62 @@ export const TextWidgetEditor = ({entity}) => {
     }
 
     return (
-        <div className="lgs-card lgs-widget-editor">
-            <div className="text-widget-editor-scroll">
-                <LGSScrollbars>
-                    <div className="text-widget-editor-header">
-                        <TextEditorToolbar id={normalizedId} fonts={true} color={false} align={false} style={false}/>
-                        <TextEditorToolbar id={normalizedId} color={true} align={true} style={true}/>
+        <LGSScrollbars>
+            <WaCard appearance="plain" className="lgs-widget-editor">
 
+                <div className="text-widget-editor-header">
+                    <div className="drawer-horizontal-line">
+                        <TypefaceElement id={normalizedId}/><LineHeightElement id={normalizedId}/>
                     </div>
-                    <div className="lgs-widget-editor-controls-wrapper">
-                        <WaDivider/>
-                        <RotationElement
-                            element={element}
-                            localRotation={localRotation}
-                            applyRotation={applyRotation}
-                            updateValue={updateValue}
-                        />
-                        <WaDivider/>
-                        <StrokeElement
-                            element={element}
-                            swatches={swatches}
-                            getColor={getColor}
-                            updateValue={updateValue}
-                        />
-                        <WaDivider/>
-                        <ShadowElement
-                            element={element}
-                            swatches={swatches}
-                            getColor={getColor}
-                            updateValue={updateValue}
-                        />
-                        <WaDivider/>
-                        <BorderElement
-                            element={element}
-                            swatches={swatches}
-                            getColor={getColor}
-                            updateValue={updateValue}
-                            showPill={true}
-                        />
-                        <WaDivider/>
-                        <BackgroundElement
-                            element={element}
-                            swatches={swatches}
-                            getColor={getColor}
-                            updateValue={updateValue}
-                        />
+                    <div className="drawer-horizontal-line">
+                        <FontSizeElement id={normalizedId}/><StyleElement id={normalizedId}/>
+                        <AlignElement id={normalizedId}/>
                     </div>
-                </LGSScrollbars>
-            </div>
-        </div>
+
+                </div>
+
+                <div className="lgs-widget-editor-controls-wrapper">
+                    <RotationElement
+                        element={element}
+                        localRotation={localRotation}
+                        applyRotation={applyRotation}
+                        updateValue={updateValue}
+                    />
+
+                    <WaDivider/>
+                    <TextColorElement id={normalizedId}/>
+
+                    <WaDivider/>
+                    <StrokeElement
+                        element={element}
+                        swatches={swatches}
+                        getColor={getColor}
+                        updateValue={updateValue}
+                    />
+                    <WaDivider/>
+                    <ShadowElement
+                        element={element}
+                        swatches={swatches}
+                        getColor={getColor}
+                        updateValue={updateValue}
+                    />
+                    <WaDivider/>
+                    <BorderElement
+                        element={element}
+                        swatches={swatches}
+                        getColor={getColor}
+                        updateValue={updateValue}
+                        showPill={true}
+                    />
+                    <WaDivider/>
+                    <BackgroundElement
+                        element={element}
+                        swatches={swatches}
+                        getColor={getColor}
+                        updateValue={updateValue}
+                    />
+                </div>
+            </WaCard>
+        </LGSScrollbars>
     )
 }

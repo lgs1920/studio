@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-24
- * Last modified: 2026-02-24
+ * Created on: 2026-04-14
+ * Last modified: 2026-04-14
  *
  *
  * Copyright © 2026 LGS1920
@@ -110,8 +110,8 @@
     background: transparent;
     place-items: center;
 
-    --sl-input-focus-ring-color: transparent;
-    --sl-input-focus-ring-width: 0;
+    --wa-focus-ring-color: transparent;
+    --wa-focus-ring-width: 0;
 }
 
 /* * Shoelace Base Shadow Part
@@ -120,8 +120,9 @@
 .text-widget-preview-area::part(base) {
     display: inline-flex;
     overflow: visible !important;
-    width: auto;
-    max-width: 100%;
+    width: var(--lgs-preview-content-width, auto);
+    max-width: none;
+    height: var(--lgs-preview-content-height, auto);
 
     /* Apply Custom Box Shadow */
     border: none !important;
@@ -150,37 +151,39 @@
     font-weight: var(--lgs-tx-weight);
     font-style: var(--lgs-tx-style);
     line-height: var(--lgs-tx-lh) !important;
-    display: block;
+    display: inline-block;
 
     overflow: hidden;
     box-sizing: border-box;
-    width: auto;
-    min-width: 20px;
-    max-width: 100%;
-    height: auto;
+    width: var(--lgs-preview-content-width, auto);
+    min-width: 1ch;
+    max-width: none;
+    height: var(--lgs-preview-content-height, auto);
+    min-height: 1em;
     margin: 0;
     padding: var(--lgs-tx-padding-top) var(--lgs-tx-padding-right) var(--lgs-tx-padding-bottom) var(--lgs-tx-padding-left);
-
     resize: none;
+
     transition: text-shadow 0.2s ease,
     background-color 0.2s ease,
     border 0.2s ease,
     box-shadow 0.2s ease;
     transform: var(--lgs-tx-transform);
-
     text-align: var(--lgs-tx-align);
 
     white-space: pre-wrap;
+
     word-wrap: break-word;
     color: var(--lgs-tx-color) !important;
+    border: var(--lgs-tx-border);
 
     /* Theming & Shadows */
-    border: var(--lgs-tx-border);
     border-radius: var(--lgs-tx-radius);
     background-color: var(--lgs-tx-bg-color);
     box-shadow: var(--lgs-bg-elevation);
-
     text-shadow: var(--lgs-tx-shadow);
+
+    field-sizing: content;
     backdrop-filter: blur(var(--lgs-tx-blur));
     field-sizing: content;
 
@@ -208,4 +211,15 @@
     align-items: center;
     margin-left: auto;
     gap: var(--lgs-gutter-xs);
+}
+
+
+.lgs--text-widget-font-size-trigger, .lgs--text-widget-typeface-trigger,
+.lgs--text-widget-line-height-trigger {
+    width: 10rem;
+}
+
+.lgs--text-widget-color-trigger wa-slider {
+    flex: 0 0 40%;
+    margin-left: auto;
 }
