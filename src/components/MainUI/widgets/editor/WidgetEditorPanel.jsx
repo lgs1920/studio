@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-12
- * Last modified: 2026-04-12
+ * Created on: 2026-04-14
+ * Last modified: 2026-04-14
  *
  *
  * Copyright © 2026 LGS1920
@@ -22,11 +22,14 @@ import {
     WidgetsOrderingPanelContent,
 }                                                                                             from '@Components/MainUI/widgets/ordering/WidgetsOrderingPanelContent'
 import PanelActions
-                                                                      from '@Components/PanelsActions'
-import { SCENE_WIDGETS_BOARD, VIDEO_CROP_ZONE, WIDGETS_CONFIGURATION, WIDGETS_EDITOR_DRAWER } from '@Core/constants'
+    from '@Components/PanelsActions'
+import {
+    CREDITS_WIDGET, SCENE_WIDGETS_BOARD, VIDEO_CROP_ZONE, WIDGET_LAYER_START, WIDGET_LAYER_STEP, WIDGETS_CONFIGURATION,
+    WIDGETS_EDITOR_DRAWER,
+}   from '@Core/constants'
 import {
     WidgetRegistry,
-}                                                                                             from '@Core/ui/widget-manager/registry/WidgetRegistry'
+}   from '@Core/ui/widget-manager/registry/WidgetRegistry'
 
 import WaDrawer from '@Components/WaDrawerNonModal'
 import {
@@ -131,6 +134,46 @@ export const WidgetEditorPanel = () => {
         resolveContent()
     }, [drawers.entity, isVisible, _widgetRegistry, ui.widget.cache])
 
+    /**
+     * @description Retrieves and formats the list of active widgets for the current board
+     * @returns {Array} Sorted list of active widget objects
+     */
+    const activeWidgetsList = useCallback(() => {
+        // Safety check: if list or cached data is missing, return empty array
+        if (!widget.list || !cached) {
+            return []
+        }
+
+        return Array.from(widget.list.entries())
+            .filter(([id, entry]) => {
+                const _widgetType = id.split('#')[0]
+                // Safe comparison with the current board
+                return entry?.widgetsBoard === cached.widgetsBoard && _widgetType !== CREDITS_WIDGET
+            })
+            .map(([id, entry], index) => {
+                const _widgetType = id.split('#')[0]
+                const _instance = lgs.settings.widgets[_widgetType]
+                if (!_instance) {
+                    return null
+                }
+
+                const _cacheEntry = __.ui.widgetCache.get(id)
+                const _currentZ = Number(entry?.zIndex ?? _cacheEntry?.zIndex)
+                    || (WIDGET_LAYER_START + index * WIDGET_LAYER_STEP)
+
+                return {
+                    id,
+                    zIndex: parseInt(_currentZ, 10),
+                    type:   _widgetType,
+                    fixed:  _instance.fixedPosition ?? false,
+                }
+            })
+            .filter(Boolean)
+            .sort((a, b) => b.zIndex - a.zIndex)
+    }, [widget.list, cached]) // Use 'cached' as a dependency to react to any change
+
+    const activeWidgets = useMemo(() => activeWidgetsList(), [activeWidgetsList])
+
     if (!isVisible) {
         return null
     }
@@ -158,11 +201,13 @@ export const WidgetEditorPanel = () => {
             onWaAfterHide={handleRequestClose}
             onWaHide={closeEditor}
         >
-            <div slot="label" className="drawer-header-title">
+            {lgs.stores.ui.widget.list.size > 1 &&
+
+                <div slot="label" className="drawer-header-title">
                 <WaIcon name={data.icon}/>
                 <span>{data.name}</span>
             </div>
-
+            }
             <PanelActions stackedPanel={isStacked}/>
 
             <div className="drawer-content lgs-editor-layout">
@@ -171,9 +216,12 @@ export const WidgetEditorPanel = () => {
                         <WaTab slot="nav" panel="preview">
                             <WaIcon size="small" name="image"/> Preview
                         </WaTab>
+
+                        {activeWidgets.length > 1 &&
                         <WaTab slot="nav" panel="ordering">
                             <WaIcon size="small" name="layer"/> Widgets stack
                         </WaTab>
+                        }
 
                         <WaTabPanel name="preview">
                             <section
@@ -191,12 +239,13 @@ export const WidgetEditorPanel = () => {
                                 </Suspense>
                             </section>
                         </WaTabPanel>
-
+                        {activeWidgets.length > 1 &&
                         <WaTabPanel name="ordering">
                             <section className="editor-ordering-zone">
                                 <WidgetsOrderingPanelContent widgetsBoard={cached.widgetsBoard}/>
                             </section>
                         </WaTabPanel>
+                        }
                     </WaTabGroup>
                 </div>
 
