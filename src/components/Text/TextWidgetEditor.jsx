@@ -152,43 +152,53 @@ export const TextWidgetEditor = ({entity}) => {
         _curr[_keys[_keys.length - 1]] = val
     }, [element, normalizedId, $configuration])
 
+
     /**
-     * applies rotation to manager, ui store, and configuration
+     * Applies rotation to the widget and updates persistent configuration
+     * @param {number|string} val - The rotation angle
      */
-    const applyRotation = async (val) => {
-        const angle = parseFloat(val) || 0
+    const applyRotation = useCallback(async (val) => {
+        const parsedAngle = parseFloat(val)
+        const angle = Number.isFinite(parsedAngle) ? parsedAngle : 0
         setLocalRotation(angle)
 
-        const _target = __.ui.widgetManager.getElementById(entity)
-        if (_target) {
-            const transform = await __.ui.widgetManager.getTransform(_target)
-            await __.ui.widgetManager.setTransform(_target, {
+        const target = __.ui.widgetManager.getElementById(entity)
+        if (target) {
+            const transform = await __.ui.widgetManager.getTransform(target)
+            await __.ui.widgetManager.setTransform(target, {
                 ...transform,
                 rotate: angle,
             })
+
+            const config = __.ui.widgetManager.getWidgetConfig(entity)
+            if (config?.persist) {
+                await __.ui.widgetManager.saveWidgetPosition(entity, config)
+            }
         }
-        if ($widget.current) {
-            $widget.current.rotate = angle
-        }
-        updateValue('rotate', angle)
 
         if (_moveable?.current) {
             _moveable.current.updateRect()
         }
-    }
 
-    const scheduleUpdate = useCallback(() => {
-        if (!_moveable?.current) {
-            return
+        // Update ephemeral store for UI sync
+        $widget.current = {
+            id:     entity,
+            rotate: angle,
         }
 
-        requestAnimationFrame(() => {
-            _moveable.current.updateRect()
-            setTimeout(() => {
-                _moveable.current?.updateRect()
-            }, 50)
-        })
-    }, [_moveable])
+        // Persist the value to the configuration store
+        updateValue('rotate', angle)
+    }, [entity, _moveable, $widget, updateValue])
+
+
+    const resolvedRotation = useMemo(() => {
+        if (widget.current?.id !== entity || widget.current?.rotate === undefined) {
+            return localRotation
+        }
+
+        const angle = Number(widget.current.rotate)
+        return Math.ceil(Number.isFinite(angle) ? angle : 0)
+    }, [entity, localRotation, widget])
 
     const getColor = useCallback((item, alpha = false) => __.ui.ui.resolveItemColor(item, alpha), [])
 
@@ -212,11 +222,8 @@ export const TextWidgetEditor = ({entity}) => {
                 </div>
 
                 <div className="lgs-widget-editor-controls-wrapper">
-                    <RotationElement
-                        element={element}
-                        localRotation={localRotation}
-                        applyRotation={applyRotation}
-                        updateValue={updateValue}
+                    <RotationElement localRotation={resolvedRotation}
+                                     applyRotation={applyRotation}
                     />
 
                     <WaDivider/>
