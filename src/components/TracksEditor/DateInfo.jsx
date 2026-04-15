@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-04-15
+ * Last modified: 2026-04-15
  *
  *
  * Copyright © 2026 LGS1920
@@ -17,6 +17,7 @@
 import { faLocationPin }     from '@fortawesome/pro-solid-svg-icons'
 import { SlDivider, SlIcon } from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }             from '@Utils/FA2SL'
+import { WaDivider, WaIcon } from '@web.awesome.me/webawesome-pro/dist/react'
 import { DateTime }          from 'luxon'
 
 export const DateInfo = function DateInfo(props) {
@@ -35,14 +36,16 @@ export const DateInfo = function DateInfo(props) {
         },
     }
     const sameDay = date.start.date === date.stop.date
+
     return (<>
-        {__.ui.poiManager.list.get($editor.track.flags.start) && __.ui.poiManager.list.get($editor.track.flags.stp) &&
+        {__.ui.poiManager.list.get($editor.track.flags.start) && __.ui.poiManager.list.get($editor.track.flags.stop) &&
             <>
                 {sameDay &&
                     <div className={'track-date'}>
                         <span>{date.start.date}</span>
                         <span>
-                    <SlIcon library="fa" name={FA2SL.set(faLocationPin)}
+                    <WaIcon name="location-pin"
+                            variant="regular"
                             style={{
                                 color: __.ui.poiManager.list.get($editor.track.flags.start).bgColor
                                            ?? lgs.settings.journey.pois.start.color,
@@ -50,10 +53,11 @@ export const DateInfo = function DateInfo(props) {
                             {date.start.time}
                 </span>
                         <span>
-                    <SlIcon library="fa" name={FA2SL.set(faLocationPin)}
+                    <WaIcon name="location-pin"
+                            variant="regular"
                             style={{
                                 color: __.ui.poiManager.list.get($editor.track.flags.stop).bgColor
-                                           ?? lgs.settings.journey.pois.stop,
+                                           ?? lgs.settings.journey.pois.stop.color,
                             }}/>
                             {date.stop.time}
                 </span>
@@ -64,7 +68,8 @@ export const DateInfo = function DateInfo(props) {
                 {!sameDay &&
                     <div className={'track-date'}>
                 <span>
-                <SlIcon library="fa" name={FA2SL.set(faLocationPin)}
+                <WaIcon name="location-pin"
+                        variant="regular"
                         style={{
                             color: __.ui.poiManager.list.get($editor.track.flags.start).bgColor
                                        ?? lgs.settings.journey.pois.start,
@@ -72,7 +77,8 @@ export const DateInfo = function DateInfo(props) {
                     {date.start.date} {date.start.time}
                 </span>
                         <span>
-                <SlIcon library="fa" name={FA2SL.set(faLocationPin)}
+                <WaIcon name="location-pin"
+                        variant="regular"
                         style={{
                             color: __.ui.poiManager.list.get($editor.track.flags.stop).bgColor
                                        ?? lgs.settings.journey.pois.stop,
@@ -81,7 +87,7 @@ export const DateInfo = function DateInfo(props) {
                 </span>
                     </div>
                 }
-                <SlDivider style={{'--width': '1px'}}/>
+                <WaDivider/>
             </>
         }
     </>)
