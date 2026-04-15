@@ -319,12 +319,12 @@ export const TrackData = memo(() => {
                     <div className="element-row">
                         <div className="element-item indented">
                             <WaIcon variant="regular" name={'arrow-up-right'}/>
-                            <span className="screen-reader-only">{'Positive distance'}</span>
+                            <span className="screen-reader-only">{'Positive:'}</span>
                             <NameValueUnit value={metrics.positive.distance} units={DISTANCE_UNITS}/>
                         </div>
                         <div className="element-item">
                             <WaIcon variant="regular" name={'arrow-down-right'}/>
-                            <span className="screen-reader-only">{'Negative distance'}</span>
+                            <span className="screen-reader-only">{'Negative:'}</span>
                             <NameValueUnit value={metrics.negative.distance} units={DISTANCE_UNITS}/>
                         </div>
                     </div>
@@ -344,12 +344,12 @@ export const TrackData = memo(() => {
                         <div className="element-row">
                             <div className="element-item indented">
                                 <WaIcon variant="regular" name={'person-hiking'}/>
-                                <span className="screen-reader-only">{'Moving time'}</span>
+                                <span className="screen-reader-only">{'Moving time:'}</span>
                                 <NameValueUnit value={UnitUtils.convert(metrics.duration - metrics.idleTime).toTime()}/>
                             </div>
                             <div className="element-item">
                                 <WaIcon variant="regular" name={'pause'}/>
-                                <span className="screen-reader-only">{'Idle time'}</span>
+                                <span className="screen-reader-only">{'Idle time:'}</span>
                                 <NameValueUnit value={UnitUtils.convert(metrics.idleTime).toTime()}/>
                             </div>
                         </div>
@@ -365,10 +365,12 @@ export const TrackData = memo(() => {
                             <div className="element-item title">{'Elevation'}</div>
                             <div className="element-item">
                                 <WaIcon variant="regular" name={'arrow-up-right'}/>
+                                <span className="screen-reader-only">{'Positive:'}</span>
                                 <NameValueUnit value={metrics.positive.elevation} units={ELEVATION_UNITS} format="%d"/>
                             </div>
                             <div className="element-item">
                                 <WaIcon variant="regular" name={'arrow-down-right'}/>
+                                <span className="screen-reader-only">{'Negative:'}</span>
                                 <NameValueUnit value={metrics.negative.elevation} units={ELEVATION_UNITS} format="%d"/>
                             </div>
                         </div>
@@ -382,10 +384,12 @@ export const TrackData = memo(() => {
                         <div className="element-item title">{'Altitude'}</div>
                         <div className="element-item">
                             <WaIcon variant="regular" name={'arrow-down-to-line'}/>
+                            <span className="screen-reader-only">{'Min:'}</span>
                             <NameValueUnit value={metrics.minHeight} units={ELEVATION_UNITS} format="%d"/>
                         </div>
                         <div className="element-item">
                             <WaIcon variant="regular" name={'arrow-up-to-line'}/>
+                            <span className="screen-reader-only">{'Max:'}</span>
                             <NameValueUnit value={metrics.maxHeight} units={ELEVATION_UNITS} format="%d"/>
                         </div>
                     </div>
@@ -400,10 +404,12 @@ export const TrackData = memo(() => {
                             <div className="element-item title">{'Speed'}</div>
                             <div className="element-item">
                                 <WaIcon variant="regular" name={'gauge-simple-high'}/>
+                                <span className="screen-reader-only">{'Average:'}</span>
                                 <NameValueUnit value={metrics.averageSpeed} units={SPEED_UNITS}/>
                             </div>
                             <div className="element-item">
-                                <WaIcon variant="regular" name={'person-hiking'}/>
+                                <WaIcon variant="regular" name={'arrow-up-to-line'}/>
+                                <span className="screen-reader-only">{'Max:'}</span>
                                 <NameValueUnit value={metrics.averageSpeedMoving} units={SPEED_UNITS}/>
                             </div>
                         </div>
@@ -419,10 +425,12 @@ export const TrackData = memo(() => {
                             <div className="element-item title">{'Pace'}</div>
                             <div className="element-item">
                                 <WaIcon variant="regular" name={'gauge-simple-high'}/>
+                                <span className="screen-reader-only">{'Average:'}</span>
                                 <NameValueUnit value={metrics.averagePace} units={PACE_UNITS}/>
                             </div>
                             <div className="element-item">
-                                <WaIcon variant="regular" name={'person-hiking'}/>
+                                <WaIcon variant="regular" name={'arrow-up-to-line'}/>
+                                <span className="screen-reader-only">{'Max:'}</span>
                                 <NameValueUnit value={metrics.averageSpeedMoving} units={PACE_UNITS}/>
                             </div>
                         </div>
