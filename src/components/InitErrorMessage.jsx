@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-06
- * Last modified: 2026-04-05
+ * Created on: 2026-04-15
+ * Last modified: 2026-04-15
  *
  *
  * Copyright © 2026 LGS1920
@@ -29,29 +29,25 @@ import { useState }      from 'react'
  */
 export const InitErrorMessage = ({error}) => {
     const [isOpen, setIsOpen] = useState(false)
-
-    console.log(error)
+    const text = 'We\'re sorry for the interruption.'
+    const remark = 'Something didn\'t go quite as planned on our end.'
 
     return (
         <WaDialog label={`${lgs.servers.studio.name} stopped!`}
                   open={true}
+                  withFooter
                   id={'init-error-modal'}
-                  className={'lgs-theme'}
         >
-            <div slot="footer" className="buttons-bar">
-                <WaButton variant="brand" onClick={() => window.location.reload()}>
-                    <WaIcon slot="start" name="arrows-rotate" variant="regular"/>{'Retry'}
-                </WaButton>
-            </div>
             <div className="lgs--init-error-message">
 
-                <div>
-                    <span>{'We\’re sorry for the interruption.'}</span><br/>
-                    <span>{'Something didn\'t go quite as planned on our end.'}</span>
-                </div>
                 <WaCallout variant="danger" open>
                     <WaIcon slot="icon" name="triangle-exclamation" variant="regular"/>
-                    {error.type && `[${error?.type}]`} {parse(error.message)}
+                    {error.type && `[${error?.type}]`} {parse(error.message)}<br/><br/>
+
+                    <div>
+                        <span>{text}</span><br/>
+                        <span>{remark}</span>
+                    </div>
                 </WaCallout>
 
                 <WaDetails
@@ -77,10 +73,13 @@ export const InitErrorMessage = ({error}) => {
                         </LGSScrollbars>
                     </pre>
                 </WaDetails>
-
             </div>
 
-
+            <div slot="footer" className="buttons-bar">
+                <WaButton variant="brand" onClick={() => window.location.reload()}>
+                    <WaIcon name="arrows-rotate" variant="regular"/>{'Retry'}
+                </WaButton>
+            </div>
         </WaDialog>
     )
 }
