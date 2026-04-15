@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-08
- * Last modified: 2026-04-08
+ * Created on: 2026-04-15
+ * Last modified: 2026-04-15
  *
  *
  * Copyright © 2026 LGS1920
@@ -284,11 +284,9 @@ export const TrackData = memo(() => {
                 }
             </div>
 
-            <WaDivider style={DIVIDER_STYLE}/>
+            <WaDivider/>
 
-            {
-                hasDuration && <DateInfo date={trackDate}/>
-            }
+            {hasDuration && <DateInfo date={trackDate}/>}
 
             {
                 lgs.theJourney.hasSeveralTracks() && (
