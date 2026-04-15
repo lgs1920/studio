@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-18
- * Last modified: 2026-03-18
+ * Created on: 2026-04-15
+ * Last modified: 2026-04-15
  *
  *
  * Copyright © 2026 LGS1920
@@ -318,11 +318,10 @@ export const LGS1920 = () => {
 
         initialize()
     }, [])
-
     return (
         <>
-
             {!initStatus && initError && <InitErrorMessage error={initError}/>}
+
             {initStatus && (
                 <>
                     <div id="drawer-root" className="drawer-wrapper"/>
