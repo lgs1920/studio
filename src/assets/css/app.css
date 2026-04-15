@@ -694,6 +694,9 @@ body {
 /*******************************************************************************
  * Widget Editor
  ******************************************************************************/
+.lgs-widget-editor {
+    flex: 1;
+}
 
 .lgs-widget-editor::part(body), .lgs-widget-editor-controls-wrapper::part(body) {
     display: flex;
