@@ -16,9 +16,10 @@
 
 import { NameValueUnit }                                                       from '@Components/DataDisplay/NameValueUnit'
 import {
+    MILLIS,
     SCENE_WIDGETS, SCENE_WIDGETS_BOARD, WIDGET_EDITOR_POST_RENDER_EVENT, WIDGET_EDITOR_PRE_RENDER_EVENT,
     WIDGETS_EDITOR_DRAWER,
-}                                                                              from '@Core/constants'
+} from '@Core/constants'
 import { Export }                                                              from '@Core/ui/Export'
 import {
     WidgetDynamicRenderer,
@@ -242,6 +243,7 @@ export const TrackData = memo(() => {
     const hasElevation = metrics && metrics.negative?.elevation < 0 && metrics.positive?.elevation > 0
     const hasAltitude = metrics && !isNaN(metrics.minHeight) && !isNaN(metrics.maxHeight)
 
+    console.log(metrics.duration)
     return (
         <div ref={_rootRef} className="track-data-container">
             <div className="journey-profile-chart-menu">
@@ -338,19 +340,20 @@ export const TrackData = memo(() => {
                             <div className="element-item title">{'Duration'}</div>
                             <div className="element-item">
                                 <WaIcon variant="regular" name={'clock-desk'}/>
-                                <NameValueUnit value={UnitUtils.convert(metrics.duration).toTime()}/>
+                                <NameValueUnit value={UnitUtils.convert(metrics.duration * MILLIS).toTime(false)}/>
                             </div>
                         </div>
                         <div className="element-row">
                             <div className="element-item indented">
                                 <WaIcon variant="regular" name={'person-hiking'}/>
                                 <span className="screen-reader-only">{'Moving time:'}</span>
-                                <NameValueUnit value={UnitUtils.convert(metrics.duration - metrics.idleTime).toTime()}/>
+                                <NameValueUnit
+                                    value={UnitUtils.convert((metrics.duration - metrics.idleTime) * MILLIS).toTime(false)}/>
                             </div>
                             <div className="element-item">
                                 <WaIcon variant="regular" name={'pause'}/>
                                 <span className="screen-reader-only">{'Idle time:'}</span>
-                                <NameValueUnit value={UnitUtils.convert(metrics.idleTime).toTime()}/>
+                                <NameValueUnit value={UnitUtils.convert(metrics.idleTime * MILLIS).toTime(false)}/>
                             </div>
                         </div>
                     </>
