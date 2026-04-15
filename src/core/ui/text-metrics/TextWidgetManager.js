@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-24
- * Last modified: 2026-02-24
+ * Created on: 2026-04-15
+ * Last modified: 2026-04-15
  *
  *
  * Copyright © 2026 LGS1920
@@ -90,24 +90,5 @@ export class TextWidgetManager {
             '--lgs-tx-paint-order':  'fill stroke',
 
         }
-    }
-
-    /**
-     * Captures the background and opens the editor.
-     * This runs BEFORE the Panel or TextWidgetEditor are even mounted.
-     */
-    async openTextEditor(group, key, entity) {
-        const _widgetEl = __.ui.widgetManager.getElementById(entity)
-        const _sourceCanvas = lgs.canvas
-
-        if (_widgetEl && _sourceCanvas) {
-            // 1. Force a clean render of the scene
-            lgs.scene.render()
-            const _snapshot = await this.captureBackgroundSnapshot(_widgetEl, _sourceCanvas)
-            lgs.stores.ui.widget.currentSnapshot = _snapshot
-        }
-
-        // 4. Finally, open the drawer
-        __.ui.drawerManager.open(WIDGETS_EDITOR_DRAWER, {entity})
     }
 }
