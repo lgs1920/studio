@@ -107,7 +107,7 @@
     "vite-plugin-cesium": "^1.2.23",
     "vite-plugin-pwa": "^1.2.0",
     "yaml": "^2.8.3",
-    "zip-a-folder": "^6.1.0"
+    "zip-a-folder": "^6.1.1"
   },
   "devDependencies": {
     "@eslint/compat": "^2.0.5",

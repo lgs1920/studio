@@ -2197,7 +2197,7 @@
 
     "yocto-queue": ["yocto-queue@0.1.0", "", {}, "sha512-rVksvsnNCdJ/ohGc6xgPwyN8eheCxsiLM8mxuE/t/mOVqJewPuO1miLpTHQiRgTKCLexL4MeAFVagts7HmNZ2Q=="],
 
-    "zip-a-folder": ["zip-a-folder@6.1.0", "", { "dependencies": { "lzma": "^2.3.2", "tinyglobby": "^0.2.15" }, "bin": { "zip-a-folder": "dist/cli.mjs" } }, "sha512-c/warR1v5M19y0EOov8P25NunZu37Un8ha7CQbylUm+3dO0hpS9dg/fR8MKb8bUTwCyCgfVeRdx6D05NNKjl9g=="],
+    "zip-a-folder": ["zip-a-folder@6.1.1", "", { "dependencies": { "lzma": "^2.3.2", "tinyglobby": "^0.2.16" }, "bin": { "zip-a-folder": "dist/cli.mjs" } }, "sha512-8hjtUn4YQpj8HZvDwtGHhol27oDf+D1x70ldKwA3Bwru6gup62fDVrBTd+BC90/8REgjdCa5ep7EsBiGHudSdA=="],
 
     "zod": ["zod@4.3.6", "", {}, "sha512-rftlrkhHZOcjDwkGlnUtZZkvaPHCsDATp4pGpuOOMDaTdDDXF91wuVDJoWoPsKX/3YPQ5fHuF3STjcYyKr+Qhg=="],
 
@@ -2404,6 +2404,8 @@
     "workbox-build/source-map": ["source-map@0.8.0-beta.0", "", { "dependencies": { "whatwg-url": "^7.0.0" } }, "sha512-2ymg6oRBpebeZi9UUNsgQ89bhx01TcTkmNTGnNO88imTmbSgy4nfujrgVEFKWpMTEGA11EDkTt7mqObTPdigIA=="],
 
     "workbox-expiration/idb": ["idb@7.1.1", "", {}, "sha512-gchesWBzyvGHRO9W8tzUWFDycow5gwjvFKfyV9FF32Y7F50yZMp7mP+T2mJIWFx49zicqyC4uefHM17o6xKIVQ=="],
+
+    "zip-a-folder/tinyglobby": ["tinyglobby@0.2.16", "", { "dependencies": { "fdir": "^6.5.0", "picomatch": "^4.0.4" } }, "sha512-pn99VhoACYR8nFHhxqix+uvsbXineAasWm5ojXoN8xEwK5Kd3/TrhNn1wByuD52UxWRLy8pu+kRMniEi6Eq9Zg=="],
 
     "zrender/tslib": ["tslib@2.3.0", "", {}, "sha512-N82ooyxVNm6h1riLCoyS9e3fuJ3AMG2zIZs2Gd1ATcSFjSA23Q0fzjjZeh0jbJvWVDZ0cJT8yaNNaaXHzueNjg=="],
 
