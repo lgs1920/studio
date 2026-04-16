@@ -107,7 +107,7 @@
     "vite-plugin-cesium": "^1.2.23",
     "vite-plugin-pwa": "^1.2.0",
     "yaml": "^2.8.3",
-    "zip-a-folder": "^6.1.0"
+    "zip-a-folder": "^6.1.1"
   },
   "devDependencies": {
     "@eslint/compat": "^2.0.5",
@@ -121,13 +121,13 @@
     "@typescript-eslint/parser": "^8.58.2",
     "@vitejs/plugin-react": "^6.0.1",
     "baseline-browser-mapping": "^2.10.19",
-    "eslint": "^10.2.0",
-    "eslint-plugin-react-hooks": "^7.0.1",
+    "eslint": "^10.2.1",
+    "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-refresh": "^0.5.2",
     "globals": "^17.5.0",
     "jsdom": "^29.0.2",
-    "typescript": "^6.0.2",
+    "typescript": "^6.0.3",
     "vite": "^8.0.8",
     "vite-plugin-markdown": "^2.2.0",
     "vitest": "^4.1.4"
