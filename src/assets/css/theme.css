@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-14
- * Last modified: 2026-04-14
+ * Created on: 2026-04-18
+ * Last modified: 2026-04-18
  *
  *
  * Copyright © 2026 LGS1920
@@ -1384,66 +1384,36 @@ wa-callout::part(message) {
     --width: var(--lgs-max-mobile-width);
 }
 
-.lgs-toaster wa-toast-item {
+wa-toast-item {
     margin: 0;
+    padding: 0;
     --accent-width: var(--lgs-gutter-s);
+    --wa-space-l: var(--lgs-gutter-s);
+
 }
 
-.lgs-toaster wa-toast-item::part(content) {
-    padding: 0 var(--lgs-gutter);
-    color: var(--lgs-text-on-color);
-}
 
-.lgs-toaster wa-toast-item:first-child::part(toast-item) {
-    margin-bottom: 0;
-}
-
-.lgs-toaster wa-toast-item[variant="success"]::part(toast-item) {
-    /*color: var(--lgs-success-text-color);*/
-    /*border-color: var(--lgs-success-border-color);*/
-    /*background: var(--lgs-success-bg-color);*/
-}
-
-.lgs-toaster wa-toast-item[variant="warning"]::part(toast-item) {
-    /*border-color: var(--lgs-warning-border-color);*/
-    /*background: var(--lgs-warning-bg-color);*/
-}
-
-.lgs-toaster wa-toast-item[variant="danger"]::part(toast-item) {
-    /*border-color: var(--lgs-error-border-color);*/
-    /*background: var(--lgs-error-bg-color);*/
-}
-
-.lgs-toaster wa-toast-item[variant="information"]::part(toast-item) {
-    /*padding: 0;*/
-    /*border-color: var(--lgs-information-border-color);*/
-    /*background: var(--lgs-information-bg-color);*/
-}
-
-.lgs-toaster wa-toast-item::part(icon) {
+wa-toast-item::part(icon) {
     padding-inline-start: var(--lgs-gutter);
 }
 
-.lgs-toaster wa-toast-item wa-icon {
-    padding: var(--lgs-gutter-s);
-}
-
-.lgs-toaster wa-toast-item::part(message) {
+wa-toast-item::part(message) {
     padding: var(--lgs-gutter-xs);
     padding-left: var(--lgs-gutter);
 }
 
-.lgs-toaster wa-toast-item::part(close-button) {
-    color: var(--lgs-text-on-color);
+wa-toast-item::part(close-button) {
+    margin-right: var(--lgs-gutter);
 }
 
-.lgs-toaster wa-toast-item::part(close-button):hover {
+wa-toast-item::part(close-button):hover {
     opacity: 1;
     color: white !important;
 }
 
 .toast-caption {
-    font-weight: 400;
+    font-weight: 700;
+    color: var(--wa-color-brand-on-quiet);
 }
 
 .toast-text {

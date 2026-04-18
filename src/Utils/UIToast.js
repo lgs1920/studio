@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-07
- * Last modified: 2026-03-07
+ * Created on: 2026-04-18
+ * Last modified: 2026-04-18
  *
  *
  * Copyright © 2026 LGS1920
@@ -31,7 +31,7 @@ export const LGS_ERROR_TOAST = 'danger'
 export class UIToast {
 
     /** @type {number} Default display duration */
-    static DURATION = 4 * SECOND
+    static DURATION = 5 * SECOND
     /** * @type {Object} Icon mapping using standard Font Awesome names.
      * Web Awesome 3 resolves these names via the registered icon library.
      */
@@ -60,7 +60,7 @@ export class UIToast {
      * @param {string} type - Variant type
      * @param {number} duration - Visibility duration
      */
-    static #notify = (message, type = LGS_INFORMATION_TOAST, duration = this.DURATION) => {
+    static #notify = (message, type = LGS_INFORMATION_TOAST, duration = UIToast.DURATION) => {
         if (typeof message === 'string') {
             message = {caption: message}
         }
@@ -115,13 +115,13 @@ export class UIToast {
      * @returns {string} HTML string with spacing markers
      */
     static #setNotificationContent = (message = {}) => {
-        let content = message.caption ? `<div class="toast-caption">${message.caption}</div>` : ''
-        content += message.text ? `<div class="toast-text">${message.text}</div>` : ''
-
-        let errors = message.errors ?? []
-        if (!Array.isArray(errors)) {
-            errors = [errors]
-        }
+        const caption = message.caption ? `<h3 class="toast-caption">${message.caption}</h3>` : 'Notification'
+        const content = `
+         ${caption}
+         <div class="toast-content">
+         ${message.text}
+         </div>
+        `
 
         return content
     }
