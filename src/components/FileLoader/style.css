@@ -1,89 +1,121 @@
 /*******************************************************************************
  *
  * This file is part of the LGS1920/studio project.
- *
+ *  
  * File: style.css
  *
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-04-19
+ * Last modified: 2026-04-19
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 #file-loader-modal {
-    --width: min(400px,90vw);
+    --width: min(400px, 90vw);
 }
+
 #file-loader-modal::part(close-button) {
     display: none;
 }
+
 .download-columns, .download-columns-text {
     display: flex;
     flex-direction: column;
     gap: var(--lgs-gutter)
 }
 
-.drag-and-drop-container {
+[slot="dropzone"] {
+    font-size: var(--lgs-font-size);
     display: flex;
-    flex-direction: column;
-}
-.drag-and-drop {
-    --dropzone-border-color: var(--sl-input-border-color);
-    --dropzone-text-color:'';
-    --dropzone-bg-color:'';
-
-    display: flex;
-    flex-direction: column;
-    height: max(20dvh, 150px);
     align-items: center;
+    flex-direction: column;
+    gap: var(--lgs-gutter-s);
+
+}
+
+wa-file-input.drag-and-drop-container::part(dropzone) {
+    cursor: pointer;
+    border-width: 2px;
+    border-color: var(--wa-color-brand-border-loud);
+    border-radius: var(--lgs-border-radius);
+}
+
+wa-file-input.drag-and-drop-container::part(file) {
+    display: none;
+}
+
+
+.drag-and-drop-container {
+    border-radius: var(--lgs-border-radius-s);
+}
+
+.drag-and-drop-container [slot="dropzone"] wa-icon {
+    font-size: var(--lgs-font-size-xl);
+    color: var(--wa-color-brand);
+}
+
+.drag-and-drop-container [slot="dropzone"] span {
+    font-size: var(--lgs-font-size-s);
+}
+
+.drag-and-drop-container.xxxx {
+    font-size: var(--sl-font-size-medium);
+    display: flex;
+    align-items: center;
+
+    flex-direction: column;
     justify-content: center;
+    height: max(20dvh, 150px);
+    cursor: pointer;
+    transition: border .24s ease-in-out;
     text-align: center;
+    color: var(--dropzone-text-color);
     border: calc(2 * var(--sl-input-border-width)) dashed var(--dropzone-border-color);
     border-radius: var(--sl-border-radius-medium);
-    font-size: var(--sl-font-size-medium);
-    color:var(--dropzone-text-color);
-    transition: border .24s ease-in-out;
     background-color: var(--dropzone-bg-color);
+    --dropzone-border-color: var(--sl-input-border-color);
+    --dropzone-text-color: '';
 
-    cursor: pointer;
+    --dropzone-bg-color: '';
 
 }
 
 @keyframes changeBackground {
-    0%   {background-color: transparent; opacity: 0;}
-    25%  {background-color: var(--dropzone-bg-color); opacity: 1;}
-    75%  {background-color: var(--dropzone-bg-color); opacity: 1;}
+    0% {background-color: transparent; opacity: 0;}
+    25% {background-color: var(--dropzone-bg-color); opacity: 1;}
+    75% {background-color: var(--dropzone-bg-color); opacity: 1;}
     100% {background-color: transparent; opacity: 0;}
 }
 
-.drag-and-drop.waiting-drop,.drag-and-drop:hover{
-    --dropzone-border-color:var(--lgs-hover-color);
+.drag-and-drop.waiting-drop, .drag-and-drop:hover {
+    --dropzone-border-color: var(--lgs-hover-color);
     --dropzone-text-color: var(--lgs-hover-color);
-    --dropzone-bg-color:var(--lgs-hover-bg-color);
+    --dropzone-bg-color: var(--lgs-hover-bg-color);
 }
 
 .drag-and-drop.drag-accept {
     animation: changeBackground 3s;
-    --dropzone-border-color:var(--lgs-success-color);
+    --dropzone-border-color: var(--lgs-success-color);
     --dropzone-text-color: var(--lgs-success-color);
-    --dropzone-bg-color:var(--lgs-success-bg-color);
+    --dropzone-bg-color: var(--lgs-success-bg-color);
 }
 
 .drag-and-drop.drag-reject {
     animation: changeBackground 3s;
-    --dropzone-border-color:var(--lgs-error-color);
+    --dropzone-border-color: var(--lgs-error-color);
     --dropzone-text-color: var(--lgs-error-color);
-    --dropzone-bg-color:var(--lgs-error-bg-color);
+    --dropzone-bg-color: var(--lgs-error-bg-color);
 }
 
 .drag-and-drop.drag-some-reject {
     animation: changeBackground 3s;
-    --dropzone-border-color:var(--lgs-warning-color);
+    --dropzone-border-color: var(--lgs-warning-color);
     --dropzone-text-color: var(--lgs-warning-color);
-    --dropzone-bg-color:var(--lgs-warning-bg-color);
+    --dropzone-bg-color: var(--lgs-warning-bg-color);
 }
 
 .drag-and-drop span {
@@ -105,6 +137,7 @@
     padding: 0;
     list-style: none;
 }
+
 .drag-and-drop-list li {
     display: flex;
     gap: var(--lgs-gutter-s);
@@ -112,11 +145,11 @@
     margin-right: var(--lgs-gutter);
 }
 
-.drag-and-drop-list li sl-icon:nth-child(2){
+.drag-and-drop-list li sl-icon:nth-child(2) {
     margin-left: auto;
 }
 
-.drag-and-drop-list li sl-icon{
+.drag-and-drop-list li sl-icon {
     font-size: var(--sl-font-size-large);
     flex: 0 0 auto;
 }
@@ -129,23 +162,23 @@
 }
 
 .read-journey-success {
-    color:var(--lgs-success-color)
+    color: var(--lgs-success-color)
 }
 
 .read-journey-failure {
-    color:var(--lgs-error-color)
+    color: var(--lgs-error-color)
 }
 
 .read-journey-warning {
-    color:var(--lgs-warning-color)
+    color: var(--lgs-warning-color)
 }
 
 .read-journey-error-message {
     font-size: var(--lgs-font-size-s);
-    border-color: var(--lgs-error-color);
-    color: var(--lgs-error-color);
-    background-color:var(--lgs-error-bg-color);
     padding: var(--lgs-gutter-xs);
+    color: var(--lgs-error-color);
+    border-color: var(--lgs-error-color);
+    background-color: var(--lgs-error-bg-color);
 }
 
 .add-url, .load-sample {
@@ -162,7 +195,7 @@
     flex-shrink: 0;
 }
 
-.add-url sl-button, .load-sample sl-button {
+.add-url sl-button, .load-sample sl-button, .load-sample wa-button {
     width: 8rem;
 }
 
@@ -175,3 +208,75 @@
     font-size: var(--sl-font-size-large);
 }
 
+.journey-files-list {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    padding: var(--lgs-gutter-xs);
+    gap: var(--lgs-gutter-s);
+
+    & wa-card {
+        &::part(body) {
+            display: flex;
+            align-items: center;
+            flex-direction: row;
+            border-radius: var(--lgs-border-radius-s);
+            gap: var(--lgs-gutter-s);
+        }
+
+        & wa-icon {
+            font-size: var(--lgs-font-size);
+            width: 3em;
+            height: 3em;
+            color: var(--wa-color-brand-on-quiet);
+            border-radius: var(--lgs-border-radius-s);
+            background: var(--wa-color-neutral-fill-quiet);
+
+            &.status-success {
+                color: var(--wa-color-success-on-quiet);
+                /*background: var(--wa-color-success-fill-quiet);*/
+                background: transparent;
+
+            }
+
+            &.status-error {
+                color: var(--wa-color-danger-on-quiet);
+                /*background: var(--wa-color-danger-fill-quiet);*/
+                background: transparent;
+
+            }
+
+            &.status-warning {
+                color: var(--wa-color-warning-on-quiet);
+                background: transparent;
+            }
+
+            &.status-loading {
+                color: var(--wa-color-brand-on-quiet);
+                background: transparent;
+            }
+        }
+    }
+
+    & .journey-file-details {
+        display: flex;
+        overflow: hidden;
+        flex: 1;
+        flex-direction: column;
+        min-width: 0;
+        text-wrap: nowrap;
+        text-overflow: ellipsis;
+
+        & span {
+            overflow: hidden;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+        }
+
+        & wa-format-bytes {
+            font-size: var(--lgs-font-size-s);
+            color: var(--wa-color-text-quiet);
+        }
+    }
+
+}

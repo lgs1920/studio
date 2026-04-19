@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-11
- * Last modified: 2026-04-11
+ * Created on: 2026-04-19
+ * Last modified: 2026-04-19
  *
  *
  * Copyright © 2026 LGS1920
@@ -522,7 +522,7 @@ export class AppUtils {
      */
     static setSlug = ({suffix = '', content = '', prefix = ''}) => {
 
-        // Array could be an array, let's join it into a single string
+        // content could be an array, let's join it into a single string
         // Slugify each term
         if (Array.isArray(content)) {
             content = content.map(text => __.app.slugify(text)).join('#')

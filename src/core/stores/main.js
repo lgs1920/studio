@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-08
- * Last modified: 2026-04-08
+ * Created on: 2026-04-19
+ * Last modified: 2026-04-19
  *
  *
  * Copyright © 2026 LGS1920
@@ -26,14 +26,8 @@ import { proxyMap } from 'valtio/utils'
 export const main = {
     components: {
         fileLoader: {
-            accepted: 0,
-            error:    '',
-            dragging: {
-                active: null,
-                files: [],
-            },
             fileList: new proxyMap(),
-            empty:    true,
+            loadSample: false,
         },
 
         camera: {

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-06
- * Last modified: 2026-04-03
+ * Created on: 2026-04-19
+ * Last modified: 2026-04-19
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,15 +16,15 @@
 
 import {
     CURRENT_JOURNEY, DRAWING_FROM_DB, DRAWING_FROM_UI, FOCUS_ON_FEATURE, GEOJSON, GPX, JOURNEYS_STORE, JSON_, KML, KMZ,
-    NO_FOCUS, ORIGIN_STORE, POI_FLAG_START, POI_FLAG_STOP, POI_STANDARD_TYPE, REFRESH_DRAWING, SIMULATE_ALTITUDE,
-    TRACK_SLUG, UPDATE_JOURNEY_SILENTLY,
+    NO_FOCUS, ORIGIN_STORE, POI_FLAG_START, POI_FLAG_STOP, POI_STANDARD_TYPE, SIMULATE_ALTITUDE, TRACK_SLUG,
+    UPDATE_JOURNEY_SILENTLY,
 }                   from '@Core/constants'
 import { MapPOI }   from '@Core/MapPOI'
 import { gpx, kml } from '@tmcw/togeojson'
 import { getGeom }  from '@turf/invariant'
 
 import {
-    FEATURE_COLLECTION, FEATURE_LINE_STRING, FEATURE_MULTILINE_STRING, FEATURE_POINT, TrackUtils,
+    FEATURE_COLLECTION, FEATURE_LINE_STRING, FEATURE_MULTILINE_STRING, FEATURE_POINT, IMPORT_LOADING_ERROR, TrackUtils,
 }                          from '@Utils/cesium/TrackUtils'
 import { UIToast }         from '@Utils/UIToast'
 import { ElevationServer } from './Elevation/ElevationServer'
@@ -307,9 +307,10 @@ export class Journey extends MapElement {
         }
         catch (error) {
             console.error(error)
-            // Error => we notify
+            const filename = `<strong>${this.title}<strong>`
             UIToast.error({
-                              caption: `An error occurs during loading <strong>${this.title}<strong>!`, text: error,
+                              caption: IMPORT_LOADING_ERROR.caption,
+                              text:    `${IMPORT_LOADING_ERROR.text} ${filename}<br/>${error.message}`,
                           })
             this.geoJson = undefined
         }
@@ -646,16 +647,16 @@ export class Journey extends MapElement {
 
         await Promise.all(promises)
 
-        //Ready
-        const texts = new Map([
-                                  [DRAWING_FROM_UI, 'Loaded succesfully!'],
-                                  [DRAWING_FROM_DB, 'Loaded succesfully!'],
-                                  [SIMULATE_ALTITUDE, 'Updated succesfully!'],
-                                  [REFRESH_DRAWING, 'Updated succesfully!'],
-                              ])
-        UIToast.success({
-                            caption: `${this.title}`, text: texts.get(action),
-                        })
+        // //Ready
+        // const texts = new Map([
+        //                           [DRAWING_FROM_UI, 'File loaded succesfully!'],
+        //                           [DRAWING_FROM_DB, 'File loaded succesfully!'],
+        //                           [SIMULATE_ALTITUDE, 'File updated succesfully!'],
+        //                           [REFRESH_DRAWING, 'File updated succesfully!'],
+        //                       ])
+        // UIToast.success({
+        //                     caption: `${this.title}`, text: texts.get(action),
+        //                 })
 
         if (mode === FOCUS_ON_FEATURE && action !== DRAWING_FROM_DB && action !== UPDATE_JOURNEY_SILENTLY) {
             this.focus({action: action, rotate: lgs.settings.ui.camera.start.rotate.journey})
