@@ -7,22 +7,24 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-06
- * Last modified: 2026-04-03
+ * Created on: 2026-04-19
+ * Last modified: 2026-04-19
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { FAButton }                                                  from '@Components/FAButton'
 import { ToggleStateIcon }                                           from '@Components/ToggleStateIcon'
-import { CURRENT_JOURNEY, REFRESH_DRAWING, UPDATE_JOURNEY_SILENTLY } from '@Core/constants'
-import { JourneySelector }                                           from '@Editor/journey/JourneySelector'
+import {
+    CLOSE_ICON, CURRENT_JOURNEY, FOCUS_ICON, REFRESH_DRAWING, ROTATION_ICON, UPDATE_JOURNEY_SILENTLY,
+} from '@Core/constants'
+import {
+    JourneySelector,
+} from '@Editor/journey/JourneySelector'
 import { Utils }                                                     from '@Editor/Utils'
-import { faCrosshairsSimple, faSquarePlus, faXmark }                 from '@fortawesome/pro-regular-svg-icons'
-import { faGripDotsVertical }                                        from '@fortawesome/pro-solid-svg-icons'
-import { SlButton, SlIcon, SlIconButton, SlTooltip }                 from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                                                     from '@Utils/FA2SL'
+import {
+    WaButton, WaCard, WaIcon, WaSpinner, WaTooltip,
+} from '@web.awesome.me/webawesome-pro/dist/react'
 import React, { useEffect, useRef, useState }                        from 'react'
 import { sprintf }                                                   from 'sprintf-js'
 import { useSnapshot }                                               from 'valtio'
@@ -81,7 +83,7 @@ export const JourneyToolbar = (props) => {
     }
 
     /**
-     * Memoized condition for rendering FAButton vs SlSpinner.
+     * Memoized condition for rendering button
      * @type {boolean}
      */
     const showButton = () => {
@@ -193,79 +195,89 @@ export const JourneyToolbar = (props) => {
     return (
         <>
             {journeyEditor.list.length > 0 && journeyToolbar.show &&
-                <div className="journey-toolbar lgs-card on-map"
-                     ref={_journeyToolbar}>
-                    <SlTooltip hoist content={'Drag me'}>
-                        <SlIcon className="grabber" library="fa"
-                                name={FA2SL.set(faGripDotsVertical)}/>
-                    </SlTooltip>
+                <WaCard className="journey-toolbar lgs--toolbar"
+                        ref={_journeyToolbar}>
+                    <WaIcon className="grabber" name="grip-dots-vertical"/>
 
                     <JourneySelector onChange={newJourneySelection}
-                                     single="true" size="small" ref={_journeySelector}/>
+                                     single="true"
+                                     size="small"
+                                     ref={_journeySelector}/>
 
-                    <SlTooltip hoist content={'Add a journey'} placement="top">
-                        <SlIconButton library="fa" onClick={journeyLoader} name={FA2SL.set(faSquarePlus)}/>
-                    </SlTooltip>
+                    <WaTooltip for="create-journey-toolbar">{'Add a journey'}</WaTooltip>
+                    <WaButton id="create-journey-toolbar"
+                              appearance="plain"
+                              variant="brand"
+                              onClick={journeyLoader}
+                    >
+                        <WaIcon name="circle-plus" variant={'regular'}/>
+                    </WaButton>
 
-                    <SlTooltip hoist content={textVisibilityJourney} placement="top">
-                        <ToggleStateIcon
-                            onChange={setJourneyVisibility}
-                            initial={editorStore?.journey?.visible}
-                        />
-                    </SlTooltip>
+                    <WaTooltip for="visibility-journey-toolbar">{'Show/hide journey'}</WaTooltip>
+                    <ToggleStateIcon
+                        id="visibility-journey-toolbar"
+                        onChange={setJourneyVisibility}
+                        initial={editorStore?.journey?.visible}
+                    />
+
                     <>
                         {editorStore.journey?.visible &&
                             <>
                                 {!autoRotate.journey &&
-                                    <SlTooltip
-                                        hoist
-                                        content={
-                                            rotate.running && rotate.target.instanceOf(CURRENT_JOURNEY)
-                                            ? 'Stop rotation'
-                                            : 'Start rotation'
-                                        }
-                                        placement="top"
-                                    >
-                                        <SlButton
-                                            size="small"
+                                    <>
+                                        <WaTooltip for="rotate-journey-toolbar">
+                                            {
+                                                rotate.running && rotate.target.instanceOf(CURRENT_JOURNEY)
+                                                ? 'Stop rotation'
+                                                : 'Start rotation'
+                                            }
+                                        </WaTooltip>
+
+                                        <WaButton
+                                            variant="brand"
+                                            appearance="plain"
+                                            id="rotate-journey-toolbar"
                                             ref={manualRotate}
-
                                             onClick={forceRotate}
-                                            loading={rotate.running && rotate.target?.instanceOf(CURRENT_JOURNEY)}
+                                            size="small"
                                         >
-                                            <SlIcon slot="prefix" library="fa"
-                                                    name={FA2SL.set(faCrosshairsSimple)}/>
-                                        </SlButton>
-
-                                    </SlTooltip>
+                                            {rotate.running && rotate.target?.instanceOf(CURRENT_JOURNEY)
+                                             ? (<WaSpinner size="small"/>)
+                                             : (<WaIcon name={FOCUS_ICON} variant="regular"/>)
+                                            }
+                                        </WaButton>
+                                    </>
                                 }
-
-                                <SlTooltip
-                                    hoist
-                                    content={
+                                    <WaTooltip for="focus-journey-toolbar">{
                                         rotate.running && rotate.target?.instanceOf(CURRENT_JOURNEY)
                                         ? 'Stop rotation'
                                         : 'Focus on journey'
                                     }
-                                    placement="top"
-                                >
-                                    <SlButton
-                                        size="small"
+                                    </WaTooltip>
+                                    <WaButton
+                                        id="focus-journey-toolbar"
+                                        variant="brand"
+                                        appearance="plain"
                                         onClick={maybeRotate}
-                                        loading={rotate.running && rotate.target?.instanceOf(CURRENT_JOURNEY)}
                                     >
-                                        <SlIcon slot="prefix" library="fa" name={FA2SL.set(faCrosshairsSimple)}/>
-                                    </SlButton>
-
-                                </SlTooltip>
+                                        {rotate.running && rotate.target?.instanceOf(CURRENT_JOURNEY)
+                                         ? (<WaIcon name={ROTATION_ICON} variant="regular" animation="spin"/>)
+                                         : (<WaIcon name={FOCUS_ICON} variant="regular"/>)
+                                        }
+                                    </WaButton>
                             </>
                         }
-
-                        <SlTooltip hoist content="Close" placement="top">
-                            <FAButton className="close-lgs-toolbar" onClick={closeToolbar} icon={faXmark}/>
-                        </SlTooltip>
                     </>
-                </div>
+
+                    <WaTooltip for="close-journey-toolbar">{'Close'}</WaTooltip>
+                    <WaButton
+                        id="close-journey-toolbar"
+                        variant="brand"
+                        appearance="plain"
+                        className="close-lgs-toolbar" onClick={closeToolbar}>
+                        <WaIcon name={CLOSE_ICON} variant="regular"/>
+                    </WaButton>
+                </WaCard>
             }
         </>
     )
