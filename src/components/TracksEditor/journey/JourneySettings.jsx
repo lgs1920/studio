@@ -7,14 +7,13 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-12
- * Last modified: 2026-04-12
+ * Created on: 2026-04-19
+ * Last modified: 2026-04-19
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { FAButton }                   from '@Components/FAButton'
 import {
     LGSScrollbars,
 }                                     from '@Components/MainUI/LGSScrollbars'

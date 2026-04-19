@@ -7,16 +7,16 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-26
- * Last modified: 2026-03-26
+ * Created on: 2026-04-19
+ * Last modified: 2026-04-19
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import {
-    POI_FLAG_START, POI_FLAG_STOP, POI_STANDARD_TYPE, POI_STARTER_TYPE, POI_TMP_TYPE, POIS_EDITOR_DRAWER,
-}                                                 from '@Core/constants'
+    POI_FLAG_START, POI_FLAG_STOP, POI_STANDARD_TYPE, POI_STARTER_TYPE, POI_TMP_TYPE, POIS_EDITOR_DRAWER, ROTATION_ICON,
+}                                       from '@Core/constants'
 import {
     faArrowRotateRight, faArrowsFromLine, faArrowsToLine, faCopy, faFlag, faLocationDot, faLocationPen, faPanorama,
     faTrashCan,
@@ -25,7 +25,7 @@ import { faMask as faMaskSolid }                  from '@fortawesome/pro-solid-s
 import { SlDivider, SlIcon } from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                                  from '@Utils/FA2SL'
 import { UIToast }                                from '@Utils/UIToast'
-import { WaSpinner } from '@web.awesome.me/webawesome-pro/dist/react'
+import { WaDivider, WaIcon, WaSpinner } from '@web.awesome.me/webawesome-pro/dist/react'
 import React, { useCallback, useEffect, useMemo } from 'react'
 import { useSnapshot }                            from 'valtio'
 
@@ -210,7 +210,7 @@ export const MapPOIContextMenu = (props) => {
             {!currentPoi.expanded && (
                 <div className="context-menu-title-when-reduced">
                     {currentPoi.title ?? 'Point Of Interest'}
-                    <SlDivider/>
+                    <WaDivider/>
                 </div>
             )}
 
@@ -218,71 +218,62 @@ export const MapPOIContextMenu = (props) => {
                 {/* Save as standard POI */}
                 {canSaveAsStandard && (
                     <li onClick={saveAsStandardPOI}>
-                        <SlIcon library="fa" name={FA2SL.set(faLocationDot)}/>
-                        <span>{'Add to library'}</span>
+                        <WaIcon name="location-dot" variant="regular"/>{'Add to library'}
                     </li>
                 )}
 
                 {/* Set as Starter */}
                 {canSetAsStarter && (
                     <li onClick={setAsStarter}>
-                        <SlIcon library="fa" name={FA2SL.set(faFlag)}/>
-                        <span>Set as Starter</span>
+                        <WaIcon name="flag" variant="regular"/>{'Set as Starter'}
                     </li>
                 )}
 
                 {/* Remove POI */}
                 {canRemove && (
                     <li onClick={removePOI}>
-                        <SlIcon library="fa" name={FA2SL.set(faTrashCan)}/>
-                        <span>Remove</span>
+                        <WaIcon name="trash-can" variant="regular"/>{'Remove'}
                     </li>
                 )}
 
                 {/* Edit POI */}
                 {canEdit && (
                     <li onClick={openEditDrawer}>
-                        <SlIcon library="fa" name={FA2SL.set(faLocationPen)}/>
-                        <span>Edit</span>
+                        <WaIcon name="location-pen" variant="regular"/>{'Edit'}
                     </li>
                 )}
 
                 {/* Expand / Reduce */}
                 <li onClick={toggleExpanded}>
-                    <SlIcon library="fa"
-                            name={FA2SL.set(currentPoi.expanded ? faArrowsToLine : faArrowsFromLine)}/>
-                    <span>{currentPoi.expanded ? 'Reduce' : 'Expand'}</span>
+                    <WaIcon name={currentPoi.expanded ? 'arrows-to-line' : 'arrows-from-line'}/>
+                    {currentPoi.expanded ? 'Reduce' : 'Expand'}
                 </li>
 
                 {/* Hide POI */}
                 <li onClick={hidePOI}>
-                    <SlIcon library="fa" name={FA2SL.set(faMaskSolid)}/>
-                    <span>Hide</span>
+                    <WaIcon name="mask" variant="solid"/>{'Hide'}
                 </li>
 
-                <SlDivider/>
+                <WaDivider/>
 
                 {/* Copy Coordinates */}
                 <li onClick={copyCoordinates}>
-                    <SlIcon library="fa" name={FA2SL.set(faCopy)}/>
-                    <span>Copy Coords</span>
+                    <WaIcon name="copy" variant="regular"/>{'Copy Coords'}
                 </li>
 
                 {/* Rotation / Panoramic Options */}
                 {showRotationItem ? (
                     <li onClick={toggleRotation}>
-                        <WaSpinner/>
-                        <span>Stop Rotation</span>
+                        <WaIcon name={ROTATION_ICON} animation="spin" variant="regular"/>
+                        {'Stop Rotation'}
                     </li>
                 ) : (
                      <>
                          <li onClick={toggleRotation}>
-                             <SlIcon library="fa" name={FA2SL.set(faArrowRotateRight)}/>
-                             <span>Rotate Around</span>
+                             <WaIcon name={ROTATION_ICON} variant="regular"/>{'Rotate Around'}
                          </li>
                          <li onClick={startPanoramic}>
-                             <SlIcon library="fa" name={FA2SL.set(faPanorama)}/>
-                             <span>Panoramic</span>
+                             <WaIcon name="panorama" variant="regular"/>{'Panoramic'}
                          </li>
                      </>
                  )}

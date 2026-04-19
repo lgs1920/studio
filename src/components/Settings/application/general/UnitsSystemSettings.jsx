@@ -7,15 +7,13 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-14
- * Last modified: 2026-03-14
+ * Created on: 2026-04-19
+ * Last modified: 2026-04-19
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { faGlobe, faRuler, faRulerCombined }      from '@fortawesome/pro-regular-svg-icons'
-import { FontAwesomeIcon }                        from '@fortawesome/react-fontawesome'
 import { DD, DMS, IMPERIAL, INTERNATIONAL }         from '@Utils/UnitUtils'
 import { WaDivider, WaIcon, WaRadio, WaRadioGroup } from '@web.awesome.me/webawesome-pro/dist/react'
 import { useSnapshot }                              from 'valtio/index'
