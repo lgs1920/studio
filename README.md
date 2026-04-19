@@ -98,8 +98,7 @@ The second phase will expand the platform's capabilities with video generation f
 - **Frontend Framework**: [React 19.1.0](https://react.dev/) - A JavaScript library for building user interfaces
 - **State Management**: [Valtio](https://valtio.pmnd.rs) - A proxy-based state management tool for React
 - **3D Visualization**: [Cesium.js](https://cesium.com/) - The WebGL-based globe and map engine
-- **Canvas Rendering**: [Konva](https://konvajs.org/) - HTML5 Canvas JavaScript framework for drawings and animations
-- **UI Components**: [Shoelace](https://shoelace.style/) - A collection of web components used for the UI
+- **UI Components**: [WebAwesome](https://webawesome.com/) - A collection of web components used for the UI
 - **Geospatial Processing**: [Turf.js](https://turfjs.org/) - Advanced geospatial analysis for browsers and Node.js
 - **Data Storage**: IndexedDB for local storage with structured schema
 - **Build Tool**: [Vite](https://vitejs.dev/) - Next generation frontend tooling
