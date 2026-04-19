@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-28
- * Last modified: 2026-03-28
+ * Created on: 2026-04-19
+ * Last modified: 2026-04-19
  *
  *
  * Copyright © 2026 LGS1920
@@ -45,7 +45,7 @@ export const ToggleStateIcon = memo((props) => {
               id,
               appearance,
               style,
-              size          = false,
+              size = 'medium',
               className = '',
               tooltip,
               disabled  = false,

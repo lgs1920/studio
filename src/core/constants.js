@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-15
- * Last modified: 2026-04-15
+ * Created on: 2026-04-19
+ * Last modified: 2026-04-19
  *
  *
  * Copyright © 2026 LGS1920
@@ -338,6 +338,10 @@ export const POI_CATEGORY_ICONS = new Map([
                                               ['campground', 'campground'],
                                               ['picnic-area', 'table-picnic'],
                                           ])
+
+export const ROTATION_ICON = 'arrows-rotate',
+             FOCUS_ICON    = 'crosshairs-simple',
+             CLOSE_ICON    = 'xmark'
 
 
 /**

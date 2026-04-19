@@ -7,24 +7,25 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-06
- * Last modified: 2026-04-02
+ * Created on: 2026-04-19
+ * Last modified: 2026-04-19
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { JourneyLoaderButton }   from '@Components/FileLoader/JourneyLoaderButton'
-import PanelActions     from '@Components/PanelsActions'
-import { JOURNEY_EDITOR_DRAWER } from '@Core/constants'
-import { SlSwitch } from '@shoelace-style/shoelace/dist/react'
-import WaDrawer from '@Components/WaDrawerNonModal'
+import DrawerFooter                 from '@Components/DrawerFooter'
+import { JourneyLoaderButton }      from '@Components/FileLoader/JourneyLoaderButton'
+import PanelActions                 from '@Components/PanelsActions'
+import { JOURNEY_EDITOR_DRAWER }    from '@Core/constants'
+import { SlSwitch }                 from '@shoelace-style/shoelace/dist/react'
+import WaDrawer                     from '@Components/WaDrawerNonModal'
 
 import './style.css'
 import { WaButton, WaIcon, WaSwitch } from '@web.awesome.me/webawesome-pro/dist/react'
-import { memo, useCallback }          from 'react'
-import { createPortal } from 'react-dom'
-import { useSnapshot }           from 'valtio'
+import React, { memo, useCallback } from 'react'
+import { createPortal }             from 'react-dom'
+import { useSnapshot }              from 'valtio'
 import { JourneySelector }       from './journey/JourneySelector'
 import { JourneySettings }       from './journey/JourneySettings'
 import { TrackSettings }         from './track/TrackSettings'
@@ -125,7 +126,7 @@ export const TracksEditor = memo(() => {
                         />
                         </PanelActions>
                         {hasJourneys && <JourneyContent journeyVisible={journeyVisible}/>}
-                        <div id="journey-editor-footer" slot="footer"/>
+                        <DrawerFooter/>
                     </WaDrawer>
             }
         </>
