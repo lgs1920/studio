@@ -1034,6 +1034,7 @@ wa-details.lgs--details-hoverable:not([open]):hover {
 }
 
 .lgs-context-menu ul {
+    font-size: var(--lgs-font-size);
     width: 100%;
     margin: 0;
     margin-bottom: var(--lgs-gutter-xs);
@@ -1059,7 +1060,7 @@ wa-details.lgs--details-hoverable:not([open]):hover {
     --color: var(--lgs-card-on-map-border-color);
 }
 
-.lgs-context-menu sl-icon, .lgs-context-menu svg, .lgs-context-menu wa-spinner {
+.lgs-context-menu wa-icon, .lgs-context-menu svg, .lgs-context-menu wa-spinner {
     margin-right: var(--lgs-gutter-s);
 }
 
