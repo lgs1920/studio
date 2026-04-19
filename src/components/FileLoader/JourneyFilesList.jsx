@@ -16,8 +16,8 @@
 
 import { LGSScrollbars }                               from '@Components/MainUI/LGSScrollbars'
 import { JOURNEY_EXISTS, JOURNEY_OK, JOURNEY_WAITING } from '@Utils/cesium/TrackUtils'
-import { WaCard, WaIcon, WaFormatBytes, WaCallout }    from '@web.awesome.me/webawesome-pro/dist/react'
-import { useSnapshot }                                 from 'valtio'
+import { WaCard, WaIcon, WaFormatBytes, WaCallout, WaSpinner } from '@web.awesome.me/webawesome-pro/dist/react'
+import { useSnapshot }                                         from 'valtio'
 
 /**
  * JourneyFilesList Component
@@ -38,8 +38,8 @@ export const JourneyFilesList = () => {
     const getStatusTheme = (status) => {
         if (status === JOURNEY_WAITING) {
             return {
-                icon:      'arrow-rotate-right',
-                className: 'fa-spin status-loading',
+                icon:      'display-arrow-down',
+                className: 'fa-beat-fade status-waiting',
             }
         }
 
