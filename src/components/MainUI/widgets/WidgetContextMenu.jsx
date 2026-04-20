@@ -7,30 +7,20 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-13
- * Last modified: 2026-01-13
+ * Created on: 2026-04-20
+ * Last modified: 2026-04-20
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { faRegularSquareCircleMinus, faRegularSquareCirclePlus } from '@awesome.me/kit-eb5c406148/icons/kit/custom'
 import {
     WIDGET_EDITOR_POST_RENDER_EVENT, WIDGET_EDITOR_PRE_RENDER_EVENT, WIDGETS_CAPABILITIES, WIDGETS_EDITOR_DRAWER,
-}                                                                from '@Core/constants'
-import {
-    WidgetDynamicRenderer,
-}                                                                from '@Core/ui/widget-manager/dynamic-render/WidgetDynamicRender'
-import {
-    faArrowDown, faArrowDownLeft, faArrowDownRight, faArrowLeft, faArrowRight, faArrowUp, faArrowUpLeft, faArrowUpRight,
-    faCompress, faPaintbrushPencil, faPlus, faTrashCan,
-}                                                                from '@fortawesome/pro-regular-svg-icons'
-import {
-    SlIcon, SlTooltip,
-}                                                                from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                                                 from '@Utils/FA2SL'
-import React, { useMemo } from 'react'
-import { useSnapshot }                                           from 'valtio'
+}                                from '@Core/constants'
+import { WidgetDynamicRenderer } from '@Core/ui/widget-manager/dynamic-render/WidgetDynamicRender'
+import { WaIcon, WaTooltip }     from '@web.awesome.me/webawesome-pro/dist/react'
+import React, { useMemo }        from 'react'
+import { useSnapshot }           from 'valtio'
 
 const PERCENTAGE = 0.1
 
@@ -160,99 +150,84 @@ export const WidgetContextMenu = ({targetId, menuRef}) => {
     }
 
     return (
-        <div className="lgs-context-menu widget-context-menu lgs-card on-map" ref={menuRef}>
+        <div className="lgs-context-menu widget-context-menu poi-on-map-menu  lgs-card on-map" ref={menuRef}>
             <ul>
                 {/* Size controls */}
                 {capabilities.canReset && (
                     <li className="widget-grid-one-line widget-no-hover buttons-bar-on-map">
-                        <SlTooltip content="Reset size" placement="top">
-                            <SlIcon
-                                library="fa"
-                                name={FA2SL.set(faCompress)}
+                        <WaTooltip placement="top" for="compress-widget-context">{'Reset size'}</WaTooltip>
+                        <WaIcon name="compress"
+                                id="compress-widget-context"
                                 className="lgs-one-line-card on-map"
                                 onClick={() => resetSize(1)}
-                            />
-                        </SlTooltip>
+                        />
 
-                        <SlTooltip content={`Shrink -${PERCENTAGE * 100}%`} placement="top">
-                            <SlIcon
-                                library="fa"
-                                name={FA2SL.set(faRegularSquareCircleMinus)}
+
+                        <WaTooltip placement="top"
+                                   for="shrink-widget-context">{`Shrink -${PERCENTAGE * 100}%`}</WaTooltip>
+                        <WaIcon id="shrink-widget-context"
+                                name="arrow-down-left-and-arrow-up-right-to-center"
                                 className="lgs-one-line-card on-map"
                                 onClick={() => resetSize(-PERCENTAGE)}
-                            />
-                        </SlTooltip>
+                        />
 
-                        <SlTooltip content={`Expand +${PERCENTAGE * 100}%`} placement="top">
-                            <SlIcon
-                                library="fa"
-                                name={FA2SL.set(faRegularSquareCirclePlus)}
+
+                        <WaTooltip placement="top"
+                                   for="expand-widget-context">{`Expand +${PERCENTAGE * 100}%`}</WaTooltip>
+                        <WaIcon id="expand-widget-context"
+                                name="arrow-up-right-and-arrow-down-left-from-center"
                                 className="lgs-one-line-card on-map"
                                 onClick={() => resetSize(PERCENTAGE)}
-                            />
-                        </SlTooltip>
+                        />
+
                     </li>
                 )}
 
                 {/* Edit action - Only show if not already being edited in the current entity context */}
                 {capabilities.canEdit && (drawers.open !== WIDGETS_EDITOR_DRAWER || drawers.entity !== targetId) && (
                     <li onClick={editWidget}>
-                        <SlIcon library="fa" name={FA2SL.set(faPaintbrushPencil)}/>
-                        <SlTooltip content="Edit Widget" placement="left">
-                            <span>Edit</span>
-                        </SlTooltip>
+                        <WaIcon name="paintbrush-pencil"/>
+                        <WaTooltip content="Edit Widget" placement="left"></WaTooltip>
+                        <span>Edit</span>
+
                     </li>
                 )}
 
                 {/* Remove action */}
                 {capabilities.canRemove && (
-                    <li onClick={removeWidget}>
-                        <SlIcon library="fa" name={FA2SL.set(faTrashCan)}/>
-                        <SlTooltip content="Remove Widget" placement="left">
-                            <span>Remove</span>
-                        </SlTooltip>
-                    </li>
+                    <li onClick={removeWidget}><WaIcon name="trash-can"/>{'Remove'}</li>
                 )}
 
                 {/* Positioning Grid */}
                 {capabilities.canPosition && (
                     <li className="widget-grid-position widget-no-hover buttons-bar-on-map">
-                        <SlTooltip content="Top left">
-                            <SlIcon library="fa" name={FA2SL.set(faArrowUpLeft)} className="lgs-one-line-card on-map"
-                                    onClick={() => moveTo('toTopLeft')}/>
-                        </SlTooltip>
-                        <SlTooltip content="Top">
-                            <SlIcon library="fa" name={FA2SL.set(faArrowUp)} className="lgs-one-line-card on-map"
-                                    onClick={() => moveTo('toTop')}/>
-                        </SlTooltip>
-                        <SlTooltip content="Top right">
-                            <SlIcon library="fa" name={FA2SL.set(faArrowUpRight)} className="lgs-one-line-card on-map"
-                                    onClick={() => moveTo('toTopRight')}/>
-                        </SlTooltip>
-                        <SlTooltip content="Left">
-                            <SlIcon library="fa" name={FA2SL.set(faArrowLeft)} className="lgs-one-line-card on-map"
-                                    onClick={() => moveTo('toLeft')}/>
-                        </SlTooltip>
-                        <SlTooltip content="Center">
-                            <SlIcon library="fa" name={FA2SL.set(faPlus)} className="lgs-one-line-card on-map"
-                                    onClick={() => moveTo('toCenter')}/>
-                        </SlTooltip>
-                        <SlTooltip content="Right">
-                            <SlIcon library="fa" name={FA2SL.set(faArrowRight)} className="lgs-one-line-card on-map"
-                                    onClick={() => moveTo('toRight')}/>
-                        </SlTooltip>
-                        <SlTooltip content="Bottom left">
-                            <SlIcon library="fa" name={FA2SL.set(faArrowDownLeft)} className="lgs-one-line-card on-map"
-                                    onClick={() => moveTo('toBottomLeft')}/>
-                        </SlTooltip>
-                        <SlTooltip content="Bottom">
-                            <SlIcon library="fa" name={FA2SL.set(faArrowDown)} className="lgs-one-line-card on-map"
-                                    onClick={() => moveTo('toBottom')}/>
-                        </SlTooltip>
-                        <SlTooltip content="Bottom right">
-                            <SlIcon library="fa" name={FA2SL.set(faArrowDownRight)} className="lgs-one-line-card on-map"
-                                    onClick={() => moveTo('toBottomRight')}/>
-                        </SlTooltip>
+                        <WaIcon name="arrow-up-left" className="lgs-one-line-card on-map"
+                                onClick={() => moveTo('toTopLeft')}/>
+
+                        <WaIcon name="arrow-up" className="lgs-one-line-card on-map"
+                                onClick={() => moveTo('toTop')}/>
+
+                        <WaIcon name="arrow-up-right" className="lgs-one-line-card on-map"
+                                onClick={() => moveTo('toTopRight')}/>
+
+                        <WaIcon name="arrow-left" className="lgs-one-line-card on-map"
+                                onClick={() => moveTo('toLeft')}/>
+
+                        <WaIcon name="plus" className="lgs-one-line-card on-map"
+                                onClick={() => moveTo('toCenter')}/>
+
+                        <WaIcon name="arrow-right" className="lgs-one-line-card on-map"
+                                onClick={() => moveTo('toRight')}/>
+
+                        <WaIcon name="arrow-down-left" className="lgs-one-line-card on-map"
+                                onClick={() => moveTo('toBottomLeft')}/>
+
+                        <WaIcon name="arrow-down" className="lgs-one-line-card on-map"
+                                onClick={() => moveTo('toBottom')}/>
+
+                        <WaIcon name="arrow-down-right" className="lgs-one-line-card on-map"
+                                onClick={() => moveTo('toBottomRight')}/>
+
                     </li>
                 )}
             </ul>

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-19
- * Last modified: 2026-04-19
+ * Created on: 2026-04-20
+ * Last modified: 2026-04-20
  *
  *
  * Copyright © 2026 LGS1920
@@ -331,18 +331,14 @@ wa-button::part(label) {
     height: var(--lgs-font-size-m);
 }
 
-sl-button:not(.square-button) sl-icon:first-child {
+sl-button:not(.square-button) wa-icon:first-child {
     margin-right: var(--lgs-gutter-s);
 }
 
-sl-icon-button[size="small"], sl-icon[size="small"] {
-    font-size: var(--sl-font-size-small);
-}
-
-.on-map sl-button[variant="default"]::part(base),
-.on-map sl-button[variant="default"]::part(prefix),
-.on-map sl-button[variant="default"]::part(suffix),
-.on-map sl-icon-button::part(base) {
+.on-map wa-button[variant="default"]::part(base),
+.on-map wa-button[variant="default"]::part(prefix),
+.on-map wa-button[variant="default"]::part(suffix),
+.on-map wa-icon-button::part(base) {
     color: var(--lgs-light-color-75);
     border-color: var(--lgs-light-color-25);
 }
@@ -1046,7 +1042,8 @@ wa-details.lgs--details-hoverable:not([open]):hover {
     display: flex;
     align-items: center;
     max-width: 150px;
-    margin: 0;
+    margin: 2px;
+    padding: 2px;
     cursor: pointer;
     white-space: nowrap;
     border-radius: var(--lgs-border-radius-xs);
