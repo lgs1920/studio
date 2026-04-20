@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-19
- * Last modified: 2026-04-19
+ * Created on: 2026-04-20
+ * Last modified: 2026-04-20
  *
  *
  * Copyright © 2026 LGS1920
@@ -30,9 +30,10 @@ import {
     ToggleStateIcon,
 }                                     from '@Components/ToggleStateIcon'
 import {
-    CURRENT_JOURNEY, JOURNEY_EDITOR_DRAWER, ORIGIN_STORE, REFRESH_DRAWING, REMOVE_JOURNEY_IN_EDIT, SIMULATE_ALTITUDE,
+    CURRENT_JOURNEY, EDIT_JOURNEY_ICON, JOURNEY_EDITOR_DRAWER, ORIGIN_STORE, REFRESH_DRAWING, REMOVE_JOURNEY_IN_EDIT,
+    SIMULATE_ALTITUDE,
     UPDATE_JOURNEY_SILENTLY,
-}                                     from '@Core/constants'
+} from '@Core/constants'
 import {
     ElevationServer,
 }                                     from '@Core/Elevation/ElevationServer'
@@ -346,7 +347,7 @@ export const JourneySettings = () => {
                                 <WaIcon name="rectangle-list" variant="regular"/> Data
                             </WaTab>
                             <WaTab slot="nav" panel={EDIT} active={__.ui.drawerManager.tabActive(EDIT)}>
-                                <WaIcon name="paintbrush-pencil" variant="regular"/> Edit
+                                <WaIcon name={EDIT_JOURNEY_ICON} variant="regular"/> Edit
                             </WaTab>
                             <WaTab slot="nav" panel={POIS} active={__.ui.drawerManager.tabActive(POIS)}>
                                 <WaIcon name="location-dot" variant="regular"/> POIs

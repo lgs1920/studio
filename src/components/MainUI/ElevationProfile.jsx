@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-15
- * Last modified: 2026-04-15
+ * Created on: 2026-04-20
+ * Last modified: 2026-04-20
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,9 +16,10 @@
 
 import { ProfileChart }                                             from '@Components/Profile/ProfileChart'
 import {
+    EDIT_WIDGET_ICON,
     SCENE_WIDGETS, SCENE_WIDGETS_BOARD, WIDGET_EDITOR_POST_RENDER_EVENT, WIDGET_EDITOR_PRE_RENDER_EVENT,
     WIDGETS_EDITOR_DRAWER,
-}                                                                   from '@Core/constants'
+} from '@Core/constants'
 import {
     ElevationServer,
 }                                                                   from '@Core/Elevation/ElevationServer'
@@ -347,7 +348,7 @@ export const ElevationProfile = (props) => {
                              <WaTooltip for="edit-profile-widget-in-settings">{'Edit widget'}</WaTooltip>
                              <WaButton id="edit-profile-widget-in-settings" appearance="plain" variant="brand"
                                        onClick={openWidgetProfileEditor}>
-                                 <WaIcon variant="regular" name="pen-ruler"/>
+                                 <WaIcon variant="regular" name={EDIT_WIDGET_ICON}/>
                              </WaButton>
                              <WaTooltip for="snap-profile-widget-in-settings">{'Export to image'}</WaTooltip>
                              <WaButton id="snap-profile-widget-in-settings" appearance="plain" variant="brand"

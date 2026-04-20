@@ -15,8 +15,9 @@
  ******************************************************************************/
 
 import {
+    EDIT_WIDGET_ICON,
     WIDGET_EDITOR_POST_RENDER_EVENT, WIDGET_EDITOR_PRE_RENDER_EVENT, WIDGETS_CAPABILITIES, WIDGETS_EDITOR_DRAWER,
-}                                from '@Core/constants'
+} from '@Core/constants'
 import { WidgetDynamicRenderer } from '@Core/ui/widget-manager/dynamic-render/WidgetDynamicRender'
 import { WaIcon, WaTooltip }     from '@web.awesome.me/webawesome-pro/dist/react'
 import React, { useMemo }        from 'react'
@@ -157,6 +158,7 @@ export const WidgetContextMenu = ({targetId, menuRef}) => {
                     <li className="widget-grid-one-line widget-no-hover buttons-bar-on-map">
                         <WaTooltip placement="top" for="compress-widget-context">{'Reset size'}</WaTooltip>
                         <WaIcon name="compress"
+                                variant="regular"
                                 id="compress-widget-context"
                                 className="lgs-one-line-card on-map"
                                 onClick={() => resetSize(1)}
@@ -166,6 +168,7 @@ export const WidgetContextMenu = ({targetId, menuRef}) => {
                         <WaTooltip placement="top"
                                    for="shrink-widget-context">{`Shrink -${PERCENTAGE * 100}%`}</WaTooltip>
                         <WaIcon id="shrink-widget-context"
+                                variant="regular"
                                 name="arrow-down-left-and-arrow-up-right-to-center"
                                 className="lgs-one-line-card on-map"
                                 onClick={() => resetSize(-PERCENTAGE)}
@@ -175,6 +178,7 @@ export const WidgetContextMenu = ({targetId, menuRef}) => {
                         <WaTooltip placement="top"
                                    for="expand-widget-context">{`Expand +${PERCENTAGE * 100}%`}</WaTooltip>
                         <WaIcon id="expand-widget-context"
+                                variant="regular"
                                 name="arrow-up-right-and-arrow-down-left-from-center"
                                 className="lgs-one-line-card on-map"
                                 onClick={() => resetSize(PERCENTAGE)}
@@ -186,7 +190,7 @@ export const WidgetContextMenu = ({targetId, menuRef}) => {
                 {/* Edit action - Only show if not already being edited in the current entity context */}
                 {capabilities.canEdit && (drawers.open !== WIDGETS_EDITOR_DRAWER || drawers.entity !== targetId) && (
                     <li onClick={editWidget}>
-                        <WaIcon name="paintbrush-pencil"/>
+                        <WaIcon name={EDIT_WIDGET_ICON} variant="regular"/>
                         <WaTooltip content="Edit Widget" placement="left"></WaTooltip>
                         <span>Edit</span>
 
@@ -195,37 +199,46 @@ export const WidgetContextMenu = ({targetId, menuRef}) => {
 
                 {/* Remove action */}
                 {capabilities.canRemove && (
-                    <li onClick={removeWidget}><WaIcon name="trash-can"/>{'Remove'}</li>
+                    <li onClick={removeWidget}><WaIcon name="trash-can" variant="regular"/>{'Remove'}</li>
                 )}
 
                 {/* Positioning Grid */}
                 {capabilities.canPosition && (
                     <li className="widget-grid-position widget-no-hover buttons-bar-on-map">
                         <WaIcon name="arrow-up-left" className="lgs-one-line-card on-map"
+                                variant="regular"
                                 onClick={() => moveTo('toTopLeft')}/>
 
                         <WaIcon name="arrow-up" className="lgs-one-line-card on-map"
+                                variant="regular"
                                 onClick={() => moveTo('toTop')}/>
 
                         <WaIcon name="arrow-up-right" className="lgs-one-line-card on-map"
+                                variant="regular"
                                 onClick={() => moveTo('toTopRight')}/>
 
                         <WaIcon name="arrow-left" className="lgs-one-line-card on-map"
+                                variant="regular"
                                 onClick={() => moveTo('toLeft')}/>
 
                         <WaIcon name="plus" className="lgs-one-line-card on-map"
+                                variant="regular"
                                 onClick={() => moveTo('toCenter')}/>
 
                         <WaIcon name="arrow-right" className="lgs-one-line-card on-map"
+                                variant="regular"
                                 onClick={() => moveTo('toRight')}/>
 
                         <WaIcon name="arrow-down-left" className="lgs-one-line-card on-map"
+                                variant="regular"
                                 onClick={() => moveTo('toBottomLeft')}/>
 
                         <WaIcon name="arrow-down" className="lgs-one-line-card on-map"
+                                variant="regular"
                                 onClick={() => moveTo('toBottom')}/>
 
                         <WaIcon name="arrow-down-right" className="lgs-one-line-card on-map"
+                                variant="regular"
                                 onClick={() => moveTo('toBottomRight')}/>
 
                     </li>

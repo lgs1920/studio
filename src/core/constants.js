@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-19
- * Last modified: 2026-04-19
+ * Created on: 2026-04-20
+ * Last modified: 2026-04-20
  *
  *
  * Copyright © 2026 LGS1920
@@ -341,7 +341,9 @@ export const POI_CATEGORY_ICONS = new Map([
 
 export const ROTATION_ICON = 'arrows-rotate',
              FOCUS_ICON    = 'crosshairs-simple',
-             CLOSE_ICON    = 'xmark'
+             CLOSE_ICON        = 'xmark',
+             EDIT_JOURNEY_ICON = 'paintbrush-pencil',
+             EDIT_WIDGET_ICON  = 'pen-ruler'
 
 
 /**
