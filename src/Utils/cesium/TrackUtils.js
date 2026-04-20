@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-19
- * Last modified: 2026-04-19
+ * Created on: 2026-04-20
+ * Last modified: 2026-04-20
  *
  *
  * Copyright © 2026 LGS1920
@@ -223,7 +223,7 @@ export class TrackUtils {
             case REFRESH_DRAWING:
             case DRAWING_FROM_UI:
                 const material = new PolylineOutlineMaterialProperty({
-                                                                         color: CColor.fromCssColorString(track.color),
+                                                                         color: CColor.fromCssColorString(track.color ?? '#ffffff'),
                                                                          outlineWidth: 0,
                                                                      })
                 source.entities.values.forEach(entity => {
