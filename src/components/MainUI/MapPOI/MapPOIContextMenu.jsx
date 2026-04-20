@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-19
- * Last modified: 2026-04-19
+ * Created on: 2026-04-20
+ * Last modified: 2026-04-20
  *
  *
  * Copyright © 2026 LGS1920
@@ -17,13 +17,7 @@
 import {
     POI_FLAG_START, POI_FLAG_STOP, POI_STANDARD_TYPE, POI_STARTER_TYPE, POI_TMP_TYPE, POIS_EDITOR_DRAWER, ROTATION_ICON,
 }                                       from '@Core/constants'
-import {
-    faArrowRotateRight, faArrowsFromLine, faArrowsToLine, faCopy, faFlag, faLocationDot, faLocationPen, faPanorama,
-    faTrashCan,
-}                                                 from '@fortawesome/pro-regular-svg-icons'
-import { faMask as faMaskSolid }                  from '@fortawesome/pro-solid-svg-icons'
-import { SlDivider, SlIcon } from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                                  from '@Utils/FA2SL'
+
 import { UIToast }                                from '@Utils/UIToast'
 import { WaDivider, WaIcon, WaSpinner } from '@web.awesome.me/webawesome-pro/dist/react'
 import React, { useCallback, useEffect, useMemo } from 'react'
