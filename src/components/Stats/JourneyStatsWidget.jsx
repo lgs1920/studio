@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-24
- * Last modified: 2026-02-24
+ * Created on: 2026-04-20
+ * Last modified: 2026-04-20
  *
  *
  * Copyright © 2026 LGS1920
@@ -18,16 +18,26 @@ import { Widget }                                                               
 import { JourneyStats }                                                           from '@Components/Stats/JourneyStats'
 import { JOURNEY_WIDGETS, LGS_VISUAL_WIDGET, SCENE_WIDGETS, SCENE_WIDGETS_BOARD } from '@Core/constants'
 import { DISTANCE_UNITS, ELEVATION_UNITS, PACE_UNITS, SPEED_UNITS }               from '@Utils/UnitUtils'
-import { DateTime }                                                               from 'luxon'
 import React, { useEffect, useMemo, useState }                                    from 'react'
 import { useSnapshot }                                                            from 'valtio'
 import './style.css'
 
 export const JourneyStatsWidget = ({id, context, zIndex}) => {
-    const {widgetEditor, widgetsBoard} = context
+    /**
+     * Early return if the journey is not defined to avoid unnecessary computations
+     */
+    if (!lgs.theJourney) {
+        return null
+    }
 
-    const unitSystem = useSnapshot(lgs.settings.unitSystem).current
+    const {widgetEditor, widgetsBoard} = context
     const journey = lgs.theJourney
+
+    const $unitSystem = lgs.settings.unitSystem
+    const {current: unitSystem} = useSnapshot($unitSystem)
+
+    const $video = lgs.stores.ui.video
+    const video = useSnapshot($video)
 
     const journeyMetrics = useMemo(() => {
         if (!journey?.metrics) {
@@ -35,8 +45,6 @@ export const JourneyStatsWidget = ({id, context, zIndex}) => {
         }
         return {...journey.getMetrics()}
     }, [journey, unitSystem])
-
-    const video = useSnapshot(lgs.stores.ui.video)
 
     const units = useMemo(() => ({
         elevation: ELEVATION_UNITS[unitSystem],
@@ -62,8 +70,7 @@ export const JourneyStatsWidget = ({id, context, zIndex}) => {
         }
     }, [widgetsBoard])
 
-    const metrics = useMemo(() => journeyMetrics.metrics, [journeyMetrics])
-    const global = useMemo(() => journeyMetrics.global, [journeyMetrics])
+    const metrics = useMemo(() => journeyMetrics?.metrics, [journeyMetrics])
 
     const config = useMemo(() => {
         return {
@@ -104,9 +111,9 @@ export const JourneyStatsWidget = ({id, context, zIndex}) => {
         <Widget
             isVisible={true}
             config={config}
-            key={lgs.theJourney.slug}
+            key={journey.slug}
         >
-            {journey && metrics && (
+            {metrics && (
                 <JourneyStats
                     id={id}
                     metrics={metrics}
