@@ -26,10 +26,10 @@ import {
     ScreenMediaRecorder,
 }                                                                          from '@Core/ui/screen-media-recorder/recorder/ScreenMediaRecorder'
 import {
-    WaButton, WaIcon, WaPopup, WaTooltip,
+    WaButton, WaIcon, WaPopup,
 }                                                                          from '@web.awesome.me/webawesome-pro/dist/react'
 import classNames                                                          from 'classnames'
-import React, { Fragment, memo, useCallback, useEffect, useRef, useState } from 'react'
+import { Fragment, memo, useCallback, useEffect, useRef, useState }        from 'react'
 import { useSnapshot }                                                     from 'valtio'
 import '../style.css'
 
@@ -60,6 +60,28 @@ export const VideoPresetToolbar = memo(() => {
         }
         return {key: 'custom', ...ScreenMediaRecorder.VIDEO_PRESETS.get('custom')}
     }, [])
+
+    const getSafeIndex = useCallback((value, list, fallback) => {
+        return Number.isInteger(value) && value >= 0 && value < list.length ? value : fallback
+    }, [])
+
+    useEffect(() => {
+        const safeFps = getSafeIndex(lgs.settings.ui.video?.fps, ScreenMediaRecorder.FPS, ScreenMediaRecorder.DEFAULT_FPS_INDEX)
+        const safeQuality = getSafeIndex(lgs.settings.ui.video?.quality, ScreenMediaRecorder.QUALITY, ScreenMediaRecorder.DEFAULT_QUALITY_INDEX)
+
+        if ($video.fps !== safeFps) {
+            $video.fps = safeFps
+        }
+        if ($video.quality !== safeQuality) {
+            $video.quality = safeQuality
+        }
+        if (lgs.settings.ui.video.fps !== safeFps) {
+            lgs.settings.ui.video.fps = safeFps
+        }
+        if (lgs.settings.ui.video.quality !== safeQuality) {
+            lgs.settings.ui.video.quality = safeQuality
+        }
+    }, [$video, getSafeIndex])
 
     /**
      * Sync local preset state when store indexes change

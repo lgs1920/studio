@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-14
- * Last modified: 2026-02-14
+ * Created on: 2026-04-23
+ * Last modified: 2026-04-23
  *
  *
  * Copyright © 2026 LGS1920
@@ -398,7 +398,11 @@ export class WidgetCoreRegistry {
                 config.group = savedWidget.group || config.group
                 config.scale = savedWidget.scale || {x: 1, y: 1}
                 config.rotate = savedWidget.rotate || 0
-                config.ratio = savedWidget.ratio
+                const savedRatioValue = savedWidget.ratio?.value ?? savedWidget.ratio
+                const resolvedSavedRatio = this.getRatio(savedRatioValue)
+                if (resolvedSavedRatio) {
+                    config.ratio = resolvedSavedRatio
+                }
                 config.attachTo = savedWidget.attachTo || config.attachTo || 'center'
                 // Prefer initialConfig.zIndex if explicitly provided (for newly added widgets)
                 if (initialConfig.zIndex !== undefined) {

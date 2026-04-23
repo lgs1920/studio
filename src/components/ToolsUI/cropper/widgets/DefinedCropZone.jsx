@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-04-23
+ * Last modified: 2026-04-23
  *
  *
  * Copyright © 2026 LGS1920
@@ -22,7 +22,8 @@
  ******************************************************************************/
 
 import { VideoMessage }                             from '@Components/MainUI/video/VideoMessage'
-import React, { memo, useEffect, useRef, useState } from 'react'
+import classNames                            from 'classnames'
+import { memo, useEffect, useRef, useState } from 'react'
 import { useSnapshot }                              from 'valtio'
 import { CropZoneInfo }                             from './CropZoneInfo'
 
@@ -38,7 +39,7 @@ export const DefinedCropZone = memo(function DefinedCropZone({
     const $video = lgs.stores.ui.video
     const video = useSnapshot($video)
 
-    const [crop, setCrop] = useState(() => {
+    const [crop] = useState(() => {
         const config = __.ui.widgetManager.getWidgetConfig(context.id)
         return config?.cropDimensions ?? {left: 0, top: 0, width: 0, height: 0}
     })
@@ -58,7 +59,7 @@ export const DefinedCropZone = memo(function DefinedCropZone({
                 // we need widgetEditor later...
             }
         }
-    }, [_definedCropZone.current, $video.resizable])
+    }, [$video.resizable, context])
 
     // Apply DOM styles for the static crop box
     useEffect(() => {
@@ -86,15 +87,29 @@ export const DefinedCropZone = memo(function DefinedCropZone({
                 __.ui.widgetManager.applyCropToOverlay({...config, cropDimensions: crop})
             }
         }
-        catch (_) {
+        catch {
+            // Ignore overlay sync errors for non-mounted/static states.
         }
-    }, [])
+    }, [context.id, crop, overlay])
+
+    const zoneClassName = classNames(
+        'crop-zone',
+        'defined',
+        'defined-crop-zone',
+        className,
+        {
+            'video-pre-recording-in-progress': video.preRecording,
+            'video-recording-in-progress':     video.recording,
+            'photo-snapshot-in-progress':      video.snapshot,
+            finalizing:                        video.finalizing,
+        },
+    )
 
     return (
         <>
             <div
                 ref={_definedCropZone}
-                className={`crop-zone defined ${className}`}
+                className={zoneClassName}
                 aria-label="defined-crop-zone"
                 id={context.id}
             >

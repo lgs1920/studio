@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-27
- * Last modified: 2026-02-27
+ * Created on: 2026-04-23
+ * Last modified: 2026-04-23
  *
  *
  * Copyright © 2026 LGS1920
@@ -368,7 +368,7 @@ export const VideoRecordingScreenArea = memo(() => {
         if (!videoFrame) {
             return
         }
-
+        console.log($video)
         __.recorder.initialize({
                                    maxSize:    maxSize * 1048576,
                                    maxDuration: maxDuration * MINUTE,

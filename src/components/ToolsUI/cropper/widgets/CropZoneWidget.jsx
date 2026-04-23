@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-29
- * Last modified: 2026-01-29
+ * Created on: 2026-04-23
+ * Last modified: 2026-04-23
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,9 +16,9 @@
 
 import { Widget } from '@Components/MainUI/widgets/Widget'
 import { CROP_TOOLS_WIDGETS, HOUR } from '@Core/constants'
-import React, { memo, useMemo, useRef }  from 'react'
-import { useSnapshot }                  from 'valtio'
-import { CropZone }                     from './CropZone'
+import { memo, useMemo, useRef } from 'react'
+import { useSnapshot }           from 'valtio'
+import { CropZone }              from './CropZone'
 
 /**
  * CropZoneWidget component to display a crop zone in the widget editor
@@ -48,23 +48,33 @@ export const CropZoneWidget = memo(({
     const $context = useSnapshot(context)
 
     // Memoized configuration for the Widget component
-    const config = useMemo(() => ({
-        left:             '20%',
-        top:              '30%',
-        attachTo:         'center',
-        isCropper:        true,
-        resizable:        true,
-        draggable:        true,
-        outsideOverlay:   overlay,
-        margin: lgs?.gutter?.xs ?? 8,
-        resizeFromCenter: true,
-        id:               $context.id,
-        forceEven:        $context.forceEven ?? false,
-        persist:   true,
-        transient: true,
-        ttl:       HOUR,
-        group: CROP_TOOLS_WIDGETS,
-    }), [$context.id, $context.forceEven, overlay])
+    const config = useMemo(() => {
+        const savedRatio = lgs.settings.ui.video?.ratio
+        const fallbackRatio = __.device.isPortrait ? '9x16' : '16x9'
+        const initialRatio = lgs.configuration.videoFormats.find(preset => preset.value === savedRatio)?.value
+            ?? lgs.configuration.videoFormats.find(preset => preset.value === fallbackRatio)?.value
+            ?? lgs.configuration.videoFormats[0]?.value
+            ?? '1x1'
+
+        return {
+            left:             '20%',
+            top:              '30%',
+            attachTo:         'center',
+            isCropper:        true,
+            resizable:        true,
+            draggable:        true,
+            outsideOverlay:   overlay,
+            margin:           lgs?.gutter?.xs ?? 8,
+            resizeFromCenter: true,
+            id:               $context.id,
+            forceEven:        $context.forceEven ?? false,
+            persist:          true,
+            transient:        true,
+            ttl:              HOUR,
+            group:            CROP_TOOLS_WIDGETS,
+            ratio:            initialRatio,
+        }
+    }, [$context.id, $context.forceEven, overlay])
 
     // Render the widget with the CropZone component
     return (

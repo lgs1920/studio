@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-01
- * Last modified: 2026-04-01
+ * Created on: 2026-04-23
+ * Last modified: 2026-04-23
  *
  *
  * Copyright © 2026 LGS1920
@@ -57,8 +57,9 @@ const PRIMARY_ENTRANCE = 'lgs-slide-in-from-left'
 const SECONDARY_ENTRANCE = 'lgs-slide-in-from-right'
 
 export const MainUI = memo(() => {
-    const {hidden} = useSnapshot(lgs.stores.ui.welcome)
     const formerDevice = useRef(__.device.isMobile)
+    const main = useSnapshot(lgs.stores.main)
+    const mainUI = useSnapshot(lgs.stores.ui.mainUI)
     const {drawers, toolBar} = useSnapshot(lgs.settings.ui.menu)
     const {device, video} = useSnapshot(lgs.stores.ui)
 
@@ -193,6 +194,25 @@ export const MainUI = memo(() => {
         }
     }, [arrangeDrawers, closeDrawer, windowResized])
 
+    useEffect(() => {
+        if (mainUI.callForActions.initialized || !main.readyForTheShow) {
+            return
+        }
+
+        lgs.stores.ui.mainUI.callForActions.active = !main.theJourney
+        lgs.stores.ui.mainUI.callForActions.initialized = true
+    }, [main.readyForTheShow, main.theJourney, mainUI.callForActions.initialized])
+
+    useEffect(() => {
+        if (!mainUI.callForActions.active) {
+            return
+        }
+
+        if (main.theJourney || video.editing || video.recording || video.preRecording || video.snapshot) {
+            lgs.stores.ui.mainUI.callForActions.active = false
+        }
+    }, [main.theJourney, mainUI.callForActions.active, video.editing, video.recording, video.preRecording, video.snapshot])
+
     const tooltipDir = toolBar.fromStart ? 'right' : 'left'
     const {primaryEntrance, secondaryEntrance} = arrangeDrawers()
 
@@ -222,7 +242,6 @@ export const MainUI = memo(() => {
                                 <GeocodingUI/>
                             </div>
                         </div>
-                        <CallForActions/>
                     </>
                 )}
 
@@ -257,6 +276,7 @@ export const MainUI = memo(() => {
             <MapPOIMonitor/>
             <VideoDownloadAndShareDialog/>
 
+            {mainUI.callForActions.active && <CallForActions/>}
 
         </>
     )
