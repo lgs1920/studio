@@ -7,12 +7,28 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-20
- * Last modified: 2026-04-20
+ * Created on: 2026-04-23
+ * Last modified: 2026-04-23
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
+
+
+/* Custom theme overrides */
+:root {
+    --wa-font-family-body: "Wix Madefor Text", sans-serif;
+    --wa-font-family-heading: "Wix Madefor Text", sans-serif;
+    --wa-font-family-code: "Roboto Mono", monospace;
+    --wa-font-family-longform: "Roboto Serif", serif;
+    --wa-font-weight-body: 400;
+    --wa-font-weight-heading: 600;
+    --wa-font-weight-code: 400;
+    --wa-font-weight-longform: 400;
+    --wa-border-radius-scale: 1;
+    --wa-border-width-scale: 1.5;
+    --wa-space-scale: 1;
+}
 
 :root {
     --lgs-gutter: 0.8rem;
@@ -82,21 +98,39 @@
     --lgs-border-width-s: 1px;
     --lgs-border-s: var(--lgs-border-width-s) solid var(--wa-color-surface-border);
 
-    /* === LIGHT COLOR === */
-    --lgs-light-color: hsla(39 100% 87% / 1);
-    --lgs-light-color-90: hsla(39 100% 87% / 0.9);
-    --lgs-light-color-75: hsla(39 100% 87% / 0.75);
-    --lgs-light-color-50: hsla(39 100% 87% / 0.5);
-    --lgs-light-color-25: hsla(39 100% 87% / 0.25);
+    /* === LIGHT COLOR (hsla(39 100% 87%)) === */
+    --lgs-light-color-05: hsla(39 100% 87% / 0.05);
+    --lgs-light-color-10: hsla(39 100% 87% / 0.1);
     --lgs-light-color-15: hsla(39 100% 87% / 0.15);
+    --lgs-light-color-20: hsla(39 100% 87% / 0.2);
+    --lgs-light-color-25: hsla(39 100% 87% / 0.25);
+    --lgs-light-color-30: hsla(39 100% 87% / 0.3);
+    --lgs-light-color-40: hsla(39 100% 87% / 0.4);
+    --lgs-light-color-50: hsla(39 100% 87% / 0.5);
+    --lgs-light-color-60: hsla(39 100% 87% / 0.6);
+    --lgs-light-color-70: hsla(39 100% 87% / 0.7);
+    --lgs-light-color-75: hsla(39 100% 87% / 0.75);
+    --lgs-light-color-80: hsla(39 100% 87% / 0.8);
+    --lgs-light-color-90: hsla(39 100% 87% / 0.9);
+    --lgs-light-color-95: hsla(39 100% 87% / 0.95);
+    --lgs-light-color: hsla(39 100% 87% / 1);
 
-    /* === DARK COLOR === */
-    --lgs-dark-color: hsla(125 87% 18% / 1);
-    --lgs-dark-color-90: hsla(125 87% 18% / 0.9);
-    --lgs-dark-color-75: hsla(125 87% 18% / 0.75);
-    --lgs-dark-color-50: hsla(125 87% 18% / 0.5);
-    --lgs-dark-color-25: hsla(125 87% 18% / 0.25);
+    /* === DARK COLOR (hsla(125 87% 18%)) === */
+    --lgs-dark-color-05: hsla(125 87% 18% / 0.05);
+    --lgs-dark-color-10: hsla(125 87% 18% / 0.1);
     --lgs-dark-color-15: hsla(125 87% 18% / 0.15);
+    --lgs-dark-color-20: hsla(125 87% 18% / 0.2);
+    --lgs-dark-color-25: hsla(125 87% 18% / 0.25);
+    --lgs-dark-color-30: hsla(125 87% 18% / 0.3);
+    --lgs-dark-color-40: hsla(125 87% 18% / 0.4);
+    --lgs-dark-color-50: hsla(125 87% 18% / 0.5);
+    --lgs-dark-color-60: hsla(125 87% 18% / 0.6);
+    --lgs-dark-color-70: hsla(125 87% 18% / 0.7);
+    --lgs-dark-color-75: hsla(125 87% 18% / 0.75);
+    --lgs-dark-color-80: hsla(125 87% 18% / 0.8);
+    --lgs-dark-color-90: hsla(125 87% 18% / 0.9);
+    --lgs-dark-color-95: hsla(125 87% 18% / 0.95);
+    --lgs-dark-color: hsla(125 87% 18% / 1);
 
     /* === THIRD COLOR === */
     --lgs-third-color: hsla(42 91% 59% / 1);
@@ -218,15 +252,8 @@
     --lgs-scroolbar-track-color: transparent;
     --lgs-scroolbar-thumb-color: var(--sl-color-gray-700);
 
-    --lgs-video-recorder-color: white;
-    --lgs-video-recorder-hover-color: var(--sl-color-red-800);
-    --lgs-video-recorder-bg-color: var(--sl-color-red-800);
-    --lgs-video-recorder-hover-bg-color: white;
-    --lgs-video-recorder-border-color: white;
-    --lgs-video-recorder-hover-border-color: var(--sl-color-red-800);
-    --lgs-video-warning-color: var(--lgs-light-color);
-    --lgs-video-warning-bg-color: var(--sl-color-orange-500);
-}
+    --lgs-video-recorder-bg-color: var(--wa-color-red-50);
+    --lgs-video-recorder-border-color: var(--wa-color-red-20);
 
 /*******************************************************************************
  * Globals
@@ -331,9 +358,13 @@ wa-button::part(label) {
     height: var(--lgs-font-size-m);
 }
 
-sl-button:not(.square-button) wa-icon:first-child {
+    wa-button:not(.square-button) wa-icon[slot="start"] {
     margin-right: var(--lgs-gutter-s);
 }
+
+    wa-button:not(.square-button) wa-icon[slot="end"] {
+        margin-left: var(--lgs-gutter-s);
+    }
 
 .on-map wa-button[variant="default"]::part(base),
 .on-map wa-button[variant="default"]::part(prefix),
@@ -370,13 +401,6 @@ sl-button:not(.square-button) wa-icon:first-child {
 
 wa-color-picker[size="small"]::part(trigger) {
     margin-top: 5px;
-}
-
-/*******************************************************************************
- * Icons
- ******************************************************************************/
-sl-icon.is-duotone svg[part="svg"] {
-    fill: red;
 }
 
 /*******************************************************************************
@@ -683,11 +707,6 @@ wa-card.lgs--toolbar::part(body) {
     border-radius: var(--lgs-border-radius-xs);
 }
 
-/*.lgs-card ::part(base) {*/
-/*    height: var(--lgs-line-dimension);*/
-/*    width: 100%;*/
-/*}*/
-
 .on-map {
     align-items: center;
     color: var(--lgs-text-on-color);
@@ -697,8 +716,31 @@ wa-card.lgs--toolbar::part(body) {
     box-shadow: var(--sl-shadow-medium);
     gap: var(--lgs-gutter-s);
     backdrop-filter: blur(var(--lgs-blur));
+
 }
 
+    [variant="on-map"] {
+        --wa-color-fill-loud: var(--wa-color-brand-40);
+        --wa-color-fill-normal: var(--wa-color-brand-40);
+        --wa-color-fill-quiet: var(--lgs-light-color-50);
+        --wa-color-border-loud: var(--lgs-light-color-80);
+        --wa-color-border-normal: var(--lgs-light-color-40);
+        --wa-color-border-quiet: var(--lgs-light-color-80);
+        --wa-color-on-loud: var(--lgs-light-color-80);
+        --wa-color-on-normal: var(--lgs-light-color-50);
+        --wa-color-on-quiet: var(--lgs-light-color-80);
+        --wa-color-text-normal: var(--wa-color-brand-40)
+    }
+
+    [variant="on-map"]::part(base) {
+        /*border-color: var(--wa-color-brand-60);*/
+}
+
+    [variant="on-map"]:hover::part(base) {
+        color: var(--wa-color-brand-10) !important;
+        border-color: var(--wa-color-brand-80);
+        background-color: var(--wa-color-brand-70);
+    }
 
 .on-map.lgs-card, .on-map .lgs-card {
     padding: var(--lgs-gutter-xs);
@@ -985,9 +1027,10 @@ wa-details.lgs--details-hoverable:not([open]):hover {
     outline-offset: 2px;
     box-shadow: var(--wa-shadow-l);
 }
-/*******************************************************************************
- * Context menu
- ******************************************************************************/
+
+    /*******************************************************************************
+     * Context menu
+     ******************************************************************************/
 #lgs-context-menu-hook { /* id defined in LGS_CONTEXT_MENU_HOOK */
     position: absolute;
     z-index: calc(var(--lgs-tools-ui-zindex) - 1);
@@ -1122,7 +1165,8 @@ wa-input.lgs--short-input[label-at-start], wa-number-input.lgs--short-input[labe
     line-height: var(--wa-form-control-label-line-height);
     margin-block-end: 0 !important
 }
-wa-input[label-at-start] label, wa-number-input[label-at-start] label {
+
+    wa-input[label-at-start] label, wa-number-input[label-at-start] label {
     font-size: var(--lgs-font-size) !important;
     flex: none;
     width: auto;
@@ -1169,7 +1213,8 @@ wa-slider[size="small"] {
 wa-slider[label-at-start]::part(label) {
     margin-block-end: 0;
 }
-wa-slider::part(track) {
+
+    wa-slider::part(track) {
     background-color: var(--wa-color-brand-fill-normal);
 }
 

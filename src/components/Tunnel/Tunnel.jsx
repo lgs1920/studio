@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-04-23
+ * Last modified: 2026-04-23
  *
  *
  * Copyright © 2026 LGS1920
@@ -21,9 +21,8 @@
  *
  * @module Tunnel
  */
-import { faXmark }                                                 from '@fortawesome/pro-regular-svg-icons'
-import { SlIconButton, SlTooltip }                                 from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                                                   from '@Utils/FA2SL'
+import { WaButton, WaIcon, WaTooltip } from '@web.awesome.me/webawesome-pro/dist/react'
 import classNames                                                  from 'classnames'
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import './style.css'
@@ -55,7 +54,7 @@ import './style.css'
  * @param {string} [props.className] - Additional CSS class names
  * @returns {JSX.Element} The rendered tunnel component
  */
-export const Tunnel = memo(({steps, defaultStepIndex = 0, onCancel, className = ''}) => {
+export const Tunnel = memo(({variant = '', steps, defaultStepIndex = 0, onCancel, className = ''}) => {
     // State for the current step index
     const [currentContainer, setCurrentStepIndex] = useState(defaultStepIndex)
     // Ref for the tunnel container
@@ -91,7 +90,7 @@ export const Tunnel = memo(({steps, defaultStepIndex = 0, onCancel, className = 
         // Check if navigation is blocked by mandatory steps
         const isBlocked = steps
             .slice(0, index)
-            .some(step => step.mandatory && !step.done);
+            .some(step => step.mandatory && !step.done)
         if (isBlocked) {
             return
         }
@@ -110,7 +109,7 @@ export const Tunnel = memo(({steps, defaultStepIndex = 0, onCancel, className = 
         }
         // Update the current step index
         setCurrentStepIndex(index)
-    }, [steps, currentContainer]);
+    }, [steps, currentContainer])
 
     // Execute beforeStep for the default step on initial render
     useEffect(() => {
@@ -123,7 +122,7 @@ export const Tunnel = memo(({steps, defaultStepIndex = 0, onCancel, className = 
                 defaultStep.beforeStep(defaultStepIndex)
             }
         }
-    }, [steps, defaultStepIndex, validateDefaultStep]);
+    }, [steps, defaultStepIndex, validateDefaultStep])
 
     // Memoize step items to prevent unnecessary re-renders
     const stepItems = useMemo(() =>
@@ -142,19 +141,21 @@ export const Tunnel = memo(({steps, defaultStepIndex = 0, onCancel, className = 
                                                   pointerEvents: isBlocked ? 'none' : 'auto',
                                               }}
                                           >
-                                              <SlTooltip content={step.text} placement="top">
-                                                  <SlIconButton
-                                                      className={classNames('lgs-tunnel-element', step.className, {
-                                                          'lgs-tunnel-element-done':    isDone,
-                                                          'lgs-tunnel-element-active':  isCurrent,
-                                                          'lgs-tunnel-element-blocked': isBlocked,
-                                                      })}
-                                                      onClick={event => handleStepClick(index, event)}
-                                                      disabled={isBlocked}
-                                                      library="fa"
-                                                      name={FA2SL.set(step.icon)}
-                                                  />
-                                              </SlTooltip>
+                                              <WaTooltip placement="top">{step.text}</WaTooltip>
+                                              <WaButton
+                                                  variant={variant}
+                                                  pill
+                                                  appearance="plain"
+                                                  className={classNames('lgs-tunnel-element', step.className, {
+                                                      'lgs-tunnel-element-done':    isDone,
+                                                      'lgs-tunnel-element-active':  isCurrent,
+                                                      'lgs-tunnel-element-blocked': isBlocked,
+                                                  })}
+                                                  onClick={event => handleStepClick(index, event)}
+                                                  disabled={isBlocked}
+                                              >
+                                                  <WaIcon name={step.icon} variant="regular"/>
+                                              </WaButton>
                                               <div className="lgs-tunnel-bar-spacer"/>
                                           </div>
                                       )
@@ -168,14 +169,16 @@ export const Tunnel = memo(({steps, defaultStepIndex = 0, onCancel, className = 
                 <div className="lgs-tunnel-bar-spacer"/>
                 {stepItems}
                 {/* Exit button */}
-                <SlTooltip content="Cancel" placement="top">
-                    <SlIconButton
-                        className="lgs-tunnel-cancel lgs-tunnel-element"
-                        onPointerDown={onCancel}
-                        library="fa"
-                        name={FA2SL.set(faXmark)}
-                    />
-                </SlTooltip>
+                <WaTooltip placement="top">{'Exit'}</WaTooltip>
+                <WaButton
+                    variant={variant}
+                    pill
+                    appearance="plain"
+                    className="lgs-tunnel-cancel lgs-tunnel-element"
+                    onPointerDown={onCancel}>
+                    <WaIcon name="xmark" variant="regular"/>
+                </WaButton>
+
                 <div className="lgs-tunnel-bar-spacer"/>
             </div>
             {/* Current step content */}
@@ -185,5 +188,5 @@ export const Tunnel = memo(({steps, defaultStepIndex = 0, onCancel, className = 
                 </div>
             )}
         </div>
-    );
-});
+    )
+})

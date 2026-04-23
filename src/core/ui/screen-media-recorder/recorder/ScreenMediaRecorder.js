@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-27
- * Last modified: 2026-02-27
+ * Created on: 2026-04-23
+ * Last modified: 2026-04-23
  *
  *
  * Copyright © 2026 LGS1920
@@ -21,9 +21,11 @@
  * Real-time duration and size reporting via INFO event
  ******************************************************************************/
 import { APP_KEY, NAVIGATOR, SECOND } from '@Core/constants'
-import { DateTime }                   from 'luxon'
 import {
-    BufferTarget, CanvasSource, Mp4OutputFormat, Output, QUALITY_HIGH, QUALITY_LOW, QUALITY_MEDIUM, QUALITY_VERY_HIGH,
+    DateTime,
+}                                     from 'luxon'
+import {
+    BufferTarget, CanvasSource, Mp4OutputFormat, Output, QUALITY_HIGH, QUALITY_MEDIUM, QUALITY_VERY_HIGH,
 }                                     from 'mediabunny'
 
 /**
@@ -53,44 +55,36 @@ export class ScreenMediaRecorder extends EventTarget {
 
     /** Bitrate presets from mediabunny (in bits per second) */
     static QUALITY = [
-        {value: QUALITY_LOW, name: 'Low Quality', short: 'L'},
+        // {value: QUALITY_LOW, name: 'Low Quality', short: 'L'},
         {value: QUALITY_MEDIUM, name: 'Medium Quality', short: 'M'},
         {value: QUALITY_HIGH, name: 'High Quality', short: 'H'},
         {value: QUALITY_VERY_HIGH, name: 'Ultra High Quality', short: 'V'},
     ]
     /** Supported output frame rates */
-    static FPS = [15, 30, 45, 60]
+    static FPS = [30, 45, 60]
 
     /** Presets for video recording */
     static VIDEO_PRESETS = new Map([
                                        [
-                                           'low', {
-                                           quality:     0,  // index of QUALITY array
-                                           fps:         0,  // Index of FPS array
-                                           name:        'Low',
-                                           description: 'Low quality',
-                                       },
-                                       ],
-                                       [
                                            'medium', {
-                                           quality:     1,
-                                           fps:         1,
+                                           quality: 0,
+                                           fps:     0,
                                            name:        'Med',
                                            description: 'Medium quality',
                                        },
                                        ],
                                        [
                                            'high', {
-                                           quality:     2,
-                                           fps:         2,
+                                           quality: 1,
+                                           fps:     1,
                                            name:        'High',
                                            description: 'Very High quality',
                                        },
                                        ],
                                        [
                                            'Ultra', {
-                                           quality:     3,
-                                           fps:         3,
+                                           quality: 2,
+                                           fps:     2,
                                            name:        'Ultra',
                                            description: 'Ultra High quality',
                                        },
@@ -101,13 +95,14 @@ export class ScreenMediaRecorder extends EventTarget {
                                            fps:         10,
                                            name:        'Flex',
                                            description: 'Define yours',
+                                           submenu: true,
                                        },
                                        ],
                                    ])
 
 
-    static DEFAULT_FPS_INDEX = 1
-    static DEFAULT_QUALITY_INDEX = 2
+    static DEFAULT_FPS_INDEX = 0
+    static DEFAULT_QUALITY_INDEX = 0
 
     static instance
     static VIDEO = 'video'

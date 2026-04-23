@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-04-23
+ * Last modified: 2026-04-23
  *
  *
  * Copyright © 2026 LGS1920
@@ -18,60 +18,46 @@ import {
     faCropSimple, faRectangleWide, faRectangle, faRectangleVertical, faSquare, faRectangleTall,
 }                                   from '@fortawesome/pro-regular-svg-icons'
 import { faExpandWide, faGripDots } from '@fortawesome/pro-solid-svg-icons'
-import { SlIcon, SlTooltip }        from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                                          from '@Utils/FA2SL'
-import classNames                                         from 'classnames'
-import { memo, useCallback, useEffect, useRef, useState } from 'react'
+import { WaButton, WaIcon, WaTooltip, WaPopup }                  from '@web.awesome.me/webawesome-pro/dist/react'
+import classNames                                                from 'classnames'
+import * as PropTypes                                            from 'prop-types'
+import React, { memo, useCallback, useEffect, useRef, useState } from 'react'
 import { useSnapshot }                                    from 'valtio'
 import '../style.css'
 
 /**
  * Icon mappings for crop ratio presets
- * @type {Object.<string, import('@fortawesome/fontawesome-svg-core').IconDefinition>}
+ * @type {Object.<string, string>}
  * @constant
  */
 const ICONS = {
-    'square': faSquare,
-    '9x16': faRectangleWide,
-    '16x9': faRectangleWide,
-    '1x1': faSquare,
-    '4x5':  faRectangleVertical,
-    '4x3':  faRectangle,
-    '0x0':  faExpandWide,
+    'square': 'square',
+    '9x16':   'rectangle-wide',
+    '16x9':   'rectangle-wide',
+    '1x1':    'square',
+    '4x5':    'rectangle-vertical',
+    '4x3':    'rectangle',
+    '0x0':    'expand-wide',
 }
 
 /**
  * CropRatioEditorToolbar renders a draggable toolbar for selecting crop ratios
+ * with a popup menu for selection.
  * @component
- * @param {Object} props - Component props
- * @param {Object} props.context - Valtio store with crop state (ratioEditor, etc.)
- * @param {string} props.cropzoneId - ID of the cropzone to update
- * @returns {JSX.Element} Draggable crop ratio selector UI
  */
 export const CropRatioEditorToolbar = memo(({context, cropzoneId}) => {
-    // Access reactive cropper and toolbar states
     const $cropper = context
     const cropper = useSnapshot($cropper || {}, {sync: true})
     const $video = lgs.stores.ui.video
     const video = useSnapshot($video || {}, {sync: true})
 
-    const toolbars = useSnapshot(lgs.settings.ui.toolbars || {})
-    const [forceRender, setForceRender] = useState(0)
-    // Reference to the cropper menu DOM element
-    const _toolbar = useRef(null)
+    /** * State for popup visibility */
+    const [_isPopupOpen, setIsPopupOpen] = useState(false)
+    /** * Ref for the widget container to handle click-away */
+    const _widgetRef = useRef(null)
 
-    // Track selected ratio, defaulting to first video format
-    const defaultRatio = __.device.isPortrait ? '9x16' : '16x9'
-
-    // Ensure handleCropUpdate is executed only once (singleton listener)
     useEffect(() => {
         let executed = false
-
-        /**
-         * Handles crop update event – runs only on first occurrence.
-         * Wus it t retrieve and display the right crop ratio.
-         * @param {CustomEvent} event - Custom event with detail.ratio.value
-         */
         const handleCropUpdate = (event) => {
             if (executed) {
                 return
@@ -82,74 +68,114 @@ export const CropRatioEditorToolbar = memo(({context, cropzoneId}) => {
 
         document.addEventListener('onCropUpdate', handleCropUpdate)
         return () => document.removeEventListener('onCropUpdate', handleCropUpdate)
-    }, [$video]) // $video is stable (Valtio proxy)
+    }, [$video])
+
+    /**
+     * Handles global pointerdown to close popup when clicking outside the widget
+     */
+    useEffect(() => {
+        if (!_isPopupOpen) {
+            return
+        }
+
+        /**
+         * @param {PointerEvent} event
+         */
+        const handlePointerDown = (event) => {
+            const path = event.composedPath()
+            // If the click path doesn't include our widget container, close
+            if (_widgetRef.current && !path.includes(_widgetRef.current)) {
+                setIsPopupOpen(false)
+            }
+        }
+
+        document.addEventListener('pointerdown', handlePointerDown)
+        return () => document.removeEventListener('pointerdown', handlePointerDown)
+    }, [_isPopupOpen])
 
     /**
      * Handles selection of a crop ratio preset
-     * Updates the selected ratio and resets the crop with new aspect ratio
-     * @function
-     * @param {Object} preset - Video format preset (value, label, description, locked)
-     * @param {Event} event - Click event from icon
+     * @param {Object} preset - Video format preset
      */
-    const handleChangeRatio = useCallback((preset, event) => {
+    const handleChangeRatio = useCallback((preset) => {
         $video.ratio = preset.value
-
-        // Parse ratio and update cropzone
         const [w, h] = preset.value.split('x').map(Number)
         __.ui.widgetManager.updateCropRatio(cropzoneId, preset.value, w / h, preset.locked)
 
-        // Update store to keep ratioEditor active
         $cropper.ratioEditor = true
         $cropper.aspectRatio = w / h
+        setIsPopupOpen(false)
     }, [$cropper, $video, cropzoneId])
 
     /**
-     * Determines if a given preset is visible on the current device and orientation
-     * @param {Object} preset - The preset object from YAML
-     * @returns {boolean} True if the preset should be visible
+     * Filters visibility based on device and orientation
      */
     const isPresetVisible = useCallback((preset) => {
-        const device = __.device.getDeviceType() // e.g., "mobile"
-        const orientation = __.device.getOrientation() // e.g., "portrait"
-        const key = `${device}-${orientation}` // e.g., "mobile-portrait"
-        // If no visibility is defined, preset is visible everywhere
+        const device = __.device.getDeviceType()
+        const orientation = __.device.getOrientation()
+        const key = `${device}-${orientation}`
         if (!preset.visibility) {
             return true
         }
-        // Check if visibility includes either the device or the device-orientation key
         return preset.visibility.includes(device) || preset.visibility.includes(key)
     }, [])
+
+    /** * Current selected preset for the trigger icon */
+    const currentPreset = lgs.configuration.videoFormats.find(p => p.value === video.ratio)
 
     return (
         <>
             {cropper.ratioEditor && (
-                <div className="crop-ratio-widget lgs-card on-map">
-                    {/* Drag handle for moving the toolbar */}
-                    <SlTooltip content="Drag me">
-                        <SlIcon library="fa" className="grabber" name={FA2SL.set(faGripDots)}/>
-                    </SlTooltip>
-                    <div className="buttons-bar-on-map">
-                        {lgs.configuration.videoFormats.map(preset => (
-                            isPresetVisible(preset) && (
-                                <SlTooltip
-                                    key={preset.value}
-                                    content={`${preset.label}: ${preset.description}`}
-                                    placement="right"
-                                >
-                                    <SlIcon
-                                        library="fa"
-                                        className={classNames(
-                                            'lgs-one-line-card on-map',
-                                            {'selected': preset.value === video.ratio},
-                                            `icon-${preset.value}`,
-                                        )}
-                                        onClick={event => handleChangeRatio(preset, event)}
-                                        name={FA2SL.set(ICONS[preset.value] || faSquare)}
-                                    />
-                                </SlTooltip>
-                            )
-                        ))}
-                    </div>
+                <div ref={_widgetRef} className="crop-ratio-widget lgs-card on-map">
+                    <WaTooltip for="crop-ratio-grabber" placement="top">{'Drag me'}</WaTooltip>
+                    <WaIcon id="crop-ratio-grabber" className="grabber" name="grip-dots" variant="solid"/>
+
+                    <span>{'Format:'}</span>
+                    <WaButton
+                        id="current-crop-ratio"
+                        size="small"
+                        appearance="outlined"
+                        variant="on-map"
+                        onClick={(e) => {
+                            // Stop propagation to prevent the global listener from firing immediately
+                            e.stopPropagation()
+                            setIsPopupOpen(!_isPopupOpen)
+                        }}
+                        withCaret
+                    >
+                        {currentPreset?.label || video.ratio}
+                    </WaButton>
+
+                    <WaPopup
+                        flip
+                        anchor="current-crop-ratio"
+                        active={_isPopupOpen}
+                        placement="bottom-end"
+                        distance={2}
+                        strategy="fixed"
+                    >
+                        <div className="lgs-card on-map" style={{display: 'flex', flexDirection: 'column', gap: '2px'}}>
+                            {lgs.configuration.videoFormats.map(preset => (
+                                isPresetVisible(preset) && (
+                                    <React.Fragment key={`crop-ratio-${preset.value}`}>
+                                        <WaTooltip for={`btn-ratio-${preset.value}`} placement="right">
+                                            {`${preset.label}: ${preset.description}`}
+                                        </WaTooltip>
+                                        <WaButton
+                                            variant="on-map"
+                                            id={`btn-ratio-${preset.value}`}
+                                            size="small"
+                                            appearance={video.ratio === preset.value ? 'accent' : 'plain'}
+                                            onClick={() => handleChangeRatio(preset)}
+                                            style={{justifyContent: 'flex-start', width: '100%'}}
+                                        >
+                                            {preset.label}
+                                        </WaButton>
+                                    </React.Fragment>
+                                )
+                            ))}
+                        </div>
+                    </WaPopup>
                 </div>
             )}
         </>

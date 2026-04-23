@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-03
- * Last modified: 2026-02-03
+ * Created on: 2026-04-23
+ * Last modified: 2026-04-23
  *
  *
  * Copyright © 2026 LGS1920
@@ -88,7 +88,7 @@ export const VideoRecordingSettingsToolbar = memo(() => {
     const steps = useMemo(() => {
         _steps.current = [
             {
-                icon:       faGear,
+                icon: 'gear',
                 text:       'Video parameters',
                 done:       false,
                 mandatory:  false,
@@ -113,7 +113,7 @@ export const VideoRecordingSettingsToolbar = memo(() => {
                 },
             },
             {
-                icon:       faPhotoFilm,
+                icon: 'photo-film',
                 text:       'Add widgets',
                 done:       false,
                 mandatory:  true,
@@ -131,7 +131,7 @@ export const VideoRecordingSettingsToolbar = memo(() => {
                 },
             },
             {
-                icon:       faVideo,
+                icon: 'clapperboard-play',
                 text:       'Start Recording',
                 done:       false,
                 mandatory:  false,
@@ -151,9 +151,9 @@ export const VideoRecordingSettingsToolbar = memo(() => {
                 },
             },
             {
-                icon:       faCamera,
+                icon: 'camera',
                 text:       'Snapshot',
-                done:       true,
+                done: false,
                 mandatory:  false,
                 beforeStep: () => {
                     $video.step = 3

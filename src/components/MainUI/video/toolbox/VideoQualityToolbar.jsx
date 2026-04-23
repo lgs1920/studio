@@ -7,69 +7,56 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-27
- * Last modified: 2026-02-27
+ * Created on: 2026-04-23
+ * Last modified: 2026-04-23
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-/**
- * Component for rendering the video quality toolbar content
- * @component
- * @returns {JSX.Element} Video quality toolbar UI
- */
-import { useCallback, useEffect } from 'react'
-import { SlIcon, SlTooltip } from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }             from '@Utils/FA2SL'
-import { faGripDots }        from '@fortawesome/pro-solid-svg-icons'
-import classNames              from 'classnames'
+/*******************************************************************************
+ * File: VideoQualityToolbar.jsx
+ ******************************************************************************/
+
 import { ScreenMediaRecorder } from '@Core/ui/screen-media-recorder/recorder/ScreenMediaRecorder'
-import { useSnapshot }         from 'valtio'
+import { WaButton, WaTooltip }          from '@web.awesome.me/webawesome-pro/dist/react'
+import React, { Fragment, useCallback } from 'react'
+import { useSnapshot }                  from 'valtio'
 
 export const VideoQualityToolbar = () => {
-    // Access reactive video state
     const $video = lgs.stores.ui.video
     const video = useSnapshot($video)
 
     /**
-     * Handles selection of a crop quality key
-     * @param {number} index - Index of the selected video quality
-     * @param {Event} event - Click event from icon
+     * Updates quality index in store and settings
+     * @param {number} index
      */
-    const handleChangeQuality = useCallback((index, event) => {
-        lgs.stores.ui.video.quality = index
+    const handleChangeQuality = useCallback((index) => {
+        $video.quality = index
         lgs.settings.ui.video.quality = index
+
         if (lgs.settings.ui.video.adaptiveQuality?.enabled) {
             lgs.settings.ui.video.adaptiveQuality = {...lgs.settings.ui.video.adaptiveQuality, enabled: false}
         }
-    }, [])
-
-
-    /**
-     * Initialize default Quality from settings
-     */
-    useEffect(() => {
-        $video.quality = lgs.settings.ui.video.quality ?? ScreenMediaRecorder.QUALITY[0].value
-    }, [])
-
+    }, [$video])
 
     return (
         <div className="video-quality-widget">
             <span>{'Quality'}</span>
             <div className="buttons-bar-on-map">
-                {ScreenMediaRecorder.QUALITY.map(({value, name, short}, index) => (
-                    <SlTooltip
-                        key={index}
-                        content={name}
-                        placement="bottom"
-                    >
-                        <div
-                            className={classNames('lgs-one-line-card', 'on-map', {'selected': index === video.quality})}
-                            onClick={(event) => handleChangeQuality(index, event)}>
+                {ScreenMediaRecorder.QUALITY.map(({name, short}, index) => (
+                    <Fragment key={index}>
+                        <WaTooltip placement="bottom" for={`q-${index}`}>{name}</WaTooltip>
+                        <WaButton
+                            id={`q-${index}`}
+                            size="small"
+                            variant="on-map"
+                            appearance={index === video.quality ? 'accent' : 'outlined'}
+                            onClick={() => handleChangeQuality(index)}
+                        >
                             {short}
-                        </div>
-                    </SlTooltip>
+                        </WaButton>
+                    </Fragment>
                 ))}
             </div>
         </div>

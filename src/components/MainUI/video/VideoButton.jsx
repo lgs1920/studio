@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-09
- * Last modified: 2026-03-09
+ * Created on: 2026-04-23
+ * Last modified: 2026-04-23
  *
  *
  * Copyright © 2026 LGS1920
@@ -30,13 +30,13 @@ export const VideoButton = (props) => {
             {!video.recording && !video.preRecording && !video.snapshot &&
                 <>
                     <WaTooltip for={'launch-the-video-editor'}
-                               placement={props.tooltip}>{'Make a new video'}</WaTooltip>
-                    <WaButton className={'square-button'}
+                               placement={props.tooltip}>{'Record a new video'}</WaTooltip>
+                    <WaButton className="square-button"
                               id={'launch-the-video-editor'}
                               onClick={handleClick}
                               variant={'brand'}
                               appearance="Filled">
-                        <WaIcon name="video-plus" variant="regular"/>
+                        <WaIcon name="clapperboard-play" variant="regular"/>
                     </WaButton>
                 </>
             }

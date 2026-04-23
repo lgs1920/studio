@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-14
- * Last modified: 2026-02-14
+ * Created on: 2026-04-23
+ * Last modified: 2026-04-23
  *
  *
  * Copyright © 2026 LGS1920
@@ -23,22 +23,10 @@
 }
 
 .lgs-video-recording-trigger:not(.lgs-tunnel-element-blocked) {
-    color: var(--lgs-video-recorder-color);
     border-color: var(--lgs-video-recorder-border-color);
     background: var(--lgs-video-recorder-bg-color);
 }
 
-.lgs-video-recording-trigger:not(.lgs-tunnel-element-blocked):hover {
-    color: var(--lgs-video-recorder-hover-color);
-    border-color: var(--lgs-video-recorder-hover-border-color);
-    background: var(--lgs-video-recorder-hover-bg-color);
-
-}
-
-.lgs-video-recording-trigger::part(base):hover {
-    color: var(--lgs-video-recorder-hover-color);
-    border-color: var(--lgs-video-recorder-hover-border-color)
-}
 
 .video-recorder-widget {
     font-size: var(--lgs-font-size-s);
@@ -309,9 +297,7 @@
 
 .video-preset-custom {
     display: flex;
-    flex-basis: 100%;
     flex-direction: column;
-    margin-bottom: var(--lgs-gutter-xs);
     gap: var(--lgs-gutter-xs);
 }
 

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-04-23
+ * Last modified: 2026-04-23
  *
  *
  * Copyright © 2026 LGS1920
@@ -17,19 +17,20 @@
 :root {
     --lgs-tunnel-thickness: 2px;
     --lgs-tunnel-icon-border-thickness: 2px;
-    --lgs-tunnel-color: var(--lgs-light-color-75);
-    --lgs-tunnel-bg-color: var(--lgs-dark-color-75);
-    --lgs-tunnel-bg-blocked-color: var(--lgs-dark-color-50);
-    --lgs-tunnel-blocked-color: var(--lgs-light-color-50);
+    --lgs-tunnel-color: var(--lgs-light-color);
+    --lgs-tunnel-bg-color: var(--lgs-dark-color);
 
-    --lgs-tunnel-bg-active-color: var(--lgs-third-color);
-    --lgs-tunnel-active-color: var(--lgs-dark-color);
+    --lgs-tunnel-bg-blocked-color: var(--wa-color-red-40) !important;
+    --lgs-tunnel-blocked-color: var(--wa-color-red-10) !important;
+
+    --lgs-tunnel-bg-active-color: var(--wa-color-brand-70);
+    --lgs-tunnel-active-color: var(--wa-color-brand-40);
 
     --lgs-tunnel-bg-done-color: var(--lgs-dark-color);
     --lgs-tunnel-done-color: var(--lgs-light-color);
 
-    --lgs-tunnel-hover-bg-color: var(--lgs-dark-color);
-    --lgs-tunnel-hover-color: var(--lgs-light-color);
+    --lgs-tunnel-hover-bg-color: var(--wa-color-brand-70);
+    --lgs-tunnel-hover-color: var(--wa-color-brand-20);
 
     --lgs-tunnel-spacer-width: var(--lgs-gutter);
 }
@@ -37,6 +38,7 @@
 .lgs-tunnel-container {
     position: relative;
 }
+
 
 .lgs-tunnel-bar {
     position: relative;
@@ -53,17 +55,29 @@
 .lgs-tunnel-element {
     position: relative;
     z-index: 2;
-    color: var(--lgs-tunnel-color);
     border: var(--lgs-tunnel-icon-border-thickness) solid var(--lgs-tunnel-color);
     border-radius: 50%;
     background-color: var(--lgs-tunnel-bg-color);
+
+    & wa-icon {
+        pointer-events: none;
+        color: var(--lgs-tunnel-color);
+    }
+
+    &:hover {
+        border-color: var(--lgs-tunnel-hover-color) !important;
+    }
+
+
+    &:hover wa-icon {
+        color: var(--lgs-tunnel-hover-color) !important;
+    }
+
+    &::part(base):hover {
+        background-color: var(--lgs-tunnel-hover-bg-color) !important;
+    }
 }
 
-.lgs-tunnel-element:hover {
-    color: var(--lgs-tunnel-hover-color);
-    border-color: var(--lgs-tunnel-hover-color);
-    background-color: var(--lgs-tunnel-hover-bg-color);
-}
 
 .lgs-tunnel-element-blocked {
     color: var(--lgs-tunnel-blocked-color);
@@ -74,7 +88,10 @@
     color: var(--lgs-tunnel-active-color) !important;
     border-color: var(--lgs-tunnel-active-color) !important;
     background-color: var(--lgs-tunnel-bg-active-color) !important;
+
+    & wa-icon {color: var(--lgs-tunnel-active-color) !important}
 }
+
 
 .lgs-tunnel-element-done {
     color: var(--lgs-tunnel-done-color);
@@ -98,4 +115,5 @@
 
 .lgs-tunnel-cancel {
     font-size: var(--lgs-font-size-s);
+    background-color: var(--lgs-dark-color-90);
 }
