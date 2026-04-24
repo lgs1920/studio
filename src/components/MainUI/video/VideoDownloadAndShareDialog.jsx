@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-27
- * Last modified: 2026-02-27
+ * Created on: 2026-04-24
+ * Last modified: 2026-04-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -37,20 +37,26 @@ import {
     UIToast,
 }                      from '@Utils/UIToast'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useSnapshot } from 'valtio'
 import './style.css'
 
 export const VideoDownloadAndShareDialog = () => {
     const $video = lgs.stores.ui.video
-    const video = useSnapshot($video)
     const [dialogOpen, setDialogOpen] = useState(false)
     const [filename, setFilename] = useState('')
     const [canDownloadAndShare, setCanDownloadAndShare] = useState(false)
-    const [canShare] = useState(!!(navigator.canShare && navigator.canShare({files: []})))
     const _mainVideo = useRef(null)
     const _blurredVideo = useRef(null)
     const _mediaBlob = useRef({blob: null, url: null, filename: ''})
     const _mediaData = useRef(null)
+    const releaseMediaUrl = useCallback(() => {
+        const url = _mediaBlob.current.url
+        if (url) {
+            _mediaBlob.current.url = null
+            URL.revokeObjectURL(url)
+        }
+    }, [])
+    const getVideoExtension = useCallback(() => __.recorder.mediaData?.extension || lgs.settings.ui.video.format, [])
+    const getVideoMimeType = useCallback(() => __.recorder.mediaData?.mimeType || 'video/mp4', [])
 
     /**
      * Safely accesses media data from recorder with fallback.
@@ -114,6 +120,7 @@ export const VideoDownloadAndShareDialog = () => {
                 return
             }
 
+            releaseMediaUrl()
             const url = URL.createObjectURL(blob)
             const recorderFilename = __.recorder.filename({}) || 'video'
             const safeFilename = recorderFilename.replace(/[^a-zA-Z0-9_-]/g, '_')
@@ -130,18 +137,34 @@ export const VideoDownloadAndShareDialog = () => {
         }
 
         const handleCapture = (event) => {
-            const {canvas} = event.detail
-            const recorderFilename = __.recorder.filename({}) || 'record'
-            const safeFilename = recorderFilename.replace(/[^a-zA-Z0-9_-]/g, '_')
-            _mediaBlob.current = {
-                content: canvas.toDataURL(`image/${lgs.settings.ui.video.image}`, 1.0),
-                filename: safeFilename,
-                type:     ScreenMediaRecorder.IMAGE,
+            try {
+                const imageBlob = event.detail?.blob
+                if (!(imageBlob instanceof Blob) || imageBlob.size === 0) {
+                    throw new Error('Invalid screenshot blob received')
+                }
+
+                releaseMediaUrl()
+                const imageUrl = URL.createObjectURL(imageBlob)
+                const recorderFilename = __.recorder.filename({}) || 'record'
+                const safeFilename = recorderFilename.replace(/[^a-zA-Z0-9_-]/g, '_')
+                _mediaBlob.current = {
+                    blob:     imageBlob,
+                    url:      imageUrl,
+                    filename: safeFilename,
+                    type:     ScreenMediaRecorder.IMAGE,
+                }
+                setFilename(safeFilename)
+                setCanDownloadAndShare(true)
+                setDialogOpen(true)
             }
-            setFilename(safeFilename)
-            setCanDownloadAndShare(true)
-            $video.snapshot = false
-            setDialogOpen(true)
+            catch (error) {
+                console.error('Invalid screenshot blob received', error)
+                UIToast.error({caption: 'Screenshot', text: 'Unable to finalize screenshot.'})
+            }
+            finally {
+                $video.snapshot = false
+                $video.finalizing = false
+            }
         }
 
 
@@ -151,12 +174,9 @@ export const VideoDownloadAndShareDialog = () => {
         return () => {
             __.recorder.removeEventListener(ScreenMediaRecorder.events.STOP, handleStopRecording)
             __.recorder.removeEventListener(ScreenMediaRecorder.events.CAPTURED, handleCapture)
-
-            if (_mediaBlob.current.url) {
-                URL.revokeObjectURL(_mediaBlob.current.url)
-            }
+            releaseMediaUrl()
         }
-    }, [])
+    }, [releaseMediaUrl, $video])
 
     /**
      * Sync blurred video with main video playback.
@@ -228,14 +248,14 @@ export const VideoDownloadAndShareDialog = () => {
 
         const getVideoFile = async () => {
             const blob = _mediaBlob.current.blob
-            const filename = `${_mediaBlob.current.filename}.${lgs.settings.ui.video.format}`
-            return new File([blob], filename, {type: blob.type || 'video/mp4'})
+            const filename = `${_mediaBlob.current.filename}.${getVideoExtension()}`
+            return new File([blob], filename, {type: blob.type || getVideoMimeType()})
         }
 
 
         const getImageFile = async () => {
-            const base64 = _mediaBlob.current.content
-            const blob = __.tools.base64ToBlob(base64)
+            const blob = _mediaBlob.current.blob
+                ?? await fetch(_mediaBlob.current.url).then(response => response.blob())
             _mediaBlob.current.blob = blob
 
             const filename = `${_mediaBlob.current.filename}.${lgs.settings.ui.video.image}`
@@ -271,7 +291,7 @@ export const VideoDownloadAndShareDialog = () => {
         catch (error) {
             console.error('Share failed:', error.message)
         }
-    }, [])
+    }, [getMediaData, getVideoExtension, getVideoMimeType])
 
     _mediaData.current = getMediaData()
 
@@ -287,7 +307,7 @@ export const VideoDownloadAndShareDialog = () => {
                     return
                 }
                 await __.recorder.download({
-                                               filename: `${_mediaBlob.current.filename}.${lgs.settings.ui.video.format}`,
+                                               filename: `${_mediaBlob.current.filename}.${getVideoExtension()}`,
                                                type:     'local-filesystem',
                                            })
             }
@@ -301,21 +321,19 @@ export const VideoDownloadAndShareDialog = () => {
         catch (error) {
             console.error('Download failed:', error.message)
         }
-    }, [])
+    }, [getVideoExtension])
 
     /**
      * Handle cancel and cleanup.
      */
     const handleCancel = useCallback(() => {
         setDialogOpen(false)
-        if (_mediaBlob.current.url) {
-            URL.revokeObjectURL(_mediaBlob.current.url)
-        }
+        releaseMediaUrl()
         _mediaBlob.current = {blob: null, url: null, filename: ''}
         $video.editing = false
         setCanDownloadAndShare(false)
         setFilename('')
-    }, [$video])
+    }, [releaseMediaUrl, $video])
 
     /**
      * Prevent dialog close except via close button.
@@ -364,9 +382,9 @@ export const VideoDownloadAndShareDialog = () => {
                     </>
                 ) : (
                      <>
-                         <img src={_mediaBlob.current.content} alt="Screenshot" className="main-video"/>
+                         <img src={_mediaBlob.current.url} alt="Screenshot" className="main-video"/>
                          <div className="blurred-video-wrapper">
-                             <img src={_mediaBlob.current.content} className="blurred-video"/>
+                             <img src={_mediaBlob.current.url} className="blurred-video"/>
                          </div>
                      </>
                  )}
@@ -408,7 +426,7 @@ export const VideoDownloadAndShareDialog = () => {
                     label={'File name'}
                 >
                     <span
-                        slot="suffix">.{__.recorder.isVideo() ? lgs.settings.ui.video.format : lgs.settings.ui.video.image}</span>
+                        slot="suffix">.{__.recorder.isVideo() ? getVideoExtension() : lgs.settings.ui.video.image}</span>
                 </SlInput>
                 <div className="video-actions">
                     {__.app.canShare() && (

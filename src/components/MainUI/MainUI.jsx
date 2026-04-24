@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-23
- * Last modified: 2026-04-23
+ * Created on: 2026-04-24
+ * Last modified: 2026-04-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -208,10 +208,10 @@ export const MainUI = memo(() => {
             return
         }
 
-        if (main.theJourney || video.editing || video.recording || video.preRecording || video.snapshot) {
+        if (main.theJourney || video.editing || video.recording || video.preRecording || video.snapshot || video.finalizing) {
             lgs.stores.ui.mainUI.callForActions.active = false
         }
-    }, [main.theJourney, mainUI.callForActions.active, video.editing, video.recording, video.preRecording, video.snapshot])
+    }, [main.theJourney, mainUI.callForActions.active, video.editing, video.recording, video.preRecording, video.snapshot, video.finalizing])
 
     const tooltipDir = toolBar.fromStart ? 'right' : 'left'
     const {primaryEntrance, secondaryEntrance} = arrangeDrawers()

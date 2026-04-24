@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-23
- * Last modified: 2026-04-23
+ * Created on: 2026-04-24
+ * Last modified: 2026-04-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -21,11 +21,10 @@
  * Real-time duration and size reporting via INFO event
  ******************************************************************************/
 import { APP_KEY, NAVIGATOR, SECOND } from '@Core/constants'
+import { DateTime }                  from 'luxon'
 import {
-    DateTime,
-}                                     from 'luxon'
-import {
-    BufferTarget, CanvasSource, Mp4OutputFormat, Output, QUALITY_HIGH, QUALITY_MEDIUM, QUALITY_VERY_HIGH,
+    BufferTarget, CanvasSource, getFirstEncodableVideoCodec, Mp4OutputFormat, Output, QUALITY_HIGH, QUALITY_MEDIUM,
+    QUALITY_VERY_HIGH,
 }                                     from 'mediabunny'
 
 /**
@@ -130,11 +129,14 @@ export class ScreenMediaRecorder extends EventTarget {
     #maxSize = Infinity
     #timeslice = SECOND
     #dimensions = {width: 1920, height: 1080}
+    #videoCodec = null
     #sourceType = 'unknown'
     #metadata = null
     #ratio = null
     #type = null
     #snapshot
+    #mimeType = 'video/mp4'
+    #extension = 'mp4'
 
     constructor() {
         super()
@@ -153,10 +155,13 @@ export class ScreenMediaRecorder extends EventTarget {
             duration: this.#recordedDuration * 1000, // Convert to milliseconds
             fps:      this.#fps,
             quality:  this.#quality,
+            codec:     this.#videoCodec,
             dimensions: this.#dimensions,
             ratio:    this.#ratio,
             sourceType: this.#sourceType,
             metadata: this.#metadata,
+            mimeType:  this.#mimeType,
+            extension: this.#extension,
         }
     }
 
@@ -195,21 +200,14 @@ export class ScreenMediaRecorder extends EventTarget {
     }
 
     async url() {
-        if (this.isVideo()) {
-            if (!this.#blob) {
+        if (!this.#blob) {
+            if (this.isVideo()) {
                 throw this.error('No video')
             }
-        }
-        else {
-
-            // const base64 = this.#snapshot.toDataURL('image/png')
-            // this.#blob = await (await fetch(base64)).blob()
-            this.#snapshot.toBlob(blob => {
-                this.#blob = blob
-            }, 'image/png')
-
-            // TODO: add chunking to png
-            //this.#blob = await __.tools.addChunksToPng(this.#blob , this.#metadata)
+            if (!(this.#snapshot instanceof HTMLCanvasElement)) {
+                throw this.error('No snapshot')
+            }
+            this.#blob = await this.#canvasToBlob(this.#snapshot, 'image/png')
         }
         return {url: URL.createObjectURL(this.#blob), blob: this.#blob}
     }
@@ -417,18 +415,25 @@ export class ScreenMediaRecorder extends EventTarget {
         }
 
         this.#reset()
+        const safe = this.#dimensions
+        const outputConfig = await this.#resolveVideoOutput(safe)
+        if (!outputConfig) {
+            throw this.error(`No supported video codec for ${safe.width}x${safe.height} on this browser.`)
+        }
+        const {codec, format, mimeType, extension} = outputConfig
+        this.#videoCodec = codec
+        this.#mimeType = mimeType
+        this.#extension = extension
         this.#output = new Output({
-                                      format:  new Mp4OutputFormat({fastStart: false}),
+                                      format,
                                       target:  new BufferTarget(),
                                       process: (a, b, c) => {
                                           console.log(a, b, c)
                                       },
                                   })
         await this.#output.setMetadataTags(this.#metadata)
-
-        const safe = this.#dimensions
         this.#videoSource = new CanvasSource(this.#canvas, {
-            codec:                (__.device.browser === NAVIGATOR.firefox && __.device.isMobile) ? 'vp9' : 'avc',
+            codec,
             bitrate:              this.#quality.value,
             alpha:                'discard',
             latencyMode:          'realtime',
@@ -486,6 +491,9 @@ export class ScreenMediaRecorder extends EventTarget {
     #reset = () => {
         this.#blob = null
         this.#snapshot = null
+        this.#videoCodec = null
+        this.#mimeType = 'video/mp4'
+        this.#extension = 'mp4'
         this.#recordedDuration = 0
         this.#startTime = 0
         this.#pausedTime = 0
@@ -509,6 +517,50 @@ export class ScreenMediaRecorder extends EventTarget {
         const width = w - (w % 2) || 2
         const height = h - (h % 2) || 2
         return {width, height}
+    }
+
+    #canvasToBlob = async (canvas, mimeType = 'image/png') => {
+        if (!(canvas instanceof HTMLCanvasElement)) {
+            throw this.error('Invalid canvas')
+        }
+
+        let blob = await new Promise(resolve => canvas.toBlob(resolve, mimeType))
+        if (!(blob instanceof Blob) || blob.size === 0) {
+            try {
+                const dataUrl = canvas.toDataURL(mimeType)
+                blob = await fetch(dataUrl).then(response => response.blob())
+            }
+            catch {
+                blob = null
+            }
+        }
+        if (!(blob instanceof Blob) || blob.size === 0) {
+            throw this.error('Snapshot generation failed')
+        }
+        return blob
+    }
+
+    #resolveVideoOutput = async (safe) => {
+        const codecCandidates = __.device.browser === NAVIGATOR.firefox
+                                ? ['vp9', 'av1']
+                                : ['avc', 'vp9', 'av1']
+        const codec = await getFirstEncodableVideoCodec(codecCandidates, {
+            width:                safe.width,
+            height:               safe.height,
+            bitrate:              this.#quality.value,
+            alpha:                'discard',
+            latencyMode:          'realtime',
+            hardwareAcceleration: 'no-preference',
+        })
+        if (!codec) {
+            return null
+        }
+        return {
+            codec,
+            format:    new Mp4OutputFormat({fastStart: false}),
+            mimeType:  'video/mp4',
+            extension: 'mp4',
+        }
     }
 
     /**
@@ -536,7 +588,7 @@ export class ScreenMediaRecorder extends EventTarget {
 
         if (this.#output) {
             await this.#output.finalize()
-            this.#blob = new Blob([this.#output.target.buffer], {type: 'video/mp4'})
+            this.#blob = new Blob([this.#output.target.buffer], {type: this.#mimeType})
             this.#sizeBytes = this.#blob.size
         }
 
@@ -553,11 +605,13 @@ export class ScreenMediaRecorder extends EventTarget {
     captureScreenshot = async (canvas) => {
         this.type = ScreenMediaRecorder.IMAGE
         this.#snapshot = canvas
-        this.#blob = await new Promise(resolve => canvas.toBlob(resolve))
+        this.#mimeType = 'image/png'
+        this.#extension = 'png'
+        this.#blob = await this.#canvasToBlob(canvas, this.#mimeType)
         this.#sizeBytes = this.#blob.size
-        this.dimensions = {width: canvas.width, height: canvas.height}
+        this.#dimensions = {width: canvas.width, height: canvas.height}
         this.dispatchEvent(new CustomEvent(ScreenMediaRecorder.events.CAPTURED, {
-            detail: {canvas},
+            detail: {canvas, blob: this.#blob},
         }))
 
     }

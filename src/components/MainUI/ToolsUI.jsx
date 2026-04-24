@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-04-24
+ * Last modified: 2026-04-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -23,7 +23,6 @@ import { WidgetContextMenu }    from '@Components/MainUI/widgets/WidgetContextMe
 import { Cropper }           from '@Components/ToolsUI/cropper/Cropper'
 import { VideoRecordingScreenArea } from '@Components/MainUI/video/VideoRecordingScreenArea'
 import { JourneyToolbarWidget }     from '@Editor/JourneyToolbarWidget'
-import React                        from 'react'
 import { useSnapshot }              from 'valtio/index'
 
 export const ToolsUI = () => {
@@ -45,7 +44,8 @@ export const ToolsUI = () => {
             ) : (
 
                 <>
-                    {(video.preRecording || video.recording || video.snapshot) && <VideoRecordingScreenArea/>}
+                    {(video.preRecording || video.recording || video.snapshot || video.finalizing) &&
+                        <VideoRecordingScreenArea/>}
                     <CameraAndTargetPanel/>
                      <MapPOIContextMenu/>
                     {usage && <JourneyToolbarWidget id="journey-toolbar-widget"/>}

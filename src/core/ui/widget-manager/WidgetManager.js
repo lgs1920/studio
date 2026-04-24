@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-14
- * Last modified: 2026-02-14
+ * Created on: 2026-04-24
+ * Last modified: 2026-04-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -453,6 +453,16 @@ export class WidgetManager {
     remainingWidgets = (group, widget) => this.#registry.remainingWidgets(group, widget)
 
     applyCropToOverlay = config => this.#cropper.applyCropToOverlay(config)
+
+    /**
+     * Synchronizes crop dimensions from the rendered DOM element.
+     * @param {string} cropzoneId - Crop zone identifier
+     * @param {boolean} persist - Whether to persist the synced crop after update
+     * @param {string} phase - Crop update phase label
+     * @returns {Promise<Object|null>}
+     */
+    syncCropDimensionsFromElement = async (cropzoneId, persist = false, phase = 'sync') =>
+        await this.#cropper.syncCropDimensionsFromElement(cropzoneId, persist, phase)
 
     /**
      * Saves widget position and dimensions to the widgets DB.

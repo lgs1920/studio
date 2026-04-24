@@ -129,27 +129,6 @@ export const VideoRecorderToolbar = ({toolbar}) => {
             return
         }
 
-        const handleStart = () => {
-            if ($video.recording) {
-                return
-            }
-
-            // Widgets are already hidden by VideoRecordingSettingsToolbar
-            // No need to hide them again here
-
-            updateState({
-                            preRecording: false,
-                            recording: true,
-                            finalizing:   false,
-                            paused:       false,
-                            size:         0,
-                            recordedDuration: 0,
-                            recordedSize: 0,
-                        })
-            showToast('warning', 'ON AIR!')
-
-        }
-
         const handleInfo = (event) => {
             // Use the duration directly from the event
             setState((prev) => ({
@@ -230,7 +209,6 @@ export const VideoRecorderToolbar = ({toolbar}) => {
         }
 
         const events = [
-            [ScreenMediaRecorder.events.START, handleStart],
             [ScreenMediaRecorder.events.INFO, handleInfo],
             [ScreenMediaRecorder.events.PAUSE, handlePause],
             [ScreenMediaRecorder.events.RESUME, handleResume],

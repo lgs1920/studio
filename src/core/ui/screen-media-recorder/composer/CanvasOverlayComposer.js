@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-27
- * Last modified: 2026-02-27
+ * Created on: 2026-04-24
+ * Last modified: 2026-04-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -150,6 +150,29 @@ export class CanvasOverlayComposer {
 
     /** @returns {HTMLCanvasElement} Output canvas used for recording. */
     getCanvas = () => this.#outputCanvas
+
+    /**
+     * Forces an immediate composite frame render.
+     * Useful for one-shot captures where waiting for the internal rAF loop would
+     * otherwise produce an empty or stale frame.
+     *
+     * @param {{waitForNextFrame?: boolean}} [options]
+     * @returns {Promise<HTMLCanvasElement|null>}
+     */
+    renderFrame = async ({waitForNextFrame = false} = {}) => {
+        if (!this.#running || !this.#outputCanvas) {
+            return this.#outputCanvas
+        }
+
+        if (waitForNextFrame) {
+            await new Promise(resolve => requestAnimationFrame(() => resolve()))
+        }
+
+        this.#updateSourceDpr()
+        this.#computeSourceRect()
+        this.#draw()
+        return this.#outputCanvas
+    }
 
     /**
      * Start an overlay update batch. Use with addOverlay(), then endUpdate().

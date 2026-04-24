@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-08
- * Last modified: 2026-03-07
+ * Created on: 2026-04-24
+ * Last modified: 2026-04-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -132,7 +132,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
         return () => _observer.disconnect()
     }, [config.widgetsBoard, config.container])
 
-    const interactionLocked = (video.preRecording || video.recording || video.snapshot) && config.type === LGS_VISUAL_WIDGET
+    const interactionLocked = (video.preRecording || video.recording || video.snapshot || video.finalizing) && config.type === LGS_VISUAL_WIDGET
     const showGhostOnly = Boolean(config?.showGhostDuringRecording) && video.recording && config.type === LGS_VISUAL_WIDGET
 
     // Snapping logic
@@ -586,7 +586,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
             __.recorder.removeEventListener(ScreenMediaRecorder.events.STOP, clean)
             __.recorder.removeEventListener(ScreenMediaRecorder.events.CANCEL, clean)
         }
-    }, [isVisible, config, video.preRecording, video.recording, video.snapshot, actualContainer])
+    }, [isVisible, config, video.preRecording, video.recording, video.snapshot, video.finalizing, actualContainer])
 
     useEffect(() => {
         const canvas = _w2c.current?.getCanvas?.()
