@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-19
- * Last modified: 2026-04-19
+ * Created on: 2026-04-24
+ * Last modified: 2026-04-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -21,8 +21,8 @@ import {
 }                                                             from '@Utils/cesium/TrackUtils'
 import { FileUtils }                                          from '@Utils/FileUtils'
 import { UIToast }                                            from '@Utils/UIToast'
-import { WaButton, WaDialog, WaDivider, WaFileInput, WaIcon } from '@web.awesome.me/webawesome-pro/dist/react'
-import { useEffect, useMemo, useRef }                         from 'react'
+import { WaButton, WaDialog, WaDivider, WaIcon } from '@web.awesome.me/webawesome-pro/dist/react'
+import { useEffect, useId, useMemo, useRef }     from 'react'
 import { v4 as uuid }                                         from 'uuid'
 import { useSnapshot }                                        from 'valtio'
 import './style.css'
@@ -37,8 +37,7 @@ export const JourneyLoaderUI = (props) => {
     const $journeyLoader = lgs.stores.ui.mainUI.journeyLoader
     const journeyLoader = useSnapshot($journeyLoader)
 
-    const $fileLoader = lgs.stores.main.components.fileLoader
-    const {fileList, sampleLoaded} = useSnapshot($fileLoader)
+    const {fileList, sampleLoaded} = useSnapshot(lgs.stores.main.components.fileLoader)
 
     const _dialog = useRef(null)
     const _filesDropper = useRef(null)
@@ -49,6 +48,7 @@ export const JourneyLoaderUI = (props) => {
     const GPX_SAMPLE_URL = [__.app.isDevelopment() ? '/public' : '/', 'assets', 'samples', GPX_SAMPLE_FILENAME].join('/')
     const sampleFileInfo = useMemo(() => FileUtils.getFileNameAndExtension(GPX_SAMPLE_FILENAME), [])
     const sampleSlug = useMemo(() => __.app.setSlug({content: GPX_SAMPLE_FILENAME.split('.')}), [])
+    const fileInputId = useId()
 
     /**
      * Resynchronize sampleLoaded state whenever the dialog opens.
@@ -57,8 +57,8 @@ export const JourneyLoaderUI = (props) => {
     useEffect(() => {
         if (journeyLoader.visible) {
             const isPresent = lgs.journeys.has(sampleSlug)
-            if ($fileLoader.sampleLoaded !== isPresent) {
-                $fileLoader.sampleLoaded = isPresent
+            if (lgs.stores.main.components.fileLoader.sampleLoaded !== isPresent) {
+                lgs.stores.main.components.fileLoader.sampleLoaded = isPresent
             }
         }
     }, [journeyLoader.visible, sampleSlug])
@@ -75,9 +75,9 @@ export const JourneyLoaderUI = (props) => {
      * @param {string} error
      */
     const updateFileStatus = (id, status, error = '') => {
-        const item = $fileLoader.fileList.get(id)
+        const item = lgs.stores.main.components.fileLoader.fileList.get(id)
         if (item) {
-            $fileLoader.fileList.set(id, {
+            lgs.stores.main.components.fileLoader.fileList.set(id, {
                 ...item,
                 journeyStatus: status,
                 error:         error || item.error,
@@ -85,7 +85,7 @@ export const JourneyLoaderUI = (props) => {
 
             // Update sampleLoaded flag if this file matches the sample slug
             if (status === JOURNEY_OK && item.slug === sampleSlug) {
-                $fileLoader.sampleLoaded = true
+                lgs.stores.main.components.fileLoader.sampleLoaded = true
             }
         }
     }
@@ -103,12 +103,12 @@ export const JourneyLoaderUI = (props) => {
         item.journeyStatus = JOURNEY_WAITING
         item.internalId = currentId
 
-        $fileLoader.fileList.set(currentId, item)
+        lgs.stores.main.components.fileLoader.fileList.set(currentId, item)
 
         if (lgs.journeys.has(slug)) {
             updateFileStatus(currentId, JOURNEY_EXISTS, ALREADY_IMPORTED.text)
             if (slug === sampleSlug) {
-                $fileLoader.sampleLoaded = true
+                lgs.stores.main.components.fileLoader.sampleLoaded = true
             }
 
             UIToast.warning({
@@ -147,7 +147,7 @@ export const JourneyLoaderUI = (props) => {
                 const isDoublon = status === JOURNEY_EXISTS
                 updateFileStatus(currentId, isDoublon ? JOURNEY_EXISTS : JOURNEY_KO, isDoublon ? ALREADY_IMPORTED.text : IMPORT_FAILED.text)
                 if (isDoublon && slug === sampleSlug) {
-                    $fileLoader.sampleLoaded = true
+                    lgs.stores.main.components.fileLoader.sampleLoaded = true
                 }
 
                 UIToast.warning({
@@ -163,12 +163,201 @@ export const JourneyLoaderUI = (props) => {
     }
 
     /**
+     * Clears the native file input value.
+     */
+    const clearSelectedFiles = () => {
+        if (_filesDropper.current) {
+            _filesDropper.current.value = ''
+        }
+    }
+
+    /**
+     * Handles a list of selected or dropped files.
+     * @param {File[]} files
+     */
+    const processFiles = (files) => {
+        files.forEach(file => processLocalFile(file))
+        clearSelectedFiles()
+    }
+
+    /**
      * File input change handler
      */
     const handleFilesChange = (event) => {
-        const currentFiles = Array.from(_filesDropper.current.files || [])
-        currentFiles.forEach(file => processLocalFile(file))
-        _filesDropper.current.files = []
+        const currentFiles = Array.from(event.target.files || [])
+        processFiles(currentFiles)
+    }
+
+    /**
+     * Reads all entries from a dropped directory.
+     * @param {FileSystemDirectoryReader} reader
+     * @returns {Promise<FileSystemEntry[]>}
+     */
+    const readDirectoryEntries = (reader) => {
+        return new Promise((resolve, reject) => {
+            reader.readEntries(resolve, reject)
+        })
+    }
+
+    /**
+     * Reads a dropped file entry as a File instance.
+     * @param {FileSystemFileEntry} entry
+     * @returns {Promise<File>}
+     */
+    const readFileEntry = (entry) => {
+        return new Promise((resolve, reject) => {
+            entry.file(resolve, reject)
+        })
+    }
+
+    /**
+     * Resolves the browser-specific dropped entry API.
+     * Chromium-based browsers can invalidate DataTransferItem access after the first await,
+     * so entries must be captured synchronously during the drop event.
+     * @param {DataTransferItem} item
+     * @returns {FileSystemEntry | null}
+     */
+    const getDroppedEntry = (item) => {
+        return item?.getAsEntry?.() ?? item?.webkitGetAsEntry?.() ?? null
+    }
+
+    /**
+     * Collects dropped files recursively, including directory contents when the browser exposes entries.
+     * @param {FileSystemEntry | null} entry
+     * @returns {Promise<File[]>}
+     */
+    const collectFilesFromEntry = async (entry) => {
+        if (!entry) {
+            return []
+        }
+
+        if (entry.isFile) {
+            const file = await readFileEntry(entry)
+            return file ? [file] : []
+        }
+
+        if (entry.isDirectory) {
+            const reader = entry.createReader()
+            const files = []
+
+            while (true) {
+                const entries = await readDirectoryEntries(reader)
+                if (entries.length === 0) {
+                    break
+                }
+
+                for (const childEntry of entries) {
+                    files.push(...await collectFilesFromEntry(childEntry))
+                }
+            }
+
+            return files
+        }
+
+        return []
+    }
+
+    /**
+     * Normalizes dropped files from the browser data transfer payload.
+     * @param {DragEvent} event
+     * @returns {Promise<File[]>}
+     */
+    const getDroppedFiles = async (event) => {
+        const dataTransfer = event.dataTransfer
+        const directFiles = Array.from(dataTransfer?.files || [])
+        const items = Array.from(dataTransfer?.items || [])
+
+        if (items.length === 0) {
+            return directFiles
+        }
+
+        const droppedItems = items
+            .filter(item => item.kind === 'file')
+            .map(item => ({
+                entry: getDroppedEntry(item),
+                file:  item.getAsFile?.() ?? null,
+            }))
+
+        const hasDirectoryDrop = droppedItems.some(({entry}) => entry?.isDirectory)
+        if (!hasDirectoryDrop && directFiles.length > 0) {
+            return directFiles
+        }
+
+        const files = []
+
+        for (const {entry, file} of droppedItems) {
+            if (entry) {
+                files.push(...await collectFilesFromEntry(entry))
+                continue
+            }
+
+            if (file) {
+                files.push(file)
+            }
+        }
+
+        return files.length > 0 ? files : directFiles
+    }
+
+    /**
+     * Opens the native file picker.
+     */
+    const openFilePicker = () => {
+        _filesDropper.current?.click()
+    }
+
+    /**
+     * Keyboard support for the custom dropzone.
+     * @param {React.KeyboardEvent<HTMLDivElement>} event
+     */
+    const handleDropZoneKeyDown = (event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault()
+            openFilePicker()
+        }
+    }
+
+    /**
+     * Keeps the browser from opening dragged files.
+     * @param {React.DragEvent<HTMLDivElement>} event
+     */
+    const handleDragEnter = (event) => {
+        event.preventDefault()
+        event.stopPropagation()
+    }
+
+    /**
+     * Keeps the browser from opening dropped files.
+     * @param {React.DragEvent<HTMLDivElement>} event
+     */
+    const handleDragOver = (event) => {
+        event.preventDefault()
+        event.stopPropagation()
+    }
+
+    /**
+     * Keeps the browser from opening dragged files when leaving the dropzone.
+     * @param {React.DragEvent<HTMLDivElement>} event
+     */
+    const handleDragLeave = (event) => {
+        event.preventDefault()
+        event.stopPropagation()
+    }
+
+    /**
+     * Handles files dropped onto the custom dropzone.
+     * @param {React.DragEvent<HTMLDivElement>} event
+     * @returns {Promise<void>}
+     */
+    const handleDrop = async (event) => {
+        event.preventDefault()
+        event.stopPropagation()
+
+        const droppedFiles = await getDroppedFiles(event.nativeEvent)
+
+        if (droppedFiles.length > 0) {
+            processFiles(droppedFiles)
+        }
     }
 
     /**
@@ -180,10 +369,10 @@ export const JourneyLoaderUI = (props) => {
         const item = createListItem(mockFile, {validated: true, file: sampleFileInfo})
 
         if (lgs.journeys.has(sampleSlug)) {
-            $fileLoader.sampleLoaded = true
+            lgs.stores.main.components.fileLoader.sampleLoaded = true
             item.journeyStatus = JOURNEY_EXISTS
             item.error = ALREADY_IMPORTED.text
-            $fileLoader.fileList.set(currentId, item)
+            lgs.stores.main.components.fileLoader.fileList.set(currentId, item)
             UIToast.warning({
                                 caption: ALREADY_IMPORTED.caption,
                                 text:    `The sample <strong>${GPX_SAMPLE_FILENAME}</strong> ${ALREADY_IMPORTED.text}`,
@@ -192,7 +381,7 @@ export const JourneyLoaderUI = (props) => {
         }
 
         item.journeyStatus = JOURNEY_WAITING
-        $fileLoader.fileList.set(currentId, item)
+        lgs.stores.main.components.fileLoader.fileList.set(currentId, item)
 
         try {
             const response = await lgs.axios.get(GPX_SAMPLE_URL)
@@ -205,7 +394,7 @@ export const JourneyLoaderUI = (props) => {
 
             if (status === JOURNEY_OK) {
                 updateFileStatus(currentId, JOURNEY_OK)
-                $fileLoader.sampleLoaded = true
+                lgs.stores.main.components.fileLoader.sampleLoaded = true
             }
             else {
                 updateFileStatus(currentId, JOURNEY_KO, 'Sample load failed')
@@ -270,10 +459,8 @@ export const JourneyLoaderUI = (props) => {
      */
     const close = () => {
         _attemptCounter.current = 0
-        if (_filesDropper.current) {
-            _filesDropper.current.value = ''
-        }
-        $fileLoader.fileList.clear()
+        clearSelectedFiles()
+        lgs.stores.main.components.fileLoader.fileList.clear()
         lgs.stores.ui.mainUI.journeyLoader.visible = false
     }
 
@@ -288,22 +475,38 @@ export const JourneyLoaderUI = (props) => {
             ref={_dialog}
         >
             <div className="download-columns">
-                <WaFileInput
-                    ref={_filesDropper}
-                    className={'drag-and-drop-container'}
-                    size="large"
-                    multiple
-                    accept={SUPPORTED_EXTENSIONS.join(',')}
-                    hint={`Accepted formats: ${ACCEPTED_FILES}`}
-                    onInput={handleFilesChange}
+                <div
+                    className="drag-and-drop-container"
+                    role="button"
+                    tabIndex={0}
+                    onClick={openFilePicker}
+                    onKeyDown={handleDropZoneKeyDown}
+                    onDragEnter={handleDragEnter}
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
+                    aria-describedby={`${fileInputId}-hint`}
                 >
-                    <WaIcon slot="file-icon" name="route" variant="regular"/>
-                    <label slot="dropzone">
-                        <WaIcon name="route" variant="regular"/>
+                    <input
+                        ref={_filesDropper}
+                        id={fileInputId}
+                        className="standard-file-input"
+                        type="file"
+                        multiple={props.multiple ?? true}
+                        accept={SUPPORTED_EXTENSIONS.join(',')}
+                        onChange={handleFilesChange}
+                    />
+
+                    <div className="drag-and-drop-trigger">
+                        <WaIcon className="dropzone-icon" name="route" variant="regular"/>
                         <strong>Drop your files here</strong>
                         <span>or click to browse</span>
-                    </label>
-                </WaFileInput>
+                    </div>
+
+                    <div id={`${fileInputId}-hint`} className="drag-and-drop-hint">
+                        {`Accepted formats: ${ACCEPTED_FILES}`}
+                    </div>
+                </div>
 
 
                 {fileList.size > 0 &&
