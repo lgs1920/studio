@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-28
- * Last modified: 2026-02-28
+ * Created on: 2026-04-24
+ * Last modified: 2026-04-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -128,31 +128,40 @@ export class SceneUtils {
      *
      * @return {Array|number} altitude
      */
-    static getHeightFromTerrain = async ({coordinates, precision = HIGH_TERRAIN_PRECISION, level = 11}) => {
-        const positions = []
-        let multi = true
-        if (!Array.isArray(coordinates)) {
-            multi = false
-            coordinates = [coordinates]
+    static getHeightFromTerrain = async ({coordinates, precision = HIGH_TERRAIN_PRECISION, level = 11} = {}) => {
+        if (!coordinates) {
+            throw new TypeError('SceneUtils.getHeightFromTerrain requires coordinates')
+        }
+
+        const multi = Array.isArray(coordinates)
+        const sourceCoordinates = multi ? coordinates : [coordinates]
+        const indexedCoordinates = sourceCoordinates
+            .map((point, index) => ({point, index}))
+            .filter(({point}) => point
+                && Number.isFinite(Number(point.longitude))
+                && Number.isFinite(Number(point.latitude)))
+
+        if (indexedCoordinates.length === 0) {
+            throw new TypeError('SceneUtils.getHeightFromTerrain requires valid longitude/latitude coordinates')
         }
 
         const cartographics = []
-        coordinates.forEach(point => cartographics.push(Cartographic.fromDegrees(point.longitude, point.latitude,
-                                                                                 __.ui.sceneManager.noRelief() ? 0 : (point.simulatedHeight ?? point.height))))
+        indexedCoordinates.forEach(({point}) => cartographics.push(Cartographic.fromDegrees(point.longitude, point.latitude,
+                                                                                            __.ui.sceneManager.noRelief() ? 0 : (point.simulatedHeight ?? point.height))))
         //TODO apply only if altitude is missing for some coordinates
-        const altitude = []
+        const altitude = multi ? Array(sourceCoordinates.length).fill(null) : [0]
         let results
         switch (precision) {
             case HIGH_TERRAIN_PRECISION:
                 results = await sampleTerrainMostDetailed(lgs.viewer.terrainProvider, cartographics)
                 break
             case LOW_TERRAIN_PRECISION:
-                results = await sampleTerrain(lgs.viewer.terrainProvider, precision, cartographics)
+                results = await sampleTerrain(lgs.viewer.terrainProvider, level, cartographics)
                 break
         }
         // Get altitudes
-        results.forEach(coordinate => {
-            altitude.push(coordinate.height)
+        results.forEach((coordinate, index) => {
+            altitude[indexedCoordinates[index].index] = coordinate.height
         })
 
         // Returns values in the same format as input
@@ -339,7 +348,12 @@ export class SceneUtils {
         const [longitude, latitude] = centroid(track.content).geometry.coordinates
         let height = 0
         try {
-            height = await __.ui.poiManager.getHeightFromTerrain({longitude: longitude, latitude: latitude})
+            height = await __.ui.poiManager.getHeightFromTerrain({
+                                                                     coordinates: {
+                                                                         longitude: longitude,
+                                                                         latitude:  latitude,
+                                                                     },
+                                                                 })
         }
         catch (error) {
             console.error(error)

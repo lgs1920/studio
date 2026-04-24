@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-19
- * Last modified: 2026-04-19
+ * Created on: 2026-04-24
+ * Last modified: 2026-04-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -28,101 +28,69 @@
     gap: var(--lgs-gutter)
 }
 
-[slot="dropzone"] {
+.drag-and-drop-container {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    border-radius: var(--lgs-border-radius-s);
+    gap: var(--lgs-gutter-s);
+    --dropzone-border-color: var(--wa-color-brand-border-loud);
+    --dropzone-text-color: inherit;
+    --dropzone-bg-color: transparent;
+}
+
+.standard-file-input {
+    position: absolute;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    white-space: nowrap;
+    border: 0;
+}
+
+.drag-and-drop-trigger {
     font-size: var(--lgs-font-size);
     display: flex;
     align-items: center;
     flex-direction: column;
-    gap: var(--lgs-gutter-s);
-
-}
-
-wa-file-input.drag-and-drop-container::part(dropzone) {
+    justify-content: center;
+    min-height: max(20dvh, 150px);
+    padding: var(--lgs-gutter);
     cursor: pointer;
-    border-width: 2px;
-    border-color: var(--wa-color-brand-border-loud);
+    transition: box-shadow .24s ease-in-out;
+    text-align: center;
+    color: var(--dropzone-text-color);
+    border: 2px dashed var(--dropzone-border-color);
     border-radius: var(--lgs-border-radius);
+    background-color: var(--dropzone-bg-color);
+    gap: var(--lgs-gutter-s);
 }
 
-wa-file-input.drag-and-drop-container::part(file) {
-    display: none;
+.drag-and-drop-container:focus-visible,
+.drag-and-drop-container:focus {
+    outline: none;
 }
 
-
-.drag-and-drop-container {
-    border-radius: var(--lgs-border-radius-s);
+.drag-and-drop-container:focus-visible .drag-and-drop-trigger {
+    box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 16%, transparent);
 }
 
-.drag-and-drop-container [slot="dropzone"] wa-icon {
+.drag-and-drop-container .dropzone-icon {
     font-size: var(--lgs-font-size-xl);
     color: var(--wa-color-brand);
 }
 
-.drag-and-drop-container [slot="dropzone"] span {
+.drag-and-drop-trigger span {
     font-size: var(--lgs-font-size-s);
 }
 
-.drag-and-drop-container.xxxx {
-    font-size: var(--sl-font-size-medium);
-    display: flex;
-    align-items: center;
-
-    flex-direction: column;
-    justify-content: center;
-    height: max(20dvh, 150px);
-    cursor: pointer;
-    transition: border .24s ease-in-out;
+.drag-and-drop-hint {
+    font-size: var(--lgs-font-size-s);
     text-align: center;
-    color: var(--dropzone-text-color);
-    border: calc(2 * var(--sl-input-border-width)) dashed var(--dropzone-border-color);
-    border-radius: var(--sl-border-radius-medium);
-    background-color: var(--dropzone-bg-color);
-    --dropzone-border-color: var(--sl-input-border-color);
-    --dropzone-text-color: '';
-
-    --dropzone-bg-color: '';
-
-}
-
-@keyframes changeBackground {
-    0% {background-color: transparent; opacity: 0;}
-    25% {background-color: var(--dropzone-bg-color); opacity: 1;}
-    75% {background-color: var(--dropzone-bg-color); opacity: 1;}
-    100% {background-color: transparent; opacity: 0;}
-}
-
-.drag-and-drop.waiting-drop, .drag-and-drop:hover {
-    --dropzone-border-color: var(--lgs-hover-color);
-    --dropzone-text-color: var(--lgs-hover-color);
-    --dropzone-bg-color: var(--lgs-hover-bg-color);
-}
-
-.drag-and-drop.drag-accept {
-    animation: changeBackground 3s;
-    --dropzone-border-color: var(--lgs-success-color);
-    --dropzone-text-color: var(--lgs-success-color);
-    --dropzone-bg-color: var(--lgs-success-bg-color);
-}
-
-.drag-and-drop.drag-reject {
-    animation: changeBackground 3s;
-    --dropzone-border-color: var(--lgs-error-color);
-    --dropzone-text-color: var(--lgs-error-color);
-    --dropzone-bg-color: var(--lgs-error-bg-color);
-}
-
-.drag-and-drop.drag-some-reject {
-    animation: changeBackground 3s;
-    --dropzone-border-color: var(--lgs-warning-color);
-    --dropzone-text-color: var(--lgs-warning-color);
-    --dropzone-bg-color: var(--lgs-warning-bg-color);
-}
-
-.drag-and-drop span {
-    display: flex;
-    gap: var(--lgs-gutter-s);
-    align-items: center;
-    text-align: center;
+    color: var(--wa-color-text-quiet);
 }
 
 .drag-and-drop-list {

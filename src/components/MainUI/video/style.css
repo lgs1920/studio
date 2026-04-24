@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-23
- * Last modified: 2026-04-23
+ * Created on: 2026-04-24
+ * Last modified: 2026-04-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -32,10 +32,14 @@
     font-size: var(--lgs-font-size-s);
     position: relative;
     z-index: calc(var(--lgs-ui-layer-zindex) + 2);
-    display: flex;
-    align-items: center;
-    flex-direction: row;
-    gap: 0;
+
+
+    &::part(body) {
+        display: flex;
+        align-items: center;
+        flex-direction: row;
+        gap: 0;
+    }
 }
 
 .video-recorder-widget span {

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-19
- * Last modified: 2026-02-19
+ * Created on: 2026-04-24
+ * Last modified: 2026-04-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -26,6 +26,9 @@ import { useSnapshot }                                              from 'valtio
 export const JourneyStatsWidgetPreview = ({entity}) => {
     const $widget = lgs.stores.ui.widget
     const widget = useSnapshot($widget)
+    const main = useSnapshot(lgs.stores.main)
+    const journey = lgs.theJourney
+    const journeySlug = main.theJourney?.slug ?? null
 
     const $unitSystem = lgs.settings.unitSystem
     const unitSystem = useSnapshot($unitSystem)
@@ -34,7 +37,7 @@ export const JourneyStatsWidgetPreview = ({entity}) => {
     const $configuration = lgs.settings.widgets['journey-stats-widget'].configuration
     const configuration = useSnapshot($configuration)
 
-    const $metrics = lgs.theJourney.metrics
+    const $metrics = journey?.metrics ?? lgs.stores.main.components.journeyStats
     const metrics = useSnapshot($metrics)
 
     const [initialRotation, setInitialRotation] = useState(0)
@@ -63,11 +66,11 @@ export const JourneyStatsWidgetPreview = ({entity}) => {
     }, [entity])
 
     const journeyMetrics = useMemo(() => {
-        if (!metrics) {
+        if (!journeySlug || !journey || !metrics) {
             return null
         }
-        return lgs.theJourney.getMetrics()
-    }, [metrics, currentUnit])
+        return journey.getMetrics()
+    }, [journeySlug, journey, metrics])
 
     const units = useMemo(() => ({
         elevation: ELEVATION_UNITS[currentUnit],
@@ -84,7 +87,7 @@ export const JourneyStatsWidgetPreview = ({entity}) => {
                            ? Number(widget.current.rotate)
                            : initialRotation
 
-    if (!journeyMetrics) {
+    if (!journeySlug || !journey || !journeyMetrics) {
         return null
     }
 

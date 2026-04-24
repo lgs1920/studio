@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-19
- * Last modified: 2026-02-19
+ * Created on: 2026-04-24
+ * Last modified: 2026-04-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -20,7 +20,7 @@ import { faArrowDownToLine, faArrowUpToLine }           from '@fortawesome/pro-r
 import { SlDivider, SlIcon }                            from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                                        from '@Utils/FA2SL'
 import { DISTANCE_UNITS, ELEVATION_UNITS, SPEED_UNITS } from '@Utils/UnitUtils'
-import React, { memo, useEffect, useMemo, useRef } from 'react'
+import { memo, useEffect, useMemo } from 'react'
 import { useSnapshot }                                  from 'valtio'
 
 /**
@@ -28,10 +28,15 @@ import { useSnapshot }                                  from 'valtio'
  * Maintains layout consistency by preserving slots even when values are zero.
  */
 export const JourneyStats = memo(({id, metrics, units, style = {}}) => {
+    const main = useSnapshot(lgs.stores.main)
+    const journey = lgs.theJourney
+    const journeySlug = main.theJourney?.slug ?? null
+
     const $configuration = lgs.settings.widgets['journey-stats-widget'].configuration
     const configuration = useSnapshot($configuration)
 
-    const $metrics = lgs.theJourney.metrics
+    const fallbackMetrics = useMemo(() => metrics ?? {}, [metrics])
+    const $metrics = journey?.metrics ?? lgs.stores.main.components.journeyStats
     const metricsSnap = useSnapshot($metrics)
 
     const $unitSystem = lgs.settings.unitSystem
@@ -50,9 +55,9 @@ export const JourneyStats = memo(({id, metrics, units, style = {}}) => {
      */
     const displayMetrics = useMemo(() => {
         const source = element.dataSource || 'global'
-        const global = metricsSnap.global
-        const external = metricsSnap.external || {}
-        const user = metricsSnap.user || {}
+        const global = metricsSnap.global || fallbackMetrics.global || {}
+        const external = metricsSnap.external || fallbackMetrics.external || {}
+        const user = metricsSnap.user || fallbackMetrics.user || {}
 
         if (source === 'global') {
             return global
@@ -68,7 +73,7 @@ export const JourneyStats = memo(({id, metrics, units, style = {}}) => {
                 ...(source === 'user' ? {...(external.positive || {}), ...(user.positive || {})} : {}),
             }
         }
-    }, [element.dataSource, metricsSnap])
+    }, [element.dataSource, fallbackMetrics, metricsSnap])
 
     const formattedDuration = useMemo(() => {
         const seconds = displayMetrics?.duration
@@ -106,9 +111,10 @@ export const JourneyStats = memo(({id, metrics, units, style = {}}) => {
         min: formatPace(displayMetrics?.minPace),
     }), [displayMetrics?.averagePace, displayMetrics?.minPace])
 
-    const hasDuration = lgs.theJourney.hasTime
-    const hasElevation = lgs.theJourney.hasAltitude
-    const date = __.ui.ui.formatJourneyDurationDates(lgs.theJourney.getDate())
+    const hasDuration = journey?.hasTime ?? false
+    const hasElevation = journey?.hasAltitude ?? false
+    const date = journey ? __.ui.ui.formatJourneyDurationDates(journey.getDate()) : {}
+    const hasDateRange = Boolean(date?.prefix && date?.sufix)
 
     const _moveable = useMemo(() => __.ui.widgetManager.getMoveable(id), [id])
 
@@ -119,7 +125,7 @@ export const JourneyStats = memo(({id, metrics, units, style = {}}) => {
         if (_moveable?.current) {
             _moveable.current.updateRect()
         }
-    }, [_moveable, element?.date, element?.altitude, element?.performance, element.separator, element.border])
+    }, [_moveable, journeySlug, element?.date, element?.altitude, element?.performance, element.separator, element.border])
 
     const mainStyle = useMemo(() => ({
         ...style,
@@ -144,9 +150,13 @@ export const JourneyStats = memo(({id, metrics, units, style = {}}) => {
     const showSpeedRow = element?.performance && (displayMetrics.averageSpeed > 0 || displayMetrics.maxSpeed > 0)
     const showPaceRow = element?.performance && (paceValues.average !== null || paceValues.min !== null)
 
+    if (!journeySlug || !journey) {
+        return null
+    }
+
     return (
         <div className="journey-stats-widget" style={mainStyle}>
-            {(hasDuration && element?.date) && (
+            {(hasDuration && element?.date && hasDateRange) && (
                 <>
                     <div className="journey-stats-date">
                         <span>{date.prefix}</span><span>{date.sufix}</span>

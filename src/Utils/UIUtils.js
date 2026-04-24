@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-11
- * Last modified: 2026-04-11
+ * Created on: 2026-04-24
+ * Last modified: 2026-04-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -195,7 +195,7 @@ export class UIUtils {
      */
     static formatJourneyDurationDates = (data) => {
         if (!data?.start || !data?.stop) {
-            return []
+            return {}
         }
 
         const startDT = DateTime.fromISO(data.start)
@@ -242,5 +242,4 @@ export class UIUtils {
         return includeAlpha ? c.alpha(item.opacity ?? 1).toRgbString() : c.toRgbString()
     }
 }
-
 

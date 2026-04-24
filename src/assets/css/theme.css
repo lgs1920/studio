@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-23
- * Last modified: 2026-04-23
+ * Created on: 2026-04-24
+ * Last modified: 2026-04-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -76,6 +76,7 @@
     --lgs-main-ui-zindex: 800;
     --lgs-ui-layer-zindex: 5000;
     --lgs-tools-ui-zindex: calc(var(--lgs-ui-layer-zindex) - 1);
+    --lgs-toast-zindex: 2147483647;
     --lgs-drop-zone-zindex: 10;
     --lgs-context-menu-zindex: calc(var(--lgs-tools-ui-zindex) + 100);
 
@@ -257,6 +258,7 @@
 
 
     --lgs-compass-size: 50px;
+}
 
     /*******************************************************************************
      * Globals
@@ -1437,48 +1439,138 @@
      ******************************************************************************/
 
 
-    .lgs-toaster {
-        z-index: calc(var(--lgs-ui-layer-zindex) + 1) !important;
-        margin: var(--left);
-        padding: 0;
-        --gap: var(--lgs-gutter-s);
-        --width: var(--lgs-max-mobile-width);
+.lgs-toast-layer {
+    position: fixed;
+    z-index: var(--lgs-toast-zindex) !important;
+    overflow: visible;
+    margin: 0;
+    padding: 0;
+    pointer-events: none;
+    border: none;
+    background: transparent;
+    inset: 0;
+}
+
+.lgs-toast-layer:popover-open {
+    display: block;
+}
+
+.Toastify__toast-container.lgs-toaster {
+    z-index: var(--lgs-toast-zindex) !important;
+    width: var(--lgs-max-mobile-width);
+    padding: 0;
+    pointer-events: none;
+}
+
+.Toastify__toast-container--bottom-left.lgs-toaster {
+    bottom: var(--bottom);
+    left: var(--left);
     }
 
-    wa-toast-item {
+.Toastify__toast.lgs-toast {
+    position: relative;
+    overflow: visible;
+    min-height: 0;
+    margin: 0 0 var(--lgs-gutter-s) 0;
+    padding: 0;
+    pointer-events: auto;
+    border-radius: 0;
+    background: transparent !important;
+    box-shadow: none !important;
+}
+
+.Toastify__toast-container.lgs-toaster .Toastify__toast:last-child {
+    margin-bottom: 0;
+}
+
+.Toastify__toast-body {
         margin: 0;
         padding: 0;
-        --accent-width: var(--lgs-gutter-s);
-        --wa-space-l: var(--lgs-gutter-s);
-
     }
 
-
-    wa-toast-item::part(icon) {
-        padding-inline-start: var(--lgs-gutter);
-    }
-
-    wa-toast-item::part(message) {
-        padding: var(--lgs-gutter-xs);
-        padding-left: var(--lgs-gutter);
-    }
-
-    wa-toast-item::part(close-button) {
-        margin-right: var(--lgs-gutter);
-    }
-
-    wa-toast-item::part(close-button):hover {
+.Toastify__close-button {
+    position: absolute;
+    z-index: 1;
+    top: var(--lgs-gutter-xs);
+    right: var(--lgs-gutter-xs);
         opacity: 1;
-        color: white !important;
+    color: var(--lgs-toast-close-color, var(--wa-color-text-normal));
+}
+
+.Toastify__close-button > svg {
+    fill: currentColor;
+}
+
+.Toastify__close-button:hover {
+    opacity: 0.85;
+    color: var(--lgs-toast-close-color, var(--wa-color-text-normal));
+}
+
+.lgs-toast-callout {
+    display: flex;
+    width: 100%;
+    --wa-color-fill-quiet: color-mix(in srgb, var(--wa-color-fill-loud) 18%, var(--wa-color-surface-default));
+    --wa-color-border-quiet: color-mix(in srgb, var(--wa-color-border-loud) 30%, var(--wa-color-surface-default));
+}
+
+.lgs-toast-callout::part(message) {
+    padding-right: calc(var(--lgs-gutter) + 1.5rem);
+    padding-bottom: calc(var(--lgs-gutter-s) + 0.45rem);
     }
 
     .toast-caption {
         font-weight: 700;
-        color: var(--wa-color-brand-on-quiet);
+        color: inherit;
     }
 
     .toast-text {
         font-size: var(--lgs-font-size-s);
+        margin-top: var(--lgs-gutter-xxs);
+    }
+
+.lgs-toast--primary {
+    --lgs-toast-progress-color: var(--wa-color-brand-fill-loud);
+    --lgs-toast-progress-track: color-mix(in srgb, var(--wa-color-brand-fill-loud) 18%, transparent);
+    --lgs-toast-close-color: var(--wa-color-brand-on-quiet);
+}
+
+.lgs-toast--success {
+    --lgs-toast-progress-color: var(--wa-color-success-fill-loud);
+    --lgs-toast-progress-track: color-mix(in srgb, var(--wa-color-success-fill-loud) 18%, transparent);
+    --lgs-toast-close-color: var(--wa-color-success-on-quiet);
+}
+
+.lgs-toast--warning {
+    --lgs-toast-progress-color: var(--wa-color-warning-fill-loud);
+    --lgs-toast-progress-track: color-mix(in srgb, var(--wa-color-warning-fill-loud) 20%, transparent);
+    --lgs-toast-close-color: var(--wa-color-warning-on-quiet);
+}
+
+.lgs-toast--danger {
+    --lgs-toast-progress-color: var(--wa-color-danger-fill-loud);
+    --lgs-toast-progress-track: color-mix(in srgb, var(--wa-color-danger-fill-loud) 18%, transparent);
+    --lgs-toast-close-color: var(--wa-color-danger-on-quiet);
+}
+
+.lgs-toast .Toastify__progress-bar--wrp {
+    right: var(--lgs-gutter-s);
+    bottom: var(--lgs-gutter-s);
+    left: var(--lgs-gutter-s);
+    overflow: hidden;
+    width: auto;
+    height: 4px;
+    border-radius: 999px;
+    background: var(--lgs-toast-progress-track);
+}
+
+.lgs-toast .Toastify__progress-bar--bg {
+    display: none;
+}
+
+.lgs-toast-progress {
+    opacity: 1;
+    border-radius: 999px;
+    background: var(--lgs-toast-progress-color) !important;
     }
 
     .toast-error {

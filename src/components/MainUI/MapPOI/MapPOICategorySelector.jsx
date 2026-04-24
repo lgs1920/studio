@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-25
- * Last modified: 2026-03-25
+ * Created on: 2026-04-24
+ * Last modified: 2026-04-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,7 +16,7 @@
 
 import { ICONS_PATH, POI_CATEGORY_ICONS } from '@Core/constants'
 import { applyPOIDuotoneIconStyles }      from '@Components/MainUI/MapPOI/duotoneIconUtils'
-import { WaCombobox, WaIcon, WaOption }   from '@web.awesome.me/webawesome-pro/dist/react'
+import { WaIcon, WaOption, WaSelect } from '@web.awesome.me/webawesome-pro/dist/react'
 import { useMemo }                        from 'react'
 import { useSnapshot }                    from 'valtio'
 
@@ -24,8 +24,8 @@ export const MapPOICategorySelector = ({point: current, props}) => {
     const $pois = lgs.stores.main.components.pois
     const pois = useSnapshot($pois)
 
-    const handleCategory = async (event) => {
-        current = __.ui.poiManager.updatePOI(pois.current, {
+    const handleCategory = (event) => {
+        __.ui.poiManager.updatePOI(pois.current, {
             category: event.target.value,
         })
     }
@@ -52,24 +52,24 @@ export const MapPOICategorySelector = ({point: current, props}) => {
         })
     }, [pois.categories])
 
-    const duotoneVars = useMemo(() => ({
+    const duotoneVars = {
         '--poi-primary-default-color':   current?.color ?? 'var(--wa-color-yellow-60)',
         '--poi-secondary-default-color': current?.bgColor ?? 'var(--wa-color-gray-10)',
         '--primary-color':               'var(--poi-primary-default-color)',
         '--secondary-color':             'var(--poi-secondary-default-color)',
         '--primary-opacity':             'var(--poi-primary-default-opacity)',
         '--secondary-opacity':           'var(--poi-secondary-default-opacity)',
-    }), [current?.color, current?.bgColor])
+    }
 
     return (
         <>
             {pois.current && current &&
-                <WaCombobox label={'Category'} value={current.category} size={props?.size ?? 'small'}
-                            className="map-poi-category-selector"
-                            style={duotoneVars}
-                            onChange={handleCategory}>
+                <WaSelect label={'Category'} value={current.category} size={props?.size ?? 'small'}
+                          className="map-poi-category-selector"
+                          style={duotoneVars}
+                          onChange={handleCategory}>
                     {categoryOptions}
-                </WaCombobox>
+                </WaSelect>
             }</>
     )
 }

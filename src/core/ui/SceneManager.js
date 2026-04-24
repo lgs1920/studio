@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-28
- * Last modified: 2026-02-28
+ * Created on: 2026-04-24
+ * Last modified: 2026-04-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -213,11 +213,15 @@ export class SceneManager {
      *
      * @return {Array|number} altitude
      */
-    getHeightFromTerrain = async ({coordinates, precision = HIGH_TERRAIN_PRECISION, level = 11}) => {
+    getHeightFromTerrain = async (args = {}) => {
+        const normalizedArgs = (args && typeof args === 'object' && 'coordinates' in args)
+                               ? args
+                               : {coordinates: args}
+
         return this.utils.getHeightFromTerrain({
-                                                   coordinates: coordinates,
-                                                   precision:   precision,
-                                                   level:       level,
+                                                   coordinates: normalizedArgs.coordinates,
+                                                   precision:   normalizedArgs.precision ?? HIGH_TERRAIN_PRECISION,
+                                                   level:       normalizedArgs.level ?? 11,
                                                })
     }
 

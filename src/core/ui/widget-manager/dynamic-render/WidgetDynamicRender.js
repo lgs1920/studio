@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-15
- * Last modified: 2026-02-15
+ * Created on: 2026-04-24
+ * Last modified: 2026-04-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -27,6 +27,7 @@ export class WidgetDynamicRenderer {
 
     // Memory cache for pre-resolved components
     #resolvedComponents = new Map()
+    #pendingRenders = new Map()
 
     constructor() {
         if (WidgetDynamicRenderer.#instance) {
@@ -68,23 +69,56 @@ export class WidgetDynamicRenderer {
         return subGroups
     }
 
+    #getBaseKey = key => key.split('#')[0]
+
+    #isSingletonWidget(group, key) {
+        return __.ui.widgetManager.maxWidgets(group, this.#getBaseKey(key)) === 1
+    }
+
+    #getPendingRenderKey(group, key, widgetsBoard) {
+        if (!group || !key) {
+            return null
+        }
+
+        if (this.#isSingletonWidget(group, key)) {
+            return `${group}:${this.#getBaseKey(key)}:${widgetsBoard ?? ''}`
+        }
+
+        if (key.includes('#')) {
+            return `${group}:${key}:${widgetsBoard ?? ''}`
+        }
+
+        return null
+    }
+
     /**
      * Checks if a widget can be rendered.
      */
     canRenderWidget = (group, key, props = {}) => {
         const {widgetsBoard, forceRefresh} = props
+        const baseKey = this.#getBaseKey(key)
+        const isConcreteInstance = key.includes('#')
+        const lookupKey = isConcreteInstance ? key : baseKey
 
-        const isMaxReached = __.ui.widgetManager.isMaxWidgetsReached(group, key, widgetsBoard)
-        const existingInList = this.findExistingInList(key, widgetsBoard)
-        const existingInCache = __.ui.widgetCache.has(key, {group, full: false, widgetsBoard})
-
-        if (!isMaxReached) {
-            const widgetId = __.ui.widgetManager.defineElementId(group, key)
-            return {canRender: true, widgetId, existingInList: null}
-        }
+        const isMaxReached = __.ui.widgetManager.isMaxWidgetsReached(group, baseKey, widgetsBoard)
+        const existingInList = this.findExistingInList(lookupKey, widgetsBoard)
+        const existingInCache = __.ui.widgetCache.has(lookupKey, {
+            group,
+            full: isConcreteInstance,
+            widgetsBoard,
+        })
 
         if (existingInList && forceRefresh && existingInCache) {
             return {canRender: true, widgetId: existingInList, existingInList}
+        }
+
+        if (!isConcreteInstance && this.#isSingletonWidget(group, baseKey) && existingInList) {
+            return {canRender: false, widgetId: null, existingInList}
+        }
+
+        if (!isMaxReached) {
+            const widgetId = isConcreteInstance ? key : __.ui.widgetManager.defineElementId(group, baseKey)
+            return {canRender: true, widgetId, existingInList: null}
         }
 
         return {canRender: false, widgetId: null, existingInList}
@@ -94,6 +128,30 @@ export class WidgetDynamicRenderer {
      * Renders a widget. Ensures resolution is complete before store injection.
      */
     async renderWidget(group, key, props = {}) {
+        const pendingRenderKey = this.#getPendingRenderKey(group, key, props.widgetsBoard)
+        if (pendingRenderKey && this.#pendingRenders.has(pendingRenderKey)) {
+            return this.#pendingRenders.get(pendingRenderKey)
+        }
+
+        const renderPromise = this.#renderWidget(group, key, props)
+
+        if (!pendingRenderKey) {
+            return renderPromise
+        }
+
+        this.#pendingRenders.set(pendingRenderKey, renderPromise)
+
+        try {
+            return await renderPromise
+        }
+        finally {
+            if (this.#pendingRenders.get(pendingRenderKey) === renderPromise) {
+                this.#pendingRenders.delete(pendingRenderKey)
+            }
+        }
+    }
+
+    async #renderWidget(group, key, props = {}) {
         const $widget = lgs.stores.ui.widget
 
         const {canRender, widgetId} = this.canRenderWidget(group, key, props)

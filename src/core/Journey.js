@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-19
- * Last modified: 2026-04-19
+ * Created on: 2026-04-24
+ * Last modified: 2026-04-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -44,7 +44,7 @@ export class Journey extends MapElement {
     origin                                     // initial geoJson
     POIsVisible = true
 
-    metrics = {global: {}, user: {}, eternal: {}, points: {}}
+    metrics = {global: {}, user: {}, external: {}, points: []}
     camera = {}
     cameraOrigin = {}
 
@@ -119,7 +119,13 @@ export class Journey extends MapElement {
             this.globalSettings()
 
             // Get Metrics
-            this.metrics = options.metrics ?? {}
+            this.metrics = {
+                global:   {},
+                user:     {},
+                external: {},
+                points:   [],
+                ...(options.metrics ?? {}),
+            }
 
             this.prepareDrawing().then(async () => {
                 await this.getPOIsFromGeoJson()
@@ -137,10 +143,11 @@ export class Journey extends MapElement {
      * @return {{global: NodeJS.Global|{}, user: *|{}, union: *}}
      */
     getMetrics = () => {
-        const global = this.metrics.global
-        const user = this.metrics.user ?? {}
-        const external = this.metrics.external ?? {}
-        const points = this.metrics.points
+        const metrics = this.metrics ?? {}
+        const global = metrics.global ?? {}
+        const user = metrics.user ?? {}
+        const external = metrics.external ?? {}
+        const points = Array.isArray(metrics.points) ? metrics.points : []
 
         // Deep merge to properly handle nested objects like positive.elevation
         const deepMerge = (target, ...sources) => {
@@ -183,6 +190,14 @@ export class Journey extends MapElement {
 
     getDate = () => {
         const {points} = this.getMetrics()
+
+        if (points.length === 0) {
+            return {
+                start: undefined,
+                stop:  undefined,
+            }
+        }
+
         return {
             start: points[0]?.time,
             stop:  points[points.length - 1]?.time,

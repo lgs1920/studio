@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-13
- * Last modified: 2026-04-13
+ * Created on: 2026-04-24
+ * Last modified: 2026-04-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -59,10 +59,14 @@ const JOURNEY_STATS_SLIDERS = {
 }
 
 export const JourneyStatsWidgetEditor = ({entity}) => {
+    const main = useSnapshot(lgs.stores.main)
+    const journey = lgs.theJourney
+    const journeySlug = main.theJourney?.slug ?? null
+
     const $unitSystem = lgs.settings.unitSystem
     const unitSystem = useSnapshot($unitSystem).current
 
-    const $metrics = lgs.theJourney.metrics
+    const $metrics = journey?.metrics ?? lgs.stores.main.components.journeyStats
     const metricsSnap = useSnapshot($metrics)
 
     const [activeTab, setActiveTab] = useState('style')
@@ -269,10 +273,10 @@ export const JourneyStatsWidgetEditor = ({entity}) => {
     const getColor = (item, alpha = false) => __.ui.ui.resolveItemColor(item, alpha)
 
 
-    const hasExternal = (() => {
-        const m = lgs.theJourney.getMetrics()
-        return m?.external && Object.keys(m.external).length > 0
-    })()
+    const hasExternal = useMemo(() => {
+        const externalMetrics = journey?.getMetrics?.()?.external
+        return Boolean(externalMetrics && Object.keys(externalMetrics).length > 0)
+    }, [journey])
 
     // Logic to determine if the source selector should be displayed
     const hasUserData = metricsSnap.user && Object.keys(metricsSnap.user).length > 0
@@ -314,6 +318,10 @@ export const JourneyStatsWidgetEditor = ({entity}) => {
                                    <WaButton disabled size="small" variant="brand">{'Data'}</WaButton>
                                </div>
                            )
+
+    if (!journeySlug || !journey) {
+        return null
+    }
 
     return (
         <div className="lgs-widget-editor" key={`editor-${entity}`}>

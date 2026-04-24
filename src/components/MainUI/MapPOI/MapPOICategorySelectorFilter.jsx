@@ -7,18 +7,18 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-25
- * Last modified: 2026-03-25
+ * Created on: 2026-04-24
+ * Last modified: 2026-04-24
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { WaCombobox, WaIcon, WaOption, WaSwitch } from '@web.awesome.me/webawesome-pro/dist/react'
+import { WaIcon, WaOption, WaSelect, WaSwitch } from '@web.awesome.me/webawesome-pro/dist/react'
 import { memo, useEffect, useMemo }               from 'react'
 import { useSnapshot }                            from 'valtio'
 import { ICONS_PATH, POI_CATEGORY_ICONS }         from '@Core/constants'
-import { applyPOIDuotoneIconStyles } from '@Components/MainUI/MapPOI/duotoneIconUtils'
+import { applyPOIDuotoneIconStyles }            from '@Components/MainUI/MapPOI/duotoneIconUtils'
 
 /**
  * A memoized React component for selecting and filtering POI categories.
@@ -93,7 +93,7 @@ export const MapPOICategorySelectorFilter = memo(({
     }, [settings.filter.byCategories, exclude, onChange])
 
     return (
-        <WaCombobox
+        <WaSelect
             value={settings.filter.byCategories}
             size={size}
             className="map-poi-category-selector"
@@ -105,6 +105,6 @@ export const MapPOICategorySelectorFilter = memo(({
         >
             {labelSlot}
             {categoryOptions}
-        </WaCombobox>
+        </WaSelect>
     )
 })

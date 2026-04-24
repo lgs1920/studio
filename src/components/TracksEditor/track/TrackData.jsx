@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-20
- * Last modified: 2026-04-20
+ * Created on: 2026-04-24
+ * Last modified: 2026-04-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -107,7 +107,6 @@ export const TrackData = memo(() => {
         }
 
         $journeyStats.show = _nextState
-        // __.ui.widgetManager.updateWidgetVisibility(_id, _nextState)
     }, [journeyStats.show])
 
     /**
@@ -121,7 +120,6 @@ export const TrackData = memo(() => {
                 if (_el && !_el.classList.contains(HIDDEN_CLASS)) {
                     _el.classList.add(HIDDEN_CLASS)
                     $journeyStats.show = false
-                    __.ui.widgetManager.updateWidgetVisibility(_id, false)
                 }
             }
         }
@@ -131,7 +129,12 @@ export const TrackData = memo(() => {
         if (!metrics || isNaN(metrics.duration)) {
             return {}
         }
-        const points = track.metrics.points
+
+        const points = Array.isArray(track?.metrics?.points) ? track.metrics.points : []
+        if (points.length === 0) {
+            return {}
+        }
+
         return {
             start: points[0]?.time,
             stop: points[points.length - 1]?.time,

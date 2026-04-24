@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-15
- * Last modified: 2026-04-15
+ * Created on: 2026-04-24
+ * Last modified: 2026-04-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -34,6 +34,7 @@ import {
 import {
     MainUI,
 }                       from '@Components/MainUI/MainUI.jsx'
+import { Toast } from '@Components/Toast'
 import '@shoelace-style/shoelace/dist/themes/light.css'
 import ResponsiveDevice from '@Components/MainUI/ResponsiveDevice'
 import {
@@ -67,7 +68,6 @@ import {
 import {
     UIToast,
 }                       from '@Utils/UIToast'
-import { WaToast } from '@web.awesome.me/webawesome-pro/dist/react'
 import {
     preCache,
 }                       from '@zumer/snapdom'
@@ -334,7 +334,7 @@ export const LGS1920 = () => {
                     <MapLayer type={OVERLAY_ENTITY}/>
                     <Viewer/>
                     <SelectionIndicator/>
-                    <WaToast placement="bottom-start"/>
+                    <Toast/>
                 </>
             )}
         </>

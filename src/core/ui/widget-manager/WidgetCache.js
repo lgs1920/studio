@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-17
- * Last modified: 2026-02-17
+ * Created on: 2026-04-24
+ * Last modified: 2026-04-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -25,6 +25,7 @@ export class WidgetCache {
 
     /** @type {Map<string, CacheEntry>} */
     #cache
+    #defaultBoard = 'scene'
 
     constructor() {
         if (WidgetCache.#instance) {
@@ -173,6 +174,71 @@ export class WidgetCache {
 
     isMounted = key => this.#cache.get(key)?.mounted
 
+    #getBaseWidgetId = id => String(id).split('#')[0]
+
+    #resolveWidgetDefinition = (group, id) => {
+        if (!group || !id) {
+            return null
+        }
+
+        const baseId = this.#getBaseWidgetId(id)
+        return __.widgets.get(group)?.widgets?.get(baseId) ?? null
+    }
+
+    async #loadPersistedWidgets() {
+        const widgetIds = await lgs.db.lgs1920.keys(WIDGETS_STORE)
+        const widgets = await Promise.all(widgetIds.map(async (id) => {
+            const record = await lgs.db.lgs1920.get(id, WIDGETS_STORE, true)
+            const position = record?.data ?? null
+
+            return {
+                id,
+                modifiedAt: record?._mt_ ?? record?._ct_ ?? 0,
+                position,
+            }
+        }))
+
+        return widgets.filter(({position}) => Boolean(position?.group))
+    }
+
+    async #dedupePersistedSingletons(widgets) {
+        const keepers = new Map()
+        const duplicates = []
+
+        for (const widget of widgets) {
+            const definition = this.#resolveWidgetDefinition(widget.position.group, widget.id)
+            if (!definition || (definition.max ?? 1) !== 1) {
+                continue
+            }
+
+            const scopeKey = `${this.#getBaseWidgetId(widget.id)}:${widget.position.widgetsBoard || this.#defaultBoard}`
+            const current = keepers.get(scopeKey)
+
+            if (!current) {
+                keepers.set(scopeKey, widget)
+                continue
+            }
+
+            const shouldReplace =
+                      widget.modifiedAt > current.modifiedAt ||
+                      (widget.modifiedAt === current.modifiedAt && widget.id > current.id)
+
+            if (shouldReplace) {
+                duplicates.push(current.id)
+                keepers.set(scopeKey, widget)
+            }
+            else {
+                duplicates.push(widget.id)
+            }
+        }
+
+        if (duplicates.length > 0) {
+            await Promise.all(duplicates.map(id => this.delete(id)))
+        }
+
+        return widgets.filter(({id}) => !duplicates.includes(id))
+    }
+
     /**
      * Performs initial hydration of the cache with meta-data from DB.
      */
@@ -208,10 +274,10 @@ export class WidgetCache {
      * 2. Enriches cache and reactive store with real persistent positions/zIndex.
      */
     async init() {
-        const widgets = await lgs.db.lgs1920.keys(WIDGETS_STORE)
-        const initWidgets = widgets.map(async (id) => {
-            // Retrieve persistent data through the manager
-            const position = await __.ui.widgetManager.getWidgetPosition(id)
+        const widgets = await this.#loadPersistedWidgets()
+        const dedupedWidgets = await this.#dedupePersistedSingletons(widgets)
+
+        const initWidgets = dedupedWidgets.map(async ({id, position}) => {
             const zIndex = position?.zIndex// ?? 0
             // Update local cache
             this.set(id, {
@@ -221,7 +287,7 @@ export class WidgetCache {
             })
             // Create  global store
             const item = {
-                widgetsBoard: position.widgetsBoard || 'scene',
+                widgetsBoard: position.widgetsBoard || this.#defaultBoard,
             }
             // Add zIndex for video widgets
             if (position.widgetsBoard === VIDEO_WIDGETS_BOARD) {

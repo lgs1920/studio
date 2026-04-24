@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-20
- * Last modified: 2026-04-20
+ * Created on: 2026-04-24
+ * Last modified: 2026-04-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -18,33 +18,26 @@ import { Widget }                                                               
 import { JourneyStats }                                                           from '@Components/Stats/JourneyStats'
 import { JOURNEY_WIDGETS, LGS_VISUAL_WIDGET, SCENE_WIDGETS, SCENE_WIDGETS_BOARD } from '@Core/constants'
 import { DISTANCE_UNITS, ELEVATION_UNITS, PACE_UNITS, SPEED_UNITS }               from '@Utils/UnitUtils'
-import React, { useEffect, useMemo, useState }                                    from 'react'
+import { useMemo } from 'react'
 import { useSnapshot }                                                            from 'valtio'
 import './style.css'
 
 export const JourneyStatsWidget = ({id, context, zIndex}) => {
-    /**
-     * Early return if the journey is not defined to avoid unnecessary computations
-     */
-    if (!lgs.theJourney) {
-        return null
-    }
-
-    const {widgetEditor, widgetsBoard} = context
+    const {widgetsBoard} = context
+    const main = useSnapshot(lgs.stores.main)
     const journey = lgs.theJourney
+    const journeySlug = main.theJourney?.slug ?? null
 
     const $unitSystem = lgs.settings.unitSystem
     const {current: unitSystem} = useSnapshot($unitSystem)
 
-    const $video = lgs.stores.ui.video
-    const video = useSnapshot($video)
-
     const journeyMetrics = useMemo(() => {
-        if (!journey?.metrics) {
+        if (!journeySlug || !journey?.metrics) {
             return null
         }
+
         return {...journey.getMetrics()}
-    }, [journey, unitSystem])
+    }, [journey, journeySlug])
 
     const units = useMemo(() => ({
         elevation: ELEVATION_UNITS[unitSystem],
@@ -53,24 +46,15 @@ export const JourneyStatsWidget = ({id, context, zIndex}) => {
         speed: SPEED_UNITS[unitSystem],
     }), [unitSystem])
 
-    const [container, setContainer] = useState(lgs.canvas)
+    const container = useMemo(() => {
+        if (!widgetsBoard || widgetsBoard === SCENE_WIDGETS_BOARD) {
+            return lgs.canvas
+        }
 
-    /**
-     * Updates the container element reference when the widget board changes.
-     */
-    useEffect(() => {
-        if (widgetsBoard && widgetsBoard !== SCENE_WIDGETS_BOARD) {
-            const element = document.querySelector(`#${widgetsBoard}.defined`)
-            if (element) {
-                setContainer(element)
-            }
-        }
-        else {
-            setContainer(lgs.canvas)
-        }
+        return document.querySelector(`#${widgetsBoard}.defined`) ?? lgs.canvas
     }, [widgetsBoard])
 
-    const metrics = useMemo(() => journeyMetrics?.metrics, [journeyMetrics])
+    const metrics = useMemo(() => journeyMetrics?.metrics ?? null, [journeyMetrics])
 
     const config = useMemo(() => {
         return {
@@ -101,9 +85,9 @@ export const JourneyStatsWidget = ({id, context, zIndex}) => {
             widgetsBoard:    widgetsBoard,
             zIndex: zIndex,
         }
-    }, [container, widgetsBoard, id, widgetEditor, zIndex])
+    }, [container, widgetsBoard, id, zIndex])
 
-    if (!widgetsBoard || Object.keys(config).length === 0) {
+    if (!journeySlug || !journey || !widgetsBoard || Object.keys(config).length === 0) {
         return null
     }
 
@@ -111,7 +95,7 @@ export const JourneyStatsWidget = ({id, context, zIndex}) => {
         <Widget
             isVisible={true}
             config={config}
-            key={journey.slug}
+            key={journeySlug}
         >
             {metrics && (
                 <JourneyStats

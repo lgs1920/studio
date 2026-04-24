@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-09
- * Last modified: 2026-04-09
+ * Created on: 2026-04-24
+ * Last modified: 2026-04-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -17,11 +17,9 @@
 import './style.css'
 import { CHART_ELEVATION_VS_DISTANCE, DISTANCE, ELEVATION } from '@Core/ui/Profiler'
 import { INTERNATIONAL } from '@Utils/UnitUtils'
-import { WaSpinner }                                                from '@web.awesome.me/webawesome-pro/dist/react'
 import { colord }        from 'colord'
-import ReactECharts                                         from 'echarts-for-react'
-import * as echarts                                                 from 'echarts/core'
-import React, { Suspense, useCallback, useEffect, useMemo, useRef } from 'react'
+import * as echarts                                from 'echarts'
+import { useCallback, useEffect, useMemo, useRef } from 'react'
 import { useSnapshot }                                              from 'valtio'
 import { usePreviewChartResize } from '@Components/MainUI/widgets/editor/usePreviewChartResize'
 import { v4 as uuid } from 'uuid'
@@ -38,8 +36,7 @@ import { v4 as uuid } from 'uuid'
  * @returns {React.JSX.Element}
  */
 export const ProfileChart = ({data, id, configId, width, height, preview = false}) => {
-    const $main = lgs.stores.main
-    const main = useSnapshot($main)
+    const main = useSnapshot(lgs.stores.main)
     const $configuration = lgs.settings.widgets['profile-widget'].configuration
     const configuration = useSnapshot($configuration)
 
@@ -47,7 +44,11 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
     const unitStore = useSnapshot($unitStore)
     const unitSystem = unitStore.current
 
-    const _instance = useRef(null)
+    const _chart = useRef(null)
+    const _chartDom = useRef(null)
+    const _instance = useRef({
+                                 getEchartsInstance: () => _chart.current,
+                             })
     const configKey = configId ?? id
 
     /**
@@ -207,7 +208,7 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
             areaStyle: areaStyle,
             dimensions: params.dimensions,
         }
-    }, [])
+    }, [setColor])
 
     const baseOptions = useMemo(() => {
         if (!data || !element) {
@@ -220,11 +221,6 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
                                                                      color:      data.options[index].color,
                                                                      dimensions: data.dimensions,
                                                                  }, element))
-
-        const distances = data.dataset.map(ds => ({
-            start: ds.source[0][0],
-            end:   ds.source[ds.source.length - 1][0],
-        }))
 
         const styles = getStyleOptions(element)
         const yFloor = unitSystem === INTERNATIONAL ? 100 : 300
@@ -275,82 +271,81 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
         if (preview) {
             return
         }
-        if (main.components.profile.show && _instance.current) {
-            const chart = _instance.current.getEchartsInstance()
-            chart.resize()
+        const chart = _instance.current?.getEchartsInstance?.()
+        if (main.components.profile.show && chart) {
+            try {
+                chart.resize()
+            }
+            catch {
+                return
+            }
 
             const container = document.getElementById(`profile-${CHART_ELEVATION_VS_DISTANCE}`)
             if (container) {
                 const dimensions = container.getBoundingClientRect()
                 if (dimensions.width > 0) {
-                    $main.components.profile.width = dimensions.width
-                    $main.components.profile.height = dimensions.height
+                    lgs.stores.main.components.profile.width = dimensions.width
+                    lgs.stores.main.components.profile.height = dimensions.height
                 }
             }
         }
-    }, [preview, main.components.profile.show, $main])
+    }, [preview, main.components.profile.show])
 
     /**
-     * Life cycle management: Instance registration, events and cleanup
+     * Life cycle management: chart init, events and cleanup
      */
     useEffect(() => {
-        if (!_instance.current || preview) {
+        const dom = _chartDom.current
+        if (!dom) {
             return
         }
 
-        const chart = _instance.current.getEchartsInstance()
-        __.ui.profiler.charts.set(CHART_ELEVATION_VS_DISTANCE, chart)
+        const chart = echarts.getInstanceByDom(dom) ?? echarts.init(dom, null, {renderer: 'svg'})
+        _chart.current = chart
 
-        const onDataZoom = () => {
-            $main.components.profile.zoom = true
+        let onDataZoom = null
+        if (!preview) {
+            __.ui.profiler.charts.set(CHART_ELEVATION_VS_DISTANCE, chart)
+            onDataZoom = () => {
+                lgs.stores.main.components.profile.zoom = true
+            }
+            chart.on('dataZoom', onDataZoom)
+            window.addEventListener('resize', handleResize)
         }
-
-        chart.on('dataZoom', onDataZoom)
-        window.addEventListener('resize', handleResize)
 
         return () => {
-            chart.off('dataZoom', onDataZoom)
+            if (onDataZoom) {
+                chart.off('dataZoom', onDataZoom)
+            }
             window.removeEventListener('resize', handleResize)
-            __.ui.profiler.charts.delete(CHART_ELEVATION_VS_DISTANCE)
+            if (!preview && __.ui.profiler.charts.get(CHART_ELEVATION_VS_DISTANCE) === chart) {
+                __.ui.profiler.charts.delete(CHART_ELEVATION_VS_DISTANCE)
+            }
+            _chart.current = null
+            chart.dispose()
         }
-    }, [handleResize, $main, preview])
+    }, [handleResize, preview])
 
     usePreviewChartResize(_instance, preview, [width, height])
 
     /**
-     * Unit & Dataset Synchronization
-     * Direct ECharts API call to update data without full re-merge
+     * Synchronize ECharts options
      */
     useEffect(() => {
-        if (!_instance.current || !element || !data || !baseOptions) {
+        const chart = _instance.current?.getEchartsInstance?.()
+        if (!chart || !element || !data || !baseOptions) {
             return
         }
 
-        const chart = _instance.current.getEchartsInstance()
-        const yFloor = unitSystem === INTERNATIONAL ? 100 : 300
-        const xCeiling = 1
+        chart.setOption(baseOptions, {
+            replaceMerge: ['dataset', 'series', 'xAxis', 'yAxis'],
+            lazyUpdate:   preview,
+        })
 
-        chart.setOption({
-                            dataset: processedDataset,
-                            series:  baseOptions.series,
-                            xAxis: [
-                                {
-                                    ...baseOptions.xAxis[0],
-                                    max: (val) => Math.ceil(val.max / xCeiling) * xCeiling,
-                                },
-                            ],
-                            yAxis:   [
-                                {
-                                    ...baseOptions.yAxis[0],
-                                    min: (val) => Math.floor(val.min / yFloor) * yFloor,
-                                },
-                            ],
-                        }, {
-                            replaceMerge: ['dataset', 'series', 'xAxis', 'yAxis'],
-                            lazyUpdate:   false,
-                        })
-
-    }, [processedDataset, baseOptions, element, data, unitSystem])
+        if (!preview) {
+            requestAnimationFrame(handleResize)
+        }
+    }, [baseOptions, element, data, preview, handleResize])
 
     if (!data || !element) {
         return null
@@ -370,17 +365,7 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
                 overflow:        'hidden',
             }}
         >
-            <Suspense fallback={<WaSpinner style={{fontSize: '2rem'}}/>}>
-                <ReactECharts
-                option={baseOptions}
-                style={{width: '100%', height: '100%'}}
-                opts={{renderer: 'svg'}}
-                ref={_instance}
-                onEvents={preview ? undefined : {rendered: handleResize}}
-                notMerge={false}
-                lazyUpdate={preview}
-            />
-            </Suspense>
+            <div ref={_chartDom} className="echarts-for-react" style={{width: '100%', height: '100%'}}/>
         </div>
     )
 }

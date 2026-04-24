@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-04-24
+ * Last modified: 2026-04-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -26,6 +26,7 @@ import { SlIconButton, SlTooltip }          from '@shoelace-style/shoelace/dist/
 import { FA2SL }                            from '@Utils/FA2SL'
 import { UIToast }                          from '@Utils/UIToast'
 import { UnitUtils }                        from '@Utils/UnitUtils'
+import { WaCard } from '@web.awesome.me/webawesome-pro/dist/react'
 import classNames                           from 'classnames'
 import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import { useSnapshot }                      from 'valtio'
@@ -267,9 +268,9 @@ export const VideoRecorderToolbar = ({toolbar}) => {
     }, [__.recorder, updateState, showToast])
 
     return (
-        <div
+        <WaCard
             ref={_toolbar}
-            className="video-recorder-widget lgs-toolbar-content lgs-toolbar lgs-toolbar-horizontal lgs-one-line-card on-map"
+            className="video-recorder-widget lgs-toolbar-content lgs-toolbar lgs-toolbar-horizontal on-map"
         >
             <FontAwesomeIcon
                 icon={faCircle}
@@ -302,6 +303,6 @@ export const VideoRecorderToolbar = ({toolbar}) => {
                     name={FA2SL.set(faXmark)}
                 />
             </SlTooltip>
-        </div>
+        </WaCard>
     )
 }

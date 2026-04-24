@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-20
- * Last modified: 2026-04-20
+ * Created on: 2026-04-24
+ * Last modified: 2026-04-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -222,7 +222,6 @@ export const ElevationProfile = (props) => {
 
         syncProfileChartConfigId()
         $profile.show = _nextState
-        __.ui.widgetManager.updateWidgetVisibility(_id, _nextState)
 
         if (!_nextState && lgs.stores.ui.drawers.open === WIDGETS_EDITOR_DRAWER) {
             lgs.stores.ui.drawers.open = null
