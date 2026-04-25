@@ -7,96 +7,82 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-09
- * Last modified: 2026-03-09
+ * Created on: 2026-04-25
+ * Last modified: 2026-04-25
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { SelectLocation }              from '@Components/MainUI/geocoding/SelectLocation'
-import { SECOND } from '@Core/constants'
-import { faBullseyePointer, faSearch } from '@fortawesome/pro-regular-svg-icons'
-import { SlButton, SlIcon, SlInput, SlPopup, SlSwitch, SlTooltip } from '@shoelace-style/shoelace/dist/react'
-import * as turf                                                   from '@turf/helpers'
-import { FA2SL }                                                   from '@Utils/FA2SL'
-import { UIToast }                                                 from '@Utils/UIToast'
+/* eslint-disable react-hooks/immutability */
 
-import { convert }                            from 'geo-coordinates-parser'
-import React, { useEffect, useRef, useState } from 'react'
-import { useSnapshot }                        from 'valtio'
+import { SelectLocation }              from '@Components/MainUI/geocoding/SelectLocation'
+import WaDialogNonModal                from '@Components/WaDialogNonModal'
+import { SECOND }                      from '@Core/constants'
+import {
+    WaButton, WaDivider, WaIcon, WaInput, WaSwitch, WaTooltip,
+}                                      from '@web.awesome.me/webawesome-pro/dist/react'
+import * as turf                       from '@turf/helpers'
+import { UIToast }                     from '@Utils/UIToast'
+import { convert }                     from 'geo-coordinates-parser'
+import { useEffect, useRef, useState } from 'react'
+import { useSnapshot }                 from 'valtio'
 import './style.css'
 
-
 export const GeocodingUI = () => {
-    const $geocoder = lgs.stores.main.components.geocoder
-    const geocoder = useSnapshot($geocoder)
-    const settings = useSnapshot(lgs.settings.ui.menu)
-
+    const store = lgs.stores.main.components.geocoder
+    const geocoder = useSnapshot(store)
     const address = useRef(null)
-    const [, setPoi] = useState(null)
     const [exactMatch, setExactMatch] = useState(false)
     const [coordinates, setCoordinates] = useState(false)
     const [ddCoordinates, setDdCoordinates] = useState(false)
 
-    const handleSubmit = async (event) => {
-        event.preventDefault()
-        $geocoder.dialog.loading = true
-        $geocoder.dialog.noResults = false
-        $geocoder.dialog.error = false
-        $geocoder.dialog.loading = false
+    const resetSearchState = () => {
+        __.ui.geocoder.init()
+        store.list.clear()
+        store.dialog.noResults = false
+        store.dialog.moreResults = false
+        store.dialog.error = false
+    }
 
-        if (exactMatch && coordinates) {
-            // Get latitude and longitude from input field.
-            // Separator is spaces or comma or both
-            let latitude, longitude, regex = /\s*,\s*|\s+/
-            if (ddCoordinates) {
-                [latitude, longitude] = address.current.value.split(regex)
-            }
-            else {
-                [latitude, longitude] = convert(address.current.value).decimalCoordinates.split(regex)
-            }
-            await showPOI(turf.point([longitude * 1, latitude * 1]))
+    const resetTransientState = ({keepInput = false} = {}) => {
+        resetSearchState()
+        store.dialog.loading = false
+        store.dialog.submitDisabled = true
+
+        if (!keepInput && address.current) {
+            address.current.value = ''
+        }
+
+        setCoordinates(false)
+        setExactMatch(false)
+        setDdCoordinates(false)
+    }
+
+    const requestClose = () => {
+        store.dialog.visible = false
+    }
+
+    const isDialogLifecycleEvent = (event) => event.target === event.currentTarget
+
+    const handleRequestClose = (event) => {
+        if (!isDialogLifecycleEvent(event)) {
             return
         }
 
-        if (!$geocoder.dialog.submitDisabled) {
-            const value = ddCoordinates ? address.current.value : __.ui.geocoder.toDMS(address.current.value)
-            __.ui.geocoder.search(address.current.value).then((results) => {
+        requestClose()
+    }
 
-                if (results.error) {
-                    $geocoder.dialog.error = {message: results.error}
-                    return
-                }
-
-                if (results.size > 0) {
-                    results.forEach((value, key) => {
-                        $geocoder.list.set(key, value)
-                    })
-                    $geocoder.dialog.moreResults = results.size === __.ui.geocoder.limit
-                }
-                else {
-                    $geocoder.dialog.noResults = true
-                }
-            })
+    const handleAfterHide = (event) => {
+        if (!isDialogLifecycleEvent(event)) {
+            return
         }
+
+        resetTransientState()
+        store.dialog.mounted = false
     }
 
-    const handleSubmitAfterClear = (event) => {
-        __.ui.geocoder.init()
-        setCoordinates(false)
-        setExactMatch(false)
-        $geocoder.dialog.error = false
-
-        handleSubmit(event)
-    }
-
-    /**
-     *
-     * @param geoPoint GeoJSON point
-     */
-    const showPOI = async geoPoint => {
-
+    const showPOI = async (geoPoint) => {
         __.ui.poiManager.getPointFromGeoJson(geoPoint, true).then(point => {
             __.ui.sceneManager.focus(point, {
                 target:     point,
@@ -108,133 +94,205 @@ export const GeocodingUI = () => {
                 callback: async (poi) => {
                     const newPoi = await __.ui.poiManager.add(poi)
                     if (newPoi) {
-                        setPoi(newPoi)
                         return true
                     }
                     UIToast.warning({
-                                        caption: `POI not created !`,
-                                        text:    `This location is too closed to an existing POI!`,
+                                        caption: 'POI not created !',
+                                        text:    'This location is too closed to an existing POI!',
                                     })
                     return false
                 },
             })
         })
 
-        // Clear current values and states
-        __.ui.geocoder.init()
-        $geocoder.list.clear()
-        address.current.value = ''
-        $geocoder.dialog.visible = false
-        $geocoder.dialog.noResults = false
-        $geocoder.dialog.submitDisabled = true
+        requestClose()
     }
 
-    /**
-     * We show the selected address
-     *
-     * @param event
-     */
-    const handleSelect = async (event) => {
+    const handleSubmit = async (event) => {
+        event?.preventDefault?.()
+
+        if (!address.current) {
+            return
+        }
+
+        store.dialog.loading = true
+        store.dialog.noResults = false
+        store.dialog.moreResults = false
+        store.dialog.error = false
+
+        try {
+            if (exactMatch && coordinates) {
+                const regex = /\s*,\s*|\s+/
+                let latitude
+                let longitude
+
+                if (ddCoordinates) {
+                    [latitude, longitude] = address.current.value.split(regex)
+                }
+                else {
+                    [latitude, longitude] = convert(address.current.value).decimalCoordinates.split(regex)
+                }
+
+                await showPOI(turf.point([longitude * 1, latitude * 1]))
+                return
+            }
+
+            if (store.dialog.submitDisabled) {
+                return
+            }
+
+            const results = await __.ui.geocoder.search(address.current.value)
+            if (results.error) {
+                store.dialog.error = {message: results.error}
+                return
+            }
+
+            if (results.size > 0) {
+                results.forEach((value, key) => {
+                    store.list.set(key, value)
+                })
+                store.dialog.moreResults = results.size === __.ui.geocoder.limit
+                return
+            }
+
+            store.dialog.noResults = true
+        }
+        finally {
+            store.dialog.loading = false
+        }
+    }
+
+    const handlePrimarySubmit = (event) => {
+        resetSearchState()
+        void handleSubmit(event)
+    }
+
+    const handleSelect = async (placeId) => {
         lgs.stores.main.components.pois.current = false
-        await showPOI($geocoder.list.get(event.target.parentElement.id * 1))
+        const point = store.list.get(placeId)
+        if (!point) {
+            return
+        }
+        await showPOI(point)
         UIToast.warning({
-                            caption: `Temporary POI created.`,
+                            caption: 'Temporary POI created.',
                             text:    `It won't be saved permanently until you edit it and add it to POIs library.`,
                         }, 8 * SECOND)
     }
 
     const handleChange = () => {
-        $geocoder.dialog.noResults = false
-        $geocoder.dialog.error = false
-        address.current.value = address.current.value.trimStart()
-        $geocoder.dialog.submitDisabled = address.current.value.length < lgs.settings.ui.geocoder.minQuery
-        __.ui.geocoder.init()
-        $geocoder.list.clear()
-        $geocoder.dialog.noResults = false
+        const value = (address.current?.value || '').trimStart()
+        if (address.current && address.current.value !== value) {
+            address.current.value = value
+        }
 
-        // Check if it is lat,lon in degrees with spaces or comma or both as separateur
+        resetSearchState()
+
         const ddRegex = /^-?([1-8]?\d(\.\d+)?|90(\.0+)?)[ ,\s]+-?(1[0-7]\d(\.\d+)?|180(\.0+)?|\d{1,2}(\.\d+)?)$/
-        const dmsRegex = /^-?\d{1,3}° \d{1,2}' \d{1,2}(?:\.\d+)?\"[ ,]+-?\d{1,3}° \d{1,2}' \d{1,2}(?:\.\d+)?\"$/
+        const dmsRegex = /^-?\d{1,3}° \d{1,2}' \d{1,2}(?:\.\d+)?"[ ,]+-?\d{1,3}° \d{1,2}' \d{1,2}(?:\.\d+)?"$/
+        const isDD = ddRegex.test(value)
+        const isDMS = dmsRegex.test(value)
+        const isCoordinates = isDD || isDMS
 
-
-        if (ddRegex.test(address.current.value) || dmsRegex.test(address.current.value)) {
-            setDdCoordinates(ddRegex.test(address.current.value))
-            setCoordinates(true)
-            setExactMatch(true)
-        }
-        else {
-            setCoordinates(false)
-            setExactMatch(false)
-        }
-
+        setDdCoordinates(isDD)
+        setCoordinates(isCoordinates)
+        setExactMatch(isCoordinates)
+        store.dialog.submitDisabled = !isCoordinates && value.length < lgs.settings.ui.geocoder.minQuery
     }
 
     useEffect(() => {
+        if (!geocoder.dialog.visible) {
+            return
+        }
 
-        setCoordinates(false)
-        setExactMatch(false)
         handleChange()
-
-
-        return (() => {
-            __.ui.geocoder.init()
-            // store.list.clear()
-            if (address.current) {
-                address.current.value = ''
-            }
-            $geocoder.dialog.visible = false
-            $geocoder.dialog.noResults = true
-            $geocoder.dialog.error = false
-
-            setCoordinates(false)
-            setExactMatch(false)
+        requestAnimationFrame(() => {
+            address.current?.focus?.()
         })
+    }, [geocoder.dialog.visible])
 
+    useEffect(() => {
+        return () => {
+            resetTransientState()
+            store.dialog.visible = false
+            store.dialog.mounted = false
+        }
     }, [])
 
     return (
-        <>
-            <SlPopup active={geocoder.dialog.visible}
-                     className={'lgs-theme'}
-                     anchor="launch-the-geocoder"
-                     placement={settings.toolBar.fromStart ? 'left-start' : 'right-start'}
-                     distance={__.ui.css.rem2px(__.ui.css.getCSSVariable('lgs-gutter-xs'))}
-            >
+        <WaDialogNonModal
+            open={geocoder.dialog.visible}
+            className="geocoding-widget-dialog"
+            appearance="outlined"
+            withFooter
+            onWaHide={handleRequestClose}
+            onWaAfterHide={handleAfterHide}
+        >
+            <div slot="label" className="geocoding-dialog-title">
+                <WaIcon name="map-location-dot" variant="regular"/>
+                <span>{'Search location'}</span>
+            </div>
 
-                <div className="geocoding-dialog">
-                    <form onSubmit={handleSubmitAfterClear}>
-                        <div className="geocoding-form">
-                            <SlInput name="location" ref={address} id="geocoder-search-location"
-                                     placeholder={'Address or coordinates (lat,lon)'}
-                                     onChange={handleChange} onInput={handleChange}
-                                     onFocus={handleChange}>
+            <div className="geocoding-dialog">
+                <form onSubmit={handlePrimarySubmit}>
+                    <div className="geocoding-form">
+                        <WaInput
+                            appearance="outlined"
+                            name="location"
+                            ref={address}
+                            id="geocoder-search-location"
+                            placeholder="Address or coordinates (lat,lon)"
+                            onChange={handleChange}
+                            onInput={handleChange}
+                            withClear
+                        />
 
-                            </SlInput>
-                            <SlTooltip placement="top" open={!geocoder.dialog.submitDisabled}>
-                                <SlButton size={'small'} className="square-button" type="submit"
-                                          id="geocoder-search-location-submit"
-                                          loading={geocoder.dialog.loading}
-                                          disabled={geocoder.dialog.submitDisabled}>
-                                    <SlIcon slot="prefix" library="fa"
-                                            name={FA2SL.set(exactMatch ? faBullseyePointer : faSearch)}></SlIcon>
-                                </SlButton>
-                                <span slot="content">{exactMatch ? 'Show on map' : 'Search nearest'}</span>
-                            </SlTooltip>
-                        </div>
-                    </form>
+                        <WaTooltip for="geocoder-search-location-submit">
+                            {exactMatch ? 'Show on map' : 'Search nearest'}
+                        </WaTooltip>
+                        <WaButton
+                            size="small"
+                            className="square-button"
+                            type="submit"
+                            id="geocoder-search-location-submit"
+                            loading={geocoder.dialog.loading}
+                            disabled={geocoder.dialog.submitDisabled}
+                            variant="brand"
+                        >
+                            <WaIcon name={exactMatch ? 'bullseye-pointer' : 'search'} variant="regular"/>
+                        </WaButton>
+                    </div>
+                </form>
 
-                    {coordinates &&
-                        <div className="lgs-one-line-card exact-geocoding">
-                            <SlSwitch align-right size="small" checked={exactMatch}
-                                      onSlChange={(event) => setExactMatch(!exactMatch)}>
-                                {'Exact Match'}</SlSwitch>
-                        </div>
+                {coordinates &&
+                    <WaSwitch
+                        label-at-start width-auto
+                        size="xsmall"
+                        checked={exactMatch}
+                        onChange={(event) => setExactMatch(event.target.checked)}
+                    >
+                        {'Exact Match'}
+                    </WaSwitch>
+                }
+
+                <SelectLocation select={handleSelect}/>
+            </div>
+
+            <div slot="footer" className="geocoding-dialog-footer">
+                <WaDivider/>
+                <div className="buttons-bar">
+                    <WaButton appearance="outlined" onClick={requestClose}>
+                        <WaIcon slot="start" name="xmark" variant="regular"/>
+                        {'Close'}
+                    </WaButton>
+                    {geocoder.dialog.moreResults &&
+                        <WaButton autofocus variant="brand" appearance="accent" onClick={handleSubmit}>
+                            <WaIcon slot="start" name="search" variant="regular"/>
+                            {'More results'}
+                        </WaButton>
                     }
-
-                    <SelectLocation select={handleSelect} address={address} submit={handleSubmit}/>
-
                 </div>
-            </SlPopup>
-        </>
+            </div>
+        </WaDialogNonModal>
     )
 }

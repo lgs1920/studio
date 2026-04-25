@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-19
- * Last modified: 2026-04-19
+ * Created on: 2026-04-25
+ * Last modified: 2026-04-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -125,10 +125,12 @@ export const main = {
         geocoder: {
             list:   proxyMap(),
             dialog: {
+                mounted: false,
                 visible:   false,
                 loading:   false,
                 noResults: false,
                 moreResults: false,
+                error:   false,
                 submitDisabled: true,
                 showMore:  false,
             },

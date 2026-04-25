@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-24
- * Last modified: 2026-04-24
+ * Created on: 2026-04-25
+ * Last modified: 2026-04-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -18,7 +18,7 @@ import { FullScreenButton } from '@Components/FullScreenButton/FullScreenButton'
 import { ContextMenuRenderer } from '@Components/MainUI/context-menu/ContextMenuRenderer'
 
 import { GeocodingButton }   from '@Components/MainUI/geocoding/GeocodingButton'
-import { GeocodingUI }                          from '@Components/MainUI/geocoding/GeocodingUI'
+import { GeocodingWidget } from '@Components/MainUI/geocoding/GeocodingWidget'
 import { MapPOIMonitor }     from '@Components/MainUI/MapPOI/MapPOIMonitor'
 import { RotateButton }      from '@Components/MainUI/RotateButton'
 import { EditorPanelButton } from '@Editor/EditorPanelButton'
@@ -239,9 +239,9 @@ export const MainUI = memo(() => {
                                 <RotateButton tooltip={toolBar.fromStart ? 'left' : 'right'}/>
                                 <FullScreenButton tooltip={toolBar.fromStart ? 'left' : 'right'}/>
                                 <VideoButton tooltip={toolBar.fromStart ? 'left' : 'right'}/>
-                                <GeocodingUI/>
                             </div>
                         </div>
+                        {main.components.geocoder.dialog.mounted && <GeocodingWidget/>}
                     </>
                 )}
 

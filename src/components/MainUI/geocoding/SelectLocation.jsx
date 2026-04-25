@@ -7,90 +7,65 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-28
- * Last modified: 2026-02-28
+ * Created on: 2026-04-25
+ * Last modified: 2026-04-25
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { faChevronRight, faTriangleExclamation, faXmark } from '@fortawesome/pro-regular-svg-icons'
-import { faBomb, faSearch }                               from '@fortawesome/pro-solid-svg-icons'
-import { SlAlert, SlButton, SlDivider, SlIcon }           from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                                          from '@Utils/FA2SL'
-import { useLayoutEffect, useRef }                        from 'react'
-import { useSnapshot }                                    from 'valtio/index'
-import { LGSScrollbars }                                  from '../LGSScrollbars'
+import {
+    WaCallout, WaCard, WaIcon,
+}                                  from '@web.awesome.me/webawesome-pro/dist/react'
+import { useLayoutEffect, useRef } from 'react'
+import { useSnapshot }             from 'valtio/index'
+import { LGSScrollbars }           from '../LGSScrollbars'
 
-export const SelectLocation = ({select, address, submit}) => {
+export const SelectLocation = ({select}) => {
     const store = lgs.stores.main.components.geocoder
     const snap = useSnapshot(store)
     const scrollbars = useRef(null)
 
-    const submitAndScroll = (event) => {
-        submit(event)
-        if (scrollbars.current) {
-            scrollbars.current.scrollToBottom()
-        }
-    }
-
-    const handleClose = () => {
-        store.dialog.visible = false
-        address.current.value = ''
-    }
-
     useLayoutEffect(() => {
-        if (scrollbars.current) {
-            scrollbars.current.scrollToBottom()
-        }
+        scrollbars.current?.scrollToBottom?.()
     }, [snap.list])
+
     return (
         <>
             {snap.list.size > 0 &&
-                <div className="select-location-wrapper lgs-card on-map">
+                <WaCard appearance="plain" className="select-location-panel">
                     <LGSScrollbars autoHide autoHeight ref={scrollbars}>
                         <div className="select-location-wrapper">
                             {Array.from(snap.list.entries()).map(([key, value]) => (
-                                <div className="select-location-item lgs-card" key={key} id={key}
-                                     onClick={select}>
-                                    <span>{value.properties.display_name}</span>
-                                    <SlIcon slot="prefix" library="fa" name={FA2SL.set(faChevronRight)}></SlIcon>
-                                </div>
+                                <WaCard
+                                    key={key}
+                                    appearance="outlined"
+                                    className="lgs--card-hoverable select-location-item"
+                                    onClick={() => select(key)}
+                                >
+                                        <span lassName="select-location-item-label">
+                                            {value.properties.display_name}
+                                        </span>
+                                    <WaIcon name="chevron-right" variant="regular"/>
+                                </WaCard>
                             ))}
                         </div>
                     </LGSScrollbars>
-
-                    <div className="call-for-actions">
-                        <SlDivider/>
-                        <div className="buttons-bar">
-                            <SlButton close size="small" outline onClick={handleClose}>
-                                <SlIcon slot="prefix" library="fa"
-                                        name={FA2SL.set(faXmark)}></SlIcon>{'Close'}
-                            </SlButton>
-                            {snap.dialog.moreResults &&
-                                <SlButton autofocus size="small" outline onClick={submitAndScroll}>
-                                    <SlIcon slot="prefix" library="fa"
-                                            name={FA2SL.set(faSearch)}></SlIcon>{'More results'}
-                                </SlButton>
-                            }
-                        </div>
-                    </div>
-                </div>
+                </WaCard>
             }
 
             {snap.dialog.visible && snap.dialog.noResults &&
-                <SlAlert variant="warning" open>
-                    <SlIcon slot="icon" library="fa" name={FA2SL.set(faTriangleExclamation)}/>
+                <WaCallout variant="warning" appearance="filled-outlined" open>
+                    <WaIcon slot="icon" name="triangle-exclamation" variant="regular"/>
                     {'There are no results matching your search!'}
-                </SlAlert>
+                </WaCallout>
             }
             {snap.dialog.visible && snap.dialog.error &&
-                <SlAlert variant="danger" open>
-                    <SlIcon slot="icon" library="fa" name={FA2SL.set(faBomb)}/>
+                <WaCallout variant="danger" appearance="filled-outlined" open>
+                    <WaIcon slot="icon" name="bomb" variant="regular"/>
                     {snap.dialog.error.message}
-                </SlAlert>
+                </WaCallout>
             }
-
         </>
     )
 }

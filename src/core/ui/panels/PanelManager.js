@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-08
- * Last modified: 2026-04-08
+ * Created on: 2026-04-25
+ * Last modified: 2026-04-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -207,6 +207,18 @@ export class PanelManager {
             ui.drawers.entity = null
             ui.drawers.action = null
         }
+    }
+
+    /**
+     * Closes every drawer immediately and clears the stacked history.
+     * Useful for floating tools/widgets that must not reserve drawer space.
+     */
+    forceClose = () => {
+        document.activeElement?.blur()
+        this.#stack = []
+        ui.drawers.open = null
+        ui.drawers.entity = null
+        ui.drawers.action = null
     }
 
     /**
