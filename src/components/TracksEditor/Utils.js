@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-06
- * Last modified: 2026-04-03
+ * Created on: 2026-04-25
+ * Last modified: 2026-04-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -78,14 +78,15 @@ export class Utils {
         __.ui.profiler.draw()
 
         // Save information
-        TrackUtils.saveCurrentJourneyToDB(lgs.theJourney).then(async () => {
-            if (editorStore.journey.visible && focus) {
-                lgs.theJourney.focus({action: action, rotate: rotate})
+        await TrackUtils.saveCurrentJourneyToDB(lgs.theJourney)
+        if (editorStore.journey.visible && focus) {
+            if (__.ui.cameraManager.isRotating()) {
+                await __.ui.cameraManager.stopRotate()
             }
-            await TrackUtils.saveCurrentJourneyToDB(lgs.theJourney)
-            await TrackUtils.saveCurrentTrackToDB(null)
-            await TrackUtils.saveCurrentPOIToDB(null)
-        })
+            lgs.theJourney.focus({action, rotate, resetCamera: true})
+        }
+        await TrackUtils.saveCurrentTrackToDB(null)
+        await TrackUtils.saveCurrentPOIToDB(null)
 
     }
 
@@ -138,7 +139,7 @@ export class Utils {
      * @param {Number} action
      * @return {Journey}
      */
-    static updateJourney = async action => {
+    static updateJourney = async (action, {focus = action !== UPDATE_JOURNEY_SILENTLY} = {}) => {
 
         const journey = Journey.deserialize({object: Journey.unproxify(lgs.theJourneyEditorProxy.journey)})
         await journey.extractMetrics()
@@ -150,7 +151,8 @@ export class Utils {
 
         if (action !== UPDATE_JOURNEY_SILENTLY) {
             await journey.draw({action: action})
-        } else {
+        }
+        else if (focus) {
             journey.focus({action: action, rotate: lgs.settings.ui.camera.start.rotate.journey})
         }
 
