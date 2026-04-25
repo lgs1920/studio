@@ -83,9 +83,9 @@ const applyNonModalLayout = (instance) => {
         position:  'static',
         inset:     'auto',
         margin:    '0',
-        maxWidth:  '100%',
-        maxHeight: '100%',
-        overflow:  'hidden',
+        maxWidth:  '',
+        maxHeight: '',
+        overflow:  '',
         transform: 'none',
     })
 
@@ -93,8 +93,9 @@ const applyNonModalLayout = (instance) => {
 }
 
 const WaDialogNonModal = forwardRef(function WaDialogNonModal(props, ref) {
-    const {lightDismiss = true, ...restProps} = props
     const innerRef = useRef(null)
+    const pointerDownOutsideRef = useRef(false)
+    const {lightDismiss = true, ...restProps} = props
 
     patchWaDialog()
 
@@ -114,33 +115,48 @@ const WaDialogNonModal = forwardRef(function WaDialogNonModal(props, ref) {
 
     useEffect(() => {
         if (!props.open || !lightDismiss) {
+            pointerDownOutsideRef.current = false
             return
         }
 
-        const handlePointerDown = (event) => {
+        const isOutsideDialog = (event) => {
             const host = innerRef.current
             if (!host) {
-                return
+                return false
             }
 
             const path = event.composedPath?.() ?? []
-            if (path.includes(host) || path.includes(host.dialog)) {
+            return !path.includes(host) && !path.includes(host.dialog)
+        }
+
+        const handlePointerDown = (event) => {
+            pointerDownOutsideRef.current = isOutsideDialog(event)
+        }
+
+        const handleClick = (event) => {
+            const host = innerRef.current
+            if (!host || !pointerDownOutsideRef.current || !isOutsideDialog(event)) {
+                pointerDownOutsideRef.current = false
                 return
             }
 
+            pointerDownOutsideRef.current = false
             if (typeof host.requestClose === 'function') {
                 host.requestClose(event.target)
-                return
             }
-
-            host.open = false
         }
 
         document.addEventListener('pointerdown', handlePointerDown, true)
-        return () => document.removeEventListener('pointerdown', handlePointerDown, true)
+        document.addEventListener('click', handleClick, true)
+
+        return () => {
+            pointerDownOutsideRef.current = false
+            document.removeEventListener('pointerdown', handlePointerDown, true)
+            document.removeEventListener('click', handleClick, true)
+        }
     }, [props.open, lightDismiss])
 
-    return <WaDialogBase ref={innerRef} lightDismiss={lightDismiss} {...restProps} />
+    return <WaDialogBase ref={innerRef} lightDismiss={false} {...restProps} />
 })
 
 export default WaDialogNonModal
