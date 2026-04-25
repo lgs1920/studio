@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-24
- * Last modified: 2026-04-24
+ * Created on: 2026-04-25
+ * Last modified: 2026-04-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -22,11 +22,37 @@ import { MapTarget } from '@Core/MapTarget'
 import bbox          from '@turf/bbox'
 import centroid      from '@turf/centroid'
 import {
-    Cartesian2, Cartesian3, Cartographic, Color, EasingFunction, Math as M, Matrix4, Rectangle, sampleTerrain,
-    sampleTerrainMostDetailed, SceneMode,
+    BoundingSphere, Cartesian2, Cartesian3, Cartographic, Color, EasingFunction, HeadingPitchRange, Math as M, Matrix4,
+    Rectangle, sampleTerrain, sampleTerrainMostDetailed, SceneMode,
 }                    from 'cesium'
 
 export class SceneUtils {
+    static resolveFlightDuration = (distance, baseDuration, {resetCamera = false, snapDistance = 0} = {}) => {
+        if (!Number.isFinite(distance) || distance <= 0) {
+            return resetCamera ? Math.max(baseDuration, 1.4) : baseDuration
+        }
+
+        if (snapDistance > 0 && distance < snapDistance) {
+            return 0
+        }
+
+        if (distance < 4000) {
+            return resetCamera ? 1.25 : Math.max(baseDuration, 0.75)
+        }
+
+        if (distance < 15000) {
+            return Math.max(baseDuration, resetCamera ? 1.65 : 1.2)
+        }
+
+        if (distance < 80000) {
+            return Math.max(baseDuration, resetCamera ? 2.2 : 1.8)
+        }
+
+        return Math.max(baseDuration, resetCamera ? 2.8 : 2.2)
+    }
+
+    static resolveFlightEasing = (resetCamera = false) =>
+        resetCamera ? EasingFunction.EXPONENTIAL_OUT : EasingFunction.SINUSOIDAL_IN_OUT
 
     /**
      * Do Morphing and trigger event if there is a callback
@@ -249,6 +275,22 @@ export class SceneUtils {
         const pitch = M.toRadians(options.pitch ?? lgs.settings.camera.pitch)
         const heading = M.toRadians(options.heading ?? lgs.settings.camera.heading)
         const roll = M.toRadians(options.roll ?? lgs.settings.camera.roll)
+        const target = {
+            longitude:       point.longitude,
+            latitude:        point.latitude,
+            height:          height,
+            simulatedHeight: point?.simulatedHeight,
+            title:           point.title,
+            color:           point?.color ?? lgs.colors.poiDefault,
+            bgColor:         point?.bgColor ?? lgs.colors.poiDefaultBackground,
+            description:     point?.description ?? '',
+            camera:          {
+                heading: heading,
+                pitch:   pitch,
+                roll:    roll,
+                range:   range,
+            },
+        }
 
         const maximumHeight = options.maximumHeight ?? lgs.settings.camera.maximumHeight
         let pitchAdjustHeight = options.pitchAdjustHeight ?? lgs.settings.camera.pitchAdjustHeight
@@ -258,50 +300,25 @@ export class SceneUtils {
         // fix flying time and pitch height if necessary
         const initializer = options.initializer ? options.initializer(point, options) : null
         if (initializer) {
-            if (initializer.distance < 4000) {
-                flyingTime = 0
-            }
-            else if (initializer.distance < 15000) {
-                flyingTime = (flyingTime > 2) ? 2 : flyingTime
+            flyingTime = SceneUtils.resolveFlightDuration(initializer.distance, flyingTime, {
+                resetCamera:  options.resetCamera === true,
+                snapDistance: options.snapDistance ?? 50000,
+            })
+
+            if (initializer.distance < 15000) {
                 pitchAdjustHeight = initializer.height + 1000
             }
-
-
         }
-        lgs.camera.flyTo({
-                             destination:       Cartesian3.fromDegrees(
-                                 point.longitude, point.latitude, height,
-                             ),
-                             orientation:       {
-                                 heading: heading,
-                                 pitch: M.toRadians(pitch),
-                                 roll:  roll,
-                             },
-                             maximumHeight:     maximumHeight,
-                             pitchAdjustHeight: pitchAdjustHeight,
-                             duration:          flyingTime,
-                             convert:           options?.convert ?? true,
-                             easingFunction: EasingFunction.LINEAR_NONE,
-                             complete:          async () => {
-                                 const target = {
-                                     longitude:       point.longitude,
-                                     latitude:        point.latitude,
-                                     height:      height,
-                                     simulatedHeight: point?.simulatedHeight,
-                                     title:           point.title,
-                                     color:   point?.color ?? lgs.colors.poiDefault,
-                                     bgColor: point?.bgColor ?? lgs.colors.poiDefaultBackground,
-
-                                     description: point?.description ?? '',
-
-                                     camera: {
-                                         heading: heading,
-                                         pitch:   pitch,
-                                         roll:    roll,
-                                         range:   range,
-                                     },
-                                 }
-
+        lgs.camera.flyToBoundingSphere(new BoundingSphere(
+            Cartesian3.fromDegrees(point.longitude, point.latitude, height), 0,
+        ), {
+                                           offset:            new HeadingPitchRange(heading, pitch, range),
+                                           maximumHeight:     maximumHeight,
+                                           pitchAdjustHeight: pitchAdjustHeight,
+                                           duration:          flyingTime,
+                                           convert:           options?.convert ?? true,
+                                           easingFunction:    options.easingFunction ?? SceneUtils.resolveFlightEasing(options.resetCamera === true),
+                                           complete:          async () => {
                                  if (options?.bbox && options.bbox.show) {
                                      SceneUtils.drawBbox(options.bbox.data, options.bbox.id)
                                  }
@@ -321,7 +338,7 @@ export class SceneUtils {
                                  }
                                  else {
                                      __.ui.sceneManager.stopRotate
-                                     __.ui.cameraManager.lookAt(target)
+                                     await __.ui.cameraManager.raiseUpdateEvent()
                                      __.ui.cameraManager.unlock()
                                  }
                                  //
@@ -346,7 +363,18 @@ export class SceneUtils {
         // Let's use the first track
         const track = journey.tracks.values().next().value
         const [longitude, latitude] = centroid(track.content).geometry.coordinates
-        let height = 0
+        const storedHeight = journey?.camera?.target?.height
+            ?? journey?.cameraOrigin?.target?.height
+        let height = Number.isFinite(storedHeight) ? storedHeight : 0
+
+        if (Number.isFinite(storedHeight)) {
+            return {
+                longitude: longitude,
+                latitude:  latitude,
+                height:    storedHeight,
+            }
+        }
+
         try {
             height = await __.ui.poiManager.getHeightFromTerrain({
                                                                      coordinates: {
@@ -387,7 +415,8 @@ export class SceneUtils {
         const theBbox = SceneUtils.extendBbox(bbox(track.content), 2)
 
         let point
-        if (__.ui.cameraManager.isJourneyFocusOn(FOCUS_LAST)
+        if (!options.resetCamera
+            && __.ui.cameraManager.isJourneyFocusOn(FOCUS_LAST)
             && options.action !== REFRESH_DRAWING && options.action !== ADD_JOURNEY) {
             if (journey?.camera) {
                 point = new MapTarget(CURRENT_JOURNEY, {...journey.camera.target, ...{slug: journey.slug}})

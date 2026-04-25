@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-20
- * Last modified: 2026-04-20
+ * Created on: 2026-04-25
+ * Last modified: 2026-04-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -21,7 +21,9 @@ import {
 import { UIToast }                                from '@Utils/UIToast'
 import { WaDivider, WaIcon, WaSpinner } from '@web.awesome.me/webawesome-pro/dist/react'
 import React, { useCallback, useEffect, useMemo } from 'react'
-import { useSnapshot }                            from 'valtio'
+import { proxy, useSnapshot } from 'valtio'
+
+const EMPTY_POI_PROXY = proxy({})
 
 /**
  * @typedef {Object} MapPOIContextMenuProps
@@ -52,7 +54,7 @@ export const MapPOIContextMenu = (props) => {
 
     // POI Data Access
     const $targetPoi = $pois.list.get(thePOI)
-    const currentPoi = useSnapshot($targetPoi || {})
+    const currentPoi = useSnapshot($targetPoi ?? EMPTY_POI_PROXY)
 
     const $contextMenu = lgs.stores.ui.contextMenu
     const contextMenu = useSnapshot($contextMenu)

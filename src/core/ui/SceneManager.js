@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-24
- * Last modified: 2026-04-24
+ * Created on: 2026-04-25
+ * Last modified: 2026-04-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -158,7 +158,10 @@ export class SceneManager {
 
     //
     focusPreProcessing = (point, options) => {
-        const from = lgs.stores.ui.mainUI.rotate.target
+        const cameraTarget = __.ui.cameraManager?.target
+        const from = (Number.isFinite(cameraTarget?.longitude) && Number.isFinite(cameraTarget?.latitude))
+                     ? cameraTarget
+                     : lgs.stores.ui.mainUI.rotate.target
         if (point instanceof MapTarget) {
             lgs.stores.ui.mainUI.rotate.target = point
         }
@@ -168,7 +171,7 @@ export class SceneManager {
         const distance = Mobility.distance(from, point)
         return {
             distance: distance,
-            height:   Math.max(from.height, point.height),
+            height: Math.max(from?.height ?? 0, point?.height ?? 0),
         }
     }
 

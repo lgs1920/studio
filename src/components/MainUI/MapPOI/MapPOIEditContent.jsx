@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-06
- * Last modified: 2026-04-05
+ * Created on: 2026-04-25
+ * Last modified: 2026-04-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -38,7 +38,10 @@ import {
 }                  from 'react'
 import {
     useSnapshot,
+    proxy,
 }                  from 'valtio'
+
+const EMPTY_POI_PROXY = proxy({})
 
 /**
  * Edit content for a POI using only its ID to ensure instant reactivity with Valtio.
@@ -57,7 +60,7 @@ export const MapPOIEditContent = memo(({poi}) => {
 
                                           /** @type {Object} Fresh proxy reference for direct mutations */
                                           const $point = lgs.stores.main.components.pois.list.get(poi)
-                                          const point = useSnapshot($point || {})
+                                          const point = useSnapshot($point ?? EMPTY_POI_PROXY)
 
                                           if (!point.id) {
                                               return null

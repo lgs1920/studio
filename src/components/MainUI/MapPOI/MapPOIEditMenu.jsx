@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-26
- * Last modified: 2026-03-26
+ * Created on: 2026-04-25
+ * Last modified: 2026-04-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -28,8 +28,9 @@ import {
 import { UIToast }                                     from '@Utils/UIToast'
 import { WaButton, WaDivider, WaDropdown, WaDropdownItem, WaIcon } from '@web.awesome.me/webawesome-pro/dist/react'
 import React, { memo, useMemo, useCallback } from 'react'
-import { useSnapshot }                                 from 'valtio'
+import { proxy, useSnapshot } from 'valtio'
 
+const EMPTY_POI_PROXY = proxy({})
 
 export const MapPOIEditMenu = memo(({poiId}) => {
     const $pois = lgs.stores.main.components.pois
@@ -40,7 +41,7 @@ export const MapPOIEditMenu = memo(({poiId}) => {
      * trigger UI updates without relying on list-level epoch changes.
      */
     const $point = $pois.list.get(poiId)
-    const pointSnap = useSnapshot($point || {})
+    const pointSnap = useSnapshot($point ?? EMPTY_POI_PROXY)
 
     if (!pointSnap || !$point) {
         return null

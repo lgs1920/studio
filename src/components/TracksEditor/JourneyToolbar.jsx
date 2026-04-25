@@ -7,16 +7,18 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-19
- * Last modified: 2026-04-19
+ * Created on: 2026-04-25
+ * Last modified: 2026-04-25
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
+/* eslint-disable react-hooks/refs */
+
 import { ToggleStateIcon }                                           from '@Components/ToggleStateIcon'
 import {
-    CLOSE_ICON, CURRENT_JOURNEY, FOCUS_ICON, REFRESH_DRAWING, ROTATION_ICON, UPDATE_JOURNEY_SILENTLY,
+    CLOSE_ICON, CURRENT_JOURNEY, FOCUS_ICON, ROTATION_ICON, UPDATE_JOURNEY_SILENTLY,
 } from '@Core/constants'
 import {
     JourneySelector,
@@ -25,8 +27,7 @@ import { Utils }                                                     from '@Edit
 import {
     WaButton, WaCard, WaIcon, WaSpinner, WaTooltip,
 } from '@web.awesome.me/webawesome-pro/dist/react'
-import React, { useEffect, useRef, useState }                        from 'react'
-import { sprintf }                                                   from 'sprintf-js'
+import { useEffect, useRef, useState } from 'react'
 import { useSnapshot }                                               from 'valtio'
 
 /**
@@ -36,6 +37,7 @@ import { useSnapshot }                                               from 'valti
  * @returns {JSX.Element} The rendered JourneyToolbar component
  */
 export const JourneyToolbar = (props) => {
+    const toolbarRef = props.ref
     const $journeyToolbar = lgs.settings.ui.journeyToolbar
     const journeyToolbar = useSnapshot($journeyToolbar)
 
@@ -53,7 +55,7 @@ export const JourneyToolbar = (props) => {
     const editorStore = useSnapshot($editorStore)
 
     const autoRotate = useSnapshot(lgs.settings.ui.camera.start.rotate)
-    let rotationAllowed = false
+    const rotationAllowed = useRef(false)
     const manualRotate = useRef(null)
 
     const [isDragging, setIsDragging] = useState(false)
@@ -83,22 +85,14 @@ export const JourneyToolbar = (props) => {
     }
 
     /**
-     * Memoized condition for rendering button
-     * @type {boolean}
-     */
-    const showButton = () => {
-        return rotate.running && autoRotate.journey && !rotate.target
-    }
-
-    /**
      * Sets the visibility of the current journey and updates related settings.
      * @param {boolean} visibility - Whether the journey should be visible
      */
     const setJourneyVisibility = async (visibility) => {
-        stopRotate()
+        await stopRotate()
         $editorStore.journey.visible = visibility
         lgs.theJourney.updateVisibility(visibility)
-        await Utils.updateJourney(UPDATE_JOURNEY_SILENTLY)
+        await Utils.updateJourney(UPDATE_JOURNEY_SILENTLY, {focus: false})
         Utils.renderJourneySettings()
     }
 
@@ -106,8 +100,8 @@ export const JourneyToolbar = (props) => {
      * Toggles the rotation state and focuses on the journey.
      * @param {Event} event - The click event
      */
-    const forceRotate = async (event) => {
-        rotationAllowed = !rotationAllowed
+    const forceRotate = async () => {
+        rotationAllowed.current = !rotationAllowed.current
         await focusOnJourney()
     }
 
@@ -118,20 +112,20 @@ export const JourneyToolbar = (props) => {
     const maybeRotate = async (event) => {
         event.stopPropagation()
         if (rotate.running) {
-            rotationAllowed = false
-            stopRotate()
+            rotationAllowed.current = false
+            await stopRotate()
             if ($rotate.target.element && $rotate.target.element === lgs.theJourney.element) {
                 return
             }
         }
-        rotationAllowed = autoRotate.journey
+        rotationAllowed.current = autoRotate.journey
         await focusOnJourney()
     }
 
     /**
      * Focuses the camera on the current journey, optionally resetting the camera and enabling rotation.
      */
-    const focusOnJourney = async (event) => {
+    const focusOnJourney = async () => {
         if ($rotate.running) {
             await __.ui.cameraManager.stopRotate()
             if (rotate.target?.instanceOf(CURRENT_JOURNEY)) {
@@ -141,8 +135,7 @@ export const JourneyToolbar = (props) => {
         await setJourneyVisibility(true)
         lgs.theJourney.focus({
                                  resetCamera: true,
-                                 action: REFRESH_DRAWING,
-                                 rotate: rotationAllowed || autoRotate.journey,
+                                 rotate: rotationAllowed.current || autoRotate.journey,
                              })
     }
 
@@ -150,13 +143,13 @@ export const JourneyToolbar = (props) => {
      * Closes the journey toolbar by hiding it.
      * @param {Event} event - The click event
      */
-    const closeToolbar = (event) => {
+    const closeToolbar = () => {
         $journeyToolbar.show = false
     }
 
     useEffect(() => {
-        if (props.ref) {
-            props.ref.current = {
+        if (toolbarRef) {
+            toolbarRef.current = {
 
                 // We do not need handleDragStart here
 
@@ -180,7 +173,7 @@ export const JourneyToolbar = (props) => {
                  * if it's only a click.
                  * @param {Object} event - The drag end event object.
                  */
-                handleDragEnd: event => {
+                handleDragEnd: () => {
                     if (_journeySelector.current && isDragging) {
                         _journeySelector.current.show()
                     }
@@ -188,9 +181,7 @@ export const JourneyToolbar = (props) => {
                 },
             }
         }
-    }, [props.ref])
-
-    const textVisibilityJourney = sprintf('%s Journey', editorStore?.journey?.visible ? 'Hide' : 'Show')
+    }, [toolbarRef, isDragging, $journeyToolbar])
 
     return (
         <>

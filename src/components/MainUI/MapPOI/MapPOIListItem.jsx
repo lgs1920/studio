@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-01
- * Last modified: 2026-04-01
+ * Created on: 2026-04-25
+ * Last modified: 2026-04-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -27,7 +27,9 @@ import { POI_FLAG_START, POI_FLAG_STOP, POI_STARTER_TYPE } from '@Core/constants
 import { WaDetails, WaIcon }                               from '@web.awesome.me/webawesome-pro/dist/react'
 import classNames                                          from 'classnames'
 import { memo, useCallback }                               from 'react'
-import { useSnapshot }                                     from 'valtio'
+import { proxy, useSnapshot } from 'valtio'
+
+const EMPTY_POI_PROXY = proxy({})
 
 const POIBulkToggle = memo(({id}) => {
     const $pois = lgs.stores.main.components.pois
@@ -60,7 +62,7 @@ export const MapPOIListItem = memo(({id, canSelect}) => {
     const $pois = lgs.stores.main.components.pois
     const $poi = $pois.list.get(id)
     const {current, bulkList} = useSnapshot($pois)
-    const poi = useSnapshot($poi || {})
+    const poi = useSnapshot($poi ?? EMPTY_POI_PROXY)
 
     const isCurrent = current === id
     const isSelected = bulkList.has(id)

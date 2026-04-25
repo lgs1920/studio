@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-20
- * Last modified: 2026-04-20
+ * Created on: 2026-04-25
+ * Last modified: 2026-04-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -30,7 +30,7 @@ import {
     ToggleStateIcon,
 }                                     from '@Components/ToggleStateIcon'
 import {
-    CURRENT_JOURNEY, EDIT_JOURNEY_ICON, JOURNEY_EDITOR_DRAWER, ORIGIN_STORE, REFRESH_DRAWING, REMOVE_JOURNEY_IN_EDIT,
+    CURRENT_JOURNEY, EDIT_JOURNEY_ICON, JOURNEY_EDITOR_DRAWER, ORIGIN_STORE, REMOVE_JOURNEY_IN_EDIT,
     SIMULATE_ALTITUDE,
     UPDATE_JOURNEY_SILENTLY,
 } from '@Core/constants'
@@ -273,14 +273,14 @@ export const JourneySettings = () => {
         }
         $journeyEditor.journey.visible = v
         lgs.theJourney.updateVisibility(v)
-        await Utils.updateJourney(UPDATE_JOURNEY_SILENTLY)
+        await Utils.updateJourney(UPDATE_JOURNEY_SILENTLY, {focus: false})
         Utils.renderJourneySettings()
     }
 
     const setAllPOIsVisibility = async (v) => {
         $journeyEditor.journey.POIsVisible = v
         TrackUtils.updatePOIsVisibility(lgs.theJourney, v)
-        await Utils.updateJourney(UPDATE_JOURNEY_SILENTLY)
+        await Utils.updateJourney(UPDATE_JOURNEY_SILENTLY, {focus: false})
         Utils.renderJourneySettings()
     }
 
@@ -291,7 +291,6 @@ export const JourneySettings = () => {
         await setJourneyVisibility(true)
         lgs.theJourney.focus({
                                  resetCamera: true,
-                                 action: REFRESH_DRAWING,
                                  rotate: _allowRotation.current || autoRotateJourney,
                              })
     }
