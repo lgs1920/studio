@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-19
- * Last modified: 2026-04-19
+ * Created on: 2026-04-25
+ * Last modified: 2026-04-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -329,21 +329,23 @@ export class AppUtils {
             }
         }
 
-        //sanitize strings
-        Object.defineProperty(String.prototype, 'sanitize', {
-            value:        function () {
-                return this
-                    .normalize('NFKD')                  // Removes accents and special Unicode characters
-                    .replace(/[\u0300-\u036f]/g, '')    // Strips diacritics (accent marks)
-                    .trim()                             // Removes leading and trailing spaces
-                    .replace(/[/\\:*?"<>|]/g, '_')      // Replaces forbidden filename characters
-                    .replace(/[\s]+/g, '_')             // Converts multiple spaces to a single underscore
-                    .replace(/_+/g, '_')                // Collapses consecutive underscores
-                    .replace(/^_+|_+$/g, '')           // Removes leading and trailing underscores
-            },
-            writable:     false,
-            configurable: false,
-        })
+        // sanitize strings once; HMR can rerun init in the same runtime
+        if (!Object.getOwnPropertyDescriptor(String.prototype, 'sanitize')) {
+            Object.defineProperty(String.prototype, 'sanitize', {
+                value:        function () {
+                    return this
+                        .normalize('NFKD')                  // Removes accents and special Unicode characters
+                        .replace(/[\u0300-\u036f]/g, '')    // Strips diacritics (accent marks)
+                        .trim()                             // Removes leading and trailing spaces
+                        .replace(/[/\\:*?"<>|]/g, '_')      // Replaces forbidden filename characters
+                        .replace(/[\s]+/g, '_')             // Converts multiple spaces to a single underscore
+                        .replace(/_+/g, '_')                // Collapses consecutive underscores
+                        .replace(/^_+|_+$/g, '')           // Removes leading and trailing underscores
+                },
+                writable:     false,
+                configurable: false,
+            })
+        }
 
 
         // Ping server
