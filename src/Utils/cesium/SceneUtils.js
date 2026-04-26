@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-25
- * Last modified: 2026-04-25
+ * Created on: 2026-04-26
+ * Last modified: 2026-04-26
  *
  *
  * Copyright © 2026 LGS1920
@@ -330,6 +330,7 @@ export class SceneUtils {
                                  if (options.rotate ?? false) {
                                      __.ui.cameraManager.rotateAround(target, {
                                          rpm:       options.rpm ?? lgs.settings.camera.rpm,
+                                         direction: options.direction ?? 1,
                                          infinite: options.infinite ?? true,
                                          fps:       lgs.settings.camera.fps,
                                          rotations: options.rotations ?? lgs.settings.camera.rotations,
@@ -442,6 +443,7 @@ export class SceneUtils {
                 range:       10000,
                 lookAt:      true,
                 rpm:         options.rpm ?? lgs.settings.camera.rpm,
+                direction: options.direction ?? 1,
                 rotation:    1,
                 infinite:    false,
                 bbox:        {data: theBbox, id: track.slug, show: false},

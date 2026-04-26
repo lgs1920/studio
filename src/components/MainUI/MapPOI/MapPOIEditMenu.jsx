@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-25
- * Last modified: 2026-04-25
+ * Created on: 2026-04-26
+ * Last modified: 2026-04-26
  *
  *
  * Copyright © 2026 LGS1920
@@ -22,8 +22,9 @@
  ******************************************************************************/
 
 import {
-    POI_FLAG_START, POI_FLAG_STOP, POI_STARTER_TYPE,
+    CURRENT_POI, POI_FLAG_START, POI_FLAG_STOP, POI_STARTER_TYPE,
 }                                                      from '@Core/constants'
+import { getOrbitSettings, setOrbitStoreSettings }     from '@Core/OrbitSettings'
 
 import { UIToast }                                     from '@Utils/UIToast'
 import { WaButton, WaDivider, WaDropdown, WaDropdownItem, WaIcon } from '@web.awesome.me/webawesome-pro/dist/react'
@@ -52,7 +53,10 @@ export const MapPOIEditMenu = memo(({poiId}) => {
         () => __.ui.poiManager.isPOIRotating(pointSnap.id),
         [pointSnap.id, rotateState.running, rotateState.target?.element, rotateState.target?.slug, rotateState.target?.id],
     )
-
+    const panoramaState = useSnapshot(lgs.stores.ui.mainUI.panorama)
+    const isPOIPanoramic = panoramaState.active
+        && panoramaState.target?.element === CURRENT_POI
+        && (panoramaState.target?.slug ?? panoramaState.target?.id) === pointSnap.id
     const stopRotation = useCallback(async () => {
         await __.ui.poiManager.stopRotationAndSync()
     }, [])
@@ -82,10 +86,30 @@ export const MapPOIEditMenu = memo(({poiId}) => {
 
     const startPanoramic = useCallback(async (e) => {
         e?.stopPropagation()
-        await __.ui.poiManager.stopRotationAndSync()
-        await __.ui.poiManager.updatePOI(pointSnap.id, {animated: false})
-        __.ui.cameraManager.panoramic()
-    }, [pointSnap.id])
+        if (__.ui.cameraManager.isRotating()) {
+            await __.ui.poiManager.stopRotationAndSync()
+        }
+        const storedPanorama = {
+            ...(pointSnap.panorama ?? {}),
+            ...getOrbitSettings(pointSnap, 'panorama'),
+        }
+        const panorama = lgs.stores.ui.mainUI.panorama
+        panorama.target = {
+            ...pointSnap,
+            element: CURRENT_POI,
+            slug:    pointSnap.slug ?? pointSnap.id,
+        }
+        panorama.heading = lgs.stores.main.components.camera.position.heading ?? 0
+        panorama.pitch = storedPanorama.pitch ?? -12
+        panorama.heightOffset = storedPanorama.heightOffset ?? 1000
+        setOrbitStoreSettings(panorama, storedPanorama)
+        panorama.active = true
+    }, [pointSnap])
+
+    const stopPanoramic = useCallback((e) => {
+        e?.stopPropagation()
+        void __.ui.poiManager.stopRotationAndSync()
+    }, [])
 
     const copyCoordinates = useCallback((e) => {
         e?.stopPropagation()
@@ -147,11 +171,11 @@ export const MapPOIEditMenu = memo(({poiId}) => {
             <WaDivider key="div-1"/>,
         )
 
-        if (isPOIRotating) {
+        if (isPOIRotating || isPOIPanoramic) {
             items.push(
-                <WaDropdownItem key="stop-rot" onClick={stopRotation}>
-                    <WaIcon slot="icon" name={'arrow-rotate-right'}/>
-                    <span>{'Stop Rotation'}</span>
+                <WaDropdownItem key="stop-rot" onClick={isPOIPanoramic ? stopPanoramic : stopRotation}>
+                    <WaIcon slot="icon" name={'arrow-rotate-right'} animation="spin"/>
+                    <span>{isPOIPanoramic ? 'Stop Panorama' : 'Stop Rotation'}</span>
                 </WaDropdownItem>,
             )
         }
@@ -172,7 +196,7 @@ export const MapPOIEditMenu = memo(({poiId}) => {
         }
 
         return items
-    }, [pointSnap, isPOIRotating, isVisible, focus, remove, rotationAround, stopRotation, copyCoordinates, toggleVisibility, startPanoramic])
+    }, [pointSnap, isPOIRotating, isPOIPanoramic, isVisible, focus, remove, rotationAround, stopRotation, stopPanoramic, copyCoordinates, toggleVisibility, startPanoramic])
 
     /**
      * UI BRANCHING:

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-26
- * Last modified: 2026-03-26
+ * Created on: 2026-04-26
+ * Last modified: 2026-04-26
  *
  *
  * Copyright © 2026 LGS1920
@@ -17,13 +17,14 @@
 import {
     ADD_POI_EVENT, CURRENT_POI, GLOBAL_PARENT, POI_STARTER_TYPE, POI_THRESHOLD_DISTANCE, POI_TMP_TYPE, POIS_STORE,
     REMOVE_POI_EVENT,
-}                     from '@Core/constants'
-import { MapPOI }     from '@Core/MapPOI'
-import { Export }     from '@Core/ui/Export'
-import { POIUtils }   from '@Utils/cesium/POIUtils'
-import { KM }         from '@Utils/UnitUtils'
-import { v4 as uuid } from 'uuid'
-import { subscribe }  from 'valtio'
+}                                                  from '@Core/constants'
+import { MapPOI }                                  from '@Core/MapPOI'
+import { getOrbitSettings, setOrbitStoreSettings } from '@Core/OrbitSettings'
+import { Export }                                  from '@Core/ui/Export'
+import { POIUtils }                                from '@Utils/cesium/POIUtils'
+import { KM }                                      from '@Utils/UnitUtils'
+import { v4 as uuid }                              from 'uuid'
+import { subscribe }                               from 'valtio'
 
 export class POIManager {
     threshold = POI_THRESHOLD_DISTANCE
@@ -425,14 +426,18 @@ export class POIManager {
         if (!point) {
             return false
         }
+        const rotationSettings = getOrbitSettings(point, 'rotation')
 
         if (__.ui.cameraManager.isRotating()) {
             await this.stopRotationAndSync()
         }
 
+        setOrbitStoreSettings(lgs.stores.ui.mainUI.rotate, rotationSettings)
+
         await this.focusPOI(poiId, {
+            direction: rotationSettings.direction,
             infinite:   true,
-            rpm:        lgs.settings.ui.poi.rpm,
+            rpm:       rotationSettings.rpm,
             rotate:     true,
             flyingTime: 0,
         })
@@ -453,14 +458,26 @@ export class POIManager {
 
     stopRotationAndSync = async () => {
         const rotatingId = this.getRotatingPoiId()
+        const panorama = lgs.stores.ui.mainUI.panorama
+        const panoramaId = panorama.target?.slug ?? panorama.target?.id
         if (__.ui.cameraManager.isRotating()) {
             await __.ui.cameraManager.stopRotate()
+        }
+        if (panorama.active) {
+            panorama.active = false
+            panorama.target = false
         }
 
         if (rotatingId) {
             const rotatingPoi = this.list.get(rotatingId)
             if (rotatingPoi?.animated) {
                 await this.updatePOI(rotatingId, {animated: false})
+            }
+        }
+        if (panoramaId && panoramaId !== rotatingId) {
+            const panoramicPoi = this.list.get(panoramaId)
+            if (panoramicPoi?.animated) {
+                await this.updatePOI(panoramaId, {animated: false})
             }
         }
     }

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-28
- * Last modified: 2026-02-28
+ * Created on: 2026-04-26
+ * Last modified: 2026-04-26
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,11 +16,12 @@
 
 import { CURRENT_CAMERA, CURRENT_STORE, FOCUS_STARTER, JOURNEYS_STORE, MILLIS, MINUTE } from '@Core/constants'
 
-import { CameraUtils } from '@Utils/cesium/CameraUtils.js'
-import { UIToast }     from '@Utils/UIToast'
-import { snapshot }    from 'valtio'
-import { deepClone }   from 'valtio/utils'
-import { Journey }     from '../Journey'
+import { normalizeOrbitDirection, normalizeOrbitRPM } from '@Core/OrbitSettings'
+import { CameraUtils }                                from '@Utils/cesium/CameraUtils.js'
+import { UIToast }                                    from '@Utils/UIToast'
+import { snapshot }                                   from 'valtio'
+import { deepClone }                                  from 'valtio/utils'
+import { Journey }                                    from '../Journey'
 
 export class CameraManager {
     static CLOCKWISE = true
@@ -325,9 +326,10 @@ export class CameraManager {
         }
 
         // Set some configuration parameters
-        const rpm = (options?.rpm ?? lgs.settings.camera.rpm)
+        const $rotate = lgs.stores.ui.mainUI.rotate
+        $rotate.rpm = normalizeOrbitRPM(options?.rpm ?? $rotate.rpm)
+        $rotate.direction = normalizeOrbitDirection(options?.direction ?? $rotate.direction)
 
-        const fps = lgs.settings.camera.fps
         const infinite = options?.infinite ?? true
         const rotations = options?.rotations ?? lgs.settings.camera.rotations
         const lookAt = options?.lookAt ?? true
@@ -337,22 +339,41 @@ export class CameraManager {
             this.lookAt(point)
         }
         // Setting spinner speed
-        __.ui.css.setCSSVariable('--map-rotation-speed', `${60 / rpm}s`)
+        __.ui.css.setCSSVariable('--map-rotation-speed', `${60 / Math.max($rotate.rpm * Math.abs($rotate.direction), 0.2)}s`)
 
-
-        const angleRotation = 2 * Math.PI / (MINUTE / MILLIS * fps) * rpm
         let totalRotation = 0
         const totalTurns = rotations * 2 * Math.PI
         lgs.camera.percentageChanged = lgs.settings.camera.percentageChanged
         lgs.camera.orbitalPercentageChanged = lgs.settings.camera.orbitalPercentageChanged
 
+        let lastFrameTime = null
 
-        const rotateCamera = async (startTime, currentTime) => {
+        const rotateCamera = async () => {
             if (this.isRotating()) {
+                const currentTime = performance.now()
+                if (lastFrameTime === null) {
+                    lastFrameTime = currentTime
+                }
+
+                const elapsedSeconds = (currentTime - lastFrameTime) / MILLIS
+                lastFrameTime = currentTime
+                const rpm = normalizeOrbitRPM($rotate.rpm)
+                const direction = normalizeOrbitDirection($rotate.direction)
+                const effectiveRpm = rpm * Math.abs(direction)
+                const angleRotation = 2 * Math.PI / (MINUTE / MILLIS) * effectiveRpm * elapsedSeconds
+
                 if (lgs.camera && infinite || totalRotation < totalTurns) {
-                    lgs.camera.rotateRight(angleRotation)
-                    totalRotation += Math.abs(angleRotation)
-                    this.move.animation = __.requestAnimationFrame((time) => rotateCamera(time))
+                    if (effectiveRpm > 0) {
+                        if (direction >= 0) {
+                            lgs.camera.rotateRight(angleRotation)
+                        }
+                        else {
+                            lgs.camera.rotateLeft(angleRotation)
+                        }
+                        totalRotation += Math.abs(angleRotation)
+                        __.ui.css.setCSSVariable('--map-rotation-speed', `${60 / Math.max(effectiveRpm, 0.2)}s`)
+                    }
+                    this.move.animation = __.requestAnimationFrame(rotateCamera)
                 }
                 else {
                     this.stopRotate()
@@ -362,7 +383,7 @@ export class CameraManager {
         }
         this.move = {
             type:         CameraManager.ROTATE,
-            animation: __.requestAnimationFrame((time) => rotateCamera(time)),
+            animation: __.requestAnimationFrame(rotateCamera),
             stopWatching: lgs.camera.changed.addEventListener(async () => {
                 if (!this.saveTimer) {
                     await this.startWatching()
@@ -380,9 +401,8 @@ export class CameraManager {
         if (this.isRotating()) {
             this.unlock()
             __.ui.sceneManager.stopRotate
-            cancelAnimationFrame(this.move.animation)
+            __.cancelAnimationFrame(this.move.animation)
             this.enableMapDragging()
-
         }
     }
 
@@ -404,7 +424,6 @@ export class CameraManager {
 
 
     }
-
     /**
      * Reset focus to STARTER
      */
@@ -440,4 +459,3 @@ export class CameraManager {
     }
 
 }
-

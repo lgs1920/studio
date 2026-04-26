@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-20
- * Last modified: 2026-04-20
+ * Created on: 2026-04-26
+ * Last modified: 2026-04-26
  *
  *
  * Copyright © 2026 LGS1920
@@ -104,6 +104,68 @@ html {
     left: var(--left);
     display: flex;
     flex-direction: column;
+}
+
+.orbit-widget {
+    position: absolute;
+    bottom: var(--bottom);
+    display: flex;
+    flex-direction: column;
+    width: max-content;
+    padding: var(--lgs-gutter-s) !important;
+    pointer-events: auto;
+    gap: var(--lgs-gutter-s);
+}
+
+.orbit-widget.from-start {
+    left: calc(var(--left) + var(--lgs-dimension) + var(--lgs-gutter));
+}
+
+.orbit-widget.from-end {
+    right: calc(var(--right) + var(--lgs-dimension) + var(--lgs-gutter));
+}
+
+.orbit-widget::part(body) {
+    display: flex;
+    flex-direction: column;
+    gap: var(--lgs-gutter-s);
+}
+
+.panorama-widget-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--lgs-gutter-s);
+}
+
+.panorama-widget-title {
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--lgs-gutter-xs);
+}
+
+.panorama-widget-body {
+    display: flex;
+    align-items: stretch;
+    justify-content: center;
+    gap: var(--lgs-gutter);
+}
+
+.panorama-widget-slider {
+    display: flex;
+    align-items: center;
+    flex-direction: column;
+    min-width: 3.5rem;
+    gap: var(--lgs-gutter-xs);
+}
+
+.panorama-widget-range {
+    width: 1.25rem;
+    height: 10rem;
+    writing-mode: vertical-lr;
+    direction: rtl;
+    accent-color: var(--wa-color-brand-50);
 }
 
 #used-platform {
@@ -322,4 +384,3 @@ html {
 .scene-mode-selector[waiting-mode="true"] sl-button {
     display: flex;
 }
-

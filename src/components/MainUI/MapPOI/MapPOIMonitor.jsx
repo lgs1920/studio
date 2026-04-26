@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-28
- * Last modified: 2026-02-28
+ * Created on: 2026-04-26
+ * Last modified: 2026-04-26
  *
  *
  * Copyright © 2026 LGS1920
@@ -86,8 +86,9 @@ export const MapPOIMonitor = () => {
      */
     const handleContextMenu = (event, entity) => {
         const poi = getPOI(entity)
-        if (poi && !__.ui.cameraManager.isRotating()
-            || (__.ui.cameraManager.isRotating()
+        const isCameraBusy = __.ui.cameraManager.isRotating() || lgs.stores.ui.mainUI.panorama.active
+        if (poi && !isCameraBusy
+            || (isCameraBusy
                 &&
                 (pois.current === false || pois.current.id === poi.id)
             )) {

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-23
- * Last modified: 2026-04-23
+ * Created on: 2026-04-26
+ * Last modified: 2026-04-26
  *
  *
  * Copyright © 2026 LGS1920
@@ -53,10 +53,19 @@ export const ui = {
         journeyMenu:         {timeout: 0, active: false},
         removeJourneyDialog: {active: proxyMap()},
         rotate:              {
-            clockwise: false,
             running:   false,
             target:    false,
-            rpm:       4,
+            rpm:       1,
+            direction: 1,
+        },
+        panorama:            {
+            active:       false,
+            target:       false,
+            heightOffset: 1000,
+            pitch:        -12,
+            heading:      0,
+            rpm:          1,
+            direction:    1,
         },
     },
 

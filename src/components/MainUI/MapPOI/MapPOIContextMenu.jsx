@@ -7,16 +7,18 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-25
- * Last modified: 2026-04-25
+ * Created on: 2026-04-26
+ * Last modified: 2026-04-26
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import {
-    POI_FLAG_START, POI_FLAG_STOP, POI_STANDARD_TYPE, POI_STARTER_TYPE, POI_TMP_TYPE, POIS_EDITOR_DRAWER, ROTATION_ICON,
+    CURRENT_POI, POI_FLAG_START, POI_FLAG_STOP, POI_STANDARD_TYPE, POI_STARTER_TYPE, POI_TMP_TYPE, POIS_EDITOR_DRAWER,
+    ROTATION_ICON,
 }                                       from '@Core/constants'
+import { getOrbitSettings, setOrbitStoreSettings } from '@Core/OrbitSettings'
 
 import { UIToast }                                from '@Utils/UIToast'
 import { WaDivider, WaIcon, WaSpinner } from '@web.awesome.me/webawesome-pro/dist/react'
@@ -144,10 +146,28 @@ export const MapPOIContextMenu = (props) => {
         if (__.ui.cameraManager.isRotating()) {
             await __.ui.poiManager.stopRotationAndSync()
         }
-        await __.ui.poiManager.updatePOI(thePOI, {animated: false})
-        __.ui.cameraManager.panoramic()
+        const storedPanorama = {
+            ...(currentPoi.panorama ?? {}),
+            ...getOrbitSettings(currentPoi, 'panorama'),
+        }
+        const panorama = lgs.stores.ui.mainUI.panorama
+        panorama.target = {
+            ...currentPoi,
+            element: CURRENT_POI,
+            slug:    currentPoi.slug ?? currentPoi.id,
+        }
+        panorama.heading = lgs.stores.main.components.camera.position.heading ?? 0
+        panorama.pitch = storedPanorama.pitch ?? -12
+        panorama.heightOffset = storedPanorama.heightOffset ?? 1000
+        setOrbitStoreSettings(panorama, storedPanorama)
+        panorama.active = true
         hideMenu()
-    }, [hideMenu, thePOI])
+    }, [currentPoi, hideMenu])
+
+    const stopPanoramic = useCallback(async () => {
+        await __.ui.poiManager.stopRotationAndSync()
+        hideMenu()
+    }, [hideMenu])
 
     // --- Menu Rendering Logic ---
 
@@ -183,13 +203,17 @@ export const MapPOIContextMenu = (props) => {
         () => __.ui.poiManager.isPOIRotating(thePOI),
         [thePOI, rotateState.running, rotateState.target?.element, rotateState.target?.slug, rotateState.target?.id],
     )
+    const panoramaState = useSnapshot(lgs.stores.ui.mainUI.panorama)
+    const isPOIPanoramic = panoramaState.active
+        && panoramaState.target?.element === CURRENT_POI
+        && (panoramaState.target?.slug ?? panoramaState.target?.id) === thePOI
     const canSaveAsStandard = currentPoi?.type === undefined
     const canSetAsStarter = currentPoi?.type !== POI_STARTER_TYPE && !canSaveAsStandard
     const canRemove = currentPoi?.type !== POI_STARTER_TYPE &&
         currentPoi?.type !== POI_FLAG_START &&
         currentPoi?.type !== POI_FLAG_STOP
     const canEdit = currentPoi?.type !== POI_TMP_TYPE
-    const showRotationItem = isPOIRotating
+    const showRotationItem = isPOIRotating || isPOIPanoramic
 
     // Safety check: if the POI doesn't exist in the list (though targetPoiId should prevent this), return null.
     if (!currentPoi.id) {
@@ -259,9 +283,9 @@ export const MapPOIContextMenu = (props) => {
 
                 {/* Rotation / Panoramic Options */}
                 {showRotationItem ? (
-                    <li onClick={toggleRotation}>
+                    <li onClick={isPOIPanoramic ? stopPanoramic : toggleRotation}>
                         <WaIcon name={ROTATION_ICON} animation="spin" variant="regular"/>
-                        {'Stop Rotation'}
+                        {isPOIPanoramic ? 'Stop Panorama' : 'Stop Rotation'}
                     </li>
                 ) : (
                      <>

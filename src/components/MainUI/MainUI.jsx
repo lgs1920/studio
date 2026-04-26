@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-25
- * Last modified: 2026-04-25
+ * Created on: 2026-04-26
+ * Last modified: 2026-04-26
  *
  *
  * Copyright © 2026 LGS1920
@@ -20,11 +20,12 @@ import { ContextMenuRenderer } from '@Components/MainUI/context-menu/ContextMenu
 import { GeocodingButton }   from '@Components/MainUI/geocoding/GeocodingButton'
 import { GeocodingWidget } from '@Components/MainUI/geocoding/GeocodingWidget'
 import { MapPOIMonitor }     from '@Components/MainUI/MapPOI/MapPOIMonitor'
+import { PanoramaWidget } from '@Components/MainUI/PanoramaWidget'
+import { RotationWidget } from '@Components/MainUI/RotationWidget'
 import { RotateButton }      from '@Components/MainUI/RotateButton'
 import { EditorPanelButton } from '@Editor/EditorPanelButton'
 import { VideoButton }       from '@Components/MainUI/video/VideoButton'
 import { VideoDownloadAndShareDialog } from '@Components/MainUI/video/VideoDownloadAndShareDialog'
-import { ProfileButton }                        from '@Components/Profile/ProfileButton'
 import { TextButton }        from '@Components/Text/TextButton'
 import { TracksEditor }                         from '@Components/TracksEditor/TracksEditor'
 import {
@@ -32,6 +33,7 @@ import {
     MENU_START_START, SCENE_MODE_2D, SECOND, START, TOP,
 }                            from '@Core/constants'
 import { memo, useCallback, useEffect, useRef } from 'react'
+import { sprintf }        from 'sprintf-js'
 import { subscribe, useSnapshot }               from 'valtio'
 import { JourneyLoaderUI }                      from '../FileLoader/JourneyLoaderUI'
 import { Panel as InformationPanel }            from '../InformationPanel/Panel'
@@ -61,7 +63,7 @@ export const MainUI = memo(() => {
     const main = useSnapshot(lgs.stores.main)
     const mainUI = useSnapshot(lgs.stores.ui.mainUI)
     const {drawers, toolBar} = useSnapshot(lgs.settings.ui.menu)
-    const {device, video} = useSnapshot(lgs.stores.ui)
+    const {video} = useSnapshot(lgs.stores.ui)
 
 
     const windowResized = useCallback(__.tools.debounce(() => {
@@ -90,8 +92,6 @@ export const MainUI = memo(() => {
         )
 
         const isDrawerOpen = lgs.stores.ui.drawers.open !== null
-        const verticalOffsetLeft = isDrawerOpen ? __.ui.css.getCSSVariable('--lgs-vertical-panel-offset-left') : '0.1px'
-        const verticalOffsetRight = isDrawerOpen ? __.ui.css.getCSSVariable('--lgs-vertical-panel-offset-right') : '0.1px'
         const horizontalOffsetLeft = isDrawerOpen ? __.ui.css.getCSSVariable('--lgs-horizontal-panel-offset-left') : '0.1px'
         const width = isDrawerOpen
                       ? `calc(${__.ui.css.getCSSVariable('--lgs-vertical-panel-width')} + ${__.ui.css.getCSSVariable('--right')})`
@@ -242,6 +242,8 @@ export const MainUI = memo(() => {
                             </div>
                         </div>
                         {main.components.geocoder.dialog.mounted && <GeocodingWidget/>}
+                        <RotationWidget/>
+                        <PanoramaWidget/>
                     </>
                 )}
 

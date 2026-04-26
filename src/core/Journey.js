@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-24
- * Last modified: 2026-04-24
+ * Created on: 2026-04-26
+ * Last modified: 2026-04-26
  *
  *
  * Copyright © 2026 LGS1920
@@ -25,11 +25,12 @@ import { getGeom }  from '@turf/invariant'
 
 import {
     FEATURE_COLLECTION, FEATURE_LINE_STRING, FEATURE_MULTILINE_STRING, FEATURE_POINT, IMPORT_LOADING_ERROR, TrackUtils,
-}                          from '@Utils/cesium/TrackUtils'
-import { UIToast }         from '@Utils/UIToast'
-import { ElevationServer } from './Elevation/ElevationServer'
-import { MapElement }      from './MapElement'
-import { Track }           from './Track'
+}                           from '@Utils/cesium/TrackUtils'
+import { UIToast }          from '@Utils/UIToast'
+import { ElevationServer }  from './Elevation/ElevationServer'
+import { MapElement }       from './MapElement'
+import { getOrbitSettings } from './OrbitSettings'
+import { Track }            from './Track'
 
 
 export class Journey extends MapElement {
@@ -47,6 +48,8 @@ export class Journey extends MapElement {
     metrics = {global: {}, user: {}, external: {}, points: []}
     camera = {}
     cameraOrigin = {}
+    rotation = {}
+    panorama = {}
 
     hasElevation = false
     hasTime = false
@@ -72,6 +75,8 @@ export class Journey extends MapElement {
             this.description = options.description ?? ''
 
             this.camera = options.camera ?? null
+            this.rotation = options.rotation ?? {}
+            this.panorama = options.panorama ?? {}
 
 
         }
@@ -681,6 +686,11 @@ export class Journey extends MapElement {
     }
 
     focus = (props = {}) => {
+        if (props.rotate) {
+            const rotationSettings = getOrbitSettings(this, 'rotation')
+            props.rpm ??= rotationSettings.rpm
+            props.direction ??= rotationSettings.direction
+        }
         props.journey = this
         props.target = this
         __.ui.sceneManager.focusOnJourney(props)

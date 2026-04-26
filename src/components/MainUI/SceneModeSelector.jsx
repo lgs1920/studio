@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-11
- * Last modified: 2026-03-11
+ * Created on: 2026-04-26
+ * Last modified: 2026-04-26
  *
  *
  * Copyright © 2026 LGS1920
@@ -57,7 +57,7 @@ export const SceneModeSelector = (props) => {
                 <WaButton slot={'trigger'}
                           size={'small'}
                           className={'square-button'}
-                          disabled={mainUI.rotate.running}
+                          disabled={mainUI.rotate.running || mainUI.panorama.active}
                           id="scene-mode-trigger"
                           variant={'brand'}
                           appearance="Filled"
