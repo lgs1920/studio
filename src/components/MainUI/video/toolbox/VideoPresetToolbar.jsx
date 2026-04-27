@@ -37,6 +37,7 @@ export const VideoPresetToolbar = memo(() => {
     const $video = lgs.stores.ui.video
     const video = useSnapshot($video)
     const videoSettings = useSnapshot(lgs.settings.ui.video || {})
+    const toolbars = useSnapshot(lgs.settings.ui.toolbars)
 
     const [preset, setPreset] = useState(null)
     const [open, setOpen] = useState(false)
@@ -153,11 +154,13 @@ export const VideoPresetToolbar = memo(() => {
                 className={classNames('video-preset-widget', 'video-preset-grid', {'video-preset-grid-open': preset === 'custom'})}>
                 <WaIcon id="grabber-video-preset" className="grabber" name="grip-dots" variant="solid"/>
 
-                <div className="buttons-bar-on-map">
+                <div className="buttons-bar-on-map video-choice-buttons video-choice-buttons-on-map">
                     {Array.from(ScreenMediaRecorder.VIDEO_PRESETS).map(([key, value]) => (
                         <Fragment key={key}>
                             <WaButton
+                                className={classNames('video-choice-button', {'is-selected': key === preset})}
                                 size="small"
+                                variant="neutral"
                                 appearance={key === preset ? 'outlined' : 'plain'}
                                 id={`video-preset-${key}`}
                                 onClick={event => handleChangePreset(key, event)}
@@ -174,16 +177,20 @@ export const VideoPresetToolbar = memo(() => {
                                     strategy="fixed"
                                     distance={4}
                                 >
-                                    <div className="video-preset-custom lgs-card wa-theme-lgs1920-on-map">
-                                        <div className="video-preset-grid"><span/><VideoFPSToolbar/></div>
-                                        <div className="video-preset-grid"><span/><VideoQualityToolbar/></div>
+                                    <div className="video-preset-custom lgs-card wa-theme-lgs1920-on-map"
+                                         style={{opacity: toolbars.opacity}}>
+                                        <div className="video-preset-grid"><span/><VideoFPSToolbar choicesOnMap/></div>
+                                        <div className="video-preset-grid"><span/><VideoQualityToolbar choicesOnMap/>
+                                        </div>
                                     </div>
                                 </WaPopup>
                             )}
                         </Fragment>
                     ))}
                     <WaButton
+                        className={classNames('video-choice-button', {'is-selected': preset === 'auto'})}
                         size="small"
+                        variant="neutral"
                         appearance={preset === 'auto' ? 'outlined' : 'plain'}
                         onClick={() => handleChangePreset('auto')}
                     >

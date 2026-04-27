@@ -7,16 +7,17 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-04-27
+ * Last modified: 2026-04-27
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import React, { useEffect, useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import { useSnapshot }              from 'valtio'
 
+import { MapPointContextMenu } from '@Components/MainUI/context-menu/MapPointContextMenu'
 import { MapPOIContextMenu } from '@Components/MainUI/MapPOI/MapPOIContextMenu'
 import { WidgetContextMenu } from '@Components/MainUI/widgets/WidgetContextMenu'
 
@@ -43,7 +44,7 @@ export const ContextMenuRenderer = () => {
                 __.ui.contextMenu.showAt(contextMenu.position)
             }
         }
-    }, [contextMenu.visible, contextMenu.position?.x, contextMenu.position?.y])
+    }, [contextMenu.visible, contextMenu.position, contextMenu.position?.x, contextMenu.position?.y])
 
     // Do not render anything when the menu is hidden
     if (!contextMenu.visible || !contextMenu.type) {
@@ -56,6 +57,8 @@ export const ContextMenuRenderer = () => {
             return <WidgetContextMenu targetId={contextMenu.targetId} menuRef={_menu}/>
         case 'poi':
             return <MapPOIContextMenu targetId={contextMenu.targetId} menuRef={_menu}/>
+        case 'map-point':
+            return <MapPointContextMenu target={contextMenu.targetId} menuRef={_menu}/>
         default:
             return null
     }

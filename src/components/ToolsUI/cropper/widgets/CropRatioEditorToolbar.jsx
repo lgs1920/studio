@@ -15,6 +15,7 @@
  ******************************************************************************/
 
 import { WaButton, WaIcon, WaTooltip, WaPopup } from '@web.awesome.me/webawesome-pro/dist/react'
+import classNames from 'classnames'
 import React, { memo, useCallback, useEffect, useRef, useState } from 'react'
 import { useSnapshot }                          from 'valtio'
 import '../style.css'
@@ -125,6 +126,16 @@ export const CropRatioEditorToolbar = memo(({context, cropzoneId}) => {
         return preset.visibility.includes(device) || preset.visibility.includes(key)
     }, [])
 
+    const handlePresetKeyDown = useCallback((event, preset) => {
+        if (event.key !== 'Enter' && event.key !== ' ') {
+            return
+        }
+
+        event.preventDefault()
+        event.stopPropagation()
+        handleChangeRatio(preset)
+    }, [handleChangeRatio])
+
     useEffect(() => {
         const configRatio = __.ui.widgetManager.getWidgetConfig(cropzoneId)?.ratio?.value
         const savedRatio = lgs.settings.ui.video?.ratio
@@ -180,27 +191,29 @@ export const CropRatioEditorToolbar = memo(({context, cropzoneId}) => {
                         distance={2}
                         strategy="fixed"
                     >
-                        <div className="lgs-card wa-theme-lgs1920-on-map"
-                             style={{display: 'flex', flexDirection: 'column', gap: '2px'}}>
-                            {lgs.configuration.videoFormats.map(preset => (
-                                isPresetVisible(preset) && (
-                                    <React.Fragment key={`crop-ratio-${preset.value}`}>
-                                        <WaTooltip for={`btn-ratio-${preset.value}`} placement="right">
-                                            {`${preset.label}: ${preset.description}`}
-                                        </WaTooltip>
+                        <div className="crop-ratio-popup-menu lgs-card wa-theme-lgs1920-on-map">
+                            <ul>
+                                {lgs.configuration.videoFormats.map(preset => (
+                                    isPresetVisible(preset) && (
+                                        <React.Fragment key={`crop-ratio-${preset.value}`}>
+                                            <WaTooltip for={`btn-ratio-${preset.value}`} placement="right">
+                                                {`${preset.label}: ${preset.description}`}
+                                            </WaTooltip>
 
-                                        <WaButton
-                                            id={`btn-ratio-${preset.value}`}
-                                            size="small"
-                                            appearance={video.ratio === preset.value ? 'accent' : 'plain'}
-                                            onClick={() => handleChangeRatio(preset)}
-                                            style={{justifyContent: 'flex-start', width: '100%'}}
-                                        >
-                                            {preset.label}
-                                        </WaButton>
-                                    </React.Fragment>
-                                )
-                            ))}
+                                            <li
+                                                id={`btn-ratio-${preset.value}`}
+                                                role="button"
+                                                tabIndex={0}
+                                                className={classNames('crop-ratio-choice-button', {'is-selected': video.ratio === preset.value})}
+                                                onClick={() => handleChangeRatio(preset)}
+                                                onKeyDown={(event) => handlePresetKeyDown(event, preset)}
+                                            >
+                                                <span>{preset.label}</span>
+                                            </li>
+                                        </React.Fragment>
+                                    )
+                                ))}
+                            </ul>
                         </div>
                     </WaPopup>
                 </div>

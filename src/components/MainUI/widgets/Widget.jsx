@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-24
- * Last modified: 2026-04-24
+ * Created on: 2026-04-27
+ * Last modified: 2026-04-27
  *
  *
  * Copyright © 2026 LGS1920
@@ -75,12 +75,17 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
     const widgetListSnapshot = useSnapshot($widget.list)
     const $drawers = lgs.stores.ui.drawers
     const drawers = useSnapshot($drawers)
+    const $toolbars = lgs.settings.ui.toolbars
+    const toolbars = useSnapshot($toolbars)
     const $video = lgs.stores.ui.video
     const video = useSnapshot($video)
 
     const throttleRotate = 1
     const selectedId = widget.current?.id ?? null
     const isSelected = selectedId === config.id
+    const liveOpacity = config.type === LGS_TOOLBAR
+                        ? toolbars.opacity
+                        : (config.opacity ?? 1)
 
     // Reactive depth resolution: priority to Store, fallback to initial Config
     const activeZIndex = widgetListSnapshot.get(config.id)?.zIndex ?? config.zIndex
@@ -495,7 +500,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                 min:            {width: config?.min?.width ?? 10, height: config?.min?.height ?? 10},
                 max:            {width: config?.max?.width ?? 500, height: config?.max?.height ?? 500},
                 mandatory:      config.mandatory ?? false,
-                opacity:        config.opacity ?? lgs.settings.ui.toolbars.opacity,
+                opacity: liveOpacity,
                 outsideOverlay: config.outsideOverlay ?? false,
                 persist:        config.persist ?? false,
                 ratio:          config.ratio ?? null,
@@ -532,7 +537,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                     $widget.list.set(config.id, {zIndex: activeZIndex})
                 }
 
-                _widget.current.style.opacity = 1
+                _widget.current.style.opacity = liveOpacity
                 lgs.stores.ui.widget.current.rotate = resolved.rotate
 
                 if (interactionLocked) {
@@ -587,6 +592,21 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
             __.recorder.removeEventListener(ScreenMediaRecorder.events.CANCEL, clean)
         }
     }, [isVisible, config, video.preRecording, video.recording, video.snapshot, video.finalizing, actualContainer])
+
+    useEffect(() => {
+        if (!_initialized.current || !_widget.current) {
+            return
+        }
+
+        _widget.current.style.opacity = liveOpacity
+
+        const elementId = __.ui.widgetManager.retrieveElementId(_widget.current) ?? config.id
+        const storedConfig = __.ui.widgetManager.getWidgetConfig(elementId)
+
+        if (storedConfig && storedConfig.opacity !== liveOpacity) {
+            __.ui.widgetManager.setConfig(elementId, {...storedConfig, opacity: liveOpacity})
+        }
+    }, [config.id, liveOpacity])
 
     useEffect(() => {
         const canvas = _w2c.current?.getCanvas?.()

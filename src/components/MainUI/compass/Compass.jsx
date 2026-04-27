@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-28
- * Last modified: 2026-02-28
+ * Created on: 2026-04-27
+ * Last modified: 2026-04-27
  *
  *
  * Copyright © 2026 LGS1920
@@ -31,6 +31,8 @@ export const Compass = ({fixed, inWidget = false, entity}) => {
     const _rotatingPart = useRef(null)
     const _compass = useRef(null)
     const _doubleTapTimeout = useRef(null)
+    const _animationFrame = useRef(null)
+    const _lastHeading = useRef(null)
 
     // Store Proxies
     const $globalCompass = lgs.settings.ui.compass
@@ -49,6 +51,11 @@ export const Compass = ({fixed, inWidget = false, entity}) => {
     }, [entity, widgetConfig])
 
     const activeConfig = inWidget ? element : globalCompass
+    const currentMode = activeConfig?.mode
+    const baseTransform = useMemo(
+        () => currentMode?.toString() === COMPASS_LIGHT.toString() ? 'scale(1.2)' : '',
+        [currentMode],
+    )
 
     /**
      * Resolves a CSS variable string to its computed value recursively.
@@ -73,11 +80,21 @@ export const Compass = ({fixed, inWidget = false, entity}) => {
      * Updates the rotation of the referenced element based on camera heading.
      */
     const updateRotation = useCallback(() => {
-        if (_rotatingPart.current) {
-            const headingDegrees = -CMath.toDegrees(lgs.camera.heading) % 360
-            _rotatingPart.current.style.transform = `rotate(${headingDegrees}deg)`
+        const rotatingPart = _rotatingPart.current
+        if (!rotatingPart) {
+            return
         }
-    }, [])
+
+        const headingDegrees = ((-CMath.toDegrees(lgs.camera.heading) % 360) + 360) % 360
+        if (_lastHeading.current === headingDegrees) {
+            return
+        }
+
+        rotatingPart.style.transform = baseTransform
+                                       ? `rotate(${headingDegrees}deg) ${baseTransform}`
+                                       : `rotate(${headingDegrees}deg)`
+        _lastHeading.current = headingDegrees
+    }, [baseTransform])
 
     /**
      * Maps store configuration to CSS variables.
@@ -144,8 +161,13 @@ export const Compass = ({fixed, inWidget = false, entity}) => {
         }
 
         if (!fixed) {
-            lgs.camera.changed.addEventListener(updateRotation)
+            const tick = () => {
+                updateRotation()
+                _animationFrame.current = window.requestAnimationFrame(tick)
+            }
+
             updateRotation()
+            _animationFrame.current = window.requestAnimationFrame(tick)
         }
 
         return () => {
@@ -153,18 +175,22 @@ export const Compass = ({fixed, inWidget = false, entity}) => {
                 el.removeEventListener('dblclick', resetToNorth)
                 el.removeEventListener('touchend', handleDoubleTap)
             }
-            lgs.camera.changed.removeEventListener(updateRotation)
+
+            if (_animationFrame.current !== null) {
+                window.cancelAnimationFrame(_animationFrame.current)
+                _animationFrame.current = null
+            }
         }
-    }, [fixed, activeConfig.mode, updateRotation])
+    }, [fixed, currentMode, updateRotation])
 
     // Post-render effect to maintain rotation during Valtio re-renders
     useEffect(() => {
+        _lastHeading.current = null
         if (!fixed) {
             updateRotation()
         }
-    })
+    }, [currentMode, fixed, updateRotation])
 
-    const currentMode = activeConfig?.mode
     if (!currentMode) {
         return null
     }

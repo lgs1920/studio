@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-24
- * Last modified: 2026-04-24
+ * Created on: 2026-04-27
+ * Last modified: 2026-04-27
  *
  *
  * Copyright © 2026 LGS1920
@@ -309,6 +309,10 @@
     gap: var(--lgs-gutter-xs);
 }
 
+.video-preset-custom.lgs-card.wa-theme-lgs1920-on-map {
+    padding-inline-end: 0;
+}
+
 .video-preset-widget-wrapper {
     display: flex;
     flex-direction: column;
@@ -317,9 +321,29 @@
 
 }
 
+.video-choice-buttons-on-map wa-button.video-choice-button::part(base) {
+    transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
+    color: var(--lgs-light-color-75);
+    border-color: transparent;
+    background: transparent !important;
+}
+
+.video-choice-buttons-on-map wa-button.video-choice-button:not(.is-selected):hover::part(base) {
+    color: var(--lgs-card-on-map-hover-color);
+    border-color: var(--lgs-card-on-map-hover-border-color);
+    background: var(--lgs-card-on-map-hover-bg-color) !important;
+}
+
+.video-choice-buttons-on-map wa-button.video-choice-button.is-selected::part(base),
+.video-choice-buttons-on-map wa-button.video-choice-button.is-selected:hover::part(base) {
+    color: var(--lgs-card-on-map-selected-color);
+    border-color: var(--lgs-card-on-map-selected-border-color);
+    background: var(--lgs-card-on-map-selected-bg-color) !important;
+}
+
 .video-fps-widget .buttons-bar-on-map, .video-quality-widget .buttons-bar-on-map {
     display: grid;
-    grid-template-columns: repeat(4, 2rem) !important;
+    grid-template-columns: repeat(3, 2rem) !important;
 }
 
 /***************************************

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-20
- * Last modified: 2026-04-20
+ * Created on: 2026-04-27
+ * Last modified: 2026-04-27
  *
  *
  * Copyright © 2026 LGS1920
@@ -92,6 +92,7 @@ export const CURRENT_TRACK = 'track'
 export const CURRENT_CAMERA = 'camera'
 
 export const CURRENT_POI = 'poi'
+export const CURRENT_MAP_POINT = 'map-point'
 export const POI_THRESHOLD_DISTANCE = 50 // meters
 
 export const POI_STARTER_TYPE = 'starter'

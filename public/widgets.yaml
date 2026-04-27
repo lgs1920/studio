@@ -161,7 +161,7 @@ widgets:
     id: "text-widget"
     name: "Text"
     description: "The text widget"
-    icon: "Text"
+    icon: "text"
     mandatory: false
     component: "TextWidget"
     type: "lgs-visual-widget"

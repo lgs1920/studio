@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-06
- * Last modified: 2026-04-03
+ * Created on: 2026-04-27
+ * Last modified: 2026-04-27
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,7 +16,7 @@
 
 import { WaCard, WaIcon, WaOption, WaSelect } from '@web.awesome.me/webawesome-pro/dist/react'
 import classNames                             from 'classnames'
-import { memo, useCallback, useMemo, useRef } from 'react'
+import { memo, useCallback, useEffect, useMemo, useRef } from 'react'
 import { useSnapshot }                        from 'valtio'
 
 /**
@@ -26,20 +26,26 @@ import { useSnapshot }                        from 'valtio'
  * @param {string} [props.size='medium'] - Size of the select dropdown
  * @param {Function} [props.onChange] - Handler for selection changes
  * @param {boolean} [props.single] - Whether to display a single journey title
- * @param {string} [props.style] - Style variant ('card' for card-like display)
+ * @param {boolean} [props.closeOnOutsidePointerDown=false] - Forces close on outside pointerdown
  * @param {React.Ref} [props.ref] - Forwarded ref
  * @returns {JSX.Element|null} The rendered component or null if no journeys
  */
-export const JourneySelector = memo(({label, size = 'medium', onChange, single, style, ref}) => {
+export const JourneySelector = memo(({
+                                         label,
+                                         size = 'medium',
+                                         onChange,
+                                         single,
+                                         closeOnOutsidePointerDown = false,
+                                         ref,
+                                     }) => {
     // Valtio proxy references following '$' prefix convention
     const $journeyEditor = lgs.stores.main.components.journeyEditor
     const $journeyStore = lgs.stores.journeyEditor.journey
-    const $editorProxy = lgs.theJourneyEditorProxy
+    const _select = useRef(null)
 
     // Snapshot values for reactivity
     const {list, keys} = useSnapshot($journeyEditor)
     const theJourney = useSnapshot($journeyStore)
-    const editorStore = useSnapshot($editorProxy)
 
     // Memoized sorted journeys
     const journeys = useMemo(() => {
@@ -58,6 +64,35 @@ export const JourneySelector = memo(({label, size = 'medium', onChange, single, 
         }
     }, [onChange, $journeyEditor])
 
+    const setSelectRef = useCallback((element) => {
+        _select.current = element
+        if (typeof ref === 'function') {
+            ref(element)
+        }
+        else if (ref) {
+            ref.current = element
+        }
+    }, [ref])
+
+    useEffect(() => {
+        if (!closeOnOutsidePointerDown) {
+            return
+        }
+
+        const handlePointerDownOutside = (event) => {
+            const select = _select.current
+            if (!select?.open) {
+                return
+            }
+            if (!event.composedPath().includes(select)) {
+                select.hide()
+            }
+        }
+
+        document.addEventListener('pointerdown', handlePointerDownOutside, true)
+        return () => document.removeEventListener('pointerdown', handlePointerDownOutside, true)
+    }, [closeOnOutsidePointerDown])
+
     /**
      * Computes the icon style for a specific track.
      * @param {Object} track - The specific track object to style
@@ -68,7 +103,7 @@ export const JourneySelector = memo(({label, size = 'medium', onChange, single, 
         return {
             color: track ? track.color : journey.tracks.values().next().value.color,
         }
-    }, [theJourney, editorStore.track])
+    }, [theJourney])
 
     if (journeys.length === 0) {
         return null
@@ -83,7 +118,7 @@ export const JourneySelector = memo(({label, size = 'medium', onChange, single, 
                     onChange={handleChange}
                     key={keys.journey.list}
                     className={classNames('journey-selector', {masked: !theJourney.visible})}
-                    ref={ref}
+                    ref={setSelectRef}
                     value={theJourney.slug}
                 >
                     <div slot="start" className="lgs--track-colors-in-settings">

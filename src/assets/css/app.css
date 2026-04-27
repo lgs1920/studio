@@ -473,6 +473,8 @@ body {
 }
 
 .widget-no-hover:hover {
+    color: inherit !important;
+    border-color: transparent !important;
     background: transparent !important
 }
 
@@ -484,7 +486,7 @@ body {
     gap: var(--lgs-gutter-xs);
 }
 
-.buttons-bar-on-map wa-icon, .buttons-bar-on-map div {
+.buttons-bar-on-map > wa-icon, .buttons-bar-on-map > div {
     font-size: var(--lgs-font-size);
     line-height: 1;
     /*width: calc(var(--lgs-font-size) + 4px);*/
@@ -493,27 +495,30 @@ body {
     /*padding: 0;*/
     cursor: pointer;
     text-align: center;
+    transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
 }
 
-.buttons-bar-on-map div {
+.buttons-bar-on-map > div {
     justify-content: center;
     width: 100%;
     height: auto;
+    border: 1px solid transparent;
+    border-radius: var(--lgs-border-radius-xs);
 }
 
-.buttons-bar-on-map .selected {
+.buttons-bar-on-map > .selected {
     color: var(--lgs-card-on-map-selected-color, inherit);
     border-color: var(--lgs-card-on-map-selected-border-color);
     background: var(--lgs-card-on-map-selected-bg-color);
 }
 
-.buttons-bar-on-map wa-icon:hover, .buttons-bar-on-map div:hover {
+.buttons-bar-on-map > wa-icon:hover, .buttons-bar-on-map > div:hover {
     color: var(--lgs-card-on-map-hover-color);
     border-color: var(--lgs-card-on-map-hover-border-color);
     background: var(--lgs-card-on-map-hover-bg-color);
 }
 
-.buttons-bar-on-map wa-icon svg {
+.buttons-bar-on-map > wa-icon svg {
     width: unset;
     height: var(--lgs-font-size);
 }
@@ -524,50 +529,85 @@ body {
 }
 
 .widget-deck-panel {
+    align-items: stretch;
+    box-sizing: border-box;
     flex-direction: column;
     width: auto;
     padding: var(--lgs-gutter-xs);
-    gap: var(--lgs-gutter-xs);
+    padding-block-end: calc(var(--lgs-gutter-s) + var(--lgs-gutter-xs));
+    overflow: hidden;
+    gap: 0;
 }
 
 .widget-deck-panel, .widget-deck-panel * {
-    font-size: var(--lgs-font-size) !important;
+    font-size: var(--lgs-font-size-s) !important;
 }
 
-.widget-deck-panel section {
+.widget-deck-panel ul {
     display: flex;
     flex-direction: column;
+    margin: 0;
+    padding: 0 var(--lgs-gutter-xs);
     width: 100%;
-    gap: var(--lgs-gutter-xs);
+    list-style: none;
+    gap: 0;
+}
+
+.widget-group:not(:last-child) .widget-deck-item:last-child {
+    margin-bottom: 0;
+}
+
+.widget-group + .widget-group .widget-deck-item:first-child {
+    margin-top: 0;
 }
 
 .widget-deck-entry {
+    box-sizing: border-box;
     display: flex;
     align-items: center;
-    /*border-bottom: 1 px solid var(--lgs-light-color-25);*/
-    background: transparent !important;
+    background: transparent;
     gap: var(--lgs-gutter-xs);
+    margin: 2px;
+    padding: 2px;
+    border: 1px solid transparent;
+    border-radius: var(--lgs-border-radius-xs);
+    transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
 }
 
 .widget-deck-entry.small {
-    height: calc(2 * var(--lgs-font-size)) !important;
+    height: calc(2 * var(--lgs-font-size-s)) !important;
 }
 
-.widget-deck-entry:not(.widget-deck-title):hover {
+.widget-deck-item {
     cursor: pointer;
+    width: 100%;
+}
+
+.widget-deck-item:hover,
+.widget-deck-item.selected,
+.widget-deck-item.is-selected {
     color: var(--lgs-card-on-map-hover-color);
     border-color: var(--lgs-card-on-map-hover-border-color);
     background: var(--lgs-card-on-map-hover-bg-color);
 }
 
+.widget-deck-item.selected,
+.widget-deck-item.is-selected {
+    color: var(--lgs-card-on-map-selected-color);
+    border-color: var(--lgs-card-on-map-selected-border-color);
+    background: var(--lgs-card-on-map-selected-bg-color);
+}
+
 .widget-deck-title {
     width: 100%;
     padding: 0 var(--lgs-gutter-xs);
+    margin: 0;
+    border: 0;
 }
 
 .widget-deck-entry wa-icon {
-    width: calc(var(--lgs-font-size-s) + 6px);
-    height: calc(var(--lgs-font-size-s) + 6px);
+    width: calc(var(--lgs-font-size-s) + 4px);
+    height: calc(var(--lgs-font-size-s) + 4px);
 }
 
 .widget-deck-entry span {
@@ -575,6 +615,10 @@ body {
     width: 100%;
     white-space: nowrap;
 
+}
+
+.widget-deck-entry .widget-name {
+    text-align: left;
 }
 
 .widget-menu-disabled {

@@ -19,11 +19,12 @@
  ******************************************************************************/
 
 import { ScreenMediaRecorder } from '@Core/ui/screen-media-recorder/recorder/ScreenMediaRecorder'
+import classNames         from 'classnames'
 import { WaButton }                           from '@web.awesome.me/webawesome-pro/dist/react'
-import React, { Fragment, memo, useCallback } from 'react'
+import { Fragment, memo } from 'react'
 import { useSnapshot }                        from 'valtio'
 
-export const VideoFPSToolbar = memo(() => {
+export const VideoFPSToolbar = memo(({choicesOnMap = false}) => {
     const $video = lgs.stores.ui.video
     const video = useSnapshot($video)
 
@@ -31,20 +32,24 @@ export const VideoFPSToolbar = memo(() => {
      * Updates FPS index in store and settings
      * @param {number} index
      */
-    const handleChangeFPS = useCallback((index) => {
+    const handleChangeFPS = (index) => {
         $video.fps = index
         lgs.settings.ui.video.fps = index
-    }, [$video])
+    }
 
     return (
         <div className="video-fps-widget">
             <span>{'FPS'}</span>
-            <div className="buttons-bar-on-map">
+            <div className={classNames('buttons-bar-on-map', {
+                'video-choice-buttons video-choice-buttons-on-map': choicesOnMap,
+            })}>
                 {ScreenMediaRecorder.FPS.map((fps, index) => (
                     <Fragment key={index}>
                         <WaButton
+                            className={classNames('video-choice-button', {'is-selected': index === video.fps})}
                             size="small"
-                            appearance={index === video.fps ? 'accent' : 'outlined'}
+                            variant="neutral"
+                            appearance={index === video.fps ? 'outlined' : 'plain'}
                             onClick={() => handleChangeFPS(index)}
                         >
                             {fps}

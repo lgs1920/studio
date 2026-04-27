@@ -19,38 +19,44 @@
  ******************************************************************************/
 
 import { ScreenMediaRecorder } from '@Core/ui/screen-media-recorder/recorder/ScreenMediaRecorder'
+import classNames   from 'classnames'
 import { WaButton, WaTooltip }          from '@web.awesome.me/webawesome-pro/dist/react'
-import React, { Fragment, useCallback } from 'react'
+import { Fragment } from 'react'
 import { useSnapshot }                  from 'valtio'
 
-export const VideoQualityToolbar = () => {
+export const VideoQualityToolbar = ({choicesOnMap = false}) => {
     const $video = lgs.stores.ui.video
+    const $videoSettings = lgs.settings.ui.video
     const video = useSnapshot($video)
 
     /**
      * Updates quality index in store and settings
      * @param {number} index
      */
-    const handleChangeQuality = useCallback((index) => {
+    const handleChangeQuality = (index) => {
         $video.quality = index
-        lgs.settings.ui.video.quality = index
+        $videoSettings.quality = index
 
-        if (lgs.settings.ui.video.adaptiveQuality?.enabled) {
-            lgs.settings.ui.video.adaptiveQuality = {...lgs.settings.ui.video.adaptiveQuality, enabled: false}
+        if ($videoSettings.adaptiveQuality?.enabled) {
+            $videoSettings.adaptiveQuality = {...$videoSettings.adaptiveQuality, enabled: false}
         }
-    }, [$video])
+    }
 
     return (
         <div className="video-quality-widget">
             <span>{'Quality'}</span>
-            <div className="buttons-bar-on-map">
+            <div className={classNames('buttons-bar-on-map', {
+                'video-choice-buttons video-choice-buttons-on-map': choicesOnMap,
+            })}>
                 {ScreenMediaRecorder.QUALITY.map(({name, short}, index) => (
                     <Fragment key={index}>
                         <WaTooltip placement="bottom" for={`q-${index}`}>{name}</WaTooltip>
                         <WaButton
                             id={`q-${index}`}
+                            className={classNames('video-choice-button', {'is-selected': index === video.quality})}
                             size="small"
-                            appearance={index === video.quality ? 'accent' : 'outlined'}
+                            variant="neutral"
+                            appearance={index === video.quality ? 'outlined' : 'plain'}
                             onClick={() => handleChangeQuality(index)}
                         >
                             {short}

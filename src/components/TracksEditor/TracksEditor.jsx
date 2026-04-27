@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-19
- * Last modified: 2026-04-19
+ * Created on: 2026-04-27
+ * Last modified: 2026-04-27
  *
  *
  * Copyright © 2026 LGS1920
@@ -55,6 +55,7 @@ const JourneyContent = memo(({journeyVisible}) => (
             <JourneySelector
                 onChange={Utils.initJourneyEdition}
                 single={true}
+                closeOnOutsidePointerDown
             />
             <JourneyLoaderButton
                 tooltip="left"

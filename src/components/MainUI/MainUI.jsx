@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-26
- * Last modified: 2026-04-26
+ * Created on: 2026-04-27
+ * Last modified: 2026-04-27
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,6 +16,7 @@
 import { Compass }          from '@Components/MainUI/compass/Compass'
 import { FullScreenButton } from '@Components/FullScreenButton/FullScreenButton'
 import { ContextMenuRenderer } from '@Components/MainUI/context-menu/ContextMenuRenderer'
+import { MapPointContextMenuTrigger } from '@Components/MainUI/context-menu/MapPointContextMenuTrigger'
 
 import { GeocodingButton }   from '@Components/MainUI/geocoding/GeocodingButton'
 import { GeocodingWidget } from '@Components/MainUI/geocoding/GeocodingWidget'
@@ -218,6 +219,7 @@ export const MainUI = memo(() => {
 
     return (
         <>
+            <MapPointContextMenuTrigger/>
             <div id="lgs-main-ui" onKeyDown={handleKeyDown}>
                 {!video.editing && (
                     <>

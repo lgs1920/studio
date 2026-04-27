@@ -48,6 +48,7 @@ export const MapPOIContextMenu = (props) => {
     const thePOI = props.targetId?.id
     const $pois = lgs.stores.main.components.pois
     const rotateState = useSnapshot(lgs.stores.ui.mainUI.rotate)
+    const toolbars = useSnapshot(lgs.settings.ui.toolbars)
 
     // If no target ID is provided, do not render the menu component.
     if (!thePOI) {
@@ -225,6 +226,7 @@ export const MapPOIContextMenu = (props) => {
             ref={_menuRef}
             id="poi-context-menu"
             className="lgs-context-menu poi-on-map-menu lgs-card wa-theme-lgs1920-on-map"
+            style={{'--lgs-on-map-ui-opacity': toolbars.opacity}}
             onContextMenu={(event) => event.preventDefault()} // Prevent native browser context menu
         >
             {!currentPoi.expanded && (

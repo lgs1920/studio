@@ -248,6 +248,28 @@
 
     --lgs-switch-active-track-color: var(--wa-color-brand);
     --lgs-switch-active-thumb-color: var(--wa-color-brand-40);
+    --lgs-switch-inactive-thumb-color: var(--wa-color-brand-80);
+    --lgs-select-bg-color: var(--wa-form-control-background-color);
+    --lgs-select-border-color: var(--wa-form-control-border-color);
+    --lgs-select-color: var(--wa-form-control-value-color);
+    --lgs-select-option-hover-bg-color: var(--wa-color-neutral-fill-normal);
+    --lgs-select-option-hover-color: var(--wa-color-neutral-on-normal);
+    --lgs-select-option-current-bg-color: var(--wa-color-neutral-fill-loud);
+    --lgs-select-option-current-color: var(--wa-color-neutral-on-loud);
+    --lgs-select-option-current-outline-color: var(--lgs-select-option-hover-bg-color);
+    --lgs-select-option-current-outline-width: 1px;
+    --lgs-select-option-current-expand: 3px;
+    --lgs-select-option-current-gap-inline: 4px;
+    --lgs-select-option-current-gap-block: 3px;
+    --lgs-select-listbox-padding-inline: calc(
+            var(--lgs-select-option-current-expand)
+            + var(--lgs-select-option-current-gap-inline)
+            + var(--lgs-select-option-current-outline-width)
+    );
+    --lgs-select-listbox-padding-block: calc(
+            var(--lgs-select-option-current-gap-block)
+            + var(--lgs-select-option-current-outline-width)
+    );
     --lgs-slider-track-color: var(--lgs-switch-active-track-color);
     --lgs-slider-thumb-color: var(--lgs-switch-active-thumb-color);
     --lgs-track-color-active: var(--lgs-slider-thumb-color);
@@ -456,8 +478,17 @@ wa-button::part(label) {
     }
 
 .wa-theme-lgs1920-on-map .fa-icon-button {
-        color: var(--lgs-light-color-75);
-        border-color: var(--lgs-light-color-25);
+        transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
+    color: var(--lgs-light-color-75);
+        border: 1px solid transparent;
+    border-color: var(--lgs-light-color-25);
+    background: transparent;
+}
+
+.wa-theme-lgs1920-on-map .fa-icon-button:hover {
+    color: var(--lgs-card-on-map-hover-color);
+    border-color: var(--lgs-card-on-map-hover-border-color);
+    background: var(--lgs-card-on-map-hover-bg-color);
     }
 
     /*******************************************************************************
@@ -752,7 +783,12 @@ wa-button::part(label) {
         --spacing: var(--lgs-gutter-xs);
     }
 
-    .lgs-card, .lgs-card::part(base), .lgs-one-line-card, .lgs-one-line-card::part(base) {
+wa-card.wa-theme-lgs1920-on-map::part(body) {
+    padding: 0;
+    --spacing: 0;
+}
+
+.lgs-card, .lgs-card::part(base), .lgs-one-line-card, .lgs-one-line-card::part(base) {
         display: flex;
         padding: var(--lgs-gutter-s);
         border: 1px solid var(--lgs-card-border-color);
@@ -783,7 +819,7 @@ wa-button::part(label) {
         align-items: center;
         color: var(--lgs-text-on-color);
         border-color: var(--lgs-card-on-map-border-color);
-        border-radius: var(--lgs-border-radius-xs);
+    border-radius: var(--lgs-on-map-border-radius, var(--lgs-border-radius-s));
         background: var(--lgs-card-on-map-bg-color);
         box-shadow: var(--sl-shadow-medium);
         gap: var(--lgs-gutter-s);
@@ -791,9 +827,13 @@ wa-button::part(label) {
 
     }
 
+.wa-theme-lgs1920-on-map:is(.lgs-card, .lgs-one-line-card, .lgs-toolbar),
+.wa-theme-lgs1920-on-map :is(.lgs-card, .lgs-one-line-card, .lgs-toolbar) {
+    padding: var(--lgs-on-map-padding, var(--lgs-gutter-xs));
+}
+
 .wa-theme-lgs1920-on-map.lgs-card,
 .wa-theme-lgs1920-on-map .lgs-card {
-        padding: var(--lgs-gutter-xs);
         border-color: var(--lgs-card-on-map-border-color);
     }
 
@@ -824,7 +864,9 @@ wa-button::part(label) {
     }
 
     .lgs-compass-needle {
-        transform-origin: center
+        transform-origin: center;
+        will-change: transform;
+        backface-visibility: hidden;
     }
 
     .lgs-compass-needle-north {
@@ -956,8 +998,8 @@ wa-button::part(label) {
 
 .wa-theme-lgs1920-on-map .lgs-scrollbars .track-horizontal,
 .wa-theme-lgs1920-on-map .lgs-scrollbars .track-vertical {
-    --lgs-scrollbar-track-color: var(--lgs-switch-active-thumb-color);
-    --lgs-scrollbar-thumb-color: var(--lgs-switch-active-track-color);
+    --lgs-scrollbar-track-color: color-mix(in oklab, var(--lgs-card-on-map-bg-color) 82%, black 18%);
+    --lgs-scrollbar-thumb-color: var(--lgs-card-on-map-border-color);
     --lgs-scroolbar-track-color: var(--lgs-scrollbar-track-color);
     --lgs-scroolbar-thumb-color: var(--lgs-scrollbar-thumb-color);
     }
@@ -1135,7 +1177,7 @@ wa-button::part(label) {
         transition: opacity 120ms ease, transform 120ms ease, visibility 0s 0s;
         transform: translateY(0);
         pointer-events: all;
-        opacity: 1;
+        opacity: var(--lgs-on-map-ui-opacity, 1);
 
     }
 
@@ -1155,16 +1197,20 @@ wa-button::part(label) {
     .lgs-context-menu li {
         display: flex;
         align-items: center;
+        box-sizing: border-box;
         max-width: 150px;
         margin: 2px;
         padding: 2px;
         cursor: pointer;
+        transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
         white-space: nowrap;
+        border: 1px solid transparent;
         border-radius: var(--lgs-border-radius-xs);
     }
 
     .lgs-context-menu li:hover {
         color: var(--lgs-card-on-map-hover-color, inherit);
+        border-color: var(--lgs-card-on-map-hover-border-color);
         background: var(--lgs-hover-context-menu-bg-color);
     }
 
@@ -1586,6 +1632,19 @@ wa-button::part(label) {
         font-size: var(--lgs-font-size-s);
         margin-top: var(--lgs-gutter-xxs);
     }
+
+.toast-action-stack {
+    display: flex;
+    align-items: stretch;
+    flex-direction: column;
+    width: 100%;
+    gap: var(--lgs-gutter-xxs);
+}
+
+.toast-action-button {
+    align-self: flex-end;
+    margin-top: var(--lgs-gutter-xxs);
+}
 
 .lgs-toast--primary {
     --lgs-toast-progress-color: var(--wa-color-brand-fill-loud);
@@ -2020,6 +2079,17 @@ wa-button::part(label) {
 
 wa-select::part(listbox) {
     font-size: var(--lgs-font-size);
+    box-sizing: border-box;
+    padding-block: var(--lgs-select-listbox-padding-block);
+    padding-inline: var(--lgs-select-listbox-padding-inline);
+    scrollbar-width: thin;
+    scrollbar-color: var(--lgs-scrollbar-thumb-color) var(--lgs-scrollbar-track-color);
+}
+
+wa-select::part(combobox) {
+    color: var(--lgs-select-color);
+    border-color: var(--lgs-select-border-color);
+    background-color: var(--lgs-select-bg-color);
 }
 
 wa-select::part(display-input),
@@ -2030,5 +2100,30 @@ wa-select::part(tag__content) {
 
 wa-option {
     line-height: var(--wa-line-height-normal);
+    box-sizing: border-box;
+    transition: background-color 120ms ease, color 120ms ease, outline-color 120ms ease, margin 120ms ease;
+    border: 1px solid transparent;
+    border-radius: var(--lgs-border-radius-xs);
+    outline: var(--lgs-select-option-current-outline-width) solid transparent;
     padding-block: 0.625em;
+    padding-inline-start: 0.25em;
+    padding-inline-end: 1em;
+}
+
+@media (hover: hover) {
+    wa-option:not([disabled]):not([aria-selected="true"]):not(:state(current)):hover {
+        color: var(--lgs-select-option-hover-color);
+        background-color: var(--lgs-select-option-hover-bg-color);
+    }
+}
+
+wa-option[aria-selected="true"],
+wa-option:state(current) {
+    color: var(--lgs-select-option-current-color);
+    outline-color: var(--lgs-select-option-current-outline-color);
+    background-color: var(--lgs-select-option-current-bg-color);
+    margin-block: var(--lgs-select-option-current-gap-block);
+    margin-inline: calc(-1 * var(--lgs-select-option-current-expand));
+    padding-inline-start: calc(0.25em + var(--lgs-select-option-current-expand));
+    padding-inline-end: calc(1em + var(--lgs-select-option-current-expand));
 }

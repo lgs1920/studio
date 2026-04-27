@@ -18,12 +18,14 @@
 .wa-theme-lgs1920-on-map {
     display: flex;
     align-items: center;
-    padding: var(--lgs-gutter-xs);
+    padding: var(--lgs-on-map-padding);
     color: var(--lgs-text-on-color);
     border: 1px solid var(--lgs-card-on-map-border-color);
-    border-radius: var(--lgs-border-radius-xs);
+    border-radius: var(--lgs-on-map-border-radius);
     background: var(--lgs-card-on-map-bg-color);
     box-shadow: var(--sl-shadow-medium);
+    --lgs-on-map-padding: var(--lgs-gutter-xs);
+    --lgs-on-map-border-radius: var(--lgs-border-radius-s);
     color-scheme: dark;
     gap: var(--lgs-gutter-s);
     backdrop-filter: blur(var(--lgs-blur));
@@ -43,12 +45,25 @@
     --lgs-hover-context-menu-bg-color: var(--lgs-card-on-map-hover-bg-color);
     --lgs-switch-active-track-color: var(--wa-color-brand);
     --lgs-switch-active-thumb-color: var(--wa-color-brand-40);
+    --lgs-switch-inactive-thumb-color: var(--wa-color-brand-80);
+    --lgs-select-bg-color: var(--wa-form-control-background-color);
+    --lgs-select-border-color: var(--wa-form-control-border-color);
+    --lgs-select-color: var(--wa-form-control-value-color);
+    --lgs-select-option-hover-bg-color: var(--lgs-card-on-map-hover-bg-color);
+    --lgs-select-option-hover-color: var(--lgs-card-on-map-hover-color);
+    --lgs-select-option-current-bg-color: var(--lgs-card-on-map-selected-bg-color);
+    --lgs-select-option-current-color: var(--lgs-card-on-map-selected-color);
+    --lgs-select-option-current-outline-color: var(--lgs-select-option-hover-bg-color);
+    --lgs-select-option-current-outline-width: 1px;
+    --lgs-select-option-current-expand: 3px;
+    --lgs-select-option-current-gap-inline: 4px;
+    --lgs-select-option-current-gap-block: 3px;
     --lgs-slider-track-color: var(--lgs-switch-active-track-color);
     --lgs-slider-thumb-color: var(--lgs-switch-active-thumb-color);
     --lgs-track-color-active: var(--lgs-slider-thumb-color);
     --lgs-track-color-inactive: var(--lgs-slider-track-color);
-    --lgs-scrollbar-track-color: var(--lgs-switch-active-thumb-color);
-    --lgs-scrollbar-thumb-color: var(--lgs-switch-active-track-color);
+    --lgs-scrollbar-track-color: color-mix(in oklab, var(--lgs-card-on-map-bg-color) 82%, black 18%);
+    --lgs-scrollbar-thumb-color: var(--lgs-card-on-map-border-color);
     --lgs-scroolbar-track-color: var(--lgs-scrollbar-track-color);
     --lgs-scroolbar-thumb-color: var(--lgs-scrollbar-thumb-color);
 
@@ -70,7 +85,9 @@
     --wa-color-text-normal: var(--lgs-text-on-color);
     --wa-color-text-quiet: var(--lgs-light-color-75);
     --wa-color-text-link: var(--lgs-light-color-95);
+    --wa-color-focus: var(--lgs-card-on-map-hover-bg-color);
     --wa-form-control-placeholder-color: var(--lgs-light-color-40);
+    --wa-form-control-activated-color: var(--lgs-card-on-map-hover-bg-color);
     --wa-color-mix-hover: var(--lgs-light-color) 90%;
 
     --lgs-button-border-color: var(--wa-color-neutral-border-normal);
@@ -102,6 +119,10 @@
     --wa-form-control-background-color: var(--wa-color-neutral-fill-quiet);
     --wa-form-control-border-color: var(--wa-color-neutral-border-normal);
     --wa-form-control-activated-color: var(--lgs-switch-active-track-color);
+}
+
+.wa-theme-lgs1920-on-map wa-select::part(listbox) {
+    scrollbar-color: var(--lgs-scrollbar-thumb-color) var(--lgs-scrollbar-track-color);
 }
 
 .wa-theme-lgs1920-on-map wa-select::part(tag),

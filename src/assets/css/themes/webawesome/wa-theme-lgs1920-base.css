@@ -413,6 +413,11 @@
             }
 
             &::part(thumb) {
+                background-color: var(--lgs-switch-inactive-thumb-color, var(--wa-color-brand-90));
+                box-shadow: var(--wa-shadow-s);
+            }
+
+            &:state(checked)::part(thumb) {
                 background-color: var(--lgs-switch-active-thumb-color, var(--wa-color-brand-40));
                 box-shadow: var(--wa-shadow-s);
             }

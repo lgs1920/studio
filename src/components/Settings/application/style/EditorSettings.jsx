@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-19
- * Last modified: 2026-04-19
+ * Created on: 2026-04-27
+ * Last modified: 2026-04-27
  *
  *
  * Copyright © 2026 LGS1920
@@ -53,7 +53,7 @@ export const EditorSettings = (props) => {
                     {'Add Journey Toolbar'}
                 </WaSwitch>
                 <div id="toolbars-opacity">
-                    {'Floating Toolbar Opacity'}
+                    {'Floating Toolbars Opacity'}
                     <WaTooltip for="toolbars-opacity-reset">{'Reset to default'}</WaTooltip>
                     <WaButton onClick={resetToolbarOpacity}
                               size="small"

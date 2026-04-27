@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-24
- * Last modified: 2026-04-24
+ * Created on: 2026-04-27
+ * Last modified: 2026-04-27
  *
  *
  * Copyright © 2026 LGS1920
@@ -158,12 +158,43 @@
     opacity: 1;
 }
 
-.crop-ratio-widget wa-popup div {
-    flex-direction: column;
-    gap: var(--lgs-gutter-xs)
+.crop-ratio-popup-menu ul {
+    width: 100%;
+    margin: 0;
+    padding: 0 var(--lgs-gutter-xs);
+    list-style: none;
 }
 
-.crop-ratio-widget wa-popup wa-button {
+.crop-ratio-popup-menu li.crop-ratio-choice-button {
+    display: flex;
+    align-items: center;
+    box-sizing: border-box;
+    min-width: 6rem;
+    margin: 2px;
+    padding: 2px;
+    cursor: pointer;
+    transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
+    white-space: nowrap;
+    color: var(--lgs-light-color-75);
+    border: 1px solid transparent;
+    border-radius: var(--lgs-border-radius-xs);
+}
+
+.crop-ratio-popup-menu li.crop-ratio-choice-button span {
     display: block;
-    width: 6rem;
+    width: 100%;
+    text-align: left;
+}
+
+.crop-ratio-popup-menu li.crop-ratio-choice-button:not(.is-selected):hover {
+    color: var(--lgs-card-on-map-hover-color);
+    border-color: var(--lgs-card-on-map-hover-border-color);
+    background: var(--lgs-card-on-map-hover-bg-color);
+}
+
+.crop-ratio-popup-menu li.crop-ratio-choice-button.is-selected,
+.crop-ratio-popup-menu li.crop-ratio-choice-button.is-selected:hover {
+    color: var(--lgs-card-on-map-selected-color);
+    border-color: var(--lgs-card-on-map-selected-border-color);
+    background: var(--lgs-card-on-map-selected-bg-color);
 }

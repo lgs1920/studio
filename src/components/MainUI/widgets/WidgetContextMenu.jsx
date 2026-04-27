@@ -35,6 +35,7 @@ const PERCENTAGE = 0.1
 export const WidgetContextMenu = ({targetId, menuRef}) => {
     // Shared store state
     const drawers = useSnapshot(lgs.stores.ui.drawers)
+    const toolbars = useSnapshot(lgs.settings.ui.toolbars)
 
     // Core widget data
     const element = __.ui.widgetManager.getElementById(targetId)
@@ -152,7 +153,8 @@ export const WidgetContextMenu = ({targetId, menuRef}) => {
 
     return (
         <div className="lgs-context-menu widget-context-menu poi-on-map-menu  lgs-card wa-theme-lgs1920-on-map"
-             ref={menuRef}>
+             ref={menuRef}
+             style={{'--lgs-on-map-ui-opacity': toolbars.opacity}}>
             <ul>
                 {/* Size controls */}
                 {capabilities.canReset && (

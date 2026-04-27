@@ -15,13 +15,13 @@
  ******************************************************************************/
 
 import {
-    VIDEO_WIDGETS_BOARD, WIDGETS_CONFIGURATION, LGS_VISUAL_WIDGET, WIDGET_LAYER_START, WIDGET_LAYER_STEP,
+    VIDEO_WIDGETS_BOARD, LGS_VISUAL_WIDGET, WIDGET_LAYER_START, WIDGET_LAYER_STEP,
 }                                from '@Core/constants'
 import { WidgetDynamicRenderer } from '@Core/ui/widget-manager/dynamic-render/WidgetDynamicRender'
-import { WaIcon } from '@web.awesome.me/webawesome-pro/dist/react'
-import classNames                                     from 'classnames'
+import { WaDivider, WaIcon }     from '@web.awesome.me/webawesome-pro/dist/react'
+import classNames                from 'classnames'
 import { useEffect, useRef, useState }                from 'react'
-import { useSnapshot }                                from 'valtio'
+import { useSnapshot }           from 'valtio'
 
 /**
  * Widget panel that shows available widgets grouped by category.
@@ -34,8 +34,7 @@ import { useSnapshot }                                from 'valtio'
 export const WidgetsPanelContent = ({groups}) => {
     const _widgetDeckPanel = useRef(null)
     const widgetDynamicRenderer = new WidgetDynamicRenderer()
-    const $widget = lgs.stores.ui.widget
-    const widget = useSnapshot($widget)
+    const toolbars = useSnapshot(lgs.settings.ui.toolbars)
     const reached = new Set()
     const [isInitialized, setIsInitialized] = useState(false)
 
@@ -111,21 +110,14 @@ export const WidgetsPanelContent = ({groups}) => {
         e.stopPropagation()
     }
 
-    /**
-     * Computes the tooltip text.
-     * @param {string} groupKey
-     * @param {string} widgetKey
-     * @param {Object} widgetDesc
-     * @returns {string}
-     */
-    const getTooltipText = (groupKey, widgetKey, widgetDesc) => {
-        const remaining = __.ui.widgetManager.remainingWidgets(groupKey, widgetKey)
-        const max = __.ui.widgetManager.maxWidgets(groupKey, widgetKey)
-        let tooltipText = widgetDesc.description || ''
-        if (max > 1 && max < 10 && remaining > 0) {
-            tooltipText += ` (${remaining} remaining)`
+    const handleKeyboardAction = (event, action) => {
+        if (event.key !== 'Enter' && event.key !== ' ') {
+            return
         }
-        return tooltipText
+
+        event.preventDefault()
+        event.stopPropagation()
+        action()
     }
 
     useEffect(() => {
@@ -175,7 +167,7 @@ export const WidgetsPanelContent = ({groups}) => {
 
           // Logic to track which widgets can still be added
     ;[...theGroups().entries()].forEach(([groupKey, groupValue]) => {
-        ;[...groupValue.widgets.entries()].forEach(([widgetKey, widgetDef]) => {
+        ;[...groupValue.widgets.entries()].forEach(([widgetKey]) => {
             if (widgetKey === 'journey-stats-widget' && !hasJourney) {
                 return
             }
@@ -193,6 +185,7 @@ export const WidgetsPanelContent = ({groups}) => {
         <div
             className="lgs-widget-menu widget-deck-panel lgs-card wa-theme-lgs1920-on-map"
             ref={_widgetDeckPanel}
+            style={{opacity: toolbars.opacity}}
             onMouseDown={handleInteraction}
             onTouchStart={handleInteraction}
         >
@@ -202,30 +195,32 @@ export const WidgetsPanelContent = ({groups}) => {
             </div>
 
             {[...theGroups().entries()].map(([groupKey, groupValue]) => (
-                <section key={groupKey} className="widget-group">
+                <ul key={groupKey} className="widget-group">
                     {[...groupValue.widgets.entries()].map(([widgetKey, widgetDef]) => {
                         if (widgetKey === 'journey-stats-widget' && !hasJourney) {
                             return null
                         }
                         if (reached.has(widgetKey)) {
                             return (
-                                    <div
+                                <li
+                                    key={`${groupKey}-${widgetKey}`}
+                                    role="button"
+                                    tabIndex={0}
                                         onClick={() => addWidget(groupKey, widgetKey)}
                                         onMouseDown={handleInteraction}
                                         onTouchStart={handleInteraction}
+                                    onKeyDown={(event) => handleKeyboardAction(event, () => addWidget(groupKey, widgetKey))}
                                         className={classNames(
-                                            'widget-deck-entry', 'small',
-                                            'lgs-one-line-card wa-theme-lgs1920-on-map',
+                                            'widget-deck-entry', 'widget-deck-item', 'small',
                                         )}
                                     >
-                                        <WaIcon name={widgetDef.icon}
-                                        />
+                                    <WaIcon name={widgetDef.icon} variant="regular"/>
                                         <span className="widget-name">{widgetDef.name}</span>
-                                    </div>
+                                </li>
                             )
                         }
                     })}
-                </section>
+                </ul>
             ))}
         </div>
     )

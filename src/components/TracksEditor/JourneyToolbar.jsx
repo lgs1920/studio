@@ -192,6 +192,7 @@ export const JourneyToolbar = (props) => {
 
                     <JourneySelector onChange={newJourneySelection}
                                      single="true"
+                                     closeOnOutsidePointerDown
                                      size="small"
                                      ref={_journeySelector}/>
 
