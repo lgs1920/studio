@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-24
- * Last modified: 2026-04-24
+ * Created on: 2026-04-27
+ * Last modified: 2026-04-27
  *
  *
  * Copyright © 2026 LGS1920
@@ -248,7 +248,7 @@ export const VideoRecorderToolbar = ({toolbar}) => {
     return (
         <WaCard
             ref={_toolbar}
-            className="video-recorder-widget lgs-toolbar-content lgs-toolbar lgs-toolbar-horizontal on-map"
+            className="video-recorder-widget lgs-toolbar-content lgs-toolbar lgs-toolbar-horizontal wa-theme-lgs1920-on-map"
         >
             <FontAwesomeIcon
                 icon={faCircle}

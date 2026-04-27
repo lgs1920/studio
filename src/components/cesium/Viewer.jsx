@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-18
- * Last modified: 2026-03-18
+ * Created on: 2026-04-27
+ * Last modified: 2026-04-27
  *
  *
  * Copyright © 2026 LGS1920
@@ -44,6 +44,9 @@ export const ensureViewer = () => {
      * @return {Promise<void>}
      */
     const raiseCameraUpdateEvent = async () => {
+        if (__.ui.cameraManager?.isRotating?.() || lgs.stores.ui.mainUI.panorama.active) {
+            return
+        }
         await __.ui.cameraManager.raiseUpdateEvent({})
     }
     // If initialisation phase was OK, we have somme additional tasks to do.

@@ -1,0 +1,113 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: wa-lgs1920-on-map.css
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2026-04-27
+ * Last modified: 2026-04-27
+ *
+ *
+ * Copyright © 2026 LGS1920
+ ******************************************************************************/
+
+:root.wa-theme-lgs1920-on-map,
+.wa-theme-lgs1920-on-map {
+    display: flex;
+    align-items: center;
+    padding: var(--lgs-gutter-xs);
+    color: var(--lgs-text-on-color);
+    border: 1px solid var(--lgs-card-on-map-border-color);
+    border-radius: var(--lgs-border-radius-xs);
+    background: var(--lgs-card-on-map-bg-color);
+    box-shadow: var(--sl-shadow-medium);
+    color-scheme: dark;
+    gap: var(--lgs-gutter-s);
+    backdrop-filter: blur(var(--lgs-blur));
+
+    --lgs-card-on-map-bg-color: var(--lgs-dark-color-70);
+    --lgs-card-on-map-border-color: var(--lgs-light-color-40);
+    --lgs-card-on-map-hover-bg-color: var(--lgs-light-color-50);
+    --lgs-card-on-map-hover-border-color: var(--lgs-dark-color);
+    --lgs-card-on-map-hover-color: var(--lgs-dark-color);
+    --lgs-card-on-map-selected-bg-color: var(--lgs-dark-color);
+    --lgs-card-on-map-selected-border-color: var(--lgs-light-color);
+    --lgs-card-on-map-selected-color: var(--lgs-text-on-color);
+    --lgs-card-on-map-disabled-color: var(--lgs-light-color-25);
+    --lgs-card-on-map-disabled-bg-color: var(--lgs-dark-color-25);
+    --lgs-card-on-map-disabled-border-color: var(--lgs-light-color-15);
+
+    --lgs-hover-context-menu-bg-color: var(--lgs-card-on-map-hover-bg-color);
+    --lgs-switch-active-track-color: var(--wa-color-brand);
+    --lgs-switch-active-thumb-color: var(--wa-color-brand-40);
+    --lgs-slider-track-color: var(--lgs-switch-active-track-color);
+    --lgs-slider-thumb-color: var(--lgs-switch-active-thumb-color);
+    --lgs-track-color-active: var(--lgs-slider-thumb-color);
+    --lgs-track-color-inactive: var(--lgs-slider-track-color);
+    --lgs-scrollbar-track-color: var(--lgs-switch-active-thumb-color);
+    --lgs-scrollbar-thumb-color: var(--lgs-switch-active-track-color);
+    --lgs-scroolbar-track-color: var(--lgs-scrollbar-track-color);
+    --lgs-scroolbar-thumb-color: var(--lgs-scrollbar-thumb-color);
+
+    --wa-color-surface-raised: var(--lgs-dark-color-60);
+    --wa-color-surface-default: var(--lgs-card-on-map-bg-color);
+    --wa-color-surface-lowered: var(--lgs-dark-color-90);
+    --wa-color-surface-border: var(--lgs-card-on-map-border-color);
+
+    --wa-color-neutral-fill-quiet: var(--lgs-dark-color-50);
+    --wa-color-neutral-fill-normal: var(--lgs-card-on-map-bg-color);
+    --wa-color-neutral-fill-loud: var(--lgs-card-on-map-hover-bg-color);
+    --wa-color-neutral-border-quiet: var(--lgs-light-color-25);
+    --wa-color-neutral-border-normal: var(--lgs-card-on-map-border-color);
+    --wa-color-neutral-border-loud: var(--lgs-card-on-map-hover-border-color);
+    --wa-color-neutral-on-quiet: var(--lgs-light-color-75);
+    --wa-color-neutral-on-normal: var(--lgs-light-color-90);
+    --wa-color-neutral-on-loud: var(--lgs-text-on-color);
+
+    --wa-color-text-normal: var(--lgs-text-on-color);
+    --wa-color-text-quiet: var(--lgs-light-color-75);
+    --wa-color-text-link: var(--lgs-light-color-95);
+    --wa-form-control-placeholder-color: var(--lgs-light-color-40);
+    --wa-color-mix-hover: var(--lgs-light-color) 90%;
+
+    --lgs-button-border-color: var(--wa-color-neutral-border-normal);
+    --lgs-button-color: var(--wa-color-neutral-on-loud);
+    --lgs-button-bg-color: var(--wa-color-neutral-fill-normal);
+    --lgs-button-border-hover-color: var(--lgs-card-on-map-hover-border-color);
+    --lgs-button-hover-color: var(--lgs-card-on-map-hover-color);
+    --lgs-button-bg-hover-color: var(--lgs-card-on-map-hover-bg-color);
+    --lgs-button-plain-color: var(--wa-color-neutral-on-normal);
+    --lgs-button-plain-hover-color: var(--lgs-card-on-map-hover-color);
+    --lgs-button-plain-bg-hover-color: var(--lgs-card-on-map-hover-bg-color);
+}
+
+.wa-theme-lgs1920-on-map:is(wa-button, wa-icon-button),
+.wa-theme-lgs1920-on-map :is(wa-button, wa-icon-button):is(:not([variant]), [variant="default"], [variant="neutral"]) {
+    --wa-color-fill-loud: var(--wa-color-neutral-fill-loud);
+    --wa-color-fill-normal: var(--wa-color-neutral-fill-normal);
+    --wa-color-fill-quiet: var(--wa-color-neutral-fill-quiet);
+    --wa-color-border-loud: var(--wa-color-neutral-border-loud);
+    --wa-color-border-normal: var(--wa-color-neutral-border-normal);
+    --wa-color-border-quiet: var(--wa-color-neutral-border-quiet);
+    --wa-color-on-loud: var(--wa-color-neutral-on-loud);
+    --wa-color-on-normal: var(--wa-color-neutral-on-normal);
+    --wa-color-on-quiet: var(--wa-color-neutral-on-quiet);
+}
+
+.wa-theme-lgs1920-on-map:is(wa-switch, wa-radio, wa-checkbox),
+.wa-theme-lgs1920-on-map :is(wa-switch, wa-radio, wa-checkbox) {
+    --wa-form-control-background-color: var(--wa-color-neutral-fill-quiet);
+    --wa-form-control-border-color: var(--wa-color-neutral-border-normal);
+    --wa-form-control-activated-color: var(--lgs-switch-active-track-color);
+}
+
+.wa-theme-lgs1920-on-map wa-select::part(tag),
+.wa-theme-lgs1920-on-map wa-select::part(tag__content),
+.wa-theme-lgs1920-on-map wa-select::part(tag__remove-button__base) {
+    border-color: transparent !important;
+    background: transparent !important;
+    box-shadow: none !important;
+}

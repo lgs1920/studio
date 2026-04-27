@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-26
- * Last modified: 2026-04-26
+ * Created on: 2026-04-27
+ * Last modified: 2026-04-27
  *
  *
  * Copyright © 2026 LGS1920
@@ -106,9 +106,21 @@ html {
     flex-direction: column;
 }
 
+.orbit-widget-shell {
+    overflow: visible !important;
+    width: auto !important;
+    min-width: auto !important;
+    height: auto !important;
+    min-height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    gap: 0 !important;
+}
+
 .orbit-widget {
-    position: absolute;
-    bottom: var(--bottom);
     display: flex;
     flex-direction: column;
     width: max-content;
@@ -117,12 +129,11 @@ html {
     gap: var(--lgs-gutter-s);
 }
 
-.orbit-widget.from-start {
-    left: calc(var(--left) + var(--lgs-dimension) + var(--lgs-gutter));
-}
-
-.orbit-widget.from-end {
-    right: calc(var(--right) + var(--lgs-dimension) + var(--lgs-gutter));
+.orbit-widget.wa-theme-lgs1920-on-map {
+    background: color-mix(in oklab, var(--lgs-card-on-map-bg-color) 96%, black 4%);
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+    contain: layout paint;
 }
 
 .orbit-widget::part(body) {
@@ -131,11 +142,15 @@ html {
     gap: var(--lgs-gutter-s);
 }
 
-.panorama-widget-header {
+.orbit-widget-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: var(--lgs-gutter-s);
+}
+
+.orbit-widget-header wa-button {
+    cursor: pointer;
 }
 
 .panorama-widget-title {
@@ -143,6 +158,11 @@ html {
     display: inline-flex;
     align-items: center;
     gap: var(--lgs-gutter-xs);
+}
+
+.orbit-widget-grabber {
+    opacity: 0.65;
+    rotate: 90deg;
 }
 
 .panorama-widget-body {

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-26
- * Last modified: 2026-04-26
+ * Created on: 2026-04-27
+ * Last modified: 2026-04-27
  *
  *
  * Copyright © 2026 LGS1920
@@ -115,6 +115,7 @@ export class CameraManager {
     stopWatching = () => {
         if (this.move.stopWatching) {
             this.move.stopWatching()
+            this.move.stopWatching = null
             clearInterval(this.saveTimer)
             this.saveTimer = null
         }
@@ -174,8 +175,7 @@ export class CameraManager {
      *
      */
     enableMapDragging = () => {
-        // Bail early if such tracking is already in action
-        if (!this.isRotating()) {
+        if (this.move.type === CameraManager.NORMAL && this.move.stopWatching) {
             return
         }
 
@@ -337,6 +337,7 @@ export class CameraManager {
         // Do we need a camera pre-positioning ?
         if (lookAt) {
             this.lookAt(point)
+            lgs.scene?.requestRender?.()
         }
         // Setting spinner speed
         __.ui.css.setCSSVariable('--map-rotation-speed', `${60 / Math.max($rotate.rpm * Math.abs($rotate.direction), 0.2)}s`)
@@ -348,7 +349,7 @@ export class CameraManager {
 
         let lastFrameTime = null
 
-        const rotateCamera = async () => {
+        const rotateCamera = () => {
             if (this.isRotating()) {
                 const currentTime = performance.now()
                 if (lastFrameTime === null) {
@@ -372,6 +373,7 @@ export class CameraManager {
                         }
                         totalRotation += Math.abs(angleRotation)
                         __.ui.css.setCSSVariable('--map-rotation-speed', `${60 / Math.max(effectiveRpm, 0.2)}s`)
+                        lgs.scene?.requestRender?.()
                     }
                     this.move.animation = __.requestAnimationFrame(rotateCamera)
                 }
@@ -384,11 +386,7 @@ export class CameraManager {
         this.move = {
             type:         CameraManager.ROTATE,
             animation: __.requestAnimationFrame(rotateCamera),
-            stopWatching: lgs.camera.changed.addEventListener(async () => {
-                if (!this.saveTimer) {
-                    await this.startWatching()
-                }
-            }),
+            stopWatching: null,
         }
     }
 
@@ -399,10 +397,14 @@ export class CameraManager {
      */
     stopRotate = async () => {
         if (this.isRotating()) {
+            __.cancelAnimationFrame(this.move.animation)
+            this.move.animation = null
+            this.stopWatching()
             this.unlock()
             __.ui.sceneManager.stopRotate
-            __.cancelAnimationFrame(this.move.animation)
+            await this.updatePositionInformation()
             this.enableMapDragging()
+            lgs.scene?.requestRender?.()
         }
     }
 

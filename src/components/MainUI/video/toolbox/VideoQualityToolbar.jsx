@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-23
- * Last modified: 2026-04-23
+ * Created on: 2026-04-27
+ * Last modified: 2026-04-27
  *
  *
  * Copyright © 2026 LGS1920
@@ -50,7 +50,6 @@ export const VideoQualityToolbar = () => {
                         <WaButton
                             id={`q-${index}`}
                             size="small"
-                            variant="on-map"
                             appearance={index === video.quality ? 'accent' : 'outlined'}
                             onClick={() => handleChangeQuality(index)}
                         >

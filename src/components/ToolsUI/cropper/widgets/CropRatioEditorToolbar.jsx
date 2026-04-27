@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-23
- * Last modified: 2026-04-23
+ * Created on: 2026-04-27
+ * Last modified: 2026-04-27
  *
  *
  * Copyright © 2026 LGS1920
@@ -153,7 +153,7 @@ export const CropRatioEditorToolbar = memo(({context, cropzoneId}) => {
     return (
         <>
             {cropper.ratioEditor && (
-                <div ref={_widget} className="crop-ratio-widget lgs-card on-map">
+                <div ref={_widget} className="crop-ratio-widget lgs-card wa-theme-lgs1920-on-map">
                     <WaTooltip for="crop-ratio-grabber" placement="top">{'Drag me'}</WaTooltip>
                     <WaIcon id="crop-ratio-grabber" className="grabber" name="grip-dots" variant="solid"/>
 
@@ -163,7 +163,6 @@ export const CropRatioEditorToolbar = memo(({context, cropzoneId}) => {
                         id="current-crop-ratio"
                         size="small"
                         appearance="outlined"
-                        variant="on-map"
                         onClick={(e) => {
                             e.stopPropagation()
                             setIsPopupOpen(!_isPopupOpen)
@@ -181,7 +180,8 @@ export const CropRatioEditorToolbar = memo(({context, cropzoneId}) => {
                         distance={2}
                         strategy="fixed"
                     >
-                        <div className="lgs-card on-map" style={{display: 'flex', flexDirection: 'column', gap: '2px'}}>
+                        <div className="lgs-card wa-theme-lgs1920-on-map"
+                             style={{display: 'flex', flexDirection: 'column', gap: '2px'}}>
                             {lgs.configuration.videoFormats.map(preset => (
                                 isPresetVisible(preset) && (
                                     <React.Fragment key={`crop-ratio-${preset.value}`}>
@@ -190,7 +190,6 @@ export const CropRatioEditorToolbar = memo(({context, cropzoneId}) => {
                                         </WaTooltip>
 
                                         <WaButton
-                                            variant="on-map"
                                             id={`btn-ratio-${preset.value}`}
                                             size="small"
                                             appearance={video.ratio === preset.value ? 'accent' : 'plain'}

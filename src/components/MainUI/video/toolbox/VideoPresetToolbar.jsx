@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-23
- * Last modified: 2026-04-23
+ * Created on: 2026-04-27
+ * Last modified: 2026-04-27
  *
  *
  * Copyright © 2026 LGS1920
@@ -148,7 +148,7 @@ export const VideoPresetToolbar = memo(() => {
     }, [$video])
 
     return (
-        <div ref={_toolbarRef} className="video-preset-widget-wrapper lgs-card on-map">
+        <div ref={_toolbarRef} className="video-preset-widget-wrapper lgs-card wa-theme-lgs1920-on-map">
             <div
                 className={classNames('video-preset-widget', 'video-preset-grid', {'video-preset-grid-open': preset === 'custom'})}>
                 <WaIcon id="grabber-video-preset" className="grabber" name="grip-dots" variant="solid"/>
@@ -159,7 +159,6 @@ export const VideoPresetToolbar = memo(() => {
                             <WaButton
                                 size="small"
                                 appearance={key === preset ? 'outlined' : 'plain'}
-                                variant="on-map"
                                 id={`video-preset-${key}`}
                                 onClick={event => handleChangePreset(key, event)}
                                 withCaret={value.submenu}
@@ -175,7 +174,7 @@ export const VideoPresetToolbar = memo(() => {
                                     strategy="fixed"
                                     distance={4}
                                 >
-                                    <div className="video-preset-custom lgs-card on-map">
+                                    <div className="video-preset-custom lgs-card wa-theme-lgs1920-on-map">
                                         <div className="video-preset-grid"><span/><VideoFPSToolbar/></div>
                                         <div className="video-preset-grid"><span/><VideoQualityToolbar/></div>
                                     </div>
@@ -186,7 +185,6 @@ export const VideoPresetToolbar = memo(() => {
                     <WaButton
                         size="small"
                         appearance={preset === 'auto' ? 'outlined' : 'plain'}
-                        variant="on-map"
                         onClick={() => handleChangePreset('auto')}
                     >
                         {'Auto'}

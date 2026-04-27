@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-04-27
+ * Last modified: 2026-04-27
  *
  *
  * Copyright © 2026 LGS1920
@@ -62,7 +62,7 @@ export const VideoMessage = ({children, duration = 3600, blinkRate = 0}) => {
 
     return (
         <div
-            className="lgs-one-line-card on-map lgs-video-message blinking"
+            className="lgs-one-line-card wa-theme-lgs1920-on-map lgs-video-message blinking"
             style={{
                 '--blink-speed': `${blinkRate}s`,
             }}

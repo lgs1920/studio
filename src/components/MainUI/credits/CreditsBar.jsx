@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-04-27
+ * Last modified: 2026-04-27
  *
  *
  * Copyright © 2026 LGS1920
@@ -121,14 +121,14 @@ export const CreditsBar = () => {
             <div className="main-logo signage-style">
                 <img src="/assets/images/logo-lgs1920.png" alt="LGS1920 Logo"/>
             </div>
-            <div className="provider-credits lgs-credits lgs-one-line-card on-map">
+            <div className="provider-credits lgs-credits lgs-one-line-card wa-theme-lgs1920-on-map">
                 {providers.terrain && <Credit id="terrain-credits" type={TERRAIN_ENTITY}
                                               provider={providers.terrain}/>}
                 {providers.overlay && <Credit id="overlay-credits" type={OVERLAY_ENTITY}
                                               provider={providers.overlay}/>}
                 {providers.base && <Credit id="layer-credits" type={BASE_ENTITY} provider={providers.base}/>}
             </div>
-            <div className="cesium-credits lgs-credits lgs-one-line-card on-map">
+            <div className="cesium-credits lgs-credits lgs-one-line-card wa-theme-lgs1920-on-map">
                 <a href="https://www.cesium.com/" target="_blank">
                     <img src="/assets/images/Cesium_light_color.svg" alt="Cesium"/>
                 </a>

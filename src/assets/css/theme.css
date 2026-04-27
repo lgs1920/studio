@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-24
- * Last modified: 2026-04-24
+ * Created on: 2026-04-27
+ * Last modified: 2026-04-27
  *
  *
  * Copyright © 2026 LGS1920
@@ -80,15 +80,19 @@
     --lgs-drop-zone-zindex: 10;
     --lgs-context-menu-zindex: calc(var(--lgs-tools-ui-zindex) + 100);
 
-    --lgs-button-border-color: var(--lgs-dark-ui-secondary-color);
-    --lgs-button-color: var(--lgs-dark-ui-primary-color);
-    --lgs-button-bg-color: var(--lgs-dark-ui-secondary-color);
+    --lgs-button-border-color: color-mix(in oklab, var(--wa-color-brand) 85%, black 12%);
+    --lgs-button-color: var(--wa-color-brand-on);
+    --lgs-button-bg-color: var(--wa-color-brand);
 
-    --lgs-button-border-hover-color: var(--lgs-dark-ui-primary-color);
-    --lgs-button-hover-color: var(--lgs-dark-ui-secondary-color);
-    --lgs-button-bg-hover-color: var(--lgs-dark-ui-primary-color);
+    --lgs-button-border-hover-color: var(--wa-color-brand-50);
+    --lgs-button-hover-color: var(--wa-color-brand-on);
+    --lgs-button-bg-hover-color: var(--wa-color-brand-60);
 
-    --lgs-card-border-color: var(--sl-color-gray-300);
+    --lgs-button-plain-color: var(--wa-color-brand);
+    --lgs-button-plain-hover-color: var(--wa-color-brand);
+    --lgs-button-plain-bg-hover-color: var(--wa-color-brand-fill-quiet);
+
+    --lgs-card-border-color: var(--wa-color-surface-border);
 
     --lgs-card-ui-bg-color: var(--lgs-dark-ui-secondary-color);
     --lgs-card-ui-color: var(--lgs-dark-ui-5th-color);
@@ -242,16 +246,23 @@
     --lgs-card-on-map-disabled-bg-color: var(--lgs-dark-color-15);
     --lgs-card-on-map-disabled-border-color: var(--lgs-light-color-15);
 
-    --lgs-track-color-active: var(--lgs-dark-ui-secondary-color);
-    --lgs-track-color-inactive: var(--sl-color-gray-200);
+    --lgs-switch-active-track-color: var(--wa-color-brand);
+    --lgs-switch-active-thumb-color: var(--wa-color-brand-40);
+    --lgs-slider-track-color: var(--lgs-switch-active-track-color);
+    --lgs-slider-thumb-color: var(--lgs-switch-active-thumb-color);
+    --lgs-track-color-active: var(--lgs-slider-thumb-color);
+    --lgs-track-color-inactive: var(--lgs-slider-track-color);
 
-    --lgs-theme-background-color: var(--sl-color-neutral-0);
+    --lgs-theme-background-color: var(--wa-color-surface-default);
 
     --lgs-width-unit: 28rem;
     --lgs-max-mobile-width: min(var(--lgs-width-unit), calc(100% - var(--left) - var(--top)));
 
-    --lgs-scroolbar-track-color: transparent;
-    --lgs-scroolbar-thumb-color: var(--sl-color-gray-700);
+    --lgs-scrollbar-track-color: var(--lgs-switch-active-thumb-color);
+    --lgs-scrollbar-thumb-color: var(--lgs-switch-active-track-color);
+    --lgs-scroolbar-track-color: var(--lgs-scrollbar-track-color);
+    --lgs-scroolbar-thumb-color: var(--lgs-scrollbar-thumb-color);
+    --lgs-scrollbar-size: 4px;
 
     --lgs-video-recorder-bg-color: var(--wa-color-red-50);
     --lgs-video-recorder-border-color: var(--wa-color-red-20);
@@ -298,9 +309,31 @@
         font-weight: normal;
     }
 
-    /*******************************************************************************
-     * Canvas
-     */
+.lgs--theme-controls {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--lgs-gutter-xs);
+}
+
+.lgs--brand-option {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--lgs-gutter-s);
+}
+
+.lgs-brand-color-swatch {
+    display: inline-block;
+    flex: 0 0 auto;
+    width: 0.8rem;
+    height: 0.8rem;
+    border: 1px solid color-mix(in oklab, var(--swatch-color) 65%, white 35%);
+    border-radius: 0.24rem;
+    background: var(--swatch-color);
+}
+
+/*******************************************************************************
+ * Canvas
+ */
 
     canvas {
         image-rendering: crisp-edges !important;
@@ -311,7 +344,7 @@
      * Buttons
      ******************************************************************************/
 
-    .wa-button::part(base) {
+:is(wa-button, .wa-button):is(:not([variant]), [variant="neutral"], [variant="brand"]):not([appearance="plain"]):not([appearance="Plain"]):not([appearance="outlined"]):not([appearance="Outlined"])::part(base) {
         display: flex;
         align-items: center;
         color: var(--lgs-button-color);
@@ -320,13 +353,37 @@
         gap: var(--lgs-gutter-s);
     }
 
-    .wa-button:not(.button--disabled):hover::part(base) {
+:is(wa-button, .wa-button):is(:not([variant]), [variant="neutral"], [variant="brand"]):not([appearance="plain"]):not([appearance="Plain"]):not([appearance="outlined"]):not([appearance="Outlined"]):not(.button--disabled):hover::part(base) {
         color: var(--lgs-button-hover-color);
         border-color: var(--lgs-button-border-hover-color);
         background-color: var(--lgs-button-bg-hover-color);
     }
 
-    wa-button::part(label) {
+:is(wa-button, .wa-button):is(:not([variant]), [variant="neutral"], [variant="brand"]):is([appearance="outlined"], [appearance="Outlined"])::part(base) {
+    color: var(--lgs-button-plain-color);
+    border-color: var(--lgs-button-border-color);
+    background-color: transparent !important;
+}
+
+:is(wa-button, .wa-button):is(:not([variant]), [variant="neutral"], [variant="brand"]):is([appearance="outlined"], [appearance="Outlined"]):not(.button--disabled):hover::part(base) {
+    color: var(--lgs-button-plain-hover-color);
+    border-color: var(--lgs-button-border-hover-color);
+    background-color: var(--lgs-button-plain-bg-hover-color) !important;
+}
+
+:is(wa-button, .wa-button):is(:not([variant]), [variant="neutral"], [variant="brand"]):is([appearance="plain"], [appearance="Plain"])::part(base) {
+    color: var(--lgs-button-plain-color);
+    border-color: transparent;
+    background-color: transparent !important;
+}
+
+:is(wa-button, .wa-button):is(:not([variant]), [variant="neutral"], [variant="brand"]):is([appearance="plain"], [appearance="Plain"]):not(.button--disabled):hover::part(base) {
+    color: var(--lgs-button-plain-hover-color);
+    border-color: transparent;
+    background-color: var(--lgs-button-plain-bg-hover-color) !important;
+}
+
+wa-button::part(label) {
         display: flex;
         align-items: center;
         padding-left: 0;
@@ -374,10 +431,10 @@
         margin-left: var(--lgs-gutter-s);
     }
 
-    .on-map wa-button[variant="default"]::part(base),
-    .on-map wa-button[variant="default"]::part(prefix),
-    .on-map wa-button[variant="default"]::part(suffix),
-    .on-map wa-icon-button::part(base) {
+.wa-theme-lgs1920-on-map wa-button[variant="neutral"]::part(base),
+.wa-theme-lgs1920-on-map wa-button[variant="neutral"]::part(prefix),
+.wa-theme-lgs1920-on-map wa-button[variant="neutral"]::part(suffix),
+.wa-theme-lgs1920-on-map wa-icon-button::part(base) {
         color: var(--lgs-light-color-75);
         border-color: var(--lgs-light-color-25);
     }
@@ -398,7 +455,7 @@
         -webkit-appearance: none;
     }
 
-    .on-map .fa-icon-button {
+.wa-theme-lgs1920-on-map .fa-icon-button {
         color: var(--lgs-light-color-75);
         border-color: var(--lgs-light-color-25);
     }
@@ -437,7 +494,8 @@
         --speed: var(--map-rotation-speed);
     }
 
-    .on-map wa-spinner, .on-map ::part(spinner) {
+.wa-theme-lgs1920-on-map wa-spinner,
+.wa-theme-lgs1920-on-map ::part(spinner) {
         --indicator-color: var(--lgs-light-color);
         --track-color: var(--lgs-light-color-25);
         --track-width: 2px;
@@ -708,7 +766,7 @@
         flex-direction: row;
         height: var(--lgs-line-dimension);
         padding: var(--lgs-gutter-xs);
-        background-color: var(--sl-color-neutral-0);
+        background-color: var(--wa-color-surface-default);
     }
 
     .lgs-card.small, .lgs-card.small::part(base), .lgs-one-line-card.small, .lgs-one-line-card.small::part(base) {
@@ -717,7 +775,11 @@
         border-radius: var(--lgs-border-radius-xs);
     }
 
-    .on-map {
+.wa-theme-lgs1920-on-map:is(.lgs-card, .lgs-one-line-card, .lgs-toolbar, .lgs-context-menu),
+.wa-theme-lgs1920-on-map .lgs-card,
+.wa-theme-lgs1920-on-map .lgs-one-line-card,
+.wa-theme-lgs1920-on-map .lgs-toolbar,
+.wa-theme-lgs1920-on-map .lgs-context-menu {
         align-items: center;
         color: var(--lgs-text-on-color);
         border-color: var(--lgs-card-on-map-border-color);
@@ -729,30 +791,8 @@
 
     }
 
-    [variant="on-map"] {
-        --wa-color-fill-loud: var(--wa-color-brand-40);
-        --wa-color-fill-normal: var(--wa-color-brand-40);
-        --wa-color-fill-quiet: var(--lgs-light-color-50);
-        --wa-color-border-loud: var(--lgs-light-color-80);
-        --wa-color-border-normal: var(--lgs-light-color-40);
-        --wa-color-border-quiet: var(--lgs-light-color-80);
-        --wa-color-on-loud: var(--lgs-light-color-80);
-        --wa-color-on-normal: var(--lgs-light-color-50);
-        --wa-color-on-quiet: var(--lgs-light-color-80);
-        --wa-color-text-normal: var(--wa-color-brand-40)
-    }
-
-    [variant="on-map"]::part(base) {
-        /*border-color: var(--wa-color-brand-60);*/
-    }
-
-    [variant="on-map"]:hover::part(base) {
-        color: var(--wa-color-brand-10) !important;
-        border-color: var(--wa-color-brand-80);
-        background-color: var(--wa-color-brand-70);
-    }
-
-    .on-map.lgs-card, .on-map .lgs-card {
+.wa-theme-lgs1920-on-map.lgs-card,
+.wa-theme-lgs1920-on-map .lgs-card {
         padding: var(--lgs-gutter-xs);
         border-color: var(--lgs-card-on-map-border-color);
     }
@@ -846,7 +886,8 @@
 
     .lgs-scrollbars .view {
         /* Ensures content doesn't touch the custom scrollbar thumb */
-        overflow: scroll !important;
+        overflow-x: hidden !important;
+        overflow-y: scroll !important;
         box-sizing: content-box !important;
         /* Crucial: prevents ghost native bars on some browsers */
         padding-right: 10px;
@@ -860,22 +901,23 @@
         position: absolute;
         z-index: 10;
         transition: opacity 0.2s ease;
-        border-radius: 3px;
-        background-color: var(--lgs-scroolbar-track-color, rgba(0, 0, 0, 0.1));
+        border-radius: 999px;
+        background-color: var(--lgs-scrollbar-track-color, var(--lgs-slider-track-color));
     }
 
     .lgs-scrollbars .track-horizontal {
         right: 2px;
         bottom: 2px;
         left: 2px;
-        height: 6px !important;
+        display: none !important;
+        height: var(--lgs-scrollbar-size) !important;
     }
 
     .lgs-scrollbars .track-vertical {
         top: 2px;
         right: 2px;
         bottom: 2px;
-        width: 6px !important;
+        width: var(--lgs-scrollbar-size) !important;
     }
 
     /* Thumb styles (the draggable part) */
@@ -886,21 +928,38 @@
         display: block;
         cursor: pointer;
         transition: background-color 0.2s ease;
-        border: 1px solid var(--lgs-light-color-50);
+        border: none;
         border-radius: inherit;
-        background-color: var(--lgs-scrollbar-thumb-color, var(--lgs-dark-color-50));
+        background-color: var(--lgs-scrollbar-thumb-color, var(--lgs-slider-thumb-color));
+    }
+
+.lgs-scrollbars .thumb-horizontal {
+    display: none !important;
     }
 
     .lgs-scrollbars .thumb-vertical:hover,
     .lgs-scrollbars .thumb-horizontal:hover {
-        background-color: var(--lgs-primary-color, #007bff);
+        background-color: color-mix(
+                in oklab,
+                var(--lgs-scrollbar-thumb-color, var(--lgs-slider-thumb-color)) 82%,
+                black 18%
+        );
     }
 
-    /* Specific context: when panel is displayed 'on-map' */
+@supports (-moz-appearance: none) {
+    .lgs-scrollbars .view {
+        scrollbar-width: none;
+    }
+    }
 
-    .on-map .lgs-scrollbars .track-horizontal,
-    .on-map .lgs-scrollbars .track-vertical {
-        --lgs-scroolbar-thumb-color: var(--lgs-text-on-color);
+/* Specific context: when panel uses wa-theme-lgs1920-on-map */
+
+.wa-theme-lgs1920-on-map .lgs-scrollbars .track-horizontal,
+.wa-theme-lgs1920-on-map .lgs-scrollbars .track-vertical {
+    --lgs-scrollbar-track-color: var(--lgs-switch-active-thumb-color);
+    --lgs-scrollbar-thumb-color: var(--lgs-switch-active-track-color);
+    --lgs-scroolbar-track-color: var(--lgs-scrollbar-track-color);
+    --lgs-scroolbar-thumb-color: var(--lgs-scrollbar-thumb-color);
     }
 
     wa-scroller {
@@ -1105,6 +1164,7 @@
     }
 
     .lgs-context-menu li:hover {
+        color: var(--lgs-card-on-map-hover-color, inherit);
         background: var(--lgs-hover-context-menu-bg-color);
     }
 
@@ -1227,15 +1287,15 @@
     }
 
     wa-slider::part(track) {
-        background-color: var(--wa-color-brand-fill-normal);
+        background-color: var(--lgs-slider-track-color);
     }
 
     wa-slider::part(thumb) {
-        background-color: var(--wa-color-brand-fill-loud);
+        background-color: var(--lgs-slider-thumb-color);
     }
 
     wa-slider::part(indicator) {
-        background-color: var(--wa-color-brand-fill-loud);
+        background-color: var(--lgs-slider-thumb-color);
     }
 
     .lgs--range-container {
@@ -1313,8 +1373,7 @@
     }
 
     wa-switch {
-        --wa-form-control-activated-color: var(--wa-color-brand-fill-loud);
-        --wa-color-surface-default: var(--wa-color-brand-40);
+        --wa-form-control-activated-color: var(--lgs-switch-active-track-color);
     }
 
     /*******************************************************************************
@@ -1958,3 +2017,18 @@
         align-items: center;
         gap: var(--lgs-gutter-s);
     }
+
+wa-select::part(listbox) {
+    font-size: var(--lgs-font-size);
+}
+
+wa-select::part(display-input),
+wa-select::part(tag),
+wa-select::part(tag__content) {
+    font-size: var(--lgs-font-size);
+}
+
+wa-option {
+    line-height: var(--wa-line-height-normal);
+    padding-block: 0.625em;
+}

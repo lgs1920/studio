@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-11
- * Last modified: 2026-04-11
+ * Created on: 2026-04-27
+ * Last modified: 2026-04-27
  *
  *
  * Copyright © 2026 LGS1920
@@ -191,7 +191,7 @@ export const WidgetsPanelContent = ({groups}) => {
 
     return (
         <div
-            className="lgs-widget-menu widget-deck-panel lgs-card on-map"
+            className="lgs-widget-menu widget-deck-panel lgs-card wa-theme-lgs1920-on-map"
             ref={_widgetDeckPanel}
             onMouseDown={handleInteraction}
             onTouchStart={handleInteraction}
@@ -215,7 +215,7 @@ export const WidgetsPanelContent = ({groups}) => {
                                         onTouchStart={handleInteraction}
                                         className={classNames(
                                             'widget-deck-entry', 'small',
-                                            'lgs-one-line-card on-map',
+                                            'lgs-one-line-card wa-theme-lgs1920-on-map',
                                         )}
                                     >
                                         <WaIcon name={widgetDef.icon}

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-25
- * Last modified: 2026-04-25
+ * Created on: 2026-04-27
+ * Last modified: 2026-04-27
  *
  *
  * Copyright © 2026 LGS1920
@@ -186,7 +186,7 @@ export const JourneyToolbar = (props) => {
     return (
         <>
             {journeyEditor.list.length > 0 && journeyToolbar.show &&
-                <WaCard className="journey-toolbar lgs--toolbar"
+                <WaCard className="journey-toolbar lgs--toolbar wa-theme-lgs1920-on-map"
                         ref={_journeyToolbar}>
                     <WaIcon className="grabber" name="grip-dots-vertical"/>
 

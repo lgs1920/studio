@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-26
- * Last modified: 2026-04-26
+ * Created on: 2026-04-27
+ * Last modified: 2026-04-27
  *
  *
  * Copyright © 2026 LGS1920
@@ -224,7 +224,7 @@ export const MapPOIContextMenu = (props) => {
         <div
             ref={_menuRef}
             id="poi-context-menu"
-            className="lgs-context-menu poi-on-map-menu lgs-card on-map"
+            className="lgs-context-menu poi-on-map-menu lgs-card wa-theme-lgs1920-on-map"
             onContextMenu={(event) => event.preventDefault()} // Prevent native browser context menu
         >
             {!currentPoi.expanded && (

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-24
- * Last modified: 2026-04-24
+ * Created on: 2026-04-27
+ * Last modified: 2026-04-27
  *
  *
  * Copyright © 2026 LGS1920
@@ -144,13 +144,13 @@ export const DefinedCropZone = memo(function DefinedCropZone({
                 id={context.id}
             >
                 {infoPosition && (
-                    <div className="crop-info lgs-one-line-card on-map small">
+                    <div className="crop-info lgs-one-line-card wa-theme-lgs1920-on-map small">
                         <CropZoneInfo id={context.id}/>
                     </div>
                 )}
 
                 {infoComponent && (
-                    <div className="crop-info-custom lgs-one-line-card on-map small">
+                    <div className="crop-info-custom lgs-one-line-card wa-theme-lgs1920-on-map small">
                         {infoComponent}
                     </div>
                 )}

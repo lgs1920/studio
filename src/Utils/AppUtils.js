@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-25
- * Last modified: 2026-04-25
+ * Created on: 2026-04-27
+ * Last modified: 2026-04-27
  *
  *
  * Copyright © 2026 LGS1920
@@ -29,6 +29,25 @@ import { EventEmitter }     from '../assets/libs/EventEmitter/EventEmitter'
 import { FA2SL }            from './FA2SL'
 
 export class AppUtils {
+    static THEME_STORAGE_KEY = 'theme'
+    static BRAND_COLOR_STORAGE_KEY = 'brandColor'
+    static ROOT_THEME_CLASS = 'wa-theme-lgs1920'
+    static DEFAULT_BRAND_COLOR = 'yellow'
+    static BRAND_COLORS = ['yellow', 'orange', 'red', 'pink', 'purple', 'blue', 'green', 'gray']
+
+    static LEGACY_ROOT_THEME_PREFIXES = [
+        'sl-theme-',
+        'wa-brand-',
+        'wa-palette-',
+        'wa-neutral-',
+        'wa-success-',
+        'wa-warning-',
+        'wa-danger-',
+    ]
+
+    static LEGACY_ROOT_THEME_CLASSES = new Set([
+                                                   'wa-theme-premium',
+                                               ])
     static uiInit = false
     /**
      * Split a slug using '#'
@@ -99,11 +118,48 @@ export class AppUtils {
 
     static MapToObject = map => Object.fromEntries(map.entries())
 
-    static setTheme = (theme = null) => {
-        if (!theme) {
-            theme = lgs.settings.theme
+    static resolveBrandColor = (brandColor = null) => {
+        const fallbackColor = localStorage.getItem(AppUtils.BRAND_COLOR_STORAGE_KEY) || AppUtils.DEFAULT_BRAND_COLOR
+        const resolvedColor = brandColor || fallbackColor
+        return AppUtils.BRAND_COLORS.includes(resolvedColor) ? resolvedColor : AppUtils.DEFAULT_BRAND_COLOR
+    }
+
+    static normalizeDocumentThemeClasses = (root = document.documentElement) => {
+        if (!root) {
+            return
         }
-        document.documentElement.classList.add(`sl-theme-${theme}`)
+
+        const toRemove = Array.from(root.classList).filter((className) => {
+            if (AppUtils.LEGACY_ROOT_THEME_CLASSES.has(className)) {
+                return true
+            }
+
+            if (className.startsWith('wa-theme-') && className !== 'wa-theme-lgs1920') {
+                return true
+            }
+
+            return AppUtils.LEGACY_ROOT_THEME_PREFIXES.some(prefix => className.startsWith(prefix))
+        })
+
+        if (toRemove.length > 0) {
+            root.classList.remove(...toRemove)
+        }
+    }
+
+    static setTheme = (theme = null, brandColor = null) => {
+        if (!theme) {
+            theme = localStorage.getItem(AppUtils.THEME_STORAGE_KEY) || lgs.settings.theme || 'system'
+        }
+
+        const root = document.documentElement
+        const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
+        const isDark = theme === 'dark' || (theme === 'system' && mediaQuery.matches)
+        const resolvedBrandColor = AppUtils.resolveBrandColor(brandColor)
+
+        AppUtils.normalizeDocumentThemeClasses(root)
+        root.classList.add(AppUtils.ROOT_THEME_CLASS, `wa-brand-${resolvedBrandColor}`)
+        root.classList.toggle('wa-dark', isDark)
+        root.classList.toggle('wa-light', !isDark)
     }
 
     /**

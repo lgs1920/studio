@@ -7,22 +7,20 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-23
- * Last modified: 2026-04-23
+ * Created on: 2026-04-27
+ * Last modified: 2026-04-27
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import './assets/css/theme.css'
 import { createRoot } from 'react-dom/client'
 import { LGS1920 } from '@Components/LGS1920.jsx'
 import './assets/css/app.css?v=1.0.5'
+import './assets/css/themes/wa-lgs1920.css'
 import './assets/css/animations.css'
 import { UIUtils } from '@Utils/UIUtils'
-
-import '@web.awesome.me/webawesome-pro/dist/styles/themes/premium.css'
-import '@web.awesome.me/webawesome-pro/dist/styles/color/palettes/anodized.css'
+import { AppUtils } from '@Utils/AppUtils'
 
 
 /**
@@ -40,6 +38,7 @@ ResizeObserver.prototype.unobserve = function (target) {
  * Load Google Fonts once at startup
  */
 UIUtils.importFonts()
+AppUtils.setTheme(localStorage.getItem('theme') || 'system')
 
 /**
  * Let's go

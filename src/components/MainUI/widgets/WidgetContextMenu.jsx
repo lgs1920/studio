@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-20
- * Last modified: 2026-04-20
+ * Created on: 2026-04-27
+ * Last modified: 2026-04-27
  *
  *
  * Copyright © 2026 LGS1920
@@ -151,7 +151,8 @@ export const WidgetContextMenu = ({targetId, menuRef}) => {
     }
 
     return (
-        <div className="lgs-context-menu widget-context-menu poi-on-map-menu  lgs-card on-map" ref={menuRef}>
+        <div className="lgs-context-menu widget-context-menu poi-on-map-menu  lgs-card wa-theme-lgs1920-on-map"
+             ref={menuRef}>
             <ul>
                 {/* Size controls */}
                 {capabilities.canReset && (
@@ -160,7 +161,7 @@ export const WidgetContextMenu = ({targetId, menuRef}) => {
                         <WaIcon name="compress"
                                 variant="regular"
                                 id="compress-widget-context"
-                                className="lgs-one-line-card on-map"
+                                className="lgs-one-line-card wa-theme-lgs1920-on-map"
                                 onClick={() => resetSize(1)}
                         />
 
@@ -170,7 +171,7 @@ export const WidgetContextMenu = ({targetId, menuRef}) => {
                         <WaIcon id="shrink-widget-context"
                                 variant="regular"
                                 name="arrow-down-left-and-arrow-up-right-to-center"
-                                className="lgs-one-line-card on-map"
+                                className="lgs-one-line-card wa-theme-lgs1920-on-map"
                                 onClick={() => resetSize(-PERCENTAGE)}
                         />
 
@@ -180,7 +181,7 @@ export const WidgetContextMenu = ({targetId, menuRef}) => {
                         <WaIcon id="expand-widget-context"
                                 variant="regular"
                                 name="arrow-up-right-and-arrow-down-left-from-center"
-                                className="lgs-one-line-card on-map"
+                                className="lgs-one-line-card wa-theme-lgs1920-on-map"
                                 onClick={() => resetSize(PERCENTAGE)}
                         />
 
@@ -205,39 +206,39 @@ export const WidgetContextMenu = ({targetId, menuRef}) => {
                 {/* Positioning Grid */}
                 {capabilities.canPosition && (
                     <li className="widget-grid-position widget-no-hover buttons-bar-on-map">
-                        <WaIcon name="arrow-up-left" className="lgs-one-line-card on-map"
+                        <WaIcon name="arrow-up-left" className="lgs-one-line-card wa-theme-lgs1920-on-map"
                                 variant="regular"
                                 onClick={() => moveTo('toTopLeft')}/>
 
-                        <WaIcon name="arrow-up" className="lgs-one-line-card on-map"
+                        <WaIcon name="arrow-up" className="lgs-one-line-card wa-theme-lgs1920-on-map"
                                 variant="regular"
                                 onClick={() => moveTo('toTop')}/>
 
-                        <WaIcon name="arrow-up-right" className="lgs-one-line-card on-map"
+                        <WaIcon name="arrow-up-right" className="lgs-one-line-card wa-theme-lgs1920-on-map"
                                 variant="regular"
                                 onClick={() => moveTo('toTopRight')}/>
 
-                        <WaIcon name="arrow-left" className="lgs-one-line-card on-map"
+                        <WaIcon name="arrow-left" className="lgs-one-line-card wa-theme-lgs1920-on-map"
                                 variant="regular"
                                 onClick={() => moveTo('toLeft')}/>
 
-                        <WaIcon name="plus" className="lgs-one-line-card on-map"
+                        <WaIcon name="plus" className="lgs-one-line-card wa-theme-lgs1920-on-map"
                                 variant="regular"
                                 onClick={() => moveTo('toCenter')}/>
 
-                        <WaIcon name="arrow-right" className="lgs-one-line-card on-map"
+                        <WaIcon name="arrow-right" className="lgs-one-line-card wa-theme-lgs1920-on-map"
                                 variant="regular"
                                 onClick={() => moveTo('toRight')}/>
 
-                        <WaIcon name="arrow-down-left" className="lgs-one-line-card on-map"
+                        <WaIcon name="arrow-down-left" className="lgs-one-line-card wa-theme-lgs1920-on-map"
                                 variant="regular"
                                 onClick={() => moveTo('toBottomLeft')}/>
 
-                        <WaIcon name="arrow-down" className="lgs-one-line-card on-map"
+                        <WaIcon name="arrow-down" className="lgs-one-line-card wa-theme-lgs1920-on-map"
                                 variant="regular"
                                 onClick={() => moveTo('toBottom')}/>
 
-                        <WaIcon name="arrow-down-right" className="lgs-one-line-card on-map"
+                        <WaIcon name="arrow-down-right" className="lgs-one-line-card wa-theme-lgs1920-on-map"
                                 variant="regular"
                                 onClick={() => moveTo('toBottomRight')}/>
 

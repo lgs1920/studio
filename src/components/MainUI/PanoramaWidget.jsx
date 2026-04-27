@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-26
- * Last modified: 2026-04-26
+ * Created on: 2026-04-27
+ * Last modified: 2026-04-27
  *
  *
  * Copyright © 2026 LGS1920
@@ -25,10 +25,12 @@ import {
     ORBIT_RPM_STEP,
     persistOrbitSettings,
 }                                               from '@Core/OrbitSettings'
+import { Widget }                                        from '@Components/MainUI/widgets/Widget'
 import { Cartesian3, Math as M }                from 'cesium'
 import { WaButton, WaCard, WaIcon }             from '@web.awesome.me/webawesome-pro/dist/react'
-import { memo, useCallback, useEffect, useRef } from 'react'
+import { memo, useCallback, useEffect, useMemo, useRef } from 'react'
 import { useSnapshot }                          from 'valtio'
+import { getOrbitWidgetConfig }                          from './orbitWidgetConfig'
 
 export const PanoramaWidget = memo(() => {
     const $panorama = lgs.stores.ui.mainUI.panorama
@@ -42,6 +44,7 @@ export const PanoramaWidget = memo(() => {
     const rpmRef = useRef(panorama.rpm)
     const directionRef = useRef(panorama.direction)
     const controllerStateRef = useRef(null)
+    const config = useMemo(() => getOrbitWidgetConfig('panorama-widget', toolBar.fromStart), [toolBar.fromStart])
 
     heightOffsetRef.current = panorama.heightOffset
     pitchRef.current = panorama.pitch
@@ -81,24 +84,40 @@ export const PanoramaWidget = memo(() => {
     const updateHeight = useCallback((event) => {
         const value = Number(event.target.value)
         $panorama.heightOffset = value
+    }, [$panorama])
+
+    const persistHeight = useCallback((event) => {
+        const value = Number(event.target.value)
         persistPanoramaSettings({heightOffset: value})
     }, [$panorama, persistPanoramaSettings])
 
     const updatePitch = useCallback((event) => {
         const value = Number(event.target.value)
         $panorama.pitch = value
+    }, [$panorama])
+
+    const persistPitch = useCallback((event) => {
+        const value = Number(event.target.value)
         persistPanoramaSettings({pitch: value})
     }, [$panorama, persistPanoramaSettings])
 
     const updateRPM = useCallback((event) => {
         const value = Number(event.target.value)
         $panorama.rpm = value
+    }, [$panorama])
+
+    const persistRPM = useCallback((event) => {
+        const value = Number(event.target.value)
         persistPanoramaSettings({rpm: value})
     }, [$panorama, persistPanoramaSettings])
 
     const updateDirection = useCallback((event) => {
         const value = Number(event.target.value)
         $panorama.direction = value
+    }, [$panorama])
+
+    const persistDirection = useCallback((event) => {
+        const value = Number(event.target.value)
         persistPanoramaSettings({direction: value})
     }, [$panorama, persistPanoramaSettings])
 
@@ -146,6 +165,7 @@ export const PanoramaWidget = memo(() => {
                                        roll:    0,
                                    },
                                })
+            lgs.scene?.requestRender?.()
         }
 
         const tick = (timestamp) => {
@@ -198,92 +218,100 @@ export const PanoramaWidget = memo(() => {
                 Object.assign(nextController, controllerStateRef.current)
             }
             controllerStateRef.current = null
+            void __.ui.cameraManager.raiseUpdateEvent()
             void setPoiAnimated(false)
         }
     }, [panorama.active, panorama.target, panorama.heading, $panorama, setPoiAnimated])
 
-    if (!panorama.active) {
-        return null
-    }
-
     return (
-        <WaCard
-            appearance="plain"
-            className={`orbit-widget panorama-widget lgs-card on-map ${toolBar.fromStart ? 'from-start' : 'from-end'}`}
-            onWheel={stopPropagation}
+        <Widget
+            isVisible={panorama.active}
+            config={config}
+            className="orbit-widget-shell"
         >
-            <div className="panorama-widget-header">
-                <div className="panorama-widget-title">
-                    <WaIcon name="arrows-rotate" animation="spin" variant="regular"/>
-                    <span>{'Panorama'}</span>
+            <WaCard
+                appearance="plain"
+                className="orbit-widget panorama-widget lgs-card wa-theme-lgs1920-on-map"
+                onWheel={stopPropagation}
+            >
+                <div className="orbit-widget-header">
+                    <div className="panorama-widget-title">
+                        <WaIcon className="grabber orbit-widget-grabber" name="grip-dots" variant="solid"/>
+                        <WaIcon name="arrows-rotate" animation="spin" variant="regular"/>
+                        <span>{'Panorama'}</span>
+                    </div>
+                    <WaButton appearance="plain" size="small" onClick={closePanorama}>
+                        <WaIcon name="xmark" variant="regular"/>
+                    </WaButton>
                 </div>
-                <WaButton appearance="plain" size="small" variant="on-map" onClick={closePanorama}>
-                    <WaIcon name="xmark" variant="regular"/>
+
+                <div className="panorama-widget-body">
+                    <div className="panorama-widget-slider">
+                        <span>{'Height'}</span>
+                        <input
+                            className="panorama-widget-range"
+                            type="range"
+                            min="100"
+                            max="5000"
+                            step="50"
+                            value={panorama.heightOffset}
+                            onInput={updateHeight}
+                            onChange={persistHeight}
+                        />
+                        <strong>{`${Math.round(panorama.heightOffset)} m`}</strong>
+                    </div>
+
+                    <div className="panorama-widget-slider">
+                        <span>{'Angle'}</span>
+                        <input
+                            className="panorama-widget-range"
+                            type="range"
+                            min="-85"
+                            max="15"
+                            step="1"
+                            value={panorama.pitch}
+                            onInput={updatePitch}
+                            onChange={persistPitch}
+                        />
+                        <strong>{`${Math.round(panorama.pitch)}°`}</strong>
+                    </div>
+
+                    <div className="panorama-widget-slider">
+                        <span>{'RPM'}</span>
+                        <input
+                            className="panorama-widget-range"
+                            type="range"
+                            min={ORBIT_RPM_MIN}
+                            max={ORBIT_RPM_MAX}
+                            step={ORBIT_RPM_STEP}
+                            value={panorama.rpm}
+                            onInput={updateRPM}
+                            onChange={persistRPM}
+                        />
+                        <strong>{panorama.rpm.toFixed(1)}</strong>
+                    </div>
+
+                    <div className="panorama-widget-slider">
+                        <span>{'Sense'}</span>
+                        <input
+                            className="panorama-widget-range"
+                            type="range"
+                            min={ORBIT_DIRECTION_MIN}
+                            max={ORBIT_DIRECTION_MAX}
+                            step={ORBIT_DIRECTION_STEP}
+                            value={panorama.direction}
+                            onInput={updateDirection}
+                            onChange={persistDirection}
+                        />
+                        <strong>{getOrbitDirectionLabel(panorama.direction)}</strong>
+                    </div>
+                </div>
+
+                <WaButton appearance="outlined" size="small" onClick={closePanorama}>
+                    <WaIcon slot="start" name="arrows-rotate" animation="spin" variant="regular"/>
+                    {'Stop'}
                 </WaButton>
-            </div>
-
-            <div className="panorama-widget-body">
-                <div className="panorama-widget-slider">
-                    <span>{'Height'}</span>
-                    <input
-                        className="panorama-widget-range"
-                        type="range"
-                        min="100"
-                        max="5000"
-                        step="50"
-                        value={panorama.heightOffset}
-                        onInput={updateHeight}
-                    />
-                    <strong>{`${Math.round(panorama.heightOffset)} m`}</strong>
-                </div>
-
-                <div className="panorama-widget-slider">
-                    <span>{'Angle'}</span>
-                    <input
-                        className="panorama-widget-range"
-                        type="range"
-                        min="-85"
-                        max="15"
-                        step="1"
-                        value={panorama.pitch}
-                        onInput={updatePitch}
-                    />
-                    <strong>{`${Math.round(panorama.pitch)}°`}</strong>
-                </div>
-
-                <div className="panorama-widget-slider">
-                    <span>{'RPM'}</span>
-                    <input
-                        className="panorama-widget-range"
-                        type="range"
-                        min={ORBIT_RPM_MIN}
-                        max={ORBIT_RPM_MAX}
-                        step={ORBIT_RPM_STEP}
-                        value={panorama.rpm}
-                        onInput={updateRPM}
-                    />
-                    <strong>{panorama.rpm.toFixed(1)}</strong>
-                </div>
-
-                <div className="panorama-widget-slider">
-                    <span>{'Sense'}</span>
-                    <input
-                        className="panorama-widget-range"
-                        type="range"
-                        min={ORBIT_DIRECTION_MIN}
-                        max={ORBIT_DIRECTION_MAX}
-                        step={ORBIT_DIRECTION_STEP}
-                        value={panorama.direction}
-                        onInput={updateDirection}
-                    />
-                    <strong>{getOrbitDirectionLabel(panorama.direction)}</strong>
-                </div>
-            </div>
-
-            <WaButton appearance="outlined" size="small" variant="on-map" onClick={closePanorama}>
-                <WaIcon slot="start" name="arrows-rotate" animation="spin" variant="regular"/>
-                {'Stop'}
-            </WaButton>
-        </WaCard>
+            </WaCard>
+        </Widget>
     )
 })

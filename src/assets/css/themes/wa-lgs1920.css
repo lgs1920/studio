@@ -1,0 +1,24 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: wa-lgs1920.css
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2026-04-27
+ * Last modified: 2026-04-27
+ *
+ *
+ * Copyright © 2026 LGS1920
+ ******************************************************************************/
+
+@import './webawesome/wa-color-vogue.css';
+@import './webawesome/wa-theme-lgs1920-base.css';
+@import '../theme.css';
+@import './wa-lgs1920-on-map.css';
+
+:root.wa-theme-lgs1920 {
+    color: var(--wa-color-text-normal);
+}

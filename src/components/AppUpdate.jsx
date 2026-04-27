@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-11
- * Last modified: 2026-04-11
+ * Created on: 2026-04-27
+ * Last modified: 2026-04-27
  *
  *
  * Copyright © 2026 LGS1920
@@ -254,7 +254,7 @@ export const AppUpdate = ({mode = 'banner'}) => {
         return (
             <div className={classNames('lgs-install-banner',
                                        // Apply card styles only for standard banner mode
-                                       {'lgs-card on-map lgs-slide-in-from-top': isStandardBannerFlow},
+                                       {'lgs-card wa-theme-lgs1920-on-map lgs-slide-in-from-top': isStandardBannerFlow},
             )}>
                 <div className="lgs-install-banner-content">
                     <WaIcon name="mobile-arrow-down" variant="regular"/>

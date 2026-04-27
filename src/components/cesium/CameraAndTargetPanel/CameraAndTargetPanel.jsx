@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-28
- * Last modified: 2026-02-28
+ * Created on: 2026-04-27
+ * Last modified: 2026-04-27
  *
  *
  * Copyright © 2026 LGS1920
@@ -35,7 +35,7 @@ import { useSnapshot }       from 'valtio'
  */
 const CameraDataPanel = ({icon, children, play, onDoubleClick}) => (
     <SlAnimation size="small" easing="bounceInLeft" duration={1000} iterations={1} play={play}>
-        <div className="camera-data-panel lgs-card on-map" onDoubleClick={onDoubleClick}>
+        <div className="camera-data-panel lgs-card wa-theme-lgs1920-on-map" onDoubleClick={onDoubleClick}>
             <sl-icon library="fa" name={FA2SL.set(icon)}/>
             <div>{children}</div>
         </div>

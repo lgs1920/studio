@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-24
- * Last modified: 2026-04-24
+ * Created on: 2026-04-27
+ * Last modified: 2026-04-27
  *
  *
  * Copyright © 2026 LGS1920
@@ -388,7 +388,7 @@ export const VideoDownloadAndShareDialog = () => {
                          </div>
                      </>
                  )}
-                <div className="video-info lgs-card on-map">
+                <div className="video-info lgs-card wa-theme-lgs1920-on-map">
                     <div>
                         <SlIcon library="fa" name={FA2SL.set(faCropAlt)}/>
                         {_mediaData.current.ratio.label} - {_mediaData.current.dimensions.width}x{_mediaData.current.dimensions.height}

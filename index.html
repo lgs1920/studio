@@ -7,15 +7,16 @@
   ~ Author : LGS1920 Team
   ~ email: contact@lgs1920.fr
   ~
-  ~ Created on: 2026-04-23
-  ~ Last modified: 2026-04-23
+  ~ Created on: 2026-04-27
+  ~ Last modified: 2026-04-27
   ~
   ~
   ~ Copyright © 2026 LGS1920
   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
 
 <!doctype html>
-<html class="wa-theme-premium wa-palette-anodized" data-fa-kit-code="eb5c406148" lang="en">
+<html class="wa-theme-lgs1920 wa-brand-yellow wa-dark" data-fa-kit-code="eb5c406148" lang="en">
+
 <head>
     <meta charset="UTF-8"/>
     <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
@@ -50,11 +51,33 @@
     <script crossorigin="anonymous" src="https://kit.webawesome.com/e55a0a6efad544ac.js"></script>
     <script>
         (function () {
+            const root = document.documentElement
             const storedTheme = localStorage.getItem('theme') || 'system'
+            const storedBrandColor = localStorage.getItem('brandColor') || 'yellow'
+            const allowedBrandColors = new Set(['yellow', 'orange', 'red', 'pink', 'purple', 'blue', 'green', 'gray'])
             const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
             const isDark = storedTheme === 'dark' || (storedTheme === 'system' && mediaQuery.matches)
-            document.documentElement.classList.toggle('wa-dark', isDark)
-            document.documentElement.classList.toggle('wa-light', !isDark)
+            const brandColor = allowedBrandColors.has(storedBrandColor) ? storedBrandColor : 'yellow'
+            const prefixesToReset = ['sl-theme-', 'wa-brand-', 'wa-palette-', 'wa-neutral-', 'wa-success-', 'wa-warning-', 'wa-danger-']
+            const classesToRemove = Array.from(root.classList).filter((className) => {
+                if (className === 'wa-theme-premium') {
+                    return true
+                }
+
+                if (className.startsWith('wa-theme-') && className !== 'wa-theme-lgs1920') {
+                    return true
+                }
+
+                return prefixesToReset.some(prefix => className.startsWith(prefix))
+            })
+
+            if (classesToRemove.length > 0) {
+                root.classList.remove(...classesToRemove)
+            }
+
+            root.classList.add('wa-theme-lgs1920', `wa-brand-${brandColor}`)
+            root.classList.toggle('wa-dark', isDark)
+            root.classList.toggle('wa-light', !isDark)
         })()
     </script>
 
