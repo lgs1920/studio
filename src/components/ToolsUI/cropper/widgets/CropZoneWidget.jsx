@@ -15,7 +15,7 @@
  ******************************************************************************/
 
 import { Widget } from '@Components/MainUI/widgets/Widget'
-import { CROP_TOOLS_WIDGETS, HOUR } from '@Core/constants'
+import { CROP_TOOLS_WIDGETS, HOUR, LGS_VISUAL_WIDGET } from '@Core/constants'
 import { memo, useMemo, useRef } from 'react'
 import { useSnapshot }           from 'valtio'
 import { CropZone }              from './CropZone'
@@ -60,6 +60,7 @@ export const CropZoneWidget = memo(({
             left:             '20%',
             top:              '30%',
             attachTo:         'center',
+            type:             LGS_VISUAL_WIDGET,
             isCropper:        true,
             resizable:        true,
             draggable:        true,

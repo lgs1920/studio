@@ -23,7 +23,7 @@
 
 import { VideoMessage }                             from '@Components/MainUI/video/VideoMessage'
 import classNames                            from 'classnames'
-import { memo, useCallback, useEffect, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useSnapshot }                              from 'valtio'
 import { CropZoneInfo }                             from './CropZoneInfo'
 
@@ -76,20 +76,12 @@ export const DefinedCropZone = memo(function DefinedCropZone({
         if (_definedCropZone.current) {
             context.widgetsBoard = _definedCropZone.current.id
             context.resizable = video.cropper?.resizable ?? context.resizable
-            context.widgetEditor = true
+            context.widgetEditor = !video.cropper?.ratioEditor
         }
-
-
-        return () => {
-            if (context) {
-                context.widgetsBoard = null
-                // we need widgetEditor later...
-            }
-        }
-    }, [context, video.cropper?.resizable])
+    }, [context, video.cropper?.ratioEditor, video.cropper?.resizable])
 
     // Apply DOM styles for the static crop box
-    useEffect(() => {
+    useLayoutEffect(() => {
         if (!_definedCropZone.current) {
             return
         }

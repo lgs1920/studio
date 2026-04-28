@@ -30,6 +30,8 @@ export class WidgetCoreControls {
         this.#registry = registry
     }
 
+    #getBoundsTarget = (config) => config.boundsContainer ?? config.container
+
     #throttle = (func, limit) => {
         let lastCall = 0
         return (...args) => {
@@ -167,21 +169,20 @@ export class WidgetCoreControls {
      * Computes initial position for a widget based on configuration, respecting container margins
      * @param {Object} config - Widget configuration
      * @param {HTMLElement} element - The DOM element
-     * @param {boolean} isResize - Whether this is a resize operation
      * @returns {Object} Position object with left and top coordinates
      */
-    computeInitialPosition = (config, element, isResize = false) => {
+    computeInitialPosition = (config, element) => {
         if (!config.container || !element) {
             return {left: 0, top: 0}
         }
-        const container = config.container.getBoundingClientRect()
+        const container = this.#getBoundsTarget(config).getBoundingClientRect()
         const widget = element.getBoundingClientRect()
         const margin = Number.isFinite(config.margin) ? config.margin : 0
 
         let defaultWidth = widget.width || 200
         let defaultHeight = widget.height || 200
 
-        if (config.fromDB && config.dimensions?.width && config.dimensions?.height) {
+        if ((config.fromDB || config.fromRuntime) && config.dimensions?.width && config.dimensions?.height) {
             defaultWidth = config.dimensions.width
             defaultHeight = config.dimensions.height
         }
@@ -193,10 +194,11 @@ export class WidgetCoreControls {
         config.dimensions = {width: defaultWidth, height: defaultHeight}
 
         const attachTo = config.attachTo || (config.isCropper ? 'center' : 'top-left')
+        const hasRuntimePosition = Number.isFinite(config.position?.left) && Number.isFinite(config.position?.top)
 
         let left
         let top
-        if (config.fromDB && Number.isFinite(config.position.left) && Number.isFinite(config.position.top)) {
+        if ((config.fromDB || config.fromRuntime || config.isCropper) && hasRuntimePosition) {
             left = config.position.left
             top = config.position.top
         }
@@ -234,7 +236,7 @@ export class WidgetCoreControls {
         const scaledWidth = defaultWidth * scaleX
         const scaledHeight = defaultHeight * scaleY
 
-        if (!config.fromDB) {
+        if (!config.fromDB && !config.fromRuntime) {
             config.position = {
                 left: Math.max(
                     container.left,
@@ -253,11 +255,10 @@ export class WidgetCoreControls {
     /**
      * Refreshes container bounds based on current container size.
      * @param {Object} config - Widget configuration
-     * @param {Object} moveableInstance - Moveable instance
      * @returns {Object} Updated bounds object
      */
-    refreshBounds = (config, moveableInstance) => {
-        const container = config.container.getBoundingClientRect()
+    refreshBounds = (config) => {
+        const container = this.#getBoundsTarget(config).getBoundingClientRect()
         config.bounds = {
             left:   container.left,
             top:    container.top,
@@ -274,7 +275,7 @@ export class WidgetCoreControls {
      * @returns {Object} Boundary status object
      */
     setBoundStatus = (element, config = this.#registry.getWidgetConfig(this.#registry.current)) => {
-        const container = config.container.getBoundingClientRect()
+        const container = this.#getBoundsTarget(config).getBoundingClientRect()
         const target = element.getBoundingClientRect()
         const margin = Number.isFinite(config.margin) ? config.margin : 0
         config.boundStatus = {
@@ -286,6 +287,68 @@ export class WidgetCoreControls {
         return config.boundStatus
     }
 
+    monitorElementResize = (config, element) => {
+        if (!element || config.isCropper) {
+            return
+        }
+
+        if (config.elementObserver) {
+            config.elementObserver.disconnect()
+            config.elementObserver = null
+        }
+
+        const syncDimensions = this.#throttle(() => {
+            if (this.#registry.isResizing || this.#registry.isScaling) {
+                return
+            }
+
+            if (config.skipInitialElementResizeSync) {
+                config.skipInitialElementResizeSync = false
+                return
+            }
+
+            const computedStyle = window.getComputedStyle(element)
+            const styledWidth = parseFloat(computedStyle.width || '')
+            const styledHeight = parseFloat(computedStyle.height || '')
+            const rect = element.getBoundingClientRect()
+            const scaleX = config.scale?.x ?? 1
+            const scaleY = config.scale?.y ?? 1
+
+            const width = Number.isFinite(styledWidth) && styledWidth > 0
+                          ? styledWidth
+                          : (Number.isFinite(rect.width) && rect.width > 0 && scaleX > 0
+                             ? rect.width / scaleX
+                             : 0)
+            const height = Number.isFinite(styledHeight) && styledHeight > 0
+                           ? styledHeight
+                           : (Number.isFinite(rect.height) && rect.height > 0 && scaleY > 0
+                              ? rect.height / scaleY
+                              : 0)
+
+            if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
+                return
+            }
+
+            const previousWidth = config.dimensions?.width ?? 0
+            const previousHeight = config.dimensions?.height ?? 0
+            const changed = Math.abs(previousWidth - width) > 0.5 || Math.abs(previousHeight - height) > 0.5
+
+            if (!changed) {
+                return
+            }
+
+            config.dimensions = {width, height}
+
+            if (config.persist && config.runtimeReady) {
+                void __.ui.widgetManager.saveWidgetPosition(config.id, config)
+            }
+        }, 100)
+
+        config.elementObserver = new ResizeObserver(syncDimensions)
+        config.elementObserver.observe(element)
+        requestAnimationFrame(syncDimensions)
+    }
+
     /**
      * Monitors container resize events and updates widget bounds and position.
      * @param {Object} config - Widget configuration
@@ -295,19 +358,24 @@ export class WidgetCoreControls {
      * @param {Function} setPosition - Function to set position
      */
     monitorContainerResize = (config, setBounds, moveable, element, setPosition) => {
-        const target = config.container
-        if (!target) {
+        const referenceTarget = config.container
+        const boundsTarget = this.#getBoundsTarget(config)
+        if (!referenceTarget || !boundsTarget) {
             return
         }
-        if (config.observer && config.observedTarget !== target) {
-            try {
-                config.observer.unobserve(config.observedTarget)
-            }
-            catch (_) {
-            }
+        if (config.observer) {
+            const previousTargets = config.observedTargets ?? [boundsTarget]
+            previousTargets.filter(Boolean).forEach(target => {
+                try {
+                    config.observer.unobserve(target)
+                }
+                catch {
+                    void 0
+                }
+            })
             config.observer.disconnect()
             config.observer = null
-            config.observedTarget = null
+            config.observedTargets = []
         }
         const elementId = config.id
 
@@ -325,8 +393,10 @@ export class WidgetCoreControls {
             setBounds(newBounds)
             this.setBoundStatus(element, config)
 
-            const containerRect = config.container.getBoundingClientRect()
+            const referenceRect = config.container.getBoundingClientRect()
+            const boundsRect = this.#getBoundsTarget(config).getBoundingClientRect()
             const allowAutoAdapt = this.#registry.windowResizing
+            const skipInitialAutoAdapt = first && (config.fromDB || config.fromRuntime) && !config.isCropper
             const oldContainerWidth = oldBounds.right - oldBounds.left
             const oldContainerHeight = oldBounds.bottom - oldBounds.top
             const newContainerWidth = newBounds.right - newBounds.left
@@ -343,19 +413,21 @@ export class WidgetCoreControls {
             if (allowAutoAdapt && !first && config.savedRatios && !config.isCropper) {
                 const leftRatio = config.savedRatios.leftRatio
                 const topRatio = config.savedRatios.topRatio
-                const relativeLeft = (leftRatio / 100) * containerRect.width
-                const relativeTop = (topRatio / 100) * containerRect.height
+                const relativeCenterX = (leftRatio / 100) * referenceRect.width
+                const relativeCenterY = (topRatio / 100) * referenceRect.height
+                const width = config.dimensions?.width ?? element.getBoundingClientRect().width ?? 0
+                const height = config.dimensions?.height ?? element.getBoundingClientRect().height ?? 0
 
                 config.position = {
-                    left: containerRect.left + relativeLeft,
-                    top:  containerRect.top + relativeTop,
+                    left: referenceRect.left + relativeCenterX - (width / 2),
+                    top:  referenceRect.top + relativeCenterY - (height / 2),
                 }
             }
 
             let scaleWasAdapted = false
-            if (allowAutoAdapt && config.type === LGS_VISUAL_WIDGET) {
+            if (allowAutoAdapt && !skipInitialAutoAdapt && config.type === LGS_VISUAL_WIDGET) {
                 const oldScale = {...config.scale}
-                config.scale = this.adaptScaleToContainer(config, containerRect)
+                config.scale = this.adaptScaleToContainer(config, boundsRect)
 
                 if (oldScale.x !== config.scale.x || oldScale.y !== config.scale.y) {
                     __.ui.widgetManager.transform.setScale(element, config.scale.x, config.scale.y)
@@ -364,8 +436,8 @@ export class WidgetCoreControls {
             }
 
             let positionWasAdapted = false
-            if (allowAutoAdapt && !config.isCropper) {
-                const adaptedPosition = this.adaptPositionToContainer(config, containerRect)
+            if (allowAutoAdapt && !skipInitialAutoAdapt && !config.isCropper) {
+                const adaptedPosition = this.adaptPositionToContainer(config, boundsRect)
                 if (adaptedPosition.left !== config.position.left || adaptedPosition.top !== config.position.top) {
                     config.position = adaptedPosition
                     positionWasAdapted = true
@@ -378,12 +450,8 @@ export class WidgetCoreControls {
                 setPosition(config.position)
             }
 
-            if (allowAutoAdapt && !config.isCropper && (scaleWasAdapted || positionWasAdapted) && config.persist) {
+            if (!first && allowAutoAdapt && !config.isCropper && (scaleWasAdapted || positionWasAdapted) && config.persist) {
                 __.ui.widgetManager.saveWidgetPosition(config.id, config)
-            }
-
-            if (first && config.fromDB) {
-                config.fromDB = false
             }
 
             if (config.transform) {
@@ -417,7 +485,7 @@ export class WidgetCoreControls {
             }
 
             if (config.isCropper && this.#registry.windowResizing && isContainerShrinking) {
-                const containerRect = config.container.getBoundingClientRect()
+                const containerRect = boundsRect
                 const currentWidth = config.cropDimensions?.width || 200
                 const currentHeight = config.cropDimensions?.height || 200
                 const maxWidth = containerRect.width - 2 * margin
@@ -496,6 +564,11 @@ export class WidgetCoreControls {
                 element.style.left = `${newLeft}px`
                 element.style.top = `${newTop}px`
                 __.ui.widgetManager.applyCropToOverlay(config)
+                __.ui.widgetManager.setConfig(config.id, config)
+                __.ui.widgetManager.dispatchCropUpdate(config, 'resize')
+                if (config.persist) {
+                    __.ui.widgetManager.saveWidgetPosition(config.id, config)
+                }
                 if (mv && mv.current && (config.transform || config.isCropper)) {
                     mv.current.updateRect()
                 }
@@ -511,25 +584,16 @@ export class WidgetCoreControls {
                 }
             }
         }
-        if (config.observer && config.observedTarget === target) {
-            if (config.isCropper && !config.windowResizeHandler) {
-                config.windowResizeHandler = this.#throttle(() => handleResize(false), 100)
-                window.addEventListener('resize', config.windowResizeHandler)
-            }
-            return
-        }
         if (config.windowResizeHandler) {
             window.removeEventListener('resize', config.windowResizeHandler)
             config.windowResizeHandler = null
         }
         handleResize(true)
         config.observer = new ResizeObserver(this.#throttle(handleResize, 100))
-        config.observer.observe(target)
-        config.observedTarget = target
-        if (config.isCropper) {
-            config.windowResizeHandler = this.#throttle(() => handleResize(false), 100)
-            window.addEventListener('resize', config.windowResizeHandler)
-        }
+        config.observedTargets = [referenceTarget, boundsTarget].filter((target, index, array) => target && array.indexOf(target) === index)
+        config.observedTargets.forEach(target => config.observer.observe(target))
+        config.windowResizeHandler = this.#throttle(() => handleResize(false), 100)
+        window.addEventListener('resize', config.windowResizeHandler)
     }
 
     /**
@@ -649,7 +713,15 @@ export class WidgetCoreControls {
             config.ratio = this.#registry.getRatio(initialConfig.ratio ?? fallback)
         }
 
-        if (config.isCropper) {
+        const hasCropDimensions = config.isCropper &&
+            Number.isFinite(config.cropDimensions?.left) &&
+            Number.isFinite(config.cropDimensions?.top) &&
+            Number.isFinite(config.cropDimensions?.width) &&
+            Number.isFinite(config.cropDimensions?.height) &&
+            config.cropDimensions.width > 0 &&
+            config.cropDimensions.height > 0
+
+        if (config.isCropper && !hasCropDimensions) {
             __.ui.widgetManager.cropDimensions(config, false)
         }
 
@@ -678,6 +750,14 @@ export class WidgetCoreControls {
                 deltaHeight: 0,
             }, true)
         }
+        else if ((config.fromDB || config.fromRuntime) &&
+            Number.isFinite(config.dimensions?.width) &&
+            Number.isFinite(config.dimensions?.height) &&
+            config.dimensions.width > 0 &&
+            config.dimensions.height > 0) {
+            element.style.width = `${config.dimensions.width}px`
+            element.style.height = `${config.dimensions.height}px`
+        }
 
         element.style.transform = 'none'
         element.style.opacity = initialConfig.opacity || 1
@@ -693,16 +773,17 @@ export class WidgetCoreControls {
             __.ui.widgetManager.transform.setRotate(element, config.rotate)
         }
 
-        this.monitorContainerResize(config, setBounds, moveable, element, setPosition)
-        this.#createInnerOverlay(element)
+        config.skipInitialElementResizeSync = Boolean(config.fromDB || config.fromRuntime)
 
-        if (config.isCropper && config.cropDimensions) {
-            __.ui.widgetManager.cropDimensions(config, false)
-        }
+        this.monitorContainerResize(config, setBounds, moveable, element, setPosition)
+        this.monitorElementResize(config, element)
+        this.#createInnerOverlay(element)
+        config.runtimeReady = true
+
         this.#registry.setConfig(elementId, config)
         this.#registry.setMoveable(elementId, moveable)
 
-        if (config.persist && !config.fromDB) {
+        if (config.persist && !config.fromDB && !config.fromRuntime) {
             await __.ui.widgetManager.saveWidgetPosition(elementId, config)
         }
         return true

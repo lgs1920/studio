@@ -52,7 +52,7 @@ export const TextColorElement = ({id}) => {
         if ($element?.text) {
             $element.text.color = e.target.value
             syncCSS($element.text.color, $element.text.opacity)
-            _moveable.updateRect()
+            _moveable?.current?.updateRect()
         }
     }, [$element, syncCSS])
 

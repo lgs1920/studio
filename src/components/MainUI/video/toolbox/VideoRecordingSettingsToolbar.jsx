@@ -20,7 +20,7 @@
  * Renders a call-to-action bar for the video cropper interface.
  ******************************************************************************/
 import { Tunnel }                                                       from '@Components/Tunnel/Tunnel'
-import { CROP_TOOLS_WIDGETS, VIDEO_TOOLS_WIDGETS, VIDEO_WIDGETS_BOARD } from '@Core/constants'
+import { CROP_TOOLS_WIDGETS, VIDEO_CROP_ZONE, VIDEO_TOOLS_WIDGETS, VIDEO_WIDGETS_BOARD } from '@Core/constants'
 import { faGear }                                                       from '@fortawesome/pro-regular-svg-icons'
 import { faCamera, faPhotoFilm, faVideo }                               from '@fortawesome/pro-solid-svg-icons'
 import { memo, useCallback, useEffect, useMemo, useRef }                from 'react'
@@ -40,8 +40,13 @@ export const VideoRecordingSettingsToolbar = memo(() => {
 
     // --- Handlers ---
 
+    const syncCropFrame = useCallback((phase = 'sync') => {
+        void __.ui.widgetManager.syncCropDimensionsFromElement(VIDEO_CROP_ZONE, true, phase)
+    }, [])
+
     /** Cancels the video editing process and restores widgets immediately. */
     const handleCancel = useCallback(() => {
+        syncCropFrame('cancel-editing')
         $video.editing = false
         __.ui.widgetManager.disposeByGroup(CROP_TOOLS_WIDGETS, true)
 
@@ -49,7 +54,7 @@ export const VideoRecordingSettingsToolbar = memo(() => {
         // hide some elements that can be visible
         __.ui.contextMenu.hide()
         __.ui.drawerManager.close()
-    }, [])
+    }, [syncCropFrame])
 
     const handleSnapShot = useCallback(async (event) => {
         Object.assign($video, {
@@ -84,6 +89,12 @@ export const VideoRecordingSettingsToolbar = memo(() => {
         // or by handleCancel when user cancels editing
     }, [])
 
+    useEffect(() => {
+        if (video.editing) {
+            __.ui.widgetManager.windowResizing = true
+        }
+    }, [video.editing])
+
     // --- Tunnel Steps ---
     const steps = useMemo(() => {
         _steps.current = [
@@ -103,12 +114,12 @@ export const VideoRecordingSettingsToolbar = memo(() => {
                     return true
                 },
                 afterStep:  () => {
+                    syncCropFrame('ratio-editor-exit')
                     Object.assign($video.cropper, {
                         ratioEditor:   false,
                         presetEditor: false,
                     })
                     _steps.current[0].done = true
-                    __.ui.widgetManager.windowResizing = false
                     return true
                 },
             },
@@ -119,6 +130,7 @@ export const VideoRecordingSettingsToolbar = memo(() => {
                 mandatory:  true,
                 beforeStep: () => {
                     $video.step = 1
+                    __.ui.widgetManager.windowResizing = true
                     _steps.current[1].done = true
                     _steps.current[2].done = true
                     _steps.current[3].done = true
@@ -142,6 +154,7 @@ export const VideoRecordingSettingsToolbar = memo(() => {
                     return true
                 },
                 onClick:    async (index, event) => {
+                    syncCropFrame('before-recording')
                     await handleVideoRecording(event)
                     Object.assign($video, {
                         editing:    false,
@@ -161,6 +174,7 @@ export const VideoRecordingSettingsToolbar = memo(() => {
                     return true
                 },
                 onClick:    async (index, event) => {
+                    syncCropFrame('before-snapshot')
                     Object.assign($video, {
                         recording:  false,
                         editing:    false,
@@ -173,7 +187,7 @@ export const VideoRecordingSettingsToolbar = memo(() => {
             },
         ]
         return _steps.current
-    }, [handleVideoRecording, handleSnapShot])
+    }, [handleVideoRecording, handleSnapShot, syncCropFrame])
 
     if (!video.editing) {
         return null

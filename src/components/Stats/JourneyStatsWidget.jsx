@@ -22,8 +22,9 @@ import { useMemo } from 'react'
 import { useSnapshot }                                                            from 'valtio'
 import './style.css'
 
-export const JourneyStatsWidget = ({id, context, zIndex}) => {
-    const {widgetsBoard} = context
+export const JourneyStatsWidget = ({id, context, zIndex, widgetsBoard: persistedWidgetsBoard}) => {
+    const contextState = useSnapshot(context ?? {widgetsBoard: ''})
+    const widgetsBoard = contextState.widgetsBoard || persistedWidgetsBoard || ''
     const main = useSnapshot(lgs.stores.main)
     const journey = lgs.theJourney
     const journeySlug = main.theJourney?.slug ?? null
@@ -47,11 +48,7 @@ export const JourneyStatsWidget = ({id, context, zIndex}) => {
     }), [unitSystem])
 
     const container = useMemo(() => {
-        if (!widgetsBoard || widgetsBoard === SCENE_WIDGETS_BOARD) {
-            return lgs.canvas
-        }
-
-        return document.querySelector(`#${widgetsBoard}.defined`) ?? lgs.canvas
+        return __.ui.widgetManager.resolveWidgetsBoardContainer(widgetsBoard) ?? lgs.canvas
     }, [widgetsBoard])
 
     const metrics = useMemo(() => journeyMetrics?.metrics ?? null, [journeyMetrics])

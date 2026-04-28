@@ -27,14 +27,16 @@ import { useSnapshot }                                    from 'valtio'
  * @param {Object} props.context - Valtio proxy context containing widgetsBoard and widgetEditor
  * @returns {JSX.Element|null} The compass widget or null if not in editor mode or container is not ready
  */
-export const CompassWidget = ({id, context, zIndex}) => {
+export const CompassWidget = ({id, context, zIndex, widgetsBoard: persistedWidgetsBoard}) => {
     // Get snapshot of context
-    const {widgetEditor, widgetsBoard} = useSnapshot(context ?? {widgetEditor: false, widgetsBoard: ''})
+    const contextState = useSnapshot(context ?? {widgetEditor: false, widgetsBoard: ''})
+    const widgetEditor = contextState.widgetEditor
+    const widgetsBoard = contextState.widgetsBoard || persistedWidgetsBoard || ''
     const [_container, setContainer] = useState(null)
 
     // Set container when widgetsBoard changes
     useEffect(() => {
-        const element = document.querySelector(`#${widgetsBoard}.defined`)
+        const element = __.ui.widgetManager.resolveWidgetsBoardContainer(widgetsBoard)
         setContainer(element)
     }, [widgetsBoard])
 

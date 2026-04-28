@@ -132,12 +132,13 @@ export class WidgetCropper {
         }
 
         const elementRect = element?.getBoundingClientRect?.()
+        const containerRect = container?.getBoundingClientRect?.()
         const persistedCrop = config.cropDimensions ?? {}
         const crop = {
-            left:   readPx(element?.style?.left) ?? config.position?.left ?? persistedCrop.left,
-            top:    readPx(element?.style?.top) ?? config.position?.top ?? persistedCrop.top,
-            width:  readPx(element?.style?.width) ?? persistedCrop.width ?? Math.round(elementRect?.width ?? 0),
-            height: readPx(element?.style?.height) ?? persistedCrop.height ?? Math.round(elementRect?.height ?? 0),
+            left:   Math.round(elementRect?.left ?? readPx(element?.style?.left) ?? config.position?.left ?? persistedCrop.left),
+            top:    Math.round(elementRect?.top ?? readPx(element?.style?.top) ?? config.position?.top ?? persistedCrop.top),
+            width:  Math.round(elementRect?.width ?? readPx(element?.style?.width) ?? persistedCrop.width ?? 0),
+            height: Math.round(elementRect?.height ?? readPx(element?.style?.height) ?? persistedCrop.height ?? 0),
         }
 
         if (!Number.isFinite(crop.left) ||
@@ -154,11 +155,10 @@ export class WidgetCropper {
         config.position = {left: crop.left, top: crop.top}
         config.cropDimensions = crop
 
-        const containerRect = container?.getBoundingClientRect?.()
         if (config.resizeFromCenter && containerRect?.width > 0 && containerRect?.height > 0) {
             config.centerRatio = {
-                x: (crop.left + crop.width / 2) / containerRect.width,
-                y: (crop.top + crop.height / 2) / containerRect.height,
+                x: (crop.left - containerRect.left + crop.width / 2) / containerRect.width,
+                y: (crop.top - containerRect.top + crop.height / 2) / containerRect.height,
             }
         }
 

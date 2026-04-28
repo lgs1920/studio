@@ -14,7 +14,7 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { DynamicWidget } from '@Components/MainUI/widgets/DynamicWidget'
+import { VideoSceneWidgetsPortal } from '@Components/MainUI/video/VideoSceneWidgetsPortal'
 import { WidgetsPanel } from '@Components/MainUI/widgets/WidgetsPanel'
 import { CropRatioEditorWidget } from '@Components/ToolsUI/cropper/widgets/CropRatioEditorWidget'
 /**
@@ -31,9 +31,9 @@ import { CropRatioEditorWidget } from '@Components/ToolsUI/cropper/widgets/CropR
  * @returns {JSX.Element|null} Cropper UI or null if source is not loaded
  */
 import { DefinedCropZone }                                                                  from '@Components/ToolsUI/cropper/widgets/DefinedCropZone'
-import { JOURNEY_WIDGETS, MULTI_PURPOSE_WIDGETS, SCENE_WIDGETS_BOARD, VIDEO_WIDGETS_BOARD } from '@Core/constants'
-import React, { memo, useEffect, useMemo, useRef, useState }                                from 'react'
-import { useSnapshot }                                                                      from 'valtio'
+import { JOURNEY_WIDGETS, MULTI_PURPOSE_WIDGETS } from '@Core/constants'
+import { memo, useEffect, useRef, useState } from 'react'
+import { useSnapshot } from 'valtio'
 import { CropZoneWidget }        from './widgets/CropZoneWidget'
 import './style.css'
 
@@ -42,8 +42,6 @@ export const Cropper = memo(({overlay = false, className = '', context, options 
     const _cropperContainer = useRef(null)
     const _overlay = useRef(null)
     const cropper = useSnapshot(context)
-    const $widget = lgs.stores.ui.widget
-    const {list} = useSnapshot($widget)
     const [overlayElement, setOverlayElement] = useState(null)
 
     useEffect(() => {
@@ -59,8 +57,16 @@ export const Cropper = memo(({overlay = false, className = '', context, options 
             }
 
             <div ref={_cropperContainer} className="crop-container">
-                {overlayElement && cropper.ratioEditor ? (
-                    <>
+                {overlayElement && (
+                    <DefinedCropZone
+                        className={[className, cropper.ratioEditor ? 'defined-crop-zone-hidden' : ''].filter(Boolean).join(' ')}
+                        infoPosition={options.infoPosition}
+                        infoComponent={options.infoComponent}
+                        overlay={overlayElement}
+                        context={context}>
+                    </DefinedCropZone>
+                )}
+                {overlayElement && cropper.ratioEditor && (
                         <CropZoneWidget
                             className={className}
                             infoPosition={options.infoPosition}
@@ -68,29 +74,12 @@ export const Cropper = memo(({overlay = false, className = '', context, options 
                             overlay={overlayElement}
                             context={context}
                         />
-                    </>
-                ) : overlayElement ? (
-                    <DefinedCropZone
-                        className={className}
-                        infoPosition={options.infoPosition}
-                        infoComponent={options.infoComponent}
-                        overlay={overlayElement}
-                        context={context}>
-                    </DefinedCropZone>
-                ) : null}
+                )}
                 {overlay && <div className="crop-overlay" ref={_overlay}/>}
                 {children}
                 <WidgetsPanel id="widget-deck" context={context} groups={[MULTI_PURPOSE_WIDGETS, JOURNEY_WIDGETS]}/>
-
-                {
-                    Array.from(list.entries())
-                        .filter(([key, props]) => props?.widgetsBoard === VIDEO_WIDGETS_BOARD)
-                        .sort(([, a], [, b]) => (b.zIndex || 0) - (a.zIndex || 0))
-                        .map(([key, props]) => (
-                            <DynamicWidget key={key} id={key} props={props} context={context}/>
-                        ))
-                }
             </div>
+            <VideoSceneWidgetsPortal context={context} hidden={cropper.ratioEditor}/>
         </>
     )
 })

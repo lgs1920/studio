@@ -35,7 +35,7 @@ export const TypefaceElement = ({id}) => {
     const handleFontChange = useCallback((e) => {
         if ($element) {
             $element.fontFamily = e.target.value.replace(/_/g, ' ')
-            _moveable.updateRect()
+            _moveable?.current?.updateRect()
         }
     }, [$element])
 

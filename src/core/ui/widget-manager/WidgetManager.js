@@ -18,6 +18,7 @@
  * Singleton class acting as an interface for managing draggable and resizable widgets.
  * Delegates functionality to specialized classes.
  */
+import { SCENE_WIDGETS_BOARD, VIDEO_WIDGETS_BOARD } from '@Core/constants'
 import { WidgetDBManager }    from '@Core/ui/widget-manager/WidgetDBManager'
 import { WidgetRotatable }    from '@Core/ui/widget-manager/WidgetRotatable'
 import { WidgetCoreControls } from './WidgetCoreControls'
@@ -71,7 +72,7 @@ export class WidgetManager {
      * Creates or returns the singleton instance of WidgetManager.
      * @param {Object} store - Application store
      */
-    constructor(store) {
+    constructor() {
         if (WidgetManager.#instance) {
             return WidgetManager.#instance
         }
@@ -87,7 +88,6 @@ export class WidgetManager {
         this.#controls = new WidgetCoreControls(this.#registry)
         WidgetManager.#instance = this
     }
-
 
     /**
      * Gets the transform helper instance.
@@ -272,6 +272,51 @@ export class WidgetManager {
     getElementById = id => this.#registry.getElementById(id)
 
     /**
+     * Resolves the DOM element used as the positioning reference for a widgets board.
+     * Positions are stored relative to the board itself.
+     *
+     * @param {string|null|undefined} widgetsBoard
+     * @returns {HTMLElement|null}
+     */
+    resolveWidgetsBoardReferenceContainer = (widgetsBoard) => this.resolveWidgetsBoardBoundsContainer(widgetsBoard)
+
+    /**
+     * Resolves the DOM element used as bounds / clipping reference for a widgets board.
+     * Scene widgets are bounded by the scene canvas. Board widgets are bounded by their own `.defined` area.
+     *
+     * @param {string|null|undefined} widgetsBoard
+     * @returns {HTMLElement|null}
+     */
+    resolveWidgetsBoardBoundsContainer = (widgetsBoard) => {
+        if (!widgetsBoard || widgetsBoard === SCENE_WIDGETS_BOARD) {
+            return lgs.canvas ?? null
+        }
+
+        if (typeof document === 'undefined') {
+            return null
+        }
+
+        const definedBoard = document.querySelector(`#${widgetsBoard}.defined`)
+        if (definedBoard) {
+            return definedBoard
+        }
+
+        if (widgetsBoard === VIDEO_WIDGETS_BOARD) {
+            return null
+        }
+
+        return document.querySelector(`[data-widget-id="${widgetsBoard}"] .crop-zone`)
+    }
+
+    /**
+     * Backward-compatible alias for bounds resolution.
+     *
+     * @param {string|null|undefined} widgetsBoard
+     * @returns {HTMLElement|null}
+     */
+    resolveWidgetsBoardContainer = (widgetsBoard) => this.resolveWidgetsBoardBoundsContainer(widgetsBoard)
+
+    /**
      * Retrieves the widget ID from an element.
      * @param {HTMLElement} element - The DOM element
      * @returns {string|null} The widget ID or null if not found
@@ -420,7 +465,7 @@ export class WidgetManager {
      * @returns {number} number of instances
      *
      */
-    countWidgets = (group, widget) => this.#registry.countWidgets(group, widget)
+    countWidgets = (group, widget, widgetsBoard = undefined) => this.#registry.countWidgets(group, widget, widgetsBoard)
     /**
      * Checks if a widget has reached its maximum allowed instances.
      *
@@ -428,7 +473,7 @@ export class WidgetManager {
      * @param {string} widget - Widget ID (can include ID prefixed, e.g., 'myWidget#uuid').
      * @returns {boolean} True if the max is reached, false otherwise.
      */
-    isMaxWidgetsReached = (group, widget) => this.#registry.isMaxWidgetsReached(group, widget)
+    isMaxWidgetsReached = (group, widget, widgetsBoard = undefined) => this.#registry.isMaxWidgetsReached(group, widget, widgetsBoard)
     /**
      * Returns maximum allowed widget instances.
      *
@@ -436,7 +481,7 @@ export class WidgetManager {
      * @param {string} widget - Widget ID (can include ID prefixed, e.g., 'myWidget#uuid').
      * @returns {number} the maximum  allowed instances
      */
-    maxWidgets = (group, widget) => this.#registry.maxWidgets(group, widget)
+    maxWidgets = (group, widget, widgetsBoard = undefined) => this.#registry.maxWidgets(group, widget, widgetsBoard)
 
     /**
      * Applies crop dimensions to the overlay element.
@@ -450,7 +495,7 @@ export class WidgetManager {
      * @param {string} widget - Widget ID (can include ID prefixed, e.g., 'myWidget#uuid').
      * @returns {number} The remaining number of instances.
      */
-    remainingWidgets = (group, widget) => this.#registry.remainingWidgets(group, widget)
+    remainingWidgets = (group, widget, widgetsBoard = undefined) => this.#registry.remainingWidgets(group, widget, widgetsBoard)
 
     applyCropToOverlay = config => this.#cropper.applyCropToOverlay(config)
 

@@ -139,7 +139,7 @@ export const JourneySelector = memo(({
                             <div slot="start" className="lgs--track-colors-in-settings">
                                 {journey.visible ?
                                  (Array.from(journey.tracks.values()).slice(0, journey.visible ? 3 : 1).map(track => (
-                                     <WaIcon
+                                     <WaIcon key={track.slug}
                                          name="hexagon"
                                          style={getTrackIconStyle(journey, track)}
                                          variant="solid"

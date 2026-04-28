@@ -32,7 +32,7 @@ import './style.css'
  * @param {Object} props.context - Widget rendering context.
  * @returns {JSX.Element | null}
  */
-export const ProfileWidget = ({id, context, zIndex}) => {
+export const ProfileWidget = ({id, context, zIndex, widgetsBoard: persistedWidgetsBoard}) => {
     /**
      * Early return if the journey is not defined to avoid unnecessary computations
      */
@@ -40,7 +40,9 @@ export const ProfileWidget = ({id, context, zIndex}) => {
         return null
     }
 
-    const {widgetEditor, widgetsBoard} = context
+    const contextState = useSnapshot(context ?? {widgetEditor: false, widgetsBoard: ''})
+    const widgetEditor = contextState.widgetEditor
+    const widgetsBoard = contextState.widgetsBoard || persistedWidgetsBoard || ''
 
     /**
      * Proxy and Snapshot for the profile component state.
@@ -69,11 +71,9 @@ export const ProfileWidget = ({id, context, zIndex}) => {
      * Updates the container element reference when the widget board changes.
      */
     useEffect(() => {
-        if (widgetsBoard && widgetsBoard !== SCENE_WIDGETS_BOARD) {
-            const element = document.querySelector(`#${widgetsBoard}.defined`)
-            if (element) {
-                setContainer(element)
-            }
+        const element = __.ui.widgetManager.resolveWidgetsBoardContainer(widgetsBoard)
+        if (element) {
+            setContainer(element)
         }
     }, [widgetsBoard])
 

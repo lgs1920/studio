@@ -40,14 +40,14 @@ export const FontSizeElement = ({id}) => {
     const handleSizeChange = useCallback((e) => {
         if ($element) {
             $element.size = sanitizeNumericControlValue(e.target.value, 16, sizeLimits)
-            _moveable.updateRect()
+            _moveable?.current?.updateRect()
         }
     }, [$element])
 
     useEffect(() => {
         if ($element && element?.size !== undefined && element.size !== fontSize) {
             $element.size = fontSize
-            _moveable.updateRect()
+            _moveable?.current?.updateRect()
         }
 
     }, [$element, element?.size, fontSize])

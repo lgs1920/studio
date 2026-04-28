@@ -17,7 +17,7 @@
 /**
  * Singleton class that manages resizable functionality for widgets.
  */
-import { LGS_ANIMATION_RESIZING, VIDEO_CROP_ZONE, VIDEO_WIDGETS_BOARD } from '@Core/constants'
+import { LGS_ANIMATION_RESIZING } from '@Core/constants'
 
 export class WidgetResizable {
     // Singleton instance
@@ -41,8 +41,6 @@ export class WidgetResizable {
     }
 
     #resizeDirection = ''
-    #cropperResizeStart = null
-
     /**
      * Creates or returns the singleton instance of WidgetResizable.
      * @param {WidgetManager} widgetManager - The WidgetManager instance
@@ -75,125 +73,6 @@ export class WidgetResizable {
         }
     }
 
-    #adaptWidgetsToCropperResize = (before, after) => {
-        if (!before || !after) {
-            return
-        }
-        const oldWidth = Number(before.width) || 0
-        const oldHeight = Number(before.height) || 0
-        const newWidth = Number(after.width) || 0
-        const newHeight = Number(after.height) || 0
-        if (oldWidth <= 0 || oldHeight <= 0 || newWidth <= 0 || newHeight <= 0) {
-            return
-        }
-
-        const widgets = __.ui.widgetCache?.getAll({widgetsBoard: VIDEO_WIDGETS_BOARD})
-        if (!widgets || widgets.size === 0) {
-            return
-        }
-
-        for (const [id] of widgets) {
-            if (id === VIDEO_CROP_ZONE) {
-                continue
-            }
-            const config = this.#widgetManager.getWidgetConfig(id)
-            const element = this.#widgetManager.getElementById(id)
-            if (!config || !config.position) {
-                continue
-            }
-            const leftRatio = (config.position.left - before.left) / oldWidth
-            const topRatio = (config.position.top - before.top) / oldHeight
-
-            let nextLeft = after.left + (leftRatio * newWidth)
-            let nextTop = after.top + (topRatio * newHeight)
-
-            const width = config.dimensions?.width ?? 0
-            const height = config.dimensions?.height ?? 0
-            const angle = (config.rotate ?? 0) * (Math.PI / 180)
-            const absCos = Math.abs(Math.cos(angle))
-            const absSin = Math.abs(Math.sin(angle))
-            const scaleX = config.scale?.x ?? 1
-            const scaleY = config.scale?.y ?? 1
-
-            const getBounding = (left, top, sx, sy) => {
-                const scaledWidth = width * sx
-                const scaledHeight = height * sy
-                const rotatedWidth = (scaledWidth * absCos) + (scaledHeight * absSin)
-                const rotatedHeight = (scaledWidth * absSin) + (scaledHeight * absCos)
-                const centerX = left + (scaledWidth / 2)
-                const centerY = top + (scaledHeight / 2)
-                return {
-                    left:   centerX - (rotatedWidth / 2),
-                    top:    centerY - (rotatedHeight / 2),
-                    right:  centerX + (rotatedWidth / 2),
-                    bottom: centerY + (rotatedHeight / 2),
-                    rotatedWidth,
-                    rotatedHeight,
-                }
-            }
-
-            const getCurrentRenderedSize = () => {
-                if (element) {
-                    const rect = element.getBoundingClientRect()
-                    if (rect.width > 0 && rect.height > 0) {
-                        return {width: rect.width, height: rect.height}
-                    }
-                }
-                return {width: bbox.rotatedWidth, height: bbox.rotatedHeight}
-            }
-
-            let nextScaleX = scaleX
-            let nextScaleY = scaleY
-            let bbox = getBounding(nextLeft, nextTop, nextScaleX, nextScaleY)
-
-            const clampPosition = () => {
-                if (bbox.left < after.left) {
-                    nextLeft += (after.left - bbox.left)
-                }
-                if (bbox.right > after.left + newWidth) {
-                    nextLeft += ((after.left + newWidth) - bbox.right)
-                }
-                if (bbox.top < after.top) {
-                    nextTop += (after.top - bbox.top)
-                }
-                if (bbox.bottom > after.top + newHeight) {
-                    nextTop += ((after.top + newHeight) - bbox.bottom)
-                }
-                bbox = getBounding(nextLeft, nextTop, nextScaleX, nextScaleY)
-            }
-
-            clampPosition()
-
-            if (config.scalable && (bbox.rotatedWidth > newWidth || bbox.rotatedHeight > newHeight)) {
-                const currentSize = getCurrentRenderedSize()
-                const factor = Math.min(newWidth / currentSize.width, newHeight / currentSize.height)
-                nextScaleX = nextScaleX * factor
-                nextScaleY = nextScaleY * factor
-                bbox = getBounding(nextLeft, nextTop, nextScaleX, nextScaleY)
-                clampPosition()
-                config.scale = {x: nextScaleX, y: nextScaleY}
-                if (element) {
-                    __.ui.widgetManager.transform.setScale(element, nextScaleX, nextScaleY)
-                }
-            }
-
-            config.position = {left: nextLeft, top: nextTop}
-            config.savedRatios = {
-                leftRatio: ((nextLeft - after.left) / newWidth) * 100,
-                topRatio:  ((nextTop - after.top) / newHeight) * 100,
-            }
-            if (element) {
-                element.style.left = `${nextLeft}px`
-                element.style.top = `${nextTop}px`
-            }
-            config.setPosition?.(config.position)
-            const moveable = this.#widgetManager.getMoveable(id)
-            if (moveable?.current) {
-                moveable.current.updateRect()
-            }
-        }
-    }
-
     /**
      * Handles resize operations, throttled to prevent excessive updates.
      * @private
@@ -215,8 +94,8 @@ export class WidgetResizable {
         const baseTop = __.app.parsePx(target.style.top || '0')
         const currentWidth = config.isCropper ? prevCropDimensions?.width || width : __.app.parsePx(target.style.width || '0') || width
         const currentHeight = config.isCropper ? prevCropDimensions?.height || height : __.app.parsePx(target.style.height || '0') || height
-        let finalLeft = baseLeft
-        let finalTop = baseTop
+        let finalLeft
+        let finalTop
 
         // Adjust position for center-based resizing
         if (config?.resizeFromCenter) {
@@ -224,8 +103,8 @@ export class WidgetResizable {
             finalTop = Math.round(baseTop + (currentHeight - height) / 2)
             const container = config.container.getBoundingClientRect()
             config.centerRatio = {
-                x: (finalLeft + width / 2) / container.width,
-                y: (finalTop + height / 2) / container.height,
+                x: (finalLeft - container.left + width / 2) / container.width,
+                y: (finalTop - container.top + height / 2) / container.height,
             }
         }
         else {
@@ -261,21 +140,21 @@ export class WidgetResizable {
 
         // Update config.position and crop dimensions
         config.position = {left: finalLeft, top: finalTop}
+        config.runtimeReady = true
         if (config.isCropper) {
-            const before = prevCropDimensions
             const after = {left: finalLeft, top: finalTop, width, height}
             config.cropDimensions = after
-            if (config.id === VIDEO_CROP_ZONE) {
-                this.#adaptWidgetsToCropperResize(before, after)
-            }
-            if (!before ||
-                before.left !== after.left ||
-                before.top !== after.top ||
-                before.width !== after.width ||
-                before.height !== after.height) {
+            if (!prevCropDimensions ||
+                prevCropDimensions.left !== after.left ||
+                prevCropDimensions.top !== after.top ||
+                prevCropDimensions.width !== after.width ||
+                prevCropDimensions.height !== after.height) {
                 this.#widgetCropper.dispatchCropUpdate(config, 'resize')
             }
             this.#widgetCropper.applyCropToOverlay(config)
+        }
+        else {
+            config.dimensions = {width, height}
         }
 
         // Update overlay and child component
@@ -295,9 +174,6 @@ export class WidgetResizable {
         this.#resizeDirection = event.direction
         event.target.classList.add('resizing', `direction-${this.#cardinalDirections[this.#resizeDirection]}`)
         const config = await this.#widgetManager.retrieveConfig(event.target)
-        if (config?.id === VIDEO_CROP_ZONE) {
-            this.#cropperResizeStart = {...config.cropDimensions}
-        }
 
         if (config.animationWhenResizing) {
             event.target.classList.add(LGS_ANIMATION_RESIZING)
@@ -323,6 +199,7 @@ export class WidgetResizable {
 
         event.target.classList.remove('resizing', LGS_ANIMATION_RESIZING, `direction-${this.#cardinalDirections[this.#resizeDirection]}`)
         const config = await this.#widgetManager.retrieveConfig(event.target)
+        config.runtimeReady = true
         if (config?.isCropper) {
             config.element = event.target
             const left = __.app.parsePx(event.target.style.left || '0')
@@ -333,14 +210,16 @@ export class WidgetResizable {
             config.cropDimensions = {left, top, width, height}
             this.#widgetCropper.applyCropToOverlay(config)
             this.#widgetCropper.dispatchCropUpdate(config, 'end')
-            if (config.id === VIDEO_CROP_ZONE) {
-                this.#persistWidgetsForBoard(VIDEO_WIDGETS_BOARD)
-                this.#cropperResizeStart = null
-            }
+            this.#persistWidgetsForBoard(config.id)
+        }
+        else {
+            const width = __.app.parsePx(event.target.style.width || '0') || event.target.getBoundingClientRect().width || config.dimensions?.width || 0
+            const height = __.app.parsePx(event.target.style.height || '0') || event.target.getBoundingClientRect().height || config.dimensions?.height || 0
+            config.dimensions = {width, height}
         }
 
         if (config.persist) {
-            this.#widgetManager.saveWidgetPosition(config.id, config)
+            await this.#widgetManager.saveWidgetPosition(config.id, config)
         }
 
         __.ui.widgetManager.setConfig(config.id, config)
@@ -353,7 +232,7 @@ export class WidgetResizable {
             return
         }
         for (const [id] of widgets) {
-            if (id === VIDEO_CROP_ZONE) {
+            if (id === boardId) {
                 continue
             }
             const config = this.#widgetManager.getWidgetConfig(id)

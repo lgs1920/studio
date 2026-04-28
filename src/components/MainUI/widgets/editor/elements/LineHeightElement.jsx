@@ -39,7 +39,7 @@ export const LineHeightElement = ({id}) => {
     const handleLineHeightChange = useCallback((e) => {
         if ($element) {
             $element.lineHeight = e.target.value
-            _moveable.updateRect()
+            _moveable?.current?.updateRect()
         }
     }, [$element])
 
