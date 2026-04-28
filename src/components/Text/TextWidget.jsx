@@ -21,9 +21,10 @@ import React, { useEffect, useMemo, useState }                                  
 import { useSnapshot }                                                            from 'valtio'
 import './style.css'
 
-export const TextWidget = ({id, context, zIndex}) => {
-    // Destructure context properties used as dependencies
-    const {widgetEditor, widgetsBoard} = context
+export const TextWidget = ({id, context, zIndex, widgetsBoard: persistedWidgetsBoard}) => {
+    const contextState = useSnapshot(context ?? {widgetEditor: false, widgetsBoard: ''})
+    const widgetEditor = contextState.widgetEditor
+    const widgetsBoard = contextState.widgetsBoard || persistedWidgetsBoard || ''
 
     /**
      * Snapshot of the video state (included for completeness).
@@ -43,12 +44,9 @@ export const TextWidget = ({id, context, zIndex}) => {
      * If the board is not the main scene board, it looks up the specific board element.
      */
     useEffect(() => {
-        if (widgetsBoard && widgetsBoard !== SCENE_WIDGETS_BOARD) {
-            // Find the board element using its ID and the 'defined' class for safety
-            const element = document.querySelector(`#${widgetsBoard}.defined`)
-            if (element) {
-                setContainer(element)
-            }
+        const element = __.ui.widgetManager.resolveWidgetsBoardContainer(widgetsBoard)
+        if (element) {
+            setContainer(element)
         }
     }, [widgetsBoard]) // Re-run only when the board ID changes
 

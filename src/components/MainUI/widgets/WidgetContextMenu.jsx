@@ -116,7 +116,7 @@ export const WidgetContextMenu = ({targetId, menuRef}) => {
      */
     const resetSize = (factor) => {
         const elementId = __.ui.widgetManager.retrieveElementId(element)
-        const container = config.container.getBoundingClientRect()
+        const container = (config.boundsContainer ?? config.container).getBoundingClientRect()
 
         if (factor === 1) {
             config.scale = {x: 1, y: 1}

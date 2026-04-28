@@ -15,19 +15,19 @@
  ******************************************************************************/
 
 import { VideoRecorderWidget }                                  from '@Components/MainUI/video/toolbox/VideoRecorderWidget'
+import { VideoSceneWidgetsPortal } from '@Components/MainUI/video/VideoSceneWidgetsPortal'
 import { VideoSettingsInfo }                                    from '@Components/MainUI/video/VideoSettingsInfo'
-import { DynamicWidget }                                        from '@Components/MainUI/widgets/DynamicWidget'
 import { CropOverlay }                                          from '@Components/ToolsUI/cropper/CropOverlay'
 import { DefinedCropZone }       from '@Components/ToolsUI/cropper/widgets/DefinedCropZone'
 import {
     APP_KEY, CROP_TOOLS_WIDGETS, LGS_PROJECT, MINUTE, NAVIGATOR, SECOND, VIDEO_CROP_ZONE,
-    VIDEO_TOOLS_WIDGETS, VIDEO_WIDGETS_BOARD, WIDGET_MOUNT_TIMEOUT,
+    VIDEO_TOOLS_WIDGETS, WIDGET_MOUNT_TIMEOUT, VIDEO_WIDGETS_BOARD,
 } from '@Core/constants'
 import { CanvasOverlayComposer } from '@Core/ui/screen-media-recorder/composer/CanvasOverlayComposer'
 import { ScreenMediaRecorder }   from '@Core/ui/screen-media-recorder/recorder/ScreenMediaRecorder'
 import { WidgetMountErrorDialog } from '@Components/MainUI/video/WidgetMountErrorDialog'
 import { UIToast }                                              from '@Utils/UIToast'
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import { useSnapshot }           from 'valtio'
 
 // Overlay refresh cadence (in ms). Balanced for smooth updates and low CPU.
@@ -253,15 +253,6 @@ export const VideoRecordingScreenArea = memo(() => {
         document.addEventListener('onCropUpdate', handleCropUpdate)
         return () => document.removeEventListener('onCropUpdate', handleCropUpdate)
     }, [readCrop])
-
-    /**
-     * Cache entries sorted DESCENDING for React rendering (Top to Bottom).
-     * Includes all cache props (zIndex, etc.) passed to DynamicWidget.
-     */
-    const widgetCacheEntries = useMemo(() => {
-        return [...__.ui.widgetCache.getAll({widgetsBoard: VIDEO_WIDGETS_BOARD}).entries()]
-            .sort((a, b) => (a[1].zIndex || 0) - (b[1].zIndex || 0))
-    }, [])
 
     const isValidCrop = Number.isFinite(crop.left) && crop.width > 0
 
@@ -597,6 +588,8 @@ export const VideoRecordingScreenArea = memo(() => {
     }, [disposeComposer, stopOverlaysRefresh, startOverlaysRefresh, requestWakeLock, releaseWakeLock, $video])
 
     useEffect(() => {
+        __.ui.widgetManager.windowResizing = false
+
         const metricsCache = _metricsCache.current
         return () => {
             __.ui.widgetManager.disposeByGroup(VIDEO_TOOLS_WIDGETS, false)
@@ -604,6 +597,7 @@ export const VideoRecordingScreenArea = memo(() => {
             disposeComposer()
             stopOverlaysRefresh()
             releaseWakeLock()
+            __.ui.widgetManager.windowResizing = true
             metricsCache.clear()
         }
     }, [disposeComposer, stopOverlaysRefresh, releaseWakeLock])
@@ -628,14 +622,7 @@ export const VideoRecordingScreenArea = memo(() => {
                 $video.editing = true
             }}/>
             <DefinedCropZone context={$video.cropper} infoComponent={<VideoSettingsInfo/>} ref={_cropZone}/>
-            {widgetCacheEntries.map(([key, props]) => (
-                    <DynamicWidget
-                        key={key}
-                        id={key}
-                        props={props}
-                        context={lgs.stores.ui.video.cropper}
-                    />
-            ))}
+            <VideoSceneWidgetsPortal context={lgs.stores.ui.video.cropper}/>
         </>
     )
 })

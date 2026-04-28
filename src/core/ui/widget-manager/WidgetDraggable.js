@@ -96,6 +96,7 @@ export class WidgetDraggable {
         this.#widgetTransform.commitTranslateToPosition(event.target)
 
         config.element = event.target
+        config.runtimeReady = true
         // Use the updated position from config after commitTranslateToPosition
         const left = config.position.left
         const top = config.position.top
@@ -109,8 +110,8 @@ export class WidgetDraggable {
             if (config.resizeFromCenter) {
                 const container = config.container.getBoundingClientRect()
                 config.centerRatio = {
-                    x: (left + width / 2) / container.width,
-                    y: (top + height / 2) / container.height,
+                    x: (left - container.left + width / 2) / container.width,
+                    y: (top - container.top + height / 2) / container.height,
                 }
             }
             this.#widgetCropper.applyCropToOverlay(config)
@@ -118,7 +119,7 @@ export class WidgetDraggable {
         }
 
         if (config.persist) {
-            this.#widgetManager.saveWidgetPosition(config.id, config)
+            await this.#widgetManager.saveWidgetPosition(config.id, config)
         }
 
         __.ui.widgetManager.setConfig(config.id, config)

@@ -1787,6 +1787,8 @@ wa-card.wa-theme-lgs1920-on-map::part(body) {
 
     .lgs-widget-container {
         position: absolute;
+        top: 0;
+        left: 0;
         z-index: calc(var(--crop-zindex) + 2);
         /*width: 100%;*/
         /*height: 100%;*/

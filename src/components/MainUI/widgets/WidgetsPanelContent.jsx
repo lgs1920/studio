@@ -18,7 +18,7 @@ import {
     VIDEO_WIDGETS_BOARD, LGS_VISUAL_WIDGET, WIDGET_LAYER_START, WIDGET_LAYER_STEP,
 }                                from '@Core/constants'
 import { WidgetDynamicRenderer } from '@Core/ui/widget-manager/dynamic-render/WidgetDynamicRender'
-import { WaDivider, WaIcon }     from '@web.awesome.me/webawesome-pro/dist/react'
+import { WaIcon }                from '@web.awesome.me/webawesome-pro/dist/react'
 import classNames                from 'classnames'
 import { useEffect, useRef, useState }                from 'react'
 import { useSnapshot }           from 'valtio'
@@ -130,6 +130,9 @@ export const WidgetsPanelContent = ({groups}) => {
             for (const [groupId] of targetedGroups.entries()) {
                 const widgets = await __.ui.widgetManager.getWidgetsByGroup(groupId)
                 for (const widgetToRender of widgets) {
+                    if (widgetToRender?.widgetsBoard !== VIDEO_WIDGETS_BOARD) {
+                        continue
+                    }
                     // Pass existing widget data to preserve its original zIndex
                     addWidget(groupId, widgetToRender.id, widgetToRender)
                 }
@@ -142,8 +145,10 @@ export const WidgetsPanelContent = ({groups}) => {
         const displayMandatoryWidgets = () => {
             for (const [groupId, group] of targetedGroups.entries()) {
                 for (const [widgetId, widgetDef] of group.widgets) {
-                    const fullId = __.ui.widgetManager.defineElementId(groupId, widgetId)
-                    if (widgetDef.mandatory && !lgs.stores.ui.widget.list.has(fullId)) {
+                    const existingMandatory = Array.from(lgs.stores.ui.widget.list.entries()).some(([id, entry]) => {
+                        return id.startsWith(widgetId) && entry?.widgetsBoard === VIDEO_WIDGETS_BOARD
+                    })
+                    if (widgetDef.mandatory && !existingMandatory) {
                         addWidget(groupId, widgetId)
                     }
                 }
@@ -171,7 +176,7 @@ export const WidgetsPanelContent = ({groups}) => {
             if (widgetKey === 'journey-stats-widget' && !hasJourney) {
                 return
             }
-            if (!__.ui.widgetManager.isMaxWidgetsReached(groupKey, widgetKey)) {
+            if (!__.ui.widgetManager.isMaxWidgetsReached(groupKey, widgetKey, VIDEO_WIDGETS_BOARD)) {
                 reached.add(widgetKey)
             }
         })

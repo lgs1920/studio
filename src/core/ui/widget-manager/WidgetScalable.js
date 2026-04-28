@@ -160,6 +160,7 @@ export class WidgetScalable {
         // Now get the transforms (scale without translate)
         const transforms = this.#widgetTransform.getTransform(event.target)
         config.scale = transforms.scale
+        config.runtimeReady = true
 
         // Position was already updated by commitTranslateToPosition
         // Just make sure config.position is in sync
@@ -168,7 +169,7 @@ export class WidgetScalable {
         config.position = {left, top}
 
         if (config.persist) {
-            this.#widgetManager.saveWidgetPosition(config.id, config)
+            await this.#widgetManager.saveWidgetPosition(config.id, config)
         }
 
         __.ui.widgetManager.setConfig(config.id, config)

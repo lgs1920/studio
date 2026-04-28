@@ -32,14 +32,14 @@ export const StyleElement = ({id}) => {
     const toggleBold = useCallback(() => {
         if ($element) {
             $element.weight = element?.weight === 'bold' ? 'normal' : 'bold'
-            _moveable.updateRect()
+            _moveable?.current?.updateRect()
         }
     }, [$element, element?.weight])
 
     const toggleItalic = useCallback(() => {
         if ($element) {
             $element.style = element?.style === 'italic' ? 'normal' : 'italic'
-            _moveable.updateRect()
+            _moveable?.current?.updateRect()
         }
     }, [$element, element?.style])
 

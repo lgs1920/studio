@@ -53,7 +53,7 @@ export const AlignElement = ({id}) => {
                         if ($element) {
                             $element.align = mode
                         }
-                        _moveable.updateRect()
+                        _moveable?.current?.updateRect()
                     }}
                 >
                     <WaIcon

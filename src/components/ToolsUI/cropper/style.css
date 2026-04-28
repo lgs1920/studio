@@ -69,6 +69,10 @@
     pointer-events: none;
 }
 
+.defined-crop-zone-hidden {
+    visibility: hidden;
+}
+
 /***************************************
  *  On map crop info
  **************************************/

@@ -104,38 +104,30 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
     useEffect(() => {
         const {widgetsBoard} = config
         if (!widgetsBoard || widgetsBoard === SCENE_WIDGETS_BOARD) {
-            setActualContainer(lgs.canvas)
+            setActualContainer(__.ui.widgetManager.resolveWidgetsBoardContainer(widgetsBoard))
             return
         }
 
-        const findTarget = () => {
-            const _el = document.querySelector(`#${widgetsBoard}.defined`)
-            if (_el) {
-                setActualContainer(_el)
-                return true
-            }
-            return false
+        const updateTarget = () => {
+            const _el = __.ui.widgetManager.resolveWidgetsBoardContainer(widgetsBoard)
+            setActualContainer(current => current !== _el ? (_el ?? null) : current)
         }
 
-        if (findTarget()) {
-            return
-        }
+        updateTarget()
 
         const _observer = new MutationObserver(() => {
-            if (findTarget()) {
-                _observer.disconnect()
-            }
+            updateTarget()
         })
 
         _observer.observe(document.body, {
             childList:  true,
             subtree:    true,
             attributes: true,
-            attributeFilter: ['class'],
+            attributeFilter: ['class', 'style', 'id'],
         })
 
         return () => _observer.disconnect()
-    }, [config.widgetsBoard, config.container])
+    }, [config.widgetsBoard])
 
     const interactionLocked = (video.preRecording || video.recording || video.snapshot || video.finalizing) && config.type === LGS_VISUAL_WIDGET
     const showGhostOnly = Boolean(config?.showGhostDuringRecording) && video.recording && config.type === LGS_VISUAL_WIDGET
@@ -469,7 +461,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
         }
 
         const isTargetingBoard = config.widgetsBoard && config.widgetsBoard !== SCENE_WIDGETS_BOARD
-        if (isTargetingBoard && actualContainer === lgs.canvas) {
+        if (isTargetingBoard && !actualContainer) {
             return
         }
 
@@ -483,10 +475,19 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                 return
             }
 
+            if (isTargetingBoard) {
+                const boardRect = actualContainer?.getBoundingClientRect?.()
+                if (!boardRect || boardRect.width <= 0 || boardRect.height <= 0) {
+                    requestAnimationFrame(init)
+                    return
+                }
+            }
+
             const fullConfig = {
                 animationWhenDragging: config.animationWhenDragging ?? config.type === LGS_TOOLBAR,
                 attachTo:       config.attachTo ?? 'top-left',
-                container:      actualContainer,
+                container:      __.ui.widgetManager.resolveWidgetsBoardReferenceContainer(config.widgetsBoard) ?? actualContainer,
+                boundsContainer: actualContainer,
                 contextMenu:    __.ui.widgetManager.cloneContext(config?.contextMenu ?? {}, WIDGETS_CAPABILITIES),
                 cropDimensions: config.cropDimensions ?? {left: 0, top: 0, width: 0, height: 0},
                 dynamic:        config.dynamic ?? false,

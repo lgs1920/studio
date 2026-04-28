@@ -27,12 +27,14 @@ import { useSnapshot } from 'valtio'
  * @param {Object} props.context - Valtio proxy context containing widgetsBoard and widgetEditor
  * @returns {JSX.Element|null} The credits widget or null if not in editor mode or container is not ready
  */
-export const CreditsWidget = ({id, context, zIndex}) => {
+export const CreditsWidget = ({id, context, zIndex, widgetsBoard: persistedWidgetsBoard}) => {
     // Get snapshot of context
-    const {widgetEditor, widgetsBoard} = useSnapshot(context ?? {widgetEditor: false, widgetsBoard: ''})
+    const contextState = useSnapshot(context ?? {widgetEditor: false, widgetsBoard: ''})
+    const widgetEditor = contextState.widgetEditor
+    const widgetsBoard = contextState.widgetsBoard || persistedWidgetsBoard || ''
     const _content = useRef(null)
     const container = useMemo(
-        () => (typeof document !== 'undefined' ? document.querySelector(`#${widgetsBoard}.defined`) : null),
+        () => __.ui.widgetManager.resolveWidgetsBoardContainer(widgetsBoard),
         [widgetsBoard],
     )
 
