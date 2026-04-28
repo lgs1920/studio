@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-24
- * Last modified: 2026-04-24
+ * Created on: 2026-04-28
+ * Last modified: 2026-04-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -21,11 +21,13 @@
  * Real-time duration and size reporting via INFO event
  ******************************************************************************/
 import { APP_KEY, NAVIGATOR, SECOND } from '@Core/constants'
-import { DateTime }                  from 'luxon'
+import { DateTime }                   from 'luxon'
 import {
     BufferTarget, CanvasSource, getFirstEncodableVideoCodec, Mp4OutputFormat, Output, QUALITY_HIGH, QUALITY_MEDIUM,
     QUALITY_VERY_HIGH,
 }                                     from 'mediabunny'
+
+const INFO_INTERVAL_MS = 250
 
 /**
  * Singleton class responsible for screen/canvas/stream recording using mediabunny
@@ -137,6 +139,15 @@ export class ScreenMediaRecorder extends EventTarget {
     #snapshot
     #mimeType = 'video/mp4'
     #extension = 'mp4'
+    #frameIntervalMs = 1000 / ScreenMediaRecorder.FPS[ScreenMediaRecorder.DEFAULT_FPS_INDEX]
+    #frameIntervalSec = 1 / ScreenMediaRecorder.FPS[ScreenMediaRecorder.DEFAULT_FPS_INDEX]
+    #nextFrameIndex = 0
+    #frameLoopActive = false
+    #frameWriteInFlight = false
+    #encodedFrames = 0
+    #currentFps = 0
+    #lastInfoSampleTimeMs = null
+    #lastInfoFrameCount = 0
 
     constructor() {
         super()
@@ -154,6 +165,7 @@ export class ScreenMediaRecorder extends EventTarget {
             size:     this.#sizeBytes,
             duration: this.#recordedDuration * 1000, // Convert to milliseconds
             fps:      this.#fps,
+            currentFps: this.#currentFps,
             quality:  this.#quality,
             codec:     this.#videoCodec,
             dimensions: this.#dimensions,
@@ -194,7 +206,8 @@ export class ScreenMediaRecorder extends EventTarget {
             try {
                 this.#videoSource.bitrate = q.value
             }
-            catch (e) {
+            catch {
+                // Ignore runtime bitrate adjustment failures.
             }
         }
     }
@@ -229,6 +242,8 @@ export class ScreenMediaRecorder extends EventTarget {
         }
         if (fps && ScreenMediaRecorder.FPS.includes(fps)) {
             this.#fps = fps
+            this.#frameIntervalMs = 1000 / fps
+            this.#frameIntervalSec = 1 / fps
         }
         const q = ScreenMediaRecorder.QUALITY.find(i => i.value === quality)
         if (q) {
@@ -253,7 +268,7 @@ export class ScreenMediaRecorder extends EventTarget {
             throw this.error('Cannot change source while recording')
         }
         this.#canvas = canvas
-        this.#ctx = canvas.getContext('2d', {alpha: false})
+        this.#ctx = canvas.getContext('2d', {alpha: false, desynchronized: true})
         this.#dimensions = this.#getEncoderSafeSize(canvas.width, canvas.height)
         this.#sourceType = 'canvas'
         this.dispatchEvent(new CustomEvent(ScreenMediaRecorder.events.SOURCE, {
@@ -282,7 +297,7 @@ export class ScreenMediaRecorder extends EventTarget {
         this.#canvas = document.createElement('canvas')
         this.#canvas.width = this.#dimensions.width
         this.#canvas.height = this.#dimensions.height
-        this.#ctx = this.#canvas.getContext('2d', {alpha: false})
+        this.#ctx = this.#canvas.getContext('2d', {alpha: false, desynchronized: true})
 
         const copyFrame = () => {
             if (this.#videoElement.readyState >= 2) {
@@ -299,30 +314,117 @@ export class ScreenMediaRecorder extends EventTarget {
         }))
     }
 
-    /** Encode next frame using precise timestamp */
-    #recordFrame = () => {
+    #updateCurrentFps = (sampleTimeMs = performance.now()) => {
         if (!this.#isRecording || this.#isPaused) {
+            this.#currentFps = 0
+            this.#lastInfoSampleTimeMs = sampleTimeMs
+            this.#lastInfoFrameCount = this.#encodedFrames
+            return this.#currentFps
+        }
+
+        if (this.#lastInfoSampleTimeMs == null || sampleTimeMs <= this.#lastInfoSampleTimeMs) {
+            this.#lastInfoSampleTimeMs = sampleTimeMs
+            this.#lastInfoFrameCount = this.#encodedFrames
+            return this.#currentFps
+        }
+
+        const frameDelta = this.#encodedFrames - this.#lastInfoFrameCount
+        const durationDeltaSec = (sampleTimeMs - this.#lastInfoSampleTimeMs) / 1000
+
+        if (frameDelta >= 0 && durationDeltaSec > 0) {
+            this.#currentFps = frameDelta / durationDeltaSec
+        }
+
+        this.#lastInfoSampleTimeMs = sampleTimeMs
+        this.#lastInfoFrameCount = this.#encodedFrames
+        return this.#currentFps
+    }
+
+    #emitInfo = (durationMs = this.#recordedDuration * 1000) => {
+        const currentFps = this.#updateCurrentFps()
+        this.dispatchEvent(new CustomEvent(ScreenMediaRecorder.events.INFO, {
+            detail: {
+                duration: durationMs,
+                size:     this.#sizeBytes,
+                fps:      this.#fps,
+                currentFps,
+                isPaused: this.#isPaused,
+            },
+        }))
+    }
+
+    #startMonitoring = () => {
+        clearInterval(this.#infoInterval)
+        const cadence = Math.max(100, Math.min(INFO_INTERVAL_MS, this.#timeslice))
+        this.#infoInterval = setInterval(() => {
+            if (!this.#isRecording) {
+                return
+            }
+            this.#checkLimits()
+            this.#emitInfo()
+        }, cadence)
+    }
+
+    #scheduleNextFrame = () => {
+        if (!this.#isRecording || this.#isPaused || this.#frameWriteInFlight) {
+            this.#frameLoopActive = false
+            return
+        }
+        this.#frameLoopActive = true
+        this.#rafId = requestAnimationFrame(this.#processFrame)
+    }
+
+    /** Encode frames at the requested FPS while respecting encoder backpressure. */
+    #processFrame = async () => {
+        if (!this.#isRecording || this.#isPaused || !this.#videoSource) {
+            this.#frameLoopActive = false
             return
         }
 
         const now = performance.now()
         const elapsedMs = now - this.#startTime + this.#pausedTime
-        const elapsedSec = elapsedMs / 1000
+        const dueFrameIndex = Math.floor(elapsedMs / this.#frameIntervalMs)
 
-        this.#videoSource.add(elapsedSec, 1 / this.#fps)
-        this.#recordedDuration = elapsedSec
+        if (dueFrameIndex < this.#nextFrameIndex) {
+            this.#scheduleNextFrame()
+            return
+        }
 
-        // Send INFO event with current duration
-        this.dispatchEvent(new CustomEvent(ScreenMediaRecorder.events.INFO, {
-            detail: {
-                duration: elapsedMs,
-                size:     this.#sizeBytes,
-                fps:      this.#fps,
-                isPaused: this.#isPaused,
-            },
-        }))
+        const frameIndex = dueFrameIndex
+        this.#frameWriteInFlight = true
 
-        this.#rafId = requestAnimationFrame(this.#recordFrame)
+        try {
+            await this.#videoSource.add(frameIndex / this.#fps, this.#frameIntervalSec)
+            this.#encodedFrames += 1
+            this.#nextFrameIndex = frameIndex + 1
+            this.#recordedDuration = this.#nextFrameIndex * this.#frameIntervalSec
+        }
+        catch (error) {
+            if (this.#isRecording) {
+                console.error('[ScreenMediaRecorder] Frame encoding failed', error)
+                this.dispatchEvent(new CustomEvent(ScreenMediaRecorder.events.ERROR, {detail: {error}}))
+            }
+        }
+        finally {
+            this.#frameWriteInFlight = false
+        }
+
+        this.#scheduleNextFrame()
+    }
+
+    #stopScheduling = () => {
+        this.#frameLoopActive = false
+        cancelAnimationFrame(this.#rafId)
+        clearInterval(this.#infoInterval)
+    }
+
+    #clearRuntimeReferences = () => {
+        this.#videoSource = null
+        this.#output = null
+        this.#rafId = null
+        this.#infoInterval = null
+        this.#frameWriteInFlight = false
+        this.#frameLoopActive = false
     }
 
     /** Pause encoding */
@@ -337,15 +439,7 @@ export class ScreenMediaRecorder extends EventTarget {
         this.#isPaused = true
         this.#pausedTime += now - this.#startTime
 
-        // Send INFO event with current duration before pausing
-        this.dispatchEvent(new CustomEvent(ScreenMediaRecorder.events.INFO, {
-            detail: {
-                duration: currentDuration,
-                size:     this.#sizeBytes,
-                fps:      this.#fps,
-                isPaused: true,
-            },
-        }))
+        this.#emitInfo(currentDuration)
 
         document.body.classList.add(ScreenMediaRecorder.CLASSES.PAUSED)
         this.dispatchEvent(new CustomEvent(ScreenMediaRecorder.events.PAUSE))
@@ -360,18 +454,12 @@ export class ScreenMediaRecorder extends EventTarget {
         this.#isPaused = false
         this.#startTime = performance.now()
 
-        // Send INFO event with current duration before resuming
-        this.dispatchEvent(new CustomEvent(ScreenMediaRecorder.events.INFO, {
-            detail: {
-                duration: this.#recordedDuration * 1000,
-                size:     this.#sizeBytes,
-                fps:      this.#fps,
-                isPaused: false,
-            },
-        }))
+        this.#emitInfo()
 
         document.body.classList.remove(ScreenMediaRecorder.CLASSES.PAUSED)
-        this.#recordFrame()
+        if (!this.#frameLoopActive) {
+            this.#scheduleNextFrame()
+        }
         this.dispatchEvent(new CustomEvent(ScreenMediaRecorder.events.RESUME))
     }
 
@@ -381,26 +469,27 @@ export class ScreenMediaRecorder extends EventTarget {
     /** Abort recording and discard data */
     cancelVideo = async () => {
         this.#isRecording = this.#isPaused = false
-        cancelAnimationFrame(this.#rafId)
-        clearInterval(this.#infoInterval)
+        this.#stopScheduling()
 
         if (this.#videoSource) {
             await this.#videoSource.close()
         }
 
         if (this.#output) {
-            await this.#output.abort?.()
+            await this.#output.cancel?.()
         }
 
         if (this.#stream) {
-            this.#stream.getTracks().forEach(track => track.stopVideo())
+            this.#stream.getTracks().forEach(track => track.stop())
         }
 
         if (this.#videoElement) {
+            this.#videoElement.pause?.()
             this.#videoElement.srcObject = null
         }
 
         this.#reset()
+        this.#clearRuntimeReferences()
         document.body.classList.remove(ScreenMediaRecorder.CLASSES.RECORDING, ScreenMediaRecorder.CLASSES.PAUSED)
         this.dispatchEvent(new CustomEvent(ScreenMediaRecorder.events.CANCEL))
     }
@@ -426,10 +515,7 @@ export class ScreenMediaRecorder extends EventTarget {
         this.#extension = extension
         this.#output = new Output({
                                       format,
-                                      target:  new BufferTarget(),
-                                      process: (a, b, c) => {
-                                          console.log(a, b, c)
-                                      },
+                                      target: new BufferTarget(),
                                   })
         await this.#output.setMetadataTags(this.#metadata)
         this.#videoSource = new CanvasSource(this.#canvas, {
@@ -442,31 +528,28 @@ export class ScreenMediaRecorder extends EventTarget {
             height:               safe.height,
         })
 
-        this.#output.addVideoTrack(this.#videoSource, {framerate: this.#fps})
+        const maximumPacketCount = Number.isFinite(this.#maxDuration)
+                                   ? Math.ceil(this.#maxDuration * this.#fps) + this.#fps
+                                   : undefined
+        this.#output.addVideoTrack(this.#videoSource, {
+            frameRate: this.#fps,
+            ...(maximumPacketCount ? {maximumPacketCount} : {}),
+        })
         this.#output.target.onwrite = (_, end) => {
             this.#sizeBytes = end
         }
 
         await this.#output.start()
         this.#isRecording = true
+        this.#isPaused = false
         this.#startTime = performance.now()
         this.#pausedTime = 0
+        this.#nextFrameIndex = 0
         document.body.classList.add(ScreenMediaRecorder.CLASSES.RECORDING)
 
-        // Send initial INFO event with duration 0
-        this.dispatchEvent(new CustomEvent(ScreenMediaRecorder.events.INFO, {
-            detail: {
-                duration: 0,
-                size:     this.#sizeBytes,
-                fps:      this.#fps,
-                isPaused: this.#isPaused,
-            },
-        }))
-
-        this.#recordFrame()
-        this.#infoInterval = setInterval(() => {
-            this.#checkLimits()
-        }, this.#timeslice)
+        this.#emitInfo(0)
+        this.#startMonitoring()
+        this.#scheduleNextFrame()
 
         this.dispatchEvent(new CustomEvent(ScreenMediaRecorder.events.START))
     }
@@ -498,6 +581,13 @@ export class ScreenMediaRecorder extends EventTarget {
         this.#startTime = 0
         this.#pausedTime = 0
         this.#sizeBytes = 0
+        this.#nextFrameIndex = 0
+        this.#frameWriteInFlight = false
+        this.#frameLoopActive = false
+        this.#encodedFrames = 0
+        this.#currentFps = 0
+        this.#lastInfoSampleTimeMs = null
+        this.#lastInfoFrameCount = 0
     }
 
     /** Enforce max duration and max size limits */
@@ -579,8 +669,7 @@ export class ScreenMediaRecorder extends EventTarget {
         }
         this.type = ScreenMediaRecorder.VIDEO
         this.#isRecording = false
-        cancelAnimationFrame(this.#rafId)
-        clearInterval(this.#infoInterval)
+        this.#stopScheduling()
 
         if (this.#videoSource) {
             await this.#videoSource.close()
@@ -592,6 +681,8 @@ export class ScreenMediaRecorder extends EventTarget {
             this.#sizeBytes = this.#blob.size
         }
 
+        this.#emitInfo()
+        this.#clearRuntimeReferences()
         document.body.classList.remove(ScreenMediaRecorder.CLASSES.RECORDING, ScreenMediaRecorder.CLASSES.PAUSED)
         this.dispatchEvent(new CustomEvent(ScreenMediaRecorder.events.STOP, {
             detail: {

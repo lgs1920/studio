@@ -18,7 +18,7 @@ import { WaCard, WaIcon } from '@web.awesome.me/webawesome-pro/dist/react'
 import { memo }           from 'react'
 import './style.css'
 
-export const RecordingInfo = memo(({mediaData, isVideo, adaptiveQualityEnabled = false}) => {
+export const RecordingInfo = memo(({mediaData, isVideo}) => {
     return (
         <WaCard className="recording-info-card">
             <WaIcon className="recording-info-icon" name="crop-simple" variant="regular"/>
@@ -37,23 +37,11 @@ export const RecordingInfo = memo(({mediaData, isVideo, adaptiveQualityEnabled =
                     <span className="recording-info-label">{'Duration'}</span>
                     <span className="recording-info-value">{__.convert(mediaData.duration).toTime()}</span>
 
-                    {adaptiveQualityEnabled
-                     ? (
-                         <>
-                             <span className="recording-info-label recording-info-label-offset">{'Quality'}</span>
-                             <span className="recording-info-value">{'Auto'}</span>
-                         </>
-                     )
-                     : (
-                         <>
-                             <span className="recording-info-label recording-info-label-offset">{'FPS'}</span>
-                             <span className="recording-info-value">{mediaData.fps}</span>
+                    <span className="recording-info-label recording-info-label-offset">{'FPS'}</span>
+                    <span className="recording-info-value">{mediaData.fps}</span>
 
-                             <span className="recording-info-label recording-info-label-offset">{'Quality'}</span>
-                             <span className="recording-info-value">{mediaData.quality?.name}</span>
-                         </>
-                     )
-                    }
+                    <span className="recording-info-label recording-info-label-offset">{'Quality'}</span>
+                    <span className="recording-info-value">{mediaData.quality?.name}</span>
                 </>
             }
         </WaCard>

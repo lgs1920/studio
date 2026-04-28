@@ -37,7 +37,7 @@ export const VideoDownloadAndShareDialog = () => {
     const [filename, setFilename] = useState('')
     const [canDownloadAndShare, setCanDownloadAndShare] = useState(false)
     const [isRecordingInfoOpen, setIsRecordingInfoOpen] = useState(false)
-    const [mediaUrl, setMediaUrl] = useState('')
+    const [mediaUrl, setMediaUrl] = useState(null)
     const _mainVideo = useRef(null)
     const _blurredVideo = useRef(null)
     const _recordingInfoButton = useRef(null)
@@ -362,7 +362,7 @@ export const VideoDownloadAndShareDialog = () => {
         setIsRecordingInfoOpen(false)
         releaseMediaUrl()
         _mediaBlob.current = {blob: null, url: null, filename: ''}
-        setMediaUrl('')
+        setMediaUrl(null)
         lgs.stores.ui.video.editing = false
         setCanDownloadAndShare(false)
         setFilename('')
@@ -472,7 +472,6 @@ export const VideoDownloadAndShareDialog = () => {
                     <RecordingInfo
                         mediaData={mediaData}
                         isVideo={isVideo}
-                        adaptiveQualityEnabled={lgs.settings.ui.video?.adaptiveQuality?.enabled}
                     />
                 </WaPopup>
             </div>

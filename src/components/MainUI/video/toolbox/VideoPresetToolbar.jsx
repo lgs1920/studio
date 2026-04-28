@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-27
- * Last modified: 2026-04-27
+ * Created on: 2026-04-28
+ * Last modified: 2026-04-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -35,8 +35,8 @@ import '../style.css'
 
 export const VideoPresetToolbar = memo(() => {
     const $video = lgs.stores.ui.video
+    const $videoSettings = lgs.settings.ui.video
     const video = useSnapshot($video)
-    const videoSettings = useSnapshot(lgs.settings.ui.video || {})
     const toolbars = useSnapshot(lgs.settings.ui.toolbars)
 
     const [preset, setPreset] = useState(null)
@@ -67,8 +67,8 @@ export const VideoPresetToolbar = memo(() => {
     }, [])
 
     useEffect(() => {
-        const safeFps = getSafeIndex(lgs.settings.ui.video?.fps, ScreenMediaRecorder.FPS, ScreenMediaRecorder.DEFAULT_FPS_INDEX)
-        const safeQuality = getSafeIndex(lgs.settings.ui.video?.quality, ScreenMediaRecorder.QUALITY, ScreenMediaRecorder.DEFAULT_QUALITY_INDEX)
+        const safeFps = getSafeIndex($videoSettings?.fps, ScreenMediaRecorder.FPS, ScreenMediaRecorder.DEFAULT_FPS_INDEX)
+        const safeQuality = getSafeIndex($videoSettings?.quality, ScreenMediaRecorder.QUALITY, ScreenMediaRecorder.DEFAULT_QUALITY_INDEX)
 
         if ($video.fps !== safeFps) {
             $video.fps = safeFps
@@ -76,30 +76,25 @@ export const VideoPresetToolbar = memo(() => {
         if ($video.quality !== safeQuality) {
             $video.quality = safeQuality
         }
-        if (lgs.settings.ui.video.fps !== safeFps) {
-            lgs.settings.ui.video.fps = safeFps
+        if ($videoSettings.fps !== safeFps) {
+            $videoSettings.fps = safeFps
         }
-        if (lgs.settings.ui.video.quality !== safeQuality) {
-            lgs.settings.ui.video.quality = safeQuality
+        if ($videoSettings.quality !== safeQuality) {
+            $videoSettings.quality = safeQuality
         }
-    }, [$video, getSafeIndex])
+    }, [$video, $videoSettings, getSafeIndex])
 
     /**
      * Sync local preset state when store indexes change
      */
     useEffect(() => {
-        if (videoSettings?.adaptiveQuality?.enabled) {
-            setPreset('auto')
-            return
-        }
-
         const current = getPresets(video.fps, video.quality)
         setPreset(current.key)
 
         if (current.key !== 'custom') {
             setOpen(false)
         }
-    }, [video.fps, video.quality, videoSettings?.adaptiveQuality?.enabled, getPresets])
+    }, [video.fps, video.quality, getPresets])
 
     /**
      * Handle click-away to close custom popup
@@ -121,11 +116,6 @@ export const VideoPresetToolbar = memo(() => {
      * Update store indexes based on preset selection
      */
     const handleChangePreset = useCallback((key, event) => {
-        if (key === 'auto') {
-            lgs.settings.ui.video.adaptiveQuality = {...lgs.settings.ui.video.adaptiveQuality, enabled: true}
-            return
-        }
-
         if (key === 'custom') {
             event?.stopPropagation()
             setOpen(prev => !prev)
@@ -139,14 +129,10 @@ export const VideoPresetToolbar = memo(() => {
             $video.quality = config.quality
 
             // Sync settings
-            lgs.settings.ui.video.fps = config.fps
-            lgs.settings.ui.video.quality = config.quality
-
-            if (lgs.settings.ui.video.adaptiveQuality?.enabled) {
-                lgs.settings.ui.video.adaptiveQuality = {...lgs.settings.ui.video.adaptiveQuality, enabled: false}
-            }
+            $videoSettings.fps = config.fps
+            $videoSettings.quality = config.quality
         }
-    }, [$video])
+    }, [$video, $videoSettings])
 
     return (
         <div ref={_toolbarRef} className="video-preset-widget-wrapper lgs-card wa-theme-lgs1920-on-map">
@@ -187,15 +173,6 @@ export const VideoPresetToolbar = memo(() => {
                             )}
                         </Fragment>
                     ))}
-                    <WaButton
-                        className={classNames('video-choice-button', {'is-selected': preset === 'auto'})}
-                        size="small"
-                        variant="neutral"
-                        appearance={preset === 'auto' ? 'outlined' : 'plain'}
-                        onClick={() => handleChangePreset('auto')}
-                    >
-                        {'Auto'}
-                    </WaButton>
                 </div>
             </div>
         </div>
