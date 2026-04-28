@@ -90,6 +90,7 @@ export const VideoRecorderToolbar = ({toolbar}) => {
     const [state, setState] = useState({
                                            recordedDuration: 0,
                                            recordedSize: 0,
+                                           currentFps: 0,
                                            finalizing:   false,
                                        })
 
@@ -111,6 +112,13 @@ export const VideoRecorderToolbar = ({toolbar}) => {
      */
     const formatSize = useCallback((bytes) => {
         return UnitUtils.convert(bytes).toBytesUnit()
+    }, [])
+
+    const formatCurrentFps = useCallback((fps) => {
+        if (!Number.isFinite(fps) || fps <= 0) {
+            return '-- fps'
+        }
+        return `${Math.round(fps)} fps`
     }, [])
 
     /**
@@ -141,6 +149,7 @@ export const VideoRecorderToolbar = ({toolbar}) => {
                 ...prev,
                 recordedSize:     event.detail.size,
                 recordedDuration: event.detail.duration,
+                currentFps: event.detail.currentFps ?? 0,
             }))
         }
 
@@ -194,6 +203,7 @@ export const VideoRecorderToolbar = ({toolbar}) => {
                             size:         0,
                             recordedDuration: 0,
                             recordedSize: 0,
+                            currentFps: 0,
                             finalizing:   false,
                         })
 
@@ -246,6 +256,7 @@ export const VideoRecorderToolbar = ({toolbar}) => {
                         editing:      true,
                         recordedDuration: 0,
                         recordedSize: 0,
+                        currentFps: 0,
                         finalizing:   false,
                     })
         showToast('warning', 'Recording has been canceled!')
@@ -265,6 +276,7 @@ export const VideoRecorderToolbar = ({toolbar}) => {
             />
             <span className="duration">{formatDuration(state.recordedDuration)}</span>
             <span className="size">{formatSize(state.recordedSize)}</span>
+            <span className="current-fps">{formatCurrentFps(state.currentFps)}</span>
             {state.finalizing ? (
                 <div className="blinking">Finalisation...</div>
             ) : (

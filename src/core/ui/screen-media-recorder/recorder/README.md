@@ -1,428 +1,312 @@
-# VideoRecorder
-
-**VideoRecorder** is a singleton JavaScript class designed to record video from HTML canvas elements or MediaStream
-sources (e.g., webcam, screen capture) in a browser environment using the **Mediabunny** library. It is part of the *
-*LGS1920/studio** project, providing robust video recording capabilities with customizable settings for frame rate,
-quality, maximum duration, and size limits. The class emits custom DOM events to facilitate integration with UI
-components, such as a React-based toolbar, and supports advanced features like pausing, resuming, canceling, and
-downloading recordings.
-
-## Table of Contents
-
-- [Features](#features)
-- [Installation](#installation)
-- [Usage](#usage)
-    - [Basic Example](#basic-example)
-    - [Recording a Canvas](#recording-a-canvas)
-    - [Recording a MediaStream](#recording-a-mediastream)
-  - [Handling Downloads](#handling-downloads)
-- [API Reference](#api-reference)
-    - [Static Properties](#static-properties)
-    - [Instance Properties](#instance-properties)
-    - [Methods](#methods)
-- [Events](#events)
-- [Configuration Options](#configuration-options)
-- [Error Handling](#error-handling)
-- [Dependencies](#dependencies)
-- [License](#license)
-- [Contact](#contact)
-
-## Features
-
-- **Singleton Pattern**: Ensures a single instance of the recorder for consistent state management across the
-  application.
-- **Flexible Source Support**: Records from HTML canvas elements (single or multiple) or MediaStream sources (e.g.,
-  webcam, screen).
-- **Customizable Recording**:
-    - Supports `video/mp4` format using Mediabunny's `Mp4OutputFormat`.
-  - Configurable frame rate (15, 30, 45, 60 FPS), quality (`QUALITY_LOW`, `QUALITY_MEDIUM`, `QUALITY_HIGH`,
-    `QUALITY_VERY_HIGH`), maximum duration, and maximum size.
-- **Frame-Based Processing**: Uses `requestAnimationFrame` for frame capture and periodic checks, ensuring smooth
-  integration with browser rendering.
-- **Event-Driven Architecture**: Emits custom DOM events (`video/start`, `video/stop`, `video/info`, etc.) for seamless
-  integration with UI components.
-- **Clipping and Compositing**: Supports clipping regions for canvas sources and compositing multiple canvases into a
-  single stream.
-- **Download Capability**: Supports multiple download types:
-    - `local`: Browser-based download via a temporary anchor link.
-    - `local-filesystem`: Uses the File System Access API for saving to the local filesystem with progress reporting.
-    - (Note: `remote` download is referenced but not implemented in the current code; future updates may add this
-      feature.)
-- **Pause/Resume**: Allows pausing and resuming recordings with accurate duration tracking, excluding paused time.
-- **Cancel Recording**: Supports canceling an ongoing recording without producing output, preserving the source for
-  future recordings.
-- **Error Handling**: Robust error detection and reporting via custom `video/error` events.
-- **Resource Management**: Proper cleanup of streams, canvases, and resources via the `dispose` method.
-- **Metadata Support**: Embeds user-provided metadata (e.g., artist, album, date) in the output container.
-
-## Installation
-
-The `VideoRecorder` class is a JavaScript module that relies on the **Mediabunny** library for video encoding and
-recording. To use it in your project:
-
-1. **Install Dependencies**:
-   Ensure Mediabunny and Luxon are installed in your project using Bun:
-   ```bash
-   bun add mediabunny luxon
-   ```
-
-2. **Copy the File**:
-   Place `VideoRecorder.js` in your project's source directory (e.g., `src/utils/`).
-
-3. **Import the Module**:
-   Import the `VideoRecorder` class in your JavaScript or React application:
-   ```javascript
-   import { VideoRecorder } from './path/to/VideoRecorder.js'
-   ```
-
-4. **Ensure Browser Compatibility**:
-   Verify that your target browsers support the necessary APIs for Mediabunny, canvas/MediaStream capture,
-   `requestAnimationFrame`, and the File System Access API (for `local-filesystem` downloads). The `video/mp4` format
-   requires browser support for MP4 encoding.
-
-## Usage
-
-### Basic Example
-
-Initialize and start recording a default canvas stream:
-
-```javascript
-/**
- * Basic example of recording a default canvas and downloading the result
- */
-import { ScreenMediaRecorder, QUALITY_HIGH } from './ScreenMediaRecorder.js'
-
-const recorder = new ScreenMediaRecorder()
-
-// Initialize with custom settings
-recorder.initialize({
-                        maxDuration: 10 * 60 * 1000, // 10 minutes
-                        fps:         60,
-                        quality:  QUALITY_HIGH,
-                        metadata: {artist: 'LGS1920', title: 'Demo Recording'}
-                    })
-
-// Start recording
-recorder.startVideo()
-
-// Stop recording after 5 seconds and download
-setTimeout(() => {
-    recorder.stopVideo().then(() => {
-        recorder.download({type: 'local', filename: 'my-video.mp4'})
-    })
-}, 5000)
-```
-
-### Recording a Canvas
-
-Record from a specific canvas with clipping:
-
-```javascript
-/**
- * Example of recording from a canvas with clipping
- */
-import { ScreenMediaRecorder, QUALITY_MEDIUM } from './ScreenMediaRecorder.js'
-
-const canvas = document.createElement('canvas')
-canvas.width = 1920
-canvas.height = 1080
-const ctx = canvas.getContext('2d')
-// Draw something on the canvas
-ctx.fillStyle = 'blue'
-ctx.fillRect(0, 0, canvas.width, canvas.height)
-
-const recorder = new ScreenMediaRecorder()
-recorder.initialize({
-                        quality:  QUALITY_MEDIUM,
-                        metadata: {description: 'Canvas recording example'}
-                    })
-
-// Set the canvas as the source with a clipping region
-recorder.setSource([canvas], {
-    clipX:      100,
-    clipY:      100,
-    clipWidth:  800,
-    clipHeight: 600,
-    width:      800, // Output resolution
-    height:     600
-})
-
-// Start recording
-recorder.startVideo()
-
-// Stop after 5 seconds
-setTimeout(() => recorder.stopVideo(), 5000)
-```
-
-### Recording a MediaStream
-
-Record from a webcam stream:
-
-```javascript
-/**
- * Example of recording from a webcam stream
- */
-import { ScreenMediaRecorder } from './ScreenMediaRecorder.js'
-
-const startWebcamRecording = async () => {
-    const stream = await navigator.mediaDevices.getUserMedia({video: true})
-    const recorder = new ScreenMediaRecorder()
-    recycler.initialize({
-                            metadata: {genre: 'Webcam', date: new Date().toISOString()}
-                        })
-
-    // Set the webcam stream as the source
-    await recorder.setStream(stream)
-
-    // Start recording
-    recorder.startVideo()
-
-    // Stop after 5 seconds and clean up
-    setTimeout(() => {
-        recorder.stopVideo()
-        recorder.dispose()
-    }, 5000)
-}
-
-startWebcamRecording()
-```
-
-### Handling Downloads
-
-Handle different download types (`local`, `local-filesystem`):
-
-```javascript
-/**
- * Example of handling downloads with File System Access API
- */
-import { ScreenMediaRecorder } from './ScreenMediaRecorder.js'
-
-const recorder = new ScreenMediaRecorder()
-recorder.initialize({
-                        maxDuration: 5 * 60 * 1000 // 5 minutes
-                    })
-
-// Listen for download events
-recorder.addEventListener(ScreenMediaRecorder.events.DOWNLOAD, ({detail}) => {
-    console.log('Download started:', detail.filename, detail.type)
-    if (detail.type === 'local-filesystem') {
-        console.log('Progress:', detail.progress * 100, '%')
-    }
-})
-
-// Start and stop recording
-recorder.startVideo()
-setTimeout(() => {
-    recorder.stopVideo().then(() => {
-        // Download to local filesystem
-        recorder.download({type: 'circular-filesystem', filename: 'my-video.mp4'})
-    })
-}, 5000)
-```
-
-## API Reference
-
-### Static Properties
-
-- **`VideoRecorder.events`**:
-    - Object defining custom event names for the recording lifecycle.
-    - Example: `VideoRecorder.events.START` → `'video/start'`.
-    - See [Events](#events) for details.
-
-- **`VideoRecorder.CLASSES`**:
-    - Object defining CSS classes applied to the `<body>` element during recording (`recording-in-progress`) and pause (
-      `recording-paused`).
-
-- **`VideoRecorder.QUALITY`**:
-    - Array of quality settings (`QUALITY_LOW`, `QUALITY_MEDIUM`, `QUALITY_HIGH`, `QUALITY_VERY_HIGH`) with `value`,
-      `name`, and `short` properties.
-
-- **`VideoRecorder.FPS`**:
-    - Array of supported frame rates (15, 30, 45, 60).
-
-- **`VideoRecorder.DEFAULT_FPS`**:
-    - Default frame rate index (optional, defaults to 30 FPS if undefined).
-
-- **`VideoRecorder.DEFAULT_QUALITY`**:
-    - Default quality index (optional, defaults to `QUALITY_MEDIUM` if undefined).
-
-### Instance Properties
-
-- **`size`** (getter):
-    - Returns the total bytes recorded (`number`).
-    - Updated during recording via the `onwrite` callback and finalized in the `stop` method.
-
-- **`duration`** (getter):
-    - Returns the elapsed recording time in milliseconds, excluding paused time (`number`).
-
-### Methods
-
-1. **`initialize = ({ maxDuration, fps, timeslice, quality, maxSize, metadata } = {})`**
-    - Configures the recorder with recording parameters and creates a default canvas if no stream is set.
-    - Parameters:
-        - `maxDuration`: Maximum recording duration in milliseconds (default: `Infinity`).
-        - `fps`: Frames per second (default: 30).
-        - `timeslice`: Interval for `INFO` events in milliseconds (default: 1000).
-        - `quality`: Recording quality (default: `QUALITY_MEDIUM`).
-        - `maxSize`: Maximum recording size in bytes (default: `Infinity`).
-        - `metadata`: User-provided metadata for the output container (default: `{ date: new Date() }`).
-    - Throws: `Error` if called during recording.
-
-2. **`setSource = (canvases, { width, height, clipX, clipY, clipWidth, clipHeight } = {})`**
-    - Sets one or more canvases as the recording source with optional clipping.
-    - Parameters:
-        - `canvases`: Array of `HTMLCanvasElement`.
-        - `options`: Object with `width`, `height`, `clipX`, `clipY`, `clipWidth`, `clipHeight`.
-    - Throws: `Error` if invalid canvases, clipping parameters, or called during recording.
-
-3. **`setStream = async (stream)`**
-    - Sets a `MediaStream` as the recording source.
-    - Parameters:
-        - `stream`: `MediaStream` instance.
-    - Throws: `TypeError` if `stream` is not a `MediaStream`; `Error` if called during recording.
-
-4. **`start = async ()`**
-    - Starts recording using a frame-based loop (`requestAnimationFrame`) and emits `START` event.
-    - Throws: `Error` if no active source or recording is already in progress.
-
-5. **`stop = async ()`**
-    - Stops recording, finalizes the output, and emits `STOP` and `FINALIZE` events with the recorded `Blob`,
-      `duration`, `metadata`, and `size`.
-    - Throws: `Error` if no active recording.
-
-6. **`cancel = async ()`**
-    - Cancels an ongoing recording without finalizing or producing output, emits `CANCEL` event, and preserves the
-      source for future recordings.
-    - Does not emit `STOP` or `FINALIZE` events.
-
-7. **`pause = ()`**
-    - Pauses recording and emits `PAUSE` event.
-    - Throws: `Error` if not recording.
-
-8. **`resume = ()`**
-    - Resumes a paused recording and emits `RESUME` event.
-    - Throws: `Error` if not paused.
-
-9. **`isRecording = ()`**
-    - Returns `true` if recording is active (not paused).
-
-10. **`download = async ({ filename, type, url, headers, path } = {})`**
-    - Triggers a download of the recorded video with a timestamped filename.
-    - Parameters:
-        - `filename`: Name of the file (default: generated from `APP_KEY` with timestamp).
-        - `type`: Download type (`'local'`, `'local-filesystem'`; default: `'local'`).
-        - `url`: HTTPS URL for remote upload (not implemented in current code).
-        - `headers`: HTTP headers for remote upload (not implemented in current code).
-        - `path`: File path for `local-filesystem` download.
-    - Emits `DOWNLOAD` event with progress for `local-filesystem`.
-    - Throws: `Error` if no recorded data, invalid download type, or missing required options.
-
-11. **`dispose = ()`**
-    - Cleans up resources (stops recording, streams, canvases, etc.) and resets internal state.
-
-12. **`filename = ({ filename, useTimestamp } = {})`**
-    - Generates a filename with an optional timestamp prefix.
-    - Parameters:
-        - `filename`: Base filename (default: `APP_KEY`).
-        - `useTimestamp`: Include timestamp prefix (default: `true`).
-    - Returns: Formatted filename as a string.
-
-## Events
-
-The `VideoRecorder` class extends `EventTarget` and emits the following custom DOM events:
-
-| Event Name           | Description                              | Detail Properties                                                                                            |
-|----------------------|------------------------------------------|--------------------------------------------------------------------------------------------------------------|
-| `video/start`        | Fired when recording starts              | `timestamp`                                                                                                  |
-| `video/stop`         | Fired when recording stops               | `blob`, `metadata`, `duration`, `size`, `timestamp`                                                          |
-| `video/info`         | Fired periodically during recording      | `timestamp`, `duration`, `size`, `fps`, `quality`                                                            |
-| `video/pause`        | Fired when recording is paused           | `timestamp`, `duration`                                                                                      |
-| `video/resume`       | Fired when recording resumes             | `timestamp`, `duration`                                                                                      |
-| `video/source`       | Fired when a new source is set           | `type`, `timestamp`, `width`, `height`, `canvases`, `clipX`, `clipY`, `clipWidth`, `clipHeight` (for canvas) |
-| `video/error`        | Fired on errors                          | `error`, `timestamp`                                                                                         |
-| `video/download`     | Fired when a video is downloaded         | `type`, `download`, `timestamp`, `filename`, `size`, `duration`, `mime`, `progress` (for `local-filesystem`) |
-| `video/max-duration` | Fired when max duration limit is reached | `timestamp`, `duration`, `max`                                                                               |
-| `video/max-size`     | Fired when max size limit is reached     | `timestamp`, `size`, `max`                                                                                   |
-| `video/finalize`     | Fired when output is finalized           | `blob`, `metadata`, `duration`, `size`, `timestamp`                                                          |
-| `video/cancel`       | Fired when recording is canceled         | `timestamp`                                                                                                  |
-
-Example of listening to events:
-
-```javascript
-recorder.addEventListener(ScreenMediaRecorder.events.START, () => {
-    console.log('Recording started')
-})
-recorder.addEventListener(ScreenMediaRecorder.events.STOP, ({detail}) => {
-    console.log('Recording stopped:', detail.size, 'bytes,', detail.duration, 'ms')
-})
-```
-
-## Configuration Options
-
-- **`initialize` Options**:
-    - `maxDuration`: Maximum recording duration in milliseconds (default: `Infinity`).
-  - `fps`: Frames per second (default: 30).
-  - `timeslice`: Interval for `INFO` events in milliseconds (default: 1000).
-  - `quality`: Recording quality (`QUALITY_LOW`, `QUALITY_MEDIUM`, `QUALITY_HIGH`, `QUALITY_VERY_HIGH`; default:
-    `QUALITY_MEDIUM`).
-  - `maxSize`: Maximum recording size in bytes (default: `Infinity`).
-  - `metadata`: User-provided metadata (e.g., artist, album, date; default: `{ date: new Date() }`).
-
-- **`setSource` Options**:
-    - `width`, `height`: Output resolution in physical pixels (defaults to `clipWidth`, `clipHeight`).
-  - `clipX`, `clipY`: Top-left corner of the clipping region in physical pixels (default: 0).
-    - `clipWidth`, `clipHeight`: Clipping region size in physical pixels (defaults to canvas dimensions).
-
-- **`download` Options**:
-    - `type`: Download type (`'local'`, `'local-filesystem'`; default: `'local'`).
-    - `filename`: Name of the file (default: generated with timestamp and `APP_KEY`).
-    - `url`: HTTPS URL for remote upload (not implemented).
-    - `headers`: HTTP headers for remote upload (not implemented).
-    - `path`: File path for `local-filesystem` download.
-
-## Error Handling
-
-The class throws errors for invalid operations and emits `video/error` events with details:
-
-```javascript
-recorder.addEventListener(ScreenMediaRecorder.events.ERROR, ({detail}) => {
-    console.error('Recorder error:', detail.error.message)
-})
-```
-
-Common errors:
-
-- No active source (canvas or MediaStream).
-- Invalid canvas or clipping parameters.
-- Operations attempted during active recording.
-- No recorded data for download.
-- Invalid download type or missing required options.
-- Failure to set metadata (non-fatal, reported via `ERROR` event).
-
-## Dependencies
-
-- **Mediabunny**: Used for video encoding and recording (`Output`, `Mp4OutputFormat`, `BufferTarget`, `CanvasSource`).
-- **Luxon**: Used for timestamp formatting in metadata and filenames.
-- **@Core/constants**: Provides project-specific constants (e.g., `APP_KEY`, `SECOND`).
-
-**Browser Support**:
-
-- Requires modern browsers with support for canvas APIs, MediaStream, `requestAnimationFrame`, and Mediabunny's encoding
-  capabilities.
-- The `video/mp4` format requires browser support for MP4 encoding.
-- The File System Access API (for `local-filesystem` downloads) is supported in modern browsers like Chrome and Edge but
-  may require a fallback for unsupported browsers.
-
-## License
-
-Copyright © 2025 LGS1920. All rights reserved.
-
-This software is proprietary and may not be copied, modified, or distributed without permission from LGS1920.
-
-## Contact
-
-- **Email**: [contact@lgs1920.fr](mailto:contact@lgs1920.fr)
-- **Team**: LGS1920 Team
-- **Project**: LGS1920/studio
-
-For support or inquiries, please contact the LGS1920 team via email.
+# ScreenMediaRecorder
+
+This document describes the current recording pipeline used by the studio video tools.
+It covers the recorder itself, the canvas compositor that feeds it, the sizing policy for retina/mobile devices, the
+browser codec strategy, and the metadata exposed to the final dialog.
+
+This README is intentionally practical. It documents what the code does today, not an idealized design.
+
+## Scope
+
+Main files involved in recording:
+
+- `src/core/ui/screen-media-recorder/recorder/ScreenMediaRecorder.js`
+- `src/core/ui/screen-media-recorder/composer/CanvasOverlayComposer.js`
+- `src/components/MainUI/video/VideoRecordingScreenArea.jsx`
+- `src/components/MainUI/video/VideoDownloadAndShareDialog.jsx`
+- `src/components/MainUI/video/RecordingInfo.jsx`
+
+For the compositor internals, see also:
+
+- `src/core/ui/screen-media-recorder/composer/README.md`
+
+## Current pipeline
+
+The recording flow is:
+
+1. `VideoRecordingScreenArea` resolves the crop area and user settings.
+2. It computes a bounded output size from crop dimensions, FPS, quality, browser, and device DPR.
+3. `CanvasOverlayComposer` renders the scene crop plus UI overlays into a dedicated output canvas.
+4. `ScreenMediaRecorder` uses that composed canvas as the source for `mediabunny` `CanvasSource`.
+5. The recorder writes MP4 data into a `BufferTarget`.
+6. The final dialog reads `mediaData` from the recorder and exposes preview, download, share, and recording stats.
+
+This is a real-time recorder. It does not intentionally build a delayed frame queue to preserve every frame under
+encoder pressure. The priority is:
+
+- keep the UI responsive,
+- keep real-time duration coherent,
+- avoid memory blowups,
+- finalize into a normal MP4 file.
+
+## Why the recorder works this way
+
+Several more aggressive strategies were tested and rejected:
+
+- writing progressively to OPFS during recording:
+  - lower RAM,
+  - but too much performance cost in the current browser matrix.
+- building a delayed video queue to preserve every frame:
+  - smoother motion on paper,
+  - but unacceptable lag, long catch-up phases, and poor Firefox behavior.
+- pushing multiple logical frames from one rendered canvas state:
+  - improved nominal FPS counters,
+  - but could visually freeze motion near the end of the video.
+
+The retained model is closer to the beta behavior:
+
+- capture in real time,
+- gate capture by the user-selected FPS,
+- do not `await` encoder writes in the frame loop,
+- wait for in-flight writes only when stopping.
+
+## Recorder behavior
+
+### Source types
+
+`ScreenMediaRecorder` supports:
+
+- composed canvas recording for video,
+- stream-to-canvas recording,
+- canvas snapshot capture for still images.
+
+Video recording in the studio path uses the composed canvas.
+
+### Frame scheduling
+
+The recorder uses `requestAnimationFrame` and a target frame interval:
+
+- `#frameIntervalMs = 1000 / fps`
+- `#nextFrameDueMs` tracks when the next frame may be submitted
+
+If the current tick arrives too early, the recorder skips submission and schedules the next tick.
+If it is due, it submits one frame to `CanvasSource.add(...)`.
+
+Important detail: frame submission is not awaited inside the render loop.
+Instead, the resulting promise is stored in `#pendingFrameWrites`.
+
+This avoids stalling the main capture loop on encoder backpressure, while still allowing the recorder to wait for all
+pending writes during finalization.
+
+### Stop / finalize
+
+When `stopVideo()` runs, the recorder:
+
+1. stops scheduling,
+2. waits for all pending frame write promises,
+3. closes the `CanvasSource`,
+4. finalizes the `Output`,
+5. creates the MP4 `Blob` from `BufferTarget.buffer`,
+6. dispatches the `video/stop` event with final media data.
+
+This is why finalization can be noticeably expensive, especially on Firefox with VP9.
+
+### Metrics emitted by the recorder
+
+The recorder exposes:
+
+- `fps`: target FPS chosen by the user
+- `currentFps`: short-window live FPS estimate during recording
+- `averageFps`: real average FPS over the captured duration
+- `duration`
+- `size`
+- `codec`
+- `dimensions`
+
+`averageFps` is the value that should be treated as the truthful final FPS for the saved clip.
+
+## Browser codec policy
+
+Codec selection is explicit and intentionally conservative:
+
+- Firefox: `vp9` only
+- Chromium browsers (`Chrome`, `Edge`, Android Chromium): `avc`, then `vp9`
+- `av1` is excluded from the interactive recorder path
+
+Rationale:
+
+- Firefox live recording was unstable or too costly with other strategies.
+- Chromium can often do better with AVC, but falls back to VP9 when AVC is not encodable for the current config.
+- AV1 is too expensive for an interactive capture workflow.
+
+At start, the recorder logs a codec probe:
+
+- browser
+- dimensions
+- bitrate
+- candidate codecs
+- support result per candidate
+
+Then it logs the actual chosen codec when recording starts.
+
+## Output size policy
+
+The recorder does not encode blindly at `cropWidth * devicePixelRatio`.
+
+That naive rule is too expensive on:
+
+- Android devices with high DPR,
+- desktop retina displays,
+- Firefox,
+- higher FPS settings.
+
+Instead, `VideoRecordingScreenArea` computes a bounded output size from:
+
+- crop width/height,
+- target FPS,
+- quality preset,
+- browser factor,
+- device DPR,
+- high-DPR policy,
+- mobile policy.
+
+### Pixel budget
+
+Base budgets are defined per FPS:
+
+- 30 FPS: `2_800_000` pixels
+- 45 FPS: `2_250_000` pixels
+- 60 FPS: `1_700_000` pixels
+
+Then the budget is adjusted by:
+
+- quality factor,
+- Firefox factor,
+- high-DPR factor,
+- mobile factor.
+
+### High-DPR handling
+
+High-DPR devices are supported on both mobile and desktop.
+
+The code caps usable DPR per platform and FPS:
+
+- desktop caps are higher,
+- mobile caps are lower,
+- both stay below raw native retina when needed.
+
+This gives a retina-like output without the full cost of encoding at native device DPR.
+
+The result of the calculation is:
+
+- target encoded width/height,
+- an `outputDpr` used by the compositor backing canvas.
+
+That means the compositor and the recorder are aligned on the same real output size.
+
+## CanvasOverlayComposer role
+
+`CanvasOverlayComposer` is responsible for producing the actual recording canvas.
+
+It:
+
+- crops the source scene,
+- draws overlays,
+- reproduces backdrop blur and rounded masks where needed,
+- uses `outputDpr` for the output canvas backing store,
+- throttles its own work to the selected FPS.
+
+The recorder does not encode the original scene canvas directly. It encodes the composer output.
+
+## Final dialog behavior
+
+`VideoDownloadAndShareDialog` and `RecordingInfo` consume `__.recorder.mediaData`.
+
+Current behavior:
+
+- preview video/image from the final blob URL,
+- download via the recorder API,
+- share via Web Share when available,
+- show recording info in a popup card.
+
+The info popup now uses:
+
+- actual dimensions,
+- duration,
+- size,
+- quality,
+- average FPS for video
+
+The final dialog should never present the target FPS as if it were the recorded FPS.
+
+## Logs and diagnostics
+
+The recorder currently logs:
+
+1. codec probe results,
+2. recording start info,
+3. recording finalize info.
+
+Typical fields:
+
+- browser
+- codec
+- dimensions
+- target FPS
+- average FPS
+- bitrate / quality
+- final size
+- duration
+
+These logs are there to answer practical questions quickly:
+
+- Did Chromium really use AVC?
+- Did Firefox stay on VP9?
+- What exact output size was used?
+- Is the recorded average FPS close to the target?
+
+## Known tradeoffs
+
+### Firefox finalization
+
+Firefox can still be slow when finalizing VP9 output.
+
+That cost is mostly structural:
+
+- encoder flush,
+- MP4 finalization,
+- blob construction from `BufferTarget`.
+
+This is not solved by the current architecture.
+
+### BufferTarget memory usage
+
+Video data stays in memory until finalization completes.
+
+That keeps the runtime path fast enough today, but it means:
+
+- RAM grows with recording duration,
+- finalization still has a non-trivial cost.
+
+OPFS / streamed targets were evaluated, but are not enabled in the retained implementation because the runtime cost was
+too high for the current browsers and workload.
+
+### Real-time priority
+
+The recorder favors real-time capture stability over guaranteed retention of every conceptual frame under heavy load.
+
+This is deliberate. The alternatives were worse in practice for this product.
+
+## Extension points
+
+If recording quality or performance needs more work, the next safe levers are:
+
+1. adjust pixel budgets by FPS and quality,
+2. adjust desktop/mobile DPR caps,
+3. inspect codec probe logs per browser,
+4. revisit storage strategy only if memory becomes the primary problem.
+
+The first place to tune should be `VideoRecordingScreenArea.jsx`, not the recorder scheduler.
+
+## Summary
+
+The current implementation is built around a few fixed decisions:
+
+- real-time recording,
+- bounded output sizing,
+- compositor-backed canvas capture,
+- explicit browser codec policy,
+- truthful final stats in the UI.
+
+That keeps the pipeline understandable and debuggable, which matters more here than chasing theoretical maximum quality
+with unstable runtime behavior.

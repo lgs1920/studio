@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-27
- * Last modified: 2026-04-27
+ * Created on: 2026-04-28
+ * Last modified: 2026-04-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -36,10 +36,6 @@ export const VideoQualityToolbar = ({choicesOnMap = false}) => {
     const handleChangeQuality = (index) => {
         $video.quality = index
         $videoSettings.quality = index
-
-        if ($videoSettings.adaptiveQuality?.enabled) {
-            $videoSettings.adaptiveQuality = {...$videoSettings.adaptiveQuality, enabled: false}
-        }
     }
 
     return (

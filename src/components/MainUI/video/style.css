@@ -44,6 +44,7 @@
 
 .video-recorder-widget .duration,
 .video-recorder-widget .size,
+.video-recorder-widget .current-fps,
 .video-recorder-widget .video-recorder-spacer {
     display: inline-flex;
     width: max-content;
@@ -53,7 +54,8 @@
 }
 
 .video-recorder-widget .duration,
-.video-recorder-widget .size {
+.video-recorder-widget .size,
+.video-recorder-widget .current-fps {
     white-space: nowrap;
 }
 
