@@ -57,6 +57,7 @@ export class CanvasOverlayComposer {
      * @param {number} [options.width=1920] - Output width in CSS pixels.
      * @param {number} [options.height=1080] - Output height in CSS pixels.
      * @param {number} [options.fps=0] - Target FPS for composition (0 = no throttle).
+     * @param {number} [options.outputDpr=window.devicePixelRatio] - Backing-store scale for the output canvas.
      * @param {Function|null} [options.flushWebGLBuffer=null] - Optional callback to flush a WebGL scene.
      */
     constructor(sourceCanvas, options = {}) {
@@ -71,6 +72,7 @@ export class CanvasOverlayComposer {
                   width = 1920,
                   height = 1080,
                   fps = 0,
+                  outputDpr = window.devicePixelRatio || 1,
                   flushWebGLBuffer = null,
               } = options
 
@@ -79,6 +81,7 @@ export class CanvasOverlayComposer {
         this.#outH = height
         this.#minFrameMs = (typeof fps === 'number' && fps > 0) ? (1000 / fps) : 0
         this.#fixedMinFrameMs = this.#minFrameMs
+        this.#dpr = Math.max(1, Number(outputDpr) || 1)
         this.#flushWebGLBuffer = typeof flushWebGLBuffer === 'function' ? flushWebGLBuffer : null
 
         this.#outputCanvas = document.createElement('canvas')

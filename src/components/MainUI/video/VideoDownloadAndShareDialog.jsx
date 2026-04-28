@@ -43,6 +43,7 @@ export const VideoDownloadAndShareDialog = () => {
     const _recordingInfoButton = useRef(null)
     const _recordingInfoPopup = useRef(null)
     const _mediaBlob = useRef({blob: null, url: null, filename: ''})
+    const _shareInFlight = useRef(false)
     const releaseMediaUrl = useCallback(() => {
         const url = _mediaBlob.current.url
         if (url) {
@@ -62,6 +63,7 @@ export const VideoDownloadAndShareDialog = () => {
             size:       0,
             duration:   0,
             fps:        0,
+            averageFps: 0,
             dimensions: {width: 0, height: 0},
             quality:    {name: 'Unknown'},
             ratio:      {label: 'Unknown'},
@@ -77,6 +79,7 @@ export const VideoDownloadAndShareDialog = () => {
                     size:       Number(data.size) || 0,
                     duration:   Number(data.duration) || 0,
                     fps:        Number(data.fps) || 0,
+                    averageFps: Number(data.averageFps) || 0,
                     dimensions: {
                         width:  Number(data.dimensions?.width) || 0,
                         height: Number(data.dimensions?.height) || 0,
@@ -172,6 +175,7 @@ export const VideoDownloadAndShareDialog = () => {
             __.recorder.removeEventListener(ScreenMediaRecorder.events.STOP, handleStopRecording)
             __.recorder.removeEventListener(ScreenMediaRecorder.events.CAPTURED, handleCapture)
             releaseMediaUrl()
+            void __.recorder?.releaseMedia?.()
         }
     }, [releaseMediaUrl])
 
@@ -262,15 +266,19 @@ export const VideoDownloadAndShareDialog = () => {
      * Handle share action with Web Share API fallback.
      */
     const handleShare = useCallback(async () => {
+        if (_shareInFlight.current) {
+            return
+        }
         const blob = _mediaBlob.current.blob
         if (!(blob instanceof Blob) || blob.size === 0) {
             UIToast.error({
                               caption: 'Share',
                               text:    'No media is available to share.',
-                          })
+            })
             return
         }
 
+        _shareInFlight.current = true
         const isVideo = __.recorder.isVideo()
         const extension = isVideo ? getVideoExtension() : lgs.settings.ui.video.image
         const file = new File(
@@ -286,12 +294,21 @@ export const VideoDownloadAndShareDialog = () => {
         }
 
         try {
-            if (navigator.canShare?.(shareData)) {
-                await navigator.share(shareData)
-                return
-            }
-
             if (navigator.share) {
+                try {
+                    await navigator.share(shareData)
+                    return
+                }
+                catch (error) {
+                    if (error?.name === 'AbortError') {
+                        return
+                    }
+
+                    if (!['TypeError', 'DataError', 'NotSupportedError'].includes(error?.name)) {
+                        throw error
+                    }
+                }
+
                 await navigator.share({
                                           title: shareData.title,
                                           text:  shareData.text,
@@ -315,13 +332,10 @@ export const VideoDownloadAndShareDialog = () => {
                               text:    'Unable to open the share dialog on this device.',
                           })
         }
-    }, [getVideoExtension, getVideoMimeType])
-
-    const handleShareClick = useCallback((event) => {
-        if (event.detail === 0) {
-            void handleShare()
+        finally {
+            _shareInFlight.current = false
         }
-    }, [handleShare])
+    }, [getVideoExtension, getVideoMimeType])
 
     const mediaData = getMediaData()
     const isVideo = __.recorder.isVideo()
@@ -339,13 +353,11 @@ export const VideoDownloadAndShareDialog = () => {
                 }
                 await __.recorder.download({
                                                filename: `${_mediaBlob.current.filename}.${getVideoExtension()}`,
-                                               type:     'local-filesystem',
                                            })
             }
             else {
                 await __.recorder.download({
                                                filename: `${_mediaBlob.current.filename}.${lgs.settings.ui.video.image}`,
-                                               type:     'local-filesystem',
                                            })
             }
         }
@@ -366,6 +378,7 @@ export const VideoDownloadAndShareDialog = () => {
         lgs.stores.ui.video.editing = false
         setCanDownloadAndShare(false)
         setFilename('')
+        void __.recorder?.releaseMedia?.()
     }, [releaseMediaUrl])
 
     /**
@@ -491,8 +504,7 @@ export const VideoDownloadAndShareDialog = () => {
                                 appearance="outlined"
                                 variant="brand"
                                 disabled={!canDownloadAndShare}
-                                onPointerDown={() => void handleShare()}
-                                onClick={handleShareClick}
+                                onClick={() => void handleShare()}
                             >
                                 <WaIcon
                                     slot="start"

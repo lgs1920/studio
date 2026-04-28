@@ -20,7 +20,7 @@ import { DynamicWidget }                                        from '@Component
 import { CropOverlay }                                          from '@Components/ToolsUI/cropper/CropOverlay'
 import { DefinedCropZone }       from '@Components/ToolsUI/cropper/widgets/DefinedCropZone'
 import {
-    APP_KEY, CROP_TOOLS_WIDGETS, LGS_PROJECT, MINUTE, SECOND, VIDEO_CROP_ZONE,
+    APP_KEY, CROP_TOOLS_WIDGETS, LGS_PROJECT, MINUTE, NAVIGATOR, SECOND, VIDEO_CROP_ZONE,
     VIDEO_TOOLS_WIDGETS, VIDEO_WIDGETS_BOARD, WIDGET_MOUNT_TIMEOUT,
 } from '@Core/constants'
 import { CanvasOverlayComposer } from '@Core/ui/screen-media-recorder/composer/CanvasOverlayComposer'
@@ -36,6 +36,78 @@ const OVERLAYS_REFRESH_MS = 250
 const METRICS_CACHE_TTL_MS = 750
 // Softer recorder timeslice to reduce INFO event overhead.
 const SOFT_TIMESLICE_MS = SECOND * 2
+const VIDEO_PIXEL_BUDGETS_BY_FPS = {
+    30: 2_800_000,
+    45: 2_250_000,
+    60: 1_700_000,
+}
+const VIDEO_QUALITY_BUDGET_FACTORS = [0.9, 1, 1.12]
+const VIDEO_BROWSER_BUDGET_FACTORS = {
+    [NAVIGATOR.firefox]: 0.92,
+}
+const VIDEO_HIGH_DPR_BUDGET_FACTORS_BY_FPS = {
+    30: 1.12,
+    45: 1.08,
+    60: 1.04,
+}
+const VIDEO_MOBILE_BUDGET_FACTORS_BY_FPS = {
+    30: 1.08,
+    45: 1.04,
+    60: 1,
+}
+const VIDEO_DESKTOP_MAX_DPR_BY_FPS = {
+    30: 2.75,
+    45: 2.5,
+    60: 2.25,
+}
+const VIDEO_MOBILE_MAX_DPR_BY_FPS = {
+    30: 2.5,
+    45: 2.3,
+    60: 2.1,
+}
+
+const toEvenInt = (value) => Math.max(2, Math.floor(value / 2) * 2)
+
+const computeRecordingOutput = ({
+    cropWidth,
+    cropHeight,
+    fps,
+    qualityIndex,
+    deviceDpr,
+    browser,
+}) => {
+    const baseWidth = Math.max(2, Math.round(cropWidth))
+    const baseHeight = Math.max(2, Math.round(cropHeight))
+    const nativeDpr = Math.max(1, Number(deviceDpr) || 1)
+    const isHighDpr = nativeDpr > 1.25
+    const platformDprCap = __.device.mobile
+                           ? (VIDEO_MOBILE_MAX_DPR_BY_FPS[fps] ?? VIDEO_MOBILE_MAX_DPR_BY_FPS[30])
+                           : (VIDEO_DESKTOP_MAX_DPR_BY_FPS[fps] ?? VIDEO_DESKTOP_MAX_DPR_BY_FPS[30])
+    const usableDpr = Math.max(1, Math.min(nativeDpr, isHighDpr ? platformDprCap : nativeDpr))
+    const nativeWidth = toEvenInt(baseWidth * usableDpr)
+    const nativeHeight = toEvenInt(baseHeight * usableDpr)
+    const basePixels = baseWidth * baseHeight
+    const nativePixels = nativeWidth * nativeHeight
+    const qualityFactor = VIDEO_QUALITY_BUDGET_FACTORS[qualityIndex] ?? 1
+    const browserFactor = VIDEO_BROWSER_BUDGET_FACTORS[browser] ?? 1
+    const highDprFactor = isHighDpr ? (VIDEO_HIGH_DPR_BUDGET_FACTORS_BY_FPS[fps] ?? VIDEO_HIGH_DPR_BUDGET_FACTORS_BY_FPS[30]) : 1
+    const mobileFactor = __.device.mobile ? (VIDEO_MOBILE_BUDGET_FACTORS_BY_FPS[fps] ?? VIDEO_MOBILE_BUDGET_FACTORS_BY_FPS[30]) : 1
+    const pixelBudget = Math.round((VIDEO_PIXEL_BUDGETS_BY_FPS[fps] ?? VIDEO_PIXEL_BUDGETS_BY_FPS[30]) * qualityFactor * browserFactor * highDprFactor * mobileFactor)
+    const targetPixels = Math.max(basePixels, Math.min(nativePixels, pixelBudget))
+    const scale = Math.sqrt(targetPixels / basePixels)
+    const targetWidth = Math.min(nativeWidth, toEvenInt(baseWidth * scale))
+    const targetHeight = Math.min(nativeHeight, toEvenInt(baseHeight * scale))
+    const outputDpr = Math.max(1, Math.min(usableDpr, targetWidth / baseWidth, targetHeight / baseHeight))
+
+    return {
+        outputDpr,
+        targetWidth,
+        targetHeight,
+        nativeWidth,
+        nativeHeight,
+        pixelBudget,
+    }
+}
 
 /**
  * Extract overlay metrics from DOM styles, with a shallow search on children.
@@ -311,21 +383,29 @@ export const VideoRecordingScreenArea = memo(() => {
         if (!videoFrame) {
             return
         }
+        const outputConfig = computeRecordingOutput({
+            cropWidth: videoFrame.cropDimensions.width,
+            cropHeight: videoFrame.cropDimensions.height,
+            fps: selectedFps,
+            qualityIndex: $video.quality,
+            deviceDpr: __.device.dpr,
+            browser: __.device.browser,
+        })
         __.recorder.initialize({
                                    maxSize:    maxSize * 1048576,
-                                   maxDuration: maxDuration * MINUTE,
-                                   quality: ScreenMediaRecorder.QUALITY[$video.quality].value,
-                                   filename:   APP_KEY,
-                                   fps: selectedFps,
-                                   timeslice: SOFT_TIMESLICE_MS,
-                                   dimensions: {
-                                       width: videoFrame.cropDimensions.width * __.device.dpr,
-                                       height: videoFrame.cropDimensions.height * __.device.dpr,
-                                   },
-                                   ratio:      videoFrame.ratio.value,
-                                   metadata: {artist: lgs.servers.studio.name, date: new Date(), album: LGS_PROJECT},
-                                   useWebGL:   true,
-                               })
+                                    maxDuration: maxDuration * MINUTE,
+                                    quality: ScreenMediaRecorder.QUALITY[$video.quality].value,
+                                    filename:   APP_KEY,
+                                    fps: selectedFps,
+                                    timeslice: SOFT_TIMESLICE_MS,
+                                    dimensions: {
+                                       width: outputConfig.targetWidth,
+                                       height: outputConfig.targetHeight,
+                                    },
+                                    ratio:      videoFrame.ratio.value,
+                                    metadata: {artist: lgs.servers.studio.name, date: new Date(), album: LGS_PROJECT},
+                                    useWebGL:   true,
+                                })
 
         const {top: y, left: x, width, height} = videoFrame.cropDimensions
         disposeComposer()
@@ -333,6 +413,7 @@ export const VideoRecordingScreenArea = memo(() => {
         const composer = new CanvasOverlayComposer(lgs.canvas, {
             clip: {x, y, width, height}, width, height,
             fps: selectedFps,
+            outputDpr: outputConfig.outputDpr,
             flushWebGLBuffer: () => lgs.scene.render(),
         })
         _composer.current = composer
