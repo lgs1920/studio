@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-27
- * Last modified: 2026-04-27
+ * Created on: 2026-04-28
+ * Last modified: 2026-04-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -17,17 +17,11 @@
 /*******************************************************************************
  * VideoRecorderToolbar.jsx - Displays video recording controls and stats
  ******************************************************************************/
-import { FontAwesomeIcon }     from '@Components/FontAwesomeIcon'
 import { VIDEO_WIDGETS_BOARD } from '@Core/constants'
 import { ScreenMediaRecorder } from '@Core/ui/screen-media-recorder/recorder/ScreenMediaRecorder'
-import { faCircle }            from '@fortawesome/duotone-regular-svg-icons'
-import { faPause, faPlay, faStop, faXmark } from '@fortawesome/pro-regular-svg-icons'
-import { SlIconButton, SlTooltip }          from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                            from '@Utils/FA2SL'
 import { UIToast }                          from '@Utils/UIToast'
 import { UnitUtils }                        from '@Utils/UnitUtils'
-import { WaCard } from '@web.awesome.me/webawesome-pro/dist/react'
-import classNames                           from 'classnames'
+import { WaButton, WaCard, WaIcon, WaTooltip } from '@web.awesome.me/webawesome-pro/dist/react'
 import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import { useSnapshot }                      from 'valtio'
 import '../style.css'
@@ -49,26 +43,38 @@ const RecorderControls = memo(({recording, paused, recorder, onFinalize}) => {
         onFinalize(true)
         $video.finalizing = true
         recorder?.stopVideo()
-    }, [recorder, onFinalize])
+    }, [recorder, onFinalize, $video])
 
     return (
         <>
-            <SlTooltip content={paused ? 'Click to resume' : 'Click to pause'}>
-                <SlIconButton
-                    library="fa"
-                    name={FA2SL.set(paused ? faPlay : faPause)}
-                    onClick={handlePlayPause}
-                    disabled={!recorder}
-                />
-            </SlTooltip>
+            <WaTooltip for="video-recorder-play-pause">
+                {paused ? 'Click to resume' : 'Click to pause'}
+            </WaTooltip>
+            <WaButton
+                id="video-recorder-play-pause"
+                appearance="plain"
+                variant="brand"
+                size="small"
+                className="video-recorder-action"
+                onClick={handlePlayPause}
+                disabled={!recorder}
+            >
+                <WaIcon name={paused ? 'play' : 'pause'} variant="regular"/>
+            </WaButton>
             {recording && !paused && (
-                <SlTooltip content="Click to stop">
-                    <SlIconButton
-                        library="fa"
-                        name={FA2SL.set(faStop)}
+                <>
+                    <WaTooltip for="video-recorder-stop">{'Click to stop'}</WaTooltip>
+                    <WaButton
+                        id="video-recorder-stop"
+                        appearance="plain"
+                        variant="brand"
+                        size="small"
+                        className="video-recorder-action"
                         onClick={handleStop}
-                    />
-                </SlTooltip>
+                    >
+                        <WaIcon name="stop" variant="regular"/>
+                    </WaButton>
+                </>
             )}
         </>
     )
@@ -113,7 +119,7 @@ export const VideoRecorderToolbar = ({toolbar}) => {
     const updateState = useCallback((updates) => {
         Object.assign($video, updates)
         setState((prev) => ({...prev, ...updates}))
-    }, [])
+    }, [$video])
 
     /**
      * Shows toast notification
@@ -226,7 +232,7 @@ export const VideoRecorderToolbar = ({toolbar}) => {
                 events.forEach(([event, handler]) => __.recorder.removeEventListener(event, handler))
             }
         }
-    }, [__.recorder, updateState, showToast, video.maxSize, video.maxDuration])
+    }, [updateState, showToast, video.maxSize, video.maxDuration, $video])
 
     const handleCancel = useCallback(async () => {
         if (__.recorder) {
@@ -243,22 +249,19 @@ export const VideoRecorderToolbar = ({toolbar}) => {
                         finalizing:   false,
                     })
         showToast('warning', 'Recording has been canceled!')
-    }, [__.recorder, updateState, showToast])
+    }, [updateState, showToast])
 
     return (
         <WaCard
             ref={_toolbar}
             className="video-recorder-widget lgs-toolbar-content lgs-toolbar lgs-toolbar-horizontal wa-theme-lgs1920-on-map"
         >
-            <FontAwesomeIcon
-                icon={faCircle}
-                className={classNames(
-                    {
-                        'fa-beat':  video.paused || video.finalizing,
-                        finalizing: video.finalizing,
-                    },
-                    'video-recorder-indicator',
-                )}
+            <WaIcon
+                name="circle"
+                family="duotone"
+                variant="regular"
+                animation={video.paused || video.finalizing ? 'beat' : undefined}
+                className={video.finalizing ? 'video-recorder-indicator finalizing' : 'video-recorder-indicator'}
             />
             <span className="duration">{formatDuration(state.recordedDuration)}</span>
             <span className="size">{formatSize(state.recordedSize)}</span>
@@ -272,15 +275,18 @@ export const VideoRecorderToolbar = ({toolbar}) => {
                      onFinalize={(value) => setState((prev) => ({...prev, finalizing: value}))}
                  />
              )}
-            <span/>
-            <SlTooltip content="Cancel" placement="top">
-                <SlIconButton
-                    onPointerDown={handleCancel}
-                    className="lgs-cancel-recording"
-                    library="fa"
-                    name={FA2SL.set(faXmark)}
-                />
-            </SlTooltip>
+            <span className="video-recorder-spacer"/>
+            <WaTooltip for="video-recorder-cancel" placement="top">{'Cancel'}</WaTooltip>
+            <WaButton
+                id="video-recorder-cancel"
+                appearance="plain"
+                variant="brand"
+                size="small"
+                onPointerDown={handleCancel}
+                className="video-recorder-action lgs-cancel-recording"
+            >
+                <WaIcon name="xmark" variant="regular"/>
+            </WaButton>
         </WaCard>
     )
 }

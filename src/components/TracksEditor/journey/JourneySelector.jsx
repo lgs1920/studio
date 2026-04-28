@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-27
- * Last modified: 2026-04-27
+ * Created on: 2026-04-28
+ * Last modified: 2026-04-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -57,8 +57,7 @@ export const JourneySelector = memo(({
 
     // Handle selection change
     const handleChange = useCallback(event => {
-        const newSlug = event.target.value
-        $journeyEditor.theJourney = newSlug
+        $journeyEditor.theJourney = event.target.value
         if (onChange) {
             onChange(event)
         }
@@ -124,7 +123,7 @@ export const JourneySelector = memo(({
                     <div slot="start" className="lgs--track-colors-in-settings">
                         {Array.from(lgs.theJourney.tracks.values()).slice(0, theJourney.visible ? 3 : 1).map(track => (
                             track.visible && (
-                                < WaIcon
+                                < WaIcon key={track.slug}
                                     name={theJourney.visible ? 'hexagon' : 'mask'}
                                     style={getTrackIconStyle(lgs.theJourney, track)}
                                     variant="solid"

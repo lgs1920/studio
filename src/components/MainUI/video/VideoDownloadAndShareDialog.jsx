@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-27
- * Last modified: 2026-04-27
+ * Created on: 2026-04-28
+ * Last modified: 2026-04-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -17,22 +17,15 @@
 /**
  * @file VideoDownloadAndShareDialog.jsx
  * @description Optimized component for previewing and downloading recorded videos.
- * Prevents errors on _mediaData access by using Valtio snapshot safely.
- * Uses Shoelace web components and FontAwesome icons.
+ * Keeps preview state render-safe while using recorder data with fallbacks.
+ * Uses Web Awesome components and icons.
  * All refs prefixed with _, no default export, no semicolons.
  */
-
-
+import { RecordingInfo } from '@Components/MainUI/video/RecordingInfo'
 import { ScreenMediaRecorder } from '@Core/ui/screen-media-recorder/recorder/ScreenMediaRecorder'
 import {
-    faCameraPolaroid, faCropAlt, faDownload, faFile, faFilm, faHourglass, faShareAlt, faXmark,
-}                              from '@fortawesome/pro-regular-svg-icons'
-import {
-    SlButton, SlDialog, SlIcon, SlInput, SlTooltip,
-}                      from '@shoelace-style/shoelace/dist/react'
-import {
-    FA2SL,
-}                              from '@Utils/FA2SL'
+    WaButton, WaDialog, WaIcon, WaInput, WaPopup, WaTooltip,
+}                        from '@web.awesome.me/webawesome-pro/dist/react'
 import {
     UIToast,
 }                      from '@Utils/UIToast'
@@ -40,14 +33,16 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import './style.css'
 
 export const VideoDownloadAndShareDialog = () => {
-    const $video = lgs.stores.ui.video
     const [dialogOpen, setDialogOpen] = useState(false)
     const [filename, setFilename] = useState('')
     const [canDownloadAndShare, setCanDownloadAndShare] = useState(false)
+    const [isRecordingInfoOpen, setIsRecordingInfoOpen] = useState(false)
+    const [mediaUrl, setMediaUrl] = useState('')
     const _mainVideo = useRef(null)
     const _blurredVideo = useRef(null)
+    const _recordingInfoButton = useRef(null)
+    const _recordingInfoPopup = useRef(null)
     const _mediaBlob = useRef({blob: null, url: null, filename: ''})
-    const _mediaData = useRef(null)
     const releaseMediaUrl = useCallback(() => {
         const url = _mediaBlob.current.url
         if (url) {
@@ -131,6 +126,7 @@ export const VideoDownloadAndShareDialog = () => {
                 filename: safeFilename,
                 type:     ScreenMediaRecorder.VIDEO,
             }
+            setMediaUrl(url)
             setFilename(safeFilename)
             setCanDownloadAndShare(true)
             setDialogOpen(true)
@@ -153,6 +149,7 @@ export const VideoDownloadAndShareDialog = () => {
                     filename: safeFilename,
                     type:     ScreenMediaRecorder.IMAGE,
                 }
+                setMediaUrl(imageUrl)
                 setFilename(safeFilename)
                 setCanDownloadAndShare(true)
                 setDialogOpen(true)
@@ -162,8 +159,8 @@ export const VideoDownloadAndShareDialog = () => {
                 UIToast.error({caption: 'Screenshot', text: 'Unable to finalize screenshot.'})
             }
             finally {
-                $video.snapshot = false
-                $video.finalizing = false
+                lgs.stores.ui.video.snapshot = false
+                lgs.stores.ui.video.finalizing = false
             }
         }
 
@@ -176,7 +173,7 @@ export const VideoDownloadAndShareDialog = () => {
             __.recorder.removeEventListener(ScreenMediaRecorder.events.CAPTURED, handleCapture)
             releaseMediaUrl()
         }
-    }, [releaseMediaUrl, $video])
+    }, [releaseMediaUrl])
 
     /**
      * Sync blurred video with main video playback.
@@ -229,6 +226,26 @@ export const VideoDownloadAndShareDialog = () => {
         }
     }, [dialogOpen])
 
+    useEffect(() => {
+        if (!isRecordingInfoOpen) {
+            return
+        }
+
+        const handlePointerDown = (event) => {
+            const path = event.composedPath()
+            if (!_recordingInfoButton.current || !_recordingInfoPopup.current) {
+                return
+            }
+
+            if (!path.includes(_recordingInfoButton.current) && !path.includes(_recordingInfoPopup.current)) {
+                setIsRecordingInfoOpen(false)
+            }
+        }
+
+        document.addEventListener('pointerdown', handlePointerDown, true)
+        return () => document.removeEventListener('pointerdown', handlePointerDown, true)
+    }, [isRecordingInfoOpen])
+
     /**
      * Handle filename input with sanitization.
      */
@@ -245,56 +262,70 @@ export const VideoDownloadAndShareDialog = () => {
      * Handle share action with Web Share API fallback.
      */
     const handleShare = useCallback(async () => {
-
-        const getVideoFile = async () => {
-            const blob = _mediaBlob.current.blob
-            const filename = `${_mediaBlob.current.filename}.${getVideoExtension()}`
-            return new File([blob], filename, {type: blob.type || getVideoMimeType()})
+        const blob = _mediaBlob.current.blob
+        if (!(blob instanceof Blob) || blob.size === 0) {
+            UIToast.error({
+                              caption: 'Share',
+                              text:    'No media is available to share.',
+                          })
+            return
         }
 
-
-        const getImageFile = async () => {
-            const blob = _mediaBlob.current.blob
-                ?? await fetch(_mediaBlob.current.url).then(response => response.blob())
-            _mediaBlob.current.blob = blob
-
-            const filename = `${_mediaBlob.current.filename}.${lgs.settings.ui.video.image}`
-            return new File([blob], filename, {type: blob.type})
+        const isVideo = __.recorder.isVideo()
+        const extension = isVideo ? getVideoExtension() : lgs.settings.ui.video.image
+        const file = new File(
+            [blob],
+            `${_mediaBlob.current.filename}.${extension}`,
+            {type: blob.type || (isVideo ? getVideoMimeType() : `image/${extension}`)},
+        )
+        const media = isVideo ? 'video' : 'shot'
+        const shareData = {
+            title: 'LGS1920 Studio Video',
+            text:  `Check out my last ${media} created with LGS1920 Studio!`,
+            files: [file],
         }
-        _mediaData.current = getMediaData()
 
-        const file = __.recorder.isVideo() ? await getVideoFile() : await getImageFile()
-        const media = __.recorder.isVideo() ? 'video' : 'shot'
         try {
-            if (navigator.canShare?.({files: [file]})) {
+            if (navigator.canShare?.(shareData)) {
+                await navigator.share(shareData)
+                return
+            }
+
+            if (navigator.share) {
                 await navigator.share({
-                                          title: 'LGS1920 Studio Video',
-                                          text: `Check out my last ${media} created with LGS1920 Studio!`,
-                                          files: [file],
+                                          title: shareData.title,
+                                          text:  shareData.text,
                                       })
                 return
             }
-            if (navigator.share && __.recorder.isVideo()) {
-                await navigator.share({
-                                          title: 'LGS1920 Studio Video',
-                                          text: `Check out my last ${media}  created with LGS1920 Studio!`,
-                                          url:  _mediaBlob.current.url,
-                                      })
-                return
-            }
-            UIToast.success({
+
+            UIToast.warning({
                                 caption: `Share your ${media}`,
-                                text:    'Sorry, this is not supported by your browser. Please try again with a modern browser.',
+                                text: 'This browser cannot share this media file directly.',
                             })
 
         }
         catch (error) {
+            if (error?.name === 'AbortError') {
+                return
+            }
             console.error('Share failed:', error.message)
+            UIToast.error({
+                              caption: 'Share failed',
+                              text:    'Unable to open the share dialog on this device.',
+                          })
         }
-    }, [getMediaData, getVideoExtension, getVideoMimeType])
+    }, [getVideoExtension, getVideoMimeType])
 
-    _mediaData.current = getMediaData()
+    const handleShareClick = useCallback((event) => {
+        if (event.detail === 0) {
+            void handleShare()
+        }
+    }, [handleShare])
 
+    const mediaData = getMediaData()
+    const isVideo = __.recorder.isVideo()
+    const canShare = __.app.canShare()
 
     /**
      * Handle download via recorder API.
@@ -328,43 +359,46 @@ export const VideoDownloadAndShareDialog = () => {
      */
     const handleCancel = useCallback(() => {
         setDialogOpen(false)
+        setIsRecordingInfoOpen(false)
         releaseMediaUrl()
         _mediaBlob.current = {blob: null, url: null, filename: ''}
-        $video.editing = false
+        setMediaUrl('')
+        lgs.stores.ui.video.editing = false
         setCanDownloadAndShare(false)
         setFilename('')
-    }, [releaseMediaUrl, $video])
+    }, [releaseMediaUrl])
 
     /**
-     * Prevent dialog close except via close button.
+     * Keep dialog close explicit through footer actions.
      */
     const handleDialogClose = useCallback((event) => {
-        if (event.detail?.source === 'close-button') {
-            handleCancel()
-        }
-        else {
-            event.preventDefault()
-        }
-    }, [handleCancel])
+        event.preventDefault()
+    }, [])
 
     return (
-        <SlDialog
+        <WaDialog
             id="video-preview-dialog"
             open={dialogOpen}
-            onSlRequestClose={handleDialogClose}
+            onWaRequestClose={handleDialogClose}
             className="lgs-theme"
         >
-            <div slot="label">
-                <SlIcon slot="prefix" library="fa" name={FA2SL.set(__.recorder.isVideo() ? faFilm : faCameraPolaroid)}/>
-                {`Download ${__.app.canShare() ? 'and Share ' : ''}${__.recorder.isVideo() ? 'your video' : 'your screenshot'}`}
+            <div slot="label" className="video-preview-dialog-title">
+                <WaIcon
+                    className="video-preview-title-icon"
+                    name={isVideo ? 'film' : 'camera-polaroid'}
+                    variant="regular"
+                />
+                <span>
+                    {`Download ${canShare ? 'and Share ' : ''}${isVideo ? 'your video' : 'your screenshot'}`}
+                </span>
             </div>
 
             <div className="video-container">
-                {__.recorder.isVideo() ? (
+                {isVideo ? (
                     <>
                         <video
                             ref={_mainVideo}
-                            src={_mediaBlob.current.url}
+                            src={mediaUrl}
                             controls
                             autoPlay
                             className="main-video"
@@ -373,7 +407,7 @@ export const VideoDownloadAndShareDialog = () => {
                         <div className="blurred-video-wrapper">
                             <video
                                 ref={_blurredVideo}
-                                src={_mediaBlob.current.url}
+                                src={mediaUrl}
                                 className="blurred-video"
                                 muted
                                 autoPlay
@@ -382,84 +416,107 @@ export const VideoDownloadAndShareDialog = () => {
                     </>
                 ) : (
                      <>
-                         <img src={_mediaBlob.current.url} alt="Screenshot" className="main-video"/>
+                         <img src={mediaUrl} alt="Screenshot" className="main-video"/>
                          <div className="blurred-video-wrapper">
-                             <img src={_mediaBlob.current.url} className="blurred-video"/>
+                             <img src={mediaUrl} alt="" className="blurred-video"/>
                          </div>
                      </>
                  )}
-                <div className="video-info lgs-card wa-theme-lgs1920-on-map">
-                    <div>
-                        <SlIcon library="fa" name={FA2SL.set(faCropAlt)}/>
-                        {_mediaData.current.ratio.label} - {_mediaData.current.dimensions.width}x{_mediaData.current.dimensions.height}
-                    </div>
-                    <div>
-                        <SlIcon library="fa" name={FA2SL.set(faFile)}/>
-                        {__.convert(_mediaData.current.size).toBytesUnit()}
-                    </div>
-                    {__.recorder.isVideo() &&
-                        <>
-                            <div>
-                                <SlIcon library="fa" name={FA2SL.set(faHourglass)}/>
-                                {__.convert(_mediaData.current.duration).toTime()}
-                            </div>
-                            {lgs.settings.ui.video?.adaptiveQuality?.enabled
-                             ? (<div>{'Auto'}</div>)
-                             : (
-                                 <>
-                                     <div>{`FPS: ${_mediaData.current.fps}`}</div>
-                                     <div>{_mediaData.current.quality?.name}</div>
-                                 </>
-                             )
-                            }
-                        </>
-                    }
-                </div>
             </div>
 
             <div className="video-file-actions">
-                <SlInput
+                <WaInput
+                    appearance="outlined"
                     size="small"
                     name="video-file-name"
-                    onSlInput={handleFilenameChange}
+                    onInput={handleFilenameChange}
                     value={filename}
-                    label={'File name'}
                 >
-                    <span
-                        slot="suffix">.{__.recorder.isVideo() ? getVideoExtension() : lgs.settings.ui.video.image}</span>
-                </SlInput>
-                <div className="video-actions">
-                    {__.app.canShare() && (
-                        <SlTooltip content="Share your video">
-                            <SlButton disabled={!canDownloadAndShare} onClick={handleShare} variant="text">
-                                <SlIcon slot="prefix" library="fa" name={FA2SL.set(faShareAlt)}/>
-                                {__.device.isMobile ? '' : 'Share'}
-                            </SlButton>
-                        </SlTooltip>
-                    )}
-
-
-                    <SlTooltip content="Save your video">
-                        <SlButton
-                            variant="text"
-                            onClick={handleDownload}
-                            disabled={!canDownloadAndShare}
-                        >
-                            <SlIcon slot="prefix" library="fa" name={FA2SL.set(faDownload)}/>
-                            {__.device.isMobile ? '' : 'Download'}
-                        </SlButton>
-                    </SlTooltip>
-                </div>
+                    <div slot="label" className="video-file-label">
+                        <span>{'File name'}</span>
+                        <div className="video-file-label-actions">
+                            <WaTooltip for="video-recording-info-trigger" placement="top">
+                                {'Recording information'}
+                            </WaTooltip>
+                            <WaButton
+                                id="video-recording-info-trigger"
+                                ref={_recordingInfoButton}
+                                className="video-recording-info-trigger"
+                                appearance="plain"
+                                size="small"
+                                variant="brand"
+                                onClick={(event) => {
+                                    event.preventDefault()
+                                    event.stopPropagation()
+                                    setIsRecordingInfoOpen((open) => !open)
+                                }}
+                            >
+                                <WaIcon name="circle-info" variant="regular"/>
+                            </WaButton>
+                        </div>
+                    </div>
+                    <span slot="end" className="video-file-extension">
+                        .{isVideo ? getVideoExtension() : lgs.settings.ui.video.image}
+                    </span>
+                </WaInput>
+                <WaPopup
+                    ref={_recordingInfoPopup}
+                    anchor="video-recording-info-trigger"
+                    active={isRecordingInfoOpen}
+                    placement="top-end"
+                    distance={lgs.gutter.xs}
+                    flip
+                    shift
+                    strategy="fixed"
+                >
+                    <RecordingInfo
+                        mediaData={mediaData}
+                        isVideo={isVideo}
+                        adaptiveQualityEnabled={lgs.settings.ui.video?.adaptiveQuality?.enabled}
+                    />
+                </WaPopup>
             </div>
 
             <div slot="footer" id="video-preview-dialog-footer">
-                <SlTooltip content="Cancel">
-                    <SlButton onClick={handleCancel}>
-                        <SlIcon slot="prefix" library="fa" name={FA2SL.set(faXmark)}/>
+                <div className="buttons-bar">
+                    <WaTooltip for="video-preview-close">{'Cancel'}</WaTooltip>
+                    <WaButton id="video-preview-close" appearance="outlined" onClick={handleCancel}>
+                        <WaIcon slot="start" className="video-preview-action-icon" name="xmark" variant="regular"/>
                         {'Close'}
-                    </SlButton>
-                </SlTooltip>
+                    </WaButton>
+                    {canShare && (
+                        <>
+                            <WaTooltip for="video-preview-share">{'Share your video'}</WaTooltip>
+                            <WaButton
+                                id="video-preview-share"
+                                appearance="outlined"
+                                variant="brand"
+                                disabled={!canDownloadAndShare}
+                                onPointerDown={() => void handleShare()}
+                                onClick={handleShareClick}
+                            >
+                                <WaIcon
+                                    slot="start"
+                                    className="video-preview-action-icon"
+                                    name="share-nodes"
+                                    variant="regular"
+                                />
+                                {'Share'}
+                            </WaButton>
+                        </>
+                    )}
+                    <WaTooltip for="video-preview-download">{'Save your video'}</WaTooltip>
+                    <WaButton
+                        id="video-preview-download"
+                        variant="brand"
+                        disabled={!canDownloadAndShare}
+                        onClick={handleDownload}
+                    >
+                        <WaIcon slot="start" className="video-preview-action-icon" name="download" variant="regular"/>
+                        {'Download'}
+                    </WaButton>
+                </div>
             </div>
-        </SlDialog>
+        </WaDialog>
     )
 }
