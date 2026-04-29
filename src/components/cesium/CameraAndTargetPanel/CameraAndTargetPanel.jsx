@@ -15,16 +15,32 @@
  ******************************************************************************/
 
 import './style.css'
-import { NameValueUnit } from '@Components/DataDisplay/NameValueUnit.jsx'
 import { Widget }      from '@Components/MainUI/widgets/Widget'
 import {
     CAMERA_INFORMATION_WIDGET, LGS_WIDGET, SCENE_WIDGETS, SCENE_WIDGETS_BOARD,
 }                      from '@Core/constants'
 import { faAngle, faArrowsToCircle, faMountains, faVideo } from '@fortawesome/pro-regular-svg-icons'
+import { CameraUtils }                                       from '@Utils/cesium/CameraUtils'
 import { FA2SL }       from '@Utils/FA2SL'
-import { foot, meter } from '@Utils/UnitUtils'
-import { useMemo }     from 'react'
-import { useSnapshot } from 'valtio'
+import { foot, meter, UnitUtils }                            from '@Utils/UnitUtils'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { snapshot, useSnapshot }                             from 'valtio'
+
+const CAMERA_PANEL_UPDATE_DELAY = 250
+
+const cloneCameraData = camera => ({
+    position: {...(camera?.position ?? {})},
+    target:   {...(camera?.target ?? {})},
+})
+
+const currentContinuousTarget = () => {
+    const panorama = lgs.stores.ui.mainUI.panorama
+    if (panorama.active && panorama.target) {
+        return panorama.target
+    }
+
+    return lgs.stores.ui.mainUI.rotate.target ?? lgs.stores.main.components.camera.target
+}
 
 /**
  * Renders one camera information line with the icon used by the previous banners.
@@ -56,15 +72,45 @@ const coordinateOf = value => {
     return numericValue === null ? null : __.convert(numericValue).to(lgs.settings.coordinateSystem.current)
 }
 
+const metricOf = (value, {units, precision}) => {
+    const numericValue = valueOf(value)
+    if (numericValue === null) {
+        return {value: '', unit: ''}
+    }
+
+    return UnitUtils.formatMetric(numericValue, {units, precision})
+}
+
+const CameraMetric = ({bindLiveRef, metricKey, value, className, text, units, precision}) => {
+    const metric = metricOf(value, {units, precision})
+
+    return (
+        <div className={`${className ?? ''} lgs-text-value`.trim()}>
+            {text && <span className="lgs-nvu-text">{text}</span>}
+            <span ref={bindLiveRef(`${metricKey}Value`)} className="lgs-nvu-value">{metric.value}</span>
+            <span ref={bindLiveRef(`${metricKey}Unit`)} className="lgs-nvu-unit">{metric.unit}</span>
+        </div>
+    )
+}
+
 /**
  * Displays camera and target information in a single draggable, non-resizable top-centered widget.
  * @returns {JSX.Element|null} Camera information widget
  */
 export const CameraAndTargetPanel = () => {
-    const camera = useSnapshot(lgs.stores.main.components.camera)
+    const storeCamera = useSnapshot(lgs.stores.main.components.camera)
     const $ui = lgs.settings.ui
     const ui = useSnapshot($ui)
+    useSnapshot(lgs.settings.unitSystem)
+    useSnapshot(lgs.settings.coordinateSystem)
+    const rotate = useSnapshot(lgs.stores.ui.mainUI.rotate)
+    const panorama = useSnapshot(lgs.stores.ui.mainUI.panorama)
     const is2D = __.ui.sceneManager.is2D
+    const liveRefs = useRef({})
+    const updateTimer = useRef(null)
+    const updateInProgress = useRef(false)
+    const [camera, setCamera] = useState(() => cloneCameraData(snapshot(lgs.stores.main.components.camera)))
+    const continuousMove = rotate.running || panorama.active
 
     const config = useMemo(() => {
         return {
@@ -92,6 +138,106 @@ export const CameraAndTargetPanel = () => {
         }
     }, [])
 
+    const hasSelectedInformation = ui.camera.showPosition || ui.camera.showHPR || ui.camera.showTargetPosition
+
+    const bindLiveRef = useCallback((key) => (element) => {
+        if (element) {
+            liveRefs.current[key] = element
+        }
+        else {
+            delete liveRefs.current[key]
+        }
+    }, [])
+
+    const updateText = useCallback((key, value) => {
+        const element = liveRefs.current[key]
+        if (element) {
+            element.textContent = value ?? ''
+        }
+    }, [])
+
+    const updateMetric = useCallback((key, value, options) => {
+        const metric = metricOf(value, options)
+        updateText(`${key}Value`, metric.value)
+        updateText(`${key}Unit`, metric.unit)
+    }, [updateText])
+
+    const applyLiveCameraData = useCallback((nextCamera) => {
+        updateText('targetLatitude', coordinateOf(nextCamera.target?.latitude))
+        updateText('targetLongitude', coordinateOf(nextCamera.target?.longitude))
+        updateText('positionLatitude', coordinateOf(nextCamera.position?.latitude))
+        updateText('positionLongitude', coordinateOf(nextCamera.position?.longitude))
+
+        updateMetric('targetHeight', nextCamera.target?.height, {units: [meter, foot], precision: 0})
+        updateMetric('targetPositionHeight', nextCamera.position?.height, {units: [meter, foot], precision: 0})
+        updateMetric('positionHeight', nextCamera.position?.height, {units: [meter, foot], precision: 0})
+        updateMetric('heading', nextCamera.position?.heading, {units: '°', precision: 0})
+        updateMetric('pitch', nextCamera.position?.pitch, {units: '°', precision: 0})
+        updateMetric('roll', nextCamera.position?.roll, {units: '°', precision: 0})
+    }, [updateMetric, updateText])
+
+    const updateLiveCamera = useCallback(async () => {
+        if (!hasSelectedInformation || !continuousMove || updateInProgress.current) {
+            return
+        }
+
+        updateInProgress.current = true
+
+        try {
+            const nextCamera = await CameraUtils.updatePositionInformation(null, {
+                skipTargetPick: true,
+                target:         currentContinuousTarget(),
+            })
+
+            if (nextCamera) {
+                applyLiveCameraData(nextCamera)
+            }
+        }
+        finally {
+            updateInProgress.current = false
+        }
+    }, [applyLiveCameraData, continuousMove, hasSelectedInformation])
+
+    useEffect(() => {
+        const timeout = window.setTimeout(() => {
+            if (!continuousMove) {
+                setCamera(cloneCameraData(storeCamera))
+            }
+        }, 0)
+
+        return () => window.clearTimeout(timeout)
+    }, [continuousMove, storeCamera])
+
+    useEffect(() => {
+        if (!hasSelectedInformation || !continuousMove || !lgs.camera) {
+            return
+        }
+
+        let cancelled = false
+
+        const tick = async () => {
+            if (cancelled) {
+                return
+            }
+
+            await updateLiveCamera()
+
+            if (!cancelled) {
+                updateTimer.current = window.setTimeout(tick, CAMERA_PANEL_UPDATE_DELAY)
+            }
+        }
+
+        void tick()
+
+        return () => {
+            cancelled = true
+            if (updateTimer.current) {
+                window.clearTimeout(updateTimer.current)
+                updateTimer.current = null
+            }
+        }
+    }, [continuousMove, hasSelectedInformation, updateLiveCamera])
+
     const targetLatitude = coordinateOf(camera.target?.latitude)
     const targetLongitude = coordinateOf(camera.target?.longitude)
     const targetHeight = valueOf(camera.target?.height)
@@ -102,7 +248,6 @@ export const CameraAndTargetPanel = () => {
     const pitch = valueOf(camera.position?.pitch)
     const roll = valueOf(camera.position?.roll)
 
-    const hasSelectedInformation = ui.camera.showPosition || ui.camera.showHPR || ui.camera.showTargetPosition
     const showTargetPosition = ui.camera.showTargetPosition && !__.ui.cameraManager.lookingAtTheSky(camera.target)
     const showCameraPosition = !is2D && ui.camera.showPosition && camera.position
     const showCameraHPR = !is2D && ui.camera.showHPR && camera.position
@@ -121,16 +266,15 @@ export const CameraAndTargetPanel = () => {
                         onDoubleClick={() => ($ui.camera.showTargetPosition = false)}
                     >
                         <>
-                            {targetLatitude !== null && targetLongitude !== null && (
-                                <>
-                                    {targetLatitude},{' '}
-                                    {targetLongitude}
-                                </>
-                            )}
+                            <span ref={bindLiveRef('targetLatitude')}>{targetLatitude ?? ''}</span>
+                            {', '}
+                            <span ref={bindLiveRef('targetLongitude')}>{targetLongitude ?? ''}</span>
                             {targetHeight !== null && (
                                 <>
                                     <sl-icon library="fa" name={FA2SL.set(faMountains)}/>
-                                    <NameValueUnit
+                                    <CameraMetric
+                                        bindLiveRef={bindLiveRef}
+                                        metricKey="targetHeight"
                                         value={targetHeight}
                                         className="camera-altitude"
                                         units={[meter, foot]}
@@ -141,7 +285,9 @@ export const CameraAndTargetPanel = () => {
                             {is2D && positionHeight !== null && (
                                 <>
                                     <sl-icon library="fa" name={FA2SL.set(faVideo)}/>
-                                    <NameValueUnit
+                                    <CameraMetric
+                                        bindLiveRef={bindLiveRef}
+                                        metricKey="targetPositionHeight"
                                         value={positionHeight}
                                         className="camera-altitude"
                                         units={[meter, foot]}
@@ -159,16 +305,15 @@ export const CameraAndTargetPanel = () => {
                         onDoubleClick={() => ($ui.camera.showPosition = false)}
                     >
                         <>
-                            {positionLatitude !== null && positionLongitude !== null && (
-                                <>
-                                    {positionLatitude},{' '}
-                                    {positionLongitude}
-                                </>
-                            )}
+                            <span ref={bindLiveRef('positionLatitude')}>{positionLatitude ?? ''}</span>
+                            {', '}
+                            <span ref={bindLiveRef('positionLongitude')}>{positionLongitude ?? ''}</span>
                             {positionHeight !== null && (
                                 <>
                                     <sl-icon library="fa" name={FA2SL.set(faMountains)}/>
-                                    <NameValueUnit
+                                    <CameraMetric
+                                        bindLiveRef={bindLiveRef}
+                                        metricKey="positionHeight"
                                         value={positionHeight}
                                         className="camera-altitude"
                                         units={[meter, foot]}
@@ -187,7 +332,9 @@ export const CameraAndTargetPanel = () => {
                     >
                         <>
                             {heading !== null && (
-                                <NameValueUnit
+                                <CameraMetric
+                                    bindLiveRef={bindLiveRef}
+                                    metricKey="heading"
                                     value={heading}
                                     className="camera-heading"
                                     text="Heading:"
@@ -196,7 +343,9 @@ export const CameraAndTargetPanel = () => {
                                 />
                             )}
                             {pitch !== null && (
-                                <NameValueUnit
+                                <CameraMetric
+                                    bindLiveRef={bindLiveRef}
+                                    metricKey="pitch"
                                     value={pitch}
                                     className="camera-pitch"
                                     text="Pitch:"
@@ -205,7 +354,9 @@ export const CameraAndTargetPanel = () => {
                                 />
                             )}
                             {roll !== null && (
-                                <NameValueUnit
+                                <CameraMetric
+                                    bindLiveRef={bindLiveRef}
+                                    metricKey="roll"
                                     value={roll}
                                     className="camera-roll"
                                     text="Roll:"

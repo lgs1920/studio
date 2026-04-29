@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-27
- * Last modified: 2026-04-27
+ * Created on: 2026-04-29
+ * Last modified: 2026-04-29
  *
  *
  * Copyright © 2026 LGS1920
@@ -89,7 +89,7 @@ export const PanoramaWidget = memo(() => {
     const persistHeight = useCallback((event) => {
         const value = Number(event.target.value)
         persistPanoramaSettings({heightOffset: value})
-    }, [$panorama, persistPanoramaSettings])
+    }, [persistPanoramaSettings])
 
     const updatePitch = useCallback((event) => {
         const value = Number(event.target.value)
@@ -99,7 +99,7 @@ export const PanoramaWidget = memo(() => {
     const persistPitch = useCallback((event) => {
         const value = Number(event.target.value)
         persistPanoramaSettings({pitch: value})
-    }, [$panorama, persistPanoramaSettings])
+    }, [persistPanoramaSettings])
 
     const updateRPM = useCallback((event) => {
         const value = Number(event.target.value)
@@ -109,7 +109,7 @@ export const PanoramaWidget = memo(() => {
     const persistRPM = useCallback((event) => {
         const value = Number(event.target.value)
         persistPanoramaSettings({rpm: value})
-    }, [$panorama, persistPanoramaSettings])
+    }, [persistPanoramaSettings])
 
     const updateDirection = useCallback((event) => {
         const value = Number(event.target.value)
@@ -119,7 +119,7 @@ export const PanoramaWidget = memo(() => {
     const persistDirection = useCallback((event) => {
         const value = Number(event.target.value)
         persistPanoramaSettings({direction: value})
-    }, [$panorama, persistPanoramaSettings])
+    }, [persistPanoramaSettings])
 
     useEffect(() => {
         if (!panorama.active || !panorama.target) {
@@ -130,6 +130,8 @@ export const PanoramaWidget = memo(() => {
         if (!Number.isFinite(target.longitude) || !Number.isFinite(target.latitude)) {
             return
         }
+
+        __.ui.cameraManager.optimizeContinuousCameraRender()
 
         const controller = lgs.scene?.screenSpaceCameraController
         if (controller) {
@@ -165,7 +167,6 @@ export const PanoramaWidget = memo(() => {
                                        roll:    0,
                                    },
                                })
-            lgs.scene?.requestRender?.()
         }
 
         const tick = (timestamp) => {
@@ -218,6 +219,7 @@ export const PanoramaWidget = memo(() => {
                 Object.assign(nextController, controllerStateRef.current)
             }
             controllerStateRef.current = null
+            __.ui.cameraManager.restoreContinuousCameraRender()
             void __.ui.cameraManager.raiseUpdateEvent()
             void setPoiAnimated(false)
         }

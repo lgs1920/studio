@@ -15,6 +15,7 @@
  ******************************************************************************/
 
 import '@shoelace-style/shoelace/dist/themes/light.css'
+/* eslint-disable react-refresh/only-export-components */
 import { CanvasEventManager } from '@Core/events/CanvasEventManager'
 import { LayersUtils }        from '@Utils/cesium/LayersUtils'
 import { SceneUtils }                                                                                  from '@Utils/cesium/SceneUtils'
@@ -25,11 +26,6 @@ let layersInitialized = false
 let cameraUpdateHandlerAttached = false
 let canvasEventsInitialized = false
 let cameraUpdateInProgress = false
-let cameraUpdateQueued = false
-let cameraUpdateTimer = null
-let lastCameraUpdate = 0
-
-const CONTINUOUS_CAMERA_UPDATE_DELAY = 125
 
 export const ensureViewer = () => {
 
@@ -38,46 +34,26 @@ export const ensureViewer = () => {
      *
      * @return {Promise<void>}
      */
-    const flushCameraUpdate = async () => {
+    const flushCameraUpdate = async (options = {}) => {
         if (cameraUpdateInProgress) {
-            cameraUpdateQueued = true
             return
         }
 
         cameraUpdateInProgress = true
-        lastCameraUpdate = performance.now()
-
         try {
-            await __.ui.cameraManager.raiseUpdateEvent({})
+            await __.ui.cameraManager.raiseUpdateEvent(options)
         }
         finally {
             cameraUpdateInProgress = false
-            if (cameraUpdateQueued) {
-                cameraUpdateQueued = false
-                void raiseCameraUpdateEvent()
-            }
         }
     }
 
     const raiseCameraUpdateEvent = async () => {
-        const isContinuousCameraMove = __.ui.cameraManager?.isRotating?.() || lgs.stores.ui.mainUI.panorama.active
-        if (!isContinuousCameraMove) {
-            await flushCameraUpdate()
+        if (__.ui.cameraManager?.isRotating?.() || lgs.stores.ui.mainUI.panorama.active) {
             return
         }
 
-        const elapsed = performance.now() - lastCameraUpdate
-        const delay = Math.max(0, CONTINUOUS_CAMERA_UPDATE_DELAY - elapsed)
-
-        if (cameraUpdateTimer) {
-            cameraUpdateQueued = true
-            return
-        }
-
-        cameraUpdateTimer = window.setTimeout(() => {
-            cameraUpdateTimer = null
-            void flushCameraUpdate()
-        }, delay)
+        await flushCameraUpdate()
     }
     // If initialisation phase was OK, we have somme additional tasks to do.
 
