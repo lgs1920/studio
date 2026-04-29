@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-27
- * Last modified: 2026-04-27
+ * Created on: 2026-04-29
+ * Last modified: 2026-04-29
  *
  *
  * Copyright © 2026 LGS1920
@@ -270,7 +270,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
         __.ui.widgetManager.manageControlBox(_moveable, setControlBox, _controlBoxTimer, true, isMouseOver)
     }, [isMouseOver])
 
-    const handleDrag = useCallback(async (event) => {
+    const handleDrag = useCallback((event) => {
         const input = event.inputEvent
         if (!input || hasDrawerInPath(input)) {
             event.stopDrag()
@@ -286,12 +286,20 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
         const element = _widget.current
         if (element) {
             const {scale, rotate} = __.ui.widgetManager.getTransform(element)
-            element.style.transform = `translate(${event.translate[0]}px, ${event.translate[1]}px) rotate(${rotate}deg) scale(${scale.x}, ${scale.y})`
-            event.target.style.transform = element.style.transform
-            _moveable.current.updateRect()
-            __.ui.widgetManager.applyPosition(element, element.style.transform, _moveable, true, setControlBox)
+            const translateX = Number.isFinite(event.translate?.[0]) ? event.translate[0] : 0
+            const translateY = Number.isFinite(event.translate?.[1]) ? event.translate[1] : 0
+            const transform = `translate(${translateX}px, ${translateY}px) rotate(${rotate}deg) scale(${scale.x}, ${scale.y})`
+
+            element.style.transform = transform
+            event.target.style.transform = transform
+
+            const config = __.ui.widgetManager.getWidgetConfig(__.ui.widgetManager.retrieveElementId(element))
+            if (config) {
+                config.translate = {x: translateX, y: translateY}
+                config.transform = transform
+            }
         }
-        await __.ui.widgetManager.onDrag(event)
+        __.ui.widgetManager.onDrag(event)
         _children.current?.handleDrag?.(event)
     }, [])
 
@@ -299,8 +307,8 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
         __.ui.widgetManager.manageControlBox(_moveable, setControlBox, _controlBoxTimer, false, isMouseOver)
         setIsDragging(false)
         _dragConfirmed.current = false
-        _moveable.current?.updateRect()
         await __.ui.widgetManager.onDragEnd(event)
+        _moveable.current?.updateRect()
     }, [isMouseOver])
 
     const handleDoubleClick = useCallback(() => {
@@ -659,7 +667,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                 onDrag={handleDrag}
                 onDragStart={handleDragStart}
                 onDragEnd={handleDragEnd}
-                throttleDrag={2}
+                throttleDrag={1}
                 onBound={handleBound}
                 preventDefault={false}
                 stopPropagation={true}
@@ -668,7 +676,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                 onResize={handleResize}
                 onResizeStart={handleResizeStart}
                 onResizeEnd={handleResizeEnd}
-                throttleResize={2}
+                throttleResize={config?.throttleResize ?? 2}
                 scalable={!interactionLocked && (config?.scalable ?? false)}
                 onScale={handleScale}
                 onScaleStart={handleScaleStart}

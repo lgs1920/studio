@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-27
- * Last modified: 2026-04-27
+ * Created on: 2026-04-29
+ * Last modified: 2026-04-29
  *
  *
  * Copyright © 2026 LGS1920
@@ -20,7 +20,7 @@ import {
 import { WidgetDynamicRenderer } from '@Core/ui/widget-manager/dynamic-render/WidgetDynamicRender'
 import { WaIcon }                from '@web.awesome.me/webawesome-pro/dist/react'
 import classNames                from 'classnames'
-import { useEffect, useRef, useState }                from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSnapshot }           from 'valtio'
 
 /**
@@ -33,27 +33,20 @@ import { useSnapshot }           from 'valtio'
  */
 export const WidgetsPanelContent = ({groups}) => {
     const _widgetDeckPanel = useRef(null)
-    const widgetDynamicRenderer = new WidgetDynamicRenderer()
+    const widgetDynamicRenderer = WidgetDynamicRenderer.instance
+    const widget = useSnapshot(lgs.stores.ui.widget)
     const toolbars = useSnapshot(lgs.settings.ui.toolbars)
-    const reached = new Set()
     const [isInitialized, setIsInitialized] = useState(false)
 
     // Counter to ensure new widgets are placed on top of the stack
     const _widgetIndex = useRef(WIDGET_LAYER_START)
-
-    /**
-     * Filters and returns only valid groups from the global registry.
-     * @returns {Map<string, Object>}
-     */
-    const theGroups = () => {
-        return widgetDynamicRenderer.theGroups(groups)
-    }
+    const availableGroups = useMemo(() => widgetDynamicRenderer.theGroups(groups), [groups, widgetDynamicRenderer])
 
     /**
      * Synchronizes the global store map order with the zIndex values.
      * Required for consistent rendering order in Valtio snapshots.
      */
-    const sortWidgetStore = () => {
+    const sortWidgetStore = useCallback(() => {
         const $list = lgs.stores.ui.widget.list
         const sortedEntries = Array.from($list.entries())
             .sort(([, a], [, b]) => (a.zIndex || 0) - (b.zIndex || 0))
@@ -62,7 +55,7 @@ export const WidgetsPanelContent = ({groups}) => {
         for (const [id, data] of sortedEntries) {
             $list.set(id, data)
         }
-    }
+    }, [])
 
     /**
      * Adds a new instance of a widget to the map.
@@ -70,13 +63,17 @@ export const WidgetsPanelContent = ({groups}) => {
      * @param {string} key
      * @param {Object} [props={}] - Existing widget properties (e.g. from DB)
      */
-    const addWidget = (group, key, props = {}) => {
+    const addWidget = useCallback((group, key, props = {}) => {
         const id = !/#/.test(key) ? __.ui.widgetManager.defineElementId(group, key) : key
 
         // Fetch definition to determine if zIndex is applicable
         const groupsMap = widgetDynamicRenderer.theGroups([group])
         const groupDef = groupsMap.get(group)
         const widgetDef = groupDef?.widgets.get(key.split('#')[0])
+
+        if (!widgetDef) {
+            return
+        }
 
         const additionalProps = {}
 
@@ -100,7 +97,7 @@ export const WidgetsPanelContent = ({groups}) => {
 
         // Ensure the global list Map is ordered correctly after insertion
         sortWidgetStore()
-    }
+    }, [sortWidgetStore, widgetDynamicRenderer])
 
     /**
      * Stops event propagation for both mouse and touch interactions.
@@ -120,14 +117,38 @@ export const WidgetsPanelContent = ({groups}) => {
         action()
     }
 
-    useEffect(() => {
-        const targetedGroups = theGroups()
+    const getWidgetStats = (groupKey, widgetKey, widgetDef = null) => {
+        const baseKey = widgetKey.split('#')[0]
+        const definition = widgetDef ?? __.widgets.get(groupKey)?.widgets?.get(baseKey)
+        const max = definition?.max ?? 1
+        let count = 0
 
+        for (const [id, entry] of widget.cache.entries()) {
+            if (entry?.group !== groupKey || entry?.widgetsBoard !== VIDEO_WIDGETS_BOARD) {
+                continue
+            }
+            if (id.split('#')[0] === baseKey) {
+                count++
+            }
+        }
+
+        return {
+            count,
+            max,
+            remaining:  Math.max(0, max - count),
+            maxReached: count >= max,
+        }
+    }
+
+    const getRemainingLabel = stats =>
+        stats.max > 1 && stats.remaining > 0 && stats.remaining < 5 ? `(${stats.remaining})` : ''
+
+    useEffect(() => {
         /**
          * Load widgets already existing in the state/database.
          */
         const displayWidgetsInBase = async () => {
-            for (const [groupId] of targetedGroups.entries()) {
+            for (const [groupId] of availableGroups.entries()) {
                 const widgets = await __.ui.widgetManager.getWidgetsByGroup(groupId)
                 for (const widgetToRender of widgets) {
                     if (widgetToRender?.widgetsBoard !== VIDEO_WIDGETS_BOARD) {
@@ -143,7 +164,7 @@ export const WidgetsPanelContent = ({groups}) => {
          * Trigger rendering for mandatory widgets not yet present in the list.
          */
         const displayMandatoryWidgets = () => {
-            for (const [groupId, group] of targetedGroups.entries()) {
+            for (const [groupId, group] of availableGroups.entries()) {
                 for (const [widgetId, widgetDef] of group.widgets) {
                     const existingMandatory = Array.from(lgs.stores.ui.widget.list.entries()).some(([id, entry]) => {
                         return id.startsWith(widgetId) && entry?.widgetsBoard === VIDEO_WIDGETS_BOARD
@@ -162,29 +183,13 @@ export const WidgetsPanelContent = ({groups}) => {
         }
 
         initializePanel()
-    }, [])
+    }, [addWidget, availableGroups])
 
     if (!isInitialized) {
         return null
     }
 
     const hasJourney = Boolean(lgs.theJourney)
-
-          // Logic to track which widgets can still be added
-    ;[...theGroups().entries()].forEach(([groupKey, groupValue]) => {
-        ;[...groupValue.widgets.entries()].forEach(([widgetKey]) => {
-            if (widgetKey === 'journey-stats-widget' && !hasJourney) {
-                return
-            }
-            if (!__.ui.widgetManager.isMaxWidgetsReached(groupKey, widgetKey, VIDEO_WIDGETS_BOARD)) {
-                reached.add(widgetKey)
-            }
-        })
-    })
-
-    if (reached.size === 0) {
-        return null
-    }
 
     return (
         <div
@@ -199,31 +204,36 @@ export const WidgetsPanelContent = ({groups}) => {
                 <span>Widgets</span>
             </div>
 
-            {[...theGroups().entries()].map(([groupKey, groupValue]) => (
+            {[...availableGroups.entries()].map(([groupKey, groupValue]) => (
                 <ul key={groupKey} className="widget-group">
                     {[...groupValue.widgets.entries()].map(([widgetKey, widgetDef]) => {
-                        if (widgetKey === 'journey-stats-widget' && !hasJourney) {
+                        if (widgetDef.mandatory || (widgetKey === 'journey-stats-widget' && !hasJourney)) {
                             return null
                         }
-                        if (reached.has(widgetKey)) {
-                            return (
-                                <li
-                                    key={`${groupKey}-${widgetKey}`}
-                                    role="button"
-                                    tabIndex={0}
-                                        onClick={() => addWidget(groupKey, widgetKey)}
-                                        onMouseDown={handleInteraction}
-                                        onTouchStart={handleInteraction}
-                                    onKeyDown={(event) => handleKeyboardAction(event, () => addWidget(groupKey, widgetKey))}
-                                        className={classNames(
-                                            'widget-deck-entry', 'widget-deck-item', 'small',
-                                        )}
-                                    >
-                                    <WaIcon name={widgetDef.icon} variant="regular"/>
-                                        <span className="widget-name">{widgetDef.name}</span>
-                                </li>
-                            )
-                        }
+                        const stats = getWidgetStats(groupKey, widgetKey, widgetDef)
+                        const isDisabled = stats.maxReached
+                        const remainingLabel = getRemainingLabel(stats)
+
+                        return (
+                            <li
+                                key={`${groupKey}-${widgetKey}`}
+                                role="button"
+                                tabIndex={isDisabled ? -1 : 0}
+                                aria-disabled={isDisabled}
+                                onClick={() => !isDisabled && addWidget(groupKey, widgetKey)}
+                                onMouseDown={handleInteraction}
+                                onTouchStart={handleInteraction}
+                                onKeyDown={(event) => !isDisabled && handleKeyboardAction(event, () => addWidget(groupKey, widgetKey))}
+                                className={classNames(
+                                    'widget-deck-entry', 'widget-deck-item', 'small',
+                                    {'widget-menu-disabled': isDisabled},
+                                )}
+                            >
+                                <WaIcon name={widgetDef.icon} variant="regular"/>
+                                <span className="widget-name">{widgetDef.name}</span>
+                                {remainingLabel && <span className="widget-remaining">{remainingLabel}</span>}
+                            </li>
+                        )
                     })}
                 </ul>
             ))}

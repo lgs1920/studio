@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-24
- * Last modified: 2026-04-24
+ * Created on: 2026-04-29
+ * Last modified: 2026-04-29
  *
  *
  * Copyright © 2026 LGS1920
@@ -26,16 +26,17 @@ import {
     WidgetDynamicRenderer,
 }                                                                              from '@Core/ui/widget-manager/dynamic-render/WidgetDynamicRender'
 import { UIToast }                                                             from '@Utils/UIToast'
+import { useOptionalSnapshot }                                     from '@Utils/ValtioUtils'
 import { DISTANCE_UNITS, ELEVATION_UNITS, PACE_UNITS, SPEED_UNITS, UnitUtils } from '@Utils/UnitUtils'
 import {
     WaButton, WaCopyButton, WaDivider, WaIcon, WaSwitch, WaTooltip,
 }                                                                              from '@web.awesome.me/webawesome-pro/dist/react'
 import { DateTime }                                                            from 'luxon'
-import React, { memo, useCallback, useEffect, useMemo, useRef, useState }      from 'react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSnapshot }                                                         from 'valtio'
 import { DateInfo }                                                            from '../DateInfo'
 
-const DIVIDER_STYLE = {'--width': '1px'}
+const JOURNEY_STATS_FALLBACK = {show: false}
 
 export const TrackData = memo(() => {
     const _rootRef = useRef(null)
@@ -46,7 +47,7 @@ export const TrackData = memo(() => {
     const $journeyEditor = lgs.stores.journeyEditor
 
     // Snapshots
-    const journeyStats = useSnapshot($journeyStats ?? {show: false})
+    const journeyStats = useOptionalSnapshot($journeyStats, JOURNEY_STATS_FALLBACK)
     const {track} = useSnapshot($journeyEditor)
 
     const metrics = track?.metrics?.global
@@ -247,7 +248,6 @@ export const TrackData = memo(() => {
     const hasElevation = metrics && metrics.negative?.elevation < 0 && metrics.positive?.elevation > 0
     const hasAltitude = metrics && !isNaN(metrics.minHeight) && !isNaN(metrics.maxHeight)
 
-    console.log(metrics.duration)
     return (
         <div ref={_rootRef} className="track-data-container">
             <div className="journey-profile-chart-menu">

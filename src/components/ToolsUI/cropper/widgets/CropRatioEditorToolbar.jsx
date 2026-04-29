@@ -7,16 +7,17 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-27
- * Last modified: 2026-04-27
+ * Created on: 2026-04-29
+ * Last modified: 2026-04-29
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
+import { useOptionalSnapshot }                                      from '@Utils/ValtioUtils'
 import { WaButton, WaIcon, WaTooltip, WaPopup } from '@web.awesome.me/webawesome-pro/dist/react'
 import classNames from 'classnames'
-import React, { memo, useCallback, useEffect, useRef, useState } from 'react'
+import { Fragment, memo, useCallback, useEffect, useRef, useState } from 'react'
 import { useSnapshot }                          from 'valtio'
 import '../style.css'
 
@@ -31,8 +32,8 @@ export const CropRatioEditorToolbar = memo(({context, cropzoneId}) => {
     const $video = lgs.stores.ui.video
 
     // Snapshots for rendering (without '$' prefix)
-    const cropper = useSnapshot($cropper || {})
-    const video = useSnapshot($video || {})
+    const cropper = useOptionalSnapshot($cropper)
+    const video = useSnapshot($video)
 
     // UI States
     const [_isPopupOpen, setIsPopupOpen] = useState(false)
@@ -195,7 +196,7 @@ export const CropRatioEditorToolbar = memo(({context, cropzoneId}) => {
                             <ul>
                                 {lgs.configuration.videoFormats.map(preset => (
                                     isPresetVisible(preset) && (
-                                        <React.Fragment key={`crop-ratio-${preset.value}`}>
+                                        <Fragment key={`crop-ratio-${preset.value}`}>
                                             <WaTooltip for={`btn-ratio-${preset.value}`} placement="right">
                                                 {`${preset.label}: ${preset.description}`}
                                             </WaTooltip>
@@ -210,7 +211,7 @@ export const CropRatioEditorToolbar = memo(({context, cropzoneId}) => {
                                             >
                                                 <span>{preset.label}</span>
                                             </li>
-                                        </React.Fragment>
+                                        </Fragment>
                                     )
                                 ))}
                             </ul>

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-27
- * Last modified: 2026-04-27
+ * Created on: 2026-04-29
+ * Last modified: 2026-04-29
  *
  *
  * Copyright © 2026 LGS1920
@@ -17,8 +17,10 @@
 import { CreditsBar }                          from '@Components/MainUI/credits/CreditsBar'
 import { Widget }                              from '@Components/MainUI/widgets/Widget'
 import { HOUR, LGS_VISUAL_WIDGET, MULTI_PURPOSE_WIDGETS } from '@Core/constants'
+import { useOptionalSnapshot } from '@Utils/ValtioUtils'
 import { useEffect, useMemo, useRef } from 'react'
-import { useSnapshot } from 'valtio'
+
+const CREDITS_WIDGET_CONTEXT_FALLBACK = {widgetEditor: false, widgetsBoard: ''}
 
 /**
  * CreditsWidget component to display a compass in the widget editor
@@ -29,7 +31,7 @@ import { useSnapshot } from 'valtio'
  */
 export const CreditsWidget = ({id, context, zIndex, widgetsBoard: persistedWidgetsBoard}) => {
     // Get snapshot of context
-    const contextState = useSnapshot(context ?? {widgetEditor: false, widgetsBoard: ''})
+    const contextState = useOptionalSnapshot(context, CREDITS_WIDGET_CONTEXT_FALLBACK)
     const widgetEditor = contextState.widgetEditor
     const widgetsBoard = contextState.widgetsBoard || persistedWidgetsBoard || ''
     const _content = useRef(null)

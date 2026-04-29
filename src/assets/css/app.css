@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-27
- * Last modified: 2026-04-27
+ * Created on: 2026-04-29
+ * Last modified: 2026-04-29
  *
  *
  * Copyright © 2026 LGS1920
@@ -503,7 +503,7 @@ body {
     width: 100%;
     height: auto;
     border: 1px solid transparent;
-    border-radius: var(--lgs-border-radius-xs);
+    border-radius: var(--lgs-on-map-interactive-radius, var(--lgs-border-radius-xs));
 }
 
 .buttons-bar-on-map > .selected {
@@ -529,14 +529,21 @@ body {
 }
 
 .widget-deck-panel {
-    align-items: stretch;
-    box-sizing: border-box;
-    flex-direction: column;
-    width: auto;
-    padding: var(--lgs-gutter-xs);
-    padding-block-end: calc(var(--lgs-gutter-s) + var(--lgs-gutter-xs));
     overflow: hidden;
+    align-items: stretch;
+    flex-direction: column;
+    box-sizing: border-box;
+    width: max-content;
+    min-width: max-content;
+    padding: var(--lgs-gutter-xs);
+    box-shadow: var(--lgs-on-map-floating-shadow, var(--sl-shadow-large));
+    padding-block-end: calc(var(--lgs-gutter-s) + var(--lgs-gutter-xs));
     gap: 0;
+}
+
+.widget-deck-panel.lgs-card.wa-theme-lgs1920-on-map {
+    box-shadow: var(--lgs-on-map-floating-shadow, var(--sl-shadow-large)) !important;
+    filter: drop-shadow(0 0.65rem 1.4rem rgb(0 0 0 / 0.32));
 }
 
 .widget-deck-panel, .widget-deck-panel * {
@@ -546,9 +553,10 @@ body {
 .widget-deck-panel ul {
     display: flex;
     flex-direction: column;
+    width: max-content;
+    min-width: 100%;
     margin: 0;
     padding: 0 var(--lgs-gutter-xs);
-    width: 100%;
     list-style: none;
     gap: 0;
 }
@@ -562,16 +570,16 @@ body {
 }
 
 .widget-deck-entry {
-    box-sizing: border-box;
     display: flex;
     align-items: center;
-    background: transparent;
-    gap: var(--lgs-gutter-xs);
+    box-sizing: border-box;
     margin: 2px;
     padding: 2px;
-    border: 1px solid transparent;
-    border-radius: var(--lgs-border-radius-xs);
     transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
+    border: 1px solid transparent;
+    border-radius: var(--lgs-on-map-interactive-radius, var(--lgs-border-radius-xs));
+    background: transparent;
+    gap: var(--lgs-gutter-xs);
 }
 
 .widget-deck-entry.small {
@@ -612,19 +620,36 @@ body {
 
 .widget-deck-entry span {
     display: block;
-    width: 100%;
+    flex: 1 1 auto;
+    width: auto;
+    min-width: 0;
     white-space: nowrap;
-
 }
 
 .widget-deck-entry .widget-name {
     text-align: left;
 }
 
+.widget-deck-entry .widget-remaining {
+    flex: 0 0 auto;
+    width: auto;
+    min-width: 2.25rem;
+    text-align: right;
+    color: inherit;
+}
+
 .widget-menu-disabled {
     cursor: not-allowed !important;
     color: var(--lgs-card-on-map-disabled-color) !important;
-    border-color: var(--lgs-card-on-map-disabled-border-color) !important;
+    border-color: transparent !important;
+    background: transparent !important;
+}
+
+.widget-deck-item.widget-menu-disabled:hover,
+.widget-deck-item.widget-menu-disabled.selected,
+.widget-deck-item.widget-menu-disabled.is-selected {
+    color: var(--lgs-card-on-map-disabled-color) !important;
+    border-color: transparent !important;
     background: transparent !important;
 }
 

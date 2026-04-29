@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-20
- * Last modified: 2026-04-20
+ * Created on: 2026-04-29
+ * Last modified: 2026-04-29
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,13 +16,13 @@
 
 import { Widget }                                                                       from '@Components/MainUI/widgets/Widget'
 import { HOUR, JOURNEY_WIDGETS, LGS_VISUAL_WIDGET, SCENE_WIDGETS, SCENE_WIDGETS_BOARD } from '@Core/constants'
-import { Export }                                                                       from '@Core/ui/Export'
-import { CHART_ELEVATION_VS_DISTANCE }                                                  from '@Core/ui/Profiler'
-import { UIToast }                                                                      from '@Utils/UIToast'
-import React, { useEffect, useMemo, useState }                                          from 'react'
+import { useOptionalSnapshot } from '@Utils/ValtioUtils'
+import { useEffect, useMemo }  from 'react'
 import { useSnapshot }                                                                  from 'valtio'
 import { ProfileChart }                                                                 from './ProfileChart'
 import './style.css'
+
+const PROFILE_WIDGET_CONTEXT_FALLBACK = {widgetEditor: false, widgetsBoard: ''}
 
 /**
  * The Profile Widget component displays the elevation profile chart and handles widget configuration.
@@ -33,15 +33,8 @@ import './style.css'
  * @returns {JSX.Element | null}
  */
 export const ProfileWidget = ({id, context, zIndex, widgetsBoard: persistedWidgetsBoard}) => {
-    /**
-     * Early return if the journey is not defined to avoid unnecessary computations
-     */
-    if (!lgs.theJourney) {
-        return null
-    }
-
-    const contextState = useSnapshot(context ?? {widgetEditor: false, widgetsBoard: ''})
-    const widgetEditor = contextState.widgetEditor
+    const contextState = useOptionalSnapshot(context, PROFILE_WIDGET_CONTEXT_FALLBACK)
+    const journey = lgs.theJourney
     const widgetsBoard = contextState.widgetsBoard || persistedWidgetsBoard || ''
 
     /**
@@ -49,12 +42,6 @@ export const ProfileWidget = ({id, context, zIndex, widgetsBoard: persistedWidge
      */
     const $profile = lgs.stores.main.components.profile
     const profile = useSnapshot($profile)
-
-    /**
-     * Proxy and Snapshot for the video UI state.
-     */
-    const $video = lgs.stores.ui.video
-    const video = useSnapshot($video)
 
     /**
      * Proxy and Snapshot for the unit system.
@@ -65,36 +52,7 @@ export const ProfileWidget = ({id, context, zIndex, widgetsBoard: persistedWidge
     /**
      * State for the container element where the widget should attach.
      */
-    const [container, setContainer] = useState(lgs.canvas)
-
-    /**
-     * Updates the container element reference when the widget board changes.
-     */
-    useEffect(() => {
-        const element = __.ui.widgetManager.resolveWidgetsBoardContainer(widgetsBoard)
-        if (element) {
-            setContainer(element)
-        }
-    }, [widgetsBoard])
-
-    /**
-     * Exports the chart content as a PNG image.
-     */
-    const snapshotAsImage = () => {
-        const file = `${CHART_ELEVATION_VS_DISTANCE}-${__.app.slugify(
-            lgs.theJourney.title,
-        )}`
-
-        const chart = __.ui.profiler?.charts.get(CHART_ELEVATION_VS_DISTANCE)
-        if (chart) {
-            Export.toPNG(chart.getDom(), file).then(() => {
-                UIToast.success({
-                                    caption: `Your chart has been exported successfully !`,
-                                    text:    `into ${file}.png`,
-                                })
-            })
-        }
-    }
+    const container = useMemo(() => __.ui.widgetManager.resolveWidgetsBoardContainer(widgetsBoard) ?? lgs.canvas, [widgetsBoard])
 
     /**
      * Sets the visibility state within the global profiler utility once on mount.
@@ -106,7 +64,7 @@ export const ProfileWidget = ({id, context, zIndex, widgetsBoard: persistedWidge
     /**
      * Prepares and memoizes the data required for the profile chart.
      */
-    const data = useMemo(() => __.ui.profiler?.prepareData(), [profile.key, unitStore.current])
+    const data = useMemo(() => journey ? __.ui.profiler?.prepareData() : null, [journey, profile.key, unitStore.current])
 
     /**
      * Memoizes the configuration object for the Widget component.
@@ -138,14 +96,14 @@ export const ProfileWidget = ({id, context, zIndex, widgetsBoard: persistedWidge
             widgetsBoard: widgetsBoard,
             zIndex:      zIndex,
         }
-    }, [widgetEditor, container, widgetsBoard, id, zIndex])
+    }, [container, id, widgetsBoard, zIndex])
 
-    if (!widgetsBoard || Object.keys(config).length === 0) {
+    if (!journey || !widgetsBoard || Object.keys(config).length === 0) {
         return null
     }
 
     return (
-        <Widget isVisible={true} config={config} key={lgs.theJourney.slug}>
+        <Widget isVisible={true} config={config} key={journey.slug}>
             {data &&
                 <ProfileChart data={data}
                               id={id}

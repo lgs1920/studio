@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-27
- * Last modified: 2026-04-27
+ * Created on: 2026-04-29
+ * Last modified: 2026-04-29
  *
  *
  * Copyright © 2026 LGS1920
@@ -41,9 +41,10 @@
  *   Crop Box Container
  **************************************/
 
-.video-cropper {
-    margin: 0;
+.video-cropper, video-cropper.defined {
+    margin: 0 !important;
 }
+
 .crop-zone {
     position: absolute;
     z-index: calc(var(--crop-zindex) + 1);
@@ -51,12 +52,13 @@
     right: 0;
     bottom: 0;
     left: 0;
-    overflow: hidden;
+    overflow: visible;
     box-sizing: border-box;
     user-select: none;
     pointer-events: none;
     border: var(--border-width) solid var(--crop-border-color);
     background-color: transparent;
+    box-shadow: 0 0.2rem 0.55rem rgb(0 0 0 / 0.22);
     --border-width: 1px;
     touch-action: none;
 }
@@ -85,8 +87,14 @@
     align-items: center;
     width: max-content;
     pointer-events: none;
-    opacity: 0.7;
+    opacity: 0.92;
     gap: var(--lgs-gutter-xs);
+}
+
+.crop-ratio-widget.lgs-card.wa-theme-lgs1920-on-map,
+.crop-ratio-popup-menu.lgs-card.wa-theme-lgs1920-on-map {
+    box-shadow: var(--lgs-on-map-floating-shadow, var(--sl-shadow-large)) !important;
+    filter: drop-shadow(0 0.65rem 1.4rem rgb(0 0 0 / 0.32));
 }
 
 .crop-info {
@@ -119,14 +127,9 @@
     height: 100%;
     user-select: none;
     pointer-events: none;
-    background-color: var(--lgs-dark-color-90);
-    background-image: repeating-linear-gradient(
-            135deg,
-            var(--lgs-light-color-25) 0px,
-            var(--lgs-light-color-25) 2px,
-            transparent 2px,
-            transparent 20px
-    );
+    background-color: var(--lgs-dark-color-80);
+    background-image: var(--lgs-brand-overlay-gradient);
+    background-blend-mode: screen, soft-light, normal;
 
     clip-path: inset(0 0 0 0);
     clip-rule: evenodd;
@@ -152,6 +155,7 @@
     flex-direction: row;
     width: auto;
     padding: var(--lgs-gutter-xs);
+    box-shadow: var(--lgs-on-map-floating-shadow, var(--sl-shadow-large));
     gap: var(--lgs-gutter-xs);
 }
 
@@ -169,6 +173,10 @@
     list-style: none;
 }
 
+.crop-ratio-popup-menu {
+    box-shadow: var(--lgs-on-map-floating-shadow, var(--sl-shadow-large));
+}
+
 .crop-ratio-popup-menu li.crop-ratio-choice-button {
     display: flex;
     align-items: center;
@@ -181,7 +189,7 @@
     white-space: nowrap;
     color: var(--lgs-light-color-75);
     border: 1px solid transparent;
-    border-radius: var(--lgs-border-radius-xs);
+    border-radius: var(--lgs-on-map-interactive-radius, var(--lgs-border-radius-xs));
 }
 
 .crop-ratio-popup-menu li.crop-ratio-choice-button span {

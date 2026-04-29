@@ -76,7 +76,7 @@ widgets:
   credits-widget:
     id: "credits-widget"
     name: "Credits"
-    description: "The app credits widget"
+    description: "Map credits"
     icon: "user"
     mandatory: true
     component: "CreditsWidget"
@@ -89,7 +89,7 @@ widgets:
   profile-widget:
     id: "profile-widget"
     name: "Elevation Profile"
-    description: "The journey elevation profile widget"
+    description: "Journey elevation profile"
     icon: "chart-fft"
     mandatory: false
     max: 1
@@ -160,13 +160,13 @@ widgets:
   text-widget:
     id: "text-widget"
     name: "Text"
-    description: "The text widget"
+    description: "Text widget"
     icon: "text"
     mandatory: false
     component: "TextWidget"
     type: "lgs-visual-widget"
     path: "@Components/Text"
-    max: 1000
+    max: 50
     groups:
       - "journey-widgets"
       - "scene-widgets"
@@ -218,7 +218,7 @@ widgets:
   journey-stats-widget:
     id: "journey-stats-widget"
     name: "Journey Stats"
-    description: "Track data rendered as SVG"
+    description: "Journey Stats"
     icon: "route"
     mandatory: false
     max: 1

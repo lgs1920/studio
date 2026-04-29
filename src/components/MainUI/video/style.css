@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-28
- * Last modified: 2026-04-28
+ * Created on: 2026-04-29
+ * Last modified: 2026-04-29
  *
  *
  * Copyright © 2026 LGS1920
@@ -133,9 +133,26 @@
  * Video preview
  */
 
+#video-preview-dialog::part(dialog),
 #video-preview-dialog::part(panel) {
     width: min(100%, 600px);
     max-height: 90%;
+}
+
+#video-preview-dialog {
+    --wa-color-overlay-modal: transparent;
+}
+
+.video-preview-dialog-brand-overlay {
+    position: fixed;
+    z-index: calc(var(--lgs-ui-layer-zindex) + 1);
+    pointer-events: none;
+    background-color: var(--lgs-dark-color-80);
+    background-image: var(--lgs-brand-overlay-gradient);
+    inset: 0;
+    --backdrop-filter: var(--lgs-blur);
+    background-blend-mode: screen, soft-light, normal;
+    backdrop-filter: blur(var(--backdrop-filter));
 }
 
 .video-preview-dialog-title {
@@ -260,7 +277,6 @@
     height: 100%;
     content: '';
     background-color: var(--lgs-dark-color-75);
-
 }
 
 /***************************************
@@ -390,6 +406,12 @@
 
 .video-preset-custom.lgs-card.wa-theme-lgs1920-on-map {
     padding-inline-end: 0;
+}
+
+.video-preset-widget-wrapper.lgs-card.wa-theme-lgs1920-on-map,
+.video-preset-custom.lgs-card.wa-theme-lgs1920-on-map {
+    box-shadow: var(--lgs-on-map-floating-shadow, var(--sl-shadow-large)) !important;
+    filter: drop-shadow(0 0.65rem 1.4rem rgb(0 0 0 / 0.32));
 }
 
 .video-preset-widget-wrapper {

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-27
- * Last modified: 2026-04-27
+ * Created on: 2026-04-29
+ * Last modified: 2026-04-29
  *
  *
  * Copyright © 2026 LGS1920
@@ -224,6 +224,9 @@
     --lgs-theme-gradient-1: linear-gradient(to right, rgba(192, 134, 24, 0.75), rgba(142, 120, 6, 0.65));
     --lgs-theme-gradient-2: linear-gradient(61deg, rgba(142, 212, 244, 0.64) 20%, rgba(13, 127, 204, 0.55) 90%);
     --lgs-theme-gradient-3: linear-gradient(130deg, rgba(146, 64, 14, 0.8) 22%, rgba(194, 124, 8, 0.6) 69%, rgba(255, 202, 0, 1));
+    --lgs-brand-overlay-gradient: linear-gradient(32deg, color-mix(in oklab, var(--wa-color-brand) 46%, transparent) 0%, transparent 32%, var(--lgs-light-color-25) 66%, transparent 100%),
+    linear-gradient(138deg, transparent 0%, color-mix(in oklab, var(--wa-color-brand-60, var(--wa-color-brand)) 42%, transparent) 40%, transparent 76%),
+    linear-gradient(166deg, var(--lgs-light-color-15) 0%, color-mix(in oklab, var(--wa-color-brand) 16%, transparent) 34%, var(--lgs-dark-color-70) 58%, var(--lgs-dark-color-95) 100%);
 
     --lgs-theme-background-image: var(--lgs-theme-gradient-1);
 
@@ -242,9 +245,11 @@
     --lgs-card-on-map-hover-border-color: var(--lgs-light-color-50);
     --lgs-card-on-map-selected-bg-color: var(--lgs-dark-color);
     --lgs-card-on-map-selected-border-color: var(--lgs-light-color-75);
-    --lgs-card-on-map-disabled-color: var(--lgs-light-color-25);
-    --lgs-card-on-map-disabled-bg-color: var(--lgs-dark-color-15);
-    --lgs-card-on-map-disabled-border-color: var(--lgs-light-color-15);
+    --lgs-disabled-color: var(--lgs-light-color-20);
+    --lgs-disabled-bg-color: var(--lgs-dark-color-20);
+    --lgs-card-on-map-disabled-color: var(--lgs-light-color-20);
+    --lgs-card-on-map-disabled-bg-color: var(--lgs-dark-color-20);
+    --lgs-card-on-map-disabled-border-color: var(--lgs-light-color-10);
 
     --lgs-switch-active-track-color: var(--wa-color-brand);
     --lgs-switch-active-thumb-color: var(--wa-color-brand-40);
@@ -1042,7 +1047,12 @@ wa-card.wa-theme-lgs1920-on-map::part(body) {
      ******************************************************************************/
 
     wa-dialog {
-        --header-spacing: var(--body-spacing) var(--body-spacing) 0 var(--body-spacing)
+        --backdrop-filter: var(--lgs-blur);
+        --header-spacing: var(--body-spacing) var(--body-spacing) 0 var(--body-spacing);
+    }
+
+wa-dialog::part(dialog)::backdrop {
+    backdrop-filter: blur(var(--backdrop-filter));
     }
 
     wa-dialog::part(base) {
@@ -1194,7 +1204,7 @@ wa-card.wa-theme-lgs1920-on-map::part(body) {
         list-style: none;
     }
 
-    .lgs-context-menu li {
+.lgs-context-menu li {
         display: flex;
         align-items: center;
         box-sizing: border-box;
@@ -1205,7 +1215,7 @@ wa-card.wa-theme-lgs1920-on-map::part(body) {
         transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
         white-space: nowrap;
         border: 1px solid transparent;
-        border-radius: var(--lgs-border-radius-xs);
+    border-radius: var(--lgs-on-map-interactive-radius, var(--lgs-border-radius-xs));
     }
 
     .lgs-context-menu li:hover {

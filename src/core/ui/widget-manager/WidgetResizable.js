@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-27
- * Last modified: 2026-01-27
+ * Created on: 2026-04-29
+ * Last modified: 2026-04-29
  *
  *
  * Copyright © 2026 LGS1920
@@ -41,6 +41,9 @@ export class WidgetResizable {
     }
 
     #resizeDirection = ''
+    #resizeStartPosition = {left: 0, top: 0}
+    #pendingCropUpdateFrame = null
+    #pendingCropUpdateConfig = null
     /**
      * Creates or returns the singleton instance of WidgetResizable.
      * @param {WidgetManager} widgetManager - The WidgetManager instance
@@ -55,33 +58,54 @@ export class WidgetResizable {
         WidgetResizable.#instance = this
     }
 
-    /**
-     * Throttles a function to limit its execution rate.
-     * @private
-     * @param {Function} func - The function to throttle
-     * @param {number} limit - Minimum time between executions in milliseconds
-     * @returns {Function} Throttled function
-     */
-    #throttle = (func, limit) => {
-        let lastCall = 0
-        return (...args) => {
-            const now = performance.now()
-            if (now - lastCall >= limit) {
-                lastCall = now
-                func(...args)
-            }
+    #runPendingCropUpdate = () => {
+        this.#pendingCropUpdateFrame = null
+        const config = this.#pendingCropUpdateConfig
+        this.#pendingCropUpdateConfig = null
+
+        if (!config?.isCropper || !config.cropDimensions) {
+            return
         }
+
+        this.#widgetCropper.applyCropToOverlay(config)
+        this.#widgetCropper.dispatchCropUpdate(config, 'resize')
+    }
+
+    #schedulePendingCropUpdate = (config) => {
+        this.#pendingCropUpdateConfig = config
+        if (this.#pendingCropUpdateFrame !== null) {
+            return
+        }
+        this.#pendingCropUpdateFrame = requestAnimationFrame(this.#runPendingCropUpdate)
+    }
+
+    #flushPendingCropUpdate = () => {
+        if (!this.#pendingCropUpdateConfig) {
+            return
+        }
+        if (this.#pendingCropUpdateFrame !== null) {
+            cancelAnimationFrame(this.#pendingCropUpdateFrame)
+        }
+        this.#runPendingCropUpdate()
+    }
+
+    #clearPendingCropUpdate = () => {
+        if (this.#pendingCropUpdateFrame !== null) {
+            cancelAnimationFrame(this.#pendingCropUpdateFrame)
+        }
+        this.#pendingCropUpdateFrame = null
+        this.#pendingCropUpdateConfig = null
     }
 
     /**
-     * Handles resize operations, throttled to prevent excessive updates.
+     * Handles resize operations and keeps the DOM in sync with Moveable.
      * @private
      * @param {Object} event - Resize event
      * @param {HTMLElement} target - Target element
      * @param {Function} setPosition - Function to set position
      * @param {Object} childRef - Child reference
      */
-    #handleResize = this.#throttle((event, target, setPosition, childRef) => {
+    #handleResize = (event, target, setPosition, childRef) => {
         if (!target || !event) {
             return
         }
@@ -94,11 +118,22 @@ export class WidgetResizable {
         const baseTop = __.app.parsePx(target.style.top || '0')
         const currentWidth = config.isCropper ? prevCropDimensions?.width || width : __.app.parsePx(target.style.width || '0') || width
         const currentHeight = config.isCropper ? prevCropDimensions?.height || height : __.app.parsePx(target.style.height || '0') || height
+        const resizeOffsetX = Number.isFinite(event?.drag?.beforeDist?.[0]) ? Math.round(event.drag.beforeDist[0]) : null
+        const resizeOffsetY = Number.isFinite(event?.drag?.beforeDist?.[1]) ? Math.round(event.drag.beforeDist[1]) : null
         let finalLeft
         let finalTop
 
         // Adjust position for center-based resizing
-        if (config?.resizeFromCenter) {
+        if (config?.resizeFromCenter && resizeOffsetX !== null && resizeOffsetY !== null) {
+            finalLeft = this.#resizeStartPosition.left + resizeOffsetX
+            finalTop = this.#resizeStartPosition.top + resizeOffsetY
+            const container = config.container.getBoundingClientRect()
+            config.centerRatio = {
+                x: (finalLeft - container.left + width / 2) / container.width,
+                y: (finalTop - container.top + height / 2) / container.height,
+            }
+        }
+        else if (config?.resizeFromCenter) {
             finalLeft = Math.round(baseLeft + (currentWidth - width) / 2)
             finalTop = Math.round(baseTop + (currentHeight - height) / 2)
             const container = config.container.getBoundingClientRect()
@@ -149,33 +184,44 @@ export class WidgetResizable {
                 prevCropDimensions.top !== after.top ||
                 prevCropDimensions.width !== after.width ||
                 prevCropDimensions.height !== after.height) {
-                this.#widgetCropper.dispatchCropUpdate(config, 'resize')
+                this.#schedulePendingCropUpdate(config)
             }
-            this.#widgetCropper.applyCropToOverlay(config)
         }
         else {
             config.dimensions = {width, height}
         }
 
-        // Update overlay and child component
-        setPosition({left: finalLeft, top: finalTop})
+        // Avoid forcing a full Widget rerender on every crop frame.
+        if (!config.isCropper) {
+            setPosition({left: finalLeft, top: finalTop})
+        }
         if (childRef.current?.handleResize) {
             childRef.current.handleResize({left: finalLeft, top: finalTop, width, height})
         }
         this.#widgetManager.isResizing = false
-    }, 16)
+    }
 
     /**
      * Handles the start of a resize event.
      * @param {Object} event - Resize event
      */
-    onResizeStart = async event => {
+    onResizeStart = event => {
         this.#widgetManager.isResizing = true
+        this.#clearPendingCropUpdate()
         this.#resizeDirection = event.direction
-        event.target.classList.add('resizing', `direction-${this.#cardinalDirections[this.#resizeDirection]}`)
-        const config = await this.#widgetManager.retrieveConfig(event.target)
+        this.#resizeStartPosition = {
+            left: __.app.parsePx(event.target.style.left || '0'),
+            top:  __.app.parsePx(event.target.style.top || '0'),
+        }
+        const config = this.#widgetManager.getWidgetConfig(this.#widgetManager.retrieveElementId(event.target))
 
-        if (config.animationWhenResizing) {
+        if (config?.resizeFromCenter) {
+            event.setFixedDirection?.([0, 0])
+        }
+
+        event.target.classList.add('resizing', `direction-${this.#cardinalDirections[this.#resizeDirection]}`)
+
+        if (config?.animationWhenResizing) {
             event.target.classList.add(LGS_ANIMATION_RESIZING)
         }
     }
@@ -196,6 +242,8 @@ export class WidgetResizable {
      */
     onResizeEnd = async event => {
         this.#widgetManager.isResizing = false
+        this.#resizeStartPosition = {left: 0, top: 0}
+        this.#flushPendingCropUpdate()
 
         event.target.classList.remove('resizing', LGS_ANIMATION_RESIZING, `direction-${this.#cardinalDirections[this.#resizeDirection]}`)
         const config = await this.#widgetManager.retrieveConfig(event.target)

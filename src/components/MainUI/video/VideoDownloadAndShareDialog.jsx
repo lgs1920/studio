@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-28
- * Last modified: 2026-04-28
+ * Created on: 2026-04-29
+ * Last modified: 2026-04-29
  *
  *
  * Copyright © 2026 LGS1920
@@ -389,12 +389,14 @@ export const VideoDownloadAndShareDialog = () => {
     }, [])
 
     return (
-        <WaDialog
-            id="video-preview-dialog"
-            open={dialogOpen}
-            onWaRequestClose={handleDialogClose}
-            className="lgs-theme"
-        >
+        <>
+            {dialogOpen && <div className="video-preview-dialog-brand-overlay" aria-hidden="true"/>}
+            <WaDialog
+                id="video-preview-dialog"
+                open={dialogOpen}
+                onWaRequestClose={handleDialogClose}
+                className="lgs-theme"
+            >
             <div slot="label" className="video-preview-dialog-title">
                 <WaIcon
                     className="video-preview-title-icon"
@@ -528,6 +530,7 @@ export const VideoDownloadAndShareDialog = () => {
                     </WaButton>
                 </div>
             </div>
-        </WaDialog>
+            </WaDialog>
+        </>
     )
 }

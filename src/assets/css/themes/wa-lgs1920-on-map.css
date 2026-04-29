@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-27
- * Last modified: 2026-04-27
+ * Created on: 2026-04-29
+ * Last modified: 2026-04-29
  *
  *
  * Copyright © 2026 LGS1920
@@ -26,6 +26,8 @@
     box-shadow: var(--sl-shadow-medium);
     --lgs-on-map-padding: var(--lgs-gutter-xs);
     --lgs-on-map-border-radius: var(--lgs-border-radius-s);
+    --lgs-on-map-interactive-radius: var(--wa-border-radius-m);
+    --lgs-on-map-floating-shadow: 0 0.25rem 0.75rem rgb(0 0 0 / 0.34), 0 0.9rem 2rem rgb(0 0 0 / 0.3);
     color-scheme: dark;
     gap: var(--lgs-gutter-s);
     backdrop-filter: blur(var(--lgs-blur));
@@ -38,9 +40,11 @@
     --lgs-card-on-map-selected-bg-color: var(--lgs-dark-color);
     --lgs-card-on-map-selected-border-color: var(--lgs-light-color);
     --lgs-card-on-map-selected-color: var(--lgs-text-on-color);
-    --lgs-card-on-map-disabled-color: var(--lgs-light-color-25);
-    --lgs-card-on-map-disabled-bg-color: var(--lgs-dark-color-25);
-    --lgs-card-on-map-disabled-border-color: var(--lgs-light-color-15);
+    --lgs-disabled-color: var(--lgs-light-color-20);
+    --lgs-disabled-bg-color: var(--lgs-dark-color-20);
+    --lgs-card-on-map-disabled-color: var(--lgs-light-color-30);
+    --lgs-card-on-map-disabled-bg-color: var(--lgs-dark-color-20);
+    --lgs-card-on-map-disabled-border-color: var(--lgs-light-color-10);
 
     --lgs-hover-context-menu-bg-color: var(--lgs-card-on-map-hover-bg-color);
     --lgs-switch-active-track-color: var(--wa-color-brand);

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-14
- * Last modified: 2026-02-14
+ * Created on: 2026-04-29
+ * Last modified: 2026-04-29
  *
  *
  * Copyright © 2026 LGS1920
@@ -17,38 +17,16 @@
 import { Widget }                                                                 from '@Components/MainUI/widgets/Widget'
 import { EditableText }                                                           from '@Components/Text/EditableText'
 import { JOURNEY_WIDGETS, LGS_VISUAL_WIDGET, SCENE_WIDGETS, SCENE_WIDGETS_BOARD } from '@Core/constants'
-import React, { useEffect, useMemo, useState }                                    from 'react'
-import { useSnapshot }                                                            from 'valtio'
+import { useOptionalSnapshot } from '@Utils/ValtioUtils'
+import { useMemo }             from 'react'
 import './style.css'
 
+const TEXT_WIDGET_CONTEXT_FALLBACK = {widgetEditor: false, widgetsBoard: ''}
+
 export const TextWidget = ({id, context, zIndex, widgetsBoard: persistedWidgetsBoard}) => {
-    const contextState = useSnapshot(context ?? {widgetEditor: false, widgetsBoard: ''})
-    const widgetEditor = contextState.widgetEditor
+    const contextState = useOptionalSnapshot(context, TEXT_WIDGET_CONTEXT_FALLBACK)
     const widgetsBoard = contextState.widgetsBoard || persistedWidgetsBoard || ''
-
-    /**
-     * Snapshot of the video state (included for completeness).
-     * @type {object}
-     */
-    const video = useSnapshot(lgs.stores.ui.video)
-
-    /**
-     * State for the container element where the widget should attach.
-     * Initialized to the global canvas element (default attach point).
-     * @type {[HTMLElement, React.Dispatch<React.SetStateAction<HTMLElement>>]}
-     */
-    const [container, setContainer] = useState(lgs.canvas)
-
-    /**
-     * Updates the container element reference when the widget board changes.
-     * If the board is not the main scene board, it looks up the specific board element.
-     */
-    useEffect(() => {
-        const element = __.ui.widgetManager.resolveWidgetsBoardContainer(widgetsBoard)
-        if (element) {
-            setContainer(element)
-        }
-    }, [widgetsBoard]) // Re-run only when the board ID changes
+    const container = useMemo(() => __.ui.widgetManager.resolveWidgetsBoardContainer(widgetsBoard) ?? lgs.canvas, [widgetsBoard])
 
     /**
      * Prepares and memoizes the data required for the profile chart.
@@ -88,7 +66,7 @@ export const TextWidget = ({id, context, zIndex, widgetsBoard: persistedWidgetsB
             widgetsBoard:    widgetsBoard,
             zIndex: zIndex,
         }
-    }, [widgetEditor, container, widgetsBoard, id, zIndex]) // Include all dependencies to ensure accurate recalculation
+    }, [container, widgetsBoard, id, zIndex]) // Include all dependencies to ensure accurate recalculation
 
     // Safety check: if the board is missing or the config generation failed, return null.
     // We check Object.keys(config).length for cases where config returned {} inside useMemo.

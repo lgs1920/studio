@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-23
- * Last modified: 2026-04-23
+ * Created on: 2026-04-29
+ * Last modified: 2026-04-29
  *
  *
  * Copyright © 2026 LGS1920
@@ -67,6 +67,7 @@ export const CropZoneWidget = memo(({
             outsideOverlay:   overlay,
             margin:           lgs?.gutter?.xs ?? 8,
             resizeFromCenter: true,
+            throttleResize: 1,
             id:               $context.id,
             forceEven:        $context.forceEven ?? false,
             persist:          true,
