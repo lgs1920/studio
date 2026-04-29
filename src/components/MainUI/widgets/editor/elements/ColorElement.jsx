@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-14
- * Last modified: 2026-04-14
+ * Created on: 2026-04-29
+ * Last modified: 2026-04-29
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,7 +16,7 @@
 
 import { WaColorPicker, WaSlider }                        from '@web.awesome.me/webawesome-pro/dist/react'
 import { colord }                                         from 'colord'
-import React, { useCallback, useEffect, useMemo, useRef } from 'react'
+import { useCallback, useEffect, useMemo, useRef } from 'react'
 import { sanitizeNumericControlValue }                    from './sliderUtils'
 
 /**
@@ -31,6 +31,7 @@ export const ColorElement = ({
                                  updateValue,
                              }) => {
     const sliderRef = useRef(null)
+    const opacityValue = part?.opacity
 
     /**
      * Resolves the color via parent logic.
@@ -47,11 +48,11 @@ export const ColorElement = ({
      * Extracts current opacity for the slider and for color updates.
      */
     const currentOpacity = useMemo(() => {
-        if (part?.opacity !== undefined && part?.opacity !== null) {
-            return sanitizeNumericControlValue(part.opacity, colorObj.alpha(), {min: 0, max: 1})
+        if (opacityValue !== undefined && opacityValue !== null) {
+            return sanitizeNumericControlValue(opacityValue, colorObj.alpha(), {min: 0, max: 1})
         }
         return sanitizeNumericControlValue(colorObj.alpha(), 1, {min: 0, max: 1})
-    }, [part?.opacity, colorObj])
+    }, [opacityValue, colorObj])
 
     /**
      * Color for the picker (forced to alpha 1 for display consistency).
@@ -76,10 +77,10 @@ export const ColorElement = ({
             sliderRef.current.value = currentOpacity
         }
 
-        if (part?.opacity !== undefined && part?.opacity !== null && part.opacity !== currentOpacity) {
+        if (opacityValue !== undefined && opacityValue !== null && opacityValue !== currentOpacity) {
             updateValue(`${path}.opacity`, currentOpacity)
         }
-    }, [currentOpacity, part?.opacity, path, updateValue])
+    }, [currentOpacity, opacityValue, path, updateValue])
 
     return (
         <>
@@ -100,6 +101,7 @@ export const ColorElement = ({
                 <div className="drawer-horizontal-element xlarge-element">
                     <WaSlider
                         ref={sliderRef}
+                        size="small"
                         label="Opacity"
                         min="0"
                         max="1"

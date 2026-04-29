@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-24
- * Last modified: 2026-04-24
+ * Created on: 2026-04-29
+ * Last modified: 2026-04-29
  *
  *
  * Copyright © 2026 LGS1920
@@ -338,8 +338,8 @@ export const JourneyStatsWidgetEditor = ({entity}) => {
 
                 <WaTabPanel name="style">
                     <LGSScrollbars>
-                        <WaCard appearance="filled" orientation="vertical"
-                                className="lgs-widget-editor-controls-wrapper">
+                        <WaCard appearance="plain" orientation="vertical"
+                                className="lgs-widget-editor-controls-wrapper lgs-widget-editor-card">
                             <RotationElement localRotation={resolvedRotation}
                                              applyRotation={applyRotation}
                             />
@@ -405,8 +405,8 @@ export const JourneyStatsWidgetEditor = ({entity}) => {
 
                 <WaTabPanel name="data">
                     <LGSScrollbars>
-                        <WaCard appearance="filled" orientation="vertical"
-                                className="journey-stats-widget-editor-data">
+                        <WaCard appearance="plain" orientation="vertical"
+                                className="journey-stats-widget-editor-data lgs-widget-editor-card">
                             <div className="drawer-horizontal-element">
                                 {'Source'} {sourceSelector}
                             </div>

@@ -411,7 +411,7 @@
 .video-preset-widget-wrapper.lgs-card.wa-theme-lgs1920-on-map,
 .video-preset-custom.lgs-card.wa-theme-lgs1920-on-map {
     box-shadow: var(--lgs-on-map-floating-shadow, var(--sl-shadow-large)) !important;
-    filter: drop-shadow(0 0.65rem 1.4rem rgb(0 0 0 / 0.32));
+    filter: drop-shadow(0 0.45rem 1rem rgb(0 0 0 / 0.22));
 }
 
 .video-preset-widget-wrapper {

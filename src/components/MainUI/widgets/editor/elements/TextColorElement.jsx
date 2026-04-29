@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-14
- * Last modified: 2026-04-14
+ * Created on: 2026-04-29
+ * Last modified: 2026-04-29
  *
  *
  * Copyright © 2026 LGS1920
@@ -17,7 +17,7 @@
 import { sanitizeNumericControlValue }            from '@Components/MainUI/widgets/editor/elements/sliderUtils'
 import { WaColorPicker, WaSlider }                from '@web.awesome.me/webawesome-pro/dist/react'
 import { colord }                                 from 'colord'
-import React, { useCallback, useEffect, useMemo } from 'react'
+import { useCallback, useEffect, useMemo } from 'react'
 import { useSnapshot }                            from 'valtio'
 
 /**
@@ -26,7 +26,6 @@ import { useSnapshot }                            from 'valtio'
 export const TextColorElement = ({id}) => {
     const $configuration = lgs.settings.widgets['text-widget'].configuration
     const configuration = useSnapshot($configuration)
-    const _moveable = useMemo(() => __.ui.widgetManager.getMoveable(id), [id])
     const $element = $configuration?.elements?.[id] ?? $configuration.user ?? $configuration.default
     const element = configuration?.elements?.[id] ?? configuration.user ?? configuration.default
     const swatches = useMemo(() => lgs.settings.getSwatches.list.join(';'), [])
@@ -52,9 +51,9 @@ export const TextColorElement = ({id}) => {
         if ($element?.text) {
             $element.text.color = e.target.value
             syncCSS($element.text.color, $element.text.opacity)
-            _moveable?.current?.updateRect()
+            __.ui.widgetManager.getMoveable(id)?.current?.updateRect()
         }
-    }, [$element, syncCSS])
+    }, [$element, id, syncCSS])
 
     const handleOpacityChange = useCallback((e) => {
         if ($element?.text) {
@@ -74,24 +73,28 @@ export const TextColorElement = ({id}) => {
         <>
             <div style={{width: '100%'}}>{'Text color'}</div>
             <div className="lgs--text-widget-color-trigger drawer-horizontal-line three-columns">
-                <WaColorPicker
-                    value={element?.text?.color ?? 'white'}
-                    onInput={handleColorChange}
-                    size="small"
-                    swatches={swatches}
-                />
-                <div/>
-                <WaSlider
-                    size="small"
-                    label="Opacity"
-                    label-at-start
-                    min="0"
-                    max="1"
-                    step="0.05"
-                    value={textOpacity}
-                    tooltipFormatter={v => `${Math.floor(v * 100)}%`}
-                    onInput={handleOpacityChange}
-                />
+                <div className="drawer-horizontal-element">
+                    <WaColorPicker
+                        value={element?.text?.color ?? 'white'}
+                        onInput={handleColorChange}
+                        size="small"
+                        swatches={swatches}
+                    />
+                </div>
+                <div className="drawer-horizontal-element xlarge-element"></div>
+                <div className="drawer-horizontal-element xlarge-element">
+                    <WaSlider
+                        size="small"
+                        label="Opacity"
+                        label-at-start
+                        min="0"
+                        max="1"
+                        step="0.05"
+                        value={textOpacity}
+                        valueFormatter={v => `${Math.floor(v * 100)}%`}
+                        onInput={handleOpacityChange}
+                    />
+                </div>
             </div>
         </>
     )

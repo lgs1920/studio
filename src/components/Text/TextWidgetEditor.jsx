@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-14
- * Last modified: 2026-04-14
+ * Created on: 2026-04-29
+ * Last modified: 2026-04-29
  *
  *
  * Copyright © 2026 LGS1920
@@ -50,7 +50,7 @@ import {
 } from '@Components/MainUI/widgets/editor/elements/TypefaceElement'
 
 import { WaCard, WaDivider } from '@web.awesome.me/webawesome-pro/dist/react'
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useSnapshot }                                      from 'valtio'
 import './style.css'
 
@@ -208,7 +208,7 @@ export const TextWidgetEditor = ({entity}) => {
 
     return (
         <LGSScrollbars>
-            <WaCard appearance="plain" className="lgs-widget-editor">
+            <WaCard appearance="plain" className="lgs-widget-editor lgs-widget-editor-card">
 
                 <div className="text-widget-editor-header">
                     <div className="drawer-horizontal-line">

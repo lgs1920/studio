@@ -191,68 +191,66 @@ export const CompassWidgetEditor = ({entity}) => {
     }
 
     return (
-        <WaCard className="lgs-widget-editor-controls-wrapper compass-widget-editor" appearance="plain"
-                orientation="vertical" key={`editor-${entity}`}>
-            <div className="drawer-horizontal-line">
-                <div className="drawer-horizontal-element">
-                    <WaRadioGroup size="small" value={compassMode} orientation="horizontal" label-at-start
-                                  onChange={handleCompassMode}>
-                        <span slot="label">{'Model'}</span>
-                        <WaRadio value={COMPASS_FULL.toString()}>
-                            <WaIcon size="small" variant="regular" name="compass"/>
-                            <span>{'Full'}</span>
-                        </WaRadio>
-                        <WaRadio value={COMPASS_LIGHT.toString()}>
-                            <WaIcon size="small" variant="regular" name="location-arrow"/>
-                            <span>{'Light'}</span>
-                        </WaRadio>
-                    </WaRadioGroup>
-                </div>
-                <div className="drawer-horizontal-element">
-                    <div className="widget-editor-reset-menus">
-                        <WaButton size="small" appearance="plain" onClick={handleReset} aria-label="Reset">
-                            <WaIcon size="small" variant="regular" name="arrow-rotate-left"/>
-                        </WaButton>
+        <LGSScrollbars key={`editor-${entity}`}>
+            <WaCard className="lgs-widget-editor-controls-wrapper lgs-widget-editor-card compass-widget-editor"
+                    appearance="plain" orientation="vertical">
+                <div className="drawer-horizontal-line">
+                    <div className="drawer-horizontal-element">
+                        <WaRadioGroup size="small" value={compassMode} orientation="horizontal" label-at-start
+                                      onChange={handleCompassMode}>
+                            <span slot="label">{'Model'}</span>
+                            <WaRadio value={COMPASS_FULL.toString()}>
+                                <WaIcon size="small" variant="regular" name="compass"/>
+                                <span>{'Full'}</span>
+                            </WaRadio>
+                            <WaRadio value={COMPASS_LIGHT.toString()}>
+                                <WaIcon size="small" variant="regular" name="location-arrow"/>
+                                <span>{'Light'}</span>
+                            </WaRadio>
+                        </WaRadioGroup>
+                    </div>
+                    <div className="drawer-horizontal-element">
+                        <div className="widget-editor-reset-menus">
+                            <WaButton size="small" appearance="plain" onClick={handleReset} aria-label="Reset">
+                                <WaIcon size="small" variant="regular" name="arrow-rotate-left"/>
+                            </WaButton>
+                        </div>
                     </div>
                 </div>
-            </div>
-            <WaDivider/>
-            <div className="compass-widget-editor-scroll">
-                <LGSScrollbars>
-                    <div className="compass-widget-editor-colors">
-                        {compassMode === COMPASS_FULL.toString() &&
-                            <>
-                                <ColorElement label="Background" path="background" part={element.background}
-                                              swatches={swatches} getColor={(p) => getColor(p, 'background')}
-                                              updateValue={updateValue}/>
-                                <WaDivider/>
-                                <ColorElement label="Over-Background" path="overBackground"
-                                              part={element.overBackground}
-                                              swatches={swatches} getColor={(p) => getColor(p, 'overBackground')}
-                                              updateValue={updateValue}/>
-                                <WaDivider/>
-                                <ColorElement label="Poles" path="poles" part={element.poles} swatches={swatches}
-                                              getColor={(p) => getColor(p, 'poles')} updateValue={updateValue}/>
-                                <WaDivider/>
-                                <ColorElement label="Text" path="text" part={element.text} swatches={swatches}
-                                              getColor={(p) => getColor(p, 'text')} updateValue={updateValue}/>
-                                <WaDivider/>
-                            </>
-                        }
-                        <ColorElement label="Needle North" path="needle.north" part={element.needle.north}
-                                      swatches={swatches} getColor={(p) => getColor(p, 'needle.north')}
-                                      updateValue={updateValue}/>
-                        <WaDivider/>
-                        <ColorElement label="Needle South" path="needle.south" part={element.needle.south}
-                                      swatches={swatches} getColor={(p) => getColor(p, 'needle.south')}
-                                      updateValue={updateValue}/>
-                        <WaDivider/>
-                        <ColorElement label="Center Point" path="needle.center" part={element.needle.center}
-                                      swatches={swatches} getColor={(p) => getColor(p, 'needle.center')}
-                                      updateValue={updateValue}/>
-                    </div>
-                </LGSScrollbars>
-            </div>
-        </WaCard>
+                <WaDivider/>
+                <div className="compass-widget-editor-colors">
+                    {compassMode === COMPASS_FULL.toString() &&
+                        <>
+                            <ColorElement label="Background" path="background" part={element.background}
+                                          swatches={swatches} getColor={(p) => getColor(p, 'background')}
+                                          updateValue={updateValue}/>
+                            <WaDivider/>
+                            <ColorElement label="Over-Background" path="overBackground"
+                                          part={element.overBackground}
+                                          swatches={swatches} getColor={(p) => getColor(p, 'overBackground')}
+                                          updateValue={updateValue}/>
+                            <WaDivider/>
+                            <ColorElement label="Poles" path="poles" part={element.poles} swatches={swatches}
+                                          getColor={(p) => getColor(p, 'poles')} updateValue={updateValue}/>
+                            <WaDivider/>
+                            <ColorElement label="Text" path="text" part={element.text} swatches={swatches}
+                                          getColor={(p) => getColor(p, 'text')} updateValue={updateValue}/>
+                            <WaDivider/>
+                        </>
+                    }
+                    <ColorElement label="Needle North" path="needle.north" part={element.needle.north}
+                                  swatches={swatches} getColor={(p) => getColor(p, 'needle.north')}
+                                  updateValue={updateValue}/>
+                    <WaDivider/>
+                    <ColorElement label="Needle South" path="needle.south" part={element.needle.south}
+                                  swatches={swatches} getColor={(p) => getColor(p, 'needle.south')}
+                                  updateValue={updateValue}/>
+                    <WaDivider/>
+                    <ColorElement label="Center Point" path="needle.center" part={element.needle.center}
+                                  swatches={swatches} getColor={(p) => getColor(p, 'needle.center')}
+                                  updateValue={updateValue}/>
+                </div>
+            </WaCard>
+        </LGSScrollbars>
     )
 }

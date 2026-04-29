@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-12
- * Last modified: 2026-04-12
+ * Created on: 2026-04-29
+ * Last modified: 2026-04-29
  *
  *
  * Copyright © 2026 LGS1920
@@ -25,7 +25,7 @@ import {
     WaButton, WaCard, WaColorPicker, WaDivider, WaIcon, WaSlider, WaSwitch,
 }                                                         from '@web.awesome.me/webawesome-pro/dist/react'
 import { colord }                      from 'colord'
-import React, { useCallback, useEffect, useMemo, useRef } from 'react'
+import { useCallback, useEffect, useMemo, useRef } from 'react'
 import { useSnapshot }                 from 'valtio'
 
 const PROFILE_WIDGET_SLIDERS = {
@@ -210,7 +210,8 @@ export const ProfileWidgetEditor = ({entity}) => {
 
     return (
         <LGSScrollbars>
-            <WaCard className="lgs-widget-editor-controls-wrapper" appearance="plain" orientation="vertical">
+            <WaCard className="lgs-widget-editor-controls-wrapper lgs-widget-editor-card" appearance="plain"
+                    orientation="vertical">
                 {/* Visual Base Elements */}
                 <BackgroundElement element={element} swatches={swatches} getColor={getColor}
                                    updateValue={updateValue} sanitizeSliderValue={sanitizeSliderValue}/>

@@ -7,14 +7,14 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-13
- * Last modified: 2026-04-13
+ * Created on: 2026-04-29
+ * Last modified: 2026-04-29
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { WaInput, WaSlider, WaSwitch } from '@web.awesome.me/webawesome-pro/dist/react'
+import { WaButton, WaIcon, WaInput, WaSlider } from '@web.awesome.me/webawesome-pro/dist/react'
 import { useCallback, useEffect, useMemo, useRef } from 'react'
 
 /**
@@ -46,7 +46,7 @@ export const RotationElement = ({
         return Math.min(max, Math.max(min, numericValue))
     }, [max, min])
 
-    const isRotated = localRotation !== 0
+    const isRotated = Math.abs(Number(localRotation) || 0) > 0
     const displayValue = useMemo(() => sanitizeRotationValue(-localRotation), [localRotation, sanitizeRotationValue])
     const handleRotationInput = useCallback((rawValue) => {
         applyRotation(-sanitizeRotationValue(rawValue))
@@ -94,18 +94,13 @@ export const RotationElement = ({
                 />
             </div>
 
-            <div className="drawer-horizontal-element">
-                <WaSwitch
-                    size="xsmall"
-                    label-at-start
-                    checked={isRotated}
-                    disabled={!isRotated}
-                    onInput={(e) => {
-                        if (!e.target.checked) {
-                            applyRotation(0)
-                        }
-                    }}
-                />
+            <div className="drawer-horizontal-element widget-editor-rotation-reset">
+                {isRotated && (
+                    <WaButton size="small" appearance="plain" aria-label="Reset rotation"
+                              onClick={() => applyRotation(0)}>
+                        <WaIcon size="small" name="arrow-rotate-left" variant="regular"/>
+                    </WaButton>
+                )}
             </div>
         </div>
     )

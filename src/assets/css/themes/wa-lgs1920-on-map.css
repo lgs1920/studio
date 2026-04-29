@@ -27,7 +27,7 @@
     --lgs-on-map-padding: var(--lgs-gutter-xs);
     --lgs-on-map-border-radius: var(--lgs-border-radius-s);
     --lgs-on-map-interactive-radius: var(--wa-border-radius-m);
-    --lgs-on-map-floating-shadow: 0 0.25rem 0.75rem rgb(0 0 0 / 0.34), 0 0.9rem 2rem rgb(0 0 0 / 0.3);
+    --lgs-on-map-floating-shadow: 0 0.18rem 0.5rem rgb(0 0 0 / 0.26), 0 0.65rem 1.45rem rgb(0 0 0 / 0.22);
     color-scheme: dark;
     gap: var(--lgs-gutter-s);
     backdrop-filter: blur(var(--lgs-blur));

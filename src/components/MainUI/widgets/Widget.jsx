@@ -517,7 +517,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                 resizable:      config.resizable ?? false,
                 rotatable:      config.rotatable ?? false,
                 scalable:       config.scalable ?? false,
-                showControlBox: true,
+                showControlBox: config.showControlBox ?? true,
                 snap:           config.snap ?? false,
                 stopPropagation: config.stopPropagation ?? false,
                 top:            config.top,
@@ -533,6 +533,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
 
             // Critical: Force the reactive zIndex over retrieved stale persistence during launch
             resolved.zIndex = activeZIndex
+            resolved.showControlBox = fullConfig.showControlBox
 
 
             const success = await __.ui.widgetManager.setupElement(_widget.current, resolved, setBounds, setPosition, _moveable)

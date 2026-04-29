@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-24
- * Last modified: 2026-04-24
+ * Created on: 2026-04-29
+ * Last modified: 2026-04-29
  *
  *
  * Copyright © 2026 LGS1920
@@ -176,6 +176,9 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
         }
         return data.dataset
     }, [data])
+    const hasAltitudeData = useMemo(() => {
+        return processedDataset.some(dataset => Array.isArray(dataset.source) && dataset.source.length > 0)
+    }, [processedDataset])
 
     /**
      * Build ECharts series object with optional gradient
@@ -211,7 +214,7 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
     }, [setColor])
 
     const baseOptions = useMemo(() => {
-        if (!data || !element) {
+        if (!data || !element || !hasAltitudeData) {
             return {}
         }
 
@@ -262,7 +265,7 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
             series:   series,
             dataZoom:  preview ? [] : [{type: 'inside'}],
         }
-    }, [data, buildSerie, element, getStyleOptions, unitSystem, processedDataset, preview])
+    }, [data, buildSerie, element, getStyleOptions, unitSystem, processedDataset, preview, hasAltitudeData])
 
     /**
      * Handle chart resizing and store state updates
@@ -333,7 +336,7 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
      */
     useEffect(() => {
         const chart = _instance.current?.getEchartsInstance?.()
-        if (!chart || !element || !data || !baseOptions) {
+        if (!chart || !element || !data || !hasAltitudeData || !baseOptions) {
             return
         }
 
@@ -345,9 +348,9 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
         if (!preview) {
             requestAnimationFrame(handleResize)
         }
-    }, [baseOptions, element, data, preview, handleResize])
+    }, [baseOptions, element, data, preview, handleResize, hasAltitudeData])
 
-    if (!data || !element) {
+    if (!data || !element || !hasAltitudeData) {
         return null
     }
 

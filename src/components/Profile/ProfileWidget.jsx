@@ -65,6 +65,9 @@ export const ProfileWidget = ({id, context, zIndex, widgetsBoard: persistedWidge
      * Prepares and memoizes the data required for the profile chart.
      */
     const data = useMemo(() => journey ? __.ui.profiler?.prepareData() : null, [journey, profile.key, unitStore.current])
+    const hasAltitudeData = useMemo(() => {
+        return data?.dataset?.some(dataset => Array.isArray(dataset.source) && dataset.source.length > 0) ?? false
+    }, [data])
 
     /**
      * Memoizes the configuration object for the Widget component.
@@ -98,7 +101,7 @@ export const ProfileWidget = ({id, context, zIndex, widgetsBoard: persistedWidge
         }
     }, [container, id, widgetsBoard, zIndex])
 
-    if (!journey || !widgetsBoard || Object.keys(config).length === 0) {
+    if (!journey || !widgetsBoard || Object.keys(config).length === 0 || !hasAltitudeData) {
         return null
     }
 

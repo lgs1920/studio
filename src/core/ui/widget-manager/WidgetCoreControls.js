@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-17
- * Last modified: 2026-02-17
+ * Created on: 2026-04-29
+ * Last modified: 2026-04-29
  *
  *
  * Copyright © 2026 LGS1920
@@ -589,7 +589,7 @@ export class WidgetCoreControls {
             config.windowResizeHandler = null
         }
         handleResize(true)
-        config.observer = new ResizeObserver(this.#throttle(handleResize, 100))
+        config.observer = new ResizeObserver(this.#throttle(() => handleResize(false), 100))
         config.observedTargets = [referenceTarget, boundsTarget].filter((target, index, array) => target && array.indexOf(target) === index)
         config.observedTargets.forEach(target => config.observer.observe(target))
         config.windowResizeHandler = this.#throttle(() => handleResize(false), 100)
@@ -609,24 +609,33 @@ export class WidgetCoreControls {
             const scaleY = config.scale?.y ?? 1
             const width = config.dimensions?.width ?? 0
             const height = config.dimensions?.height ?? 0
-            const offsetX = (width * (1 - scaleX)) / 2
-            const offsetY = (height * (1 - scaleY)) / 2
+            if (width <= 0 || height <= 0) {
+                return config.position
+            }
+            const angle = (config.rotate ?? 0) * (Math.PI / 180)
+            const absCos = Math.abs(Math.cos(angle))
+            const absSin = Math.abs(Math.sin(angle))
+            const scaledWidth = width * scaleX
+            const scaledHeight = height * scaleY
+            const rotatedWidth = (scaledWidth * absCos) + (scaledHeight * absSin)
+            const rotatedHeight = (scaledWidth * absSin) + (scaledHeight * absCos)
+            const halfRotatedWidth = rotatedWidth / 2
+            const halfRotatedHeight = rotatedHeight / 2
+            const centerX = config.position.left + (width / 2)
+            const centerY = config.position.top + (height / 2)
+            const clamp = (value, min, max) => {
+                if (min > max) {
+                    return (min + max) / 2
+                }
+                return Math.max(min, Math.min(value, max))
+            }
 
-            const boundingLeft = config.position.left + offsetX
-            const boundingTop = config.position.top + offsetY
-
-            const clampedBoundingLeft = Math.max(
-                container.left,
-                Math.min(boundingLeft, container.right - width * scaleX),
-            )
-            const clampedBoundingTop = Math.max(
-                container.top,
-                Math.min(boundingTop, container.bottom - height * scaleY),
-            )
+            const clampedCenterX = clamp(centerX, container.left + halfRotatedWidth, container.right - halfRotatedWidth)
+            const clampedCenterY = clamp(centerY, container.top + halfRotatedHeight, container.bottom - halfRotatedHeight)
 
             return {
-                left: clampedBoundingLeft - offsetX,
-                top:  clampedBoundingTop - offsetY,
+                left: clampedCenterX - (width / 2),
+                top:  clampedCenterY - (height / 2),
             }
         }
 
@@ -659,18 +668,22 @@ export class WidgetCoreControls {
         const height = config.dimensions?.height ?? 0
         const scaleX = config.scale?.x ?? 1
         const scaleY = config.scale?.y ?? 1
+        if (width <= 0 || height <= 0 || container.width <= 0 || container.height <= 0) {
+            return config.scale || {x: 1, y: 1}
+        }
         const angle = (config.rotate ?? 0) * (Math.PI / 180)
         const absCos = Math.abs(Math.cos(angle))
         const absSin = Math.abs(Math.sin(angle))
-        const scaledWidth = width * scaleX
-        const scaledHeight = height * scaleY
-        const rotatedWidth = (scaledWidth * absCos) + (scaledHeight * absSin)
-        const rotatedHeight = (scaledWidth * absSin) + (scaledHeight * absCos)
+        const rotatedWidth = (width * absCos) + (height * absSin)
+        const rotatedHeight = (width * absSin) + (height * absCos)
 
         const limitX = rotatedWidth > 0 ? container.width / rotatedWidth : 1
         const limitY = rotatedHeight > 0 ? container.height / rotatedHeight : 1
-        const maxAllowedScale = Math.min(limitX, limitY)
-        let finalScale = Math.min(config.scale.x, maxAllowedScale)
+        let finalScale = Math.min(scaleX, scaleY, limitX, limitY)
+
+        if (!Number.isFinite(finalScale)) {
+            finalScale = Math.min(scaleX, scaleY)
+        }
 
         if (finalScale < MIN_SCALE) {
             finalScale = MIN_SCALE
