@@ -7,23 +7,22 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-18
- * Last modified: 2026-03-18
+ * Created on: 2026-04-29
+ * Last modified: 2026-04-29
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import DrawerFooter                                  from '@Components/DrawerFooter'
-import PanelActions from '@Components/PanelsActions'
-import ThemeSelector from '@Components/ThemeSelector'
+import PanelActions                        from '@Components/PanelsActions'
 import WaDrawer                                      from '@Components/WaDrawerNonModal'
-import { INFO_DRAWER }                               from '@Core/constants'
+import { INFO_CHANGELOG_TAB, INFO_DRAWER } from '@Core/constants'
 import { WaScroller, WaTab, WaTabGroup, WaTabPanel } from '@web.awesome.me/webawesome-pro/dist/react'
 
-import React, { useEffect, useRef } from 'react'
-import { createPortal }             from 'react-dom'
-import { useSnapshot }              from 'valtio'
+import { useEffect, useRef, useState } from 'react'
+import { createPortal }                from 'react-dom'
+import { useSnapshot }                 from 'valtio'
 import './style.css'
 
 import { CreditsPanel } from './CreditsPanel'
@@ -32,6 +31,7 @@ import { WhatsNew }     from './WhatsNew'
 export const Panel = () => {
     const snap = useSnapshot(lgs.stores.ui.drawers)
     const _drawerRef = useRef(null)
+    const [activeTab, setActiveTab] = useState(INFO_CHANGELOG_TAB)
 
     const closePanel = (event) => {
         if (window.isOK(event)) {
@@ -58,10 +58,12 @@ export const Panel = () => {
     }
 
     useEffect(() => {
-        if (_drawerRef.current) {
+        const drawer = _drawerRef.current
+
+        if (drawer) {
             // Find the slot element inside the Shadow DOM
-            const _slot = _drawerRef.current.shadowRoot.querySelector('slot[name="body"]') ||
-                _drawerRef.current.shadowRoot.querySelector('slot:not([name])')
+            const _slot = drawer.shadowRoot.querySelector('slot[name="body"]') ||
+                drawer.shadowRoot.querySelector('slot:not([name])')
 
             if (_slot) {
                 _slot.addEventListener('slotchange', _handleSlotChange)
@@ -72,11 +74,18 @@ export const Panel = () => {
          * Cleanup function to prevent memory leaks
          */
         return () => {
-            const _slot = _drawerRef.current?.shadowRoot.querySelector('slot')
+            const _slot = drawer?.shadowRoot.querySelector('slot')
             _slot?.removeEventListener('slotchange', _handleSlotChange)
         }
     }, [])
 
+    const handleTabShow = (event) => {
+        setActiveTab(event.detail.name)
+    }
+
+    const visibleTab = snap.open === INFO_DRAWER
+                       ? __.ui.drawerManager.tab ?? activeTab
+                       : activeTab
 
     const drawerRoot = __.ui.drawerManager.drawerRoot
 
@@ -89,8 +98,8 @@ export const Panel = () => {
                   placement={useSnapshot(lgs.editorSettingsProxy.menu).drawer}
         >
             <PanelActions/>
-            <WaTabGroup>
-                <WaTab slot="nav" panel="tab-whats-new">
+            <WaTabGroup onWaTabShow={handleTabShow}>
+                <WaTab slot="nav" panel={INFO_CHANGELOG_TAB}>
                     What's New ?
                 </WaTab>
                 <WaTab slot="nav" panel="tab-credits">
@@ -101,8 +110,8 @@ export const Panel = () => {
                         <CreditsPanel/>
                     </WaScroller>
                 </WaTabPanel>
-                <WaTabPanel name="tab-whats-new">
-                        <WhatsNew/>
+                <WaTabPanel name={INFO_CHANGELOG_TAB}>
+                    <WhatsNew visible={snap.open === INFO_DRAWER && visibleTab === INFO_CHANGELOG_TAB}/>
                 </WaTabPanel>
             </WaTabGroup>
 

@@ -247,6 +247,7 @@ export const SCENE_MODES = new Map([
 /** Drawers **/
 
 export const INFO_DRAWER = 'info-drawer'
+export const INFO_CHANGELOG_TAB = 'tab-whats-new'
 export const LAYERS_DRAWER = 'layers-drawer'
 export const JOURNEY_EDITOR_DRAWER = 'journey-editor-drawer'
 export const SETTINGS_EDITOR_DRAWER = 'settings-editor-drawer'

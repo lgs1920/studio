@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-18
- * Last modified: 2026-03-18
+ * Created on: 2026-04-29
+ * Last modified: 2026-04-29
  *
  *
  * Copyright © 2026 LGS1920
@@ -24,24 +24,49 @@
     overflow: hidden;
     flex-direction: column;
     box-sizing: border-box;
-    min-height: 100%;
+    min-height: 0;
     gap: var(--lgs-gutter-xs);
 }
 
+.lgs--whats-new-list wa-details {
+    flex: 0 0 auto;
+}
+
 .lgs--whats-new-list .wa-details-open {
-    display: flex;
-    flex: 1;
-    flex-direction: column;
+    display: block;
+    flex: 0 0 auto;
 }
 
 .lgs--whats-new-list .version-content {
-    overflow: hidden;
-    flex: 1;
-    min-height: 0;
+    overflow: visible;
+    flex: 0 0 auto;
+    min-height: auto;
 }
 
 .lgs--whats-new-list summary {
     margin: 0 !important
+}
+
+.lgs--whats-new-state {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 8rem;
+    color: var(--wa-color-neutral-60);
+}
+
+.lgs--whats-new-pagination {
+    font-size: var(--lgs-font-size-s);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--lgs-gutter-xs) 0;
+    color: var(--wa-color-neutral-60);
+    gap: var(--lgs-gutter-xs);
+}
+
+.lgs--whats-new-pagination-spacer {
+    min-width: 5rem;
 }
 
 .lgs--credits-list::part(body) {

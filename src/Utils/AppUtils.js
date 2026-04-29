@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-27
- * Last modified: 2026-04-27
+ * Created on: 2026-04-29
+ * Last modified: 2026-04-29
  *
  *
  * Copyright © 2026 LGS1920
@@ -17,16 +17,15 @@
 import {
     BUILD, CONFIGURATION, COUNTRIES, FREE_ANONYMOUS_ACCESS, LAYERS_TERRAINS_SETTINGS, LGS_CONTEXT_MENU_HOOK, MILLIS,
     platforms, SERVERS, SETTINGS, SETTINGS_STORE, VAULT_STORE, WIDGET_LAYER_TOP, WIDGETS,
-}                           from '@Core/constants'
-import { ElevationServer }  from '@Core/Elevation/ElevationServer'
-import { Settings }         from '@Core/settings/Settings'
-import { SettingsSection }  from '@Core/settings/SettingsSection'
-import { ChangelogManager } from '@Core/ui/ChangelogManager'
-import axios                from 'axios'
-import * as Cesium          from 'cesium'
-import YAML                 from 'yaml'
-import { EventEmitter }     from '../assets/libs/EventEmitter/EventEmitter'
-import { FA2SL }            from './FA2SL'
+}                          from '@Core/constants'
+import { ElevationServer } from '@Core/Elevation/ElevationServer'
+import { Settings }        from '@Core/settings/Settings'
+import { SettingsSection } from '@Core/settings/SettingsSection'
+import axios               from 'axios'
+import * as Cesium         from 'cesium'
+import YAML                from 'yaml'
+import { EventEmitter }    from '../assets/libs/EventEmitter/EventEmitter'
+import { FA2SL }           from './FA2SL'
 
 export class AppUtils {
     static THEME_STORAGE_KEY = 'theme'
@@ -432,14 +431,11 @@ export class AppUtils {
                 // Update last visit
                 lgs.settings.app.lastVisit = Date.now()
 
-                // Read changelog
-                const changeLog = new ChangelogManager()
-                changeLog.list().then(files => {
-                    lgs.changelog = {
-                        files:  files,
-                        toRead: changeLog.whatsNew(files.list, lgs.settings.app.lastVisit),
-                    }
-                })
+                // Changelog metadata and content are loaded lazily when the drawer is displayed.
+                lgs.changelog = {
+                    files:  null,
+                    toRead: [],
+                }
 
                 // Set Elevation servers
                 lgs.elevationServers = ElevationServer.SERVERS
