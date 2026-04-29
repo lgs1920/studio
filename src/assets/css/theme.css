@@ -227,6 +227,12 @@
     --lgs-brand-overlay-gradient: linear-gradient(32deg, color-mix(in oklab, var(--wa-color-brand) 46%, transparent) 0%, transparent 32%, var(--lgs-light-color-25) 66%, transparent 100%),
     linear-gradient(138deg, transparent 0%, color-mix(in oklab, var(--wa-color-brand-60, var(--wa-color-brand)) 42%, transparent) 40%, transparent 76%),
     linear-gradient(166deg, var(--lgs-light-color-15) 0%, color-mix(in oklab, var(--wa-color-brand) 16%, transparent) 34%, var(--lgs-dark-color-70) 58%, var(--lgs-dark-color-95) 100%);
+    --lgs-brand-overlay-shadow-ambient: color-mix(in oklab, color-mix(in oklab, var(--wa-color-brand) 14%, var(--lgs-dark-color-95) 86%) 44%, transparent);
+    --lgs-brand-overlay-shadow-core: color-mix(in oklab, color-mix(in oklab, var(--wa-color-brand) 8%, var(--lgs-dark-color-95) 92%) 78%, transparent);
+    --lgs-brand-overlay-shadow-rim: color-mix(in oklab, color-mix(in oklab, var(--wa-color-brand) 16%, var(--lgs-dark-color-95) 84%) 28%, transparent);
+    --lgs-brand-overlay-shadow-filter: color-mix(in oklab, color-mix(in oklab, var(--wa-color-brand) 10%, var(--lgs-dark-color-95) 90%) 64%, transparent);
+    --lgs-overlay-floating-shadow: 0 0.08rem 0.18rem var(--lgs-brand-overlay-shadow-core), 0 0.26rem 0.58rem var(--lgs-brand-overlay-shadow-ambient), 0 0.02rem 0.12rem var(--lgs-brand-overlay-shadow-rim);
+    --lgs-overlay-floating-drop-shadow: 0 0.2rem 0.46rem var(--lgs-brand-overlay-shadow-filter);
 
     --lgs-theme-background-image: var(--lgs-theme-gradient-1);
 
