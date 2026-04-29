@@ -27,6 +27,8 @@ Each step is an object with the following properties:
 - `done` (boolean, optional): Indicates if the step is completed. Defaults to `false`.
 - `mandatory` (boolean, optional): Indicates if the step is mandatory. Defaults to `false`.
 - `component` (React.ReactNode, optional): Content to render for the active step.
+- `tooltip` (string | object | false, optional): Tooltip content. Uses `text` when omitted, and `false` disables it.
+- `tooltipPlacement` (string, optional): Preferred tooltip placement. Defaults to `top` and flips when needed.
 - `beforeStep` ((index: number) => boolean, optional): Called before navigating to the step; return `false` to cancel
   navigation.
 - `afterStep` ((index: number) => void, optional): Called after navigating to the step.
