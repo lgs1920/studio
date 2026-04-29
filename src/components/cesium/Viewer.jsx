@@ -24,6 +24,12 @@ import { useEffect }                                                            
 let layersInitialized = false
 let cameraUpdateHandlerAttached = false
 let canvasEventsInitialized = false
+let cameraUpdateInProgress = false
+let cameraUpdateQueued = false
+let cameraUpdateTimer = null
+let lastCameraUpdate = 0
+
+const CONTINUOUS_CAMERA_UPDATE_DELAY = 125
 
 export const ensureViewer = () => {
 
@@ -32,8 +38,46 @@ export const ensureViewer = () => {
      *
      * @return {Promise<void>}
      */
+    const flushCameraUpdate = async () => {
+        if (cameraUpdateInProgress) {
+            cameraUpdateQueued = true
+            return
+        }
+
+        cameraUpdateInProgress = true
+        lastCameraUpdate = performance.now()
+
+        try {
+            await __.ui.cameraManager.raiseUpdateEvent({})
+        }
+        finally {
+            cameraUpdateInProgress = false
+            if (cameraUpdateQueued) {
+                cameraUpdateQueued = false
+                void raiseCameraUpdateEvent()
+            }
+        }
+    }
+
     const raiseCameraUpdateEvent = async () => {
-        await __.ui.cameraManager.raiseUpdateEvent({})
+        const isContinuousCameraMove = __.ui.cameraManager?.isRotating?.() || lgs.stores.ui.mainUI.panorama.active
+        if (!isContinuousCameraMove) {
+            await flushCameraUpdate()
+            return
+        }
+
+        const elapsed = performance.now() - lastCameraUpdate
+        const delay = Math.max(0, CONTINUOUS_CAMERA_UPDATE_DELAY - elapsed)
+
+        if (cameraUpdateTimer) {
+            cameraUpdateQueued = true
+            return
+        }
+
+        cameraUpdateTimer = window.setTimeout(() => {
+            cameraUpdateTimer = null
+            void flushCameraUpdate()
+        }, delay)
     }
     // If initialisation phase was OK, we have somme additional tasks to do.
 

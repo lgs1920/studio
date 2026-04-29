@@ -7,24 +7,22 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-15
- * Last modified: 2026-03-15
+ * Created on: 2026-04-29
+ * Last modified: 2026-04-29
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { CameraSettings } from '@Components/Settings/application/general/CameraSettings'
 import { CompassSettings } from '@Components/Settings/application/style/CompassSettings'
 import { EditorSettings } from '@Components/Settings/application/style/EditorSettings'
 import { MenuSettings }      from '@Components/Settings/application/style/MenuSettings'
 import { PWASettings } from '@Components/Settings/application/style/PWASettings'
-import { SlDetails }         from '@shoelace-style/shoelace/dist/react'
 import { WaDetails } from '@web.awesome.me/webawesome-pro/dist/react'
-import { useEffect, useRef } from 'react'
+import { memo, useRef } from 'react'
 import { WelcomeModal }      from './WelcomeModal'
 
-export const Style = () => {
+export const Style = memo(() => {
     const styleSettings = useRef(null)
     const _cantClose = useRef(false)
     const handleClose = event => {
@@ -38,7 +36,7 @@ export const Style = () => {
 
         <div ref={styleSettings} id="style-settings" className="lgs--details-list">
             <WaDetails id="ui-welcome-modal-settings"
-                       small open={false}
+                       small
                        name="style-settings"
                        className="lgs--details-hoverable"
             >
@@ -46,26 +44,24 @@ export const Style = () => {
             </WaDetails>
 
             <WaDetails id="ui-menu-settings"
-                       small open={false}
-                       className="lgs-theme"
+                       small
                        name="style-settings"
-                       className="lgs--details-hoverable"
+                       className="lgs-theme lgs--details-hoverable"
                        onWaHide={handleClose}
             >
                 <MenuSettings ref={_cantClose}/>
             </WaDetails>
 
             <WaDetails id="ui-compass-settings"
-                       small open={false}
-                       className="lgs-theme"
+                       small
                        name="style-settings"
-                       className="lgs--details-hoverable"
+                       className="lgs-theme lgs--details-hoverable"
             >
                 <CompassSettings/>
             </WaDetails>
 
             <WaDetails id="ui-editor-settings"
-                       small open={false}
+                       small
                        className="lgs--details-hoverable"
                        name="style-settings"
             >
@@ -73,7 +69,7 @@ export const Style = () => {
             </WaDetails>
 
             <WaDetails id="ui-pwa-settings"
-                       small open={false}
+                       small
                        className="lgs--details-hoverable"
                        name="style-settings"
             >
@@ -83,4 +79,6 @@ export const Style = () => {
         </div>
 
     )
-}
+})
+
+Style.displayName = 'StyleSettings'

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-27
- * Last modified: 2026-04-27
+ * Created on: 2026-04-29
+ * Last modified: 2026-04-29
  *
  *
  * Copyright © 2026 LGS1920
@@ -61,7 +61,8 @@ const SECONDARY_ENTRANCE = 'lgs-slide-in-from-right'
 
 export const MainUI = memo(() => {
     const formerDevice = useRef(__.device.isMobile)
-    const main = useSnapshot(lgs.stores.main)
+    const {readyForTheShow, theJourney} = useSnapshot(lgs.stores.main)
+    const geocoderDialog = useSnapshot(lgs.stores.main.components.geocoder.dialog)
     const mainUI = useSnapshot(lgs.stores.ui.mainUI)
     const {drawers, toolBar} = useSnapshot(lgs.settings.ui.menu)
     const {video} = useSnapshot(lgs.stores.ui)
@@ -196,23 +197,23 @@ export const MainUI = memo(() => {
     }, [arrangeDrawers, closeDrawer, windowResized])
 
     useEffect(() => {
-        if (mainUI.callForActions.initialized || !main.readyForTheShow) {
+        if (mainUI.callForActions.initialized || !readyForTheShow) {
             return
         }
 
-        lgs.stores.ui.mainUI.callForActions.active = !main.theJourney
+        lgs.stores.ui.mainUI.callForActions.active = !theJourney
         lgs.stores.ui.mainUI.callForActions.initialized = true
-    }, [main.readyForTheShow, main.theJourney, mainUI.callForActions.initialized])
+    }, [readyForTheShow, theJourney, mainUI.callForActions.initialized])
 
     useEffect(() => {
         if (!mainUI.callForActions.active) {
             return
         }
 
-        if (main.theJourney || video.editing || video.recording || video.preRecording || video.snapshot || video.finalizing) {
+        if (theJourney || video.editing || video.recording || video.preRecording || video.snapshot || video.finalizing) {
             lgs.stores.ui.mainUI.callForActions.active = false
         }
-    }, [main.theJourney, mainUI.callForActions.active, video.editing, video.recording, video.preRecording, video.snapshot, video.finalizing])
+    }, [theJourney, mainUI.callForActions.active, video.editing, video.recording, video.preRecording, video.snapshot, video.finalizing])
 
     const tooltipDir = toolBar.fromStart ? 'right' : 'left'
     const {primaryEntrance, secondaryEntrance} = arrangeDrawers()
@@ -243,7 +244,7 @@ export const MainUI = memo(() => {
                                 <VideoButton tooltip={toolBar.fromStart ? 'left' : 'right'}/>
                             </div>
                         </div>
-                        {main.components.geocoder.dialog.mounted && <GeocodingWidget/>}
+                        {geocoderDialog.mounted && <GeocodingWidget/>}
                         <RotationWidget/>
                         <PanoramaWidget/>
                     </>

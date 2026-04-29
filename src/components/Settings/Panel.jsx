@@ -7,21 +7,18 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-18
- * Last modified: 2026-03-18
+ * Created on: 2026-04-29
+ * Last modified: 2026-04-29
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import PanelActions from '@Components/PanelsActions'
-import ThemeSelector                                                  from '@Components/ThemeSelector'
 import { SETTINGS_EDITOR_DRAWER }                                     from '@Core/constants'
-import { faPaintbrushPencil, faScrewdriverWrench }                    from '@fortawesome/pro-solid-svg-icons'
-import { FA2SL }                                                      from '@Utils/FA2SL'
 import WaDrawer                                             from '@Components/WaDrawerNonModal'
 import { WaIcon, WaTab, WaTabGroup, WaTabPanel, WaTooltip } from '@web.awesome.me/webawesome-pro/dist/react'
-import React                                                          from 'react'
+import { memo, useCallback } from 'react'
 import { createPortal }                                     from 'react-dom'
 import { useSnapshot }                                                from 'valtio'
 import './style.css'
@@ -30,19 +27,19 @@ import { GlobalSettings }                                             from './ap
 import { ProfileTools }                                               from './application/profile/ProfileTools'
 import { Style }                                                      from './application/style/Style'
 
-export const Panel = () => {
+export const Panel = memo(() => {
     const drawers = useSnapshot(lgs.stores.ui.drawers)
-    const openInfoModal = () => lgs.editorSettingsProxy.layer.infoDialog = true
     const placement = useSnapshot(lgs.stores.editorSettings.menu).drawer
 
-    const closePanel = (event) => {
+    const closePanel = useCallback((event) => {
         if (event.target.tagName === 'WA-DRAWER') {
             window.dispatchEvent(new Event('resize'))
             if (__.ui.drawerManager.isCurrent(SETTINGS_EDITOR_DRAWER)) {
                 __.ui.drawerManager.close()
             }
         }
-    }
+    }, [])
+
     const drawerRoot = __.ui.drawerManager.drawerRoot
     const content = (
         <>
@@ -76,4 +73,6 @@ export const Panel = () => {
 
     return drawerRoot ? createPortal(content, drawerRoot) : content
 
-}
+})
+
+Panel.displayName = 'SettingsPanel'
