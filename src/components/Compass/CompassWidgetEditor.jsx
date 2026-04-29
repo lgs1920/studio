@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-23
- * Last modified: 2026-02-23
+ * Created on: 2026-04-29
+ * Last modified: 2026-04-29
  *
  *
  * Copyright © 2026 LGS1920
@@ -19,15 +19,38 @@ import {
     ColorElement,
 }                                                                   from '@Components/MainUI/widgets/editor/elements/ColorElement'
 import { COMPASS_FULL, COMPASS_LIGHT }                              from '@Core/constants'
-import { faArrowRotateLeft, faCompass, faLocationArrow }            from '@fortawesome/pro-regular-svg-icons'
-import { SlButton, SlDivider, SlIcon, SlRadioButton, SlRadioGroup } from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                                                    from '@Utils/FA2SL'
-import { colord, extend } from 'colord'
-import namesPlugin                                from 'colord/plugins/names'
-import React, { useCallback, useEffect, useMemo } from 'react'
-import { useSnapshot }                            from 'valtio'
+import { WaButton, WaCard, WaDivider, WaIcon, WaRadio, WaRadioGroup } from '@web.awesome.me/webawesome-pro/dist/react'
+import { colord, extend }                                             from 'colord'
+import namesPlugin                                                    from 'colord/plugins/names'
+import { useCallback, useEffect, useMemo }                            from 'react'
+import { useSnapshot }                                                from 'valtio'
 
 extend([namesPlugin])
+
+/**
+ * Format path to kebab-case for CSS variables.
+ */
+const toCompassKebab = (str) => {
+    return str.replace(/([a-z0-9])([A-Z])/g, '$1-$2').replace(/\./g, '-').toLowerCase()
+}
+
+/**
+ * Resolve CSS variables to actual hex/rgb strings.
+ */
+const resolveCompassColor = (color) => {
+    if (!color || typeof color !== 'string') {
+        return color
+    }
+    if (color.startsWith('--') || color.startsWith('var(')) {
+        const cleanVar = color.startsWith('var(') ? color.replace(/^var\((--.*?)\)$/, '$1') : color
+        const resolved = __.ui.css.getCSSVariable(cleanVar)
+        if (!resolved || resolved === '' || resolved === cleanVar) {
+            return '#ffffff'
+        }
+        return resolveCompassColor(resolved)
+    }
+    return color
+}
 
 export const CompassWidgetEditor = ({entity}) => {
     const _moveable = __.ui.widgetManager.getMoveable(entity)
@@ -37,31 +60,7 @@ export const CompassWidgetEditor = ({entity}) => {
     const element = useMemo(() => {
         return configuration.elements?.[entity] ?? configuration.user ?? configuration.default
     }, [configuration, entity])
-
-    /**
-     * Format path to kebab-case for CSS variables
-     */
-    const toKebab = (str) => {
-        return str.replace(/([a-z0-9])([A-Z])/g, '$1-$2').replace(/\./g, '-').toLowerCase()
-    }
-
-    /**
-     * Resolve CSS variables to actual hex/rgb strings
-     */
-    const resolveColor = useCallback((color) => {
-        if (!color || typeof color !== 'string') {
-            return color
-        }
-        if (color.startsWith('--') || color.startsWith('var(')) {
-            const cleanVar = color.startsWith('var(') ? color.replace(/^var\((--.*?)\)$/, '$1') : color
-            const resolved = __.ui.css.getCSSVariable(cleanVar)
-            if (!resolved || resolved === '' || resolved === cleanVar) {
-                return '#ffffff'
-            }
-            return resolveColor(resolved)
-        }
-        return color
-    }, [])
+    const compassMode = element?.mode?.toString() ?? ''
 
     /**
      * Pure and simple color + opacity to RGBA string conversion
@@ -87,9 +86,9 @@ export const CompassWidgetEditor = ({entity}) => {
         }
         const _sceneTarget = __.ui.widgetManager.getElementById(entity)
         const _previewTarget = document.querySelector('.compass-widget-preview .lgs-compass')
-        const variableName = `--lgs-compass-${toKebab(path)}`
+        const variableName = `--lgs-compass-${toCompassKebab(path)}`
 
-        const baseColor = resolveColor(part.color) || resolveColor(variableName)
+        const baseColor = resolveCompassColor(part.color) || resolveCompassColor(variableName)
         const finalColor = formatRGBA(baseColor, part.opacity)
 
         if (_sceneTarget) {
@@ -98,15 +97,15 @@ export const CompassWidgetEditor = ({entity}) => {
         if (_previewTarget) {
             __.ui.css.setCSSVariable(variableName, finalColor, _previewTarget)
         }
-    }, [entity, resolveColor, formatRGBA])
+    }, [entity, formatRGBA])
 
     /**
      * Provides the RGBA string for ColorElement preview
      */
     const getColor = useCallback((item, path) => {
-        const baseColor = resolveColor(item?.color) || resolveColor(`--lgs-compass-${toKebab(path)}`)
+        const baseColor = resolveCompassColor(item?.color) || resolveCompassColor(`--lgs-compass-${toCompassKebab(path)}`)
         return formatRGBA(baseColor, item?.opacity)
-    }, [resolveColor, formatRGBA])
+    }, [formatRGBA])
 
     const updateValue = useCallback((path, value) => {
         if (!$configuration.elements) {
@@ -171,7 +170,8 @@ export const CompassWidgetEditor = ({entity}) => {
     }, [$configuration, entity, configuration.default, _moveable, syncCSS])
 
     const handleCompassMode = useCallback((event) => {
-        updateValue('mode', event.target.value)
+        const mode = Number(event.target.value)
+        updateValue('mode', Number.isFinite(mode) ? mode : event.target.value)
     }, [updateValue])
 
     /**
@@ -182,7 +182,7 @@ export const CompassWidgetEditor = ({entity}) => {
         if (_moveable?.current) {
             _moveable.current.updateRect()
         }
-    }, [element.mode, _moveable])
+    }, [compassMode, _moveable])
 
     const swatches = useMemo(() => lgs.settings.getSwatches.list.join(';'), [])
 
@@ -191,64 +191,68 @@ export const CompassWidgetEditor = ({entity}) => {
     }
 
     return (
-        <div className="lgs-widget-editor-controls-wrapper lgs-card" key={`editor-${entity}`}>
+        <WaCard className="lgs-widget-editor-controls-wrapper compass-widget-editor" appearance="plain"
+                orientation="vertical" key={`editor-${entity}`}>
             <div className="drawer-horizontal-line">
                 <div className="drawer-horizontal-element">
-                    <SlRadioGroup label="Model" size="small" value={element.mode} onSlInput={handleCompassMode}
-                                  align-right>
-                        <SlRadioButton size="small" value={COMPASS_FULL}>
-                            <SlIcon size="small" slot="prefix" library="fa" name={FA2SL.set(faCompass)}/>
-                            {'Full'}
-                        </SlRadioButton>
-                        <SlRadioButton size="small" value={COMPASS_LIGHT}>
-                            <SlIcon size="small" slot="prefix" library="fa" name={FA2SL.set(faLocationArrow)}/>
-                            {'Light'}
-                        </SlRadioButton>
-                    </SlRadioGroup>
+                    <WaRadioGroup size="small" value={compassMode} orientation="horizontal" label-at-start
+                                  onChange={handleCompassMode}>
+                        <span slot="label">{'Model'}</span>
+                        <WaRadio value={COMPASS_FULL.toString()}>
+                            <WaIcon size="small" variant="regular" name="compass"/>
+                            <span>{'Full'}</span>
+                        </WaRadio>
+                        <WaRadio value={COMPASS_LIGHT.toString()}>
+                            <WaIcon size="small" variant="regular" name="location-arrow"/>
+                            <span>{'Light'}</span>
+                        </WaRadio>
+                    </WaRadioGroup>
                 </div>
                 <div className="drawer-horizontal-element">
                     <div className="widget-editor-reset-menus">
-                    <SlButton size="small" onClick={handleReset}>
-                        <SlIcon size="small" slot="prefix" library="fa" name={FA2SL.set(faArrowRotateLeft)}/>
-                        {'Reset'}
-                    </SlButton>
+                        <WaButton size="small" appearance="plain" onClick={handleReset} aria-label="Reset">
+                            <WaIcon size="small" variant="regular" name="arrow-rotate-left"/>
+                        </WaButton>
                     </div>
                 </div>
             </div>
-            <SlDivider/>
-            <LGSScrollbars>
-                <div className="compass-widget-editor-colors">
-                    {element.mode === COMPASS_FULL &&
-                        <>
-                            <ColorElement label="Background" path="background" part={element.background}
-                                          swatches={swatches} getColor={(p) => getColor(p, 'background')}
-                                          updateValue={updateValue}/>
-                            <SlDivider/>
-                            <ColorElement label="Over-Background" path="overBackground" part={element.overBackground}
-                                          swatches={swatches} getColor={(p) => getColor(p, 'overBackground')}
-                                          updateValue={updateValue}/>
-                            <SlDivider/>
-                            <ColorElement label="Poles" path="poles" part={element.poles} swatches={swatches}
-                                          getColor={(p) => getColor(p, 'poles')} updateValue={updateValue}/>
-                            <SlDivider/>
-                            <ColorElement label="Text" path="text" part={element.text} swatches={swatches}
-                                          getColor={(p) => getColor(p, 'text')} updateValue={updateValue}/>
-                            <SlDivider/>
-                        </>
-                    }
-                    <ColorElement label="Needle North" path="needle.north" part={element.needle.north}
-                                  swatches={swatches} getColor={(p) => getColor(p, 'needle.north')}
-                                  updateValue={updateValue}/>
-                    <SlDivider/>
-                    <ColorElement label="Needle South" path="needle.south" part={element.needle.south}
-                                  swatches={swatches} getColor={(p) => getColor(p, 'needle.south')}
-                                  updateValue={updateValue}/>
-                    <SlDivider/>
-                    <ColorElement label="Center Point" path="needle.center" part={element.needle.center}
-                                  swatches={swatches} getColor={(p) => getColor(p, 'needle.center')}
-                                  updateValue={updateValue}/>
-                </div>
-            </LGSScrollbars>
-        </div>
+            <WaDivider/>
+            <div className="compass-widget-editor-scroll">
+                <LGSScrollbars>
+                    <div className="compass-widget-editor-colors">
+                        {compassMode === COMPASS_FULL.toString() &&
+                            <>
+                                <ColorElement label="Background" path="background" part={element.background}
+                                              swatches={swatches} getColor={(p) => getColor(p, 'background')}
+                                              updateValue={updateValue}/>
+                                <WaDivider/>
+                                <ColorElement label="Over-Background" path="overBackground"
+                                              part={element.overBackground}
+                                              swatches={swatches} getColor={(p) => getColor(p, 'overBackground')}
+                                              updateValue={updateValue}/>
+                                <WaDivider/>
+                                <ColorElement label="Poles" path="poles" part={element.poles} swatches={swatches}
+                                              getColor={(p) => getColor(p, 'poles')} updateValue={updateValue}/>
+                                <WaDivider/>
+                                <ColorElement label="Text" path="text" part={element.text} swatches={swatches}
+                                              getColor={(p) => getColor(p, 'text')} updateValue={updateValue}/>
+                                <WaDivider/>
+                            </>
+                        }
+                        <ColorElement label="Needle North" path="needle.north" part={element.needle.north}
+                                      swatches={swatches} getColor={(p) => getColor(p, 'needle.north')}
+                                      updateValue={updateValue}/>
+                        <WaDivider/>
+                        <ColorElement label="Needle South" path="needle.south" part={element.needle.south}
+                                      swatches={swatches} getColor={(p) => getColor(p, 'needle.south')}
+                                      updateValue={updateValue}/>
+                        <WaDivider/>
+                        <ColorElement label="Center Point" path="needle.center" part={element.needle.center}
+                                      swatches={swatches} getColor={(p) => getColor(p, 'needle.center')}
+                                      updateValue={updateValue}/>
+                    </div>
+                </LGSScrollbars>
+            </div>
+        </WaCard>
     )
 }
