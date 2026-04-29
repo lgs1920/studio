@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-28
- * Last modified: 2026-02-28
+ * Created on: 2026-04-29
+ * Last modified: 2026-04-29
  *
  *
  * Copyright © 2026 LGS1920
@@ -49,7 +49,7 @@ export class CameraUtils {
     /**
      * get Camera target and position in degrees
      */
-    static getPositions = async (camera) => {
+    static getPositions = async (camera, options = {}) => {
         // If we do not have camera, we try to set one or return zeros
         if (!camera) {
             camera = lgs.camera
@@ -70,7 +70,10 @@ export class CameraUtils {
             }
         }
 
-        const target = CameraUtils.getCameraTargetPosition()
+        const target = options.skipTargetPick
+                       ? options.target ?? lgs.stores.main.components.camera.target
+                       : CameraUtils.getCameraTargetPosition()
+        const targetHeight = target?.simulatedHeight ?? target?.height
         const {longitude, latitude, height} = await camera.positionCartographic
         //
         // let scratchRectangle = new Rectangle();
@@ -82,13 +85,16 @@ export class CameraUtils {
             target: {
                 longitude: target?.longitude,
                 latitude: target?.latitude,
-                height: target?.height,
+                height: targetHeight,
             },
             position: {
                 longitude: M.toDegrees(longitude),
                 latitude: M.toDegrees(latitude),
                 height: height,
-                range: (height ?? lgs.settings.getCamera.range),
+                range: options.range ??
+                           target?.range ??
+                           lgs.stores.main.components.camera.position?.range ??
+                           (height ?? lgs.settings.getCamera.range),
             },
         }
     }
@@ -100,7 +106,7 @@ export class CameraUtils {
      *
      * @return {position:{object},target:{object}}
      */
-    static updatePositionInformation = async (camera) => {
+    static updatePositionInformation = async (camera, options = {}) => {
         // If we do not have camera, we try to set one or return
         if (!camera) {
             camera = lgs.camera
@@ -110,7 +116,7 @@ export class CameraUtils {
         }
 
         try {
-            const cameraData = await CameraUtils.getPositions(camera)
+            const cameraData = await CameraUtils.getPositions(camera, options)
             cameraData.position = {...cameraData.position, ...await CameraUtils.getHeadingPitchRoll(camera)}
             return cameraData
         } catch (e) {

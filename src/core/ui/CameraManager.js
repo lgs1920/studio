@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-27
- * Last modified: 2026-04-27
+ * Created on: 2026-04-29
+ * Last modified: 2026-04-29
  *
  *
  * Copyright © 2026 LGS1920
@@ -32,6 +32,12 @@ export class CameraManager {
     position = {}
     orbitalInPause = false
     saveTimer = null
+    renderQuality = {
+        locks:           0,
+        msaaSamples:     null,
+        resolutionScale: null,
+        shadows:         null,
+    }
 
     constructor(settings) {
 
@@ -108,8 +114,8 @@ export class CameraManager {
      *
      * @return {Promise<void>}
      */
-    raiseUpdateEvent = async () => {
-        await this.updatePositionInformation()
+    raiseUpdateEvent = async (options = {}) => {
+        await this.updatePositionInformation(options)
     }
 
     stopWatching = () => {
@@ -200,14 +206,14 @@ export class CameraManager {
      *
      * @return {Promise<void>}
      */
-    updatePositionInformation = async () => {
-        const data = await this.proxy.updatePositionInformation()
+    updatePositionInformation = async (options = {}) => {
+        const data = await this.proxy.updatePositionInformation(null, options)
         // Update Camera Manager information
         if (data) {
             this.settings = data
         }
         else {
-            this.reset()
+            this.resetCameraInformation()
         }
         // Update camera proxy
         this.clone()
@@ -226,6 +232,65 @@ export class CameraManager {
         lgs.stores.main.components.camera.target = deepClone(this.target)
     }
 
+    optimizeContinuousCameraRender = () => {
+        if (!lgs.viewer) {
+            return
+        }
+
+        const scene = lgs.scene ?? lgs.viewer.scene
+        this.renderQuality.locks += 1
+        if (this.renderQuality.locks !== 1) {
+            return
+        }
+
+        this.renderQuality.resolutionScale = lgs.viewer.resolutionScale
+        if (lgs.viewer.resolutionScale > 1) {
+            lgs.viewer.resolutionScale = 1
+        }
+
+        this.renderQuality.msaaSamples = scene?.msaaSamples ?? null
+        if (scene?.msaaSamples > 1) {
+            scene.msaaSamples = 1
+        }
+
+        this.renderQuality.shadows = scene?.shadows ?? null
+        if (scene?.shadows) {
+            scene.shadows = false
+        }
+    }
+
+    restoreContinuousCameraRender = () => {
+        if (!lgs.viewer || this.renderQuality.locks === 0) {
+            return
+        }
+
+        const scene = lgs.scene ?? lgs.viewer.scene
+        this.renderQuality.locks -= 1
+        if (this.renderQuality.locks > 0) {
+            return
+        }
+
+        let shouldRequestRender = false
+        if (this.renderQuality.resolutionScale !== null) {
+            lgs.viewer.resolutionScale = this.renderQuality.resolutionScale
+            this.renderQuality.resolutionScale = null
+            shouldRequestRender = true
+        }
+        if (scene && this.renderQuality.msaaSamples !== null) {
+            scene.msaaSamples = this.renderQuality.msaaSamples
+            this.renderQuality.msaaSamples = null
+            shouldRequestRender = true
+        }
+        if (scene && this.renderQuality.shadows !== null) {
+            scene.shadows = this.renderQuality.shadows
+            this.renderQuality.shadows = null
+            shouldRequestRender = true
+        }
+        if (shouldRequestRender) {
+            scene?.requestRender?.()
+        }
+    }
+
 
     /**
      * Get the data of the camera instance
@@ -239,7 +304,7 @@ export class CameraManager {
      *
      *
      */
-    reset = () => {
+    resetCameraInformation = () => {
         this.settings = this.focusToStarterPOI()
     }
 
@@ -293,12 +358,13 @@ export class CameraManager {
     rotateAround = async (point = null, options) => {
 
         // Let's stop any rotation
-        this.stopRotate()
+        await this.stopRotate()
 
         // And any related event
         this.stopWatching()
 
         __.ui.sceneManager.startRotate
+        this.optimizeContinuousCameraRender()
 
         if (point === null) {
             //take current settings from proxy
@@ -373,7 +439,6 @@ export class CameraManager {
                         }
                         totalRotation += Math.abs(angleRotation)
                         __.ui.css.setCSSVariable('--map-rotation-speed', `${60 / Math.max(effectiveRpm, 0.2)}s`)
-                        lgs.scene?.requestRender?.()
                     }
                     this.move.animation = __.requestAnimationFrame(rotateCamera)
                 }
@@ -402,6 +467,7 @@ export class CameraManager {
             this.stopWatching()
             this.unlock()
             __.ui.sceneManager.stopRotate
+            this.restoreContinuousCameraRender()
             await this.updatePositionInformation()
             this.enableMapDragging()
             lgs.scene?.requestRender?.()
