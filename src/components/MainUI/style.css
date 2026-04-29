@@ -217,11 +217,16 @@ html {
     flex-direction: column;
     max-width: min(18rem, calc(100vw - var(--left) - var(--right) - 2 * var(--lgs-gutter-s)));
     padding: var(--lgs-gutter-s);
+    cursor: grab;
     text-align: left;
     opacity: 0.86;
     color: var(--lgs-card-on-map-color);
     background-color: color-mix(in oklab, var(--lgs-card-on-map-bg-color) 92%, transparent) !important;
     gap: calc(var(--lgs-gutter-xs) / 2);
+}
+
+.orbit-interaction-hints-shell.dragging .orbit-interaction-hints {
+    cursor: grabbing;
 }
 
 .panorama-adjustment-widget-shell {
@@ -247,10 +252,12 @@ html {
     font-weight: 600;
     display: inline-flex;
     align-items: center;
+    justify-content: flex-start;
     padding: var(--lgs-gutter-xs) var(--lgs-gutter-s);
     cursor: grab;
     transition: opacity 180ms ease, transform 180ms ease;
     transform: scale(0.96);
+    text-align: left;
     white-space: nowrap;
     opacity: 0;
     color: var(--wa-color-brand-on-quiet);
@@ -274,6 +281,8 @@ html {
 .panorama-adjustment-metric {
     display: inline-flex;
     align-items: center;
+    justify-content: flex-start;
+    text-align: left;
     gap: var(--lgs-gutter-xs);
 }
 

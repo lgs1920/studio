@@ -59,7 +59,7 @@ export const OrbitInteractionHintsWidget = memo(() => {
         contextMenu:     {
             canRemove: true,
         },
-        draggable:       false,
+        draggable: true,
         dynamic:         true,
         group:           SCENE_WIDGETS,
         id:              ORBIT_INTERACTION_HINTS_WIDGET,
@@ -90,9 +90,9 @@ export const OrbitInteractionHintsWidget = memo(() => {
                 {panorama.active ? (
                     finePointer ? (
                         <>
-                            <span>{'Drag vertical: angle'}</span>
                             <span>{'Wheel/trackpad: height'}</span>
                             <span>{'Alt/Option + drag: height'}</span>
+                            <span>{'Drag vertical: angle'}</span>
                         </>
                     ) : (
                         <>

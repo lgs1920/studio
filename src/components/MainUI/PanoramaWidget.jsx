@@ -34,9 +34,6 @@ import {
     normalizePanoramaPitch,
 }                                               from '@Core/OrbitSettings'
 import { Widget }                                        from '@Components/MainUI/widgets/Widget'
-import {
-    OrbitInteractionHintsWidget,
-}                                                                              from '@Components/MainUI/OrbitInteractionHintsWidget'
 import { faAngle, faMountains }                                                from '@fortawesome/pro-regular-svg-icons'
 import { FA2SL }                                                               from '@Utils/FA2SL'
 import { foot, meter, UnitUtils }                                              from '@Utils/UnitUtils'
@@ -72,12 +69,39 @@ const formatCameraAltitude = height => UnitUtils.formatMetric(numericValueOf(hei
     precision: 0,
 }).full
 const formatPanoramaPitch = pitch => `${Math.round(numericValueOf(pitch))}°`
+const currentCameraMovementSnapshot = () => {
+    const camera = lgs.camera
+    const cartographic = camera?.positionCartographic
+    if (!camera || !cartographic) {
+        return null
+    }
+
+    const key = [
+        cartographic.longitude,
+        cartographic.latitude,
+        cartographic.height,
+        camera.heading,
+        camera.pitch,
+        camera.roll,
+    ].map(value => Number.isFinite(Number(value)) ? Number(value).toFixed(6) : '').join('|')
+
+    if (!key.replaceAll('|', '')) {
+        return null
+    }
+
+    return {
+        key,
+        position: {
+            height: cartographic.height,
+            pitch:  M.toDegrees(camera.pitch ?? 0),
+        },
+    }
+}
 
 export const PanoramaWidget = memo(() => {
     const $panorama = lgs.stores.ui.mainUI.panorama
     const panorama = useSnapshot($panorama)
     const rotate = useSnapshot(lgs.stores.ui.mainUI.rotate)
-    const camera = useSnapshot(lgs.stores.main.components.camera)
     const cameraSettings = useSnapshot(lgs.settings.ui.camera)
     const {toolBar} = useSnapshot(lgs.settings.ui.menu)
     useSnapshot(lgs.settings.unitSystem)
@@ -99,6 +123,7 @@ export const PanoramaWidget = memo(() => {
     }))
     const showCameraMovementWidget = cameraSettings.showMovementWidget ?? true
     const standardCameraKeyRef = useRef(null)
+    const standardCameraFrameRef = useRef(null)
     const config = useMemo(() => getOrbitWidgetConfig('panorama-widget', toolBar.fromStart), [toolBar.fromStart])
     const adjustmentConfig = useMemo(() => ({
         attachTo:        'center',
@@ -328,50 +353,60 @@ export const PanoramaWidget = memo(() => {
     }, [panorama.active, showAdjustmentOverlay])
 
     useEffect(() => {
+        const clearStandardCameraFrame = () => {
+            if (standardCameraFrameRef.current !== null) {
+                window.cancelAnimationFrame(standardCameraFrameRef.current)
+                standardCameraFrameRef.current = null
+            }
+        }
+
         if (!showCameraMovementWidget) {
             standardCameraKeyRef.current = null
+            clearStandardCameraFrame()
             if (!panorama.active) {
                 hideAdjustmentOverlay()
             }
-            return
+            return undefined
         }
 
-        if (panorama.active || rotate.running) {
+        if (panorama.active || rotate.running || !lgs.camera?.changed) {
             standardCameraKeyRef.current = null
-            return
+            clearStandardCameraFrame()
+            return undefined
         }
 
-        const position = camera.position
-        if (!position) {
-            return
+        standardCameraKeyRef.current = currentCameraMovementSnapshot()?.key ?? null
+
+        const showCurrentCameraMovement = () => {
+            if (standardCameraFrameRef.current !== null) {
+                return
+            }
+
+            standardCameraFrameRef.current = window.requestAnimationFrame(() => {
+                standardCameraFrameRef.current = null
+
+                if (lgs.stores.ui.mainUI.panorama.active || lgs.stores.ui.mainUI.rotate.running) {
+                    standardCameraKeyRef.current = null
+                    return
+                }
+
+                const snapshot = currentCameraMovementSnapshot()
+                if (!snapshot || standardCameraKeyRef.current === snapshot.key) {
+                    return
+                }
+
+                standardCameraKeyRef.current = snapshot.key
+                showCameraAdjustmentOverlay(snapshot.position)
+            })
         }
 
-        const cameraKey = [
-            position.longitude,
-            position.latitude,
-            position.height,
-            position.heading,
-            position.pitch,
-            position.roll,
-        ].map(value => Number.isFinite(Number(value)) ? Number(value).toFixed(4) : '').join('|')
+        const removeChangedListener = lgs.camera.changed.addEventListener(showCurrentCameraMovement)
 
-        if (!cameraKey.replaceAll('|', '')) {
-            return
+        return () => {
+            removeChangedListener?.()
+            clearStandardCameraFrame()
         }
-
-        if (standardCameraKeyRef.current === null) {
-            standardCameraKeyRef.current = cameraKey
-            return
-        }
-
-        if (standardCameraKeyRef.current === cameraKey) {
-            return
-        }
-
-        standardCameraKeyRef.current = cameraKey
-        showCameraAdjustmentOverlay(position)
     }, [
-                  camera.position,
                   hideAdjustmentOverlay,
                   panorama.active,
                   rotate.running,
@@ -609,7 +644,6 @@ export const PanoramaWidget = memo(() => {
 
     return (
         <div className="orbit-mode-widgets">
-            <OrbitInteractionHintsWidget/>
             <Widget
                 isVisible={panorama.active}
                 config={config}
@@ -711,12 +745,12 @@ export const PanoramaWidget = memo(() => {
             >
                 <div className="panorama-adjustment-overlay" onWheel={handleAdjustmentWheel}>
                     <span className="panorama-adjustment-metric">
-                        <sl-icon library="fa" name={FA2SL.set(faAngle)}/>
-                        <strong>{adjustmentValues.pitch}</strong>
-                    </span>
-                    <span className="panorama-adjustment-metric">
                         <sl-icon library="fa" name={FA2SL.set(faMountains)}/>
                         <strong>{adjustmentValues.height}</strong>
+                    </span>
+                    <span className="panorama-adjustment-metric">
+                        <sl-icon library="fa" name={FA2SL.set(faAngle)}/>
+                        <strong>{adjustmentValues.pitch}</strong>
                     </span>
                 </div>
             </Widget>
