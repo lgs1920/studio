@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-27
- * Last modified: 2026-04-27
+ * Created on: 2026-04-29
+ * Last modified: 2026-04-29
  *
  *
  * Copyright © 2026 LGS1920
@@ -132,8 +132,10 @@ html {
 .orbit-widget.wa-theme-lgs1920-on-map {
     padding: var(--lgs-on-map-padding, var(--lgs-gutter-xs)) !important;
     border-radius: var(--lgs-on-map-border-radius, var(--lgs-border-radius-s));
-    background: color-mix(in oklab, var(--lgs-card-on-map-bg-color) 96%, black 4%);
+    background-color: color-mix(in oklab, var(--lgs-card-on-map-bg-color) 96%, black 4%);
+    background-image: var(--lgs-card-on-map-bg-image);
     box-shadow: none !important;
+    background-blend-mode: var(--lgs-card-on-map-bg-blend-mode);
     backdrop-filter: none !important;
     contain: layout paint;
 }

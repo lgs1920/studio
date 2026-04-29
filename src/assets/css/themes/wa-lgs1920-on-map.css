@@ -22,8 +22,10 @@
     color: var(--lgs-text-on-color);
     border: 1px solid var(--lgs-card-on-map-border-color);
     border-radius: var(--lgs-on-map-border-radius);
-    background: var(--lgs-card-on-map-bg-color);
+    background-color: var(--lgs-card-on-map-bg-color);
+    background-image: var(--lgs-card-on-map-bg-image);
     box-shadow: var(--sl-shadow-medium);
+    background-blend-mode: var(--lgs-card-on-map-bg-blend-mode);
     --lgs-on-map-padding: var(--lgs-gutter-xs);
     --lgs-on-map-border-radius: var(--lgs-border-radius-s);
     --lgs-on-map-interactive-radius: var(--wa-border-radius-m);
@@ -34,6 +36,8 @@
     backdrop-filter: blur(var(--lgs-blur));
 
     --lgs-card-on-map-bg-color: var(--lgs-dark-color-70);
+    --lgs-card-on-map-bg-image: var(--lgs-on-map-surface-gradient);
+    --lgs-card-on-map-bg-blend-mode: soft-light, screen, normal;
     --lgs-card-on-map-border-color: var(--lgs-light-color-40);
     --lgs-card-on-map-hover-bg-color: var(--lgs-light-color-50);
     --lgs-card-on-map-hover-border-color: var(--lgs-dark-color);
@@ -126,7 +130,12 @@
     --wa-form-control-activated-color: var(--lgs-switch-active-track-color);
 }
 
+.wa-theme-lgs1920-on-map wa-dropdown::part(menu),
 .wa-theme-lgs1920-on-map wa-select::part(listbox) {
+    border-color: var(--lgs-card-on-map-border-color);
+    background-color: var(--lgs-card-on-map-bg-color);
+    background-image: var(--lgs-card-on-map-bg-image);
+    background-blend-mode: var(--lgs-card-on-map-bg-blend-mode);
     scrollbar-color: var(--lgs-scrollbar-thumb-color) var(--lgs-scrollbar-track-color);
 }
 

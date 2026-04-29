@@ -227,6 +227,9 @@
     --lgs-brand-overlay-gradient: linear-gradient(32deg, color-mix(in oklab, var(--wa-color-brand) 46%, transparent) 0%, transparent 32%, var(--lgs-light-color-25) 66%, transparent 100%),
     linear-gradient(138deg, transparent 0%, color-mix(in oklab, var(--wa-color-brand-60, var(--wa-color-brand)) 42%, transparent) 40%, transparent 76%),
     linear-gradient(166deg, var(--lgs-light-color-15) 0%, color-mix(in oklab, var(--wa-color-brand) 16%, transparent) 34%, var(--lgs-dark-color-70) 58%, var(--lgs-dark-color-95) 100%);
+    --lgs-on-map-surface-gradient: linear-gradient(28deg, color-mix(in oklab, var(--wa-color-brand) 24%, transparent) 0%, transparent 34%, color-mix(in oklab, var(--lgs-dark-color-95) 82%, transparent) 100%),
+    linear-gradient(138deg, transparent 0%, color-mix(in oklab, var(--wa-color-brand-60, var(--wa-color-brand)) 18%, transparent) 46%, transparent 82%),
+    linear-gradient(168deg, var(--lgs-dark-color-60) 0%, var(--lgs-dark-color-80) 48%, var(--lgs-dark-color-95) 100%);
     --lgs-brand-overlay-shadow-ambient: color-mix(in oklab, color-mix(in oklab, var(--wa-color-brand) 14%, var(--lgs-dark-color-95) 86%) 44%, transparent);
     --lgs-brand-overlay-shadow-core: color-mix(in oklab, color-mix(in oklab, var(--wa-color-brand) 8%, var(--lgs-dark-color-95) 92%) 78%, transparent);
     --lgs-brand-overlay-shadow-rim: color-mix(in oklab, color-mix(in oklab, var(--wa-color-brand) 16%, var(--lgs-dark-color-95) 84%) 28%, transparent);
@@ -246,6 +249,8 @@
     --lgs-slogan-color: black;
 
     --lgs-card-on-map-bg-color: var(--lgs-dark-color-50);
+    --lgs-card-on-map-bg-image: var(--lgs-on-map-surface-gradient);
+    --lgs-card-on-map-bg-blend-mode: soft-light, screen, normal;
     --lgs-card-on-map-border-color: var(--lgs-light-color-25);
     --lgs-card-on-map-hover-bg-color: var(--lgs-dark-color-75);
     --lgs-card-on-map-hover-border-color: var(--lgs-light-color-50);
@@ -831,12 +836,24 @@ wa-card.wa-theme-lgs1920-on-map::part(body) {
         color: var(--lgs-text-on-color);
         border-color: var(--lgs-card-on-map-border-color);
     border-radius: var(--lgs-on-map-border-radius, var(--lgs-border-radius-s));
-        background: var(--lgs-card-on-map-bg-color);
-        box-shadow: var(--sl-shadow-medium);
+    background-color: var(--lgs-card-on-map-bg-color);
+    background-image: var(--lgs-card-on-map-bg-image);
+    box-shadow: var(--sl-shadow-medium);
+        background-blend-mode: var(--lgs-card-on-map-bg-blend-mode);
         gap: var(--lgs-gutter-s);
         backdrop-filter: blur(var(--lgs-blur));
 
     }
+
+.wa-theme-lgs1920-on-map:is(.lgs-card, .lgs-one-line-card, .lgs-toolbar, .lgs-context-menu)::part(base),
+.wa-theme-lgs1920-on-map .lgs-card::part(base),
+.wa-theme-lgs1920-on-map .lgs-one-line-card::part(base),
+.wa-theme-lgs1920-on-map .lgs-toolbar::part(base),
+.wa-theme-lgs1920-on-map .lgs-context-menu::part(base) {
+    background-color: var(--lgs-card-on-map-bg-color);
+    background-image: var(--lgs-card-on-map-bg-image);
+    background-blend-mode: var(--lgs-card-on-map-bg-blend-mode);
+}
 
 .wa-theme-lgs1920-on-map:is(.lgs-card, .lgs-one-line-card, .lgs-toolbar),
 .wa-theme-lgs1920-on-map :is(.lgs-card, .lgs-one-line-card, .lgs-toolbar) {

@@ -7,14 +7,13 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-27
- * Last modified: 2026-04-27
+ * Created on: 2026-04-29
+ * Last modified: 2026-04-29
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { VideoMessage }                          from '@Components/MainUI/video/VideoMessage'
 import { VIDEO_CROP_ZONE }                from '@Core/constants'
 import { useCallback, useEffect, useRef } from 'react'
 import { useSnapshot }                           from 'valtio'
@@ -58,7 +57,6 @@ export const CropZone = ({onDoubleClick, infoComponent, infoPosition, children, 
                 )}
                 {children}
             </div>
-            {video.step === 0 && <VideoMessage>{'Video settings'}</VideoMessage>}
         </>
 
     )

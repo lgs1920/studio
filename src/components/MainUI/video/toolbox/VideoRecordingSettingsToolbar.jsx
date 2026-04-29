@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-23
- * Last modified: 2026-04-23
+ * Created on: 2026-04-29
+ * Last modified: 2026-04-29
  *
  *
  * Copyright © 2026 LGS1920
@@ -20,9 +20,7 @@
  * Renders a call-to-action bar for the video cropper interface.
  ******************************************************************************/
 import { Tunnel }                                                       from '@Components/Tunnel/Tunnel'
-import { CROP_TOOLS_WIDGETS, VIDEO_CROP_ZONE, VIDEO_TOOLS_WIDGETS, VIDEO_WIDGETS_BOARD } from '@Core/constants'
-import { faGear }                                                       from '@fortawesome/pro-regular-svg-icons'
-import { faCamera, faPhotoFilm, faVideo }                               from '@fortawesome/pro-solid-svg-icons'
+import { CROP_TOOLS_WIDGETS, VIDEO_CROP_ZONE, VIDEO_WIDGETS_BOARD } from '@Core/constants'
 import { memo, useCallback, useEffect, useMemo, useRef }                from 'react'
 import { useSnapshot }                                                  from 'valtio'
 
@@ -35,8 +33,6 @@ export const VideoRecordingSettingsToolbar = memo(() => {
     const video = useSnapshot($video)
 
     const _steps = useRef([])
-    /** Stores original positions of hidden widgets to restore them later */
-    const _needsToBeHidden = useRef(new Map())
 
     // --- Handlers ---
 
@@ -54,9 +50,9 @@ export const VideoRecordingSettingsToolbar = memo(() => {
         // hide some elements that can be visible
         __.ui.contextMenu.hide()
         __.ui.drawerManager.close()
-    }, [syncCropFrame])
+    }, [$video, syncCropFrame])
 
-    const handleSnapShot = useCallback(async (event) => {
+    const handleSnapShot = useCallback(async () => {
         Object.assign($video, {
             snapshot:     true,
             preRecording: false,
@@ -64,7 +60,7 @@ export const VideoRecordingSettingsToolbar = memo(() => {
         })
         // Restoration logic should be triggered by the store observer or a dedicated event
         // after the actual file is saved/processed.
-    }, [])
+    }, [$video])
 
     const handleVideoRecording = useCallback(async (event) => {
         if (!__.recorder) {
@@ -78,7 +74,7 @@ export const VideoRecordingSettingsToolbar = memo(() => {
             paused:       false,
             position: {left: event.clientX, top: event.clientY},
         })
-    }, [])
+    }, [$video])
 
     /**
      * Side effect to hide background widgets when the toolbar appears.
@@ -101,6 +97,10 @@ export const VideoRecordingSettingsToolbar = memo(() => {
             {
                 icon: 'gear',
                 text:       'Video parameters',
+                tooltip: {
+                    title: 'Video parameters',
+                    text:  'Choose the video format and presets before composing the capture.',
+                },
                 done:       false,
                 mandatory:  false,
                 beforeStep: () => {
@@ -126,6 +126,10 @@ export const VideoRecordingSettingsToolbar = memo(() => {
             {
                 icon: 'photo-film',
                 text:       'Add widgets',
+                tooltip: {
+                    title: 'Add widgets',
+                    text:  'Place, resize, and arrange the widgets that will appear in the video.',
+                },
                 done:       false,
                 mandatory:  true,
                 beforeStep: () => {
@@ -145,6 +149,10 @@ export const VideoRecordingSettingsToolbar = memo(() => {
             {
                 icon: 'clapperboard-play',
                 text:       'Start Recording',
+                tooltip: {
+                    title: 'Start recording',
+                    text:  'Record the selected zone.',
+                },
                 done:       false,
                 mandatory:  false,
                 className:  'lgs-video-recording-trigger',
@@ -153,7 +161,7 @@ export const VideoRecordingSettingsToolbar = memo(() => {
                     __.ui.widgetManager.windowResizing = false
                     return true
                 },
-                onClick:    async (index, event) => {
+                onClick: async (_index, event) => {
                     syncCropFrame('before-recording')
                     await handleVideoRecording(event)
                     Object.assign($video, {
@@ -166,6 +174,10 @@ export const VideoRecordingSettingsToolbar = memo(() => {
             {
                 icon: 'camera',
                 text:       'Snapshot',
+                tooltip: {
+                    title: 'Snapshot',
+                    text:  'Export one image from the current zone.',
+                },
                 done: false,
                 mandatory:  false,
                 beforeStep: () => {
@@ -173,7 +185,7 @@ export const VideoRecordingSettingsToolbar = memo(() => {
                     __.ui.widgetManager.windowResizing = false
                     return true
                 },
-                onClick:    async (index, event) => {
+                onClick: async () => {
                     syncCropFrame('before-snapshot')
                     Object.assign($video, {
                         recording:  false,
@@ -181,13 +193,13 @@ export const VideoRecordingSettingsToolbar = memo(() => {
                         finalizing: false,
                     })
                     _steps.current[3].done = true
-                    await handleSnapShot(event)
+                    await handleSnapShot()
                     return true
                 },
             },
         ]
         return _steps.current
-    }, [handleVideoRecording, handleSnapShot, syncCropFrame])
+    }, [$video, handleVideoRecording, handleSnapShot, syncCropFrame])
 
     if (!video.editing) {
         return null
@@ -197,6 +209,10 @@ export const VideoRecordingSettingsToolbar = memo(() => {
         <Tunnel
             className="video-recording-settings-toolbar lgs-toolbar lgs-toolbar-horizontal"
             steps={steps}
+            cancelTooltip={{
+                title: 'Cancel',
+                text:  'Leave video setup.',
+            }}
             onCancel={handleCancel}
         />
     )

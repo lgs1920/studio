@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-27
- * Last modified: 2026-04-27
+ * Created on: 2026-04-29
+ * Last modified: 2026-04-29
  *
  *
  * Copyright © 2026 LGS1920
@@ -21,7 +21,6 @@
  *
  ******************************************************************************/
 
-import { VideoMessage }                             from '@Components/MainUI/video/VideoMessage'
 import classNames                            from 'classnames'
 import { memo, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useSnapshot }                              from 'valtio'
@@ -150,7 +149,6 @@ export const DefinedCropZone = memo(function DefinedCropZone({
                 {children}
 
             </div>
-            {video.step === 1 && <VideoMessage>{'Add some widgets'}</VideoMessage>}
         </>
     )
 })

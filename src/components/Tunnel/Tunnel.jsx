@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-23
- * Last modified: 2026-04-23
+ * Created on: 2026-04-29
+ * Last modified: 2026-04-29
  *
  *
  * Copyright © 2026 LGS1920
@@ -21,11 +21,99 @@
  *
  * @module Tunnel
  */
-import { FA2SL }                                                   from '@Utils/FA2SL'
-import { WaButton, WaIcon, WaTooltip } from '@web.awesome.me/webawesome-pro/dist/react'
+import { WaButton, WaIcon, WaPopup }                                      from '@web.awesome.me/webawesome-pro/dist/react'
 import classNames                                                  from 'classnames'
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import './style.css'
+
+const normalizeTooltip = (tooltip) => {
+    if (tooltip === false || tooltip === null || tooltip === undefined || tooltip === '') {
+        return null
+    }
+
+    if (typeof tooltip === 'string') {
+        return {title: tooltip}
+    }
+
+    return tooltip
+}
+
+const TunnelTooltipContent = memo(({tooltip, icon}) => {
+    const content = normalizeTooltip(tooltip)
+
+    if (!content) {
+        return null
+    }
+
+    if (content.content) {
+        return content.content
+    }
+
+    const titleIcon = content.icon ?? icon
+    const titleIconVariant = content.iconVariant ?? 'regular'
+
+    return (
+        <>
+            {content.title && (
+                <span className="lgs-tunnel-tooltip-heading">
+                    {titleIcon && <WaIcon name={titleIcon} variant={titleIconVariant}/>}
+                    <span className="lgs-tunnel-tooltip-title">{content.title}</span>
+                </span>
+            )}
+            {content.text && <span className="lgs-tunnel-tooltip-text">{content.text}</span>}
+        </>
+    )
+})
+
+TunnelTooltipContent.displayName = 'TunnelTooltipContent'
+
+const TunnelTooltip = memo(({anchorId, tooltip, icon, placement = 'top', children}) => {
+    const [active, setActive] = useState(false)
+    const content = normalizeTooltip(tooltip)
+
+    const show = useCallback(() => setActive(true), [])
+    const hide = useCallback(() => setActive(false), [])
+
+    if (!content) {
+        return children
+    }
+
+    return (
+        <>
+            <span
+                id={anchorId}
+                className="lgs-tunnel-tooltip-anchor"
+                onFocusCapture={show}
+                onBlurCapture={hide}
+                onPointerEnter={show}
+                onPointerLeave={hide}
+                onPointerDown={hide}
+            >
+                {children}
+            </span>
+            <WaPopup
+                className="lgs-tunnel-tooltip-popup"
+                anchor={anchorId}
+                active={active}
+                placement={placement}
+                distance={8}
+                arrow
+                arrowPadding={8}
+                flip
+                shift
+                flipPadding={8}
+                shiftPadding={8}
+                strategy="fixed"
+            >
+                <div className="lgs-tunnel-tooltip lgs-card wa-theme-lgs1920-on-map" role="tooltip">
+                    <TunnelTooltipContent tooltip={content} icon={icon}/>
+                </div>
+            </WaPopup>
+        </>
+    )
+})
+
+TunnelTooltip.displayName = 'TunnelTooltip'
 
 /**
  * @typedef {Object} TunnelStep
@@ -34,6 +122,8 @@ import './style.css'
  * @property {boolean} [done=false] - Whether the step is completed
  * @property {boolean} [mandatory=false] - Whether the step is mandatory
  * @property {React.ReactNode} [component] - Content to render for the step
+ * @property {string|Object|false} [tooltip] - Optional tooltip content. Uses text when omitted, false disables it
+ * @property {string} [tooltipPlacement='top'] - Preferred tooltip placement. It flips vertically when needed
  * @property {(index: number, event?: PointerEvent) => boolean} [beforeStep] - Called before navigating to this step,
  *     return false to cancel
  * @property {(index: number) => void} [afterStep] - Called after navigating to this step
@@ -54,9 +144,17 @@ import './style.css'
  * @param {string} [props.className] - Additional CSS class names
  * @returns {JSX.Element} The rendered tunnel component
  */
-export const Tunnel = memo(({variant = '', steps, defaultStepIndex = 0, onCancel, className = ''}) => {
+export const Tunnel = memo(({
+                                variant = '',
+                                steps,
+                                defaultStepIndex = 0,
+                                onCancel,
+                                className = '',
+                                cancelTooltip = 'Exit',
+                            }) => {
     // State for the current step index
     const [currentContainer, setCurrentStepIndex] = useState(defaultStepIndex)
+    const tunnelId = useId().replace(/:/g, '')
     // Ref for the tunnel container
     const _tunnelContainer = useRef(null)
 
@@ -137,30 +235,36 @@ export const Tunnel = memo(({variant = '', steps, defaultStepIndex = 0, onCancel
                                               key={index}
                                               className="lgs-tunnel-bar-item"
                                               style={{
-                                                  opacity:       isCurrent || step.className ? 1 : 0.7,
-                                                  pointerEvents: isBlocked ? 'none' : 'auto',
+                                                  opacity: isCurrent || step.className ? 1 : 0.7,
                                               }}
                                           >
-                                              <WaTooltip placement="top">{step.text}</WaTooltip>
-                                              <WaButton
-                                                  variant={variant}
-                                                  pill
-                                                  appearance="plain"
-                                                  className={classNames('lgs-tunnel-element', step.className, {
-                                                      'lgs-tunnel-element-done':    isDone,
-                                                      'lgs-tunnel-element-active':  isCurrent,
-                                                      'lgs-tunnel-element-blocked': isBlocked,
-                                                  })}
-                                                  onClick={event => handleStepClick(index, event)}
-                                                  disabled={isBlocked}
+                                              <TunnelTooltip
+                                                  anchorId={`lgs-tunnel-${tunnelId}-step-${index}`}
+                                                  tooltip={step.tooltip ?? step.text}
+                                                  icon={step.tooltipIcon ?? step.icon}
+                                                  placement={step.tooltipPlacement ?? 'top'}
                                               >
-                                                  <WaIcon name={step.icon} variant="regular"/>
-                                              </WaButton>
+                                                  <WaButton
+                                                      variant={variant}
+                                                      pill
+                                                      appearance="plain"
+                                                      aria-label={step.text}
+                                                      className={classNames('lgs-tunnel-element', step.className, {
+                                                          'lgs-tunnel-element-done':    isDone,
+                                                          'lgs-tunnel-element-active':  isCurrent,
+                                                          'lgs-tunnel-element-blocked': isBlocked,
+                                                      })}
+                                                      onClick={event => handleStepClick(index, event)}
+                                                      disabled={isBlocked}
+                                                  >
+                                                      <WaIcon name={step.icon} variant="regular"/>
+                                                  </WaButton>
+                                              </TunnelTooltip>
                                               <div className="lgs-tunnel-bar-spacer"/>
                                           </div>
                                       )
                                   }),
-                              [steps, currentContainer, handleStepClick])
+                              [steps, currentContainer, handleStepClick, tunnelId, variant])
 
     return (
         <div className={classNames('lgs-tunnel-container', className)} ref={_tunnelContainer}>
@@ -169,15 +273,21 @@ export const Tunnel = memo(({variant = '', steps, defaultStepIndex = 0, onCancel
                 <div className="lgs-tunnel-bar-spacer"/>
                 {stepItems}
                 {/* Exit button */}
-                <WaTooltip placement="top">{'Exit'}</WaTooltip>
-                <WaButton
-                    variant={variant}
-                    pill
-                    appearance="plain"
-                    className="lgs-tunnel-cancel lgs-tunnel-element"
-                    onPointerDown={onCancel}>
-                    <WaIcon name="xmark" variant="regular"/>
-                </WaButton>
+                <TunnelTooltip
+                    anchorId={`lgs-tunnel-${tunnelId}-cancel`}
+                    tooltip={cancelTooltip}
+                    icon="xmark"
+                >
+                    <WaButton
+                        variant={variant}
+                        pill
+                        appearance="plain"
+                        aria-label="Exit"
+                        className="lgs-tunnel-cancel lgs-tunnel-element"
+                        onPointerDown={onCancel}>
+                        <WaIcon name="xmark" variant="regular"/>
+                    </WaButton>
+                </TunnelTooltip>
 
                 <div className="lgs-tunnel-bar-spacer"/>
             </div>
