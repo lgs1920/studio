@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-27
- * Last modified: 2026-04-27
+ * Created on: 2026-04-29
+ * Last modified: 2026-04-29
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,6 +16,7 @@
 
 import { createRoot } from 'react-dom/client'
 import { LGS1920 } from '@Components/LGS1920.jsx'
+import { LGS1920Context } from '@Core/LGS1920Context'
 import './assets/css/app.css?v=1.0.5'
 import './assets/css/themes/wa-lgs1920.css'
 import './assets/css/animations.css'
@@ -39,6 +40,11 @@ ResizeObserver.prototype.unobserve = function (target) {
  */
 UIUtils.importFonts()
 AppUtils.setTheme(localStorage.getItem('theme') || 'system')
+document.body.classList.add('lgs-app-booting')
+
+if (!window.lgs) {
+    window.lgs = new LGS1920Context()
+}
 
 /**
  * Let's go

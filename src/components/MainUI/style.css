@@ -302,47 +302,123 @@ html {
  *
  * https://hype4.academy/tools/glassmorphism-generator
  */
-#welcome-modal::part(panel) {
-    --body-spacing: 0;
-    box-shadow: var(--sl-shadow-x-large);
-    color: black;
-    cursor: pointer
+#welcome-modal {
+    position: fixed;
+    z-index: calc(var(--lgs-toast-zindex) - 2);
+    overflow: hidden;
+    color: var(--lgs-text-on-color);
+    background-color: var(--lgs-dark-color-95);
+    inset: 0;
 }
 
-#welcome-modal #footer{
-    display: flex !important;
-    flex-direction: column;
-    gap: var(--lgs-gutter);
-    justify-content: flex-start;
-    text-align: start;
+.welcome-modal-media,
+.welcome-modal-fog,
+.welcome-modal-scrim,
+.welcome-modal-content {
+    position: absolute;
+    inset: 0;
+}
+
+.welcome-modal-media {
+    background: var(--lgs-dark-color-95) url("/assets/images/menu-thumbnail.png") center / cover no-repeat;
+}
+
+.welcome-modal-video {
     width: 100%;
+    height: 100%;
+    transform: scale(1.015);
+    filter: blur(var(--welcome-video-blur, 7px)) brightness(var(--welcome-video-brightness, .84)) saturate(var(--welcome-video-saturation, .72));
+    object-fit: cover;
+    object-position: center;
+}
+
+.welcome-modal-fog {
+    z-index: 1;
+    transition: opacity 600ms ease;
+    opacity: var(--welcome-fog-opacity, .64);
+    background: radial-gradient(circle at 50% 60%, rgba(255, 255, 255, .26) 0%, rgba(255, 255, 255, .1) 36%, transparent 72%),
+    linear-gradient(180deg, rgba(255, 255, 255, .32) 0%, rgba(255, 255, 255, .12) 45%, transparent 100%);
+    backdrop-filter: blur(4.5px) saturate(.84);
+}
+
+.welcome-modal-scrim {
+    z-index: 2;
+    transition: opacity 600ms ease;
+    opacity: var(--welcome-scrim-opacity, .68);
+    background: linear-gradient(180deg, var(--lgs-dark-color-50) 0%, var(--lgs-dark-color-25) 44%, var(--lgs-dark-color-75) 100%),
+    radial-gradient(circle at 50% 45%, transparent 0%, var(--lgs-dark-color-40) 62%, var(--lgs-dark-color-90) 100%);
+    backdrop-filter: blur(1px);
+}
+
+.welcome-modal-content {
+    z-index: 3;
+    display: flex;
+    align-items: center;
+    flex-direction: column;
+    justify-content: center;
+    padding: max(var(--top), var(--lgs-gutter)) max(var(--right), var(--lgs-gutter)) max(var(--bottom), var(--lgs-gutter));
+    gap: var(--lgs-gutter);
 }
 
 #welcome-modal .welcome-logo {
+    position: relative;
     display: flex;
-    justify-content: center;
     flex-direction: column;
+    justify-content: center;
+    width: min(28rem, calc(100vw - var(--lgs-gutter) - var(--lgs-gutter))) !important;
+    min-height: 14rem;
+    color: white;
+    border-color: transparent;
+    background: transparent;
+    box-shadow: none;
+    text-shadow: 0 2px 18px var(--lgs-dark-color-90);
     gap: var(--lgs-gutter);
-    box-shadow: var(--sl-shadow-medium);
+}
+
+#welcome-modal .welcome-logo img {
+    filter: brightness(0) invert(1) drop-shadow(0 2px 18px var(--lgs-dark-color-90));
+}
+
+#welcome-modal .welcome-logo .the-slogan,
+#welcome-modal .welcome-logo .version-info {
+    color: white;
+}
+
+#welcome-modal .welcome-logo-bootstrap {
+    padding: var(--lgs-gutter);
+}
+
+#welcome-modal > .welcome-modal-timer {
+    font-size: calc(var(--lgs-font-size-l) / 2);
+    font-weight: var(--lgs-font-weight-bold);
+    line-height: 1;
+    position: absolute;
+    z-index: 4;
+    top: var(--lgs-gutter-s);
+    right: var(--lgs-gutter-s);
+    color: white;
+    text-shadow: 0 2px 14px var(--lgs-dark-color-90);
 }
 
 #welcome-links {
     position: absolute;
+    z-index: 4;
+    bottom: var(--lgs-gutter-s);
+    left: var(--lgs-gutter-s);
     display: flex;
     align-items: center;
-    gap: var(--lgs-gutter);
-    bottom: 0;
-    left: var(--lgs-gutter-s);
-    width: calc(100% - 2 * var(--lgs-gutter-s));
+    width: auto;
+    gap: var(--lgs-gutter-s);
 }
 
-#welcome-links sl-button {
-    margin-left: auto;
+#welcome-links > :last-child {
+    margin-left: 0;
 }
 
-#welcome-links sl-button::part(base) {
-    color: black;
+#welcome-links wa-button::part(base) {
     font-weight: normal;
+    color: white;
+    text-shadow: 0 2px 12px var(--lgs-dark-color-90);
 }
 
 #welcome-links-do-not-show {
@@ -351,14 +427,47 @@ html {
     gap: var(--lgs-gutter-s);
 }
 
-#welcome-links-do-not-show sl-checkbox::part(base) {
-    color: black
+.welcome-enter-call-for-action {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    width: min(28rem, calc(100vw - var(--lgs-gutter) - var(--lgs-gutter)));
+    gap: var(--lgs-gutter-s);
 }
 
-#welcome-links-do-not-show sl-checkbox::part(control) {
-    color: black;
-    background: transparent;
-    border: 1px solid black;
+.welcome-enter-call-for-action wa-button::part(base) {
+    box-shadow: var(--lgs-overlay-floating-shadow, var(--sl-shadow-large));
+    backdrop-filter: blur(var(--lgs-blur));
+}
+
+.welcome-enter-call-for-action .welcome-site-button::part(base) {
+    color: var(--wa-color-brand-on-quiet);
+    border-color: var(--wa-color-brand-border-quiet);
+    background-color: color-mix(in oklab, var(--wa-color-brand-fill-quiet) 42%, transparent) !important;
+}
+
+.welcome-enter-call-for-action .welcome-site-button:hover::part(base) {
+    color: var(--wa-color-brand-on-normal);
+    border-color: var(--wa-color-brand-border-normal);
+    background-color: var(--wa-color-brand-fill-quiet) !important;
+}
+
+.welcome-enter-call-for-action .welcome-explore-button::part(base) {
+    color: var(--wa-color-brand-on-loud);
+    border-color: var(--wa-color-brand-border-loud);
+    background-color: var(--wa-color-brand-fill-loud) !important;
+}
+
+.welcome-enter-call-for-action .welcome-explore-button:hover::part(base) {
+    color: var(--wa-color-brand-on-loud);
+    border-color: var(--wa-color-brand-border-loud);
+    background-color: var(--wa-color-brand-70) !important;
+}
+
+.welcome-enter-call-for-action wa-button::part(label) {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--lgs-gutter-xs);
 }
 #waiting-loading {
     display: flex;

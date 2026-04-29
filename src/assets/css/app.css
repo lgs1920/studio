@@ -70,6 +70,12 @@ body {
     height: 100%;
 }
 
+body.lgs-app-booting #cesium-viewer {
+    visibility: hidden;
+    pointer-events: none;
+    opacity: 0;
+}
+
 /** Hide the main toolbar */
 .cesium-viewer-toolbar {
     display: none;

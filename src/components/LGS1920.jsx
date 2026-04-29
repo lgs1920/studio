@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-24
- * Last modified: 2026-04-24
+ * Created on: 2026-04-29
+ * Last modified: 2026-04-29
  *
  *
  * Copyright © 2026 LGS1920
@@ -51,9 +51,6 @@ import {
     WIDGET_GOOGLE_FONTS,
 }                       from '@Core/constants'
 import {
-    LGS1920Context,
-}                       from '@Core/LGS1920Context'
-import {
     MapTarget,
 }                       from '@Core/MapTarget'
 import {
@@ -72,25 +69,21 @@ import {
     preCache,
 }                       from '@zumer/snapdom'
 import {
-    useEffect, useState,
+    useCallback, useEffect, useState,
 }                       from 'react'
 
 export const LGS1920 = () => {
     // State to track initialization status and errors
     const [initStatus, setInitStatus] = useState(null)
     const [initError, setInitError] = useState(null)
+    const [settingsReady, setSettingsReady] = useState(false)
+    const [appVisible, setAppVisible] = useState(false)
 
-    /**
-     * Initializes the global LGS1920 context
-     * @returns {LGS1920Context} The initialized context
-     */
-    const initializeContext = () => {
-        if (window.lgs) {
-            return window.lgs
-        }
-        window.lgs = new LGS1920Context()
-        return window.lgs
-    }
+    const revealApp = useCallback(() => {
+        document.body.classList.remove('lgs-app-booting')
+        document.body.classList.add('lgs-app-visible')
+        setAppVisible(true)
+    }, [])
 
     /**
      * Initializes the application and sets the theme
@@ -163,7 +156,7 @@ export const LGS1920 = () => {
      */
     const configureCamera = async (lgs, starter) => {
         let focusTarget = null
-        let cameraStore = null
+        let cameraStore
 
         if (!lgs.theJourney) {
             __.ui.cameraManager.reset()
@@ -236,13 +229,6 @@ export const LGS1920 = () => {
         starter.animated = lgs.settings.ui.camera.start.rotate.app
     }
 
-    /**
-     * Initializes the application on component mount
-     */
-    if (!window.lgs) {
-        initializeContext()
-    }
-
     useEffect(() => {
         /**
          * Main initialization function
@@ -254,16 +240,18 @@ export const LGS1920 = () => {
 
                 // Initialize app
                 const initResult = await initializeApp()
-                setInitStatus(initResult.status)
                 setInitError(initResult.error)
 
                 if (!initResult.status) {
+                    setInitStatus(false)
+                    document.body.classList.remove('lgs-app-booting')
                     UIToast.error({
                                       caption: 'LGS1920 was stopped due to initialization errors!',
                                       text:    'We\'re sorry',
                                   })
                     return
                 }
+                setSettingsReady(true)
 
                 // Initialize managers and layers
                 await initializeManagersAndLayers(lgs)
@@ -301,6 +289,7 @@ export const LGS1920 = () => {
 
                 // Mark UI as initialized
                 __.app.uiInit = true
+                setInitStatus(true)
 
                 // log starting information
                 console.log(`LGS1920 ${lgs.versions.studio} has been loaded and is ready on ${lgs.platform} platform !`)
@@ -313,6 +302,7 @@ export const LGS1920 = () => {
                               })
                 setInitStatus(false)
                 setInitError(error)
+                document.body.classList.remove('lgs-app-booting')
             }
         }
 
@@ -322,14 +312,17 @@ export const LGS1920 = () => {
         <>
             {!initStatus && initError && <InitErrorMessage error={initError}/>}
 
-            {initStatus && (
+            {!initError && !appVisible && (
+                <WelcomeModal initComplete={initStatus === true} settingsReady={settingsReady} onEnter={revealApp}/>
+            )}
+
+            {initStatus && appVisible && (
                 <>
                     <div id="drawer-root" className="drawer-wrapper"/>
                     <ToolsUI/>
                     <MainUI/>
                     <ResponsiveDevice/>
                     <AppUpdate/>
-                    <WelcomeModal/>
                     <MapLayer type={BASE_ENTITY}/>
                     <MapLayer type={OVERLAY_ENTITY}/>
                     <Viewer/>
