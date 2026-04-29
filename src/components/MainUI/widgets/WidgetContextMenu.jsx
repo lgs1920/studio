@@ -7,20 +7,20 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-27
- * Last modified: 2026-04-27
+ * Created on: 2026-04-29
+ * Last modified: 2026-04-29
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import {
-    EDIT_WIDGET_ICON,
+    CAMERA_INFORMATION_WIDGET, EDIT_WIDGET_ICON,
     WIDGET_EDITOR_POST_RENDER_EVENT, WIDGET_EDITOR_PRE_RENDER_EVENT, WIDGETS_CAPABILITIES, WIDGETS_EDITOR_DRAWER,
 } from '@Core/constants'
 import { WidgetDynamicRenderer } from '@Core/ui/widget-manager/dynamic-render/WidgetDynamicRender'
 import { WaIcon, WaTooltip }     from '@web.awesome.me/webawesome-pro/dist/react'
-import React, { useMemo }        from 'react'
+import { useMemo } from 'react'
 import { useSnapshot }           from 'valtio'
 
 const PERCENTAGE = 0.1
@@ -67,6 +67,12 @@ export const WidgetContextMenu = ({targetId, menuRef}) => {
      */
     const removeWidget = () => {
         new WidgetDynamicRenderer().destroyWidget(targetId)
+
+        if (targetId.split('#')[0] === CAMERA_INFORMATION_WIDGET) {
+            lgs.settings.ui.camera.showPosition = false
+            lgs.settings.ui.camera.showHPR = false
+            lgs.settings.ui.camera.showTargetPosition = false
+        }
 
         // Cleanup settings persistence
         const type = targetId.split('#')[0]
@@ -115,31 +121,35 @@ export const WidgetContextMenu = ({targetId, menuRef}) => {
      * @param {number} factor - Scale multiplier or 1 for reset
      */
     const resetSize = (factor) => {
+        const widgetConfig = __.ui.widgetManager.getWidgetConfig(targetId)
+        if (!widgetConfig) {
+            return
+        }
         const elementId = __.ui.widgetManager.retrieveElementId(element)
-        const container = (config.boundsContainer ?? config.container).getBoundingClientRect()
+        const container = (widgetConfig.boundsContainer ?? widgetConfig.container).getBoundingClientRect()
 
         if (factor === 1) {
-            config.scale = {x: 1, y: 1}
+            widgetConfig.scale = {x: 1, y: 1}
         }
         else {
-            config.scale = __.ui.widgetManager.clampScale(
+            widgetConfig.scale = __.ui.widgetManager.clampScale(
                 {
-                    x: config.scale.x * (1 + factor),
-                    y: config.scale.y * (1 + factor),
+                    x: widgetConfig.scale.x * (1 + factor),
+                    y: widgetConfig.scale.y * (1 + factor),
                 },
-                config,
+                widgetConfig,
             )
         }
 
-        config.scale = __.ui.widgetManager.adaptScaleToContainer(config, container)
-        config.position = __.ui.widgetManager.adaptPositionToContainer(config, container)
+        widgetConfig.scale = __.ui.widgetManager.adaptScaleToContainer(widgetConfig, container)
+        widgetConfig.position = __.ui.widgetManager.adaptPositionToContainer(widgetConfig, container)
 
-        if (config.persist) {
-            __.ui.widgetManager.saveWidgetPosition(elementId, config)
+        if (widgetConfig.persist) {
+            __.ui.widgetManager.saveWidgetPosition(elementId, widgetConfig)
         }
 
-        __.ui.widgetManager.setScale(element, config.scale.x, config.scale.y)
-        __.ui.widgetManager.applyPosition(element, config.position)
+        __.ui.widgetManager.setScale(element, widgetConfig.scale.x, widgetConfig.scale.y)
+        __.ui.widgetManager.applyPosition(element, widgetConfig.position)
 
         if (factor === 1) {
             closeMenu()

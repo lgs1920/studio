@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-27
- * Last modified: 2026-04-27
+ * Created on: 2026-04-29
+ * Last modified: 2026-04-29
  *
  *
  * Copyright © 2026 LGS1920
@@ -27,26 +27,12 @@ let canvasEventsInitialized = false
 
 export const ensureViewer = () => {
 
-    const coordinates = {
-        position: {
-            longitude: lgs.settings.starter.longitude,
-            latitude:  lgs.settings.starter.latitude,
-            height:    lgs.settings.starter.height,
-            heading:   lgs.settings.starter.camera.heading,
-            pitch:     lgs.settings.starter.camera.pitch,
-            roll:      lgs.settings.starter.camera.roll,
-        },
-    }
-
     /**
      * We manage our own camera update event
      *
      * @return {Promise<void>}
      */
     const raiseCameraUpdateEvent = async () => {
-        if (__.ui.cameraManager?.isRotating?.() || lgs.stores.ui.mainUI.panorama.active) {
-            return
-        }
         await __.ui.cameraManager.raiseUpdateEvent({})
     }
     // If initialisation phase was OK, we have somme additional tasks to do.

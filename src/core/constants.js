@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-27
- * Last modified: 2026-04-27
+ * Created on: 2026-04-29
+ * Last modified: 2026-04-29
  *
  *
  * Copyright © 2026 LGS1920
@@ -461,6 +461,7 @@ export const VIDEO_TOOLS_WIDGETS   = 'video-tools-widgets',
 
 export const COMPASS_WIDGET       = 'compass-widget',
              CREDITS_WIDGET       = 'credits-widget',
+             CAMERA_INFORMATION_WIDGET = 'camera-information-widget',
              PROFILE_WIDGET       = 'profile-widget',
              TEXT_WIDGET          = 'text-widget',
              JOURNEY_STATS_WIDGET = 'journey-stats-widget'
