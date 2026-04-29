@@ -376,7 +376,8 @@ export const ADD_POI_EVENT    = 'poi/add',
 /** Compass **/
 export const NO_COMPASS = 0,
 COMPASS_FULL            = 1,
-COMPASS_LIGHT           = 2
+COMPASS_LIGHT     = 2,
+COMPASS_WIND_ROSE = 3
 
 /*******************************************************************************
  * Context Menu

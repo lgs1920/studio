@@ -38,7 +38,7 @@ widgets:
     configuration:
       default:
         show: true
-        mode: 1        # 0: none, 1: full, 2:light
+        mode: 1        # 0: none, 1: full, 2: light, 3: wind rose
         background:
           show: true
           color: --lgs-dark-color-75

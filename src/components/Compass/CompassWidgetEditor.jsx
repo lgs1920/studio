@@ -15,11 +15,14 @@
  ******************************************************************************/
 
 import { LGSScrollbars }                                            from '@Components/MainUI/LGSScrollbars'
+import { CompassFull }                                             from '@Components/MainUI/compass/CompassFull'
+import { CompassLight }                                            from '@Components/MainUI/compass/CompassLight'
+import { CompassWindRose }                                         from '@Components/MainUI/compass/CompassWindRose'
 import {
     ColorElement,
 }                                                                   from '@Components/MainUI/widgets/editor/elements/ColorElement'
-import { COMPASS_FULL, COMPASS_LIGHT }                              from '@Core/constants'
-import { WaButton, WaCard, WaDivider, WaIcon, WaRadio, WaRadioGroup } from '@web.awesome.me/webawesome-pro/dist/react'
+import { COMPASS_FULL, COMPASS_LIGHT, COMPASS_WIND_ROSE }          from '@Core/constants'
+import { WaButton, WaCard, WaDivider, WaIcon, WaOption, WaSelect } from '@web.awesome.me/webawesome-pro/dist/react'
 import { colord, extend }                                             from 'colord'
 import namesPlugin                                                    from 'colord/plugins/names'
 import { useCallback, useEffect, useMemo }                            from 'react'
@@ -61,6 +64,8 @@ export const CompassWidgetEditor = ({entity}) => {
         return configuration.elements?.[entity] ?? configuration.user ?? configuration.default
     }, [configuration, entity])
     const compassMode = element?.mode?.toString() ?? ''
+    const showsSurfaceColors = compassMode === COMPASS_FULL.toString()
+    const showsDirectionalColors = compassMode === COMPASS_FULL.toString() || compassMode === COMPASS_WIND_ROSE.toString()
 
     /**
      * Pure and simple color + opacity to RGBA string conversion
@@ -179,8 +184,22 @@ export const CompassWidgetEditor = ({entity}) => {
      * This ensures the handles match the new visual dimensions
      */
     useEffect(() => {
-        if (_moveable?.current) {
-            _moveable.current.updateRect()
+        let firstFrame = null
+        let secondFrame = null
+
+        firstFrame = requestAnimationFrame(() => {
+            secondFrame = requestAnimationFrame(() => {
+                _moveable?.current?.updateRect()
+            })
+        })
+
+        return () => {
+            if (firstFrame !== null) {
+                cancelAnimationFrame(firstFrame)
+            }
+            if (secondFrame !== null) {
+                cancelAnimationFrame(secondFrame)
+            }
         }
     }, [compassMode, _moveable])
 
@@ -196,18 +215,34 @@ export const CompassWidgetEditor = ({entity}) => {
                     appearance="plain" orientation="vertical">
                 <div className="drawer-horizontal-line">
                     <div className="drawer-horizontal-element">
-                        <WaRadioGroup size="small" value={compassMode} orientation="horizontal" label-at-start
-                                      onChange={handleCompassMode}>
-                            <span slot="label">{'Model'}</span>
-                            <WaRadio value={COMPASS_FULL.toString()}>
-                                <WaIcon size="small" variant="regular" name="compass"/>
-                                <span>{'Full'}</span>
-                            </WaRadio>
-                            <WaRadio value={COMPASS_LIGHT.toString()}>
-                                <WaIcon size="small" variant="regular" name="location-arrow"/>
-                                <span>{'Light'}</span>
-                            </WaRadio>
-                        </WaRadioGroup>
+                        <WaSelect
+                            className="compass-mode-select"
+                            size="small"
+                            value={compassMode}
+                            label="Model"
+                            label-at-start
+                            onChange={handleCompassMode}
+                        >
+                            <WaIcon slot="start" size="small" variant="regular" name="compass"/>
+                            <WaOption value={COMPASS_FULL.toString()} label="Full">
+                                <span slot="start" className="compass-select-thumbnail">
+                                    <CompassFull width="24" height="24"/>
+                                </span>
+                                {'Full'}
+                            </WaOption>
+                            <WaOption value={COMPASS_LIGHT.toString()} label="Light">
+                                <span slot="start" className="compass-select-thumbnail">
+                                    <CompassLight width="24" height="24"/>
+                                </span>
+                                {'Light'}
+                            </WaOption>
+                            <WaOption value={COMPASS_WIND_ROSE.toString()} label="Rose">
+                                <span slot="start" className="compass-select-thumbnail">
+                                    <CompassWindRose width="24" height="24"/>
+                                </span>
+                                {'Rose'}
+                            </WaOption>
+                        </WaSelect>
                     </div>
                     <div className="drawer-horizontal-element">
                         <div className="widget-editor-reset-menus">
@@ -219,7 +254,7 @@ export const CompassWidgetEditor = ({entity}) => {
                 </div>
                 <WaDivider/>
                 <div className="compass-widget-editor-colors">
-                    {compassMode === COMPASS_FULL.toString() &&
+                    {showsSurfaceColors &&
                         <>
                             <ColorElement label="Background" path="background" part={element.background}
                                           swatches={swatches} getColor={(p) => getColor(p, 'background')}
@@ -230,6 +265,16 @@ export const CompassWidgetEditor = ({entity}) => {
                                           swatches={swatches} getColor={(p) => getColor(p, 'overBackground')}
                                           updateValue={updateValue}/>
                             <WaDivider/>
+                            <ColorElement label="Poles" path="poles" part={element.poles} swatches={swatches}
+                                          getColor={(p) => getColor(p, 'poles')} updateValue={updateValue}/>
+                            <WaDivider/>
+                            <ColorElement label="Text" path="text" part={element.text} swatches={swatches}
+                                          getColor={(p) => getColor(p, 'text')} updateValue={updateValue}/>
+                            <WaDivider/>
+                        </>
+                    }
+                    {showsDirectionalColors && !showsSurfaceColors &&
+                        <>
                             <ColorElement label="Poles" path="poles" part={element.poles} swatches={swatches}
                                           getColor={(p) => getColor(p, 'poles')} updateValue={updateValue}/>
                             <WaDivider/>

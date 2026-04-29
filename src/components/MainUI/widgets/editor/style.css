@@ -117,8 +117,15 @@
     padding-bottom: var(--lgs-gutter-s);
 }
 
-.compass-widget-editor wa-radio::part(label) {
+.compass-widget-editor .compass-mode-select {
+    min-width: 10rem;
+}
+
+.compass-widget-editor .compass-select-thumbnail {
     display: inline-flex;
     align-items: center;
-    gap: var(--lgs-gutter-xs);
+}
+
+.compass-widget-editor .compass-select-thumbnail svg {
+    flex: 0 0 auto;
 }

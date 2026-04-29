@@ -7,16 +7,14 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-22
- * Last modified: 2026-02-22
+ * Created on: 2026-04-29
+ * Last modified: 2026-04-29
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { CompassWidget } from '@Components/Compass/CompassWidget'
 import { Compass }       from '@Components/MainUI/compass/Compass'
-import React             from 'react'
 
 /**
  * Preview component for Journey Stats.
@@ -25,7 +23,7 @@ import React             from 'react'
 export const CompassWidgetPreview = ({entity}) => {
     return (
         <div className="compass-widget-preview">
-            <Compass fixed inWidget entity={entity}/>
+            <Compass fixed inWidget entity={entity} syncBounds={false}/>
         </div>
     )
 }

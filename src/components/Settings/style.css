@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-14
- * Last modified: 2026-03-14
+ * Created on: 2026-04-29
+ * Last modified: 2026-04-29
  *
  *
  * Copyright © 2026 LGS1920
@@ -208,32 +208,15 @@
  * Compass settings
  *******************************************************************************/
 
-.compass-settings wa-radio-group::part(form-control-input) {
-    display: flex;
-    align-content: center;
-    gap: var(--lgs-gutter-s);
-}
-
-.compass-settings wa-radio-group[align="right"]::part(form-control) {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
+.compass-settings wa-select {
     width: 100%;
-    gap: var(--lgs-gutter-s);
 }
 
-.compass-settings wa-radio-group::part(form-control-label) {
-    margin-bottom: 0;
-}
-
-.compass-settings wa-radio-group, .compass-settings wa-radio {
-    display: flex;
+.compass-settings .compass-select-thumbnail {
+    display: inline-flex;
     align-items: center;
-    justify-content: space-between;
-    gap: var(--lgs-gutter-s);
 }
 
-.compass-settings svg {
-    margin-right: 0;
+.compass-settings .compass-select-thumbnail svg {
+    flex: 0 0 auto;
 }
-
