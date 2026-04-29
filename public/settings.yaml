@@ -228,6 +228,7 @@ ui:
     showPosition: false         # Display Camera position
     showTargetPosition: true    # Display Camera View point
     showHPR: false              # Display Camera HPR
+    showMovementWidget: true    # Display Camera movement widget
 
     targetIcon: # Camera Target Icon
       show: true

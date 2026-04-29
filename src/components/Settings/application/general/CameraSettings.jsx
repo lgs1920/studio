@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-19
- * Last modified: 2026-04-19
+ * Created on: 2026-04-29
+ * Last modified: 2026-04-29
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,7 +16,7 @@
 
 import { FOCUS_CENTROID, FOCUS_LAST, FOCUS_STARTER, SCENE_MODE_3D } from '@Core/constants'
 import { WaDivider, WaIcon, WaRadio, WaRadioGroup, WaSwitch } from '@web.awesome.me/webawesome-pro/dist/react'
-import React, { useRef }                                      from 'react'
+import { useCallback, useRef } from 'react'
 import { useSnapshot }                                        from 'valtio/index'
 
 /**
@@ -24,7 +24,7 @@ import { useSnapshot }                                        from 'valtio/index
  * Manages camera display options and focus behaviors.
  * @param {Object} props - Component properties.
  */
-export const CameraSettings = (props) => {
+export const CameraSettings = () => {
     // Valtio Proxies
     const $camera = lgs.settings.ui.camera
     const $poi = lgs.settings.ui.poi
@@ -38,6 +38,30 @@ export const CameraSettings = (props) => {
     // Ref naming convention: starts with _ and no Ref suffix
     const _targetPosition = useRef(null)
 
+    const updateCameraBoolean = useCallback((key, value) => {
+        lgs.settings.ui.camera[key] = value
+    }, [])
+
+    const updateCameraStart = useCallback((key, value) => {
+        lgs.settings.ui.camera.start[key] = value
+    }, [])
+
+    const updateCameraStartRotate = useCallback((key, value) => {
+        lgs.settings.ui.camera.start.rotate[key] = value
+    }, [])
+
+    const updateTargetMarker = useCallback((event) => {
+        const isChecked = event.target.checked
+        lgs.settings.ui.camera.targetIcon.show = isChecked
+        if (!isChecked && _targetPosition.current?.checked) {
+            _targetPosition.current.click()
+        }
+    }, [])
+
+    const updatePoiRotate = useCallback((event) => {
+        lgs.settings.ui.poi.rotate = event.target.checked
+    }, [])
+
     /**
      * Renders information toggles.
      * Used as a function to maintain DOM structure without re-mounting components.
@@ -49,30 +73,23 @@ export const CameraSettings = (props) => {
                     <>
                         <div className="drawer-horizontal-line align-to-top">
                             <WaSwitch size="xsmall" label-at-start checked={camera.showPosition}
-                                      onChange={(event) => $camera.showPosition = event.target.checked}>
+                                      onChange={(event) => updateCameraBoolean('showPosition', event.target.checked)}>
                                 {' Show Position '}
                                 <span slot="hint">{' Longitude, Latitude, Altitude '}</span>
                             </WaSwitch>
                             <WaDivider orientation="vertical"/>
                             <WaSwitch size="xsmall" label-at-start checked={camera.showHPR}
-                                      onChange={(event) => $camera.showHPR = event.target.checked}>
+                                      onChange={(event) => updateCameraBoolean('showHPR', event.target.checked)}>
                                 {' Show HPR '}
                                 <span slot="hint">{' Head, Pitch, Roll '}</span>
                             </WaSwitch>
                         </div>
-                        <WaDivider/>
                     </>
                 }
 
                 <div className="drawer-horizontal-line align-to-top">
                     <WaSwitch size="xsmall" label-at-start checked={camera.targetIcon.show}
-                              onChange={(event) => {
-                                  const isChecked = event.target.checked
-                                  $camera.targetIcon.show = isChecked
-                                  if (!isChecked && _targetPosition.current?.checked) {
-                                      _targetPosition.current.click()
-                                  }
-                              }}>
+                              onChange={updateTargetMarker}>
                         {' Show Target Marker '}
                         <span slot="hint">
                             {' Marked with '}
@@ -81,12 +98,20 @@ export const CameraSettings = (props) => {
                     </WaSwitch>
                     <WaDivider orientation="vertical"/>
                     <WaSwitch size="xsmall" label-at-start checked={camera.showTargetPosition} ref={_targetPosition}
-                              onChange={(event) => $camera.showTargetPosition = event.target.checked}>
+                              onChange={(event) => updateCameraBoolean('showTargetPosition', event.target.checked)}>
                         {' Show Target Position '}
                         <span slot="hint">
                             {' Marked with '}
                             <WaIcon name="arrows-to-circle" variant="regular"/>
                         </span>
+                    </WaSwitch>
+                </div>
+                <WaDivider/>
+                <div className="drawer-horizontal-line align-to-top">
+                    <WaSwitch size="xsmall" label-at-start checked={camera.showMovementWidget ?? true}
+                              onChange={(event) => updateCameraBoolean('showMovementWidget', event.target.checked)}>
+                        {' Camera Info '}
+                        <span slot="hint">{' Angle and altitude while moving the camera '}</span>
                     </WaSwitch>
                 </div>
                 <WaDivider/>
@@ -103,7 +128,7 @@ export const CameraSettings = (props) => {
                 <div className="drawer-horizontal-line two-columns align-to-top">
                     <WaRadioGroup value={camera.start.app}
                                   size={'xsmall'}
-                                  onChange={(event) => $camera.start.app = event.target.value}
+                                  onChange={(event) => updateCameraStart('app', event.target.value)}
                     >
                         <label slot="label">{' Start focus: '}</label>
                         <WaRadio value={FOCUS_STARTER}>{' Starter POI '}</WaRadio>
@@ -113,7 +138,7 @@ export const CameraSettings = (props) => {
 
                     <WaRadioGroup value={camera.start.journey}
                                   size={'xsmall'}
-                                  onChange={(event) => $camera.start.journey = event.target.value}>
+                                  onChange={(event) => updateCameraStart('journey', event.target.value)}>
                         <label slot="label">{' Journey focus: '}</label>
                         <WaRadio value={FOCUS_CENTROID}>{' Center '}</WaRadio>
                         <WaRadio value={FOCUS_LAST}>{' Last Camera Location '}</WaRadio>
@@ -122,7 +147,7 @@ export const CameraSettings = (props) => {
                 <WaDivider/>
                 <div className="drawer-horizontal-line two-columns">
                     <WaSwitch size="xsmall" label-at-start checked={camera.start.rotate.app}
-                              onChange={(event) => $camera.start.rotate.app = event.target.checked}>
+                              onChange={(event) => updateCameraStartRotate('app', event.target.checked)}>
                         {' Rotation after initial focus '}
                     </WaSwitch>
                 </div>
@@ -130,12 +155,12 @@ export const CameraSettings = (props) => {
                 <WaDivider/>
                 <div>
                     <WaSwitch size="xsmall" label-at-start checked={poi.rotate}
-                              onChange={(event) => $poi.rotate = event.target.checked}>
+                              onChange={updatePoiRotate}>
                         {' Rotation after focusing on a POI '}
                     </WaSwitch>
                     <br/>
                     <WaSwitch size="xsmall" label-at-start checked={camera.start.rotate.journey}
-                              onChange={(event) => $camera.start.rotate.journey = event.target.checked}>
+                              onChange={(event) => updateCameraStartRotate('journey', event.target.checked)}>
                         {' Rotation after focusing on a journey '}
                     </WaSwitch>
                 </div>

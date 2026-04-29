@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-27
- * Last modified: 2026-04-27
+ * Created on: 2026-04-29
+ * Last modified: 2026-04-29
  *
  *
  * Copyright © 2026 LGS1920
@@ -24,6 +24,7 @@ import {
     ORBIT_RPM_STEP,
     persistOrbitSettings,
 }                                   from '@Core/OrbitSettings'
+import { OrbitInteractionHintsWidget } from '@Components/MainUI/OrbitInteractionHintsWidget'
 import { Widget }                     from '@Components/MainUI/widgets/Widget'
 import { WaButton, WaCard, WaIcon } from '@web.awesome.me/webawesome-pro/dist/react'
 import { memo, useCallback, useMemo } from 'react'
@@ -67,64 +68,67 @@ export const RotationWidget = memo(() => {
     }, [$rotate, rotate.target])
 
     return (
-        <Widget
-            isVisible={rotate.running && !panorama.active}
-            config={config}
-            className="orbit-widget-shell"
-        >
-            <WaCard
-                appearance="plain"
-                className="orbit-widget rotation-widget lgs-card wa-theme-lgs1920-on-map"
-                onWheel={stopPropagation}
+        <div className="orbit-mode-widgets">
+            <OrbitInteractionHintsWidget/>
+            <Widget
+                isVisible={rotate.running && !panorama.active}
+                config={config}
+                className="orbit-widget-shell"
             >
-                <div className="orbit-widget-header">
-                    <div className="panorama-widget-title">
-                        <WaIcon className="grabber orbit-widget-grabber" name="grip-dots" variant="solid"/>
-                        <WaIcon name="arrows-rotate" animation="spin" variant="regular"/>
-                        <span>{'Rotation'}</span>
+                <WaCard
+                    appearance="plain"
+                    className="orbit-widget rotation-widget lgs-card wa-theme-lgs1920-on-map"
+                    onWheel={stopPropagation}
+                >
+                    <div className="orbit-widget-header">
+                        <div className="panorama-widget-title">
+                            <WaIcon className="grabber orbit-widget-grabber" name="grip-dots" variant="solid"/>
+                            <WaIcon name="arrows-rotate" animation="spin" variant="regular"/>
+                            <span>{'Rotation'}</span>
+                        </div>
+                        <WaButton appearance="plain" size="small" onClick={stopRotation}>
+                            <WaIcon name="xmark" variant="regular"/>
+                        </WaButton>
                     </div>
-                    <WaButton appearance="plain" size="small" onClick={stopRotation}>
-                        <WaIcon name="xmark" variant="regular"/>
+
+                    <div className="panorama-widget-body">
+                        <div className="panorama-widget-slider">
+                            <span>{'RPM'}</span>
+                            <input
+                                className="panorama-widget-range"
+                                type="range"
+                                min={ORBIT_RPM_MIN}
+                                max={ORBIT_RPM_MAX}
+                                step={ORBIT_RPM_STEP}
+                                value={rotate.rpm}
+                                onInput={updateRPM}
+                                onChange={persistRPM}
+                            />
+                            <strong>{rotate.rpm.toFixed(1)}</strong>
+                        </div>
+
+                        <div className="panorama-widget-slider">
+                            <span>{'Sense'}</span>
+                            <input
+                                className="panorama-widget-range"
+                                type="range"
+                                min={ORBIT_DIRECTION_MIN}
+                                max={ORBIT_DIRECTION_MAX}
+                                step={ORBIT_DIRECTION_STEP}
+                                value={rotate.direction}
+                                onInput={updateDirection}
+                                onChange={persistDirection}
+                            />
+                            <strong>{getOrbitDirectionLabel(rotate.direction)}</strong>
+                        </div>
+                    </div>
+
+                    <WaButton appearance="outlined" size="small" onClick={stopRotation}>
+                        <WaIcon slot="start" name="arrows-rotate" animation="spin" variant="regular"/>
+                        {'Stop'}
                     </WaButton>
-                </div>
-
-                <div className="panorama-widget-body">
-                    <div className="panorama-widget-slider">
-                        <span>{'RPM'}</span>
-                        <input
-                            className="panorama-widget-range"
-                            type="range"
-                            min={ORBIT_RPM_MIN}
-                            max={ORBIT_RPM_MAX}
-                            step={ORBIT_RPM_STEP}
-                            value={rotate.rpm}
-                            onInput={updateRPM}
-                            onChange={persistRPM}
-                        />
-                        <strong>{rotate.rpm.toFixed(1)}</strong>
-                    </div>
-
-                    <div className="panorama-widget-slider">
-                        <span>{'Sense'}</span>
-                        <input
-                            className="panorama-widget-range"
-                            type="range"
-                            min={ORBIT_DIRECTION_MIN}
-                            max={ORBIT_DIRECTION_MAX}
-                            step={ORBIT_DIRECTION_STEP}
-                            value={rotate.direction}
-                            onInput={updateDirection}
-                            onChange={persistDirection}
-                        />
-                        <strong>{getOrbitDirectionLabel(rotate.direction)}</strong>
-                    </div>
-                </div>
-
-                <WaButton appearance="outlined" size="small" onClick={stopRotation}>
-                    <WaIcon slot="start" name="arrows-rotate" animation="spin" variant="regular"/>
-                    {'Stop'}
-                </WaButton>
-            </WaCard>
-        </Widget>
+                </WaCard>
+            </Widget>
+        </div>
     )
 })
