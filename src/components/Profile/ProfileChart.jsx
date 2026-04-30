@@ -45,6 +45,26 @@ const resolvePadding = (element, correction = 1, fallback = 8) => {
     return `${getValue('top')}px ${getValue('right')}px ${getValue('bottom')}px ${getValue('left')}px`
 }
 
+const readElementSize = (element) => {
+    if (!element) {
+        return {width: 0, height: 0}
+    }
+
+    const rect = element.getBoundingClientRect()
+    const width = element.clientWidth || rect.width
+    const height = element.clientHeight || rect.height
+
+    return {
+        width:  Number.isFinite(width) ? width : 0,
+        height: Number.isFinite(height) ? height : 0,
+    }
+}
+
+const toNumber = value => {
+    const numeric = Number.parseFloat(value)
+    return Number.isFinite(numeric) ? numeric : 0
+}
+
 /**
  * ProfileChart component to render elevation vs distance using ECharts
  * @param {Object} props
@@ -57,7 +77,6 @@ const resolvePadding = (element, correction = 1, fallback = 8) => {
  * @returns {React.JSX.Element}
  */
 export const ProfileChart = ({data, id, configId, width, height, preview = false}) => {
-    const main = useSnapshot(lgs.stores.main)
     const $configuration = lgs.settings.widgets['profile-widget'].configuration
     const configuration = useSnapshot($configuration)
 
@@ -73,12 +92,44 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
     const configKey = configId ?? id
     const scaleCorrection = useWidgetScaleCorrection(preview ? null : id)
 
+    const getChartContainer = useCallback(() => _chartDom.current?.parentElement ?? null, [])
+
+    const getLiveLayoutContainer = useCallback(() => {
+        const chartContainer = getChartContainer()
+        if (preview) {
+            return chartContainer
+        }
+
+        return chartContainer?.closest('.lgs-widget') ?? chartContainer
+    }, [getChartContainer, preview])
+
+    const syncProfileDimensions = useCallback(() => {
+        if (preview) {
+            return
+        }
+
+        const layoutContainer = getLiveLayoutContainer()
+        const {width: nextWidth, height: nextHeight} = readElementSize(layoutContainer)
+        const $profile = lgs.stores.main.components.profile
+
+        if (nextWidth > 0 && Math.abs(toNumber($profile.width) - nextWidth) > 0.5) {
+            $profile.width = nextWidth
+        }
+
+        if (nextHeight > 0 && Math.abs(toNumber($profile.height) - nextHeight) > 0.5) {
+            $profile.height = nextHeight
+        }
+    }, [getLiveLayoutContainer, preview])
+
     /**
      * Resolves the element to use based on configuration priority
      */
     const element = useMemo(() => {
         return configuration.elements?.[configKey] ?? configuration.user ?? configuration.default
     }, [configuration, configKey])
+    const borderCorrection = element?.border?.scaled === false ? scaleCorrection : 1
+    const borderWidth = element?.border?.show ? scaleValue(element.border.thickness, borderCorrection) : 0
+    const padding = resolvePadding(element, scaleCorrection)
 
     const labels = useMemo(() => ({
         distance:  unitSystem === INTERNATIONAL ? 'km' : 'mi',
@@ -300,7 +351,7 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
             return
         }
         const chart = _instance.current?.getEchartsInstance?.()
-        if (main.components.profile.show && chart) {
+        if (chart) {
             try {
                 chart.resize()
             }
@@ -308,16 +359,9 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
                 return
             }
 
-            const container = document.getElementById(`profile-${CHART_ELEVATION_VS_DISTANCE}`)
-            if (container) {
-                const dimensions = container.getBoundingClientRect()
-                if (dimensions.width > 0) {
-                    lgs.stores.main.components.profile.width = dimensions.width
-                    lgs.stores.main.components.profile.height = dimensions.height
-                }
-            }
+            syncProfileDimensions()
         }
-    }, [preview, main.components.profile.show])
+    }, [preview, syncProfileDimensions])
 
     /**
      * Life cycle management: chart init, events and cleanup
@@ -354,7 +398,47 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
         }
     }, [handleResize, preview])
 
-    usePreviewChartResize(_instance, preview, [width, height])
+    usePreviewChartResize(_instance, preview, [width, height, padding, borderWidth])
+
+    useEffect(() => {
+        if (preview || !_chartDom.current || typeof ResizeObserver === 'undefined') {
+            return
+        }
+
+        let frame = null
+        const scheduleResize = () => {
+            if (frame !== null) {
+                return
+            }
+
+            frame = requestAnimationFrame(() => {
+                frame = null
+                handleResize()
+            })
+        }
+
+        const observer = new ResizeObserver(scheduleResize)
+        const chartDom = _chartDom.current
+        const chartContainer = getChartContainer()
+        const layoutContainer = getLiveLayoutContainer()
+
+        observer.observe(chartDom)
+        if (chartContainer) {
+            observer.observe(chartContainer)
+        }
+        if (layoutContainer && layoutContainer !== chartContainer) {
+            observer.observe(layoutContainer)
+        }
+
+        scheduleResize()
+
+        return () => {
+            if (frame !== null) {
+                cancelAnimationFrame(frame)
+            }
+            observer.disconnect()
+        }
+    }, [getChartContainer, getLiveLayoutContainer, handleResize, preview])
 
     /**
      * Synchronize ECharts options
@@ -379,9 +463,6 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
         return null
     }
 
-    const borderCorrection = element.border?.scaled === false ? scaleCorrection : 1
-    const padding = resolvePadding(element, scaleCorrection)
-
     return (
         <div id={id ?? `profile-${uuid()}`}
             className="profile-chart-container"
@@ -392,7 +473,7 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
                 backgroundColor: element.background.show ? setColor(element.background) : 'transparent',
                 backdropFilter: element.background.blur ? 'blur(var(--lgs-blur-s))' : 'none',
                 border:          element.border.show
-                                 ? `${scaleValue(element.border.thickness, borderCorrection)}px solid ${setColor(element.border)}`
+                                 ? `${borderWidth}px solid ${setColor(element.border)}`
                                  : 'none',
                 overflow:        'hidden',
             }}
