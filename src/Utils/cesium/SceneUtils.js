@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-26
- * Last modified: 2026-04-26
+ * Created on: 2026-04-30
+ * Last modified: 2026-04-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -25,6 +25,46 @@ import {
     BoundingSphere, Cartesian2, Cartesian3, Cartographic, Color, EasingFunction, HeadingPitchRange, Math as M, Matrix4,
     Rectangle, sampleTerrain, sampleTerrainMostDetailed, SceneMode,
 }                    from 'cesium'
+
+const finiteNumber = value => {
+    const number = Number(value)
+    return Number.isFinite(number) ? number : null
+}
+
+const cameraTargetIsValid = cameraStore => {
+    const target = cameraStore?.target
+    return finiteNumber(target?.longitude) !== null
+        && finiteNumber(target?.latitude) !== null
+        && finiteNumber(target?.height) !== null
+}
+
+const cameraPositionIsValid = position => finiteNumber(position?.longitude) !== null
+    && finiteNumber(position?.latitude) !== null
+    && finiteNumber(position?.height) !== null
+
+const cameraPositionValue = (position, key, fallback) =>
+    finiteNumber(position?.[key]) ?? fallback
+
+const cameraRangeFromStoredPosition = (position = {}, target = {}) => {
+    const longitude = finiteNumber(position?.longitude)
+    const latitude = finiteNumber(position?.latitude)
+    const height = finiteNumber(position?.height)
+    const targetLongitude = finiteNumber(target?.longitude)
+    const targetLatitude = finiteNumber(target?.latitude)
+    const targetHeight = finiteNumber(target?.height)
+
+    if ([longitude, latitude, height, targetLongitude, targetLatitude, targetHeight].some(value => value === null)) {
+        return null
+    }
+
+    return Cartesian3.distance(
+        Cartesian3.fromDegrees(longitude, latitude, height),
+        Cartesian3.fromDegrees(targetLongitude, targetLatitude, targetHeight),
+    )
+}
+
+const cameraRangeValue = (position, target, fallback) =>
+    cameraRangeFromStoredPosition(position, target) ?? cameraPositionValue(position, 'range', fallback)
 
 export class SceneUtils {
     static resolveFlightDuration = (distance, baseDuration, {resetCamera = false, snapDistance = 0} = {}) => {
@@ -275,6 +315,13 @@ export class SceneUtils {
         const pitch = M.toRadians(options.pitch ?? lgs.settings.camera.pitch)
         const heading = M.toRadians(options.heading ?? lgs.settings.camera.heading)
         const roll = M.toRadians(options.roll ?? lgs.settings.camera.roll)
+        const cameraDestination = cameraPositionIsValid(options.cameraPosition)
+                                  ? Cartesian3.fromDegrees(
+                finiteNumber(options.cameraPosition.longitude),
+                finiteNumber(options.cameraPosition.latitude),
+                finiteNumber(options.cameraPosition.height),
+            )
+                                  : null
         const target = {
             longitude:       point.longitude,
             latitude:        point.latitude,
@@ -309,60 +356,110 @@ export class SceneUtils {
                 pitchAdjustHeight = initializer.height + 1000
             }
         }
+
+        const syncRestoredCamera = async () => {
+            if (!cameraDestination) {
+                return
+            }
+
+            await __.ui.cameraManager.raiseUpdateEvent({
+                                                           range,
+                                                           skipTargetPick: true,
+                                                           target,
+                                                       })
+
+            target.camera = {
+                heading: M.toRadians(cameraPositionValue(__.ui.cameraManager.position, 'heading', options.heading ?? lgs.settings.camera.heading)),
+                pitch:   M.toRadians(cameraPositionValue(__.ui.cameraManager.position, 'pitch', options.pitch ?? lgs.settings.camera.pitch)),
+                roll:    M.toRadians(cameraPositionValue(__.ui.cameraManager.position, 'roll', options.roll ?? lgs.settings.camera.roll)),
+                range:   cameraPositionValue(__.ui.cameraManager.position, 'range', range),
+            }
+        }
+
+        const complete = async () => {
+            if (options?.bbox && options.bbox.show) {
+                SceneUtils.drawBbox(options.bbox.data, options.bbox.id)
+            }
+
+            if (options.callback ?? false) {
+                options.callback(target, options)
+            }
+
+            if ((options.rotate ?? false) && !cameraDestination) {
+                await syncRestoredCamera()
+                __.ui.cameraManager.rotateAround(target, {
+                    rpm:       options.rpm ?? lgs.settings.camera.rpm,
+                    direction: options.direction ?? 1,
+                    infinite:  options.infinite ?? true,
+                    fps:       lgs.settings.camera.fps,
+                    rotations: options.rotations ?? lgs.settings.camera.rotations,
+                    lookAt:    true,
+                })
+            }
+            else {
+                __.ui.sceneManager.stopRotate
+                if (cameraDestination) {
+                    await syncRestoredCamera()
+                }
+                else {
+                    await __.ui.cameraManager.raiseUpdateEvent()
+                }
+                __.ui.cameraManager.saveInformation(Date.now(), {sync: false})
+                __.ui.cameraManager.unlock()
+            }
+            //
+            // if (options.panoramic ?? false) {
+            //     __.ui.cameraManager.panoramic(target, {
+            //         rpm:       options.rpm ?? lgs.settings.camera.rpm,
+            //         infinite: options.infinite ?? true,
+            //         fps:       lgs.settings.camera.fps,
+            //         rotations: options.rotations ?? lgs.settings.camera.rotations,
+            //         lookAt:    true,
+            //     })
+            // } else {
+            //     __.ui.sceneManager.stopPanoramic
+            //     __.ui.cameraManager.lookAt(target)
+            //     __.ui.cameraManager.unlock()
+            // }
+        }
+
+        const flyOptions = {
+            maximumHeight:     maximumHeight,
+            pitchAdjustHeight: pitchAdjustHeight,
+            duration:          flyingTime,
+            convert:           options?.convert ?? true,
+            easingFunction:    options.easingFunction ?? SceneUtils.resolveFlightEasing(options.resetCamera === true),
+            complete,
+        }
+
+        if (cameraDestination) {
+            lgs.camera.flyTo({
+                                 ...flyOptions,
+                                 destination: cameraDestination,
+                                 orientation: {
+                                     heading,
+                                     pitch,
+                                     roll,
+                                 },
+                             })
+            return
+        }
+
         lgs.camera.flyToBoundingSphere(new BoundingSphere(
             Cartesian3.fromDegrees(point.longitude, point.latitude, height), 0,
         ), {
-                                           offset:            new HeadingPitchRange(heading, pitch, range),
-                                           maximumHeight:     maximumHeight,
-                                           pitchAdjustHeight: pitchAdjustHeight,
-                                           duration:          flyingTime,
-                                           convert:           options?.convert ?? true,
-                                           easingFunction:    options.easingFunction ?? SceneUtils.resolveFlightEasing(options.resetCamera === true),
-                                           complete:          async () => {
-                                 if (options?.bbox && options.bbox.show) {
-                                     SceneUtils.drawBbox(options.bbox.data, options.bbox.id)
-                                 }
-
-                                 if (options.callback ?? false) {
-                                     options.callback(target, options)
-                                 }
-
-                                 if (options.rotate ?? false) {
-                                     __.ui.cameraManager.rotateAround(target, {
-                                         rpm:       options.rpm ?? lgs.settings.camera.rpm,
-                                         direction: options.direction ?? 1,
-                                         infinite: options.infinite ?? true,
-                                         fps:       lgs.settings.camera.fps,
-                                         rotations: options.rotations ?? lgs.settings.camera.rotations,
-                                         lookAt:    true,
-                                     })
-                                 }
-                                 else {
-                                     __.ui.sceneManager.stopRotate
-                                     await __.ui.cameraManager.raiseUpdateEvent()
-                                     __.ui.cameraManager.unlock()
-                                 }
-                                 //
-                                 // if (options.panoramic ?? false) {
-                                 //     __.ui.cameraManager.panoramic(target, {
-                                 //         rpm:       options.rpm ?? lgs.settings.camera.rpm,
-                                 //         infinite: options.infinite ?? true,
-                                 //         fps:       lgs.settings.camera.fps,
-                                 //         rotations: options.rotations ?? lgs.settings.camera.rotations,
-                                 //         lookAt:    true,
-                                 //     })
-                                 // } else {
-                                 //     __.ui.sceneManager.stopPanoramic
-                                 //     __.ui.cameraManager.lookAt(target)
-                                 //     __.ui.cameraManager.unlock()
-                                 // }
-                             },
-                         })
+                                           ...flyOptions,
+                                           offset: new HeadingPitchRange(heading, pitch, range),
+                                       })
     }
 
     static getJourneyCentroid = async (journey) => {
         // Let's use the first track
-        const track = journey.tracks.values().next().value
+        const track = journey?.tracks?.values().next().value
+        if (!track?.content) {
+            return null
+        }
+
         const [longitude, latitude] = centroid(track.content).geometry.coordinates
         const storedHeight = journey?.camera?.target?.height
             ?? journey?.cameraOrigin?.target?.height
@@ -406,27 +503,37 @@ export class SceneUtils {
             if (journey === null) {
                 journey = lgs.theJourney
             }
-            track = journey.tracks.values().next().value
+            track = journey?.tracks?.values().next().value
         }
         // else {
         //     // We have a track, let's force the journey (even if there is one provided)
         //     journey = lgs.journeys.get(track.parent)
         // }
 
+        if (!track?.content) {
+            return
+        }
+
         const theBbox = SceneUtils.extendBbox(bbox(track.content), 2)
 
         let point
+        let cameraPosition = null
         if (!options.resetCamera
             && __.ui.cameraManager.isJourneyFocusOn(FOCUS_LAST)
             && options.action !== REFRESH_DRAWING && options.action !== ADD_JOURNEY) {
-            if (journey?.camera) {
-                point = new MapTarget(CURRENT_JOURNEY, {...journey.camera.target, ...{slug: journey.slug}})
+            if (cameraTargetIsValid(journey?.camera)) {
+                point = new MapTarget(CURRENT_JOURNEY, {...journey.camera.target, ...{id: journey.slug}})
+                cameraPosition = journey.camera.position
             }
         }
-        else {
+
+        if (!point) {
             // Centroid
             const centroid = await SceneUtils.getJourneyCentroid(journey)
-            point = new MapTarget(CURRENT_JOURNEY, {...centroid, ...{slug: journey.slug}})
+            if (!centroid) {
+                return
+            }
+            point = new MapTarget(CURRENT_JOURNEY, {...centroid, ...{id: journey.slug}})
         }
 
         // Depending on what we are doing, we need to convert the destination
@@ -437,13 +544,13 @@ export class SceneUtils {
         }
         if (options.action !== UPDATE_JOURNEY_SILENTLY) {
             SceneUtils.focus(point, {
-                pitch:       -45,
-                heading:     0,
-                roll:        0,
-                range:       10000,
+                pitch:          cameraPositionValue(cameraPosition, 'pitch', -45),
+                heading:        cameraPositionValue(cameraPosition, 'heading', 0),
+                roll:           cameraPositionValue(cameraPosition, 'roll', 0),
+                range:          cameraRangeValue(cameraPosition, point, 10000),
                 lookAt:      true,
                 rpm:         options.rpm ?? lgs.settings.camera.rpm,
-                direction: options.direction ?? 1,
+                direction:      options.direction ?? 1,
                 rotation:    1,
                 infinite:    false,
                 bbox:        {data: theBbox, id: track.slug, show: false},
@@ -453,6 +560,7 @@ export class SceneUtils {
                 resetCamera: options.resetCamera,
                 callback:    options.callback,
                 initializer: options.initializer,
+                cameraPosition: cameraPositionIsValid(cameraPosition) ? cameraPosition : null,
 
             })
 
@@ -468,7 +576,7 @@ export class SceneUtils {
                                             id:        id,
                                             name:      id,
                                             rectangle: {
-                                                coordinates: Rectangle.fromDegrees(myBbox[0], myBbox[1], myBbox[2], myBbox[3]),
+                                                coordinates: Rectangle.fromDegrees(theBbox[0], theBbox[1], theBbox[2], theBbox[3]),
                                                 material:    Color.CHARTREUSE.withAlpha(0.2),
                                             },
                                         })

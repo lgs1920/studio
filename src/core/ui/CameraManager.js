@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-29
- * Last modified: 2026-04-29
+ * Created on: 2026-04-30
+ * Last modified: 2026-04-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -127,22 +127,61 @@ export class CameraManager {
         }
     }
 
+    getCurrentUpdateOptions = () => {
+        if (lgs.stores.ui.mainUI.rotate.running && lgs.stores.ui.mainUI.rotate.target) {
+            return {
+                skipTargetPick: true,
+                target:         lgs.stores.ui.mainUI.rotate.target,
+            }
+        }
+
+        if (lgs.stores.ui.mainUI.panorama.active && lgs.stores.ui.mainUI.panorama.target) {
+            return {
+                skipTargetPick: true,
+                target:         lgs.stores.ui.mainUI.panorama.target,
+            }
+        }
+
+        return {}
+    }
+
+    syncPositionInformation = (options = this.getCurrentUpdateOptions()) => {
+        const data = this.proxy.updatePositionInformationSync?.(null, options)
+        if (!data) {
+            return null
+        }
+
+        this.settings = data
+        this.clone()
+
+        if (lgs.theJourney) {
+            lgs.theJourney.camera = snapshot(this.store)
+        }
+
+        return data
+    }
+
     /**
      * Save camera information
      *
      * @param last is the reference time (ie the last known)
      *
      */
-    saveInformation = (last) => {
+    saveInformation = (last, {sync = true} = {}) => {
+        if (sync) {
+            this.syncPositionInformation()
+        }
+
         if (Date.now() - last >= lgs.configuration.db.IDBDelay * MILLIS) {
             clearInterval(this.saveTimer)
             this.saveTimer = null
         }
+        const currentCamera = snapshot(this.store)
         if (lgs.theJourney) {
-            lgs.theJourney.camera = snapshot(this.store)
+            lgs.theJourney.camera = currentCamera
             lgs.db.lgs1920.put(lgs.theJourney.slug, Journey.unproxify(snapshot(lgs.theJourney)), JOURNEYS_STORE)
         }
-        lgs.db.lgs1920.put(CURRENT_CAMERA, snapshot(this.store), CURRENT_STORE)
+        lgs.db.lgs1920.put(CURRENT_CAMERA, currentCamera, CURRENT_STORE)
     }
 
     /**
@@ -167,10 +206,10 @@ export class CameraManager {
      *
      * @return {Promise<*|null>}
      */
-    readCameraInformation = async () => {
+    readCameraInformation = async ({fallback = true} = {}) => {
         let data = await lgs.db.lgs1920.get(CURRENT_CAMERA, CURRENT_STORE)
         if (!data || __.app.isEmpty(data.target)) {
-            return this.focusToStarterPOI()
+            return fallback ? this.focusToStarterPOI() : null
         }
         return data
     }
@@ -462,13 +501,18 @@ export class CameraManager {
      */
     stopRotate = async () => {
         if (this.isRotating()) {
+            const target = lgs.stores.ui.mainUI.rotate.target
             __.cancelAnimationFrame(this.move.animation)
             this.move.animation = null
             this.stopWatching()
             this.unlock()
             __.ui.sceneManager.stopRotate
             this.restoreContinuousCameraRender()
-            await this.updatePositionInformation()
+            await this.updatePositionInformation(target ? {
+                skipTargetPick: true,
+                target,
+            } : undefined)
+            this.saveInformation(Date.now(), {sync: false})
             this.enableMapDragging()
             lgs.scene?.requestRender?.()
         }

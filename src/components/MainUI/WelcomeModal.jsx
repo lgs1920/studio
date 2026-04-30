@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-29
- * Last modified: 2026-04-29
+ * Created on: 2026-04-30
+ * Last modified: 2026-04-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,7 +16,7 @@
 
 import { APP_EVENT, MILLIS, SECOND, SLOGAN }                 from '@Core/constants'
 import { UIToast }                                           from '@Utils/UIToast'
-import { WaButton, WaIcon }                                  from '@web.awesome.me/webawesome-pro/dist/react'
+import { WaButton, WaIcon, WaSpinner } from '@web.awesome.me/webawesome-pro/dist/react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { StudioLogo }                                        from './StudioLogo'
 
@@ -27,9 +27,11 @@ const WELCOME_FALLBACK_IMAGE = '/assets/images/menu-thumbnail.png'
 const WELCOME_MAX_FOG_DURATION = 3 * MILLIS
 const WELCOME_FOG_UPDATE_INTERVAL = 100
 
-export const WelcomeModal = ({initComplete = false, settingsReady = false, onEnter}) => {
+export const WelcomeModal = ({initComplete = false, appReady = false, settingsReady = false, onEnter}) => {
     const enterHandled = useRef(false)
     const [elapsedMillis, setElapsedMillis] = useState(0)
+    const [readyElapsedMillis, setReadyElapsedMillis] = useState(0)
+    const [dismissed, setDismissed] = useState(false)
 
     const welcomeSettings = settingsReady ? lgs.settings?.ui?.welcome : null
     const configuredDisplayTime = Number(welcomeSettings?.displayTime ?? DEFAULT_WELCOME_DISPLAY_TIME)
@@ -37,9 +39,11 @@ export const WelcomeModal = ({initComplete = false, settingsReady = false, onEnt
     const displayDuration = Math.max(Math.ceil(displayTime), 1)
     const showIntro = welcomeSettings?.showIntro !== false
     const autoClose = welcomeSettings?.autoClose !== false
-    const elapsedSeconds = Math.floor(elapsedMillis / MILLIS)
-    const closure = showIntro && autoClose ? Math.max(displayDuration - elapsedSeconds, 0) : 0
-    const counterReached = !showIntro || !autoClose || closure <= 0
+    const readyToEnter = initComplete && appReady
+    const readyElapsedSeconds = Math.floor(readyElapsedMillis / MILLIS)
+    const closure = showIntro && autoClose && readyToEnter ? Math.max(displayDuration - readyElapsedSeconds, 0) : 0
+    const autoCloseReached = showIntro && autoClose && readyToEnter && closure <= 0
+    const shouldAutoEnter = readyToEnter && (!showIntro || autoCloseReached)
     const canShowFullLogo = settingsReady && Boolean(lgs.build?.date) && Boolean(lgs.versions?.studio)
     const fogDuration = Math.min(WELCOME_MAX_FOG_DURATION, displayDuration * MILLIS)
     const fogProgress = Math.min(elapsedMillis / fogDuration, 1)
@@ -53,7 +57,7 @@ export const WelcomeModal = ({initComplete = false, settingsReady = false, onEnt
     }
 
     const hide = useCallback(() => {
-        if (!initComplete) {
+        if (!readyToEnter) {
             return
         }
 
@@ -62,6 +66,7 @@ export const WelcomeModal = ({initComplete = false, settingsReady = false, onEnt
         }
 
         enterHandled.current = true
+        setDismissed(true)
         document.activeElement?.blur()
 
         if (settingsReady) {
@@ -77,8 +82,8 @@ export const WelcomeModal = ({initComplete = false, settingsReady = false, onEnt
             },
         }))
 
-        onEnter?.()
-    }, [initComplete, onEnter, settingsReady])
+        requestAnimationFrame(() => onEnter?.())
+    }, [onEnter, readyToEnter, settingsReady])
 
     const enter = () => {
         hide()
@@ -94,10 +99,10 @@ export const WelcomeModal = ({initComplete = false, settingsReady = false, onEnt
                            text:    `This can be changed later in the settings menu.`,
                        }, 5 * SECOND)
 
-        if (initComplete) {
+        if (readyToEnter) {
             hide()
         }
-    }, [hide, initComplete, settingsReady])
+    }, [hide, readyToEnter, settingsReady])
 
     useEffect(() => {
         lgs.stores.ui.welcome.modal = true
@@ -111,10 +116,24 @@ export const WelcomeModal = ({initComplete = false, settingsReady = false, onEnt
     }, [])
 
     useEffect(() => {
-        if (initComplete && counterReached) {
+        if (!readyToEnter) {
+            return undefined
+        }
+
+        const startedAt = Date.now()
+
+        const timer = setInterval(() => {
+            setReadyElapsedMillis(Date.now() - startedAt)
+        }, WELCOME_FOG_UPDATE_INTERVAL)
+
+        return () => clearInterval(timer)
+    }, [readyToEnter])
+
+    useEffect(() => {
+        if (shouldAutoEnter) {
             hide()
         }
-    }, [counterReached, hide, initComplete])
+    }, [hide, shouldAutoEnter])
 
     const links = useMemo(() => {
         if (!settingsReady) {
@@ -132,8 +151,12 @@ export const WelcomeModal = ({initComplete = false, settingsReady = false, onEnt
         )
     }, [settingsReady, setShowModal])
 
+    if (dismissed) {
+        return null
+    }
+
     return (
-        <div id="welcome-modal" className="lgs-theme" aria-busy={!initComplete} style={welcomeStyle}>
+        <div id="welcome-modal" className="lgs-theme" aria-busy={!readyToEnter} style={welcomeStyle}>
             <div className="welcome-modal-media" aria-hidden="true">
                 <video
                     className="welcome-modal-video"
@@ -150,7 +173,7 @@ export const WelcomeModal = ({initComplete = false, settingsReady = false, onEnt
             <div className="welcome-modal-fog" aria-hidden="true"/>
             <div className="welcome-modal-scrim" aria-hidden="true"/>
 
-            {showIntro && autoClose && closure > 0 && (
+            {showIntro && autoClose && readyToEnter && closure > 0 && (
                 <div className="welcome-modal-timer">{closure} s</div>
             )}
 
@@ -169,7 +192,7 @@ export const WelcomeModal = ({initComplete = false, settingsReady = false, onEnt
                      </div>
                  )}
 
-                {initComplete && !counterReached && (
+                {showIntro && settingsReady && (
                     <div className="welcome-enter-call-for-action">
                         <WaButton
                             className="welcome-site-button"
@@ -181,16 +204,24 @@ export const WelcomeModal = ({initComplete = false, settingsReady = false, onEnt
                             onClick={enter}
                         >
                             <WaIcon slot="start" name="globe-pointer" variant="regular"/>
-                            {'Site'}
+                            {'Visit our Site'}
                         </WaButton>
-                        <WaButton className="welcome-explore-button" variant="brand" onClick={enter}>
-                            <WaIcon
-                                slot="start"
-                                name="mountains"
-                                variant="regular"
-                            />
-                            {'Explore'}
-                        </WaButton>
+                        {readyToEnter ? (
+                            <WaButton className="welcome-explore-button" variant="brand" onClick={enter}>
+                                <WaIcon
+                                    slot="start"
+                                    name="mountains"
+                                    variant="regular"
+                                />
+                                {'Replay your adventures'}
+                            </WaButton>
+                        ) : (
+                             <div className="welcome-loading-indicator" role="status" aria-live="polite"
+                                  aria-label="Loading">
+                                 <span>{'Loading ...'}</span>
+                                 <WaSpinner/>
+                             </div>
+                         )}
                     </div>
                 )}
             </div>
