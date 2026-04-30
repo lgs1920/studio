@@ -7,18 +7,18 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-10
- * Last modified: 2026-04-10
+ * Created on: 2026-04-30
+ * Last modified: 2026-04-30
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { WaColorPicker, WaOption, WaSelect, WaSlider, WaSwitch } from '@web.awesome.me/webawesome-pro/dist/react'
-import React, { useEffect, useRef }                              from 'react'
+import { useEffect, useRef } from 'react'
 import { sanitizeNumericControlValue }                           from './sliderUtils'
 
-export const ShadowElement = ({element, swatches, getColor, updateValue}) => {
+export const ShadowElement = ({element, swatches, updateValue}) => {
     const sliderRef = useRef(null)
     const opacityValue = sanitizeNumericControlValue(element.text?.shadow?.opacity, 1, {min: 0, max: 1})
 
@@ -42,39 +42,41 @@ export const ShadowElement = ({element, swatches, getColor, updateValue}) => {
             </WaSwitch>
 
             {element.text?.shadow?.show && (
-                <div className="drawer-horizontal-line three-columns">
-                    <div className="drawer-horizontal-element">
-                        <WaColorPicker size="small" swatches={swatches} value={element.text.shadow.color}
-                                       onInput={(e) => updateValue('text.shadow.color', e.target.value)}/>
+                <>
+                    <div className="drawer-horizontal-line three-columns">
+                        <div className="drawer-horizontal-element">
+                            <WaColorPicker size="small" swatches={swatches} value={element.text.shadow.color}
+                                           onInput={(e) => updateValue('text.shadow.color', e.target.value)}/>
+                        </div>
+                        <div className="drawer-horizontal-element">
+                            <WaSelect size="small" value={element.text.shadow?.value ?? 'normal'}
+                                      label-at-start
+                                      style={{marginLeft: 'auto', width: '6.5rem'}}
+                                      onChange={(e) => updateValue('text.shadow.value', e.target.value)}>
+                                <WaOption value="small">{'Small'}</WaOption>
+                                <WaOption value="normal">{'Medium'}</WaOption>
+                                <WaOption value="large">{'Large'}</WaOption>
+                            </WaSelect>
+                        </div>
+                        <div className="drawer-horizontal-element xlarge-element">
+                            <WaSlider ref={sliderRef}
+                                      size="small"
+                                      label="Opacity"
+                                      min="0"
+                                      max="1"
+                                      step="0.05"
+                                      label-at-start
+                                      placement="top"
+                                      withTooltip
+                                      valueFormatter={value => `${Math.floor(value * 100)}%`}
+                                      defaultValue={opacityValue}
+                                      onInput={(e) => updateValue(
+                                          'text.shadow.opacity',
+                                          sanitizeNumericControlValue(e.target.value, 1, {min: 0, max: 1}),
+                                      )}/>
+                        </div>
                     </div>
-                    <div className="drawer-horizontal-element">
-                        <WaSelect size="small" value={element.text.shadow?.value ?? 'normal'}
-                                  label-at-start
-                                  style={{marginLeft: 'auto', width: '6.5rem'}}
-                                  onChange={(e) => updateValue('text.shadow.value', e.target.value)}>
-                            <WaOption value="small">{'Small'}</WaOption>
-                            <WaOption value="normal">{'Medium'}</WaOption>
-                            <WaOption value="large">{'Large'}</WaOption>
-                        </WaSelect>
-                    </div>
-                    <div className="drawer-horizontal-element xlarge-element">
-                        <WaSlider ref={sliderRef}
-                                  size="small"
-                                  label="Opacity"
-                                  min="0"
-                                  max="1"
-                                  step="0.05"
-                                  label-at-start
-                                  placement="top"
-                                  withTooltip
-                                  valueFormatter={value => `${Math.floor(value * 100)}%`}
-                                  defaultValue={opacityValue}
-                                  onInput={(e) => updateValue(
-                                      'text.shadow.opacity',
-                                      sanitizeNumericControlValue(e.target.value, 1, {min: 0, max: 1}),
-                                  )}/>
-                    </div>
-                </div>
+                </>
             )}
         </>
     )

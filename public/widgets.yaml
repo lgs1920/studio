@@ -121,6 +121,14 @@ widgets:
           color: "#ffffff"
           opacity: 0.5
           thickness: 1
+          scaled: false
+
+        padding:
+          top: 8
+          right: 8
+          bottom: 8
+          left: 8
+          scaled: false
 
         xAxis:
           main: true
@@ -138,11 +146,13 @@ widgets:
           color: "--lgs-dark-color" #CSS variable
           opacity: 0.8
           thickness: 1
+          scaled: false
 
         secondAxis:
           color: "--lgs-light-color" #CSS variable
           opacity: 0.6
           thickness: 0.5
+          scaled: false
 
         shadow:
           show: true
@@ -182,6 +192,7 @@ widgets:
           right: 5
           bottom: 5
           left: 5
+          scaled: false
         text:
           content: "Enter text here"
           color: "#ffffff"
@@ -210,6 +221,8 @@ widgets:
           radius: none
           thickness: 1
           opacity: 1
+          scaled: false
+          radiusScaled: false
           shadow: false
           pill: false
       user:
@@ -242,8 +255,16 @@ widgets:
           radius: none
           thickness: 1
           opacity: 1
+          scaled: false
+          radiusScaled: false
           shadow: false
           pill: false
+        padding:
+          top: 16
+          right: 16
+          bottom: 16
+          left: 16
+          scaled: false
         text:
           color: "#ffffff"
           shadow:

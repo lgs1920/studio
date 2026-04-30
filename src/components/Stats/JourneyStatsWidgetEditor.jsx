@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-29
- * Last modified: 2026-04-29
+ * Created on: 2026-04-30
+ * Last modified: 2026-04-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -23,6 +23,9 @@ import {
 import {
     BorderElement,
 }                                                                   from '@Components/MainUI/widgets/editor/elements/BorderElement'
+import {
+    PaddingElement,
+} from '@Components/MainUI/widgets/editor/elements/PaddingElement'
 import {
     RotationElement,
 }                                                                   from '@Components/MainUI/widgets/editor/elements/RotationElement'
@@ -344,7 +347,9 @@ export const JourneyStatsWidgetEditor = ({entity}) => {
                                              applyRotation={applyRotation}
                             />
                             <WaDivider/>
-                            <div className="drawer-horizontal-line"><span>Text color</span></div>
+                            <div className="drawer-horizontal-line">
+                                <span>Text color</span>
+                            </div>
                             <div className="drawer-horizontal-line three-columns">
                                 <div className="drawer-horizontal-element">
                                     <WaColorPicker size="small" swatches={swatches} value={getColor(element.text)}
@@ -397,6 +402,8 @@ export const JourneyStatsWidgetEditor = ({entity}) => {
                                                        updateValue={updateValue}/>
                             <WaDivider/><BorderElement element={element} swatches={swatches} getColor={getColor}
                                                        updateValue={updateValue} showPill={false}/>
+                            <WaDivider/><PaddingElement element={element} updateValue={updateValue} fallback={16}
+                                                        moveableId={entity}/>
                             <WaDivider/><BackgroundElement element={element} swatches={swatches} getColor={getColor}
                                                            updateValue={updateValue}/>
                         </WaCard>

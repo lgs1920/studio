@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-24
- * Last modified: 2026-04-24
+ * Created on: 2026-04-30
+ * Last modified: 2026-04-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -102,13 +102,7 @@ export class WidgetDynamicRenderer {
 
         const isMaxReached = __.ui.widgetManager.isMaxWidgetsReached(group, baseKey, widgetsBoard)
         const existingInList = this.findExistingInList(lookupKey, widgetsBoard)
-        const existingInCache = __.ui.widgetCache.has(lookupKey, {
-            group,
-            full: isConcreteInstance,
-            widgetsBoard,
-        })
-
-        if (existingInList && forceRefresh && existingInCache) {
+        if (existingInList && forceRefresh) {
             return {canRender: true, widgetId: existingInList, existingInList}
         }
 
@@ -185,7 +179,10 @@ export class WidgetDynamicRenderer {
                 })
 
                 // Only update the Valtio store once everything is ready in cache
-                $widget.list.set(widgetId, props)
+                $widget.list.set(widgetId, {
+                    ...props,
+                    group,
+                })
 
                 resolve(ResolvedComponent ?? widgetId)
             }

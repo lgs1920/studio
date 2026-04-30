@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-27
- * Last modified: 2026-01-27
+ * Created on: 2026-04-30
+ * Last modified: 2026-04-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -18,6 +18,8 @@
  * Singleton class that manages all transformations (translate, scale, rotate) for widgets.
  * Centralizes transform operations to prevent conflicts between drag, scale, and other transforms.
  */
+import { applyWidgetScaleVariables } from '@Core/ui/widget-manager/widgetScaleUtils'
+
 export class WidgetTransform {
     // Singleton instance
     static #instance = null
@@ -135,6 +137,7 @@ export class WidgetTransform {
         const newTransform = this.buildTransform(currentTransform)
         element.style.transform = newTransform
         config.transform = newTransform
+        this.applyScaleVariables(element, currentTransform.scale)
     }
 
     /**
@@ -165,6 +168,7 @@ export class WidgetTransform {
         const newTransform = this.buildTransform(currentTransform)
         element.style.transform = newTransform
         config.transform = newTransform
+        this.applyScaleVariables(element, currentTransform.scale)
     }
 
     /**
@@ -239,6 +243,7 @@ export class WidgetTransform {
         config.translate = {x: 0, y: 0}
         config.scale = {x: 1, y: 1}
         config.rotate = 0
+        this.applyScaleVariables(element, config.scale)
     }
 
     /**
@@ -439,5 +444,10 @@ export class WidgetTransform {
         const newTransformString = this.buildTransform(currentTransform)
         element.style.transform = newTransformString
         config.transform = newTransformString
+        this.applyScaleVariables(element, currentTransform.scale)
+    }
+
+    applyScaleVariables = (element, scale = {x: 1, y: 1}) => {
+        applyWidgetScaleVariables(element, scale)
     }
 }

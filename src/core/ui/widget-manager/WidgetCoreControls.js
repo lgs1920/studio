@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-29
- * Last modified: 2026-04-29
+ * Created on: 2026-04-30
+ * Last modified: 2026-04-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -780,6 +780,9 @@ export class WidgetCoreControls {
 
         if (config.scale && (config.scale.x !== 1 || config.scale.y !== 1)) {
             __.ui.widgetManager.transform.setScale(element, config.scale.x, config.scale.y)
+        }
+        else {
+            __.ui.widgetManager.applyScaleVariables(element, config.scale ?? {x: 1, y: 1})
         }
 
         if (config.rotate && config.rotate !== 0) {

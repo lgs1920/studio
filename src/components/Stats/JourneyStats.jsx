@@ -7,14 +7,15 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-24
- * Last modified: 2026-04-24
+ * Created on: 2026-04-30
+ * Last modified: 2026-04-30
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { NameValueUnit }                                from '@Components/DataDisplay/NameValueUnit'
+import { useWidgetScaleCorrection } from '@Components/MainUI/widgets/useWidgetScaleCorrection'
 import { WIDGET_RADIUS }                                from '@Core/constants'
 import { faArrowDownToLine, faArrowUpToLine }           from '@fortawesome/pro-regular-svg-icons'
 import { SlDivider, SlIcon }                            from '@shoelace-style/shoelace/dist/react'
@@ -22,6 +23,38 @@ import { FA2SL }                                        from '@Utils/FA2SL'
 import { DISTANCE_UNITS, ELEVATION_UNITS, SPEED_UNITS } from '@Utils/UnitUtils'
 import { memo, useEffect, useMemo } from 'react'
 import { useSnapshot }                                  from 'valtio'
+
+const scaleValue = (value, correction = 1) => {
+    const numericValue = Number(value)
+    const numericCorrection = Number(correction)
+
+    if (!Number.isFinite(numericValue)) {
+        return 0
+    }
+
+    return numericValue * (Number.isFinite(numericCorrection) ? numericCorrection : 1)
+}
+
+const scaleRadius = (radius, correction = 1) => {
+    const normalizedCorrection = Number(correction)
+    const scale = Number.isFinite(normalizedCorrection) ? normalizedCorrection : 1
+    const value = String(radius ?? '0').trim()
+
+    if (value === '0') {
+        return '0'
+    }
+
+    return `calc(${value} * ${scale})`
+}
+
+const resolvePadding = (element, correction = 1, fallback = 16) => {
+    const padding = element?.padding ?? {}
+    const paddingCorrection = (padding.scaled ?? false) === false ? correction : 1
+
+    const getValue = side => scaleValue(padding[side] ?? fallback, paddingCorrection)
+
+    return `${getValue('top')}px ${getValue('right')}px ${getValue('bottom')}px ${getValue('left')}px`
+}
 
 /**
  * Statistical display component for journeys.
@@ -31,6 +64,7 @@ export const JourneyStats = memo(({id, metrics, units, style = {}}) => {
     const main = useSnapshot(lgs.stores.main)
     const journey = lgs.theJourney
     const journeySlug = main.theJourney?.slug ?? null
+    const scaleCorrection = useWidgetScaleCorrection(id)
 
     const $configuration = lgs.settings.widgets['journey-stats-widget'].configuration
     const configuration = useSnapshot($configuration)
@@ -125,21 +159,35 @@ export const JourneyStats = memo(({id, metrics, units, style = {}}) => {
         if (_moveable?.current) {
             _moveable.current.updateRect()
         }
-    }, [_moveable, journeySlug, element?.date, element?.altitude, element?.performance, element.separator, element.border])
+    }, [_moveable, journeySlug, element?.date, element?.altitude, element?.performance, element.separator, element.border, element.padding])
 
-    const mainStyle = useMemo(() => ({
-        ...style,
-        color:          __.ui.ui.resolveItemColor(element.text, true),
-        textShadow:     element.text.shadow?.show ? (
-            element.text.shadow.value === 'small' ? `0 1px 2px ${__.ui.ui.resolveItemColor(element.text.shadow, true)}` :
-            element.text.shadow.value === 'large' ? `0 4px 8px ${__.ui.ui.resolveItemColor(element.text.shadow, true)}` :
-            `0 2px 4px ${__.ui.ui.resolveItemColor(element.text.shadow, true)}`
-        ) : undefined,
-        border:         element.border.show ? `${element.border.thickness}px solid ${__.ui.ui.resolveItemColor(element.border, true)}` : 'none',
-        background:     __.ui.ui.resolveItemColor(element.background, true),
-        backdropFilter: (element.background?.show && element.background?.blur) ? 'blur(var(--lgs-blur-s))' : 'blur(0)',
-        borderRadius: element.border?.show ? WIDGET_RADIUS.get(element.border.radius ?? 'none')?.value : '0',
-    }), [style, element.text, element.border, element.background])
+    const mainStyle = useMemo(() => {
+        const textShadowColor = __.ui.ui.resolveItemColor(element.text?.shadow, true)
+        const borderCorrection = element.border?.scaled === false ? scaleCorrection : 1
+        const radiusCorrection = element.border?.radiusScaled === false ? scaleCorrection : 1
+        const shadowSizes = {
+            small:  [0, 1, 2],
+            normal: [0, 2, 4],
+            large:  [0, 4, 8],
+        }
+        const radius = WIDGET_RADIUS.get(element.border?.radius ?? 'none')?.value ?? '0'
+        const shadowSize = shadowSizes[element.text?.shadow?.value] ?? shadowSizes.normal
+
+        return {
+            ...style,
+            color:          __.ui.ui.resolveItemColor(element.text, true),
+            textShadow:     element.text?.shadow?.show ? (
+                `${shadowSize[0]}px ${shadowSize[1]}px ${shadowSize[2]}px ${textShadowColor}`
+            ) : undefined,
+            border:         element.border.show ? `${scaleValue(element.border.thickness, borderCorrection)}px solid ${__.ui.ui.resolveItemColor(element.border, true)}` : 'none',
+            padding:        resolvePadding(element, scaleCorrection),
+            background:     __.ui.ui.resolveItemColor(element.background, true),
+            backdropFilter: (element.background?.show && element.background?.blur)
+                            ? 'blur(var(--lgs-blur-s))'
+                            : 'blur(0)',
+            borderRadius:   element.border?.show ? scaleRadius(radius, radiusCorrection) : '0',
+        }
+    }, [element, scaleCorrection, style])
 
     const separatorStyle = useMemo(() => ({
         '--color': __.ui.ui.resolveItemColor(element.separator, true),
