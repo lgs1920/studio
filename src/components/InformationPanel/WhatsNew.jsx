@@ -7,15 +7,15 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-29
- * Last modified: 2026-04-29
+ * Created on: 2026-04-30
+ * Last modified: 2026-04-30
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { LGSScrollbars }                                     from '@Components/MainUI/LGSScrollbars'
-import { ChangelogManager }                                  from '@Core/ui/ChangelogManager'
+import { ChangelogManager, changelogVersionFromFile } from '@Core/ui/ChangelogManager'
 import { WaButton, WaDetails, WaDivider, WaIcon, WaSpinner } from '@web.awesome.me/webawesome-pro/dist/react'
 import { DateTime }                                          from 'luxon'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -41,7 +41,7 @@ const formatNews = pageData => pageData.entries.map((news) => {
         name:    file.slice(0, -3).replace(/_/gi, ' '),
         date:    DateTime.fromMillis(news.time).toLocaleString(DateTime.DATE_MED),
         time:    news.time,
-        version: news.version,
+        version: changelogVersionFromFile(file) ?? news.version,
         content: news.content,
     }
 })

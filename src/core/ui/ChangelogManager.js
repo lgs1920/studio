@@ -7,12 +7,31 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-29
- * Last modified: 2026-04-29
+ * Created on: 2026-04-30
+ * Last modified: 2026-04-30
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
+
+const CHANGELOG_EXTENSION_PATTERN = /\.md$/i
+const CHANGELOG_VERSION_PATTERN = /^\d{8}-(\d+(?:\.\d+)+(?:-[0-9A-Za-z][0-9A-Za-z.-]*)?(?:\+[0-9A-Za-z][0-9A-Za-z.-]*)?)$/
+
+export const changelogVersionFromFile = file => {
+    const basename = String(file ?? '').split(/[\\/]/).pop().replace(CHANGELOG_EXTENSION_PATTERN, '')
+    return basename.match(CHANGELOG_VERSION_PATTERN)?.[1] ?? null
+}
+
+const normalizeChangelogFile = file => {
+    if (!file) {
+        return file
+    }
+
+    return {
+        ...file,
+        version: changelogVersionFromFile(file.file ?? file.name ?? file.path) ?? file.version,
+    }
+}
 
 export class ChangelogManager {
     #filesPromise = null
@@ -75,13 +94,13 @@ export class ChangelogManager {
             this.#filesPromise = this.list().then(files => {
                 const data = files ?? {}
                 const list = Array.isArray(data.list)
-                             ? [...data.list].sort((a, b) => (b.time ?? 0) - (a.time ?? 0))
+                             ? [...data.list].map(normalizeChangelogFile).sort((a, b) => (b.time ?? 0) - (a.time ?? 0))
                              : []
 
                 const normalizedFiles = {
                     ...data,
                     list,
-                    last: data.last ?? list[0],
+                    last: normalizeChangelogFile(data.last) ?? list[0],
                 }
 
                 lgs.changelog = {

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-22
- * Last modified: 2026-03-22
+ * Created on: 2026-04-30
+ * Last modified: 2026-04-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -24,13 +24,10 @@
 import { MapPOIListItem }        from '@Components/MainUI/MapPOI/MapPOIListItem'
 import { JOURNEY_EDITOR_DRAWER } from '@Core/constants'
 import { faTriangleExclamation } from '@fortawesome/pro-regular-svg-icons'
-import { SlAlert, SlIcon }       from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                       from '@Utils/FA2SL'
 import { WaButton, WaCallout, WaIcon } from '@web.awesome.me/webawesome-pro/dist/react'
 import { useEffect, useMemo }          from 'react'
 import { useSnapshot }           from 'valtio'
-
-const ICON_WARNING = FA2SL.set(faTriangleExclamation)
 
 /**
  * Filter and sort logic that preserves hidden POIs for UI management
