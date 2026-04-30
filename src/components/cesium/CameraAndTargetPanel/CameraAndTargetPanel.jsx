@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-29
- * Last modified: 2026-04-29
+ * Created on: 2026-04-30
+ * Last modified: 2026-04-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -33,13 +33,37 @@ const cloneCameraData = camera => ({
     target:   {...(camera?.target ?? {})},
 })
 
+const finiteNumber = value => {
+    if (value === null || value === undefined || value === '') {
+        return null
+    }
+
+    const number = Number(value)
+    return Number.isFinite(number) ? number : null
+}
+
+const targetHeightOf = target => target?.simulatedHeight ?? target?.height
+
+const hasMapCoordinates = target => finiteNumber(target?.longitude) !== null
+    && finiteNumber(target?.latitude) !== null
+    && finiteNumber(targetHeightOf(target)) !== null
+
 const currentContinuousTarget = () => {
     const panorama = lgs.stores.ui.mainUI.panorama
-    if (panorama.active && panorama.target) {
+    if (panorama.active && hasMapCoordinates(panorama.target)) {
         return panorama.target
     }
 
-    return lgs.stores.ui.mainUI.rotate.target ?? lgs.stores.main.components.camera.target
+    return hasMapCoordinates(lgs.stores.ui.mainUI.rotate.target)
+           ? lgs.stores.ui.mainUI.rotate.target
+           : lgs.stores.main.components.camera.target
+}
+
+const liveCameraOptions = continuousMove => {
+    const target = currentContinuousTarget()
+    return continuousMove && hasMapCoordinates(target)
+           ? {skipTargetPick: true, target}
+           : {}
 }
 
 /**
@@ -72,23 +96,43 @@ const coordinateOf = value => {
     return numericValue === null ? null : __.convert(numericValue).to(lgs.settings.coordinateSystem.current)
 }
 
+const normalizeAngle = value => {
+    const numericValue = valueOf(value)
+    if (numericValue === null) {
+        return null
+    }
+
+    const normalizedValue = ((numericValue % 360) + 360) % 360
+    return Object.is(normalizedValue, -0) ? 0 : normalizedValue
+}
+
 const metricOf = (value, {units, precision}) => {
     const numericValue = valueOf(value)
     if (numericValue === null) {
         return {value: '', unit: ''}
     }
 
-    return UnitUtils.formatMetric(numericValue, {units, precision})
+    return UnitUtils.formatMetric(units === '°' ? normalizeAngle(numericValue) : numericValue, {units, precision})
 }
 
 const CameraMetric = ({bindLiveRef, metricKey, value, className, text, units, precision}) => {
     const metric = metricOf(value, {units, precision})
+    const compactUnit = units === '°'
 
     return (
         <div className={`${className ?? ''} lgs-text-value`.trim()}>
             {text && <span className="lgs-nvu-text">{text}</span>}
-            <span ref={bindLiveRef(`${metricKey}Value`)} className="lgs-nvu-value">{metric.value}</span>
-            <span ref={bindLiveRef(`${metricKey}Unit`)} className="lgs-nvu-unit">{metric.unit}</span>
+            {compactUnit ? (
+                <span className="camera-metric-compact-unit">
+                    <span ref={bindLiveRef(`${metricKey}Value`)} className="lgs-nvu-value">{metric.value}</span>
+                    <span ref={bindLiveRef(`${metricKey}Unit`)} className="lgs-nvu-unit">{metric.unit}</span>
+                </span>
+            ) : (
+                 <>
+                     <span ref={bindLiveRef(`${metricKey}Value`)} className="lgs-nvu-value">{metric.value}</span>
+                     <span ref={bindLiveRef(`${metricKey}Unit`)} className="lgs-nvu-unit">{metric.unit}</span>
+                 </>
+             )}
         </div>
     )
 }
@@ -109,6 +153,7 @@ export const CameraAndTargetPanel = () => {
     const liveRefs = useRef({})
     const updateTimer = useRef(null)
     const updateInProgress = useRef(false)
+    const updateFrame = useRef(null)
     const [camera, setCamera] = useState(() => cloneCameraData(snapshot(lgs.stores.main.components.camera)))
     const continuousMove = rotate.running || panorama.active
 
@@ -123,7 +168,7 @@ export const CameraAndTargetPanel = () => {
             group:           SCENE_WIDGETS,
             id:              CAMERA_INFORMATION_WIDGET,
             left:            '50%',
-            margin:          lgs.gutter.s,
+            margin: lgs.gutter.xs,
             persist:         false,
             resizable:       false,
             rotatable:       false,
@@ -176,27 +221,30 @@ export const CameraAndTargetPanel = () => {
         updateMetric('roll', nextCamera.position?.roll, {units: '°', precision: 0})
     }, [updateMetric, updateText])
 
+    const commitCameraData = useCallback((nextCamera) => {
+        const clonedCamera = cloneCameraData(nextCamera)
+        setCamera(clonedCamera)
+        applyLiveCameraData(clonedCamera)
+    }, [applyLiveCameraData])
+
     const updateLiveCamera = useCallback(async () => {
-        if (!hasSelectedInformation || !continuousMove || updateInProgress.current) {
+        if (!hasSelectedInformation || !lgs.camera || updateInProgress.current) {
             return
         }
 
         updateInProgress.current = true
 
         try {
-            const nextCamera = await CameraUtils.updatePositionInformation(null, {
-                skipTargetPick: true,
-                target:         currentContinuousTarget(),
-            })
+            const nextCamera = await CameraUtils.updatePositionInformation(null, liveCameraOptions(continuousMove))
 
             if (nextCamera) {
-                applyLiveCameraData(nextCamera)
+                commitCameraData(nextCamera)
             }
         }
         finally {
             updateInProgress.current = false
         }
-    }, [applyLiveCameraData, continuousMove, hasSelectedInformation])
+    }, [commitCameraData, continuousMove, hasSelectedInformation])
 
     useEffect(() => {
         const timeout = window.setTimeout(() => {
@@ -238,6 +286,61 @@ export const CameraAndTargetPanel = () => {
         }
     }, [continuousMove, hasSelectedInformation, updateLiveCamera])
 
+    useEffect(() => {
+        if (!hasSelectedInformation || continuousMove) {
+            return undefined
+        }
+
+        let cancelled = false
+        let retryTimer = null
+        let removeChangedListener = null
+
+        const clearFrame = () => {
+            if (updateFrame.current !== null) {
+                window.cancelAnimationFrame(updateFrame.current)
+                updateFrame.current = null
+            }
+        }
+
+        const scheduleUpdate = () => {
+            if (cancelled || updateFrame.current !== null) {
+                return
+            }
+
+            updateFrame.current = window.requestAnimationFrame(() => {
+                updateFrame.current = null
+                if (!cancelled) {
+                    void updateLiveCamera()
+                }
+            })
+        }
+
+        const attachCameraListener = () => {
+            if (cancelled) {
+                return
+            }
+
+            if (!lgs.camera?.changed) {
+                retryTimer = window.setTimeout(attachCameraListener, CAMERA_PANEL_UPDATE_DELAY)
+                return
+            }
+
+            scheduleUpdate()
+            removeChangedListener = lgs.camera.changed.addEventListener(scheduleUpdate)
+        }
+
+        attachCameraListener()
+
+        return () => {
+            cancelled = true
+            removeChangedListener?.()
+            if (retryTimer) {
+                window.clearTimeout(retryTimer)
+            }
+            clearFrame()
+        }
+    }, [continuousMove, hasSelectedInformation, updateLiveCamera])
+
     const targetLatitude = coordinateOf(camera.target?.latitude)
     const targetLongitude = coordinateOf(camera.target?.longitude)
     const targetHeight = valueOf(camera.target?.height)
@@ -247,10 +350,13 @@ export const CameraAndTargetPanel = () => {
     const heading = valueOf(camera.position?.heading)
     const pitch = valueOf(camera.position?.pitch)
     const roll = valueOf(camera.position?.roll)
+    const hasTargetPosition = targetLatitude !== null && targetLongitude !== null
+    const hasCameraPosition = positionLatitude !== null && positionLongitude !== null
+    const hasCameraHPR = heading !== null || pitch !== null || roll !== null
 
-    const showTargetPosition = ui.camera.showTargetPosition && !__.ui.cameraManager.lookingAtTheSky(camera.target)
-    const showCameraPosition = !is2D && ui.camera.showPosition && camera.position
-    const showCameraHPR = !is2D && ui.camera.showHPR && camera.position
+    const showTargetPosition = ui.camera.showTargetPosition && hasTargetPosition && !__.ui.cameraManager.lookingAtTheSky(camera.target)
+    const showCameraPosition = !is2D && ui.camera.showPosition && hasCameraPosition
+    const showCameraHPR = !is2D && ui.camera.showHPR && hasCameraHPR
     const hasRenderableInformation = showTargetPosition || showCameraPosition || showCameraHPR
 
     if (!hasSelectedInformation || !hasRenderableInformation) {

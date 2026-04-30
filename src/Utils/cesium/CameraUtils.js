@@ -46,6 +46,11 @@ export class CameraUtils {
         camera.lookAtTransform(Transforms.eastNorthUpToFixedFrame(point), new HeadingPitchRange(hpr.heading, hpr.pitch, hpr.range))
     }
 
+    static setOrbitTransform = (camera, target) => {
+        const point = Cartesian3.fromDegrees(target.longitude, target.latitude, targetHeightOf(target))
+        camera.lookAtTransform(Transforms.eastNorthUpToFixedFrame(point))
+    }
+
     static unlock = (camera) => {
         camera.lookAtTransform(Matrix4.IDENTITY);
     }

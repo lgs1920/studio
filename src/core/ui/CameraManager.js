@@ -23,6 +23,21 @@ import { snapshot }                                   from 'valtio'
 import { deepClone }                                  from 'valtio/utils'
 import { Journey }                                    from '../Journey'
 
+const finiteNumber = value => {
+    if (value === null || value === undefined || value === '') {
+        return null
+    }
+
+    const number = Number(value)
+    return Number.isFinite(number) ? number : null
+}
+
+const targetHeightOf = target => target?.simulatedHeight ?? target?.height
+
+const hasMapCoordinates = target => finiteNumber(target?.longitude) !== null
+    && finiteNumber(target?.latitude) !== null
+    && finiteNumber(targetHeightOf(target)) !== null
+
 export class CameraManager {
     static CLOCKWISE = true
     static NORMAL = 'normal'
@@ -128,14 +143,14 @@ export class CameraManager {
     }
 
     getCurrentUpdateOptions = () => {
-        if (lgs.stores.ui.mainUI.rotate.running && lgs.stores.ui.mainUI.rotate.target) {
+        if (lgs.stores.ui.mainUI.rotate.running && hasMapCoordinates(lgs.stores.ui.mainUI.rotate.target)) {
             return {
                 skipTargetPick: true,
                 target:         lgs.stores.ui.mainUI.rotate.target,
             }
         }
 
-        if (lgs.stores.ui.mainUI.panorama.active && lgs.stores.ui.mainUI.panorama.target) {
+        if (lgs.stores.ui.mainUI.panorama.active && hasMapCoordinates(lgs.stores.ui.mainUI.panorama.target)) {
             return {
                 skipTargetPick: true,
                 target:         lgs.stores.ui.mainUI.panorama.target,
@@ -414,6 +429,11 @@ export class CameraManager {
             }
         }
 
+        const preserveView = options?.preserveView === true
+        const cameraPosition = preserveView
+                               ? snapshot(this.store).position
+                               : point.camera
+
         // Update target and camera position
         this.settings = {
             target:   {
@@ -423,10 +443,10 @@ export class CameraManager {
                 simulatedHeight: point.simulatedHeight ?? point.height,
             },
             position: {
-                heading: point.camera.heading,
-                pitch:   point.camera.pitch,
-                roll:    point.camera.roll,
-                range:   point.camera.range,
+                heading: cameraPosition.heading,
+                pitch:   cameraPosition.pitch,
+                roll:    cameraPosition.roll,
+                range:   cameraPosition.range,
             },
         }
 
@@ -440,7 +460,11 @@ export class CameraManager {
         const lookAt = options?.lookAt ?? true
 
         // Do we need a camera pre-positioning ?
-        if (lookAt) {
+        if (preserveView) {
+            this.proxy.setOrbitTransform(lgs.camera, point)
+            lgs.scene?.requestRender?.()
+        }
+        else if (lookAt) {
             this.lookAt(point)
             lgs.scene?.requestRender?.()
         }

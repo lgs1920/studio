@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-24
- * Last modified: 2026-04-24
+ * Created on: 2026-04-30
+ * Last modified: 2026-04-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -73,6 +73,7 @@ export class WidgetCache {
      */
     delete = async key => {
         this.#cache.delete(key)
+        lgs.stores.ui.widget.list.delete(key)
         await lgs.db.lgs1920.delete(key, WIDGETS_STORE)
     }
 

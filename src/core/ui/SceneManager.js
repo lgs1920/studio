@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-26
- * Last modified: 2026-04-26
+ * Created on: 2026-04-30
+ * Last modified: 2026-04-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -22,6 +22,18 @@ import { SceneUtils }              from '@Utils/cesium/SceneUtils'
 import { Mobility }                from '@Utils/Mobility'
 import { UIToast }                 from '@Utils/UIToast'
 import { LayersAndTerrainManager } from './LayerAndTerrainManager'
+
+const finiteNumber = value => {
+    if (value === null || value === undefined || value === '') {
+        return null
+    }
+
+    const number = Number(value)
+    return Number.isFinite(number) ? number : null
+}
+
+const hasMapCoordinates = target => finiteNumber(target?.longitude) !== null
+    && finiteNumber(target?.latitude) !== null
 
 export class SceneManager {
 
@@ -159,10 +171,11 @@ export class SceneManager {
     //
     focusPreProcessing = (point, options) => {
         const cameraTarget = __.ui.cameraManager?.target
-        const from = (Number.isFinite(cameraTarget?.longitude) && Number.isFinite(cameraTarget?.latitude))
+        const rotateTarget = lgs.stores.ui.mainUI.rotate.target
+        const from = hasMapCoordinates(cameraTarget)
                      ? cameraTarget
-                     : lgs.stores.ui.mainUI.rotate.target
-        if (options?.target?.element) {
+                     : hasMapCoordinates(rotateTarget) ? rotateTarget : null
+        if (options?.target?.element && hasMapCoordinates(options.target)) {
             lgs.stores.ui.mainUI.rotate.target = options.target
         }
         else if (point instanceof MapTarget) {
@@ -171,7 +184,7 @@ export class SceneManager {
         else {
             lgs.stores.ui.mainUI.rotate.target = new MapTarget(point.element, point)
         }
-        const distance = Mobility.distance(from, point)
+        const distance = from && hasMapCoordinates(point) ? Mobility.distance(from, point) : 0
         return {
             distance: distance,
             height: Math.max(from?.height ?? 0, point?.height ?? 0),
@@ -180,10 +193,10 @@ export class SceneManager {
 
     getJourneyCentroid = async journey => await this.utils.getJourneyCentroid(journey)
 
-    focus = (point, options) => {
+    focus = (point, options = {}) => {
         this.#focusTarget = options.target ?? null
 
-        this.utils.focus(point, {
+        return this.utils.focus(point, {
             ...options,
             initializer: options.initializer ?? this.focusPreProcessing,
             callback:    options.callback ?? this.focusPostProcessing,

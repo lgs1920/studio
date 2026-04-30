@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-29
- * Last modified: 2026-04-29
+ * Created on: 2026-04-30
+ * Last modified: 2026-04-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -34,7 +34,7 @@ import {
     normalizePanoramaPitch,
 }                                               from '@Core/OrbitSettings'
 import { Widget }                                        from '@Components/MainUI/widgets/Widget'
-import { faAngle, faMountains }                                                from '@fortawesome/pro-regular-svg-icons'
+import { faAngle, faVideo } from '@fortawesome/pro-regular-svg-icons'
 import { FA2SL }                                                               from '@Utils/FA2SL'
 import { foot, meter, UnitUtils }                                              from '@Utils/UnitUtils'
 import { Cartesian3, Math as M }                from 'cesium'
@@ -69,6 +69,10 @@ const formatCameraAltitude = height => UnitUtils.formatMetric(numericValueOf(hei
     precision: 0,
 }).full
 const formatPanoramaPitch = pitch => `${Math.round(numericValueOf(pitch))}°`
+const formatCameraAdjustmentValues = position => ({
+    height: formatCameraAltitude(position?.height),
+    pitch:  formatPanoramaPitch(position?.pitch),
+})
 const currentCameraMovementSnapshot = () => {
     const camera = lgs.camera
     const cartographic = camera?.positionCartographic
@@ -237,10 +241,7 @@ export const PanoramaWidget = memo(() => {
     }, [panorama.target, showAdjustmentValues])
 
     const showCameraAdjustmentOverlay = useCallback((position) => {
-        showAdjustmentValues({
-                                 height: formatCameraAltitude(position?.height),
-                                 pitch:  formatPanoramaPitch(position?.pitch),
-                             })
+        showAdjustmentValues(formatCameraAdjustmentValues(position))
     }, [showAdjustmentValues])
 
     const schedulePersistPanoramaSettings = useCallback((updates = {}) => {
@@ -359,23 +360,9 @@ export const PanoramaWidget = memo(() => {
                 standardCameraFrameRef.current = null
             }
         }
-
-        if (!showCameraMovementWidget) {
-            standardCameraKeyRef.current = null
-            clearStandardCameraFrame()
-            if (!panorama.active) {
-                hideAdjustmentOverlay()
-            }
-            return undefined
-        }
-
-        if (panorama.active || rotate.running || !lgs.camera?.changed) {
-            standardCameraKeyRef.current = null
-            clearStandardCameraFrame()
-            return undefined
-        }
-
-        standardCameraKeyRef.current = currentCameraMovementSnapshot()?.key ?? null
+        let cancelled = false
+        let retryTimer = null
+        let removeChangedListener = null
 
         const showCurrentCameraMovement = () => {
             if (standardCameraFrameRef.current !== null) {
@@ -385,7 +372,7 @@ export const PanoramaWidget = memo(() => {
             standardCameraFrameRef.current = window.requestAnimationFrame(() => {
                 standardCameraFrameRef.current = null
 
-                if (lgs.stores.ui.mainUI.panorama.active || lgs.stores.ui.mainUI.rotate.running) {
+                if (lgs.stores.ui.mainUI.panorama.active) {
                     standardCameraKeyRef.current = null
                     return
                 }
@@ -396,14 +383,61 @@ export const PanoramaWidget = memo(() => {
                 }
 
                 standardCameraKeyRef.current = snapshot.key
+                if (lgs.stores.ui.mainUI.rotate.running) {
+                    return
+                }
+
                 showCameraAdjustmentOverlay(snapshot.position)
             })
         }
 
-        const removeChangedListener = lgs.camera.changed.addEventListener(showCurrentCameraMovement)
+        if (!showCameraMovementWidget) {
+            standardCameraKeyRef.current = null
+            clearStandardCameraFrame()
+            if (!panorama.active) {
+                hideAdjustmentOverlay()
+            }
+            return undefined
+        }
+
+        const attachCameraListener = () => {
+            if (cancelled) {
+                return
+            }
+
+            if (!lgs.camera?.changed) {
+                retryTimer = window.setTimeout(attachCameraListener, ADJUSTMENT_OVERLAY_DELAY / 4)
+                return
+            }
+
+            standardCameraKeyRef.current = currentCameraMovementSnapshot()?.key ?? null
+            removeChangedListener = lgs.camera.changed.addEventListener(showCurrentCameraMovement)
+        }
+
+        if (panorama.active || !lgs.camera?.changed) {
+            standardCameraKeyRef.current = null
+            clearStandardCameraFrame()
+            if (!panorama.active) {
+                attachCameraListener()
+            }
+            return () => {
+                cancelled = true
+                removeChangedListener?.()
+                if (retryTimer) {
+                    window.clearTimeout(retryTimer)
+                }
+                clearStandardCameraFrame()
+            }
+        }
+
+        attachCameraListener()
 
         return () => {
+            cancelled = true
             removeChangedListener?.()
+            if (retryTimer) {
+                window.clearTimeout(retryTimer)
+            }
             clearStandardCameraFrame()
         }
     }, [
@@ -413,6 +447,12 @@ export const PanoramaWidget = memo(() => {
                   showCameraAdjustmentOverlay,
                   showCameraMovementWidget,
               ])
+
+    useEffect(() => {
+        if (rotate.running && !panorama.active) {
+            hideAdjustmentOverlay()
+        }
+    }, [hideAdjustmentOverlay, panorama.active, rotate.running])
 
     useEffect(() => {
         return () => {
@@ -745,7 +785,7 @@ export const PanoramaWidget = memo(() => {
             >
                 <div className="panorama-adjustment-overlay" onWheel={handleAdjustmentWheel}>
                     <span className="panorama-adjustment-metric">
-                        <sl-icon library="fa" name={FA2SL.set(faMountains)}/>
+                        <sl-icon library="fa" name={FA2SL.set(faVideo)}/>
                         <strong>{adjustmentValues.height}</strong>
                     </span>
                     <span className="panorama-adjustment-metric">

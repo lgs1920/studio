@@ -410,7 +410,7 @@ export const LGS1920 = () => {
             roll:     cameraStore.position.roll,
             range:    cameraStore.position.range,
             infinite: true,
-            rotate:         !restoreCameraPosition && lgs.settings.ui.camera.start.rotate.app,
+            rotate: lgs.settings.ui.camera.start.rotate.app,
             lookAt:   true,
             cameraPosition: restoreCameraPosition ? cameraStore.position : null,
             rpm:      lgs.settings.starter.camera.rpm,

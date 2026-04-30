@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-09
- * Last modified: 2026-03-09
+ * Created on: 2026-04-30
+ * Last modified: 2026-04-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -33,10 +33,27 @@ export const DynamicWidget = ({id, context, props = {}}) => {
     const [LazyWidget, setLazyWidget] = useState(() => __.ui.widgetCache.get(id)?.component)
 
     useEffect(() => {
+        let cancelled = false
+
         if (!LazyWidget) {
-            ensureWidget(id).then(setLazyWidget)
+            ensureWidget(id, props)
+                .then(widget => {
+                    if (!cancelled) {
+                        setLazyWidget(() => widget)
+                    }
+                })
+                .catch(error => {
+                    if (!cancelled) {
+                        console.error(`[DynamicWidget] Failed to render widget "${id}":`, error)
+                        setLazyWidget(null)
+                    }
+                })
         }
-    }, [id])
+
+        return () => {
+            cancelled = true
+        }
+    }, [id, LazyWidget, props])
 
     if (!LazyWidget) {
         return null
@@ -52,24 +69,30 @@ export const DynamicWidget = ({id, context, props = {}}) => {
     )
 }
 
-async function ensureWidget(id) {
+async function ensureWidget(id, props = {}) {
     const cache = __.ui.widgetCache.get(id)
     if (cache?.component) {
         return cache.component
     }
 
-    const renderer = new WidgetDynamicRenderer()
-    const entity = lgs.stores.ui.widget.list.get(id)
-    const widgetsBoard = entity?.widgetsBoard
-    const forceRefresh = true
-    const LazyWidget = await renderer.renderWidget(cache.group, id, {widgetsBoard, forceRefresh, zIndex: entity.zIndex})
+    const entity = lgs.stores.ui.widget.list.get(id) ?? {}
+    const group = cache?.group ?? entity.group ?? props.group
+    if (!group) {
+        console.warn(`[DynamicWidget] Skipping widget "${id}" because cache metadata is missing.`)
+        return null
+    }
+
+    const renderer = WidgetDynamicRenderer.instance
+    const widgetsBoard = entity.widgetsBoard ?? props.widgetsBoard ?? cache?.widgetsBoard
+    const zIndex = entity.zIndex ?? props.zIndex ?? cache?.zIndex
+    const LazyWidget = await renderer.renderWidget(group, id, {widgetsBoard, forceRefresh: true, zIndex})
     if (LazyWidget) {
         __.ui.widgetCache.set(id, {
                                   component: LazyWidget,
-                                  group:     cache.group,
-                                  mounted:   cache.mounted,
+            group,
+            mounted: cache?.mounted,
                                   widgetsBoard,
-            zIndex: entity.zIndex,
+            zIndex,
                               },
         )
     }

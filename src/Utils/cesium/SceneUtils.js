@@ -27,8 +27,32 @@ import {
 }                    from 'cesium'
 
 const finiteNumber = value => {
+    if (value === null || value === undefined || value === '') {
+        return null
+    }
+
     const number = Number(value)
     return Number.isFinite(number) ? number : null
+}
+
+const focusPointCoordinates = point => {
+    const longitude = finiteNumber(point?.longitude)
+    const latitude = finiteNumber(point?.latitude)
+    const pointHeight = finiteNumber(point?.height)
+    const simulatedHeight = finiteNumber(point?.simulatedHeight)
+    const height = simulatedHeight ?? pointHeight
+
+    if ([longitude, latitude, height].some(value => value === null)) {
+        return null
+    }
+
+    return {
+        longitude,
+        latitude,
+        height,
+        pointHeight,
+        simulatedHeight,
+    }
 }
 
 const cameraTargetIsValid = cameraStore => {
@@ -308,13 +332,38 @@ export class SceneUtils {
     }
 
 
-    static focus = async (point, options) => {
+    static focus = async (point, options = {}) => {
 
-        const height = point.simulatedHeight ?? point.height // compatibility <0.8.1
-        const range = options.range ?? lgs.settings.camera.range
-        const pitch = M.toRadians(options.pitch ?? lgs.settings.camera.pitch)
-        const heading = M.toRadians(options.heading ?? lgs.settings.camera.heading)
-        const roll = M.toRadians(options.roll ?? lgs.settings.camera.roll)
+        const coordinates = focusPointCoordinates(point)
+        if (!coordinates) {
+            console.warn('SceneUtils.focus skipped invalid target', {point})
+            return false
+        }
+
+        const {
+                  longitude,
+                  latitude,
+                  height,
+                  pointHeight,
+                  simulatedHeight,
+              } = coordinates
+        const normalizedPoint = {
+            ...point,
+            longitude,
+            latitude,
+            height: pointHeight ?? height,
+        }
+        if (simulatedHeight !== null) {
+            normalizedPoint.simulatedHeight = simulatedHeight
+        }
+        else {
+            delete normalizedPoint.simulatedHeight
+        }
+
+        const range = cameraPositionValue(options, 'range', lgs.settings.camera.range)
+        const pitch = M.toRadians(cameraPositionValue(options, 'pitch', lgs.settings.camera.pitch))
+        const heading = M.toRadians(cameraPositionValue(options, 'heading', lgs.settings.camera.heading))
+        const roll = M.toRadians(cameraPositionValue(options, 'roll', lgs.settings.camera.roll))
         const cameraDestination = cameraPositionIsValid(options.cameraPosition)
                                   ? Cartesian3.fromDegrees(
                 finiteNumber(options.cameraPosition.longitude),
@@ -323,11 +372,11 @@ export class SceneUtils {
             )
                                   : null
         const target = {
-            longitude:       point.longitude,
-            latitude:        point.latitude,
+            longitude:       longitude,
+            latitude:        latitude,
             height:          height,
-            simulatedHeight: point?.simulatedHeight,
-            title:           point.title,
+            simulatedHeight: simulatedHeight ?? undefined,
+            title:           point?.title,
             color:           point?.color ?? lgs.colors.poiDefault,
             bgColor:         point?.bgColor ?? lgs.colors.poiDefaultBackground,
             description:     point?.description ?? '',
@@ -339,13 +388,13 @@ export class SceneUtils {
             },
         }
 
-        const maximumHeight = options.maximumHeight ?? lgs.settings.camera.maximumHeight
-        let pitchAdjustHeight = options.pitchAdjustHeight ?? lgs.settings.camera.pitchAdjustHeight
-        let flyingTime = options.flyingTime ?? lgs.settings.camera.flyingTime
+        const maximumHeight = cameraPositionValue(options, 'maximumHeight', lgs.settings.camera.maximumHeight)
+        let pitchAdjustHeight = cameraPositionValue(options, 'pitchAdjustHeight', lgs.settings.camera.pitchAdjustHeight)
+        let flyingTime = cameraPositionValue(options, 'flyingTime', lgs.settings.camera.flyingTime)
 
 
         // fix flying time and pitch height if necessary
-        const initializer = options.initializer ? options.initializer(point, options) : null
+        const initializer = options.initializer ? options.initializer(normalizedPoint, options) : null
         if (initializer) {
             flyingTime = SceneUtils.resolveFlightDuration(initializer.distance, flyingTime, {
                 resetCamera:  options.resetCamera === true,
@@ -363,7 +412,6 @@ export class SceneUtils {
             }
 
             await __.ui.cameraManager.raiseUpdateEvent({
-                                                           range,
                                                            skipTargetPick: true,
                                                            target,
                                                        })
@@ -385,7 +433,7 @@ export class SceneUtils {
                 options.callback(target, options)
             }
 
-            if ((options.rotate ?? false) && !cameraDestination) {
+            if (options.rotate ?? false) {
                 await syncRestoredCamera()
                 __.ui.cameraManager.rotateAround(target, {
                     rpm:       options.rpm ?? lgs.settings.camera.rpm,
@@ -394,6 +442,7 @@ export class SceneUtils {
                     fps:       lgs.settings.camera.fps,
                     rotations: options.rotations ?? lgs.settings.camera.rotations,
                     lookAt:    true,
+                    preserveView: Boolean(cameraDestination),
                 })
             }
             else {
@@ -442,15 +491,17 @@ export class SceneUtils {
                                      roll,
                                  },
                              })
-            return
+            return true
         }
 
         lgs.camera.flyToBoundingSphere(new BoundingSphere(
-            Cartesian3.fromDegrees(point.longitude, point.latitude, height), 0,
+            Cartesian3.fromDegrees(longitude, latitude, height), 0,
         ), {
                                            ...flyOptions,
                                            offset: new HeadingPitchRange(heading, pitch, range),
                                        })
+
+        return true
     }
 
     static getJourneyCentroid = async (journey) => {

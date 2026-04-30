@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-29
- * Last modified: 2026-04-29
+ * Created on: 2026-04-30
+ * Last modified: 2026-04-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -84,4 +84,14 @@
 
 .camera-information-values > sl-icon {
     flex: 0 0 auto;
+}
+
+.camera-metric-compact-unit {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0;
+}
+
+.camera-metric-compact-unit .lgs-nvu-unit {
+    margin-left: 1px;
 }
