@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-24
- * Last modified: 2026-04-24
+ * Created on: 2026-04-30
+ * Last modified: 2026-04-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -32,8 +32,12 @@ import { UIToast }                                                  from '@Utils
 import {
     WaButton, WaIcon, WaOption, WaProgressBar, WaSelect, WaSwitch, WaTooltip,
 }                                                                   from '@web.awesome.me/webawesome-pro/dist/react'
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSnapshot }                                              from 'valtio'
+
+const setProfileWidgetVisible = visible => {
+    lgs.stores.main.components.profile.show = visible
+}
 
 /**
  * ElevationProfile component to manage and display elevation data and widgets
@@ -69,6 +73,63 @@ export const ElevationProfile = (props) => {
         return entity
     }, [renderer])
 
+    const renderProfileWidget = useCallback(async () => {
+        let entity = renderer.findExistingInList(WIDGET_KEY, SCENE_WIDGETS_BOARD)
+
+        if (!entity) {
+            await renderer.renderWidget(GROUP, WIDGET_KEY, {
+                forceRefresh: true,
+                widgetsBoard: SCENE_WIDGETS_BOARD,
+            })
+            entity = renderer.findExistingInList(WIDGET_KEY, SCENE_WIDGETS_BOARD)
+        }
+        else if (!__.ui.widgetManager.getElementById(entity)) {
+            await renderer.renderWidget(GROUP, entity, {
+                forceRefresh: true,
+                widgetsBoard: SCENE_WIDGETS_BOARD,
+            })
+        }
+
+        if (entity) {
+            __.ui.widgetManager.getElementById(entity)?.classList.remove(HIDDEN_CLASS)
+        }
+
+        return entity
+    }, [GROUP, renderer])
+
+    const ensureProfileWidget = useCallback(async () => {
+        const entity = await renderProfileWidget()
+
+        if (entity) {
+            setProfileChartConfigId(entity)
+        }
+
+        return entity
+    }, [renderProfileWidget])
+
+    const resetProfileWidget = useCallback(async (entity) => {
+        if (!entity) {
+            return
+        }
+
+        const element = __.ui.widgetManager.getElementById(entity)
+        const type = entity.split('#')[0]
+        const elements = lgs.settings.widgets[type]?.configuration?.elements
+
+        if (elements?.[entity]) {
+            delete elements[entity]
+        }
+
+        renderer.destroyWidget(entity)
+
+        if (element) {
+            await __.ui.widgetManager.disposeElement(element)
+        }
+        await __.ui.widgetManager.deleteWidgetPosition(entity)
+
+        setProfileChartConfigId(null)
+    }, [renderer])
+
     /**
      * Prepare data for the profile chart
      * Moved up to avoid ReferenceError in effects
@@ -92,20 +153,6 @@ export const ElevationProfile = (props) => {
      * Resolves the profile background asynchronously
      */
     const getProfileBackground = useCallback(async () => {
-        let entity = renderer.findExistingInList(WIDGET_KEY, SCENE_WIDGETS_BOARD)
-
-        if (!entity) {
-            await renderer.renderWidget(GROUP, WIDGET_KEY, {
-                forceRefresh: true,
-                widgetsBoard: SCENE_WIDGETS_BOARD,
-            })
-            entity = renderer.findExistingInList(WIDGET_KEY, SCENE_WIDGETS_BOARD)
-        }
-
-        if (!entity) {
-            return null
-        }
-
         // We have one snapshot, let's use it
         if (lgs.stores.ui.widget.currentSnapshot) {
             return lgs.stores.ui.widget.currentSnapshot.image
@@ -133,27 +180,43 @@ export const ElevationProfile = (props) => {
             )
             return _offscreen.toDataURL('image/webp')
         }
-        catch (e) {
+        catch {
             return null
         }
 
-    }, [renderer])
+    }, [])
 
     /**
      * Initial sync of the toggle state
      */
     useEffect(() => {
-        const _id = syncProfileChartConfigId()
-        if (!_id) {
-            $profile.show = false
-            return
+        let cancelled = false
+
+        const syncProfileWidget = async () => {
+            const _id = syncProfileChartConfigId()
+
+            if (_id) {
+                const _el = __.ui.widgetManager.getElementById(_id)
+                if (_el) {
+                    setProfileWidgetVisible(!_el.classList.contains(HIDDEN_CLASS))
+                }
+                return
+            }
+
+            if (profile.show && data.hasElevation && !isProcessing) {
+                const entity = await renderProfileWidget()
+                if (!cancelled && entity) {
+                    setProfileWidgetVisible(true)
+                }
+            }
         }
 
-        const _el = __.ui.widgetManager.getElementById(_id)
-        if (_el) {
-            $profile.show = !_el.classList.contains(HIDDEN_CLASS)
+        syncProfileWidget()
+
+        return () => {
+            cancelled = true
         }
-    }, [syncProfileChartConfigId])
+    }, [data.hasElevation, isProcessing, profile.show, renderProfileWidget, syncProfileChartConfigId])
 
     /**
      * Handles background image updates
@@ -187,25 +250,40 @@ export const ElevationProfile = (props) => {
                 const _el = __.ui.widgetManager.getElementById(_id)
                 if (_el && !_el.classList.contains(HIDDEN_CLASS)) {
                     _el.classList.add(HIDDEN_CLASS)
-                    $profile.show = false
+                    setProfileWidgetVisible(false)
                 }
             }
         }
-    }, [data.hasElevation, isProcessing, profile.show])
+    }, [data.hasElevation, isProcessing, profile.show, renderer])
+
+    useEffect(() => {
+        if (!profile.show || !data.hasElevation || isProcessing) {
+            return
+        }
+
+        let cancelled = false
+
+        renderProfileWidget().then(entity => {
+            if (!cancelled && entity) {
+                setProfileWidgetVisible(true)
+            }
+        })
+
+        return () => {
+            cancelled = true
+        }
+    }, [data.hasElevation, isProcessing, profile.show, renderProfileWidget])
 
     /**
      * Toggles the profile widget visibility
      */
-    const toggleProfileButton = useCallback(async () => {
-        const _id = renderer.findExistingInList(WIDGET_KEY, SCENE_WIDGETS_BOARD)
+    const toggleProfileButton = async () => {
+        let _id = renderer.findExistingInList(WIDGET_KEY, SCENE_WIDGETS_BOARD)
 
         if (!_id) {
-            await renderer.renderWidget(GROUP, WIDGET_KEY, {
-                forceRefresh: true,
-                widgetsBoard: SCENE_WIDGETS_BOARD,
-            })
+            await ensureProfileWidget()
             syncProfileChartConfigId()
-            $profile.show = true
+            setProfileWidgetVisible(true)
             return
         }
 
@@ -216,28 +294,39 @@ export const ElevationProfile = (props) => {
         const _el = __.ui.widgetManager.getElementById(_id)
         const _nextState = !profile.show
 
+        if (!_nextState) {
+            await resetProfileWidget(_id)
+            setProfileWidgetVisible(false)
+
+            if (lgs.stores.ui.drawers.open === WIDGETS_EDITOR_DRAWER) {
+                lgs.stores.ui.drawers.open = null
+            }
+            return
+        }
+
         if (_el) {
-            _el.classList.toggle(HIDDEN_CLASS, !_nextState)
+            _el.classList.remove(HIDDEN_CLASS)
+        }
+        else {
+            await ensureProfileWidget()
         }
 
         syncProfileChartConfigId()
-        $profile.show = _nextState
+        setProfileWidgetVisible(true)
+    }
 
-        if (!_nextState && lgs.stores.ui.drawers.open === WIDGETS_EDITOR_DRAWER) {
-            lgs.stores.ui.drawers.open = null
-        }
-    }, [profile.show, syncProfileChartConfigId])
-
+    const journeyElevationServer = journey?.elevationServer
+    const journeyHasElevation = journey?.hasElevation
     const selectedServer = useMemo(() => {
         const _ids = props.servers.map(s => s.id)
-        if (journey?.elevationServer && _ids.includes(journey.elevationServer)) {
-            return journey.elevationServer
+        if (journeyElevationServer && _ids.includes(journeyElevationServer)) {
+            return journeyElevationServer
         }
-        if (journey?.hasElevation !== false && _ids.includes(ElevationServer.FILE_CONTENT)) {
+        if (journeyHasElevation !== false && _ids.includes(ElevationServer.FILE_CONTENT)) {
             return ElevationServer.FILE_CONTENT
         }
         return props.default || _ids[0] || ''
-    }, [journey?.elevationServer, journey?.hasElevation, props.default, props.servers])
+    }, [journeyElevationServer, journeyHasElevation, props.default, props.servers])
 
     useEffect(() => {
         if (!isProcessing && canShowProgress) {
@@ -288,11 +377,7 @@ export const ElevationProfile = (props) => {
         let entity = renderer.findExistingInList(WIDGET_KEY, SCENE_WIDGETS_BOARD)
 
         if (!entity) {
-            await renderer.renderWidget(GROUP, WIDGET_KEY, {
-                forceRefresh: true,
-                widgetsBoard: SCENE_WIDGETS_BOARD,
-            })
-            entity = renderer.findExistingInList(WIDGET_KEY, SCENE_WIDGETS_BOARD)
+            entity = await ensureProfileWidget()
         }
 
         if (!entity) {

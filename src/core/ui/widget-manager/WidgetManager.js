@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-24
- * Last modified: 2026-04-24
+ * Created on: 2026-04-30
+ * Last modified: 2026-04-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -19,16 +19,16 @@
  * Delegates functionality to specialized classes.
  */
 import { SCENE_WIDGETS_BOARD, VIDEO_WIDGETS_BOARD } from '@Core/constants'
-import { WidgetDBManager }    from '@Core/ui/widget-manager/WidgetDBManager'
-import { WidgetRotatable }    from '@Core/ui/widget-manager/WidgetRotatable'
-import { WidgetCoreControls } from './WidgetCoreControls'
-import { WidgetCoreRegistry } from './WidgetCoreRegistry'
-import { WidgetCropper }      from './WidgetCropper'
-import { WidgetDraggable }    from './WidgetDraggable'
-import { WidgetPosition }     from './WidgetPosition'
-import { WidgetResizable }    from './WidgetResizable'
-import { WidgetScalable }     from './WidgetScalable'
-import { WidgetTransform }    from './WidgetTransform'
+import { WidgetDBManager }                          from '@Core/ui/widget-manager/WidgetDBManager'
+import { WidgetRotatable }                          from '@Core/ui/widget-manager/WidgetRotatable'
+import { WidgetCoreControls }                       from './WidgetCoreControls'
+import { WidgetCoreRegistry }                       from './WidgetCoreRegistry'
+import { WidgetCropper }                            from './WidgetCropper'
+import { WidgetDraggable }                          from './WidgetDraggable'
+import { WidgetPosition }                           from './WidgetPosition'
+import { WidgetResizable }                          from './WidgetResizable'
+import { WidgetScalable }                           from './WidgetScalable'
+import { WidgetTransform }                          from './WidgetTransform'
 
 export class WidgetManager {
     // Singleton instance
@@ -780,6 +780,13 @@ export class WidgetManager {
      * @param {number} y - Y scale value
      */
     setScale = (element, x, y) => this.#transform.setScale(element, x, y)
+
+    /**
+     * Publishes widget scale CSS variables and change events for inner renderers.
+     * @param {HTMLElement} element - The DOM element
+     * @param {Object} scale - Scale object {x, y}
+     */
+    applyScaleVariables = (element, scale) => this.#transform.applyScaleVariables(element, scale)
 
     /**
      * Updates the translate values in the widget's transform.

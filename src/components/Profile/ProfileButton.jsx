@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-14
- * Last modified: 2026-03-14
+ * Created on: 2026-04-30
+ * Last modified: 2026-04-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -43,11 +43,29 @@ export const ProfileButton = (props) => {
     const WIDGET_KEY = 'profile-widget'
     const GROUP = SCENE_WIDGETS
 
-    const toggleProfileButton = async () => {
-        const existing = renderer.findExistingInList(WIDGET_KEY, SCENE_WIDGETS_BOARD)
+    const ensureProfileWidget = async () => {
+        let existing = renderer.findExistingInList(WIDGET_KEY, SCENE_WIDGETS_BOARD)
 
         if (!existing) {
             await addWidget(GROUP, WIDGET_KEY, {forceRefresh: true})
+            existing = renderer.findExistingInList(WIDGET_KEY, SCENE_WIDGETS_BOARD)
+        }
+        else if (!__.ui.widgetManager.getElementById(existing)) {
+            await addWidget(GROUP, existing, {forceRefresh: true})
+        }
+
+        if (existing) {
+            __.ui.widgetManager.getElementById(existing)?.classList.remove('lgs-widget-hidden')
+        }
+
+        return existing
+    }
+
+    const toggleProfileButton = async () => {
+        let existing = renderer.findExistingInList(WIDGET_KEY, SCENE_WIDGETS_BOARD)
+
+        if (!existing) {
+            await ensureProfileWidget()
             $profile.show = true
         }
         else {
@@ -60,7 +78,11 @@ export const ProfileButton = (props) => {
                 return
             }
 
-            if (widgetElement && widgetElement.classList.contains('lgs-widget-hidden')) {
+            if (!widgetElement) {
+                await ensureProfileWidget()
+                $profile.show = true
+            }
+            else if (widgetElement.classList.contains('lgs-widget-hidden')) {
                 widgetElement.classList.remove('lgs-widget-hidden')
                 $profile.show = true
             }

@@ -7,14 +7,15 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-24
- * Last modified: 2026-04-24
+ * Created on: 2026-04-30
+ * Last modified: 2026-04-30
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { WidgetRegistry } from '@Core/ui/widget-manager/registry/WidgetRegistry'
+import { WIDGET_LAYER_START } from '@Core/constants'
+import { WidgetRegistry }     from '@Core/ui/widget-manager/registry/WidgetRegistry'
 
 /**
  * Singleton class responsible for dynamically rendering and managing widgets.
@@ -71,6 +72,8 @@ export class WidgetDynamicRenderer {
 
     #getBaseKey = key => key.split('#')[0]
 
+    #resolveZIndex = value => Number(value) > 0 ? Number(value) : WIDGET_LAYER_START
+
     #isSingletonWidget(group, key) {
         return __.ui.widgetManager.maxWidgets(group, this.#getBaseKey(key)) === 1
     }
@@ -102,13 +105,7 @@ export class WidgetDynamicRenderer {
 
         const isMaxReached = __.ui.widgetManager.isMaxWidgetsReached(group, baseKey, widgetsBoard)
         const existingInList = this.findExistingInList(lookupKey, widgetsBoard)
-        const existingInCache = __.ui.widgetCache.has(lookupKey, {
-            group,
-            full: isConcreteInstance,
-            widgetsBoard,
-        })
-
-        if (existingInList && forceRefresh && existingInCache) {
+        if (existingInList && forceRefresh) {
             return {canRender: true, widgetId: existingInList, existingInList}
         }
 
@@ -176,16 +173,22 @@ export class WidgetDynamicRenderer {
 
         return new Promise((resolve) => {
             const commitUpdate = () => {
+                const zIndex = this.#resolveZIndex(props.zIndex)
+
                 // Registering in cache with the resolved reference
                 __.ui.widgetCache.set(widgetId, {
                     group,
                     component:    ResolvedComponent,
                     widgetsBoard: props.widgetsBoard,
-                    zIndex: props.zIndex,
+                    zIndex,
                 })
 
                 // Only update the Valtio store once everything is ready in cache
-                $widget.list.set(widgetId, props)
+                $widget.list.set(widgetId, {
+                    ...props,
+                    group,
+                    zIndex,
+                })
 
                 resolve(ResolvedComponent ?? widgetId)
             }

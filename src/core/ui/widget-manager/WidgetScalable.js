@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-25
- * Last modified: 2026-01-25
+ * Created on: 2026-04-30
+ * Last modified: 2026-04-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -26,9 +26,6 @@ export class WidgetScalable {
     /** @type {WidgetManager} Reference to WidgetManager instance */
     #widgetManager
 
-    /** @type {WidgetCropper} Reference to WidgetCropper instance */
-    #widgetCropper
-
     /** @type {WidgetTransform} Reference to WidgetTransform instance */
     #widgetTransform
 
@@ -38,14 +35,19 @@ export class WidgetScalable {
      * @param {WidgetCropper} widgetCropper - The WidgetCropper instance
      * @param {WidgetTransform} widgetTransform - The WidgetTransform instance
      */
-    constructor(widgetManager, widgetCropper, widgetTransform) {
+    constructor(widgetManager, _widgetCropper, widgetTransform) {
         if (WidgetScalable.#instance) {
             return WidgetScalable.#instance
         }
         this.#widgetManager = widgetManager
-        this.#widgetCropper = widgetCropper
         this.#widgetTransform = widgetTransform
         WidgetScalable.#instance = this
+    }
+
+    #toScaleValue = value => {
+        const rounded = typeof value?.toFixed === 'function' ? value.toFixed(4) : value
+        const scale = Number(rounded)
+        return Number.isFinite(scale) ? scale : 1
     }
 
     /**
@@ -99,10 +101,8 @@ export class WidgetScalable {
      * @private
      * @param {Object} event - Scale event
      * @param {HTMLElement} target - Target element
-     * @param {Function} setPosition - Function to set position
-     * @param {Object} childRef - Child reference
      */
-    #handleScale = (event, target, setPosition, childRef) => {
+    #handleScale = (event, target) => {
         if (!target || !event) {
             return
         }
@@ -112,9 +112,10 @@ export class WidgetScalable {
 
         // Update config
         config.scale = {
-            x: Number(event.scale?.[0].toFixed(4)) ?? 1,
-            y: Number(event.scale?.[1].toFixed(4)) ?? 1,
+            x: this.#toScaleValue(event.scale?.[0]),
+            y: this.#toScaleValue(event.scale?.[1]),
         }
+        this.#widgetTransform.applyScaleVariables(target, config.scale)
         this.#widgetManager.isScaling = false
     }
 
@@ -138,10 +139,9 @@ export class WidgetScalable {
      * Handles scale events, updating element scale and position.
      * @param {Object} event - Scale event
      * @param {Object} refs - References object
-     * @param {Function} setPosition - Function to set position
      */
-    onScale = (event, refs, setPosition) => {
-        this.#handleScale(event, refs.widget?.current, setPosition, refs.child)
+    onScale = (event, refs) => {
+        this.#handleScale(event, refs.widget?.current)
     }
 
     /**
@@ -160,6 +160,7 @@ export class WidgetScalable {
         // Now get the transforms (scale without translate)
         const transforms = this.#widgetTransform.getTransform(event.target)
         config.scale = transforms.scale
+        this.#widgetTransform.applyScaleVariables(event.target, config.scale)
         config.runtimeReady = true
 
         // Position was already updated by commitTranslateToPosition

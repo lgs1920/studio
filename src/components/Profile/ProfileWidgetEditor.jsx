@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-29
- * Last modified: 2026-04-29
+ * Created on: 2026-04-30
+ * Last modified: 2026-04-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -21,6 +21,12 @@ import {
 import {
     BorderElement,
 }                                                         from '@Components/MainUI/widgets/editor/elements/BorderElement'
+import {
+    PaddingElement,
+} from '@Components/MainUI/widgets/editor/elements/PaddingElement'
+import {
+    ScaleSwitchElement,
+} from '@Components/MainUI/widgets/editor/elements/ScaleSwitchElement'
 import {
     WaButton, WaCard, WaColorPicker, WaDivider, WaIcon, WaSlider, WaSwitch,
 }                                                         from '@web.awesome.me/webawesome-pro/dist/react'
@@ -105,7 +111,7 @@ export const ProfileWidgetEditor = ({entity}) => {
     const gradientFallbackColor = useMemo(() => {
         const fallbackColor = __.ui.profiler?.prepareData()?.options?.[0]?.color ?? '#3b82f6'
         return colord(fallbackColor).alpha(1).toRgbString()
-    }, [configuration, entity])
+    }, [])
 
     /**
      * Resolves color values, supporting CSS variables and opacity.
@@ -198,11 +204,8 @@ export const ProfileWidgetEditor = ({entity}) => {
                 slider.value = sanitizedValue
             }
 
-            if (rawValue !== undefined && rawValue !== null && rawValue !== sanitizedValue) {
-                updateValue(path, sanitizedValue)
-            }
         })
-    }, [element, sanitizeSliderValue, updateValue])
+    }, [element, sanitizeSliderValue])
 
     if (!element) {
         return null
@@ -218,6 +221,8 @@ export const ProfileWidgetEditor = ({entity}) => {
                 <WaDivider/>
                 <BorderElement element={element} swatches={swatches} getColor={getColor} updateValue={updateValue}
                                showRadius={false} sanitizeSliderValue={sanitizeSliderValue}/>
+                <WaDivider/>
+                <PaddingElement element={element} updateValue={updateValue} fallback={8} moveableId={entity}/>
                 <WaDivider/>
 
                 {/* X-Axis (Distance) Settings */}
@@ -316,37 +321,47 @@ export const ProfileWidgetEditor = ({entity}) => {
                 {(element.xAxis?.main || element.yAxis?.main || element.xAxis?.labels || element.yAxis?.labels) && (
                     <>
                         <WaDivider/>
-                        <div>{'Main'}</div>
-                        <div className="drawer-horizontal-line three-columns">
-                            <div className="drawer-horizontal-element">
+                        <div className="drawer-horizontal-line">
+                            <div className="drawer-horizontal-element">{'Main'}</div>
+                        </div>
+                        <div className="lgs-widget-color-control-grid">
+                            <div className="lgs-widget-color-control-color">
                                 <WaColorPicker size="small" swatches={swatches} value={getColor(element.mainAxis)}
                                                onInput={(e) => updateValue('mainAxis.color', e.target.value)}/>
                             </div>
-                            <div className="drawer-horizontal-element xlarge-element">
-                                <WaSlider ref={setSliderRef('mainAxis.thickness')}
-                                          size="small"
-                                          label="Width"
-                                          min={PROFILE_WIDGET_SLIDERS['mainAxis.thickness'].min}
-                                          max={PROFILE_WIDGET_SLIDERS['mainAxis.thickness'].max}
-                                          step={PROFILE_WIDGET_SLIDERS['mainAxis.thickness'].step}
-                                          label-at-start
-                                          withTooltip
-                                          defaultValue={getProfileSliderValue('mainAxis.thickness')}
-                                          onInput={(e) => handleProfileSliderInput('mainAxis.thickness', e.target.value)}/>
+                            <div className="lgs-widget-border-control-row">
+                                <div className="drawer-horizontal-element lgs-widget-border-control">
+                                    <WaSlider ref={setSliderRef('mainAxis.thickness')}
+                                              size="small"
+                                              label="Width"
+                                              min={PROFILE_WIDGET_SLIDERS['mainAxis.thickness'].min}
+                                              max={PROFILE_WIDGET_SLIDERS['mainAxis.thickness'].max}
+                                              step={PROFILE_WIDGET_SLIDERS['mainAxis.thickness'].step}
+                                              label-at-start
+                                              withTooltip
+                                              defaultValue={getProfileSliderValue('mainAxis.thickness')}
+                                              onInput={(e) => handleProfileSliderInput('mainAxis.thickness', e.target.value)}/>
+                                </div>
+                                <div className="drawer-horizontal-element lgs-widget-border-control">
+                                    <WaSlider ref={setSliderRef('mainAxis.opacity')}
+                                              size="small"
+                                              label="Opacity"
+                                              min={PROFILE_WIDGET_SLIDERS['mainAxis.opacity'].min}
+                                              max={PROFILE_WIDGET_SLIDERS['mainAxis.opacity'].max}
+                                              step={PROFILE_WIDGET_SLIDERS['mainAxis.opacity'].step}
+                                              label-at-start
+                                              withTooltip
+                                              valueFormatter={v => `${Math.floor(v * 100)}%`}
+                                              defaultValue={getProfileSliderValue('mainAxis.opacity')}
+                                              onInput={(e) => handleProfileSliderInput('mainAxis.opacity', e.target.value)}/>
+                                </div>
                             </div>
-                            <div className="drawer-horizontal-element xlarge-element">
-                                <WaSlider ref={setSliderRef('mainAxis.opacity')}
-                                          size="small"
-                                          label="Opacity"
-                                          min={PROFILE_WIDGET_SLIDERS['mainAxis.opacity'].min}
-                                          max={PROFILE_WIDGET_SLIDERS['mainAxis.opacity'].max}
-                                          step={PROFILE_WIDGET_SLIDERS['mainAxis.opacity'].step}
-                                          label-at-start
-                                          withTooltip
-                                          valueFormatter={v => `${Math.floor(v * 100)}%`}
-                                          defaultValue={getProfileSliderValue('mainAxis.opacity')}
-                                          onInput={(e) => handleProfileSliderInput('mainAxis.opacity', e.target.value)}/>
-                            </div>
+                            <div className="lgs-widget-color-control-spacer" aria-hidden="true"/>
+                            <ScaleSwitchElement
+                                checked={element.mainAxis?.scaled ?? false}
+                                onChange={(checked) => updateValue('mainAxis.scaled', checked)}
+                                className="lgs-widget-profile-axis-scaled-line"
+                            />
                         </div>
                     </>
                 )}
@@ -355,35 +370,45 @@ export const ProfileWidgetEditor = ({entity}) => {
                 {(element.xAxis?.second || element.yAxis?.second) && (
                     <>
                         <WaDivider/>
-                        <div>{'Grid'}</div>
-                        <div className="drawer-horizontal-line three-columns">
-                            <div className="drawer-horizontal-element">
+                        <div className="drawer-horizontal-line">
+                            <div className="drawer-horizontal-element">{'Grid'}</div>
+                        </div>
+                        <div className="lgs-widget-color-control-grid">
+                            <div className="lgs-widget-color-control-color">
                                 <WaColorPicker size="small" swatches={swatches} value={getColor(element.secondAxis)}
                                                onInput={(e) => updateValue('secondAxis.color', e.target.value)}/>
                             </div>
-                            <div className="drawer-horizontal-element xlarge-element">
-                                <WaSlider ref={setSliderRef('secondAxis.thickness')}
-                                          size="small"
-                                          label="Width"
-                                          min={PROFILE_WIDGET_SLIDERS['secondAxis.thickness'].min}
-                                          max={PROFILE_WIDGET_SLIDERS['secondAxis.thickness'].max}
-                                          step={PROFILE_WIDGET_SLIDERS['secondAxis.thickness'].step}
-                                          label-at-start withTooltip withLabel
-                                          defaultValue={getProfileSliderValue('secondAxis.thickness')}
-                                          onInput={(e) => handleProfileSliderInput('secondAxis.thickness', e.target.value)}/>
+                            <div className="lgs-widget-border-control-row">
+                                <div className="drawer-horizontal-element lgs-widget-border-control">
+                                    <WaSlider ref={setSliderRef('secondAxis.thickness')}
+                                              size="small"
+                                              label="Width"
+                                              min={PROFILE_WIDGET_SLIDERS['secondAxis.thickness'].min}
+                                              max={PROFILE_WIDGET_SLIDERS['secondAxis.thickness'].max}
+                                              step={PROFILE_WIDGET_SLIDERS['secondAxis.thickness'].step}
+                                              label-at-start withTooltip withLabel
+                                              defaultValue={getProfileSliderValue('secondAxis.thickness')}
+                                              onInput={(e) => handleProfileSliderInput('secondAxis.thickness', e.target.value)}/>
+                                </div>
+                                <div className="drawer-horizontal-element lgs-widget-border-control">
+                                    <WaSlider ref={setSliderRef('secondAxis.opacity')}
+                                              size="small"
+                                              label="Opacity"
+                                              min={PROFILE_WIDGET_SLIDERS['secondAxis.opacity'].min}
+                                              max={PROFILE_WIDGET_SLIDERS['secondAxis.opacity'].max}
+                                              step={PROFILE_WIDGET_SLIDERS['secondAxis.opacity'].step}
+                                              label-at-start withTooltip
+                                              valueFormatter={v => `${Math.floor(v * 100)}%`}
+                                              defaultValue={getProfileSliderValue('secondAxis.opacity')}
+                                              onInput={(e) => handleProfileSliderInput('secondAxis.opacity', e.target.value)}/>
+                                </div>
                             </div>
-                            <div className="drawer-horizontal-element xlarge-element">
-                                <WaSlider ref={setSliderRef('secondAxis.opacity')}
-                                          size="small"
-                                          label="Opacity"
-                                          min={PROFILE_WIDGET_SLIDERS['secondAxis.opacity'].min}
-                                          max={PROFILE_WIDGET_SLIDERS['secondAxis.opacity'].max}
-                                          step={PROFILE_WIDGET_SLIDERS['secondAxis.opacity'].step}
-                                          label-at-start withTooltip
-                                          valueFormatter={v => `${Math.floor(v * 100)}%`}
-                                          defaultValue={getProfileSliderValue('secondAxis.opacity')}
-                                          onInput={(e) => handleProfileSliderInput('secondAxis.opacity', e.target.value)}/>
-                            </div>
+                            <div className="lgs-widget-color-control-spacer" aria-hidden="true"/>
+                            <ScaleSwitchElement
+                                checked={element.secondAxis?.scaled ?? false}
+                                onChange={(checked) => updateValue('secondAxis.scaled', checked)}
+                                className="lgs-widget-profile-axis-scaled-line"
+                            />
                         </div>
                     </>
                 )}

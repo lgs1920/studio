@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-29
- * Last modified: 2026-04-29
+ * Created on: 2026-04-30
+ * Last modified: 2026-04-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -45,6 +45,9 @@ import {
 import {
     TextColorElement,
 } from '@Components/MainUI/widgets/editor/elements/TextColorElement'
+import {
+    PaddingElement,
+} from '@Components/MainUI/widgets/editor/elements/PaddingElement'
 import {
     TypefaceElement,
 } from '@Components/MainUI/widgets/editor/elements/TypefaceElement'
@@ -106,16 +109,7 @@ export const TextWidgetEditor = ({entity}) => {
         return () => {
             isMounted = false
         }
-    }, [entity, isTextWidget])
-
-    /**
-     * sync local rotation with store changes
-     */
-    useEffect(() => {
-        if (widget.current?.rotate !== undefined) {
-            setLocalRotation(Math.ceil(widget.current.rotate))
-        }
-    }, [widget.current?.rotate])
+    }, [$widget, element?.rotate, entity, isTextWidget])
 
     const swatches = useMemo(() => lgs.settings.getSwatches.list.join(';'), [])
 
@@ -215,7 +209,8 @@ export const TextWidgetEditor = ({entity}) => {
                         <TypefaceElement id={normalizedId}/><LineHeightElement id={normalizedId}/>
                     </div>
                     <div className="drawer-horizontal-line">
-                        <FontSizeElement id={normalizedId}/><StyleElement id={normalizedId}/>
+                        <FontSizeElement id={normalizedId}/>
+                        <StyleElement id={normalizedId}/>
                         <AlignElement id={normalizedId}/>
                     </div>
 
@@ -228,6 +223,9 @@ export const TextWidgetEditor = ({entity}) => {
 
                     <WaDivider/>
                     <TextColorElement id={normalizedId}/>
+
+                    <WaDivider/>
+                    <PaddingElement element={element} updateValue={updateValue} moveableId={normalizedId}/>
 
                     <WaDivider/>
                     <StrokeElement

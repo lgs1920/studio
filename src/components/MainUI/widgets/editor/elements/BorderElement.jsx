@@ -7,17 +7,17 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-14
- * Last modified: 2026-04-14
+ * Created on: 2026-04-30
+ * Last modified: 2026-04-30
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { WIDGET_RADIUS }                                        from '@Core/constants'
+import { WIDGET_RADIUS }               from '@Core/constants'
 import { WaColorPicker, WaOption, WaSelect, WaSlider, WaSwitch } from '@web.awesome.me/webawesome-pro/dist/react'
+import { ScaleSwitchElement }          from './ScaleSwitchElement'
 import { sanitizeNumericControlValue } from './sliderUtils'
-import React                                                     from 'react'
 
 /**
  * Common border & radius editor element
@@ -31,6 +31,8 @@ export const BorderElement = ({
                                   updateValue,
                                   showPill = false,
                                   showRadius = true,
+                                  showScale = true,
+                                  showRadiusScale = true,
                                   sanitizeSliderValue = sanitizeNumericControlValue,
                               }) => {
     const currentRadius = element.border?.radius ?? 'none'
@@ -61,8 +63,8 @@ export const BorderElement = ({
 
             {element.border?.show && (
                 <>
-                    <div className="drawer-horizontal-line three-columns">
-                        <div className="drawer-horizontal-element">
+                    <div className="lgs-widget-color-control-grid lgs-widget-border-control-grid">
+                        <div className="lgs-widget-color-control-color">
                             <WaColorPicker
                                 size="small"
                                 swatches={swatches}
@@ -70,46 +72,59 @@ export const BorderElement = ({
                                 onInput={(e) => updateValue('border.color', e.target.value)}
                             />
                         </div>
-                        <div className="drawer-horizontal-element xlarge-element">
-                            <WaSlider
-                                withTooltip
-                                size="small"
-                                label="Width"
-                                min="0"
-                                max="10"
-                                step="0.5"
-                                label-at-start
-                                placement="top"
-                                value={sanitizeSliderValue(element.border?.thickness, 1, {min: 0, max: 10})}
-                                onInput={(e) => updateValue(
-                                    'border.thickness',
-                                    sanitizeSliderValue(e.target.value, 1, {min: 0, max: 10}),
-                                )}
-                            />
+                        <div className="lgs-widget-border-control-row">
+                            <div className="drawer-horizontal-element lgs-widget-border-control">
+                                <WaSlider
+                                    withTooltip
+                                    size="small"
+                                    label="Width"
+                                    min="0"
+                                    max="10"
+                                    step="0.5"
+                                    label-at-start
+                                    placement="top"
+                                    value={sanitizeSliderValue(element.border?.thickness, 1, {min: 0, max: 10})}
+                                    onInput={(e) => updateValue(
+                                        'border.thickness',
+                                        sanitizeSliderValue(e.target.value, 1, {min: 0, max: 10}),
+                                    )}
+                                />
+                            </div>
+                            <div className="drawer-horizontal-element lgs-widget-border-control">
+                                <WaSlider
+                                    withTooltip
+                                    size="small"
+                                    label="Opacity"
+                                    min="0"
+                                    max="1"
+                                    step="0.05"
+                                    label-at-start
+                                    placement="top"
+                                    valueFormatter={value => `${Math.floor(value * 100)}%`}
+                                    value={sanitizeSliderValue(element.border?.opacity, 1, {min: 0, max: 1})}
+                                    onInput={(e) => updateValue(
+                                        'border.opacity',
+                                        sanitizeSliderValue(e.target.value, 1, {min: 0, max: 1}),
+                                    )}
+                                />
+                            </div>
                         </div>
-                        <div className="drawer-horizontal-element xlarge-element">
-                            <WaSlider
-                                withTooltip
-                                size="small"
-                                label="Opacity"
-                                min="0"
-                                max="1"
-                                step="0.05"
-                                label-at-start
-                                placement="top"
-                                valueFormatter={value => `${Math.floor(value * 100)}%`}
-                                value={sanitizeSliderValue(element.border?.opacity, 1, {min: 0, max: 1})}
-                                onInput={(e) => updateValue(
-                                    'border.opacity',
-                                    sanitizeSliderValue(e.target.value, 1, {min: 0, max: 1}),
-                                )}
-                            />
-                        </div>
+                        {showScale && (
+                            <>
+                                <div className="lgs-widget-color-control-spacer" aria-hidden="true"/>
+                                <ScaleSwitchElement
+                                    checked={element.border?.scaled ?? false}
+                                    onChange={(checked) => updateValue('border.scaled', checked)}
+                                    className="lgs-widget-color-control-scaled-line lgs-widget-border-scaled-line"
+                                    widthAuto
+                                />
+                            </>
+                        )}
                     </div>
 
                     {showRadius && (
-                        <div className="drawer-horizontal-line">
-                            {/* <div className="drawer-horizontal-element xlarge-element"> */}
+                        <>
+                            <div className="drawer-horizontal-line lgs-widget-border-radius-line">
                                 <WaSelect
                                     size="small"
                                     label={'Radius'}
@@ -129,8 +144,15 @@ export const BorderElement = ({
                                         )
                                     })}
                                 </WaSelect>
-                            {/* </div> */}
-                        </div>
+                            </div>
+                            {showRadiusScale && (
+                                <ScaleSwitchElement
+                                    checked={element.border?.radiusScaled ?? false}
+                                    onChange={(checked) => updateValue('border.radiusScaled', checked)}
+                                    className="lgs-widget-radius-scaled-line lgs-widget-border-radius-scaled-line"
+                                />
+                            )}
+                        </>
                     )}
                 </>
             )}

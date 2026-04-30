@@ -124,6 +124,7 @@ html {
     display: flex;
     flex-direction: column;
     width: max-content;
+    max-width: calc(100vw - var(--left) - var(--right) - var(--lgs-gutter-s) - var(--lgs-gutter-s));
     padding: var(--lgs-gutter-s) !important;
     pointer-events: auto;
     gap: var(--lgs-gutter-s);
@@ -172,7 +173,9 @@ html {
 .panorama-widget-body {
     display: flex;
     align-items: stretch;
+    flex-wrap: wrap;
     justify-content: center;
+    max-width: 100%;
     gap: var(--lgs-gutter);
 }
 
@@ -190,6 +193,32 @@ html {
     writing-mode: vertical-lr;
     direction: rtl;
     accent-color: var(--wa-color-brand-50);
+}
+
+body.mobile .panorama-widget {
+    width: min(100%, calc(100vw - var(--left) - var(--right) - var(--lgs-gutter-s) - var(--lgs-gutter-s)));
+}
+
+body.mobile .panorama-widget-body {
+    display: grid;
+    align-items: center;
+    justify-items: center;
+    grid-template-columns: repeat(4, minmax(3.25rem, 1fr));
+    gap: var(--lgs-gutter-xs);
+}
+
+@media (max-width: 640px) {
+    .panorama-widget {
+        width: min(100%, calc(100vw - var(--left) - var(--right) - var(--lgs-gutter-s) - var(--lgs-gutter-s)));
+    }
+
+    .panorama-widget-body {
+        display: grid;
+        align-items: center;
+        justify-items: center;
+        grid-template-columns: repeat(4, minmax(3.25rem, 1fr));
+        gap: var(--lgs-gutter-xs);
+    }
 }
 
 .orbit-mode-widgets {

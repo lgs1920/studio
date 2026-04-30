@@ -23,11 +23,12 @@ import { useSnapshot }                                    from 'valtio'
 export const ORBIT_INTERACTION_HINTS_WIDGET = 'orbit-interaction-hints-widget'
 
 const SHORTCUT_ICONS = {
-    cameraRotate:    'camera-rotate',
-    command:         'command',
-    mouseButtonLeft: 'computer-mouse-button-left',
-    scrollwheel:     'computer-mouse-scrollwheel',
-    sliders:         'sliders',
+    cameraRotate:     'camera-rotate',
+    command:          'command',
+    mouseButtonLeft:  'computer-mouse-button-left',
+    mouseButtonRight: 'computer-mouse-button-right',
+    scrollwheel:      'computer-mouse-scrollwheel',
+    sliders:          'sliders',
 }
 
 const hasFinePointer = () => typeof window !== 'undefined' && (window.matchMedia?.('(any-pointer: fine)').matches ?? false)
@@ -57,6 +58,14 @@ const Gesture = ({icon, label}) => (
         <Icon icon={icon}/>
         <span>{label}</span>
     </span>
+)
+
+const LeftClickDrag = () => (
+    <Gesture icon={SHORTCUT_ICONS.mouseButtonLeft} label="Left click + drag"/>
+)
+
+const RightClickDrag = () => (
+    <Gesture icon={SHORTCUT_ICONS.mouseButtonRight} label="Right click + drag"/>
 )
 
 const Shortcut = ({gesture, action}) => (
@@ -150,12 +159,15 @@ export const OrbitInteractionHintsWidget = memo(() => {
                                 action="Height"
                             />
                             <Shortcut
-                                gesture={<>{altKey}<Plus/><Gesture icon={SHORTCUT_ICONS.mouseButtonLeft}
-                                                                   label="Drag"/></>}
+                                gesture={<>{altKey}<Plus/><LeftClickDrag/></>}
                                 action="Height"
                             />
                             <Shortcut
-                                gesture={<Gesture icon={SHORTCUT_ICONS.mouseButtonLeft} label="Vertical drag"/>}
+                                gesture={<RightClickDrag/>}
+                                action="Height"
+                            />
+                            <Shortcut
+                                gesture={<LeftClickDrag/>}
                                 action="Angle"
                             />
                         </>
@@ -174,8 +186,8 @@ export const OrbitInteractionHintsWidget = memo(() => {
                 ) : (
                      <>
                          <Shortcut
-                             gesture={<Gesture icon={SHORTCUT_ICONS.mouseButtonLeft} label="Drag"/>}
-                             action="Orbit"
+                             gesture={<LeftClickDrag/>}
+                             action="Angle"
                          />
                          <Shortcut
                              gesture={distanceGesture}

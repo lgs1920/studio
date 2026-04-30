@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-29
- * Last modified: 2026-04-29
+ * Created on: 2026-04-30
+ * Last modified: 2026-04-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -57,6 +57,51 @@ export const TrackData = memo(() => {
     const GROUP = SCENE_WIDGETS
     const HIDDEN_CLASS = 'lgs-widget-hidden'
 
+    const ensureStatsWidget = useCallback(async () => {
+        let _id = renderer.findExistingInList(WIDGET_KEY, SCENE_WIDGETS_BOARD)
+
+        if (!_id) {
+            await renderer.renderWidget(GROUP, WIDGET_KEY, {
+                forceRefresh: true,
+                widgetsBoard: SCENE_WIDGETS_BOARD,
+            })
+            _id = renderer.findExistingInList(WIDGET_KEY, SCENE_WIDGETS_BOARD)
+        }
+        else if (!__.ui.widgetManager.getElementById(_id)) {
+            await renderer.renderWidget(GROUP, _id, {
+                forceRefresh: true,
+                widgetsBoard: SCENE_WIDGETS_BOARD,
+            })
+        }
+
+        if (_id) {
+            __.ui.widgetManager.getElementById(_id)?.classList.remove(HIDDEN_CLASS)
+        }
+
+        return _id
+    }, [GROUP, renderer])
+
+    const resetStatsWidget = useCallback(async (entity) => {
+        if (!entity) {
+            return
+        }
+
+        const element = __.ui.widgetManager.getElementById(entity)
+        const type = entity.split('#')[0]
+        const elements = lgs.settings.widgets[type]?.configuration?.elements
+
+        if (elements?.[entity]) {
+            delete elements[entity]
+        }
+
+        renderer.destroyWidget(entity)
+
+        if (element) {
+            await __.ui.widgetManager.disposeElement(element)
+        }
+        await __.ui.widgetManager.deleteWidgetPosition(entity)
+    }, [renderer])
+
     /**
      * Sync initial switch state with widget presence in the scene
      */
@@ -65,17 +110,33 @@ export const TrackData = memo(() => {
             return
         }
 
-        const _id = renderer.findExistingInList(WIDGET_KEY, SCENE_WIDGETS_BOARD)
-        if (!_id) {
-            $journeyStats.show = false
-            return
+        let cancelled = false
+
+        const syncStatsWidget = async () => {
+            const _id = renderer.findExistingInList(WIDGET_KEY, SCENE_WIDGETS_BOARD)
+
+            if (_id) {
+                const _el = __.ui.widgetManager.getElementById(_id)
+                if (_el) {
+                    $journeyStats.show = !_el.classList.contains(HIDDEN_CLASS)
+                }
+                return
+            }
+
+            if (journeyStats.show && metrics) {
+                const entity = await ensureStatsWidget()
+                if (!cancelled && entity) {
+                    $journeyStats.show = true
+                }
+            }
         }
 
-        const _el = __.ui.widgetManager.getElementById(_id)
-        if (_el) {
-            $journeyStats.show = !_el.classList.contains(HIDDEN_CLASS)
+        syncStatsWidget()
+
+        return () => {
+            cancelled = true
         }
-    }, [])
+    }, [$journeyStats, ensureStatsWidget, journeyStats.show, metrics, renderer])
 
     /**
      * Toggles the journey-stats widget visibility on the scene
@@ -85,13 +146,10 @@ export const TrackData = memo(() => {
             return
         }
 
-        const _id = renderer.findExistingInList(WIDGET_KEY, SCENE_WIDGETS_BOARD)
+        let _id = renderer.findExistingInList(WIDGET_KEY, SCENE_WIDGETS_BOARD)
 
         if (!_id) {
-            await renderer.renderWidget(GROUP, WIDGET_KEY, {
-                forceRefresh: true,
-                widgetsBoard: SCENE_WIDGETS_BOARD,
-            })
+            await ensureStatsWidget()
             $journeyStats.show = true
             return
         }
@@ -103,12 +161,25 @@ export const TrackData = memo(() => {
         const _el = __.ui.widgetManager.getElementById(_id)
         const _nextState = !journeyStats.show
 
-        if (_el) {
-            _el.classList.toggle(HIDDEN_CLASS, !_nextState)
+        if (!_nextState) {
+            await resetStatsWidget(_id)
+            $journeyStats.show = false
+
+            if (lgs.stores.ui.drawers.open === WIDGETS_EDITOR_DRAWER) {
+                lgs.stores.ui.drawers.open = null
+            }
+            return
         }
 
-        $journeyStats.show = _nextState
-    }, [journeyStats.show])
+        if (_el) {
+            _el.classList.remove(HIDDEN_CLASS)
+        }
+        else {
+            await ensureStatsWidget()
+        }
+
+        $journeyStats.show = true
+    }, [$journeyStats, ensureStatsWidget, journeyStats.show, renderer, resetStatsWidget])
 
     /**
      * Auto-hide: If no metrics are available, remove the widget from the scene
@@ -124,7 +195,25 @@ export const TrackData = memo(() => {
                 }
             }
         }
-    }, [metrics, journeyStats.show])
+    }, [$journeyStats, metrics, journeyStats.show, renderer])
+
+    useEffect(() => {
+        if (!$journeyStats || !journeyStats.show || !metrics) {
+            return
+        }
+
+        let cancelled = false
+
+        ensureStatsWidget().then(entity => {
+            if (!cancelled && entity) {
+                $journeyStats.show = true
+            }
+        })
+
+        return () => {
+            cancelled = true
+        }
+    }, [$journeyStats, ensureStatsWidget, journeyStats.show, metrics])
 
     const trackDate = useMemo(() => {
         if (!metrics || isNaN(metrics.duration)) {
@@ -221,11 +310,7 @@ export const TrackData = memo(() => {
         let entity = renderer.findExistingInList(WIDGET_KEY, SCENE_WIDGETS_BOARD)
 
         if (!entity) {
-            await renderer.renderWidget(GROUP, WIDGET_KEY, {
-                forceRefresh: true,
-                widgetsBoard: SCENE_WIDGETS_BOARD,
-            })
-            entity = renderer.findExistingInList(WIDGET_KEY, SCENE_WIDGETS_BOARD)
+            entity = await ensureStatsWidget()
         }
 
         if (!entity) {

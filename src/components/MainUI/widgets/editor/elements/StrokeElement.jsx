@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-14
- * Last modified: 2026-04-14
+ * Created on: 2026-04-30
+ * Last modified: 2026-04-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,7 +16,7 @@
 
 import { WaColorPicker, WaSlider, WaSwitch } from '@web.awesome.me/webawesome-pro/dist/react'
 import { colord }                            from 'colord'
-import React, { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { sanitizeNumericControlValue }       from './sliderUtils'
 
 /**
@@ -29,7 +29,7 @@ export const StrokeElement = ({
                                   getColor,
                                   updateValue,
                               }) => {
-    const stroke = element.text?.stroke ?? {}
+    const stroke = useMemo(() => element.text?.stroke ?? {}, [element.text?.stroke])
     const widthRef = useRef(null)
     const opacityRef = useRef(null)
     const strokeWidth = sanitizeNumericControlValue(stroke.width, 0, {min: 0, max: 2})

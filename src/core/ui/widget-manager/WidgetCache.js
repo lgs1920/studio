@@ -14,7 +14,7 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { VIDEO_WIDGETS_BOARD, WIDGETS_STORE } from '@Core/constants'
+import { JOURNEY_WIDGETS, SCENE_WIDGETS, WIDGET_LAYER_START, WIDGETS_STORE } from '@Core/constants'
 
 /**
  * Utility class providing a clean, reactive API over the global Valtio proxy cache.
@@ -177,6 +177,45 @@ export class WidgetCache {
 
     #getBaseWidgetId = id => String(id).split('#')[0]
 
+    #resolveWidgetGroup = (id, position = {}) => {
+        if (position.group) {
+            return position.group
+        }
+
+        const baseId = this.#getBaseWidgetId(id)
+        const candidateGroups = Array.from(__.widgets?.entries?.() ?? [])
+            .filter(([, group]) => group?.widgets?.has(baseId))
+            .map(([groupId]) => groupId)
+
+        const widgetsBoard = position.widgetsBoard || this.#defaultBoard
+        if (widgetsBoard === this.#defaultBoard && candidateGroups.includes(SCENE_WIDGETS)) {
+            return SCENE_WIDGETS
+        }
+        if (widgetsBoard !== this.#defaultBoard && candidateGroups.includes(JOURNEY_WIDGETS)) {
+            return JOURNEY_WIDGETS
+        }
+
+        return candidateGroups[0] ?? null
+    }
+
+    #normalizePersistedWidget = (id, position = null) => {
+        if (!position) {
+            return null
+        }
+
+        const group = this.#resolveWidgetGroup(id, position)
+        if (!group) {
+            return null
+        }
+
+        return {
+            ...position,
+            group,
+            widgetsBoard: position.widgetsBoard || this.#defaultBoard,
+            zIndex:       Number(position.zIndex) > 0 ? Number(position.zIndex) : WIDGET_LAYER_START,
+        }
+    }
+
     #resolveWidgetDefinition = (group, id) => {
         if (!group || !id) {
             return null
@@ -190,7 +229,7 @@ export class WidgetCache {
         const widgetIds = await lgs.db.lgs1920.keys(WIDGETS_STORE)
         const widgets = await Promise.all(widgetIds.map(async (id) => {
             const record = await lgs.db.lgs1920.get(id, WIDGETS_STORE, true)
-            const position = record?.data ?? null
+            const position = this.#normalizePersistedWidget(id, record?.data ?? null)
 
             return {
                 id,
@@ -249,18 +288,20 @@ export class WidgetCache {
             const keys = await lgs.db.lgs1920.keys(WIDGETS_STORE)
             for (const widgetId of keys) {
                 const widgetData = await lgs.db.lgs1920.get(widgetId, WIDGETS_STORE)
-                if (!widgetData || !widgetData.group) {
+                const position = this.#normalizePersistedWidget(widgetId, widgetData)
+                if (!position) {
                     continue
                 }
 
                 this.set(widgetId, {
-                    group:        widgetData.group,
+                    group:        position.group,
                     component: null,
-                    widgetsBoard: widgetData.widgetsBoard,
+                    widgetsBoard: position.widgetsBoard,
                 })
 
                 $widget.list.set(widgetId, {
-                    widgetsBoard: widgetData.widgetsBoard || 'scene',
+                    group:        position.group,
+                    widgetsBoard: position.widgetsBoard,
                 })
             }
         }
@@ -288,14 +329,13 @@ export class WidgetCache {
             })
             // Create  global store
             const item = {
+                group: position.group,
                 widgetsBoard: position.widgetsBoard || this.#defaultBoard,
-            }
-            // Add zIndex for video widgets
-            if (position.widgetsBoard === VIDEO_WIDGETS_BOARD) {
-                item.zIndex = zIndex
+                zIndex,
             }
 
             lgs.stores.ui.widget.list.set(id, item)
+            await lgs.db.lgs1920.put(id, position, WIDGETS_STORE)
         })
 
         await Promise.all(initWidgets)

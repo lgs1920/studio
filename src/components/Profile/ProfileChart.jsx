@@ -7,14 +7,15 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-29
- * Last modified: 2026-04-29
+ * Created on: 2026-04-30
+ * Last modified: 2026-04-30
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import './style.css'
+import { useWidgetScaleCorrection } from '@Components/MainUI/widgets/useWidgetScaleCorrection'
 import { CHART_ELEVATION_VS_DISTANCE, DISTANCE, ELEVATION } from '@Core/ui/Profiler'
 import { INTERNATIONAL } from '@Utils/UnitUtils'
 import { colord }        from 'colord'
@@ -23,6 +24,26 @@ import { useCallback, useEffect, useMemo, useRef } from 'react'
 import { useSnapshot }                                              from 'valtio'
 import { usePreviewChartResize } from '@Components/MainUI/widgets/editor/usePreviewChartResize'
 import { v4 as uuid } from 'uuid'
+
+const scaleValue = (value, correction = 1) => {
+    const numericValue = Number(value)
+    const numericCorrection = Number(correction)
+
+    if (!Number.isFinite(numericValue)) {
+        return 0
+    }
+
+    return numericValue * (Number.isFinite(numericCorrection) ? numericCorrection : 1)
+}
+
+const resolvePadding = (element, correction = 1, fallback = 8) => {
+    const padding = element?.padding ?? {}
+    const paddingCorrection = (padding.scaled ?? false) === false ? correction : 1
+
+    const getValue = side => scaleValue(padding[side] ?? fallback, paddingCorrection)
+
+    return `${getValue('top')}px ${getValue('right')}px ${getValue('bottom')}px ${getValue('left')}px`
+}
 
 /**
  * ProfileChart component to render elevation vs distance using ECharts
@@ -50,6 +71,7 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
                                  getEchartsInstance: () => _chart.current,
                              })
     const configKey = configId ?? id
+    const scaleCorrection = useWidgetScaleCorrection(preview ? null : id)
 
     /**
      * Resolves the element to use based on configuration priority
@@ -85,9 +107,12 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
      */
     const getStyleOptions = useCallback((config) => {
         const mainColor = setColor(config.mainAxis)
-        const mainWidth = config.mainAxis.thickness
+        const mainCorrection = config.mainAxis?.scaled === false ? scaleCorrection : 1
+        const secondCorrection = config.secondAxis?.scaled === false ? scaleCorrection : 1
+        const mainWidth = scaleValue(config.mainAxis.thickness, mainCorrection)
         const secondColor = setColor(config.secondAxis)
-        const secondWidth = config.secondAxis.thickness
+        const secondWidth = scaleValue(config.secondAxis.thickness, secondCorrection)
+        const mainFontSize = scaleValue(10, mainCorrection)
 
         return {
             grid:  {
@@ -121,7 +146,7 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
                         color:        mainColor,
                         showMinLabel: true,
                         showMaxLabel: !config.xAxis.units,
-                        fontSize:     10,
+                        fontSize: mainFontSize,
                     },
                     name: config.xAxis.units ? labels.distance : '',
                     nameTextStyle: {
@@ -129,7 +154,7 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
                         align:         'right',
                         verticalAlign: 'top',
                         padding:       [6, 0, 0, 0],
-                        fontSize:      10,
+                        fontSize: mainFontSize,
                     },
                 },
             ],
@@ -155,7 +180,7 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
                         showMinLabel: true,
                         showMaxLabel: !config.yAxis.units,
                         formatter:    (value) => `${value}`,
-                        fontSize:     10,
+                        fontSize: mainFontSize,
                     },
                     name: config.yAxis.units ? labels.elevation : '',
                     nameTextStyle: {
@@ -163,12 +188,12 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
                         align:         'right',
                         verticalAlign: 'middle',
                         padding:       [0, 10, 0, 0],
-                        fontSize:      10,
+                        fontSize: mainFontSize,
                     },
                 },
             ],
         }
-    }, [setColor, labels])
+    }, [setColor, labels, scaleCorrection])
 
     const processedDataset = useMemo(() => {
         if (!data?.dataset) {
@@ -354,16 +379,20 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
         return null
     }
 
+    const borderCorrection = element.border?.scaled === false ? scaleCorrection : 1
+    const padding = resolvePadding(element, scaleCorrection)
+
     return (
         <div id={id ?? `profile-${uuid()}`}
             className="profile-chart-container"
             style={{
                 width:           width,
                 height:          height,
+                padding:         padding,
                 backgroundColor: element.background.show ? setColor(element.background) : 'transparent',
                 backdropFilter: element.background.blur ? 'blur(var(--lgs-blur-s))' : 'none',
                 border:          element.border.show
-                                 ? `${element.border.thickness}px solid ${setColor(element.border)}`
+                                 ? `${scaleValue(element.border.thickness, borderCorrection)}px solid ${setColor(element.border)}`
                                  : 'none',
                 overflow:        'hidden',
             }}

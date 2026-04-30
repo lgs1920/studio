@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-14
- * Last modified: 2026-04-14
+ * Created on: 2026-04-30
+ * Last modified: 2026-04-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -19,7 +19,7 @@ import { TextWidgetManager }                                              from '
 import {
     WaTextarea,
 }                                                            from '@web.awesome.me/webawesome-pro/dist/react'
-import React, { memo, useEffect, useMemo, useRef, useState } from 'react'
+import { memo, useEffect, useMemo, useRef, useState } from 'react'
 import { useSnapshot }                                                    from 'valtio'
 
 const PREVIEW_MEASURE_BUFFER = 4
@@ -106,9 +106,7 @@ export const TextWidgetPreview = memo(({entity}) => {
         const fontSize = Number(element?.size ?? 16)
         const lineHeight = Number.parseFloat(element?.lineHeight ?? 1) || 1
         const lineHeightPx = fontSize * lineHeight
-        const basePadding = Math.max(4, lineHeightPx * 0.25)
-        const paddingSide = element?.border?.pill ? basePadding * 2.5 : basePadding
-        const paddingTopBottom = Math.max(4, lineHeightPx * 0.25)
+        const padding = _textWidgetManager.resolvePadding(element, 1)
         const borderThickness = element?.border?.show ? Number(element.border?.thickness ?? 0) : 0
         const strokeWidth = element?.text?.stroke?.show ? Number(element.text.stroke?.width ?? 0) : 0
 
@@ -131,22 +129,10 @@ export const TextWidgetPreview = memo(({entity}) => {
         }
 
         return {
-            width:  Math.ceil(maxLineWidth + (paddingSide * 2) + (borderThickness * 2) + (strokeWidth * 2) + PREVIEW_MEASURE_BUFFER),
-            height: Math.ceil((lines.length * lineHeightPx) + (paddingTopBottom * 2) + (borderThickness * 2) + (strokeWidth * 2) + PREVIEW_MEASURE_BUFFER),
+            width:  Math.ceil(maxLineWidth + padding.left + padding.right + (borderThickness * 2) + (strokeWidth * 2) + PREVIEW_MEASURE_BUFFER),
+            height: Math.ceil((lines.length * lineHeightPx) + padding.top + padding.bottom + (borderThickness * 2) + (strokeWidth * 2) + PREVIEW_MEASURE_BUFFER),
         }
-    }, [
-                                    element?.border?.pill,
-                                    element?.border?.show,
-                                    element?.border?.thickness,
-                                    element?.fontFamily,
-                                    element?.lineHeight,
-                                    element?.size,
-                                    element?.style,
-                                    element?.text?.content,
-                                    element?.text?.stroke?.show,
-                                    element?.text?.stroke?.width,
-                                    element?.weight,
-                                ])
+    }, [element, _textWidgetManager])
 
     useEffect(() => {
         if (_moveable?.current) {

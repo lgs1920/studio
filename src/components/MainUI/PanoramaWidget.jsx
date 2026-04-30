@@ -109,6 +109,7 @@ export const PanoramaWidget = memo(() => {
     const cameraSettings = useSnapshot(lgs.settings.ui.camera)
     const {toolBar} = useSnapshot(lgs.settings.ui.menu)
     useSnapshot(lgs.settings.unitSystem)
+    useSnapshot(lgs.stores.ui.device)
     const [finePointer, setFinePointer] = useState(hasFinePointer)
     const animationRef = useRef(null)
     const lastFrameRef = useRef(null)
@@ -160,16 +161,16 @@ export const PanoramaWidget = memo(() => {
     directionRef.current = panorama.direction
 
     useEffect(() => {
-        const mediaQuery = window.matchMedia?.('(any-pointer: fine)')
-        if (!mediaQuery) {
+        const finePointerQuery = window.matchMedia?.('(any-pointer: fine)')
+        if (!finePointerQuery) {
             return
         }
 
-        const updatePointerMode = () => setFinePointer(mediaQuery.matches)
+        const updatePointerMode = () => setFinePointer(finePointerQuery.matches)
         updatePointerMode()
-        mediaQuery.addEventListener('change', updatePointerMode)
+        finePointerQuery.addEventListener('change', updatePointerMode)
 
-        return () => mediaQuery.removeEventListener('change', updatePointerMode)
+        return () => finePointerQuery.removeEventListener('change', updatePointerMode)
     }, [])
 
     useEffect(() => {
@@ -498,7 +499,7 @@ export const PanoramaWidget = memo(() => {
         }
 
         function handlePointerDown(event) {
-            if (event.pointerType === 'touch' || event.button !== 0 || !$panorama.active) {
+            if (event.pointerType === 'touch' || ![0, 2].includes(event.button) || !$panorama.active) {
                 return
             }
 
@@ -506,7 +507,7 @@ export const PanoramaWidget = memo(() => {
             event.stopPropagation()
 
             drag.active = true
-            drag.mode = event.altKey || event.shiftKey ? 'height' : 'pitch'
+            drag.mode = event.button === 2 || event.altKey || event.shiftKey ? 'height' : 'pitch'
             drag.startHeight = heightOffsetRef.current
             drag.startPitch = pitchRef.current
             drag.startY = event.clientY
@@ -559,13 +560,23 @@ export const PanoramaWidget = memo(() => {
                 true,
             )
         }
+        const handleContextMenu = (event) => {
+            if (!$panorama.active) {
+                return
+            }
+
+            event.preventDefault()
+            event.stopPropagation()
+        }
 
         canvas.addEventListener('pointerdown', handlePointerDown, true)
         canvas.addEventListener('wheel', handleWheel, {capture: true, passive: false})
+        canvas.addEventListener('contextmenu', handleContextMenu, true)
 
         return () => {
             canvas.removeEventListener('pointerdown', handlePointerDown, true)
             canvas.removeEventListener('wheel', handleWheel, {capture: true})
+            canvas.removeEventListener('contextmenu', handleContextMenu, true)
             stopDragListeners()
         }
     }, [
@@ -576,6 +587,8 @@ export const PanoramaWidget = memo(() => {
                   setPanoramaHeightOffset,
                   setPanoramaPitch,
               ])
+
+    const showDirectPanoramaControls = !finePointer || __.device.isMobile
 
     useEffect(() => {
         if (!panorama.active || !panorama.target) {
@@ -706,7 +719,7 @@ export const PanoramaWidget = memo(() => {
                     </div>
 
                     <div className="panorama-widget-body">
-                        {!finePointer && (
+                        {showDirectPanoramaControls && (
                             <>
                                 <div className="panorama-widget-slider">
                                     <span>{'Height'}</span>
