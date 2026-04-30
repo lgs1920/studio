@@ -207,6 +207,10 @@ body.mobile .panorama-widget-body {
     gap: var(--lgs-gutter-xs);
 }
 
+body.mobile .rotation-widget-body {
+    grid-template-columns: repeat(2, minmax(3.25rem, 1fr));
+}
+
 @media (max-width: 640px) {
     .panorama-widget {
         width: min(100%, calc(100vw - var(--left) - var(--right) - var(--lgs-gutter-s) - var(--lgs-gutter-s)));
@@ -218,6 +222,10 @@ body.mobile .panorama-widget-body {
         justify-items: center;
         grid-template-columns: repeat(4, minmax(3.25rem, 1fr));
         gap: var(--lgs-gutter-xs);
+    }
+
+    .rotation-widget-body {
+        grid-template-columns: repeat(2, minmax(3.25rem, 1fr));
     }
 }
 
@@ -522,9 +530,17 @@ body.mobile .panorama-widget-body {
     position: fixed;
     z-index: calc(var(--lgs-toast-zindex) - 2);
     overflow: hidden;
+    transition: background-color var(--welcome-exit-duration, 3000ms) ease;
     color: var(--lgs-text-on-color);
     background-color: var(--lgs-dark-color-95);
     inset: 0;
+    --welcome-overlay-transition-duration: 600ms;
+}
+
+#welcome-modal.welcome-modal-exiting {
+    pointer-events: none;
+    background-color: transparent;
+    --welcome-overlay-transition-duration: var(--welcome-exit-duration, 3000ms);
 }
 
 .welcome-modal-media,
@@ -536,6 +552,7 @@ body.mobile .panorama-widget-body {
 }
 
 .welcome-modal-media {
+    transition: opacity var(--welcome-exit-duration, 3000ms) ease;
     background: var(--lgs-dark-color-95) url("/assets/images/menu-thumbnail.png") center / cover no-repeat;
 }
 
@@ -550,7 +567,7 @@ body.mobile .panorama-widget-body {
 
 .welcome-modal-fog {
     z-index: 1;
-    transition: opacity 600ms ease;
+    transition: opacity var(--welcome-overlay-transition-duration, 600ms) ease;
     opacity: var(--welcome-fog-opacity, .64);
     background: radial-gradient(circle at 50% 60%, rgba(255, 255, 255, .26) 0%, rgba(255, 255, 255, .1) 36%, transparent 72%),
     linear-gradient(180deg, rgba(255, 255, 255, .32) 0%, rgba(255, 255, 255, .12) 45%, transparent 100%);
@@ -559,7 +576,7 @@ body.mobile .panorama-widget-body {
 
 .welcome-modal-scrim {
     z-index: 2;
-    transition: opacity 600ms ease;
+    transition: opacity var(--welcome-overlay-transition-duration, 600ms) ease;
     opacity: var(--welcome-scrim-opacity, .68);
     background: linear-gradient(180deg, var(--lgs-dark-color-50) 0%, var(--lgs-dark-color-25) 44%, var(--lgs-dark-color-75) 100%),
     radial-gradient(circle at 50% 45%, transparent 0%, var(--lgs-dark-color-40) 62%, var(--lgs-dark-color-90) 100%);
@@ -573,7 +590,18 @@ body.mobile .panorama-widget-body {
     flex-direction: column;
     justify-content: center;
     padding: max(var(--top), var(--lgs-gutter)) max(var(--right), var(--lgs-gutter)) max(var(--bottom), var(--lgs-gutter));
+    transition: opacity var(--welcome-exit-duration, 3000ms) ease;
     gap: var(--lgs-gutter);
+}
+
+#welcome-modal.welcome-modal-exiting .welcome-modal-media,
+#welcome-modal.welcome-modal-exiting .welcome-modal-fog,
+#welcome-modal.welcome-modal-exiting .welcome-modal-scrim,
+#welcome-modal.welcome-modal-exiting .welcome-modal-content,
+#welcome-modal.welcome-modal-exiting #welcome-links,
+#welcome-modal.welcome-modal-exiting #welcome-build-info,
+#welcome-modal.welcome-modal-exiting > .welcome-modal-timer {
+    opacity: 0;
 }
 
 #welcome-modal .welcome-logo {
@@ -612,6 +640,7 @@ body.mobile .panorama-widget-body {
     z-index: 4;
     top: var(--lgs-gutter-s);
     right: var(--lgs-gutter-s);
+    transition: opacity var(--welcome-exit-duration, 3000ms) ease;
     color: white;
     text-shadow: 0 2px 14px var(--lgs-dark-color-90);
 }
@@ -624,6 +653,7 @@ body.mobile .panorama-widget-body {
     display: flex;
     align-items: center;
     width: auto;
+    transition: opacity var(--welcome-exit-duration, 3000ms) ease;
     gap: var(--lgs-gutter-s);
 }
 
@@ -644,19 +674,56 @@ body.mobile .panorama-widget-body {
 }
 
 #welcome-build-info {
-    font-size: var(--lgs-font-size-s);
-    line-height: 1.35;
     position: absolute;
     z-index: 4;
     right: var(--lgs-gutter-s);
     bottom: var(--lgs-gutter-s);
     display: flex;
-    align-items: flex-end;
-    flex-direction: column;
-    text-align: right;
-    opacity: .78;
+    transition: opacity var(--welcome-exit-duration, 3000ms) ease;
+}
+
+#welcome-build-info-button::part(base) {
+    font-size: var(--lgs-font-size);
     color: white;
+    border: 0;
+    background: transparent;
     text-shadow: 0 2px 12px var(--lgs-dark-color-90);
+}
+
+#welcome-build-info-button:hover::part(base) {
+    color: white;
+    background: color-mix(in oklab, white 14%, transparent);
+}
+
+.welcome-build-info-popup {
+    font-size: var(--lgs-font-size-s);
+    line-height: 1.35;
+    display: grid;
+    min-width: 12rem;
+    padding: var(--lgs-gutter-s);
+    color: white;
+    border: 1px solid color-mix(in oklab, white 18%, transparent);
+    border-radius: var(--lgs-border-radius-s);
+    background: color-mix(in oklab, var(--lgs-dark-color-95) 86%, transparent);
+    box-shadow: var(--lgs-overlay-floating-shadow, var(--sl-shadow-large));
+    text-shadow: 0 2px 12px var(--lgs-dark-color-90);
+    backdrop-filter: blur(var(--lgs-blur));
+    gap: var(--lgs-gutter-xs);
+}
+
+.welcome-build-info-popup > div {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--lgs-gutter);
+}
+
+.welcome-build-info-popup span {
+    opacity: .72;
+}
+
+.welcome-build-info-popup strong {
+    font-weight: var(--lgs-font-weight-bold);
+    text-align: right;
 }
 
 .welcome-enter-call-for-action {

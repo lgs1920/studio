@@ -16,7 +16,7 @@
 
 import { APP_EVENT, MILLIS, SECOND, SLOGAN }                 from '@Core/constants'
 import { UIToast }                                           from '@Utils/UIToast'
-import { WaButton, WaIcon, WaSpinner } from '@web.awesome.me/webawesome-pro/dist/react'
+import { WaButton, WaIcon, WaPopup, WaSpinner } from '@web.awesome.me/webawesome-pro/dist/react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { StudioLogo }                                        from './StudioLogo'
 
@@ -26,6 +26,7 @@ const WELCOME_VIDEO_MOBILE = '/assets/media/trekking-hero-mobile.mp4'
 const WELCOME_FALLBACK_IMAGE = '/assets/images/menu-thumbnail.png'
 const WELCOME_MAX_FOG_DURATION = 3 * MILLIS
 const WELCOME_FOG_UPDATE_INTERVAL = 100
+const WELCOME_EXIT_DURATION = 3000
 
 const formatBuildInfo = build => {
     const rawBuild = build?.date ?? build?.buildTime ?? build?.id ?? build?.hash
@@ -43,9 +44,12 @@ const formatBuildInfo = build => {
 
 export const WelcomeModal = ({initComplete = false, appReady = false, settingsReady = false, onEnter}) => {
     const enterHandled = useRef(false)
+    const exitTimerRef = useRef(null)
     const [elapsedMillis, setElapsedMillis] = useState(0)
     const [readyElapsedMillis, setReadyElapsedMillis] = useState(0)
     const [dismissed, setDismissed] = useState(false)
+    const [exiting, setExiting] = useState(false)
+    const [buildInfoOpen, setBuildInfoOpen] = useState(false)
 
     const welcomeSettings = settingsReady ? lgs.settings?.ui?.welcome : null
     const configuredDisplayTime = Number(welcomeSettings?.displayTime ?? DEFAULT_WELCOME_DISPLAY_TIME)
@@ -70,9 +74,10 @@ export const WelcomeModal = ({initComplete = false, appReady = false, settingsRe
         '--welcome-video-brightness': (0.92 + fogProgress * 0.08).toFixed(3),
         '--welcome-video-saturation': (0.82 + fogProgress * 0.18).toFixed(3),
         '--welcome-scrim-opacity':    (0.58 - fogProgress * 0.10).toFixed(3),
+        '--welcome-exit-duration': `${WELCOME_EXIT_DURATION}ms`,
     }
 
-    const hide = useCallback(() => {
+    const hide = useCallback(({animate = true} = {}) => {
         if (!readyToEnter) {
             return
         }
@@ -82,7 +87,8 @@ export const WelcomeModal = ({initComplete = false, appReady = false, settingsRe
         }
 
         enterHandled.current = true
-        setDismissed(true)
+        setExiting(true)
+        setBuildInfoOpen(false)
         document.activeElement?.blur()
 
         if (settingsReady) {
@@ -92,13 +98,25 @@ export const WelcomeModal = ({initComplete = false, appReady = false, settingsRe
         lgs.stores.ui.show = true
         lgs.stores.ui.welcome.hidden = true
         lgs.stores.ui.welcome.modal = false
+        document.body.classList.remove('lgs-app-booting')
+        document.body.classList.add('lgs-app-visible')
         window.dispatchEvent(new CustomEvent(APP_EVENT.WELCOME.HIDE, {
             detail: {
                 timestamp: Date.now(),
             },
         }))
 
-        requestAnimationFrame(() => onEnter?.())
+        if (!animate) {
+            setDismissed(true)
+            onEnter?.()
+            return
+        }
+
+        exitTimerRef.current = window.setTimeout(() => {
+            exitTimerRef.current = null
+            setDismissed(true)
+            onEnter?.()
+        }, WELCOME_EXIT_DURATION)
     }, [onEnter, readyToEnter, settingsReady])
 
     const enter = () => {
@@ -132,6 +150,15 @@ export const WelcomeModal = ({initComplete = false, appReady = false, settingsRe
     }, [])
 
     useEffect(() => {
+        return () => {
+            if (exitTimerRef.current !== null) {
+                window.clearTimeout(exitTimerRef.current)
+                exitTimerRef.current = null
+            }
+        }
+    }, [])
+
+    useEffect(() => {
         if (!readyToEnter) {
             return undefined
         }
@@ -147,9 +174,11 @@ export const WelcomeModal = ({initComplete = false, appReady = false, settingsRe
 
     useEffect(() => {
         if (shouldAutoEnter) {
-            hide()
+            const frameId = requestAnimationFrame(() => hide({animate: showIntro}))
+            return () => cancelAnimationFrame(frameId)
         }
-    }, [hide, shouldAutoEnter])
+        return undefined
+    }, [hide, shouldAutoEnter, showIntro])
 
     const links = useMemo(() => {
         if (!settingsReady) {
@@ -172,7 +201,10 @@ export const WelcomeModal = ({initComplete = false, appReady = false, settingsRe
     }
 
     return (
-        <div id="welcome-modal" className="lgs-theme" aria-busy={!readyToEnter} style={welcomeStyle}>
+        <div id="welcome-modal"
+             className={`lgs-theme${exiting ? ' welcome-modal-exiting' : ''}`}
+             aria-busy={!readyToEnter}
+             style={welcomeStyle}>
             <div className="welcome-modal-media" aria-hidden="true">
                 <video
                     className="welcome-modal-video"
@@ -197,7 +229,6 @@ export const WelcomeModal = ({initComplete = false, appReady = false, settingsRe
                 {canShowFullLogo ? (
                     <StudioLogo
                         width="100%"
-                        version
                         slogan={SLOGAN}
                         addClassName="welcome-logo"
                     />
@@ -244,8 +275,38 @@ export const WelcomeModal = ({initComplete = false, appReady = false, settingsRe
             {links}
             {studioVersion && (
                 <div id="welcome-build-info">
-                    <span>{`version ${studioVersion}`}</span>
-                    <span>{`build ${buildInfo}`}</span>
+                    <WaButton
+                        id="welcome-build-info-button"
+                        className="welcome-build-info-button"
+                        appearance="plain"
+                        size="small"
+                        aria-label="Version and build information"
+                        onClick={(event) => {
+                            event.stopPropagation()
+                            setBuildInfoOpen(open => !open)
+                        }}
+                    >
+                        <WaIcon name="circle-info" variant="regular"/>
+                    </WaButton>
+                    <WaPopup
+                        active={buildInfoOpen}
+                        anchor="welcome-build-info-button"
+                        placement="top-end"
+                        distance={lgs.gutter?.s ?? 8}
+                        flip
+                        shift
+                    >
+                        <div className="welcome-build-info-popup">
+                            <div>
+                                <span>{'Version'}</span>
+                                <strong>{studioVersion}</strong>
+                            </div>
+                            <div>
+                                <span>{'Build'}</span>
+                                <strong>{buildInfo}</strong>
+                            </div>
+                        </div>
+                    </WaPopup>
                 </div>
             )}
         </div>
