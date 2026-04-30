@@ -27,6 +27,20 @@ const WELCOME_FALLBACK_IMAGE = '/assets/images/menu-thumbnail.png'
 const WELCOME_MAX_FOG_DURATION = 3 * MILLIS
 const WELCOME_FOG_UPDATE_INTERVAL = 100
 
+const formatBuildInfo = build => {
+    const rawBuild = build?.date ?? build?.buildTime ?? build?.id ?? build?.hash
+    if (!rawBuild) {
+        return new Date().toLocaleString()
+    }
+
+    const timestamp = Number(rawBuild)
+    if (Number.isFinite(timestamp)) {
+        return new Date(timestamp).toLocaleString()
+    }
+
+    return String(rawBuild)
+}
+
 export const WelcomeModal = ({initComplete = false, appReady = false, settingsReady = false, onEnter}) => {
     const enterHandled = useRef(false)
     const [elapsedMillis, setElapsedMillis] = useState(0)
@@ -45,6 +59,8 @@ export const WelcomeModal = ({initComplete = false, appReady = false, settingsRe
     const autoCloseReached = showIntro && autoClose && readyToEnter && closure <= 0
     const shouldAutoEnter = readyToEnter && (!showIntro || autoCloseReached)
     const canShowFullLogo = settingsReady && Boolean(lgs.build?.date) && Boolean(lgs.versions?.studio)
+    const studioVersion = settingsReady ? (lgs.versions?.studio ?? lgs.versions?.version) : null
+    const buildInfo = settingsReady ? formatBuildInfo(lgs.build) : null
     const fogDuration = Math.min(WELCOME_MAX_FOG_DURATION, displayDuration * MILLIS)
     const fogProgress = Math.min(elapsedMillis / fogDuration, 1)
     const fogStrength = Math.max(1 - fogProgress, 0)
@@ -226,6 +242,12 @@ export const WelcomeModal = ({initComplete = false, appReady = false, settingsRe
                 )}
             </div>
             {links}
+            {studioVersion && (
+                <div id="welcome-build-info">
+                    <span>{`version ${studioVersion}`}</span>
+                    <span>{`build ${buildInfo}`}</span>
+                </div>
+            )}
         </div>
     )
 }

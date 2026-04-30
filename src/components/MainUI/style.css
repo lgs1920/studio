@@ -529,6 +529,22 @@ html {
     gap: var(--lgs-gutter-s);
 }
 
+#welcome-build-info {
+    font-size: var(--lgs-font-size-s);
+    line-height: 1.35;
+    position: absolute;
+    z-index: 4;
+    right: var(--lgs-gutter-s);
+    bottom: var(--lgs-gutter-s);
+    display: flex;
+    align-items: flex-end;
+    flex-direction: column;
+    text-align: right;
+    opacity: .78;
+    color: white;
+    text-shadow: 0 2px 12px var(--lgs-dark-color-90);
+}
+
 .welcome-enter-call-for-action {
     display: flex;
     flex-wrap: wrap;
