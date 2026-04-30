@@ -209,20 +209,105 @@ html {
     box-shadow: none !important;
 }
 
-.orbit-interaction-hints {
+.orbit-interaction-hints.lgs-card {
     font-size: var(--lgs-font-size-s);
     line-height: 1.35;
-    display: flex;
-    align-items: flex-start;
-    flex-direction: column;
+    display: grid !important;
+    align-items: center;
+    width: max-content;
     max-width: min(18rem, calc(100vw - var(--left) - var(--right) - 2 * var(--lgs-gutter-s)));
-    padding: var(--lgs-gutter-s);
+    padding: var(--lgs-gutter-s) !important;
     cursor: grab;
     text-align: left;
     opacity: 0.86;
-    color: var(--lgs-card-on-map-color);
+    color: var(--lgs-text-on-color);
+    border-color: var(--lgs-card-on-map-border-color);
+    border-radius: var(--lgs-on-map-border-radius, var(--lgs-border-radius-s));
     background-color: color-mix(in oklab, var(--lgs-card-on-map-bg-color) 92%, transparent) !important;
+    background-image: var(--lgs-card-on-map-bg-image);
+    box-shadow: none !important;
+    justify-items: start;
+    grid-template-columns: max-content max-content;
+    grid-auto-flow: row;
+    background-blend-mode: var(--lgs-card-on-map-bg-blend-mode);
+    gap: calc(var(--lgs-gutter-xs) / 2) var(--lgs-gutter-xs) !important;
+}
+
+.orbit-shortcut-row {
+    display: grid;
+    align-items: center;
+    width: max-content;
+    min-height: 1.5rem;
+    justify-items: start;
+    grid-column: 1 / -1;
+    grid-template-columns: max-content max-content;
+    column-gap: var(--lgs-gutter-xs);
+}
+
+@supports (grid-template-columns: subgrid) {
+    .orbit-shortcut-row {
+        grid-template-columns: subgrid;
+        width: auto;
+    }
+}
+
+.orbit-shortcut-combo {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-start;
+    text-align: left;
+    white-space: nowrap;
+    justify-self: start;
     gap: calc(var(--lgs-gutter-xs) / 2);
+}
+
+.orbit-shortcut-label {
+    align-self: center;
+    text-align: left;
+    white-space: nowrap;
+    justify-self: start;
+}
+
+.orbit-shortcut-gesture {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-start;
+    text-align: left;
+    white-space: nowrap;
+    gap: calc(var(--lgs-gutter-xs) / 2);
+}
+
+.orbit-shortcut-icon {
+    font-size: var(--lgs-font-size-m);
+    width: 1.1rem;
+    text-align: center;
+}
+
+.orbit-shortcut-plus {
+    font-weight: var(--lgs-font-weight-bold);
+    opacity: .66;
+}
+
+.orbit-key-tag {
+    font-size: calc(var(--lgs-font-size-s) * .82);
+    font-weight: var(--lgs-font-weight-bold);
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    min-height: 1.28rem;
+    padding: 0 calc(var(--lgs-gutter-xs) * .75);
+    color: var(--lgs-text-on-color);
+    border: 1px solid color-mix(in oklab, var(--lgs-text-on-color) 32%, transparent);
+    border-bottom-width: 2px;
+    border-radius: var(--lgs-border-radius-xs);
+    background: color-mix(in oklab, var(--lgs-card-on-map-bg-color) 74%, white 12%);
+    box-shadow: 0 1px 0 color-mix(in oklab, black 22%, transparent);
+    gap: calc(var(--lgs-gutter-xs) / 2);
+}
+
+.orbit-shortcut-key-icon {
+    font-size: .9em;
+    width: .9em;
 }
 
 .orbit-interaction-hints-shell.dragging .orbit-interaction-hints {
