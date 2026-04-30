@@ -24,7 +24,7 @@ import { WidgetRegistry }     from '@Core/ui/widget-manager/registry/WidgetRegis
 export class WidgetDynamicRenderer {
     /** @type {WidgetDynamicRenderer} */
     static #instance
-    registry = new WidgetRegistry()
+    #registry = null
 
     // Memory cache for pre-resolved components
     #resolvedComponents = new Map()
@@ -42,6 +42,18 @@ export class WidgetDynamicRenderer {
             WidgetDynamicRenderer.#instance = new WidgetDynamicRenderer()
         }
         return WidgetDynamicRenderer.#instance
+    }
+
+    get registry() {
+        if (!this.#registry) {
+            this.#registry = new WidgetRegistry()
+        }
+
+        return this.#registry
+    }
+
+    set registry(registry) {
+        this.#registry = registry
     }
 
     /**

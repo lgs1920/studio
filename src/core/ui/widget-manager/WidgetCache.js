@@ -216,6 +216,16 @@ export class WidgetCache {
         }
     }
 
+    #needsPersistedWidgetRepair = (source, normalized) => {
+        if (!source || !normalized) {
+            return false
+        }
+
+        return source.group !== normalized.group ||
+            (source.widgetsBoard || this.#defaultBoard) !== normalized.widgetsBoard ||
+            Number(source.zIndex) !== normalized.zIndex
+    }
+
     #resolveWidgetDefinition = (group, id) => {
         if (!group || !id) {
             return null
@@ -229,12 +239,14 @@ export class WidgetCache {
         const widgetIds = await lgs.db.lgs1920.keys(WIDGETS_STORE)
         const widgets = await Promise.all(widgetIds.map(async (id) => {
             const record = await lgs.db.lgs1920.get(id, WIDGETS_STORE, true)
-            const position = this.#normalizePersistedWidget(id, record?.data ?? null)
+            const source = record?.data ?? null
+            const position = this.#normalizePersistedWidget(id, source)
 
             return {
                 id,
                 modifiedAt: record?._mt_ ?? record?._ct_ ?? 0,
                 position,
+                needsRepair: this.#needsPersistedWidgetRepair(source, position),
             }
         }))
 
@@ -319,7 +331,7 @@ export class WidgetCache {
         const widgets = await this.#loadPersistedWidgets()
         const dedupedWidgets = await this.#dedupePersistedSingletons(widgets)
 
-        const initWidgets = dedupedWidgets.map(async ({id, position}) => {
+        const initWidgets = dedupedWidgets.map(async ({id, position, needsRepair}) => {
             const zIndex = position?.zIndex// ?? 0
             // Update local cache
             this.set(id, {
@@ -335,7 +347,9 @@ export class WidgetCache {
             }
 
             lgs.stores.ui.widget.list.set(id, item)
-            await lgs.db.lgs1920.put(id, position, WIDGETS_STORE)
+            if (needsRepair) {
+                await lgs.db.lgs1920.put(id, position, WIDGETS_STORE)
+            }
         })
 
         await Promise.all(initWidgets)

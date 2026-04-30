@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-20
- * Last modified: 2026-02-20
+ * Created on: 2026-04-30
+ * Last modified: 2026-04-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -30,7 +30,8 @@ export class WidgetRegistry {
             return WidgetRegistry._instance
         }
 
-        // Scan directories using Vite glob import
+        // Scan directories using Vite glob import.
+        // Keep the call direct so Vite can rewrite it at build/dev time.
         this.#modules = import.meta.glob([
                                              '/src/components/MainUI/widgets/list/*Widget*.jsx',
                                              '/src/components/MainUI/widgets/list/**/*Widget*.jsx',
@@ -112,5 +113,11 @@ export class WidgetRegistry {
     }
 }
 
-// Export a single instance to ensure singleton pattern across the app
-export const $widgetRegistry = new WidgetRegistry()
+const getWidgetRegistry = () => new WidgetRegistry()
+
+// Export a lazy proxy so non-Vite test runners can import this module without
+// instantiating the Vite-only glob until a registry method is actually used.
+export const $widgetRegistry = {
+    getLazyComponent: (...args) => getWidgetRegistry().getLazyComponent(...args),
+    getCollisions:    (...args) => getWidgetRegistry().getCollisions(...args),
+}

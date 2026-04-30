@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-29
- * Last modified: 2026-04-29
+ * Created on: 2026-04-30
+ * Last modified: 2026-04-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -30,7 +30,7 @@ import {
     Widget2Canvas,
 }                                 from '@Core/ui/widget-manager/widget-2-canvas/Widget2Canvas'
 import classNames                 from 'classnames'
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Moveable                   from 'react-moveable'
 import { useSnapshot }            from 'valtio'
 
@@ -53,7 +53,8 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
     const _widget = useRef(null)
     const _moveable = useRef(null)
     const _controlBoxTimer = useRef(null)
-    const _children = childRef ?? useRef(null)
+    const _fallbackChildren = useRef(null)
+    const _children = childRef ?? _fallbackChildren
     const _dragConfirmed = useRef(false)
     const _dragStart = useRef({x: 0, y: 0})
     const _initialized = useRef(false)
@@ -67,7 +68,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
     const [guidelines, setGuidelines] = useState({verticalGuidelines: [], horizontalGuidelines: []})
     const [isMouseOver, setIsMouseOver] = useState(false)
     const [isDragging, setIsDragging] = useState(false)
-    const [actualContainer, setActualContainer] = useState(null)
+    const [boardContainer, setBoardContainer] = useState(null)
 
     // Global stores (valtio)
     const $widget = lgs.stores.ui.widget
@@ -81,14 +82,23 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
     const video = useSnapshot($video)
 
     const throttleRotate = 1
+    const [widgetId] = useState(() => {
+        const id = config.id
+        return id && id.includes('#') ? id : __.ui.widgetManager.defineElementId(config.group, id)
+    })
     const selectedId = widget.current?.id ?? null
-    const isSelected = selectedId === config.id
+    const isSelected = selectedId === widgetId
     const liveOpacity = config.type === LGS_TOOLBAR
                         ? toolbars.opacity
                         : (config.opacity ?? 1)
+    const isTargetingBoard = Boolean(config.widgetsBoard && config.widgetsBoard !== SCENE_WIDGETS_BOARD)
+    const sceneContainer = useMemo(() => {
+        return isTargetingBoard ? null : __.ui.widgetManager.resolveWidgetsBoardContainer(config.widgetsBoard)
+    }, [config.widgetsBoard, isTargetingBoard])
+    const actualContainer = isTargetingBoard ? boardContainer : sceneContainer
 
     // Reactive depth resolution: priority to Store, fallback to initial Config
-    const activeZIndex = widgetListSnapshot.get(config.id)?.zIndex ?? config.zIndex
+    const activeZIndex = widgetListSnapshot.get(widgetId)?.zIndex ?? config.zIndex
     /**
      * Ensures Moveable handles are correctly layered when zIndex changes.
      */
@@ -103,17 +113,16 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
      */
     useEffect(() => {
         const {widgetsBoard} = config
-        if (!widgetsBoard || widgetsBoard === SCENE_WIDGETS_BOARD) {
-            setActualContainer(__.ui.widgetManager.resolveWidgetsBoardContainer(widgetsBoard))
+        if (!isTargetingBoard) {
             return
         }
 
         const updateTarget = () => {
             const _el = __.ui.widgetManager.resolveWidgetsBoardContainer(widgetsBoard)
-            setActualContainer(current => current !== _el ? (_el ?? null) : current)
+            setBoardContainer(current => current !== _el ? (_el ?? null) : current)
         }
 
-        updateTarget()
+        const frameId = requestAnimationFrame(updateTarget)
 
         const _observer = new MutationObserver(() => {
             updateTarget()
@@ -126,8 +135,11 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
             attributeFilter: ['class', 'style', 'id'],
         })
 
-        return () => _observer.disconnect()
-    }, [config.widgetsBoard])
+        return () => {
+            cancelAnimationFrame(frameId)
+            _observer.disconnect()
+        }
+    }, [config.widgetsBoard, isTargetingBoard])
 
     const interactionLocked = (video.preRecording || video.recording || video.snapshot || video.finalizing) && config.type === LGS_VISUAL_WIDGET
     const showGhostOnly = Boolean(config?.showGhostDuringRecording) && video.recording && config.type === LGS_VISUAL_WIDGET
@@ -177,7 +189,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
             }
         }
         return {verticalGuidelines: vertical, horizontalGuidelines: horizontal}
-    }, [config?.snapGrid])
+    }, [config.snapGrid])
 
     useEffect(() => {
         const update = () => {
@@ -200,7 +212,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
     useEffect(() => {
         const handlePreRender = (event) => {
             const {entity} = event.detail
-            if (entity !== config.id) {
+            if (entity !== widgetId) {
                 return
             }
             const _sourceCanvas = lgs.canvas
@@ -229,7 +241,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
         }
         window.addEventListener(WIDGET_EDITOR_PRE_RENDER_EVENT, handlePreRender)
         return () => window.removeEventListener(WIDGET_EDITOR_PRE_RENDER_EVENT, handlePreRender)
-    }, [config.id])
+    }, [widgetId])
 
     const hasDrawerInPath = (event) => event.composedPath().some(target => target.tagName?.toLowerCase() === 'wa-drawer')
 
@@ -315,19 +327,19 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
         if (interactionLocked) {
             return
         }
-        lgs.stores.ui.widget.current = {id: config.id}
+        lgs.stores.ui.widget.current = {id: widgetId}
         if (!__.ui.widgetManager.hasCapabilities(config.contextMenu, WIDGETS_CAPABILITIES) || config.contextMenu?.canEdit !== true) {
             return
         }
-        if (drawers.open === WIDGETS_EDITOR_DRAWER && drawers.entity === config.id) {
+        if (drawers.open === WIDGETS_EDITOR_DRAWER && drawers.entity === widgetId) {
             __.ui.drawerManager.close()
         }
         else {
-            window.dispatchEvent(new CustomEvent(WIDGET_EDITOR_PRE_RENDER_EVENT, {detail: {entity: config.id}}))
-            __.ui.drawerManager.open(WIDGETS_EDITOR_DRAWER, {action: 'edit-current', entity: config.id})
-            window.dispatchEvent(new CustomEvent(WIDGET_EDITOR_POST_RENDER_EVENT, {detail: {entity: config.id}}))
+            window.dispatchEvent(new CustomEvent(WIDGET_EDITOR_PRE_RENDER_EVENT, {detail: {entity: widgetId}}))
+            __.ui.drawerManager.open(WIDGETS_EDITOR_DRAWER, {action: 'edit-current', entity: widgetId})
+            window.dispatchEvent(new CustomEvent(WIDGET_EDITOR_POST_RENDER_EVENT, {detail: {entity: widgetId}}))
         }
-    }, [interactionLocked, config.id, config.contextMenu, drawers.open, drawers.entity])
+    }, [interactionLocked, widgetId, config.contextMenu, drawers.open, drawers.entity])
 
     const openContextMenu = useCallback((event) => {
         if (interactionLocked) {
@@ -337,9 +349,9 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
         const clientY = event.clientY ?? event.touches?.[0]?.clientY ?? 0
         lgs.stores.ui.contextMenu.visible = true
         lgs.stores.ui.contextMenu.type = 'widget'
-        lgs.stores.ui.contextMenu.targetId = config.id
+        lgs.stores.ui.contextMenu.targetId = widgetId
         lgs.stores.ui.contextMenu.position = {x: clientX, y: clientY}
-    }, [interactionLocked, config.id])
+    }, [interactionLocked, widgetId])
 
     const pointerInteractionsRef = usePointerInteractions({
                                                               onDoubleTap:           handleDoubleClick,
@@ -408,27 +420,34 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
         }
         const drawerEntity = typeof drawers.entity === 'string' ? drawers.entity : ''
         const drawerBase = drawerEntity.split('#')[0],
-              widgetBase = typeof config.id === 'string' ? config.id.split('#')[0] : ''
+              widgetBase = typeof widgetId === 'string' ? widgetId.split('#')[0] : ''
         if (drawers.open === WIDGETS_EDITOR_DRAWER && drawerBase && drawerBase !== widgetBase) {
             __.ui.drawerManager.close()
         }
-        if (drawers.open === WIDGETS_EDITOR_DRAWER && drawerBase && drawerBase === widgetBase && drawers.entity !== config.id) {
-            lgs.stores.ui.drawers.entity = config.id
+        if (drawers.open === WIDGETS_EDITOR_DRAWER && drawerBase && drawerBase === widgetBase && drawers.entity !== widgetId) {
+            lgs.stores.ui.drawers.entity = widgetId
         }
-        lgs.stores.ui.widget.current = {id: config.id}
+        lgs.stores.ui.widget.current = {id: widgetId}
         __.ui.widgetManager.manageControlBox(_moveable, setControlBox, _controlBoxTimer, true, true)
-    }, [config.id, drawers.entity, drawers.open, interactionLocked])
+    }, [widgetId, drawers.entity, drawers.open, interactionLocked])
 
     const handleBound = useCallback(() => __.ui.widgetManager.setBoundStatus(_widget.current), [])
 
     useEffect(() => {
-        if (!isSelected) {
-            if (_controlBoxTimer.current) {
-                clearTimeout(_controlBoxTimer.current)
-                _controlBoxTimer.current = null
-            }
-            setControlBox({renderDirections: [], zoom: 0, opacity: 0})
+        if (isSelected) {
+            return
         }
+
+        if (_controlBoxTimer.current) {
+            clearTimeout(_controlBoxTimer.current)
+            _controlBoxTimer.current = null
+        }
+
+        const frameId = requestAnimationFrame(() => {
+            setControlBox({renderDirections: [], zoom: 0, opacity: 0})
+        })
+
+        return () => cancelAnimationFrame(frameId)
     }, [isSelected])
 
     useEffect(() => {
@@ -474,8 +493,6 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
         }
 
         let cancelled = false
-        const hasUUID = config.id && config.id.includes('#')
-        config.id = hasUUID ? config.id : __.ui.widgetManager.defineElementId(config.group, config.id)
         const clean = () => _w2c.current?.destroy()
 
         const init = async () => {
@@ -502,7 +519,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                 forceEven:      config.forceEven ?? false,
                 group:          config.group ?? null,
                 handle:         config.handle ?? null,
-                id:             config.id,
+                id: widgetId,
                 isCropper:      config.isCropper ?? false,
                 left:           config.left,
                 margin:         config.margin ?? 0,
@@ -540,11 +557,11 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
 
             if (success) {
                 _initialized.current = true
-                __.ui.widgetCache.mount(config.id)
+                __.ui.widgetCache.mount(widgetId)
 
                 // Synchronize store entry if missing
-                if (!$widget.list.has(config.id)) {
-                    $widget.list.set(config.id, {zIndex: activeZIndex})
+                if (!$widget.list.has(widgetId)) {
+                    $widget.list.set(widgetId, {zIndex: activeZIndex})
                 }
 
                 _widget.current.style.opacity = liveOpacity
@@ -583,8 +600,8 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
         }
         requestAnimationFrame(init)
 
-        if (config.type === LGS_VISUAL_WIDGET && !$widget.list.has(config.id)) {
-            $widget.list.set(config.id, {zIndex: activeZIndex})
+        if (config.type === LGS_VISUAL_WIDGET && !$widget.list.has(widgetId)) {
+            $widget.list.set(widgetId, {zIndex: activeZIndex})
         }
 
         return () => {
@@ -594,14 +611,15 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                 try {
                     __.ui.widgetManager.disposeElement(_widget.current)
                 }
-                catch (e) {
+                catch {
+                    // Ignore dispose errors during unmount; the DOM node may already be gone.
                 }
                 _initialized.current = false
             }
             __.recorder.removeEventListener(ScreenMediaRecorder.events.STOP, clean)
             __.recorder.removeEventListener(ScreenMediaRecorder.events.CANCEL, clean)
         }
-    }, [isVisible, config, video.preRecording, video.recording, video.snapshot, video.finalizing, actualContainer])
+    }, [isVisible, config, widgetId, video.preRecording, video.recording, video.snapshot, video.finalizing, actualContainer])
 
     useEffect(() => {
         if (!_initialized.current || !_widget.current) {
@@ -610,13 +628,13 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
 
         _widget.current.style.opacity = liveOpacity
 
-        const elementId = __.ui.widgetManager.retrieveElementId(_widget.current) ?? config.id
+        const elementId = __.ui.widgetManager.retrieveElementId(_widget.current) ?? widgetId
         const storedConfig = __.ui.widgetManager.getWidgetConfig(elementId)
 
         if (storedConfig && storedConfig.opacity !== liveOpacity) {
             __.ui.widgetManager.setConfig(elementId, {...storedConfig, opacity: liveOpacity})
         }
-    }, [config.id, liveOpacity])
+    }, [widgetId, liveOpacity])
 
     useEffect(() => {
         const canvas = _w2c.current?.getCanvas?.()
@@ -633,14 +651,14 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
     }
 
     return (
-        <div className="lgs-widget-container" data-widget={config.id} style={{zIndex: activeZIndex}}>
+        <div className="lgs-widget-container" data-widget={widgetId} style={{zIndex: activeZIndex}}>
             <div
                 className={classNames(LGS_WIDGET, {
                     [className]:    !!className,
                     [config?.type]: config?.type && config?.type !== LGS_WIDGET,
                     [LGS_ANIMATION_DRAGGING]: config.animationWhenDragging,
                     [LGS_ANIMATION_RESIZING]: config.animationWhenResizing,
-                    dragging:       _dragConfirmed.current,
+                    dragging: isDragging,
                     'recording-locked': interactionLocked,
                 })}
                 ref={(el) => {
@@ -672,7 +690,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                 onBound={handleBound}
                 preventDefault={false}
                 stopPropagation={true}
-                keepRatio={Boolean(__.ui.widgetManager.getWidgetConfig(config?.id)?.ratio?.locked ?? config?.ratio?.locked)}
+                keepRatio={Boolean(__.ui.widgetManager.getWidgetConfig(widgetId)?.ratio?.locked ?? config?.ratio?.locked)}
                 resizable={!interactionLocked && (config?.resizable ?? false)}
                 onResize={handleResize}
                 onResizeStart={handleResizeStart}
