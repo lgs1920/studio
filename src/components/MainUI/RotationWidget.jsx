@@ -417,7 +417,7 @@ export const RotationWidget = memo(() => {
                         </WaButton>
                     </div>
 
-                    <div className="panorama-widget-body">
+                    <div className="panorama-widget-body rotation-widget-body">
                         <div className="panorama-widget-slider">
                             <span>{'RPM'}</span>
                             <input
