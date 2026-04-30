@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-14
- * Last modified: 2026-04-14
+ * Created on: 2026-04-30
+ * Last modified: 2026-04-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -24,7 +24,7 @@ import {
 import PanelActions
     from '@Components/PanelsActions'
 import {
-    CREDITS_WIDGET, SCENE_WIDGETS_BOARD, VIDEO_CROP_ZONE, WIDGET_LAYER_START, WIDGET_LAYER_STEP, WIDGETS_CONFIGURATION,
+    CREDITS_WIDGET, SCENE_WIDGETS_BOARD, SETTINGS_EDITOR_DRAWER, WIDGET_LAYER_START, WIDGET_LAYER_STEP,
     WIDGETS_EDITOR_DRAWER,
 }   from '@Core/constants'
 import {
@@ -33,17 +33,39 @@ import {
 
 import WaDrawer from '@Components/WaDrawerNonModal'
 import {
-    WaButton,
     WaIcon,
     WaTab,
     WaTabGroup,
-    WaTabPanel, WaTooltip,
+    WaTabPanel,
 }                                                                     from '@web.awesome.me/webawesome-pro/dist/react'
 import classNames                                                     from 'classnames'
-import React, { Suspense, useCallback, useEffect, useMemo, useState } from 'react'
+import { Suspense, useCallback, useEffect, useMemo, useState } from 'react'
 import { createPortal }                                               from 'react-dom'
 import { useSnapshot }                                                from 'valtio'
 import './style.css'
+
+const OPEN_COMPASS_SETTINGS_ACTION = 'open-compass-settings'
+
+const buildCanvasPreviewBackground = () => {
+    try {
+        const source = lgs.canvas
+        if (!source?.width || !source?.height) {
+            return null
+        }
+
+        lgs.scene?.render?.()
+        const width = Math.min(source.width, 1024)
+        const height = Math.max(1, Math.round(width * source.height / source.width))
+        const canvas = document.createElement('canvas')
+        canvas.width = width
+        canvas.height = height
+        canvas.getContext('2d')?.drawImage(source, 0, 0, source.width, source.height, 0, 0, width, height)
+        return canvas.toDataURL('image/webp', 0.8)
+    }
+    catch {
+        return null
+    }
+}
 
 /**
  * Dynamic widget editor panel.
@@ -66,6 +88,7 @@ export const WidgetEditorPanel = () => {
     const [data, setData] = useState({name: '', description: '', icon: '', rawIcon: null, type: ''})
     const [EditorComponent, setEditorComponent] = useState(null)
     const [PreviewComponent, setPreviewComponent] = useState(null)
+    const [canvasPreviewBg, setCanvasPreviewBg] = useState({entity: null, image: null})
 
     const cached = ui.widget.cache.get(drawers.entity)
     const _widgetRegistry = useMemo(() => new WidgetRegistry(), [])
@@ -73,14 +96,21 @@ export const WidgetEditorPanel = () => {
     const isVisible = drawers.open === WIDGETS_EDITOR_DRAWER && (video.editing || cached?.widgetsBoard === SCENE_WIDGETS_BOARD)
     // Check stacked state via manager instead of snapshot property
     const isStacked = __.ui.drawerManager.isStacked(WIDGETS_EDITOR_DRAWER)
+    const syncGlobalCompass = drawers.action === 'edit-global-compass'
     const drawerPlacement = menuSettings.drawer
-    const previewBg = widget.currentSnapshot?.image || null
+    const previewBg = widget.currentSnapshot?.image ||
+        (canvasPreviewBg.entity === drawers.entity ? canvasPreviewBg.image : null)
 
     /**
      * Closes the editor and handles the stack via the manager.
      */
-    const closeEditor = useCallback((event) => {
-        if (event && event.target.tagName !== 'WA-DRAWER') {
+    const closeEditorWithManager = useCallback(() => {
+        if (syncGlobalCompass) {
+            __.ui.drawerManager.open(SETTINGS_EDITOR_DRAWER, {
+                action: OPEN_COMPASS_SETTINGS_ACTION,
+                tab:    'tab-ui',
+            })
+            window.dispatchEvent(new Event('resize'))
             return
         }
 
@@ -92,7 +122,15 @@ export const WidgetEditorPanel = () => {
         }
 
         window.dispatchEvent(new Event('resize'))
-    }, [isStacked, $drawers])
+    }, [isStacked, $drawers, syncGlobalCompass])
+
+    const closeEditor = useCallback((event) => {
+        if (event && event.target.tagName !== 'WA-DRAWER') {
+            return
+        }
+
+        closeEditorWithManager()
+    }, [closeEditorWithManager])
 
     /**
      * Prevents default shoelace close behavior to let the manager handle it.
@@ -132,7 +170,23 @@ export const WidgetEditorPanel = () => {
             }
         }
         resolveContent()
-    }, [drawers.entity, isVisible, _widgetRegistry, ui.widget.cache])
+    }, [drawers.entity, isVisible, _widgetRegistry, ui.widget.cache, cached])
+
+    useEffect(() => {
+        if (!isVisible || widget.currentSnapshot?.image) {
+            return
+        }
+
+        const entity = drawers.entity
+        const frame = requestAnimationFrame(() => {
+            setCanvasPreviewBg({
+                                   entity,
+                                   image: buildCanvasPreviewBackground(),
+                               })
+        })
+
+        return () => cancelAnimationFrame(frame)
+    }, [drawers.entity, isVisible, widget.currentSnapshot?.image])
 
     /**
      * @description Retrieves and formats the list of active widgets for the current board
@@ -208,7 +262,7 @@ export const WidgetEditorPanel = () => {
                 <span>{data.name}</span>
             </div>
             }
-            <PanelActions stackedPanel={isStacked}/>
+            <PanelActions stackedPanel={isStacked} onBack={isStacked ? closeEditorWithManager : null}/>
 
             <div className="drawer-content lgs-editor-layout">
                 <div className="editor-header-zones">
@@ -230,7 +284,11 @@ export const WidgetEditorPanel = () => {
                             >
                                 <Suspense fallback={PreviewLoadingFallback}>
                                     {PreviewComponent ? (
-                                        <PreviewComponent entity={drawers.entity} data={data}/>
+                                        <PreviewComponent
+                                            entity={drawers.entity}
+                                            data={data}
+                                            syncGlobalCompass={syncGlobalCompass}
+                                        />
                                     ) : (
                                          <div className="default-preview">
                                              <WaIcon library="fa" name={data.icon}/>
@@ -257,6 +315,7 @@ export const WidgetEditorPanel = () => {
                                     entity={drawers.entity}
                                     widgetData={data}
                                     position={widgetPosition}
+                                    syncGlobalCompass={syncGlobalCompass}
                                 />
                             ) : (
                                  <div className="error-placeholder">

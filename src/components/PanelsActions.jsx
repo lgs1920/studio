@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-08
- * Last modified: 2026-04-08
+ * Created on: 2026-04-30
+ * Last modified: 2026-04-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,13 +16,13 @@
 
 import ThemeSelector        from '@Components/ThemeSelector'
 import { WaButton, WaIcon } from '@web.awesome.me/webawesome-pro/dist/react'
-import React                from 'react'
 
 /**
  * Panel Actions component
  * @returns {JSX.Element}
  */
-const PanelActions = ({stackedPanel = false, children}) => {
+const PanelActions = ({stackedPanel = false, onBack = null, children}) => {
+    const backButtonProps = onBack ? {onClick: onBack} : {'data-drawer': 'close'}
 
     return (
         <div slot={'header-actions'}>
@@ -33,7 +33,7 @@ const PanelActions = ({stackedPanel = false, children}) => {
                     size="small"
                     variant="brand"
                     appearance="plain"
-                    data-drawer="close"
+                    {...backButtonProps}
                 >
                     <WaIcon name="chevrons-left" variant="regular"/>{'Back'}
                 </WaButton>

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-29
- * Last modified: 2026-04-29
+ * Created on: 2026-04-30
+ * Last modified: 2026-04-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -18,7 +18,7 @@ import PanelActions from '@Components/PanelsActions'
 import { SETTINGS_EDITOR_DRAWER }                                     from '@Core/constants'
 import WaDrawer                                             from '@Components/WaDrawerNonModal'
 import { WaIcon, WaTab, WaTabGroup, WaTabPanel, WaTooltip } from '@web.awesome.me/webawesome-pro/dist/react'
-import { memo, useCallback } from 'react'
+import { memo, useCallback, useEffect } from 'react'
 import { createPortal }                                     from 'react-dom'
 import { useSnapshot }                                                from 'valtio'
 import './style.css'
@@ -30,6 +30,18 @@ import { Style }                                                      from './ap
 export const Panel = memo(() => {
     const drawers = useSnapshot(lgs.stores.ui.drawers)
     const placement = useSnapshot(lgs.stores.editorSettings.menu).drawer
+
+    useEffect(() => {
+        if (drawers.open !== SETTINGS_EDITOR_DRAWER) {
+            return
+        }
+
+        const frame = requestAnimationFrame(() => {
+            __.ui.drawerManager.openTab(__.ui.drawerManager.tab ?? 'tab-tools')
+        })
+
+        return () => cancelAnimationFrame(frame)
+    }, [drawers.action, drawers.open])
 
     const closePanel = useCallback((event) => {
         if (event.target.tagName === 'WA-DRAWER') {
@@ -44,7 +56,7 @@ export const Panel = memo(() => {
     const content = (
         <>
             {drawers.open === SETTINGS_EDITOR_DRAWER &&
-                    <WaDrawer id="settings-pane"
+                <WaDrawer id={SETTINGS_EDITOR_DRAWER}
                               placement={placement}
                               open={true}
                               modal="false"

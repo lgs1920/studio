@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-29
- * Last modified: 2026-04-29
+ * Created on: 2026-04-30
+ * Last modified: 2026-04-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -55,14 +55,61 @@ const resolveCompassColor = (color) => {
     return color
 }
 
-export const CompassWidgetEditor = ({entity}) => {
+const cloneConfig = value => JSON.parse(JSON.stringify(value ?? {}))
+
+const mergeCompassConfig = (defaults = {}, overrides = {}) => {
+    const merged = cloneConfig(defaults)
+    const merge = (target, source) => {
+        if (!source || typeof source !== 'object') {
+            return target
+        }
+
+        Object.entries(source).forEach(([key, value]) => {
+            if (value && typeof value === 'object' && !Array.isArray(value)) {
+                target[key] = merge(target[key] && typeof target[key] === 'object' ? target[key] : {}, value)
+            }
+            else if (value !== undefined) {
+                target[key] = value
+            }
+        })
+
+        return target
+    }
+
+    return merge(merged, overrides)
+}
+
+const getPathValue = (source, path) => {
+    return path.split('.').reduce((current, key) => current?.[key], source)
+}
+
+const COMPASS_COLOR_PATHS = ['background', 'overBackground', 'poles', 'text', 'needle.north', 'needle.south', 'needle.center']
+
+const setPathValue = (target, path, value) => {
+    const keys = path.split('.')
+    let current = target
+    for (let i = 0; i < keys.length - 1; i++) {
+        if (!current[keys[i]] || typeof current[keys[i]] !== 'object') {
+            current[keys[i]] = {}
+        }
+        current = current[keys[i]]
+    }
+    current[keys[keys.length - 1]] = value
+}
+
+export const CompassWidgetEditor = ({entity, syncGlobalCompass = false}) => {
     const _moveable = __.ui.widgetManager.getMoveable(entity)
     const $configuration = lgs.settings.widgets['compass-widget'].configuration
+    const $globalCompass = lgs.settings.ui.compass
     const configuration = useSnapshot($configuration)
+    const globalCompass = useSnapshot($globalCompass)
 
     const element = useMemo(() => {
-        return configuration.elements?.[entity] ?? configuration.user ?? configuration.default
-    }, [configuration, entity])
+        const source = syncGlobalCompass
+                       ? globalCompass
+                       : configuration.elements?.[entity] ?? configuration.user ?? configuration.default
+        return mergeCompassConfig(configuration.default, source)
+    }, [configuration, entity, globalCompass, syncGlobalCompass])
     const compassMode = element?.mode?.toString() ?? ''
     const showsSurfaceColors = compassMode === COMPASS_FULL.toString()
     const showsDirectionalColors = compassMode === COMPASS_FULL.toString() || compassMode === COMPASS_WIND_ROSE.toString()
@@ -113,29 +160,23 @@ export const CompassWidgetEditor = ({entity}) => {
     }, [formatRGBA])
 
     const updateValue = useCallback((path, value) => {
-        if (!$configuration.elements) {
-            $configuration.elements = {}
+        if (syncGlobalCompass) {
+            const mergedGlobal = mergeCompassConfig(configuration.default, $globalCompass)
+            Object.assign($globalCompass, mergedGlobal)
+            setPathValue($globalCompass, path, value)
         }
-        if (!$configuration.elements[entity]) {
-            $configuration.elements[entity] = JSON.parse(JSON.stringify(element))
-        }
-
-        const keys = path.split('.')
-        let curr = $configuration.elements[entity]
-        for (let i = 0; i < keys.length - 1; i++) {
-            if (!curr[keys[i]]) {
-                curr[keys[i]] = {}
+        else {
+            if (!$configuration.elements) {
+                $configuration.elements = {}
             }
-            curr = curr[keys[i]]
+            if (!$configuration.elements[entity]) {
+                $configuration.elements[entity] = cloneConfig(element)
+            }
+            setPathValue($configuration.elements[entity], path, value)
         }
-        curr[keys[keys.length - 1]] = value
 
         const _rootPath = path.replace('.color', '').replace('.opacity', '')
-        const _keys = _rootPath.split('.')
-        let _part = $configuration.elements[entity]
-        for (const key of _keys) {
-            _part = _part?.[key]
-        }
+        const _part = getPathValue(syncGlobalCompass ? $globalCompass : $configuration.elements[entity], _rootPath)
 
         if (_part && typeof _part === 'object' && _rootPath !== path) {
             syncCSS(_rootPath, _part)
@@ -144,26 +185,31 @@ export const CompassWidgetEditor = ({entity}) => {
         if (_moveable?.current) {
             _moveable.current.updateRect()
         }
-    }, [$configuration, element, entity, _moveable, syncCSS])
+    }, [$configuration, $globalCompass, element, entity, _moveable, syncCSS, configuration.default, syncGlobalCompass])
 
     const handleReset = useCallback(() => {
         if (!configuration.default) {
             return
         }
-        if (!$configuration.elements) {
-            $configuration.elements = {}
+
+        const target = syncGlobalCompass ? $globalCompass : ($configuration.elements?.[entity] ?? cloneConfig(element))
+
+        if (syncGlobalCompass) {
+            Object.assign($globalCompass, mergeCompassConfig(configuration.default, $globalCompass))
         }
-        $configuration.elements[entity] = JSON.parse(JSON.stringify(configuration.default))
-
-        const defaults = $configuration.elements[entity]
-        const paths = ['background', 'overBackground', 'poles', 'text', 'needle.north', 'needle.south', 'needle.center']
-
-        paths.forEach(path => {
-            const keys = path.split('.')
-            let val = defaults
-            for (const key of keys) {
-                val = val?.[key]
+        else {
+            if (!$configuration.elements) {
+                $configuration.elements = {}
             }
+            $configuration.elements[entity] = target
+        }
+
+        COMPASS_COLOR_PATHS.forEach(path => {
+            const defaultValue = getPathValue(configuration.default, path)
+            if (defaultValue) {
+                setPathValue(target, path, cloneConfig(defaultValue))
+            }
+            const val = getPathValue(target, path)
             if (val) {
                 syncCSS(path, val)
             }
@@ -172,7 +218,7 @@ export const CompassWidgetEditor = ({entity}) => {
         if (_moveable?.current) {
             _moveable.current.updateRect()
         }
-    }, [$configuration, entity, configuration.default, _moveable, syncCSS])
+    }, [$configuration, $globalCompass, element, entity, configuration.default, _moveable, syncCSS, syncGlobalCompass])
 
     const handleCompassMode = useCallback((event) => {
         const mode = Number(event.target.value)

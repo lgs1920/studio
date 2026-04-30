@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-29
- * Last modified: 2026-04-29
+ * Created on: 2026-04-30
+ * Last modified: 2026-04-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -18,19 +18,40 @@ import { CompassSettings } from '@Components/Settings/application/style/CompassS
 import { EditorSettings } from '@Components/Settings/application/style/EditorSettings'
 import { MenuSettings }      from '@Components/Settings/application/style/MenuSettings'
 import { PWASettings } from '@Components/Settings/application/style/PWASettings'
+import { SETTINGS_EDITOR_DRAWER }  from '@Core/constants'
 import { WaDetails } from '@web.awesome.me/webawesome-pro/dist/react'
-import { memo, useRef } from 'react'
+import { memo, useEffect, useRef } from 'react'
+import { useSnapshot }             from 'valtio'
 import { WelcomeModal }      from './WelcomeModal'
+
+const OPEN_COMPASS_SETTINGS_ACTION = 'open-compass-settings'
 
 export const Style = memo(() => {
     const styleSettings = useRef(null)
     const _cantClose = useRef(false)
+    const drawers = useSnapshot(lgs.stores.ui.drawers)
     const handleClose = event => {
         if (_cantClose.current) {
             event.preventDefault()
         }
 
     }
+
+    useEffect(() => {
+        if (drawers.open !== SETTINGS_EDITOR_DRAWER || drawers.action !== OPEN_COMPASS_SETTINGS_ACTION) {
+            return
+        }
+
+        const frame = requestAnimationFrame(() => {
+            const root = styleSettings.current
+            root?.querySelectorAll('wa-details').forEach(details => {
+                details.open = details.id === 'ui-compass-settings'
+            })
+            __.ui.drawerManager.clean()
+        })
+
+        return () => cancelAnimationFrame(frame)
+    }, [drawers.action, drawers.open])
 
     return (
 
