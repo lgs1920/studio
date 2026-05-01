@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-29
- * Last modified: 2026-04-29
+ * Created on: 2026-05-01
+ * Last modified: 2026-05-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -19,7 +19,10 @@ import { WaButton, WaDivider, WaIcon } from '@web.awesome.me/webawesome-pro/dist
 import React                           from 'react'
 
 const openChangelog = () => {
-    __.ui.drawerManager.open(INFO_DRAWER, {tab: INFO_CHANGELOG_TAB})
+    __.ui.drawerManager.open(INFO_DRAWER, {
+        tab:     INFO_CHANGELOG_TAB,
+        stacked: true,
+    })
 }
 
 // Memoized component for performance
@@ -35,10 +38,6 @@ const DrawerFooter = React.memo(() => (
             <div>
                 <strong>{lgs?.servers?.backend?.shortname || 'Backend'}</strong>
                 <span>{lgs?.versions?.backend || 'N/A'}</span>
-            </div>
-            <div>
-                <strong>{lgs?.configuration?.api?.name || 'API'}</strong>
-                <span>{lgs?.versions?.api || 'N/A'}</span>
             </div>
             <div className="drawer-footer-url">
                 <WaButton appearance="plain" variant="brand"
