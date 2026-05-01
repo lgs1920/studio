@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-30
- * Last modified: 2026-04-30
+ * Created on: 2026-05-01
+ * Last modified: 2026-05-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -80,9 +80,10 @@ const Plus = () => <span className="orbit-shortcut-plus">{'+'}</span>
 export const OrbitInteractionHintsWidget = memo(() => {
     const rotate = useSnapshot(lgs.stores.ui.mainUI.rotate)
     const panorama = useSnapshot(lgs.stores.ui.mainUI.panorama)
+    const device = useSnapshot(lgs.stores.ui.device)
     const widgetList = useSnapshot(lgs.stores.ui.widget.list)
     const [finePointer, setFinePointer] = useState(hasFinePointer)
-    const active = rotate.running || panorama.active
+    const active = (rotate.running || panorama.active) && !device.mobile
 
     useEffect(() => {
         const mediaQuery = window.matchMedia?.('(any-pointer: fine)')
