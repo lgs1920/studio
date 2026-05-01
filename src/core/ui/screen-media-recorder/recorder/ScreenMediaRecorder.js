@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-28
- * Last modified: 2026-04-28
+ * Created on: 2026-05-01
+ * Last modified: 2026-05-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,18 +16,21 @@
 
 /*******************************************************************************
  * VideoRecorder.js – Stable mediabunny recorder
- * Uses CanvasSource → BufferTarget → MP4
- * Forces even dimensions, 'avc' codec, no hardware acceleration
- * Real-time duration and size reporting via INFO event
+ * Uses CanvasSource → BufferTarget → MP4.
+ * Forces even dimensions and reports real-time duration and size via INFO event.
  ******************************************************************************/
 import { APP_KEY, NAVIGATOR, SECOND } from '@Core/constants'
 import { DateTime }                   from 'luxon'
 import {
-    BufferTarget, CanvasSource, getEncodableVideoCodecs, Mp4OutputFormat, Output, QUALITY_HIGH, QUALITY_MEDIUM,
-    QUALITY_VERY_HIGH,
+    BufferTarget, canEncodeVideo, CanvasSource, getEncodableVideoCodecs, Mp4OutputFormat, Output, QUALITY_HIGH,
+    QUALITY_MEDIUM, QUALITY_VERY_HIGH,
 }                                     from 'mediabunny'
 
 const INFO_INTERVAL_MS = 250
+const VIDEO_CODEC_PROBE_TIMEOUT_MS = 2500
+const VIDEO_START_TIMEOUT_MS = 8000
+const VIDEO_FIRST_PACKET_TIMEOUT_MS = 3500
+const VIDEO_START_CLEANUP_TIMEOUT_MS = 2000
 
 /**
  * Singleton class responsible for screen/canvas/stream recording using mediabunny
@@ -145,9 +148,14 @@ export class ScreenMediaRecorder extends EventTarget {
     #frameLoopActive = false
     #pendingFrameWrites = new Set()
     #encodedFrames = 0
+    #encodedPackets = 0
     #currentFps = 0
     #lastInfoSampleTimeMs = null
     #lastInfoFrameCount = 0
+    #lastFrameError = null
+    #firstEncodedPacketPromise = null
+    #resolveFirstEncodedPacket = null
+    #rejectFirstEncodedPacket = null
 
     constructor() {
         super()
@@ -405,18 +413,11 @@ export class ScreenMediaRecorder extends EventTarget {
 
         const elapsedSec = elapsedMs / 1000
 
-        let pendingWrite
-        pendingWrite = Promise
-            .resolve(this.#videoSource.add(elapsedSec, this.#frameIntervalSec))
-            .catch(error => {
-                if (this.#isRecording) {
-                    console.error('[ScreenMediaRecorder] Frame encoding failed', error)
-                    this.dispatchEvent(new CustomEvent(ScreenMediaRecorder.events.ERROR, {detail: {error}}))
-                }
-            })
-            .finally(() => this.#pendingFrameWrites.delete(pendingWrite))
+        const pendingWrite = this.#submitVideoFrame(elapsedSec, this.#frameIntervalSec)
+        if (!pendingWrite) {
+            return
+        }
 
-        this.#pendingFrameWrites.add(pendingWrite)
         this.#encodedFrames += 1
         this.#recordedDuration = elapsedSec
         this.#nextFrameDueMs = elapsedMs + this.#frameIntervalMs
@@ -437,6 +438,35 @@ export class ScreenMediaRecorder extends EventTarget {
         this.#infoInterval = null
         this.#frameLoopActive = false
         this.#pendingFrameWrites.clear()
+    }
+
+    #submitVideoFrame = (timestampSec, durationSec, encodeOptions = undefined) => {
+        let pendingWrite
+        try {
+            pendingWrite = Promise.resolve(this.#videoSource.add(timestampSec, durationSec, encodeOptions))
+        }
+        catch (error) {
+            this.#handleFrameEncodingError(error)
+            return null
+        }
+
+        pendingWrite = pendingWrite
+            .catch(error => this.#handleFrameEncodingError(error))
+            .finally(() => this.#pendingFrameWrites.delete(pendingWrite))
+
+        this.#pendingFrameWrites.add(pendingWrite)
+        return pendingWrite
+    }
+
+    #handleFrameEncodingError = (error) => {
+        this.#lastFrameError = error
+        if (this.#encodedPackets === 0) {
+            this.#rejectFirstEncodedPacket?.(error)
+        }
+        if (this.#isRecording) {
+            console.error('[ScreenMediaRecorder] Frame encoding failed', error)
+            this.dispatchEvent(new CustomEvent(ScreenMediaRecorder.events.ERROR, {detail: {error}}))
+        }
     }
 
     /** Pause encoding */
@@ -516,62 +546,71 @@ export class ScreenMediaRecorder extends EventTarget {
             throw this.error('No source set')
         }
 
-        this.#reset()
-        const safe = this.#dimensions
-        const outputConfig = await this.#resolveVideoOutput(safe)
-        if (!outputConfig) {
-            throw this.error(`No supported video codec for ${safe.width}x${safe.height} on this browser.`)
+        try {
+            this.#reset()
+            const safe = this.#dimensions
+            const outputConfig = await this.#resolveVideoOutput(safe)
+            if (!outputConfig) {
+                throw this.error(`No supported video codec for ${safe.width}x${safe.height} on this browser.`)
+            }
+            const {codec, format, mimeType, extension} = outputConfig
+            this.#videoCodec = codec
+            this.#mimeType = mimeType
+            this.#extension = extension
+            console.info('[ScreenMediaRecorder] Starting video recording', {
+                browser:         __.device.browser,
+                codec,
+                fullCodecString: outputConfig.fullCodecString,
+                extension,
+                mimeType,
+                fps:             this.#fps,
+                quality:         this.#quality.name,
+                dimensions:      safe,
+            })
+            this.#output = new Output({
+                                          format,
+                                          target: new BufferTarget(),
+                                      })
+            await this.#output.setMetadataTags(this.#metadata)
+            this.#prepareFirstEncodedPacketWaiter()
+            this.#videoSource = new CanvasSource(this.#canvas, this.#getCanvasSourceConfig(outputConfig, safe))
+
+            const maximumPacketCount = Number.isFinite(this.#maxDuration)
+                                       ? Math.ceil(this.#maxDuration * this.#fps) + this.#fps
+                                       : undefined
+            this.#output.addVideoTrack(this.#videoSource, {
+                frameRate: this.#fps,
+                ...(maximumPacketCount ? {maximumPacketCount} : {}),
+            })
+            this.#output.target.onwrite = (_, end) => {
+                this.#sizeBytes = end
+            }
+
+            await this.#withTimeout(
+                this.#output.start(),
+                VIDEO_START_TIMEOUT_MS,
+                'Video recording start timed out on this browser.',
+                true,
+            )
+            this.#isRecording = true
+            this.#isPaused = false
+            this.#startTime = performance.now()
+            this.#pausedTime = 0
+            this.#nextFrameDueMs = 0
+            document.body.classList.add(ScreenMediaRecorder.CLASSES.RECORDING)
+
+            this.#emitInfo(0)
+            this.#startMonitoring()
+            this.#scheduleNextFrame()
+            this.#submitVideoFrame(0, this.#frameIntervalSec, {keyFrame: true})
+            await this.#waitForFirstEncodedPacket()
+
+            this.dispatchEvent(new CustomEvent(ScreenMediaRecorder.events.START))
         }
-        const {codec, format, mimeType, extension} = outputConfig
-        this.#videoCodec = codec
-        this.#mimeType = mimeType
-        this.#extension = extension
-        console.info('[ScreenMediaRecorder] Starting video recording', {
-            browser: __.device.browser,
-            codec,
-            fps: this.#fps,
-            quality: this.#quality.name,
-            dimensions: safe,
-        })
-        this.#output = new Output({
-                                      format,
-                                      target: new BufferTarget(),
-                                  })
-        await this.#output.setMetadataTags(this.#metadata)
-        this.#videoSource = new CanvasSource(this.#canvas, {
-            codec,
-            bitrate:              this.#quality.value,
-            alpha:                'discard',
-            latencyMode:          'realtime',
-            hardwareAcceleration: 'no-preference',
-            width:                safe.width,
-            height:               safe.height,
-        })
-
-        const maximumPacketCount = Number.isFinite(this.#maxDuration)
-                                   ? Math.ceil(this.#maxDuration * this.#fps) + this.#fps
-                                   : undefined
-        this.#output.addVideoTrack(this.#videoSource, {
-            frameRate: this.#fps,
-            ...(maximumPacketCount ? {maximumPacketCount} : {}),
-        })
-        this.#output.target.onwrite = (_, end) => {
-            this.#sizeBytes = end
+        catch (error) {
+            await this.#cleanupFailedStart()
+            throw error
         }
-
-        await this.#output.start()
-        this.#isRecording = true
-        this.#isPaused = false
-        this.#startTime = performance.now()
-        this.#pausedTime = 0
-        this.#nextFrameDueMs = 0
-        document.body.classList.add(ScreenMediaRecorder.CLASSES.RECORDING)
-
-        this.#emitInfo(0)
-        this.#startMonitoring()
-        this.#scheduleNextFrame()
-
-        this.dispatchEvent(new CustomEvent(ScreenMediaRecorder.events.START))
     }
 
     /**
@@ -605,9 +644,14 @@ export class ScreenMediaRecorder extends EventTarget {
         this.#frameLoopActive = false
         this.#pendingFrameWrites.clear()
         this.#encodedFrames = 0
+        this.#encodedPackets = 0
         this.#currentFps = 0
         this.#lastInfoSampleTimeMs = null
         this.#lastInfoFrameCount = 0
+        this.#lastFrameError = null
+        this.#firstEncodedPacketPromise = null
+        this.#resolveFirstEncodedPacket = null
+        this.#rejectFirstEncodedPacket = null
     }
 
     /** Enforce max duration and max size limits */
@@ -650,29 +694,135 @@ export class ScreenMediaRecorder extends EventTarget {
         return blob
     }
 
-    #getVideoCodecCandidates = () => {
-        if (__.device.browser === NAVIGATOR.firefox) {
-            return ['vp9']
+    #getVideoHardwareAcceleration = () => 'no-preference'
+
+    #getAvcLevelHex = (safe) => {
+        const macroblocks = Math.ceil(safe.width / 16) * Math.ceil(safe.height / 16)
+        const macroblocksPerSecond = macroblocks * this.#fps
+
+        // Level 4.2 covers 1080p60. Above that, request level 5.1.
+        if (macroblocks > 8704 || macroblocksPerSecond > 522240) {
+            return '33'
         }
 
-        return ['avc', 'vp9']
+        return '2a'
+    }
+
+    #getAvcVideoOutputCandidates = (safe) => {
+        const levelHex = this.#getAvcLevelHex(safe)
+        return [
+            {codec: 'avc', fullCodecString: `avc1.42e0${levelHex}`, label: `baseline-${levelHex}`},
+            {codec: 'avc', fullCodecString: `avc1.4d40${levelHex}`, label: `main-${levelHex}`},
+            {codec: 'avc', fullCodecString: `avc1.6400${levelHex}`, label: `high-${levelHex}`},
+            {codec: 'avc', fullCodecString: null, label: 'mediabunny-default'},
+        ]
+    }
+
+    #withTimeout = async (promise, timeoutMs, message, reportError = false) => {
+        let timeoutId = null
+        try {
+            return await Promise.race([
+                                          promise,
+                                          new Promise((_, reject) => {
+                                              timeoutId = setTimeout(() => {
+                                                  reject(reportError ? this.error(message) : new Error(message))
+                                              }, timeoutMs)
+                                          }),
+                                      ])
+        }
+        finally {
+            clearTimeout(timeoutId)
+        }
+    }
+
+    #canEncodeVideoCandidate = async (candidate, safe, hardwareAcceleration) => {
+        try {
+            return await this.#withTimeout(
+                canEncodeVideo(candidate.codec, {
+                    width:       safe.width,
+                    height:      safe.height,
+                    bitrate:     this.#quality.value,
+                    alpha:       'discard',
+                    latencyMode: 'realtime',
+                    hardwareAcceleration,
+                    ...(candidate.fullCodecString ? {fullCodecString: candidate.fullCodecString} : {}),
+                }),
+                VIDEO_CODEC_PROBE_TIMEOUT_MS,
+                `Video codec probe timed out for ${candidate.label}.`,
+            )
+        }
+        catch (error) {
+            console.warn('[ScreenMediaRecorder] Video codec probe failed', {
+                browser:         __.device.browser,
+                codec:           candidate.codec,
+                fullCodecString: candidate.fullCodecString,
+                label:           candidate.label,
+                dimensions:      safe,
+                error,
+            })
+            return false
+        }
     }
 
     #resolveVideoOutput = async (safe) => {
-        const codecCandidates = this.#getVideoCodecCandidates()
+        const hardwareAcceleration = this.#getVideoHardwareAcceleration()
+
+        if (__.device.browser !== NAVIGATOR.firefox) {
+            const avcCandidates = this.#getAvcVideoOutputCandidates(safe)
+            const probeResults = []
+            for (const candidate of avcCandidates) {
+                const supported = await this.#canEncodeVideoCandidate(candidate, safe, hardwareAcceleration)
+                probeResults.push({
+                                      codec:           candidate.codec,
+                                      fullCodecString: candidate.fullCodecString,
+                                      label:           candidate.label,
+                                      supported,
+                                  })
+                if (!supported) {
+                    continue
+                }
+
+                console.info('[ScreenMediaRecorder] Video codec selection', {
+                    browser:    __.device.browser,
+                    dimensions: safe,
+                    bitrate:    this.#quality.value,
+                    hardwareAcceleration,
+                    candidates: probeResults,
+                })
+                return {
+                    codec:           candidate.codec,
+                    fullCodecString: candidate.fullCodecString,
+                    format:          new Mp4OutputFormat({fastStart: false}),
+                    mimeType:        'video/mp4',
+                    extension:       'mp4',
+                    hardwareAcceleration,
+                }
+            }
+
+            console.info('[ScreenMediaRecorder] Video codec selection', {
+                browser:    __.device.browser,
+                dimensions: safe,
+                bitrate:    this.#quality.value,
+                hardwareAcceleration,
+                candidates: probeResults,
+            })
+        }
+
+        const codecCandidates = ['vp9']
         const codecProbeOptions = {
             width:                safe.width,
             height:               safe.height,
             bitrate:              this.#quality.value,
             alpha:                'discard',
             latencyMode:          'realtime',
-            hardwareAcceleration: 'no-preference',
+            hardwareAcceleration,
         }
         const encodableCodecs = await getEncodableVideoCodecs(codecCandidates, codecProbeOptions)
         console.info('[ScreenMediaRecorder] Video codec probe', {
             browser: __.device.browser,
             dimensions: safe,
             bitrate: this.#quality.value,
+            hardwareAcceleration,
             candidates: codecCandidates.map(codec => ({
                 codec,
                 supported: encodableCodecs.includes(codec),
@@ -684,10 +834,97 @@ export class ScreenMediaRecorder extends EventTarget {
         }
         return {
             codec,
+            fullCodecString: null,
             format:    new Mp4OutputFormat({fastStart: false}),
             mimeType:  'video/mp4',
             extension: 'mp4',
+            hardwareAcceleration,
         }
+    }
+
+    #getCanvasSourceConfig = (outputConfig, safe) => ({
+        codec:                outputConfig.codec,
+        bitrate:              this.#quality.value,
+        alpha:                'discard',
+        latencyMode:          'realtime',
+        hardwareAcceleration: outputConfig.hardwareAcceleration,
+        ...(outputConfig.fullCodecString ? {fullCodecString: outputConfig.fullCodecString} : {}),
+        transform:          {
+            width:  safe.width,
+            height: safe.height,
+        },
+        sizeChangeBehavior: 'fill',
+        onEncoderConfig:    (config) => {
+            console.info('[ScreenMediaRecorder] Video encoder config', {
+                browser:              __.device.browser,
+                codec:                config.codec,
+                width:                config.width,
+                height:               config.height,
+                bitrate:              config.bitrate,
+                framerate:            config.framerate,
+                hardwareAcceleration: config.hardwareAcceleration,
+                latencyMode:          config.latencyMode,
+            })
+        },
+        onEncodedPacket:    () => {
+            this.#encodedPackets += 1
+            this.#resolveFirstEncodedPacket?.()
+        },
+    })
+
+    #prepareFirstEncodedPacketWaiter = () => {
+        this.#firstEncodedPacketPromise = new Promise((resolve, reject) => {
+            this.#resolveFirstEncodedPacket = resolve
+            this.#rejectFirstEncodedPacket = reject
+        })
+        this.#firstEncodedPacketPromise.catch(() => {
+            // A frame error can reject before startVideo reaches the explicit await.
+        })
+    }
+
+    #waitForFirstEncodedPacket = async () => {
+        if (this.#encodedPackets > 0) {
+            return
+        }
+        if (this.#lastFrameError) {
+            throw this.#lastFrameError
+        }
+        await this.#withTimeout(
+            this.#firstEncodedPacketPromise,
+            VIDEO_FIRST_PACKET_TIMEOUT_MS,
+            'Video encoder did not produce any MP4 frame on this browser.',
+            true,
+        )
+    }
+
+    #cleanupFailedStart = async () => {
+        this.#isRecording = this.#isPaused = false
+        this.#stopScheduling()
+
+        if (this.#output) {
+            try {
+                await this.#withTimeout(
+                    this.#output.cancel?.() ?? Promise.resolve(),
+                    VIDEO_START_CLEANUP_TIMEOUT_MS,
+                    'Video recording startup cleanup timed out.',
+                )
+            }
+            catch (error) {
+                console.warn('[ScreenMediaRecorder] Failed to clean video startup', error)
+            }
+        }
+        else if (this.#videoSource) {
+            try {
+                this.#videoSource.close()
+            }
+            catch (error) {
+                console.warn('[ScreenMediaRecorder] Failed to close video source after startup error', error)
+            }
+        }
+
+        this.#reset()
+        this.#clearRuntimeReferences()
+        document.body.classList.remove(ScreenMediaRecorder.CLASSES.RECORDING, ScreenMediaRecorder.CLASSES.PAUSED)
     }
 
     /**

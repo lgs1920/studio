@@ -79,6 +79,8 @@
     --lgs-toast-zindex: 2147483647;
     --lgs-drop-zone-zindex: 10;
     --lgs-context-menu-zindex: calc(var(--lgs-ui-layer-zindex) + 9000);
+    --lgs-video-recording-settings-toolbar-zindex: calc(var(--lgs-above-widgets) + 2);
+    --lgs-video-recorder-toolbar-zindex: calc(var(--lgs-context-menu-zindex) + 1);
 
     --lgs-button-border-color: color-mix(in oklab, var(--wa-color-brand) 85%, black 12%);
     --lgs-button-color: var(--wa-color-brand-on);

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-29
- * Last modified: 2026-04-29
+ * Created on: 2026-05-01
+ * Last modified: 2026-05-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -36,6 +36,7 @@ const OVERLAYS_REFRESH_MS = 250
 const METRICS_CACHE_TTL_MS = 750
 // Softer recorder timeslice to reduce INFO event overhead.
 const SOFT_TIMESLICE_MS = SECOND * 2
+const VIDEO_RECORDER_INITIALIZE_TIMEOUT_MS = 6000
 const VIDEO_PIXEL_BUDGETS_BY_FPS = {
     30: 2_800_000,
     45: 2_250_000,
@@ -44,6 +45,7 @@ const VIDEO_PIXEL_BUDGETS_BY_FPS = {
 const VIDEO_QUALITY_BUDGET_FACTORS = [0.9, 1, 1.12]
 const VIDEO_BROWSER_BUDGET_FACTORS = {
     [NAVIGATOR.firefox]: 0.92,
+    [NAVIGATOR.edge]: 0.65,
 }
 const VIDEO_HIGH_DPR_BUDGET_FACTORS_BY_FPS = {
     30: 1.12,
@@ -67,6 +69,21 @@ const VIDEO_MOBILE_MAX_DPR_BY_FPS = {
 }
 
 const toEvenInt = (value) => Math.max(2, Math.floor(value / 2) * 2)
+
+const withTimeout = async (promise, timeoutMs, message) => {
+    let timeoutId = null
+    try {
+        return await Promise.race([
+                                      promise,
+                                      new Promise((_, reject) => {
+                                          timeoutId = setTimeout(() => reject(new Error(message)), timeoutMs)
+                                      }),
+                                  ])
+    }
+    finally {
+        clearTimeout(timeoutId)
+    }
+}
 
 const computeRecordingOutput = ({
     cropWidth,
@@ -209,6 +226,7 @@ export const VideoRecordingScreenArea = memo(() => {
     const _overlaysRefreshLast = useRef(0)
     const _metricsCache = useRef(new Map())
     const _wakeLock = useRef(null)
+    const _recordingStartToken = useRef(0)
     const [mountTimeoutOpen, setMountTimeoutOpen] = useState(false)
     const [mountTimeoutError] = useState({missing: [], timeoutMs: WIDGET_MOUNT_TIMEOUT})
     const [mountTimeoutAction] = useState('record')
@@ -367,12 +385,15 @@ export const VideoRecordingScreenArea = memo(() => {
         _wakeLock.current = null
     }, [])
 
-    const initializeRecorder = useCallback(async () => {
+    const initializeRecorder = useCallback(async (startToken) => {
         const selectedFps = ScreenMediaRecorder.FPS[$video.fps]
         $video.settings = {quality: $video.quality, fps: $video.fps}
         const videoFrame = await syncVideoCropFrame('before-record')
         if (!videoFrame) {
-            return
+            return false
+        }
+        if (startToken !== _recordingStartToken.current) {
+            return false
         }
         const outputConfig = computeRecordingOutput({
             cropWidth: videoFrame.cropDimensions.width,
@@ -411,20 +432,63 @@ export const VideoRecordingScreenArea = memo(() => {
 
         buildComposerOverlays(composer, videoFrame.cropDimensions)
         await composer.renderFrame({waitForNextFrame: true})
+        if (startToken !== _recordingStartToken.current) {
+            composer.dispose()
+            return false
+        }
         __.recorder.setCanvas(composer.getCanvas())
         startOverlaysRefresh(composer, videoFrame.cropDimensions)
+        return true
     }, [maxDuration, maxSize, disposeComposer, stopOverlaysRefresh, buildComposerOverlays, startOverlaysRefresh, syncVideoCropFrame, $video])
 
+    const markRecordingStarted = useCallback(() => {
+        if (!$video.preRecording && $video.recording) {
+            return
+        }
+        Object.assign($video, {
+            preRecording: false,
+            recording:    true,
+            finalizing:   false,
+            paused:       false,
+            size:         0,
+        })
+        UIToast.warning({caption: 'Video Recording', text: 'ON AIR!'})
+    }, [$video])
+
     const handleVideoRecording = useCallback(async () => {
+        const startToken = _recordingStartToken.current + 1
+        _recordingStartToken.current = startToken
         try {
-            await initializeRecorder()
+            const ready = await withTimeout(
+                initializeRecorder(startToken),
+                VIDEO_RECORDER_INITIALIZE_TIMEOUT_MS,
+                'Video recording initialization timed out on this browser.',
+            )
+            if (!ready) {
+                Object.assign($video, {
+                    preRecording: false,
+                    recording:    false,
+                    finalizing:   false,
+                    editing:      true,
+                    size:         0,
+                })
+                return
+            }
+            if (startToken !== _recordingStartToken.current) {
+                return
+            }
             await __.recorder.startVideo()
+            markRecordingStarted()
         }
         catch (e) {
-            Object.assign($video, {preRecording: false, recording: false, finalizing: false, size: 0})
-            UIToast.error({text: e.message})
+            _recordingStartToken.current += 1
+            disposeComposer()
+            stopOverlaysRefresh()
+            Object.assign($video, {preRecording: false, recording: false, finalizing: false, editing: true, size: 0})
+            console.error('[VideoRecordingScreenArea] Video recording start failed', e)
+            UIToast.error({text: e?.message ?? 'Video recording could not be started.'})
         }
-    }, [$video, initializeRecorder])
+    }, [$video, initializeRecorder, markRecordingStarted, disposeComposer, stopOverlaysRefresh])
 
     const handlePhotoSnapshot = useCallback(async () => {
         const videoFrame = await syncVideoCropFrame('before-snapshot')
@@ -552,16 +616,7 @@ export const VideoRecordingScreenArea = memo(() => {
             requestWakeLock()
         }
         const hStarted = () => {
-            if ($video.preRecording || !$video.recording) {
-                Object.assign($video, {
-                    preRecording: false,
-                    recording:    true,
-                    finalizing:   false,
-                    paused:       false,
-                    size:         0,
-                })
-                UIToast.warning({caption: 'Video Recording', text: 'ON AIR!'})
-            }
+            markRecordingStarted()
             requestWakeLock()
         }
         __.recorder.addEventListener(ScreenMediaRecorder.events.STOP, hStopped)
@@ -585,7 +640,7 @@ export const VideoRecordingScreenArea = memo(() => {
             __.recorder.removeEventListener(ScreenMediaRecorder.events.START, hStarted)
             document.removeEventListener('visibilitychange', handleVisibility)
         }
-    }, [disposeComposer, stopOverlaysRefresh, startOverlaysRefresh, requestWakeLock, releaseWakeLock, $video])
+    }, [disposeComposer, stopOverlaysRefresh, startOverlaysRefresh, requestWakeLock, releaseWakeLock, markRecordingStarted])
 
     useEffect(() => {
         __.ui.widgetManager.windowResizing = false
@@ -610,7 +665,7 @@ export const VideoRecordingScreenArea = memo(() => {
         <>
             <CropOverlay
                 style={{clipPath: `polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%, 0% ${crop.top}px, ${crop.left}px ${crop.top}px, ${crop.left}px ${crop.top + crop.height}px, ${crop.left + crop.width}px ${crop.top + crop.height}px, ${crop.left + crop.width}px ${crop.top}px, 0% ${crop.top}px)`}}/>
-            {video.recording && <VideoRecorderWidget id="video-recorder-widget"/>}
+            {(video.preRecording || video.recording) && <VideoRecorderWidget id="video-recorder-widget"/>}
             <WidgetMountErrorDialog open={mountTimeoutOpen} error={mountTimeoutError} action={mountTimeoutAction}
                                     onConfirm={() => {
                                         setMountTimeoutOpen(false)

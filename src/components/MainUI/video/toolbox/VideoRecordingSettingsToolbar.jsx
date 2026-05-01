@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-29
- * Last modified: 2026-04-29
+ * Created on: 2026-05-01
+ * Last modified: 2026-05-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -23,6 +23,22 @@ import { Tunnel }                                                       from '@C
 import { CROP_TOOLS_WIDGETS, VIDEO_CROP_ZONE, VIDEO_WIDGETS_BOARD } from '@Core/constants'
 import { memo, useCallback, useEffect, useMemo, useRef }                from 'react'
 import { useSnapshot }                                                  from 'valtio'
+
+const resolveRecorderToolbarPosition = (event) => {
+    const nativeEvent = event?.nativeEvent ?? event
+    const touch = nativeEvent?.changedTouches?.[0] ?? nativeEvent?.touches?.[0]
+    const rect = event?.currentTarget?.getBoundingClientRect?.()
+    const rawLeft = touch?.clientX ?? nativeEvent?.clientX
+    const rawTop = touch?.clientY ?? nativeEvent?.clientY
+    const left = Number.isFinite(rawLeft) ? rawLeft : ((rect?.left ?? 0) + ((rect?.width ?? window.innerWidth) / 2))
+    const top = Number.isFinite(rawTop) ? rawTop : ((rect?.top ?? 0) + ((rect?.height ?? window.innerHeight) / 2))
+
+    return {
+        left,
+        top,
+        attachTo: top < window.innerHeight / 2 ? 'top' : 'bottom',
+    }
+}
 
 /**
  * VideoRecordingSettingsToolbar renders a call-to-action bar for the video cropper interface.
@@ -68,11 +84,13 @@ export const VideoRecordingSettingsToolbar = memo(() => {
             return
         }
 
+        const toolbarPosition = resolveRecorderToolbarPosition(event)
         Object.assign($video, {
             preRecording: true,
             recording:    false,
             paused:       false,
-            position: {left: event.clientX, top: event.clientY},
+            position: toolbarPosition,
+            toolbarPosition,
         })
     }, [$video])
 

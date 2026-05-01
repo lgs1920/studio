@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-28
- * Last modified: 2026-04-28
+ * Created on: 2026-05-01
+ * Last modified: 2026-05-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -29,7 +29,7 @@ import '../style.css'
 /**
  * RecorderControls - Renders play/pause and stop buttons for the recorder
  */
-const RecorderControls = memo(({recording, paused, recorder, onFinalize}) => {
+const RecorderControls = memo(({recording, paused, recorder, starting, onFinalize}) => {
 
     const $video = lgs.stores.ui.video
 
@@ -57,7 +57,7 @@ const RecorderControls = memo(({recording, paused, recorder, onFinalize}) => {
                 size="small"
                 className="video-recorder-action"
                 onClick={handlePlayPause}
-                disabled={!recorder}
+                disabled={!recorder || starting || !recording}
             >
                 <WaIcon name={paused ? 'play' : 'pause'} variant="regular"/>
             </WaButton>
@@ -277,13 +277,16 @@ export const VideoRecorderToolbar = ({toolbar}) => {
             <span className="duration">{formatDuration(state.recordedDuration)}</span>
             <span className="size">{formatSize(state.recordedSize)}</span>
             <span className="current-fps">{formatCurrentFps(state.currentFps)}</span>
-            {state.finalizing ? (
+            {video.preRecording ? (
+                <div className="blinking">Starting...</div>
+            ) : state.finalizing ? (
                 <div className="blinking">Finalisation...</div>
             ) : (
                  <RecorderControls
                      recording={video.recording}
                      paused={video.paused}
                      recorder={__.recorder}
+                     starting={video.preRecording}
                      onFinalize={(value) => setState((prev) => ({...prev, finalizing: value}))}
                  />
              )}
@@ -295,6 +298,7 @@ export const VideoRecorderToolbar = ({toolbar}) => {
                 variant="brand"
                 size="small"
                 onPointerDown={handleCancel}
+                disabled={video.preRecording}
                 className="video-recorder-action lgs-cancel-recording"
             >
                 <WaIcon name="xmark" variant="regular"/>
