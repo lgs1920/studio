@@ -7,16 +7,17 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-27
- * Last modified: 2026-04-27
+ * Created on: 2026-05-01
+ * Last modified: 2026-05-01
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { WaButton, WaDivider, WaDropdown, WaDropdownItem, WaIcon } from '@web.awesome.me/webawesome-pro/dist/react'
-import React, { useEffect, useState }                              from 'react'
-import { AppUtils } from '@Utils/AppUtils'
+import { useEffect, useState } from 'react'
+import { useSnapshot }         from 'valtio'
+import { AppUtils }            from '@Utils/AppUtils'
 
 const BRAND_OPTIONS = [
     {value: 'yellow', label: 'Yellow', swatch: 'var(--wa-color-yellow)'},
@@ -29,15 +30,28 @@ const BRAND_OPTIONS = [
     {value: 'gray', label: 'Gray', swatch: 'var(--wa-color-gray)'},
 ]
 
+const getSystemThemeIcon = (device) => {
+    if (device.mobile) {
+        return 'mobile'
+    }
+    if (device.tablet) {
+        return 'tablet'
+    }
+    return 'desktop'
+}
+
 /**
  * Theme Selector component
  * @returns {JSX.Element}
  */
 const ThemeSelector = () => {
+    const device = useSnapshot(lgs.stores.ui.device)
     const [theme, setTheme] = useState(localStorage.getItem(AppUtils.THEME_STORAGE_KEY) || 'system')
     const [brandColor, setBrandColor] = useState(AppUtils.resolveBrandColor())
     const [isDark, setIsDark] = useState(false)
     const currentBrand = BRAND_OPTIONS.find(option => option.value === brandColor) || BRAND_OPTIONS[0]
+    const systemThemeIcon = getSystemThemeIcon(device)
+    const currentThemeIcon = theme === 'system' ? systemThemeIcon : isDark ? 'moon-stars' : 'sun-bright'
 
     useEffect(() => {
         const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
@@ -89,7 +103,7 @@ const ThemeSelector = () => {
 
             <WaDropdown onWaSelect={handleSelect} className="lgs--theme-selector">
                 <WaButton slot={'trigger'} appearance="plain" variant={'neutral'}>
-                    <WaIcon name={isDark ? 'moon-stars' : 'sun-bright'} variant="regular"/>
+                    <WaIcon name={currentThemeIcon} variant="regular"/>
                 </WaButton>
 
                 <WaDropdownItem value={'light'}>
@@ -101,7 +115,7 @@ const ThemeSelector = () => {
                 </WaDropdownItem>
                 <WaDivider/>
                 <WaDropdownItem value={'system'}>
-                    <WaIcon slot="icon" name="cog" variant="regular"/>{' System '}
+                    <WaIcon slot="icon" name={systemThemeIcon} variant="regular"/>{' System '}
                 </WaDropdownItem>
             </WaDropdown>
         </div>
