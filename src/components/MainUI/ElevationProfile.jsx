@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-30
- * Last modified: 2026-04-30
+ * Created on: 2026-05-01
+ * Last modified: 2026-05-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -52,6 +52,7 @@ export const ElevationProfile = (props) => {
     const profile = useSnapshot($profile)
     const {current: unitSystem} = useSnapshot($unitStore)
     const {journey, isProcessing} = useSnapshot($journeyEditor)
+    const widget = useSnapshot(lgs.stores.ui.widget)
 
     const _bootstrapComputeRef = useRef('')
     const [canShowProgress, setCanShowProgress] = useState(false)
@@ -63,6 +64,11 @@ export const ElevationProfile = (props) => {
     const WIDGET_KEY = 'profile-widget'
     const GROUP = SCENE_WIDGETS
     const HIDDEN_CLASS = 'lgs-widget-hidden'
+
+    const currentSnapshot = widget.currentSnapshot
+    const currentProfileSnapshotImage = currentSnapshot?.image && profileChartConfigId && currentSnapshot.entity === profileChartConfigId
+                                        ? currentSnapshot.image
+                                        : null
 
     /**
      * Syncs the chart configuration ID from existing widgets
@@ -154,8 +160,8 @@ export const ElevationProfile = (props) => {
      */
     const getProfileBackground = useCallback(async () => {
         // We have one snapshot, let's use it
-        if (lgs.stores.ui.widget.currentSnapshot) {
-            return lgs.stores.ui.widget.currentSnapshot.image
+        if (currentProfileSnapshotImage) {
+            return currentProfileSnapshotImage
         }
 
         // We do not have one, we need to make it
@@ -184,7 +190,7 @@ export const ElevationProfile = (props) => {
             return null
         }
 
-    }, [])
+    }, [currentProfileSnapshotImage])
 
     /**
      * Initial sync of the toggle state
@@ -447,6 +453,7 @@ export const ElevationProfile = (props) => {
             {!isProcessing && data.hasElevation && (
                 <div
                     className="editor-preview-zone lgs-widget-preview"
+                    data-widget-preview-entity={profileChartConfigId ?? undefined}
                     style={{'--lgs-widget-preview-bg': backgroundImage ? `url(${backgroundImage})` : 'none'}}
                 >
                     <ProfileChart

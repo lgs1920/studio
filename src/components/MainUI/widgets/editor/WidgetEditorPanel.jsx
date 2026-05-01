@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-30
- * Last modified: 2026-04-30
+ * Created on: 2026-05-01
+ * Last modified: 2026-05-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -98,7 +98,8 @@ export const WidgetEditorPanel = () => {
     const isStacked = __.ui.drawerManager.isStacked(WIDGETS_EDITOR_DRAWER)
     const syncGlobalCompass = drawers.action === 'edit-global-compass'
     const drawerPlacement = menuSettings.drawer
-    const previewBg = widget.currentSnapshot?.image ||
+    const currentSnapshotImage = widget.currentSnapshot?.entity === drawers.entity ? widget.currentSnapshot.image : null
+    const previewBg = currentSnapshotImage ||
         (canvasPreviewBg.entity === drawers.entity ? canvasPreviewBg.image : null)
 
     /**
@@ -173,7 +174,7 @@ export const WidgetEditorPanel = () => {
     }, [drawers.entity, isVisible, _widgetRegistry, ui.widget.cache, cached])
 
     useEffect(() => {
-        if (!isVisible || widget.currentSnapshot?.image) {
+        if (!isVisible || currentSnapshotImage) {
             return
         }
 
@@ -186,7 +187,7 @@ export const WidgetEditorPanel = () => {
         })
 
         return () => cancelAnimationFrame(frame)
-    }, [drawers.entity, isVisible, widget.currentSnapshot?.image])
+    }, [drawers.entity, isVisible, currentSnapshotImage])
 
     /**
      * @description Retrieves and formats the list of active widgets for the current board
@@ -280,6 +281,7 @@ export const WidgetEditorPanel = () => {
                         <WaTabPanel name="preview">
                             <section
                                 className="editor-preview-zone lgs-widget-preview"
+                                data-widget-preview-entity={drawers.entity}
                                 style={{'--lgs-widget-preview-bg': previewBg ? `url(${previewBg})` : 'none'}}
                             >
                                 <Suspense fallback={PreviewLoadingFallback}>

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-30
- * Last modified: 2026-04-30
+ * Created on: 2026-05-01
+ * Last modified: 2026-05-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -35,6 +35,105 @@ import Moveable                   from 'react-moveable'
 import { useSnapshot }            from 'valtio'
 
 const DRAG_THRESHOLD = {touch: 30, mouse: 5}
+const SNAPSHOT_MAX_SIZE = 1024
+const SNAPSHOT_MIN_SIZE = 240
+const SNAPSHOT_MIN_PADDING = 80
+const SNAPSHOT_MAX_PADDING = 220
+
+const clamp = (value, min, max) => Math.min(Math.max(value, min), max)
+
+const resolveSnapshotPreviewerRect = (widgetId) => {
+    if (typeof document === 'undefined') {
+        return null
+    }
+
+    const previewers = Array.from(document.querySelectorAll('.editor-preview-zone.lgs-widget-preview'))
+        .map(element => ({element, rect: element.getBoundingClientRect()}))
+        .filter(({rect}) => rect.width > 0 && rect.height > 0)
+
+    const exactPreviewer = previewers.find(({element}) => element.dataset.widgetPreviewEntity === widgetId)
+    return exactPreviewer?.rect ?? previewers[0]?.rect ?? null
+}
+
+const fitSnapshotRectToCanvas = (width, height, aspect, canvasRect) => {
+    let nextWidth = width
+    let nextHeight = height
+
+    if (aspect && nextWidth / nextHeight < aspect) {
+        nextWidth = nextHeight * aspect
+    }
+    else if (aspect) {
+        nextHeight = nextWidth / aspect
+    }
+
+    if (nextWidth > canvasRect.width) {
+        nextWidth = canvasRect.width
+        nextHeight = aspect ? nextWidth / aspect : nextHeight
+    }
+
+    if (nextHeight > canvasRect.height) {
+        nextHeight = canvasRect.height
+        nextWidth = aspect ? nextHeight * aspect : nextWidth
+    }
+
+    return {
+        width:  clamp(nextWidth, 1, canvasRect.width),
+        height: clamp(nextHeight, 1, canvasRect.height),
+    }
+}
+
+const resolveSnapshotRect = (canvasRect, widgetRect, previewerRect = null) => {
+    const widgetLeft = widgetRect.left - canvasRect.left
+    const widgetTop = widgetRect.top - canvasRect.top
+    const widgetWidth = widgetRect.width || SNAPSHOT_MIN_SIZE
+    const widgetHeight = widgetRect.height || SNAPSHOT_MIN_SIZE
+    const widgetCenterX = widgetLeft + (widgetWidth / 2)
+    const widgetCenterY = widgetTop + (widgetHeight / 2)
+    const padding = clamp(Math.max(widgetWidth, widgetHeight) * 0.2, SNAPSHOT_MIN_PADDING, SNAPSHOT_MAX_PADDING)
+    const previewerAspect = previewerRect?.width > 0 && previewerRect?.height > 0
+                            ? previewerRect.width / previewerRect.height
+                            : null
+    const preferredWidth = Math.max(widgetWidth + (padding * 2), previewerRect?.width ?? SNAPSHOT_MIN_SIZE)
+    const preferredHeight = Math.max(widgetHeight + (padding * 2), previewerRect?.height ?? SNAPSHOT_MIN_SIZE)
+    const {width, height} = fitSnapshotRectToCanvas(preferredWidth, preferredHeight, previewerAspect, canvasRect)
+    const left = clamp(widgetCenterX - (width / 2), 0, Math.max(0, canvasRect.width - width))
+    const top = clamp(widgetCenterY - (height / 2), 0, Math.max(0, canvasRect.height - height))
+
+    return {left, top, width, height}
+}
+
+const createWidgetSnapshot = (sourceCanvas, canvasRect, widgetRect, previewerRect = null) => {
+    const sourceRect = resolveSnapshotRect(canvasRect, widgetRect, previewerRect)
+    const scaleX = canvasRect.width > 0 ? (sourceCanvas.width / canvasRect.width) : 1
+    const scaleY = canvasRect.height > 0 ? (sourceCanvas.height / canvasRect.height) : 1
+    const outputScale = Math.min(
+        1,
+        SNAPSHOT_MAX_SIZE / Math.max(sourceRect.width, sourceRect.height),
+        previewerRect?.width > 0 ? previewerRect.width / sourceRect.width : 1,
+        previewerRect?.height > 0 ? previewerRect.height / sourceRect.height : 1,
+    )
+    const snapshotCanvas = document.createElement('canvas')
+
+    snapshotCanvas.width = Math.max(1, Math.round(sourceRect.width * outputScale))
+    snapshotCanvas.height = Math.max(1, Math.round(sourceRect.height * outputScale))
+    snapshotCanvas.getContext('2d').drawImage(
+        sourceCanvas,
+        sourceRect.left * scaleX,
+        sourceRect.top * scaleY,
+        sourceRect.width * scaleX,
+        sourceRect.height * scaleY,
+        0,
+        0,
+        snapshotCanvas.width,
+        snapshotCanvas.height,
+    )
+
+    return {
+        image:     snapshotCanvas.toDataURL('image/webp', 0.8),
+        sourceRect,
+        widgetPos: {x: widgetRect.left - canvasRect.left, y: widgetRect.top - canvasRect.top},
+    }
+}
 
 /**
  * Draggable, resizable and scalable widget with full pointer interaction support.
@@ -221,21 +320,17 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                 lgs.scene.render()
                 const _canvasRect = _sourceCanvas.getBoundingClientRect()
                 const _widgetRect = _element.getBoundingClientRect()
-                const previewSize = Math.max(1, Math.round(Math.min(_canvasRect.width, _canvasRect.height, 1024)))
-                const scaleX = _canvasRect.width > 0 ? (_sourceCanvas.width / _canvasRect.width) : 1
-                const scaleY = _canvasRect.height > 0 ? (_sourceCanvas.height / _canvasRect.height) : 1
-                const _centerX = (_widgetRect.left - _canvasRect.left) + (_widgetRect.width / 2)
-                const _centerY = (_widgetRect.top - _canvasRect.top) + (_widgetRect.height / 2)
-                const _sourceX = Math.max(0, Math.min(_centerX - (previewSize / 2), _canvasRect.width - previewSize))
-                const _sourceY = Math.max(0, Math.min(_centerY - (previewSize / 2), _canvasRect.height - previewSize))
-                const _tempCanvas = document.createElement('canvas')
-                _tempCanvas.width = previewSize
-                _tempCanvas.height = previewSize
-                _tempCanvas.getContext('2d').drawImage(_sourceCanvas, _sourceX * scaleX, _sourceY * scaleY, previewSize * scaleX, previewSize * scaleY, 0, 0, previewSize, previewSize)
+                if (!_canvasRect.width || !_canvasRect.height || !_sourceCanvas.width || !_sourceCanvas.height) {
+                    return
+                }
+                const _previewerRect = resolveSnapshotPreviewerRect(widgetId)
+                const snapshot = createWidgetSnapshot(_sourceCanvas, _canvasRect, _widgetRect, _previewerRect)
                 $widget.currentSnapshot = {
-                    image:  _tempCanvas.toDataURL('image/webp', 0.8),
-                    offset: {x: _sourceX, y: _sourceY},
-                    widgetPos: {x: _widgetRect.left - _canvasRect.left, y: _widgetRect.top - _canvasRect.top},
+                    entity:     widgetId,
+                    image:      snapshot.image,
+                    offset:     {x: snapshot.sourceRect.left, y: snapshot.sourceRect.top},
+                    sourceRect: snapshot.sourceRect,
+                    widgetPos:  snapshot.widgetPos,
                 }
             }
         }

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-30
- * Last modified: 2026-04-30
+ * Created on: 2026-05-01
+ * Last modified: 2026-05-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -18,17 +18,20 @@
  * Singleton class acting as an interface for managing draggable and resizable widgets.
  * Delegates functionality to specialized classes.
  */
-import { SCENE_WIDGETS_BOARD, VIDEO_WIDGETS_BOARD } from '@Core/constants'
-import { WidgetDBManager }                          from '@Core/ui/widget-manager/WidgetDBManager'
-import { WidgetRotatable }                          from '@Core/ui/widget-manager/WidgetRotatable'
-import { WidgetCoreControls }                       from './WidgetCoreControls'
-import { WidgetCoreRegistry }                       from './WidgetCoreRegistry'
-import { WidgetCropper }                            from './WidgetCropper'
-import { WidgetDraggable }                          from './WidgetDraggable'
-import { WidgetPosition }                           from './WidgetPosition'
-import { WidgetResizable }                          from './WidgetResizable'
-import { WidgetScalable }                           from './WidgetScalable'
-import { WidgetTransform }                          from './WidgetTransform'
+import {
+    JOURNEY_EDITOR_DRAWER, PROFILE_WIDGET, SCENE_WIDGETS_BOARD, VIDEO_WIDGETS_BOARD, WIDGET_EDITOR_PRE_RENDER_EVENT,
+    WIDGETS_EDITOR_DRAWER,
+}                             from '@Core/constants'
+import { WidgetDBManager }    from '@Core/ui/widget-manager/WidgetDBManager'
+import { WidgetRotatable }    from '@Core/ui/widget-manager/WidgetRotatable'
+import { WidgetCoreControls } from './WidgetCoreControls'
+import { WidgetCoreRegistry } from './WidgetCoreRegistry'
+import { WidgetCropper }      from './WidgetCropper'
+import { WidgetDraggable }    from './WidgetDraggable'
+import { WidgetPosition }     from './WidgetPosition'
+import { WidgetResizable }    from './WidgetResizable'
+import { WidgetScalable }     from './WidgetScalable'
+import { WidgetTransform }    from './WidgetTransform'
 
 export class WidgetManager {
     // Singleton instance
@@ -527,6 +530,45 @@ export class WidgetManager {
         }
         await this.#widgetDB.saveWidgetPosition(widgetId, positionData)
 
+    }
+
+    /**
+     * Refreshes the editor preview background when the edited widget moved.
+     * @param {string} widgetId - The widget ID
+     */
+    refreshEditorPreviewSnapshot = (widgetId) => {
+        if (!widgetId || typeof window === 'undefined') {
+            return
+        }
+
+        const isRelevantEditor = () => {
+            const drawers = lgs.stores?.ui?.drawers
+            const widgetType = widgetId.split('#')[0]
+
+            return (drawers?.open === WIDGETS_EDITOR_DRAWER && drawers.entity === widgetId) ||
+                (drawers?.open === JOURNEY_EDITOR_DRAWER && widgetType === PROFILE_WIDGET)
+        }
+
+        if (!isRelevantEditor()) {
+            return
+        }
+
+        const dispatch = () => {
+            if (!isRelevantEditor()) {
+                return
+            }
+
+            window.dispatchEvent(new CustomEvent(WIDGET_EDITOR_PRE_RENDER_EVENT, {
+                detail: {entity: widgetId},
+            }))
+        }
+
+        if (typeof requestAnimationFrame === 'function') {
+            requestAnimationFrame(dispatch)
+            return
+        }
+
+        dispatch()
     }
 
     /**

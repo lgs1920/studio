@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-30
- * Last modified: 2026-04-30
+ * Created on: 2026-05-01
+ * Last modified: 2026-05-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -32,6 +32,7 @@ export const TextWidgetPreview = memo(({entity}) => {
     const $widget = lgs.stores.ui.widget
     const widget = useSnapshot($widget)
     const currentSnapshot = widget.currentSnapshot
+    const currentSnapshotImage = currentSnapshot?.entity === entity ? currentSnapshot.image : null
 
     const $configuration = lgs.settings.widgets['text-widget'].configuration
     const configuration = useSnapshot($configuration)
@@ -98,8 +99,8 @@ export const TextWidgetPreview = memo(({entity}) => {
         if (!element?.text) {
             return {}
         }
-        return _textWidgetManager.generateCSSVariables(element, currentSnapshot?.image, WIDGET_SYSTEM_FONT_STACK)
-    }, [element, currentSnapshot?.image, _textWidgetManager])
+        return _textWidgetManager.generateCSSVariables(element, currentSnapshotImage, WIDGET_SYSTEM_FONT_STACK)
+    }, [element, currentSnapshotImage, _textWidgetManager])
 
     const contentSize = useMemo(() => {
         const content = element?.text?.content ?? ''
