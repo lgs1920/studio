@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-29
- * Last modified: 2026-04-29
+ * Created on: 2026-05-01
+ * Last modified: 2026-05-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -20,7 +20,7 @@ import WaDrawer                                      from '@Components/WaDrawerN
 import { INFO_CHANGELOG_TAB, INFO_DRAWER } from '@Core/constants'
 import { WaScroller, WaTab, WaTabGroup, WaTabPanel } from '@web.awesome.me/webawesome-pro/dist/react'
 
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal }                from 'react-dom'
 import { useSnapshot }                 from 'valtio'
 import './style.css'
@@ -32,13 +32,18 @@ export const Panel = () => {
     const snap = useSnapshot(lgs.stores.ui.drawers)
     const _drawerRef = useRef(null)
     const [activeTab, setActiveTab] = useState(INFO_CHANGELOG_TAB)
+    const isStacked = __.ui.drawerManager.isStacked(INFO_DRAWER)
+
+    const closePanelWithManager = useCallback(() => {
+        window.dispatchEvent(new Event('resize'))
+        if (__.ui.drawerManager.isCurrent(INFO_DRAWER)) {
+            __.ui.drawerManager.close()
+        }
+    }, [])
 
     const closePanel = (event) => {
         if (window.isOK(event)) {
-            window.dispatchEvent(new Event('resize'))
-            if (__.ui.drawerManager.isCurrent(INFO_DRAWER)) {
-                __.ui.drawerManager.close()
-            }
+            closePanelWithManager()
         }
     }
 
@@ -94,10 +99,11 @@ export const Panel = () => {
                   open={snap.open === INFO_DRAWER}
                   onWaAfterHide={closePanel}
                   ref={_drawerRef}
+                  className={isStacked ? 'drawer-is-stacked' : undefined}
                   lightDismiss
                   placement={useSnapshot(lgs.editorSettingsProxy.menu).drawer}
         >
-            <PanelActions/>
+            <PanelActions stackedPanel={isStacked} onBack={isStacked ? closePanelWithManager : null}/>
             <WaTabGroup onWaTabShow={handleTabShow}>
                 <WaTab slot="nav" panel={INFO_CHANGELOG_TAB}>
                     What's New ?
