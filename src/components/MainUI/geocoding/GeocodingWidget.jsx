@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-25
- * Last modified: 2026-04-25
+ * Created on: 2026-05-01
+ * Last modified: 2026-05-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -24,10 +24,11 @@ export const GeocodingWidget = () => {
         const trigger = document.getElementById('launch-the-geocoder')
         const rect = trigger?.getBoundingClientRect?.()
         const containerRect = lgs.canvas?.getBoundingClientRect?.()
-        const margin = 0//lgs.gutter.s ?? 8
+        const margin = lgs.gutter.s ?? 8
         const gap = lgs.gutter.s ?? 8
         const viewportWidth = containerRect?.width ?? window.innerWidth
         const viewportHeight = containerRect?.height ?? window.innerHeight
+        const centerOnMobile = __.device.isMobile || viewportWidth <= 767
         const dialogWidth = Math.min(viewportWidth - 2 * margin, 560)
         const triggerCenter = rect
                               ? ((rect.left + rect.right) / 2) - (containerRect?.left ?? 0)
@@ -43,7 +44,10 @@ export const GeocodingWidget = () => {
         let left = relativeLeft
         const top = Math.max(margin, Math.min(relativeTop, viewportHeight - margin))
 
-        if (openToRight) {
+        if (centerOnMobile) {
+            left = viewportWidth / 2
+        }
+        else if (openToRight) {
             left = Math.min(left, viewportWidth - dialogWidth - margin)
         }
         else {
@@ -60,7 +64,7 @@ export const GeocodingWidget = () => {
             },
             top:             `${Math.round(top)}px`,
             left:            `${Math.round(left)}px`,
-            attachTo:        openToRight ? 'top-left' : 'top-right',
+            attachTo: centerOnMobile ? 'top' : (openToRight ? 'top-left' : 'top-right'),
             margin:          0,
             type:            LGS_WIDGET,
             group:           SCENE_WIDGETS,

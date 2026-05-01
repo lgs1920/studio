@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-25
- * Last modified: 2026-04-25
+ * Created on: 2026-05-01
+ * Last modified: 2026-05-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -29,8 +29,9 @@
 
 .geocoding-widget-shell {
     overflow: visible !important;
-    width: auto !important;
-    min-width: 20rem !important;
+    width: var(--geocoding-dialog-width) !important;
+    min-width: var(--geocoding-dialog-width) !important;
+    max-width: var(--geocoding-dialog-width) !important;
     height: auto !important;
     min-height: auto !important;
     margin: 0 !important;
@@ -38,10 +39,16 @@
     border: 0 !important;
     background: transparent !important;
     box-shadow: none !important;
+    --geocoding-dialog-width: min(calc(100vw - 2 * var(--lgs-gutter-s)), 35rem);
 }
 
 .geocoding-widget-dialog {
-    --width: min(calc(100vw - 3.5 * var(--lgs-dimension)), 35rem);
+    --width: var(--geocoding-dialog-width, min(calc(100vw - 2 * var(--lgs-gutter-s)), 35rem));
+}
+
+.geocoding-widget-dialog::part(dialog) {
+    width: var(--geocoding-dialog-width, min(calc(100vw - 2 * var(--lgs-gutter-s)), 35rem));
+    max-width: var(--geocoding-dialog-width, min(calc(100vw - 2 * var(--lgs-gutter-s)), 35rem));
 }
 
 .geocoding-widget-dialog::part(footer) {
