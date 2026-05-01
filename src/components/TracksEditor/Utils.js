@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-25
- * Last modified: 2026-04-25
+ * Created on: 2026-05-01
+ * Last modified: 2026-05-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -42,7 +42,19 @@ export class Utils {
     }
 
     static initJourneyEdition = async (event = undefined) => {
-            Utils.updateJourneyEditor(event.target.value, {})
+        const journeySlug = event?.target?.value
+        const editorStore = lgs.theJourneyEditorProxy
+
+        if (!journeySlug) {
+            return
+        }
+
+        if (editorStore.journey?.slug === journeySlug) {
+            __.ui.drawerManager.consumeSuppressFocusOnOpen?.(journeySlug)
+            return
+        }
+
+        Utils.updateJourneyEditor(journeySlug, {})
     }
     static updateJourneyEditor = async (journeySlug, {
         rotate = lgs.settings.ui.camera.start.rotate.journey,
@@ -50,6 +62,7 @@ export class Utils {
         focus = true,
     }) => {
         const editorStore = lgs.theJourneyEditorProxy
+        const shouldFocus = focus && !__.ui.drawerManager.consumeSuppressFocusOnOpen?.(journeySlug)
         editorStore.journey = lgs.getJourneyBySlug(journeySlug)
 
         lgs.saveJourneyInContext(editorStore.journey)
@@ -79,7 +92,7 @@ export class Utils {
 
         // Save information
         await TrackUtils.saveCurrentJourneyToDB(lgs.theJourney)
-        if (editorStore.journey.visible && focus) {
+        if (editorStore.journey.visible && shouldFocus) {
             if (__.ui.cameraManager.isRotating()) {
                 await __.ui.cameraManager.stopRotate()
             }
@@ -91,8 +104,16 @@ export class Utils {
     }
 
     static initTrackEdition = async (event) => {
+        const trackSlug = event?.target?.value
             const editorStore = lgs.theJourneyEditorProxy
-            editorStore.track = lgs.getTrackBySlug(event.target.value)
+
+        if (!trackSlug || editorStore.track?.slug === trackSlug) {
+            __.ui.drawerManager.consumeSuppressFocusOnOpen?.(editorStore.journey?.slug)
+            return
+        }
+
+        const shouldFocus = !__.ui.drawerManager.consumeSuppressFocusOnOpen?.(editorStore.journey?.slug)
+        editorStore.track = lgs.getTrackBySlug(trackSlug)
             editorStore.track.addToContext()
 
             // Force POI in editor
@@ -103,8 +124,8 @@ export class Utils {
             Utils.renderTrackSettings()
 
             // Save information
-            TrackUtils.saveCurrentTrackToDB(event.target.value).then(async () => {
-                if (editorStore.journey.visible) {
+        TrackUtils.saveCurrentTrackToDB(trackSlug).then(async () => {
+            if (editorStore.journey.visible && shouldFocus) {
                     editorStore.journey.focus({rotate: lgs.settings.ui.camera.start.rotate.journey})
                 }
                 await TrackUtils.saveCurrentPOIToDB(null)

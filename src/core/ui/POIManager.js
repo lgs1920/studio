@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-26
- * Last modified: 2026-04-26
+ * Created on: 2026-05-01
+ * Last modified: 2026-05-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -25,6 +25,25 @@ import { POIUtils }                                from '@Utils/cesium/POIUtils'
 import { KM }                                      from '@Utils/UnitUtils'
 import { v4 as uuid }                              from 'uuid'
 import { subscribe }                               from 'valtio'
+
+const finiteNumber = value => {
+    if (value === null || value === undefined || value === '') {
+        return null
+    }
+
+    const number = Number(value)
+    return Number.isFinite(number) ? number : null
+}
+
+export const focusablePOI = point => {
+    const height = finiteNumber(point?.simulatedHeight) ?? finiteNumber(point?.height) ?? 0
+
+    return {
+        ...point,
+        height,
+        simulatedHeight: undefined,
+    }
+}
 
 export class POIManager {
     threshold = POI_THRESHOLD_DISTANCE
@@ -143,7 +162,7 @@ export class POIManager {
         this.#structureSubscription = subscribe(
             this.list,
             (ops) => {
-                ops.forEach(([op, path, value, prevValue]) => {
+                ops.forEach(([op, , value, prevValue]) => {
                     // Si on ajoute un POI (op 'set' et pas de valeur précédente)
                     if (op === 'set' && prevValue === undefined) {
                         this.#handlePOIAdded(value.id, value)
@@ -264,7 +283,7 @@ export class POIManager {
                                                                             },
                                                                         })
             }
-            catch (e) {
+            catch {
                 point.simulatedHeight = 0
             }
         }
@@ -274,7 +293,7 @@ export class POIManager {
         return point
     }
 
-    remove = async ({id, dbSync = true, force = false} = {}) => {
+    remove = async ({id, dbSync = true} = {}) => {
         const poi = this.list.get(id)
         if (!poi) {
             return {id, success: false}
@@ -409,13 +428,13 @@ export class POIManager {
         if (!point) {
             return false
         }
-        const camera = lgs.stores.main.components.camera.position
-        __.ui.sceneManager.focus(point, {
-            target:  point,
-            heading: camera.heading,
-            pitch:   camera.pitch,
-            roll:    camera.roll,
-            range:   camera.range,
+        const target = focusablePOI(point)
+        __.ui.sceneManager.focus(target, {
+            target:  target,
+            heading: lgs.settings.camera.heading,
+            pitch:   lgs.settings.camera.pitch,
+            roll:    lgs.settings.camera.roll,
+            range:   lgs.settings.camera.range,
             ...options,
         })
         return true

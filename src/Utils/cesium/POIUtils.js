@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-28
- * Last modified: 2026-02-28
+ * Created on: 2026-05-01
+ * Last modified: 2026-05-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -71,7 +71,7 @@ export class POIUtils {
                     break
                 }
                 default: { // Track
-                    const [track, name, type, slug] = poi.parent.split('#')
+                    const [, name, type] = poi.parent.split('#')
                     file = `${name}#${type}`
                 }
             }
@@ -247,11 +247,11 @@ export class POIUtils {
         const context = canvas.getContext('2d')
         context.imageSmoothingEnabled = true
         context.imageSmoothingQuality = 'high'
-        const image = POIUtils.useFontAwesome(poi)
+        const image = POIUtils.renderFontAwesome(poi)
         const ratio = image.height / image.width
         canvas.width = poi.size * (ratio > 1 ? 1 : ratio)
         canvas.height = poi.size * (ratio > 1 ? ratio : 1)
-        const v = Canvg.fromString(context, POIUtils.useFontAwesome(poi).html)
+        const v = Canvg.fromString(context, POIUtils.renderFontAwesome(poi).html)
         v.start()
         return canvas
     }
@@ -259,7 +259,7 @@ export class POIUtils {
     /**
      * Processes a marker object to generate a customized Font Awesome SVG icon.
      *
-     * @function useFontAwesome
+     * @function renderFontAwesome
      * @param {Object} marker - The marker object containing icon and style properties.
      * @param {Object} marker.icon - The Font Awesome icon to be used.
      * @param {string} marker.foregroundColor - The color to apply to the icon paths.
@@ -271,7 +271,7 @@ export class POIUtils {
      *                   - `width` (number): The width of the SVG, derived from the viewBox.
      *                   - `height` (number): The height of the SVG, derived from the viewBox.
      */
-    static useFontAwesome = (marker) => {
+    static renderFontAwesome = (marker) => {
         library.add(marker.icon)
 
         const html = icon(marker.icon).html[0]
@@ -363,7 +363,6 @@ export class POIUtils {
         const distance = POIUtils.distanceFromCamera(point)
         const scale = Math.max(scaler.minScale, Math.min(1 / (distance / scaler.distanceThreshold), 1))
         const tooFar = scale <= scaler.minScale
-        const flagVisible = !tooFar && scale <= scaler.minScaleFlag
         return {
             scale:          scale,
             tooFar:         tooFar,

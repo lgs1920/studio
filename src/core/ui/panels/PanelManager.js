@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-25
- * Last modified: 2026-04-25
+ * Created on: 2026-05-01
+ * Last modified: 2026-05-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -156,9 +156,10 @@ export class PanelManager {
     open = (id, options = {}) => {
         if (options.stacked && ui.drawers.open && ui.drawers.open !== id) {
             this.#stack.push({
-                                 id:     ui.drawers.open,
-                                 action: ui.drawers.action,
-                                 entity: ui.drawers.entity,
+                                 id:                  ui.drawers.open,
+                                 action:              ui.drawers.action,
+                                 entity:              ui.drawers.entity,
+                                 suppressFocusOnOpen: ui.drawers.suppressFocusOnOpen,
                              })
         }
         else if (!options.stacked) {
@@ -168,6 +169,9 @@ export class PanelManager {
         ui.drawers.open = id
         ui.drawers.action = options.action ?? ''
         ui.drawers.entity = options.entity ?? null
+        ui.drawers.suppressFocusOnOpen = Array.isArray(options.suppressFocusOnOpen) && options.suppressFocusOnOpen.length === 0
+                                         ? false
+                                         : options.suppressFocusOnOpen ?? false
 
         let tabToActivate = null
 
@@ -184,6 +188,32 @@ export class PanelManager {
         }
     }
 
+    consumeSuppressFocusOnOpen = (target) => {
+        const suppressedTarget = ui.drawers.suppressFocusOnOpen
+
+        if (Array.isArray(suppressedTarget)) {
+            const targetIndex = suppressedTarget.indexOf(target)
+            const wildcardIndex = suppressedTarget.indexOf(true)
+            const matchIndex = targetIndex >= 0 ? targetIndex : wildcardIndex
+
+            if (matchIndex === -1) {
+                return false
+            }
+
+            const nextTargets = suppressedTarget.filter((_, index) => index !== matchIndex)
+            ui.drawers.suppressFocusOnOpen = nextTargets.length ? nextTargets : false
+            return true
+        }
+
+        const shouldSuppress = suppressedTarget === true || suppressedTarget === target
+
+        if (shouldSuppress) {
+            ui.drawers.suppressFocusOnOpen = false
+        }
+
+        return shouldSuppress
+    }
+
     /**
      * Closes the current drawer.
      * Restores the previous drawer from the stack if available.
@@ -195,6 +225,7 @@ export class PanelManager {
             ui.drawers.open = previous.id
             ui.drawers.action = previous.action
             ui.drawers.entity = previous.entity
+            ui.drawers.suppressFocusOnOpen = previous.suppressFocusOnOpen ?? false
 
             const tabToActivate = this.#tabs.get(previous.id)
             if (tabToActivate) {
@@ -206,6 +237,7 @@ export class PanelManager {
             ui.drawers.open = null
             ui.drawers.entity = null
             ui.drawers.action = null
+            ui.drawers.suppressFocusOnOpen = false
         }
     }
 
@@ -219,6 +251,7 @@ export class PanelManager {
         ui.drawers.open = null
         ui.drawers.entity = null
         ui.drawers.action = null
+        ui.drawers.suppressFocusOnOpen = false
     }
 
     /**

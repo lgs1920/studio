@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-05-01
+ * Last modified: 2026-05-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -25,6 +25,8 @@
 import { DOUBLE_CLICK_TIMEOUT, DOUBLE_TAP_TIMEOUT, LGS_CONTEXT_MENU_HOOK, LONG_TAP_TIMEOUT } from '@Core/constants'
 import { ScreenSpaceEventHandler }                                                           from 'cesium'
 import { CESIUM_EVENTS, EVENT_LOWEST, EVENTS, MODIFIER_SEPARATOR, MODIFIERS }                from './cesiumEvents'
+
+const LONG_TAP_MOVE_THRESHOLD = 10
 
 export class CanvasEventManager {
     /**
@@ -356,11 +358,10 @@ export class CanvasEventManager {
     /**
      * Sets up touch event handlers for TAP, DOUBLE_TAP, and LONG_TAP events.
      *
-     * @param {string} eventType - The event type (e.g., TAP, DOUBLE_TAP, LONG_TAP).
      * @returns {Object} Object containing downHandler and upHandler for touch events.
      * @private
      */
-    #setupTouchEvents(eventType) {
+    #setupTouchEvents() {
         const validateTouchEvent = (event) => {
             if (event.pointerType !== 'touch' && !this.isTouchDevice) {
                 return null
@@ -374,6 +375,73 @@ export class CanvasEventManager {
         let tapTimeout = null
         let tapCount = 0
         let tapStartTime = 0
+        let touchStartPosition = null
+        let touchMoveCancelled = false
+
+        const clearLongTapTimer = () => {
+            if (this.#tapState.longTapTimer) {
+                clearTimeout(this.#tapState.longTapTimer)
+                this.#tapState.longTapTimer = null
+            }
+        }
+
+        const clearTapTimeout = () => {
+            if (tapTimeout) {
+                clearTimeout(tapTimeout)
+                tapTimeout = null
+            }
+        }
+
+        const getClientPosition = (event) => {
+            const touch = event.touches?.[0] ?? event.changedTouches?.[0]
+            if (touch) {
+                return {x: touch.clientX, y: touch.clientY}
+            }
+            if (Number.isFinite(event.clientX) && Number.isFinite(event.clientY)) {
+                return {x: event.clientX, y: event.clientY}
+            }
+            return null
+        }
+
+        const getClientPositionFromCanvas = (position) => {
+            const rect = this.#viewer.scene.canvas.getBoundingClientRect()
+            return {
+                x: rect.left + position.x,
+                y: rect.top + position.y,
+            }
+        }
+
+        const stopMoveTracking = () => {
+            document.removeEventListener('pointermove', handleTouchMove, true)
+            document.removeEventListener('touchmove', handleTouchMove, true)
+        }
+
+        const cancelTouchInteraction = () => {
+            touchMoveCancelled = true
+            this.#tapState.suppressTap = true
+            clearLongTapTimer()
+            clearTapTimeout()
+            tapCount = 0
+            tapStartTime = 0
+        }
+
+        const handleTouchMove = (event) => {
+            if (!touchStartPosition || touchMoveCancelled) {
+                return
+            }
+
+            const position = getClientPosition(event)
+            if (!position) {
+                return
+            }
+
+            const dx = position.x - touchStartPosition.x
+            const dy = position.y - touchStartPosition.y
+            if (Math.hypot(dx, dy) > LONG_TAP_MOVE_THRESHOLD) {
+                cancelTouchInteraction()
+                stopMoveTracking()
+            }
+        }
 
         const downHandler = (event) => {
             const entityId = validateTouchEvent(event)
@@ -388,17 +456,21 @@ export class CanvasEventManager {
             lastTapTime = now
             tapCount++
             tapStartTime = now
+            touchStartPosition = event.position ? getClientPositionFromCanvas(event.position) : null
+            touchMoveCancelled = false
+            stopMoveTracking()
+            document.addEventListener('pointermove', handleTouchMove, true)
+            document.addEventListener('touchmove', handleTouchMove, {capture: true, passive: true})
 
-            if (tapTimeout) {
-                clearTimeout(tapTimeout)
-                tapTimeout = null
-            }
-            if (this.#tapState.longTapTimer) {
-                clearTimeout(this.#tapState.longTapTimer)
-                this.#tapState.longTapTimer = null
-            }
+            clearTapTimeout()
+            clearLongTapTimer()
 
             this.#tapState.longTapTimer = setTimeout(() => {
+                if (touchMoveCancelled) {
+                    return
+                }
+                stopMoveTracking()
+                touchStartPosition = null
                 this.#tapState.suppressTap = true
                 this.#emit(EVENTS.LONG_TAP, event, entityId)
                 tapCount = 0
@@ -407,18 +479,15 @@ export class CanvasEventManager {
             }, LONG_TAP_TIMEOUT)
 
             setTimeout(() => {
-                if (tapStartTime && Date.now() - tapStartTime >= DOUBLE_TAP_TIMEOUT && this.#tapState.longTapTimer) {
+                if (tapStartTime && !touchMoveCancelled && Date.now() - tapStartTime >= DOUBLE_TAP_TIMEOUT && this.#tapState.longTapTimer) {
                     this.#tapState.suppressTap = true
-                    if (tapTimeout) {
-                        clearTimeout(tapTimeout)
-                        tapTimeout = null
-                    }
+                    clearTapTimeout()
                 }
             }, DOUBLE_TAP_TIMEOUT)
 
             if (tapCount === 1) {
                 tapTimeout = setTimeout(() => {
-                    if (tapCount === 1 && !this.#tapState.suppressTap) {
+                    if (tapCount === 1 && !this.#tapState.suppressTap && !touchMoveCancelled) {
                         this.#emit(EVENTS.TAP, event, entityId)
                     }
                     tapCount = 0
@@ -427,29 +496,28 @@ export class CanvasEventManager {
                 }, DOUBLE_TAP_TIMEOUT + 50)
             }
             else if (tapCount === 2 && timeDiff < DOUBLE_TAP_TIMEOUT) {
-                clearTimeout(tapTimeout)
-                clearTimeout(this.#tapState.longTapTimer)
+                clearTapTimeout()
+                clearLongTapTimer()
                 this.#tapState.suppressTap = false
-                this.#tapState.longTapTimer = null
                 this.#emit(EVENTS.DOUBLE_TAP, event, entityId)
                 tapCount = 0
                 tapTimeout = null
                 tapStartTime = 0
             }
             else {
-                clearTimeout(tapTimeout)
+                clearTapTimeout()
                 tapCount = 1
                 lastTapTime = now
             }
         }
 
         const upHandler = () => {
-            if (this.#tapState.longTapTimer) {
-                clearTimeout(this.#tapState.longTapTimer)
-                this.#tapState.longTapTimer = null
-            }
+            stopMoveTracking()
+            clearLongTapTimer()
 
             this.#tapState.suppressTap = false
+            touchStartPosition = null
+            touchMoveCancelled = false
             tapStartTime = 0
         }
 
@@ -595,7 +663,7 @@ export class CanvasEventManager {
         }
         else if (this.isTouchDevice) {
             if (this.#events[eventType]?.touch) {
-                handler = this.#setupTouchEvents(eventType)
+                handler = this.#setupTouchEvents()
                 if (!this.#handlers.has(eventName)) {
                     this.#screenSpaceEventHandler.setInputAction(handler.downHandler, this.#events[eventType].event)
                     this.#screenSpaceEventHandler.setInputAction(handler.upHandler, this.#events.UP.event)

@@ -617,8 +617,15 @@ wa-button::part(label) {
         border-radius: var(--lgs-border-radius);
     }
 
+body.mobile .drawer-wrapper {
+    right: auto;
+    left: var(--lgs-mobile-drawer-inline-gutter);
+    width: calc(100vw - 2 * var(--lgs-mobile-drawer-inline-gutter));
+    --lgs-mobile-drawer-inline-gutter: max(var(--left), var(--right), var(--lgs-gutter-s));
+}
 
-    wa-drawer section {
+
+wa-drawer section {
         width: 100%;
     }
 

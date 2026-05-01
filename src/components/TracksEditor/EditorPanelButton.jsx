@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-27
- * Last modified: 2026-03-27
+ * Created on: 2026-05-01
+ * Last modified: 2026-05-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -35,16 +35,6 @@ export const EditorPanelButton = memo(() => {
     const mainUI = useMemo(() => lgs.stores.ui.mainUI, [])
 
     /**
-     * Memoized icon name based on journey existence.
-     * @type {string}
-     */
-    const iconName = useMemo(() => {
-        // Fallback to 0 if lgs.journeys is undefined or null
-        const journeyCount = lgs.journeys?.size ?? 0
-        return journeyCount ? 'route' : 'regular-route-circle-plus'
-    }, [lgs.journeys?.size])
-
-    /**
      * Memoized tooltip placement based on toolbar settings.
      * @type {string}
      */
@@ -61,7 +51,12 @@ export const EditorPanelButton = memo(() => {
             journeyLoaderStore.visible = true
             return
         }
-        __.ui.drawerManager.toggle(JOURNEY_EDITOR_DRAWER)
+        __.ui.drawerManager.toggle(JOURNEY_EDITOR_DRAWER, {
+            suppressFocusOnOpen: [
+                                     lgs.theJourney?.slug,
+                                     lgs.stores.main.components.pois.current,
+                                 ].filter(Boolean),
+        })
     }, [hasJourney, journeyLoaderStore])
 
     // Manage remove journey dialog state (if needed)

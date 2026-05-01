@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-30
- * Last modified: 2026-04-30
+ * Created on: 2026-05-01
+ * Last modified: 2026-05-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -47,15 +47,15 @@ import {
     WelcomeModal,
 }                       from '@Components/MainUI/WelcomeModal'
 import {
-    APP_EVENT, BASE_ENTITY, CURRENT_JOURNEY, FOCUS_CENTROID, FOCUS_LAST, FOCUS_STARTER, OVERLAY_ENTITY,
-    POI_STARTER_TYPE, WIDGET_GOOGLE_FONTS,
+    APP_EVENT, BASE_ENTITY, OVERLAY_ENTITY, POI_STARTER_TYPE, WIDGET_GOOGLE_FONTS,
 }                       from '@Core/constants'
-import {
-    MapTarget,
-}                       from '@Core/MapTarget'
 import {
     LayersAndTerrainManager,
 }                       from '@Core/ui/LayerAndTerrainManager'
+import {
+    buildStartupCameraFocusOptions,
+    configureStartupCamera,
+}                       from '@Core/ui/cameraStartup'
 import {
     TerrainUtils,
 }                       from '@Utils/cesium/TerrainUtils'
@@ -68,140 +68,12 @@ import {
 import {
     preCache,
 }                       from '@zumer/snapdom'
-import { Cartesian3 }   from 'cesium'
 import {
     useCallback, useEffect, useState,
 }                       from 'react'
 
 const APP_SURFACE_READY_TIMEOUT = 10000
 const APP_SURFACE_READY_STABLE_FRAMES = 2
-
-const finiteNumber = value => {
-    const number = Number(value)
-    return Number.isFinite(number) ? number : null
-}
-
-const cameraTargetIsValid = cameraStore => {
-    const target = cameraStore?.target
-    return finiteNumber(target?.longitude) !== null
-        && finiteNumber(target?.latitude) !== null
-        && finiteNumber(target?.height) !== null
-}
-
-const cameraPositionIsValid = position => finiteNumber(position?.longitude) !== null
-    && finiteNumber(position?.latitude) !== null
-    && finiteNumber(position?.height) !== null
-
-const cameraRangeFromStoredPosition = (position = {}, target = {}) => {
-    const longitude = finiteNumber(position.longitude)
-    const latitude = finiteNumber(position.latitude)
-    const height = finiteNumber(position.height)
-    const targetLongitude = finiteNumber(target.longitude)
-    const targetLatitude = finiteNumber(target.latitude)
-    const targetHeight = finiteNumber(target.height)
-
-    if ([longitude, latitude, height, targetLongitude, targetLatitude, targetHeight].some(value => value === null)) {
-        return null
-    }
-
-    return Cartesian3.distance(
-        Cartesian3.fromDegrees(longitude, latitude, height),
-        Cartesian3.fromDegrees(targetLongitude, targetLatitude, targetHeight),
-    )
-}
-
-const cameraPositionWithDefaults = (position = {}, target = {}) => {
-    const storedRange = finiteNumber(position.range)
-    const computedRange = cameraRangeFromStoredPosition(position, target) ?? storedRange
-
-    return {
-        longitude: position.longitude,
-        latitude:  position.latitude,
-        height:    position.height,
-        heading:   finiteNumber(position.heading) ?? lgs.settings.camera.heading,
-        pitch:     finiteNumber(position.pitch) ?? lgs.settings.camera.pitch,
-        roll:      finiteNumber(position.roll) ?? lgs.settings.camera.roll,
-        range:     computedRange ?? lgs.settings.camera.range,
-    }
-}
-
-const cameraStoreForTarget = (target, position = {}) => ({
-    target:   {
-        longitude:       target.longitude,
-        latitude:        target.latitude,
-        height:          target.height,
-        simulatedHeight: target.simulatedHeight,
-    },
-    position: cameraPositionWithDefaults(position, target),
-})
-
-const starterCameraStore = starter => cameraStoreForTarget(starter)
-
-const journeyCentroidCameraStore = async journey => {
-    if (!journey?.tracks?.size) {
-        return null
-    }
-
-    const centroid = await __.ui.sceneManager.getJourneyCentroid(journey)
-    if (!centroid) {
-        return null
-    }
-
-    return {
-        focusTarget: journey,
-        cameraStore: cameraStoreForTarget(new MapTarget(CURRENT_JOURNEY, {
-            ...centroid,
-            id: journey.slug,
-        })),
-    }
-}
-
-const fallbackCameraConfiguration = async (lgs, starter) => {
-    const journeyConfiguration = await journeyCentroidCameraStore(lgs.theJourney)
-    return journeyConfiguration ?? {
-        focusTarget: starter,
-        cameraStore: starterCameraStore(starter),
-    }
-}
-
-const lastCameraConfiguration = async (lgs, starter) => {
-    const savedCamera = await __.ui.cameraManager.readCameraInformation({fallback: false})
-    if (cameraPositionIsValid(savedCamera?.position)) {
-        const savedTargetIsValid = cameraTargetIsValid(savedCamera)
-        const fallbackConfiguration = savedTargetIsValid ? null : await fallbackCameraConfiguration(lgs, starter)
-        const target = savedTargetIsValid ? savedCamera.target : fallbackConfiguration.cameraStore.target
-
-        return {
-            focusTarget: savedTargetIsValid ? null : fallbackConfiguration.focusTarget,
-            cameraStore: {
-                restoreCameraPosition: true,
-                target:                target,
-                position:              cameraPositionWithDefaults(savedCamera.position, savedTargetIsValid ? savedCamera.target : {}),
-            },
-        }
-    }
-
-    return fallbackCameraConfiguration(lgs, starter)
-}
-
-const configureCamera = async (lgs, starter) => {
-    if (__.ui.cameraManager.isAppFocusOn(FOCUS_LAST)) {
-        return lastCameraConfiguration(lgs, starter)
-    }
-
-    if (__.ui.cameraManager.isAppFocusOn(FOCUS_CENTROID)) {
-        return fallbackCameraConfiguration(lgs, starter)
-    }
-
-    if (__.ui.cameraManager.isAppFocusOn(FOCUS_STARTER) && !lgs.theJourney) {
-        return {
-            focusTarget: starter,
-            cameraStore: starterCameraStore(starter),
-        }
-    }
-
-    return fallbackCameraConfiguration(lgs, starter)
-}
 
 const nextFrame = () => new Promise(resolve => requestAnimationFrame(resolve))
 
@@ -402,17 +274,11 @@ export const LGS1920 = () => {
      * @param {Object} cameraStore - The camera settings
      */
     const setCameraFocus = (lgs, starter, focusTarget, cameraStore) => {
-        const restoreCameraPosition = cameraStore.restoreCameraPosition === true
-        __.ui.sceneManager.focus(cameraStore.target, {
-            target:   focusTarget,
-            heading:  cameraStore.position.heading,
-            pitch:          !restoreCameraPosition && __.ui.sceneManager.noRelief() ? -90 : cameraStore.position.pitch,
-            roll:     cameraStore.position.roll,
-            range:    cameraStore.position.range,
-            infinite: true,
-            rotate: lgs.settings.ui.camera.start.rotate.app,
-            lookAt:   true,
-            cameraPosition: restoreCameraPosition ? cameraStore.position : null,
+        const focusOptions = buildStartupCameraFocusOptions({
+                                                                cameraStore,
+                                                                focusTarget,
+                                                                noRelief: __.ui.sceneManager.noRelief(),
+                                                                rotate:   lgs.settings.ui.camera.start.rotate.app,
             rpm:      lgs.settings.starter.camera.rpm,
             callback: point => {
                 const initEvent = new CustomEvent(APP_EVENT.INITIAL_FOCUS, {
@@ -425,6 +291,7 @@ export const LGS1920 = () => {
                 setInitialFocusReady(true)
             },
         })
+        __.ui.sceneManager.focus(cameraStore.target, focusOptions)
         starter.animated = focusTarget === starter && lgs.settings.ui.camera.start.rotate.app
     }
 
@@ -468,7 +335,13 @@ export const LGS1920 = () => {
                 const starter = await setupStarterPOI(lgs)
 
                 // Configure camera
-                const {focusTarget, cameraStore} = await configureCamera(lgs, starter)
+                const {focusTarget, cameraStore} = await configureStartupCamera({
+                                                                                    context:        lgs,
+                                                                                    starter,
+                                                                                    cameraManager:  __.ui.cameraManager,
+                                                                                    sceneManager:   __.ui.sceneManager,
+                                                                                    cameraSettings: lgs.settings.camera,
+                                                                                })
 
                 // Set camera focus
                 setCameraFocus(lgs, starter, focusTarget, cameraStore)

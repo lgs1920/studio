@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-25
- * Last modified: 2026-04-25
+ * Created on: 2026-05-01
+ * Last modified: 2026-05-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -299,11 +299,13 @@ export const MapPOIEditContent = memo(({poi}) => {
                                               let cancelled = false
 
                                               const handleFocusOnOpen = async () => {
-                                                  if (!lgs.settings.ui.poi.focusOnEdit || !$point) {
+                                                  if (__.ui.drawerManager.consumeSuppressFocusOnOpen?.(id)) {
                                                       return
                                                   }
 
-                                                  const $camera = lgs.stores.main.components.camera
+                                                  if (!lgs.settings.ui.poi.focusOnEdit || !$point) {
+                                                      return
+                                                  }
 
                                                   if (__.ui.cameraManager.isRotating()) {
                                                       await __.ui.poiManager.stopRotationAndSync()
@@ -312,13 +314,7 @@ export const MapPOIEditContent = memo(({poi}) => {
                                                       return
                                                   }
 
-                                                  __.ui.sceneManager.focus($point, {
-                                                      target:     $point,
-                                                      heading:    $camera.position.heading,
-                                                      pitch:      $camera.position.pitch,
-                                                      range:      $camera.position.range,
-                                                      flyingTime: 2,
-                                                  })
+                                                  await __.ui.poiManager.focusPOI(id, {flyingTime: 2})
                                               }
 
                                               handleFocusOnOpen()
