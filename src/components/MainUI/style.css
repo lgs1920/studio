@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-30
- * Last modified: 2026-04-30
+ * Created on: 2026-05-01
+ * Last modified: 2026-05-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -553,7 +553,7 @@ body.mobile .rotation-widget-body {
 
 .welcome-modal-media {
     transition: opacity var(--welcome-exit-duration, 3000ms) ease;
-    background: var(--lgs-dark-color-95) url("/assets/images/menu-thumbnail.png") center / cover no-repeat;
+    background: var(--lgs-dark-color-95) var(--welcome-background-image, url("/assets/images/welcome-splash.png")) center / cover no-repeat;
 }
 
 .welcome-modal-video {

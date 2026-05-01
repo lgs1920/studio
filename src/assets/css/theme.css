@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-29
- * Last modified: 2026-04-29
+ * Created on: 2026-05-01
+ * Last modified: 2026-05-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -674,6 +674,7 @@ wa-button::part(label) {
 
     .lgs--popup-in-drawer {
         width: var(--width-popup);
+        max-width: var(--width-popup);
         margin-left: var(--margin);
         pointer-events: auto;
         border-radius: var(--lgs-border-radius);
@@ -693,7 +694,22 @@ wa-button::part(label) {
         margin-left: calc(var(--margin) - var(--lgs-gutter-s));
     }
 
-    .lgs--popup-in-drawer::part(body) {
+body.mobile .lgs--popup-in-drawer {
+    width: 100%;
+    max-width: 100%;
+    margin-left: 0;
+    --margin: var(--lgs-gutter-s);
+    --width-popup: calc(100vw - 2 * var(--lgs-gutter-s));
+}
+
+body.mobile wa-popup:has(.lgs--popup-in-drawer)::part(popup) {
+    left: var(--lgs-gutter-s) !important;
+    box-sizing: border-box;
+    width: calc(100vw - 2 * var(--lgs-gutter-s));
+    max-width: calc(100vw - 2 * var(--lgs-gutter-s));
+}
+
+.lgs--popup-in-drawer::part(body) {
         display: flex;
         align-content: center;
         align-items: flex-start;
@@ -748,11 +764,11 @@ wa-button::part(label) {
     }
 
 
-    #widgets-editor-drawer.drawer-is-stacked::part(close-button) {
+wa-drawer.drawer-is-stacked::part(close-button) {
         display: none;
     }
 
-    #widgets-editor-drawer.drawer-is-stacked::part(header-actions) {
+wa-drawer.drawer-is-stacked::part(header-actions) {
         margin-top: var(--lgs-gutter-xs);
         padding-inline-end: var(--spacing);
     }

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-30
- * Last modified: 2026-04-30
+ * Created on: 2026-05-01
+ * Last modified: 2026-05-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -23,7 +23,7 @@ import { StudioLogo }                                        from './StudioLogo'
 const DEFAULT_WELCOME_DISPLAY_TIME = 6
 const WELCOME_VIDEO_DESKTOP = '/assets/media/trekking-hero-desktop.mp4'
 const WELCOME_VIDEO_MOBILE = '/assets/media/trekking-hero-mobile.mp4'
-const WELCOME_FALLBACK_IMAGE = '/assets/images/menu-thumbnail.png'
+const WELCOME_FALLBACK_IMAGE = '/assets/images/welcome-splash.png'
 const WELCOME_MAX_FOG_DURATION = 3 * MILLIS
 const WELCOME_FOG_UPDATE_INTERVAL = 100
 const WELCOME_EXIT_DURATION = 3000
@@ -62,9 +62,9 @@ export const WelcomeModal = ({initComplete = false, appReady = false, settingsRe
     const closure = showIntro && autoClose && readyToEnter ? Math.max(displayDuration - readyElapsedSeconds, 0) : 0
     const autoCloseReached = showIntro && autoClose && readyToEnter && closure <= 0
     const shouldAutoEnter = readyToEnter && (!showIntro || autoCloseReached)
-    const canShowFullLogo = settingsReady && Boolean(lgs.build?.date) && Boolean(lgs.versions?.studio)
     const studioVersion = settingsReady ? (lgs.versions?.studio ?? lgs.versions?.version) : null
     const buildInfo = settingsReady ? formatBuildInfo(lgs.build) : null
+    const canShowFullLogo = settingsReady && Boolean(studioVersion)
     const fogDuration = Math.min(WELCOME_MAX_FOG_DURATION, displayDuration * MILLIS)
     const fogProgress = Math.min(elapsedMillis / fogDuration, 1)
     const fogStrength = Math.max(1 - fogProgress, 0)
@@ -74,7 +74,8 @@ export const WelcomeModal = ({initComplete = false, appReady = false, settingsRe
         '--welcome-video-brightness': (0.92 + fogProgress * 0.08).toFixed(3),
         '--welcome-video-saturation': (0.82 + fogProgress * 0.18).toFixed(3),
         '--welcome-scrim-opacity':    (0.58 - fogProgress * 0.10).toFixed(3),
-        '--welcome-exit-duration': `${WELCOME_EXIT_DURATION}ms`,
+        '--welcome-exit-duration':    `${WELCOME_EXIT_DURATION}ms`,
+        '--welcome-background-image': `url(${WELCOME_FALLBACK_IMAGE})`,
     }
 
     const hide = useCallback(({animate = true} = {}) => {
