@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-30
- * Last modified: 2026-04-30
+ * Created on: 2026-05-01
+ * Last modified: 2026-05-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -208,10 +208,12 @@ export const TextWidgetEditor = ({entity}) => {
                     <div className="drawer-horizontal-line">
                         <TypefaceElement id={normalizedId}/><LineHeightElement id={normalizedId}/>
                     </div>
-                    <div className="drawer-horizontal-line">
+                    <div className="drawer-horizontal-line text-widget-editor-size-format-line">
                         <FontSizeElement id={normalizedId}/>
-                        <StyleElement id={normalizedId}/>
-                        <AlignElement id={normalizedId}/>
+                        <div className="text-widget-editor-format-row">
+                            <StyleElement id={normalizedId}/>
+                            <AlignElement id={normalizedId}/>
+                        </div>
                     </div>
 
                 </div>

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-30
- * Last modified: 2026-04-30
+ * Created on: 2026-05-01
+ * Last modified: 2026-05-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -70,6 +70,26 @@
     margin-left: auto;
 
 }
+
+.text-widget-editor-size-format-line {
+    flex-wrap: nowrap;
+}
+
+.text-widget-editor-format-row {
+    display: flex;
+    align-items: center;
+    flex: 0 0 auto;
+    justify-content: flex-end;
+    min-width: max-content;
+    margin-left: auto;
+    gap: calc(2 * var(--lgs-gutter-xs));
+}
+
+.text-widget-editor-format-row wa-button-group {
+    flex: 0 0 auto;
+    white-space: nowrap;
+}
+
 .text-widget-editor-header sl-button:not(.square-button) sl-icon:first-child {
     margin-left: var(--lgs-gutter-s);
 }
@@ -217,4 +237,29 @@
 .lgs--text-widget-font-size-trigger, .lgs--text-widget-typeface-trigger,
 .lgs--text-widget-line-height-trigger {
     width: 10rem;
+}
+
+body.mobile .text-widget-editor-size-format-line {
+    flex-wrap: wrap;
+}
+
+body.mobile .text-widget-editor-size-format-line .lgs--text-widget-font-size-trigger {
+    flex: 0 0 auto;
+    width: 10rem;
+    min-width: 0;
+}
+
+body.mobile .text-widget-editor-format-row {
+    overflow-x: auto;
+    flex: 1 1 100%;
+    justify-content: flex-start;
+    width: 100%;
+    min-width: 0;
+    margin-left: 0;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+}
+
+body.mobile .text-widget-editor-format-row::-webkit-scrollbar {
+    display: none;
 }
