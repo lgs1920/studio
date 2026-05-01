@@ -224,6 +224,10 @@ export const VideoRecorderToolbar = ({toolbar}) => {
             showToast('success', `Saved in ${event.detail.filename}`)
         }
 
+        const handleError = (event) => {
+            showToast('error', event.detail?.error?.message ?? 'Video recording failed.')
+        }
+
         const events = [
             [ScreenMediaRecorder.events.INFO, handleInfo],
             [ScreenMediaRecorder.events.PAUSE, handlePause],
@@ -231,6 +235,8 @@ export const VideoRecorderToolbar = ({toolbar}) => {
             [ScreenMediaRecorder.events.MAX_SIZE, handleStop],
             [ScreenMediaRecorder.events.MAX_DURATION, handleStop],
             [ScreenMediaRecorder.events.STOP, handleStop],
+            [ScreenMediaRecorder.events.CANCEL, handleStop],
+            [ScreenMediaRecorder.events.ERROR, handleError],
             [ScreenMediaRecorder.events.DOWNLOAD, handleDownload],
             [ScreenMediaRecorder.events.FINALIZE, handleFinalize],
         ]

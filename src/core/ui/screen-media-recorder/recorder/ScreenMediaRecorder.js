@@ -31,6 +31,7 @@ const VIDEO_CODEC_PROBE_TIMEOUT_MS = 2500
 const VIDEO_START_TIMEOUT_MS = 8000
 const VIDEO_FIRST_PACKET_TIMEOUT_MS = 3500
 const VIDEO_START_CLEANUP_TIMEOUT_MS = 2000
+const VIDEO_EMPTY_OUTPUT_MAX_BYTES = 256
 
 /**
  * Singleton class responsible for screen/canvas/stream recording using mediabunny
@@ -152,10 +153,7 @@ export class ScreenMediaRecorder extends EventTarget {
     #currentFps = 0
     #lastInfoSampleTimeMs = null
     #lastInfoFrameCount = 0
-    #lastFrameError = null
-    #firstEncodedPacketPromise = null
-    #resolveFirstEncodedPacket = null
-    #rejectFirstEncodedPacket = null
+    #firstEncodedPacketMonitorId = 0
 
     constructor() {
         super()
@@ -432,6 +430,7 @@ export class ScreenMediaRecorder extends EventTarget {
     }
 
     #clearRuntimeReferences = () => {
+        this.#firstEncodedPacketMonitorId += 1
         this.#videoSource = null
         this.#output = null
         this.#rafId = null
@@ -459,14 +458,15 @@ export class ScreenMediaRecorder extends EventTarget {
     }
 
     #handleFrameEncodingError = (error) => {
-        this.#lastFrameError = error
+        if (!this.#isRecording) {
+            return
+        }
         if (this.#encodedPackets === 0) {
-            this.#rejectFirstEncodedPacket?.(error)
+            void this.#failActiveRecording(error)
+            return
         }
-        if (this.#isRecording) {
-            console.error('[ScreenMediaRecorder] Frame encoding failed', error)
-            this.dispatchEvent(new CustomEvent(ScreenMediaRecorder.events.ERROR, {detail: {error}}))
-        }
+        console.error('[ScreenMediaRecorder] Frame encoding failed', error)
+        this.dispatchEvent(new CustomEvent(ScreenMediaRecorder.events.ERROR, {detail: {error}}))
     }
 
     /** Pause encoding */
@@ -572,7 +572,6 @@ export class ScreenMediaRecorder extends EventTarget {
                                           target: new BufferTarget(),
                                       })
             await this.#output.setMetadataTags(this.#metadata)
-            this.#prepareFirstEncodedPacketWaiter()
             this.#videoSource = new CanvasSource(this.#canvas, this.#getCanvasSourceConfig(outputConfig, safe))
 
             const maximumPacketCount = Number.isFinite(this.#maxDuration)
@@ -603,9 +602,9 @@ export class ScreenMediaRecorder extends EventTarget {
             this.#startMonitoring()
             this.#scheduleNextFrame()
             this.#submitVideoFrame(0, this.#frameIntervalSec, {keyFrame: true})
-            await this.#waitForFirstEncodedPacket()
 
             this.dispatchEvent(new CustomEvent(ScreenMediaRecorder.events.START))
+            this.#startFirstEncodedPacketMonitor()
         }
         catch (error) {
             await this.#cleanupFailedStart()
@@ -648,10 +647,7 @@ export class ScreenMediaRecorder extends EventTarget {
         this.#currentFps = 0
         this.#lastInfoSampleTimeMs = null
         this.#lastInfoFrameCount = 0
-        this.#lastFrameError = null
-        this.#firstEncodedPacketPromise = null
-        this.#resolveFirstEncodedPacket = null
-        this.#rejectFirstEncodedPacket = null
+        this.#firstEncodedPacketMonitorId += 1
     }
 
     /** Enforce max duration and max size limits */
@@ -817,7 +813,11 @@ export class ScreenMediaRecorder extends EventTarget {
             latencyMode:          'realtime',
             hardwareAcceleration,
         }
-        const encodableCodecs = await getEncodableVideoCodecs(codecCandidates, codecProbeOptions)
+        const encodableCodecs = await this.#withTimeout(
+            getEncodableVideoCodecs(codecCandidates, codecProbeOptions),
+            VIDEO_CODEC_PROBE_TIMEOUT_MS,
+            `Video codec probe timed out for ${codecCandidates.join(', ')}.`,
+        )
         console.info('[ScreenMediaRecorder] Video codec probe', {
             browser: __.device.browser,
             dimensions: safe,
@@ -868,33 +868,53 @@ export class ScreenMediaRecorder extends EventTarget {
         },
         onEncodedPacket:    () => {
             this.#encodedPackets += 1
-            this.#resolveFirstEncodedPacket?.()
         },
     })
 
-    #prepareFirstEncodedPacketWaiter = () => {
-        this.#firstEncodedPacketPromise = new Promise((resolve, reject) => {
-            this.#resolveFirstEncodedPacket = resolve
-            this.#rejectFirstEncodedPacket = reject
-        })
-        this.#firstEncodedPacketPromise.catch(() => {
-            // A frame error can reject before startVideo reaches the explicit await.
-        })
+    #startFirstEncodedPacketMonitor = () => {
+        const monitorId = ++this.#firstEncodedPacketMonitorId
+        setTimeout(() => {
+            if (monitorId !== this.#firstEncodedPacketMonitorId || !this.#isRecording || this.#encodedPackets > 0) {
+                return
+            }
+
+            void this.#failActiveRecording(new Error('Video encoder did not produce any MP4 frame on this browser.'))
+        }, VIDEO_FIRST_PACKET_TIMEOUT_MS)
     }
 
-    #waitForFirstEncodedPacket = async () => {
-        if (this.#encodedPackets > 0) {
+    #emitRecorderError = (error) => {
+        const safeError = error instanceof Error ? error : new Error(String(error))
+        console.error('[ScreenMediaRecorder] Video recording failed', safeError)
+        this.dispatchEvent(new CustomEvent(ScreenMediaRecorder.events.ERROR, {detail: {error: safeError}}))
+        return safeError
+    }
+
+    #failActiveRecording = async (error) => {
+        if (!this.#isRecording && !this.#isPaused) {
             return
         }
-        if (this.#lastFrameError) {
-            throw this.#lastFrameError
+
+        this.#emitRecorderError(error)
+        try {
+            await this.cancelVideo()
         }
-        await this.#withTimeout(
-            this.#firstEncodedPacketPromise,
-            VIDEO_FIRST_PACKET_TIMEOUT_MS,
-            'Video encoder did not produce any MP4 frame on this browser.',
-            true,
-        )
+        catch (cancelError) {
+            console.warn('[ScreenMediaRecorder] Failed to cancel invalid video recording', cancelError)
+            this.#reset()
+            this.#clearRuntimeReferences()
+            document.body.classList.remove(ScreenMediaRecorder.CLASSES.RECORDING, ScreenMediaRecorder.CLASSES.PAUSED)
+            this.dispatchEvent(new CustomEvent(ScreenMediaRecorder.events.CANCEL))
+        }
+    }
+
+    #isEmptyFinalizedVideo = () => !(this.#blob instanceof Blob) || this.#blob.size <= VIDEO_EMPTY_OUTPUT_MAX_BYTES
+
+    #discardFinalizedVideo = (error) => {
+        this.#emitRecorderError(error)
+        this.#reset()
+        this.#clearRuntimeReferences()
+        document.body.classList.remove(ScreenMediaRecorder.CLASSES.RECORDING, ScreenMediaRecorder.CLASSES.PAUSED)
+        this.dispatchEvent(new CustomEvent(ScreenMediaRecorder.events.CANCEL))
     }
 
     #cleanupFailedStart = async () => {
@@ -957,6 +977,11 @@ export class ScreenMediaRecorder extends EventTarget {
             await this.#output.finalize()
             this.#blob = new Blob([this.#output.target.buffer], {type: this.#mimeType})
             this.#sizeBytes = this.#blob.size
+        }
+
+        if (this.#isEmptyFinalizedVideo()) {
+            this.#discardFinalizedVideo(new Error('Video encoder produced an empty MP4 output on this browser.'))
+            return
         }
 
         this.#emitInfo()
