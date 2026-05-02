@@ -49,6 +49,61 @@
     gap: var(--lgs-gutter-s);
 }
 
+.journey-statistics-scroll-area {
+    width: 100%;
+    height: clamp(14rem, calc(100dvh - 24rem), 34rem);
+}
+
+#journey-statistics-settings {
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+    width: 100%;
+    padding-bottom: calc(3 * var(--lgs-gutter));
+    gap: var(--lgs-gutter-s);
+}
+
+.journey-statistics-scroll-area .lgs-scrollbars .view {
+    padding-bottom: calc(4 * var(--lgs-gutter)) !important;
+}
+
+.journey-statistics-settings-row {
+    display: grid;
+    gap: var(--lgs-gutter-s);
+    grid-template-columns: 1fr;
+}
+
+.journey-statistics-threshold-grid {
+    display: flex;
+    flex-direction: column;
+    gap: var(--lgs-gutter-s);
+}
+
+.journey-statistics-threshold-row {
+    display: grid;
+    align-items: start;
+    gap: var(--lgs-gutter-xs);
+    grid-template-columns: 1fr auto;
+}
+
+.journey-statistics-threshold-input {
+    width: 100%;
+}
+
+.journey-statistics-field-reset {
+    margin-top: 1.5rem;
+}
+
+.journey-statistics-field-reset::part(base) {
+    width: var(--lgs-line-dimension);
+    min-width: var(--lgs-line-dimension);
+    padding: 0;
+}
+
+.journey-statistics-reset {
+    display: flex;
+    justify-content: flex-end;
+}
 /***************************************
  * Menu disposition
  */

@@ -14,6 +14,7 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
+import { Journey } from '@Core/Journey'
 import { WaCard, WaIcon, WaOption, WaSelect } from '@web.awesome.me/webawesome-pro/dist/react'
 import classNames                             from 'classnames'
 import { memo, useCallback, useEffect, useMemo, useRef } from 'react'
@@ -104,6 +105,42 @@ export const JourneySelector = memo(({
         }
     }, [theJourney])
 
+    const renderActivityIcon = useCallback((journey = theJourney) => {
+        const activity = Journey.activityProfile(journey?.activity, journey?.activitySettings)
+
+        return (
+            <WaIcon
+                className="lgs--journey-activity-icon"
+                name={activity.icon ?? 'person-hiking'}
+                title={activity.label}
+                variant="regular"
+            />
+        )
+    }, [theJourney])
+
+    const renderJourneyIcons = useCallback((journey = theJourney) => {
+        return (
+            <span className="lgs--journey-icons-in-settings">
+                <span className="lgs--track-colors-in-settings">
+                    {journey.visible ?
+                     (Array.from(journey.tracks.values()).slice(0, journey.visible ? 3 : 1).map(track => (
+                         <WaIcon key={track.slug}
+                             name="hexagon"
+                             style={getTrackIconStyle(journey, track)}
+                             variant="solid"
+                         />
+                     ))) : (
+                         <WaIcon
+                             name="mask"
+                             style={getTrackIconStyle(journey)}
+                             variant="solid"
+                         />)}
+                </span>
+                {renderActivityIcon(journey)}
+            </span>
+        )
+    }, [getTrackIconStyle, renderActivityIcon, theJourney])
+
     if (journeys.length === 0) {
         return null
     }
@@ -120,15 +157,8 @@ export const JourneySelector = memo(({
                     ref={setSelectRef}
                     value={theJourney.slug}
                 >
-                    <div slot="start" className="lgs--track-colors-in-settings">
-                        {Array.from(lgs.theJourney.tracks.values()).slice(0, theJourney.visible ? 3 : 1).map(track => (
-                            track.visible && (
-                                < WaIcon key={track.slug}
-                                    name={theJourney.visible ? 'hexagon' : 'mask'}
-                                    style={getTrackIconStyle(lgs.theJourney, track)}
-                                    variant="solid"
-                                />)
-                        ))}
+                    <div slot="start">
+                        {renderJourneyIcons(lgs.theJourney)}
                     </div>
                     {journeys.map(journey => (
                         <WaOption
@@ -136,20 +166,8 @@ export const JourneySelector = memo(({
                             value={journey.slug}
                             className={classNames('journey-title', {masked: !journey.visible})}
                         >
-                            <div slot="start" className="lgs--track-colors-in-settings">
-                                {journey.visible ?
-                                 (Array.from(journey.tracks.values()).slice(0, journey.visible ? 3 : 1).map(track => (
-                                     <WaIcon key={track.slug}
-                                         name="hexagon"
-                                         style={getTrackIconStyle(journey, track)}
-                                         variant="solid"
-                                     />
-                                 ))) : (
-                                     <WaIcon
-                                         name="mask"
-                                         style={getTrackIconStyle(journey)}
-                                         variant="solid"
-                                     />)}
+                            <div slot="start">
+                                {renderJourneyIcons(journey)}
                             </div>
                             <div>{journey.title}</div>
                         </WaOption>
@@ -160,10 +178,7 @@ export const JourneySelector = memo(({
             {journeys.length === 1 && single && (
                 <WaCard className="journey-title" appearance="plain">
                     <span>
-                        <WaIcon
-                            name={theJourney.visible ? 'hexagon' : 'mask'}
-                            style={getTrackIconStyle()}
-                        /> {theJourney.title}
+                        {renderJourneyIcons(theJourney)} {theJourney.title}
                     </span>
                 </WaCard>
             )}

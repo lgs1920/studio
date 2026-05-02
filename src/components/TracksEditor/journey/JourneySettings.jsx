@@ -63,7 +63,7 @@ import {
 }                                     from '@Utils/UIToast'
 import { decodeHTMLEntities }         from '@Utils/TextUtils'
 import {
-    WaButton, WaCard, WaIcon, WaInput, WaTab, WaTabGroup, WaTabPanel, WaTextarea, WaTooltip,
+    WaButton, WaCard, WaIcon, WaInput, WaOption, WaSelect, WaTab, WaTabGroup, WaTabPanel, WaTextarea, WaTooltip,
 }                                     from '@web.awesome.me/webawesome-pro/dist/react'
 import { useEffect, useMemo, useRef } from 'react'
 import { sprintf }                    from 'sprintf-js'
@@ -97,6 +97,7 @@ export const JourneySettings = () => {
     const {running, target} = useSnapshot($uiRotate)
     const {journey: autoRotateJourney} = useSnapshot($cameraSettings)
     const {open} = useSnapshot($drawers)
+    const activitySettings = useSnapshot(lgs.settings.journey.activity)
 
     const _title = useRef(null)
     const _description = useRef(null)
@@ -123,6 +124,8 @@ export const JourneySettings = () => {
         }
         return list.concat(Array.from(ElevationServer.SERVERS.values()))
     }, [journey?.hasElevation, journey?.elevationServer])
+
+    const activityList = useMemo(() => Journey.activityProfiles(), [activitySettings.types])
 
     /**
      * Coordinates preparation logic
@@ -267,6 +270,23 @@ export const JourneySettings = () => {
         await Utils.updateJourney(UPDATE_JOURNEY_SILENTLY)
     }, 300)
 
+    const setActivity = async (event) => {
+        const activity = event.target.value
+        if (!activity || activity === $journeyEditor.journey.activity) {
+            return
+        }
+
+        $journeyEditor.journey.activity = activity
+        $journeyEditor.journey.activitySettings = Journey.activityProfile(activity)
+        const updated = await Utils.updateJourney(UPDATE_JOURNEY_SILENTLY)
+        updated.addToContext()
+        const track = updated.tracks.get($journeyEditor.track?.slug) ?? Array.from(updated.tracks.values())[0]
+        track?.addToContext()
+        track?.addToEditor()
+        Utils.renderJourneySettings()
+        __.ui.profiler.draw()
+    }
+
     const setJourneyVisibility = async (v) => {
         if (running) {
             await __.ui.cameraManager.stopRotate()
@@ -285,7 +305,7 @@ export const JourneySettings = () => {
     }
 
     const focusOnJourney = async () => {
-        if (running && target.instanceOf(CURRENT_JOURNEY)) {
+        if (running && target?.instanceOf?.(CURRENT_JOURNEY)) {
             return
         }
         await setJourneyVisibility(true)
@@ -299,7 +319,7 @@ export const JourneySettings = () => {
         if (running) {
             _allowRotation.current = false
             await __.ui.cameraManager.stopRotate()
-            if (target.element === lgs.theJourney.element) {
+            if (target?.element === lgs.theJourney.element) {
                 return
             }
         }
@@ -380,6 +400,20 @@ export const JourneySettings = () => {
                                         onChange={setTitle}
                                     />
 
+                                    <WaSelect
+                                        label="Activity"
+                                        size="small"
+                                        value={journey.activity ?? Journey.defaultActivity()}
+                                        onChange={setActivity}
+                                    >
+                                        {activityList.map(activity => (
+                                            <WaOption key={activity.id} value={activity.id}>
+                                                {activity.icon && <WaIcon slot="start" name={activity.icon} variant="regular"/>}
+                                                {activity.label}
+                                            </WaOption>
+                                        ))}
+                                    </WaSelect>
+
                                     <WaTextarea
                                         label={journey.tracks.size === 1 ? 'Description' : 'Journey Description'}
                                         ref={_description}
@@ -415,7 +449,7 @@ export const JourneySettings = () => {
                                                     placement="bottom"
                                                     for="rotation-in-settings"
                                                 >
-                                                    {running && target.instanceOf(CURRENT_JOURNEY) ? 'Stop rotation' : 'Start rotation'}
+                                                    {running && target?.instanceOf?.(CURRENT_JOURNEY) ? 'Stop rotation' : 'Start rotation'}
                                                 </WaTooltip>
                                                 <WaButton
                                                     size="small"
@@ -426,14 +460,14 @@ export const JourneySettings = () => {
                                                     appearance="plain">
                                                     <WaIcon name="arrow-rotate-right"
                                                             variant="regular"
-                                                            animation={running && target.instanceOf(CURRENT_JOURNEY) ? 'spin' : ''}/>
+                                                            animation={running && target?.instanceOf?.(CURRENT_JOURNEY) ? 'spin' : ''}/>
                                                 </WaButton>
                                             </>
                                         )}
                                         <WaTooltip
                                             for="auto-rotate-in-settings"
                                             placement="bottom">
-                                            {running && target.instanceOf(CURRENT_JOURNEY) ? 'Stop rotation' : 'Focus on Journey'}
+                                            {running && target?.instanceOf?.(CURRENT_JOURNEY) ? 'Stop rotation' : 'Focus on Journey'}
                                         </WaTooltip>
                                         <WaButton id="auto-rotate-in-settings"
                                                   size="small"
@@ -443,8 +477,8 @@ export const JourneySettings = () => {
                                                   appearance="plain">
                                             <WaIcon
                                                 variant="regular"
-                                                name={running && autoRotateJourney && target.instanceOf(CURRENT_JOURNEY) ? 'arrow-rotate-right' : 'crosshairs-simple'}
-                                                animation={running && autoRotateJourney && target.instanceOf(CURRENT_JOURNEY) ? 'spin' : ''}
+                                                name={running && autoRotateJourney && target?.instanceOf?.(CURRENT_JOURNEY) ? 'arrow-rotate-right' : 'crosshairs-simple'}
+                                                animation={running && autoRotateJourney && target?.instanceOf?.(CURRENT_JOURNEY) ? 'spin' : ''}
                                             />
                                         </WaButton>
 

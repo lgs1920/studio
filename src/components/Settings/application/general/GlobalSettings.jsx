@@ -15,6 +15,7 @@
  ******************************************************************************/
 
 import { CameraSettings }      from '@Components/Settings/application/general/CameraSettings'
+import { JourneyStatisticsSettings } from '@Components/Settings/application/general/JourneyStatisticsSettings'
 import { UnitsSystemSettings } from '@Components/Settings/application/general/UnitsSystemSettings'
 import { WaDetails } from '@web.awesome.me/webawesome-pro/dist/react'
 import { memo, useRef } from 'react'
@@ -39,6 +40,14 @@ export const GlobalSettings = memo(() => {
                        className="lgs--details-hoverable"
             >
                 <CameraSettings/>
+            </WaDetails>
+
+            <WaDetails id={'journey-statistics-settings-details'}
+                       small
+                       name="global-settings"
+                       className="lgs--details-hoverable"
+            >
+                <JourneyStatisticsSettings/>
             </WaDetails>
 
         </div>
