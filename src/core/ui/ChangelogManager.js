@@ -17,19 +17,30 @@
 const CHANGELOG_EXTENSION_PATTERN = /\.md$/i
 const CHANGELOG_VERSION_PATTERN = /^\d{8}-(\d+(?:\.\d+)+(?:-[0-9A-Za-z][0-9A-Za-z.-]*)?(?:\+[0-9A-Za-z][0-9A-Za-z.-]*)?)$/
 
+export const changelogFileName = file => {
+    const source = typeof file === 'string'
+                   ? file
+                   : file?.file ?? file?.name ?? file?.path ?? ''
+
+    return String(source).split(/[\\/]/).pop()
+}
+
 export const changelogVersionFromFile = file => {
-    const basename = String(file ?? '').split(/[\\/]/).pop().replace(CHANGELOG_EXTENSION_PATTERN, '')
+    const basename = changelogFileName(file).replace(CHANGELOG_EXTENSION_PATTERN, '')
     return basename.match(CHANGELOG_VERSION_PATTERN)?.[1] ?? null
 }
 
-const normalizeChangelogFile = file => {
+export const normalizeChangelogFile = file => {
     if (!file) {
         return file
     }
 
+    const fileName = changelogFileName(file)
+    const normalizedFile = typeof file === 'string' ? {file: fileName} : {...file, file: fileName}
+
     return {
-        ...file,
-        version: changelogVersionFromFile(file.file ?? file.name ?? file.path) ?? file.version,
+        ...normalizedFile,
+        version: changelogVersionFromFile(fileName) ?? normalizedFile.version,
     }
 }
 
