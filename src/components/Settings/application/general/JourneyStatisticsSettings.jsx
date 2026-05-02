@@ -233,20 +233,22 @@ export const JourneyStatisticsSettings = () => {
                         <div className="journey-statistics-threshold-grid">
                             {THRESHOLDS.map(field => (
                                 <div className="journey-statistics-threshold-row" key={field.key}>
-                                    <WaInput
-                                        className="journey-statistics-threshold-input"
-                                        label={field.label}
-                                        size="small"
-                                        type="number"
-                                        min="0"
-                                        step={field.step}
-                                        value={displayValue(field)}
-                                        onInput={(event) => updateThreshold(field.key, event)}
-                                        withoutSpinButtons
-                                    >
-                                        <span slot="hint">{field.hint}</span>
-                                        <span slot="end">{field.suffix}</span>
-                                    </WaInput>
+                                    <div className="journey-statistics-threshold-field">
+                                        <WaInput
+                                            className="journey-statistics-threshold-input"
+                                            label={field.label}
+                                            size="small"
+                                            type="number"
+                                            min="0"
+                                            step={field.step}
+                                            value={displayValue(field)}
+                                            onInput={(event) => updateThreshold(field.key, event)}
+                                            withoutSpinButtons
+                                        >
+                                            <span slot="end">{field.suffix}</span>
+                                        </WaInput>
+                                        <span className="journey-statistics-threshold-hint">{field.hint}</span>
+                                    </div>
                                     <WaButton
                                         className="journey-statistics-field-reset"
                                         size="small"
