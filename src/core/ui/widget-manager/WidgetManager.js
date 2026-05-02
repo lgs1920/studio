@@ -19,9 +19,10 @@
  * Delegates functionality to specialized classes.
  */
 import {
-    JOURNEY_EDITOR_DRAWER, PROFILE_WIDGET, SCENE_WIDGETS_BOARD, VIDEO_WIDGETS_BOARD, WIDGET_EDITOR_PRE_RENDER_EVENT,
-    WIDGETS_EDITOR_DRAWER,
+    CAMERA_INFORMATION_WIDGET, JOURNEY_EDITOR_DRAWER, PROFILE_WIDGET, SCENE_WIDGETS_BOARD, VIDEO_WIDGETS_BOARD,
+    WIDGET_EDITOR_POST_RENDER_EVENT, WIDGET_EDITOR_PRE_RENDER_EVENT, WIDGETS_EDITOR_DRAWER,
 }                             from '@Core/constants'
+import { WidgetDynamicRenderer } from '@Core/ui/widget-manager/dynamic-render/WidgetDynamicRender'
 import { WidgetDBManager }    from '@Core/ui/widget-manager/WidgetDBManager'
 import { WidgetRotatable }    from '@Core/ui/widget-manager/WidgetRotatable'
 import { WidgetCoreControls } from './WidgetCoreControls'
@@ -569,6 +570,122 @@ export class WidgetManager {
         }
 
         dispatch()
+    }
+
+    /**
+     * Checks whether a widget can be removed from the scene.
+     *
+     * @param {string|null|undefined} widgetId - The widget ID
+     * @returns {boolean} True if the widget can be removed
+     */
+    canRemoveWidget = (widgetId) => {
+        if (!widgetId) {
+            return false
+        }
+        const config = this.getWidgetConfig(widgetId)
+        return Boolean(config?.contextMenu?.canRemove && this.getElementById(widgetId))
+    }
+
+    /**
+     * Checks whether a widget can be edited.
+     *
+     * @param {string|null|undefined} widgetId - The widget ID
+     * @returns {boolean} True if the widget editor can be opened
+     */
+    canEditWidget = (widgetId) => {
+        if (!widgetId) {
+            return false
+        }
+        const config = this.getWidgetConfig(widgetId)
+        return Boolean(config?.contextMenu?.canEdit && this.getElementById(widgetId))
+    }
+
+    /**
+     * Opens or toggles the editor drawer for a widget.
+     *
+     * @param {string|null|undefined} widgetId - The widget ID
+     * @param {Object} [options] - Editor options
+     * @param {boolean} [options.toggle=false] - Close the editor if it is already editing this widget
+     * @returns {boolean} True when the widget was editable
+     */
+    editWidget = (widgetId, options = {}) => {
+        if (!this.canEditWidget(widgetId)) {
+            return false
+        }
+
+        const {toggle = false} = options
+        const drawers = lgs.stores?.ui?.drawers
+        const isCurrentlyEditing = drawers?.open === WIDGETS_EDITOR_DRAWER && drawers.entity === widgetId
+
+        lgs.stores.ui.widget.current = {id: widgetId}
+
+        if (isCurrentlyEditing) {
+            if (toggle) {
+                __.ui.drawerManager?.close?.()
+            }
+            return true
+        }
+
+        window.dispatchEvent(new CustomEvent(WIDGET_EDITOR_PRE_RENDER_EVENT, {
+            detail: {entity: widgetId},
+        }))
+        __.ui.drawerManager.open(WIDGETS_EDITOR_DRAWER, {
+            action: 'edit-current',
+            entity: widgetId,
+        })
+        window.dispatchEvent(new CustomEvent(WIDGET_EDITOR_POST_RENDER_EVENT, {
+            detail: {entity: widgetId},
+        }))
+
+        return true
+    }
+
+    /**
+     * Removes a widget and cleans up the related UI state.
+     *
+     * @param {string|null|undefined} widgetId - The widget ID
+     * @returns {Promise<boolean>} True when a widget was removed
+     */
+    removeWidget = async (widgetId) => {
+        if (!this.canRemoveWidget(widgetId)) {
+            return false
+        }
+
+        const element = this.getElementById(widgetId)
+        const type = widgetId.split('#')[0]
+
+        WidgetDynamicRenderer.instance.destroyWidget(widgetId)
+
+        const cameraSettings = lgs.settings?.ui?.camera
+        if (type === CAMERA_INFORMATION_WIDGET && cameraSettings) {
+            cameraSettings.showPosition = false
+            cameraSettings.showHPR = false
+            cameraSettings.showTargetPosition = false
+        }
+
+        const elements = lgs.settings?.widgets?.[type]?.configuration?.elements
+        if (elements && Object.prototype.hasOwnProperty.call(elements, widgetId)) {
+            delete elements[widgetId]
+        }
+
+        if (element) {
+            await this.disposeElement(element)
+        }
+
+        const drawers = lgs.stores?.ui?.drawers
+        if (drawers?.open === WIDGETS_EDITOR_DRAWER && drawers.entity === widgetId) {
+            __.ui.drawerManager?.close?.()
+        }
+
+        if (lgs.stores?.ui?.widget?.current?.id === widgetId) {
+            lgs.stores.ui.widget.current = {id: null}
+        }
+
+        if (lgs.stores?.ui?.contextMenu?.targetId === widgetId) {
+            __.ui.contextMenu?.hide?.()
+        }
+
+        return true
     }
 
     /**
