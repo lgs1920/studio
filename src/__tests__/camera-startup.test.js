@@ -14,7 +14,7 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { FOCUS_CENTROID, FOCUS_LAST, FOCUS_STARTER } from '@Core/constants'
+import { DEFAULT_2D_FOCUS_PITCH, FOCUS_CENTROID, FOCUS_LAST, FOCUS_STARTER } from '@Core/constants'
 import {
     buildStartupCameraFocusOptions, cameraPositionWithDefaults, cameraRangeFromStoredPosition, cameraStoreForTarget,
     configureStartupCamera,
@@ -296,7 +296,7 @@ describe('startup camera positioning', () => {
             expect(options.rpm).toBe(4)
         })
 
-        it('forces a top-down pitch only for non-restored startup focus without relief', () => {
+        it('keeps an existing pitch for non-restored startup focus without relief', () => {
             const cameraStore = cameraStoreForTarget(starter, {pitch: -25}, cameraSettings)
             const options = buildStartupCameraFocusOptions({
                                                                cameraStore,
@@ -304,8 +304,26 @@ describe('startup camera positioning', () => {
                                                                noRelief:    true,
                                                            })
 
-            expect(options.pitch).toBe(-90)
+            expect(options.pitch).toBe(-25)
             expect(options.cameraPosition).toBeNull()
+        })
+
+        it('uses the 2D focus pitch when startup focus has no stored pitch without relief', () => {
+            const cameraStore = {
+                target:   starter,
+                position: {
+                    heading: 0,
+                    roll:    0,
+                    range:   1000,
+                },
+            }
+            const options = buildStartupCameraFocusOptions({
+                                                               cameraStore,
+                                                               focusTarget: starter,
+                                                               noRelief:    true,
+                                                           })
+
+            expect(options.pitch).toBe(DEFAULT_2D_FOCUS_PITCH)
         })
 
         it('keeps configured pitch for non-restored startup focus with relief', () => {

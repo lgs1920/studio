@@ -432,7 +432,6 @@ export class POIManager {
         __.ui.sceneManager.focus(target, {
             target:  target,
             heading: lgs.settings.camera.heading,
-            pitch:   lgs.settings.camera.pitch,
             roll:    lgs.settings.camera.roll,
             range:   lgs.settings.camera.range,
             ...options,

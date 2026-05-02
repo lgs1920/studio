@@ -15,6 +15,7 @@
  ******************************************************************************/
 
 import * as Cesium from 'cesium'
+import { DEFAULT_2D_FOCUS_PITCH } from '@Core/constants'
 import {
     Cartesian2, Cartesian3, Cartographic, Ellipsoid, HeadingPitchRange, Math as M, Matrix4, SceneMode, Transforms,
 }                  from 'cesium'
@@ -66,7 +67,7 @@ export class CameraUtils {
                 roll: M.toDegrees(camera.roll),
             }
         } else {
-            return {heading: 360, pitch: -90, roll: 360}
+            return {heading: 360, pitch: DEFAULT_2D_FOCUS_PITCH, roll: 360}
         }
     }
 

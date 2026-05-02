@@ -14,7 +14,9 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { CURRENT_JOURNEY, FOCUS_CENTROID, FOCUS_LAST, FOCUS_STARTER } from '@Core/constants'
+import {
+    CURRENT_JOURNEY, DEFAULT_2D_FOCUS_PITCH, FOCUS_CENTROID, FOCUS_LAST, FOCUS_STARTER,
+}                                                                     from '@Core/constants'
 import { MapTarget }                                                  from '@Core/MapTarget'
 import { Cartesian3 }                                                 from 'cesium'
 
@@ -249,11 +251,12 @@ export const buildStartupCameraFocusOptions = ({
                                                    callback,
                                                }) => {
     const restoreCameraPosition = cameraStore.restoreCameraPosition === true
+    const pitch = finiteCameraNumber(cameraStore.position?.pitch) ?? (noRelief ? DEFAULT_2D_FOCUS_PITCH : -30)
 
     return {
         target:         focusTarget,
         heading:        cameraStore.position.heading,
-        pitch:          !restoreCameraPosition && noRelief ? -90 : cameraStore.position.pitch,
+        pitch,
         roll:           cameraStore.position.roll,
         range:          cameraStore.position.range,
         infinite:       true,

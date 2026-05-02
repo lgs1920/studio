@@ -237,6 +237,7 @@ export const SCENE_MODE_3D = {
 export const SCENE_MODE_COLUMBUS = {
     value: 2.5, label: '2.5D', title: 'Columbus View', icon: 'road',
 }
+export const DEFAULT_2D_FOCUS_PITCH = -45
 
 export const SCENE_MODES = new Map([
                                        [SCENE_MODE_2D.value, SCENE_MODE_2D],

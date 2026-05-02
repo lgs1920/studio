@@ -15,8 +15,8 @@
  ******************************************************************************/
 
 import {
-    ADD_JOURNEY, CURRENT_JOURNEY, CURRENT_POI, CURRENT_STORE, CURRENT_TRACK, DRAWING_FROM_DB, DRAWING_FROM_UI,
-    FOCUS_ON_FEATURE, NO_FOCUS, REFRESH_DRAWING, SCENE_MODE_2D,
+    ADD_JOURNEY, CURRENT_JOURNEY, CURRENT_POI, CURRENT_STORE, CURRENT_TRACK, DEFAULT_2D_FOCUS_PITCH, DRAWING_FROM_DB,
+    DRAWING_FROM_UI, FOCUS_ON_FEATURE, NO_FOCUS, REFRESH_DRAWING, SCENE_MODE_2D,
 }                                                      from '@Core/constants'
 import { Journey }                                     from '@Core/Journey'
 import { default as centroid }                         from '@turf/centroid'
@@ -282,7 +282,7 @@ export class TrackUtils {
                         latitude:  M.toDegrees(cartographic.latitude),
                     }
             }
-            position.pitch = -90
+            position.pitch = DEFAULT_2D_FOCUS_PITCH
             position.height = M.toDegrees(cartographic.height)
 
             __.ui.cameraManager.settings = {

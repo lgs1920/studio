@@ -15,8 +15,9 @@
  ******************************************************************************/
 
 import {
-    ADD_JOURNEY, CURRENT_JOURNEY, DRAWING, DRAWING_FROM_DB, FOCUS_LAST, HIGH_TERRAIN_PRECISION, LOW_TERRAIN_PRECISION,
-    REFRESH_DRAWING, SCENE_MODE_2D, SCENE_MODE_3D, SCENE_MODE_COLUMBUS, UPDATE_JOURNEY_SILENTLY,
+    ADD_JOURNEY, CURRENT_JOURNEY, DEFAULT_2D_FOCUS_PITCH, DRAWING, DRAWING_FROM_DB, FOCUS_LAST,
+    HIGH_TERRAIN_PRECISION, LOW_TERRAIN_PRECISION, REFRESH_DRAWING, SCENE_MODE_2D, SCENE_MODE_3D,
+    SCENE_MODE_COLUMBUS, UPDATE_JOURNEY_SILENTLY,
 }                    from '@Core/constants'
 import { MapTarget } from '@Core/MapTarget'
 import bbox          from '@turf/bbox'
@@ -89,6 +90,32 @@ const cameraRangeFromStoredPosition = (position = {}, target = {}) => {
 
 const cameraRangeValue = (position, target, fallback) =>
     cameraRangeFromStoredPosition(position, target) ?? cameraPositionValue(position, 'range', fallback)
+
+const sceneIs2D = () => typeof lgs !== 'undefined'
+    && (lgs?.settings?.scene?.mode?.value * 1 === SCENE_MODE_2D.value
+        || lgs?.scene?.mode === SceneMode.SCENE2D)
+
+const defaultFocusPitch = () => sceneIs2D()
+                                 ? DEFAULT_2D_FOCUS_PITCH
+                                 : (typeof lgs !== 'undefined' ? lgs.settings.camera.pitch : -30)
+
+const focusPitchValue = (position, fallback = defaultFocusPitch()) =>
+    cameraPositionValue(position, 'pitch', fallback)
+
+const tracksFeatureSource = tracks => {
+    const features = Array.from(tracks ?? [])
+        .map(track => track?.content)
+        .filter(Boolean)
+
+    if (features.length === 0) {
+        return null
+    }
+
+    return features.length === 1 ? features[0] : {
+        type: 'FeatureCollection',
+        features,
+    }
+}
 
 export class SceneUtils {
     static resolveFlightDuration = (distance, baseDuration, {resetCamera = false, snapDistance = 0} = {}) => {
@@ -361,7 +388,8 @@ export class SceneUtils {
         }
 
         const range = cameraPositionValue(options, 'range', lgs.settings.camera.range)
-        const pitch = M.toRadians(cameraPositionValue(options, 'pitch', lgs.settings.camera.pitch))
+        const flyRange = cameraPositionValue(options, 'boundingSphereRange', range)
+        const pitch = M.toRadians(focusPitchValue(options))
         const heading = M.toRadians(cameraPositionValue(options, 'heading', lgs.settings.camera.heading))
         const roll = M.toRadians(cameraPositionValue(options, 'roll', lgs.settings.camera.roll))
         const cameraDestination = cameraPositionIsValid(options.cameraPosition)
@@ -406,8 +434,8 @@ export class SceneUtils {
             }
         }
 
-        const syncRestoredCamera = async () => {
-            if (!cameraDestination) {
+        const syncFocusedCamera = async () => {
+            if (!cameraDestination && !options.boundingSphere) {
                 return
             }
 
@@ -418,13 +446,18 @@ export class SceneUtils {
 
             target.camera = {
                 heading: M.toRadians(cameraPositionValue(__.ui.cameraManager.position, 'heading', options.heading ?? lgs.settings.camera.heading)),
-                pitch:   M.toRadians(cameraPositionValue(__.ui.cameraManager.position, 'pitch', options.pitch ?? lgs.settings.camera.pitch)),
+                pitch:   M.toRadians(focusPitchValue(__.ui.cameraManager.position, options.pitch ?? defaultFocusPitch())),
                 roll:    M.toRadians(cameraPositionValue(__.ui.cameraManager.position, 'roll', options.roll ?? lgs.settings.camera.roll)),
                 range:   cameraPositionValue(__.ui.cameraManager.position, 'range', range),
             }
         }
 
         const complete = async () => {
+            const shouldSyncFocusedCamera = Boolean(cameraDestination || options.boundingSphere)
+            if (shouldSyncFocusedCamera) {
+                await syncFocusedCamera()
+            }
+
             if (options?.bbox && options.bbox.show) {
                 SceneUtils.drawBbox(options.bbox.data, options.bbox.id)
             }
@@ -434,7 +467,6 @@ export class SceneUtils {
             }
 
             if (options.rotate ?? false) {
-                await syncRestoredCamera()
                 __.ui.cameraManager.rotateAround(target, {
                     rpm:       options.rpm ?? lgs.settings.camera.rpm,
                     direction: options.direction ?? 1,
@@ -447,10 +479,7 @@ export class SceneUtils {
             }
             else {
                 __.ui.sceneManager.stopRotate
-                if (cameraDestination) {
-                    await syncRestoredCamera()
-                }
-                else {
+                if (!shouldSyncFocusedCamera) {
                     await __.ui.cameraManager.raiseUpdateEvent()
                 }
                 __.ui.cameraManager.saveInformation(Date.now(), {sync: false})
@@ -494,24 +523,49 @@ export class SceneUtils {
             return true
         }
 
-        lgs.camera.flyToBoundingSphere(new BoundingSphere(
+        const flyToBoundingSphereOptions = {
+            ...flyOptions,
+            offset: new HeadingPitchRange(heading, pitch, flyRange),
+        }
+
+        lgs.camera.flyToBoundingSphere(options.boundingSphere ?? new BoundingSphere(
             Cartesian3.fromDegrees(longitude, latitude, height), 0,
-        ), {
-                                           ...flyOptions,
-                                           offset: new HeadingPitchRange(heading, pitch, range),
-                                       })
+        ), flyToBoundingSphereOptions)
 
         return true
     }
 
-    static getJourneyCentroid = async (journey) => {
-        // Let's use the first track
-        const track = journey?.tracks?.values().next().value
-        if (!track?.content) {
+    static getJourneyFeatureSource = (journey) => tracksFeatureSource(journey?.tracks?.values())
+
+    static getBboxBoundingSphere = (bboxData, height = 0) => {
+        if (!Array.isArray(bboxData) || bboxData.length !== 4) {
             return null
         }
 
-        const [longitude, latitude] = centroid(track.content).geometry.coordinates
+        const [west, south, east, north] = bboxData.map(finiteNumber)
+        if ([west, south, east, north].some(value => value === null)) {
+            return null
+        }
+
+        if (west === east && south === north) {
+            return new BoundingSphere(Cartesian3.fromDegrees(west, south, height), 0)
+        }
+
+        return BoundingSphere.fromPoints([
+                                             Cartesian3.fromDegrees(west, south, height),
+                                             Cartesian3.fromDegrees(west, north, height),
+                                             Cartesian3.fromDegrees(east, south, height),
+                                             Cartesian3.fromDegrees(east, north, height),
+                                         ])
+    }
+
+    static getJourneyCentroid = async (journey, source = null) => {
+        const focusSource = source ?? SceneUtils.getJourneyFeatureSource(journey)
+        if (!focusSource) {
+            return null
+        }
+
+        const [longitude, latitude] = centroid(focusSource).geometry.coordinates
         const storedHeight = journey?.camera?.target?.height
             ?? journey?.cameraOrigin?.target?.height
         let height = Number.isFinite(storedHeight) ? storedHeight : 0
@@ -548,6 +602,8 @@ export class SceneUtils {
                                        ...options
                                    }) => {
 
+        const focusTrackOnly = track !== null
+
         // If track not provided, we'll get the first one of the journey
         if (track === null) {
             // But we need to set the journey to the current one if there is no information
@@ -556,16 +612,17 @@ export class SceneUtils {
             }
             track = journey?.tracks?.values().next().value
         }
-        // else {
-        //     // We have a track, let's force the journey (even if there is one provided)
-        //     journey = lgs.journeys.get(track.parent)
-        // }
+        else if (journey === null && track.parent) {
+            journey = lgs.journeys.get(track.parent)
+        }
 
         if (!track?.content) {
             return
         }
 
-        const theBbox = SceneUtils.extendBbox(bbox(track.content), 2)
+        const focusSource = focusTrackOnly ? track.content : (SceneUtils.getJourneyFeatureSource(journey) ?? track.content)
+        const theBbox = SceneUtils.extendBbox(bbox(focusSource), 2)
+        const focusId = focusTrackOnly ? track.slug : (journey?.slug ?? track.slug)
 
         let point
         let cameraPosition = null
@@ -580,12 +637,17 @@ export class SceneUtils {
 
         if (!point) {
             // Centroid
-            const centroid = await SceneUtils.getJourneyCentroid(journey)
-            if (!centroid) {
+            const center = await SceneUtils.getJourneyCentroid(journey, focusSource)
+            if (!center) {
                 return
             }
-            point = new MapTarget(CURRENT_JOURNEY, {...centroid, ...{id: journey.slug}})
+            point = new MapTarget(CURRENT_JOURNEY, {...center, ...{id: focusId}})
         }
+
+        const focusBoundingSphere = cameraPositionIsValid(cameraPosition)
+                                    ? null
+                                    : SceneUtils.getBboxBoundingSphere(theBbox, point.height ?? 0)
+        const fallbackRange = 10000
 
         // Depending on what we are doing, we need to convert the destination
         // from world coordinates to scene coordinates
@@ -595,16 +657,16 @@ export class SceneUtils {
         }
         if (options.action !== UPDATE_JOURNEY_SILENTLY) {
             SceneUtils.focus(point, {
-                pitch:          cameraPositionValue(cameraPosition, 'pitch', -45),
+                pitch:          focusPitchValue(cameraPosition, DEFAULT_2D_FOCUS_PITCH),
                 heading:        cameraPositionValue(cameraPosition, 'heading', 0),
                 roll:           cameraPositionValue(cameraPosition, 'roll', 0),
-                range:          cameraRangeValue(cameraPosition, point, 10000),
+                range:          cameraRangeValue(cameraPosition, point, fallbackRange),
                 lookAt:      true,
                 rpm:         options.rpm ?? lgs.settings.camera.rpm,
                 direction:      options.direction ?? 1,
                 rotation:    1,
                 infinite:    false,
-                bbox:        {data: theBbox, id: track.slug, show: false},
+                bbox:        {data: theBbox, id: focusId, show: false},
                 convert:     convert,
                 rotate:      options.rotate,
                 action:      options.action,
@@ -612,12 +674,14 @@ export class SceneUtils {
                 callback:    options.callback,
                 initializer: options.initializer,
                 cameraPosition: cameraPositionIsValid(cameraPosition) ? cameraPosition : null,
+                boundingSphere: focusBoundingSphere,
+                boundingSphereRange: focusBoundingSphere?.radius > 0 ? 0 : undefined,
 
             })
 
             //Show BBox if requested
             if (options?.bbox ?? false) {
-                const id = `BBox#${track.slug}`
+                const id = `BBox#${focusId}`
                 // We remove the BBox if it already exists
                 if (lgs.viewer.entities.getById(id)) {
                     lgs.viewer.entities.removeById(id)
