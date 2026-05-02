@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-29
- * Last modified: 2026-04-29
+ * Created on: 2026-05-02
+ * Last modified: 2026-05-02
  *
  *
  * Copyright © 2026 LGS1920
@@ -79,13 +79,19 @@
     display: flex;
     flex-direction: column;
     padding: var(--lgs-gutter-s);
-    gap: var(--lgs-gutter-m);
+    gap: var(--lgs-gutter-s);
 }
 
 .lgs--shortcuts-section {
     display: flex;
     flex-direction: column;
     gap: var(--lgs-gutter-xs);
+}
+
+.lgs--shortcuts-section-card::part(body) {
+    display: flex;
+    flex-direction: column;
+    padding: var(--lgs-gutter-s);
 }
 
 .lgs--shortcuts-section h3 {
@@ -97,7 +103,7 @@
 .lgs--shortcuts-table {
     display: flex;
     flex-direction: column;
-    border-top: 1px solid var(--lgs-card-border-color);
+    gap: var(--lgs-gutter-xs);
 }
 
 .lgs--shortcuts-row {
@@ -105,7 +111,6 @@
     align-items: start;
     grid-template-columns: minmax(0, calc(40% - var(--lgs-gutter-s))) minmax(60%, 1fr);
     padding: var(--lgs-gutter-xs) 0;
-    border-bottom: 1px solid var(--lgs-card-border-color);
     gap: var(--lgs-gutter-s);
 }
 
@@ -128,15 +133,8 @@
     align-items: flex-start;
     flex-direction: column;
     flex-basis: 100%;
+    width: 100%;
     gap: calc(var(--lgs-gutter-xs) / 2);
-}
-
-.lgs--shortcut-alternative-divider {
-    width: 2rem;
-    margin: 0;
-    padding: 0;
-    --color: var(--wa-color-neutral-60);
-    --spacing: 0;
 }
 
 .lgs--shortcuts-keys .lgs--shortcut-key {

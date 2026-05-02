@@ -14,10 +14,14 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { CURRENT_POI, VIDEO_CROP_ZONE } from '@Core/constants'
+import { CURRENT_MAP_POINT, CURRENT_POI, VIDEO_CROP_ZONE } from '@Core/constants'
+import { MapTarget } from '@Core/MapTarget'
 import { getOrbitSettings, setOrbitStoreSettings } from '@Core/OrbitSettings'
+import { Cartesian2, Cartographic, Math as CesiumMath } from 'cesium'
 
-const FOCUS_TARGET = 'target'
+const MAP_POINT_PRECISION = 6
+const APP_SHORTCUT_TARGET = () => globalThis.window ?? globalThis.document
+const MIN_MAP_TARGET_HEIGHT = -12000
 
 const finiteNumber = value => {
     if (value === null || value === undefined || value === '') {
@@ -28,11 +32,16 @@ const finiteNumber = value => {
     return Number.isFinite(number) ? number : null
 }
 
+const mapTargetHeight = value => {
+    const height = finiteNumber(value)
+    return height !== null && height >= MIN_MAP_TARGET_HEIGHT ? height : null
+}
+
 const normalizedFocusPoint = point => {
     const longitude = finiteNumber(point?.longitude)
     const latitude = finiteNumber(point?.latitude)
-    const pointHeight = finiteNumber(point?.height)
-    const simulatedHeight = finiteNumber(point?.simulatedHeight)
+    const pointHeight = mapTargetHeight(point?.height)
+    const simulatedHeight = mapTargetHeight(point?.simulatedHeight)
     const height = simulatedHeight ?? pointHeight
 
     if ([longitude, latitude, height].some(value => value === null)) {
@@ -56,15 +65,110 @@ const normalizedFocusPoint = point => {
     return normalizedPoint
 }
 
-const resolveFocusPoint = () => {
+const explicitTargetOf = target => target?.element ? target : null
+
+const resolveCurrentPoiId = () => {
+    const pois = lgs.stores.main.components.pois
+    const current = pois?.current
+    const poiId = typeof current === 'string' ? current : (current?.slug ?? current?.id)
+    return poiId && pois?.list?.has(poiId) ? poiId : null
+}
+
+const resolveCurrentPoiTarget = () => {
+    const poiId = resolveCurrentPoiId()
+    const poi = poiId ? lgs.stores.main.components.pois.list.get(poiId) : null
+
+    if (!poi) {
+        return null
+    }
+
+    return {
+        ...poi,
+        element: CURRENT_POI,
+        slug:    poi.slug ?? poi.id ?? poiId,
+    }
+}
+
+const buildMapPointId = ({longitude, latitude}) => {
+    return `${CURRENT_MAP_POINT}:${longitude.toFixed(MAP_POINT_PRECISION)}:${latitude.toFixed(MAP_POINT_PRECISION)}`
+}
+
+const resolveMapCenterTarget = () => {
+    const canvas = lgs.canvas ?? lgs.viewer?.canvas
+    const scene = lgs.scene ?? lgs.viewer?.scene
+    const camera = lgs.camera ?? lgs.viewer?.camera
+
+    if (!canvas || !scene || !camera) {
+        return null
+    }
+
+    const center = new Cartesian2(
+        Math.round(canvas.clientWidth / 2),
+        Math.round(canvas.clientHeight / 2),
+    )
+    const pickRay = camera.getPickRay?.(center)
+    const globe = scene.globe
+    let cartesian = pickRay ? globe?.pick?.(pickRay, scene) : null
+
+    if (!cartesian) {
+        cartesian = camera.pickEllipsoid?.(center, globe?.ellipsoid)
+    }
+    if (!cartesian) {
+        return null
+    }
+
+    const cartographic = Cartographic.fromCartesian(cartesian)
+    if (!cartographic) {
+        return null
+    }
+
+    const longitude = CesiumMath.toDegrees(cartographic.longitude)
+    const latitude = CesiumMath.toDegrees(cartographic.latitude)
+    if (!Number.isFinite(longitude) || !Number.isFinite(latitude)) {
+        return null
+    }
+
+    const height = __.ui.sceneManager?.noRelief?.() ? 0 : (mapTargetHeight(cartographic.height) ?? 0)
+    const target = new MapTarget(CURRENT_MAP_POINT, {
+        height,
+        id: buildMapPointId({longitude, latitude}),
+        latitude,
+        longitude,
+    })
+    target.simulatedHeight = height
+    target.title = 'Map center'
+    return target
+}
+
+const resolvePanoramaFocus = () => {
     const sceneTarget = __.ui.sceneManager?.target
+    const explicitSceneTarget = normalizedFocusPoint(explicitTargetOf(sceneTarget))
+    const currentPoiTarget = normalizedFocusPoint(resolveCurrentPoiTarget())
+    const centerTarget = resolveMapCenterTarget()
     const cameraTarget = lgs.stores.main.components.camera.target
     const rotateTarget = lgs.stores.ui.mainUI.rotate.target
     const panoramaTarget = lgs.stores.ui.mainUI.panorama.target
 
-    return [sceneTarget, cameraTarget, rotateTarget, panoramaTarget]
+    return [
+        currentPoiTarget,
+        centerTarget,
+        explicitSceneTarget,
+        panoramaTarget,
+        rotateTarget,
+        cameraTarget,
+    ]
         .map(normalizedFocusPoint)
         .find(Boolean) ?? null
+}
+
+const currentCameraOrbitOptions = () => {
+    const position = lgs.stores.main.components.camera.position ?? {}
+    return {
+        heading: finiteNumber(position.heading) ?? lgs.settings.camera.heading,
+        pitch:   finiteNumber(position.pitch) ?? lgs.settings.camera.pitch,
+        roll:    finiteNumber(position.roll) ?? lgs.settings.camera.roll,
+        range:   finiteNumber(position.range) ?? lgs.settings.camera.range,
+    }
 }
 
 const toggleJourneyToolbar = () => {
@@ -136,25 +240,37 @@ const toggleRotation = () => {
         return __.ui.poiManager.stopRotationAndSync().then(() => true)
     }
 
-    const focusPoint = resolveFocusPoint()
-    if (!focusPoint) {
-        console.warn('Cannot start map rotation without a valid target')
-        return false
-    }
-
     return (async () => {
-        const rotationSettings = getOrbitSettings(focusPoint, 'rotation')
+        const poiId = resolveCurrentPoiId()
+        if (poiId) {
+            return __.ui.poiManager.rotateAroundPOI(poiId)
+        }
+
+        await __.ui.cameraManager.updatePositionInformation?.()
+        const sceneTarget = explicitTargetOf(__.ui.sceneManager?.target)
+        const centerTarget = normalizedFocusPoint(resolveMapCenterTarget())
+        const target = centerTarget
+            ?? normalizedFocusPoint(sceneTarget)
+            ?? normalizedFocusPoint(lgs.stores.ui.mainUI.rotate.target)
+            ?? normalizedFocusPoint(lgs.stores.main.components.camera.target)
+
+        if (!target) {
+            console.warn('Cannot start map rotation without a valid target', {sceneTarget})
+            return false
+        }
+
+        const settingsTarget = centerTarget ? target : (sceneTarget ?? target)
+        const rotationSettings = getOrbitSettings(settingsTarget, 'rotation')
         setOrbitStoreSettings(rotate, rotationSettings)
-        await __.ui.sceneManager.focus(focusPoint, {
+        await __.ui.sceneManager.focus(target, {
             direction:  rotationSettings.direction,
-            ...lgs.stores.main.components.camera.position,
+            flyingTime: 0,
+            ...currentCameraOrbitOptions(),
             infinite:   true,
             rotate:     true,
-            flyingTime: 0,
             rpm:        rotationSettings.rpm,
-            target:     focusPoint.element ? focusPoint : FOCUS_TARGET,
+            target,
         })
-        await setPoiAnimated(focusPoint, true)
         return true
     })()
 }
@@ -166,13 +282,14 @@ const togglePanorama = () => {
         return __.ui.poiManager.stopRotationAndSync().then(() => true)
     }
 
-    const focusPoint = resolveFocusPoint()
-    if (!focusPoint) {
-        console.warn('Cannot start panorama without a valid target')
-        return false
-    }
-
     return (async () => {
+        await __.ui.cameraManager.updatePositionInformation?.()
+        const focusPoint = resolvePanoramaFocus()
+        if (!focusPoint) {
+            console.warn('Cannot start panorama without a valid target')
+            return false
+        }
+
         if (__.ui.cameraManager.isRotating()) {
             await __.ui.poiManager.stopRotationAndSync()
         }
@@ -230,14 +347,14 @@ export const SHORTCUTS_CATALOG = [
         action:      'Toggle rotation',
         description: 'Starts or stops map rotation around the current target.',
         id:          'rotation-toggle',
-        keys:        ['Alt+Shift+R'],
+        keys:        ['Alt+Shift+R', 'Alt+Shift+O'],
         scope:       'App',
     },
     {
         action:      'Toggle panorama',
         description: 'Starts or stops panorama mode around the current target.',
         id:          'panorama-toggle',
-        keys:        ['Alt+Shift+P'],
+        keys:        ['Alt+Shift+P', 'Alt+Shift+N'],
         scope:       'App',
     },
     {
@@ -363,14 +480,16 @@ export const installAppShortcuts = (shortcutManager) => {
     return SHORTCUTS_CATALOG.filter(shortcut => SHORTCUT_ACTIONS[shortcut.id]).map(shortcut => {
         const action = SHORTCUT_ACTIONS[shortcut.id]
 
-        return shortcutManager.addShortcut(document, shortcut.keys, async (event) => {
+        return shortcutManager.addShortcut(APP_SHORTCUT_TARGET(), shortcut.keys, async (event) => {
+            event.preventDefault()
+            event.stopPropagation()
+            event.stopImmediatePropagation?.()
+
             try {
                 const handled = action?.(event)
                 if (!handled) {
                     return
                 }
-                event.preventDefault()
-                event.stopPropagation()
                 await handled
             }
             catch (error) {
@@ -378,8 +497,8 @@ export const installAppShortcuts = (shortcutManager) => {
             }
         }, {
             focusOnPointerDown: false,
-            preventDefault:     false,
-            stopPropagation:    false,
+            preventDefault:     true,
+            stopPropagation:    true,
         })
     })
 }
