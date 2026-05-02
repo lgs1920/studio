@@ -97,6 +97,7 @@ const isEditableTarget = target => target instanceof HTMLElement
 const RotationCameraAdjustmentOverlay = memo(() => {
     const rotate = useSnapshot(lgs.stores.ui.mainUI.rotate)
     const panorama = useSnapshot(lgs.stores.ui.mainUI.panorama)
+    const cameraFlight = useSnapshot(lgs.stores.ui.mainUI.cameraFlight)
     const cameraSettings = useSnapshot(lgs.settings.ui.camera)
     useSnapshot(lgs.settings.unitSystem)
     const [visible, setVisible] = useState(false)
@@ -108,6 +109,7 @@ const RotationCameraAdjustmentOverlay = memo(() => {
     const userActionFrameRef = useRef(null)
     const [values, setValues] = useState(() => formatCameraAdjustmentValues(currentCameraMovementSnapshot()?.position))
     const showCameraMovementWidget = cameraSettings.showMovementWidget ?? true
+    const cameraFlightRunning = cameraFlight.running
     const config = useMemo(() => ({
         attachTo:        'center',
         contextMenu:     {
@@ -172,7 +174,12 @@ const RotationCameraAdjustmentOverlay = memo(() => {
     }, [show])
 
     const showAfterUserAction = useCallback(() => {
-        if (!showCameraMovementWidget || !lgs.stores.ui.mainUI.rotate.running || lgs.stores.ui.mainUI.panorama.active) {
+        if (
+            !showCameraMovementWidget
+            || cameraFlightRunning
+            || !lgs.stores.ui.mainUI.rotate.running
+            || lgs.stores.ui.mainUI.panorama.active
+        ) {
             return
         }
 
@@ -185,7 +192,7 @@ const RotationCameraAdjustmentOverlay = memo(() => {
             userActionFrameRef.current = null
             showCurrentSnapshot()
         })
-    }, [showCameraMovementWidget, showCurrentSnapshot])
+    }, [cameraFlightRunning, showCameraMovementWidget, showCurrentSnapshot])
 
     useEffect(() => {
         return () => {
@@ -202,7 +209,7 @@ const RotationCameraAdjustmentOverlay = memo(() => {
     }, [hide])
 
     useEffect(() => {
-        if (!showCameraMovementWidget || !rotate.running || panorama.active) {
+        if (!showCameraMovementWidget || cameraFlightRunning || !rotate.running || panorama.active) {
             hide()
             return undefined
         }
@@ -284,10 +291,10 @@ const RotationCameraAdjustmentOverlay = memo(() => {
             window.clearInterval(interval)
             clearInitialRetry()
         }
-    }, [hide, panorama.active, rotate.running, show, showCameraMovementWidget, showCurrentSnapshot, update])
+    }, [cameraFlightRunning, hide, panorama.active, rotate.running, show, showCameraMovementWidget, showCurrentSnapshot, update])
 
     useEffect(() => {
-        if (!showCameraMovementWidget || !rotate.running || panorama.active) {
+        if (!showCameraMovementWidget || cameraFlightRunning || !rotate.running || panorama.active) {
             return undefined
         }
 
@@ -334,11 +341,11 @@ const RotationCameraAdjustmentOverlay = memo(() => {
             document.removeEventListener('pointercancel', handlePointerUp, true)
             document.removeEventListener('keydown', handleKeyDown, true)
         }
-    }, [panorama.active, rotate.running, showAfterUserAction, showCameraMovementWidget])
+    }, [cameraFlightRunning, panorama.active, rotate.running, showAfterUserAction, showCameraMovementWidget])
 
     return (
         <Widget
-            isVisible={visible && rotate.running && !panorama.active}
+            isVisible={visible && rotate.running && !panorama.active && !cameraFlightRunning}
             config={config}
             className={`panorama-adjustment-widget-shell${visible ? ' adjustment-visible' : ''}`}
         >

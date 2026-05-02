@@ -656,28 +656,46 @@ export const PanoramaWidget = memo(() => {
 
         void setPoiAnimated(true)
 
-        lgs.camera.flyTo({
-                             destination: Cartesian3.fromDegrees(
-                                 target.longitude,
-                                 target.latitude,
-                                 (target.simulatedHeight ?? target.height ?? 0) + heightOffsetRef.current,
-                             ),
-                             orientation: {
-                                 heading: M.toRadians(headingRef.current),
-                                 pitch:   M.toRadians(pitchRef.current),
-                                 roll:    0,
-                             },
-                             duration:    0.8,
-                             complete:    () => {
-                                 if (!$panorama.active) {
-                                     return
-                                 }
-                                 renderFrame()
-                                 animationRef.current = window.requestAnimationFrame(tick)
-                             },
-                         })
+        let flightEnded = false
+        const endFlight = () => {
+            if (!flightEnded) {
+                flightEnded = true
+                __.ui.cameraManager.endFlight?.()
+            }
+        }
+
+        __.ui.cameraManager.beginFlight?.()
+        try {
+            lgs.camera.flyTo({
+                                 destination: Cartesian3.fromDegrees(
+                                     target.longitude,
+                                     target.latitude,
+                                     (target.simulatedHeight ?? target.height ?? 0) + heightOffsetRef.current,
+                                 ),
+                                 orientation: {
+                                     heading: M.toRadians(headingRef.current),
+                                     pitch:   M.toRadians(pitchRef.current),
+                                     roll:    0,
+                                 },
+                                 duration:    0.8,
+                                 complete:    () => {
+                                     endFlight()
+                                     if (!$panorama.active) {
+                                         return
+                                     }
+                                     renderFrame()
+                                     animationRef.current = window.requestAnimationFrame(tick)
+                                 },
+                                 cancel:      endFlight,
+                             })
+        }
+        catch (error) {
+            endFlight()
+            throw error
+        }
 
         return () => {
+            endFlight()
             if (animationRef.current) {
                 window.cancelAnimationFrame(animationRef.current)
                 animationRef.current = null

@@ -36,11 +36,22 @@ const finiteNumber = value => {
     return Number.isFinite(number) ? number : null
 }
 
+const MIN_CAMERA_POSITION_HEIGHT = -1000
+const MIN_MAP_TARGET_HEIGHT = -12000
+
+const finiteHeightAtLeast = (value, minimum) => {
+    const height = finiteNumber(value)
+    return height !== null && height >= minimum ? height : null
+}
+
+const cameraPositionHeight = value => finiteHeightAtLeast(value, MIN_CAMERA_POSITION_HEIGHT)
+const mapTargetHeight = value => finiteHeightAtLeast(value, MIN_MAP_TARGET_HEIGHT)
+
 const focusPointCoordinates = point => {
     const longitude = finiteNumber(point?.longitude)
     const latitude = finiteNumber(point?.latitude)
-    const pointHeight = finiteNumber(point?.height)
-    const simulatedHeight = finiteNumber(point?.simulatedHeight)
+    const pointHeight = mapTargetHeight(point?.height)
+    const simulatedHeight = mapTargetHeight(point?.simulatedHeight)
     const height = simulatedHeight ?? pointHeight
 
     if ([longitude, latitude, height].some(value => value === null)) {
@@ -60,12 +71,12 @@ const cameraTargetIsValid = cameraStore => {
     const target = cameraStore?.target
     return finiteNumber(target?.longitude) !== null
         && finiteNumber(target?.latitude) !== null
-        && finiteNumber(target?.height) !== null
+        && mapTargetHeight(target?.height) !== null
 }
 
 const cameraPositionIsValid = position => finiteNumber(position?.longitude) !== null
     && finiteNumber(position?.latitude) !== null
-    && finiteNumber(position?.height) !== null
+    && cameraPositionHeight(position?.height) !== null
 
 const cameraPositionValue = (position, key, fallback) =>
     finiteNumber(position?.[key]) ?? fallback
@@ -73,10 +84,10 @@ const cameraPositionValue = (position, key, fallback) =>
 const cameraRangeFromStoredPosition = (position = {}, target = {}) => {
     const longitude = finiteNumber(position?.longitude)
     const latitude = finiteNumber(position?.latitude)
-    const height = finiteNumber(position?.height)
+    const height = cameraPositionHeight(position?.height)
     const targetLongitude = finiteNumber(target?.longitude)
     const targetLatitude = finiteNumber(target?.latitude)
-    const targetHeight = finiteNumber(target?.height)
+    const targetHeight = mapTargetHeight(target?.height)
 
     if ([longitude, latitude, height, targetLongitude, targetLatitude, targetHeight].some(value => value === null)) {
         return null
@@ -114,6 +125,18 @@ const tracksFeatureSource = tracks => {
     return features.length === 1 ? features[0] : {
         type: 'FeatureCollection',
         features,
+    }
+}
+
+const beginCameraFlight = () => {
+    if (typeof __ !== 'undefined') {
+        __.ui?.cameraManager?.beginFlight?.()
+    }
+}
+
+const endCameraFlight = () => {
+    if (typeof __ !== 'undefined') {
+        __.ui?.cameraManager?.endFlight?.()
     }
 }
 
@@ -168,19 +191,28 @@ export class SceneUtils {
                     __.ui.cameraManager.position.longitude = __.ui.cameraManager.target.longitude
                     __.ui.cameraManager.position.latitude = __.ui.cameraManager.target.latitude
 
-                    lgs.camera.flyTo({
-                                         destination:    Cartesian3.fromDegrees(
-                                             __.ui.cameraManager.position.longitude,
-                                             __.ui.cameraManager.position.latitude,
-                                             __.ui.cameraManager.position.height,
-                                         ),
-                                         maximumHeight:     lgs.settings.camera.maximumHeight,
-                                         pitchAdjustHeight: lgs.settings.camera.pitchAdjustHeight,
-                                         duration:       0, // always.
-                                         convert:        true,
-                                         endTransform:   Matrix4.IDENTITY,
-                                         easingFunction: EasingFunction.LINEAR_NONE,
-                                     })
+                    beginCameraFlight()
+                    try {
+                        lgs.camera.flyTo({
+                                             destination:    Cartesian3.fromDegrees(
+                                                 __.ui.cameraManager.position.longitude,
+                                                 __.ui.cameraManager.position.latitude,
+                                                 __.ui.cameraManager.position.height,
+                                             ),
+                                             maximumHeight:     lgs.settings.camera.maximumHeight,
+                                             pitchAdjustHeight: lgs.settings.camera.pitchAdjustHeight,
+                                             duration:       0, // always.
+                                             convert:        true,
+                                             endTransform:   Matrix4.IDENTITY,
+                                             easingFunction: EasingFunction.LINEAR_NONE,
+                                             complete:       endCameraFlight,
+                                             cancel:         endCameraFlight,
+                                         })
+                    }
+                    catch (error) {
+                        endCameraFlight()
+                        throw error
+                    }
                 }
 
             }
@@ -423,10 +455,11 @@ export class SceneUtils {
 
         // fix flying time and pitch height if necessary
         const initializer = options.initializer ? options.initializer(normalizedPoint, options) : null
+        const snapDistance = options.snapDistance ?? 50000
         if (initializer) {
             flyingTime = SceneUtils.resolveFlightDuration(initializer.distance, flyingTime, {
                 resetCamera:  options.resetCamera === true,
-                snapDistance: options.snapDistance ?? 50000,
+                snapDistance: snapDistance,
             })
 
             if (initializer.distance < 15000) {
@@ -501,25 +534,57 @@ export class SceneUtils {
             // }
         }
 
+        let flightEnded = false
+        const endFlightOnce = () => {
+            if (!flightEnded) {
+                flightEnded = true
+                endCameraFlight()
+            }
+        }
+        const completeFlight = async () => {
+            try {
+                await complete()
+            }
+            finally {
+                endFlightOnce()
+            }
+        }
+        const cancelFlight = () => {
+            endFlightOnce()
+        }
+        const startFlight = (fly) => {
+            beginCameraFlight()
+            try {
+                fly()
+            }
+            catch (error) {
+                endFlightOnce()
+                throw error
+            }
+        }
+
         const flyOptions = {
             maximumHeight:     maximumHeight,
             pitchAdjustHeight: pitchAdjustHeight,
             duration:          flyingTime,
             convert:           options?.convert ?? true,
             easingFunction:    options.easingFunction ?? SceneUtils.resolveFlightEasing(options.resetCamera === true),
-            complete,
+            complete:          completeFlight,
+            cancel:            cancelFlight,
         }
 
         if (cameraDestination) {
-            lgs.camera.flyTo({
-                                 ...flyOptions,
-                                 destination: cameraDestination,
-                                 orientation: {
-                                     heading,
-                                     pitch,
-                                     roll,
-                                 },
-                             })
+            startFlight(() => {
+                lgs.camera.flyTo({
+                                     ...flyOptions,
+                                     destination: cameraDestination,
+                                     orientation: {
+                                         heading,
+                                         pitch,
+                                         roll,
+                                     },
+                                 })
+            })
             return true
         }
 
@@ -528,9 +593,11 @@ export class SceneUtils {
             offset: new HeadingPitchRange(heading, pitch, flyRange),
         }
 
-        lgs.camera.flyToBoundingSphere(options.boundingSphere ?? new BoundingSphere(
-            Cartesian3.fromDegrees(longitude, latitude, height), 0,
-        ), flyToBoundingSphereOptions)
+        startFlight(() => {
+            lgs.camera.flyToBoundingSphere(options.boundingSphere ?? new BoundingSphere(
+                Cartesian3.fromDegrees(longitude, latitude, height), 0,
+            ), flyToBoundingSphereOptions)
+        })
 
         return true
     }
@@ -547,30 +614,34 @@ export class SceneUtils {
             return null
         }
 
+        const focusHeight = mapTargetHeight(height) ?? 0
+
         if (west === east && south === north) {
-            return new BoundingSphere(Cartesian3.fromDegrees(west, south, height), 0)
+            return new BoundingSphere(Cartesian3.fromDegrees(west, south, focusHeight), 0)
         }
 
         return BoundingSphere.fromPoints([
-                                             Cartesian3.fromDegrees(west, south, height),
-                                             Cartesian3.fromDegrees(west, north, height),
-                                             Cartesian3.fromDegrees(east, south, height),
-                                             Cartesian3.fromDegrees(east, north, height),
+                                             Cartesian3.fromDegrees(west, south, focusHeight),
+                                             Cartesian3.fromDegrees(west, north, focusHeight),
+                                             Cartesian3.fromDegrees(east, south, focusHeight),
+                                             Cartesian3.fromDegrees(east, north, focusHeight),
                                          ])
     }
 
-    static getJourneyCentroid = async (journey, source = null) => {
+    static getJourneyCentroid = async (journey, source = null, {useStoredHeight = true} = {}) => {
         const focusSource = source ?? SceneUtils.getJourneyFeatureSource(journey)
         if (!focusSource) {
             return null
         }
 
         const [longitude, latitude] = centroid(focusSource).geometry.coordinates
-        const storedHeight = journey?.camera?.target?.height
-            ?? journey?.cameraOrigin?.target?.height
-        let height = Number.isFinite(storedHeight) ? storedHeight : 0
+        const storedHeight = useStoredHeight
+                             ? mapTargetHeight(journey?.camera?.target?.height)
+                               ?? mapTargetHeight(journey?.cameraOrigin?.target?.height)
+                             : null
+        let height = storedHeight ?? 0
 
-        if (Number.isFinite(storedHeight)) {
+        if (storedHeight !== null) {
             return {
                 longitude: longitude,
                 latitude:  latitude,
@@ -585,6 +656,7 @@ export class SceneUtils {
                                                                          latitude:  latitude,
                                                                      },
                                                                  })
+            height = mapTargetHeight(height) ?? 0
         }
         catch (error) {
             console.error(error)
@@ -629,22 +701,28 @@ export class SceneUtils {
         if (!options.resetCamera
             && __.ui.cameraManager.isJourneyFocusOn(FOCUS_LAST)
             && options.action !== REFRESH_DRAWING && options.action !== ADD_JOURNEY) {
-            if (cameraTargetIsValid(journey?.camera)) {
-                point = new MapTarget(CURRENT_JOURNEY, {...journey.camera.target, ...{id: journey.slug}})
-                cameraPosition = journey.camera.position
+            const savedCameraPosition = cameraPositionIsValid(journey?.camera?.position)
+                                        ? journey.camera.position
+                                        : null
+            if (savedCameraPosition && cameraTargetIsValid(journey?.camera)) {
+                point = new MapTarget(CURRENT_JOURNEY, {...journey.camera.target, ...{id: journey?.slug ?? focusId}})
+                cameraPosition = savedCameraPosition
             }
         }
 
         if (!point) {
             // Centroid
-            const center = await SceneUtils.getJourneyCentroid(journey, focusSource)
+            const center = await SceneUtils.getJourneyCentroid(journey, focusSource, {
+                useStoredHeight: options.resetCamera !== true,
+            })
             if (!center) {
                 return
             }
             point = new MapTarget(CURRENT_JOURNEY, {...center, ...{id: focusId}})
         }
 
-        const focusBoundingSphere = cameraPositionIsValid(cameraPosition)
+        const savedCameraPosition = cameraPositionIsValid(cameraPosition) ? cameraPosition : null
+        const focusBoundingSphere = savedCameraPosition
                                     ? null
                                     : SceneUtils.getBboxBoundingSphere(theBbox, point.height ?? 0)
         const fallbackRange = 10000
@@ -657,10 +735,10 @@ export class SceneUtils {
         }
         if (options.action !== UPDATE_JOURNEY_SILENTLY) {
             SceneUtils.focus(point, {
-                pitch:          focusPitchValue(cameraPosition, DEFAULT_2D_FOCUS_PITCH),
-                heading:        cameraPositionValue(cameraPosition, 'heading', 0),
-                roll:           cameraPositionValue(cameraPosition, 'roll', 0),
-                range:          cameraRangeValue(cameraPosition, point, fallbackRange),
+                pitch:          focusPitchValue(savedCameraPosition, DEFAULT_2D_FOCUS_PITCH),
+                heading:        cameraPositionValue(savedCameraPosition, 'heading', 0),
+                roll:           cameraPositionValue(savedCameraPosition, 'roll', 0),
+                range:          cameraRangeValue(savedCameraPosition, point, fallbackRange),
                 lookAt:      true,
                 rpm:         options.rpm ?? lgs.settings.camera.rpm,
                 direction:      options.direction ?? 1,
@@ -673,7 +751,7 @@ export class SceneUtils {
                 resetCamera: options.resetCamera,
                 callback:    options.callback,
                 initializer: options.initializer,
-                cameraPosition: cameraPositionIsValid(cameraPosition) ? cameraPosition : null,
+                cameraPosition: savedCameraPosition,
                 boundingSphere: focusBoundingSphere,
                 boundingSphereRange: focusBoundingSphere?.radius > 0 ? 0 : undefined,
 

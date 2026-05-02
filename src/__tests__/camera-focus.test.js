@@ -85,6 +85,8 @@ const installFocusGlobals = journey => {
                 saveInformation:  vi.fn(),
                 unlock:           vi.fn(),
                 rotateAround:     vi.fn(),
+                beginFlight:      vi.fn(),
+                endFlight:        vi.fn(),
             },
             poiManager:    {
                 getHeightFromTerrain: vi.fn(async () => 0),
@@ -116,6 +118,62 @@ describe('camera focus defaults', () => {
         expect(Math.round(M.toDegrees(flyOptions.offset.pitch))).toBe(DEFAULT_2D_FOCUS_PITCH)
     })
 
+    it('recenters the focus target with a zero-duration flyTo before starting journey rotation under the snap distance', async () => {
+        const journey = makeJourney()
+        installFocusGlobals(journey)
+
+        await SceneUtils.focus({longitude: 0, latitude: 0, height: 0}, {
+            flyingTime: 2,
+            rotate:      true,
+            initializer: () => ({
+                distance:         100,
+                height:           0,
+                rotationTarget:   {longitude: 1, latitude: 2, height: 3},
+                sameRotateTarget: true,
+            }),
+        })
+
+        expect(lgs.camera.flyToBoundingSphere).toHaveBeenCalledTimes(1)
+        expect(lgs.camera.flyToBoundingSphere.mock.calls[0][1].duration).toBe(0)
+        expect(__.ui.cameraManager.beginFlight).toHaveBeenCalledTimes(1)
+        expect(__.ui.cameraManager.rotateAround).not.toHaveBeenCalled()
+
+        await lgs.camera.flyToBoundingSphere.mock.calls[0][1].complete()
+
+        expect(__.ui.cameraManager.rotateAround).toHaveBeenCalledTimes(1)
+        expect(__.ui.cameraManager.rotateAround.mock.calls[0][0].longitude).toBe(0)
+        expect(__.ui.cameraManager.rotateAround.mock.calls[0][0].latitude).toBe(0)
+        expect(__.ui.cameraManager.rotateAround.mock.calls[0][1].preserveView).toBe(false)
+    })
+
+    it('keeps the flyTo when rotating toward another target even under the snap distance', async () => {
+        const journey = makeJourney()
+        installFocusGlobals(journey)
+
+        await SceneUtils.focus({longitude: 0, latitude: 0, height: 0}, {
+            rotate:      true,
+            initializer: () => ({distance: 100, height: 0, sameRotateTarget: false}),
+        })
+
+        expect(lgs.camera.flyToBoundingSphere).toHaveBeenCalledTimes(1)
+        expect(__.ui.cameraManager.beginFlight).toHaveBeenCalledTimes(1)
+        expect(__.ui.cameraManager.rotateAround).not.toHaveBeenCalled()
+    })
+
+    it('ends the camera flight marker when focus flyTo completes', async () => {
+        const journey = makeJourney()
+        installFocusGlobals(journey)
+
+        await SceneUtils.focus({longitude: 0, latitude: 0, height: 0}, {range: 1000})
+
+        expect(__.ui.cameraManager.beginFlight).toHaveBeenCalledTimes(1)
+        expect(__.ui.cameraManager.endFlight).not.toHaveBeenCalled()
+
+        await lgs.camera.flyToBoundingSphere.mock.calls[0][1].complete()
+
+        expect(__.ui.cameraManager.endFlight).toHaveBeenCalledTimes(1)
+    })
+
     it('frames every track when focusing a full journey', async () => {
         const journey = makeJourney()
         installFocusGlobals(journey)
@@ -129,5 +187,41 @@ describe('camera focus defaults', () => {
         expect(focusOptions.range).toBe(10000)
         expect(focusOptions.boundingSphereRange).toBe(0)
         expect(lgs.camera.flyToBoundingSphere).toHaveBeenCalledTimes(1)
+    })
+
+    it('does not reuse a corrupted stored journey height when reset focusing', async () => {
+        const journey = makeJourney()
+        journey.camera = {
+            target:   {longitude: 9, latitude: 45, height: -42000},
+            position: {longitude: 9, latitude: 45, height: -42000},
+        }
+        installFocusGlobals(journey)
+        const focusSpy = vi.spyOn(SceneUtils, 'focus')
+
+        await SceneUtils.focusOnJourney({journey, resetCamera: true})
+
+        const [point, focusOptions] = focusSpy.mock.calls[0]
+        expect(point.height).toBe(0)
+        expect(focusOptions.cameraPosition).toBeNull()
+        expect(focusOptions.boundingSphere).not.toBeNull()
+    })
+
+    it('falls back to journey framing when the saved journey camera is underground', async () => {
+        const journey = makeJourney()
+        journey.camera = {
+            target:   {longitude: 9, latitude: 45, height: 1200},
+            position: {longitude: 9, latitude: 45, height: -42000, heading: 80, pitch: -20, roll: 4, range: 900},
+        }
+        installFocusGlobals(journey)
+        __.ui.cameraManager.isJourneyFocusOn.mockReturnValue(true)
+        const focusSpy = vi.spyOn(SceneUtils, 'focus')
+
+        await SceneUtils.focusOnJourney({journey})
+
+        const [point, focusOptions] = focusSpy.mock.calls[0]
+        expect(point.longitude).not.toBe(9)
+        expect(focusOptions.cameraPosition).toBeNull()
+        expect(focusOptions.range).toBe(10000)
+        expect(focusOptions.boundingSphereRange).toBe(0)
     })
 })

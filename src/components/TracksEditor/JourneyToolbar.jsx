@@ -114,7 +114,7 @@ export const JourneyToolbar = (props) => {
         if (rotate.running) {
             rotationAllowed.current = false
             await stopRotate()
-            if ($rotate.target.element && $rotate.target.element === lgs.theJourney.element) {
+            if ($rotate.target?.element === lgs.theJourney.element) {
                 return
             }
         }
@@ -128,7 +128,7 @@ export const JourneyToolbar = (props) => {
     const focusOnJourney = async () => {
         if ($rotate.running) {
             await __.ui.cameraManager.stopRotate()
-            if (rotate.target?.instanceOf(CURRENT_JOURNEY)) {
+            if (rotate.target?.instanceOf?.(CURRENT_JOURNEY)) {
                 return
             }
         }
@@ -219,7 +219,7 @@ export const JourneyToolbar = (props) => {
                                     <>
                                         <WaTooltip for="rotate-journey-toolbar">
                                             {
-                                                rotate.running && rotate.target.instanceOf(CURRENT_JOURNEY)
+                                                rotate.running && rotate.target?.instanceOf?.(CURRENT_JOURNEY)
                                                 ? 'Stop rotation'
                                                 : 'Start rotation'
                                             }
@@ -233,7 +233,7 @@ export const JourneyToolbar = (props) => {
                                             onClick={forceRotate}
                                             size="small"
                                         >
-                                            {rotate.running && rotate.target?.instanceOf(CURRENT_JOURNEY)
+                                            {rotate.running && rotate.target?.instanceOf?.(CURRENT_JOURNEY)
                                              ? (<WaSpinner size="small"/>)
                                              : (<WaIcon name={FOCUS_ICON} variant="regular"/>)
                                             }
@@ -241,7 +241,7 @@ export const JourneyToolbar = (props) => {
                                     </>
                                 }
                                     <WaTooltip for="focus-journey-toolbar">{
-                                        rotate.running && rotate.target?.instanceOf(CURRENT_JOURNEY)
+                                        rotate.running && rotate.target?.instanceOf?.(CURRENT_JOURNEY)
                                         ? 'Stop rotation'
                                         : 'Focus on journey'
                                     }
@@ -252,7 +252,7 @@ export const JourneyToolbar = (props) => {
                                         appearance="plain"
                                         onClick={maybeRotate}
                                     >
-                                        {rotate.running && rotate.target?.instanceOf(CURRENT_JOURNEY)
+                                        {rotate.running && rotate.target?.instanceOf?.(CURRENT_JOURNEY)
                                          ? (<WaIcon name={ROTATION_ICON} variant="regular" animation="spin"/>)
                                          : (<WaIcon name={FOCUS_ICON} variant="regular"/>)
                                         }

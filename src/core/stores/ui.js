@@ -59,6 +59,9 @@ export const ui = {
             rpm:       1,
             direction: 1,
         },
+        cameraFlight:        {
+            running: false,
+        },
         panorama:            {
             active:       false,
             target:       false,

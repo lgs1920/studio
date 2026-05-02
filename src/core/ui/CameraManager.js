@@ -47,6 +47,7 @@ export class CameraManager {
     position = {}
     orbitalInPause = false
     saveTimer = null
+    flightLocks = 0
     renderQuality = {
         locks:           0,
         msaaSamples:     null,
@@ -254,6 +255,22 @@ export class CameraManager {
             }),
         }
     }
+
+    beginFlight = () => {
+        this.flightLocks += 1
+        if (lgs.stores?.ui?.mainUI?.cameraFlight) {
+            lgs.stores.ui.mainUI.cameraFlight.running = true
+        }
+    }
+
+    endFlight = () => {
+        this.flightLocks = Math.max(0, this.flightLocks - 1)
+        if (lgs.stores?.ui?.mainUI?.cameraFlight) {
+            lgs.stores.ui.mainUI.cameraFlight.running = this.flightLocks > 0
+        }
+    }
+
+    isFlying = () => Boolean(lgs.stores?.ui?.mainUI?.cameraFlight?.running)
 
     /**
      * Update and maintain camera position

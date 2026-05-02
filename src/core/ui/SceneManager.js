@@ -170,11 +170,22 @@ export class SceneManager {
 
     //
     focusPreProcessing = (point, options) => {
+        if (options?.rotate && !__.ui.cameraManager?.isRotating?.() && !__.ui.cameraManager?.isFlying?.()) {
+            __.ui.cameraManager?.syncPositionInformation?.()
+        }
         const cameraTarget = __.ui.cameraManager?.target
         const rotateTarget = lgs.stores.ui.mainUI.rotate.target
         const from = hasMapCoordinates(cameraTarget)
                      ? cameraTarget
                      : hasMapCoordinates(rotateTarget) ? rotateTarget : null
+        const rotateTargetId = rotateTarget?.slug ?? rotateTarget?.id
+        const pointId = point?.slug ?? point?.id
+        const sameRotateTarget = Boolean(
+            point?.element
+            && rotateTarget?.element === point.element
+            && pointId
+            && rotateTargetId === pointId,
+        )
         if (options?.target?.element && hasMapCoordinates(options.target)) {
             lgs.stores.ui.mainUI.rotate.target = options.target
         }
@@ -186,8 +197,9 @@ export class SceneManager {
         }
         const distance = from && hasMapCoordinates(point) ? Mobility.distance(from, point) : 0
         return {
-            distance: distance,
-            height: Math.max(from?.height ?? 0, point?.height ?? 0),
+            distance:         distance,
+            height:           Math.max(from?.height ?? 0, point?.height ?? 0),
+            sameRotateTarget: sameRotateTarget,
         }
     }
 

@@ -198,6 +198,27 @@ describe('startup camera positioning', () => {
             expect(result.cameraStore.restoreCameraPosition).toBeUndefined()
             expect(result.cameraStore.target).toMatchObject(centroid)
         })
+
+        it('ignores saved camera positions that are far below the map', async () => {
+            const savedCamera = {
+                position: {...validSavedPosition, height: -42000},
+                target:   validSavedTarget,
+            }
+            const result = await configureStartupCamera({
+                                                            context:       context(journey),
+                                                            starter,
+                                                            cameraManager: cameraManager({
+                                                                                             focusMode: FOCUS_LAST,
+                                                                                             savedCamera,
+                                                                                         }),
+                                                            sceneManager:  sceneManager(centroid),
+                                                            cameraSettings,
+                                                        })
+
+            expect(result.focusTarget).toBe(journey)
+            expect(result.cameraStore.restoreCameraPosition).toBeUndefined()
+            expect(result.cameraStore.target).toMatchObject(centroid)
+        })
     })
 
     describe('focus mode fallback matrix', () => {

@@ -49,7 +49,7 @@ export const ensureViewer = () => {
     }
 
     const raiseCameraUpdateEvent = async () => {
-        if (__.ui.cameraManager?.isRotating?.() || lgs.stores.ui.mainUI.panorama.active) {
+        if (__.ui.cameraManager?.isRotating?.() || __.ui.cameraManager?.isFlying?.() || lgs.stores.ui.mainUI.panorama.active) {
             return
         }
 

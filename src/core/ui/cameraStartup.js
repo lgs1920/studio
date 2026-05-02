@@ -21,20 +21,35 @@ import { MapTarget }                                                  from '@Cor
 import { Cartesian3 }                                                 from 'cesium'
 
 export const finiteCameraNumber = value => {
+    if (value === null || value === undefined || value === '') {
+        return null
+    }
+
     const number = Number(value)
     return Number.isFinite(number) ? number : null
 }
+
+const MIN_CAMERA_POSITION_HEIGHT = -1000
+const MIN_MAP_TARGET_HEIGHT = -12000
+
+const finiteHeightAtLeast = (value, minimum) => {
+    const height = finiteCameraNumber(value)
+    return height !== null && height >= minimum ? height : null
+}
+
+const cameraPositionHeight = value => finiteHeightAtLeast(value, MIN_CAMERA_POSITION_HEIGHT)
+const mapTargetHeight = value => finiteHeightAtLeast(value, MIN_MAP_TARGET_HEIGHT)
 
 export const cameraTargetIsValid = cameraStore => {
     const target = cameraStore?.target
     return finiteCameraNumber(target?.longitude) !== null
         && finiteCameraNumber(target?.latitude) !== null
-        && finiteCameraNumber(target?.height) !== null
+        && mapTargetHeight(target?.height) !== null
 }
 
 export const cameraPositionIsValid = position => finiteCameraNumber(position?.longitude) !== null
     && finiteCameraNumber(position?.latitude) !== null
-    && finiteCameraNumber(position?.height) !== null
+    && cameraPositionHeight(position?.height) !== null
 
 const defaultCameraSettings = cameraSettings => ({
     heading: finiteCameraNumber(cameraSettings?.heading) ?? 0,
@@ -51,10 +66,10 @@ const cesiumDistance = ({longitude, latitude, height}, target) => Cartesian3.dis
 export const cameraRangeFromStoredPosition = (position = {}, target = {}, distanceCalculator = cesiumDistance) => {
     const longitude = finiteCameraNumber(position.longitude)
     const latitude = finiteCameraNumber(position.latitude)
-    const height = finiteCameraNumber(position.height)
+    const height = cameraPositionHeight(position.height)
     const targetLongitude = finiteCameraNumber(target.longitude)
     const targetLatitude = finiteCameraNumber(target.latitude)
-    const targetHeight = finiteCameraNumber(target.height)
+    const targetHeight = mapTargetHeight(target.height)
 
     if ([longitude, latitude, height, targetLongitude, targetLatitude, targetHeight].some(value => value === null)) {
         return null
