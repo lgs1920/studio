@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-24
- * Last modified: 2026-04-24
+ * Created on: 2026-05-02
+ * Last modified: 2026-05-02
  *
  *
  * Copyright © 2026 LGS1920
@@ -21,14 +21,179 @@ import {
 }                                                             from '@Utils/cesium/TrackUtils'
 import { FileUtils }                                          from '@Utils/FileUtils'
 import { UIToast }                                            from '@Utils/UIToast'
-import { WaButton, WaDialog, WaDivider, WaIcon } from '@web.awesome.me/webawesome-pro/dist/react'
-import { useEffect, useId, useMemo, useRef }     from 'react'
+import { WaButton, WaDialog, WaDivider, WaIcon, WaInput } from '@web.awesome.me/webawesome-pro/dist/react'
+import { useEffect, useId, useMemo, useRef, useState }    from 'react'
 import { v4 as uuid }                                         from 'uuid'
 import { useSnapshot }                                        from 'valtio'
 import './style.css'
 
 const SUPPORTED_EXTENSIONS = ['.geojson', '.json', '.kml', '.gpx']
 const ACCEPTED_FILES = 'GPX, KML, JSON, GeoJSON'
+const REMOTE_JOURNEY_DEFAULT_NAME = 'remote-journey'
+const REMOTE_JOURNEY_IMPORT_TIMEOUT_MS = 25000
+const CLOUD_PROVIDER_LABELS = {
+    dropbox:   'Dropbox',
+    google:    'Google Drive',
+    icloud:    'iCloud',
+    nextcloud: 'Nextcloud',
+    onedrive:  'OneDrive',
+    pcloud:    'pCloud',
+}
+const CLOUD_ERROR_CODES = {
+    ACCESS_DENIED:        'cloud_access_denied',
+    AUTH_REQUIRED:        'cloud_auth_required',
+    ICLOUD_NOT_SUPPORTED: 'icloud_not_supported',
+    NOT_CONFIGURED:       'cloud_not_configured',
+    PRIVATE_LINK:         'cloud_private_link',
+    READ_FAILED:          'cloud_read_failed',
+    REMOTE_TIMEOUT:       'remote_timeout',
+    REMOTE_TOO_LARGE:     'remote_file_too_large',
+    UNSUPPORTED_FORMAT:   'unsupported_format',
+}
+
+const getSupportedExtension = (fileName = '') => {
+    const extension = FileUtils.getExtension(fileName).toLowerCase()
+    return SUPPORTED_EXTENSIONS.includes(`.${extension}`) ? extension : ''
+}
+
+const getPathFilename = (url) => {
+    const segment = url.pathname.split('/').filter(Boolean).pop() ?? ''
+    try {
+        return decodeURIComponent(segment)
+    }
+    catch {
+        return segment
+    }
+}
+
+const matchesDomain = (hostname, domain) => {
+    const host = hostname.toLowerCase()
+    return host === domain || host.endsWith(`.${domain}`)
+}
+
+const detectRemoteCloudProvider = (url) => {
+    const host = url.hostname.toLowerCase()
+    if (matchesDomain(host, 'drive.google.com') || matchesDomain(host, 'docs.google.com')) {
+        return 'google'
+    }
+    if (matchesDomain(host, 'dropbox.com') || matchesDomain(host, 'dropboxusercontent.com')) {
+        return 'dropbox'
+    }
+    if (matchesDomain(host, '1drv.ms') || matchesDomain(host, 'onedrive.live.com') || matchesDomain(host, 'sharepoint.com')) {
+        return 'onedrive'
+    }
+    if (matchesDomain(host, 'pcloud.com') || matchesDomain(host, 'pcloud.link')) {
+        return 'pcloud'
+    }
+    if (matchesDomain(host, 'icloud.com') || matchesDomain(host, 'icloud.com.cn')) {
+        return 'icloud'
+    }
+    if (/\/(?:index\.php\/)?s\/[^/?#]+/.test(url.pathname)) {
+        return 'nextcloud'
+    }
+
+    return ''
+}
+
+const getCloudProviderLabel = (provider) => {
+    return CLOUD_PROVIDER_LABELS[provider] ?? 'Cloud'
+}
+
+const getRemoteDisplayName = (url) => {
+    const provider = detectRemoteCloudProvider(url)
+    if (provider) {
+        return `${getCloudProviderLabel(provider)} import`
+    }
+
+    return getPathFilename(url) || REMOTE_JOURNEY_DEFAULT_NAME
+}
+
+const setSampleLoadedState = (value) => {
+    lgs.stores.main.components.fileLoader.sampleLoaded = value
+}
+
+const closeJourneyLoader = () => {
+    lgs.stores.ui.mainUI.journeyLoader.visible = false
+}
+
+const remoteImportFeedback = (error, fallbackProvider = '') => {
+    const data = error.response?.data ?? {}
+    const provider = data.provider ?? fallbackProvider
+    const providerLabel = getCloudProviderLabel(provider)
+    const code = data.errorCode ?? (data.authRequired ? CLOUD_ERROR_CODES.AUTH_REQUIRED : '')
+
+    switch (code) {
+        case CLOUD_ERROR_CODES.AUTH_REQUIRED:
+        case CLOUD_ERROR_CODES.PRIVATE_LINK:
+        case CLOUD_ERROR_CODES.NOT_CONFIGURED:
+            return {
+                caption:  'Private cloud link unavailable',
+                itemName: `${providerLabel} private link`,
+                message:  'Private cloud links are not available yet. Use a public sharing link.',
+            }
+        case CLOUD_ERROR_CODES.ACCESS_DENIED:
+            return {
+                caption:  'Access denied',
+                itemName: `${providerLabel} access denied`,
+                message:  'The connected account cannot access this file, or the sharing permissions do not allow import.',
+            }
+        case CLOUD_ERROR_CODES.ICLOUD_NOT_SUPPORTED:
+            return {
+                caption:  'Private cloud link unavailable',
+                itemName: 'iCloud private link',
+                message:  'Private cloud links are not available yet. Use a public sharing link.',
+            }
+        case CLOUD_ERROR_CODES.UNSUPPORTED_FORMAT:
+            return {
+                caption:  'Unsupported file format',
+                itemName: provider ? `${providerLabel} import` : REMOTE_JOURNEY_DEFAULT_NAME,
+                message:  'The imported file must be GPX, KML, GeoJSON, or JSON.',
+            }
+        case CLOUD_ERROR_CODES.READ_FAILED:
+            return {
+                caption:  'File could not be read',
+                itemName: provider ? `${providerLabel} import` : REMOTE_JOURNEY_DEFAULT_NAME,
+                message:  provider
+                          ? `${providerLabel} did not return a readable file. Check the sharing settings or try again later.`
+                          : 'The remote service did not return a readable file. Check the sharing settings or try again later.',
+            }
+        case CLOUD_ERROR_CODES.REMOTE_TIMEOUT:
+            return {
+                caption:  'File request timed out',
+                itemName: provider ? `${providerLabel} import` : REMOTE_JOURNEY_DEFAULT_NAME,
+                message:  'The file request timed out. Please try again later.',
+            }
+        case CLOUD_ERROR_CODES.REMOTE_TOO_LARGE:
+            return {
+                caption:  'File too large',
+                itemName: provider ? `${providerLabel} import` : REMOTE_JOURNEY_DEFAULT_NAME,
+                message:  'The file is too large to import.',
+            }
+        default:
+            break
+    }
+
+    if (error.response?.data?.error) {
+        return {
+            caption:  IMPORT_FAILED.caption,
+            itemName: provider ? `${providerLabel} import` : REMOTE_JOURNEY_DEFAULT_NAME,
+            message:  error.response.data.error,
+        }
+    }
+    if (error.code === 'ECONNABORTED' || error.name === 'CanceledError') {
+        return {
+            caption:  'File request timed out',
+            itemName: provider ? `${providerLabel} import` : REMOTE_JOURNEY_DEFAULT_NAME,
+            message:  'The file request timed out. Please try again later.',
+        }
+    }
+
+    return {
+        caption:  IMPORT_FAILED.caption,
+        itemName: provider ? `${providerLabel} import` : REMOTE_JOURNEY_DEFAULT_NAME,
+        message:  error.message ?? 'Remote import failed.',
+    }
+}
 
 /**
  * JourneyLoaderUI Component
@@ -36,6 +201,8 @@ const ACCEPTED_FILES = 'GPX, KML, JSON, GeoJSON'
 export const JourneyLoaderUI = (props) => {
     const $journeyLoader = lgs.stores.ui.mainUI.journeyLoader
     const journeyLoader = useSnapshot($journeyLoader)
+    const [remoteUrl, setRemoteUrl] = useState('')
+    const [remoteLoading, setRemoteLoading] = useState(false)
 
     const {fileList, sampleLoaded} = useSnapshot(lgs.stores.main.components.fileLoader)
 
@@ -58,7 +225,7 @@ export const JourneyLoaderUI = (props) => {
         if (journeyLoader.visible) {
             const isPresent = lgs.journeys.has(sampleSlug)
             if (lgs.stores.main.components.fileLoader.sampleLoaded !== isPresent) {
-                lgs.stores.main.components.fileLoader.sampleLoaded = isPresent
+                setSampleLoadedState(isPresent)
             }
         }
     }, [journeyLoader.visible, sampleSlug])
@@ -85,9 +252,25 @@ export const JourneyLoaderUI = (props) => {
 
             // Update sampleLoaded flag if this file matches the sample slug
             if (status === JOURNEY_OK && item.slug === sampleSlug) {
-                lgs.stores.main.components.fileLoader.sampleLoaded = true
+                setSampleLoadedState(true)
             }
         }
+    }
+
+    const updateFileItem = (id, updates) => {
+        const item = lgs.stores.main.components.fileLoader.fileList.get(id)
+        if (!item) {
+            return
+        }
+
+        lgs.stores.main.components.fileLoader.fileList.set(id, {
+            ...item,
+            ...updates,
+            file: {
+                ...item.file,
+                ...(updates.file ?? {}),
+            },
+        })
     }
 
     /**
@@ -108,7 +291,7 @@ export const JourneyLoaderUI = (props) => {
         if (lgs.journeys.has(slug)) {
             updateFileStatus(currentId, JOURNEY_EXISTS, ALREADY_IMPORTED.text)
             if (slug === sampleSlug) {
-                lgs.stores.main.components.fileLoader.sampleLoaded = true
+                setSampleLoadedState(true)
             }
 
             UIToast.warning({
@@ -147,7 +330,7 @@ export const JourneyLoaderUI = (props) => {
                 const isDoublon = status === JOURNEY_EXISTS
                 updateFileStatus(currentId, isDoublon ? JOURNEY_EXISTS : JOURNEY_KO, isDoublon ? ALREADY_IMPORTED.text : IMPORT_FAILED.text)
                 if (isDoublon && slug === sampleSlug) {
-                    lgs.stores.main.components.fileLoader.sampleLoaded = true
+                    setSampleLoadedState(true)
                 }
 
                 UIToast.warning({
@@ -159,6 +342,152 @@ export const JourneyLoaderUI = (props) => {
         catch (error) {
             updateFileStatus(currentId, JOURNEY_KO, 'Error during upload')
             triggerFailureEvent(file.name, error)
+        }
+    }
+
+    const importRemoteJourney = async (url) => {
+        const response = await lgs.axios.post(
+            [lgs.BACKEND_API, 'journey', 'import-url'].join('/'),
+            {url},
+            {
+                headers:         {
+                    'content-type': 'application/json',
+                    Accept:         'application/json',
+                },
+                timeout:         REMOTE_JOURNEY_IMPORT_TIMEOUT_MS,
+                signal:          AbortSignal.timeout(REMOTE_JOURNEY_IMPORT_TIMEOUT_MS),
+                withCredentials: true,
+            },
+        )
+
+        if (!response.data?.success) {
+            const error = new Error(response.data?.error ?? 'Remote import failed.')
+            error.response = {data: response.data}
+            throw error
+        }
+
+        return response.data
+    }
+
+    const processRemoteUrl = async (event) => {
+        event?.preventDefault()
+        const rawUrl = remoteUrl.trim()
+        if (!rawUrl || remoteLoading) {
+            return
+        }
+
+        const currentId = `url_${_attemptCounter.current++}`
+        let sourceUrl
+        try {
+            sourceUrl = new URL(/^[a-z][a-z\d+.-]*:/i.test(rawUrl) ? rawUrl : `https://${rawUrl}`)
+        }
+        catch {
+            UIToast.error({caption: IMPORT_FAILED.caption, text: 'Invalid URL.'})
+            return
+        }
+
+        const sourceProvider = detectRemoteCloudProvider(sourceUrl)
+        const initialName = getRemoteDisplayName(sourceUrl)
+        const initialInfo = FileUtils.getFileNameAndExtension(initialName)
+        const item = createListItem(
+            {
+                name:         initialName,
+                lastModified: 0,
+                size:         0,
+                type:         'text/uri-list',
+            },
+            {
+                validated: true,
+                error:     '',
+                file:      {
+                    name:      initialInfo.name || REMOTE_JOURNEY_DEFAULT_NAME,
+                    extension: getSupportedExtension(initialName) || initialInfo.extension,
+                },
+            },
+        )
+
+        item.journeyStatus = JOURNEY_WAITING
+        item.internalId = currentId
+        lgs.stores.main.components.fileLoader.fileList.set(currentId, item)
+        setRemoteLoading(true)
+
+        try {
+            const remote = await importRemoteJourney(rawUrl)
+            const fileInfo = remote.file
+
+            if (!SUPPORTED_EXTENSIONS.includes(`.${fileInfo.extension}`)) {
+                updateFileStatus(currentId, JOURNEY_KO, 'Format not supported')
+                UIToast.error({
+                                  caption: IMPORT_NOT_SUPPORTED.caption,
+                                  text:    `<strong>${sourceUrl.hostname}</strong> ${IMPORT_NOT_SUPPORTED.text}`,
+                              })
+                return
+            }
+
+            const slug = __.app.setSlug({content: [fileInfo.name, fileInfo.extension]})
+            updateFileItem(currentId, {
+                slug,
+                file: {
+                    date:      0,
+                    fullName:  fileInfo.fullName,
+                    name:      fileInfo.name,
+                    extension: fileInfo.extension,
+                    type:      fileInfo.type,
+                    size:      fileInfo.size,
+                },
+            })
+
+            if (lgs.journeys.has(slug)) {
+                updateFileStatus(currentId, JOURNEY_EXISTS, ALREADY_IMPORTED.text)
+                UIToast.warning({
+                                    caption: ALREADY_IMPORTED.caption,
+                                    text:    `<strong>${fileInfo.fullName}</strong> ${ALREADY_IMPORTED.text}`,
+                                })
+                return
+            }
+
+            const status = await TrackUtils.loadJourneyFromFile({
+                                                                    name:      fileInfo.name,
+                                                                    extension: fileInfo.extension,
+                                                                    content:   remote.content,
+                                                                })
+
+            if (status === JOURNEY_OK) {
+                lgs.theJourney.globalSettings()
+                updateFileStatus(currentId, JOURNEY_OK)
+                setRemoteUrl('')
+                UIToast.success({
+                                    caption: IMPORT_SUCCESS.caption,
+                                    text:    `<strong>${fileInfo.fullName}</strong> ${IMPORT_SUCCESS.text}`,
+                                })
+                return
+            }
+
+            const isDoublon = status === JOURNEY_EXISTS
+            updateFileStatus(currentId, isDoublon ? JOURNEY_EXISTS : JOURNEY_KO, isDoublon ? ALREADY_IMPORTED.text : IMPORT_FAILED.text)
+            UIToast.warning({
+                                caption: isDoublon ? ALREADY_IMPORTED.caption : IMPORT_FAILED.caption,
+                                text:    `<strong>${fileInfo.fullName}</strong> ${isDoublon ? ALREADY_IMPORTED.text : IMPORT_FAILED.text}`,
+                            })
+        }
+        catch (error) {
+            const feedback = remoteImportFeedback(error, sourceProvider)
+            updateFileItem(currentId, {
+                file: {
+                    fullName:  feedback.itemName,
+                    name:      feedback.itemName,
+                    extension: '',
+                    size:      0,
+                },
+            })
+            updateFileStatus(currentId, JOURNEY_KO, feedback.message)
+            triggerFailureEvent(feedback.itemName, error, feedback.message, {
+                caption:     feedback.caption,
+                includeName: false,
+            })
+        }
+        finally {
+            setRemoteLoading(false)
         }
     }
 
@@ -369,7 +698,7 @@ export const JourneyLoaderUI = (props) => {
         const item = createListItem(mockFile, {validated: true, file: sampleFileInfo})
 
         if (lgs.journeys.has(sampleSlug)) {
-            lgs.stores.main.components.fileLoader.sampleLoaded = true
+            setSampleLoadedState(true)
             item.journeyStatus = JOURNEY_EXISTS
             item.error = ALREADY_IMPORTED.text
             lgs.stores.main.components.fileLoader.fileList.set(currentId, item)
@@ -394,7 +723,7 @@ export const JourneyLoaderUI = (props) => {
 
             if (status === JOURNEY_OK) {
                 updateFileStatus(currentId, JOURNEY_OK)
-                lgs.stores.main.components.fileLoader.sampleLoaded = true
+                setSampleLoadedState(true)
             }
             else {
                 updateFileStatus(currentId, JOURNEY_KO, 'Sample load failed')
@@ -409,11 +738,15 @@ export const JourneyLoaderUI = (props) => {
     /**
      * Error handling for failed operations
      */
-    const triggerFailureEvent = (fileName, error = null) => {
+    const triggerFailureEvent = (fileName, error = null, message = IMPORT_FAILED.text, options = {}) => {
+        const caption = options.caption ?? IMPORT_FAILED.caption
+        const includeName = options.includeName ?? true
+        const text = includeName && fileName ? `<strong>${fileName}</strong> ${message}` : message
+
         console.error(`[JourneyLoader] Error: ${fileName}`, error)
         UIToast.error({
-                          caption: IMPORT_FAILED.caption,
-                          text:    `${fileName} ${IMPORT_FAILED.text}`,
+                          caption,
+                          text,
                       })
     }
 
@@ -423,14 +756,15 @@ export const JourneyLoaderUI = (props) => {
     const validateFile = (file) => {
         let result = {validated: true, error: ''}
         const info = FileUtils.getFileNameAndExtension(file.name)
-        if (!SUPPORTED_EXTENSIONS.includes(`.${info.extension}`)) {
+        const normalizedInfo = {...info, extension: info.extension.toLowerCase()}
+        if (!SUPPORTED_EXTENSIONS.includes(`.${normalizedInfo.extension}`)) {
             result.validated = false
             result.error = 'Format not supported'
         }
         else if (props.validateCB) {
             result = props.validateCB(file)
         }
-        result.file = info
+        result.file = normalizedInfo
         return result
     }
 
@@ -461,7 +795,7 @@ export const JourneyLoaderUI = (props) => {
         _attemptCounter.current = 0
         clearSelectedFiles()
         lgs.stores.main.components.fileLoader.fileList.clear()
-        lgs.stores.ui.mainUI.journeyLoader.visible = false
+        closeJourneyLoader()
     }
 
 
@@ -508,6 +842,33 @@ export const JourneyLoaderUI = (props) => {
                     </div>
                 </div>
 
+                <div className="remote-import">
+                    <form className="add-url" onSubmit={processRemoteUrl}>
+                        <WaInput
+                            appearance="outlined"
+                            size="small"
+                            name="journey-url"
+                            value={remoteUrl}
+                            placeholder="Paste public file link"
+                            onInput={(event) => setRemoteUrl(event.target.value)}
+                            onChange={(event) => setRemoteUrl(event.target.value)}
+                            withClear
+                        >
+                            <WaIcon slot="start" name="cloud-arrow-down" variant="regular"/>
+                        </WaInput>
+
+                        <WaButton
+                            type="submit"
+                            variant="brand"
+                            size="small"
+                            loading={remoteLoading}
+                            disabled={remoteLoading || !remoteUrl.trim()}
+                        >
+                            <WaIcon slot="start" variant="regular" name="download"/>
+                            {'Import'}
+                        </WaButton>
+                    </form>
+                </div>
 
                 {fileList.size > 0 &&
                     <>
