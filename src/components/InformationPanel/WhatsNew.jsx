@@ -15,13 +15,14 @@
  ******************************************************************************/
 
 import { LGSScrollbars }                                     from '@Components/MainUI/LGSScrollbars'
-import { ChangelogManager, changelogVersionFromFile } from '@Core/ui/ChangelogManager'
+import { ChangelogManager, changelogFileName, changelogVersionFromFile } from '@Core/ui/ChangelogManager'
 import { WaButton, WaDetails, WaDivider, WaIcon, WaSpinner } from '@web.awesome.me/webawesome-pro/dist/react'
 import { DateTime }                                          from 'luxon'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { default as ReactMarkdown }                          from 'react-markdown'
 
 const PAGE_SIZE = 5
+const CHANGELOG_EXTENSION_PATTERN = /\.md$/i
 
 const initialState = {
     data:        [],
@@ -34,11 +35,13 @@ const initialState = {
     error:       false,
 }
 
-const formatNews = pageData => pageData.entries.map((news) => {
-    const file = news.file ?? ''
+const formatNews = pageData => pageData.entries.map((news, index) => {
+    const file = changelogFileName(news)
+    const id = file || `${news.version ?? 'changelog'}:${news.time ?? index}`
 
     return {
-        name:    file.slice(0, -3).replace(/_/gi, ' '),
+        id,
+        name:    file.replace(CHANGELOG_EXTENSION_PATTERN, '').replace(/_/gi, ' '),
         date:    DateTime.fromMillis(news.time).toLocaleString(DateTime.DATE_MED),
         time:    news.time,
         version: changelogVersionFromFile(file) ?? news.version,
@@ -100,7 +103,7 @@ export const WhatsNew = ({visible = false}) => {
                          loaded:      true,
                          error:       false,
                      })
-            setOpenDetails(new Set(data[0]?.name ? [data[0].name] : []))
+            setOpenDetails(new Set(data[0]?.id ? [data[0].id] : []))
 
             if (pageData.hasNext) {
                 prefetchPage(pageData.page + 1)
@@ -174,17 +177,16 @@ export const WhatsNew = ({visible = false}) => {
                 )}
 
                 {state.data.map(file => {
-                    const isOpen = openDetails.has(file.name)
+                    const isOpen = openDetails.has(file.id)
 
                     return (
                         <WaDetails small
                                    appearance="Filled-outlined"
                                    open={isOpen}
-                                   key={file.name}
-                                   name="whats-new-list"
+                                   key={file.id}
                                    className={`lgs--details-hoverable ${isOpen ? 'wa-details-open' : ''}`}
-                                   onWaShow={() => showDetails(file.name)}
-                                   onWaHide={() => hideDetails(file.name)}
+                                   onWaShow={() => showDetails(file.id)}
+                                   onWaHide={() => hideDetails(file.id)}
                         >
                             <span slot="summary"><strong>{file.version}</strong> - {file.date}</span>
                             <WaDivider/>
