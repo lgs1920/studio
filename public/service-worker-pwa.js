@@ -25,10 +25,31 @@ const MAX_CESIUM_ENTRIES = 700
 const CACHEABLE_DESTINATIONS = new Set(['script', 'style', 'image', 'font', 'manifest', 'worker'])
 const BLOCKED_CACHE_PATHS = [/^\/api(\/|$)/i, /^\/auth(\/|$)/i]
 const STATIC_FILE_EXTENSIONS = /\.(?:css|js|mjs|map|png|jpe?g|gif|webp|svg|ico|woff2?|ttf|otf|eot|wasm|webmanifest|txt|json)$/i
+const FRESHNESS_CRITICAL_PATHS = new Set([
+                                             '/',
+                                             '/index.html',
+                                             '/service-worker-pwa.js',
+                                             '/registerSW.js',
+                                             '/manifest.webmanifest',
+                                             '/build.json',
+                                             '/version.json',
+                                             '/branch.json',
+                                             '/servers.json',
+                                         ])
+const HASHED_BUILD_ASSET_PATTERN = /^\/assets\/.+-[a-z0-9_-]{8,}\.[a-z0-9]+$/i
+const DEPLOYMENT_BUILD_TIME = '__BUILD_TIME__'
+const DEPLOYMENT_VERSION = '__VERSION__'
+const DEPLOYMENT_BRANCH = '__BRANCH__'
+
+const getDeploymentValue = value => {
+    const cleaned = String(value ?? '').trim().replace(/^"+|"+$/g, '')
+    return cleaned && !cleaned.includes('__') ? cleaned : null
+}
+
 const DEFAULT_BUILD_META = Object.freeze({
-                                             buildTime: 'unknown',
-                                             version:   '0.0.0',
-                                             branch:    'main',
+                                             buildTime: getDeploymentValue(DEPLOYMENT_BUILD_TIME) ?? 'unknown',
+                                             version:   getDeploymentValue(DEPLOYMENT_VERSION) ?? '0.0.0',
+                                             branch:    getDeploymentValue(DEPLOYMENT_BRANCH) ?? 'main',
                                          })
 const RUNTIME_STATE = {
     cacheName: null,
@@ -136,10 +157,6 @@ async function openAppCache() {
     return caches.open(cacheName)
 }
 
-self.addEventListener('install', event => {
-    event.waitUntil(self.skipWaiting())
-})
-
 self.addEventListener('activate', event => {
     event.waitUntil(
         (async () => {
@@ -226,7 +243,11 @@ async function handleAppFetch(event) {
     const {request} = event
 
     if (isNavigationRequest(request)) {
-        return networkFirst(event)
+        return networkFirst(event, {cacheMode: 'reload'})
+    }
+
+    if (isFreshnessCriticalRequest(request) || isUnversionedScriptOrStyleRequest(request)) {
+        return networkFirst(event, {cacheMode: 'reload'})
     }
 
     if (!shouldCacheRequest(request)) {
@@ -244,6 +265,26 @@ async function handleAppFetch(event) {
 const isNavigationRequest = request => request.mode === 'navigate' || request.destination === 'document'
 
 const isBlockedPath = pathname => BLOCKED_CACHE_PATHS.some(pattern => pattern.test(pathname))
+
+const isHashedBuildAsset = pathname => HASHED_BUILD_ASSET_PATTERN.test(pathname)
+
+function isFreshnessCriticalRequest(request) {
+    const url = new URL(request.url)
+    return url.origin === self.location.origin && FRESHNESS_CRITICAL_PATHS.has(url.pathname)
+}
+
+function isUnversionedScriptOrStyleRequest(request) {
+    const url = new URL(request.url)
+    if (url.origin !== self.location.origin || isHashedBuildAsset(url.pathname)) {
+        return false
+    }
+
+    if (request.destination === 'script' || request.destination === 'style' || request.destination === 'worker') {
+        return true
+    }
+
+    return /\.(?:css|js|mjs)$/i.test(url.pathname)
+}
 
 function shouldCacheRequest(request) {
     if (request.method !== 'GET') {
@@ -280,12 +321,25 @@ function isCacheableResponse(request, response) {
     return url.origin === self.location.origin
 }
 
-async function networkFirst(event) {
+function withCacheMode(request, cacheMode) {
+    if (!cacheMode || cacheMode === 'default') {
+        return request
+    }
+
+    try {
+        return new Request(request, {cache: cacheMode})
+    }
+    catch {
+        return request
+    }
+}
+
+async function networkFirst(event, options = {}) {
     const {request} = event
     const cache = await openAppCache()
 
     try {
-        const networkResp = await fetch(request)
+        const networkResp = await fetch(withCacheMode(request, options.cacheMode))
         if (isCacheableResponse(request, networkResp)) {
             event.waitUntil(cache.put(request, networkResp.clone()).catch(() => null))
         }
@@ -351,6 +405,11 @@ const isManagedCacheName = cacheName =>
     typeof cacheName === 'string' && (cacheName === CESIUM_CACHE || cacheName.startsWith(APP_CACHE_PREFIX))
 
 self.addEventListener('message', async event => {
+    if (event.data?.type === 'SKIP_WAITING') {
+        event.waitUntil(self.skipWaiting())
+        return
+    }
+
     if (event.data?.source !== 'LGS_CACHE_MANAGER') {
         return
     }

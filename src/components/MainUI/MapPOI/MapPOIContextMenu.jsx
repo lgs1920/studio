@@ -19,10 +19,10 @@ import {
     ROTATION_ICON,
 }                                       from '@Core/constants'
 import { getOrbitSettings, setOrbitStoreSettings } from '@Core/OrbitSettings'
-
+import { ELEVATION_UNITS, UnitUtils }       from '@Utils/UnitUtils'
 import { UIToast }                                from '@Utils/UIToast'
-import { WaDivider, WaIcon, WaSpinner } from '@web.awesome.me/webawesome-pro/dist/react'
-import React, { useCallback, useEffect, useMemo } from 'react'
+import { WaDivider, WaIcon } from '@web.awesome.me/webawesome-pro/dist/react'
+import { useCallback, useEffect, useMemo } from 'react'
 import { proxy, useSnapshot } from 'valtio'
 
 const EMPTY_POI_PROXY = proxy({})
@@ -42,21 +42,17 @@ const EMPTY_POI_PROXY = proxy({})
  * @param {MapPOIContextMenuProps} props
  * @returns {JSX.Element|null}
  */
-export const MapPOIContextMenu = (props) => {
+export const MapPOIContextMenu = ({menuRef, targetId}) => {
 
-    const _menuRef = props.menuRef
-    const thePOI = props.targetId?.id
+    const thePOI = targetId?.id
     const $pois = lgs.stores.main.components.pois
     const rotateState = useSnapshot(lgs.stores.ui.mainUI.rotate)
     const toolbars = useSnapshot(lgs.settings.ui.toolbars)
-
-    // If no target ID is provided, do not render the menu component.
-    if (!thePOI) {
-        return null
-    }
+    const coordinateSystem = lgs.settings.coordinateSystem.current
+    const unitSystem = lgs.settings.unitSystem.current
 
     // POI Data Access
-    const $targetPoi = $pois.list.get(thePOI)
+    const $targetPoi = thePOI ? $pois.list.get(thePOI) : null
     const currentPoi = useSnapshot($targetPoi ?? EMPTY_POI_PROXY)
 
     const $contextMenu = lgs.stores.ui.contextMenu
@@ -110,7 +106,7 @@ export const MapPOIContextMenu = (props) => {
             tab: currentPoi?.parent ? 'pois' : null,
         })
         hideMenu()
-    }, [thePOI, hideMenu])
+    }, [thePOI, currentPoi.parent, hideMenu])
 
     /** Toggles the expanded/reduced state of the POI. */
     const toggleExpanded = useCallback(() => {
@@ -175,28 +171,32 @@ export const MapPOIContextMenu = (props) => {
     // Ensure the menu element is initialized in the ContextMenu singleton on first mount/ref set.
     // This is crucial for the show/hide logic managed by the singleton.
     useEffect(() => {
+        if (!thePOI) {
+            return
+        }
         if ($pois.current !== thePOI) {
             $pois.current = thePOI
         }
     }, [thePOI, $pois])
 
     useEffect(() => {
-        if (_menuRef.current) {
-            __.ui.contextMenu.initialize(_menuRef.current)
+        const menuElement = menuRef?.current
+        if (menuElement) {
+            __.ui.contextMenu.initialize(menuElement)
         }
-    }, [])
+    }, [menuRef])
 
     // Show / hide based on global context state controlled by MapPOIContent
     useEffect(() => {
         // The menu must be visible in the store, we must have a current POI, and a position set.
-        if (!contextMenu.visible || !currentPoi.id || contextMenu.position == null) {
+        if (!thePOI || !contextMenu.visible || !currentPoi.id || contextMenu.position == null) {
             __.ui.contextMenu.hide()
             return
         }
 
         // This command physically positions and displays the menu on the screen.
         __.ui.contextMenu.showAt(contextMenu.position)
-    }, [contextMenu.visible, currentPoi.id, contextMenu.position])
+    }, [thePOI, contextMenu.visible, currentPoi.id, contextMenu.position])
 
 
     // Pre-computed flags (using currentPoi snapshot data) to avoid inline logic in JSX
@@ -215,26 +215,49 @@ export const MapPOIContextMenu = (props) => {
         currentPoi?.type !== POI_FLAG_STOP
     const canEdit = currentPoi?.type !== POI_TMP_TYPE
     const showRotationItem = isPOIRotating || isPOIPanoramic
+    const latitudeLabel = useMemo(
+        () => currentPoi?.latitude != null ? __.convert(currentPoi.latitude).to(coordinateSystem) : '',
+        [coordinateSystem, currentPoi.latitude],
+    )
+    const longitudeLabel = useMemo(
+        () => currentPoi?.longitude != null ? __.convert(currentPoi.longitude).to(coordinateSystem) : '',
+        [coordinateSystem, currentPoi.longitude],
+    )
+    const simulatedAltitude = useMemo(() => {
+        const meters = currentPoi?.simulatedHeight ?? currentPoi?.height ?? 0
+        const value = UnitUtils.convert(meters).to(ELEVATION_UNITS[unitSystem])
+        return `${Math.round(value)} ${ELEVATION_UNITS[unitSystem]}`
+    }, [currentPoi.simulatedHeight, currentPoi.height, unitSystem])
 
     // Safety check: if the POI doesn't exist in the list (though targetPoiId should prevent this), return null.
-    if (!currentPoi.id) {
+    if (!thePOI || !currentPoi.id) {
         return null
     }
 
     return (
         <div
-            ref={_menuRef}
+            ref={menuRef}
             id="poi-context-menu"
             className="lgs-context-menu poi-on-map-menu lgs-card wa-theme-lgs1920-on-map"
             style={{'--lgs-on-map-ui-opacity': toolbars.opacity}}
             onContextMenu={(event) => event.preventDefault()} // Prevent native browser context menu
         >
-            {!currentPoi.expanded && (
-                <div className="context-menu-title-when-reduced">
-                    {currentPoi.title ?? 'Point Of Interest'}
-                    <WaDivider/>
+            <div className="map-point-context-menu-summary">
+                <div className="map-point-context-menu-title">{currentPoi.title ?? 'Point Of Interest'}</div>
+                <div className="map-point-context-menu-row">
+                    <span>{'Latitude'}</span>
+                    <strong>{latitudeLabel}</strong>
                 </div>
-            )}
+                <div className="map-point-context-menu-row">
+                    <span>{'Longitude'}</span>
+                    <strong>{longitudeLabel}</strong>
+                </div>
+                <div className="map-point-context-menu-row">
+                    <span>{'Simulated Alt.'}</span>
+                    <strong>{simulatedAltitude}</strong>
+                </div>
+                <WaDivider/>
+            </div>
 
             <ul>
                 {/* Save as standard POI */}

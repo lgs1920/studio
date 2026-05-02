@@ -47,7 +47,6 @@ export const MapPOIContent = ({poi, useInMenu = false, style}) => {
     const point = useMemo(() => poisSnap.list.get(poi), [poisSnap.list, poi])
     const $point = $pois.list.get(poi)
 
-    const $contextMenu = lgs.stores.ui.contextMenu
     const iconName = point?.categoryIcon(point?.category)
     const isSvgIcon = iconName?.endsWith('.svg')
 
@@ -56,6 +55,7 @@ export const MapPOIContent = ({poi, useInMenu = false, style}) => {
         if (useInMenu || !point) {
             return
         }
+        __.ui.contextMenu.hide()
 
         const alreadyOpen = __.ui.drawerManager.drawers.open
         const samePOI = entity === poisSnap.current
@@ -87,34 +87,32 @@ export const MapPOIContent = ({poi, useInMenu = false, style}) => {
         __.ui.drawerManager.open(drawer, {action: 'edit-current', entity, tab})
     }, [useInMenu, point, poisSnap.current])
 
-    /** Context menu trigger */
-    const handleContextMenu = useCallback((event) => {
+    /** Global POI menu trigger */
+    const openContextMenu = useCallback((event) => {
         if (useInMenu || !point) {
             return
         }
 
-        $contextMenu.type = 'poi'
-        $contextMenu.visible = true
-        $contextMenu.position = {x: event.position.x, y: event.position.y}
-        $contextMenu.targetId = point
-    }, [useInMenu, point, $contextMenu])
-
-    /** Toggle expanded state */
-    const handleClick = useCallback(async (event, entity) => {
-        if (useInMenu || !point) {
+        const position = event.position ?? event.endPosition
+        if (!position) {
             return
         }
-        await __.ui.poiManager.updatePOI(entity, {expanded: !point.expanded})
+
+        const contextMenu = lgs.stores.ui.contextMenu
+        contextMenu.type = 'poi'
+        contextMenu.visible = true
+        contextMenu.position = {x: position.x, y: position.y}
+        contextMenu.targetId = point
     }, [useInMenu, point])
 
     const addEventListeners = useCallback((poiId) => {
-        __.canvasEvents.onClick(handleClick, {entity: poiId})
-        __.canvasEvents.onTap(handleClick, {entity: poiId})
+        __.canvasEvents.onClick(openContextMenu, {entity: poiId, preventLowerPriority: true})
+        __.canvasEvents.onTap(openContextMenu, {entity: poiId, preventLowerPriority: true})
         __.canvasEvents.onDoubleClick(handleEditor, {entity: poiId, preventLowerPriority: true})
         __.canvasEvents.onDoubleTap(handleEditor, {entity: poiId, preventLowerPriority: true})
-        __.canvasEvents.onRightClick(handleContextMenu, {entity: poiId, preventLowerPriority: true})
-        __.canvasEvents.onLongTap(handleContextMenu, {entity: poiId, preventLowerPriority: true})
-    }, [handleClick, handleEditor, handleContextMenu])
+        __.canvasEvents.onRightClick(openContextMenu, {entity: poiId, preventLowerPriority: true})
+        __.canvasEvents.onLongTap(openContextMenu, {entity: poiId, preventLowerPriority: true})
+    }, [handleEditor, openContextMenu])
 
     const removeEventListeners = useCallback((poiId) => {
         __.canvasEvents.removeAllListenersByEntity(poiId)
@@ -151,7 +149,7 @@ export const MapPOIContent = ({poi, useInMenu = false, style}) => {
                 console.error('Error rendering POI to canvas:', error)
             }
         })
-    }, [useInMenu, point?.visible, point?.expanded, $point])
+    }, [useInMenu, point, $point])
 
     useEffect(() => {
         if (useInMenu || !point) {

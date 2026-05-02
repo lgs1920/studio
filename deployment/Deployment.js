@@ -439,10 +439,16 @@ export class Deployment {
             case 'studio': {
                 const serviceWorkerPath = path.join(this.localDistPath, 'service-worker-pwa.js')
                 if (fs.existsSync(serviceWorkerPath)) {
+                    const replaceServiceWorkerPlaceholder = (content, placeholder, value) => {
+                        const encodedValue = JSON.stringify(String(value))
+                        return content
+                            .replace(new RegExp(`(['"])${placeholder}\\1`, 'g'), encodedValue)
+                            .replace(new RegExp(placeholder, 'g'), String(value))
+                    }
                     let serviceWorkerContent = fs.readFileSync(serviceWorkerPath, 'utf8')
-                    serviceWorkerContent = serviceWorkerContent.replace(/__BUILD_TIME__/g, `"${this.date}"`)
-                    serviceWorkerContent = serviceWorkerContent.replace(/__VERSION__/g, `"${this.version}"`)
-                    serviceWorkerContent = serviceWorkerContent.replace(/__BRANCH__/g, `"${this.branch}"`)
+                    serviceWorkerContent = replaceServiceWorkerPlaceholder(serviceWorkerContent, '__BUILD_TIME__', this.date)
+                    serviceWorkerContent = replaceServiceWorkerPlaceholder(serviceWorkerContent, '__VERSION__', this.version)
+                    serviceWorkerContent = replaceServiceWorkerPlaceholder(serviceWorkerContent, '__BRANCH__', this.branch)
 
                     fs.writeFileSync(serviceWorkerPath, serviceWorkerContent, 'utf8')
                     console.log(`    > Service Worker configured`)

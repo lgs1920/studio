@@ -27,6 +27,10 @@ export class AppUpdateManager {
     #installPrompt = null
     #installCallback = null
     #updateCallback = null
+    #registration = null
+    #reloadAfterControllerChange = false
+    #hasReloadedForUpdate = false
+    #lastUpdateCheck = 0
 
     constructor() {
         if (AppUpdateManager.#instance) {
@@ -136,23 +140,76 @@ export class AppUpdateManager {
                 this.#updateCallback?.({
                                            isAvailable: true,
                                            tag: event.data[AppUpdateManager.tagKey] || 'unknown',
-                                       })
+                })
             }
         }, {passive: true})
 
-        navigator.serviceWorker.register('/service-worker-pwa.js')
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+            if (!this.#reloadAfterControllerChange) {
+                return
+            }
+
+            this.#reloadPageForUpdate()
+        }, {passive: true})
+
+        window.addEventListener('focus', () => {
+            this.#checkForUpdates()
+        }, {passive: true})
+
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') {
+                this.#checkForUpdates()
+            }
+        }, {passive: true})
+
+        navigator.serviceWorker.register('/service-worker-pwa.js', {updateViaCache: 'none'})
             .then(registration => {
-                registration.addEventListener('updatefound', () => {
-                    const newWorker = registration.installing
-                    newWorker?.addEventListener('statechange', () => {
-                        if (newWorker.state === 'installed') {
-                            this.#updateCallback?.({isAvailable: true, tag: 'new-version-ready'})
-                        }
-                    }, {passive: true})
-                }, {passive: true})
+                this.#registration = registration
+                this.#watchRegistration(registration)
+                this.#checkForUpdates({force: true})
             })
             .catch(() => {
             })
+    }
+
+    #watchRegistration = registration => {
+        if (registration.waiting && navigator.serviceWorker.controller) {
+            this.#updateCallback?.({isAvailable: true, tag: 'new-version-ready'})
+        }
+
+        registration.addEventListener('updatefound', () => {
+            const newWorker = registration.installing
+            newWorker?.addEventListener('statechange', () => {
+                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                    this.#updateCallback?.({isAvailable: true, tag: 'new-version-ready'})
+                }
+            }, {passive: true})
+        }, {passive: true})
+    }
+
+    #checkForUpdates = async ({force = false} = {}) => {
+        const now = Date.now()
+        if (!force && now - this.#lastUpdateCheck < 60_000) {
+            return
+        }
+        this.#lastUpdateCheck = now
+
+        try {
+            const registration = this.#registration || await navigator.serviceWorker.getRegistration()
+            await registration?.update()
+        }
+        catch (error) {
+        }
+    }
+
+    #reloadPageForUpdate = () => {
+        if (this.#hasReloadedForUpdate) {
+            return
+        }
+
+        this.#hasReloadedForUpdate = true
+        this.#updateCallback?.({isAvailable: false})
+        window.location.reload()
     }
 
     #setupCacheEventListener = () => {
@@ -169,8 +226,10 @@ export class AppUpdateManager {
         }
 
         try {
-            const reg = await navigator.serviceWorker.getRegistration()
+            const reg = this.#registration || await navigator.serviceWorker.getRegistration()
+            await reg?.update()
             if (reg?.waiting?.postMessage) {
+                this.#reloadAfterControllerChange = true
                 reg.waiting.postMessage({[AppUpdateManager.typeKey]: AppUpdateManager.skipWaitingMessage})
                 this.#updateCallback?.({isAvailable: false})
             }
@@ -180,14 +239,11 @@ export class AppUpdateManager {
     }
 
     applyUpdateWithCacheReset = async () => {
-        await this.applyUpdate()
-
         // Purge Cesium tiles if they exist globally
         if (window.__?.app?.cesiumCache) {
             window.__.app.cesiumCache.clear()
         }
 
-        // Force refresh to apply new assets
-        window.location.reload()
+        await this.applyUpdate()
     }
 }

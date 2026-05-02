@@ -137,15 +137,14 @@ export const AppUpdate = ({mode = 'banner'}) => {
     }
 
     /**
-     * Applies the available PWA update and reloads the page.
+     * Applies the available PWA update.
      * @async
      */
     const handleApplyUpdate = async () => {
         setUpdateError(null)
         try {
-            // Trigger service worker update and force a page reload
+            // Trigger service worker update; AppUpdateManager reloads on controllerchange.
             await $updaterStore.applyUpdate()
-            window.location.reload()
         }
         catch (error) {
             // Display error if update fails
