@@ -20,6 +20,8 @@ import {
     ORIGIN_STORE, platforms, POIS_STORE, SERVERS, SETTINGS_STORE, VAULT_STORE, WIDGETS_STORE,
 }                              from '@Core/constants'
 import { StoresManager }       from '@Core/stores/StoresManager'
+import { installAppShortcuts } from '@Core/events/appShortcuts'
+import { ShortcutManager }     from '@Core/events/ShortcutManager'
 import { AppToolsManager }     from '@Core/ui/AppToolsManager'
 import { AppUpdateManager }    from '@Core/ui/AppUpdateManager'
 import { ContextMenu }         from '@Core/ui/context-menu/ContextMenu'
@@ -406,6 +408,11 @@ export class LGS1920Context {
         __.ui.poiManager = new POIManager()
         __.ui.geocoder = new Geocoder()
         __.ui.contextMenu = new ContextMenu()
+        __.ui.shortcutManager = new ShortcutManager()
+        __.ui.addShortcut = (...args) => __.ui.shortcutManager.addShortcut(...args)
+        __.ui.removeShortcut = (...args) => __.ui.shortcutManager.removeShortcut(...args)
+        __.addShortcut = __.ui.addShortcut
+        __.ui.appShortcuts = installAppShortcuts(__.ui.shortcutManager)
 
         __.tools = new AppToolsManager() // TODO use ui.tools instead of ui.ui
         __.device = new DeviceManager()

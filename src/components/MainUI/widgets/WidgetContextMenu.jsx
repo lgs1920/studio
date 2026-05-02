@@ -15,10 +15,8 @@
  ******************************************************************************/
 
 import {
-    CAMERA_INFORMATION_WIDGET, EDIT_WIDGET_ICON,
-    WIDGET_EDITOR_POST_RENDER_EVENT, WIDGET_EDITOR_PRE_RENDER_EVENT, WIDGETS_CAPABILITIES, WIDGETS_EDITOR_DRAWER,
+    EDIT_WIDGET_ICON, WIDGETS_CAPABILITIES, WIDGETS_EDITOR_DRAWER,
 } from '@Core/constants'
-import { WidgetDynamicRenderer } from '@Core/ui/widget-manager/dynamic-render/WidgetDynamicRender'
 import { WaIcon, WaTooltip }     from '@web.awesome.me/webawesome-pro/dist/react'
 import { useMemo } from 'react'
 import { useSnapshot }           from 'valtio'
@@ -66,53 +64,14 @@ export const WidgetContextMenu = ({targetId, menuRef}) => {
      * Triggers widget deletion and cleans up associated UI state
      */
     const removeWidget = () => {
-        new WidgetDynamicRenderer().destroyWidget(targetId)
-
-        if (targetId.split('#')[0] === CAMERA_INFORMATION_WIDGET) {
-            lgs.settings.ui.camera.showPosition = false
-            lgs.settings.ui.camera.showHPR = false
-            lgs.settings.ui.camera.showTargetPosition = false
-        }
-
-        // Cleanup settings persistence
-        const type = targetId.split('#')[0]
-        const elements = lgs.settings.widgets[type]?.configuration?.elements
-        if (elements && elements[targetId]) {
-            delete elements[targetId]
-        }
-
-        element && __.ui.widgetManager.disposeElement(element)
-
-        if (drawers.open === WIDGETS_EDITOR_DRAWER && drawers.entity === targetId) {
-            __.ui.drawerManager.close()
-        }
-
-        closeMenu()
+        void __.ui.widgetManager.removeWidget(targetId)
     }
 
     /**
      * Toggles or opens the editor drawer for the current entity
      */
     const editWidget = () => {
-        const isCurrentlyEditing = drawers.open === WIDGETS_EDITOR_DRAWER && drawers.entity === targetId
-
-        if (isCurrentlyEditing) {
-            __.ui.drawerManager.close()
-        }
-        else {
-
-            window.dispatchEvent(new CustomEvent(WIDGET_EDITOR_PRE_RENDER_EVENT, {
-                detail: {entity: targetId},
-            }))
-            __.ui.drawerManager.open(WIDGETS_EDITOR_DRAWER, {
-                action: 'edit-current',
-                entity: targetId,
-            })
-            window.dispatchEvent(new CustomEvent(WIDGET_EDITOR_POST_RENDER_EVENT, {
-                detail: {entity: targetId},
-            }))
-
-        }
+        __.ui.widgetManager.editWidget(targetId, {toggle: true})
         closeMenu()
     }
 

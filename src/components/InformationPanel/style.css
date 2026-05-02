@@ -74,3 +74,132 @@
     flex-direction: column;
     gap: var(--lgs-gutter-s);
 }
+
+.lgs--shortcuts-list {
+    display: flex;
+    flex-direction: column;
+    padding: var(--lgs-gutter-s);
+    gap: var(--lgs-gutter-m);
+}
+
+.lgs--shortcuts-section {
+    display: flex;
+    flex-direction: column;
+    gap: var(--lgs-gutter-xs);
+}
+
+.lgs--shortcuts-section h3 {
+    font-size: var(--lgs-font-size);
+    font-weight: 600;
+    margin: 0;
+}
+
+.lgs--shortcuts-table {
+    display: flex;
+    flex-direction: column;
+    border-top: 1px solid var(--lgs-card-border-color);
+}
+
+.lgs--shortcuts-row {
+    display: grid;
+    align-items: start;
+    grid-template-columns: minmax(0, calc(40% - var(--lgs-gutter-s))) minmax(60%, 1fr);
+    padding: var(--lgs-gutter-xs) 0;
+    border-bottom: 1px solid var(--lgs-card-border-color);
+    gap: var(--lgs-gutter-s);
+}
+
+.lgs--shortcuts-keys {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: calc(var(--lgs-gutter-xs) / 2);
+}
+
+.lgs--shortcut-combo {
+    display: inline-flex;
+    align-items: center;
+    flex-wrap: nowrap;
+    gap: calc(var(--lgs-gutter-xs) / 2);
+}
+
+.lgs--shortcut-alternative {
+    display: flex;
+    align-items: flex-start;
+    flex-direction: column;
+    flex-basis: 100%;
+    gap: calc(var(--lgs-gutter-xs) / 2);
+}
+
+.lgs--shortcut-alternative-divider {
+    width: 2rem;
+    margin: 0;
+    padding: 0;
+    --color: var(--wa-color-neutral-60);
+    --spacing: 0;
+}
+
+.lgs--shortcuts-keys .lgs--shortcut-key {
+    font: inherit;
+    font-size: var(--lgs-font-size-s);
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: calc(var(--lgs-gutter-xs) / 2);
+    min-height: 1.65rem;
+    padding: 0 var(--lgs-gutter-xs);
+    color: var(--wa-color-brand-on-loud, var(--wa-color-brand-on));
+    border: 1px solid var(--wa-color-brand-border-loud, var(--wa-color-brand));
+    border-radius: 4px;
+    background: var(--wa-color-brand-fill-loud, var(--wa-color-brand));
+}
+
+.lgs--shortcut-key wa-icon {
+    font-size: var(--lgs-font-size);
+}
+
+.lgs--shortcut-plus {
+    font-size: var(--lgs-font-size-s);
+    font-weight: 600;
+    color: var(--wa-color-neutral-60);
+}
+
+.lgs--shortcuts-action {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    gap: calc(var(--lgs-gutter-xs) / 2);
+}
+
+.lgs--shortcuts-action-heading {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: calc(var(--lgs-gutter-xs) / 2);
+}
+
+.lgs--shortcuts-action strong {
+    font-size: var(--lgs-font-size);
+    font-weight: 600;
+}
+
+.lgs--shortcuts-platform {
+    font-size: var(--lgs-font-size);
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    gap: calc(var(--lgs-gutter-xs) / 2);
+    color: var(--wa-color-brand);
+}
+
+.lgs--shortcuts-action > span {
+    font-size: var(--lgs-font-size-s);
+    color: var(--wa-color-neutral-60);
+}
+
+@media (max-width: 640px) {
+    .lgs--shortcuts-row {
+        grid-template-columns: 1fr;
+    }
+}

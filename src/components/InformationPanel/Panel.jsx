@@ -26,7 +26,10 @@ import { useSnapshot }                 from 'valtio'
 import './style.css'
 
 import { CreditsPanel } from './CreditsPanel'
+import { ShortcutsPanel } from './ShortcutsPanel'
 import { WhatsNew }     from './WhatsNew'
+
+const INFO_SHORTCUTS_TAB = 'tab-shortcuts'
 
 export const Panel = () => {
     const snap = useSnapshot(lgs.stores.ui.drawers)
@@ -108,9 +111,15 @@ export const Panel = () => {
                 <WaTab slot="nav" panel={INFO_CHANGELOG_TAB}>
                     What's New ?
                 </WaTab>
+                <WaTab slot="nav" panel={INFO_SHORTCUTS_TAB}>
+                    Shortcuts
+                </WaTab>
                 <WaTab slot="nav" panel="tab-credits">
                     Credits
                 </WaTab>
+                <WaTabPanel name={INFO_SHORTCUTS_TAB}>
+                    <ShortcutsPanel/>
+                </WaTabPanel>
                 <WaTabPanel name="tab-credits">
                     <WaScroller orientation="vertical">
                         <CreditsPanel/>

@@ -19,7 +19,6 @@ import {
     LGS_ANIMATION_DRAGGING, LGS_ANIMATION_RESIZING, LGS_TOOLBAR, LGS_VISUAL_WIDGET, LGS_WIDGET,
     LGS_WIDGET_SCALE_EFFECTIVE,
     SCENE_WIDGETS_BOARD,
-    WIDGET_EDITOR_POST_RENDER_EVENT,
     WIDGET_EDITOR_PRE_RENDER_EVENT,
     WIDGETS_CAPABILITIES, WIDGETS_EDITOR_DRAWER,
 } from '@Core/constants'
@@ -423,18 +422,8 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
             return
         }
         lgs.stores.ui.widget.current = {id: widgetId}
-        if (!__.ui.widgetManager.hasCapabilities(config.contextMenu, WIDGETS_CAPABILITIES) || config.contextMenu?.canEdit !== true) {
-            return
-        }
-        if (drawers.open === WIDGETS_EDITOR_DRAWER && drawers.entity === widgetId) {
-            __.ui.drawerManager.close()
-        }
-        else {
-            window.dispatchEvent(new CustomEvent(WIDGET_EDITOR_PRE_RENDER_EVENT, {detail: {entity: widgetId}}))
-            __.ui.drawerManager.open(WIDGETS_EDITOR_DRAWER, {action: 'edit-current', entity: widgetId})
-            window.dispatchEvent(new CustomEvent(WIDGET_EDITOR_POST_RENDER_EVENT, {detail: {entity: widgetId}}))
-        }
-    }, [interactionLocked, widgetId, config.contextMenu, drawers.open, drawers.entity])
+        __.ui.widgetManager.editWidget(widgetId, {toggle: true})
+    }, [interactionLocked, widgetId])
 
     const openContextMenu = useCallback((event) => {
         if (interactionLocked) {
