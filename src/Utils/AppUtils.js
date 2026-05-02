@@ -533,8 +533,12 @@ export class AppUtils {
     static startBackend = async () => {
         if (!__.app.isDevelopment()) {
             return lgs.axios({
-                                 method: 'get',
-                                 url:    `start-backend.php`,
+                                 method:  'post',
+                                 url:     `start-backend.php`,
+                                 headers: {
+                                     Accept:             'application/json',
+                                     'X-Requested-With': 'XMLHttpRequest',
+                                 },
                              })
                 .then(function (response) {
                     return response.data
