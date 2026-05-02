@@ -25,12 +25,13 @@ import { getGeom }  from '@turf/invariant'
 
 import {
     FEATURE_COLLECTION, FEATURE_LINE_STRING, FEATURE_MULTILINE_STRING, FEATURE_POINT, IMPORT_LOADING_ERROR, TrackUtils,
-}                           from '@Utils/cesium/TrackUtils'
-import { UIToast }          from '@Utils/UIToast'
-import { ElevationServer }  from './Elevation/ElevationServer'
-import { MapElement }       from './MapElement'
-import { getOrbitSettings } from './OrbitSettings'
-import { Track }            from './Track'
+}                             from '@Utils/cesium/TrackUtils'
+import { decodeHTMLEntities } from '@Utils/TextUtils'
+import { UIToast }            from '@Utils/UIToast'
+import { ElevationServer }    from './Elevation/ElevationServer'
+import { MapElement }         from './MapElement'
+import { getOrbitSettings }   from './OrbitSettings'
+import { Track }              from './Track'
 
 
 export class Journey extends MapElement {
@@ -72,7 +73,7 @@ export class Journey extends MapElement {
             this.visible = options.visible ?? true
             this.POIsVisible = options.POIsVisible ?? true
 
-            this.description = options.description ?? ''
+            this.description = decodeHTMLEntities(options.description ?? '')
 
             this.camera = options.camera ?? null
             this.rotation = options.rotation ?? {}
@@ -367,7 +368,7 @@ export class Journey extends MapElement {
                         slug:        slug,
                         hasTime:     this.#hasTime(feature.properties),
                         hasAltitude: this.#hasAltitude(geometry),
-                        description: keepContext ? track.description : feature.properties.desc ?? '',
+                        description: keepContext ? track.description : decodeHTMLEntities(feature.properties.desc ?? ''),
                         segments:    geometry.coordinates.length,
                         visible:     keepContext ? track.visible : true,
                         color:       keepContext ? track.color : __.ui.editor.journey.newColor(),
@@ -446,7 +447,7 @@ export class Journey extends MapElement {
         for (const feature of this.geoJson.features) {
             const geometry = getGeom(feature)
             const common = {
-                description: feature.properties.desc ?? feature.properties.description ?? '',
+                description: decodeHTMLEntities(feature.properties.desc ?? feature.properties.description ?? ''),
                 visible:     true,
             }
 

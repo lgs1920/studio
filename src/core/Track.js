@@ -19,6 +19,7 @@ import { MapElement }                                                         fr
 import { ProfileTrackMarker }                                                 from '@Core/ProfileTrackMarker'
 import { FEATURE, FEATURE_LINE_STRING, FEATURE_MULTILINE_STRING, TrackUtils } from '@Utils/cesium/TrackUtils'
 import { Mobility }                                                           from '@Utils/Mobility'
+import { decodeHTMLEntities }                                                 from '@Utils/TextUtils'
 import { DateTime }                                                           from 'luxon'
 import { v4 as uuid }                                                         from 'uuid'
 
@@ -59,7 +60,7 @@ export class Track extends MapElement {
         this.color = options.color ??__.ui.editor.journey.newColor()
         this.thickness = options.thickness ?? lgs.settings.getJourney.thickness
         this.visible = options.visible ?? true
-        this.description = options.description ?? undefined
+        this.description = options.description === undefined ? undefined : decodeHTMLEntities(options.description)
 
 
         this.name = options.name
