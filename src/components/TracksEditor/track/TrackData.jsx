@@ -502,7 +502,7 @@ export const TrackData = memo(() => {
                             <div className="element-item">
                                 <WaIcon variant="regular" name={'arrow-up-to-line'}/>
                                 <span className="screen-reader-only">{'Max:'}</span>
-                                <NameValueUnit value={metrics.averageSpeedMoving} units={SPEED_UNITS}/>
+                                <NameValueUnit value={metrics.maxSpeed} units={SPEED_UNITS}/>
                             </div>
                         </div>
                     </>
@@ -522,8 +522,8 @@ export const TrackData = memo(() => {
                             </div>
                             <div className="element-item">
                                 <WaIcon variant="regular" name={'arrow-up-to-line'}/>
-                                <span className="screen-reader-only">{'Max:'}</span>
-                                <NameValueUnit value={metrics.averageSpeedMoving} units={PACE_UNITS}/>
+                                <span className="screen-reader-only">{'Best:'}</span>
+                                <NameValueUnit value={metrics.minPace} units={PACE_UNITS}/>
                             </div>
                         </div>
                     </>

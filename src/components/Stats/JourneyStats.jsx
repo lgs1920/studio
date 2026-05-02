@@ -20,7 +20,7 @@ import { WIDGET_RADIUS }                                from '@Core/constants'
 import { faArrowDownToLine, faArrowUpToLine }           from '@fortawesome/pro-regular-svg-icons'
 import { SlDivider, SlIcon }                            from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                                        from '@Utils/FA2SL'
-import { DISTANCE_UNITS, ELEVATION_UNITS, SPEED_UNITS } from '@Utils/UnitUtils'
+import { DISTANCE_UNITS, ELEVATION_UNITS, PACE_UNITS, SPEED_UNITS, UnitUtils } from '@Utils/UnitUtils'
 import { memo, useEffect, useMemo } from 'react'
 import { useSnapshot }                                  from 'valtio'
 
@@ -131,19 +131,24 @@ export const JourneyStats = memo(({id, metrics, units, style = {}}) => {
         )
     }, [displayMetrics?.duration, isImperial])
 
-    const formatPace = (paceSeconds) => {
-        if (!Number.isFinite(paceSeconds) || paceSeconds <= 0) {
+    const formatPace = (pace) => {
+        if (!Number.isFinite(pace) || pace <= 0) {
             return null
         }
+        const paceMinutes = UnitUtils.convert(pace).to(PACE_UNITS[unitSystem.current])
+        if (!Number.isFinite(paceMinutes) || paceMinutes <= 0) {
+            return null
+        }
+        const paceSeconds = Math.round(paceMinutes * 60)
         const m = Math.floor(paceSeconds / 60)
-        const s = Math.floor(paceSeconds % 60)
+        const s = paceSeconds % 60
         return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
     }
 
     const paceValues = useMemo(() => ({
         average: formatPace(displayMetrics?.averagePace),
         min: formatPace(displayMetrics?.minPace),
-    }), [displayMetrics?.averagePace, displayMetrics?.minPace])
+    }), [displayMetrics?.averagePace, displayMetrics?.minPace, unitSystem.current])
 
     const hasDuration = journey?.hasTime ?? false
     const hasElevation = journey?.hasAltitude ?? false

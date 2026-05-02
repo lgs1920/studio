@@ -111,7 +111,7 @@ export class UnitUtils {
                     case mkm:
                         return input / KM / MINUTE * MILLIS
                     case mpmile:
-                        return input / MPH * MILE * HOUR
+                        return input / MILE / MINUTE * MILLIS
                     case dms: {
                         const degrees = Math.floor(input)
                         const minutesFloat = (input - degrees) * 60

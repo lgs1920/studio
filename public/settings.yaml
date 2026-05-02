@@ -115,6 +115,43 @@ swatches:
 ########################################
 journey:
   thickness: 2            # Initial track thickness (pixels)
+  activity:
+    default: trek
+    # Speeds are expressed in meters per second.
+    # Used to ignore impossible metric segments without modifying source coordinates.
+    types:
+      - id: trek
+        label: Trek
+        icon: person-hiking
+        maxSpeed: 3.0          # 10.8 km/h
+        maxClimbRate: 1.5      # m/s
+        maxDescentRate: 2.5    # m/s
+        stopDuration: 60
+        stopSpeedLimit: 0.2
+      - id: trail
+        label: Trail
+        icon: person-running
+        maxSpeed: 5.5          # 19.8 km/h
+        maxClimbRate: 2.0
+        maxDescentRate: 3.0
+        stopDuration: 45
+        stopSpeedLimit: 0.3
+      - id: bike
+        label: Bike
+        icon: bicycle
+        maxSpeed: 16.0         # 57.6 km/h
+        maxClimbRate: 2.5
+        maxDescentRate: 4.0
+        stopDuration: 45
+        stopSpeedLimit: 0.6
+      - id: ski-touring
+        label: Ski touring
+        icon: person-skiing-nordic
+        maxSpeed: 8.0          # 28.8 km/h
+        maxClimbRate: 1.6
+        maxDescentRate: 6.0
+        stopDuration: 60
+        stopSpeedLimit: 0.25
   ## POIs
   pois:
     # Default POI

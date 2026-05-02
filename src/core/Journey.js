@@ -42,6 +42,8 @@ export class Journey extends MapElement {
     type                                       // File type  GPX,KML,GEOJSON  //TODO KMZ
 
     title = ''                          // Journey Title
+    activity
+    activitySettings
 
     origin                                     // initial geoJson
     POIsVisible = true
@@ -58,7 +60,7 @@ export class Journey extends MapElement {
     tracksLoaded = false
     poisLoaded = false
 
-    constructor(title, type, options) {
+    constructor(title, type, options = {}) {
         super(CURRENT_JOURNEY)
 
 
@@ -74,6 +76,8 @@ export class Journey extends MapElement {
             this.POIsVisible = options.POIsVisible ?? true
 
             this.description = decodeHTMLEntities(options.description ?? '')
+            this.activity = options.activity ?? Journey.defaultActivity()
+            this.activitySettings = Journey.activityProfile(this.activity, options.activitySettings)
 
             this.camera = options.camera ?? null
             this.rotation = options.rotation ?? {}
@@ -97,6 +101,12 @@ export class Journey extends MapElement {
         await journey.initializeJourney(options)
         return journey
     }
+
+    static defaultActivity = () => Track.defaultActivity()
+
+    static activityProfiles = () => Track.activityProfiles()
+
+    static activityProfile = (activity = Journey.defaultActivity(), overrides = undefined) => Track.activityProfile(activity, overrides)
 
     /**
      * Asynchronously initializes the journey by executing a series of tasks in sequence.
@@ -243,9 +253,13 @@ export class Journey extends MapElement {
     static deserialize = (props) => {
         props.instance = new Journey()
         let instance = super.deserialize(props)
+        instance.activity ??= Journey.defaultActivity()
+        instance.activitySettings = Journey.activityProfile(instance.activity, instance.activitySettings)
 
         // Transform Tracks from object to class
         instance.tracks.forEach((track, slug) => {
+            track.activity ??= instance.activity
+            track.activitySettings ??= instance.activitySettings
             const object = new Track(track.title, track)
             instance.tracks.set(slug, new Track(track.title, object))
         })
@@ -369,6 +383,8 @@ export class Journey extends MapElement {
                         hasTime:     this.#hasTime(feature.properties),
                         hasAltitude: this.#hasAltitude(geometry),
                         description: keepContext ? track.description : decodeHTMLEntities(feature.properties.desc ?? ''),
+                        activity:    this.activity,
+                        activitySettings: this.activitySettings,
                         segments:    geometry.coordinates.length,
                         visible:     keepContext ? track.visible : true,
                         color:       keepContext ? track.color : __.ui.editor.journey.newColor(),
@@ -706,73 +722,23 @@ export class Journey extends MapElement {
     }
 
     setGlobalMetrics = () => {
-
-        const allMetrics = []
-
-        this.tracks.forEach(track => allMetrics.push(track.metrics.global))
-
-        let global = {}, tmp = []
-
-        // Min Height
-        global.minHeight = this.hasAltitude ? Math.min(...allMetrics.map(a => a?.altitude)) : undefined
-
-        // Max Height
-        global.maxHeight = this.hasAltitude ? Math.max(...allMetrics.map(a => a?.altitude)) : undefined
-
-        // If the first have duration time, all the data set have time
-        if (this.hasTime) {
-            // Max speed
-            tmp = TrackUtils.filterArray(allMetrics, {
-                speed: speed => speed !== 0 && speed !== undefined,
-            })
-            global.maxSpeed = Math.max(...tmp.map(a => a?.speed))
-
-            // Average speed (we exclude 0 and undefined values)
-            global.averageSpeed = tmp.reduce((s, o) => {
-                return s + o.speed
-            }, 0) / tmp.length
-
-            // Todo  Add average speed in motion
-
-            // Max Pace
-            global.maxPace = Math.max(...tmp.map(a => a?.pace))
-
-            // Todo  Add average pace in motion
-        }
+        const tracks = Array.from(this.tracks.values())
+        const points = tracks.flatMap(track => Array.isArray(track.metrics?.points) ? track.metrics.points : [])
+        const global = Track.calculateGlobalMetrics({
+                                                        points:      points,
+                                                        rawPoints:   points,
+                                                        hasTime:     this.hasTime,
+                                                        hasAltitude: this.hasAltitude,
+                                                        activityProfile: Journey.activityProfile(this.activity, this.activitySettings),
+                                                    })
 
         if (this.hasAltitude) {
-            // Max Slope
-            global.maxSlope = this.hasAltitude ? Math.max(...allMetrics.map(a => a?.slope)) : undefined
+            const minHeights = tracks.map(track => track.metrics?.global?.minHeight).filter(value => Number.isFinite(value))
+            const maxHeights = tracks.map(track => track.metrics?.global?.maxHeight).filter(value => Number.isFinite(value))
 
-            // Positive elevation and distance
-            global.positiveElevation = 0
-            global.positiveDistance = 0
-            allMetrics.forEach((point) => {
-                if (point.elevation > 0) {
-                    global.positiveElevation += point.elevation
-                    global.positiveDistance += point.distance
-                }
-            })
-
-            // Negative elevation
-            global.negativeElevation = 0
-            global.negativeDistance = 0
-            allMetrics.forEach((point) => {
-                if (point.elevation < 0) {
-                    global.negativeElevation += point.elevation
-                    global.negativeDistance += point.distance
-                }
-            })
+            global.minHeight = minHeights.length ? Math.min(...minHeights) : undefined
+            global.maxHeight = maxHeights.length ? Math.max(...maxHeights) : undefined
         }
-        // Total duration
-        global.duration = allMetrics.reduce((s, o) => {
-            return s + o.duration
-        }, 0)
-
-        // Total Distance
-        global.distance = allMetrics.reduce((s, o) => {
-            return s + o.distance
-        }, 0)
 
         return global
     }
@@ -783,7 +749,12 @@ export class Journey extends MapElement {
      * We loop over tracks to compute tracks metrics
      */
     extractMetrics = () => {
+        this.activity ??= Journey.defaultActivity()
+        this.activitySettings = Journey.activityProfile(this.activity)
+
         this.tracks.forEach(track => {
+            track.activity = this.activity
+            track.activitySettings = this.activitySettings
             track.extractMetrics()
         })
 
@@ -793,6 +764,8 @@ export class Journey extends MapElement {
             return
         }
         // For a multi track journey, let's compute journey level metrics
+        this.metrics.points = Array.from(this.tracks.values())
+            .flatMap(track => Array.isArray(track.metrics?.points) ? track.metrics.points : [])
         this.metrics.global = this.setGlobalMetrics()
     }
 
