@@ -18,8 +18,8 @@ import { ToggleStateIcon }                           from '@Components/ToggleSta
 import { JUST_SAVE }                                 from '@Core/constants'
 import { TrackSelector }                             from '@Editor/track/TrackSelector'
 import { TrackUtils }                                from '@Utils/cesium/TrackUtils'
+import { decodeHTMLEntities }                        from '@Utils/TextUtils'
 import { WaDivider, WaInput, WaTextarea, WaTooltip } from '@web.awesome.me/webawesome-pro/dist/react'
-import parse                                         from 'html-react-parser'
 import { useSnapshot }                               from 'valtio'
 import { Utils }                                     from '../Utils'
 import { TrackData }                                 from './TrackData'
@@ -50,7 +50,7 @@ export const TrackSettings = () => {
      * @returns {Promise<void>}
      */
     const setDescription = async event => {
-        $journeyEditor.track.description = event.target.value
+        $journeyEditor.track.description = decodeHTMLEntities(event.target.value)
         await Utils.updateTrack(JUST_SAVE)
     }
 
@@ -153,7 +153,7 @@ export const TrackSettings = () => {
                                                     row={2}
                                                     size={'small'}
                                                     id="track-description"
-                                                    value={parse(journeyEditor.track.description)}
+                                                    value={decodeHTMLEntities(journeyEditor.track.description)}
                                                     onChange={setDescription}
                                                     placeholder={'Track description'}
                                                 />

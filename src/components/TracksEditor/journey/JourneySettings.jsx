@@ -61,10 +61,10 @@ import {
 import {
     UIToast,
 }                                     from '@Utils/UIToast'
+import { decodeHTMLEntities }         from '@Utils/TextUtils'
 import {
     WaButton, WaCard, WaIcon, WaInput, WaTab, WaTabGroup, WaTabPanel, WaTextarea, WaTooltip,
 }                                     from '@web.awesome.me/webawesome-pro/dist/react'
-import parse                          from 'html-react-parser'
 import { useEffect, useMemo, useRef } from 'react'
 import { sprintf }                    from 'sprintf-js'
 import { useSnapshot }                from 'valtio'
@@ -259,7 +259,7 @@ export const JourneySettings = () => {
     }, 300)
 
     const setDescription = __.tools.debounce(async (e) => {
-        const val = e.target.value
+        const val = decodeHTMLEntities(e.target.value)
         if (!val) {
             return
         }
@@ -385,7 +385,7 @@ export const JourneySettings = () => {
                                         ref={_description}
                                         rows={3}
                                         size="small"
-                                        value={parse(journey.description)}
+                                        value={decodeHTMLEntities(journey.description)}
                                         onChange={setDescription}
                                     />
 
