@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-11
- * Last modified: 2026-04-11
+ * Created on: 2026-05-02
+ * Last modified: 2026-05-02
  *
  *
  * Copyright © 2026 LGS1920
@@ -117,6 +117,20 @@ export default defineConfig({
             srcDir: 'public',
             injectManifest: {
                 injectionPoint: undefined,
+                rollupFormat: 'iife',
+                minify: false,
+                sourcemap: false,
+            },
+            integration: {
+                configureCustomSWViteBuild(config) {
+                    config.esbuild = false
+                    config.oxc = false
+                    config.build = {
+                        ...config.build,
+                        minify: false,
+                        sourcemap: false,
+                    }
+                },
             },
             manifest: false,
             manifestFilename: 'manifest.webmanifest',
@@ -148,7 +162,7 @@ export default defineConfig({
 
     build: {
         sourcemap: true,
-        minify: 'esbuild',
+        minify: 'oxc',
         target: 'esnext',
         chunkSizeWarningLimit: 500000,
         outDir: `./dist/${version}`,
