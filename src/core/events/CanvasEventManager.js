@@ -28,6 +28,15 @@ import { CESIUM_EVENTS, EVENT_LOWEST, EVENTS, MODIFIER_SEPARATOR, MODIFIERS }   
 
 const LONG_TAP_MOVE_THRESHOLD = 10
 
+const pickedObjectEntityId = picked => {
+    const id = picked?.id
+    if (!id) {
+        return null
+    }
+
+    return typeof id === 'string' ? id : (id.id ?? null)
+}
+
 export class CanvasEventManager {
     /**
      * Singleton instance of CanvasEventManager.
@@ -209,7 +218,7 @@ export class CanvasEventManager {
                 const position = this.#lastMousePosition.x !== null && this.#lastMousePosition.y !== null
                                  ? {x: this.#lastMousePosition.x, y: this.#lastMousePosition.y}
                                  : null
-                const pickedEntityId = position && this.#viewer.scene.pick(position)?.id || null
+                const pickedEntityId = position ? pickedObjectEntityId(this.#viewer.scene.pick(position)) : null
 
                 if (key === 'alt') {
                     event.preventDefault()
@@ -251,11 +260,10 @@ export class CanvasEventManager {
     #validateEntity(event, entity, pickedEntity = null) {
         let entityId = null
         if (pickedEntity !== null) {
-            entityId = pickedEntity.id || null
+            entityId = typeof pickedEntity === 'string' ? pickedEntity : (pickedEntity.id ?? null)
         }
         else if (event.position && event.position.x != null && event.position.y != null) {
-            const picked = this.#viewer.scene.pick(event.position)
-            entityId = picked && picked.id ? picked.id : null
+            entityId = pickedObjectEntityId(this.#viewer.scene.pick(event.position))
         }
 
         if (entity === false) {
@@ -341,21 +349,6 @@ export class CanvasEventManager {
     }
 
     /**
-     * Checks if a callback is already registered for the specified event name.
-     *
-     * @param {string} eventName - The event name to check (e.g., "TAP", "DOUBLE_TAP").
-     * @param {Function} callback - The callback function to verify.
-     * @returns {boolean} True if the callback is registered, false otherwise.
-     * @private
-     */
-    #hasCallback(eventName, callback) {
-        if (!this.#handlers.has(eventName)) {
-            return false
-        }
-        return this.#handlers.get(eventName).some((handler) => handler.callback === callback)
-    }
-
-    /**
      * Sets up touch event handlers for TAP, DOUBLE_TAP, and LONG_TAP events.
      *
      * @returns {Object} Object containing downHandler and upHandler for touch events.
@@ -366,9 +359,7 @@ export class CanvasEventManager {
             if (event.pointerType !== 'touch' && !this.isTouchDevice) {
                 return null
             }
-            const picked = this.#viewer.scene.pick(event.position)
-            const entityId = picked && picked.id ? picked.id : null
-            return entityId
+            return pickedObjectEntityId(this.#viewer.scene.pick(event.position))
         }
 
         let lastTapTime = 0
@@ -550,7 +541,7 @@ export class CanvasEventManager {
             }
 
             const picked = this.#viewer.scene.pick(event.position ?? event.endPosition)
-            const entityId = picked && picked.id ? picked.id : null
+            const entityId = pickedObjectEntityId(picked)
             const eventName = modifier ? `${modifier.name}${MODIFIER_SEPARATOR}${eventType}` : eventType
 
             if (!this.#handlers.has(eventName)) {

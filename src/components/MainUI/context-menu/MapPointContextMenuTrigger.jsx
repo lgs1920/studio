@@ -25,6 +25,30 @@ const buildMapPointId = ({longitude, latitude}) => {
     return `${CURRENT_MAP_POINT}:${longitude.toFixed(MAP_POINT_PRECISION)}:${latitude.toFixed(MAP_POINT_PRECISION)}`
 }
 
+const pickedEntityId = position => {
+    const picked = position ? lgs.scene?.pick?.(position) ?? lgs.viewer?.scene?.pick?.(position) : null
+    const id = picked?.id
+    if (!id) {
+        return null
+    }
+
+    return typeof id === 'string' ? id : (id.id ?? null)
+}
+
+const openPOIContextMenu = (position, poiId) => {
+    const poi = poiId ? lgs.stores.main.components.pois.list.get(poiId) : null
+    if (!poi) {
+        return false
+    }
+
+    const $contextMenu = lgs.stores.ui.contextMenu
+    $contextMenu.type = 'poi'
+    $contextMenu.targetId = poi
+    $contextMenu.position = {x: position.x, y: position.y}
+    $contextMenu.visible = true
+    return true
+}
+
 const pickMapPointTarget = async (position) => {
     if (!position) {
         return null
@@ -83,6 +107,10 @@ const pickMapPointTarget = async (position) => {
 export const MapPointContextMenuTrigger = () => {
     const openContextMenu = useCallback(async (event) => {
         const position = event.position ?? event.endPosition
+        if (position && openPOIContextMenu(position, pickedEntityId(position))) {
+            return
+        }
+
         const target = await pickMapPointTarget(position)
 
         if (!target || !position) {
