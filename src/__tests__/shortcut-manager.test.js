@@ -104,6 +104,43 @@ describe('ShortcutManager', () => {
         expect(callback).toHaveBeenCalledTimes(2)
     })
 
+    it('matches physical letter codes when modifiers change the emitted key', () => {
+        const element = document.createElement('div')
+        const callback = vi.fn()
+        document.body.append(element)
+        manager = new ShortcutManager()
+
+        manager.addShortcut(element, 'Alt+Shift+J', callback)
+
+        dispatchKey(element, 'Ô', {
+            altKey:   true,
+            code:     'KeyJ',
+            shiftKey: true,
+        })
+
+        expect(callback).toHaveBeenCalledTimes(1)
+    })
+
+    it('runs a window shortcut from a descendant keydown event', () => {
+        const callback = vi.fn()
+        document.body.innerHTML = '<main><button>Map action</button></main>'
+        manager = new ShortcutManager()
+
+        manager.addShortcut(window, 'Alt+Shift+R', callback, {
+            focusOnPointerDown: false,
+            stopPropagation:    true,
+        })
+
+        const event = dispatchKey(document.querySelector('button'), 'R', {
+            altKey:   true,
+            code:     'KeyR',
+            shiftKey: true,
+        })
+
+        expect(callback).toHaveBeenCalledTimes(1)
+        expect(event.defaultPrevented).toBe(true)
+    })
+
     it('keeps the temporary tabindex while another binding remains on the same element', () => {
         const element = document.createElement('section')
         document.body.append(element)

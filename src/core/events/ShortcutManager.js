@@ -38,6 +38,18 @@ const KEY_ALIASES = {
     spacebar:   ' ',
     up:         'arrowup',
 }
+const CODE_ALIASES = {
+    ' ':       'space',
+    arrowdown: 'arrowdown',
+    arrowleft: 'arrowleft',
+    arrowright: 'arrowright',
+    arrowup:   'arrowup',
+    backspace: 'backspace',
+    delete:    'delete',
+    enter:     'enter',
+    escape:    'escape',
+    tab:       'tab',
+}
 const MODIFIER_KEYS = new Set(['alt', 'ctrl', 'meta', 'shift'])
 const FOCUSABLE_SELECTOR = [
     'a[href]',
@@ -69,6 +81,18 @@ const normalizeEventKey = (event) => {
         return ' '
     }
     return normalizeKey(event.key)
+}
+
+const normalizeEventCode = event => `${event.code ?? ''}`.trim().toLowerCase()
+
+const codeForKey = (key) => {
+    if (/^[a-z]$/.test(key)) {
+        return `key${key}`
+    }
+    if (/^[0-9]$/.test(key)) {
+        return `digit${key}`
+    }
+    return CODE_ALIASES[key] ?? ''
 }
 
 const normalizeShortcut = (shortcut) => {
@@ -107,11 +131,14 @@ const normalizeShortcut = (shortcut) => {
         throw new Error(`Shortcut "${raw}" must include a non-modifier key`)
     }
 
-    return {raw, key, modifiers}
+    return {raw, code: codeForKey(key), key, modifiers}
 }
 
 const eventMatchesShortcut = (event, shortcut) => {
-    return normalizeEventKey(event) === shortcut.key
+    const keyMatches = normalizeEventKey(event) === shortcut.key
+    const codeMatches = shortcut.code && normalizeEventCode(event) === shortcut.code
+
+    return (keyMatches || codeMatches)
            && event.altKey === shortcut.modifiers.alt
            && event.ctrlKey === shortcut.modifiers.ctrl
            && event.metaKey === shortcut.modifiers.meta
@@ -200,6 +227,7 @@ export class ShortcutManager {
             }
             if (binding.options.stopPropagation) {
                 event.stopPropagation()
+                event.stopImmediatePropagation?.()
             }
 
             callback(event, {
