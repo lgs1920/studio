@@ -203,6 +203,7 @@ export const JourneyLoaderUI = (props) => {
     const journeyLoader = useSnapshot($journeyLoader)
     const [remoteUrl, setRemoteUrl] = useState('')
     const [remoteLoading, setRemoteLoading] = useState(false)
+    const [sampleLoading, setSampleLoading] = useState(false)
 
     const {fileList, sampleLoaded} = useSnapshot(lgs.stores.main.components.fileLoader)
 
@@ -693,26 +694,31 @@ export const JourneyLoaderUI = (props) => {
      * Loads sample file and updates Valtio store state
      */
     const loadSample = async () => {
+        if (sampleLoading) {
+            return
+        }
+
+        setSampleLoading(true)
         const currentId = `sample_${_attemptCounter.current++}`
         const mockFile = {name: GPX_SAMPLE_FILENAME, lastModified: 0, size: 0, type: 'application/gpx+xml'}
         const item = createListItem(mockFile, {validated: true, file: sampleFileInfo})
 
-        if (lgs.journeys.has(sampleSlug)) {
-            setSampleLoadedState(true)
-            item.journeyStatus = JOURNEY_EXISTS
-            item.error = ALREADY_IMPORTED.text
-            lgs.stores.main.components.fileLoader.fileList.set(currentId, item)
-            UIToast.warning({
-                                caption: ALREADY_IMPORTED.caption,
-                                text:    `The sample <strong>${GPX_SAMPLE_FILENAME}</strong> ${ALREADY_IMPORTED.text}`,
-                            })
-            return
-        }
-
-        item.journeyStatus = JOURNEY_WAITING
-        lgs.stores.main.components.fileLoader.fileList.set(currentId, item)
-
         try {
+            if (lgs.journeys.has(sampleSlug)) {
+                setSampleLoadedState(true)
+                item.journeyStatus = JOURNEY_EXISTS
+                item.error = ALREADY_IMPORTED.text
+                lgs.stores.main.components.fileLoader.fileList.set(currentId, item)
+                UIToast.warning({
+                                    caption: ALREADY_IMPORTED.caption,
+                                    text:    `The sample <strong>${GPX_SAMPLE_FILENAME}</strong> ${ALREADY_IMPORTED.text}`,
+                                })
+                return
+            }
+
+            item.journeyStatus = JOURNEY_WAITING
+            lgs.stores.main.components.fileLoader.fileList.set(currentId, item)
+
             const response = await lgs.axios.get(GPX_SAMPLE_URL)
             const content = (typeof response.data === 'object') ? JSON.stringify(response.data) : response.data
             const status = await TrackUtils.loadJourneyFromFile({
@@ -732,6 +738,9 @@ export const JourneyLoaderUI = (props) => {
         catch (error) {
             updateFileStatus(currentId, JOURNEY_KO, 'Sample network error')
             triggerFailureEvent(GPX_SAMPLE_FILENAME, error)
+        }
+        finally {
+            setSampleLoading(false)
         }
     }
 
@@ -884,7 +893,13 @@ export const JourneyLoaderUI = (props) => {
                         {'Don\'t have any'}{lgs.journeys.size ? ' more ' : ' '}{'files handy?'}
                         <br/>
                         {'Play with a sample!'}
-                        <WaButton onClick={loadSample} variant="brand" size="small">
+                        <WaButton
+                            onClick={loadSample}
+                            variant="brand"
+                            size="small"
+                            loading={sampleLoading}
+                            disabled={sampleLoading}
+                        >
                             <WaIcon slot="prefix" variant="regular" name="circle-plus"/>
                             {'Load Sample'}
                         </WaButton>
