@@ -19,6 +19,8 @@ import { WaButton, WaIcon, WaPopup, WaTooltip } from '@web.awesome.me/webawesome
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSnapshot }                           from 'valtio'
 
+const JOURNEY_TRIGGER_CLICK_DELAY = 280
+
 /**
  * A memoized React component for toggling the journey editor or loader.
  * @param {Object} props - Component props
@@ -32,6 +34,7 @@ export const EditorPanelButton = memo((props) => {
     const hasJourney = useSnapshot(lgs.stores.main).theJourney !== null
     const [open, setOpen] = useState(false)
     const _popupHost = useRef(null)
+    const _triggerClickTimer = useRef(null)
 
     // Stable references to store objects
     const journeyLoaderStore = useMemo(() => lgs.stores.ui.mainUI.journeyLoader, [])
@@ -54,7 +57,23 @@ export const EditorPanelButton = memo((props) => {
      * @function
      */
     const toggleActions = useCallback(() => {
-        setOpen(current => !current)
+        if (_triggerClickTimer.current) {
+            window.clearTimeout(_triggerClickTimer.current)
+        }
+
+        _triggerClickTimer.current = window.setTimeout(() => {
+            _triggerClickTimer.current = null
+            setOpen(current => !current)
+        }, JOURNEY_TRIGGER_CLICK_DELAY)
+    }, [])
+
+    const clearTriggerClickTimer = useCallback(() => {
+        if (!_triggerClickTimer.current) {
+            return
+        }
+
+        window.clearTimeout(_triggerClickTimer.current)
+        _triggerClickTimer.current = null
     }, [])
 
     /**
@@ -62,15 +81,17 @@ export const EditorPanelButton = memo((props) => {
      * @function
      */
     const importJourney = useCallback(() => {
+        clearTriggerClickTimer()
         setOpen(false)
         journeyLoaderStore.visible = true
-    }, [journeyLoaderStore])
+    }, [clearTriggerClickTimer, journeyLoaderStore])
 
     /**
      * Toggles the journey editor.
      * @function
      */
     const editJourney = useCallback(() => {
+        clearTriggerClickTimer()
         setOpen(false)
         __.ui.drawerManager.toggle(JOURNEY_EDITOR_DRAWER, {
             suppressFocusOnOpen: [
@@ -78,7 +99,20 @@ export const EditorPanelButton = memo((props) => {
                                      lgs.stores.main.components.pois.current,
                                  ].filter(Boolean),
         })
-    }, [])
+    }, [clearTriggerClickTimer])
+
+    const activateJourneyTrigger = useCallback((event) => {
+        event.preventDefault()
+        event.stopPropagation()
+        clearTriggerClickTimer()
+
+        if (hasJourney) {
+            editJourney()
+            return
+        }
+
+        importJourney()
+    }, [clearTriggerClickTimer, editJourney, hasJourney, importJourney])
 
     // Manage remove journey dialog state (if needed)
     useEffect(() => {
@@ -88,6 +122,10 @@ export const EditorPanelButton = memo((props) => {
             mainUI.removeJourneyDialog.active.set(REMOVE_JOURNEY_IN_TOOLBAR)
         }
     }, [mainUI])
+
+    useEffect(() => {
+        return () => clearTriggerClickTimer()
+    }, [clearTriggerClickTimer])
 
     useEffect(() => {
         if (!open) {
@@ -120,6 +158,7 @@ export const EditorPanelButton = memo((props) => {
             <WaButton id="open-journey-editor"
                       className="square-button"
                       onClick={toggleActions}
+                      onDoubleClick={activateJourneyTrigger}
                       variant={'brand'}
                       appearance="Filled"
                       aria-haspopup="menu"
