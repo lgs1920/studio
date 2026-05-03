@@ -27,6 +27,11 @@ const makeJourney = () => ({
     slug:             'round-trip#gpx',
     title:            'Round Trip',
     description:      'A & B',
+    location:         'Annecy - Aoste',
+    country:          'France - Italy',
+    countryCode:      'FR - IT',
+    countries:        ['France', 'Italy'],
+    countryCodes:     ['FR', 'IT'],
     activity:         'bike',
     activitySettings: {
         id:       'bike',
@@ -79,6 +84,9 @@ const makePois = () => [
         parent:          'round-trip#gpx',
         type:            'poi',
         category:        'summit',
+        location:        'Annecy',
+        country:         'France',
+        countryCode:     'FR',
         title:           'Summit & Cafe',
         description:     'Open & visible',
         longitude:       6.15,
@@ -134,6 +142,9 @@ describe('journey GPX export', () => {
         expect(gpxContent).toContain('<wpt lat="45.15" lon="6.15">')
         expect(gpxContent).toContain('<name>Summit &amp; Cafe</name>')
         expect(gpxContent).toContain('<lgs:id>poi-1</lgs:id>')
+        expect(gpxContent).toContain('<lgs:location>Annecy</lgs:location>')
+        expect(gpxContent).toContain('<lgs:countryCode>FR</lgs:countryCode>')
+        expect(gpxContent).toContain('<lgs:countryCodes>[&quot;FR&quot;,&quot;IT&quot;]</lgs:countryCodes>')
         expect(gpxContent).toContain('<lgs:parentKind>track</lgs:parentKind>')
         expect(gpxContent).not.toContain('<lgs:id>flag-start</lgs:id>')
         expect(gpxContent).not.toContain('<lgs:id>flag-end</lgs:id>')
@@ -155,10 +166,17 @@ describe('journey GPX export', () => {
         expect(track.properties.name).toBe('Main Track')
         expect(track.geometry.coordinates[0]).toEqual([6.1, 45.1, 100])
         expect(metadata.activity).toBe('bike')
+        expect(metadata.location).toBe('Annecy - Aoste')
+        expect(metadata.countryCode).toBe('FR - IT')
+        expect(metadata.countries).toEqual(['France', 'Italy'])
+        expect(metadata.countryCodes).toEqual(['FR', 'IT'])
         expect(metadata.activitySettings.maxSpeed).toBe(16)
         expect(metadata.POIsVisible).toBe(false)
         expect(poiMetadata.id).toBe('poi-1')
         expect(poiMetadata.category).toBe('summit')
+        expect(poiMetadata.location).toBe('Annecy')
+        expect(poiMetadata.country).toBe('France')
+        expect(poiMetadata.countryCode).toBe('FR')
         expect(poiMetadata.visible).toBe(false)
         expect(poiMetadata.height).toBe(112)
     })
@@ -176,12 +194,17 @@ describe('journey GeoJSON export', () => {
         const metadata = extractJourneyMetadataFromGeoJson(geoJson)
 
         expect(metadata.activity).toBe('bike')
+        expect(metadata.countryCode).toBe('FR - IT')
+        expect(metadata.countryCodes).toEqual(['FR', 'IT'])
         expect(metadata.activitySettings.maxSpeed).toBe(16)
         expect(pointFeatures).toHaveLength(2)
         expect(lineFeatures).toHaveLength(1)
         expect(pointFeatures.map(feature => feature.properties.name)).toEqual(['Summit & Cafe', 'Shelter'])
         expect(pointFeatures.map(feature => feature.properties.lgs_id)).not.toContain('flag-start')
         expect(pointFeatures[0].properties.lgs_category).toBe('summit')
+        expect(pointFeatures[0].properties.lgs_location).toBe('Annecy')
+        expect(pointFeatures[0].properties.lgs_countryCode).toBe('FR')
+        expect(geoJson.properties.lgs_countryCodes).toEqual(['FR', 'IT'])
         expect(pointFeatures[0].geometry.coordinates).toEqual([6.15, 45.15, 112])
         expect(lineFeatures[0].properties.lgs_color).toBe('#ffcc00')
     })

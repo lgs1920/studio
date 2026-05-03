@@ -146,6 +146,23 @@ const parseJson = value => {
     }
 }
 
+const parseStringArray = value => {
+    if (Array.isArray(value)) {
+        return value.map(item => `${item ?? ''}`.trim()).filter(Boolean)
+    }
+
+    const parsed = parseJson(value)
+    if (Array.isArray(parsed)) {
+        return parsed.map(item => `${item ?? ''}`.trim()).filter(Boolean)
+    }
+
+    if (!value) {
+        return undefined
+    }
+
+    return `${value}`.split(',').map(item => item.trim()).filter(Boolean)
+}
+
 const lgsProperty = (properties = {}, name) => {
     return properties[`${LGS_PROPERTY_PREFIX}${name}`] ?? properties[`lgs:${name}`]
 }
@@ -376,6 +393,9 @@ const poiToGpx = (journey, poi) => {
         lgsElement('parentTrackTitle', resolvePoiParentTrackTitle(journey, poi)),
         lgsElement('type', type),
         lgsElement('category', category),
+        lgsElement('location', poi.location),
+        lgsElement('country', poi.country),
+        lgsElement('countryCode', poi.countryCode),
         lgsElement('color', poi.color),
         lgsElement('bgColor', poi.bgColor),
         lgsElement('visible', poi.visible),
@@ -410,6 +430,9 @@ const getPoiLgsProperties = (journey, poi) => lgsProperties({
     parentTrackTitle: resolvePoiParentTrackTitle(journey, poi),
     type:             poi.type ?? POI_STANDARD_TYPE,
     category:         poi.category ?? POI_STANDARD_TYPE,
+    location:         poi.location,
+    country:          poi.country,
+    countryCode:      poi.countryCode,
     color:            poi.color,
     bgColor:          poi.bgColor,
     visible:          poi.visible,
@@ -454,6 +477,11 @@ const poiToGeoJsonFeature = (journey, poi) => {
 
 const getJourneyLgsProperties = journey => lgsProperties({
     slug:             journey?.slug,
+    location:         journey?.location,
+    country:          journey?.country,
+    countryCode:      journey?.countryCode,
+    countries:        journey?.countries,
+    countryCodes:     journey?.countryCodes,
     activity:         journey?.activity,
     activitySettings: journey?.activitySettings,
     visible:          journey?.visible,
@@ -475,6 +503,11 @@ export const exportJourneyToGPX = (journey, {pois = undefined, createdAt = new D
 
     const metadataExtensions = extensionsBlock([
         lgsElement('slug', journey?.slug),
+        lgsElement('location', journey?.location),
+        lgsElement('country', journey?.country),
+        lgsElement('countryCode', journey?.countryCode),
+        lgsElement('countries', toJson(journey?.countries)),
+        lgsElement('countryCodes', toJson(journey?.countryCodes)),
         lgsElement('activity', journey?.activity),
         lgsElement('activitySettings', toJson(journey?.activitySettings)),
         lgsElement('visible', journey?.visible),
@@ -529,6 +562,11 @@ export const extractJourneyMetadataFromGpxDocument = (document) => {
     return {
         title:            directText(metadataNode, 'name'),
         description:      directText(metadataNode, 'desc'),
+        location:         extensions.location,
+        country:          extensions.country,
+        countryCode:      extensions.countryCode,
+        countries:        parseStringArray(extensions.countries),
+        countryCodes:     parseStringArray(extensions.countryCodes),
         activity:         extensions.activity,
         activitySettings: parseJson(extensions.activitySettings),
         visible:          parseBoolean(extensions.visible),
@@ -546,6 +584,11 @@ export const extractJourneyMetadataFromGeoJson = (geoJson = {}) => {
     return {
         title:            properties.name,
         description:      properties.desc ?? properties.description,
+        location:         lgsProperty(properties, 'location'),
+        country:          lgsProperty(properties, 'country'),
+        countryCode:      lgsProperty(properties, 'countryCode'),
+        countries:        parseStringArray(lgsProperty(properties, 'countries')),
+        countryCodes:     parseStringArray(lgsProperty(properties, 'countryCodes')),
         activity:         lgsProperty(properties, 'activity'),
         activitySettings: lgsProperty(properties, 'activitySettings'),
         visible:          parseBoolean(lgsProperty(properties, 'visible')),
@@ -573,6 +616,9 @@ export const extractLgsPoiProperties = (properties = {}) => ({
     parentTrackTitle: lgsProperty(properties, 'parentTrackTitle'),
     type:             lgsProperty(properties, 'type'),
     category:         lgsProperty(properties, 'category'),
+    location:         lgsProperty(properties, 'location'),
+    country:          lgsProperty(properties, 'country'),
+    countryCode:      lgsProperty(properties, 'countryCode'),
     color:            lgsProperty(properties, 'color'),
     bgColor:          lgsProperty(properties, 'bgColor'),
     visible:          parseBoolean(lgsProperty(properties, 'visible')),

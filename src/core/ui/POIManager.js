@@ -15,8 +15,8 @@
  ******************************************************************************/
 
 import {
-    ADD_POI_EVENT, CURRENT_POI, GLOBAL_PARENT, POI_JOURNEY_ASSOCIATION_DISTANCE, POI_STARTER_TYPE,
-    POI_THRESHOLD_DISTANCE, POI_TMP_TYPE, POIS_STORE,
+    ADD_POI_EVENT, CURRENT_POI, GLOBAL_PARENT, POI_FLAG_START, POI_FLAG_STOP, POI_JOURNEY_ASSOCIATION_DISTANCE,
+    POI_STARTER_TYPE, POI_THRESHOLD_DISTANCE, POI_TMP_TYPE, POIS_STORE,
     REMOVE_POI_EVENT,
 }                                                  from '@Core/constants'
 import { MapPOI }                                  from '@Core/MapPOI'
@@ -41,6 +41,9 @@ const finiteNumber = value => {
     const number = Number(value)
     return Number.isFinite(number) ? number : null
 }
+
+const normalizeText = value => String(value ?? '').trim()
+const normalizeCountryCode = value => normalizeText(value).toUpperCase()
 
 const normalizeCoordinate = coordinate => {
     const longitude = finiteNumber(Array.isArray(coordinate) ? coordinate[0] : coordinate?.longitude)
@@ -158,6 +161,7 @@ export class POIManager {
 
     #journeyIndex = new Map()
     #journeyReferencePointCache = new Map()
+    #locationUpdatePromises = new Map()
 
     constructor() {
         if (POIManager.instance) {
@@ -364,6 +368,96 @@ export class POIManager {
 
     getByParent = parent => {
         return Array.from(this.list.values()).filter(poi => poi.parent === parent)
+    }
+
+    getJourneyForPOI = poi => {
+        const parent = poi?.parent
+
+        if (!parent || parent === GLOBAL_PARENT) {
+            return null
+        }
+
+        return lgs.getJourneyByTrackSlug?.(parent) ?? lgs.getJourneyBySlug?.(parent) ?? null
+    }
+
+    ensurePOILocation = async (poiOrId, {force = false} = {}) => {
+        const poi = typeof poiOrId === 'string' ? this.list.get(poiOrId) : poiOrId
+
+        if (!poi?.id || !__.ui.geocoder?.getPOILocationDetails) {
+            return null
+        }
+
+        const usesJourneyEndpoint = poi.type === POI_FLAG_START || poi.type === POI_FLAG_STOP
+        if (!force
+            && !usesJourneyEndpoint
+            && normalizeText(poi.location)
+            && normalizeText(poi.country)
+            && normalizeText(poi.countryCode)) {
+            return {
+                location:    normalizeText(poi.location),
+                country:     normalizeText(poi.country),
+                countryCode: normalizeCountryCode(poi.countryCode),
+            }
+        }
+
+        const key = [
+            poi.id,
+            normalizeText(poi.parent),
+            normalizeText(poi.type),
+            normalizeText(poi.longitude),
+            normalizeText(poi.latitude),
+        ].join(':')
+
+        if (this.#locationUpdatePromises.has(key)) {
+            return this.#locationUpdatePromises.get(key)
+        }
+
+        const promise = (async () => {
+            const journey = this.getJourneyForPOI(poi)
+            const details = await __.ui.geocoder.getPOILocationDetails(poi, {journey})
+            const currentPOI = this.list.get(poi.id)
+
+            if (!currentPOI
+                || currentPOI.parent !== poi.parent
+                || currentPOI.type !== poi.type
+                || currentPOI.longitude !== poi.longitude
+                || currentPOI.latitude !== poi.latitude) {
+                return details
+            }
+
+            const updates = {}
+            const location = normalizeText(details?.location)
+            const country = normalizeText(details?.country)
+            const countryCode = normalizeCountryCode(details?.countryCode)
+
+            if (location && currentPOI.location !== location) {
+                updates.location = location
+            }
+            if (country && currentPOI.country !== country) {
+                updates.country = country
+            }
+            if (countryCode && currentPOI.countryCode !== countryCode) {
+                updates.countryCode = countryCode
+            }
+
+            if (Object.keys(updates).length > 0) {
+                await this.updatePOI(currentPOI.id, updates)
+            }
+
+            return {
+                location,
+                country,
+                countryCode,
+            }
+        })().catch(error => {
+            console.error('[POIManager] POI location resolution failed:', error)
+            return null
+        }).finally(() => {
+            this.#locationUpdatePromises.delete(key)
+        })
+
+        this.#locationUpdatePromises.set(key, promise)
+        return promise
     }
 
     get journeyAssociationDistance() {

@@ -47,6 +47,16 @@ export class MapPOI extends MapElement {
     /**
      * @type {string}
      */
+    country
+
+    /**
+     * @type {string}
+     */
+    countryCode
+
+    /**
+     * @type {string}
+     */
     description
 
     /**
@@ -84,6 +94,11 @@ export class MapPOI extends MapElement {
      * @type {number}
      */
     longitude
+
+    /**
+     * @type {string}
+     */
+    location
 
     /**
      * @type {string[null]}
@@ -209,7 +224,7 @@ export class MapPOI extends MapElement {
         // Define a set of keys that trigger a redraw when modified
         const keys = new Set(['bgcolor', 'category', 'color', 'expanded', 'type', 'image'])
         // Additional keys to check when the item is expanded
-        const keysWhenExpanded = new Set(['title', 'description', 'height'])
+        const keysWhenExpanded = new Set(['title', 'description', 'height', 'location'])
 
         let shouldRedraw = false
 

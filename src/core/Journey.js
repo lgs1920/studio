@@ -46,6 +46,11 @@ export class Journey extends MapElement {
     type                                       // File type  GPX,KML,GEOJSON  //TODO KMZ
 
     title = ''                          // Journey Title
+    location = ''
+    country = ''
+    countryCode = ''
+    countries = []
+    countryCodes = []
     activity
     activitySettings
 
@@ -80,6 +85,11 @@ export class Journey extends MapElement {
             this.POIsVisible = options.POIsVisible ?? true
 
             this.description = decodeHTMLEntities(options.description ?? '')
+            this.location = options.location ?? ''
+            this.country = options.country ?? ''
+            this.countryCode = options.countryCode ?? ''
+            this.countries = options.countries ?? []
+            this.countryCodes = options.countryCodes ?? []
             this.activity = options.activity ?? Journey.defaultActivity()
             this.activitySettings = Journey.activityProfile(this.activity, options.activitySettings)
 
@@ -555,6 +565,9 @@ export class Journey extends MapElement {
                         parent:          importedParent,
                         type:            importedType,
                         category:        importedCategory,
+                        location:        lgsPoi.location,
+                        country:         lgsPoi.country,
+                        countryCode:     lgsPoi.countryCode,
                         title:           importedTitle,
                         longitude:       lon,
                         latitude:        lat,

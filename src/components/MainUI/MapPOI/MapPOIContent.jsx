@@ -46,6 +46,13 @@ export const MapPOIContent = ({poi, useInMenu = false, style}) => {
      */
     const point = useMemo(() => poisSnap.list.get(poi), [poisSnap.list, poi])
     const $point = $pois.list.get(poi)
+    const pointId = point?.id
+    const pointParent = point?.parent
+    const pointType = point?.type
+    const pointLongitude = point?.longitude
+    const pointLatitude = point?.latitude
+    const pointLocation = point?.location
+    const pointCountryCode = point?.countryCode
 
     const iconName = point?.categoryIcon(point?.category)
     const isSvgIcon = iconName?.endsWith('.svg')
@@ -118,6 +125,23 @@ export const MapPOIContent = ({poi, useInMenu = false, style}) => {
         __.canvasEvents.removeAllListenersByEntity(poiId)
     }, [])
 
+    useEffect(() => {
+        if (useInMenu || !pointId || !__.ui.poiManager?.ensurePOILocation) {
+            return
+        }
+
+        void __.ui.poiManager.ensurePOILocation(pointId)
+    }, [
+                  useInMenu,
+                  pointId,
+                  pointParent,
+                  pointType,
+                  pointLongitude,
+                  pointLatitude,
+                  pointLocation,
+                  pointCountryCode,
+              ])
+
     /** Synchronizes DOM content to map canvas */
     const renderToCanvas = useCallback(() => {
         if (useInMenu || !point?.visible || !$point) {
@@ -181,6 +205,7 @@ export const MapPOIContent = ({poi, useInMenu = false, style}) => {
                   point?.color,
                   point?.bgColor,
                   point?.height,
+                  point?.location,
                   point?.longitude,
                   point?.latitude,
                   point?.type,
@@ -215,6 +240,12 @@ export const MapPOIContent = ({poi, useInMenu = false, style}) => {
                     {point?.expanded && !useInMenu ? (
                         <>
                             <h3>{point.title ?? 'Point Of Interest'}</h3>
+                            {point.location && (
+                                <div className="poi-location" title={point.location}>
+                                    <WaIcon name="location-dot" variant="regular"/>
+                                    <span>{point.location}</span>
+                                </div>
+                            )}
                             <div className="poi-full-coordinates">
                                 {point.height > 0 && point.height !== point.simulatedHeight && (
                                     <NameValueUnit

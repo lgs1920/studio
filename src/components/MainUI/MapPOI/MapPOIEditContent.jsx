@@ -77,6 +77,7 @@ export const MapPOIEditContent = memo(({poi}) => {
                                                     description = '',
                                                     latitude,
                                                     longitude,
+                                                    location,
                                                     height,
                                                     simulatedHeight,
                                                     color,
@@ -322,6 +323,9 @@ export const MapPOIEditContent = memo(({poi}) => {
                                                   await __.ui.poiManager.focusPOI(id, {flyingTime: 2})
                                               }
 
+                                              if (__.ui.poiManager?.ensurePOILocation) {
+                                                  void __.ui.poiManager.ensurePOILocation(id)
+                                              }
                                               handleFocusOnOpen()
 
                                               return () => {
@@ -447,6 +451,12 @@ export const MapPOIEditContent = memo(({poi}) => {
                                                               hint={journeyAssociation.hint}
                                                               syncEditorSelection={false}
                                                           />
+                                                      )}
+                                                      {location && (
+                                                          <div className="map-poi-location" title={location}>
+                                                              <WaIcon name="location-dot" variant="regular"/>
+                                                              <span>{location}</span>
+                                                          </div>
                                                       )}
 
                                                       <WaTextarea
