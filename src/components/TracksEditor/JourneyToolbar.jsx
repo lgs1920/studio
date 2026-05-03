@@ -196,13 +196,14 @@ export const JourneyToolbar = (props) => {
                                      size="small"
                                      ref={_journeySelector}/>
 
-                    <WaTooltip for="create-journey-toolbar">{'Add a journey'}</WaTooltip>
+                    <WaTooltip for="create-journey-toolbar">{'Import journey'}</WaTooltip>
                     <WaButton id="create-journey-toolbar"
                               appearance="plain"
                               variant="brand"
                               onClick={journeyLoader}
+                              aria-label="Import"
                     >
-                        <WaIcon name="circle-plus" variant={'regular'}/>
+                        <WaIcon name="file-import" variant={'regular'}/>
                     </WaButton>
 
                     <WaTooltip for="visibility-journey-toolbar">{'Show/hide journey'}</WaTooltip>

@@ -199,6 +199,13 @@ const toggleJourneyToolbar = () => {
     return true
 }
 
+const openJourneyImporter = () => {
+    const mainUI = lgs.stores.ui.mainUI
+    mainUI.callForActions.active = false
+    mainUI.journeyLoader.visible = true
+    return true
+}
+
 const resolveRecorderToolbarPosition = () => ({
     left:     window.innerWidth / 2,
     top:      window.innerHeight / 2,
@@ -570,6 +577,13 @@ const installWidgetKeyboardShortcuts = () => {
 
 export const SHORTCUTS_CATALOG = [
     {
+        action:      'Import journey',
+        description: 'Opens the journey import dialog.',
+        id:          'journey-import',
+        keys:        ['Alt+Shift+I'],
+        scope:       'App',
+    },
+    {
         action:      'Show journey toolbar',
         description: 'Makes the journey toolbar available on the map.',
         id:          'journey-toolbar-show',
@@ -732,6 +746,7 @@ export const SHORTCUTS_CATALOG = [
 ]
 
 const SHORTCUT_ACTIONS = {
+    'journey-import':       openJourneyImporter,
     'journey-toolbar-show': toggleJourneyToolbar,
     'video-recording':      launchVideoRecording,
     'rotation-toggle':      toggleRotation,

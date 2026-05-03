@@ -18,17 +18,15 @@ import DrawerFooter                 from '@Components/DrawerFooter'
 import { JourneyLoaderButton }      from '@Components/FileLoader/JourneyLoaderButton'
 import PanelActions                 from '@Components/PanelsActions'
 import { JOURNEY_EDITOR_DRAWER }    from '@Core/constants'
-import { SlSwitch }                 from '@shoelace-style/shoelace/dist/react'
 import WaDrawer                     from '@Components/WaDrawerNonModal'
 
 import './style.css'
-import { WaButton, WaIcon, WaSwitch } from '@web.awesome.me/webawesome-pro/dist/react'
-import React, { memo, useCallback } from 'react'
+import { WaSwitch }                from '@web.awesome.me/webawesome-pro/dist/react'
+import { memo, useCallback }       from 'react'
 import { createPortal }             from 'react-dom'
 import { useSnapshot }              from 'valtio'
 import { JourneySelector }       from './journey/JourneySelector'
 import { JourneySettings }       from './journey/JourneySettings'
-import { TrackSettings }         from './track/TrackSettings'
 import { Utils }                 from './Utils'
 
 // Memoized sub-component for the toolbar header
@@ -49,7 +47,7 @@ const ToolbarHeader = memo(({show, usage, onToggle}) => {
 })
 
 // Memoized sub-component for journey content
-const JourneyContent = memo(({journeyVisible}) => (
+const JourneyContent = memo(() => (
     <div className="journey-content-wrapper">
         <div className="selector-wrapper">
             <JourneySelector
@@ -58,9 +56,10 @@ const JourneyContent = memo(({journeyVisible}) => (
                 closeOnOutsidePointerDown
             />
             <JourneyLoaderButton
+                id="import-journey-in-editor"
                 tooltip="left"
-                mini="true"
-                className="editor-vertical-menu in-header"
+                iconOnly
+                className="journey-import-in-editor"
             />
         </div>
         <JourneySettings/>
@@ -72,18 +71,14 @@ export const TracksEditor = memo(() => {
     const {canViewJourneyData} = useSnapshot(lgs.stores.main)
     const {drawers: {open: drawerOpen}} = useSnapshot(lgs.stores.ui)
 
-    const editor = useSnapshot(lgs.theJourneyEditorProxy)
     const {drawer: drawerPlacement} = useSnapshot(lgs.editorSettingsProxy.menu)
     const {show: toolbarShow, usage: toolbarUsage} = useSnapshot(lgs.settings.ui.journeyToolbar)
     const hasJourneys = lgs.journeys.size > 0
 
-    // Safely access journey.visible with a fallback
-    const journeyVisible = editor.journey?.visible ?? false
-
     // Memoized event handlers
     const toggleToolbar = useCallback(() => {
         lgs.settings.ui.journeyToolbar.show = !lgs.settings.ui.journeyToolbar.show
-    }, [lgs.settings.ui.journeyToolbar.show])
+    }, [])
 
     const handleRequestClose = useCallback((event) => {
         if (event.target.tagName !== 'WA-DRAWER') {
@@ -126,7 +121,7 @@ export const TracksEditor = memo(() => {
                             onToggle={toggleToolbar}
                         />
                         </PanelActions>
-                        {hasJourneys && <JourneyContent journeyVisible={journeyVisible}/>}
+                        {hasJourneys && <JourneyContent/>}
                         <DrawerFooter/>
                     </WaDrawer>
             }

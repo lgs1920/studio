@@ -14,7 +14,7 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { WaButton, WaIcon }  from '@web.awesome.me/webawesome-pro/dist/react'
+import { WaButton, WaIcon, WaTooltip } from '@web.awesome.me/webawesome-pro/dist/react'
 import { useEffect, useRef } from 'react'
 
 /**
@@ -74,9 +74,10 @@ export const CallForActions = () => {
                     {'Visit Our Site'}
                 </WaButton>
 
-                <WaButton variant="brand" onClick={loadJourney}>
-                    <WaIcon slot="start" variant="regular" name="circle-plus"/>
-                    <span>Load your first Journey</span>
+                <WaTooltip for="cfa-import-journey" placement="top">{'Import journey'}</WaTooltip>
+                <WaButton id="cfa-import-journey" variant="brand" onClick={loadJourney}>
+                    <WaIcon slot="start" variant="regular" name="file-import"/>
+                    <span>Import</span>
                 </WaButton>
             </div>
         </div>

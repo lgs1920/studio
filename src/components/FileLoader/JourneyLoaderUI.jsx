@@ -21,7 +21,7 @@ import {
 }                                                             from '@Utils/cesium/TrackUtils'
 import { FileUtils }                                          from '@Utils/FileUtils'
 import { UIToast }                                            from '@Utils/UIToast'
-import { WaButton, WaDialog, WaDivider, WaIcon, WaInput } from '@web.awesome.me/webawesome-pro/dist/react'
+import { WaButton, WaDialog, WaDivider, WaIcon, WaInput, WaTooltip } from '@web.awesome.me/webawesome-pro/dist/react'
 import { useEffect, useId, useMemo, useRef, useState }    from 'react'
 import { v4 as uuid }                                         from 'uuid'
 import { useSnapshot }                                        from 'valtio'
@@ -812,7 +812,7 @@ export const JourneyLoaderUI = (props) => {
         <WaDialog
             open={journeyLoader.visible}
             id={'file-loader-modal'}
-            label={'Add Journeys'}
+            label={'Import Journeys'}
             onWaRequestClose={close}
             className={'lgs-theme'}
             ref={_dialog}
@@ -866,14 +866,17 @@ export const JourneyLoaderUI = (props) => {
                             <WaIcon slot="start" name="cloud-arrow-down" variant="regular"/>
                         </WaInput>
 
+                        <WaTooltip for="import-remote-journey" placement="top">{'Import journey'}</WaTooltip>
                         <WaButton
+                            id="import-remote-journey"
                             type="submit"
                             variant="brand"
                             size="small"
                             loading={remoteLoading}
                             disabled={remoteLoading || !remoteUrl.trim()}
+                            aria-label="Import journey"
                         >
-                            <WaIcon slot="start" variant="regular" name="download"/>
+                            <WaIcon slot="start" variant="regular" name="file-import"/>
                             {'Import'}
                         </WaButton>
                     </form>

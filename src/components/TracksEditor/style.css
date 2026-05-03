@@ -37,6 +37,11 @@
     flex-grow: 1;
 }
 
+.journey-import-in-editor {
+    flex: 0 0 auto;
+    margin-left: auto;
+}
+
 #journey-editor-drawer .selector-wrapper wa-select::part(display-input),
 #journey-editor-drawer .selector-wrapper wa-option::part(label) {
     overflow: hidden;
