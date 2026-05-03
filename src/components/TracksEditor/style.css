@@ -183,6 +183,34 @@ wa-tab sl-icon {
     font-weight: normal;
 }
 
+#track-line-settings > wa-divider {
+    flex: 0 0 100%;
+    width: 100%;
+}
+
+.lgs--track-smoothing-settings {
+    display: flex;
+    justify-content: flex-end;
+    width: 100%;
+}
+
+.lgs--track-smoothing-switch {
+    flex: 0 0 100%;
+    width: 100%;
+}
+
+.lgs--track-smoothing-switch::part(control) {
+    margin-left: auto;
+}
+
+.lgs--track-smoothing-step {
+    width: 50%;
+}
+
+.lgs--track-smoothing-step::part(input) {
+    text-align: center;
+}
+
 .lgs--track-colors-in-settings {
     display: flex;
     align-items: center;

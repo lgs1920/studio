@@ -16,7 +16,11 @@
 
 import { DRAW_THEN_SAVE }                           from '@Core/constants'
 import { TrackUtils }                               from '@Utils/cesium/TrackUtils'
-import { WaColorPicker, WaDivider, WaSlider }       from '@web.awesome.me/webawesome-pro/dist/react'
+import {
+    TRACK_RENDER_SMOOTHING_MAX_STEP, TRACK_RENDER_SMOOTHING_MIN_STEP, defaultTrackRenderSmoothing,
+    normalizeTrackRenderSmoothing,
+}                                                   from '@Utils/cesium/trackRenderSmoothing'
+import { WaColorPicker, WaDivider, WaNumberInput, WaSlider, WaSwitch } from '@web.awesome.me/webawesome-pro/dist/react'
 import { colord }                                   from 'colord'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useSnapshot }                              from 'valtio'
@@ -29,11 +33,16 @@ import { Utils }                                    from '../Utils'
  */
 export const TrackStyleSettings = () => {
     const $editor = lgs.theJourneyEditorProxy
-    const {track} = useSnapshot($editor)
+    const {journey, track} = useSnapshot($editor)
 
     const _saveTimeoutRef = useRef(null)
     const _thicknessRef = useRef(null)
     const _opacityRef = useRef(null)
+    const isJourneyScopedSmoothing = (journey?.tracks?.size ?? 0) <= 1
+    const smoothingSource = isJourneyScopedSmoothing
+                            ? (journey?.renderSmoothing ?? track?.renderSmoothing)
+                            : track?.renderSmoothing
+    const smoothing = normalizeTrackRenderSmoothing(smoothingSource, defaultTrackRenderSmoothing())
 
     const [trackColor, setTrackColor] = useState(() => {
         const initialColor = colord($editor.track?.color ?? '#ffffff')
@@ -118,6 +127,27 @@ export const TrackStyleSettings = () => {
         }, 150)
     }
 
+    const updateRenderSmoothing = async (updates) => {
+        const target = isJourneyScopedSmoothing ? $editor.journey : $editor.track
+        if (!target) {
+            return
+        }
+
+        target.renderSmoothing = normalizeTrackRenderSmoothing({
+                                                                    ...smoothing,
+                                                                    ...updates,
+                                                                })
+        await Utils.updateTrack(DRAW_THEN_SAVE)
+    }
+
+    const handleSmoothingEnabled = (event) => {
+        void updateRenderSmoothing({enabled: event.target.checked})
+    }
+
+    const handleSmoothingStep = (event) => {
+        void updateRenderSmoothing({step: event.target.value})
+    }
+
     /**
      * Scene render loop
      */
@@ -175,6 +205,34 @@ export const TrackStyleSettings = () => {
                     />
                 </div>
             </div>
+            <WaDivider/>
+            <WaSwitch
+                className="lgs--track-smoothing-switch"
+                label-at-start
+                size="xsmall"
+                checked={smoothing.enabled}
+                onInput={handleSmoothingEnabled}
+            >
+                <span>Smooth render</span>
+            </WaSwitch>
+            {smoothing.enabled && (
+                <div className="lgs--track-smoothing-settings">
+                    <WaNumberInput
+                        className="lgs--track-smoothing-step"
+                        label-at-start
+                        size="small"
+                        min={TRACK_RENDER_SMOOTHING_MIN_STEP}
+                        max={TRACK_RENDER_SMOOTHING_MAX_STEP}
+                        step={1}
+                        value={smoothing.step}
+                        onInput={handleSmoothingStep}
+                        appearance="filled"
+                    >
+                        <span slot="label">Step</span>
+                        <span slot="hint">Visual smoothing passes applied only to the rendered track.</span>
+                    </WaNumberInput>
+                </div>
+            )}
         </div>
     )
 }
