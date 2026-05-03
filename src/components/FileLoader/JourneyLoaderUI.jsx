@@ -212,7 +212,7 @@ export const JourneyLoaderUI = (props) => {
     const _attemptCounter = useRef(0)
 
     const GPX_SAMPLE_FILENAME = 'LGS1920.gpx'
-    const GPX_SAMPLE_URL = [__.app.isDevelopment() ? '/public' : '/', 'assets', 'samples', GPX_SAMPLE_FILENAME].join('/')
+    const GPX_SAMPLE_URL = `${__.app.isDevelopment() ? '/public' : ''}/assets/samples/${GPX_SAMPLE_FILENAME}`
     const sampleFileInfo = useMemo(() => FileUtils.getFileNameAndExtension(GPX_SAMPLE_FILENAME), [])
     const sampleSlug = useMemo(() => __.app.setSlug({content: GPX_SAMPLE_FILENAME.split('.')}), [])
     const fileInputId = useId()

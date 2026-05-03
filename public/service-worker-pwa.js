@@ -213,6 +213,10 @@ self.addEventListener('fetch', event => {
  */
 async function handleCesiumFetch(event) {
     const {request} = event
+    if (isRangeRequest(request)) {
+        return fetch(request)
+    }
+
     const cache = await caches.open(CESIUM_CACHE)
     const cachedResp = await cache.match(request)
     if (cachedResp) {
@@ -221,7 +225,7 @@ async function handleCesiumFetch(event) {
 
     try {
         const networkResp = await fetch(request)
-        if (networkResp && (networkResp.ok || networkResp.type === 'opaque')) {
+        if (networkResp && !isPartialResponse(networkResp) && (networkResp.ok || networkResp.type === 'opaque')) {
             event.waitUntil(
                 cache.put(request, networkResp.clone())
                     .then(() => trimCacheByEntries(cache, MAX_CESIUM_ENTRIES))
@@ -268,6 +272,10 @@ const isBlockedPath = pathname => BLOCKED_CACHE_PATHS.some(pattern => pattern.te
 
 const isHashedBuildAsset = pathname => HASHED_BUILD_ASSET_PATTERN.test(pathname)
 
+const isRangeRequest = request => request.headers.has('range')
+
+const isPartialResponse = response => response?.status === 206
+
 function isFreshnessCriticalRequest(request) {
     const url = new URL(request.url)
     return url.origin === self.location.origin && FRESHNESS_CRITICAL_PATHS.has(url.pathname)
@@ -291,6 +299,10 @@ function shouldCacheRequest(request) {
         return false
     }
 
+    if (isRangeRequest(request)) {
+        return false
+    }
+
     const url = new URL(request.url)
     if (url.origin !== self.location.origin || isBlockedPath(url.pathname)) {
         return false
@@ -304,7 +316,11 @@ function shouldCacheRequest(request) {
 }
 
 function isCacheableResponse(request, response) {
-    if (!response || !response.ok) {
+    if (!response || !response.ok || isPartialResponse(response)) {
+        return false
+    }
+
+    if (response.status !== 200) {
         return false
     }
 
@@ -368,7 +384,7 @@ async function staleWhileRevalidate(event) {
         try {
             const networkResp = await fetch(request)
             if (isCacheableResponse(request, networkResp)) {
-                await cache.put(request, networkResp.clone())
+                await cache.put(request, networkResp.clone()).catch(() => null)
             }
             return networkResp
         }
