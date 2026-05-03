@@ -122,6 +122,9 @@ swatches:
 ########################################
 journey:
   thickness: 2            # Initial track thickness (pixels)
+  renderSmoothing:
+    enabled: false        # Smooth track rendering without modifying source coordinates
+    step: 1               # Chaikin smoothing passes
   activity:
     default: trek
     # Speeds are expressed in meters per second.

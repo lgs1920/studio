@@ -21,6 +21,7 @@ import {
 import { Journey }                                     from '@Core/Journey'
 import { default as centroid }                         from '@turf/centroid'
 import { SceneUtils }                                  from '@Utils/cesium/SceneUtils'
+import { getTrackRenderContent, trackRenderSmoothingKey } from '@Utils/cesium/trackRenderSmoothing'
 import {
     Cartesian3, Cartographic, Color as CColor, CustomDataSource, GeoJsonDataSource, Math as M,
     PolylineOutlineMaterialProperty, Rectangle, sampleTerrainMostDetailed,
@@ -216,12 +217,19 @@ export class TrackUtils {
         switch (action) {
             case DRAWING_FROM_DB:
             case ADD_JOURNEY:
-                await source.load(track.content, {
-                    clampToGround: true,
-                    name:          track.title,
-                })
             case REFRESH_DRAWING:
             case DRAWING_FROM_UI:
+                const smoothingKey = trackRenderSmoothingKey(track)
+                const needsGeometryLoad = [DRAWING_FROM_DB, ADD_JOURNEY].includes(action)
+                                          || source.entities.values.length === 0
+                                          || source.__lgsRenderSmoothingKey !== smoothingKey
+                if (needsGeometryLoad) {
+                    await source.load(getTrackRenderContent(track), {
+                        clampToGround: true,
+                        name:          track.title,
+                    })
+                    source.__lgsRenderSmoothingKey = smoothingKey
+                }
                 const material = new PolylineOutlineMaterialProperty({
                                                                          color: CColor.fromCssColorString(track.color ?? '#ffffff'),
                                                                          outlineWidth: 0,

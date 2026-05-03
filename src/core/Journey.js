@@ -30,6 +30,7 @@ import {
     extractJourneyMetadataFromGeoJson, extractJourneyMetadataFromGpxDocument, extractLgsPoiProperties,
     extractLgsTrackProperties,
 }                             from '@Utils/JourneyGpxUtils'
+import { normalizeTrackRenderSmoothing } from '@Utils/cesium/trackRenderSmoothing'
 import { decodeHTMLEntities } from '@Utils/TextUtils'
 import { UIToast }            from '@Utils/UIToast'
 import { ElevationServer }    from './Elevation/ElevationServer'
@@ -53,6 +54,7 @@ export class Journey extends MapElement {
     countryCodes = []
     activity
     activitySettings
+    renderSmoothing
 
     origin                                     // initial geoJson
     POIsVisible = true
@@ -92,6 +94,9 @@ export class Journey extends MapElement {
             this.countryCodes = options.countryCodes ?? []
             this.activity = options.activity ?? Journey.defaultActivity()
             this.activitySettings = Journey.activityProfile(this.activity, options.activitySettings)
+            this.renderSmoothing = options.renderSmoothing === undefined
+                                   ? undefined
+                                   : normalizeTrackRenderSmoothing(options.renderSmoothing)
 
             this.camera = options.camera ?? null
             this.rotation = options.rotation ?? {}
@@ -269,6 +274,9 @@ export class Journey extends MapElement {
         let instance = super.deserialize(props)
         instance.activity ??= Journey.defaultActivity()
         instance.activitySettings = Journey.activityProfile(instance.activity, instance.activitySettings)
+        instance.renderSmoothing = instance.renderSmoothing === undefined
+                                   ? undefined
+                                   : normalizeTrackRenderSmoothing(instance.renderSmoothing)
 
         // Transform Tracks from object to class
         instance.tracks.forEach((track, slug) => {
@@ -382,6 +390,9 @@ export class Journey extends MapElement {
         if (metadata.activitySettings) {
             this.activitySettings = Journey.activityProfile(this.activity, metadata.activitySettings)
         }
+        if (metadata.renderSmoothing) {
+            this.renderSmoothing = normalizeTrackRenderSmoothing(metadata.renderSmoothing)
+        }
         if (metadata.visible !== undefined) {
             this.visible = metadata.visible
         }
@@ -429,21 +440,22 @@ export class Journey extends MapElement {
                 if ([FEATURE_LINE_STRING, FEATURE_MULTILINE_STRING].includes(geometry.type)) {
                     // Let's define some tracks parameters
                     const parameters = {
-                        parent:      this.slug,
-                        id:          keepContext ? track.id : lgsTrack.id,
-                        name:        keepContext ? track.name : slug,
-                        slug:        slug,
-                        hasTime:     this.#hasTime(feature.properties),
-                        hasAltitude: this.#hasAltitude(geometry),
-                        description: keepContext ? track.description : decodeHTMLEntities(feature.properties.desc ?? ''),
-                        activity:    this.activity,
+                        parent:          this.slug,
+                        id:              keepContext ? track.id : lgsTrack.id,
+                        name:            keepContext ? track.name : slug,
+                        slug:            slug,
+                        hasTime:         this.#hasTime(feature.properties),
+                        hasAltitude:     this.#hasAltitude(geometry),
+                        description:     keepContext ? track.description : decodeHTMLEntities(feature.properties.desc ?? ''),
+                        activity:        this.activity,
                         activitySettings: this.activitySettings,
-                        segments:    geometry.coordinates.length,
-                        visible:     keepContext ? track.visible : (lgsTrack.visible ?? true),
-                        color:       keepContext ? track.color : (lgsTrack.color ?? __.ui.editor.journey.newColor()),
-                        thickness:   keepContext ? track.thickness : (lgsTrack.thickness ?? lgs.settings.getJourney.thickness),
-                        flags:       keepContext ? track.flags : {start: undefined, stop: undefined},
-                        content:     feature,
+                        renderSmoothing: keepContext ? track.renderSmoothing : lgsTrack.renderSmoothing,
+                        segments:        geometry.coordinates.length,
+                        visible:         keepContext ? track.visible : (lgsTrack.visible ?? true),
+                        color:           keepContext ? track.color : (lgsTrack.color ?? __.ui.editor.journey.newColor()),
+                        thickness:       keepContext ? track.thickness : (lgsTrack.thickness ?? lgs.settings.getJourney.thickness),
+                        flags:           keepContext ? track.flags : {start: undefined, stop: undefined},
+                        content:         feature,
                     }
                     this.tracks.set(slug, new Track(title, parameters))
                 }

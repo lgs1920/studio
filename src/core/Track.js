@@ -17,6 +17,7 @@
 import { CURRENT_TRACK, DRAWING_FROM_UI, FOCUS_ON_FEATURE }                   from '@Core/constants'
 import { MapElement }                                                         from '@Core/MapElement'
 import { FEATURE, FEATURE_LINE_STRING, FEATURE_MULTILINE_STRING, TrackUtils } from '@Utils/cesium/TrackUtils'
+import { normalizeTrackRenderSmoothing }                                      from '@Utils/cesium/trackRenderSmoothing'
 import { Mobility }                                                           from '@Utils/Mobility'
 import { decodeHTMLEntities }                                                 from '@Utils/TextUtils'
 import { v4 as uuid }                                                         from 'uuid'
@@ -109,6 +110,7 @@ export class Track extends MapElement {
     metrics     // All the metrics associated to the track
     activity
     activitySettings
+    renderSmoothing
     /** @type {boolean} */
     hasTime
     /** @type {boolean} */
@@ -137,6 +139,9 @@ export class Track extends MapElement {
         this.description = options.description === undefined ? undefined : decodeHTMLEntities(options.description)
         this.activity = options.activity ?? Track.defaultActivity()
         this.activitySettings = options.activitySettings
+        this.renderSmoothing = options.renderSmoothing === undefined
+                               ? undefined
+                               : normalizeTrackRenderSmoothing(options.renderSmoothing)
 
 
         this.name = options.name

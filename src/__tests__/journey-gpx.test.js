@@ -18,8 +18,8 @@ import { describe, expect, it } from 'vitest'
 import { gpx }                  from '@tmcw/togeojson'
 import {
     exportJourneyToGeoJSON, exportJourneyToGPX, extractJourneyMetadataFromGeoJson, extractJourneyMetadataFromGpxDocument,
-    extractLgsPoiProperties, getExportableJourneyPOIs, getJourneyExportBaseName, getJourneyExportFileName,
-    normalizeJourneyExportBaseName, normalizeJourneyExportFileName,
+    extractLgsPoiProperties, extractLgsTrackProperties, getExportableJourneyPOIs, getJourneyExportBaseName,
+    getJourneyExportFileName, normalizeJourneyExportBaseName, normalizeJourneyExportFileName,
 }                               from '@Utils/JourneyGpxUtils'
 
 const trackSlug = 'track#round-trip#gpx#main-track'
@@ -38,6 +38,10 @@ const makeJourney = () => ({
         id:       'bike',
         maxSpeed: 16,
     },
+    renderSmoothing:  {
+        enabled: true,
+        step:    2,
+    },
     visible:          true,
     POIsVisible:      false,
     camera:           {range: 1200},
@@ -55,6 +59,10 @@ const makeJourney = () => ({
                 color:       '#ffcc00',
                 thickness:   3,
                 visible:     true,
+                renderSmoothing: {
+                    enabled: true,
+                    step:    1,
+                },
                 content:     {
                     type:       'Feature',
                     properties: {
@@ -146,6 +154,7 @@ describe('journey GPX export', () => {
         expect(gpxContent).toContain('<lgs:location>Annecy</lgs:location>')
         expect(gpxContent).toContain('<lgs:countryCode>FR</lgs:countryCode>')
         expect(gpxContent).toContain('<lgs:countryCodes>[&quot;FR&quot;,&quot;IT&quot;]</lgs:countryCodes>')
+        expect(gpxContent).toContain('<lgs:renderSmoothing>{&quot;enabled&quot;:true,&quot;step&quot;:2}</lgs:renderSmoothing>')
         expect(gpxContent).toContain('<lgs:parentKind>track</lgs:parentKind>')
         expect(gpxContent).not.toContain('<lgs:id>flag-start</lgs:id>')
         expect(gpxContent).not.toContain('<lgs:id>flag-end</lgs:id>')
@@ -163,6 +172,7 @@ describe('journey GPX export', () => {
         const track = geoJson.features.find(feature => feature.geometry.type === 'LineString')
         const metadata = extractJourneyMetadataFromGpxDocument(document)
         const poiMetadata = extractLgsPoiProperties(waypoint.properties)
+        const trackMetadata = extractLgsTrackProperties(track.properties)
 
         expect(track.properties.name).toBe('Main Track')
         expect(track.geometry.coordinates[0]).toEqual([6.1, 45.1, 100])
@@ -172,7 +182,9 @@ describe('journey GPX export', () => {
         expect(metadata.countries).toEqual(['France', 'Italy'])
         expect(metadata.countryCodes).toEqual(['FR', 'IT'])
         expect(metadata.activitySettings.maxSpeed).toBe(16)
+        expect(metadata.renderSmoothing).toEqual({enabled: true, step: 2})
         expect(metadata.POIsVisible).toBe(false)
+        expect(trackMetadata.renderSmoothing).toEqual({enabled: true, step: 1})
         expect(poiMetadata.id).toBe('poi-1')
         expect(poiMetadata.category).toBe('summit')
         expect(poiMetadata.location).toBe('Annecy')
@@ -198,6 +210,7 @@ describe('journey GeoJSON export', () => {
         expect(metadata.countryCode).toBe('FR - IT')
         expect(metadata.countryCodes).toEqual(['FR', 'IT'])
         expect(metadata.activitySettings.maxSpeed).toBe(16)
+        expect(metadata.renderSmoothing).toEqual({enabled: true, step: 2})
         expect(pointFeatures).toHaveLength(2)
         expect(lineFeatures).toHaveLength(1)
         expect(pointFeatures.map(feature => feature.properties.name)).toEqual(['Summit & Cafe', 'Shelter'])
@@ -208,6 +221,7 @@ describe('journey GeoJSON export', () => {
         expect(geoJson.properties.lgs_countryCodes).toEqual(['FR', 'IT'])
         expect(pointFeatures[0].geometry.coordinates).toEqual([6.15, 45.15, 112])
         expect(lineFeatures[0].properties.lgs_color).toBe('#ffcc00')
+        expect(lineFeatures[0].properties.lgs_renderSmoothing).toEqual({enabled: true, step: 1})
     })
 })
 

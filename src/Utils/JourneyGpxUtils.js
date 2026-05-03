@@ -328,6 +328,7 @@ const trackToGpx = track => {
         lgsElement('color', track.color),
         lgsElement('thickness', track.thickness),
         lgsElement('visible', track.visible),
+        lgsElement('renderSmoothing', toJson(track.renderSmoothing)),
     ])
 
     return [
@@ -347,6 +348,7 @@ const getTrackLgsProperties = track => lgsProperties({
     color:     track.color,
     thickness: track.thickness,
     visible:   track.visible,
+    renderSmoothing: track.renderSmoothing,
 })
 
 const trackToGeoJsonFeature = track => {
@@ -496,6 +498,7 @@ const getJourneyLgsProperties = journey => lgsProperties({
     countryCodes:     journey?.countryCodes,
     activity:         journey?.activity,
     activitySettings: journey?.activitySettings,
+    renderSmoothing:  journey?.renderSmoothing,
     visible:          journey?.visible,
     POIsVisible:      journey?.POIsVisible,
     elevationServer:  journey?.elevationServer,
@@ -522,6 +525,7 @@ export const exportJourneyToGPX = (journey, {pois = undefined, createdAt = new D
         lgsElement('countryCodes', toJson(journey?.countryCodes)),
         lgsElement('activity', journey?.activity),
         lgsElement('activitySettings', toJson(journey?.activitySettings)),
+        lgsElement('renderSmoothing', toJson(journey?.renderSmoothing)),
         lgsElement('visible', journey?.visible),
         lgsElement('POIsVisible', journey?.POIsVisible),
         lgsElement('elevationServer', journey?.elevationServer),
@@ -581,6 +585,7 @@ export const extractJourneyMetadataFromGpxDocument = (document) => {
         countryCodes:     parseStringArray(extensions.countryCodes),
         activity:         extensions.activity,
         activitySettings: parseJson(extensions.activitySettings),
+        renderSmoothing:  parseJson(extensions.renderSmoothing),
         visible:          parseBoolean(extensions.visible),
         POIsVisible:      parseBoolean(extensions.POIsVisible),
         elevationServer:  extensions.elevationServer,
@@ -603,6 +608,7 @@ export const extractJourneyMetadataFromGeoJson = (geoJson = {}) => {
         countryCodes:     parseStringArray(lgsProperty(properties, 'countryCodes')),
         activity:         lgsProperty(properties, 'activity'),
         activitySettings: lgsProperty(properties, 'activitySettings'),
+        renderSmoothing:  parseJson(lgsProperty(properties, 'renderSmoothing')),
         visible:          parseBoolean(lgsProperty(properties, 'visible')),
         POIsVisible:      parseBoolean(lgsProperty(properties, 'POIsVisible')),
         elevationServer:  lgsProperty(properties, 'elevationServer'),
@@ -619,6 +625,7 @@ export const extractLgsTrackProperties = (properties = {}) => ({
     color:     lgsProperty(properties, 'color') || properties.stroke,
     thickness: finiteNumber(lgsProperty(properties, 'thickness') ?? properties['stroke-width']),
     visible:   parseBoolean(lgsProperty(properties, 'visible')),
+    renderSmoothing: parseJson(lgsProperty(properties, 'renderSmoothing')),
 })
 
 export const extractLgsPoiProperties = (properties = {}) => ({
