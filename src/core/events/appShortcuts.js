@@ -501,7 +501,12 @@ const isMinusKey = event => event.key === '-'
     || event.key?.toLowerCase() === 'minus'
 
 const widgetKeyboardShortcutAction = event => {
-    if (hasActiveAppShortcutBlocker() || isWidgetShortcutEditableTarget(event.target) || event.altKey || event.metaKey) {
+    if (lgs.stores.ui.mainUI.panorama.active
+        || lgs.stores.ui.mainUI.rotate.running
+        || hasActiveAppShortcutBlocker()
+        || isWidgetShortcutEditableTarget(event.target)
+        || event.altKey
+        || event.metaKey) {
         return null
     }
 
@@ -688,6 +693,22 @@ export const SHORTCUTS_CATALOG = [
         scope:       'Rotation mode',
     },
     {
+        action:      'Adjust RPM',
+        description: 'Increase or decrease rotation speed by 0.1 RPM.',
+        id:          'rotation-rpm-keyboard',
+        keys:        ['Plus', 'Minus'],
+        reference:   true,
+        scope:       'Rotation mode',
+    },
+    {
+        action:      'Adjust direction',
+        description: 'Set clockwise or counterclockwise rotation.',
+        id:          'rotation-direction-keyboard',
+        keys:        ['ArrowLeft', 'ArrowRight'],
+        reference:   true,
+        scope:       'Rotation mode',
+    },
+    {
         action:      'Adjust angle',
         description: 'Drag on the globe while panorama mode is active.',
         id:          'panorama-angle',
@@ -711,6 +732,38 @@ export const SHORTCUTS_CATALOG = [
         id:          'panorama-height-windows-linux',
         keys:        ['Wheel', 'Alt+Left drag', 'Shift+Left drag', 'Right drag'],
         platform:    'Windows / Linux',
+        reference:   true,
+        scope:       'Panorama mode',
+    },
+    {
+        action:      'Adjust height',
+        description: 'Change the panorama camera altitude by 2 m.',
+        id:          'panorama-height-keyboard',
+        keys:        ['ArrowUp', 'ArrowDown'],
+        reference:   true,
+        scope:       'Panorama mode',
+    },
+    {
+        action:      'Adjust height faster',
+        description: 'Change the panorama camera altitude by 10 m.',
+        id:          'panorama-height-keyboard-fast',
+        keys:        ['Ctrl+ArrowUp', 'Ctrl+ArrowDown'],
+        reference:   true,
+        scope:       'Panorama mode',
+    },
+    {
+        action:      'Adjust RPM',
+        description: 'Increase or decrease panorama speed by 0.1 RPM.',
+        id:          'panorama-rpm-keyboard',
+        keys:        ['Plus', 'Minus'],
+        reference:   true,
+        scope:       'Panorama mode',
+    },
+    {
+        action:      'Adjust direction',
+        description: 'Set clockwise or counterclockwise panorama rotation.',
+        id:          'panorama-direction-keyboard',
+        keys:        ['ArrowLeft', 'ArrowRight'],
         reference:   true,
         scope:       'Panorama mode',
     },

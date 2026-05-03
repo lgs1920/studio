@@ -29,6 +29,8 @@ import {
     PANORAMA_PITCH_MAX,
     PANORAMA_PITCH_MIN,
     PANORAMA_PITCH_STEP,
+    normalizeOrbitDirection,
+    normalizeOrbitRPM,
     persistOrbitSettings,
     normalizePanoramaHeightOffset,
     normalizePanoramaPitch,
@@ -46,12 +48,70 @@ import { getOrbitWidgetConfig }                          from './orbitWidgetConf
 const POINTER_PITCH_DEGREES_PER_PIXEL = 0.25
 const POINTER_HEIGHT_METERS_PER_PIXEL = 10
 const WHEEL_HEIGHT_METERS_PER_PIXEL = 1
+const KEYBOARD_HEIGHT_STEP_METERS = 2
+const KEYBOARD_FAST_HEIGHT_STEP_METERS = 10
 const INTERACTION_PERSIST_DELAY = 400
 const ADJUSTMENT_OVERLAY_DELAY = 2000
 const PANORAMA_ADJUSTMENT_WIDGET = 'panorama-adjustment-widget'
+const EDITABLE_SELECTOR = [
+    'input',
+    'textarea',
+    'select',
+    'wa-input',
+    'wa-textarea',
+    'wa-select',
+    '[contenteditable=""]',
+    '[contenteditable="true"]',
+    '[role="textbox"]',
+].join(',')
 
 const hasFinePointer = () => typeof window !== 'undefined' && (window.matchMedia?.('(any-pointer: fine)').matches ?? false)
 const wheelDeltaModeFactor = event => event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? window.innerHeight : 1
+const isEditableTarget = target => {
+    const ElementClass = globalThis.Element
+    if (!ElementClass || !(target instanceof ElementClass)) {
+        return false
+    }
+    if (target.matches('input[type="range"]')) {
+        return false
+    }
+    return Boolean(target.closest(EDITABLE_SELECTOR))
+}
+const isPlusKey = event => event.key === '+'
+    || event.code === 'NumpadAdd'
+    || event.key?.toLowerCase() === 'plus'
+    || (event.code === 'Equal' && (event.ctrlKey || event.shiftKey))
+const isMinusKey = event => event.key === '-'
+    || event.code === 'Minus'
+    || event.code === 'NumpadSubtract'
+    || event.key?.toLowerCase() === 'minus'
+const panoramaHeightKeyboardDirection = (event) => {
+    if (event.key === 'ArrowUp') {
+        return 1
+    }
+    if (event.key === 'ArrowDown') {
+        return -1
+    }
+    return 0
+}
+const orbitRPMKeyboardDirection = (event) => {
+    if (isPlusKey(event)) {
+        return 1
+    }
+    if (isMinusKey(event)) {
+        return -1
+    }
+    return 0
+}
+const orbitDirectionKeyboardSign = (event) => {
+    if (event.key === 'ArrowRight') {
+        return 1
+    }
+    if (event.key === 'ArrowLeft') {
+        return -1
+    }
+    return 0
+}
 const numericValueOf = value => {
     const numericValue = Number(value)
     return Number.isFinite(numericValue) ? numericValue : 0
@@ -286,6 +346,38 @@ export const PanoramaWidget = memo(() => {
         }
     }, [$panorama, schedulePersistPanoramaSettings, showAdjustmentOverlay])
 
+    const setPanoramaRPM = useCallback((value, persist = false) => {
+        const rpm = normalizeOrbitRPM(value, rpmRef.current)
+        if (rpm === rpmRef.current) {
+            return
+        }
+
+        rpmRef.current = rpm
+        $panorama.rpm = rpm
+
+        if (persist) {
+            schedulePersistPanoramaSettings({rpm})
+        }
+    }, [$panorama, schedulePersistPanoramaSettings])
+
+    const setPanoramaDirectionSign = useCallback((sign, persist = false) => {
+        const currentMagnitude = Math.abs(Number(directionRef.current))
+        const magnitude = Number.isFinite(currentMagnitude) && currentMagnitude > 0
+                          ? currentMagnitude
+                          : 1
+        const direction = normalizeOrbitDirection(sign * magnitude, directionRef.current)
+        if (direction === directionRef.current) {
+            return
+        }
+
+        directionRef.current = direction
+        $panorama.direction = direction
+
+        if (persist) {
+            schedulePersistPanoramaSettings({direction})
+        }
+    }, [$panorama, schedulePersistPanoramaSettings])
+
     const handleAdjustmentWheel = useCallback((event) => {
         event.preventDefault()
         event.stopPropagation()
@@ -297,6 +389,53 @@ export const PanoramaWidget = memo(() => {
             true,
         )
     }, [panorama.active, setPanoramaHeightOffset])
+
+    useEffect(() => {
+        if (!panorama.active) {
+            return
+        }
+
+        const handleKeyDown = (event) => {
+            if (event.altKey || event.metaKey || isEditableTarget(event.target)) {
+                return
+            }
+
+            const directionSign = event.ctrlKey ? 0 : orbitDirectionKeyboardSign(event)
+            if (directionSign !== 0) {
+                event.preventDefault()
+                event.stopPropagation()
+                event.stopImmediatePropagation?.()
+                if (!event.repeat) {
+                    setPanoramaDirectionSign(directionSign, true)
+                }
+                return
+            }
+
+            const rpmDirection = event.ctrlKey ? 0 : orbitRPMKeyboardDirection(event)
+            if (rpmDirection !== 0) {
+                event.preventDefault()
+                event.stopPropagation()
+                event.stopImmediatePropagation?.()
+                setPanoramaRPM(rpmRef.current + rpmDirection * ORBIT_RPM_STEP, true)
+                return
+            }
+
+            const heightDirection = panoramaHeightKeyboardDirection(event)
+            if (heightDirection === 0) {
+                return
+            }
+            event.preventDefault()
+            event.stopPropagation()
+            event.stopImmediatePropagation?.()
+
+            const step = event.ctrlKey ? KEYBOARD_FAST_HEIGHT_STEP_METERS : KEYBOARD_HEIGHT_STEP_METERS
+            setPanoramaHeightOffset(heightOffsetRef.current + heightDirection * step, true)
+        }
+
+        window.addEventListener('keydown', handleKeyDown, {capture: true})
+
+        return () => window.removeEventListener('keydown', handleKeyDown, {capture: true})
+    }, [panorama.active, setPanoramaDirectionSign, setPanoramaHeightOffset, setPanoramaRPM])
 
     const closePanorama = useCallback((event) => {
         event?.stopPropagation?.()

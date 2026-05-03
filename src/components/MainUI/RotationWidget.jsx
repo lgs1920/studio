@@ -22,6 +22,8 @@ import {
     ORBIT_RPM_MAX,
     ORBIT_RPM_MIN,
     ORBIT_RPM_STEP,
+    normalizeOrbitDirection,
+    normalizeOrbitRPM,
     persistOrbitSettings,
 }                                   from '@Core/OrbitSettings'
 import { OrbitInteractionHintsWidget } from '@Components/MainUI/OrbitInteractionHintsWidget'
@@ -93,6 +95,33 @@ const appIsVisible = () => typeof document === 'undefined' || document.body.clas
 
 const isEditableTarget = target => target instanceof HTMLElement
     && Boolean(target.closest('input, textarea, select, wa-input, wa-textarea, wa-select'))
+
+const isPlusKey = event => event.key === '+'
+    || event.code === 'NumpadAdd'
+    || event.key?.toLowerCase() === 'plus'
+    || (event.code === 'Equal' && event.shiftKey)
+const isMinusKey = event => event.key === '-'
+    || event.code === 'Minus'
+    || event.code === 'NumpadSubtract'
+    || event.key?.toLowerCase() === 'minus'
+const orbitRPMKeyboardDirection = (event) => {
+    if (isPlusKey(event)) {
+        return 1
+    }
+    if (isMinusKey(event)) {
+        return -1
+    }
+    return 0
+}
+const orbitDirectionKeyboardSign = (event) => {
+    if (event.key === 'ArrowRight') {
+        return 1
+    }
+    if (event.key === 'ArrowLeft') {
+        return -1
+    }
+    return 0
+}
 
 const RotationCameraAdjustmentOverlay = memo(() => {
     const rotate = useSnapshot(lgs.stores.ui.mainUI.rotate)
@@ -384,6 +413,36 @@ export const RotationWidget = memo(() => {
         $rotate.rpm = value
     }, [$rotate])
 
+    const setRotationRPM = useCallback((value, persist = false) => {
+        const rpm = normalizeOrbitRPM(value, $rotate.rpm)
+        if (rpm === $rotate.rpm) {
+            return
+        }
+
+        $rotate.rpm = rpm
+
+        if (persist) {
+            void persistOrbitSettings($rotate.target, 'rotation', {rpm})
+        }
+    }, [$rotate])
+
+    const setRotationDirectionSign = useCallback((sign, persist = false) => {
+        const currentMagnitude = Math.abs(Number($rotate.direction))
+        const magnitude = Number.isFinite(currentMagnitude) && currentMagnitude > 0
+                          ? currentMagnitude
+                          : 1
+        const direction = normalizeOrbitDirection(sign * magnitude, $rotate.direction)
+        if (direction === $rotate.direction) {
+            return
+        }
+
+        $rotate.direction = direction
+
+        if (persist) {
+            void persistOrbitSettings($rotate.target, 'rotation', {direction})
+        }
+    }, [$rotate])
+
     const persistRPM = useCallback((event) => {
         const value = Number(event.target.value)
         void persistOrbitSettings(rotate.target, 'rotation', {rpm: value})
@@ -398,6 +457,43 @@ export const RotationWidget = memo(() => {
         const value = Number(event.target.value)
         void persistOrbitSettings(rotate.target, 'rotation', {direction: value})
     }, [rotate.target])
+
+    useEffect(() => {
+        if (!rotate.running || panorama.active) {
+            return
+        }
+
+        const handleKeyDown = (event) => {
+            if (event.ctrlKey || event.altKey || event.metaKey || isEditableTarget(event.target)) {
+                return
+            }
+
+            const directionSign = event.ctrlKey ? 0 : orbitDirectionKeyboardSign(event)
+            if (directionSign !== 0) {
+                event.preventDefault()
+                event.stopPropagation()
+                event.stopImmediatePropagation?.()
+                if (!event.repeat) {
+                    setRotationDirectionSign(directionSign, true)
+                }
+                return
+            }
+
+            const direction = orbitRPMKeyboardDirection(event)
+            if (direction === 0) {
+                return
+            }
+
+            event.preventDefault()
+            event.stopPropagation()
+            event.stopImmediatePropagation?.()
+            setRotationRPM($rotate.rpm + direction * ORBIT_RPM_STEP, true)
+        }
+
+        window.addEventListener('keydown', handleKeyDown, {capture: true})
+
+        return () => window.removeEventListener('keydown', handleKeyDown, {capture: true})
+    }, [$rotate, panorama.active, rotate.running, setRotationDirectionSign, setRotationRPM])
 
     return (
         <div className="orbit-mode-widgets">
