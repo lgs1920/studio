@@ -329,6 +329,7 @@ const trackToGpx = track => {
         lgsElement('thickness', track.thickness),
         lgsElement('visible', track.visible),
         lgsElement('renderSmoothing', toJson(track.renderSmoothing)),
+        lgsElement('renderStyle', toJson(track.renderStyle)),
     ])
 
     return [
@@ -349,6 +350,7 @@ const getTrackLgsProperties = track => lgsProperties({
     thickness: track.thickness,
     visible:   track.visible,
     renderSmoothing: track.renderSmoothing,
+    renderStyle: track.renderStyle,
 })
 
 const trackToGeoJsonFeature = track => {
@@ -626,6 +628,7 @@ export const extractLgsTrackProperties = (properties = {}) => ({
     thickness: finiteNumber(lgsProperty(properties, 'thickness') ?? properties['stroke-width']),
     visible:   parseBoolean(lgsProperty(properties, 'visible')),
     renderSmoothing: parseJson(lgsProperty(properties, 'renderSmoothing')),
+    renderStyle: parseJson(lgsProperty(properties, 'renderStyle')),
 })
 
 export const extractLgsPoiProperties = (properties = {}) => ({

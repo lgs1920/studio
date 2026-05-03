@@ -18,6 +18,7 @@ import { CURRENT_TRACK, DRAWING_FROM_UI, FOCUS_ON_FEATURE }                   fr
 import { MapElement }                                                         from '@Core/MapElement'
 import { FEATURE, FEATURE_LINE_STRING, FEATURE_MULTILINE_STRING, TrackUtils } from '@Utils/cesium/TrackUtils'
 import { normalizeTrackRenderSmoothing }                                      from '@Utils/cesium/trackRenderSmoothing'
+import { normalizeTrackRenderStyle }                                          from '@Utils/cesium/trackRenderStyle'
 import { Mobility }                                                           from '@Utils/Mobility'
 import { decodeHTMLEntities }                                                 from '@Utils/TextUtils'
 import { v4 as uuid }                                                         from 'uuid'
@@ -111,6 +112,7 @@ export class Track extends MapElement {
     activity
     activitySettings
     renderSmoothing
+    renderStyle
     /** @type {boolean} */
     hasTime
     /** @type {boolean} */
@@ -133,8 +135,15 @@ export class Track extends MapElement {
         this.parent = options.parent
         this.slug = options.slug
 
-        this.color = options.color ??__.ui.editor.journey.newColor()
-        this.thickness = options.thickness ?? lgs.settings.getJourney.thickness
+        const legacyColor = options.color ?? __.ui.editor.journey.newColor()
+        const legacyThickness = options.thickness ?? lgs.settings.getJourney.thickness
+
+        this.renderStyle = normalizeTrackRenderStyle(options.renderStyle, {
+            color:     legacyColor,
+            thickness: legacyThickness,
+        })
+        this.color = this.renderStyle.color
+        this.thickness = this.renderStyle.farPixelWidth
         this.visible = options.visible ?? true
         this.description = options.description === undefined ? undefined : decodeHTMLEntities(options.description)
         this.activity = options.activity ?? Track.defaultActivity()

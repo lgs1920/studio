@@ -450,6 +450,7 @@ export class Journey extends MapElement {
                         activity:        this.activity,
                         activitySettings: this.activitySettings,
                         renderSmoothing: keepContext ? track.renderSmoothing : lgsTrack.renderSmoothing,
+                        renderStyle:     keepContext ? track.renderStyle : lgsTrack.renderStyle,
                         segments:        geometry.coordinates.length,
                         visible:         keepContext ? track.visible : (lgsTrack.visible ?? true),
                         color:           keepContext ? track.color : (lgsTrack.color ?? __.ui.editor.journey.newColor()),

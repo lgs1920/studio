@@ -143,7 +143,7 @@ wa-tab sl-icon {
 
 #track-line-settings {
     display: flex;
-    align-items: center;
+    align-items: stretch;
     flex-wrap: wrap;
     width: 100%;
     gap: var(--lgs-gutter);
@@ -181,6 +181,52 @@ wa-tab sl-icon {
 
 .lgs--track-style-settings > div wa-slider::part(label) {
     font-weight: normal;
+}
+
+.lgs--track-style-section {
+    display: flex;
+    flex: 0 0 100%;
+    flex-direction: column;
+    width: 100%;
+    min-width: 0;
+    gap: var(--lgs-gutter-s);
+}
+
+.lgs--track-style-settings {
+    width: 100%;
+    min-width: 0;
+}
+
+.lgs--track-style-controls {
+    min-width: 0;
+}
+
+.lgs--track-style-subsection {
+    padding-left: var(--lgs-gutter-s);
+}
+
+.lgs--track-render-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(8rem, 100%), 1fr));
+    width: 100%;
+    gap: var(--lgs-gutter-s);
+}
+
+.lgs--track-render-grid wa-number-input {
+    min-width: 0;
+}
+
+.lgs--track-render-grid wa-number-input::part(input) {
+    text-align: center;
+}
+
+.lgs--track-style-switch {
+    flex: 0 0 100%;
+    width: 100%;
+}
+
+.lgs--track-style-switch::part(control) {
+    margin-left: auto;
 }
 
 #track-line-settings > wa-divider {

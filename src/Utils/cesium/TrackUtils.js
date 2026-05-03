@@ -19,12 +19,18 @@ import {
     DRAWING_FROM_UI, FOCUS_ON_FEATURE, NO_FOCUS, REFRESH_DRAWING, SCENE_MODE_2D,
 }                                                      from '@Core/constants'
 import { Journey }                                     from '@Core/Journey'
+import bbox                                            from '@turf/bbox'
 import { default as centroid }                         from '@turf/centroid'
 import { SceneUtils }                                  from '@Utils/cesium/SceneUtils'
 import { getTrackRenderContent, trackRenderSmoothingKey } from '@Utils/cesium/trackRenderSmoothing'
 import {
-    Cartesian3, Cartographic, Color as CColor, CustomDataSource, GeoJsonDataSource, Math as M,
-    PolylineOutlineMaterialProperty, Rectangle, sampleTerrainMostDetailed,
+    normalizeTrackRenderStyle,
+    TRACK_RENDER_WIDTH_UNITS,
+}                                                      from '@Utils/cesium/trackRenderStyle'
+import {
+    CallbackProperty, Cartesian2, Cartesian3, Cartographic, Color as CColor, CustomDataSource,
+    GeoJsonDataSource, Math as M, PolylineDashMaterialProperty, PolylineOutlineMaterialProperty,
+    Rectangle, sampleTerrainMostDetailed, SceneTransforms,
 }                                                      from 'cesium'
 import { UIToast }                                     from '../UIToast.js'
 import { POI_FLAG, POI_FLAG_START, POI_STD, POIUtils } from './POIUtils'
@@ -40,6 +46,11 @@ export const JOURNEY_OK = 1
 export const JOURNEY_EXISTS = 2
 export const JOURNEY_WAITING = 3
 export const JOURNEY_DENIED = 4
+
+const TRACK_STYLE_ENTITY_MARKER = '#lgs-track-style#'
+const EARTH_RADIUS_METERS = 6378137
+
+const isTrackStyleEntity = entity => `${entity?.id ?? ''}`.includes(TRACK_STYLE_ENTITY_MARKER)
 
 export const ALREADY_IMPORTED = {
     /** The file or resource is already present */
@@ -202,13 +213,140 @@ export class TrackUtils {
         await Promise.all(dataSources)
     }
 
+    static getTrackRenderStyle = track => normalizeTrackRenderStyle(track?.renderStyle, {
+        color:     track?.color,
+        thickness: track?.thickness,
+    })
+
+    static cssColor = (value, fallback = CColor.WHITE) => CColor.fromCssColorString(value ?? '') ?? fallback
+
+    static createTrackMaterial = (style, color = style.color) => {
+        if (style.dash.enabled) {
+            return new PolylineDashMaterialProperty({
+                                                        color:       TrackUtils.cssColor(color),
+                                                        gapColor:    TrackUtils.cssColor(style.dash.gapColor, CColor.TRANSPARENT),
+                                                        dashLength:  style.dash.dashLength,
+                                                        dashPattern: style.dash.dashPattern,
+                                                    })
+        }
+
+        return new PolylineOutlineMaterialProperty({
+                                                       color:        TrackUtils.cssColor(color),
+                                                       outlineWidth: 0,
+                                                   })
+    }
+
+    static getTrackReferencePoint = track => {
+        try {
+            const center = centroid(track.content)
+            const coordinates = center?.geometry?.coordinates
+            if (!Array.isArray(coordinates) || coordinates.length < 2) {
+                return null
+            }
+
+            return {
+                longitude: coordinates[0],
+                latitude:  coordinates[1],
+                height:    coordinates[2] ?? 0,
+            }
+        }
+        catch {
+            return null
+        }
+    }
+
+    static meterWidthToPixels = (track, meters) => {
+        const referencePoint = TrackUtils.getTrackReferencePoint(track)
+        if (!referencePoint || !lgs?.scene || !lgs?.camera) {
+            return 0
+        }
+
+        const latitudeRad = M.toRadians(referencePoint.latitude)
+        const cosLatitude = Math.max(0.05, Math.abs(Math.cos(latitudeRad)))
+        const longitudeOffset = M.toDegrees(meters / (EARTH_RADIUS_METERS * cosLatitude))
+        const height = referencePoint.height ?? 0
+        const start = SceneTransforms.wgs84ToWindowCoordinates(
+            lgs.scene,
+            Cartesian3.fromDegrees(referencePoint.longitude, referencePoint.latitude, height),
+        )
+        const end = SceneTransforms.wgs84ToWindowCoordinates(
+            lgs.scene,
+            Cartesian3.fromDegrees(referencePoint.longitude + longitudeOffset, referencePoint.latitude, height),
+        )
+
+        return start && end ? Cartesian2.distance(start, end) : 0
+    }
+
+    static createTrackWidthProperty = (track, style, meterWidth, pixelWidth) => {
+        if (style.widthUnit !== TRACK_RENDER_WIDTH_UNITS.METERS) {
+            return pixelWidth
+        }
+
+        return new CallbackProperty(() => {
+            const meterPixels = TrackUtils.meterWidthToPixels(track, meterWidth)
+            return meterPixels > style.meterPixelThreshold ? meterPixels : pixelWidth
+        }, false)
+    }
+
+    static removeTrackStyleEntities = source => {
+        source.entities.values
+              .filter(isTrackStyleEntity)
+              .forEach(entity => source.entities.remove(entity))
+    }
+
+    static applyTrackRenderStyle = (source, track) => {
+        const style = TrackUtils.getTrackRenderStyle(track)
+        TrackUtils.removeTrackStyleEntities(source)
+
+        const baseEntities = source.entities.values.filter(entity => entity.polyline && !isTrackStyleEntity(entity))
+        const mainMaterial = TrackUtils.createTrackMaterial(style)
+
+        baseEntities.forEach(entity => {
+            const positions = entity.polyline.positions
+            if (style.underlay.enabled) {
+                source.entities.add({
+                                        id:       `${entity.id}${TRACK_STYLE_ENTITY_MARKER}underlay`,
+                                        polyline: {
+                                            positions,
+                                            clampToGround: true,
+                                            width:         TrackUtils.createTrackWidthProperty(
+                                                track,
+                                                style,
+                                                style.underlay.meterWidth,
+                                                style.underlay.pixelWidth,
+                                            ),
+                                            material:      TrackUtils.createTrackMaterial({
+                                                                                              ...style,
+                                                                                              dash: {
+                                                                                                  ...style.dash,
+                                                                                                  enabled: false,
+                                                                                              },
+                                                                                          },
+                                                                                          style.underlay.color),
+                                            zIndex:        1,
+                                        },
+                                    })
+            }
+
+            entity.polyline.clampToGround = true
+            entity.polyline.material = mainMaterial
+            entity.polyline.width = TrackUtils.createTrackWidthProperty(
+                track,
+                style,
+                style.meterWidth,
+                style.farPixelWidth,
+            )
+            entity.polyline.zIndex = 2
+        })
+    }
+
     /**
      * Show the Track on the map
      *
      * @param {Track} track
      * @param {Object} options
      */
-    static draw = async (track, {action = DRAWING_FROM_UI, mode = FOCUS_ON_FEATURE, forcedToHide = false}) => {
+    static draw = async (track, {action = DRAWING_FROM_UI, forcedToHide = false}) => {
         const source = lgs.viewer.dataSources.getByName(track.slug)[0]
         if (!source) {
             return
@@ -218,7 +356,7 @@ export class TrackUtils {
             case DRAWING_FROM_DB:
             case ADD_JOURNEY:
             case REFRESH_DRAWING:
-            case DRAWING_FROM_UI:
+            case DRAWING_FROM_UI: {
                 const smoothingKey = trackRenderSmoothingKey(track)
                 const needsGeometryLoad = [DRAWING_FROM_DB, ADD_JOURNEY].includes(action)
                                           || source.entities.values.length === 0
@@ -230,17 +368,9 @@ export class TrackUtils {
                     })
                     source.__lgsRenderSmoothingKey = smoothingKey
                 }
-                const material = new PolylineOutlineMaterialProperty({
-                                                                         color: CColor.fromCssColorString(track.color ?? '#ffffff'),
-                                                                         outlineWidth: 0,
-                                                                     })
-                source.entities.values.forEach(entity => {
-                    if (entity.polyline) {
-                        entity.polyline.material = material
-                        entity.polyline.width = track.thickness
-                    }
-                })
+                TrackUtils.applyTrackRenderStyle(source, track)
                 break
+            }
         }
         source.show = forcedToHide ? false : track.visible
         lgs.viewer.scene.requestRender()
@@ -267,16 +397,15 @@ export class TrackUtils {
             journey = lgs.journeys.get(track.parent)
         }
 
-        const bbox = TrackUtils.extendBbox(extent(track.content), 0)
-        let rectangle = Rectangle.fromDegrees(bbox[0], bbox[1], bbox[2], bbox[3])
+        const trackBbox = TrackUtils.extendBbox(bbox(track.content), 0)
+        let rectangle = Rectangle.fromDegrees(trackBbox[0], trackBbox[1], trackBbox[2], trackBbox[3])
 
-        let destination
         if (journey.camera === null || resetCamera) {
-            destination = lgs.camera.getRectangleCameraCoordinates(rectangle)
+            const destination = lgs.camera.getRectangleCameraCoordinates(rectangle)
             const cartographic = Cartographic.fromCartesian(destination)
             const center = centroid(track.content.geometry.coordinates)
 
-            let position = {}
+            let position
             switch (lgs.settings.scene.mode.value) {
                 case SCENE_MODE_2D.value:
                     position = {
@@ -305,14 +434,9 @@ export class TrackUtils {
         }
         else {
             __.ui.cameraManager.settings = (action === DRAWING_FROM_UI || action === DRAWING_FROM_DB) ? journey.cameraOrigin : journey.camera
-            destination = Cartesian3.fromDegrees(
-                __.ui.cameraManager.settings.position.longitude,
-                __.ui.cameraManager.settings.position.latitude,
-                __.ui.cameraManager.settings.position.height,
-            )
         }
 
-        SceneUtils.focusOnJourney(bbox)
+        SceneUtils.focusOnJourney(trackBbox)
 
         if (showBbox) {
             const id = `BBox#${track.slug}`
@@ -364,7 +488,7 @@ export class TrackUtils {
             const segments = type === FEATURE_LINE_STRING
                              ? [this.content.geometry.coordinates]
                              : this.content.geometry.coordinates
-            segments.forEach((segment) => {
+            segments.forEach(() => {
                 const newLine = []
                 dataExtract.push(newLine)
             })
