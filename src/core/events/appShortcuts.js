@@ -406,6 +406,11 @@ const persistWidgetKeyboardChange = async (widgetId, config) => {
     __.ui.widgetManager.setConfig(widgetId, config)
     __.ui.widgetManager.getMoveable(widgetId)?.current?.updateRect()
     __.ui.widgetManager.refreshEditorPreviewSnapshot(widgetId)
+    lgs.stores.ui.widget.current = {
+        ...(lgs.stores.ui.widget.current ?? {}),
+        id: widgetId,
+        keyboardUpdate: ((lgs.stores.ui.widget.current?.keyboardUpdate ?? 0) + 1),
+    }
 
     if (config.persist) {
         await __.ui.widgetManager.saveWidgetPosition(widgetId, config)

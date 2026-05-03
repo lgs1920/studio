@@ -186,6 +186,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
     })
     const selectedId = widget.current?.id ?? null
     const isSelected = selectedId === widgetId
+    const keyboardUpdate = widget.current?.keyboardUpdate ?? 0
     const liveOpacity = config.type === LGS_TOOLBAR
                         ? toolbars.opacity
                         : (config.opacity ?? 1)
@@ -533,6 +534,20 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
 
         return () => cancelAnimationFrame(frameId)
     }, [isSelected])
+
+    useEffect(() => {
+        if (!isSelected || keyboardUpdate === 0) {
+            return
+        }
+
+        __.ui.widgetManager.manageControlBox(_moveable, setControlBox, _controlBoxTimer, true, true)
+        const frameId = requestAnimationFrame(() => {
+            _moveable.current?.updateRect()
+            __.ui.widgetManager.manageControlBox(_moveable, setControlBox, _controlBoxTimer, true, true)
+        })
+
+        return () => cancelAnimationFrame(frameId)
+    }, [isSelected, keyboardUpdate])
 
     useEffect(() => {
         if (!isSelected) {
