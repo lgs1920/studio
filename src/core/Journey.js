@@ -470,7 +470,8 @@ export class Journey extends MapElement {
      * @return {boolean}
      */
     #hasTime = (properties) => {
-        return properties?.coordinateProperties?.times !== undefined
+        const times = properties?.coordinateProperties?.times
+        return Array.isArray(times) && times.length > 0
     }
 
     /**
@@ -480,12 +481,17 @@ export class Journey extends MapElement {
      * @return {boolean}
      */
     #hasAltitude = (geometry) => {
+        const hasAltitude = coordinate => Array.isArray(coordinate) && Number.isFinite(Number(coordinate[2]))
+
         switch (geometry.type) {
             // We check the length of the points coordinates
             case FEATURE_LINE_STRING:
-                return geometry.coordinates[0].length === 3
+                return Array.isArray(geometry.coordinates) && geometry.coordinates.some(hasAltitude)
             case FEATURE_MULTILINE_STRING:
-                return geometry.coordinates[0][0].length === 3
+                return Array.isArray(geometry.coordinates)
+                    && geometry.coordinates.some(segment => Array.isArray(segment) && segment.some(hasAltitude))
+            default:
+                return false
         }
     }
 

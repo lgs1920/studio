@@ -249,6 +249,25 @@ describe('journey metrics', () => {
         expect(track.activitySettings.maxSpeed).toBe(2.25)
     })
 
+    it('skips malformed coordinates instead of failing metrics calculation', () => {
+        const track = makeLineTrack({
+            coordinates: [
+                [0, 0, 100],
+                [null, 0, 105],
+                [0.001, 0, 110],
+            ],
+            times:       [
+                '2026-01-01T00:00:00Z',
+                '2026-01-01T00:01:00Z',
+                '2026-01-01T00:02:00Z',
+            ],
+        })
+
+        expect(() => track.extractMetrics()).not.toThrow()
+        expect(track.metrics.points).toHaveLength(1)
+        expect(track.metrics.global.distance).toBeGreaterThan(100)
+    })
+
     it('converts pace to metric and imperial display units', () => {
         const fiveMinutesPerKm = 300 / 1000
 

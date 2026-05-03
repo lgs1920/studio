@@ -16,12 +16,41 @@
 
 import { CURRENT_TRACK, DRAWING_FROM_UI, FOCUS_ON_FEATURE }                   from '@Core/constants'
 import { MapElement }                                                         from '@Core/MapElement'
-import { ProfileTrackMarker }                                                 from '@Core/ProfileTrackMarker'
 import { FEATURE, FEATURE_LINE_STRING, FEATURE_MULTILINE_STRING, TrackUtils } from '@Utils/cesium/TrackUtils'
 import { Mobility }                                                           from '@Utils/Mobility'
 import { decodeHTMLEntities }                                                 from '@Utils/TextUtils'
 import { v4 as uuid }                                                         from 'uuid'
 
+const finiteNumber = value => {
+    if (value === null || value === undefined || value === '') {
+        return null
+    }
+
+    const number = Number(value)
+    return Number.isFinite(number) ? number : null
+}
+
+const coordinatePoint = coordinates => {
+    if (!Array.isArray(coordinates)) {
+        return null
+    }
+
+    const longitude = finiteNumber(coordinates[0])
+    const latitude = finiteNumber(coordinates[1])
+
+    if (longitude === null || latitude === null) {
+        return null
+    }
+
+    const point = {longitude, latitude}
+    const altitude = finiteNumber(coordinates[2])
+
+    if (altitude !== null) {
+        point.altitude = altitude
+    }
+
+    return point
+}
 
 export class Track extends MapElement {
 
@@ -88,7 +117,7 @@ export class Track extends MapElement {
     content     // GEo JSON
     /** @type {{start:MapPOI|undefined,stop:MapPOI|undefined}} */
     flags = {start: undefined, stop: undefined}
-    /** @type {ProfileTrackMarker | null} */
+    /** @type {object | null} */
     marker = null
     /**
      * @type {string}
@@ -138,7 +167,7 @@ export class Track extends MapElement {
         return false
     }
 
-    static getBySlug(slug) {
+    static getBySlug() {
 
     }
 
@@ -228,24 +257,42 @@ export class Track extends MapElement {
                              : this.content.geometry.coordinates
 
             // Same for times data if exists
-            const times = type === FEATURE_LINE_STRING
-                          ? [this.content.properties.coordinateProperties?.times]
-                          : this.content.properties.coordinateProperties?.times
+            const times = this.content.properties?.coordinateProperties?.times
 
+            let timeCursor = 0
             segments.forEach((segment, index) => {
+                if (!Array.isArray(segment)) {
+                    return
+                }
+
                 const segmentAggregate = []
-                const segmentTimes = times?.[index] ?? []
+                let segmentTimes = []
+                if (this.hasTime && type === FEATURE_LINE_STRING) {
+                    segmentTimes = Array.isArray(times) ? times : []
+                }
+                else if (this.hasTime && Array.isArray(times?.[index])) {
+                    segmentTimes = times[index]
+                }
+                else if (this.hasTime && Array.isArray(times)) {
+                    segmentTimes = times.slice(timeCursor, timeCursor + segment.length)
+                }
+                timeCursor += segment.length
+
                 segment.forEach((coordinates, ptIndex) => {
-                    let point = {longitude: coordinates[0], latitude: coordinates[1]}
-                    if (this.hasAltitude) {
-                        point.altitude = coordinates[2]
+                    const point = coordinatePoint(coordinates)
+
+                    if (!point) {
+                        return
                     }
-                    if (this.hasTime) {
+
+                    if (this.hasTime && segmentTimes[ptIndex]) {
                         point.time = segmentTimes[ptIndex]
                     }
                     segmentAggregate.push(point)
                 })
-                aggregateData.push(segmentAggregate)
+                if (segmentAggregate.length > 0) {
+                    aggregateData.push(segmentAggregate)
+                }
             })
         }
         return aggregateData

@@ -53,9 +53,10 @@ import {
     TrackStyleSettings,
 }                                     from '@Editor/track/TrackStyleSettings'
 import { Utils }                      from '@Editor/Utils'
+import { TrackUtils }                 from '@Utils/cesium/TrackUtils'
 import {
-    FEATURE_MULTILINE_STRING, FEATURE_POINT, TrackUtils,
-}                                     from '@Utils/cesium/TrackUtils'
+    applyElevationCoordinatesToFeature, flattenFeatureGeometryCoordinates, prepareJourneyElevationCoordinates,
+}                                     from '@Utils/cesium/elevationCoordinateUtils'
 import {
     exportJourneyToGeoJSON, exportJourneyToGPX, getExportableJourneyPOIs, getJourneyExportFileName,
     JOURNEY_EXPORT_FORMAT_LABELS, JOURNEY_EXPORT_FORMATS, JOURNEY_EXPORT_MIME_TYPES,
@@ -140,25 +141,7 @@ export const JourneySettings = () => {
     /**
      * Coordinates preparation logic
      */
-    const prepareCoordinates = (journeyData, originData) => {
-        const coordinates = []
-        const origins = []
-        journeyData.geoJson.features.forEach((feature, index) => {
-            let coords = feature.geometry.coordinates
-            let orig = originData.features[index].geometry.coordinates
-            if (feature.geometry.type === FEATURE_POINT) {
-                coords = [coords]
-                orig = [orig]
-            }
-            else if (feature.geometry.type === FEATURE_MULTILINE_STRING) {
-                coords = coords.flat()
-                orig = orig.flat()
-            }
-            coordinates.push(...coords.map(([lon, lat]) => [lon, lat]))
-            origins.push(...orig)
-        })
-        return {coordinates, origins}
-    }
+    const prepareCoordinates = (journeyData, originData) => prepareJourneyElevationCoordinates(journeyData.geoJson, originData)
 
     /**
      * Update Journey logic after elevation fetch
@@ -167,23 +150,11 @@ export const JourneySettings = () => {
         const updated = Journey.deserialize({object: Journey.unproxify(journeyData)})
         let counter = 0
         updated.geoJson.features.forEach((feature, index, features) => {
-            let len = feature.geometry.type === FEATURE_POINT ? 1 : feature.geometry.coordinates.flat().length
+            const len = flattenFeatureGeometryCoordinates(feature.geometry).length
             const chunk = coordinates.slice(counter, counter + len)
             counter += len
 
-            if (feature.geometry.type === FEATURE_POINT) {
-                features[index].geometry.coordinates = chunk[0]
-            }
-            else if (feature.geometry.type === FEATURE_MULTILINE_STRING) {
-                let subCounter = 0
-                features[index].geometry.coordinates.forEach((segment, subIdx) => {
-                    features[index].geometry.coordinates[subIdx] = chunk.slice(subCounter, subCounter + segment.length)
-                    subCounter += segment.length
-                })
-            }
-            else {
-                features[index].geometry.coordinates = chunk
-            }
+            applyElevationCoordinatesToFeature(features[index], chunk)
         })
 
         updated.getTracksFromGeoJson(true)

@@ -32,10 +32,15 @@ export class Mobility {
      *
      */
     static distance = (start, end) => {
-        if (start && end) {
+        const startLongitude = Number(start?.longitude)
+        const startLatitude = Number(start?.latitude)
+        const endLongitude = Number(end?.longitude)
+        const endLatitude = Number(end?.latitude)
+
+        if ([startLongitude, startLatitude, endLongitude, endLatitude].every(Number.isFinite)) {
             return turfDistance.default(
-                turfPoint.default([start.longitude, start.latitude]),
-                turfPoint.default([end.longitude, end.latitude]),
+                turfPoint.default([startLongitude, startLatitude]),
+                turfPoint.default([endLongitude, endLatitude]),
             ) * 1000
         }
         return 0
