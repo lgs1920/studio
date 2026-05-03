@@ -17,11 +17,12 @@
 import {
     GLOBAL_PARENT, POI_FLAG_START, POI_FLAG_STOP, POI_JOURNEY_ASSOCIATION_DISTANCE, POI_STARTER_TYPE,
 }                         from '@Core/constants'
-import { useCallback, useEffect, useMemo } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useSnapshot }     from 'valtio'
 
 const NON_ASSOCIABLE_POI_TYPES = new Set([POI_STARTER_TYPE, POI_FLAG_START, POI_FLAG_STOP])
 export const NO_ASSOCIATED_JOURNEY_LABEL = 'No associated journey'
+const EMPTY_CANDIDATES = []
 
 const finiteNumber = value => {
     const number = Number(value)
@@ -45,28 +46,87 @@ const resolveJourneySlug = parent => {
         return ''
     }
 
-    return lgs.getJourneyByTrackSlug?.(parent)?.slug ?? ''
+    return lgs.getJourneyByTrackSlug?.(parent)?.slug
+        ?? lgs.getJourneyBySlug?.(parent)?.slug
+        ?? ''
 }
 
 export const usePOIJourneyAssociation = point => {
     const journeyEditor = useSnapshot(lgs.stores.main.components.journeyEditor)
-    const canAssociate = Boolean(point?.id) && !NON_ASSOCIABLE_POI_TYPES.has(point?.type)
+    const pointId = point?.id
+    const pointType = point?.type
+    const pointParent = point?.parent
+    const canAssociate = Boolean(pointId) && !NON_ASSOCIABLE_POI_TYPES.has(pointType)
     const longitude = finiteNumber(point?.longitude)
     const latitude = finiteNumber(point?.latitude)
+    const [candidateResult, setCandidateResult] = useState({key: null, candidates: EMPTY_CANDIDATES})
     const maxDistanceMeters = finiteNumber(lgs.settings?.poi?.association?.maxDistance)
                               ?? POI_JOURNEY_ASSOCIATION_DISTANCE
     const journeyListKey = useMemo(
         () => `${journeyEditor.keys?.journey?.list ?? 0}:${Array.from(journeyEditor.list ?? []).join('|')}`,
         [journeyEditor.keys?.journey?.list, journeyEditor.list],
     )
-
-    const candidates = useMemo(() => {
-        if (!canAssociate || longitude === null || latitude === null) {
-            return []
+    const associationPoint = useMemo(() => ({
+        id:        pointId,
+        type:      pointType,
+        parent:    pointParent,
+        longitude,
+        latitude,
+    }), [pointId, pointType, pointParent, longitude, latitude])
+    const canLoadCandidates = canAssociate && longitude !== null && latitude !== null
+    const associationKey = useMemo(() => {
+        if (!canLoadCandidates) {
+            return ''
         }
 
-        return __.ui.poiManager.getNearbyJourneysForPOI(point, maxDistanceMeters)
-    }, [canAssociate, longitude, latitude, point?.id, point?.parent, journeyListKey, maxDistanceMeters])
+        return [
+            pointId ?? '',
+            pointType ?? '',
+            pointParent ?? '',
+            longitude,
+            latitude,
+            journeyListKey,
+            maxDistanceMeters,
+        ].join('|')
+    }, [canLoadCandidates, pointId, pointType, pointParent, longitude, latitude, journeyListKey, maxDistanceMeters])
+
+    useEffect(() => {
+        let cancelled = false
+        let idleId = null
+        let timeoutId = null
+
+        if (!canLoadCandidates) {
+            return undefined
+        }
+
+        const resolveCandidates = () => {
+            const nextCandidates = __.ui.poiManager.getNearbyJourneysForPOI(associationPoint, maxDistanceMeters)
+
+            if (!cancelled) {
+                setCandidateResult({key: associationKey, candidates: nextCandidates})
+            }
+        }
+
+        if (typeof window.requestIdleCallback === 'function') {
+            idleId = window.requestIdleCallback(resolveCandidates, {timeout: 200})
+        }
+        else {
+            timeoutId = window.setTimeout(resolveCandidates, 0)
+        }
+
+        return () => {
+            cancelled = true
+            if (idleId !== null) {
+                window.cancelIdleCallback(idleId)
+            }
+            if (timeoutId !== null) {
+                window.clearTimeout(timeoutId)
+            }
+        }
+    }, [canLoadCandidates, associationKey, associationPoint, maxDistanceMeters])
+
+    const candidatesReady = !canLoadCandidates || candidateResult.key === associationKey
+    const candidates = candidatesReady ? candidateResult.candidates : EMPTY_CANDIDATES
 
     const candidateSlugs = useMemo(
         () => new Set(candidates.map(({journey}) => journey.slug)),
@@ -77,22 +137,24 @@ export const usePOIJourneyAssociation = point => {
         [candidates],
     )
     const currentJourneySlug = useMemo(
-        () => resolveJourneySlug(point?.parent),
-        [point?.parent],
+        () => resolveJourneySlug(pointParent),
+        [pointParent],
     )
-    const selectedJourneySlug = candidateSlugs.has(currentJourneySlug) ? currentJourneySlug : ''
+    const selectedJourneySlug = candidatesReady && candidateSlugs.has(currentJourneySlug) ? currentJourneySlug : ''
     const thresholdLabel = useMemo(() => formatDistance(maxDistanceMeters), [maxDistanceMeters])
-    const hint = candidates.length > 0
-                 ? `Journeys are filtered within ${thresholdLabel} and sorted by nearest first.`
-                 : `No nearby journey within ${thresholdLabel}.`
+    const hint = !candidatesReady
+                 ? 'Checking nearby journeys...'
+                 : candidates.length > 0
+                   ? `Journeys are filtered within ${thresholdLabel} and sorted by nearest first.`
+                   : `No nearby journey within ${thresholdLabel}.`
 
     const handleChangeJourney = useCallback(async (event) => {
         const parent = event.target.value || null
-        await __.ui.poiManager.updatePOI(point.id, {parent}, {immediate: true})
-    }, [point?.id])
+        await __.ui.poiManager.updatePOI(pointId, {parent}, {immediate: true})
+    }, [pointId])
 
     useEffect(() => {
-        if (!canAssociate || !currentJourneySlug || candidateSlugs.has(currentJourneySlug)) {
+        if (!candidatesReady || !canAssociate || !currentJourneySlug || candidateSlugs.has(currentJourneySlug)) {
             return
         }
 
@@ -100,8 +162,8 @@ export const usePOIJourneyAssociation = point => {
             return
         }
 
-        void __.ui.poiManager.updatePOI(point.id, {parent: null}, {immediate: true})
-    }, [canAssociate, candidateSlugs, currentJourneySlug, journeyEditor.list?.length, point?.id])
+        void __.ui.poiManager.updatePOI(pointId, {parent: null}, {immediate: true})
+    }, [candidatesReady, canAssociate, candidateSlugs, currentJourneySlug, journeyEditor.list?.length, pointId])
 
     return {
         canAssociate,

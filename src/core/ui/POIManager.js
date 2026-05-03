@@ -106,16 +106,51 @@ const isPointInsideBoundingBox = (point, box) => point.longitude >= box.west
     && point.latitude >= box.south
     && point.latitude <= box.north
 
+const createBounds = () => ({
+    west:  Number.POSITIVE_INFINITY,
+    east:  Number.NEGATIVE_INFINITY,
+    south: Number.POSITIVE_INFINITY,
+    north: Number.NEGATIVE_INFINITY,
+})
+
+const extendBounds = (bounds, point) => {
+    bounds.west = Math.min(bounds.west, point.longitude)
+    bounds.east = Math.max(bounds.east, point.longitude)
+    bounds.south = Math.min(bounds.south, point.latitude)
+    bounds.north = Math.max(bounds.north, point.latitude)
+    return bounds
+}
+
+const boundsFromPoints = points => {
+    const bounds = createBounds()
+
+    points.forEach(point => extendBounds(bounds, point))
+
+    return Number.isFinite(bounds.west) ? bounds : null
+}
+
+const boundingBoxesIntersect = (first, second) => Boolean(first && second)
+    && first.west <= second.east
+    && first.east >= second.west
+    && first.south <= second.north
+    && first.north >= second.south
+
 export const findNearestJourneyPointDistance = ({
                                                     poi,
                                                     journey,
                                                     maxDistanceMeters = POI_JOURNEY_ASSOCIATION_DISTANCE,
                                                     referencePoints = undefined,
+                                                    referenceBounds = undefined,
+                                                    poiBox = undefined,
                                                 } = {}) => {
     const maxDistance = finiteNumber(maxDistanceMeters) ?? POI_JOURNEY_ASSOCIATION_DISTANCE
-    const box = getDistanceBoundingBox(poi, maxDistance)
+    const box = poiBox ?? getDistanceBoundingBox(poi, maxDistance)
 
     if (!box) {
+        return null
+    }
+
+    if (referenceBounds && !boundingBoxesIntersect(referenceBounds, box)) {
         return null
     }
 
@@ -494,7 +529,7 @@ export class POIManager {
             .filter(Boolean)
     }
 
-    #getJourneyReferencePoints = journey => {
+    #getJourneyReferenceData = journey => {
         const tracks = Array.from(journey?.tracks?.values?.() ?? [])
         const sources = tracks.map(track => track?.content?.geometry?.coordinates)
         const cached = this.#journeyReferencePointCache.get(journey?.slug)
@@ -502,16 +537,19 @@ export class POIManager {
         if (cached
             && cached.sources.length === sources.length
             && cached.sources.every((source, index) => source === sources[index])) {
-            return cached.points
+            return cached
         }
 
         const points = getJourneyReferencePoints(journey).map(point => ({
             ...point,
             cartesian: Cartesian3.fromDegrees(point.longitude, point.latitude, 0),
         }))
+        const bounds = boundsFromPoints(points)
 
-        this.#journeyReferencePointCache.set(journey?.slug, {sources, points})
-        return points
+        const data = {sources, points, bounds}
+
+        this.#journeyReferencePointCache.set(journey?.slug, data)
+        return data
     }
 
     clearJourneyReferencePointCache = (journeySlug = null) => {
@@ -525,18 +563,35 @@ export class POIManager {
 
     getNearbyJourneysForPOI = (poi, maxDistanceMeters = this.journeyAssociationDistance) => {
         const maxDistance = finiteNumber(maxDistanceMeters) ?? POI_JOURNEY_ASSOCIATION_DISTANCE
+        const poiBox = getDistanceBoundingBox(poi, maxDistance)
+
+        if (!poiBox) {
+            return []
+        }
 
         return this.#journeys
-            .map(journey => ({
-                journey,
-                distance: findNearestJourneyPointDistance({
-                                                              poi,
-                                                              journey,
-                                                              maxDistanceMeters: maxDistance,
-                                                              referencePoints:    this.#getJourneyReferencePoints(journey),
-                                                          }),
-            }))
-            .filter(({distance}) => distance !== null)
+            .reduce((matches, journey) => {
+                const referenceData = this.#getJourneyReferenceData(journey)
+
+                if (!boundingBoxesIntersect(referenceData.bounds, poiBox)) {
+                    return matches
+                }
+
+                const distance = findNearestJourneyPointDistance({
+                                                                     poi,
+                                                                     journey,
+                                                                     maxDistanceMeters: maxDistance,
+                                                                     referencePoints:    referenceData.points,
+                                                                     referenceBounds:    referenceData.bounds,
+                                                                     poiBox,
+                                                                 })
+
+                if (distance !== null) {
+                    matches.push({journey, distance})
+                }
+
+                return matches
+            }, [])
             .sort((a, b) => a.distance - b.distance || a.journey.title.localeCompare(b.journey.title))
     }
 
