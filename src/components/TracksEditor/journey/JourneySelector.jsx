@@ -26,6 +26,14 @@ import { useSnapshot }                        from 'valtio'
  * @param {string} [props.label] - Label for the select dropdown
  * @param {string} [props.size='medium'] - Size of the select dropdown
  * @param {Function} [props.onChange] - Handler for selection changes
+ * @param {Object[]} [props.journeys] - Optional pre-filtered journey list
+ * @param {string} [props.value] - Optional controlled selected journey slug
+ * @param {boolean} [props.allowEmptyOption=false] - Whether to display an empty association option
+ * @param {string} [props.emptyLabel='No associated journey'] - Empty option label
+ * @param {string} [props.hint] - Optional select hint
+ * @param {boolean} [props.disabled=false] - Disabled state
+ * @param {boolean} [props.syncEditorSelection=true] - Whether selection should update the journey editor current journey
+ * @param {string} [props.className] - Extra CSS class
  * @param {boolean} [props.single] - Whether to display a single journey title
  * @param {boolean} [props.closeOnOutsidePointerDown=false] - Forces close on outside pointerdown
  * @param {React.Ref} [props.ref] - Forwarded ref
@@ -35,6 +43,14 @@ export const JourneySelector = memo(({
                                          label,
                                          size = 'medium',
                                          onChange,
+                                         journeys: providedJourneys = null,
+                                         value = undefined,
+                                         allowEmptyOption = false,
+                                         emptyLabel = 'No associated journey',
+                                         hint = undefined,
+                                         disabled = false,
+                                         syncEditorSelection = true,
+                                         className,
                                          single,
                                          closeOnOutsidePointerDown = false,
                                          ref,
@@ -50,19 +66,32 @@ export const JourneySelector = memo(({
 
     // Memoized sorted journeys
     const journeys = useMemo(() => {
+        if (Array.isArray(providedJourneys)) {
+            return providedJourneys.filter(Boolean)
+        }
+
         const journeyList = Array.from(list, slug => lgs.getJourneyBySlug(slug)).filter(Boolean)
         return journeyList.length > 1
                ? journeyList.sort((a, b) => b.title.localeCompare(a.title))
                : journeyList
-    }, [list])
+    }, [list, providedJourneys])
+
+    const selectedValue = value ?? theJourney?.slug ?? ''
+    const selectedJourney = useMemo(
+        () => journeys.find(journey => journey.slug === selectedValue) ?? (selectedValue ? theJourney : null),
+        [journeys, selectedValue, theJourney],
+    )
+    const shouldRenderSelect = allowEmptyOption || journeys.length > 1
 
     // Handle selection change
     const handleChange = useCallback(event => {
-        $journeyEditor.theJourney = event.target.value
+        if (syncEditorSelection && event.target.value) {
+            $journeyEditor.theJourney = event.target.value
+        }
         if (onChange) {
             onChange(event)
         }
-    }, [onChange, $journeyEditor])
+    }, [onChange, $journeyEditor, syncEditorSelection])
 
     const setSelectRef = useCallback((element) => {
         _select.current = element
@@ -141,25 +170,34 @@ export const JourneySelector = memo(({
         )
     }, [getTrackIconStyle, renderActivityIcon, theJourney])
 
-    if (journeys.length === 0) {
+    if (journeys.length === 0 && !allowEmptyOption) {
         return null
     }
 
     return (
         <>
-            {journeys.length > 1 && (
+            {shouldRenderSelect && (
                 <WaSelect
                     label={label}
                     size={size}
                     onChange={handleChange}
                     key={keys.journey.list}
-                    className={classNames('journey-selector', {masked: !theJourney.visible})}
+                    className={classNames('journey-selector', className, {masked: selectedJourney?.visible === false})}
                     ref={setSelectRef}
-                    value={theJourney.slug}
+                    value={selectedValue}
+                    disabled={disabled}
                 >
                     <div slot="start">
-                        {renderJourneyIcons(lgs.theJourney)}
+                        {selectedJourney
+                         ? renderJourneyIcons(selectedJourney)
+                         : allowEmptyOption && <WaIcon name="link-slash" variant="regular"/>}
                     </div>
+                    {allowEmptyOption && (
+                        <WaOption value="">
+                            <WaIcon slot="start" name="link-slash" variant="regular"/>
+                            <div>{emptyLabel}</div>
+                        </WaOption>
+                    )}
                     {journeys.map(journey => (
                         <WaOption
                             key={journey.slug}
@@ -172,13 +210,14 @@ export const JourneySelector = memo(({
                             <div>{journey.title}</div>
                         </WaOption>
                     ))}
+                    {hint && <span slot="hint">{hint}</span>}
                 </WaSelect>
             )}
 
-            {journeys.length === 1 && single && (
+            {journeys.length === 1 && !allowEmptyOption && single && (
                 <WaCard className="journey-title" appearance="plain">
                     <span>
-                        {renderJourneyIcons(theJourney)} {theJourney.title}
+                        {renderJourneyIcons(journeys[0])} {journeys[0].title}
                     </span>
                 </WaCard>
             )}

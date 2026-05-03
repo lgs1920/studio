@@ -17,6 +17,10 @@
 import { MapPOICategorySelector } from '@Components/MainUI/MapPOI/MapPOICategorySelector'
 import { MapPOIEditMenu }         from '@Components/MainUI/MapPOI/MapPOIEditMenu'
 import {
+    NO_ASSOCIATED_JOURNEY_LABEL, usePOIJourneyAssociation,
+}                                 from '@Components/MainUI/MapPOI/usePOIJourneyAssociation'
+import { JourneySelector }        from '@Editor/journey/JourneySelector'
+import {
     COORDINATE_INPUT_ERROR_DURATION_MS, COORDINATE_INPUT_NORMALIZE_DELAY_MS, LATITUDE_FORMAT, LONGITUDE_FORMAT,
     POI_STANDARD_TYPE, POI_TMP_TYPE,
 }                                 from '@Core/constants'
@@ -61,6 +65,7 @@ export const MapPOIEditContent = memo(({poi}) => {
                                           /** @type {Object} Fresh proxy reference for direct mutations */
                                           const $point = lgs.stores.main.components.pois.list.get(poi)
                                           const point = useSnapshot($point ?? EMPTY_POI_PROXY)
+                                          const journeyAssociation = usePOIJourneyAssociation(point)
 
                                           if (!point.id) {
                                               return null
@@ -428,6 +433,21 @@ export const MapPOIEditContent = memo(({poi}) => {
                                                       </WaInput>
 
                                                       {visible && <MapPOICategorySelector point={point}/>}
+                                                      {journeyAssociation.canAssociate && (
+                                                          <JourneySelector
+                                                              label="Journey"
+                                                              value={journeyAssociation.selectedJourneySlug}
+                                                              size="small"
+                                                              className="map-poi-journey-selector"
+                                                              onChange={journeyAssociation.handleChangeJourney}
+                                                              disabled={!visible}
+                                                              journeys={journeyAssociation.journeys}
+                                                              allowEmptyOption
+                                                              emptyLabel={NO_ASSOCIATED_JOURNEY_LABEL}
+                                                              hint={journeyAssociation.hint}
+                                                              syncEditorSelection={false}
+                                                          />
+                                                      )}
 
                                                       <WaTextarea
                                                           size="small"

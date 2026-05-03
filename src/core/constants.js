@@ -94,6 +94,7 @@ export const CURRENT_CAMERA = 'camera'
 export const CURRENT_POI = 'poi'
 export const CURRENT_MAP_POINT = 'map-point'
 export const POI_THRESHOLD_DISTANCE = 50 // meters
+export const POI_JOURNEY_ASSOCIATION_DISTANCE = 10000 // meters
 
 export const POI_STARTER_TYPE = 'starter'
 export const FLAG_START_TYPE = 'start'

@@ -15,7 +15,8 @@
  ******************************************************************************/
 
 import {
-    ADD_POI_EVENT, CURRENT_POI, GLOBAL_PARENT, POI_STARTER_TYPE, POI_THRESHOLD_DISTANCE, POI_TMP_TYPE, POIS_STORE,
+    ADD_POI_EVENT, CURRENT_POI, GLOBAL_PARENT, POI_JOURNEY_ASSOCIATION_DISTANCE, POI_STARTER_TYPE,
+    POI_THRESHOLD_DISTANCE, POI_TMP_TYPE, POIS_STORE,
     REMOVE_POI_EVENT,
 }                                                  from '@Core/constants'
 import { MapPOI }                                  from '@Core/MapPOI'
@@ -23,8 +24,14 @@ import { getOrbitSettings, setOrbitStoreSettings } from '@Core/OrbitSettings'
 import { Export }                                  from '@Core/ui/Export'
 import { POIUtils }                                from '@Utils/cesium/POIUtils'
 import { KM }                                      from '@Utils/UnitUtils'
+import { Cartesian3 }                              from 'cesium'
 import { v4 as uuid }                              from 'uuid'
 import { subscribe }                               from 'valtio'
+
+const METERS_PER_DEGREE_LATITUDE = 111_320
+const MIN_LONGITUDE_COSINE = 0.01
+const TRACK_LINE_STRING = 'LineString'
+const TRACK_MULTI_LINE_STRING = 'MultiLineString'
 
 const finiteNumber = value => {
     if (value === null || value === undefined || value === '') {
@@ -33,6 +40,101 @@ const finiteNumber = value => {
 
     const number = Number(value)
     return Number.isFinite(number) ? number : null
+}
+
+const normalizeCoordinate = coordinate => {
+    const longitude = finiteNumber(Array.isArray(coordinate) ? coordinate[0] : coordinate?.longitude)
+    const latitude = finiteNumber(Array.isArray(coordinate) ? coordinate[1] : coordinate?.latitude)
+
+    if (longitude === null || latitude === null) {
+        return null
+    }
+
+    return {longitude, latitude}
+}
+
+const getTrackCoordinateSegments = track => {
+    const geometry = track?.content?.geometry
+    const coordinates = geometry?.coordinates
+
+    if (!Array.isArray(coordinates)) {
+        return []
+    }
+
+    if (geometry.type === TRACK_LINE_STRING) {
+        return [coordinates]
+    }
+
+    if (geometry.type === TRACK_MULTI_LINE_STRING) {
+        return coordinates
+    }
+
+    return []
+}
+
+export const getJourneyReferencePoints = journey => Array.from(journey?.tracks?.values?.() ?? [])
+    .flatMap(track => getTrackCoordinateSegments(track))
+    .flatMap(segment => Array.isArray(segment) ? segment : [])
+    .map(normalizeCoordinate)
+    .filter(Boolean)
+
+const getDistanceBoundingBox = (poi, maxDistanceMeters) => {
+    const origin = normalizeCoordinate(poi)
+    const maxDistance = finiteNumber(maxDistanceMeters) ?? POI_JOURNEY_ASSOCIATION_DISTANCE
+
+    if (!origin || maxDistance <= 0) {
+        return null
+    }
+
+    const latitudeDelta = maxDistance / METERS_PER_DEGREE_LATITUDE
+    const longitudeCosine = Math.max(Math.abs(Math.cos(origin.latitude * Math.PI / 180)), MIN_LONGITUDE_COSINE)
+    const longitudeDelta = maxDistance / (METERS_PER_DEGREE_LATITUDE * longitudeCosine)
+
+    return {
+        origin,
+        west:  origin.longitude - longitudeDelta,
+        east:  origin.longitude + longitudeDelta,
+        south: origin.latitude - latitudeDelta,
+        north: origin.latitude + latitudeDelta,
+    }
+}
+
+const isPointInsideBoundingBox = (point, box) => point.longitude >= box.west
+    && point.longitude <= box.east
+    && point.latitude >= box.south
+    && point.latitude <= box.north
+
+export const findNearestJourneyPointDistance = ({
+                                                    poi,
+                                                    journey,
+                                                    maxDistanceMeters = POI_JOURNEY_ASSOCIATION_DISTANCE,
+                                                    referencePoints = undefined,
+                                                } = {}) => {
+    const maxDistance = finiteNumber(maxDistanceMeters) ?? POI_JOURNEY_ASSOCIATION_DISTANCE
+    const box = getDistanceBoundingBox(poi, maxDistance)
+
+    if (!box) {
+        return null
+    }
+
+    const originCartesian = Cartesian3.fromDegrees(box.origin.longitude, box.origin.latitude, 0)
+    const points = referencePoints ?? getJourneyReferencePoints(journey)
+    let nearest = Number.POSITIVE_INFINITY
+
+    for (const point of points) {
+        if (!point || !isPointInsideBoundingBox(point, box)) {
+            continue
+        }
+
+        const pointCartesian = point.cartesian ?? Cartesian3.fromDegrees(point.longitude, point.latitude, 0)
+        const distance = Cartesian3.distance(originCartesian, pointCartesian)
+
+        if (distance <= maxDistance && distance < nearest) {
+            nearest = distance
+        }
+    }
+
+    return Number.isFinite(nearest) ? nearest : null
 }
 
 export const focusablePOI = point => {
@@ -55,6 +157,7 @@ export class POIManager {
     #updateTimeout = 300
 
     #journeyIndex = new Map()
+    #journeyReferencePointCache = new Map()
 
     constructor() {
         if (POIManager.instance) {
@@ -261,6 +364,65 @@ export class POIManager {
 
     getByParent = parent => {
         return Array.from(this.list.values()).filter(poi => poi.parent === parent)
+    }
+
+    get journeyAssociationDistance() {
+        return finiteNumber(lgs.settings?.poi?.association?.maxDistance) ?? POI_JOURNEY_ASSOCIATION_DISTANCE
+    }
+
+    get #journeys() {
+        if (lgs?.journeys?.values) {
+            return Array.from(lgs.journeys.values())
+        }
+
+        return Array.from(lgs?.stores?.main?.components?.journeyEditor?.list ?? [], slug => lgs.getJourneyBySlug(slug))
+            .filter(Boolean)
+    }
+
+    #getJourneyReferencePoints = journey => {
+        const tracks = Array.from(journey?.tracks?.values?.() ?? [])
+        const sources = tracks.map(track => track?.content?.geometry?.coordinates)
+        const cached = this.#journeyReferencePointCache.get(journey?.slug)
+
+        if (cached
+            && cached.sources.length === sources.length
+            && cached.sources.every((source, index) => source === sources[index])) {
+            return cached.points
+        }
+
+        const points = getJourneyReferencePoints(journey).map(point => ({
+            ...point,
+            cartesian: Cartesian3.fromDegrees(point.longitude, point.latitude, 0),
+        }))
+
+        this.#journeyReferencePointCache.set(journey?.slug, {sources, points})
+        return points
+    }
+
+    clearJourneyReferencePointCache = (journeySlug = null) => {
+        if (journeySlug) {
+            this.#journeyReferencePointCache.delete(journeySlug)
+            return
+        }
+
+        this.#journeyReferencePointCache.clear()
+    }
+
+    getNearbyJourneysForPOI = (poi, maxDistanceMeters = this.journeyAssociationDistance) => {
+        const maxDistance = finiteNumber(maxDistanceMeters) ?? POI_JOURNEY_ASSOCIATION_DISTANCE
+
+        return this.#journeys
+            .map(journey => ({
+                journey,
+                distance: findNearestJourneyPointDistance({
+                                                              poi,
+                                                              journey,
+                                                              maxDistanceMeters: maxDistance,
+                                                              referencePoints:    this.#getJourneyReferencePoints(journey),
+                                                          }),
+            }))
+            .filter(({distance}) => distance !== null)
+            .sort((a, b) => a.distance - b.distance || a.journey.title.localeCompare(b.journey.title))
     }
 
     getPointFromGeoJson = async (json, simulate = false) => {

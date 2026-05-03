@@ -629,11 +629,16 @@
     --secondary-opacity: 0.6 !important;
 }
 
+.map-poi-journey-selector {
+    width: 100%;
+}
+
 .map-poi-category-selector + wa-divider {
     /* margin-top: var(--lgs-gutter-s);*/
 }
 
-.map-poi-category-selector::part(form-control-label) {
+.map-poi-category-selector::part(form-control-label),
+.map-poi-journey-selector::part(form-control-label) {
     width: 100%;
 }
 

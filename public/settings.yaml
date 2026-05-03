@@ -174,6 +174,9 @@ journey:
 # Global pois
 ########################################
 poi:
+  association:
+    maxDistance: 10000 # meters - POI can be associated with a journey when one track point is within this distance
+
   filter:
     byName: ""
     alphabetic: true
