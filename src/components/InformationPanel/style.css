@@ -145,6 +145,8 @@
     align-items: center;
     justify-content: center;
     gap: calc(var(--lgs-gutter-xs) / 2);
+    box-sizing: border-box;
+    min-width: 1.65rem;
     min-height: 1.65rem;
     padding: 0 var(--lgs-gutter-xs);
     color: var(--wa-color-brand-on-loud, var(--wa-color-brand-on));
