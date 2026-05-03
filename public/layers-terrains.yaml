@@ -173,6 +173,7 @@ providers:
         style: normal
         format: image/jpeg
         tileMatrixSetID: PM
+        maximumLevel: 19
         doc: 'https://data.geopf.fr'
         type: base
 
