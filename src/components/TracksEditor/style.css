@@ -274,6 +274,21 @@ wa-tab::part(base) {
     margin-left: var(--indent);
 }
 
+.track-data-extreme-button::part(base) {
+    justify-content: flex-start;
+    min-height: auto;
+    padding: 0 var(--lgs-gutter-xs);
+}
+
+.track-data-extreme-button::part(label) {
+    justify-content: flex-start;
+    text-transform: none;
+}
+
+.track-data-extreme-button .lgs-text-value {
+    text-transform: none;
+}
+
 .track-points, .journey-POIs {
     margin-top: var(--lgs-gutter-s);
 }

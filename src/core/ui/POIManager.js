@@ -425,7 +425,9 @@ export class POIManager {
     ensurePOILocation = async (poiOrId, {force = false} = {}) => {
         const poi = typeof poiOrId === 'string' ? this.list.get(poiOrId) : poiOrId
 
-        if (!poi?.id || !__.ui.geocoder?.getPOILocationDetails) {
+        if (!poi?.id
+            || (poi.type === POI_TMP_TYPE && poi.skipLocationUpdate)
+            || !__.ui.geocoder?.getPOILocationDetails) {
             return null
         }
 

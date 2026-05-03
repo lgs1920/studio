@@ -18,9 +18,11 @@ import { NameValueUnit }                                                       f
 import {
     EDIT_WIDGET_ICON,
     MILLIS,
+    POI_TMP_TYPE,
     SCENE_WIDGETS, SCENE_WIDGETS_BOARD, WIDGET_EDITOR_POST_RENDER_EVENT, WIDGET_EDITOR_PRE_RENDER_EVENT,
     WIDGETS_EDITOR_DRAWER,
 } from '@Core/constants'
+import { MapPOI }                                                              from '@Core/MapPOI'
 import { Export }                                                              from '@Core/ui/Export'
 import {
     WidgetDynamicRenderer,
@@ -37,9 +39,126 @@ import { useSnapshot }                                                         f
 import { DateInfo }                                                            from '../DateInfo'
 
 const JOURNEY_STATS_FALLBACK = {show: false}
+const STATS_POI_ID_PREFIX = 'journey-stat-extreme'
+const EXTREME_VALUE_TOLERANCE = 1e-9
+const COORDINATE_PRECISION = 6
+const LINE_STRING = 'LineString'
+const MULTI_LINE_STRING = 'MultiLineString'
+
+const finiteNumber = value => {
+    const number = Number(value)
+    return Number.isFinite(number) ? number : null
+}
+
+const matchesMetricValue = (value, target) => {
+    const current = finiteNumber(value)
+    const expected = finiteNumber(target)
+
+    if (current === null || expected === null) {
+        return false
+    }
+
+    return Math.abs(current - expected) <= Math.max(EXTREME_VALUE_TOLERANCE, Math.abs(expected) * EXTREME_VALUE_TOLERANCE)
+}
+
+const coordinateKey = point => {
+    const longitude = finiteNumber(point.longitude)
+    const latitude = finiteNumber(point.latitude)
+    const height = finiteNumber(point.altitude ?? point.height ?? point.simulatedHeight)
+
+    return [
+        longitude?.toFixed(COORDINATE_PRECISION),
+        latitude?.toFixed(COORDINATE_PRECISION),
+        height?.toFixed(1) ?? '',
+    ].join(':')
+}
+
+const uniquePointsByCoordinates = points => {
+    const seen = new Set()
+
+    return points.filter(point => {
+        const longitude = finiteNumber(point.longitude)
+        const latitude = finiteNumber(point.latitude)
+
+        if (longitude === null || latitude === null) {
+            return false
+        }
+
+        const key = coordinateKey(point)
+        if (seen.has(key)) {
+            return false
+        }
+
+        seen.add(key)
+        return true
+    })
+}
+
+const extractTrackAltitudePoints = track => {
+    const geometry = track?.content?.geometry
+
+    if (!geometry) {
+        return []
+    }
+
+    const segments = geometry.type === LINE_STRING
+                     ? [geometry.coordinates]
+                     : geometry.type === MULTI_LINE_STRING
+                       ? geometry.coordinates
+                       : []
+    const times = track?.content?.properties?.coordinateProperties?.times
+    const points = []
+    let timeCursor = 0
+
+    segments.forEach((segment, segmentIndex) => {
+        if (!Array.isArray(segment)) {
+            return
+        }
+
+        let segmentTimes = []
+        if (geometry.type === LINE_STRING && Array.isArray(times)) {
+            segmentTimes = times
+        }
+        else if (Array.isArray(times?.[segmentIndex])) {
+            segmentTimes = times[segmentIndex]
+        }
+        else if (Array.isArray(times)) {
+            segmentTimes = times.slice(timeCursor, timeCursor + segment.length)
+        }
+        timeCursor += segment.length
+
+        segment.forEach((coordinates, index) => {
+            if (!Array.isArray(coordinates)) {
+                return
+            }
+
+            const longitude = finiteNumber(coordinates[0])
+            const latitude = finiteNumber(coordinates[1])
+            const altitude = finiteNumber(coordinates[2])
+
+            if (longitude === null || latitude === null || altitude === null) {
+                return
+            }
+
+            points.push({
+                            longitude,
+                            latitude,
+                            altitude,
+                            time: segmentTimes[index],
+                        })
+        })
+    })
+
+    return uniquePointsByCoordinates(points)
+}
+
+const findExtremePoints = (points, valueSelector, value) => {
+    return uniquePointsByCoordinates(points.filter(point => matchesMetricValue(valueSelector(point), value)))
+}
 
 export const TrackData = memo(() => {
     const _rootRef = useRef(null)
+    const _statsPoiIds = useRef([])
     const [copyValue, setCopyValue] = useState('')
 
     // Proxies - Ensure lgs.stores.main.components.journeyStats is initialized in your store
@@ -102,6 +221,18 @@ export const TrackData = memo(() => {
         await __.ui.widgetManager.deleteWidgetPosition(entity)
     }, [renderer])
 
+    const clearStatsPOIs = useCallback(async () => {
+        const ids = _statsPoiIds.current
+        _statsPoiIds.current = []
+
+        if (!ids.length || !__.ui.poiManager?.remove) {
+            return
+        }
+
+        await Promise.all(ids.map(id => __.ui.poiManager.remove({id, dbSync: false})
+            .catch(error => console.error(`Failed to remove journey statistics POI ${id}:`, error))))
+    }, [])
+
     /**
      * Sync initial switch state with widget presence in the scene
      */
@@ -137,6 +268,12 @@ export const TrackData = memo(() => {
             cancelled = true
         }
     }, [$journeyStats, ensureStatsWidget, journeyStats.show, metrics, renderer])
+
+    useEffect(() => {
+        return () => {
+            void clearStatsPOIs()
+        }
+    }, [clearStatsPOIs, track?.slug])
 
     /**
      * Toggles the journey-stats widget visibility on the scene
@@ -230,6 +367,65 @@ export const TrackData = memo(() => {
             stop: points[points.length - 1]?.time,
         }
     }, [metrics, track?.metrics?.points])
+
+    const metricPoints = useMemo(() => {
+        return Array.isArray(track?.metrics?.points) ? uniquePointsByCoordinates(track.metrics.points) : []
+    }, [track?.metrics?.points])
+
+    const altitudePoints = useMemo(() => {
+        const extracted = extractTrackAltitudePoints(track)
+        return extracted.length > 0 ? extracted : metricPoints
+    }, [metricPoints, track])
+
+    const showStatsPOIs = useCallback(async ({
+                                                 id,
+                                                 label,
+                                                 value,
+                                                 units,
+                                                 format,
+                                                 points,
+                                             }) => {
+        await clearStatsPOIs()
+
+        if (!__.ui.poiManager?.add || !Array.isArray(points) || points.length === 0) {
+            return
+        }
+
+        const metric = UnitUtils.formatMetric(value, {units, format})
+        const formattedValue = metric.full?.trim() || `${value}`
+        const parent = track?.slug ?? lgs.theTrack?.slug ?? null
+
+        const createdPOIs = await Promise.all(points.map(async (point, index) => {
+            const longitude = finiteNumber(point.longitude)
+            const latitude = finiteNumber(point.latitude)
+
+            if (longitude === null || latitude === null) {
+                return null
+            }
+
+            const height = finiteNumber(point.simulatedHeight ?? point.altitude ?? point.height)
+            const poi = new MapPOI({
+                                       id:              `${STATS_POI_ID_PREFIX}:${parent ?? 'journey'}:${id}:${index}`,
+                                       parent,
+                                       type:            POI_TMP_TYPE,
+                                       title:           `${label}: ${formattedValue}`,
+                                       description:     `${label}: ${formattedValue}`,
+                                       skipLocationUpdate: true,
+                                       longitude,
+                                       latitude,
+                                       height:          height ?? undefined,
+                                       simulatedHeight: height ?? undefined,
+                                       time:            point.time,
+                                       distance:        point.distance,
+                                       expanded:        true,
+                                       visible:         true,
+                                   })
+
+            return __.ui.poiManager.add(poi, false, false)
+        }))
+
+        _statsPoiIds.current = createdPOIs.filter(Boolean).map(poi => poi.id)
+    }, [clearStatsPOIs, track?.slug])
 
     /**
      * Updates the copyable text content for the clipboard
@@ -332,6 +528,41 @@ export const TrackData = memo(() => {
     const hasDuration = metrics && !isNaN(metrics.duration)
     const hasElevation = metrics && metrics.negative?.elevation < 0 && metrics.positive?.elevation > 0
     const hasAltitude = metrics && !isNaN(metrics.minHeight) && !isNaN(metrics.maxHeight)
+    const minAltitudePoints = findExtremePoints(altitudePoints, point => point.altitude, metrics.minHeight)
+    const maxAltitudePoints = findExtremePoints(altitudePoints, point => point.altitude, metrics.maxHeight)
+    const maxSpeedPoints = findExtremePoints(metricPoints, point => point.speed, metrics.maxSpeed)
+    const bestPacePoints = findExtremePoints(metricPoints, point => point.pace, metrics.minPace)
+
+    const renderExtremeMetric = ({
+                                     id,
+                                     label,
+                                     icon,
+                                     value,
+                                     units,
+                                     format,
+                                     points,
+                                     visibleText,
+                                 }) => {
+        const buttonId = `show-${id}-on-map`
+
+        return (
+            <div className="element-item">
+                <WaTooltip for={buttonId} placement="top" content="Show on map"></WaTooltip>
+                <WaButton
+                    id={buttonId}
+                    className="track-data-extreme-button"
+                    appearance="plain"
+                    variant="brand"
+                    size="small"
+                    disabled={!points.length}
+                    onClick={() => showStatsPOIs({id, label, value, units, format, points})}>
+                    <WaIcon variant="regular" name={icon}/>
+                    <span className="screen-reader-only">{visibleText}</span>
+                    <NameValueUnit value={value} units={units} format={format}/>
+                </WaButton>
+            </div>
+        )
+    }
 
     return (
         <div ref={_rootRef} className="track-data-container">
@@ -474,16 +705,26 @@ export const TrackData = memo(() => {
                 hasAltitude && (
                     <div className="element-row">
                         <div className="element-item title">{'Altitude'}</div>
-                        <div className="element-item">
-                            <WaIcon variant="regular" name={'arrow-down-to-line'}/>
-                            <span className="screen-reader-only">{'Min:'}</span>
-                            <NameValueUnit value={metrics.minHeight} units={ELEVATION_UNITS} format="%d"/>
-                        </div>
-                        <div className="element-item">
-                            <WaIcon variant="regular" name={'arrow-up-to-line'}/>
-                            <span className="screen-reader-only">{'Max:'}</span>
-                            <NameValueUnit value={metrics.maxHeight} units={ELEVATION_UNITS} format="%d"/>
-                        </div>
+                        {renderExtremeMetric({
+                                                  id:          'min-altitude',
+                                                  label:       'Minimum altitude',
+                                                  icon:        'arrow-down-to-line',
+                                                  value:       metrics.minHeight,
+                                                  units:       ELEVATION_UNITS,
+                                                  format:      '%d',
+                                                  points:      minAltitudePoints,
+                                                  visibleText: 'Min:',
+                                              })}
+                        {renderExtremeMetric({
+                                                  id:          'max-altitude',
+                                                  label:       'Maximum altitude',
+                                                  icon:        'arrow-up-to-line',
+                                                  value:       metrics.maxHeight,
+                                                  units:       ELEVATION_UNITS,
+                                                  format:      '%d',
+                                                  points:      maxAltitudePoints,
+                                                  visibleText: 'Max:',
+                                              })}
                     </div>
                 )
             }
@@ -499,11 +740,15 @@ export const TrackData = memo(() => {
                                 <span className="screen-reader-only">{'Average:'}</span>
                                 <NameValueUnit value={metrics.averageSpeed} units={SPEED_UNITS}/>
                             </div>
-                            <div className="element-item">
-                                <WaIcon variant="regular" name={'arrow-up-to-line'}/>
-                                <span className="screen-reader-only">{'Max:'}</span>
-                                <NameValueUnit value={metrics.maxSpeed} units={SPEED_UNITS}/>
-                            </div>
+                            {renderExtremeMetric({
+                                                      id:          'max-speed',
+                                                      label:       'Maximum speed',
+                                                      icon:        'arrow-up-to-line',
+                                                      value:       metrics.maxSpeed,
+                                                      units:       SPEED_UNITS,
+                                                      points:      maxSpeedPoints,
+                                                      visibleText: 'Max:',
+                                                  })}
                         </div>
                     </>
                 )
@@ -520,11 +765,15 @@ export const TrackData = memo(() => {
                                 <span className="screen-reader-only">{'Average:'}</span>
                                 <NameValueUnit value={metrics.averagePace} units={PACE_UNITS}/>
                             </div>
-                            <div className="element-item">
-                                <WaIcon variant="regular" name={'arrow-up-to-line'}/>
-                                <span className="screen-reader-only">{'Best:'}</span>
-                                <NameValueUnit value={metrics.minPace} units={PACE_UNITS}/>
-                            </div>
+                            {renderExtremeMetric({
+                                                      id:          'best-pace',
+                                                      label:       'Best pace',
+                                                      icon:        'arrow-up-to-line',
+                                                      value:       metrics.minPace,
+                                                      units:       PACE_UNITS,
+                                                      points:      bestPacePoints,
+                                                      visibleText: 'Best:',
+                                                  })}
                         </div>
                     </>
                 )
