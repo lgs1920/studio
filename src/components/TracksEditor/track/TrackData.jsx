@@ -33,6 +33,7 @@ import { DISTANCE_UNITS, ELEVATION_UNITS, PACE_UNITS, SPEED_UNITS, UnitUtils } f
 import {
     WaButton, WaCopyButton, WaDivider, WaIcon, WaSwitch, WaTooltip,
 }                                                                              from '@web.awesome.me/webawesome-pro/dist/react'
+import { Cartographic, Rectangle }                                             from 'cesium'
 import { DateTime }                                                            from 'luxon'
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSnapshot }                                                         from 'valtio'
@@ -156,10 +157,27 @@ const findExtremePoints = (points, valueSelector, value) => {
     return uniquePointsByCoordinates(points.filter(point => matchesMetricValue(valueSelector(point), value)))
 }
 
+const isPointInCurrentView = point => {
+    const longitude = finiteNumber(point?.longitude)
+    const latitude = finiteNumber(point?.latitude)
+
+    if (longitude === null || latitude === null || !lgs.camera || !lgs.scene?.globe?.ellipsoid) {
+        return false
+    }
+
+    const visibleRectangle = lgs.camera.computeViewRectangle(lgs.scene.globe.ellipsoid)
+    if (!visibleRectangle) {
+        return false
+    }
+
+    return Rectangle.contains(visibleRectangle, Cartographic.fromDegrees(longitude, latitude))
+}
+
 export const TrackData = memo(() => {
     const _rootRef = useRef(null)
     const _statsPoiIds = useRef([])
     const [copyValue, setCopyValue] = useState('')
+    const [activeStatsPoiId, setActiveStatsPoiId] = useState(null)
 
     // Proxies - Ensure lgs.stores.main.components.journeyStats is initialized in your store
     const $journeyStats = lgs.stores.main.components.journeyStats
@@ -221,8 +239,23 @@ export const TrackData = memo(() => {
         await __.ui.widgetManager.deleteWidgetPosition(entity)
     }, [renderer])
 
-    const clearStatsPOIs = useCallback(async () => {
-        const ids = _statsPoiIds.current
+    const getStatsPOIIds = useCallback(() => {
+        const ids = new Set(_statsPoiIds.current)
+        const poiList = __.ui.poiManager?.list
+
+        if (poiList?.keys) {
+            for (const poiId of poiList.keys()) {
+                if (`${poiId}`.startsWith(STATS_POI_ID_PREFIX)) {
+                    ids.add(poiId)
+                }
+            }
+        }
+
+        return Array.from(ids)
+    }, [])
+
+    const removeStatsPOIs = useCallback(async () => {
+        const ids = getStatsPOIIds()
         _statsPoiIds.current = []
 
         if (!ids.length || !__.ui.poiManager?.remove) {
@@ -231,7 +264,12 @@ export const TrackData = memo(() => {
 
         await Promise.all(ids.map(id => __.ui.poiManager.remove({id, dbSync: false})
             .catch(error => console.error(`Failed to remove journey statistics POI ${id}:`, error))))
-    }, [])
+    }, [getStatsPOIIds])
+
+    const clearStatsPOIs = useCallback(async () => {
+        await removeStatsPOIs()
+        setActiveStatsPoiId(null)
+    }, [removeStatsPOIs])
 
     /**
      * Sync initial switch state with widget presence in the scene
@@ -271,9 +309,14 @@ export const TrackData = memo(() => {
 
     useEffect(() => {
         return () => {
-            void clearStatsPOIs()
+            void removeStatsPOIs()
         }
-    }, [clearStatsPOIs, track?.slug])
+    }, [removeStatsPOIs, track?.slug])
+
+    useEffect(() => {
+        setActiveStatsPoiId(null)
+    }, [track?.slug])
+
 
     /**
      * Toggles the journey-stats widget visibility on the scene
@@ -385,6 +428,11 @@ export const TrackData = memo(() => {
                                                  format,
                                                  points,
                                              }) => {
+        if (activeStatsPoiId === id && getStatsPOIIds().length > 0) {
+            await clearStatsPOIs()
+            return
+        }
+
         await clearStatsPOIs()
 
         if (!__.ui.poiManager?.add || !Array.isArray(points) || points.length === 0) {
@@ -425,7 +473,13 @@ export const TrackData = memo(() => {
         }))
 
         _statsPoiIds.current = createdPOIs.filter(Boolean).map(poi => poi.id)
-    }, [clearStatsPOIs, track?.slug])
+        setActiveStatsPoiId(_statsPoiIds.current.length > 0 ? id : null)
+
+        const visiblePOI = createdPOIs.filter(Boolean).find(isPointInCurrentView)
+        if (!visiblePOI && _statsPoiIds.current.length > 0) {
+            await __.ui.poiManager.focusPOI(_statsPoiIds.current[0])
+        }
+    }, [activeStatsPoiId, clearStatsPOIs, getStatsPOIIds, track?.slug])
 
     /**
      * Updates the copyable text content for the clipboard
@@ -544,16 +598,20 @@ export const TrackData = memo(() => {
                                      visibleText,
                                  }) => {
         const buttonId = `show-${id}-on-map`
+        const isActive = activeStatsPoiId === id
 
         return (
             <div className="element-item">
-                <WaTooltip for={buttonId} placement="top" content="Show on map"></WaTooltip>
+                <WaTooltip
+                    for={buttonId}
+                    placement="top"
+                    content={isActive ? 'Hide from map' : 'Show on map'}></WaTooltip>
                 <WaButton
                     id={buttonId}
-                    className="track-data-extreme-button"
+                    className={`track-data-extreme-button${isActive ? ' is-active' : ''}`}
                     appearance="plain"
                     variant="brand"
-                    size="small"
+                    aria-pressed={isActive}
                     disabled={!points.length}
                     onClick={() => showStatsPOIs({id, label, value, units, format, points})}>
                     <WaIcon variant="regular" name={icon}/>

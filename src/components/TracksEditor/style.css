@@ -348,18 +348,36 @@ wa-tab::part(base) {
     margin-left: var(--indent);
 }
 
+.track-data-extreme-button {
+    font: inherit;
+    line-height: inherit;
+}
+
 .track-data-extreme-button::part(base) {
     justify-content: flex-start;
+    height: auto;
     min-height: auto;
-    padding: 0 var(--lgs-gutter-xs);
+    padding: 0;
+    font: inherit;
+    line-height: inherit;
+}
+
+.track-data-extreme-button.is-active::part(base) {
+    color: var(--lgs-button-plain-hover-color);
+    background-color: var(--lgs-button-plain-bg-hover-color) !important;
 }
 
 .track-data-extreme-button::part(label) {
     justify-content: flex-start;
+    gap: var(--lgs-gutter-s);
+    font: inherit;
+    line-height: inherit;
     text-transform: none;
 }
 
 .track-data-extreme-button .lgs-text-value {
+    font: inherit;
+    line-height: inherit;
     text-transform: none;
 }
 
