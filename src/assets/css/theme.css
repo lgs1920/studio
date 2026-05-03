@@ -246,7 +246,7 @@
     --lgs-signage-color: black;
     --lgs-signage-disabled-color: var(--sl-color-gray-400);
 
-    --lgs-slogan-font-family: "Cookie";
+    --lgs-slogan-font-family: "Cookie", cursive;
     --lgs-slogan-font-size: calc(2.5 * var(--lgs-gutter));
     --lgs-slogan-color: black;
 

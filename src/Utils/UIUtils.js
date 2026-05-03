@@ -13,7 +13,7 @@
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
-import { COUNTRY_FLAGS_DIR, WIDGET_GOOGLE_FONTS } from '@Core/constants'
+import { APP_GOOGLE_FONTS, COUNTRY_FLAGS_DIR, WIDGET_GOOGLE_FONTS } from '@Core/constants'
 import { colord }                                 from 'colord'
 import { DateTime }                               from 'luxon'
 
@@ -176,12 +176,13 @@ export class UIUtils {
 
     static importFonts = () => {
         const linkId = 'google-fonts'
+        const fontFamilies = [...new Set([...WIDGET_GOOGLE_FONTS, ...APP_GOOGLE_FONTS])]
 
         if (!document.getElementById(linkId)) {
             const link = document.createElement('link')
             link.id = linkId
             link.rel = 'stylesheet'
-            link.href = `https://fonts.googleapis.com/css2?${WIDGET_GOOGLE_FONTS.map(f => `family=${f.replace(/\s+/g, '+')}`).join('&')}&display=swap`
+            link.href = `https://fonts.googleapis.com/css2?${fontFamilies.map(f => `family=${f.replace(/\s+/g, '+')}`).join('&')}&display=swap`
             document.head.appendChild(link)
         }
     }
@@ -242,4 +243,3 @@ export class UIUtils {
         return includeAlpha ? c.alpha(item.opacity ?? 1).toRgbString() : c.toRgbString()
     }
 }
-
