@@ -15,45 +15,47 @@
  ******************************************************************************/
 
 import { JOURNEY_WIDGETS }                              from '@Core/constants'
+import { hasActiveRemoveJourneyDialog }                 from '@Core/events/shortcutBlockers'
 import {
     WidgetDynamicRenderer,
 }                                                       from '@Core/ui/widget-manager/dynamic-render/WidgetDynamicRender'
 import { Utils }                                        from '@Editor/Utils'
 import { UIToast }                                      from '@Utils/UIToast'
 import { WaButton, WaCard, WaIcon, WaPopup, WaTooltip } from '@web.awesome.me/webawesome-pro/dist/react'
-import React, { useRef, useState }                      from 'react'
+import { useCallback, useEffect, useState }             from 'react'
 import { useSnapshot }                                  from 'valtio'
 
 export const RemoveJourney = (props) => {
     const mainUI = lgs.stores.ui.mainUI
     const editorStore = lgs.theJourneyEditorProxy
-    const snap = useSnapshot(mainUI)
 
-    const removeButton = useRef(null)
-    const tooltipElement = useRef(null)
-    const tooltip = props?.tooltip ?? 'top-start'
     const settings = useSnapshot(lgs.settings.ui.menu)
     const placement = props.placement ?? (settings.toolBar.fromStart ? 'bottom-end' : 'bottom-start')
     const [dialog, setDialog] = useState(false)
+    const dialogName = props?.name ?? 'remove-journey'
+    const removeButtonId = `remove-journey-in-settings-${dialogName}`
 
-    const hideRemoveDialog = () => {
+    const hideRemoveDialog = useCallback(() => {
         setDialog(false)
-    }
-    const toggleRemoveDialog = (event) => {
-        setDialog(!dialog)
-    }
+    }, [])
+
+    const toggleRemoveDialog = useCallback(() => {
+        setDialog(open => !open)
+    }, [])
 
     /**
      * Remove journey
      */
-    const removeJourney = async () => {
+    const removeJourney = useCallback(async () => {
 
         hideRemoveDialog()
 
         const $store = lgs.stores.main
-        const $pois = $store.components.pois.list
 
         const journey = lgs.getJourneyBySlug(editorStore.journey.slug)
+        if (!journey) {
+            return
+        }
         // get Journey index
         const index = $store.components.journeyEditor.list.findIndex((list) => list === journey.slug)
 
@@ -84,7 +86,6 @@ export const RemoveJourney = (props) => {
          * If we have some other journeys, we'll take the first and render the editor.
          * Otherwise we close the editing.
          */
-        let text = ''
         if ($store.components.journeyEditor.list.length >= 1) {
             // New current is the first.
             lgs.theJourney = lgs.getJourneyBySlug($store.components.journeyEditor.list[0])
@@ -97,7 +98,6 @@ export const RemoveJourney = (props) => {
         }
         else {
             lgs.cleanContext()
-            text = ''
             $store.canViewJourneyData = false
             __.ui.drawerManager.close()
             $store.components.profile.show = false
@@ -116,15 +116,51 @@ export const RemoveJourney = (props) => {
                                 text:    `It's time to load a new one!`,
                             })
         }
-    }
+    }, [editorStore.journey.slug, hideRemoveDialog])
+
+    useEffect(() => {
+        mainUI.removeJourneyDialog.active.set(dialogName, dialog)
+
+        return () => {
+            mainUI.removeJourneyDialog.active.set(dialogName, false)
+        }
+    }, [dialog, dialogName, mainUI.removeJourneyDialog.active])
+
+    useEffect(() => {
+        if (!dialog) {
+            return undefined
+        }
+
+        const handleConfirmShortcuts = event => {
+            if (!hasActiveRemoveJourneyDialog()) {
+                return
+            }
+
+            if (event.key !== 'Escape' && event.key !== 'Delete') {
+                return
+            }
+
+            event.preventDefault()
+            event.stopPropagation()
+            event.stopImmediatePropagation?.()
+
+            if (event.key === 'Escape') {
+                hideRemoveDialog()
+                return
+            }
+
+            void removeJourney()
+        }
+
+        window.addEventListener('keydown', handleConfirmShortcuts, true)
+        return () => window.removeEventListener('keydown', handleConfirmShortcuts, true)
+    }, [dialog, hideRemoveDialog, removeJourney])
 
     return (
         <>
-            <WaTooltip placement="bottom" for="remove-journey-in-settings"
-                       ref={tooltipElement}>{'Remove journey'}</WaTooltip>
-            <WaButton ref={removeButton}
-                      size="small"
-                      id="remove-journey-in-settings"
+            <WaTooltip placement="bottom" for={removeButtonId}>{'Remove journey'}</WaTooltip>
+            <WaButton size="small"
+                      id={removeButtonId}
                       variant="brand"
                       appearance="plain"
                       onClick={toggleRemoveDialog}>
@@ -132,8 +168,9 @@ export const RemoveJourney = (props) => {
             </WaButton>
 
 
-            <WaPopup anchor={removeButton.current}
+            <WaPopup anchor={removeButtonId}
                      active={dialog}
+                     data-lgs-shortcut-blocker={dialog ? 'true' : undefined}
                      hover-bridge="true" shift="true"
                      placement={placement}
                      distance={lgs.gutter.xs}

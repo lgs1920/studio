@@ -15,6 +15,7 @@
  ******************************************************************************/
 
 import { WIDGETS_EDITOR_DRAWER } from '@Core/constants'
+import { hasActiveAppShortcutBlocker } from '@Core/events/shortcutBlockers'
 import { useWidgetScaleCorrection } from '@Components/MainUI/widgets/useWidgetScaleCorrection'
 import { TextWidgetManager }     from '@Core/ui/text-metrics/TextWidgetManager'
 import classNames      from 'classnames'
@@ -74,6 +75,10 @@ export const EditableText = ({id}) => {
         }
 
         const handleGlobalKeyDown = (e) => {
+            if (hasActiveAppShortcutBlocker()) {
+                return
+            }
+
             const isCurrent = drawers.entity === id
             if (drawers.open === WIDGETS_EDITOR_DRAWER && isCurrent) {
                 return

@@ -15,6 +15,7 @@
  ******************************************************************************/
 
 import { CURRENT_MAP_POINT, CURRENT_POI, VIDEO_CROP_ZONE } from '@Core/constants'
+import { hasActiveAppShortcutBlocker } from '@Core/events/shortcutBlockers'
 import { MapTarget } from '@Core/MapTarget'
 import { getOrbitSettings, setOrbitStoreSettings } from '@Core/OrbitSettings'
 import { Cartesian2, Cartographic, Math as CesiumMath } from 'cesium'
@@ -486,7 +487,7 @@ const isMinusKey = event => event.key === '-'
     || event.key?.toLowerCase() === 'minus'
 
 const widgetKeyboardShortcutAction = event => {
-    if (isWidgetShortcutEditableTarget(event.target) || event.altKey || event.metaKey) {
+    if (hasActiveAppShortcutBlocker() || isWidgetShortcutEditableTarget(event.target) || event.altKey || event.metaKey) {
         return null
     }
 
@@ -748,6 +749,10 @@ export const installAppShortcuts = (shortcutManager) => {
         const action = SHORTCUT_ACTIONS[shortcut.id]
 
         return shortcutManager.addShortcut(APP_SHORTCUT_TARGET(), shortcut.keys, async (event) => {
+            if (hasActiveAppShortcutBlocker()) {
+                return
+            }
+
             event.preventDefault()
             event.stopPropagation()
             event.stopImmediatePropagation?.()
@@ -764,8 +769,8 @@ export const installAppShortcuts = (shortcutManager) => {
             }
         }, {
             focusOnPointerDown: false,
-            preventDefault:     true,
-            stopPropagation:    true,
+            preventDefault:     false,
+            stopPropagation:    false,
         })
     })
 
