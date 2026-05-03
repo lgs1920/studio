@@ -18,7 +18,7 @@ import {
     CURRENT_POI, POI_FLAG_START, POI_FLAG_STOP, POI_STANDARD_TYPE, POI_STARTER_TYPE, POI_TMP_TYPE, POIS_EDITOR_DRAWER,
     ROTATION_ICON, SCENE_MODE_2D,
 }                                       from '@Core/constants'
-import { getOrbitSettings, setOrbitStoreSettings } from '@Core/OrbitSettings'
+import { DEFAULT_PANORAMA_HEIGHT_OFFSET, DEFAULT_PANORAMA_PITCH, getOrbitSettings, setOrbitStoreSettings } from '@Core/OrbitSettings'
 import { ELEVATION_UNITS, UnitUtils }       from '@Utils/UnitUtils'
 import { UIToast }                                from '@Utils/UIToast'
 import { WaDivider, WaIcon } from '@web.awesome.me/webawesome-pro/dist/react'
@@ -160,8 +160,8 @@ export const MapPOIContextMenu = ({menuRef, targetId}) => {
             slug:    currentPoi.slug ?? currentPoi.id,
         }
         panorama.heading = lgs.stores.main.components.camera.position.heading ?? 0
-        panorama.pitch = storedPanorama.pitch ?? -12
-        panorama.heightOffset = storedPanorama.heightOffset ?? 1000
+        panorama.pitch = storedPanorama.pitch ?? DEFAULT_PANORAMA_PITCH
+        panorama.heightOffset = storedPanorama.heightOffset ?? DEFAULT_PANORAMA_HEIGHT_OFFSET
         setOrbitStoreSettings(panorama, storedPanorama)
         panorama.active = true
         hideMenu()

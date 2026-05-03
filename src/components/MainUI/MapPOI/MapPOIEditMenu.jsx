@@ -24,7 +24,9 @@
 import {
     CURRENT_POI, POI_FLAG_START, POI_FLAG_STOP, POI_STARTER_TYPE, SCENE_MODE_2D,
 }                                                      from '@Core/constants'
-import { getOrbitSettings, setOrbitStoreSettings }     from '@Core/OrbitSettings'
+import {
+    DEFAULT_PANORAMA_HEIGHT_OFFSET, DEFAULT_PANORAMA_PITCH, getOrbitSettings, setOrbitStoreSettings,
+}                                                       from '@Core/OrbitSettings'
 
 import { UIToast }                                     from '@Utils/UIToast'
 import { WaButton, WaDivider, WaDropdown, WaDropdownItem, WaIcon } from '@web.awesome.me/webawesome-pro/dist/react'
@@ -103,8 +105,8 @@ export const MapPOIEditMenu = memo(({poiId}) => {
             slug:    pointSnap.slug ?? pointSnap.id,
         }
         panorama.heading = lgs.stores.main.components.camera.position.heading ?? 0
-        panorama.pitch = storedPanorama.pitch ?? -12
-        panorama.heightOffset = storedPanorama.heightOffset ?? 1000
+        panorama.pitch = storedPanorama.pitch ?? DEFAULT_PANORAMA_PITCH
+        panorama.heightOffset = storedPanorama.heightOffset ?? DEFAULT_PANORAMA_HEIGHT_OFFSET
         setOrbitStoreSettings(panorama, storedPanorama)
         panorama.active = true
     }, [panoramaAllowed, pointSnap])

@@ -24,13 +24,13 @@ export const ORBIT_DIRECTION_MAX = 2
 export const ORBIT_DIRECTION_STEP = 0.2
 export const DEFAULT_ORBIT_RPM = 1
 export const DEFAULT_ORBIT_DIRECTION = 1
-export const PANORAMA_HEIGHT_OFFSET_MIN = 50
+export const PANORAMA_HEIGHT_OFFSET_MIN = 2
 export const PANORAMA_HEIGHT_OFFSET_MAX = 5000
-export const PANORAMA_HEIGHT_OFFSET_STEP = 100
+export const PANORAMA_HEIGHT_OFFSET_STEP = 1
 export const PANORAMA_PITCH_MIN = -90
 export const PANORAMA_PITCH_MAX = 0
 export const PANORAMA_PITCH_STEP = 1
-export const DEFAULT_PANORAMA_HEIGHT_OFFSET = 1000
+export const DEFAULT_PANORAMA_HEIGHT_OFFSET = 2
 export const DEFAULT_PANORAMA_PITCH = -12
 
 const roundToStep = (value, step) => Number((Math.round(value / step) * step).toFixed(1))

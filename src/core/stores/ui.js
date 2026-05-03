@@ -14,6 +14,7 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
+import { DEFAULT_PANORAMA_HEIGHT_OFFSET, DEFAULT_PANORAMA_PITCH } from '@Core/OrbitSettings'
 import { proxyMap } from 'valtio/utils'
 
 /**
@@ -65,8 +66,8 @@ export const ui = {
         panorama:            {
             active:       false,
             target:       false,
-            heightOffset: 1000,
-            pitch:        -12,
+            heightOffset: DEFAULT_PANORAMA_HEIGHT_OFFSET,
+            pitch:        DEFAULT_PANORAMA_PITCH,
             heading:      0,
             rpm:          1,
             direction:    1,
