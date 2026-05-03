@@ -242,6 +242,25 @@
     flex-direction: column;
     gap: var(--lgs-gutter-s);
 }
+
+.journey-stats-widget-editor-readonly-value {
+    font-size: var(--lgs-font-size-s);
+    line-height: var(--wa-form-control-label-line-height);
+    display: flex;
+    justify-content: center;
+    width: 100%;
+    min-width: 0;
+    color: var(--wa-form-control-label-color);
+    gap: var(--lgs-gutter-s);
+}
+
+.journey-stats-widget-editor-readonly-value span {
+    overflow: hidden;
+    min-width: 0;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
 .journey-stats-widget-editor-data .drawer-horizontal-line {
     display: flex;
     align-items: flex-end;
@@ -307,11 +326,13 @@
 }
 
 .journey-stats-text-order-lock-button {
+    inline-size: 1.75rem;
     flex: 0 0 auto;
     margin-left: auto;
 }
 
 .journey-stats-text-order-lock-button::part(base) {
+    inline-size: 1.75rem;
     min-width: 1.75rem;
-    padding: 0 var(--lgs-gutter-xs);
+    padding: 0;
 }

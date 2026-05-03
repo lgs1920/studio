@@ -19,6 +19,7 @@ import { useWidgetScaleCorrection } from '@Components/MainUI/widgets/useWidgetSc
 import {
     JOURNEY_STATS_TEXT_ITEM_MAP,
     isJourneyStatsSummaryTextItem,
+    isJourneyStatsTextItemEnabled,
     normalizeJourneyStatsSummaryBreaks,
     normalizeJourneyStatsTextOrder,
 }                                                       from '@Components/Stats/journeyStatsTextOrder'
@@ -226,7 +227,7 @@ export const JourneyStats = memo(({id, metrics, units, style = {}}) => {
     const hasElevation = journey?.hasAltitude ?? false
     const date = journey ? __.ui.ui.formatJourneyDurationDates(journey.getDate()) : {}
     const hasDateRange = Boolean(date?.prefix && date?.sufix)
-    const journeyLocation = journeyLocationState.slug === journeySlug ? journeyLocationState.value : ''
+    const journeyLocation = (journeyLocationState.slug === journeySlug ? journeyLocationState.value : '') || journey?.location || ''
     const showDate = hasDuration && element?.date && hasDateRange
     const showLocation = Boolean(element?.location && journeyLocation)
     const textOrder = useMemo(
@@ -245,9 +246,9 @@ export const JourneyStats = memo(({id, metrics, units, style = {}}) => {
         const visibleById = {
             date:      showDate,
             location:  showLocation,
-            distance:  displayMetrics.distance > 0,
-            elevation: displayMetrics.positive?.elevation > 0,
-            duration:  Boolean(formattedDuration),
+            distance:  isJourneyStatsTextItemEnabled(element, 'distance') && displayMetrics.distance > 0,
+            elevation: isJourneyStatsTextItemEnabled(element, 'elevation') && displayMetrics.positive?.elevation > 0,
+            duration:  isJourneyStatsTextItemEnabled(element, 'duration') && Boolean(formattedDuration),
             altitude:  showAltitudeRow,
             speed:     showSpeedRow,
             pace:      showPaceRow,
@@ -274,6 +275,7 @@ export const JourneyStats = memo(({id, metrics, units, style = {}}) => {
     }, [
         displayMetrics.distance,
         displayMetrics.positive?.elevation,
+        element,
         formattedDuration,
         showAltitudeRow,
         showDate,
@@ -393,6 +395,9 @@ export const JourneyStats = memo(({id, metrics, units, style = {}}) => {
         element?.location,
         element?.altitude,
         element?.performance,
+        element?.distance,
+        element?.elevation,
+        element?.duration,
         element?.summaryBreaks,
         element.separator,
         element.border,

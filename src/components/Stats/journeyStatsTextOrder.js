@@ -54,6 +54,26 @@ export const orderedJourneyStatsTextItems = order =>
 
 export const isJourneyStatsSummaryTextItem = id => JOURNEY_STATS_SUMMARY_TEXT_ID_SET.has(id)
 
+export const isJourneyStatsTextItemEnabled = (element = {}, id, {hasJourneyDate = true} = {}) => {
+    switch (id) {
+        case 'date':
+            return hasJourneyDate && element.date === true
+        case 'location':
+            return element.location === true
+        case 'distance':
+        case 'elevation':
+        case 'duration':
+            return element[id] !== false
+        case 'altitude':
+            return element.altitude === true
+        case 'speed':
+        case 'pace':
+            return element.performance === true
+        default:
+            return true
+    }
+}
+
 export const normalizeJourneyStatsSummaryBreaks = breaks => {
     const seen = new Set()
     const source = Array.isArray(breaks) ? breaks : []

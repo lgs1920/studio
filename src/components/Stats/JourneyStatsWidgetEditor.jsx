@@ -34,6 +34,7 @@ import {
 }                                                                   from '@Components/MainUI/widgets/editor/elements/ShadowElement'
 import {
     isJourneyStatsSummaryTextItem,
+    isJourneyStatsTextItemEnabled,
     normalizeJourneyStatsSummaryBreaks,
     normalizeJourneyStatsTextOrder,
     orderedJourneyStatsTextItems,
@@ -88,6 +89,7 @@ export const JourneyStatsWidgetEditor = ({entity}) => {
 
     const [activeTab, setActiveTab] = useState('style')
     const [localRotation, setLocalRotation] = useState(0)
+    const [journeyLocationState, setJourneyLocationState] = useState({slug: null, value: ''})
     const sliderRefs = useRef({})
     const orderListRef = useRef(null)
     const orderSortableRef = useRef(null)
@@ -108,57 +110,23 @@ export const JourneyStatsWidgetEditor = ({entity}) => {
 
     const dataSource = element.dataSource || 'global'
 
-    const hasJourneyDate = useMemo(() => {
+    const journeyDate = useMemo(() => {
         if (!journey?.getDate) {
-            return false
+            return {}
         }
 
-        const date = __.ui.ui.formatJourneyDurationDates(journey.getDate())
-        return Boolean((journey?.hasTime ?? false) && date?.prefix && date?.sufix)
+        return __.ui.ui.formatJourneyDurationDates(journey.getDate())
     }, [journey])
+    const hasJourneyDate = Boolean((journey?.hasTime ?? false) && journeyDate?.prefix && journeyDate?.sufix)
+    const journeyLocation = (journeyLocationState.slug === journeySlug ? journeyLocationState.value : '') || journey?.location || ''
 
     const dataEditorOrderItems = orderedJourneyStatsTextItems(element.textOrder)
         .filter(item => item.id !== 'date' || hasJourneyDate)
-    const textOrderItems = dataEditorOrderItems.filter(item => {
-        switch (item.id) {
-            case 'date':
-                return element.date === true
-            case 'location':
-                return element.location === true
-            case 'altitude':
-                return element.altitude === true
-            case 'speed':
-            case 'pace':
-                return element.performance === true
-            default:
-                return true
-        }
-    })
+    const textOrderItems = dataEditorOrderItems.filter(item =>
+        isJourneyStatsTextItemEnabled(element, item.id, {hasJourneyDate}))
     const textOrderItemIds = textOrderItems.map(item => item.id).join('|')
     const summaryBreaks = normalizeJourneyStatsSummaryBreaks(element.summaryBreaks)
     const summaryBreakIds = summaryBreaks.join('|')
-    const summaryBreakSet = new Set(summaryBreaks)
-    const alignedSummaryItemIds = new Set()
-    for (let index = 0; index < textOrderItems.length; index++) {
-        if (!isJourneyStatsSummaryTextItem(textOrderItems[index].id)) {
-            continue
-        }
-
-        let runEnd = index + 1
-        while (runEnd < textOrderItems.length &&
-            isJourneyStatsSummaryTextItem(textOrderItems[runEnd].id) &&
-            !summaryBreakSet.has(textOrderItems[runEnd].id)) {
-            runEnd++
-        }
-
-        if (runEnd - index > 1) {
-            for (let lockIndex = index; lockIndex < runEnd; lockIndex++) {
-                alignedSummaryItemIds.add(textOrderItems[lockIndex].id)
-            }
-        }
-
-        index = runEnd - 1
-    }
 
     const units = useMemo(() => ({
         elevation: ELEVATION_UNITS[unitSystem],
@@ -317,6 +285,33 @@ export const JourneyStatsWidgetEditor = ({entity}) => {
         return () => unsub()
     }, [$metrics, dataSource, updateValue])
 
+    useEffect(() => {
+        let isMounted = true
+
+        if (!journeySlug || !journey || !element?.location || !__.ui.geocoder?.getJourneyLocation) {
+            return () => {
+                isMounted = false
+            }
+        }
+
+        __.ui.geocoder.getJourneyLocation(journey)
+            .then(location => {
+                if (isMounted) {
+                    setJourneyLocationState({slug: journeySlug, value: location})
+                }
+            })
+            .catch(error => {
+                console.error(error)
+                if (isMounted) {
+                    setJourneyLocationState({slug: journeySlug, value: ''})
+                }
+            })
+
+        return () => {
+            isMounted = false
+        }
+    }, [journey, journeySlug, element?.location])
+
 
     /**
      * Applies rotation to the widget and updates persistent configuration
@@ -443,36 +438,49 @@ export const JourneyStatsWidgetEditor = ({entity}) => {
                                </div>
                            )
 
-    const forceSummaryLineBreak = (itemId, event) => {
-        event.stopPropagation()
-
+    const getSummaryLockState = itemId => {
         const ids = textOrderItemIds ? textOrderItemIds.split('|') : []
         const currentSummaryBreaks = summaryBreakIds ? summaryBreakIds.split('|') : []
         const currentSummaryBreakSet = new Set(currentSummaryBreaks)
         const index = ids.indexOf(itemId)
 
-        if (index === -1) {
+        if (index === -1 || !isJourneyStatsSummaryTextItem(itemId)) {
+            return {breakBeforeId: null, isOpen: false, visible: false}
+        }
+
+        const previousId = ids[index - 1]
+        const nextId = ids[index + 1]
+        const hasSummaryPrevious = isJourneyStatsSummaryTextItem(previousId)
+        const hasSummaryNext = isJourneyStatsSummaryTextItem(nextId)
+        const breakBeforeId = hasSummaryPrevious ? itemId : (hasSummaryNext ? nextId : null)
+
+        return {
+            breakBeforeId,
+            isOpen: Boolean(breakBeforeId && currentSummaryBreakSet.has(breakBeforeId)),
+            visible: Boolean(breakBeforeId),
+        }
+    }
+
+    const toggleSummaryLineBreak = (itemId, event) => {
+        event.preventDefault()
+        event.stopPropagation()
+
+        const currentSummaryBreaks = summaryBreakIds ? summaryBreakIds.split('|') : []
+        const lockState = getSummaryLockState(itemId)
+
+        if (!lockState.breakBeforeId) {
             return
         }
 
-        const hasAlignedPrevious = index > 0 &&
-            isJourneyStatsSummaryTextItem(ids[index - 1]) &&
-            !currentSummaryBreakSet.has(itemId)
-        const hasAlignedNext = index < ids.length - 1 &&
-            isJourneyStatsSummaryTextItem(ids[index + 1]) &&
-            !currentSummaryBreakSet.has(ids[index + 1])
-        const breakBeforeId = hasAlignedPrevious ? itemId : (hasAlignedNext ? ids[index + 1] : null)
+        const nextSummaryBreaks = lockState.isOpen
+                                  ? currentSummaryBreaks.filter(id => id !== lockState.breakBeforeId)
+                                  : [...currentSummaryBreaks, lockState.breakBeforeId]
 
-        if (!breakBeforeId) {
-            return
-        }
-
-        updateValue('summaryBreaks', normalizeJourneyStatsSummaryBreaks([...currentSummaryBreaks, breakBeforeId]))
+        updateValue('summaryBreaks', normalizeJourneyStatsSummaryBreaks(nextSummaryBreaks))
     }
 
     const renderTextOrderRow = item => {
-        const isSummaryItem = isJourneyStatsSummaryTextItem(item.id)
-        const isAligned = alignedSummaryItemIds.has(item.id)
+        const summaryLockState = getSummaryLockState(item.id)
 
         return (
             <WaCard
@@ -484,22 +492,43 @@ export const JourneyStatsWidgetEditor = ({entity}) => {
                 <WaIcon name="grip-dots-vertical" variant="solid" className="icon-widget"/>
                 <WaIcon name={item.icon} variant="regular" className="icon-widget"/>
                 <div className="sortable-widget-info">{item.label}</div>
-                {isSummaryItem && isAligned && (
+                {summaryLockState.visible && (
                     <WaButton
                         appearance="plain"
                         variant="brand"
                         size="small"
                         className="journey-stats-text-order-lock-button"
-                        title="Force line break"
-                        onClick={event => forceSummaryLineBreak(item.id, event)}
+                        title={summaryLockState.isOpen ? 'Align summary metrics' : 'Force line break'}
+                        onClick={event => toggleSummaryLineBreak(item.id, event)}
                         onPointerDown={event => event.stopPropagation()}
                     >
-                        <WaIcon name="lock" variant="regular"/>
+                        <WaIcon name={summaryLockState.isOpen ? 'lock-open' : 'lock'} variant="regular"/>
                     </WaButton>
                 )}
             </WaCard>
         )
     }
+
+    const isSummaryMetricEnabled = itemId => element[itemId] !== false
+
+    const renderSummaryMetricToggle = (itemId, label) => (
+        <WaSwitch
+            label-at-start
+            size="xsmall"
+            checked={isSummaryMetricEnabled(itemId)}
+            onInput={(e) => updateValue(itemId, e.target.checked)}
+        >
+            <span>{label}</span>
+        </WaSwitch>
+    )
+
+    const renderReadOnlyDataValue = value => (
+        <div className="journey-stats-widget-editor-readonly-value">
+            {Array.isArray(value)
+             ? value.map((item, index) => <span key={`${item}-${index}`}>{item}</span>)
+             : <span>{value}</span>}
+        </div>
+    )
 
     const renderDataEditorItem = (item, {showPerformanceToggle = false} = {}) => {
         switch (item.id) {
@@ -508,41 +537,62 @@ export const JourneyStatsWidgetEditor = ({entity}) => {
                     return null
                 }
                 return (
-                    <WaSwitch label-at-start size="xsmall" checked={element.date ?? false}
-                              onInput={(e) => updateValue('date', e.target.checked)}><span>Date</span></WaSwitch>
+                    <>
+                        <WaSwitch label-at-start size="xsmall" checked={element.date ?? false}
+                                  onInput={(e) => updateValue('date', e.target.checked)}><span>Date</span></WaSwitch>
+                        {element.date && renderReadOnlyDataValue([journeyDate.prefix, journeyDate.sufix])}
+                    </>
                 )
             case 'location':
                 return (
-                    <WaSwitch label-at-start size="xsmall" checked={element.location ?? false}
-                              onInput={(e) => updateValue('location', e.target.checked)}><span>Location</span></WaSwitch>
+                    <>
+                        <WaSwitch label-at-start size="xsmall" checked={element.location ?? false}
+                                  onInput={(e) => updateValue('location', e.target.checked)}><span>Location</span></WaSwitch>
+                        {element.location && journeyLocation && renderReadOnlyDataValue(journeyLocation)}
+                    </>
                 )
             case 'distance':
                 return (
-                    <div className="drawer-horizontal-line journey-stats-widget-editor-data-line">
-                        <div className="drawer-horizontal-element">
-                            <JourneyMetricsInput
-                                label={`Distance (${units.distance})`} path="distance" unit={units.distance}
-                                dataSource={dataSource}/>
-                        </div>
-                    </div>
+                    <>
+                        {renderSummaryMetricToggle('distance', `Distance (${units.distance})`)}
+                        {isSummaryMetricEnabled('distance') && (
+                            <div className="drawer-horizontal-line journey-stats-widget-editor-data-line">
+                                <div className="drawer-horizontal-element">
+                                    <JourneyMetricsInput
+                                        path="distance" unit={units.distance}
+                                        dataSource={dataSource}/>
+                                </div>
+                            </div>
+                        )}
+                    </>
                 )
             case 'elevation':
                 return (
-                    <div className="drawer-horizontal-line journey-stats-widget-editor-data-line">
-                        <div className="drawer-horizontal-element">
-                            <JourneyMetricsInput
-                                label={`Elevation (${units.elevation})`} path="positive.elevation"
-                                unit={units.elevation} precision={0} dataSource={dataSource}/>
-                        </div>
-                    </div>
+                    <>
+                        {renderSummaryMetricToggle('elevation', `Elevation (${units.elevation})`)}
+                        {isSummaryMetricEnabled('elevation') && (
+                            <div className="drawer-horizontal-line journey-stats-widget-editor-data-line">
+                                <div className="drawer-horizontal-element">
+                                    <JourneyMetricsInput
+                                        path="positive.elevation"
+                                        unit={units.elevation} precision={0} dataSource={dataSource}/>
+                                </div>
+                            </div>
+                        )}
+                    </>
                 )
             case 'duration':
                 return (
-                    <div className="drawer-horizontal-line journey-stats-widget-editor-data-line">
-                        <div className="drawer-horizontal-element">
-                            <DurationInput label="Duration" path="duration" dataSource={dataSource}/>
-                        </div>
-                    </div>
+                    <>
+                        {renderSummaryMetricToggle('duration', 'Duration')}
+                        {isSummaryMetricEnabled('duration') && (
+                            <div className="drawer-horizontal-line journey-stats-widget-editor-data-line">
+                                <div className="drawer-horizontal-element">
+                                    <DurationInput path="duration" dataSource={dataSource}/>
+                                </div>
+                            </div>
+                        )}
+                    </>
                 )
             case 'altitude':
                 return (

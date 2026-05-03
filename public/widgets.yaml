@@ -279,6 +279,9 @@ widgets:
 
         date: false
         location: false
+        distance: true
+        elevation: true
+        duration: true
         altitude: false
         performance: false
         textOrder:
