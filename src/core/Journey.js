@@ -526,11 +526,21 @@ export class Journey extends MapElement {
 
         // Build spatial index for existing POIs linked to this journey or its tracks
         const trackSlugs = Array.from(this.tracks.keys())
+        const existingPOIs = Array.from(__.ui.poiManager.list.values())
+        const existingById = new Map(existingPOIs.filter(p => p?.id).map(p => [p.id, p]))
         const existingLookup = new Map(
-            Array.from(__.ui.poiManager.list.values())
+            existingPOIs
                 .filter(p => p.parent === this.slug || trackSlugs.includes(p.parent))
                 .map(p => [getCoordKey(p.longitude, p.latitude), p]),
         )
+        const rememberImportedPOI = poi => {
+            if (!poi?.id) {
+                return
+            }
+
+            existingById.set(poi.id, poi)
+            existingLookup.set(getCoordKey(poi.longitude, poi.latitude), poi)
+        }
 
         const resolveImportedPoiParent = (poiMetadata) => {
             if (poiMetadata.parentKind !== 'track') {
@@ -564,7 +574,7 @@ export class Journey extends MapElement {
                     }
 
                     const key = getCoordKey(lon, lat)
-                    const existingPoi = existingLookup.get(key)
+                    const existingPoi = (lgsPoi.id ? existingById.get(lgsPoi.id) : null) ?? existingLookup.get(key)
                     const importedHeight = lgsPoi.height ?? (lgsPoi.simulatedHeight !== undefined ? undefined : z ?? undefined)
                     const importedParent = resolveImportedPoiParent(lgsPoi)
                     const importedType = lgsPoi.type ?? POI_STANDARD_TYPE
@@ -604,7 +614,11 @@ export class Journey extends MapElement {
                     }
 
                     if (existingPoi) {
-                        Object.assign(existingPoi, poiData)
+                        const updatedPOI = await __.ui.poiManager.updatePOI(existingPoi.id, poiData, {
+                            immediate:          true,
+                            skipLocationUpdate: Boolean(poiData.location && poiData.country && poiData.countryCode),
+                        })
+                        rememberImportedPOI(updatedPOI)
                     }
                     else {
                         if (lgsPoi.id && !__.ui.poiManager.list.has(lgsPoi.id)) {
@@ -613,7 +627,8 @@ export class Journey extends MapElement {
                         const poi = new MapPOI({
                                                    ...poiData,
                                                })
-                        await __.ui.poiManager.add(poi, false)
+                        const addedPOI = await __.ui.poiManager.add(poi, false)
+                        rememberImportedPOI(addedPOI)
                     }
                     break
                 }

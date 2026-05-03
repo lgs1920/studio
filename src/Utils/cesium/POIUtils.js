@@ -81,6 +81,25 @@ export class POIUtils {
         return lgs.viewer.entities
     }
 
+    static removeEntityFromOtherContainers = (poi, targetContainer) => {
+        if (!poi?.id || !lgs.viewer) {
+            return
+        }
+
+        const removeFrom = entities => {
+            if (!entities || entities === targetContainer || !entities.getById(poi.id)) {
+                return
+            }
+
+            entities.removeById(poi.id)
+        }
+
+        removeFrom(lgs.viewer.entities)
+        for (let index = 0; index < lgs.viewer.dataSources.length; index++) {
+            removeFrom(lgs.viewer.dataSources.get(index).entities)
+        }
+    }
+
 
     /**
      * Sets and returns the appropriate icon based on the provided icon type.
@@ -213,6 +232,8 @@ export class POIUtils {
         if (!container) {
             return null;
         }
+
+        POIUtils.removeEntityFromOtherContainers(poi, container)
 
         // Check for existing entity
         const entity = container.getById(poi.id)
