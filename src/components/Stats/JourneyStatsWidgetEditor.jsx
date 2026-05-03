@@ -32,13 +32,20 @@ import {
 import {
     ShadowElement,
 }                                                                   from '@Components/MainUI/widgets/editor/elements/ShadowElement'
+import {
+    isJourneyStatsSummaryTextItem,
+    normalizeJourneyStatsSummaryBreaks,
+    normalizeJourneyStatsTextOrder,
+    orderedJourneyStatsTextItems,
+}                                                                   from '@Components/Stats/journeyStatsTextOrder'
 import { DISTANCE_UNITS, ELEVATION_UNITS, PACE_UNITS, SPEED_UNITS } from '@Utils/UnitUtils'
 import {
     WaButton, WaButtonGroup, WaCard, WaColorPicker, WaDivider, WaIcon, WaSlider, WaSwitch, WaTab,
     WaTabGroup,
     WaTabPanel,
 }                                                                   from '@web.awesome.me/webawesome-pro/dist/react'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import Sortable                                               from 'sortablejs'
 import { subscribe, useSnapshot }                            from 'valtio'
 
 /**
@@ -51,6 +58,13 @@ const JOURNEY_STATS_SLIDERS = {
         max:      1,
         min:      0,
         step:     0.05,
+    },
+    'separator.padding': {
+        fallback: 0,
+        getValue: element => element.separator?.padding,
+        max:      10,
+        min:      0,
+        step:     1,
     },
     'text.opacity':      {
         fallback: 1,
@@ -75,6 +89,9 @@ export const JourneyStatsWidgetEditor = ({entity}) => {
     const [activeTab, setActiveTab] = useState('style')
     const [localRotation, setLocalRotation] = useState(0)
     const sliderRefs = useRef({})
+    const orderListRef = useRef(null)
+    const orderSortableRef = useRef(null)
+    const finalizeTextOrderRef = useRef(null)
 
     const _moveable = __.ui.widgetManager.getMoveable(entity)
 
@@ -90,6 +107,58 @@ export const JourneyStatsWidgetEditor = ({entity}) => {
     }, [configuration, entity])
 
     const dataSource = element.dataSource || 'global'
+
+    const hasJourneyDate = useMemo(() => {
+        if (!journey?.getDate) {
+            return false
+        }
+
+        const date = __.ui.ui.formatJourneyDurationDates(journey.getDate())
+        return Boolean((journey?.hasTime ?? false) && date?.prefix && date?.sufix)
+    }, [journey])
+
+    const dataEditorOrderItems = orderedJourneyStatsTextItems(element.textOrder)
+        .filter(item => item.id !== 'date' || hasJourneyDate)
+    const textOrderItems = dataEditorOrderItems.filter(item => {
+        switch (item.id) {
+            case 'date':
+                return element.date === true
+            case 'location':
+                return element.location === true
+            case 'altitude':
+                return element.altitude === true
+            case 'speed':
+            case 'pace':
+                return element.performance === true
+            default:
+                return true
+        }
+    })
+    const textOrderItemIds = textOrderItems.map(item => item.id).join('|')
+    const summaryBreaks = normalizeJourneyStatsSummaryBreaks(element.summaryBreaks)
+    const summaryBreakIds = summaryBreaks.join('|')
+    const summaryBreakSet = new Set(summaryBreaks)
+    const alignedSummaryItemIds = new Set()
+    for (let index = 0; index < textOrderItems.length; index++) {
+        if (!isJourneyStatsSummaryTextItem(textOrderItems[index].id)) {
+            continue
+        }
+
+        let runEnd = index + 1
+        while (runEnd < textOrderItems.length &&
+            isJourneyStatsSummaryTextItem(textOrderItems[runEnd].id) &&
+            !summaryBreakSet.has(textOrderItems[runEnd].id)) {
+            runEnd++
+        }
+
+        if (runEnd - index > 1) {
+            for (let lockIndex = index; lockIndex < runEnd; lockIndex++) {
+                alignedSummaryItemIds.add(textOrderItems[lockIndex].id)
+            }
+        }
+
+        index = runEnd - 1
+    }
 
     const units = useMemo(() => ({
         elevation: ELEVATION_UNITS[unitSystem],
@@ -149,11 +218,63 @@ export const JourneyStatsWidgetEditor = ({entity}) => {
         }
         _curr[_keys[_keys.length - 1]] = val
 
-        if (_moveable?.current) {
-            _moveable.current.updateRect()
+        requestAnimationFrame(() => {
+            const moveable = __.ui.widgetManager.getMoveable(entity)?.current
+            moveable?.updateRect()
+            requestAnimationFrame(() => moveable?.updateRect())
+        })
+
+    }, [$configuration, element, entity])
+
+    useEffect(() => {
+        finalizeTextOrderRef.current = (orderedIds) => {
+            const currentVisibleIds = textOrderItemIds ? textOrderItemIds.split('|') : []
+            const visibleIds = new Set(currentVisibleIds)
+            const orderedVisibleIds = orderedIds.filter(id => visibleIds.has(id))
+            const currentOrder = normalizeJourneyStatsTextOrder(element.textOrder)
+            let visibleIndex = 0
+
+            const nextOrder = currentOrder.map(id => {
+                if (!visibleIds.has(id)) {
+                    return id
+                }
+
+                return orderedVisibleIds[visibleIndex++] ?? id
+            })
+
+            updateValue('textOrder', nextOrder)
+            updateValue('summaryBreaks', [])
+        }
+    }, [element.textOrder, textOrderItemIds, updateValue])
+
+    /**
+     * SortableJS initialization for text order.
+     */
+    useEffect(() => {
+        if (activeTab !== 'text-order' || !orderListRef.current || !textOrderItemIds) {
+            return
         }
 
-    }, [$configuration, element, entity, _moveable])
+        orderSortableRef.current?.destroy()
+        orderSortableRef.current = new Sortable(orderListRef.current, {
+            animation:   150,
+            forceFallback: true,
+            dataIdAttr:  'data-id',
+            handle:      '.journey-stats-text-order-row',
+            filter:      '.journey-stats-text-order-lock-button',
+            ghostClass:  'widget-row-ghost',
+            chosenClass: 'widget-row-chosen',
+            dragClass:   'widget-row-drag',
+            onEnd:       () => {
+                finalizeTextOrderRef.current?.(orderSortableRef.current.toArray())
+            },
+        })
+
+        return () => {
+            orderSortableRef.current?.destroy()
+            orderSortableRef.current = null
+        }
+    }, [activeTab, textOrderItemIds])
 
     const setSliderRef = useCallback((path) => {
         return (node) => {
@@ -322,6 +443,221 @@ export const JourneyStatsWidgetEditor = ({entity}) => {
                                </div>
                            )
 
+    const forceSummaryLineBreak = (itemId, event) => {
+        event.stopPropagation()
+
+        const ids = textOrderItemIds ? textOrderItemIds.split('|') : []
+        const currentSummaryBreaks = summaryBreakIds ? summaryBreakIds.split('|') : []
+        const currentSummaryBreakSet = new Set(currentSummaryBreaks)
+        const index = ids.indexOf(itemId)
+
+        if (index === -1) {
+            return
+        }
+
+        const hasAlignedPrevious = index > 0 &&
+            isJourneyStatsSummaryTextItem(ids[index - 1]) &&
+            !currentSummaryBreakSet.has(itemId)
+        const hasAlignedNext = index < ids.length - 1 &&
+            isJourneyStatsSummaryTextItem(ids[index + 1]) &&
+            !currentSummaryBreakSet.has(ids[index + 1])
+        const breakBeforeId = hasAlignedPrevious ? itemId : (hasAlignedNext ? ids[index + 1] : null)
+
+        if (!breakBeforeId) {
+            return
+        }
+
+        updateValue('summaryBreaks', normalizeJourneyStatsSummaryBreaks([...currentSummaryBreaks, breakBeforeId]))
+    }
+
+    const renderTextOrderRow = item => {
+        const isSummaryItem = isJourneyStatsSummaryTextItem(item.id)
+        const isAligned = alignedSummaryItemIds.has(item.id)
+
+        return (
+            <WaCard
+                appearance="outlined"
+                className="lgs--card-hoverable widget-ordering-row journey-stats-text-order-row"
+                data-id={item.id}
+                key={item.id}
+            >
+                <WaIcon name="grip-dots-vertical" variant="solid" className="icon-widget"/>
+                <WaIcon name={item.icon} variant="regular" className="icon-widget"/>
+                <div className="sortable-widget-info">{item.label}</div>
+                {isSummaryItem && isAligned && (
+                    <WaButton
+                        appearance="plain"
+                        variant="brand"
+                        size="small"
+                        className="journey-stats-text-order-lock-button"
+                        title="Force line break"
+                        onClick={event => forceSummaryLineBreak(item.id, event)}
+                        onPointerDown={event => event.stopPropagation()}
+                    >
+                        <WaIcon name="lock" variant="regular"/>
+                    </WaButton>
+                )}
+            </WaCard>
+        )
+    }
+
+    const renderDataEditorItem = (item, {showPerformanceToggle = false} = {}) => {
+        switch (item.id) {
+            case 'date':
+                if (!hasJourneyDate) {
+                    return null
+                }
+                return (
+                    <WaSwitch label-at-start size="xsmall" checked={element.date ?? false}
+                              onInput={(e) => updateValue('date', e.target.checked)}><span>Date</span></WaSwitch>
+                )
+            case 'location':
+                return (
+                    <WaSwitch label-at-start size="xsmall" checked={element.location ?? false}
+                              onInput={(e) => updateValue('location', e.target.checked)}><span>Location</span></WaSwitch>
+                )
+            case 'distance':
+                return (
+                    <div className="drawer-horizontal-line journey-stats-widget-editor-data-line">
+                        <div className="drawer-horizontal-element">
+                            <JourneyMetricsInput
+                                label={`Distance (${units.distance})`} path="distance" unit={units.distance}
+                                dataSource={dataSource}/>
+                        </div>
+                    </div>
+                )
+            case 'elevation':
+                return (
+                    <div className="drawer-horizontal-line journey-stats-widget-editor-data-line">
+                        <div className="drawer-horizontal-element">
+                            <JourneyMetricsInput
+                                label={`Elevation (${units.elevation})`} path="positive.elevation"
+                                unit={units.elevation} precision={0} dataSource={dataSource}/>
+                        </div>
+                    </div>
+                )
+            case 'duration':
+                return (
+                    <div className="drawer-horizontal-line journey-stats-widget-editor-data-line">
+                        <div className="drawer-horizontal-element">
+                            <DurationInput label="Duration" path="duration" dataSource={dataSource}/>
+                        </div>
+                    </div>
+                )
+            case 'altitude':
+                return (
+                    <>
+                        <WaSwitch label-at-start size="xsmall" checked={element.altitude ?? false}
+                                  onInput={(e) => updateValue('altitude', e.target.checked)}><span>Altitude</span></WaSwitch>
+                        {element.altitude && (
+                            <div className="drawer-horizontal-line three-columns">
+                                <div className="drawer-horizontal-element">{`Altitude (${units.elevation})`}</div>
+                                <div className="drawer-horizontal-element"><JourneyMetricsInput label="Min"
+                                                                                                path="minHeight"
+                                                                                                unit={units.elevation}
+                                                                                                precision={0}
+                                                                                                dataSource={dataSource}/>
+                                </div>
+                                <div className="drawer-horizontal-element"><JourneyMetricsInput label="Max"
+                                                                                                path="maxHeight"
+                                                                                                unit={units.elevation}
+                                                                                                precision={0}
+                                                                                                dataSource={dataSource}/>
+                                </div>
+                            </div>
+                        )}
+                    </>
+                )
+            case 'speed':
+                if (!element.performance && !showPerformanceToggle) {
+                    return null
+                }
+                return (
+                    <>
+                        {showPerformanceToggle && (
+                            <WaSwitch label-at-start size="xsmall" checked={element.performance ?? false}
+                                      onInput={(e) => updateValue('performance', e.target.checked)}><span>Speed/Pace</span></WaSwitch>
+                        )}
+                        {element.performance && (
+                            <div className="drawer-horizontal-line three-columns">
+                                <div className="drawer-horizontal-element">{`Speed (${units.speed})`}</div>
+                                <div className="drawer-horizontal-element">
+                                    <JourneyMetricsInput label={'Average'}
+                                                         path="averageSpeed"
+                                                         unit={units.speed}
+                                                         precision={1}
+                                                         dataSource={dataSource}/>
+                                </div>
+                                <div className="drawer-horizontal-element">
+                                    <JourneyMetricsInput label={'Max'}
+                                                         path="maxSpeed"
+                                                         unit={units.speed}
+                                                         precision={1}
+                                                         dataSource={dataSource}/>
+                                </div>
+                            </div>
+                        )}
+                    </>
+                )
+            case 'pace':
+                if (!element.performance && !showPerformanceToggle) {
+                    return null
+                }
+                return (
+                    <>
+                        {showPerformanceToggle && (
+                            <WaSwitch label-at-start size="xsmall" checked={element.performance ?? false}
+                                      onInput={(e) => updateValue('performance', e.target.checked)}><span>Speed/Pace</span></WaSwitch>
+                        )}
+                        {element.performance && (
+                            <div className="drawer-horizontal-line three-columns">
+                                <div className="drawer-horizontal-element">{`Pace (${units.pace})`}</div>
+                                <div className="drawer-horizontal-element">
+                                    <DurationInput label={'Average'}
+                                                   path="averagePace"
+                                                   minutes
+                                                   dataSource={dataSource}/>
+                                </div>
+                                <div className="drawer-horizontal-element">
+                                    <DurationInput label={'Max'}
+                                                   path="minPace"
+                                                   minutes
+                                                   dataSource={dataSource}/>
+                                </div>
+                            </div>
+                        )}
+                    </>
+                )
+            default:
+                return null
+        }
+    }
+
+    const renderDataEditorItems = () => {
+        let performanceToggleRendered = false
+
+        return dataEditorOrderItems.map((item, index) => {
+            const isPerformanceItem = item.id === 'speed' || item.id === 'pace'
+            const showPerformanceToggle = isPerformanceItem && !performanceToggleRendered
+
+            if (isPerformanceItem) {
+                performanceToggleRendered = true
+            }
+
+            const content = renderDataEditorItem(item, {showPerformanceToggle})
+            if (!content) {
+                return null
+            }
+
+            return (
+                <Fragment key={item.id}>
+                    {index > 0 && <WaDivider/>}
+                    {content}
+                </Fragment>
+            )
+        })
+    }
+
     if (!journeySlug || !journey) {
         return null
     }
@@ -337,6 +673,9 @@ export const JourneyStatsWidgetEditor = ({entity}) => {
                 </WaTab>
                 <WaTab slot="nav" panel="data">
                     <WaIcon size="small" name="money-check-pen"/> Data editor
+                </WaTab>
+                <WaTab slot="nav" panel="text-order">
+                    <WaIcon size="small" name="arrow-down-arrow-up"/> Text order
                 </WaTab>
 
                 <WaTabPanel name="style">
@@ -381,7 +720,6 @@ export const JourneyStatsWidgetEditor = ({entity}) => {
                                                        value={getColor(element.separator)}
                                                        onInput={(e) => updateValue('separator.color', e.target.value)}/>
                                     </div>
-                                    <div className="drawer-horizontal-element xlarge-element"></div>
                                     <div className="drawer-horizontal-element xlarge-element">
                                         <WaSlider ref={setSliderRef('separator.opacity')}
                                                   size="small"
@@ -395,6 +733,20 @@ export const JourneyStatsWidgetEditor = ({entity}) => {
                                                   valueFormatter={v => `${Math.floor(v * 100)}%`}
                                                   defaultValue={getSliderValue('separator.opacity')}
                                                   onInput={(e) => handleSliderInput('separator.opacity', e.target.value)}/>
+                                    </div>
+                                    <div className="drawer-horizontal-element xlarge-element">
+                                        <WaSlider ref={setSliderRef('separator.padding')}
+                                                  size="small"
+                                                  label="Padding"
+                                                  min={JOURNEY_STATS_SLIDERS['separator.padding'].min}
+                                                  max={JOURNEY_STATS_SLIDERS['separator.padding'].max}
+                                                  step={JOURNEY_STATS_SLIDERS['separator.padding'].step}
+                                                  label-at-start
+                                                  withTooltip
+                                                  placement="top"
+                                                  valueFormatter={v => `${Math.round(v)}px`}
+                                                  defaultValue={getSliderValue('separator.padding')}
+                                                  onInput={(e) => handleSliderInput('separator.padding', e.target.value)}/>
                                     </div>
                                 </div>
                             )}
@@ -417,81 +769,19 @@ export const JourneyStatsWidgetEditor = ({entity}) => {
                             <div className="drawer-horizontal-element">
                                 {'Source'} {sourceSelector}
                             </div>
-                            <WaSwitch label-at-start size="xsmall" checked={element.date ?? false}
-                                      onInput={(e) => updateValue('date', e.target.checked)}><span>Date</span></WaSwitch>
                             <WaDivider/>
-                            <div className="drawer-horizontal-line three-columns">
-                                <div className="drawer-horizontal-element"><JourneyMetricsInput
-                                    label={`Distance (${units.distance})`} path="distance" unit={units.distance}
-                                    dataSource={dataSource}/></div>
-                                <div className="drawer-horizontal-element"><JourneyMetricsInput
-                                    label={`Elevation (${units.elevation})`} path="positive.elevation"
-                                    unit={units.elevation} precision={0} dataSource={dataSource}/></div>
-                                <div className="drawer-horizontal-element"><DurationInput label="Duration"
-                                                                                          path="duration"
-                                                                                          dataSource={dataSource}/>
-                                </div>
+                            {renderDataEditorItems()}
+                        </WaCard>
+                    </LGSScrollbars>
+                </WaTabPanel>
+
+                <WaTabPanel name="text-order">
+                    <LGSScrollbars>
+                        <WaCard appearance="plain" orientation="vertical"
+                                className="journey-stats-text-order-editor lgs-widget-editor-card">
+                            <div ref={orderListRef} className="journey-stats-text-order-list">
+                                {textOrderItems.map(renderTextOrderRow)}
                             </div>
-                            <WaDivider/>
-                            <WaSwitch label-at-start size="xsmall" checked={element.altitude ?? false}
-                                      onInput={(e) => updateValue('altitude', e.target.checked)}><span>Altitude</span></WaSwitch>
-                            {element.altitude && (
-                                <div className="drawer-horizontal-line three-columns">
-                                    <div
-                                        className="drawer-horizontal-element">{`Altitude (${units.elevation})`}</div>
-                                    <div className="drawer-horizontal-element"><JourneyMetricsInput label="Min"
-                                                                                                    path="minHeight"
-                                                                                                    unit={units.elevation}
-                                                                                                    precision={0}
-                                                                                                    dataSource={dataSource}/>
-                                    </div>
-                                    <div className="drawer-horizontal-element"><JourneyMetricsInput label="Max"
-                                                                                                    path="maxHeight"
-                                                                                                    unit={units.elevation}
-                                                                                                    precision={0}
-                                                                                                    dataSource={dataSource}/>
-                                    </div>
-                                </div>
-                            )}
-                            <WaDivider/>
-                            <WaSwitch label-at-start size="xsmall" checked={element.performance ?? false}
-                                      onInput={(e) => updateValue('performance', e.target.checked)}><span>Speed/Pace</span></WaSwitch>
-                            {element.performance && (
-                                <div className="journey-stats-widget-editor-performance">
-                                    <div className="drawer-horizontal-line three-columns">
-                                        <div className="drawer-horizontal-element">{`Speed (${units.speed})`}</div>
-                                        <div className="drawer-horizontal-element">
-                                            <JourneyMetricsInput label={'Average'}
-                                                                 path="averageSpeed"
-                                                                 unit={units.speed}
-                                                                 precision={1}
-                                                                 dataSource={dataSource}/>
-                                        </div>
-                                        <div className="drawer-horizontal-element">
-                                            <JourneyMetricsInput label={'Max'}
-                                                                 path="maxSpeed"
-                                                                 unit={units.speed}
-                                                                 precision={1}
-                                                                 dataSource={dataSource}/>
-                                        </div>
-                                    </div>
-                                    <div className="drawer-horizontal-line three-columns">
-                                        <div className="drawer-horizontal-element">{`Pace (${units.pace})`}</div>
-                                        <div className="drawer-horizontal-element">
-                                            <DurationInput label={'Average'}
-                                                           path="averagePace"
-                                                           minutes
-                                                           dataSource={dataSource}/>
-                                        </div>
-                                        <div className="drawer-horizontal-element">
-                                            <DurationInput label={'Max'}
-                                                           path="minPace"
-                                                           minutes
-                                                           dataSource={dataSource}/>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
                         </WaCard>
                     </LGSScrollbars>
                 </WaTabPanel>

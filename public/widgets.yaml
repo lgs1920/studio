@@ -275,10 +275,22 @@ widgets:
           show: true
           color: "#ffffff"
           opacity: 1
+          padding: 0
 
         date: false
+        location: false
         altitude: false
         performance: false
+        textOrder:
+          - date
+          - location
+          - distance
+          - elevation
+          - duration
+          - altitude
+          - speed
+          - pace
+        summaryBreaks: []
 
       user:
       elements:
