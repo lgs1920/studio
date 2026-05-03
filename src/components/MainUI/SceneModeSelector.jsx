@@ -15,76 +15,127 @@
  ******************************************************************************/
 
 import { SCENE_MODES }                                             from '@Core/constants'
-import { WaButton, WaDropdown, WaDropdownItem, WaIcon, WaTooltip } from '@web.awesome.me/webawesome-pro/dist/react'
-import { Fragment, useRef } from 'react'
+import { WaButton, WaIcon, WaPopup, WaTooltip }                    from '@web.awesome.me/webawesome-pro/dist/react'
+import { Fragment, useCallback, useEffect, useRef, useState }       from 'react'
 import { useSnapshot }                                             from 'valtio/index'
 
 /**
- * Component to select the scene mode via a Web Awesome dropdown.
+ * Component to select the scene mode via a Web Awesome popup.
  * @param {Object} props - Component properties.
  * @param {string} [props.tooltip='right'] - Tooltip placement.
- * @returns {JSX.Element} The rendered dropdown selector.
+ * @returns {JSX.Element} The rendered scene mode selector.
  */
 export const SceneModeSelector = (props) => {
     // Valtio snapshots named after the store attribute
     const scene = useSnapshot(lgs.settings.scene)
     const mainUI = useSnapshot(lgs.stores.ui.mainUI)
+    const [open, setOpen] = useState(false)
 
     // Ref using the underscore prefix
-    const _dropdown = useRef(null)
+    const _selector = useRef(null)
     const placement = props.tooltip ?? 'right'
-    const dropdownPlacement = placement === 'right' ? 'right-start' : 'left-start'
+    const popupPlacement = placement === 'right' ? 'right-start' : 'left-start'
+    const disabled = mainUI.rotate.running || mainUI.panorama.active
 
     /**
      * Handles the selection of a new scene mode.
-     * @param {CustomEvent} event - The selection event.
+     * @param {number} selectedMode - The selected scene mode.
      */
-    const handleSelect = (event) => {
-        const selectedMode = parseInt(event.detail.item.value)
-        __.ui.sceneManager.morph(selectedMode, __.ui.sceneManager.afterMorphing)
-    }
+    const handleSelect = useCallback((selectedMode) => {
+        setOpen(false)
+        if (selectedMode !== scene.mode.value) {
+            __.ui.sceneManager.morph(selectedMode, __.ui.sceneManager.afterMorphing)
+        }
+    }, [scene.mode.value])
+
+    const togglePopup = useCallback(() => {
+        setOpen(current => !current)
+    }, [])
+
+    useEffect(() => {
+        if (!disabled || !open) {
+            return
+        }
+
+        const animationFrame = window.requestAnimationFrame(() => setOpen(false))
+        return () => window.cancelAnimationFrame(animationFrame)
+    }, [disabled, open])
+
+    useEffect(() => {
+        if (!open || disabled) {
+            return
+        }
+
+        const handlePointerDown = (event) => {
+            if (_selector.current && !event.composedPath().includes(_selector.current)) {
+                setOpen(false)
+            }
+        }
+
+        const handleKeyDown = (event) => {
+            if (event.key === 'Escape') {
+                setOpen(false)
+            }
+        }
+
+        document.addEventListener('pointerdown', handlePointerDown)
+        window.addEventListener('keydown', handleKeyDown, true)
+        return () => {
+            document.removeEventListener('pointerdown', handlePointerDown)
+            window.removeEventListener('keydown', handleKeyDown, true)
+        }
+    }, [disabled, open])
 
     const currentModeInfo = SCENE_MODES.get(scene.mode.value)
+    const alternateModes = scene.mode.available.filter(mode => Number(mode) !== Number(scene.mode.value))
 
     return (
-        <div className={'scene-mode-selector'}>
-            <WaDropdown ref={_dropdown}
-                        onWaSelect={handleSelect}
-                        placement={dropdownPlacement}
-                        distance={lgs.gutter.xs}
+        <div className={'scene-mode-selector toolbar-action-popup-host'} ref={_selector}>
+            <WaTooltip for="scene-mode-trigger" placement={placement}>{currentModeInfo.title}</WaTooltip>
+            <WaButton size={'small'}
+                      className={'square-button'}
+                      disabled={disabled}
+                      id="scene-mode-trigger"
+                      variant={'brand'}
+                      appearance="Filled"
+                      onClick={togglePopup}
+                      aria-haspopup="menu"
+                      aria-expanded={open && !disabled ? 'true' : 'false'}
             >
-                <WaTooltip for="scene-mode-trigger" placement={placement}>{currentModeInfo.title}</WaTooltip>
-                <WaButton slot={'trigger'}
-                          size={'small'}
-                          className={'square-button'}
-                          disabled={mainUI.rotate.running || mainUI.panorama.active}
-                          id="scene-mode-trigger"
-                          variant={'brand'}
-                          appearance="Filled"
-                >
-                    <WaIcon name={currentModeInfo.icon} variant="regular"/>
-                </WaButton>
+                <WaIcon name={currentModeInfo.icon} variant="regular"/>
+            </WaButton>
 
-
-                {
-                    scene.mode.available.map(mode => {
-                        const modeData = SCENE_MODES.get(mode)
-                        return (
-                            <Fragment key={`scene-mode-${modeData.value}`}>
-                                <WaTooltip placement={placement}
-                                           for={`scene-mode-${modeData.value}`}>{modeData.title}</WaTooltip>
-                                <WaDropdownItem
-                                    id={`scene-mode-${modeData.value}`}
-                                    key={`scene-mode-${modeData.value}`}
-                                    value={modeData.value.toString()}
-                                >
-                                    <WaIcon name={modeData.icon} variant="regular"/>
-                                </WaDropdownItem>
-                            </Fragment>
-                        )
-                    })
-                }
-            </WaDropdown>
+            <WaPopup active={open && !disabled && alternateModes.length > 0}
+                     anchor="scene-mode-trigger"
+                     placement={popupPlacement}
+                     distance={lgs.gutter.xs}
+                     flip
+                     shift>
+                <div className="toolbar-action-popup" role="menu">
+                    {
+                        alternateModes.map(mode => {
+                            const modeData = SCENE_MODES.get(mode)
+                            return (
+                                <Fragment key={`scene-mode-${modeData.value}`}>
+                                    <WaTooltip placement="top"
+                                               for={`scene-mode-${modeData.value}`}>{modeData.title}</WaTooltip>
+                                    <WaButton
+                                        id={`scene-mode-${modeData.value}`}
+                                        className="square-button"
+                                        size="small"
+                                        variant="brand"
+                                        appearance="Filled"
+                                        onClick={() => handleSelect(modeData.value)}
+                                        role="menuitem"
+                                    >
+                                        <WaIcon name={modeData.icon} variant="regular"/>
+                                    </WaButton>
+                                </Fragment>
+                            )
+                        })
+                    }
+                </div>
+            </WaPopup>
         </div>
     )
 }

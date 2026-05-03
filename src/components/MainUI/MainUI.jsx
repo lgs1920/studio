@@ -229,7 +229,7 @@ export const MainUI = memo(() => {
                             <SettingsButton tooltip={tooltipDir}/>
                             <LayersButton tooltip={tooltipDir}/>
                             <POIEditButton tooltip={tooltipDir}/>
-                            <EditorPanelButton tooltip="top"/>
+                            <EditorPanelButton tooltip={tooltipDir}/>
                             {/* <ProfileButton tooltip={tooltipDir}/> */}
                             <TextButton tooltip={tooltipDir}/>
                             <InformationButton tooltip={tooltipDir}/>

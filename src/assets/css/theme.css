@@ -463,6 +463,27 @@ wa-button::part(label) {
         height: var(--lgs-font-size-m);
     }
 
+    .toolbar-action-popup-host {
+        display: flex;
+    }
+
+    .toolbar-action-popup {
+        display: flex;
+        align-items: center;
+        flex-direction: row;
+        width: max-content;
+        min-width: max-content;
+        padding: 0;
+        gap: var(--lgs-gutter-xs);
+        border: 0;
+        background: transparent;
+        box-shadow: none;
+    }
+
+    .toolbar-action-popup--reverse {
+        flex-direction: row-reverse;
+    }
+
     wa-button:not(.square-button) wa-icon[slot="start"] {
         margin-right: var(--lgs-gutter-s);
     }
