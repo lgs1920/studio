@@ -200,6 +200,38 @@ wa-tab sl-icon {
     color: var(--wa-color-brand-on-normal);
 }
 
+#journey-editor-drawer .lgs--elevation-source-select::part(form-control-label),
+#journey-editor-drawer .lgs--elevation-source-select::part(label) {
+    font-size: var(--lgs-font-size);
+    font-weight: normal;
+    line-height: var(--wa-form-control-label-line-height);
+    color: var(--wa-form-control-label-color);
+}
+
+.lgs--journey-location-in-settings,
+.track-location {
+    font-size: var(--lgs-font-size);
+    line-height: var(--wa-form-control-label-line-height);
+    display: flex;
+    align-items: center;
+    min-width: 0;
+    color: var(--wa-form-control-label-color);
+    gap: var(--lgs-gutter-xs);
+}
+
+.lgs--journey-location-in-settings wa-icon,
+.track-location wa-icon {
+    flex: 0 0 auto;
+    color: var(--wa-color-brand);
+}
+
+.lgs--journey-location-in-settings span,
+.track-location span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 wa-tab::part(base) {
     padding: var(--lgs-gutter-s);
 }
@@ -251,6 +283,40 @@ wa-tab::part(base) {
     flex-direction: column;
     gap: var(--lgs-gutter-s);
     margin-bottom: var(--lgs-gutter);
+}
+
+.journey-export-dialog-content {
+    display: flex;
+    flex-direction: column;
+    gap: var(--lgs-gutter-s);
+}
+
+.journey-export-dialog-content p {
+    margin: 0;
+}
+
+.journey-export-controls {
+    --wa-form-control-height: 2rem;
+    display: flex;
+    align-items: center;
+    gap: var(--lgs-gutter-xs);
+    width: 100%;
+}
+
+.journey-export-file-name {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.journey-export-format {
+    flex: 0 0 9rem;
+    width: 9rem;
+}
+
+.journey-export-controls wa-input::part(base),
+.journey-export-controls wa-select::part(combobox) {
+    height: var(--wa-form-control-height);
+    min-height: var(--wa-form-control-height);
 }
 
 #journey-settings .editor-preview-zone {

@@ -57,7 +57,9 @@ import {
     FEATURE_MULTILINE_STRING, FEATURE_POINT, TrackUtils,
 }                                     from '@Utils/cesium/TrackUtils'
 import {
-    exportJourneyToGPX, getExportableJourneyPOIs, getJourneyGpxFileName, GPX_MIME_TYPE,
+    exportJourneyToGeoJSON, exportJourneyToGPX, getExportableJourneyPOIs, getJourneyExportFileName,
+    JOURNEY_EXPORT_FORMAT_LABELS, JOURNEY_EXPORT_FORMATS, JOURNEY_EXPORT_MIME_TYPES,
+    normalizeJourneyExportFileName,
 }                                     from '@Utils/JourneyGpxUtils'
 import {
     UIToast,
@@ -66,7 +68,7 @@ import { decodeHTMLEntities }         from '@Utils/TextUtils'
 import {
     WaButton, WaCard, WaIcon, WaInput, WaOption, WaSelect, WaTab, WaTabGroup, WaTabPanel, WaTextarea, WaTooltip,
 }                                     from '@web.awesome.me/webawesome-pro/dist/react'
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { sprintf }                    from 'sprintf-js'
 import { useSnapshot }                from 'valtio'
 import {
@@ -94,17 +96,24 @@ export const JourneySettings = () => {
     const $drawers = lgs.stores.ui.drawers
 
     // Snapshots
-    const {journey, isProcessing} = useSnapshot($journeyEditor)
+    const {journey} = useSnapshot($journeyEditor)
     const {running, target} = useSnapshot($uiRotate)
     const {journey: autoRotateJourney} = useSnapshot($cameraSettings)
     const {open} = useSnapshot($drawers)
     const activitySettings = useSnapshot(lgs.settings.journey.activity)
+    const journeySlug = journey?.slug ?? null
 
     const _title = useRef(null)
     const _description = useRef(null)
     const _manualRotate = useRef(null)
     const _tabGroup = useRef(null)
     const _elevationRequestId = useRef(0)
+    const _exportFormat = useRef(JOURNEY_EXPORT_FORMATS.GPX)
+    const _exportFileName = useRef('')
+
+    const [exportFormat, setExportFormatState] = useState(JOURNEY_EXPORT_FORMATS.GPX)
+    const [exportFileName, setExportFileNameState] = useState('')
+    const [journeyLocationState, setJourneyLocationState] = useState({slug: null, value: ''})
 
     // Local state-like ref for rotation toggle
     const _allowRotation = useRef(false)
@@ -341,19 +350,75 @@ export const JourneySettings = () => {
         $journeyEditor.showPOIsFilter = tabName === POIS && e.type === 'wa-tab-show'
     }
 
+    const setExportFormatValue = (format) => {
+        _exportFormat.current = format
+        setExportFormatState(format)
+    }
+
+    const setExportFileNameValue = (fileName) => {
+        _exportFileName.current = fileName
+        setExportFileNameState(fileName)
+    }
+
+    const resetExportDialog = (currentJourney) => {
+        const format = JOURNEY_EXPORT_FORMATS.GPX
+        setExportFormatValue(format)
+        setExportFileNameValue(getJourneyExportFileName(currentJourney, format))
+    }
+
+    const handleExportFileNameChange = (event) => {
+        event.stopPropagation()
+        setExportFileNameValue(event.target.value)
+    }
+
+    const handleExportFormatChange = (event) => {
+        event.stopPropagation()
+        const format = event.target.value || JOURNEY_EXPORT_FORMATS.GPX
+        setExportFormatValue(format)
+        setExportFileNameValue(normalizeJourneyExportFileName(_exportFileName.current, format, lgs.theJourney))
+    }
+
+    const keepExportFormatPopoverInDialog = (event) => {
+        event.stopPropagation()
+    }
+
     const ExportJourneyMessage = () => {
         const poiCount = getExportableJourneyPOIs(lgs.theJourney).length
+        const formatLabel = JOURNEY_EXPORT_FORMAT_LABELS[exportFormat] ?? JOURNEY_EXPORT_FORMAT_LABELS.gpx
         return (
-            <p>
-                {`Export GPX with ${journey?.tracks?.size ?? 0} track(s) and ${poiCount} associated POI(s). Start and end flags are regenerated on import and are not exported as POIs.`}
-            </p>
+            <div className="journey-export-dialog-content">
+                <p>{`Export ${formatLabel} with ${journey?.tracks?.size ?? 0} track(s) and ${poiCount} associated POI(s).`}</p>
+                <div className="journey-export-controls">
+                    <WaInput
+                        aria-label="Export file name"
+                        className="journey-export-file-name"
+                        value={exportFileName}
+                        size="small"
+                        onInput={handleExportFileNameChange}
+                    />
+                    <WaSelect
+                        aria-label="Export format"
+                        className="journey-export-format"
+                        value={exportFormat}
+                        size="small"
+                        onChange={handleExportFormatChange}
+                        onWaShow={keepExportFormatPopoverInDialog}
+                        onWaAfterShow={keepExportFormatPopoverInDialog}
+                        onWaHide={keepExportFormatPopoverInDialog}
+                        onWaAfterHide={keepExportFormatPopoverInDialog}
+                    >
+                        <WaOption value={JOURNEY_EXPORT_FORMATS.GPX}>gpx</WaOption>
+                        <WaOption value={JOURNEY_EXPORT_FORMATS.GEOJSON}>geojson</WaOption>
+                    </WaSelect>
+                </div>
+            </div>
         )
     }
 
     const [ConfirmExportJourneyDialog, confirmExportJourney] = useConfirm(
         `${'Export'}&nbsp;<strong>${journey?.title}</strong> ?`,
         ExportJourneyMessage,
-        {icon: 'download', text: 'Export GPX'},
+        {icon: 'download', text: `Export ${JOURNEY_EXPORT_FORMAT_LABELS[exportFormat] ?? JOURNEY_EXPORT_FORMAT_LABELS.gpx}`},
     )
 
     const exportJourney = async () => {
@@ -361,6 +426,7 @@ export const JourneySettings = () => {
         if (!currentJourney) {
             return
         }
+        resetExportDialog(currentJourney)
 
         const confirmed = await confirmExportJourney()
         if (!confirmed) {
@@ -369,9 +435,12 @@ export const JourneySettings = () => {
 
         try {
             const pois = getExportableJourneyPOIs(currentJourney)
-            const content = exportJourneyToGPX(currentJourney, {pois})
-            const fileName = getJourneyGpxFileName(currentJourney)
-            await Export.toFile(content, fileName, GPX_MIME_TYPE)
+            const format = _exportFormat.current
+            const content = format === JOURNEY_EXPORT_FORMATS.GEOJSON
+                            ? exportJourneyToGeoJSON(currentJourney, {pois})
+                            : exportJourneyToGPX(currentJourney, {pois})
+            const fileName = normalizeJourneyExportFileName(_exportFileName.current, format, currentJourney)
+            await Export.toFile(content, fileName, JOURNEY_EXPORT_MIME_TYPES[format])
 
             UIToast.success({
                                 caption: 'Export success',
@@ -396,9 +465,39 @@ export const JourneySettings = () => {
         return () => lgs.stores.ui.mainUI.removeJourneyDialog.active.set(REMOVE_JOURNEY_IN_EDIT, false)
     }, [])
 
+    useEffect(() => {
+        let isMounted = true
+
+        if (!journeySlug || open !== JOURNEY_EDITOR_DRAWER || !__.ui.geocoder?.getJourneyLocation) {
+            return () => {
+                isMounted = false
+            }
+        }
+
+        const currentJourney = lgs.getJourneyBySlug(journeySlug) ?? lgs.theJourney
+
+        __.ui.geocoder.getJourneyLocation(currentJourney)
+            .then(location => {
+                if (isMounted) {
+                    setJourneyLocationState({slug: journeySlug, value: location})
+                }
+            })
+            .catch(error => {
+                console.error(error)
+                if (isMounted) {
+                    setJourneyLocationState({slug: journeySlug, value: ''})
+                }
+            })
+
+        return () => {
+            isMounted = false
+        }
+    }, [journeySlug, open])
+
     const shouldRender = journey && open === JOURNEY_EDITOR_DRAWER
     const textVisibilityJourney = sprintf('%s Journey', journey?.visible ? 'Hide' : 'Show')
     const textVisibilityPOIs = sprintf('%s POIs', journey?.POIsVisible ? 'Hide' : 'Show')
+    const journeyLocation = journeyLocationState.slug === journeySlug ? journeyLocationState.value : ''
 
     return (
         <>
@@ -457,6 +556,13 @@ export const JourneySettings = () => {
                                             </WaOption>
                                         ))}
                                     </WaSelect>
+
+                                    {journeyLocation && (
+                                        <div className="lgs--journey-location-in-settings">
+                                            <WaIcon name="location-dot" variant="regular"/>
+                                            <span>{journeyLocation}</span>
+                                        </div>
+                                    )}
 
                                     <WaTextarea
                                         label={journey.tracks.size === 1 ? 'Description' : 'Journey Description'}

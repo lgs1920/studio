@@ -409,7 +409,11 @@ export const ElevationProfile = (props) => {
 
     return (
         <>
-            <WaSelect size="small" label={props.label} value={selectedServer} onChange={handleServerChange}>
+            <WaSelect className="lgs--elevation-source-select"
+                      size="small"
+                      label={props.label}
+                      value={selectedServer}
+                      onChange={handleServerChange}>
                 {props.servers.map(s => (
                     <WaOption key={s.id} value={s.id}>
                         <WaIcon name={selectedServer === s.id ? (s.iconSelection || s.icon) : s.icon} slot="start"

@@ -21,6 +21,22 @@ import { decodeHTMLEntities } from '@Utils/TextUtils'
 
 export const LGS_GPX_NAMESPACE = 'https://www.lgs1920.fr/gpx/1'
 export const GPX_MIME_TYPE = 'application/gpx+xml;charset=utf-8'
+export const GEOJSON_MIME_TYPE = 'application/geo+json;charset=utf-8'
+
+export const JOURNEY_EXPORT_FORMATS = {
+    GPX:     'gpx',
+    GEOJSON: 'geojson',
+}
+
+export const JOURNEY_EXPORT_FORMAT_LABELS = {
+    [JOURNEY_EXPORT_FORMATS.GPX]:     'GPX',
+    [JOURNEY_EXPORT_FORMATS.GEOJSON]: 'GeoJSON',
+}
+
+export const JOURNEY_EXPORT_MIME_TYPES = {
+    [JOURNEY_EXPORT_FORMATS.GPX]:     GPX_MIME_TYPE,
+    [JOURNEY_EXPORT_FORMATS.GEOJSON]: GEOJSON_MIME_TYPE,
+}
 
 const GPX_NAMESPACE = 'http://www.topografix.com/GPX/1/1'
 const GPX_SCHEMA = 'http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd'
@@ -61,6 +77,18 @@ const toJson = value => {
     }
     return JSON.stringify(value)
 }
+
+const compactObject = object => Object.fromEntries(
+    Object.entries(object).filter(([, value]) => value !== undefined && value !== null && value !== ''),
+)
+
+const deepClone = value => JSON.parse(JSON.stringify(value))
+
+const lgsProperties = object => compactObject(
+    Object.fromEntries(
+        Object.entries(object).map(([key, value]) => [`${LGS_PROPERTY_PREFIX}${key}`, value]),
+    ),
+)
 
 const lgsElement = (name, value, indent = '      ') => {
     if (value === undefined || value === null || value === '') {
@@ -106,6 +134,9 @@ const parseJson = value => {
     if (!value) {
         return undefined
     }
+    if (typeof value === 'object') {
+        return value
+    }
 
     try {
         return JSON.parse(value)
@@ -138,12 +169,26 @@ const readLgsExtensionFields = (extensionsNode) => {
 }
 
 export const getJourneyGpxFileName = (journey) => {
+    return getJourneyExportFileName(journey, JOURNEY_EXPORT_FORMATS.GPX)
+}
+
+export const getJourneyExportFileName = (journey, format = JOURNEY_EXPORT_FORMATS.GPX) => {
     const fallback = journey?.slug?.replaceAll('#', '-') || 'journey'
     const title = journey?.title || fallback
     const slugify = globalThis.__?.app?.slugify
     const name = slugify ? slugify(title) : `${title}`.toLowerCase().replace(/[^\w-]+/g, '-')
+    const extension = format === JOURNEY_EXPORT_FORMATS.GEOJSON ? JOURNEY_EXPORT_FORMATS.GEOJSON : JOURNEY_EXPORT_FORMATS.GPX
 
-    return `${name || fallback}.gpx`
+    return `${name || fallback}.${extension}`
+}
+
+export const normalizeJourneyExportFileName = (fileName, format = JOURNEY_EXPORT_FORMATS.GPX, journey = null) => {
+    const fallback = getJourneyExportFileName(journey, format)
+    const extension = format === JOURNEY_EXPORT_FORMATS.GEOJSON ? JOURNEY_EXPORT_FORMATS.GEOJSON : JOURNEY_EXPORT_FORMATS.GPX
+    const candidate = `${fileName ?? ''}`.trim() || fallback
+    const baseName = candidate.replace(/\.(gpx|geojson|json)$/i, '')
+
+    return `${baseName || fallback.replace(/\.(gpx|geojson|json)$/i, '')}.${extension}`
 }
 
 export const isExportableJourneyPOI = poi => {
@@ -266,6 +311,31 @@ const trackToGpx = track => {
     ].filter(Boolean).join('\n')
 }
 
+const getTrackLgsProperties = track => lgsProperties({
+    id:        track.id,
+    slug:      track.slug,
+    parent:    track.parent,
+    color:     track.color,
+    thickness: track.thickness,
+    visible:   track.visible,
+})
+
+const trackToGeoJsonFeature = track => {
+    if (!track?.content) {
+        return null
+    }
+
+    const feature = deepClone(track.content)
+    feature.properties = compactObject({
+        ...(feature.properties ?? {}),
+        name: track.title ?? feature.properties?.name ?? 'Track',
+        desc: track.description ?? feature.properties?.desc,
+        ...getTrackLgsProperties(track),
+    })
+
+    return feature
+}
+
 const resolvePoiParentKind = (journey, poi) => {
     if (poi?.parent === journey?.slug) {
         return 'journey'
@@ -331,6 +401,69 @@ const poiToGpx = (journey, poi) => {
     ].filter(Boolean).join('\n')
 }
 
+const getPoiEffectiveHeight = poi => finiteNumber(poi.height) ?? finiteNumber(poi.simulatedHeight)
+
+const getPoiLgsProperties = (journey, poi) => lgsProperties({
+    id:               poi.id,
+    parent:           poi.parent,
+    parentKind:       resolvePoiParentKind(journey, poi),
+    parentTrackTitle: resolvePoiParentTrackTitle(journey, poi),
+    type:             poi.type ?? POI_STANDARD_TYPE,
+    category:         poi.category ?? POI_STANDARD_TYPE,
+    color:            poi.color,
+    bgColor:          poi.bgColor,
+    visible:          poi.visible,
+    expanded:         poi.expanded,
+    animated:         poi.animated,
+    height:           poi.height,
+    simulatedHeight:  poi.simulatedHeight,
+    distance:         poi.distance,
+    cameraDistance:   poi.cameraDistance,
+    camera:           isSerializableObject(poi.camera) ? poi.camera : undefined,
+})
+
+const poiToGeoJsonFeature = (journey, poi) => {
+    if (!isExportableJourneyPOI(poi)) {
+        return null
+    }
+
+    const height = getPoiEffectiveHeight(poi)
+    const coordinates = [finiteNumber(poi.longitude), finiteNumber(poi.latitude)]
+    if (height !== undefined) {
+        coordinates.push(height)
+    }
+
+    const category = poi.category ?? POI_STANDARD_TYPE
+
+    return {
+        type:       'Feature',
+        properties: compactObject({
+            name: poi.title || poi.name || 'POI',
+            desc: poi.description,
+            type: category,
+            sym:  category,
+            time: poi.time,
+            ...getPoiLgsProperties(journey, poi),
+        }),
+        geometry:   {
+            type: 'Point',
+            coordinates,
+        },
+    }
+}
+
+const getJourneyLgsProperties = journey => lgsProperties({
+    slug:             journey?.slug,
+    activity:         journey?.activity,
+    activitySettings: journey?.activitySettings,
+    visible:          journey?.visible,
+    POIsVisible:      journey?.POIsVisible,
+    elevationServer:  journey?.elevationServer,
+    camera:           isSerializableObject(journey?.camera) ? journey.camera : undefined,
+    rotation:         isSerializableObject(journey?.rotation) ? journey.rotation : undefined,
+    panorama:         isSerializableObject(journey?.panorama) ? journey.panorama : undefined,
+})
+
 export const exportJourneyToGPX = (journey, {pois = undefined, createdAt = new Date().toISOString()} = {}) => {
     const exportablePois = getExportableJourneyPOIs(journey, pois)
     const tracks = Array.from(journey?.tracks?.values?.() ?? [])
@@ -368,6 +501,26 @@ export const exportJourneyToGPX = (journey, {pois = undefined, createdAt = new D
     ].filter(line => line !== '').join('\n')
 }
 
+export const exportJourneyToGeoJSON = (journey, {pois = undefined, createdAt = new Date().toISOString()} = {}) => {
+    const exportablePois = getExportableJourneyPOIs(journey, pois)
+    const features = [
+        ...exportablePois.map(poi => poiToGeoJsonFeature(journey, poi)),
+        ...Array.from(journey?.tracks?.values?.() ?? []).map(trackToGeoJsonFeature),
+    ].filter(Boolean)
+
+    return JSON.stringify({
+        type:       'FeatureCollection',
+        properties: compactObject({
+            name:    journey?.title ?? 'Journey',
+            desc:    journey?.description,
+            creator: APP_STUDIO,
+            time:    createdAt,
+            ...getJourneyLgsProperties(journey),
+        }),
+        features,
+    }, null, 2)
+}
+
 export const extractJourneyMetadataFromGpxDocument = (document) => {
     const root = document?.documentElement
     const metadataNode = directChild(root, 'metadata')
@@ -384,6 +537,23 @@ export const extractJourneyMetadataFromGpxDocument = (document) => {
         camera:           parseJson(extensions.camera),
         rotation:         parseJson(extensions.rotation),
         panorama:         parseJson(extensions.panorama),
+    }
+}
+
+export const extractJourneyMetadataFromGeoJson = (geoJson = {}) => {
+    const properties = geoJson.properties ?? {}
+
+    return {
+        title:            properties.name,
+        description:      properties.desc ?? properties.description,
+        activity:         lgsProperty(properties, 'activity'),
+        activitySettings: lgsProperty(properties, 'activitySettings'),
+        visible:          parseBoolean(lgsProperty(properties, 'visible')),
+        POIsVisible:      parseBoolean(lgsProperty(properties, 'POIsVisible')),
+        elevationServer:  lgsProperty(properties, 'elevationServer'),
+        camera:           lgsProperty(properties, 'camera'),
+        rotation:         lgsProperty(properties, 'rotation'),
+        panorama:         lgsProperty(properties, 'panorama'),
     }
 }
 

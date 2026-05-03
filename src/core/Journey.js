@@ -27,7 +27,8 @@ import {
     FEATURE_COLLECTION, FEATURE_LINE_STRING, FEATURE_MULTILINE_STRING, FEATURE_POINT, IMPORT_LOADING_ERROR, TrackUtils,
 }                             from '@Utils/cesium/TrackUtils'
 import {
-    extractJourneyMetadataFromGpxDocument, extractLgsPoiProperties, extractLgsTrackProperties,
+    extractJourneyMetadataFromGeoJson, extractJourneyMetadataFromGpxDocument, extractLgsPoiProperties,
+    extractLgsTrackProperties,
 }                             from '@Utils/JourneyGpxUtils'
 import { decodeHTMLEntities } from '@Utils/TextUtils'
 import { UIToast }            from '@Utils/UIToast'
@@ -331,7 +332,7 @@ export class Journey extends MapElement {
                 case GPX: {
                     const gpxDocument = new DOMParser().parseFromString(content, 'text/xml')
                     this.geoJson = gpx(gpxDocument)
-                    this.#applyGpxMetadata(extractJourneyMetadataFromGpxDocument(gpxDocument))
+                    this.#applyJourneyMetadata(extractJourneyMetadataFromGpxDocument(gpxDocument))
                     break
                 }
                 case KMZ :
@@ -343,6 +344,7 @@ export class Journey extends MapElement {
                 case JSON_:
                 case GEOJSON :
                     this.geoJson = JSON.parse(content)
+                    this.#applyJourneyMetadata(extractJourneyMetadataFromGeoJson(this.geoJson))
             }
 
         }
@@ -357,7 +359,7 @@ export class Journey extends MapElement {
         }
     }
 
-    #applyGpxMetadata = (metadata = {}) => {
+    #applyJourneyMetadata = (metadata = {}) => {
         if (metadata.title) {
             this.title = decodeHTMLEntities(metadata.title)
         }
@@ -534,7 +536,7 @@ export class Journey extends MapElement {
 
                     const key = getCoordKey(lon, lat)
                     const existingPoi = existingLookup.get(key)
-                    const importedHeight = lgsPoi.height ?? z ?? undefined
+                    const importedHeight = lgsPoi.height ?? (lgsPoi.simulatedHeight !== undefined ? undefined : z ?? undefined)
                     const importedParent = resolveImportedPoiParent(lgsPoi)
                     const importedType = lgsPoi.type ?? POI_STANDARD_TYPE
                     const importedCategory = lgsPoi.category ?? POI_STANDARD_TYPE

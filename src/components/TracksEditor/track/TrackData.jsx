@@ -377,7 +377,7 @@ export const TrackData = memo(() => {
 
             <WaDivider/>
 
-            {hasDuration && <DateInfo date={trackDate}/>}
+            <DateInfo date={trackDate} track={track}/>
 
             {
                 lgs.theJourney.hasSeveralTracks() && (

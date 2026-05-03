@@ -17,7 +17,8 @@
 import { describe, expect, it } from 'vitest'
 import { gpx }                  from '@tmcw/togeojson'
 import {
-    exportJourneyToGPX, extractJourneyMetadataFromGpxDocument, extractLgsPoiProperties, getExportableJourneyPOIs,
+    exportJourneyToGeoJSON, exportJourneyToGPX, extractJourneyMetadataFromGeoJson, extractJourneyMetadataFromGpxDocument,
+    extractLgsPoiProperties, getExportableJourneyPOIs,
 }                               from '@Utils/JourneyGpxUtils'
 
 const trackSlug = 'track#round-trip#gpx#main-track'
@@ -160,5 +161,28 @@ describe('journey GPX export', () => {
         expect(poiMetadata.category).toBe('summit')
         expect(poiMetadata.visible).toBe(false)
         expect(poiMetadata.height).toBe(112)
+    })
+})
+
+describe('journey GeoJSON export', () => {
+    it('exports tracks and associated POIs without start/end POIs', () => {
+        const journey = makeJourney()
+        const geoJson = JSON.parse(exportJourneyToGeoJSON(journey, {
+            pois:      makePois(),
+            createdAt: '2026-05-02T10:00:00.000Z',
+        }))
+        const pointFeatures = geoJson.features.filter(feature => feature.geometry.type === 'Point')
+        const lineFeatures = geoJson.features.filter(feature => feature.geometry.type === 'LineString')
+        const metadata = extractJourneyMetadataFromGeoJson(geoJson)
+
+        expect(metadata.activity).toBe('bike')
+        expect(metadata.activitySettings.maxSpeed).toBe(16)
+        expect(pointFeatures).toHaveLength(2)
+        expect(lineFeatures).toHaveLength(1)
+        expect(pointFeatures.map(feature => feature.properties.name)).toEqual(['Summit & Cafe', 'Shelter'])
+        expect(pointFeatures.map(feature => feature.properties.lgs_id)).not.toContain('flag-start')
+        expect(pointFeatures[0].properties.lgs_category).toBe('summit')
+        expect(pointFeatures[0].geometry.coordinates).toEqual([6.15, 45.15, 112])
+        expect(lineFeatures[0].properties.lgs_color).toBe('#ffcc00')
     })
 })
