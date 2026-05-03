@@ -56,6 +56,10 @@ export class SceneManager {
      * @param callback {function}   called  at the end of morphing
      */
     morph = (mode, callback = null) => {
+        if (Number(mode) === Number(SCENE_MODE_2D.value) && lgs.stores.ui.mainUI.panorama.active) {
+            void __.ui.poiManager?.stopRotationAndSync?.()
+        }
+
         // update settings
         lgs.settings.scene.mode.value = mode
         SceneUtils.morph(mode, callback)

@@ -14,7 +14,7 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { CURRENT_MAP_POINT, CURRENT_POI, VIDEO_CROP_ZONE } from '@Core/constants'
+import { CURRENT_MAP_POINT, CURRENT_POI, SCENE_MODE_2D, VIDEO_CROP_ZONE } from '@Core/constants'
 import { hasActiveAppShortcutBlocker } from '@Core/events/shortcutBlockers'
 import { MapTarget } from '@Core/MapTarget'
 import { getOrbitSettings, setOrbitStoreSettings } from '@Core/OrbitSettings'
@@ -192,6 +192,8 @@ const currentCameraOrbitOptions = () => {
     }
 }
 
+const isScene2D = () => Number(lgs.settings.scene.mode.value) === Number(SCENE_MODE_2D.value)
+
 const toggleJourneyToolbar = () => {
     const toolbar = lgs.settings.ui.journeyToolbar
     toolbar.usage = true
@@ -308,6 +310,11 @@ const togglePanorama = () => {
 
     if (panorama.active) {
         return __.ui.poiManager.stopRotationAndSync().then(() => true)
+    }
+
+    if (isScene2D()) {
+        console.warn('Panorama mode is not available in 2D')
+        return false
     }
 
     return (async () => {

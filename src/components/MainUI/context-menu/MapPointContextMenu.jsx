@@ -14,14 +14,14 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { CURRENT_MAP_POINT, POI_STANDARD_TYPE, POIS_EDITOR_DRAWER, ROTATION_ICON } from '@Core/constants'
+import {
+    CURRENT_MAP_POINT, POI_STANDARD_TYPE, POIS_EDITOR_DRAWER, ROTATION_ICON, SCENE_MODE_2D,
+} from '@Core/constants'
 import { MapPOI }                                                                  from '@Core/MapPOI'
 import { getOrbitSettings, setOrbitStoreSettings }                                 from '@Core/OrbitSettings'
 import { ELEVATION_UNITS, UnitUtils }                                              from '@Utils/UnitUtils'
 import { UIToast }                                                                 from '@Utils/UIToast'
-import {
-    WaButton, WaDivider, WaIcon,
-}                                                                                  from '@web.awesome.me/webawesome-pro/dist/react'
+import { WaButton, WaDivider, WaIcon }                                             from '@web.awesome.me/webawesome-pro/dist/react'
 import { useCallback, useMemo }                                                    from 'react'
 import { useSnapshot }                                                             from 'valtio'
 
@@ -31,8 +31,10 @@ export const MapPointContextMenu = ({target, menuRef}) => {
     const toolbars = useSnapshot(lgs.settings.ui.toolbars)
     const rotateState = useSnapshot(lgs.stores.ui.mainUI.rotate)
     const panoramaState = useSnapshot(lgs.stores.ui.mainUI.panorama)
+    const sceneMode = useSnapshot(lgs.settings.scene.mode)
     const coordinateSystem = lgs.settings.coordinateSystem.current
     const unitSystem = lgs.settings.unitSystem.current
+    const panoramaAllowed = Number(sceneMode.value) !== Number(SCENE_MODE_2D.value)
 
     const hideMenu = useCallback(() => __.ui.contextMenu.hide(), [])
     const openEditDrawer = useCallback((poiId) => {
@@ -137,7 +139,7 @@ export const MapPointContextMenu = ({target, menuRef}) => {
     }, [hideMenu, target])
 
     const startPanoramic = useCallback(async () => {
-        if (!target) {
+        if (!target || !panoramaAllowed) {
             return
         }
 
@@ -154,7 +156,7 @@ export const MapPointContextMenu = ({target, menuRef}) => {
         setOrbitStoreSettings(panorama, panoramaSettings)
         panorama.active = true
         hideMenu()
-    }, [hideMenu, target])
+    }, [hideMenu, panoramaAllowed, target])
 
     const stopRotation = useCallback(async () => {
         await __.ui.poiManager.stopRotationAndSync()
@@ -234,9 +236,11 @@ export const MapPointContextMenu = ({target, menuRef}) => {
                          <li onClick={rotateAroundPoint}>
                              <WaIcon name={ROTATION_ICON} variant="regular"/>{'Rotate Around'}
                          </li>
-                         <li onClick={startPanoramic}>
-                             <WaIcon name="panorama" variant="regular"/>{'Panoramic'}
-                         </li>
+                         {panoramaAllowed && (
+                             <li onClick={startPanoramic}>
+                                 <WaIcon name="panorama" variant="regular"/>{'Panoramic'}
+                             </li>
+                         )}
                      </>
                  )}
             </ul>

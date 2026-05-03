@@ -16,7 +16,7 @@
 
 import {
     CURRENT_POI, POI_FLAG_START, POI_FLAG_STOP, POI_STANDARD_TYPE, POI_STARTER_TYPE, POI_TMP_TYPE, POIS_EDITOR_DRAWER,
-    ROTATION_ICON,
+    ROTATION_ICON, SCENE_MODE_2D,
 }                                       from '@Core/constants'
 import { getOrbitSettings, setOrbitStoreSettings } from '@Core/OrbitSettings'
 import { ELEVATION_UNITS, UnitUtils }       from '@Utils/UnitUtils'
@@ -47,9 +47,11 @@ export const MapPOIContextMenu = ({menuRef, targetId}) => {
     const thePOI = targetId?.id
     const $pois = lgs.stores.main.components.pois
     const rotateState = useSnapshot(lgs.stores.ui.mainUI.rotate)
+    const sceneMode = useSnapshot(lgs.settings.scene.mode)
     const toolbars = useSnapshot(lgs.settings.ui.toolbars)
     const coordinateSystem = lgs.settings.coordinateSystem.current
     const unitSystem = lgs.settings.unitSystem.current
+    const panoramaAllowed = Number(sceneMode.value) !== Number(SCENE_MODE_2D.value)
 
     // POI Data Access
     const $targetPoi = thePOI ? $pois.list.get(thePOI) : null
@@ -140,6 +142,10 @@ export const MapPOIContextMenu = ({menuRef, targetId}) => {
 
     /** Starts a panoramic rotation of the camera. */
     const startPanoramic = useCallback(async () => {
+        if (!panoramaAllowed) {
+            return
+        }
+
         if (__.ui.cameraManager.isRotating()) {
             await __.ui.poiManager.stopRotationAndSync()
         }
@@ -159,7 +165,7 @@ export const MapPOIContextMenu = ({menuRef, targetId}) => {
         setOrbitStoreSettings(panorama, storedPanorama)
         panorama.active = true
         hideMenu()
-    }, [currentPoi, hideMenu])
+    }, [currentPoi, hideMenu, panoramaAllowed])
 
     const stopPanoramic = useCallback(async () => {
         await __.ui.poiManager.stopRotationAndSync()
@@ -317,9 +323,11 @@ export const MapPOIContextMenu = ({menuRef, targetId}) => {
                          <li onClick={toggleRotation}>
                              <WaIcon name={ROTATION_ICON} variant="regular"/>{'Rotate Around'}
                          </li>
-                         <li onClick={startPanoramic}>
-                             <WaIcon name="panorama" variant="regular"/>{'Panoramic'}
-                         </li>
+                         {panoramaAllowed && (
+                             <li onClick={startPanoramic}>
+                                 <WaIcon name="panorama" variant="regular"/>{'Panoramic'}
+                             </li>
+                         )}
                      </>
                  )}
             </ul>

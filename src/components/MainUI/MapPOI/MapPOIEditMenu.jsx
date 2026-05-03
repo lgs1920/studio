@@ -22,13 +22,13 @@
  ******************************************************************************/
 
 import {
-    CURRENT_POI, POI_FLAG_START, POI_FLAG_STOP, POI_STARTER_TYPE,
+    CURRENT_POI, POI_FLAG_START, POI_FLAG_STOP, POI_STARTER_TYPE, SCENE_MODE_2D,
 }                                                      from '@Core/constants'
 import { getOrbitSettings, setOrbitStoreSettings }     from '@Core/OrbitSettings'
 
 import { UIToast }                                     from '@Utils/UIToast'
 import { WaButton, WaDivider, WaDropdown, WaDropdownItem, WaIcon } from '@web.awesome.me/webawesome-pro/dist/react'
-import React, { memo, useMemo, useCallback } from 'react'
+import { memo, useMemo, useCallback } from 'react'
 import { proxy, useSnapshot } from 'valtio'
 
 const EMPTY_POI_PROXY = proxy({})
@@ -36,6 +36,8 @@ const EMPTY_POI_PROXY = proxy({})
 export const MapPOIEditMenu = memo(({poiId}) => {
     const $pois = lgs.stores.main.components.pois
     const rotateState = useSnapshot(lgs.stores.ui.mainUI.rotate)
+    const sceneMode = useSnapshot(lgs.settings.scene.mode)
+    const panoramaAllowed = Number(sceneMode.value) !== Number(SCENE_MODE_2D.value)
 
     /**
      * Subscribe to POI proxy directly so property changes (visible/animated/etc.)
@@ -43,10 +45,7 @@ export const MapPOIEditMenu = memo(({poiId}) => {
      */
     const $point = $pois.list.get(poiId)
     const pointSnap = useSnapshot($point ?? EMPTY_POI_PROXY)
-
-    if (!pointSnap || !$point) {
-        return null
-    }
+    const pointAvailable = Boolean(pointSnap && $point)
 
     const isVisible = pointSnap.visible ?? true
     const isPOIRotating = useMemo(
@@ -86,6 +85,10 @@ export const MapPOIEditMenu = memo(({poiId}) => {
 
     const startPanoramic = useCallback(async (e) => {
         e?.stopPropagation()
+        if (!panoramaAllowed) {
+            return
+        }
+
         if (__.ui.cameraManager.isRotating()) {
             await __.ui.poiManager.stopRotationAndSync()
         }
@@ -104,7 +107,7 @@ export const MapPOIEditMenu = memo(({poiId}) => {
         panorama.heightOffset = storedPanorama.heightOffset ?? 1000
         setOrbitStoreSettings(panorama, storedPanorama)
         panorama.active = true
-    }, [pointSnap])
+    }, [panoramaAllowed, pointSnap])
 
     const stopPanoramic = useCallback((e) => {
         e?.stopPropagation()
@@ -133,7 +136,7 @@ export const MapPOIEditMenu = memo(({poiId}) => {
     }, [pointSnap.id, $pois, stopRotation])
 
     const menuItems = useMemo(() => {
-        if (!isVisible) {
+        if (!pointAvailable || !isVisible) {
             return []
         }
         const items = []
@@ -187,22 +190,28 @@ export const MapPOIEditMenu = memo(({poiId}) => {
                 </WaDropdownItem>,
             )
 
-            items.push(
-                <WaDropdownItem key="rot-panorama" onClick={startPanoramic}>
-                    <WaIcon slot="icon" name={'panorama'}/>
-                    <span>{'Panoramic'}</span>
-                </WaDropdownItem>,
-            )
+            if (panoramaAllowed) {
+                items.push(
+                    <WaDropdownItem key="rot-panorama" onClick={startPanoramic}>
+                        <WaIcon slot="icon" name={'panorama'}/>
+                        <span>{'Panoramic'}</span>
+                    </WaDropdownItem>,
+                )
+            }
         }
 
         return items
-    }, [pointSnap, isPOIRotating, isPOIPanoramic, isVisible, focus, remove, rotationAround, stopRotation, stopPanoramic, copyCoordinates, toggleVisibility, startPanoramic])
+    }, [pointAvailable, pointSnap, isPOIRotating, isPOIPanoramic, isVisible, focus, remove, rotationAround, stopRotation, stopPanoramic, copyCoordinates, toggleVisibility, startPanoramic, panoramaAllowed])
 
     /**
      * UI BRANCHING:
      * If hidden -> Single Button
      * If visible -> Dropdown Menu
      */
+    if (!pointAvailable) {
+        return null
+    }
+
     return (
         <div className="poi-edit-menu-container">
             {!isVisible ? (
