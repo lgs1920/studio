@@ -42,6 +42,7 @@ const GPX_NAMESPACE = 'http://www.topografix.com/GPX/1/1'
 const GPX_SCHEMA = 'http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd'
 const LGS_PROPERTY_PREFIX = 'lgs_'
 const EXCLUDED_POI_TYPES = new Set([POI_FLAG_START, POI_FLAG_STOP, POI_STARTER_TYPE])
+const EXPORT_EXTENSION_PATTERN = /\.(gpx|geojson|json)$/i
 
 const finiteNumber = value => {
     if (value === null || value === undefined || value === '') {
@@ -189,23 +190,34 @@ export const getJourneyGpxFileName = (journey) => {
     return getJourneyExportFileName(journey, JOURNEY_EXPORT_FORMATS.GPX)
 }
 
-export const getJourneyExportFileName = (journey, format = JOURNEY_EXPORT_FORMATS.GPX) => {
+export const getJourneyExportBaseName = (journey) => {
     const fallback = journey?.slug?.replaceAll('#', '-') || 'journey'
     const title = journey?.title || fallback
     const slugify = globalThis.__?.app?.slugify
     const name = slugify ? slugify(title) : `${title}`.toLowerCase().replace(/[^\w-]+/g, '-')
+
+    return name || fallback
+}
+
+export const getJourneyExportFileName = (journey, format = JOURNEY_EXPORT_FORMATS.GPX) => {
     const extension = format === JOURNEY_EXPORT_FORMATS.GEOJSON ? JOURNEY_EXPORT_FORMATS.GEOJSON : JOURNEY_EXPORT_FORMATS.GPX
 
-    return `${name || fallback}.${extension}`
+    return `${getJourneyExportBaseName(journey)}.${extension}`
+}
+
+export const normalizeJourneyExportBaseName = (fileName, journey = null) => {
+    const fallback = getJourneyExportBaseName(journey)
+    const candidate = `${fileName ?? ''}`.trim()
+    const baseName = candidate.replace(EXPORT_EXTENSION_PATTERN, '')
+
+    return baseName || fallback
 }
 
 export const normalizeJourneyExportFileName = (fileName, format = JOURNEY_EXPORT_FORMATS.GPX, journey = null) => {
-    const fallback = getJourneyExportFileName(journey, format)
     const extension = format === JOURNEY_EXPORT_FORMATS.GEOJSON ? JOURNEY_EXPORT_FORMATS.GEOJSON : JOURNEY_EXPORT_FORMATS.GPX
-    const candidate = `${fileName ?? ''}`.trim() || fallback
-    const baseName = candidate.replace(/\.(gpx|geojson|json)$/i, '')
+    const baseName = normalizeJourneyExportBaseName(fileName, journey)
 
-    return `${baseName || fallback.replace(/\.(gpx|geojson|json)$/i, '')}.${extension}`
+    return `${baseName}.${extension}`
 }
 
 export const isExportableJourneyPOI = poi => {

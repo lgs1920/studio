@@ -18,7 +18,8 @@ import { describe, expect, it } from 'vitest'
 import { gpx }                  from '@tmcw/togeojson'
 import {
     exportJourneyToGeoJSON, exportJourneyToGPX, extractJourneyMetadataFromGeoJson, extractJourneyMetadataFromGpxDocument,
-    extractLgsPoiProperties, getExportableJourneyPOIs,
+    extractLgsPoiProperties, getExportableJourneyPOIs, getJourneyExportBaseName, getJourneyExportFileName,
+    normalizeJourneyExportBaseName, normalizeJourneyExportFileName,
 }                               from '@Utils/JourneyGpxUtils'
 
 const trackSlug = 'track#round-trip#gpx#main-track'
@@ -207,5 +208,18 @@ describe('journey GeoJSON export', () => {
         expect(geoJson.properties.lgs_countryCodes).toEqual(['FR', 'IT'])
         expect(pointFeatures[0].geometry.coordinates).toEqual([6.15, 45.15, 112])
         expect(lineFeatures[0].properties.lgs_color).toBe('#ffcc00')
+    })
+})
+
+describe('journey export file names', () => {
+    it('uses a basename in the dialog field and adds the selected extension only for export', () => {
+        const journey = makeJourney()
+
+        expect(getJourneyExportBaseName(journey)).toBe('round-trip')
+        expect(getJourneyExportFileName(journey, 'gpx')).toBe('round-trip.gpx')
+        expect(getJourneyExportFileName(journey, 'geojson')).toBe('round-trip.geojson')
+        expect(normalizeJourneyExportBaseName('custom.gpx', journey)).toBe('custom')
+        expect(normalizeJourneyExportBaseName('custom.geojson', journey)).toBe('custom')
+        expect(normalizeJourneyExportFileName('custom', 'geojson', journey)).toBe('custom.geojson')
     })
 })

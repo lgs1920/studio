@@ -58,9 +58,9 @@ import {
     applyElevationCoordinatesToFeature, flattenFeatureGeometryCoordinates, prepareJourneyElevationCoordinates,
 }                                     from '@Utils/cesium/elevationCoordinateUtils'
 import {
-    exportJourneyToGeoJSON, exportJourneyToGPX, getExportableJourneyPOIs, getJourneyExportFileName,
+    exportJourneyToGeoJSON, exportJourneyToGPX, getExportableJourneyPOIs, getJourneyExportBaseName,
     JOURNEY_EXPORT_FORMAT_LABELS, JOURNEY_EXPORT_FORMATS, JOURNEY_EXPORT_MIME_TYPES,
-    normalizeJourneyExportFileName,
+    normalizeJourneyExportBaseName, normalizeJourneyExportFileName,
 }                                     from '@Utils/JourneyGpxUtils'
 import {
     UIToast,
@@ -334,7 +334,7 @@ export const JourneySettings = () => {
     const resetExportDialog = (currentJourney) => {
         const format = JOURNEY_EXPORT_FORMATS.GPX
         setExportFormatValue(format)
-        setExportFileNameValue(getJourneyExportFileName(currentJourney, format))
+        setExportFileNameValue(getJourneyExportBaseName(currentJourney))
     }
 
     const handleExportFileNameChange = (event) => {
@@ -346,7 +346,7 @@ export const JourneySettings = () => {
         event.stopPropagation()
         const format = event.target.value || JOURNEY_EXPORT_FORMATS.GPX
         setExportFormatValue(format)
-        setExportFileNameValue(normalizeJourneyExportFileName(_exportFileName.current, format, lgs.theJourney))
+        setExportFileNameValue(normalizeJourneyExportBaseName(_exportFileName.current, lgs.theJourney))
     }
 
     const keepExportFormatPopoverInDialog = (event) => {
