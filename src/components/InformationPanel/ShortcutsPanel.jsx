@@ -32,6 +32,14 @@ const PLATFORM_ICONS = [
     {key: 'windows', pattern: /windows/i, label: 'Windows'},
     {key: 'linux', pattern: /linux/i, label: 'Linux'},
 ]
+const KEY_TOKEN_LABELS = {
+    ArrowDown:  '↓',
+    ArrowLeft:  '←',
+    ArrowRight: '→',
+    ArrowUp:    '↑',
+    Minus:      '-',
+    Plus:       '+',
+}
 
 const byScope = SHORTCUTS_CATALOG.reduce((groups, shortcut) => {
     const group = groups.get(shortcut.scope) ?? []
@@ -48,7 +56,7 @@ const ShortcutKey = ({token}) => {
     return (
         <kbd className={`lgs--shortcut-key${icon ? ' is-gesture' : ''}`}>
             {icon && <WaIcon aria-hidden="true" name={icon} variant="regular"/>}
-            <span>{token}</span>
+            <span>{KEY_TOKEN_LABELS[token] ?? token}</span>
         </kbd>
     )
 }

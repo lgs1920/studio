@@ -22,6 +22,21 @@ import { Cartesian2, Cartographic, Math as CesiumMath } from 'cesium'
 const MAP_POINT_PRECISION = 6
 const APP_SHORTCUT_TARGET = () => globalThis.window ?? globalThis.document
 const MIN_MAP_TARGET_HEIGHT = -12000
+const WIDGET_MOVE_STEP = 2
+const WIDGET_FAST_MOVE_STEP = 20
+const WIDGET_SCALE_STEP = 0.01
+const WIDGET_FAST_SCALE_STEP = 0.1
+const WIDGET_SHORTCUT_EDITABLE_SELECTOR = [
+    'input',
+    'textarea',
+    'select',
+    'wa-input',
+    'wa-textarea',
+    'wa-select',
+    '[contenteditable=""]',
+    '[contenteditable="true"]',
+    '[role="textbox"]',
+].join(',')
 
 const finiteNumber = value => {
     if (value === null || value === undefined || value === '') {
@@ -30,6 +45,11 @@ const finiteNumber = value => {
 
     const number = Number(value)
     return Number.isFinite(number) ? number : null
+}
+
+const isWidgetShortcutEditableTarget = target => {
+    const ElementClass = globalThis.Element
+    return ElementClass && target instanceof ElementClass && Boolean(target.closest(WIDGET_SHORTCUT_EDITABLE_SELECTOR))
 }
 
 const mapTargetHeight = value => {
@@ -328,6 +348,220 @@ const editSelectedWidget = () => {
     return __.ui.widgetManager.editWidget(widgetId)
 }
 
+const selectedWidgetContext = () => {
+    const video = lgs.stores?.ui?.video
+
+    if (video?.preRecording || video?.recording || video?.snapshot || video?.finalizing) {
+        return null
+    }
+
+    const widgetId = lgs.stores.ui.widget.current?.id
+    const element = widgetId ? __.ui.widgetManager.getElementById(widgetId) : null
+    const config = widgetId ? __.ui.widgetManager.getWidgetConfig(widgetId) : null
+
+    if (!widgetId || !element || !config) {
+        return null
+    }
+
+    return {config, element, widgetId}
+}
+
+const widgetBoundsRect = config => (config.boundsContainer ?? config.container ?? lgs.canvas)?.getBoundingClientRect?.() ?? null
+
+const syncCropperKeyboardMove = (config) => {
+    if (!config.isCropper || !config.cropDimensions) {
+        return
+    }
+
+    const width = Number(config.cropDimensions.width)
+    const height = Number(config.cropDimensions.height)
+
+    if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
+        return
+    }
+
+    config.cropDimensions = {
+        left: config.position.left,
+        top:  config.position.top,
+        width,
+        height,
+    }
+    config.dimensions = {width, height}
+
+    if (config.resizeFromCenter) {
+        const containerRect = config.container?.getBoundingClientRect?.()
+        if (containerRect?.width > 0 && containerRect?.height > 0) {
+            config.centerRatio = {
+                x: (config.position.left - containerRect.left + width / 2) / containerRect.width,
+                y: (config.position.top - containerRect.top + height / 2) / containerRect.height,
+            }
+        }
+    }
+
+    __.ui.widgetManager.applyCropToOverlay(config)
+    __.ui.widgetManager.dispatchCropUpdate(config, 'keyboard-move')
+}
+
+const persistWidgetKeyboardChange = async (widgetId, config) => {
+    __.ui.widgetManager.setConfig(widgetId, config)
+    __.ui.widgetManager.getMoveable(widgetId)?.current?.updateRect()
+    __.ui.widgetManager.refreshEditorPreviewSnapshot(widgetId)
+
+    if (config.persist) {
+        await __.ui.widgetManager.saveWidgetPosition(widgetId, config)
+    }
+}
+
+const moveSelectedWidget = async (dx, dy) => {
+    const context = selectedWidgetContext()
+
+    if (!context || context.config.draggable === false) {
+        return false
+    }
+
+    const {config, element, widgetId} = context
+    const position = config.position ?? {
+        left: parseFloat(element.style.left || '0') || 0,
+        top:  parseFloat(element.style.top || '0') || 0,
+    }
+
+    config.position = {
+        left: position.left + dx,
+        top:  position.top + dy,
+    }
+
+    const boundsRect = widgetBoundsRect(config)
+    if (boundsRect) {
+        config.position = __.ui.widgetManager.adaptPositionToContainer(config, boundsRect)
+    }
+
+    __.ui.widgetManager.applyPosition(element, config.position)
+    syncCropperKeyboardMove(config)
+    await persistWidgetKeyboardChange(widgetId, config)
+
+    return true
+}
+
+const resizeSelectedWidget = async (factor) => {
+    const context = selectedWidgetContext()
+
+    if (!context || (!context.config.scalable && !context.config.contextMenu?.canReset)) {
+        return false
+    }
+
+    const {config, element, widgetId} = context
+    const currentScale = config.scale ?? {x: 1, y: 1}
+    const nextScale = __.ui.widgetManager.clampScale({
+        x: currentScale.x * (1 + factor),
+        y: currentScale.y * (1 + factor),
+    }, config)
+    const boundsRect = widgetBoundsRect(config)
+
+    config.scale = boundsRect ? __.ui.widgetManager.adaptScaleToContainer({
+        ...config,
+        scale: nextScale,
+    }, boundsRect) : nextScale
+    config.position = boundsRect ? __.ui.widgetManager.adaptPositionToContainer(config, boundsRect) : config.position
+
+    __.ui.widgetManager.setScale(element, config.scale.x, config.scale.y)
+    __.ui.widgetManager.applyPosition(element, config.position)
+    await persistWidgetKeyboardChange(widgetId, config)
+
+    return true
+}
+
+const isPlusKey = event => event.key === '+'
+    || event.code === 'NumpadAdd'
+    || event.key?.toLowerCase() === 'plus'
+    || (event.code === 'Equal' && (event.ctrlKey || event.shiftKey))
+
+const isMinusKey = event => event.key === '-'
+    || event.code === 'Minus'
+    || event.code === 'NumpadSubtract'
+    || event.key?.toLowerCase() === 'minus'
+
+const widgetKeyboardShortcutAction = event => {
+    if (isWidgetShortcutEditableTarget(event.target) || event.altKey || event.metaKey) {
+        return null
+    }
+
+    const context = selectedWidgetContext()
+    if (!context) {
+        return null
+    }
+
+    const ctrl = event.ctrlKey
+    const key = event.key
+    const moveStep = ctrl ? WIDGET_FAST_MOVE_STEP : WIDGET_MOVE_STEP
+    const scaleStep = ctrl ? WIDGET_FAST_SCALE_STEP : WIDGET_SCALE_STEP
+
+    switch (key) {
+        case 'ArrowUp':
+            if (event.shiftKey || context.config.draggable === false) {
+                return null
+            }
+            return () => moveSelectedWidget(0, -moveStep)
+        case 'ArrowDown':
+            if (event.shiftKey || context.config.draggable === false) {
+                return null
+            }
+            return () => moveSelectedWidget(0, moveStep)
+        case 'ArrowLeft':
+            if (event.shiftKey || context.config.draggable === false) {
+                return null
+            }
+            return () => moveSelectedWidget(-moveStep, 0)
+        case 'ArrowRight':
+            if (event.shiftKey || context.config.draggable === false) {
+                return null
+            }
+            return () => moveSelectedWidget(moveStep, 0)
+    }
+
+    if (isPlusKey(event)) {
+        if (!context.config.scalable && !context.config.contextMenu?.canReset) {
+            return null
+        }
+        return () => resizeSelectedWidget(scaleStep)
+    }
+
+    if (isMinusKey(event)) {
+        if (event.shiftKey || (!context.config.scalable && !context.config.contextMenu?.canReset)) {
+            return null
+        }
+        return () => resizeSelectedWidget(-scaleStep)
+    }
+
+    return null
+}
+
+const installWidgetKeyboardShortcuts = () => {
+    const target = APP_SHORTCUT_TARGET()
+
+    if (!target?.addEventListener) {
+        return () => {}
+    }
+
+    const listener = event => {
+        const action = widgetKeyboardShortcutAction(event)
+
+        if (!action) {
+            return
+        }
+
+        event.preventDefault()
+        event.stopPropagation()
+        event.stopImmediatePropagation?.()
+
+        Promise.resolve(action()).catch(error => {
+            console.error('Widget keyboard shortcut failed', error)
+        })
+    }
+
+    target.addEventListener('keydown', listener, {capture: true})
+    return () => target.removeEventListener('keydown', listener, {capture: true})
+}
+
 export const SHORTCUTS_CATALOG = [
     {
         action:      'Show journey toolbar',
@@ -369,6 +603,34 @@ export const SHORTCUTS_CATALOG = [
         description: 'Deletes the selected removable widget.',
         id:          'widget-remove',
         keys:        ['Delete', 'Backspace'],
+        scope:       'Selected widget',
+    },
+    {
+        action:      'Resize selected widget',
+        description: 'Increases or decreases the selected widget size by 1%.',
+        id:          'widget-resize',
+        keys:        ['Plus', 'Minus'],
+        scope:       'Selected widget',
+    },
+    {
+        action:      'Resize selected widget faster',
+        description: 'Increases or decreases the selected widget size by 10%.',
+        id:          'widget-resize-fast',
+        keys:        ['Ctrl+Plus', 'Ctrl+Minus'],
+        scope:       'Selected widget',
+    },
+    {
+        action:      'Move selected widget',
+        description: 'Moves the selected widget by 2 px.',
+        id:          'widget-move',
+        keys:        ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'],
+        scope:       'Selected widget',
+    },
+    {
+        action:      'Move selected widget faster',
+        description: 'Moves the selected widget by 20 px.',
+        id:          'widget-move-fast',
+        keys:        ['Ctrl+ArrowUp', 'Ctrl+ArrowDown', 'Ctrl+ArrowLeft', 'Ctrl+ArrowRight'],
         scope:       'Selected widget',
     },
     {
@@ -477,7 +739,7 @@ export const installAppShortcuts = (shortcutManager) => {
         return []
     }
 
-    return SHORTCUTS_CATALOG.filter(shortcut => SHORTCUT_ACTIONS[shortcut.id]).map(shortcut => {
+    const removers = SHORTCUTS_CATALOG.filter(shortcut => SHORTCUT_ACTIONS[shortcut.id]).map(shortcut => {
         const action = SHORTCUT_ACTIONS[shortcut.id]
 
         return shortcutManager.addShortcut(APP_SHORTCUT_TARGET(), shortcut.keys, async (event) => {
@@ -501,4 +763,7 @@ export const installAppShortcuts = (shortcutManager) => {
             stopPropagation:    true,
         })
     })
+
+    removers.push(installWidgetKeyboardShortcuts())
+    return removers
 }
