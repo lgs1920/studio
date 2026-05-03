@@ -53,6 +53,13 @@ starter:
   height: 1920
   simulatedHeight: 1924 # pseudo height for cesium
   title: La Grande Sure
+  location: La Sure en Chartreuse
+  country: France
+  countryCode: FR
+  countries:
+    - France
+  countryCodes:
+    - FR
   bgColor: "#7FFF00"  # chartreuse (127,255,0)
   color: "#ffffff"
   description: At 12 years old, the first time I reached the summit, it was my Everest!
@@ -315,6 +322,7 @@ ui:
   ## Geocoder
   geocoder:
     url: https://nominatim.openstreetmap.org
+    proxy: /proxy.php?csurl=
     search: search
     reverse: reverse
     limit: 7 # results per query

@@ -25,6 +25,11 @@ import fs from 'fs'
 import path from 'path'
 import serveStatic from 'serve-static'
 
+const DEV_PROXY_USER_AGENT = 'LGS1920 Studio Dev Proxy (contact@lgs1920.fr)'
+const DEV_PROXY_ALLOWED_TARGETS = new Set([
+    'https://nominatim.openstreetmap.org:443',
+])
+
 /**
  * Injects current git branch name into a local JSON file for development tracking.
  * Runs only during dev server execution.
@@ -103,12 +108,83 @@ function serveCesiumDev() {
     }
 }
 
+/**
+ * Dev-only PHP proxy equivalent for Vite.
+ * The production proxy.php is executed by PHP, while Vite only serves public files.
+ */
+function serveProxyPhpDev() {
+    return {
+        name: 'serve-proxy-php-dev',
+        apply: 'serve' as const,
+        configureServer({middlewares}) {
+            middlewares.use('/proxy.php', async (req, res) => {
+                if (req.method !== 'GET') {
+                    res.statusCode = 405
+                    res.setHeader('Content-Type', 'application/json')
+                    res.end(JSON.stringify({error: 'Method not allowed.'}))
+                    return
+                }
+
+                try {
+                    const requestUrl = new URL(req.url ?? '', 'http://localhost')
+                    const rawTargetUrl = requestUrl.searchParams.get('csurl')
+
+                    if (!rawTargetUrl) {
+                        res.statusCode = 404
+                        res.setHeader('Content-Type', 'application/json')
+                        res.end(JSON.stringify({error: 'Missing target URL.'}))
+                        return
+                    }
+
+                    const targetUrl = new URL(rawTargetUrl)
+                    requestUrl.searchParams.forEach((value, key) => {
+                        if (key !== 'csurl') {
+                            targetUrl.searchParams.append(key, value)
+                        }
+                    })
+
+                    const targetPort = targetUrl.port || (targetUrl.protocol === 'https:' ? '443' : '80')
+                    const targetKey = `${targetUrl.protocol}//${targetUrl.hostname}:${targetPort}`
+
+                    if (!DEV_PROXY_ALLOWED_TARGETS.has(targetKey)) {
+                        res.statusCode = 403
+                        res.setHeader('Content-Type', 'application/json')
+                        res.end(JSON.stringify({error: 'Target backend is not allowed.'}))
+                        return
+                    }
+
+                    const response = await fetch(targetUrl, {
+                        headers: {
+                            Accept: String(req.headers.accept ?? 'application/json'),
+                            'User-Agent': DEV_PROXY_USER_AGENT,
+                        },
+                    })
+                    const body = Buffer.from(await response.arrayBuffer())
+
+                    res.statusCode = response.status
+                    res.setHeader('Cache-Control', 'no-store')
+                    res.setHeader('Content-Type', response.headers.get('content-type') ?? 'application/json')
+                    res.end(body)
+                }
+                catch (error) {
+                    res.statusCode = 502
+                    res.setHeader('Content-Type', 'application/json')
+                    res.end(JSON.stringify({
+                        error: error instanceof Error ? error.message : 'Proxy request failed.',
+                    }))
+                }
+            })
+        },
+    }
+}
+
 const version = data.studio
 
 export default defineConfig({
     plugins: [
         cesium(),
         serveCesiumDev(),
+        serveProxyPhpDev(),
         react(),
         VitePWA({
             registerType: 'autoUpdate',

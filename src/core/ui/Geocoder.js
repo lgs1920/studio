@@ -18,6 +18,7 @@ import { POI_FLAG_START, POI_FLAG_STOP } from '@Core/constants'
 import { featureEach }                   from '@turf/meta'
 
 const CITY_FIELDS = ['city', 'town', 'village', 'municipality', 'hamlet', 'county', 'state']
+const REVERSE_GEOCODING_RETRY_DELAY = 60_000
 
 const finiteCoordinate = value => {
     const number = Number(value)
@@ -191,9 +192,12 @@ export class Geocoder {
     limit = 0
     email
     url
+    proxy
     #search
     #reverse
     #reverseLocationCache = new Map()
+    #reverseLocationUnavailableUntil = 0
+    #lastReverseLocationWarningAt = 0
     format
     license
 
@@ -212,6 +216,7 @@ export class Geocoder {
         }
 
         this.url = lgs.settings.ui.geocoder.url
+        this.proxy = lgs.servers?.studio?.proxy || lgs.settings.ui.geocoder.proxy || ''
         this.limit = lgs.settings.ui.geocoder.limit
         this.email = lgs.settings.ui.geocoder.email
         this.#search = lgs.settings.ui.geocoder.search
@@ -302,12 +307,16 @@ export class Geocoder {
             return normalizeLocationDetails()
         }
 
+        if (this.#isReverseLocationUnavailable()) {
+            return normalizeLocationDetails()
+        }
+
         const key = `${coordinate.longitude.toFixed(5)}:${coordinate.latitude.toFixed(5)}`
 
         if (!this.#reverseLocationCache.has(key)) {
             this.#reverseLocationCache.set(key, this.#fetchLocationDetails(coordinate).catch(error => {
                 this.#reverseLocationCache.delete(key)
-                console.error(error)
+                this.#handleReverseLocationError(error)
                 return normalizeLocationDetails()
             }))
         }
@@ -328,10 +337,8 @@ export class Geocoder {
             return formatJourneyLocationDetails()
         }
 
-        const [startLocation, stopLocation] = await Promise.all([
-                                                                    startCoordinate ? this.getCoordinateLocationDetails(startCoordinate) : null,
-                                                                    stopCoordinate ? this.getCoordinateLocationDetails(stopCoordinate) : null,
-                                                                ])
+        const startLocation = startCoordinate ? await this.getCoordinateLocationDetails(startCoordinate) : null
+        const stopLocation = stopCoordinate ? await this.getCoordinateLocationDetails(stopCoordinate) : null
 
         return formatJourneyLocationDetails(startLocation, stopLocation)
     }
@@ -385,16 +392,18 @@ export class Geocoder {
     }
 
     getPOILocationDetails = async (poi, {journey} = {}) => {
+        const existing = normalizeLocationDetails(poi)
+
         if ((poi?.type === POI_FLAG_START || poi?.type === POI_FLAG_STOP) && journey) {
             const journeyLocation = await this.getJourneyLocationDetails(journey)
             const endpoint = poi.type === POI_FLAG_START ? journeyLocation.start : journeyLocation.stop
 
-            if (endpoint?.location || endpoint?.countryCode) {
+            if (endpoint?.location || endpoint?.country || endpoint?.countryCode) {
                 return endpoint
             }
-        }
 
-        const existing = normalizeLocationDetails(poi)
+            return existing
+        }
 
         if (existing.location && existing.country && existing.countryCode) {
             return existing
@@ -409,8 +418,35 @@ export class Geocoder {
      * @returns {Promise<Object>} The API response data.
      */
     fetch = async (url) => {
-        const response = await lgs.axios.get(url)
+        const response = await lgs.axios.get(this.#getFetchUrl(url))
         return response.data
+    }
+
+    #getFetchUrl = url => {
+        const targetUrl = url instanceof URL ? url.toString() : String(url)
+        const proxyUrl = normalizePlaceName(this.proxy)
+
+        return proxyUrl ? `${proxyUrl}${encodeURIComponent(targetUrl)}` : targetUrl
+    }
+
+    #isReverseLocationUnavailable = () => Date.now() < this.#reverseLocationUnavailableUntil
+
+    #handleReverseLocationError = error => {
+        const now = Date.now()
+        this.#reverseLocationUnavailableUntil = now + REVERSE_GEOCODING_RETRY_DELAY
+
+        if (now - this.#lastReverseLocationWarningAt < REVERSE_GEOCODING_RETRY_DELAY) {
+            return
+        }
+
+        const status = error?.response?.status
+        const statusText = error?.response?.statusText
+        const message = status
+                        ? `${status}${statusText ? ` ${statusText}` : ''}`
+                        : (error?.message ?? 'request failed')
+
+        console.warn(`[Geocoder] Reverse geocoding unavailable (${message}). Retrying later.`)
+        this.#lastReverseLocationWarningAt = now
     }
 
 }

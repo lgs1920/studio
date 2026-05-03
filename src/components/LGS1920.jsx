@@ -256,12 +256,18 @@ export const LGS1920 = () => {
                                                      latitude:    lgs.settings.starter.latitude,
                                                      height:      lgs.settings.starter.height,
                                                      title:       lgs.settings.starter.title,
+                                                     location:    lgs.settings.starter.location,
+                                                     country:     lgs.settings.starter.country,
+                                                     countryCode: lgs.settings.starter.countryCode,
+                                                     countries:   lgs.settings.starter.countries,
+                                                     countryCodes: lgs.settings.starter.countryCodes,
                                                      description: lgs.settings.starter.description,
                                                      color:       lgs.settings.starter.color,
                                                      bgColor:     lgs.settings.starter.bgColor,
                                                      type:        POI_STARTER_TYPE,
                                                  }, false, true)
         }
+        await __.ui.poiManager.ensurePOILocation(starter.id)
         lgs.stores.main.components.pois.current = starter.id
         return starter
     }

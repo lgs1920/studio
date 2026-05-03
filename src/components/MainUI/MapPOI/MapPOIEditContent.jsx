@@ -452,13 +452,6 @@ export const MapPOIEditContent = memo(({poi}) => {
                                                               syncEditorSelection={false}
                                                           />
                                                       )}
-                                                      {location && (
-                                                          <div className="map-poi-location" title={location}>
-                                                              <WaIcon name="location-dot" variant="regular"/>
-                                                              <span>{location}</span>
-                                                          </div>
-                                                      )}
-
                                                       <WaTextarea
                                                           size="small"
                                                           value={description}
@@ -467,6 +460,15 @@ export const MapPOIEditContent = memo(({poi}) => {
                                                           label="Description"
                                                           disabled={!visible}
                                                       />
+                                                      {location && (
+                                                          <div
+                                                              className="map-poi-location"
+                                                              title={location}
+                                                          >
+                                                              <WaIcon name="location-dot" variant="regular"/>
+                                                              <span>{location}</span>
+                                                          </div>
+                                                      )}
 
                                                       {time && (
                                                           <div className="poi-time">

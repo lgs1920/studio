@@ -112,14 +112,22 @@ export const MapPOIContent = ({poi, useInMenu = false, style}) => {
         contextMenu.targetId = point
     }, [useInMenu, point])
 
+    const handlePOIClick = useCallback(() => {
+        if (useInMenu || !point?.id) {
+            return
+        }
+
+        void __.ui.poiManager.updatePOI(point.id, {expanded: !point.expanded})
+    }, [useInMenu, point])
+
     const addEventListeners = useCallback((poiId) => {
-        __.canvasEvents.onClick(openContextMenu, {entity: poiId, preventLowerPriority: true})
-        __.canvasEvents.onTap(openContextMenu, {entity: poiId, preventLowerPriority: true})
+        __.canvasEvents.onClick(handlePOIClick, {entity: poiId, preventLowerPriority: true})
+        __.canvasEvents.onTap(handlePOIClick, {entity: poiId, preventLowerPriority: true})
         __.canvasEvents.onDoubleClick(handleEditor, {entity: poiId, preventLowerPriority: true})
         __.canvasEvents.onDoubleTap(handleEditor, {entity: poiId, preventLowerPriority: true})
         __.canvasEvents.onRightClick(openContextMenu, {entity: poiId, preventLowerPriority: true})
         __.canvasEvents.onLongTap(openContextMenu, {entity: poiId, preventLowerPriority: true})
-    }, [handleEditor, openContextMenu])
+    }, [handleEditor, handlePOIClick, openContextMenu])
 
     const removeEventListeners = useCallback((poiId) => {
         __.canvasEvents.removeAllListenersByEntity(poiId)

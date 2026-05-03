@@ -15,9 +15,8 @@
  ******************************************************************************/
 
 import {
-    ADD_POI_EVENT, CURRENT_POI, GLOBAL_PARENT, POI_FLAG_START, POI_FLAG_STOP, POI_JOURNEY_ASSOCIATION_DISTANCE,
-    POI_STARTER_TYPE, POI_THRESHOLD_DISTANCE, POI_TMP_TYPE, POIS_STORE,
-    REMOVE_POI_EVENT,
+    ADD_POI_EVENT, CURRENT_POI, GLOBAL_PARENT, POI_JOURNEY_ASSOCIATION_DISTANCE, POI_STARTER_TYPE,
+    POI_THRESHOLD_DISTANCE, POI_TMP_TYPE, POIS_STORE, REMOVE_POI_EVENT,
 }                                                  from '@Core/constants'
 import { MapPOI }                                  from '@Core/MapPOI'
 import { getOrbitSettings, setOrbitStoreSettings } from '@Core/OrbitSettings'
@@ -190,7 +189,9 @@ export class POIManager {
 
     set starterSettings(poi) {
         Object.keys(lgs.settings.starter).forEach(key => {
-            lgs.settings.starter[key] = poi[key]
+            if (poi[key] !== undefined) {
+                lgs.settings.starter[key] = poi[key]
+            }
         })
     }
 
@@ -224,7 +225,7 @@ export class POIManager {
     }
 
     async updatePOI(id, updates, options = {}) {
-        const {skipPersist = false, immediate = false} = options
+        const {skipPersist = false, immediate = false, skipLocationUpdate = false} = options
         const poi = this.list.get(id)
         if (!poi) {
             return null
@@ -253,6 +254,11 @@ export class POIManager {
 
         // Trigger Valtio proxyMap update for reactivity
         this.list.set(poi.id, poi)
+        if (!skipLocationUpdate) {
+            const shouldForceLocationUpdate = ['longitude', 'latitude', 'parent', 'type']
+                .some(key => Object.prototype.hasOwnProperty.call(safeUpdates, key))
+            void this.ensurePOILocation(poi.id, {force: shouldForceLocationUpdate})
+        }
 
         if (!skipPersist) {
             if (immediate) {
@@ -358,6 +364,7 @@ export class POIManager {
         }
 
         this.list.set(poi.id, poi)
+        void this.ensurePOILocation(poi.id)
         if (dbSync) {
             await this.persistToDatabase(poi)
         }
@@ -387,9 +394,7 @@ export class POIManager {
             return null
         }
 
-        const usesJourneyEndpoint = poi.type === POI_FLAG_START || poi.type === POI_FLAG_STOP
         if (!force
-            && !usesJourneyEndpoint
             && normalizeText(poi.location)
             && normalizeText(poi.country)
             && normalizeText(poi.countryCode)) {
@@ -441,7 +446,13 @@ export class POIManager {
             }
 
             if (Object.keys(updates).length > 0) {
-                await this.updatePOI(currentPOI.id, updates)
+                const updatedPOI = await this.updatePOI(currentPOI.id, updates, {
+                    immediate:          true,
+                    skipLocationUpdate: true,
+                })
+                if (updatedPOI?.type === POI_STARTER_TYPE) {
+                    this.starterSettings = updatedPOI
+                }
             }
 
             return {
@@ -458,6 +469,16 @@ export class POIManager {
 
         this.#locationUpdatePromises.set(key, promise)
         return promise
+    }
+
+    ensureAllPOILocations = async ({force = false} = {}) => {
+        const results = []
+
+        for (const id of Array.from(this.list.keys())) {
+            results.push(await this.ensurePOILocation(id, {force}))
+        }
+
+        return results
     }
 
     get journeyAssociationDistance() {
@@ -612,6 +633,7 @@ export class POIManager {
                 // peut ne pas se déclencher pendant le chargement initial.
                 this.addToJourneyIndex(poi.id, poi)
             }
+            await this.ensureAllPOILocations()
             return this.list
         }
         catch (e) {

@@ -5,7 +5,8 @@ declare(strict_types=1);
  * LGS1920 backend proxy.
  *
  * This proxy is intentionally narrow: it only forwards requests to the backend
- * declared in servers.json. It is not a generic cross-domain proxy.
+ * declared in servers.json and explicit external services required by the app.
+ * It is not a generic cross-domain proxy.
  */
 
 const PROXY_DEBUG_ENV = 'LGS1920_PROXY_DEBUG';
@@ -43,6 +44,14 @@ const HOP_BY_HOP_HEADERS = [
     'Trailer',
     'Transfer-Encoding',
     'Upgrade',
+];
+
+const EXTERNAL_PROXY_TARGETS = [
+    [
+        'host' => 'nominatim.openstreetmap.org',
+        'scheme' => 'https',
+        'port' => 443,
+    ],
 ];
 
 $config = load_config();
@@ -176,7 +185,7 @@ function allowed_targets(array $config): array
         $targets[] = ['host' => 'localhost', 'scheme' => $scheme, 'port' => $port];
     }
 
-    return $targets;
+    return array_merge($targets, EXTERNAL_PROXY_TARGETS);
 }
 
 function default_port(string $scheme): int
@@ -344,6 +353,7 @@ function create_curl_handle(string $targetUrl, array $requestHeaders, array &$re
         CURLOPT_NOSIGNAL => true,
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_TIMEOUT => 30,
+        CURLOPT_USERAGENT => 'LGS1920 Studio (contact@lgs1920.fr)',
     ]);
 
     set_curl_protocols($ch);
