@@ -24,16 +24,15 @@
 /**
  * Ensures duotone layers use WA CSS vars for both icon families and SVG sources.
  */
-export const applyPOIDuotoneIconStyles = (event) => {
-    const icon = event?.target
+export const stylePOIDuotoneIcon = (icon) => {
     if (!icon?.updateComplete) {
-        return
+        return Promise.resolve(false)
     }
 
-    icon.updateComplete.then(() => {
+    return icon.updateComplete.then(() => {
         const svg = icon.shadowRoot?.querySelector('[part="svg"]')
         if (!svg) {
-            return
+            return false
         }
 
         const primaryPaths = svg.querySelectorAll('path[data-duotone-primary], path.fa-primary')
@@ -50,5 +49,9 @@ export const applyPOIDuotoneIconStyles = (event) => {
             path.style.fill = 'currentColor'
             path.style.opacity = 'var(--path-opacity,var(--secondary-opacity,0.4))'
         })
+
+        return true
     })
 }
+
+export const applyPOIDuotoneIconStyles = (event) => stylePOIDuotoneIcon(event?.target)

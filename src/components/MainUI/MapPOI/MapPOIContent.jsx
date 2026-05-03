@@ -15,7 +15,7 @@
  ******************************************************************************/
 
 import { NameValueUnit }                             from '@Components/DataDisplay/NameValueUnit'
-import { applyPOIDuotoneIconStyles }                             from '@Components/MainUI/MapPOI/duotoneIconUtils'
+import { stylePOIDuotoneIcon }                                   from '@Components/MainUI/MapPOI/duotoneIconUtils'
 import { ICONS_PATH, JOURNEY_EDITOR_DRAWER, POIS_EDITOR_DRAWER } from '@Core/constants'
 import { MapPOI }                                                  from '@Core/MapPOI'
 import { Utils }                                                   from '@Editor/Utils'
@@ -46,6 +46,7 @@ export const MapPOIContent = ({poi, useInMenu = false, style}) => {
      */
     const point = useMemo(() => poisSnap.list.get(poi), [poisSnap.list, poi])
     const $point = $pois.list.get(poi)
+    const currentPOI = poisSnap.current
     const pointId = point?.id
     const pointParent = point?.parent
     const pointType = point?.type
@@ -65,7 +66,7 @@ export const MapPOIContent = ({poi, useInMenu = false, style}) => {
         __.ui.contextMenu.hide()
 
         const alreadyOpen = __.ui.drawerManager.drawers.open
-        const samePOI = entity === poisSnap.current
+        const samePOI = entity === currentPOI
 
         if (alreadyOpen && samePOI) {
             __.ui.drawerManager.close()
@@ -92,11 +93,11 @@ export const MapPOIContent = ({poi, useInMenu = false, style}) => {
         }
 
         __.ui.drawerManager.open(drawer, {action: 'edit-current', entity, tab})
-    }, [useInMenu, point, poisSnap.current])
+    }, [useInMenu, point, currentPOI])
 
     /** Global POI menu trigger */
     const openContextMenu = useCallback((event) => {
-        if (useInMenu || !point) {
+        if (useInMenu || !pointId) {
             return
         }
 
@@ -110,7 +111,7 @@ export const MapPOIContent = ({poi, useInMenu = false, style}) => {
         contextMenu.visible = true
         contextMenu.position = {x: position.x, y: position.y}
         contextMenu.targetId = point
-    }, [useInMenu, point])
+    }, [useInMenu, point, pointId])
 
     const handlePOIClick = useCallback(() => {
         if (useInMenu || !point?.id) {
@@ -183,8 +184,16 @@ export const MapPOIContent = ({poi, useInMenu = false, style}) => {
         })
     }, [useInMenu, point, $point])
 
+    const renderToCanvasAfterIconLoad = useCallback((event = null) => {
+        const icon = event?.target ?? _icon.current
+
+        stylePOIDuotoneIcon(icon)
+            .catch(error => console.error('Error styling POI icon:', error))
+            .finally(renderToCanvas)
+    }, [renderToCanvas])
+
     useEffect(() => {
-        if (useInMenu || !point) {
+        if (useInMenu || !pointId) {
             return
         }
 
@@ -207,6 +216,7 @@ export const MapPOIContent = ({poi, useInMenu = false, style}) => {
         }
     }, [
                   useInMenu,
+                  pointId,
                   point?.title,
                   point?.category,
                   point?.expanded,
@@ -225,6 +235,25 @@ export const MapPOIContent = ({poi, useInMenu = false, style}) => {
                   removeEventListeners,
                   poi,
               ])
+
+    useEffect(() => {
+        if (useInMenu || point?.expanded || !_icon.current) {
+            return
+        }
+
+        let cancelled = false
+        stylePOIDuotoneIcon(_icon.current)
+            .catch(error => console.error('Error styling POI icon:', error))
+            .finally(() => {
+                if (!cancelled) {
+                    renderToCanvas()
+                }
+            })
+
+        return () => {
+            cancelled = true
+        }
+    }, [useInMenu, point?.expanded, iconName, isSvgIcon, point?.visible, renderToCanvas])
 
     return (
         <div
@@ -287,7 +316,7 @@ export const MapPOIContent = ({poi, useInMenu = false, style}) => {
                             className="poi-as-flag poi-duotone-icon"
                             variant="regular"
                             family="duotone"
-                            onWaLoad={applyPOIDuotoneIconStyles}
+                            onWaLoad={renderToCanvasAfterIconLoad}
                          />
                      )}
                 </div>

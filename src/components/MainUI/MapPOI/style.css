@@ -245,6 +245,10 @@
     --fa-secondary-color: var(--lgs-poi-background-color); /* Couche secondaire */
     --fa-secondary-opacity: 1;
     --fa-primary-opacity: 1;
+    --primary-color: var(--lgs-poi-color);
+    --secondary-color: var(--lgs-poi-background-color);
+    --primary-opacity: 1;
+    --secondary-opacity: 1;
 }
 
 .poi-menu-icons .poi-as-flag {
