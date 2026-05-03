@@ -26,6 +26,9 @@ import { getGeom }  from '@turf/invariant'
 import {
     FEATURE_COLLECTION, FEATURE_LINE_STRING, FEATURE_MULTILINE_STRING, FEATURE_POINT, IMPORT_LOADING_ERROR, TrackUtils,
 }                             from '@Utils/cesium/TrackUtils'
+import {
+    extractJourneyMetadataFromGpxDocument, extractLgsPoiProperties, extractLgsTrackProperties,
+}                             from '@Utils/JourneyGpxUtils'
 import { decodeHTMLEntities } from '@Utils/TextUtils'
 import { UIToast }            from '@Utils/UIToast'
 import { ElevationServer }    from './Elevation/ElevationServer'
@@ -325,9 +328,12 @@ export class Journey extends MapElement {
         // instead of XML
         try {
             switch (this.type) {
-                case GPX:
-                    this.geoJson = gpx(new DOMParser().parseFromString(content, 'text/xml'))
+                case GPX: {
+                    const gpxDocument = new DOMParser().parseFromString(content, 'text/xml')
+                    this.geoJson = gpx(gpxDocument)
+                    this.#applyGpxMetadata(extractJourneyMetadataFromGpxDocument(gpxDocument))
                     break
+                }
                 case KMZ :
                     // TODO unzip to get kml. but what to do with the assets files that are sometimes embedded
                     break
@@ -351,6 +357,39 @@ export class Journey extends MapElement {
         }
     }
 
+    #applyGpxMetadata = (metadata = {}) => {
+        if (metadata.title) {
+            this.title = decodeHTMLEntities(metadata.title)
+        }
+        if (metadata.description !== undefined) {
+            this.description = decodeHTMLEntities(metadata.description)
+        }
+        if (metadata.activity) {
+            this.activity = metadata.activity
+        }
+        if (metadata.activitySettings) {
+            this.activitySettings = Journey.activityProfile(this.activity, metadata.activitySettings)
+        }
+        if (metadata.visible !== undefined) {
+            this.visible = metadata.visible
+        }
+        if (metadata.POIsVisible !== undefined) {
+            this.POIsVisible = metadata.POIsVisible
+        }
+        if (metadata.elevationServer) {
+            this.elevationServer = metadata.elevationServer
+        }
+        if (metadata.camera) {
+            this.camera = metadata.camera
+        }
+        if (metadata.rotation) {
+            this.rotation = metadata.rotation
+        }
+        if (metadata.panorama) {
+            this.panorama = metadata.panorama
+        }
+    }
+
     /**
      * Extract tracks from GeoJson
      *
@@ -365,6 +404,7 @@ export class Journey extends MapElement {
             this.geoJson.features.forEach((feature) => {
                 const geometry = getGeom(feature)
                 const title = feature.properties.name
+                const lgsTrack = extractLgsTrackProperties(feature.properties)
 
                 const slug = this.#setTrackSlug({
                                                     content: [
@@ -378,6 +418,7 @@ export class Journey extends MapElement {
                     // Let's define some tracks parameters
                     const parameters = {
                         parent:      this.slug,
+                        id:          keepContext ? track.id : lgsTrack.id,
                         name:        keepContext ? track.name : slug,
                         slug:        slug,
                         hasTime:     this.#hasTime(feature.properties),
@@ -386,9 +427,9 @@ export class Journey extends MapElement {
                         activity:    this.activity,
                         activitySettings: this.activitySettings,
                         segments:    geometry.coordinates.length,
-                        visible:     keepContext ? track.visible : true,
-                        color:       keepContext ? track.color : __.ui.editor.journey.newColor(),
-                        thickness:   keepContext ? track.thickness : lgs.settings.getJourney.thickness,
+                        visible:     keepContext ? track.visible : (lgsTrack.visible ?? true),
+                        color:       keepContext ? track.color : (lgsTrack.color ?? __.ui.editor.journey.newColor()),
+                        thickness:   keepContext ? track.thickness : (lgsTrack.thickness ?? lgs.settings.getJourney.thickness),
                         flags:       keepContext ? track.flags : {start: undefined, stop: undefined},
                         content:     feature,
                     }
@@ -460,44 +501,83 @@ export class Journey extends MapElement {
                 .map(p => [getCoordKey(p.longitude, p.latitude), p]),
         )
 
+        const resolveImportedPoiParent = (poiMetadata) => {
+            if (poiMetadata.parentKind !== 'track') {
+                return this.slug
+            }
+
+            if (this.tracks.has(poiMetadata.parent)) {
+                return poiMetadata.parent
+            }
+
+            const matchingTrack = Array.from(this.tracks.values())
+                .find(track => track.title === poiMetadata.parentTrackTitle)
+
+            return matchingTrack?.slug ?? this.slug
+        }
+
         for (const feature of this.geoJson.features) {
             const geometry = getGeom(feature)
+            const properties = feature.properties ?? {}
             const common = {
-                description: decodeHTMLEntities(feature.properties.desc ?? feature.properties.description ?? ''),
+                description: decodeHTMLEntities(properties.desc ?? properties.description ?? ''),
                 visible:     true,
             }
 
             switch (geometry.type) {
                 case FEATURE_POINT: {
                     const [lon, lat, z] = geometry.coordinates
+                    const lgsPoi = extractLgsPoiProperties(properties)
+                    if ([POI_FLAG_START, POI_FLAG_STOP].includes(lgsPoi.type)) {
+                        break
+                    }
+
                     const key = getCoordKey(lon, lat)
                     const existingPoi = existingLookup.get(key)
+                    const importedHeight = lgsPoi.height ?? z ?? undefined
+                    const importedParent = resolveImportedPoiParent(lgsPoi)
+                    const importedType = lgsPoi.type ?? POI_STANDARD_TYPE
+                    const importedCategory = lgsPoi.category ?? POI_STANDARD_TYPE
+                    const importedTitle = properties.name ?? 'POI'
 
-                    const clampedHeight = await __.ui.poiManager.getHeightFromTerrain({
-                                                                                          coordinates: {
-                                                                                              longitude: lon,
-                                                                                              latitude:  lat,
-                                                                                              height:    z ?? 0,
-                                                                                          },
-                                                                                      })
+                    const clampedHeight = lgsPoi.simulatedHeight ?? await __.ui.poiManager.getHeightFromTerrain({
+                                                                                                                     coordinates: {
+                                                                                                                         longitude: lon,
+                                                                                                                         latitude:  lat,
+                                                                                                                         height:    importedHeight ?? 0,
+                                                                                                                     },
+                                                                                                                 })
+
+                    const poiData = {
+                        ...common,
+                        parent:          importedParent,
+                        type:            importedType,
+                        category:        importedCategory,
+                        title:           importedTitle,
+                        longitude:       lon,
+                        latitude:        lat,
+                        height:          importedHeight,
+                        simulatedHeight: clampedHeight,
+                        color:           lgsPoi.color,
+                        bgColor:         lgsPoi.bgColor,
+                        visible:         lgsPoi.visible ?? true,
+                        expanded:        lgsPoi.expanded ?? false,
+                        animated:        lgsPoi.animated ?? false,
+                        time:            lgsPoi.time ?? properties.time,
+                        distance:        lgsPoi.distance,
+                        cameraDistance:  lgsPoi.cameraDistance,
+                        camera:          lgsPoi.camera,
+                    }
 
                     if (existingPoi) {
-                        existingPoi.height = z ?? undefined
-                        existingPoi.simulatedHeight = clampedHeight
-                        existingPoi.title = feature.properties.name
-                        existingPoi.description = common.description
+                        Object.assign(existingPoi, poiData)
                     }
                     else {
+                        if (lgsPoi.id && !__.ui.poiManager.list.has(lgsPoi.id)) {
+                            poiData.id = lgsPoi.id
+                        }
                         const poi = new MapPOI({
-                                                   ...common,
-                                                   parent:          this.slug,
-                                                   type:            POI_STANDARD_TYPE,
-                                                   title:           feature.properties.name,
-                                                   longitude:       lon,
-                                                   latitude:        lat,
-                                                   height:          z ?? undefined,
-                                                   simulatedHeight: clampedHeight,
-                                                   visible:         true,
+                                                   ...poiData,
                                                })
                         await __.ui.poiManager.add(poi, false)
                     }
@@ -587,22 +667,6 @@ export class Journey extends MapElement {
         }
 
         this.poisLoaded = true
-    }
-
-    /**
-     * Define the slug of a POI
-     *
-     * @param suffix {string|number}
-     * @param content {string|number}
-     * @param prefix  {string|number} optional (default = poi)
-     *
-     * @return {string}
-     */
-    #setPOISlug = ({suffix = '', content = '', prefix = POI_STD}) => {
-        if (typeof content === 'number') {
-            content = content.toString()
-        }
-        return __.app.setSlug({suffix: suffix, content: content, prefix: prefix})
     }
 
     /**

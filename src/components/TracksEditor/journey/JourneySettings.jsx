@@ -38,6 +38,7 @@ import {
     ElevationServer,
 }                                     from '@Core/Elevation/ElevationServer'
 import { Journey }                    from '@Core/Journey'
+import { Export }                     from '@Core/ui/Export'
 import {
     RemoveJourney,
 }                                     from '@Editor/journey/RemoveJourney'
@@ -53,11 +54,11 @@ import {
 }                                     from '@Editor/track/TrackStyleSettings'
 import { Utils }                      from '@Editor/Utils'
 import {
-    faDownload,
-}                                     from '@fortawesome/pro-regular-svg-icons'
-import {
     FEATURE_MULTILINE_STRING, FEATURE_POINT, TrackUtils,
 }                                     from '@Utils/cesium/TrackUtils'
+import {
+    exportJourneyToGPX, getExportableJourneyPOIs, getJourneyGpxFileName, GPX_MIME_TYPE,
+}                                     from '@Utils/JourneyGpxUtils'
 import {
     UIToast,
 }                                     from '@Utils/UIToast'
@@ -340,8 +341,51 @@ export const JourneySettings = () => {
         $journeyEditor.showPOIsFilter = tabName === POIS && e.type === 'wa-tab-show'
     }
 
-    const [ConfirmExportJourneyDialog, confirmExportJourney] = useConfirm(`${'Export'}&nbsp;<strong>${journey?.title}</strong> ?`, () => <>Not
-        Yet. Sorry.</>)
+    const ExportJourneyMessage = () => {
+        const poiCount = getExportableJourneyPOIs(lgs.theJourney).length
+        return (
+            <p>
+                {`Export GPX with ${journey?.tracks?.size ?? 0} track(s) and ${poiCount} associated POI(s). Start and end flags are regenerated on import and are not exported as POIs.`}
+            </p>
+        )
+    }
+
+    const [ConfirmExportJourneyDialog, confirmExportJourney] = useConfirm(
+        `${'Export'}&nbsp;<strong>${journey?.title}</strong> ?`,
+        ExportJourneyMessage,
+        {icon: 'download', text: 'Export GPX'},
+    )
+
+    const exportJourney = async () => {
+        const currentJourney = lgs.theJourney
+        if (!currentJourney) {
+            return
+        }
+
+        const confirmed = await confirmExportJourney()
+        if (!confirmed) {
+            return
+        }
+
+        try {
+            const pois = getExportableJourneyPOIs(currentJourney)
+            const content = exportJourneyToGPX(currentJourney, {pois})
+            const fileName = getJourneyGpxFileName(currentJourney)
+            await Export.toFile(content, fileName, GPX_MIME_TYPE)
+
+            UIToast.success({
+                                caption: 'Export success',
+                                text:    `${fileName}<br/>${pois.length} POI(s) exported.`,
+                            })
+        }
+        catch (error) {
+            UIToast.error({
+                              caption: 'Export failed',
+                              text:    'The GPX file could not be generated.',
+                              errors:  error,
+                          })
+        }
+    }
 
     useEffect(() => {
         if (!$journeyEditor.activeTab) {
@@ -506,7 +550,7 @@ export const JourneySettings = () => {
                             <div>
                                 <WaTooltip placement="bottom"
                                            for="export-journey-in-settings">{'Export Journey'}</WaTooltip>
-                                <WaButton onClick={confirmExportJourney}
+                                <WaButton onClick={exportJourney}
                                           id="export-journey-in-settings"
                                           size="small"
                                           appearance="plain"
