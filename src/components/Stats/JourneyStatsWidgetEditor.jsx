@@ -15,6 +15,7 @@
  ******************************************************************************/
 
 import { DurationInput }                                            from '@Components/MainUI/DurationInput'
+import { DateTimeDisplay }                                          from '@Components/DateTimeDisplay'
 import { JourneyMetricsInput }                                      from '@Components/MainUI/JourneyMetricsInput'
 import { LGSScrollbars }                                            from '@Components/MainUI/LGSScrollbars'
 import {
@@ -540,7 +541,9 @@ export const JourneyStatsWidgetEditor = ({entity}) => {
                     <>
                         <WaSwitch label-at-start size="xsmall" checked={element.date ?? false}
                                   onInput={(e) => updateValue('date', e.target.checked)}><span>Date</span></WaSwitch>
-                        {element.date && renderReadOnlyDataValue([journeyDate.prefix, journeyDate.sufix])}
+                        {element.date && renderReadOnlyDataValue(
+                            <DateTimeDisplay items={journeyDate.items} forceStack/>,
+                        )}
                     </>
                 )
             case 'location':

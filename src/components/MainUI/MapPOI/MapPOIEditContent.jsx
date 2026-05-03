@@ -15,6 +15,7 @@
  ******************************************************************************/
 
 import { MapPOICategorySelector } from '@Components/MainUI/MapPOI/MapPOICategorySelector'
+import { DateTimeDisplay }        from '@Components/DateTimeDisplay'
 import { MapPOIEditMenu }         from '@Components/MainUI/MapPOI/MapPOIEditMenu'
 import {
     NO_ASSOCIATED_JOURNEY_LABEL, usePOIJourneyAssociation,
@@ -34,9 +35,6 @@ import {
 }                  from '@web.awesome.me/webawesome-pro/dist/react'
 import classNames  from 'classnames'
 import parse       from 'html-react-parser'
-import {
-    DateTime,
-}                  from 'luxon'
 import {
     memo, useCallback, useEffect, useMemo, useRef, useState,
 }                  from 'react'
@@ -473,7 +471,7 @@ export const MapPOIEditContent = memo(({poi}) => {
                                                       {time && (
                                                           <div className="poi-time">
                                                               <WaIcon name="clock" variant="regular"/>
-                                                              &nbsp;{DateTime.fromISO(time).toLocaleString(DateTime.DATE_FULL)} - {DateTime.fromISO(time).toLocaleString(DateTime.TIME_SIMPLE)}
+                                                              <DateTimeDisplay value={time}/>
                                                           </div>
                                                       )}
 

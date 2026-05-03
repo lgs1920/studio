@@ -213,10 +213,11 @@ export class UIUtils {
 
         const sameDay = start.date === stop.date
 
-        // Retourne [Date, "HeureDépart - HeureArrivée"] si même jour
-        // Sinon ["Date HeureDépart", "Date HeureArrivée"]
         return {
             sameDay,
+            start,
+            stop,
+            items:  [start, stop],
             prefix: sameDay ? start.date : `${start.date} ${start.time}`,
             sufix:  sameDay ? `${start.time} - ${stop.time}` : `${stop.date} ${stop.time}`,
         }

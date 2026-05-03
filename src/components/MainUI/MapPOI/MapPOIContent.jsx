@@ -15,6 +15,7 @@
  ******************************************************************************/
 
 import { NameValueUnit }                             from '@Components/DataDisplay/NameValueUnit'
+import { DateTimeDisplay }                           from '@Components/DateTimeDisplay'
 import { stylePOIDuotoneIcon }                                   from '@Components/MainUI/MapPOI/duotoneIconUtils'
 import { ICONS_PATH, JOURNEY_EDITOR_DRAWER, POIS_EDITOR_DRAWER } from '@Core/constants'
 import { MapPOI }                                                  from '@Core/MapPOI'
@@ -23,7 +24,6 @@ import { ELEVATION_UNITS }                           from '@Utils/UnitUtils'
 import { WaIcon }                                                from '@web.awesome.me/webawesome-pro/dist/react'
 import { snapdom }                                   from '@zumer/snapdom'
 import classNames                                    from 'classnames'
-import { DateTime }                                  from 'luxon'
 import { useCallback, useEffect, useMemo, useRef }                 from 'react'
 import { useSnapshot }                               from 'valtio'
 import './style.css'
@@ -301,8 +301,7 @@ export const MapPOIContent = ({poi, useInMenu = false, style}) => {
                                 </div>
                                 {point.time && (
                                     <div className="poi-time">
-                                        {DateTime.fromISO(point.time).toLocaleString(DateTime.DATE_SIMPLE)} -{' '}
-                                        {DateTime.fromISO(point.time).toLocaleString(DateTime.TIME_SIMPLE)}
+                                        <DateTimeDisplay value={point.time}/>
                                     </div>
                                 )}
                             </div>

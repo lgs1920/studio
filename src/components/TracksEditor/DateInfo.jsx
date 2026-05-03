@@ -15,8 +15,8 @@
  ******************************************************************************/
 
 import { WaDivider, WaIcon } from '@web.awesome.me/webawesome-pro/dist/react'
-import { DateTime }          from 'luxon'
 import { useEffect, useState } from 'react'
+import { DateTimeDisplay }   from '@Components/DateTimeDisplay'
 
 export const DateInfo = function DateInfo(props) {
 
@@ -27,21 +27,32 @@ export const DateInfo = function DateInfo(props) {
 
     const data = props.date
     const hasDates = Boolean(data?.start && data?.stop)
-    const date = {
-        start: {
-            date: hasDates ? DateTime.fromISO(data.start).toLocaleString(DateTime.DATE_FULL) : '',
-            time: hasDates ? DateTime.fromISO(data.start).toLocaleString(DateTime.TIME_SIMPLE) : '',
-        },
-        stop: {
-            date: hasDates ? DateTime.fromISO(data.stop).toLocaleString(DateTime.DATE_FULL) : '',
-            time: hasDates ? DateTime.fromISO(data.stop).toLocaleString(DateTime.TIME_SIMPLE) : '',
-        },
-    }
-    const sameDay = date.start.date === date.stop.date
     const trackLocation = trackLocationState.slug === trackSlug ? trackLocationState.value : ''
     const startPOI = __.ui.poiManager.list.get(track?.flags?.start)
     const stopPOI = __.ui.poiManager.list.get(track?.flags?.stop)
     const showDates = hasDates && startPOI && stopPOI
+    const dateItems = showDates
+                      ? [
+            {
+                value:   data.start,
+                leading: <WaIcon name="location-pin"
+                                 variant="regular"
+                                 style={{
+                                     color: startPOI.bgColor
+                                            ?? lgs.settings.journey.pois.start.color,
+                                 }}/>,
+            },
+            {
+                value:   data.stop,
+                leading: <WaIcon name="location-pin"
+                                 variant="regular"
+                                 style={{
+                                     color: stopPOI.bgColor
+                                            ?? lgs.settings.journey.pois.stop.color,
+                                 }}/>,
+            },
+        ]
+                      : []
 
     useEffect(() => {
         let isMounted = true
@@ -83,53 +94,7 @@ export const DateInfo = function DateInfo(props) {
                         <span>{trackLocation}</span>
                     </div>
                 )}
-                {showDates && sameDay &&
-                    <div className={'track-date'}>
-                        <span>{date.start.date}</span>
-                        <span>
-                    <WaIcon name="location-pin"
-                            variant="regular"
-                            style={{
-                                color: startPOI.bgColor
-                                           ?? lgs.settings.journey.pois.start.color,
-                            }}/>
-                            {date.start.time}
-                </span>
-                        <span>
-                    <WaIcon name="location-pin"
-                            variant="regular"
-                            style={{
-                                color: stopPOI.bgColor
-                                           ?? lgs.settings.journey.pois.stop.color,
-                            }}/>
-                            {date.stop.time}
-                </span>
-                    </div>
-
-                }
-
-                {showDates && !sameDay &&
-                    <div className={'track-date'}>
-                <span>
-                <WaIcon name="location-pin"
-                        variant="regular"
-                        style={{
-                            color: startPOI.bgColor
-                                       ?? lgs.settings.journey.pois.start.color,
-                        }}/>
-                    {date.start.date} {date.start.time}
-                </span>
-                        <span>
-                <WaIcon name="location-pin"
-                        variant="regular"
-                        style={{
-                            color: stopPOI.bgColor
-                                       ?? lgs.settings.journey.pois.stop.color,
-                        }}/>
-                            {date.stop.date} {date.stop.time}
-                </span>
-                    </div>
-                }
+                {showDates && <DateTimeDisplay className="track-date" items={dateItems} forceStack/>}
                 <WaDivider/>
             </>
         }

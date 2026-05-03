@@ -15,6 +15,7 @@
  ******************************************************************************/
 
 import { NameValueUnit }                                from '@Components/DataDisplay/NameValueUnit'
+import { DateTimeDisplay }                              from '@Components/DateTimeDisplay'
 import { useWidgetScaleCorrection } from '@Components/MainUI/widgets/useWidgetScaleCorrection'
 import {
     JOURNEY_STATS_TEXT_ITEM_MAP,
@@ -451,9 +452,7 @@ export const JourneyStats = memo(({id, metrics, units, style = {}}) => {
         switch (itemId) {
             case 'date':
                 return (
-                    <div className="journey-stats-date" key="date">
-                        <span>{date.prefix}</span><span>{date.sufix}</span>
-                    </div>
+                    <DateTimeDisplay className="journey-stats-date" items={date.items} forceStack key="date"/>
                 )
             case 'location':
                 return (
