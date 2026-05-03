@@ -217,6 +217,7 @@ export const MainUI = memo(() => {
 
     const tooltipDir = toolBar.fromStart ? 'right' : 'left'
     const {primaryEntrance, secondaryEntrance} = arrangeDrawers()
+    const videoCaptureActive = video.preRecording || video.recording || video.snapshot || video.finalizing
 
     return (
         <>
@@ -240,7 +241,7 @@ export const MainUI = memo(() => {
                                 <SceneModeSelector tooltip={toolBar.fromStart ? 'left' : 'right'}/>
                                 <GeocodingButton tooltip={toolBar.fromStart ? 'left' : 'right'}/>
                                 <RotateButton tooltip={toolBar.fromStart ? 'left' : 'right'}/>
-                                <FullScreenButton tooltip={toolBar.fromStart ? 'left' : 'right'}/>
+                                {!videoCaptureActive && <FullScreenButton tooltip={toolBar.fromStart ? 'left' : 'right'}/>}
                                 <VideoButton tooltip={toolBar.fromStart ? 'left' : 'right'}/>
                             </div>
                         </div>
