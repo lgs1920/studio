@@ -806,13 +806,6 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                 onRotate={handleRotate}
                 onRotateEnd={handleRotateEnd}
                 rotationPosition={'bottom'}
-                pinchable={true}
-                onPinchStart={({target}) => {
-                    target.style.transformOrigin = '50% 50%'
-                }}
-                onPinch={({target, transform}) => {
-                    target.style.transform = transform
-                }}
                 bounds={bounds}
                 elementGuidelines={[lgs.canvas]}
                 horizontalGuidelines={guidelines.horizontalGuidelines}
