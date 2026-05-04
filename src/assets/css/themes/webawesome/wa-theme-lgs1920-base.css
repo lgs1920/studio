@@ -423,6 +423,12 @@
             }
         }
 
+        wa-switch[size="xsmall"] {
+            --height: 12px;
+            --thumb-size: 8px;
+            --width: 24px;
+        }
+
         wa-tab {
             color: var(--wa-color-text-quiet);
         }
