@@ -12,7 +12,10 @@ import {
     ELEVATION_UNITS,
     UnitUtils,
 } from '@Utils/UnitUtils'
-import { loadDataUrlImage } from './assets'
+import {
+    canvasToDataUrl,
+    loadDataUrlImage,
+} from './assets'
 import {
     cssColor,
     finiteNumber,
@@ -256,7 +259,7 @@ export const createJourneyProfileImage = async ({journey, trackDrawings, backgro
     profileData.datasets.forEach(dataset => drawProfileDataset(context, dataset, profileData, chartBox))
 
     return {
-        dataUrl: canvas.toDataURL('image/png'),
+        dataUrl: await canvasToDataUrl(canvas),
         width:   canvas.width,
         height:  canvas.height,
         ratio:   canvas.width / canvas.height,
@@ -286,7 +289,7 @@ export const captureElementImage = async (element, {scale = 2} = {}) => {
         await waitForAnimationFrames(2)
         const snapshot = await snapdom(element, {scale})
         const canvas = await snapshot.toCanvas()
-        const dataUrl = canvas.toDataURL('image/png')
+        const dataUrl = await canvasToDataUrl(canvas)
 
         return dataUrl ? {
             dataUrl,

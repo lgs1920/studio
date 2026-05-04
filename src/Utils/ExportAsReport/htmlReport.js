@@ -6,7 +6,7 @@
  *
  ******************************************************************************/
 
-import { strToU8, zipSync } from 'fflate'
+import { strToU8, zip } from 'fflate'
 import { DateTime } from 'luxon'
 import {
     CARDINAL_VIEWS,
@@ -71,6 +71,17 @@ import {
 } from './snapshots'
 
 export const renderHTMLIcon = key => fontAwesomeSVG(PDF_ICON_DEFS[key], {className: 'table-icon'})
+
+export const zipFiles = (files, options = {}) => new Promise((resolve, reject) => {
+    zip(files, options, (error, data) => {
+        if (error) {
+            reject(error)
+            return
+        }
+
+        resolve(data)
+    })
+})
 
 export const renderHTMLRows = rows => rows
     .filter(row => row?.label && row.value !== undefined && row.value !== null && row.value !== '')
@@ -568,7 +579,8 @@ export const exportJourneyToHTMLZip = async (journey, {
     }
 
     const theme = getExportTheme()
-    const viewerSnapshot = currentViewerSnapshot()
+    const viewerSnapshot = await currentViewerSnapshot()
+    await yieldToUI()
     const [studioLogo, profileImage, mapSnapshots] = await Promise.all([
                                                                           loadStudioLogo(),
                                                                           captureJourneyProfileImage({
@@ -632,7 +644,7 @@ export const exportJourneyToHTMLZip = async (journey, {
                                                    }))
 
     await yieldToUI()
-    const archive = zipSync(files, {level: 6})
+    const archive = await zipFiles(files, {level: 6})
     downloadBlob(archive, fileName, 'application/zip')
 
     return {

@@ -38,6 +38,7 @@ import {
     SPEED_UNITS,
 } from '@Utils/UnitUtils'
 import {
+    canvasToDataUrl,
     drawInlineLinks,
     drawPDFIcon,
     drawStudioLogo,
@@ -104,10 +105,14 @@ export const normalizeImageForPDF = async (image, options = {}) => {
     context.fillStyle = options.background ?? '#ffffff'
     context.fillRect(0, 0, width, height)
     context.drawImage(source, 0, 0, width, height)
+    const dataUrl = await canvasToDataUrl(canvas, 'image/jpeg', options.quality ?? PDF_IMAGE_QUALITY)
+    if (!dataUrl) {
+        return null
+    }
 
     return {
         ...image,
-        dataUrl:    canvas.toDataURL('image/jpeg', options.quality ?? PDF_IMAGE_QUALITY),
+        dataUrl,
         width,
         height,
         pdfFormat: 'JPEG',
@@ -420,7 +425,7 @@ export const createTextWriter = (doc, studioLogo, icons = {}) => {
     return {heading, reportHeader, subheading, paragraph, row, summaryRows, table, dataTable, gap, footer: () => addFooter(doc)}
 }
 
-export const drawOverviewPage = (doc, journey, trackDrawings, pois, endpointMarkers, studioLogo, {addPage = false, icons = {}} = {}) => {
+export const drawOverviewPage = async (doc, journey, trackDrawings, pois, endpointMarkers, studioLogo, {addPage = false, icons = {}} = {}) => {
     if (addPage) {
         doc.addPage()
     }
@@ -452,10 +457,11 @@ export const drawOverviewPage = (doc, journey, trackDrawings, pois, endpointMark
     const boxWidth = (width - PAGE_MARGIN * 2 - gutter) / 2
     const boxHeight = (height - top - PAGE_MARGIN - gutter) / 2
 
-    CARDINAL_VIEWS.forEach((view, index) => {
+    for (let index = 0; index < CARDINAL_VIEWS.length; index++) {
+        const view = CARDINAL_VIEWS[index]
         const column = index % 2
         const row = Math.floor(index / 2)
-        drawMapPanel(doc, {
+        await drawMapPanel(doc, {
             box: {
                 x:      PAGE_MARGIN + column * (boxWidth + gutter),
                 y:      top + row * (boxHeight + gutter),
@@ -470,7 +476,8 @@ export const drawOverviewPage = (doc, journey, trackDrawings, pois, endpointMark
             referencePoints,
             icons,
         })
-    })
+        await yieldToUI()
+    }
 
     addFooter(doc)
 }
@@ -654,7 +661,8 @@ export const exportJourneyToPDF = async (journey, {
     }
 
     const theme = getExportTheme()
-    const viewerSnapshot = currentViewerSnapshot()
+    const viewerSnapshot = await currentViewerSnapshot()
+    await yieldToUI()
     const brandColor = parseCssColor(theme.brand, PDF_COLORS.text)
     const [studioLogo, pdfIcons, profileImage, mapSnapshots] = await Promise.all([
                                                                                     loadStudioLogo(),
@@ -683,7 +691,7 @@ export const exportJourneyToPDF = async (journey, {
 
     addJourneyDetails(doc, journey, listedPois, studioLogo, {profileImage: pdfProfileImage, icons: pdfIcons, addPage: false})
     await yieldToUI()
-    drawOverviewPage(doc, journey, trackDrawings, exportablePois, endpointMarkers, studioLogo, {
+    await drawOverviewPage(doc, journey, trackDrawings, exportablePois, endpointMarkers, studioLogo, {
         addPage: true,
         icons:   pdfIcons,
     })

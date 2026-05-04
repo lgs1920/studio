@@ -124,6 +124,56 @@ export const loadDataUrlImage = dataUrl => new Promise(resolve => {
     image.src = dataUrl
 })
 
+export const blobToDataUrl = blob => new Promise(resolve => {
+    if (!blob || typeof FileReader === 'undefined') {
+        resolve('')
+        return
+    }
+
+    const reader = new FileReader()
+    reader.onload = () => resolve(reader.result)
+    reader.onerror = () => resolve('')
+    reader.readAsDataURL(blob)
+})
+
+export const canvasToDataUrl = (canvas, type = 'image/png', quality = undefined) => new Promise(resolve => {
+    if (!canvas) {
+        resolve('')
+        return
+    }
+
+    const fallback = () => {
+        try {
+            resolve(canvas.toDataURL(type, quality))
+        }
+        catch (error) {
+            console.error(error)
+            resolve('')
+        }
+    }
+
+    if (typeof canvas.toBlob !== 'function') {
+        fallback()
+        return
+    }
+
+    try {
+        canvas.toBlob(async blob => {
+            const dataUrl = await blobToDataUrl(blob)
+            if (dataUrl) {
+                resolve(dataUrl)
+                return
+            }
+
+            fallback()
+        }, type, quality)
+    }
+    catch (error) {
+        console.error(error)
+        fallback()
+    }
+})
+
 export const svgIconToPNG = async (iconDefinition, {size = 96, color = '#000000'} = {}) => {
     if (typeof document === 'undefined') {
         return null
@@ -145,7 +195,7 @@ export const svgIconToPNG = async (iconDefinition, {size = 96, color = '#000000'
     context.clearRect(0, 0, size, size)
     context.drawImage(image, 0, 0, size, size)
 
-    return canvas.toDataURL('image/png')
+    return await canvasToDataUrl(canvas)
 }
 
 export const loadPDFIcons = async (theme = getExportTheme()) => {

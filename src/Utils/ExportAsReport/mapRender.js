@@ -39,6 +39,9 @@ import {
     drawPDFIcon,
     fontAwesomePositionedSVG,
 } from './assets'
+import { yieldToUI } from './snapshots'
+
+const PDF_MAP_YIELD_LINE_INTERVAL = 2500
 
 export const drawBadge = (doc, {x, y, label, color, radius = POI_BADGE_RADIUS}) => {
     setColor(doc, 'setFillColor', color)
@@ -130,7 +133,7 @@ export const drawCreditsOverlay = (doc, {imageBox, overlayImage}) => {
     }
 }
 
-export const drawMapPanel = (doc, {box, view, bounds, trackDrawings, pois, endpointMarkers, referencePoints, icons}) => {
+export const drawMapPanel = async (doc, {box, view, bounds, trackDrawings, pois, endpointMarkers, referencePoints, icons}) => {
     drawMapFrame(doc, box)
     doc.setFont('helvetica', 'bold')
     doc.setFontSize(8)
@@ -152,17 +155,23 @@ export const drawMapPanel = (doc, {box, view, bounds, trackDrawings, pois, endpo
                                      })
     const trackInfo = getProjectedTrackInfo(trackDrawings, project)
 
-    trackDrawings.forEach(({segments, color}) => {
+    let drawnLineCount = 0
+    for (const {segments, color} of trackDrawings) {
         setColor(doc, 'setDrawColor', color)
         doc.setLineWidth(MAP_STROKE_WIDTH)
-        segments.forEach(segment => {
-            segment.slice(1).forEach((point, index) => {
-                const previous = project(segment[index])
+        for (const segment of segments) {
+            for (let index = 1; index < segment.length; index++) {
+                const point = segment[index]
+                const previous = project(segment[index - 1])
                 const current = project(point)
                 doc.line(previous.x, previous.y, current.x, current.y)
-            })
-        })
-    })
+                drawnLineCount++
+                if (drawnLineCount % PDF_MAP_YIELD_LINE_INTERVAL === 0) {
+                    await yieldToUI()
+                }
+            }
+        }
+    }
     drawProgressMarkers(doc, {trackInfo, container: innerBox, icons, iconKey: 'progressBlack'})
 
     pois.forEach(poi => {

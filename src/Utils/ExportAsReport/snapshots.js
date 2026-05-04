@@ -9,6 +9,7 @@
 import { SceneUtils } from '@Utils/cesium/SceneUtils'
 import { snapdom } from '@zumer/snapdom'
 import { Cartesian2, Cartesian3 } from 'cesium'
+import { canvasToDataUrl } from './assets'
 import {
     CESIUM_SCENE_3D_MODE,
     MAP_SNAPSHOT_TIMEOUT,
@@ -227,11 +228,11 @@ export const focusJourneyForSnapshot = async (focusContext, {heading = 0, pitch 
     })
 }
 
-export const captureCanvasSnapshot = canvas => {
+export const captureCanvasSnapshot = async canvas => {
     const rect = canvas.getBoundingClientRect?.() ?? {}
     const width = canvas.width || Math.round(rect.width ?? 0)
     const height = canvas.height || Math.round(rect.height ?? 0)
-    const dataUrl = canvas.toDataURL('image/png')
+    const dataUrl = await canvasToDataUrl(canvas)
 
     return dataUrl && width > 0 && height > 0 ? {dataUrl, width, height} : null
 }
@@ -276,7 +277,7 @@ export const captureCreditsBarSnapshot = async () => {
         if (!canvas) {
             return null
         }
-        const dataUrl = canvas.toDataURL('image/png')
+        const dataUrl = await canvasToDataUrl(canvas)
 
         return dataUrl ? {
             dataUrl,
@@ -335,7 +336,7 @@ export const embedCreditsBarInSnapshot = async (snapshot, creditsBar) => {
 
     return {
         ...snapshot,
-        dataUrl: canvas.toDataURL('image/png'),
+        dataUrl: await canvasToDataUrl(canvas),
     }
 }
 
@@ -427,14 +428,14 @@ export const waitForJourneyTraceRender = async (trackDrawings, canvas) => {
     })
 }
 
-export const currentViewerSnapshot = () => {
+export const currentViewerSnapshot = async () => {
     const canvas = getCesiumCanvas()
     if (!canvas) {
         return null
     }
 
     try {
-        return captureCanvasSnapshot(canvas)
+        return await captureCanvasSnapshot(canvas)
     }
     catch (error) {
         console.error(error)
@@ -466,7 +467,7 @@ export const captureJourney3DMapSnapshots = async journey => {
             const trackInfo = await waitForJourneyTraceRender(trackDrawings, canvas)
             await waitForAnimationFrames(1)
 
-            const snapshot = captureCanvasSnapshot(canvas)
+            const snapshot = await captureCanvasSnapshot(canvas)
             if (snapshot) {
                 const snapshotWithCredits = await embedCreditsBarInSnapshot(snapshot, creditsBarSnapshot)
                 snapshots.push({
