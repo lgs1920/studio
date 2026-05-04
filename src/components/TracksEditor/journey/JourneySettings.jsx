@@ -172,10 +172,9 @@ export const JourneySettings = () => {
      */
     const computeElevation = async (event) => {
         const newServer = event?.detail?.value ?? event?.target?.value
-        const force = event?.detail?.force === true
         const previousServer = journey.elevationServer
 
-        if (!newServer || (newServer === previousServer && !force)) {
+        if (!newServer || newServer === previousServer) {
             return
         }
 

@@ -32,7 +32,7 @@ import { UIToast }                                                  from '@Utils
 import {
     WaButton, WaIcon, WaOption, WaProgressBar, WaSelect, WaSwitch, WaTooltip,
 }                                                                   from '@web.awesome.me/webawesome-pro/dist/react'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState }                 from 'react'
 import { useSnapshot }                                              from 'valtio'
 
 const setProfileWidgetVisible = visible => {
@@ -54,7 +54,6 @@ export const ElevationProfile = (props) => {
     const {journey, isProcessing} = useSnapshot($journeyEditor)
     const widget = useSnapshot(lgs.stores.ui.widget)
 
-    const _bootstrapComputeRef = useRef('')
     const [canShowProgress, setCanShowProgress] = useState(false)
     const [profileChartConfigId, setProfileChartConfigId] = useState(null)
     const [backgroundImage, setBackgroundImage] = useState(null)
@@ -346,19 +345,6 @@ export const ElevationProfile = (props) => {
             $journeyEditor.journey.elevationServer = selectedServer
         }
     }, [selectedServer, isProcessing])
-
-    useEffect(() => {
-        if (!journey?.slug || isProcessing || !props.onChange) {
-            return
-        }
-        const _key = `${journey.slug}:${selectedServer}`
-        if (_bootstrapComputeRef.current === _key || [ElevationServer.NONE, ElevationServer.CLEAR].includes(selectedServer)) {
-            return
-        }
-
-        _bootstrapComputeRef.current = _key
-        props.onChange({detail: {value: selectedServer, force: true}})
-    }, [journey?.slug, selectedServer, isProcessing])
 
     const handleServerChange = (e) => {
         const _val = e.target.value
