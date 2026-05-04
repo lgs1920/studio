@@ -17,15 +17,19 @@
 import { Widget }                                                                 from '@Components/MainUI/widgets/Widget'
 import { JourneyStats }                                                           from '@Components/Stats/JourneyStats'
 import { JOURNEY_WIDGETS, LGS_VISUAL_WIDGET, SCENE_WIDGETS, SCENE_WIDGETS_BOARD } from '@Core/constants'
+import { useManagedStylesheet }                                                   from '@Utils/useManagedStylesheet'
 import { useOptionalSnapshot } from '@Utils/ValtioUtils'
 import { DISTANCE_UNITS, ELEVATION_UNITS, PACE_UNITS, SPEED_UNITS }               from '@Utils/UnitUtils'
 import { useMemo } from 'react'
 import { useSnapshot }                                                            from 'valtio'
-import './style.css'
+import journeyStatsStylesheetHref                                                 from './style.css?url'
 
 const JOURNEY_STATS_WIDGET_CONTEXT_FALLBACK = {widgetsBoard: ''}
+const JOURNEY_STATS_WIDGET_STYLESHEET_ID = 'journey-stats-widget'
 
 export const JourneyStatsWidget = ({id, context, zIndex, widgetsBoard: persistedWidgetsBoard}) => {
+    useManagedStylesheet(JOURNEY_STATS_WIDGET_STYLESHEET_ID, journeyStatsStylesheetHref)
+
     const contextState = useOptionalSnapshot(context, JOURNEY_STATS_WIDGET_CONTEXT_FALLBACK)
     const widgetsBoard = contextState.widgetsBoard || persistedWidgetsBoard || ''
     const main = useSnapshot(lgs.stores.main)
