@@ -22,26 +22,135 @@ import {
 }                                                   from '@Utils/cesium/trackRenderSmoothing'
 import {
     TRACK_METER_WIDTHS,
+    TRACK_RENDER_STYLE_CUSTOM_PRESET,
+    TRACK_RENDER_STYLE_PRESETS,
     normalizeTrackRenderStyle,
 }                                                   from '@Utils/cesium/trackRenderStyle'
-import { WaColorPicker, WaDivider, WaNumberInput, WaSlider, WaSwitch } from '@web.awesome.me/webawesome-pro/dist/react'
+import { sanitizeNumericControlValue }              from '@Components/MainUI/widgets/editor/elements/sliderUtils'
+import {
+    WaColorPicker, WaDivider, WaNumberInput, WaOption, WaSelect, WaSlider, WaSwitch,
+}                                                   from '@web.awesome.me/webawesome-pro/dist/react'
 import { colord }                                   from 'colord'
 import { useCallback, useEffect, useRef }           from 'react'
 import { useSnapshot }                              from 'valtio'
 import { Utils }                                    from '../Utils'
+import { TrackStylePreview }                        from './TrackStylePreview'
 
 const toNumber = (value, fallback) => {
     const number = Number(value)
     return Number.isFinite(number) ? number : fallback
 }
 
-const toColorState = value => {
+const toColorValue = value => {
     const color = colord(value ?? '#ffffff')
-    return {
-        color:   color.alpha(1).toRgbString(),
-        opacity: color.alpha(),
-    }
+    return color.isValid() ? color.toRgbString() : '#ffffff'
 }
+
+const toOpaqueColorValue = value => {
+    const color = colord(value ?? '#ffffff')
+    return color.isValid() ? color.alpha(1).toHex() : '#ffffff'
+}
+
+const getOpacityValue = value => {
+    const color = colord(value ?? '#ffffff')
+    return sanitizeNumericControlValue(color.isValid() ? color.alpha() : 1, 1, {min: 0, max: 1})
+}
+
+const composeColorValue = (color, opacity) => {
+    const nextColor = colord(color ?? '#ffffff')
+    const nextOpacity = sanitizeNumericControlValue(opacity, 1, {min: 0, max: 1})
+    return (nextColor.isValid() ? nextColor : colord('#ffffff')).alpha(nextOpacity).toRgbString()
+}
+
+const colorEquals = (first, second) => {
+    const firstColor = colord(first ?? '')
+    const secondColor = colord(second ?? '')
+    return firstColor.isValid() && secondColor.isValid() && firstColor.toRgbString() === secondColor.toRgbString()
+}
+
+const TrackStyleField = ({label, hint, className = '', children}) => (
+    <div className={`lgs--track-style-field ${className}`.trim()}>
+        <span className="lgs--track-style-label">{label}</span>
+        {children}
+        {hint && <span className="lgs--track-style-input-hint">{hint}</span>}
+    </div>
+)
+
+const TrackStyleColorField = ({label, hint, value, onChange, className = ''}) => (
+    <TrackStyleField label={label} hint={hint} className={`lgs--track-style-color-field ${className}`.trim()}>
+        <div className="lgs--track-style-color-control">
+            <WaColorPicker
+                className="lgs--track-style-color-picker"
+                size="small"
+                aria-label={label}
+                value={toOpaqueColorValue(value)}
+                swatches={lgs.settings.getSwatches.list.join(';')}
+                onInput={(event) => onChange(composeColorValue(event.target.value, getOpacityValue(value)))}
+            />
+            <WaSlider
+                className="lgs--track-style-opacity-slider"
+                size="small"
+                label="Opacity"
+                min="0"
+                max="1"
+                step="0.05"
+                label-at-start
+                width-auto
+                placement="top"
+                withTooltip
+                value={getOpacityValue(value)}
+                valueFormatter={v => `${Math.floor(v * 100)}%`}
+                onInput={(event) => onChange(composeColorValue(toOpaqueColorValue(value), event.target.value))}
+            />
+        </div>
+    </TrackStyleField>
+)
+
+const TrackStyleNumberField = ({label, unit, hint, className = '', ...props}) => (
+    <TrackStyleField
+        label={unit ? `${label} (${unit})` : label}
+        hint={hint}
+        className={`lgs--track-style-number-field ${className}`.trim()}
+    >
+        <WaNumberInput
+            className="lgs--track-style-number-input"
+            size="small"
+            appearance="filled"
+            {...props}
+        />
+    </TrackStyleField>
+)
+
+const TrackStyleControlGroup = ({colorLabel = 'Color', color, onColorChange, fields = [], className = ''}) => (
+    <div className={`lgs--track-style-control-group ${className}`.trim()}>
+        <TrackStyleColorField
+            label={colorLabel}
+            value={color}
+            onChange={onColorChange}
+        />
+        {fields.length > 0 && (
+            <div className={`lgs--track-style-field-grid ${fields.length === 1 ? 'is-single' : ''}`.trim()}>
+                {fields.map(({key, ...field}) => (
+                    <TrackStyleNumberField key={key ?? field.label} {...field}/>
+                ))}
+            </div>
+        )}
+    </div>
+)
+
+const mergeRenderStyle = (baseStyle, updates, legacy = {}) => normalizeTrackRenderStyle({
+                                                                                            ...baseStyle,
+                                                                                            ...updates,
+                                                                                            underlay: {
+                                                                                                ...baseStyle.underlay,
+                                                                                                ...updates.underlay,
+                                                                                            },
+                                                                                            dash:     {
+                                                                                                ...baseStyle.dash,
+                                                                                                ...updates.dash,
+                                                                                            },
+                                                                                        },
+                                                                                        legacy)
 
 const assignTrackRenderStyle = (editor, updates) => {
     if (!editor.track) {
@@ -52,22 +161,10 @@ const assignTrackRenderStyle = (editor, updates) => {
         color:     editor.track.color,
         thickness: editor.track.thickness,
     })
-    const nextStyle = normalizeTrackRenderStyle({
-                                                    ...currentStyle,
-                                                    ...updates,
-                                                    underlay: {
-                                                        ...currentStyle.underlay,
-                                                        ...updates.underlay,
-                                                    },
-                                                    dash:     {
-                                                        ...currentStyle.dash,
-                                                        ...updates.dash,
-                                                    },
-                                                },
-                                                {
-                                                    color:     editor.track.color,
-                                                    thickness: editor.track.thickness,
-                                                })
+    const nextStyle = mergeRenderStyle(currentStyle, updates, {
+        color:     editor.track.color,
+        thickness: editor.track.thickness,
+    })
 
     editor.track.renderStyle = nextStyle
     editor.track.color = nextStyle.color
@@ -98,8 +195,6 @@ export const TrackStyleSettings = () => {
     const {journey, track} = useSnapshot($editor)
 
     const _saveTimeoutRef = useRef(null)
-    const _thicknessRef = useRef(null)
-    const _opacityRef = useRef(null)
     const isJourneyScopedSmoothing = (journey?.tracks?.size ?? 0) <= 1
     const smoothingSource = isJourneyScopedSmoothing
                             ? (journey?.renderSmoothing ?? track?.renderSmoothing)
@@ -110,32 +205,11 @@ export const TrackStyleSettings = () => {
         thickness: track?.thickness,
     })
 
-    const trackColor = toColorState(renderStyle.color)
-    const underlayColor = toColorState(renderStyle.underlay.color)
-    const dashGapColor = toColorState(renderStyle.dash.gapColor)
-
     useEffect(() => {
         if (!$editor.track) {
             TrackUtils.setTheTrack(false)
         }
     }, [$editor])
-
-    /**
-     * Sync sliders only when external changes occur (Initial mount or undo/redo)
-     */
-    useEffect(() => {
-        if (_thicknessRef.current) {
-            _thicknessRef.current.value = renderStyle.farPixelWidth
-        }
-        if (_opacityRef.current) {
-            _opacityRef.current.value = colord(renderStyle.color).alpha()
-        }
-    }, [
-        renderStyle.color,
-        renderStyle.dash.gapColor,
-        renderStyle.farPixelWidth,
-        renderStyle.underlay.color,
-    ])
 
     const scheduleTrackUpdate = useCallback((afterSave = null) => {
         if (_saveTimeoutRef.current) {
@@ -154,33 +228,30 @@ export const TrackStyleSettings = () => {
         }
     }, [])
 
-    const applyRenderStyle = (updates, {afterSave = null} = {}) => {
-        if (assignTrackRenderStyle($editor, updates)) {
+    const applyRenderStyle = (updates, {afterSave = null, keepPreset = false} = {}) => {
+        const nextUpdates = keepPreset || updates.presetKey
+                            ? updates
+                            : {
+                                ...updates,
+                                presetKey: TRACK_RENDER_STYLE_CUSTOM_PRESET,
+                            }
+        if (assignTrackRenderStyle($editor, nextUpdates)) {
             scheduleTrackUpdate(afterSave)
         }
     }
 
-    const updateColorState = (event, colorState, onColor, afterSave = null) => {
-        const isSlider = event.target.nodeName === 'WA-SLIDER'
-        const val = event.target.value
-        let newColor = colord(colorState.color)
-        let newOpacity = colorState.opacity
+    const handleColorInput = (color) => {
+        const nextColor = toColorValue(color)
+        const updates = {color: nextColor}
+        const isPresetStyle = renderStyle.presetKey !== TRACK_RENDER_STYLE_CUSTOM_PRESET
 
-        if (isSlider) {
-            newOpacity = toNumber(val, colorState.opacity)
-        }
-        else {
-            newColor = colord(val)
+        if (renderStyle.dash.enabled && (isPresetStyle || colorEquals(renderStyle.dash.color, renderStyle.color))) {
+            updates.dash = {color: nextColor}
         }
 
-        onColor(newColor.alpha(newOpacity).toRgbString(), afterSave)
-    }
-
-    const handleColorInput = (event) => {
-        updateColorState(
-            event,
-            trackColor,
-            color => applyRenderStyle({color}, {afterSave: () => __.ui.profiler?.updateColor()}),
+        applyRenderStyle(
+            updates,
+            {afterSave: () => __.ui.profiler?.updateColor()},
         )
     }
 
@@ -200,16 +271,12 @@ export const TrackStyleSettings = () => {
                          })
     }
 
-    const handleUnderlayColorInput = event => {
-        updateColorState(
-            event,
-            underlayColor,
-            color => applyRenderStyle({
-                                          underlay: {
-                                              color,
-                                          },
-                                      }),
-        )
+    const handleUnderlayColorInput = color => {
+        applyRenderStyle({
+                             underlay: {
+                                 color: toColorValue(color),
+                             },
+                         })
     }
 
     const handleUnderlayMeterWidthInput = event => {
@@ -236,16 +303,20 @@ export const TrackStyleSettings = () => {
                          })
     }
 
-    const handleDashGapColorInput = event => {
-        updateColorState(
-            event,
-            dashGapColor,
-            color => applyRenderStyle({
-                                          dash: {
-                                              gapColor: color,
-                                          },
-                                      }),
-        )
+    const handleDashColorInput = color => {
+        applyRenderStyle({
+                             dash: {
+                                 color: toColorValue(color),
+                             },
+                         })
+    }
+
+    const handleDashGapColorInput = color => {
+        applyRenderStyle({
+                             dash: {
+                                 gapColor: toColorValue(color),
+                             },
+                         })
     }
 
     const handleDashLengthInput = event => {
@@ -253,6 +324,51 @@ export const TrackStyleSettings = () => {
                              dash: {
                                  dashLength: toNumber(event.target.value, renderStyle.dash.dashLength),
                              },
+                         })
+    }
+
+    const handleDashGapLengthInput = event => {
+        applyRenderStyle({
+                             dash: {
+                                 gapLength: toNumber(event.target.value, renderStyle.dash.gapLength),
+                             },
+                         })
+    }
+
+    const getPresetRenderStyle = preset => {
+        const presetStyle = preset.style ?? {}
+        const presetDash = presetStyle.dash ?? {}
+
+        return mergeRenderStyle(renderStyle, {
+            ...presetStyle,
+            color:     renderStyle.color,
+            presetKey: preset.key,
+            dash:      {
+                ...presetDash,
+                color: presetDash.color ?? renderStyle.color,
+            },
+        }, {
+            color:     track?.color,
+            thickness: track?.thickness,
+        })
+    }
+
+    const handlePresetChange = event => {
+        const presetKey = event.target.value
+        if (presetKey === TRACK_RENDER_STYLE_CUSTOM_PRESET) {
+            applyRenderStyle({presetKey}, {keepPreset: true})
+            return
+        }
+
+        const preset = TRACK_RENDER_STYLE_PRESETS.find(item => item.key === presetKey)
+        if (!preset) {
+            return
+        }
+
+        applyRenderStyle(getPresetRenderStyle(preset),
+                         {
+                             afterSave:  () => __.ui.profiler?.updateColor(),
+                             keepPreset: true,
                          })
     }
 
@@ -282,6 +398,11 @@ export const TrackStyleSettings = () => {
 
     const meterWidthMin = TRACK_METER_WIDTHS[0]
     const meterWidthMax = TRACK_METER_WIDTHS[TRACK_METER_WIDTHS.length - 1]
+    const selectedPresetKey = TRACK_RENDER_STYLE_PRESETS.some(preset => preset.key === renderStyle.presetKey)
+                              ? renderStyle.presetKey
+                              : TRACK_RENDER_STYLE_CUSTOM_PRESET
+    const selectedPreset = TRACK_RENDER_STYLE_PRESETS.find(preset => preset.key === selectedPresetKey)
+    const selectedPresetPreviewStyle = selectedPreset ? getPresetRenderStyle(selectedPreset) : renderStyle
 
     if (!track?.visible) {
         return null
@@ -289,62 +410,94 @@ export const TrackStyleSettings = () => {
 
     return (
         <div id="track-line-settings">
+            <WaDivider/>
             <section className="lgs--track-style-section">
-                <div className="drawer-horizontal-line lgs--track-style-settings">
-                    <WaColorPicker
-                        opacity={false}
-                        size="small"
-                        value={trackColor.color}
-                        swatches={lgs.settings.getSwatches.list.join(';')}
-                        onChange={handleColorInput}
-                        noFormatToggle
-                    />
-                    <div className="lgs--track-style-controls">
-                        <WaSlider
-                            ref={_opacityRef}
-                            min={0.05}
-                            max={1}
-                            step={0.05}
-                            label-at-start
-                            size="small"
-                            label="Opacity"
-                            value={trackColor.opacity}
-                            onInput={handleColorInput}
-                            valueFormatter={value => `${Math.round(value * 100)}%`}
-                            placement="bottom"
-                            withTooltip
-                        />
-                        <div className="lgs--track-render-grid">
-                            <WaNumberInput
-                                label-at-start
-                                size="small"
-                                min={meterWidthMin}
-                                max={meterWidthMax}
-                                step={0.5}
-                                value={renderStyle.meterWidth}
-                                onInput={handleMeterWidthInput}
-                                appearance="filled"
-                            >
-                                <span slot="label">Width (m)</span>
-                                <span slot="hint">Track width is mapped to meters once it is wider than 2 px on screen.</span>
-                            </WaNumberInput>
-                            <WaNumberInput
-                                ref={_thicknessRef}
-                                label-at-start
-                                size="small"
-                                min={1}
-                                max={12}
-                                step={0.5}
-                                value={renderStyle.farPixelWidth}
-                                onInput={handleFarPixelWidthInput}
-                                appearance="filled"
-                            >
-                                <span slot="label">Far width (px)</span>
-                                <span slot="hint">Minimum width used from far away so the track remains visible.</span>
-                            </WaNumberInput>
+                <h3 className="lgs--track-style-title">Track style</h3>
+                <WaSwitch
+                    className="lgs--track-style-switch"
+                    label-at-start
+                    size="xsmall"
+                    checked={smoothing.enabled}
+                    onInput={handleSmoothingEnabled}
+                >
+                    <span>Smooth render</span>
+                </WaSwitch>
+                {smoothing.enabled && (
+                    <div className="lgs--track-style-subsection">
+                        <div className="lgs--track-style-field-grid is-single">
+                            <TrackStyleNumberField
+                                label="Step"
+                                hint="Visual smoothing passes applied only to the rendered track."
+                                min={TRACK_RENDER_SMOOTHING_MIN_STEP}
+                                max={TRACK_RENDER_SMOOTHING_MAX_STEP}
+                                step={1}
+                                value={smoothing.step}
+                                onInput={handleSmoothingStep}
+                            />
                         </div>
                     </div>
-                </div>
+                )}
+                <WaDivider/>
+                <TrackStyleField
+                    label="Preset"
+                    hint="Choose a starting style. Manual changes switch it to Custom."
+                    className="lgs--track-style-preset-field"
+                >
+                    <WaSelect
+                        className="lgs--track-style-preset-select"
+                        size="small"
+                        value={selectedPresetKey}
+                        onChange={handlePresetChange}
+                    >
+                        <div slot="start">
+                            <TrackStylePreview track={track} renderStyle={selectedPresetPreviewStyle}/>
+                        </div>
+                        <WaOption value={TRACK_RENDER_STYLE_CUSTOM_PRESET}>
+                            <div slot="start">
+                                <TrackStylePreview track={track} renderStyle={renderStyle}/>
+                            </div>
+                            Custom
+                        </WaOption>
+                        {TRACK_RENDER_STYLE_PRESETS.map(preset => (
+                            <WaOption key={preset.key} value={preset.key}>
+                                <div slot="start">
+                                    <TrackStylePreview track={track} renderStyle={getPresetRenderStyle(preset)}/>
+                                </div>
+                                {preset.label}
+                            </WaOption>
+                        ))}
+                    </WaSelect>
+                </TrackStyleField>
+                <TrackStyleControlGroup
+                    colorLabel="Color"
+                    color={renderStyle.color}
+                    onColorChange={handleColorInput}
+                    fields={[
+                        {
+                            key:     'meter-width',
+                            label:   'Width',
+                            unit:    'm',
+                            hint:    'Used once the projected width is wider than 2 px.',
+                            min:     meterWidthMin,
+                            max:     meterWidthMax,
+                            step:    0.5,
+                            value:   renderStyle.meterWidth,
+                            onInput: handleMeterWidthInput,
+                        },
+                        {
+                            key:     'far-pixel-width',
+                            label:   'Far Width',
+                            unit:    'px',
+                            hint:    'Minimum width from far away.',
+                            min:     1,
+                            max:     12,
+                            step:    0.5,
+                            value:   renderStyle.farPixelWidth,
+                            onInput: handleFarPixelWidthInput,
+                        },
+                    ]}
+                />
+                <WaDivider/>
                 <WaSwitch
                     className="lgs--track-style-switch"
                     label-at-start
@@ -355,60 +508,38 @@ export const TrackStyleSettings = () => {
                     <span>Underlay</span>
                 </WaSwitch>
                 {renderStyle.underlay.enabled && (
-                    <div className="drawer-horizontal-line lgs--track-style-settings lgs--track-style-subsection">
-                        <WaColorPicker
-                            opacity={false}
-                            size="small"
-                            value={underlayColor.color}
-                            swatches={lgs.settings.getSwatches.list.join(';')}
-                            onChange={handleUnderlayColorInput}
-                            noFormatToggle
-                        />
-                        <div className="lgs--track-style-controls">
-                            <WaSlider
-                                min={0.05}
-                                max={1}
-                                step={0.05}
-                                label-at-start
-                                size="small"
-                                label="Opacity"
-                                value={underlayColor.opacity}
-                                onInput={handleUnderlayColorInput}
-                                valueFormatter={value => `${Math.round(value * 100)}%`}
-                                placement="bottom"
-                                withTooltip
-                            />
-                            <div className="lgs--track-render-grid">
-                                <WaNumberInput
-                                    label-at-start
-                                    size="small"
-                                    min={meterWidthMin}
-                                    max={8}
-                                    step={0.5}
-                                    value={renderStyle.underlay.meterWidth}
-                                    onInput={handleUnderlayMeterWidthInput}
-                                    appearance="filled"
-                                >
-                                    <span slot="label">Underlay (m)</span>
-                                    <span slot="hint">Wider colored line drawn below the main track.</span>
-                                </WaNumberInput>
-                                <WaNumberInput
-                                    label-at-start
-                                    size="small"
-                                    min={1}
-                                    max={24}
-                                    step={0.5}
-                                    value={renderStyle.underlay.pixelWidth}
-                                    onInput={handleUnderlayPixelWidthInput}
-                                    appearance="filled"
-                                >
-                                    <span slot="label">Far underlay (px)</span>
-                                    <span slot="hint">Fallback underlay width while the meter width is too small on screen.</span>
-                                </WaNumberInput>
-                            </div>
-                        </div>
-                    </div>
+                    <TrackStyleControlGroup
+                        className="lgs--track-style-subsection"
+                        colorLabel="Color"
+                        color={renderStyle.underlay.color}
+                        onColorChange={handleUnderlayColorInput}
+                        fields={[
+                            {
+                                key:     'underlay-meter-width',
+                                label:   'Width',
+                                unit:    'm',
+                                hint:    'Wider line below the main track.',
+                                min:     meterWidthMin,
+                                max:     8,
+                                step:    0.5,
+                                value:   renderStyle.underlay.meterWidth,
+                                onInput: handleUnderlayMeterWidthInput,
+                            },
+                            {
+                                key:     'underlay-pixel-width',
+                                label:   'Far Width',
+                                unit:    'px',
+                                hint:    'Fallback underlay width from far away.',
+                                min:     1,
+                                max:     24,
+                                step:    0.5,
+                                value:   renderStyle.underlay.pixelWidth,
+                                onInput: handleUnderlayPixelWidthInput,
+                            },
+                        ]}
+                    />
                 )}
+                <WaDivider/>
                 <WaSwitch
                     className="lgs--track-style-switch"
                     label-at-start
@@ -419,74 +550,52 @@ export const TrackStyleSettings = () => {
                     <span>Dashes</span>
                 </WaSwitch>
                 {renderStyle.dash.enabled && (
-                    <div className="drawer-horizontal-line lgs--track-style-settings lgs--track-style-subsection">
-                        <WaColorPicker
-                            opacity={false}
-                            size="small"
-                            value={dashGapColor.color}
-                            swatches={lgs.settings.getSwatches.list.join(';')}
-                            onChange={handleDashGapColorInput}
-                            noFormatToggle
-                        />
-                        <div className="lgs--track-style-controls">
-                            <WaSlider
-                                min={0}
-                                max={1}
-                                step={0.05}
-                                label-at-start
-                                size="small"
-                                label="Gap opacity"
-                                value={dashGapColor.opacity}
-                                onInput={handleDashGapColorInput}
-                                valueFormatter={value => `${Math.round(value * 100)}%`}
-                                placement="bottom"
-                                withTooltip
+                    <div className="lgs--track-style-dash-grid lgs--track-style-subsection">
+                        <section className="lgs--track-style-dash-column">
+                            <h4 className="lgs--track-style-dash-title">Dash</h4>
+                            <TrackStyleControlGroup
+                                colorLabel="Dash color"
+                                color={renderStyle.dash.color}
+                                onColorChange={handleDashColorInput}
+                                fields={[
+                                    {
+                                        key:     'dash-length',
+                                        label:   'Length',
+                                        unit:    'px',
+                                        hint:    'Visible dash segment length.',
+                                        min:     4,
+                                        max:     96,
+                                        step:    1,
+                                        value:   renderStyle.dash.dashLength,
+                                        onInput: handleDashLengthInput,
+                                    },
+                                ]}
                             />
-                            <WaSlider
-                                min={4}
-                                max={96}
-                                step={1}
-                                label-at-start
-                                size="small"
-                                label="Dash length"
-                                value={renderStyle.dash.dashLength}
-                                onInput={handleDashLengthInput}
-                                valueFormatter={value => `${Math.round(value)} px`}
-                                placement="bottom"
-                                withTooltip
+                        </section>
+                        <section className="lgs--track-style-dash-column">
+                            <h4 className="lgs--track-style-dash-title">Gap</h4>
+                            <TrackStyleControlGroup
+                                colorLabel="Gap color"
+                                color={renderStyle.dash.gapColor}
+                                onColorChange={handleDashGapColorInput}
+                                fields={[
+                                    {
+                                        key:     'gap-length',
+                                        label:   'Length',
+                                        unit:    'px',
+                                        hint:    'Gap segment length.',
+                                        min:     4,
+                                        max:     96,
+                                        step:    1,
+                                        value:   renderStyle.dash.gapLength,
+                                        onInput: handleDashGapLengthInput,
+                                    },
+                                ]}
                             />
-                        </div>
+                        </section>
                     </div>
                 )}
             </section>
-            <WaDivider/>
-            <WaSwitch
-                className="lgs--track-smoothing-switch"
-                label-at-start
-                size="xsmall"
-                checked={smoothing.enabled}
-                onInput={handleSmoothingEnabled}
-            >
-                <span>Smooth render</span>
-            </WaSwitch>
-            {smoothing.enabled && (
-                <div className="lgs--track-smoothing-settings">
-                    <WaNumberInput
-                        className="lgs--track-smoothing-step"
-                        label-at-start
-                        size="small"
-                        min={TRACK_RENDER_SMOOTHING_MIN_STEP}
-                        max={TRACK_RENDER_SMOOTHING_MAX_STEP}
-                        step={1}
-                        value={smoothing.step}
-                        onInput={handleSmoothingStep}
-                        appearance="filled"
-                    >
-                        <span slot="label">Step</span>
-                        <span slot="hint">Visual smoothing passes applied only to the rendered track.</span>
-                    </WaNumberInput>
-                </div>
-            )}
         </div>
     )
 }

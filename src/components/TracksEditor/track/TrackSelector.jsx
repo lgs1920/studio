@@ -14,13 +14,10 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { faChevronDown, faEye, faEyeSlash } from '@fortawesome/pro-regular-svg-icons'
-import { faRoute, faSquare, faMask }             from '@fortawesome/pro-solid-svg-icons'
-import { SlIcon, SlOption, SlSelect }            from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                      from '@Utils/FA2SL'
-import { WaIcon, WaOption, WaSelect } from '@web.awesome.me/webawesome-pro/dist/react'
-import { useSnapshot }                from 'valtio'
 import { useEffect, useMemo, useCallback, memo } from 'react'
+import { useSnapshot }                            from 'valtio'
+import { WaOption, WaSelect }                     from '@web.awesome.me/webawesome-pro/dist/react'
+import { TrackStylePreview }                      from './TrackStylePreview'
 
 export const TrackSelector = memo(({label, onChange}) => {
     const $journeyEditor = lgs.stores.main.components.journeyEditor
@@ -36,7 +33,6 @@ export const TrackSelector = memo(({label, onChange}) => {
 
     const trackList = useMemo(() => Array.from(tracks.values()), [tracks])
     const memoizedOnChange = useCallback((event) => onChange(event), [onChange])
-    const trackIconStyle = useMemo(() => ({color: editor.track?.color}), [editor.track?.color])
 
     if (tracks.size <= 1 || !editor.track) {
         return null
@@ -56,19 +52,13 @@ export const TrackSelector = memo(({label, onChange}) => {
             onWaRequestClose={handleRequestClose}
         >
             <div slot="start" className="lgs--track-colors-in-settings">
-                <WaIcon
-                    name={lgs.theTrack.visible ? 'hexagon' : 'mask'}
-                    style={trackIconStyle}
-            />
+                <TrackStylePreview track={editor.track} compact/>
             </div>
 
             {trackList.map(track => (
                 <WaOption key={track.slug} value={track.slug}>
                     <div slot="start" className="lgs--track-colors-in-settings">
-                        <WaIcon
-                            name={track.visible ? 'hexagon' : 'mask'}
-                            style={{color: track.color}}
-                    />
+                        <TrackStylePreview track={track} compact/>
                     </div>
                     {track.title}
                 </WaOption>

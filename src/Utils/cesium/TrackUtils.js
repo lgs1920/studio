@@ -24,11 +24,12 @@ import { default as centroid }                         from '@turf/centroid'
 import { SceneUtils }                                  from '@Utils/cesium/SceneUtils'
 import { getTrackRenderContent, trackRenderSmoothingKey } from '@Utils/cesium/trackRenderSmoothing'
 import {
+    getTrackDashPattern,
     normalizeTrackRenderStyle,
     TRACK_RENDER_WIDTH_UNITS,
 }                                                      from '@Utils/cesium/trackRenderStyle'
 import {
-    CallbackProperty, Cartesian2, Cartesian3, Cartographic, Color as CColor, CustomDataSource,
+    Cartesian2, Cartesian3, Cartographic, Color as CColor, CustomDataSource,
     GeoJsonDataSource, Math as M, PolylineDashMaterialProperty, PolylineOutlineMaterialProperty,
     Rectangle, sampleTerrainMostDetailed, SceneTransforms,
 }                                                      from 'cesium'
@@ -51,6 +52,8 @@ const TRACK_STYLE_ENTITY_MARKER = '#lgs-track-style#'
 const EARTH_RADIUS_METERS = 6378137
 
 const isTrackStyleEntity = entity => `${entity?.id ?? ''}`.includes(TRACK_STYLE_ENTITY_MARKER)
+const trackReferencePointCache = new WeakMap()
+const trackMeterPixelCache = new WeakMap()
 
 export const ALREADY_IMPORTED = {
     /** The file or resource is already present */
@@ -223,10 +226,10 @@ export class TrackUtils {
     static createTrackMaterial = (style, color = style.color) => {
         if (style.dash.enabled) {
             return new PolylineDashMaterialProperty({
-                                                        color:       TrackUtils.cssColor(color),
+                                                        color:       TrackUtils.cssColor(style.dash.color ?? color),
                                                         gapColor:    TrackUtils.cssColor(style.dash.gapColor, CColor.TRANSPARENT),
-                                                        dashLength:  style.dash.dashLength,
-                                                        dashPattern: style.dash.dashPattern,
+                                                        dashLength:  style.dash.dashLength + style.dash.gapLength,
+                                                        dashPattern: getTrackDashPattern(style.dash.dashLength, style.dash.gapLength),
                                                     })
         }
 
@@ -237,58 +240,172 @@ export class TrackUtils {
     }
 
     static getTrackReferencePoint = track => {
+        if (!track || typeof track !== 'object') {
+            return null
+        }
+
+        const cached = trackReferencePointCache.get(track)
+        if (cached?.content === track?.content) {
+            return cached.referencePoint
+        }
+
         try {
             const center = centroid(track.content)
             const coordinates = center?.geometry?.coordinates
             if (!Array.isArray(coordinates) || coordinates.length < 2) {
+                trackReferencePointCache.set(track, {
+                    content:        track?.content,
+                    referencePoint: null,
+                })
                 return null
             }
 
-            return {
+            const referencePoint = {
                 longitude: coordinates[0],
                 latitude:  coordinates[1],
                 height:    coordinates[2] ?? 0,
             }
+
+            trackReferencePointCache.set(track, {
+                content: track.content,
+                referencePoint,
+            })
+            return referencePoint
         }
         catch {
+            trackReferencePointCache.set(track, {
+                content:        track?.content,
+                referencePoint: null,
+            })
             return null
         }
     }
 
-    static meterWidthToPixels = (track, meters) => {
-        const referencePoint = TrackUtils.getTrackReferencePoint(track)
-        if (!referencePoint || !lgs?.scene || !lgs?.camera) {
-            return 0
+    static getTrackWidthCameraKey = () => {
+        try {
+            const height = lgs?.camera?.positionCartographic?.height ?? 0
+            const zoomBucket = Math.round(Math.log2(Math.max(1, height)) * 32)
+            const canvas = lgs?.scene?.canvas
+            return `${lgs?.settings?.scene?.mode?.value ?? ''}:${zoomBucket}:${canvas?.clientWidth ?? 0}x${canvas?.clientHeight ?? 0}`
         }
-
-        const latitudeRad = M.toRadians(referencePoint.latitude)
-        const cosLatitude = Math.max(0.05, Math.abs(Math.cos(latitudeRad)))
-        const longitudeOffset = M.toDegrees(meters / (EARTH_RADIUS_METERS * cosLatitude))
-        const height = referencePoint.height ?? 0
-        const start = SceneTransforms.wgs84ToWindowCoordinates(
-            lgs.scene,
-            Cartesian3.fromDegrees(referencePoint.longitude, referencePoint.latitude, height),
-        )
-        const end = SceneTransforms.wgs84ToWindowCoordinates(
-            lgs.scene,
-            Cartesian3.fromDegrees(referencePoint.longitude + longitudeOffset, referencePoint.latitude, height),
-        )
-
-        return start && end ? Cartesian2.distance(start, end) : 0
+        catch {
+            return ''
+        }
     }
 
-    static createTrackWidthProperty = (track, style, meterWidth, pixelWidth) => {
+    static meterWidthToPixelScale = (track, cameraKey = TrackUtils.getTrackWidthCameraKey()) => {
+        try {
+            const referencePoint = TrackUtils.getTrackReferencePoint(track)
+            const cached = trackMeterPixelCache.get(track)
+
+            if (cached?.referencePoint === referencePoint && cached?.cameraKey === cameraKey) {
+                return cached.pixelPerMeter
+            }
+
+            if (!referencePoint || !lgs?.scene || !lgs?.camera) {
+                return 0
+            }
+            const toWindowCoordinates = SceneTransforms.worldToWindowCoordinates
+            if (typeof toWindowCoordinates !== 'function') {
+                return 0
+            }
+
+            const latitudeRad = M.toRadians(referencePoint.latitude)
+            const cosLatitude = Math.max(0.05, Math.abs(Math.cos(latitudeRad)))
+            const longitudeOffset = M.toDegrees(1 / (EARTH_RADIUS_METERS * cosLatitude))
+            const height = referencePoint.height ?? 0
+            const start = toWindowCoordinates(
+                lgs.scene,
+                Cartesian3.fromDegrees(referencePoint.longitude, referencePoint.latitude, height),
+            )
+            const end = toWindowCoordinates(
+                lgs.scene,
+                Cartesian3.fromDegrees(referencePoint.longitude + longitudeOffset, referencePoint.latitude, height),
+            )
+            const distance = start && end ? Cartesian2.distance(start, end) : 0
+            const pixelPerMeter = Number.isFinite(distance) ? distance : 0
+
+            trackMeterPixelCache.set(track, {
+                cameraKey,
+                referencePoint,
+                pixelPerMeter,
+            })
+            return pixelPerMeter
+        }
+        catch {
+            return 0
+        }
+    }
+
+    static resolveTrackWidth = (track, style, meterWidth, pixelWidth, cameraKey = TrackUtils.getTrackWidthCameraKey()) => {
         if (style.widthUnit !== TRACK_RENDER_WIDTH_UNITS.METERS) {
             return pixelWidth
         }
 
-        return new CallbackProperty(() => {
-            const meterPixels = TrackUtils.meterWidthToPixels(track, meterWidth)
-            return meterPixels > style.meterPixelThreshold ? meterPixels : pixelWidth
-        }, false)
+        const meterPixels = TrackUtils.meterWidthToPixelScale(track, cameraKey) * meterWidth
+        return meterPixels > style.meterPixelThreshold ? meterPixels : pixelWidth
+    }
+
+    static removeTrackWidthUpdater = source => {
+        source.__lgsTrackWidthUpdater?.()
+        source.__lgsTrackWidthUpdater = null
+        source.__lgsTrackWidthCameraKey = null
+    }
+
+    static installTrackWidthUpdater = (source, track, style, baseEntities, underlayEntities) => {
+        TrackUtils.removeTrackWidthUpdater(source)
+
+        const updateWidths = () => {
+            const cameraKey = TrackUtils.getTrackWidthCameraKey()
+            if (source.__lgsTrackWidthCameraKey === cameraKey) {
+                return
+            }
+
+            source.__lgsTrackWidthCameraKey = cameraKey
+            const mainWidth = TrackUtils.resolveTrackWidth(
+                track,
+                style,
+                style.meterWidth,
+                style.farPixelWidth,
+                cameraKey,
+            )
+
+            baseEntities.forEach(entity => {
+                if (entity.polyline) {
+                    entity.polyline.width = mainWidth
+                }
+            })
+
+            if (style.underlay.enabled) {
+                const underlayWidth = TrackUtils.resolveTrackWidth(
+                    track,
+                    style,
+                    style.underlay.meterWidth,
+                    style.underlay.pixelWidth,
+                    cameraKey,
+                )
+                underlayEntities.forEach(entity => {
+                    if (entity.polyline) {
+                        entity.polyline.width = underlayWidth
+                    }
+                })
+            }
+
+            lgs.scene.requestRender()
+        }
+
+        updateWidths()
+
+        if (style.widthUnit !== TRACK_RENDER_WIDTH_UNITS.METERS) {
+            return
+        }
+
+        lgs.scene.postRender.addEventListener(updateWidths)
+        source.__lgsTrackWidthUpdater = () => lgs.scene.postRender.removeEventListener(updateWidths)
     }
 
     static removeTrackStyleEntities = source => {
+        TrackUtils.removeTrackWidthUpdater(source)
         source.entities.values
               .filter(isTrackStyleEntity)
               .forEach(entity => source.entities.remove(entity))
@@ -300,44 +417,37 @@ export class TrackUtils {
 
         const baseEntities = source.entities.values.filter(entity => entity.polyline && !isTrackStyleEntity(entity))
         const mainMaterial = TrackUtils.createTrackMaterial(style)
+        const underlayEntities = []
 
         baseEntities.forEach(entity => {
             const positions = entity.polyline.positions
             if (style.underlay.enabled) {
-                source.entities.add({
-                                        id:       `${entity.id}${TRACK_STYLE_ENTITY_MARKER}underlay`,
-                                        polyline: {
-                                            positions,
-                                            clampToGround: true,
-                                            width:         TrackUtils.createTrackWidthProperty(
-                                                track,
-                                                style,
-                                                style.underlay.meterWidth,
-                                                style.underlay.pixelWidth,
-                                            ),
-                                            material:      TrackUtils.createTrackMaterial({
-                                                                                              ...style,
-                                                                                              dash: {
-                                                                                                  ...style.dash,
-                                                                                                  enabled: false,
+                underlayEntities.push(
+                    source.entities.add({
+                                            id:       `${entity.id}${TRACK_STYLE_ENTITY_MARKER}underlay`,
+                                            polyline: {
+                                                positions,
+                                                clampToGround: true,
+                                                material:      TrackUtils.createTrackMaterial({
+                                                                                                  ...style,
+                                                                                                  dash: {
+                                                                                                      ...style.dash,
+                                                                                                      enabled: false,
+                                                                                                  },
                                                                                               },
-                                                                                          },
-                                                                                          style.underlay.color),
-                                            zIndex:        1,
-                                        },
-                                    })
+                                                                                              style.underlay.color),
+                                                zIndex:        1,
+                                            },
+                                        }),
+                )
             }
 
             entity.polyline.clampToGround = true
             entity.polyline.material = mainMaterial
-            entity.polyline.width = TrackUtils.createTrackWidthProperty(
-                track,
-                style,
-                style.meterWidth,
-                style.farPixelWidth,
-            )
             entity.polyline.zIndex = 2
         })
+
+        TrackUtils.installTrackWidthUpdater(source, track, style, baseEntities, underlayEntities)
     }
 
     /**
@@ -373,6 +483,9 @@ export class TrackUtils {
             }
         }
         source.show = forcedToHide ? false : track.visible
+        if (!source.show) {
+            TrackUtils.removeTrackWidthUpdater(source)
+        }
         lgs.viewer.scene.requestRender()
     }
 

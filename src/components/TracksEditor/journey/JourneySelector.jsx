@@ -19,6 +19,7 @@ import { WaCard, WaIcon, WaOption, WaSelect } from '@web.awesome.me/webawesome-p
 import classNames                             from 'classnames'
 import { memo, useCallback, useEffect, useMemo, useRef } from 'react'
 import { useSnapshot }                        from 'valtio'
+import { TrackStylePreview }                  from '../track/TrackStylePreview'
 
 /**
  * A memoized React component for selecting or displaying a journey.
@@ -122,18 +123,6 @@ export const JourneySelector = memo(({
         return () => document.removeEventListener('pointerdown', handlePointerDownOutside, true)
     }, [closeOnOutsidePointerDown])
 
-    /**
-     * Computes the icon style for a specific track.
-     * @param {Object} track - The specific track object to style
-     * @param {Object} [journey=theJourney] - The journey object context
-     * @return {Object} The style object for the icon
-     */
-    const getTrackIconStyle = useCallback((journey = theJourney, track = null) => {
-        return {
-            color: track ? track.color : journey.tracks.values().next().value.color,
-        }
-    }, [theJourney])
-
     const renderActivityIcon = useCallback((journey = theJourney) => {
         const activity = Journey.activityProfile(journey?.activity, journey?.activitySettings)
 
@@ -147,28 +136,41 @@ export const JourneySelector = memo(({
         )
     }, [theJourney])
 
+    const renderTrackPreview = useCallback((journey, track) => (
+        <TrackStylePreview
+            track={track}
+            compact
+            visible={journey?.visible !== false && track?.visible !== false}
+        />
+    ), [])
+
     const renderJourneyIcons = useCallback((journey = theJourney) => {
+        const tracks = Array.from(journey.tracks.values())
+        if (tracks.length === 1) {
+            return (
+                <span className="lgs--journey-icons-in-settings">
+                    {renderTrackPreview(journey, tracks[0])}
+                    {renderActivityIcon(journey)}
+                </span>
+            )
+        }
+
         return (
             <span className="lgs--journey-icons-in-settings">
                 <span className="lgs--track-colors-in-settings">
-                    {journey.visible ?
-                     (Array.from(journey.tracks.values()).slice(0, journey.visible ? 3 : 1).map(track => (
-                         <WaIcon key={track.slug}
-                             name="hexagon"
-                             style={getTrackIconStyle(journey, track)}
-                             variant="solid"
-                         />
-                     ))) : (
-                         <WaIcon
-                             name="mask"
-                             style={getTrackIconStyle(journey)}
-                             variant="solid"
-                         />)}
+                    {tracks.slice(0, 3).map(track => (
+                        <TrackStylePreview
+                            key={track.slug}
+                            track={track}
+                            compact
+                            visible={journey.visible !== false && track.visible !== false}
+                        />
+                    ))}
                 </span>
                 {renderActivityIcon(journey)}
             </span>
         )
-    }, [getTrackIconStyle, renderActivityIcon, theJourney])
+    }, [renderActivityIcon, renderTrackPreview, theJourney])
 
     if (journeys.length === 0 && !allowEmptyOption) {
         return null
