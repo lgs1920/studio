@@ -249,7 +249,7 @@ wa-tab sl-icon {
 
 .lgs--track-style-color-field {
     width: 100%;
-    max-width: 22rem;
+    max-width: none;
 }
 
 .lgs--track-style-color-field .lgs--track-style-label {
@@ -271,6 +271,7 @@ wa-tab sl-icon {
 }
 
 .lgs--track-style-opacity-slider {
+    justify-self: end;
     margin-left: auto;
 }
 
