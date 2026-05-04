@@ -470,8 +470,10 @@ export const MapPOIEditContent = memo(({poi}) => {
 
                                                       {time && (
                                                           <div className="poi-time">
-                                                              <WaIcon name="clock" variant="regular"/>
-                                                              <DateTimeDisplay value={time}/>
+                                                              <DateTimeDisplay
+                                                                  value={time}
+                                                                  leading={<WaIcon name="clock" variant="regular"/>}
+                                                              />
                                                           </div>
                                                       )}
 

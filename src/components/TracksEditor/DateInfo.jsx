@@ -28,28 +28,14 @@ export const DateInfo = function DateInfo(props) {
     const data = props.date
     const hasDates = Boolean(data?.start && data?.stop)
     const trackLocation = trackLocationState.slug === trackSlug ? trackLocationState.value : ''
-    const startPOI = __.ui.poiManager.list.get(track?.flags?.start)
-    const stopPOI = __.ui.poiManager.list.get(track?.flags?.stop)
-    const showDates = hasDates && startPOI && stopPOI
+    const showDates = hasDates
     const dateItems = showDates
                       ? [
             {
-                value:   data.start,
-                leading: <WaIcon name="location-pin"
-                                 variant="regular"
-                                 style={{
-                                     color: startPOI.bgColor
-                                            ?? lgs.settings.journey.pois.start.color,
-                                 }}/>,
+                value: data.start,
             },
             {
-                value:   data.stop,
-                leading: <WaIcon name="location-pin"
-                                 variant="regular"
-                                 style={{
-                                     color: stopPOI.bgColor
-                                            ?? lgs.settings.journey.pois.stop.color,
-                                 }}/>,
+                value: data.stop,
             },
         ]
                       : []
@@ -94,7 +80,15 @@ export const DateInfo = function DateInfo(props) {
                         <span>{trackLocation}</span>
                     </div>
                 )}
-                {showDates && <DateTimeDisplay className="track-date" items={dateItems} forceStack/>}
+                {showDates && (
+                    <div className="track-date">
+                        <DateTimeDisplay
+                            items={dateItems}
+                            stackItems
+                            leading={<WaIcon name="clock" variant="regular"/>}
+                        />
+                    </div>
+                )}
                 <WaDivider/>
             </>
         }

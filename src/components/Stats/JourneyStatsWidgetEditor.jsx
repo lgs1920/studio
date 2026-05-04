@@ -564,7 +564,11 @@ export const JourneyStatsWidgetEditor = ({entity}) => {
                         <WaSwitch label-at-start size="xsmall" checked={element.date ?? false}
                                   onInput={(e) => updateValue('date', e.target.checked)}><span>Date</span></WaSwitch>
                         {element.date && renderReadOnlyDataValue(
-                            <DateTimeDisplay items={journeyDate.items} forceStack/>,
+                            <DateTimeDisplay
+                                items={journeyDate.items}
+                                forceStack
+                                leading={<WaIcon name="clock" variant="regular"/>}
+                            />,
                         )}
                     </>
                 )

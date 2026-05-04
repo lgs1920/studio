@@ -61,6 +61,12 @@ const normalizeItem = (item, {dateFormat = defaultDateFormat, timeFormat = defau
     }
 }
 
+const isSameDateRange = items => items.length === 2
+                                && items[0].date
+                                && items[0].date === items[1].date
+                                && items[0].time
+                                && items[1].time
+
 export const DateTimeDisplay = ({
                                     value = null,
                                     items = null,
@@ -69,6 +75,8 @@ export const DateTimeDisplay = ({
                                     timeFormat = defaultTimeFormat,
                                     separator = '-',
                                     forceStack = false,
+                                    stackItems = null,
+                                    leading = null,
                                 }) => {
     const rootRef = useRef(null)
     const measureRef = useRef(null)
@@ -80,11 +88,13 @@ export const DateTimeDisplay = ({
             .map(item => normalizeItem(item, {dateFormat, timeFormat}))
             .filter(Boolean)
     }, [dateFormat, items, timeFormat, value])
-    const shouldStack = forceStack || normalizedItems.length > 1 || autoStack
+    const sameDateRange = isSameDateRange(normalizedItems)
+    const hasLeading = Boolean(leading)
+    const shouldStackItems = !sameDateRange && (forceStack || (stackItems ?? normalizedItems.length > 1))
+    const shouldStackDateTime = forceStack || autoStack
 
     useLayoutEffect(() => {
-        if (forceStack || normalizedItems.length !== 1) {
-            setAutoStack(false)
+        if (forceStack || normalizedItems.length === 0) {
             return undefined
         }
 
@@ -96,7 +106,8 @@ export const DateTimeDisplay = ({
             }
 
             const availableWidth = root.getBoundingClientRect().width
-            const requiredWidth = measure.scrollWidth
+            const requiredWidth = Array.from(measure.children)
+                                       .reduce((width, child) => Math.max(width, child.scrollWidth), 0)
             setAutoStack(requiredWidth > availableWidth && availableWidth > 0)
         }
 
@@ -117,11 +128,18 @@ export const DateTimeDisplay = ({
         return null
     }
 
+    const renderTimePart = (item, index) => (
+        <span className="lgs-date-time-display-time-part" key={`${item.time}-${index}`}>
+            {item.leading && <span className="lgs-date-time-display-leading">{item.leading}</span>}
+            <span className="lgs-date-time-display-time">{item.time}</span>
+        </span>
+    )
+
     const renderItem = (item, index, {measuring = false} = {}) => (
         <span className="lgs-date-time-display-item" key={`${item.date}-${item.time}-${index}`}>
             {item.leading && <span className="lgs-date-time-display-leading">{item.leading}</span>}
             <span className="lgs-date-time-display-date">{item.date}</span>
-            {item.date && item.time && !shouldStack && !measuring && (
+            {item.date && item.time && !shouldStackDateTime && !measuring && (
                 <span className="lgs-date-time-display-separator">{separator}</span>
             )}
             {item.date && item.time && measuring && <span className="lgs-date-time-display-separator">{separator}</span>}
@@ -129,18 +147,43 @@ export const DateTimeDisplay = ({
         </span>
     )
 
+    const renderSameDateRange = () => (
+        <span className="lgs-date-time-display-item lgs-date-time-display-range">
+            <span className="lgs-date-time-display-date">{normalizedItems[0].date}</span>
+            <span className="lgs-date-time-display-time-range">
+                {renderTimePart(normalizedItems[0], 0)}
+                <span className="lgs-date-time-display-separator">{separator}</span>
+                {renderTimePart(normalizedItems[1], 1)}
+            </span>
+        </span>
+    )
+
+    const renderedContent = sameDateRange
+                            ? renderSameDateRange()
+                            : normalizedItems.map((item, index) => renderItem(item, index))
+    const renderedMeasure = sameDateRange
+                            ? renderSameDateRange()
+                            : normalizedItems.map((item, index) => renderItem(item, index, {measuring: true}))
+
     return (
         <span
             className={`lgs-date-time-display ${className}`.trim()}
-            data-stacked={shouldStack ? 'true' : 'false'}
+            data-items-stacked={shouldStackItems ? 'true' : 'false'}
+            data-date-time-stacked={shouldStackDateTime ? 'true' : 'false'}
+            data-leading={hasLeading ? 'true' : 'false'}
             ref={rootRef}
         >
+            {hasLeading && (
+                <span className="lgs-date-time-display-icon-cell">
+                    {leading}
+                </span>
+            )}
             <span className="lgs-date-time-display-content">
-                {normalizedItems.map((item, index) => renderItem(item, index))}
+                {renderedContent}
             </span>
-            {normalizedItems.length === 1 && (
+            {!forceStack && (
                 <span className="lgs-date-time-display-measure" ref={measureRef} aria-hidden="true">
-                    {renderItem(normalizedItems[0], 0, {measuring: true})}
+                    {renderedMeasure}
                 </span>
             )}
         </span>
