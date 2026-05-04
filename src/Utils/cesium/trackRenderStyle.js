@@ -6,6 +6,8 @@
  *
  ******************************************************************************/
 
+import { colord } from 'colord'
+
 export const TRACK_RENDER_WIDTH_UNITS = Object.freeze({
     PIXELS: 'pixels',
     METERS: 'meters',
@@ -13,6 +15,8 @@ export const TRACK_RENDER_WIDTH_UNITS = Object.freeze({
 
 export const TRACK_METER_WIDTHS = Object.freeze([0.5, 1, 1.5, 2])
 export const TRACK_RENDER_STYLE_CUSTOM_PRESET = 'custom'
+export const TRACK_RENDER_STYLE_TRANSPARENT_GAP_COLOR = 'rgba(255, 255, 255, 0)'
+export const TRACK_RENDER_STYLE_DEFAULT_GAP_COLOR = 'rgba(255, 255, 255, 1)'
 
 export const TRACK_RENDER_STYLE_DEFAULT = Object.freeze({
     presetKey:           TRACK_RENDER_STYLE_CUSTOM_PRESET,
@@ -28,7 +32,8 @@ export const TRACK_RENDER_STYLE_DEFAULT = Object.freeze({
     },
     dash:                {
         enabled:     false,
-        gapColor:    'rgba(255, 255, 255, 0)',
+        biColor:     false,
+        gapColor:    TRACK_RENDER_STYLE_TRANSPARENT_GAP_COLOR,
         dashLength:  16,
         gapLength:   16,
         dashPattern: 255,
@@ -98,7 +103,8 @@ export const TRACK_RENDER_STYLE_PRESETS = Object.freeze([
             },
             dash:          {
                 enabled:    true,
-                gapColor:   'rgba(255, 255, 255, 0)',
+                biColor:    false,
+                gapColor:   TRACK_RENDER_STYLE_TRANSPARENT_GAP_COLOR,
                 dashLength: 18,
                 gapLength:  18,
             },
@@ -118,6 +124,7 @@ export const TRACK_RENDER_STYLE_PRESETS = Object.freeze([
             },
             dash:          {
                 enabled:    true,
+                biColor:    true,
                 gapColor:   'rgba(30, 144, 255, 0.85)',
                 dashLength: 16,
                 gapLength:  16,
@@ -144,6 +151,20 @@ export const getTrackDashPattern = (dashLength, gapLength) => {
     return enabledBits >= 16 ? 65535 : (1 << enabledBits) - 1
 }
 
+export const isTransparentTrackColor = value => {
+    if (value === null || value === undefined || value === '' || value === 'transparent') {
+        return true
+    }
+
+    const color = colord(value)
+    return !color.isValid() || color.alpha() <= 0
+}
+
+export const visibleTrackDashGapColor = value => {
+    const color = colord(value ?? '')
+    return color.isValid() && color.alpha() > 0 ? color.toRgbString() : TRACK_RENDER_STYLE_DEFAULT_GAP_COLOR
+}
+
 export const normalizeTrackRenderStyle = (value = undefined, legacy = {}) => {
     const style = value && typeof value === 'object' ? value : {}
     const defaultStyle = TRACK_RENDER_STYLE_DEFAULT
@@ -159,6 +180,9 @@ export const normalizeTrackRenderStyle = (value = undefined, legacy = {}) => {
     const dash = style.dash && typeof style.dash === 'object' ? style.dash : {}
     const dashLength = clamp(dash.dashLength, 4, 96, defaultStyle.dash.dashLength)
     const gapLength = clamp(dash.gapLength, 4, 96, defaultStyle.dash.gapLength)
+    const rawGapColor = dash.gapColor ?? defaultStyle.dash.gapColor
+    const legacyBiColor = dash.biColor === undefined && !isTransparentTrackColor(rawGapColor)
+    const biColor = dash.biColor === true || legacyBiColor
 
     return {
         widthUnit:           style.widthUnit === TRACK_RENDER_WIDTH_UNITS.PIXELS
@@ -183,8 +207,9 @@ export const normalizeTrackRenderStyle = (value = undefined, legacy = {}) => {
         },
         dash:                {
             enabled:     dash.enabled === true,
+            biColor,
             color:       dash.color ?? color,
-            gapColor:    dash.gapColor ?? defaultStyle.dash.gapColor,
+            gapColor:    biColor ? visibleTrackDashGapColor(rawGapColor) : TRACK_RENDER_STYLE_TRANSPARENT_GAP_COLOR,
             dashLength,
             gapLength,
             dashPattern: getTrackDashPattern(dashLength, gapLength),
