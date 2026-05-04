@@ -99,6 +99,36 @@ const EXPORT_DIALOG_FORMATS = {
         {value: JOURNEY_EXPORT_FORMATS.HTML, label: 'html'},
     ],
 }
+const REPORT_EXPORT_STAGES = {
+    SNAPSHOTS: 'snapshots',
+    WRITING:   'writing',
+}
+const REPORT_EXPORT_FLASH_DURATION = 860
+
+const REPORT_EXPORT_STAGE_ICONS = {
+    [REPORT_EXPORT_STAGES.SNAPSHOTS]: {
+        name:      'camera',
+        animation: 'fade',
+    },
+    [REPORT_EXPORT_STAGES.WRITING]: {
+        name:      'pencil',
+        animation: 'beat-fade',
+    },
+}
+
+const ReportExportAnimation = ({animation}) => {
+    const stage = typeof animation === 'string' ? animation : animation?.stage
+    const icon = REPORT_EXPORT_STAGE_ICONS[stage]
+    if (!icon) {
+        return null
+    }
+
+    return (
+        <div className={`journey-report-export-animation is-${stage}`} aria-hidden="true">
+            <WaIcon key={animation?.id ?? stage} name={icon.name} variant="light" animation={icon.animation}/>
+        </div>
+    )
+}
 
 /**
  * Main journey settings component
@@ -125,11 +155,13 @@ export const JourneySettings = () => {
     const _elevationRequestId = useRef(0)
     const _exportFormat = useRef(JOURNEY_EXPORT_FORMATS.GPX)
     const _exportFileName = useRef('')
+    const _reportExportFlashTimeout = useRef(null)
 
     const [exportFormat, setExportFormatState] = useState(JOURNEY_EXPORT_FORMATS.GPX)
     const [exportFileName, setExportFileNameState] = useState('')
     const [exportChoiceOpen, setExportChoiceOpen] = useState(false)
     const [journeyLocationState, setJourneyLocationState] = useState({slug: null, value: ''})
+    const [reportExportAnimation, setReportExportAnimation] = useState(null)
 
     // Local state-like ref for rotation toggle
     const _allowRotation = useRef(false)
@@ -505,14 +537,44 @@ export const JourneySettings = () => {
         }
 
         const format = _exportFormat.current
+        let reportExportActive = true
+        const clearReportExportFlashTimeout = () => {
+            clearTimeout(_reportExportFlashTimeout.current)
+            _reportExportFlashTimeout.current = null
+        }
+        const setCurrentReportExportStage = payload => {
+            if (!reportExportActive) {
+                return
+            }
+
+            clearReportExportFlashTimeout()
+            const stage = typeof payload === 'string' ? payload : payload?.stage
+            const animation = {
+                stage,
+                id: payload?.id ?? `${stage}-${Date.now()}`,
+            }
+
+            setReportExportAnimation(animation)
+            if (stage === REPORT_EXPORT_STAGES.SNAPSHOTS) {
+                _reportExportFlashTimeout.current = setTimeout(() => {
+                    if (reportExportActive) {
+                        setReportExportAnimation(current => current?.id === animation.id ? null : current)
+                    }
+                }, REPORT_EXPORT_FLASH_DURATION)
+            }
+        }
 
         try {
             notifyExportInProgress()
             await waitForExportToastPaint()
             const fileName = normalizeJourneyExportFileName(_exportFileName.current, format, currentJourney)
+            const reportOptions = {
+                fileName,
+                onReportStage: setCurrentReportExportStage,
+            }
             const result = format === JOURNEY_EXPORT_FORMATS.HTML
-                           ? await exportJourneyToHTMLZip(currentJourney, {fileName})
-                           : await exportJourneyToPDF(currentJourney, {fileName})
+                           ? await exportJourneyToHTMLZip(currentJourney, reportOptions)
+                           : await exportJourneyToPDF(currentJourney, reportOptions)
 
             UIToast.success({
                                 caption: 'Export success',
@@ -525,6 +587,11 @@ export const JourneySettings = () => {
                               text:    'The report could not be generated.',
                               errors:  error,
                           })
+        }
+        finally {
+            reportExportActive = false
+            clearReportExportFlashTimeout()
+            setReportExportAnimation(null)
         }
     }
 
@@ -782,6 +849,7 @@ export const JourneySettings = () => {
             )}
             <ConfirmExportFileDialog/>
             <ConfirmExportReportDialog/>
+            <ReportExportAnimation animation={reportExportAnimation}/>
         </>
     )
 }

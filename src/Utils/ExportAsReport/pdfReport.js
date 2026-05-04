@@ -710,7 +710,16 @@ export const addReportCredits = (doc, studioLogo, {credits = []} = {}) => {
 export const exportJourneyToPDF = async (journey, {
     pois = undefined,
     fileName = 'journey.pdf',
+    onReportStage = null,
 } = {}) => {
+    const setReportStage = stage => {
+        try {
+            onReportStage?.(stage)
+        }
+        catch (error) {
+            console.error(error)
+        }
+    }
     const {
               trackDrawings,
               endpointMarkers,
@@ -729,14 +738,21 @@ export const exportJourneyToPDF = async (journey, {
     await yieldToUI()
     const brandColor = parseCssColor(theme.brand, PDF_COLORS.text)
     const studioLogoPromise = loadStudioLogo()
-    const pdfIconsPromise = loadPDFIcons(theme)
+    const pdfIconsPromise = loadPDFIcons(theme, {trackColors: trackDrawings.map(({color}) => color)})
     const profileImagePromise = captureJourneyProfileImage({
                                                                                                                   journey,
                                                                                                                   trackDrawings,
                                                                                                                   backgroundSnapshot: viewerSnapshot,
                                                                                                                   theme,
                                                                                                               })
-    const mapSnapshotsPromise = captureJourney3DMapSnapshots(journey, {trackDrawings})
+    const mapSnapshotsPromise = captureJourney3DMapSnapshots(journey, {
+        trackDrawings,
+        onSnapshotFlash: ({index}) => setReportStage({
+            stage: 'snapshots',
+            id:    `snapshot-${index}-${Date.now()}`,
+        }),
+    })
+        .finally(() => setReportStage('writing'))
     const [studioLogo, pdfIcons, profileImage, mapSnapshots] = await Promise.all([
                                                                                     studioLogoPromise,
                                                                                     pdfIconsPromise,

@@ -180,10 +180,10 @@ export const buildHTMLNorthArrow = ({rotation = 0, theme, color = theme.text}) =
         y: 80,
     }
     const textColor = escapeHtml(color)
-    const iconWidth = 58
-    const iconHeight = 22
+    const iconWidth = 44
+    const iconHeight = 17
     const tip = directionPoint(center, rotation, iconWidth / 2)
-    const label = directionPoint(tip, rotation, 16)
+    const label = directionPoint(tip, rotation, 18)
     const icon = fontAwesomePositionedSVG({
                                               iconDefinition: MAP_ICON_DEFS.north,
                                               className:      'map-north-arrow-icon',
@@ -222,12 +222,13 @@ export const renderHTMLProgressMarkers = (asset, theme) => {
                                                  size,
                                                  gap: 1.5,
                                              })
-    const color = escapeHtml(asset.progressColor ?? theme.text)
-
-    return positions.map(position => `
+    return positions.map(position => {
+        const color = escapeHtml(cssColor(position.color ?? asset.progressColor ?? theme.text))
+        return `
                             <span class="map-progress-marker" style="left: ${svgNumber(position.x + size / 2)}%; top: ${svgNumber(position.y + size / 2)}%; --progress-rotation: ${svgNumber(svgRotationFromScreenAngle(position.angle))}deg; color: ${color};">
                                 ${fontAwesomeSVG(MAP_ICON_DEFS.progress, {className: 'map-progress-icon'})}
-                            </span>`).join('')
+                            </span>`
+    }).join('')
 }
 
 export const renderMapCards = (assets, theme) => assets.map(asset => {
@@ -409,13 +410,13 @@ export const buildJourneyHTML = ({journey, pois, twoDMapAssets, threeDMapAssets,
             position: absolute;
             top: 33.333%;
             right: 12px;
-            width: 72px;
-            height: 72px;
+            width: 58px;
+            height: 58px;
             transform: translateY(-50%);
             filter: drop-shadow(0 1px 2px rgba(0, 0, 0, .18));
         }
         .map-north-arrow text {
-            font: 800 25px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            font: 800 31px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
         }
         .map-progress-marker {
             position: absolute;
@@ -610,7 +611,16 @@ export const buildJourneyHTML = ({journey, pois, twoDMapAssets, threeDMapAssets,
 export const exportJourneyToHTMLZip = async (journey, {
     pois = undefined,
     fileName = 'journey.zip',
+    onReportStage = null,
 } = {}) => {
+    const setReportStage = stage => {
+        try {
+            onReportStage?.(stage)
+        }
+        catch (error) {
+            console.error(error)
+        }
+    }
     const {
               trackDrawings,
               endpointMarkers,
@@ -634,7 +644,14 @@ export const exportJourneyToHTMLZip = async (journey, {
                                                                                                         backgroundSnapshot: viewerSnapshot,
                                                                                                         theme,
                                                                                                     })
-    const mapSnapshotsPromise = captureJourney3DMapSnapshots(journey, {trackDrawings})
+    const mapSnapshotsPromise = captureJourney3DMapSnapshots(journey, {
+        trackDrawings,
+        onSnapshotFlash: ({index}) => setReportStage({
+            stage: 'snapshots',
+            id:    `snapshot-${index}-${Date.now()}`,
+        }),
+    })
+        .finally(() => setReportStage('writing'))
     const [studioLogo, profileImage, mapSnapshots] = await Promise.all([
                                                                           studioLogoPromise,
                                                                           profileImagePromise,
@@ -668,7 +685,7 @@ export const exportJourneyToHTMLZip = async (journey, {
             height: snapshot.height,
             trackInfo: snapshot.trackInfo,
             arrowColor: theme.brand,
-            progressColor: theme.brand,
+            progressColor: theme.text,
         }
     })
     const logoPath = studioLogo?.dataUrl ? 'images/logo-lgs1920-studio.png' : ''

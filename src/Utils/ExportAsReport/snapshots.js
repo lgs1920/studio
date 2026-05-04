@@ -33,9 +33,15 @@ import {
 } from './journeyData'
 
 const CREDITS_BAR_ID = 'lgs-credits-bar'
+const TRACK_STYLE_ENTITY_MARKER = '#lgs-track-style#'
 const CREDITS_BAR_SNAPSHOT_TIMEOUT = 1800
 const SNAPSHOT_CAMERA_TIMEOUT = 900
 const SNAPSHOT_RENDER_FRAME_COUNT = 3
+const SNAPSHOT_CAPTURE_FRAME_COUNT = 4
+const SNAPSHOT_TRACE_STABLE_FRAME_COUNT = 2
+const SNAPSHOT_TRACE_TIMEOUT = 1200
+const SNAPSHOT_MIN_CAMERA_RANGE = 3500
+const SNAPSHOT_CAMERA_RANGE_FACTOR = 2.8
 
 export const wait = milliseconds => new Promise(resolve => setTimeout(resolve, milliseconds))
 
@@ -169,6 +175,15 @@ export const ensure3DSceneForSnapshot = async () => {
     }
 }
 
+export const snapshotCameraRange = boundingSphere => {
+    const radius = finiteNumber(boundingSphere?.radius)
+    if (radius === null || radius <= 0) {
+        return SNAPSHOT_MIN_CAMERA_RANGE
+    }
+
+    return Math.max(radius * SNAPSHOT_CAMERA_RANGE_FACTOR, SNAPSHOT_MIN_CAMERA_RANGE)
+}
+
 export const getJourneySnapshotFocusContext = async (journey, trackDrawings = getJourneyTrackDrawings(journey)) => {
     const referencePoints = getReferencePoints(trackDrawings, [], [])
     if (referencePoints.length === 0) {
@@ -176,18 +191,22 @@ export const getJourneySnapshotFocusContext = async (journey, trackDrawings = ge
     }
 
     const bounds = getBounds(referencePoints)
-    const point = {
+    const source = SceneUtils.getJourneyFeatureSource(journey)
+    const center = await SceneUtils.getJourneyCentroid(journey, source, {useStoredHeight: false})
+    const point = center ?? {
         longitude: (bounds.west + bounds.east) / 2,
         latitude:  (bounds.south + bounds.north) / 2,
         height:    0,
     }
+    const boundingSphere = SceneUtils.getBboxBoundingSphere(
+        [bounds.west, bounds.south, bounds.east, bounds.north],
+        point.height ?? 0,
+    )
 
     return {
         point,
-        boundingSphere: SceneUtils.getBboxBoundingSphere(
-            [bounds.west, bounds.south, bounds.east, bounds.north],
-            point.height ?? 0,
-        ),
+        boundingSphere,
+        range: snapshotCameraRange(boundingSphere),
     }
 }
 
@@ -219,7 +238,7 @@ export const focusJourneyForSnapshot = async (focusContext, {heading = 0, pitch 
                     offset:   new HeadingPitchRange(
                         CesiumMath.toRadians(heading),
                         CesiumMath.toRadians(pitch),
-                        0,
+                        focusContext.range,
                     ),
                     complete: finish,
                     cancel:   finish,
@@ -361,9 +380,44 @@ export const embedCreditsBarInSnapshot = async (snapshot, creditsBar) => {
     }
 }
 
+export const getSnapshotTrackDataSources = trackDrawings => (trackDrawings ?? [])
+    .map(({track}) => globalThis.lgs?.viewer?.dataSources?.getByName?.(track?.slug)?.[0])
+    .filter(Boolean)
+
+export const getPolylinePositions = entity => {
+    const property = entity?.polyline?.positions
+    const time = globalThis.lgs?.viewer?.clock?.currentTime
+    const positions = typeof property?.getValue === 'function' ? property.getValue(time) : property
+
+    return Array.isArray(positions) ? positions.filter(Boolean) : []
+}
+
+export const isSnapshotTrackEntity = entity => entity?.polyline
+                                             && !`${entity?.id ?? ''}`.includes(TRACK_STYLE_ENTITY_MARKER)
+
+export const getRenderedTrackDrawingFromDataSource = trackDrawing => {
+    const source = globalThis.lgs?.viewer?.dataSources?.getByName?.(trackDrawing?.track?.slug)?.[0]
+    const segments = source?.entities?.values
+        ?.filter(isSnapshotTrackEntity)
+        .map(entity => getPolylinePositions(entity).map(cartesian => ({cartesian})))
+        .filter(segment => segment.length > 1) ?? []
+
+    return segments.length > 0
+           ? {
+                   track: trackDrawing.track,
+                   color: trackDrawing.color,
+                   segments,
+               }
+           : trackDrawing
+}
+
+export const getRenderedSnapshotTrackDrawings = trackDrawings => (trackDrawings ?? [])
+    .map(getRenderedTrackDrawingFromDataSource)
+    .filter(item => item?.segments?.length > 0)
+
 export const projectJourney3DTrackInfo = (trackDrawings, canvas) => {
     const scene = getCesiumScene()
-    if (!scene?.cartesianToCanvasCoordinates || !canvas || trackDrawings.length === 0) {
+    if (!scene?.cartesianToCanvasCoordinates || !canvas || (trackDrawings?.length ?? 0) === 0) {
         return null
     }
 
@@ -374,32 +428,101 @@ export const projectJourney3DTrackInfo = (trackDrawings, canvas) => {
     const imageHeight = canvas.height || scene.drawingBufferHeight || cssHeight
     const scaleX = cssWidth > 0 ? imageWidth / cssWidth : 1
     const scaleY = cssHeight > 0 ? imageHeight / cssHeight : 1
+    const projectedTrackDrawings = getRenderedSnapshotTrackDrawings(trackDrawings)
     const scratch = new Cartesian2()
     const project = point => {
+        const cartesian = point?.cartesian
+        if (cartesian) {
+            const projected = scene.cartesianToCanvasCoordinates(cartesian, scratch)
+            return projected ? {
+                x: projected.x * scaleX,
+                y: projected.y * scaleY,
+            } : null
+        }
+
         const longitude = finiteNumber(point?.longitude)
         const latitude = finiteNumber(point?.latitude)
         if (longitude === null || latitude === null) {
             return null
         }
 
-        const cartesian = Cartesian3.fromDegrees(longitude, latitude, finiteNumber(point?.altitude) ?? finiteNumber(point?.height) ?? 0)
-        const projected = scene.cartesianToCanvasCoordinates(cartesian, scratch)
+        const projected = scene.cartesianToCanvasCoordinates(
+            Cartesian3.fromDegrees(longitude, latitude, finiteNumber(point?.altitude) ?? finiteNumber(point?.height) ?? 0),
+            scratch,
+        )
         return projected ? {
             x: projected.x * scaleX,
             y: projected.y * scaleY,
         } : null
     }
 
-    return getProjectedTrackInfo(trackDrawings, project)
+    return getProjectedTrackInfo(projectedTrackDrawings, project)
+}
+
+export const trackDataSourceReady = source => {
+    if (!source || source.isLoading === true) {
+        return false
+    }
+
+    return source.show === false || source.entities?.values?.some(entity => entity.polyline)
+}
+
+export const snapshotTrackSourcesReady = trackDrawings => {
+    const sources = getSnapshotTrackDataSources(trackDrawings)
+    const expectedCount = trackDrawings?.length ?? 0
+    return expectedCount === 0 || (sources.length >= expectedCount && sources.every(trackDataSourceReady))
 }
 
 export const waitForJourneyTraceRender = async (trackDrawings, canvas) => {
     const scene = getCesiumScene()
-    if (scene) {
-        scene.requestRender?.()
+    if (!scene) {
+        return projectJourney3DTrackInfo(trackDrawings, canvas)
     }
-    await waitForAnimationFrames(SNAPSHOT_RENDER_FRAME_COUNT)
-    return projectJourney3DTrackInfo(trackDrawings, canvas)
+
+    scene.requestRender?.()
+
+    return await new Promise(resolve => {
+        let done = false
+        let stableFrames = 0
+        let timeoutId = null
+        let removePostRender = null
+        let latestTrackInfo = null
+
+        const cleanup = () => {
+            clearTimeout(timeoutId)
+            removePostRender?.()
+        }
+        const finish = () => {
+            if (done) {
+                return
+            }
+            done = true
+            cleanup()
+            resolve(latestTrackInfo ?? projectJourney3DTrackInfo(trackDrawings, canvas))
+        }
+        const check = () => {
+            if (done) {
+                return
+            }
+
+            latestTrackInfo = projectJourney3DTrackInfo(trackDrawings, canvas)
+            stableFrames = latestTrackInfo
+                           && snapshotTrackSourcesReady(trackDrawings)
+                           ? stableFrames + 1
+                           : 0
+
+            if (stableFrames >= SNAPSHOT_TRACE_STABLE_FRAME_COUNT) {
+                finish()
+                return
+            }
+
+            scene.requestRender?.()
+        }
+
+        timeoutId = setTimeout(finish, SNAPSHOT_TRACE_TIMEOUT)
+        removePostRender = scene.postRender?.addEventListener?.(check)
+        void waitForAnimationFrames(SNAPSHOT_RENDER_FRAME_COUNT).then(check)
+    })
 }
 
 export const currentViewerSnapshot = async () => {
@@ -417,7 +540,10 @@ export const currentViewerSnapshot = async () => {
     }
 }
 
-export const captureJourney3DMapSnapshots = async (journey, {trackDrawings = getJourneyTrackDrawings(journey)} = {}) => {
+export const captureJourney3DMapSnapshots = async (journey, {
+    trackDrawings = getJourneyTrackDrawings(journey),
+    onSnapshotFlash = null,
+} = {}) => {
     const canvas = getCesiumCanvas()
     if (!canvas) {
         return []
@@ -431,14 +557,24 @@ export const captureJourney3DMapSnapshots = async (journey, {trackDrawings = get
         const focusContext = await getJourneySnapshotFocusContext(journey, trackDrawings)
         const snapshots = []
 
-        for (const view of THREE_D_CARDINAL_VIEWS) {
+        for (const [index, view] of THREE_D_CARDINAL_VIEWS.entries()) {
             await focusJourneyForSnapshot(focusContext, {
                 heading: view.heading,
                 pitch:   THREE_D_SNAPSHOT_PITCH,
             })
             scene?.requestRender?.()
             const trackInfo = await waitForJourneyTraceRender(trackDrawings, canvas)
-            await waitForAnimationFrames(1)
+            try {
+                onSnapshotFlash?.({
+                    view,
+                    index,
+                    total: THREE_D_CARDINAL_VIEWS.length,
+                })
+            }
+            catch (error) {
+                console.error(error)
+            }
+            await waitForAnimationFrames(SNAPSHOT_CAPTURE_FRAME_COUNT)
 
             const snapshot = await captureCanvasSnapshot(canvas)
             if (snapshot) {

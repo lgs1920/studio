@@ -38,6 +38,7 @@ import {
 import {
     drawPDFIcon,
     fontAwesomePositionedSVG,
+    pdfIconColorKey,
 } from './assets'
 import { yieldToUI } from './snapshots'
 
@@ -74,15 +75,15 @@ export const drawNorthArrow = (doc, {box, rotation, icons, iconKey = 'northBlack
     }
     const northRotation = finiteNumber(rotation) ?? 0
     const arrowColor = normalizeColor(color, PDF_COLORS.text)
-    const iconSize = 8
+    const iconSize = 6.4
     const tip = directionPoint(center, northRotation, iconSize / 2)
     const rotationValue = pdfRotationFromScreenAngle(northRotation, 90)
     drawPDFIcon(doc, icons, iconKey, center.x - iconSize / 2, center.y - iconSize / 2, iconSize, {rotation: rotationValue})
 
     doc.setFont('helvetica', 'bold')
-    doc.setFontSize(5.2)
+    doc.setFontSize(6.2)
     const labelWidth = doc.getTextWidth('N')
-    const label = directionPoint(tip, northRotation, labelWidth)
+    const label = directionPoint(tip, northRotation, labelWidth * 1.15)
     setColor(doc, 'setTextColor', arrowColor)
     doc.text('N', label.x, label.y, {align: 'center', baseline: 'middle'})
 }
@@ -94,10 +95,13 @@ export const drawProgressMarkers = (doc, {trackInfo, container, icons, iconKey =
                                                  container,
                                                  size,
                                                  gap: 2,
-                                             })
+    })
 
     positions.forEach(position => {
-        drawPDFIcon(doc, icons, iconKey, position.x, position.y, size, {rotation: pdfRotationFromScreenAngle(position.angle)})
+        const trackIconKey = position.color ? pdfIconColorKey('progressTrack', position.color) : iconKey
+        if (!drawPDFIcon(doc, icons, trackIconKey, position.x, position.y, size, {rotation: pdfRotationFromScreenAngle(position.angle)})) {
+            drawPDFIcon(doc, icons, iconKey, position.x, position.y, size, {rotation: pdfRotationFromScreenAngle(position.angle)})
+        }
     })
 }
 
@@ -208,10 +212,10 @@ export const buildSVGNorthArrow = ({box, rotation}) => {
         x: box.x + box.width - 118,
         y: box.y + box.height / 3,
     }
-    const iconWidth = 78
-    const iconHeight = 29
+    const iconWidth = 56
+    const iconHeight = 21
     const tip = directionPoint(center, rotation, iconWidth / 2)
-    const label = directionPoint(tip, rotation, 23)
+    const label = directionPoint(tip, rotation, 26)
     const icon = fontAwesomePositionedSVG({
                                               iconDefinition: MAP_ICON_DEFS.north,
                                               className:      'north-arrow-icon',
@@ -246,7 +250,7 @@ export const buildSVGProgressMarkers = ({trackInfo, container}) => {
                                                                   y:              position.y,
                                                                   width:          size,
                                                                   height:         size,
-                                                                  color:          '#000000',
+                                                                  color:          cssColor(position.color ?? '#000000'),
                                                                   rotation:       svgRotationFromScreenAngle(position.angle),
                                                               })).join('')
 }
@@ -321,7 +325,7 @@ export const build2DMapSVG = ({view, trackDrawings, pois, endpointMarkers, theme
         .badge circle { stroke: #fff; stroke-width: 3; }
         .badge text { fill: #fff; font: 700 22px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
         .north-arrow-icon, .progress-marker { overflow: visible; }
-        .north-arrow text { fill: #000; font: 800 36px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+        .north-arrow text { fill: #000; font: 800 44px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
     </style>
     <rect class="frame" x="${box.x}" y="${box.y}" width="${box.width}" height="${box.height}" rx="14"/>
     <text class="title" x="${box.x + 34}" y="${box.y + 52}">${escapeHtml(view.label)}</text>

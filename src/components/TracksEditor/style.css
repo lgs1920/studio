@@ -471,6 +471,43 @@ wa-tab::part(base) {
     gap: var(--lgs-gutter-xs);
 }
 
+.journey-report-export-animation {
+    position: fixed;
+    z-index: 2147483000;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    pointer-events: none;
+    color: var(--wa-color-brand);
+    opacity: 0.62;
+}
+
+.journey-report-export-animation wa-icon {
+    width: 100px;
+    height: 100px;
+    color: var(--wa-color-brand);
+    font-size: 100px;
+    line-height: 1;
+    --fade-opacity: 0.12;
+    --beat-fade-opacity: 0.36;
+    --beat-fade-scale: 1.08;
+    filter: drop-shadow(0 0 18px color-mix(in oklab, var(--wa-color-brand) 36%, transparent));
+}
+
+.journey-report-export-animation.is-snapshots wa-icon {
+    --animation-duration: 0.72s;
+    --animation-iteration-count: 1;
+    --animation-timing: steps(2, end);
+}
+
+.journey-report-export-animation.is-writing {
+    opacity: 0.72;
+}
+
+.journey-report-export-animation.is-writing wa-icon {
+    --animation-duration: 1.05s;
+}
+
 .journey-export-controls {
     --wa-form-control-height: 2rem;
     display: flex;

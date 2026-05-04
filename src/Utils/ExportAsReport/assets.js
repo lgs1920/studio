@@ -19,6 +19,7 @@ import {
 import {
     cssColor,
     getExportTheme,
+    normalizeColor,
     parseCssColor,
     setColor,
 } from './format'
@@ -198,7 +199,18 @@ export const svgIconToPNG = async (iconDefinition, {size = 96, color = '#000000'
     return await canvasToDataUrl(canvas)
 }
 
-export const loadPDFIcons = async (theme = getExportTheme()) => {
+export const pdfIconColorKey = (prefix, color) => {
+    const [red, green, blue] = normalizeColor(color, [0, 0, 0])
+    return `${prefix}-${red}-${green}-${blue}`
+}
+
+export const uniqueIconColors = colors => Array.from(
+    new Map((colors ?? [])
+        .filter(Boolean)
+        .map(color => [pdfIconColorKey('color', color), normalizeColor(color, [0, 0, 0])])).values(),
+)
+
+export const loadPDFIcons = async (theme = getExportTheme(), {trackColors = []} = {}) => {
     const brandColor = cssColor(parseCssColor(theme.brand, [34, 91, 155]))
     const iconEntries = [
         ...Object.entries(PDF_ICON_DEFS).map(([key, iconDefinition]) => [key, iconDefinition, '#000000']),
@@ -206,6 +218,11 @@ export const loadPDFIcons = async (theme = getExportTheme()) => {
         ['northBrand', MAP_ICON_DEFS.north, brandColor],
         ['progressBlack', MAP_ICON_DEFS.progress, '#000000'],
         ['progressBrand', MAP_ICON_DEFS.progress, brandColor],
+        ...uniqueIconColors(trackColors).map(color => [
+            pdfIconColorKey('progressTrack', color),
+            MAP_ICON_DEFS.progress,
+            cssColor(color),
+        ]),
     ]
     const entries = await Promise.all(iconEntries.map(async ([key, iconDefinition, color]) => [
         key,

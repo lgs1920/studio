@@ -51,6 +51,14 @@ The repository already contains the main product surface used by the studio:
 - Media composition through canvas overlays
 - Recorder pipeline based on Mediabunny
 
+### Journey Reports
+
+- Export journeys as PDF reports or HTML reports packaged as ZIP archives
+- Include journey metadata, description, statistics, dates, elevation profile, POI tables, coordinates, and altitude data
+- Generate 2D overview maps and 3D Cesium map captures for the four cardinal orientations
+- Add POI badges, start / end markers, north arrows, walking direction markers, map provider credits, and LGS1920 Studio branding
+- Keep report generation responsive with staged export feedback during snapshots and report writing
+
 ### App Platform
 
 - Local browser persistence with IndexedDB
