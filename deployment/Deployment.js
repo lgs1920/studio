@@ -15,14 +15,14 @@
  ******************************************************************************/
 
 // Import required Node.js modules for process execution, file system operations, and Git/SSH interactions
-import { exec, execSync, spawn } from 'child_process'
-import path                      from 'path'
+import { exec, execSync, spawn } from 'node:child_process'
+import fs                        from 'node:fs'
+import path                      from 'node:path'
+import process                   from 'node:process'
 import { simpleGit }             from 'simple-git'
 import { Client as SSH2 }        from 'ssh2'
+import { parse as parseYaml }    from 'yaml'
 import { zip }                   from 'zip-a-folder'
-
-const fs = require('fs')
-const yaml = require('yaml')
 
 const STUDIO_APP_NAME = 'LGS1920 Studio Development'
 
@@ -68,7 +68,7 @@ export class Deployment {
         this.product = params.product
         this.platform = params.platform
         this.local = params.local
-        this.configure().then(() => this.launch())
+        this.done = this.configure().then(() => this.launch())
     }
 
     /**
@@ -79,7 +79,7 @@ export class Deployment {
      */
     configure = async () => {
         // Parse deployment configuration from YAML file
-        this.configuration = yaml.parse(fs.readFileSync('deployment/deploy.yml', 'utf8'))
+        this.configuration = parseYaml(fs.readFileSync('deployment/deploy.yml', 'utf8'))
         this.version = await this.getVersion()
         this.remoteUser = this.configuration.remote[this.platform].user
         this.remoteHost = this.configuration.remote[this.platform].host
@@ -134,12 +134,10 @@ export class Deployment {
     getVersion = async () => {
         switch (this.product) {
             case 'studio': {
-                const file = Bun.file('./public/version.json')
-                return (await file.json()).studio
+                return JSON.parse(fs.readFileSync('./public/version.json', 'utf8')).studio
             }
             case 'backend': {
-                const file = Bun.file('./version.json')
-                return (await file.json()).backend
+                return JSON.parse(fs.readFileSync('./version.json', 'utf8')).backend
             }
         }
     }
@@ -156,7 +154,7 @@ export class Deployment {
         }
 
         // Write branch data to branch.json
-        await Bun.write(`${this.localDistPath}/branch.json`, JSON.stringify(data, null, 2))
+        fs.writeFileSync(`${this.localDistPath}/branch.json`, JSON.stringify(data, null, 2), 'utf8')
         console.log(`    > ${this.yellow}Branch info saved to branch.json${this.reset}`)
     }
 
@@ -183,7 +181,7 @@ export class Deployment {
                     console.log('---')
 
                     resolve()
-                }).on('data', (data) => {
+                }).on('data', () => {
                     // Log stdout data if needed
                 }).stderr.on('data', (data) => {
                     console.error(`STDERR: ${data}`)
@@ -214,7 +212,7 @@ export class Deployment {
                 stream.on('close', () => {
                     console.log(`    > ${this.green}Unzip completed successfully${this.reset}`)
                     resolve()
-                }).on('data', (data) => {
+                }).on('data', () => {
                     // Log stdout data if needed
                 }).stderr.on('data', (data) => {
                     console.error(`STDERR: ${data}`)
@@ -247,7 +245,7 @@ export class Deployment {
                 stream.on('close', () => {
                     console.log(`    > ${this.green}Backend restarted successfully${this.reset}`)
                     resolve()
-                }).on('data', (data) => {
+                }).on('data', () => {
                     // Log stdout data if needed
                 }).stderr.on('data', (data) => {
                     console.error(`STDERR: ${data}`)
@@ -302,18 +300,15 @@ export class Deployment {
      * @private
      */
     zip = async () => {
-        return new Promise(async (resolve, reject) => {
-            console.log(`    > Zipping version`)
-            try {
-                await zip(this.localDistPath, `${this.localDistPath}.zip`)
-                console.log(`    > ${this.green}Version zipped successfully${this.reset}`)
-                resolve()
-            }
-            catch (error) {
-                console.error(`${this.red}Zip failed: ${error.message}${this.reset}`)
-                reject(`Zip failed: ${error.message}`)
-            }
-        })
+        console.log(`    > Zipping version`)
+        try {
+            await zip(this.localDistPath, `${this.localDistPath}.zip`)
+            console.log(`    > ${this.green}Version zipped successfully${this.reset}`)
+        }
+        catch (error) {
+            console.error(`${this.red}Zip failed: ${error.message}${this.reset}`)
+            throw new Error(`Zip failed: ${error.message}`, {cause: error})
+        }
     }
 
     /**
@@ -411,6 +406,10 @@ export class Deployment {
      * @private
      */
     deleteTag = async () => {
+        if (!this.tagName) {
+            return
+        }
+
         console.log(`    > Deleting Git tag: ${this.tagName}`)
         try {
             await this.git.removeTag(this.tagName)
@@ -420,6 +419,99 @@ export class Deployment {
         catch (error) {
             console.error(`    > ${this.red}Failed to delete tag ${this.tagName}: ${error.message}${this.reset}`)
         }
+    }
+
+    /**
+     * Closes an SSH connection and forces cleanup if the remote side does not close it.
+     *
+     * @param {SSH2} connection - The SSH2 connection object.
+     * @returns {Promise<void>} Resolves when the connection is closed or force-cleaned.
+     * @private
+     */
+    closeConnection = async (connection) => {
+        if (!connection) {
+            return
+        }
+
+        await new Promise(resolve => {
+            let settled = false
+            const done = () => {
+                if (settled) {
+                    return
+                }
+                settled = true
+                clearTimeout(timer)
+                resolve()
+            }
+            const timer = setTimeout(() => {
+                if (typeof connection.destroy === 'function') {
+                    connection.destroy()
+                }
+                done()
+            }, 1500)
+
+            connection.once('close', done)
+            connection.end()
+        })
+    }
+
+    /**
+     * Runs remote deployment steps inside a real promise, including SSH cleanup.
+     *
+     * @returns {Promise<void>} Resolves when remote deployment and connection close are complete.
+     * @private
+     */
+    runRemoteDeployment = async () => {
+        await new Promise((resolve, reject) => {
+            const connection = new SSH2()
+            let settled = false
+
+            const settle = (error = null) => {
+                if (settled) {
+                    return
+                }
+                settled = true
+                connection.removeAllListeners('error')
+                connection.removeAllListeners('close')
+                if (error) {
+                    reject(error)
+                    return
+                }
+                resolve()
+            }
+
+            const handlePrematureClose = () => {
+                settle(new Error('SSH connection closed before deployment completed'))
+            }
+
+            connection.once('ready', async () => {
+                connection.removeListener('close', handlePrematureClose)
+                console.log(`    > ${this.green}SSH connection established${this.reset}`)
+                let failure = null
+
+                try {
+                    await this.unzip(connection)
+                    console.log('    > Deploying release...')
+                    await this.link(connection)
+                    await this.postDeployment(connection)
+                    await this.pushTag()
+                    console.log('\n---')
+                    console.log(`     Application ${this.yellow}${this.product} (version: ${this.version} - branch ${this.branch}) ${this.reset} deployed to ${this.platform}${this.reset}`)
+                    console.log('---\n')
+                }
+                catch (error) {
+                    failure = error
+                }
+                finally {
+                    connection.removeAllListeners('error')
+                    await this.closeConnection(connection)
+                    settle(failure)
+                }
+            })
+            connection.once('error', settle)
+            connection.once('close', handlePrematureClose)
+            connection.connect(this.sshConfig)
+        })
     }
 
     /**
@@ -457,12 +549,12 @@ export class Deployment {
                 // Update manifest.webmanifest for studio
                 const manifestPath = path.join(this.localDistPath, 'manifest.webmanifest')
                 if (fs.existsSync(manifestPath)) {
-                    const manifestContent = await Bun.file(manifestPath).json()
+                    const manifestContent = JSON.parse(fs.readFileSync(manifestPath, 'utf8'))
                     const replacement = this.platform === 'production'
                                         ? ''
                                         : this.platform.charAt(0).toUpperCase() + this.platform.slice(1)
                     manifestContent.name = STUDIO_APP_NAME.replace('Development', replacement)
-                    await Bun.write(manifestPath, JSON.stringify(manifestContent, null, 2))
+                    fs.writeFileSync(manifestPath, JSON.stringify(manifestContent, null, 2), 'utf8')
                     console.log(`    > Manifest configured for ${manifestContent.name}`)
                 }
                 else {
@@ -526,31 +618,12 @@ export class Deployment {
             console.log(`\n--- Starting deployment of ${this.yellow}${this.localDistPath}.zip${this.reset} to ${this.yellow}${this.remoteReleasePath}${this.reset}`)
             await this.copy()
             console.log('    > Connecting to SSH...')
-            const connection = new SSH2()
-            connection.on('ready', async () => {
-                console.log(`    > ${this.green}SSH connection established${this.reset}`)
-                try {
-                    await this.unzip(connection)
-                    console.log('    > Deploying release...')
-                    await this.link(connection)
-                    await this.postDeployment(connection)
-                    await this.pushTag()
-                    console.log('\n---')
-                    console.log(`     Application ${this.yellow}${this.product} (version: ${this.version} - branch ${this.branch}) ${this.reset} deployed to ${this.platform}${this.reset}`)
-                    console.log('---\n')
-                }
-                catch (error) {
-                    console.error(`${this.red}Deployment error: ${error}${this.reset}`)
-                    await this.deleteTag()
-                }
-                finally {
-                    connection.end()
-                }
-            }).connect(this.sshConfig)
+            await this.runRemoteDeployment()
         }
         catch (error) {
             console.error(`${this.red}Error: ${error}${this.reset}`)
             await this.deleteTag()
+            throw error
         }
     }
 }
