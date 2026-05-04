@@ -255,6 +255,7 @@ export const JOURNEY_EDITOR_DRAWER = 'journey-editor-drawer'
 export const SETTINGS_EDITOR_DRAWER = 'settings-editor-drawer'
 export const POIS_EDITOR_DRAWER = 'pois-editor-drawer'
 export const WIDGETS_EDITOR_DRAWER = 'widgets-editor-drawer'
+export const WANDER_DRAWER = 'wander-drawer'
 
 /** Jaurney, Track, POI **/
 

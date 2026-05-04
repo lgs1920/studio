@@ -49,6 +49,7 @@ import { PanelManager }        from './ui/panels/PanelManager'
 import { Profiler }            from './ui/Profiler'
 import { SceneManager }        from './ui/SceneManager'
 import { Wanderer }            from './ui/Wanderer'
+import { WanderMode }          from './ui/wander/WanderMode'
 
 export class LGS1920Context {
     /** @type {Proxy} */
@@ -398,6 +399,7 @@ export class LGS1920Context {
         }
 
         __.ui.wanderer = new Wanderer()
+        __.ui.wander = new WanderMode()
         __.ui.cameraManager = new CameraManager()
         __.ui.drawerManager = new PanelManager()
         __.ui.sceneManager = new SceneManager()

@@ -1,0 +1,52 @@
+.wander-drawer-content {
+    display: flex;
+    flex-direction: column;
+    gap: var(--wa-space-m, 1rem);
+    padding: var(--wa-space-m, 1rem);
+}
+
+.wander-fieldset {
+    display: grid;
+    gap: var(--wa-space-s, 0.75rem);
+}
+
+.wander-status {
+    align-items: center;
+    display: flex;
+    justify-content: space-between;
+    min-height: 2rem;
+}
+
+.wander-status strong,
+.wander-controls-progress {
+    font-variant-numeric: tabular-nums;
+}
+
+.wander-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--wa-space-xs, 0.5rem);
+}
+
+.wander-empty-state {
+    margin: 0;
+    opacity: 0.72;
+}
+
+.wander-controls {
+    align-items: center;
+    display: flex;
+    gap: 0.25rem;
+    min-height: 2.4rem;
+    padding: 0.2rem 0.35rem;
+}
+
+.wander-controls .grabber {
+    cursor: grab;
+    opacity: 0.7;
+}
+
+.wander-controls-progress {
+    min-width: 3rem;
+    text-align: center;
+}

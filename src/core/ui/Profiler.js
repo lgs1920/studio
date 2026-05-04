@@ -124,7 +124,7 @@ export class Profiler {
      */
     tooltipElevationVsDistance = ([serie, index, distance, elevation, time, point, distances, colors]) => {
 
-        if (__.ui.wanderer.running) {
+        if (__.ui.wander?.running || __.ui.wanderer.running) {
             return ''
         }
 

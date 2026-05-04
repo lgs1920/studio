@@ -72,6 +72,22 @@ export const ui = {
             rpm:          1,
             direction:    1,
         },
+        wander:              {
+            active:        false,
+            playing:       false,
+            paused:        false,
+            journeySlug:    null,
+            trackSlug:      null,
+            progress:       0,
+            sample:         null,
+            duration:       60,
+            direction:      1,
+            loop:           false,
+            scope:          'visible-tracks',
+            markerRadius:   35,
+            totalDistance:  0,
+            recordingSync:  false,
+        },
     },
 
     welcome: {
