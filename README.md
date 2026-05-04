@@ -41,6 +41,7 @@ The repository already contains the main product surface used by the studio:
 
 - Distance, elevation, duration, speed, and slope metrics
 - Elevation profile and journey statistics widgets
+- Responsive date and time display for editors, POIs, and journey statistics
 - Text, credits, compass, and scene widget system
 - Export-aware widget rendering for recording and snapshots
 
