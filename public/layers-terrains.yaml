@@ -80,6 +80,8 @@ providers:
         style: normal
         format: image/png
         tileMatrixSetID: PM
+        minimumLevel: 0
+        maximumLevel: 19
 
         ## IGN V2
       - name: Map IGNV2
@@ -95,6 +97,8 @@ providers:
         style: normal
         format: image/png
         tileMatrixSetID: PM
+        minimumLevel: 0
+        maximumLevel: 19
         doc: 'https://data.geopf.fr'
         type: base
         countries: [ FR ]
@@ -113,6 +117,8 @@ providers:
         style: normal
         format: image/jpeg
         tileMatrixSetID: PM
+        minimumLevel: 0
+        maximumLevel: 18
         doc: 'https://data.geopf.fr'
         type: base
         apikey: ign_scan_ws
@@ -134,6 +140,8 @@ providers:
         style: normal
         format: image/jpeg
         tileMatrixSetID: PM
+        minimumLevel: 6
+        maximumLevel: 16
         doc: 'https://data.geopf.fr'
         type: base
         apikey: ign_scan_ws
@@ -154,6 +162,8 @@ providers:
         style: normal
         format: image/png
         tileMatrixSetID: PM
+        minimumLevel: 3
+        maximumLevel: 15
         doc: 'https://data.geopf.fr'
         type: overlay
         alpha: 0.3
@@ -173,6 +183,7 @@ providers:
         style: normal
         format: image/jpeg
         tileMatrixSetID: PM
+        minimumLevel: 0
         maximumLevel: 19
         doc: 'https://data.geopf.fr'
         type: base
@@ -192,6 +203,8 @@ providers:
         style: normal
         format: image/png
         tileMatrixSetID: PM
+        minimumLevel: 6
+        maximumLevel: 14
         doc: 'https://data.geopf.fr'
         type: base
         credits: Crédits BNF - IGN
@@ -211,6 +224,8 @@ providers:
         style: normal
         format: image/jpeg
         tileMatrixSetID: PM
+        minimumLevel: 6
+        maximumLevel: 15
         doc: 'https://data.geopf.fr'
         type: base
         #
@@ -229,6 +244,8 @@ providers:
         style: normal
         format: image/png
         tileMatrixSetID: PM
+        minimumLevel: 6
+        maximumLevel: 16
         doc: 'https://data.geopf.fr'
         type: overlay
   ## WayMarked Trail Provider
@@ -248,6 +265,8 @@ providers:
 
         tile: slippy
         url: 'https://tile.waymarkedtrails.org/hiking/'
+        minimumLevel: 0
+        maximumLevel: 18
         doc: ''
         type: overlay
         credits: 'Credits https://waymarkedtrails.org/'
@@ -270,6 +289,8 @@ providers:
 
         tile: swisstopo
         url: https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.landeskarte-farbe-10/default/current/3857/{z}/{x}/{y}.png
+        minimumLevel: 0
+        maximumLevel: 19
         doc: ''
         type: base
         credits: 'Credits Swisstopo'
@@ -285,6 +306,8 @@ providers:
 
         tile: swisstopo
         url: https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.swissimage/default/current/3857/{z}/{x}/{y}.jpeg
+        minimumLevel: 0
+        maximumLevel: 20
         doc: ''
         type: base
         credits: 'Credits Swisstopo'
@@ -308,6 +331,8 @@ providers:
 
         tile: wayback
         url: 'https://wayback-b.maptiles.arcgis.com/arcgis/rest/services/World_Imagery/WMTS/1.0.0/default028mm/MapServer/tile/49849/'
+        minimumLevel: 0
+        maximumLevel: 23
         doc: ''
         type: base
 
@@ -321,6 +346,8 @@ providers:
 
         tile: wayback
         url: 'https://wayback-b.maptiles.arcgis.com/arcgis/rest/services/World_Imagery/WMTS/1.0.0/default028mm/MapServer/tile/4756/'
+        minimumLevel: 0
+        maximumLevel: 23
         doc: ''
         type: base
 
@@ -342,6 +369,8 @@ providers:
 
         tile: slippy
         url: 'https://tile.openstreetmap.org/'
+        minimumLevel: 0
+        maximumLevel: 19
         doc: ''
         type: base
 
@@ -362,6 +391,8 @@ providers:
 
         tile: slippy
         url: 'https://tile.opentopomap.org/'
+        minimumLevel: 0
+        maximumLevel: 17
         doc: ''
         type: base
 
@@ -399,6 +430,8 @@ providers:
 
         tile: maptiler
         url: 'https://api.maptiler.com/maps/aquarelle/256/{z}/{x}/{y}@2x.png?{%authent%}'
+        minimumLevel: 0
+        maximumLevel: 22
         doc: ''
         type: base
 
@@ -415,6 +448,8 @@ providers:
 
         tile: maptiler
         url: 'https://api.maptiler.com/tiles/satellite-v2/{z}/{x}/{y}.jpg?{%authent%}'
+        minimumLevel: 0
+        maximumLevel: 22
         doc: ''
         type: base
 
@@ -431,6 +466,8 @@ providers:
 
         tile: maptiler
         url: 'https://api.maptiler.com/maps/winter-v4/256/{z}/{x}/{y}@2x.png?{%authent%}'
+        minimumLevel: 0
+        maximumLevel: 22
         doc: ''
         type: base
 
@@ -461,6 +498,8 @@ providers:
           doc: ''
         tile: slippy
         url: 'https://tiles.opensnowmap.org/pistes/'
+        minimumLevel: 0
+        maximumLevel: 20
         doc: ''
         type: overlay
 
@@ -483,6 +522,8 @@ providers:
 
         tile: thunderforest
         url: 'https://tile.thunderforest.com/cycle/'
+        minimumLevel: 0
+        maximumLevel: 22
         doc: 'https://www.thunderforest.com/'
         type: base
 
@@ -499,6 +540,8 @@ providers:
 
         tile: thunderforest
         url: 'https://tile.thunderforest.com/landscape/'
+        minimumLevel: 0
+        maximumLevel: 22
         doc: 'https://www.thunderforest.com/'
         type: base
 
@@ -514,6 +557,8 @@ providers:
 
         tile: thunderforest
         url: 'https://tile.thunderforest.com/outdoors/'
+        minimumLevel: 0
+        maximumLevel: 22
         doc: 'https://www.thunderforest.com/'
         type: base
 

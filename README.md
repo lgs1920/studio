@@ -120,6 +120,7 @@ bun run deploy
 ## Configuration Notes
 
 - Application settings are primarily defined in `public/settings.yaml`
+- Map, overlay, and terrain providers are documented in [README_PROVIDERS.md](README_PROVIDERS.md)
 - Widget registration is defined in `public/widgets.yaml`
 - PWA behavior is configured through `vite.config.ts` and `public/service-worker-pwa.js`
 - Static version metadata is stored in `public/version.json` and `public/build.json`
