@@ -18,6 +18,7 @@ import { NameValueUnit }                                                       f
 import {
     EDIT_WIDGET_ICON,
     MILLIS,
+    POI_THRESHOLD_DISTANCE,
     POI_TMP_TYPE,
     SCENE_WIDGETS, SCENE_WIDGETS_BOARD, WIDGET_EDITOR_POST_RENDER_EVENT, WIDGET_EDITOR_PRE_RENDER_EVENT,
     WIDGETS_EDITOR_DRAWER,
@@ -40,9 +41,12 @@ import { useSnapshot }                                                         f
 import { DateInfo }                                                            from '../DateInfo'
 
 const JOURNEY_STATS_FALLBACK = {show: false}
+const JOURNEY_METRICS_FALLBACK = {global: {}, external: {}, user: {}}
 const STATS_POI_ID_PREFIX = 'journey-stat-extreme'
 const EXTREME_VALUE_TOLERANCE = 1e-9
 const COORDINATE_PRECISION = 6
+const STATS_POI_SCREEN_CLUSTER_PX = 96
+const STATS_POI_GEO_CLUSTER_METERS = POI_THRESHOLD_DISTANCE * 4
 const LINE_STRING = 'LineString'
 const MULTI_LINE_STRING = 'MultiLineString'
 
@@ -65,12 +69,10 @@ const matchesMetricValue = (value, target) => {
 const coordinateKey = point => {
     const longitude = finiteNumber(point.longitude)
     const latitude = finiteNumber(point.latitude)
-    const height = finiteNumber(point.altitude ?? point.height ?? point.simulatedHeight)
 
     return [
         longitude?.toFixed(COORDINATE_PRECISION),
         latitude?.toFixed(COORDINATE_PRECISION),
-        height?.toFixed(1) ?? '',
     ].join(':')
 }
 
@@ -93,6 +95,70 @@ const uniquePointsByCoordinates = points => {
         seen.add(key)
         return true
     })
+}
+
+const distanceMeters = (pointA, pointB) => {
+    const lonA = finiteNumber(pointA?.longitude)
+    const latA = finiteNumber(pointA?.latitude)
+    const lonB = finiteNumber(pointB?.longitude)
+    const latB = finiteNumber(pointB?.latitude)
+
+    if (lonA === null || latA === null || lonB === null || latB === null) {
+        return Infinity
+    }
+
+    const toRadians = degrees => degrees * Math.PI / 180
+    const earthRadiusMeters = 6378137
+    const dLat = toRadians(latB - latA)
+    const dLon = toRadians(lonB - lonA)
+    const a = Math.sin(dLat / 2) ** 2
+        + Math.cos(toRadians(latA)) * Math.cos(toRadians(latB)) * Math.sin(dLon / 2) ** 2
+
+    return 2 * earthRadiusMeters * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+}
+
+const clusterStatsPOIPoints = async points => {
+    const clusters = []
+
+    for (const point of points) {
+        const longitude = finiteNumber(point.longitude)
+        const latitude = finiteNumber(point.latitude)
+
+        if (longitude === null || latitude === null) {
+            continue
+        }
+
+        let screenPoint = null
+        try {
+            const coords = await __.ui.sceneManager?.degreesToPixelsCoordinates?.({
+                                                                                      longitude,
+                                                                                      latitude,
+                                                                                      height:          point.height,
+                                                                                      simulatedHeight: point.simulatedHeight ?? point.altitude,
+                                                                                  }, true)
+            if (coords?.visible && Number.isFinite(coords.x) && Number.isFinite(coords.y)) {
+                screenPoint = {x: coords.x, y: coords.y}
+            }
+        }
+        catch {
+            screenPoint = null
+        }
+
+        const existing = clusters.find(cluster => {
+            if (screenPoint && cluster.screenPoint) {
+                return Math.hypot(screenPoint.x - cluster.screenPoint.x, screenPoint.y - cluster.screenPoint.y)
+                    <= STATS_POI_SCREEN_CLUSTER_PX
+            }
+
+            return distanceMeters(point, cluster.point) <= STATS_POI_GEO_CLUSTER_METERS
+        })
+
+        if (!existing) {
+            clusters.push({point, longitude, latitude, screenPoint})
+        }
+    }
+
+    return clusters.map(cluster => cluster.point)
 }
 
 const extractTrackAltitudePoints = track => {
@@ -157,6 +223,39 @@ const findExtremePoints = (points, valueSelector, value) => {
     return uniquePointsByCoordinates(points.filter(point => matchesMetricValue(valueSelector(point), value)))
 }
 
+const findAdjustedExtremePoints = (points, valueSelector, value, fallbackValue) => {
+    const adjustedPoints = findExtremePoints(points, valueSelector, value)
+
+    if (adjustedPoints.length || fallbackValue === undefined || matchesMetricValue(value, fallbackValue)) {
+        return adjustedPoints
+    }
+
+    return findExtremePoints(points, valueSelector, fallbackValue)
+}
+
+const mergeMetricSources = (...sources) => {
+    const merged = {}
+
+    sources.forEach(source => {
+        if (!source || typeof source !== 'object') {
+            return
+        }
+
+        Object.entries(source).forEach(([key, value]) => {
+            if (value && typeof value === 'object' && !Array.isArray(value)) {
+                merged[key] = mergeMetricSources(merged[key], value)
+                return
+            }
+
+            if (value !== undefined) {
+                merged[key] = value
+            }
+        })
+    })
+
+    return merged
+}
+
 const isPointInCurrentView = point => {
     const longitude = finiteNumber(point?.longitude)
     const latitude = finiteNumber(point?.latitude)
@@ -186,8 +285,21 @@ export const TrackData = memo(() => {
     // Snapshots
     const journeyStats = useOptionalSnapshot($journeyStats, JOURNEY_STATS_FALLBACK)
     const {track} = useSnapshot($journeyEditor)
+    const journeyMetrics = useOptionalSnapshot(lgs.theJourney?.metrics, JOURNEY_METRICS_FALLBACK)
 
-    const metrics = track?.metrics?.global
+    const trackMetrics = track?.metrics?.global
+    const metrics = useMemo(() => {
+
+        if (!lgs.theJourney?.hasOneTrack?.()) {
+            return trackMetrics
+        }
+
+        return mergeMetricSources(
+            trackMetrics,
+            journeyMetrics.external,
+            journeyMetrics.user,
+        )
+    }, [journeyMetrics.external, journeyMetrics.user, trackMetrics])
     const renderer = WidgetDynamicRenderer.instance
 
     const WIDGET_KEY = 'journey-stats-widget'
@@ -254,17 +366,43 @@ export const TrackData = memo(() => {
         return Array.from(ids)
     }, [])
 
+    const removeStatsPOIEntities = useCallback(() => {
+        if (!lgs.viewer) {
+            return
+        }
+
+        const removeFrom = entities => {
+            if (!entities?.values) {
+                return
+            }
+
+            Array.from(entities.values).forEach(entity => {
+                if (`${entity.id}`.startsWith(STATS_POI_ID_PREFIX)) {
+                    entities.remove(entity)
+                }
+            })
+        }
+
+        removeFrom(lgs.viewer.entities)
+        for (let index = 0; index < lgs.viewer.dataSources.length; index++) {
+            removeFrom(lgs.viewer.dataSources.get(index).entities)
+        }
+        lgs.viewer.scene.requestRender?.()
+    }, [])
+
     const removeStatsPOIs = useCallback(async () => {
         const ids = getStatsPOIIds()
         _statsPoiIds.current = []
 
         if (!ids.length || !__.ui.poiManager?.remove) {
+            removeStatsPOIEntities()
             return
         }
 
         await Promise.all(ids.map(id => __.ui.poiManager.remove({id, dbSync: false})
             .catch(error => console.error(`Failed to remove journey statistics POI ${id}:`, error))))
-    }, [getStatsPOIIds])
+        removeStatsPOIEntities()
+    }, [getStatsPOIIds, removeStatsPOIEntities])
 
     const clearStatsPOIs = useCallback(async () => {
         await removeStatsPOIs()
@@ -308,6 +446,8 @@ export const TrackData = memo(() => {
     }, [$journeyStats, ensureStatsWidget, journeyStats.show, metrics, renderer])
 
     useEffect(() => {
+        void removeStatsPOIs()
+
         return () => {
             void removeStatsPOIs()
         }
@@ -443,7 +583,8 @@ export const TrackData = memo(() => {
         const formattedValue = metric.full?.trim() || `${value}`
         const parent = track?.slug ?? lgs.theTrack?.slug ?? null
 
-        const createdPOIs = await Promise.all(points.map(async (point, index) => {
+        const clusteredPoints = await clusterStatsPOIPoints(points)
+        const createdPOIs = await Promise.all(clusteredPoints.map(async (point, index) => {
             const longitude = finiteNumber(point.longitude)
             const latitude = finiteNumber(point.latitude)
 
@@ -582,10 +723,18 @@ export const TrackData = memo(() => {
     const hasDuration = metrics && !isNaN(metrics.duration)
     const hasElevation = metrics && metrics.negative?.elevation < 0 && metrics.positive?.elevation > 0
     const hasAltitude = metrics && !isNaN(metrics.minHeight) && !isNaN(metrics.maxHeight)
-    const minAltitudePoints = findExtremePoints(altitudePoints, point => point.altitude, metrics.minHeight)
-    const maxAltitudePoints = findExtremePoints(altitudePoints, point => point.altitude, metrics.maxHeight)
-    const maxSpeedPoints = findExtremePoints(metricPoints, point => point.speed, metrics.maxSpeed)
-    const bestPacePoints = findExtremePoints(metricPoints, point => point.pace, metrics.minPace)
+    const minAltitudePoints = findAdjustedExtremePoints(
+        altitudePoints, point => point.altitude, metrics.minHeight, trackMetrics?.minHeight,
+    )
+    const maxAltitudePoints = findAdjustedExtremePoints(
+        altitudePoints, point => point.altitude, metrics.maxHeight, trackMetrics?.maxHeight,
+    )
+    const maxSpeedPoints = findAdjustedExtremePoints(
+        metricPoints, point => point.speed, metrics.maxSpeed, trackMetrics?.maxSpeed,
+    )
+    const bestPacePoints = findAdjustedExtremePoints(
+        metricPoints, point => point.pace, metrics.minPace, trackMetrics?.minPace,
+    )
 
     const renderExtremeMetric = ({
                                      id,

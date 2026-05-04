@@ -154,7 +154,7 @@ export class MapPOI extends MapElement {
         this.update(options)
     }
 
-    toggleExpand = async (event, poi) => {
+    toggleExpand = async () => {
         if (this.expanded) {
             await this.shrink()
         }
@@ -198,7 +198,7 @@ export class MapPOI extends MapElement {
         return JSON.parse(JSON.stringify(source))
     }
 
-    isView = (entity) => {
+    isView = () => {
         return this.utils.isEntityInView() //TODO
     }
 
@@ -236,7 +236,7 @@ export class MapPOI extends MapElement {
         }
 
         // Iterate through the changes to determine if a redraw is necessary
-        for (const [key, value] of Object.entries(changes)) {
+        for (const key of Object.keys(changes)) {
             // If the changed key is in our predefined set, mark for redraw
             if (keys.has(key)) {
                 shouldRedraw = true
@@ -411,14 +411,13 @@ export class MapPOI extends MapElement {
      * @returns {Promise<void>}
      * @param dbSync
      */
-    remove = (dbSync = true) => {
+    remove = async (dbSync = true) => {
         try {
             this.clearEvents()
-            this.utils.remove(this).then(async () => {
-                if (dbSync) {
-                    await lgs.db.lgs1920.delete(this.id, POIS_STORE)
-                }
-            })
+            await this.utils.remove(this)
+            if (dbSync) {
+                await lgs.db.lgs1920.delete(this.id, POIS_STORE)
+            }
         }
         catch (error) {
             console.error(`Failed to remove POI from database: ${error.message}`)

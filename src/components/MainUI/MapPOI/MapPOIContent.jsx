@@ -34,6 +34,7 @@ import './style.css'
 export const MapPOIContent = ({poi, useInMenu = false, style}) => {
     const _poiContent = useRef(null)
     const _icon = useRef(null)
+    const _renderRequestId = useRef(0)
 
     const unitSystem = useSnapshot(lgs.settings.unitSystem)
     const coordinateSystem = useSnapshot(lgs.settings.coordinateSystem)
@@ -45,7 +46,6 @@ export const MapPOIContent = ({poi, useInMenu = false, style}) => {
     /** * Direct reactive access to the point from the snapshot.
      */
     const point = useMemo(() => poisSnap.list.get(poi), [poisSnap.list, poi])
-    const $point = $pois.list.get(poi)
     const currentPOI = poisSnap.current
     const pointId = point?.id
     const pointParent = point?.parent
@@ -153,25 +153,37 @@ export const MapPOIContent = ({poi, useInMenu = false, style}) => {
 
     /** Synchronizes DOM content to map canvas */
     const renderToCanvas = useCallback(() => {
-        if (useInMenu || !point?.visible || !$point) {
+        if (useInMenu || !point?.visible || !pointId) {
             return
         }
 
+        const renderRequestId = ++_renderRequestId.current
         __.requestAnimationFrame(() => {
             try {
+                if (renderRequestId !== _renderRequestId.current || !$pois.list.get(pointId)) {
+                    return
+                }
+
                 const scale = 2
                 const ratio = window.devicePixelRatio || 1
 
                 snapdom(_poiContent.current, {scale}).then(snap =>
                                                                snap.toCanvas().then(canvas => {
-                                                                   const mapPOI = new MapPOI($point)
+                                                                   const currentPoint = $pois.list.get(pointId)
+                                                                   if (renderRequestId !== _renderRequestId.current
+                                                                       || !currentPoint
+                                                                       || !currentPoint.visible) {
+                                                                       return
+                                                                   }
+
+                                                                   const mapPOI = new MapPOI(currentPoint)
                                                                    mapPOI.image = {
                                                                        src:    canvas.toDataURL(),
                                                                        width:  canvas.width / scale / ratio,
                                                                        height: canvas.height / scale / ratio,
                                                                    }
                                                                    mapPOI.pixelOffset = {
-                                                                       x: point.expanded ? -13 : 0,
+                                                                       x: currentPoint.expanded ? -13 : 0,
                                                                        y: 0,
                                                                    }
                                                                    mapPOI.utils.draw(mapPOI)
@@ -182,7 +194,7 @@ export const MapPOIContent = ({poi, useInMenu = false, style}) => {
                 console.error('Error rendering POI to canvas:', error)
             }
         })
-    }, [useInMenu, point, $point])
+    }, [useInMenu, point?.visible, pointId, $pois.list])
 
     const renderToCanvasAfterIconLoad = useCallback((event = null) => {
         const icon = event?.target ?? _icon.current
@@ -197,6 +209,7 @@ export const MapPOIContent = ({poi, useInMenu = false, style}) => {
             return
         }
 
+        const renderRequestRef = _renderRequestId
         const observer = new MutationObserver(renderToCanvas)
         if (_poiContent.current) {
             observer.observe(_poiContent.current, {
@@ -211,6 +224,7 @@ export const MapPOIContent = ({poi, useInMenu = false, style}) => {
         renderToCanvas()
 
         return () => {
+            renderRequestRef.current++
             observer.disconnect()
             removeEventListeners(poi)
         }
