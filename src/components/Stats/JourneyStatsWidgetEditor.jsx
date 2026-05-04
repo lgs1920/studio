@@ -110,6 +110,27 @@ export const JourneyStatsWidgetEditor = ({entity}) => {
     }, [configuration, entity])
 
     const dataSource = element.dataSource || 'global'
+    const displayMetrics = useMemo(() => {
+        const global = metricsSnap.global || {}
+        const external = metricsSnap.external || {}
+        const user = metricsSnap.user || {}
+
+        if (dataSource === 'global') {
+            return global
+        }
+
+        return {
+            ...global,
+            ...(dataSource === 'external' ? external : {}),
+            ...(dataSource === 'user' ? {...external, ...user} : {}),
+            positive: {
+                ...(global.positive || {}),
+                ...(dataSource === 'external' ? (external.positive || {}) : {}),
+                ...(dataSource === 'user' ? {...(external.positive || {}), ...(user.positive || {})} : {}),
+            },
+        }
+    }, [dataSource, metricsSnap])
+    const hasDurationData = Number.isFinite(Number(displayMetrics.duration)) && Number(displayMetrics.duration) > 0
 
     const journeyDate = useMemo(() => {
         if (!journey?.getDate) {
@@ -124,6 +145,7 @@ export const JourneyStatsWidgetEditor = ({entity}) => {
     const dataEditorOrderItems = orderedJourneyStatsTextItems(element.textOrder)
         .filter(item => item.id !== 'date' || hasJourneyDate)
     const textOrderItems = dataEditorOrderItems.filter(item =>
+        (item.id !== 'duration' || hasDurationData) &&
         isJourneyStatsTextItemEnabled(element, item.id, {hasJourneyDate}))
     const textOrderItemIds = textOrderItems.map(item => item.id).join('|')
     const summaryBreaks = normalizeJourneyStatsSummaryBreaks(element.summaryBreaks)
