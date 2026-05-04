@@ -16,10 +16,7 @@ import {
     STUDIO_NAME,
     STUDIO_URL,
 } from './constants'
-import {
-    creditsOverlayHTML,
-    getReportCredits,
-} from './credits'
+import * as ReportCredits from './credits'
 import {
     cssColor,
     escapeHtml,
@@ -70,6 +67,7 @@ import {
 import {
     captureJourney3DMapSnapshots,
     currentViewerSnapshot,
+    yieldToUI,
 } from './snapshots'
 
 export const renderHTMLIcon = key => fontAwesomeSVG(PDF_ICON_DEFS[key], {className: 'table-icon'})
@@ -94,10 +92,11 @@ export const renderPOIBadgeHTML = poi => {
 }
 
 export const renderCreditsRows = credits => credits
+    .filter(credit => typeof ReportCredits.isReportCreditVisible === 'function' ? ReportCredits.isReportCreditVisible(credit) : true)
     .map(credit => `<tr><th>${escapeHtml(credit.label)}</th><td>${
         credit.url
-        ? `<a href="${escapeHtml(credit.url)}" target="_blank" rel="noopener noreferrer">${htmlText(credit.text)}</a>`
-        : htmlText(credit.text)
+        ? `<a href="${escapeHtml(credit.url)}" target="_blank" rel="noopener noreferrer">${htmlText(ReportCredits.creditTextSource?.(credit.text) ?? credit.text)}</a>`
+        : htmlText(ReportCredits.creditTextSource?.(credit.text) ?? credit.text)
     }</td></tr>`)
     .join('')
 
@@ -580,7 +579,8 @@ export const exportJourneyToHTMLZip = async (journey, {
                                                                                                     }),
                                                                           captureJourney3DMapSnapshots(journey),
                                                                       ])
-    const reportCredits = getReportCredits()
+    const reportCredits = ReportCredits.getReportCredits()
+    await yieldToUI()
     const files = {}
     const twoDMapAssets = CARDINAL_VIEWS.map(view => {
         const path = `images/map-2d-${slugPart(view.label)}.svg`
@@ -608,7 +608,6 @@ export const exportJourneyToHTMLZip = async (journey, {
             trackInfo: snapshot.trackInfo,
             arrowColor: theme.brand,
             progressColor: theme.brand,
-            creditsOverlayHTML: creditsOverlayHTML(snapshot.credits ?? reportCredits),
         }
     })
     const logoPath = studioLogo?.dataUrl ? 'images/logo-lgs1920-studio.png' : ''
@@ -620,6 +619,7 @@ export const exportJourneyToHTMLZip = async (journey, {
         files[profileImagePath] = dataUrlToBytes(profileImage.dataUrl)
     }
 
+    await yieldToUI()
     files['index.html'] = strToU8(buildJourneyHTML({
                                                        journey,
                                                        pois: listedPois,
@@ -631,6 +631,7 @@ export const exportJourneyToHTMLZip = async (journey, {
                                                        credits: reportCredits,
                                                    }))
 
+    await yieldToUI()
     const archive = zipSync(files, {level: 6})
     downloadBlob(archive, fileName, 'application/zip')
 

@@ -57,6 +57,7 @@
         "elysia": "latest",
         "eslint-import-resolver-alias": "latest",
         "eslint-plugin-import": "latest",
+        "fflate": "latest",
         "fs": "latest",
         "fs.promises": "latest",
         "geo-coordinates-parser": "latest",

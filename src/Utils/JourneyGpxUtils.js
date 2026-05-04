@@ -22,27 +22,35 @@ import { decodeHTMLEntities } from '@Utils/TextUtils'
 export const LGS_GPX_NAMESPACE = 'https://www.lgs1920.fr/gpx/1'
 export const GPX_MIME_TYPE = 'application/gpx+xml;charset=utf-8'
 export const GEOJSON_MIME_TYPE = 'application/geo+json;charset=utf-8'
+export const PDF_MIME_TYPE = 'application/pdf'
+export const ZIP_MIME_TYPE = 'application/zip'
 
 export const JOURNEY_EXPORT_FORMATS = {
     GPX:     'gpx',
     GEOJSON: 'geojson',
+    PDF:     'pdf',
+    HTML:    'zip',
 }
 
 export const JOURNEY_EXPORT_FORMAT_LABELS = {
     [JOURNEY_EXPORT_FORMATS.GPX]:     'GPX',
     [JOURNEY_EXPORT_FORMATS.GEOJSON]: 'GeoJSON',
+    [JOURNEY_EXPORT_FORMATS.PDF]:     'PDF',
+    [JOURNEY_EXPORT_FORMATS.HTML]:    'HTML',
 }
 
 export const JOURNEY_EXPORT_MIME_TYPES = {
     [JOURNEY_EXPORT_FORMATS.GPX]:     GPX_MIME_TYPE,
     [JOURNEY_EXPORT_FORMATS.GEOJSON]: GEOJSON_MIME_TYPE,
+    [JOURNEY_EXPORT_FORMATS.PDF]:     PDF_MIME_TYPE,
+    [JOURNEY_EXPORT_FORMATS.HTML]:    ZIP_MIME_TYPE,
 }
 
 const GPX_NAMESPACE = 'http://www.topografix.com/GPX/1/1'
 const GPX_SCHEMA = 'http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd'
 const LGS_PROPERTY_PREFIX = 'lgs_'
 const EXCLUDED_POI_TYPES = new Set([POI_FLAG_START, POI_FLAG_STOP, POI_STARTER_TYPE])
-const EXPORT_EXTENSION_PATTERN = /\.(gpx|geojson|json)$/i
+const EXPORT_EXTENSION_PATTERN = /\.(gpx|geojson|json|pdf|zip)$/i
 
 const finiteNumber = value => {
     if (value === null || value === undefined || value === '') {
@@ -82,6 +90,23 @@ const toJson = value => {
 const compactObject = object => Object.fromEntries(
     Object.entries(object).filter(([, value]) => value !== undefined && value !== null && value !== ''),
 )
+
+const valuesFromPOISource = source => {
+    if (!source) {
+        return []
+    }
+    if (Array.isArray(source)) {
+        return source
+    }
+    if (typeof source.values === 'function') {
+        return Array.from(source.values())
+    }
+    if (typeof source[Symbol.iterator] === 'function') {
+        return Array.from(source).map(item => Array.isArray(item) && item.length > 1 ? item[1] : item)
+    }
+
+    return []
+}
 
 const deepClone = value => JSON.parse(JSON.stringify(value))
 
@@ -200,7 +225,9 @@ export const getJourneyExportBaseName = (journey) => {
 }
 
 export const getJourneyExportFileName = (journey, format = JOURNEY_EXPORT_FORMATS.GPX) => {
-    const extension = format === JOURNEY_EXPORT_FORMATS.GEOJSON ? JOURNEY_EXPORT_FORMATS.GEOJSON : JOURNEY_EXPORT_FORMATS.GPX
+    const extension = Object.values(JOURNEY_EXPORT_FORMATS).includes(format)
+                      ? format
+                      : JOURNEY_EXPORT_FORMATS.GPX
 
     return `${getJourneyExportBaseName(journey)}.${extension}`
 }
@@ -214,7 +241,9 @@ export const normalizeJourneyExportBaseName = (fileName, journey = null) => {
 }
 
 export const normalizeJourneyExportFileName = (fileName, format = JOURNEY_EXPORT_FORMATS.GPX, journey = null) => {
-    const extension = format === JOURNEY_EXPORT_FORMATS.GEOJSON ? JOURNEY_EXPORT_FORMATS.GEOJSON : JOURNEY_EXPORT_FORMATS.GPX
+    const extension = Object.values(JOURNEY_EXPORT_FORMATS).includes(format)
+                      ? format
+                      : JOURNEY_EXPORT_FORMATS.GPX
     const baseName = normalizeJourneyExportBaseName(fileName, journey)
 
     return `${baseName}.${extension}`
@@ -238,14 +267,14 @@ export const getExportableJourneyPOIs = (journey, pois = undefined) => {
     }
 
     const list = pois ?? globalThis.__?.ui?.poiManager?.list ?? globalThis.lgs?.stores?.main?.components?.pois?.list
-    const values = list instanceof Map ? Array.from(list.values()) : Array.isArray(list) ? list : []
+    const values = valuesFromPOISource(list)
     const trackSlugs = new Set(Array.from(journey.tracks?.keys?.() ?? []))
 
     return values.filter(poi => {
         const parent = poi?.parent ?? null
         const associated = parent === journey.slug
                            || trackSlugs.has(parent)
-                           || globalThis.lgs?.getJourneyByTrackSlug?.(parent)?.slug === journey.slug
+                           || (parent ? globalThis.lgs?.getJourneyByTrackSlug?.(parent)?.slug === journey.slug : false)
 
         return associated && isExportableJourneyPOI(poi)
     })

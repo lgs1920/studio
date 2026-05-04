@@ -7,6 +7,7 @@
  ******************************************************************************/
 
 import { SceneUtils } from '@Utils/cesium/SceneUtils'
+import { snapdom } from '@zumer/snapdom'
 import { Cartesian2, Cartesian3 } from 'cesium'
 import {
     CESIUM_SCENE_3D_MODE,
@@ -25,7 +26,22 @@ import {
     getReferencePoints,
 } from './journeyData'
 
+const CREDITS_BAR_ID = 'lgs-credits-bar'
+const CREDITS_BAR_SNAPSHOT_TIMEOUT = 1800
+
 export const wait = milliseconds => new Promise(resolve => setTimeout(resolve, milliseconds))
+
+export const resolveAfter = (milliseconds, value = null) => new Promise(resolve => {
+    setTimeout(() => resolve(value), milliseconds)
+})
+
+export const yieldToUI = async () => {
+    if (typeof requestAnimationFrame === 'function') {
+        await new Promise(resolve => requestAnimationFrame(resolve))
+    }
+
+    await wait(0)
+}
 
 export const waitForAnimationFrames = async (count = 2) => {
     if (typeof requestAnimationFrame !== 'function') {
@@ -220,6 +236,109 @@ export const captureCanvasSnapshot = canvas => {
     return dataUrl && width > 0 && height > 0 ? {dataUrl, width, height} : null
 }
 
+export const loadSnapshotImage = dataUrl => new Promise(resolve => {
+    if (!dataUrl || typeof Image === 'undefined') {
+        resolve(null)
+        return
+    }
+
+    const image = new Image()
+    image.onload = () => resolve(image)
+    image.onerror = () => resolve(null)
+    image.src = dataUrl
+})
+
+export const captureCreditsBarSnapshot = async () => {
+    if (typeof document === 'undefined') {
+        return null
+    }
+
+    const element = document.getElementById(CREDITS_BAR_ID) ?? document.querySelector('.credits-bar')
+    const rect = element?.getBoundingClientRect?.()
+    if (!element || !rect?.width || !rect?.height) {
+        return null
+    }
+
+    try {
+        await waitForAnimationFrames(2)
+        const snapshot = await Promise.race([
+                                                snapdom(element, {scale: 2}),
+                                                resolveAfter(CREDITS_BAR_SNAPSHOT_TIMEOUT),
+                                            ])
+        if (!snapshot) {
+            return null
+        }
+
+        const canvas = await Promise.race([
+                                              snapshot.toCanvas(),
+                                              resolveAfter(CREDITS_BAR_SNAPSHOT_TIMEOUT),
+                                          ])
+        if (!canvas) {
+            return null
+        }
+        const dataUrl = canvas.toDataURL('image/png')
+
+        return dataUrl ? {
+            dataUrl,
+            width:  canvas.width,
+            height: canvas.height,
+            ratio:  canvas.width / Math.max(canvas.height, 1),
+        } : null
+    }
+    catch (error) {
+        console.error(error)
+        return null
+    }
+}
+
+export const embedCreditsBarInSnapshot = async (snapshot, creditsBar) => {
+    if (!snapshot?.dataUrl || !creditsBar?.dataUrl || typeof document === 'undefined') {
+        return snapshot
+    }
+
+    const [sourceImage, creditsImage] = await Promise.all([
+                                                             loadSnapshotImage(snapshot.dataUrl),
+                                                             loadSnapshotImage(creditsBar.dataUrl),
+                                                         ])
+    if (!sourceImage || !creditsImage) {
+        return snapshot
+    }
+
+    const canvas = document.createElement('canvas')
+    canvas.width = snapshot.width
+    canvas.height = snapshot.height
+    const context = canvas.getContext?.('2d')
+    if (!context) {
+        return snapshot
+    }
+
+    context.drawImage(sourceImage, 0, 0, canvas.width, canvas.height)
+
+    const margin = Math.max(Math.round(canvas.width * 0.012), 10)
+    const maxWidth = canvas.width * 0.48
+    const maxHeight = canvas.height * 0.095
+    const ratio = creditsBar.width / Math.max(creditsBar.height, 1)
+    let width = Math.min(creditsBar.width / 2, maxWidth)
+    let height = width / ratio
+    if (height > maxHeight) {
+        height = maxHeight
+        width = height * ratio
+    }
+
+    context.drawImage(
+        creditsImage,
+        canvas.width - width - margin,
+        canvas.height - height - margin,
+        width,
+        height,
+    )
+
+    return {
+        ...snapshot,
+        dataUrl: canvas.toDataURL('image/png'),
+    }
+}
+
 export const projectJourney3DTrackInfo = (trackDrawings, canvas) => {
     const scene = getCesiumScene()
     if (!scene?.cartesianToCanvasCoordinates || !canvas || trackDrawings.length === 0) {
@@ -332,6 +451,7 @@ export const captureJourney3DMapSnapshots = async journey => {
     const trackDrawings = getJourneyTrackDrawings(journey)
     const cameraState = captureCurrentCameraState(journey)
     try {
+        const creditsBarSnapshot = await captureCreditsBarSnapshot()
         await ensure3DSceneForSnapshot()
         const scene = getCesiumScene()
         const focusContext = await getJourneySnapshotFocusContext(journey)
@@ -348,8 +468,9 @@ export const captureJourney3DMapSnapshots = async journey => {
 
             const snapshot = captureCanvasSnapshot(canvas)
             if (snapshot) {
+                const snapshotWithCredits = await embedCreditsBarInSnapshot(snapshot, creditsBarSnapshot)
                 snapshots.push({
-                    ...snapshot,
+                    ...snapshotWithCredits,
                     view,
                     trackInfo,
                     credits: getReportCredits(),

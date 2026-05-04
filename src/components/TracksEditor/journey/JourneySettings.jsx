@@ -63,11 +63,15 @@ import {
     normalizeJourneyExportBaseName, normalizeJourneyExportFileName,
 }                                     from '@Utils/JourneyGpxUtils'
 import {
+    exportJourneyToHTMLZip, exportJourneyToPDF,
+}                                     from '@Utils/ExportAsReport'
+import {
     UIToast,
 }                                     from '@Utils/UIToast'
 import { decodeHTMLEntities }         from '@Utils/TextUtils'
 import {
-    WaButton, WaCard, WaIcon, WaInput, WaOption, WaSelect, WaTab, WaTabGroup, WaTabPanel, WaTextarea, WaTooltip,
+    WaButton, WaCard, WaIcon, WaInput, WaOption, WaPopup, WaSelect, WaTab, WaTabGroup, WaTabPanel, WaTextarea,
+    WaTooltip,
 }                                     from '@web.awesome.me/webawesome-pro/dist/react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { sprintf }                    from 'sprintf-js'
@@ -85,6 +89,16 @@ const PANELS = {
 }
 
 const {DATA, EDIT, POINTS, POIS} = PANELS
+const EXPORT_DIALOG_FORMATS = {
+    FILE: [
+        {value: JOURNEY_EXPORT_FORMATS.GPX, label: 'gpx'},
+        {value: JOURNEY_EXPORT_FORMATS.GEOJSON, label: 'geojson'},
+    ],
+    REPORT: [
+        {value: JOURNEY_EXPORT_FORMATS.PDF, label: 'pdf'},
+        {value: JOURNEY_EXPORT_FORMATS.HTML, label: 'html'},
+    ],
+}
 
 /**
  * Main journey settings component
@@ -114,6 +128,7 @@ export const JourneySettings = () => {
 
     const [exportFormat, setExportFormatState] = useState(JOURNEY_EXPORT_FORMATS.GPX)
     const [exportFileName, setExportFileNameState] = useState('')
+    const [exportChoiceOpen, setExportChoiceOpen] = useState(false)
     const [journeyLocationState, setJourneyLocationState] = useState({slug: null, value: ''})
 
     // Local state-like ref for rotation toggle
@@ -330,8 +345,7 @@ export const JourneySettings = () => {
         setExportFileNameState(fileName)
     }
 
-    const resetExportDialog = (currentJourney) => {
-        const format = JOURNEY_EXPORT_FORMATS.GPX
+    const resetExportDialog = (currentJourney, format = JOURNEY_EXPORT_FORMATS.GPX) => {
         setExportFormatValue(format)
         setExportFileNameValue(getJourneyExportBaseName(currentJourney))
     }
@@ -352,12 +366,13 @@ export const JourneySettings = () => {
         event.stopPropagation()
     }
 
-    const ExportJourneyMessage = () => {
+    const ExportJourneyMessage = ({formats = EXPORT_DIALOG_FORMATS.FILE, kind = 'file'} = {}) => {
         const poiCount = getExportableJourneyPOIs(lgs.theJourney).length
         const formatLabel = JOURNEY_EXPORT_FORMAT_LABELS[exportFormat] ?? JOURNEY_EXPORT_FORMAT_LABELS.gpx
+        const itemLabel = kind === 'report' ? 'report' : 'file'
         return (
             <div className="journey-export-dialog-content">
-                <p>{`Export ${formatLabel} with ${journey?.tracks?.size ?? 0} track(s) and ${poiCount} associated POI(s).`}</p>
+                <p>{`Export ${formatLabel} ${itemLabel} with ${journey?.tracks?.size ?? 0} track(s) and ${poiCount} associated POI(s).`}</p>
                 <div className="journey-export-controls">
                     <WaInput
                         aria-label="Export file name"
@@ -377,39 +392,89 @@ export const JourneySettings = () => {
                         onWaHide={keepExportFormatPopoverInDialog}
                         onWaAfterHide={keepExportFormatPopoverInDialog}
                     >
-                        <WaOption value={JOURNEY_EXPORT_FORMATS.GPX}>gpx</WaOption>
-                        <WaOption value={JOURNEY_EXPORT_FORMATS.GEOJSON}>geojson</WaOption>
+                        {formats.map(format => (
+                            <WaOption key={format.value} value={format.value}>{format.label}</WaOption>
+                        ))}
                     </WaSelect>
                 </div>
             </div>
         )
     }
 
-    const [ConfirmExportJourneyDialog, confirmExportJourney] = useConfirm(
-        `${'Export'}&nbsp;<strong>${journey?.title}</strong> ?`,
-        ExportJourneyMessage,
-        {icon: 'download', text: `Export ${JOURNEY_EXPORT_FORMAT_LABELS[exportFormat] ?? JOURNEY_EXPORT_FORMAT_LABELS.gpx}`},
+    const ExportFileMessage = () => (
+        <ExportJourneyMessage formats={EXPORT_DIALOG_FORMATS.FILE} kind="file"/>
     )
 
-    const exportJourney = async () => {
+    const ExportReportMessage = () => (
+        <ExportJourneyMessage formats={EXPORT_DIALOG_FORMATS.REPORT} kind="report"/>
+    )
+
+    const [ConfirmExportFileDialog, confirmExportFile] = useConfirm(
+        `${'Export File'}&nbsp;<strong>${journey?.title}</strong> ?`,
+        ExportFileMessage,
+        {
+            icon:            'route',
+            text:            `Export ${JOURNEY_EXPORT_FORMAT_LABELS[exportFormat] ?? JOURNEY_EXPORT_FORMAT_LABELS.gpx}`,
+            dialogClassName: 'journey-export-dialog',
+        },
+    )
+
+    const [ConfirmExportReportDialog, confirmExportReport] = useConfirm(
+        `${'Export Report'}&nbsp;<strong>${journey?.title}</strong> ?`,
+        ExportReportMessage,
+        {
+            icon:            'file-lines',
+            text:            `Export ${JOURNEY_EXPORT_FORMAT_LABELS[exportFormat] ?? JOURNEY_EXPORT_FORMAT_LABELS.pdf}`,
+            dialogClassName: 'journey-export-dialog',
+        },
+    )
+
+    const exportJourney = async (event) => {
+        event?.stopPropagation()
+        if (!lgs.theJourney) {
+            return
+        }
+        setExportChoiceOpen(open => !open)
+    }
+
+    const notifyExportInProgress = () => {
+        UIToast.notify({
+                           caption: 'Export in progress',
+                           text:    'It will take few seconds.',
+                       }, 5000)
+    }
+
+    const waitForExportToastPaint = () => new Promise(resolve => {
+        if (typeof requestAnimationFrame !== 'function') {
+            setTimeout(resolve, 0)
+            return
+        }
+
+        requestAnimationFrame(() => requestAnimationFrame(resolve))
+    })
+
+    const openExportFileDialog = async () => {
         const currentJourney = lgs.theJourney
         if (!currentJourney) {
             return
         }
         resetExportDialog(currentJourney)
+        setExportChoiceOpen(false)
 
-        const confirmed = await confirmExportJourney()
+        const confirmed = await confirmExportFile()
         if (!confirmed) {
             return
         }
 
         try {
+            notifyExportInProgress()
+            await waitForExportToastPaint()
             const pois = getExportableJourneyPOIs(currentJourney)
             const format = _exportFormat.current
+            const fileName = normalizeJourneyExportFileName(_exportFileName.current, format, currentJourney)
             const content = format === JOURNEY_EXPORT_FORMATS.GEOJSON
                             ? exportJourneyToGeoJSON(currentJourney, {pois})
                             : exportJourneyToGPX(currentJourney, {pois})
-            const fileName = normalizeJourneyExportFileName(_exportFileName.current, format, currentJourney)
             await Export.toFile(content, fileName, JOURNEY_EXPORT_MIME_TYPES[format])
 
             UIToast.success({
@@ -420,7 +485,44 @@ export const JourneySettings = () => {
         catch (error) {
             UIToast.error({
                               caption: 'Export failed',
-                              text:    'The GPX file could not be generated.',
+                              text:    'The journey export could not be generated.',
+                              errors:  error,
+                          })
+        }
+    }
+
+    const openExportReportDialog = async () => {
+        const currentJourney = lgs.theJourney
+        if (!currentJourney) {
+            return
+        }
+        resetExportDialog(currentJourney, JOURNEY_EXPORT_FORMATS.PDF)
+        setExportChoiceOpen(false)
+
+        const confirmed = await confirmExportReport()
+        if (!confirmed) {
+            return
+        }
+
+        const format = _exportFormat.current
+
+        try {
+            notifyExportInProgress()
+            await waitForExportToastPaint()
+            const fileName = normalizeJourneyExportFileName(_exportFileName.current, format, currentJourney)
+            const result = format === JOURNEY_EXPORT_FORMATS.HTML
+                           ? await exportJourneyToHTMLZip(currentJourney, {fileName})
+                           : await exportJourneyToPDF(currentJourney, {fileName})
+
+            UIToast.success({
+                                caption: 'Export success',
+                                text:    `${fileName}<br/>${result.poiCount} POI(s) exported.`,
+                            })
+        }
+        catch (error) {
+            UIToast.error({
+                              caption: 'Export failed',
+                              text:    'The report could not be generated.',
                               errors:  error,
                           })
         }
@@ -633,6 +735,44 @@ export const JourneySettings = () => {
                                           variant="brand">
                                     <WaIcon name="download" variant="regular"/>
                                 </WaButton>
+                                <WaPopup
+                                    active={exportChoiceOpen}
+                                    anchor="export-journey-in-settings"
+                                    placement="bottom-end"
+                                    strategy="fixed"
+                                    distance={lgs.gutter?.xs ?? 4}
+                                    flip
+                                    shift
+                                >
+                                    <div className="journey-export-choice-content">
+                                        <WaTooltip placement="bottom"
+                                                   for="export-journey-file-choice">{'Export as File'}</WaTooltip>
+                                        <WaButton
+                                            id="export-journey-file-choice"
+                                            className="journey-export-choice-button"
+                                            variant="brand"
+                                            appearance="plain"
+                                            aria-label="Export as File"
+                                            onClick={openExportFileDialog}
+                                        >
+                                            <WaIcon slot="start" name="route" variant="regular"/>
+                                            <span>Export as File</span>
+                                        </WaButton>
+                                        <WaTooltip placement="bottom"
+                                                   for="export-journey-report-choice">{'Export a Report'}</WaTooltip>
+                                        <WaButton
+                                            id="export-journey-report-choice"
+                                            className="journey-export-choice-button"
+                                            variant="brand"
+                                            appearance="plain"
+                                            aria-label="Export a Report"
+                                            onClick={openExportReportDialog}
+                                        >
+                                            <WaIcon slot="start" name="file-lines" variant="regular"/>
+                                            <span>Export a Report</span>
+                                        </WaButton>
+                                    </div>
+                                </WaPopup>
                                 <RemoveJourney tooltip="left-start" name={REMOVE_JOURNEY_IN_EDIT}/>
                             </div>
                         </div>
@@ -640,7 +780,8 @@ export const JourneySettings = () => {
                     </div>
                 </div>
             )}
-            <ConfirmExportJourneyDialog/>
+            <ConfirmExportFileDialog/>
+            <ConfirmExportReportDialog/>
         </>
     )
 }

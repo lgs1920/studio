@@ -101,7 +101,7 @@ export const CreditsBar = ({contentRef = null}) => {
     }, [])
 
     return (
-        <div ref={contentRef} className="credits-bar">
+        <div id="lgs-credits-bar" ref={contentRef} className="credits-bar">
             <div className="main-logo">
                 <img src="/assets/images/logo-lgs1920.png" alt="LGS1920 Logo"/>
             </div>

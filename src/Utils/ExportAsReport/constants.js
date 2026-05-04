@@ -73,8 +73,3 @@ export const STUDIO_CONTACT = 'contact@lgs1920.fr'
 export const STUDIO_SIGNATURE = `Proudly made with ${STUDIO_NAME}`
 export const STUDIO_LOGO_URL = '/assets/images/logo-lgs1920-studio-s.png'
 export const STUDIO_LOGO_RATIO = 300 / 103
-export const CREDIT_LAYER_TYPES = [
-    {key: 'terrain', label: 'Terrain'},
-    {key: 'overlay', label: 'Overlay'},
-    {key: 'base', label: 'Base map'},
-]

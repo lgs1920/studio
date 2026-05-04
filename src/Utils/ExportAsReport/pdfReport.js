@@ -25,6 +25,7 @@ import {
     formatDateTimeParts,
     formatDuration,
     formatMetric,
+    getExportTheme,
     parseCssColor,
     plainText,
     reportSubtitle,
@@ -41,6 +42,7 @@ import {
     drawPDFIcon,
     drawStudioLogo,
     drawTextLink,
+    loadDataUrlImage,
     loadPDFIcons,
     loadStudioLogo,
 } from './assets'
@@ -56,10 +58,10 @@ import {
     formatPOIName,
     getJourneyExportContent,
     getPOIBadgeColor,
+    getReferencePoints,
 } from './journeyData'
 import {
     drawBadge,
-    drawCreditsOverlay,
     drawMapBorder,
     drawMapPanel,
     drawNorthArrow,
@@ -69,7 +71,48 @@ import { captureJourneyProfileImage } from './profile'
 import {
     captureJourney3DMapSnapshots,
     currentViewerSnapshot,
+    yieldToUI,
 } from './snapshots'
+
+const PDF_IMAGE_MAX_WIDTH = 1800
+const PDF_IMAGE_MAX_HEIGHT = 1200
+const PDF_IMAGE_QUALITY = 0.86
+
+export const normalizeImageForPDF = async (image, options = {}) => {
+    if (!image?.dataUrl || typeof document === 'undefined') {
+        return image
+    }
+
+    const source = await loadDataUrlImage(image.dataUrl)
+    if (!source) {
+        return null
+    }
+
+    const maxWidth = options.maxWidth ?? PDF_IMAGE_MAX_WIDTH
+    const maxHeight = options.maxHeight ?? PDF_IMAGE_MAX_HEIGHT
+    const scale = Math.min(maxWidth / source.width, maxHeight / source.height, 1)
+    const width = Math.max(1, Math.round(source.width * scale))
+    const height = Math.max(1, Math.round(source.height * scale))
+    const canvas = document.createElement('canvas')
+    canvas.width = width
+    canvas.height = height
+    const context = canvas.getContext?.('2d')
+    if (!context) {
+        return null
+    }
+
+    context.fillStyle = options.background ?? '#ffffff'
+    context.fillRect(0, 0, width, height)
+    context.drawImage(source, 0, 0, width, height)
+
+    return {
+        ...image,
+        dataUrl:    canvas.toDataURL('image/jpeg', options.quality ?? PDF_IMAGE_QUALITY),
+        width,
+        height,
+        pdfFormat: 'JPEG',
+    }
+}
 
 export const addFooter = (doc) => {
     const width = doc.internal.pageSize.getWidth()
@@ -238,7 +281,7 @@ export const createTextWriter = (doc, studioLogo, icons = {}) => {
                 width:  rightWidth,
                 height: blockHeight,
             })
-            doc.addImage(profileImage.dataUrl, 'PNG', imageBox.x, imageBox.y, imageBox.width, imageBox.height)
+            doc.addImage(profileImage.dataUrl, profileImage.pdfFormat ?? 'PNG', imageBox.x, imageBox.y, imageBox.width, imageBox.height)
             setColor(doc, 'setDrawColor', lineColor)
             doc.setLineWidth(0.25)
             doc.roundedRect(imageBox.x, imageBox.y, imageBox.width, imageBox.height, 1.4, 1.4, 'S')
@@ -432,7 +475,7 @@ export const drawOverviewPage = (doc, journey, trackDrawings, pois, endpointMark
     addFooter(doc)
 }
 
-export const draw3DMapPage = (doc, journey, mapSnapshot, studioLogo, {addPage = true, icons = {}, brandColor = PDF_COLORS.text, credits = []} = {}) => {
+export const draw3DMapPage = (doc, journey, mapSnapshot, studioLogo, {addPage = true, icons = {}, brandColor = PDF_COLORS.text} = {}) => {
     if (!mapSnapshot?.dataUrl) {
         return
     }
@@ -473,8 +516,7 @@ export const draw3DMapPage = (doc, journey, mapSnapshot, studioLogo, {addPage = 
         width:  box.width - 4,
         height: box.height - 4,
     })
-    doc.addImage(mapSnapshot.dataUrl, 'PNG', imageBox.x, imageBox.y, imageBox.width, imageBox.height)
-    drawCreditsOverlay(doc, {imageBox, overlayImage: mapSnapshot.creditsOverlayImage})
+    doc.addImage(mapSnapshot.dataUrl, mapSnapshot.pdfFormat ?? 'PNG', imageBox.x, imageBox.y, imageBox.width, imageBox.height)
     drawMapBorder(doc, box)
     drawNorthArrow(doc, {
         box,
@@ -590,8 +632,8 @@ export const addReportCredits = (doc, studioLogo, {credits = []} = {}) => {
 
     const writer = createTextWriter(doc, studioLogo)
     writer.heading('Credits')
-    credits.forEach(credit => {
-        writer.row(credit.label, credit.text, {url: credit.url})
+    credits.filter(ReportCredits.isReportCreditVisible).forEach(credit => {
+        writer.row(credit.label, ReportCredits.creditTextSource(credit.text), {url: credit.url})
     })
     writer.footer()
 }
@@ -626,42 +668,44 @@ export const exportJourneyToPDF = async (journey, {
                                                                                     captureJourney3DMapSnapshots(journey),
                                                                                 ])
     const reportCredits = ReportCredits.getReportCredits()
-    const creditsOverlayImage = typeof ReportCredits.createCreditsOverlayImage === 'function'
-                                ? await ReportCredits.createCreditsOverlayImage(mapSnapshots[0]?.credits ?? reportCredits)
-                                : null
-    const mapSnapshotsWithCredits = mapSnapshots.map(mapSnapshot => ({
-        ...mapSnapshot,
-        creditsOverlayImage,
-    }))
+    const [pdfProfileImage, pdfMapSnapshots] = await Promise.all([
+                                                                     normalizeImageForPDF(profileImage, {maxWidth: 1400, maxHeight: 800}),
+                                                                     Promise.all(mapSnapshots.map(snapshot => normalizeImageForPDF(snapshot))),
+                                                                 ])
+    const exportableMapSnapshots = pdfMapSnapshots.filter(Boolean)
 
+    await yieldToUI()
     const doc = new jsPDF({
                               orientation: 'landscape',
                               unit:        'mm',
                               format:      'a4',
                           })
 
-    addJourneyDetails(doc, journey, listedPois, studioLogo, {profileImage, icons: pdfIcons, addPage: false})
+    addJourneyDetails(doc, journey, listedPois, studioLogo, {profileImage: pdfProfileImage, icons: pdfIcons, addPage: false})
+    await yieldToUI()
     drawOverviewPage(doc, journey, trackDrawings, exportablePois, endpointMarkers, studioLogo, {
         addPage: true,
         icons:   pdfIcons,
     })
-    if (mapSnapshotsWithCredits.length > 0) {
-        mapSnapshotsWithCredits.forEach(mapSnapshot => {
+    await yieldToUI()
+    if (exportableMapSnapshots.length > 0) {
+        for (const mapSnapshot of exportableMapSnapshots) {
             draw3DMapPage(doc, journey, mapSnapshot, studioLogo, {
                 addPage: true,
                 icons:   pdfIcons,
                 brandColor,
-                credits: reportCredits,
             })
-        })
+            await yieldToUI()
+        }
     }
     addReportCredits(doc, studioLogo, {credits: reportCredits})
+    await yieldToUI()
     doc.save(fileName)
 
     return {
         fileName,
         poiCount: listedPois.length,
-        has3DMapSnapshot: mapSnapshotsWithCredits.length > 0,
-        mapSnapshotCount: mapSnapshotsWithCredits.length,
+        has3DMapSnapshot: exportableMapSnapshots.length > 0,
+        mapSnapshotCount: exportableMapSnapshots.length,
     }
 }

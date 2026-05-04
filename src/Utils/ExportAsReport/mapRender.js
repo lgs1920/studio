@@ -27,7 +27,6 @@ import {
     getProjectedTrackInfo,
     pdfRotationFromScreenAngle,
     progressMarkerPlacements,
-    scaleTrackInfoToBox,
     svgNumber,
     svgRotationFromScreenAngle,
 } from './geometry'

@@ -65,6 +65,7 @@
     "elysia": "^1.4.28",
     "eslint-import-resolver-alias": "^1.1.2",
     "eslint-plugin-import": "^2.32.0",
+    "fflate": "^0.8.2",
     "fs": "^0.0.1-security",
     "fs.promises": "^0.1.2",
     "geo-coordinates-parser": "^1.7.4",

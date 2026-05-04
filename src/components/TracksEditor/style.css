@@ -400,11 +400,75 @@ wa-tab::part(base) {
 .journey-export-dialog-content {
     display: flex;
     flex-direction: column;
+    min-width: min(42rem, calc(100vw - 4 * var(--lgs-gutter)));
+    max-width: min(52rem, calc(100vw - 4 * var(--lgs-gutter)));
     gap: var(--lgs-gutter-s);
 }
 
 .journey-export-dialog-content p {
     margin: 0;
+}
+
+.journey-export-dialog::part(dialog) {
+    width: fit-content;
+    max-width: calc(100vw - 2 * var(--lgs-gutter));
+}
+
+.journey-export-dialog [slot="label"] {
+    overflow: visible;
+    max-width: min(52rem, calc(100vw - 6 * var(--lgs-gutter)));
+    white-space: normal;
+    text-overflow: clip;
+}
+
+.journey-export-controls {
+    display: grid;
+    align-items: end;
+    grid-template-columns: minmax(20rem, 1fr) auto;
+    gap: var(--lgs-gutter-s);
+}
+
+.journey-export-file-name {
+    min-width: min(34rem, calc(100vw - 10 * var(--lgs-gutter)));
+}
+
+@media (max-width: 640px) {
+    .journey-export-dialog-content {
+        min-width: min(26rem, calc(100vw - 4 * var(--lgs-gutter-s)));
+    }
+
+    .journey-export-controls {
+        grid-template-columns: 1fr;
+    }
+
+    .journey-export-file-name,
+    .journey-export-format {
+        width: 100%;
+        min-width: 0;
+    }
+}
+
+.journey-export-choice-content {
+    display: flex;
+    flex-direction: column;
+    padding: var(--lgs-gutter-xs);
+    border: 1px solid var(--wa-color-surface-border);
+    border-radius: var(--lgs-border-radius-s);
+    background: var(--wa-color-surface-default);
+    box-shadow: var(--wa-shadow-l);
+    gap: var(--lgs-gutter-xs);
+}
+
+.journey-export-choice-button {
+    width: 10.5rem;
+    height: 2.25rem;
+}
+
+.journey-export-choice-button::part(base) {
+    justify-content: flex-start;
+    min-height: 2.25rem;
+    padding: 0 var(--lgs-gutter-s);
+    gap: var(--lgs-gutter-xs);
 }
 
 .journey-export-controls {

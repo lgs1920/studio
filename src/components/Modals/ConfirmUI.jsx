@@ -79,7 +79,8 @@ export const useConfirm = (title, Message, confirmButton, cancelButton) => {
         handleClose()
     }
     const ConfirmationDialog = () => (
-        <WaDialog open={open} onWaHide={handleRequestClose}
+        <WaDialog open={open} className={confirmButton?.dialogClassName}
+                  onWaHide={handleRequestClose}
                   onWaAfterHide={() => setOpen(false)}
         >
             <div slot="label">{parse(title)}</div>
