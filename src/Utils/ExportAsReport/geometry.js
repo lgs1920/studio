@@ -6,11 +6,6 @@
  *
  ******************************************************************************/
 
-import nearestPointOnLine from '@turf/nearest-point-on-line'
-import {
-    lineString as turfLineString,
-    point as turfPoint,
-} from '@turf/helpers'
 import {
     clamp,
     finiteNumber,
@@ -280,34 +275,6 @@ export const closestPointOnSegment = (point, start, end) => {
     }
 }
 
-export const interpolateGeoPoint = (start, end, ratio) => ({
-    longitude: start.longitude + (end.longitude - start.longitude) * ratio,
-    latitude:  start.latitude + (end.latitude - start.latitude) * ratio,
-})
-
-export const turfDistanceAlongPath = (path, approximatePoint, fallback) => {
-    const coordinates = path
-        .map(point => [finiteNumber(point.longitude), finiteNumber(point.latitude)])
-        .filter(([longitude, latitude]) => longitude !== null && latitude !== null)
-    if (coordinates.length < 2 || !Number.isFinite(approximatePoint?.longitude) || !Number.isFinite(approximatePoint?.latitude)) {
-        return fallback
-    }
-
-    try {
-        const snapped = nearestPointOnLine(
-            turfLineString(coordinates),
-            turfPoint([approximatePoint.longitude, approximatePoint.latitude]),
-            {units: 'meters'},
-        )
-        const location = snapped?.properties?.location
-        return Number.isFinite(location) ? location : fallback
-    }
-    catch (error) {
-        console.error(error)
-        return fallback
-    }
-}
-
 export const closestProjectedPathPosition = (paths, anchor) => {
     const candidates = paths.map(path => ({
         path,
@@ -338,11 +305,7 @@ export const closestProjectedPathPosition = (paths, anchor) => {
                     screenPathLength: candidate.screenLength,
                     geoPathLength:    candidate.geoLength,
                     screenDistanceAt,
-                    geoDistanceAt:    turfDistanceAlongPath(
-                        candidate.path,
-                        interpolateGeoPoint(start, end, closest.t),
-                        geoDistanceAt,
-                    ),
+                    geoDistanceAt,
                     distanceSquared: closest.distanceSquared,
                 }
             }

@@ -22,6 +22,7 @@ import {
 } from './constants'
 import * as ReportCredits from './credits'
 import {
+    cssColor,
     formatDateTimeParts,
     formatDuration,
     formatMetric,
@@ -49,7 +50,6 @@ import {
 } from './assets'
 import {
     fitImageToBox,
-    getBounds,
     scaleTrackInfoToBox,
 } from './geometry'
 import {
@@ -59,12 +59,12 @@ import {
     formatPOIName,
     getJourneyExportContent,
     getPOIBadgeColor,
-    getReferencePoints,
+    REPORT_RENDER_TRACK_POINT_LIMIT,
 } from './journeyData'
 import {
+    build2DMapSVG,
     drawBadge,
     drawMapBorder,
-    drawMapPanel,
     drawNorthArrow,
     drawProgressMarkers,
 } from './mapRender'
@@ -78,6 +78,18 @@ import {
 const PDF_IMAGE_MAX_WIDTH = 1800
 const PDF_IMAGE_MAX_HEIGHT = 1200
 const PDF_IMAGE_QUALITY = 0.86
+const PDF_2D_MAP_IMAGE_WIDTH = 1200
+const PDF_2D_MAP_IMAGE_HEIGHT = 760
+const PDF_2D_MAP_IMAGE_QUALITY = 0.9
+
+const PDF_2D_MAP_THEME = {
+    surface: cssColor(PDF_COLORS.mapFill),
+    line:    cssColor(PDF_COLORS.line),
+    brand:   cssColor(PDF_COLORS.text),
+    text:    cssColor(PDF_COLORS.text),
+}
+
+export const svgToDataUrl = svg => svg ? `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}` : ''
 
 export const normalizeImageForPDF = async (image, options = {}) => {
     if (!image?.dataUrl || typeof document === 'undefined') {
@@ -117,6 +129,50 @@ export const normalizeImageForPDF = async (image, options = {}) => {
         height,
         pdfFormat: 'JPEG',
     }
+}
+
+export const createPDF2DMapImages = async ({
+    trackDrawings,
+    pois,
+    endpointMarkers,
+    theme = PDF_2D_MAP_THEME,
+} = {}) => {
+    const mapImages = []
+
+    for (const view of CARDINAL_VIEWS) {
+        const svg = build2DMapSVG({
+            view,
+            trackDrawings,
+            pois,
+            endpointMarkers,
+            theme,
+        })
+
+        if (!svg) {
+            await yieldToUI()
+            continue
+        }
+
+        const image = await normalizeImageForPDF({
+            dataUrl: svgToDataUrl(svg),
+            width:   PDF_2D_MAP_IMAGE_WIDTH,
+            height:  PDF_2D_MAP_IMAGE_HEIGHT,
+        }, {
+            maxWidth:  PDF_2D_MAP_IMAGE_WIDTH,
+            maxHeight: PDF_2D_MAP_IMAGE_HEIGHT,
+            quality:   PDF_2D_MAP_IMAGE_QUALITY,
+        })
+
+        if (image) {
+            mapImages.push({
+                ...image,
+                view,
+            })
+        }
+        await yieldToUI()
+    }
+
+    return mapImages
 }
 
 export const addFooter = (doc) => {
@@ -425,7 +481,7 @@ export const createTextWriter = (doc, studioLogo, icons = {}) => {
     return {heading, reportHeader, subheading, paragraph, row, summaryRows, table, dataTable, gap, footer: () => addFooter(doc)}
 }
 
-export const drawOverviewPage = async (doc, journey, trackDrawings, pois, endpointMarkers, studioLogo, {addPage = false, icons = {}} = {}) => {
+export const drawOverviewPage = (doc, journey, mapImages, studioLogo, {addPage = false} = {}) => {
     if (addPage) {
         doc.addPage()
     }
@@ -433,8 +489,7 @@ export const drawOverviewPage = async (doc, journey, trackDrawings, pois, endpoi
     const width = doc.internal.pageSize.getWidth()
     const height = doc.internal.pageSize.getHeight()
     const title = journey?.title || 'Journey'
-    const referencePoints = getReferencePoints(trackDrawings, pois, endpointMarkers)
-    const bounds = getBounds(referencePoints)
+    const imageByLabel = new Map((mapImages ?? []).map(image => [image.view?.label, image]))
 
     doc.setFont('helvetica', 'bold')
     doc.setFontSize(15)
@@ -457,27 +512,34 @@ export const drawOverviewPage = async (doc, journey, trackDrawings, pois, endpoi
     const boxWidth = (width - PAGE_MARGIN * 2 - gutter) / 2
     const boxHeight = (height - top - PAGE_MARGIN - gutter) / 2
 
-    for (let index = 0; index < CARDINAL_VIEWS.length; index++) {
-        const view = CARDINAL_VIEWS[index]
+    CARDINAL_VIEWS.forEach((view, index) => {
         const column = index % 2
         const row = Math.floor(index / 2)
-        await drawMapPanel(doc, {
-            box: {
-                x:      PAGE_MARGIN + column * (boxWidth + gutter),
-                y:      top + row * (boxHeight + gutter),
-                width:  boxWidth,
-                height: boxHeight,
-            },
-            view,
-            bounds,
-            trackDrawings,
-            pois,
-            endpointMarkers,
-            referencePoints,
-            icons,
-        })
-        await yieldToUI()
-    }
+        const box = {
+            x:      PAGE_MARGIN + column * (boxWidth + gutter),
+            y:      top + row * (boxHeight + gutter),
+            width:  boxWidth,
+            height: boxHeight,
+        }
+        const mapImage = imageByLabel.get(view.label) ?? mapImages?.[index]
+
+        if (!mapImage?.dataUrl) {
+            drawMapBorder(doc, box)
+            return
+        }
+
+        const imageBox = fitImageToBox(mapImage, box)
+        doc.addImage(
+            mapImage.dataUrl,
+            mapImage.pdfFormat ?? 'JPEG',
+            imageBox.x,
+            imageBox.y,
+            imageBox.width,
+            imageBox.height,
+            undefined,
+            'FAST',
+        )
+    })
 
     addFooter(doc)
 }
@@ -654,7 +716,9 @@ export const exportJourneyToPDF = async (journey, {
               endpointMarkers,
               exportablePois,
               listedPois,
-          } = getJourneyExportContent(journey, pois)
+          } = getJourneyExportContent(journey, pois, {
+        trackDrawingOptions: {maxTotalPoints: REPORT_RENDER_TRACK_POINT_LIMIT},
+    })
 
     if (trackDrawings.length === 0) {
         throw new Error('No track geometry to export.')
@@ -664,16 +728,20 @@ export const exportJourneyToPDF = async (journey, {
     const viewerSnapshot = await currentViewerSnapshot()
     await yieldToUI()
     const brandColor = parseCssColor(theme.brand, PDF_COLORS.text)
-    const [studioLogo, pdfIcons, profileImage, mapSnapshots] = await Promise.all([
-                                                                                    loadStudioLogo(),
-                                                                                    loadPDFIcons(theme),
-                                                                                    captureJourneyProfileImage({
+    const studioLogoPromise = loadStudioLogo()
+    const pdfIconsPromise = loadPDFIcons(theme)
+    const profileImagePromise = captureJourneyProfileImage({
                                                                                                                   journey,
                                                                                                                   trackDrawings,
                                                                                                                   backgroundSnapshot: viewerSnapshot,
                                                                                                                   theme,
-                                                                                                              }),
-                                                                                    captureJourney3DMapSnapshots(journey),
+                                                                                                              })
+    const mapSnapshotsPromise = captureJourney3DMapSnapshots(journey, {trackDrawings})
+    const [studioLogo, pdfIcons, profileImage, mapSnapshots] = await Promise.all([
+                                                                                    studioLogoPromise,
+                                                                                    pdfIconsPromise,
+                                                                                    profileImagePromise,
+                                                                                    mapSnapshotsPromise,
                                                                                 ])
     const reportCredits = ReportCredits.getReportCredits()
     const [pdfProfileImage, pdfMapSnapshots] = await Promise.all([
@@ -681,6 +749,11 @@ export const exportJourneyToPDF = async (journey, {
                                                                      Promise.all(mapSnapshots.map(snapshot => normalizeImageForPDF(snapshot))),
                                                                  ])
     const exportableMapSnapshots = pdfMapSnapshots.filter(Boolean)
+    const pdf2DMapImages = await createPDF2DMapImages({
+        trackDrawings,
+        pois: exportablePois,
+        endpointMarkers,
+    })
 
     await yieldToUI()
     const doc = new jsPDF({
@@ -691,9 +764,8 @@ export const exportJourneyToPDF = async (journey, {
 
     addJourneyDetails(doc, journey, listedPois, studioLogo, {profileImage: pdfProfileImage, icons: pdfIcons, addPage: false})
     await yieldToUI()
-    await drawOverviewPage(doc, journey, trackDrawings, exportablePois, endpointMarkers, studioLogo, {
+    drawOverviewPage(doc, journey, pdf2DMapImages, studioLogo, {
         addPage: true,
-        icons:   pdfIcons,
     })
     await yieldToUI()
     if (exportableMapSnapshots.length > 0) {

@@ -8,7 +8,12 @@
 
 import { SceneUtils } from '@Utils/cesium/SceneUtils'
 import { snapdom } from '@zumer/snapdom'
-import { Cartesian2, Cartesian3 } from 'cesium'
+import {
+    Cartesian2,
+    Cartesian3,
+    HeadingPitchRange,
+    Math as CesiumMath,
+} from 'cesium'
 import { canvasToDataUrl } from './assets'
 import {
     CESIUM_SCENE_3D_MODE,
@@ -29,6 +34,8 @@ import {
 
 const CREDITS_BAR_ID = 'lgs-credits-bar'
 const CREDITS_BAR_SNAPSHOT_TIMEOUT = 1800
+const SNAPSHOT_CAMERA_TIMEOUT = 900
+const SNAPSHOT_RENDER_FRAME_COUNT = 3
 
 export const wait = milliseconds => new Promise(resolve => setTimeout(resolve, milliseconds))
 
@@ -162,17 +169,14 @@ export const ensure3DSceneForSnapshot = async () => {
     }
 }
 
-export const getJourneySnapshotFocusContext = async journey => {
-    const trackDrawings = getJourneyTrackDrawings(journey)
+export const getJourneySnapshotFocusContext = async (journey, trackDrawings = getJourneyTrackDrawings(journey)) => {
     const referencePoints = getReferencePoints(trackDrawings, [], [])
     if (referencePoints.length === 0) {
         return null
     }
 
     const bounds = getBounds(referencePoints)
-    const source = SceneUtils.getJourneyFeatureSource(journey)
-    const center = await SceneUtils.getJourneyCentroid(journey, source, {useStoredHeight: false})
-    const point = center ?? {
+    const point = {
         longitude: (bounds.west + bounds.east) / 2,
         latitude:  (bounds.south + bounds.north) / 2,
         height:    0,
@@ -188,7 +192,9 @@ export const getJourneySnapshotFocusContext = async journey => {
 }
 
 export const focusJourneyForSnapshot = async (focusContext, {heading = 0, pitch = THREE_D_SNAPSHOT_PITCH} = {}) => {
-    if (!focusContext?.point) {
+    const scene = getCesiumScene()
+    const camera = scene?.camera
+    if (!camera || !focusContext?.point) {
         await waitForAnimationFrames(2)
         return
     }
@@ -205,21 +211,36 @@ export const focusJourneyForSnapshot = async (focusContext, {heading = 0, pitch 
             await waitForAnimationFrames(2)
             resolve()
         }
-        timeoutId = setTimeout(finish, MAP_SNAPSHOT_TIMEOUT)
+        timeoutId = setTimeout(finish, SNAPSHOT_CAMERA_TIMEOUT)
         try {
-            void SceneUtils.focus(focusContext.point, {
-                resetCamera:         true,
-                rotate:              false,
-                pitch,
-                heading,
-                flyingTime:          0,
-                boundingSphere:      focusContext.boundingSphere,
-                boundingSphereRange: focusContext.boundingSphere?.radius > 0 ? 0 : undefined,
-                callback:            finish,
-            }).catch(error => {
-                console.error(error)
+            if (focusContext.boundingSphere && typeof camera.flyToBoundingSphere === 'function') {
+                camera.flyToBoundingSphere(focusContext.boundingSphere, {
+                    duration: 0,
+                    offset:   new HeadingPitchRange(
+                        CesiumMath.toRadians(heading),
+                        CesiumMath.toRadians(pitch),
+                        0,
+                    ),
+                    complete: finish,
+                    cancel:   finish,
+                })
+            }
+            else {
+                camera.setView?.({
+                                     destination: Cartesian3.fromDegrees(
+                                         focusContext.point.longitude,
+                                         focusContext.point.latitude,
+                                         focusContext.point.height ?? 0,
+                                     ),
+                                     orientation: {
+                                         heading: CesiumMath.toRadians(heading),
+                                         pitch:   CesiumMath.toRadians(pitch),
+                                         roll:    0,
+                                     },
+                                 })
                 void finish()
-            })
+            }
+            scene.requestRender?.()
         }
         catch (error) {
             console.error(error)
@@ -374,58 +395,11 @@ export const projectJourney3DTrackInfo = (trackDrawings, canvas) => {
 
 export const waitForJourneyTraceRender = async (trackDrawings, canvas) => {
     const scene = getCesiumScene()
-    if (!scene?.postRender?.addEventListener) {
-        await waitForAnimationFrames(3)
-        return projectJourney3DTrackInfo(trackDrawings, canvas)
-    }
-
-    return await new Promise(resolve => {
-        let stableFrames = 0
-        let lastQueueLength = null
-        let done = false
-        let removePostRender = null
-        let removeTileProgress = null
-        let timeoutId = null
-        let latestTrackInfo = null
-        const globe = scene.globe
-        const finish = () => {
-            if (done) {
-                return
-            }
-            done = true
-            clearTimeout(timeoutId)
-            removePostRender?.()
-            removeTileProgress?.()
-            resolve(latestTrackInfo ?? projectJourney3DTrackInfo(trackDrawings, canvas))
-        }
-        const isTileQueueReady = queueLength => (!Number.isFinite(queueLength) || queueLength === 0) && globe?.tilesLoaded !== false
-        const check = queueLength => {
-            if (done) {
-                return
-            }
-            if (Number.isFinite(queueLength)) {
-                lastQueueLength = queueLength
-            }
-
-            latestTrackInfo = projectJourney3DTrackInfo(trackDrawings, canvas)
-            stableFrames = latestTrackInfo && isTileQueueReady(lastQueueLength) ? stableFrames + 1 : 0
-            if (stableFrames >= 3) {
-                finish()
-                return
-            }
-
-            scene.requestRender?.()
-        }
-
-        timeoutId = setTimeout(finish, MAP_SNAPSHOT_TIMEOUT)
-        removePostRender = scene.postRender.addEventListener(() => check(lastQueueLength))
-        if (globe?.tileLoadProgressEvent?.addEventListener) {
-            removeTileProgress = globe.tileLoadProgressEvent.addEventListener(queueLength => check(queueLength))
-        }
-
+    if (scene) {
         scene.requestRender?.()
-        void waitForAnimationFrames(1).then(() => check(lastQueueLength))
-    })
+    }
+    await waitForAnimationFrames(SNAPSHOT_RENDER_FRAME_COUNT)
+    return projectJourney3DTrackInfo(trackDrawings, canvas)
 }
 
 export const currentViewerSnapshot = async () => {
@@ -443,19 +417,18 @@ export const currentViewerSnapshot = async () => {
     }
 }
 
-export const captureJourney3DMapSnapshots = async journey => {
+export const captureJourney3DMapSnapshots = async (journey, {trackDrawings = getJourneyTrackDrawings(journey)} = {}) => {
     const canvas = getCesiumCanvas()
     if (!canvas) {
         return []
     }
 
-    const trackDrawings = getJourneyTrackDrawings(journey)
     const cameraState = captureCurrentCameraState(journey)
     try {
         const creditsBarSnapshot = await captureCreditsBarSnapshot()
         await ensure3DSceneForSnapshot()
         const scene = getCesiumScene()
-        const focusContext = await getJourneySnapshotFocusContext(journey)
+        const focusContext = await getJourneySnapshotFocusContext(journey, trackDrawings)
         const snapshots = []
 
         for (const view of THREE_D_CARDINAL_VIEWS) {

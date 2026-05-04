@@ -58,6 +58,7 @@ import {
     formatPOIName,
     getJourneyExportContent,
     getPOIBadgeColor,
+    REPORT_RENDER_TRACK_POINT_LIMIT,
 } from './journeyData'
 import { build2DMapSVG } from './mapRender'
 import {
@@ -82,6 +83,49 @@ export const zipFiles = (files, options = {}) => new Promise((resolve, reject) =
         resolve(data)
     })
 })
+
+export const zipFilesInWorker = (files, options = {}) => new Promise((resolve, reject) => {
+    if (typeof Worker === 'undefined') {
+        reject(new Error('Worker is not available.'))
+        return
+    }
+
+    const worker = new Worker(new URL('./reportZipWorker.js', import.meta.url), {type: 'module'})
+    const cleanup = () => worker.terminate()
+    worker.onmessage = event => {
+        cleanup()
+        if (event.data?.error) {
+            reject(new Error(event.data.error))
+            return
+        }
+
+        resolve(event.data?.archive ?? new Uint8Array())
+    }
+    worker.onerror = error => {
+        cleanup()
+        reject(error instanceof Error ? error : new Error(error?.message ?? 'Report zip worker failed.'))
+    }
+
+    const transferableFiles = {}
+    const transfer = []
+    Object.entries(files).forEach(([path, content]) => {
+        const bytes = content.byteOffset === 0 && content.byteLength === content.buffer.byteLength
+                      ? content
+                      : content.slice()
+        transferableFiles[path] = bytes
+        transfer.push(bytes.buffer)
+    })
+    worker.postMessage({files: transferableFiles, options}, transfer)
+})
+
+export const createReportZip = async (files, options = {}) => {
+    try {
+        return await zipFilesInWorker(files, options)
+    }
+    catch {
+        return await zipFiles(files, options)
+    }
+}
 
 export const renderHTMLRows = rows => rows
     .filter(row => row?.label && row.value !== undefined && row.value !== null && row.value !== '')
@@ -572,7 +616,9 @@ export const exportJourneyToHTMLZip = async (journey, {
               endpointMarkers,
               exportablePois,
               listedPois,
-          } = getJourneyExportContent(journey, pois)
+          } = getJourneyExportContent(journey, pois, {
+        trackDrawingOptions: {maxTotalPoints: REPORT_RENDER_TRACK_POINT_LIMIT},
+    })
 
     if (trackDrawings.length === 0) {
         throw new Error('No track geometry to export.')
@@ -581,15 +627,18 @@ export const exportJourneyToHTMLZip = async (journey, {
     const theme = getExportTheme()
     const viewerSnapshot = await currentViewerSnapshot()
     await yieldToUI()
-    const [studioLogo, profileImage, mapSnapshots] = await Promise.all([
-                                                                          loadStudioLogo(),
-                                                                          captureJourneyProfileImage({
+    const studioLogoPromise = loadStudioLogo()
+    const profileImagePromise = captureJourneyProfileImage({
                                                                                                         journey,
                                                                                                         trackDrawings,
                                                                                                         backgroundSnapshot: viewerSnapshot,
                                                                                                         theme,
-                                                                                                    }),
-                                                                          captureJourney3DMapSnapshots(journey),
+                                                                                                    })
+    const mapSnapshotsPromise = captureJourney3DMapSnapshots(journey, {trackDrawings})
+    const [studioLogo, profileImage, mapSnapshots] = await Promise.all([
+                                                                          studioLogoPromise,
+                                                                          profileImagePromise,
+                                                                          mapSnapshotsPromise,
                                                                       ])
     const reportCredits = ReportCredits.getReportCredits()
     await yieldToUI()
@@ -644,7 +693,7 @@ export const exportJourneyToHTMLZip = async (journey, {
                                                    }))
 
     await yieldToUI()
-    const archive = await zipFiles(files, {level: 6})
+    const archive = await createReportZip(files, {level: 6})
     downloadBlob(archive, fileName, 'application/zip')
 
     return {

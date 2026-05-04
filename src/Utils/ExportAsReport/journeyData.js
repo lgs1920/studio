@@ -24,6 +24,8 @@ import {
     plainText,
 } from './format'
 
+export const REPORT_RENDER_TRACK_POINT_LIMIT = 5200
+
 export const coordinateFromPOI = poi => {
     const longitude = finiteNumber(poi?.longitude)
     const latitude = finiteNumber(poi?.latitude)
@@ -43,7 +45,67 @@ export const coordinatesMatch = (first, second) => {
            && Math.abs(firstPoint.latitude - secondPoint.latitude) <= COORDINATE_MATCH_TOLERANCE
 }
 
-export const getTrackSegments = track => {
+export const coordinateFromArray = coordinates => {
+    const longitude = finiteNumber(coordinates?.[0])
+    const latitude = finiteNumber(coordinates?.[1])
+    const altitude = finiteNumber(coordinates?.[2])
+    if (longitude === null || latitude === null) {
+        return null
+    }
+
+    return altitude === null ? {longitude, latitude} : {longitude, latitude, altitude}
+}
+
+export const segmentExtremaIndices = segment => {
+    const extrema = {
+        minLongitude: {value: Infinity, index: 0},
+        maxLongitude: {value: -Infinity, index: 0},
+        minLatitude:  {value: Infinity, index: 0},
+        maxLatitude:  {value: -Infinity, index: 0},
+    }
+
+    segment.forEach((coordinates, index) => {
+        const longitude = finiteNumber(coordinates?.[0])
+        const latitude = finiteNumber(coordinates?.[1])
+        if (longitude !== null) {
+            if (longitude < extrema.minLongitude.value) {
+                extrema.minLongitude = {value: longitude, index}
+            }
+            if (longitude > extrema.maxLongitude.value) {
+                extrema.maxLongitude = {value: longitude, index}
+            }
+        }
+        if (latitude !== null) {
+            if (latitude < extrema.minLatitude.value) {
+                extrema.minLatitude = {value: latitude, index}
+            }
+            if (latitude > extrema.maxLatitude.value) {
+                extrema.maxLatitude = {value: latitude, index}
+            }
+        }
+    })
+
+    return Object.values(extrema).map(item => item.index)
+}
+
+export const sampledSegmentIndices = (segment, maxPoints = Infinity) => {
+    const length = segment?.length ?? 0
+    const pointLimit = Number.isFinite(maxPoints) ? Math.max(2, Math.floor(maxPoints)) : length
+    if (length <= pointLimit) {
+        return Array.from({length}, (_, index) => index)
+    }
+
+    const indices = new Set([0, length - 1])
+    const step = (length - 1) / Math.max(pointLimit - 1, 1)
+    for (let index = 1; index < pointLimit - 1; index++) {
+        indices.add(Math.round(index * step))
+    }
+    segmentExtremaIndices(segment).forEach(index => indices.add(index))
+
+    return Array.from(indices).sort((first, second) => first - second)
+}
+
+export const getTrackSegments = (track, {maxTotalPoints = Infinity} = {}) => {
     const geometry = track?.content?.geometry
     if (!geometry) {
         return []
@@ -54,28 +116,30 @@ export const getTrackSegments = track => {
                      : geometry.type === 'MultiLineString'
                        ? geometry.coordinates
                        : []
+    const sourcePointCount = segments.reduce((count, segment) => count + (Array.isArray(segment) ? segment.length : 0), 0)
+    const pointScale = Number.isFinite(maxTotalPoints) && maxTotalPoints > 0 && sourcePointCount > maxTotalPoints
+                       ? maxTotalPoints / sourcePointCount
+                       : 1
 
     return segments
-        .map(segment => Array.isArray(segment)
-                        ? segment.map(coordinates => {
-                const longitude = finiteNumber(coordinates?.[0])
-                const latitude = finiteNumber(coordinates?.[1])
-                const altitude = finiteNumber(coordinates?.[2])
-                if (longitude === null || latitude === null) {
-                    return null
-                }
+        .map(segment => {
+            if (!Array.isArray(segment)) {
+                return []
+            }
 
-                return altitude === null ? {longitude, latitude} : {longitude, latitude, altitude}
-            }).filter(Boolean)
-                        : [])
+            const maxSegmentPoints = pointScale < 1 ? Math.ceil(segment.length * pointScale) : segment.length
+            return sampledSegmentIndices(segment, maxSegmentPoints)
+                .map(index => coordinateFromArray(segment[index]))
+                .filter(Boolean)
+        })
         .filter(segment => segment.length > 1)
 }
 
-export const getJourneyTrackDrawings = journey => Array.from(journey?.tracks?.values?.() ?? [])
+export const getJourneyTrackDrawings = (journey, options = {}) => Array.from(journey?.tracks?.values?.() ?? [])
     .map(track => ({
         track,
         color:    parseCssColor(track?.renderStyle?.color ?? track?.color),
-        segments: getTrackSegments(track),
+        segments: getTrackSegments(track, options),
     }))
     .filter(item => item.segments.length > 0)
 
@@ -343,8 +407,8 @@ export const getReferencePoints = (trackDrawings, pois, endpointMarkers) => [
     })).filter(point => point.longitude !== null && point.latitude !== null),
 ]
 
-export const getJourneyExportContent = (journey, pois = undefined) => {
-    const trackDrawings = getJourneyTrackDrawings(journey)
+export const getJourneyExportContent = (journey, pois = undefined, {trackDrawingOptions = {}} = {}) => {
+    const trackDrawings = getJourneyTrackDrawings(journey, trackDrawingOptions)
     const associatedPois = getAssociatedJourneyPOIs(journey, pois)
     const endpointMarkers = getJourneyEndpointMarkers(journey, trackDrawings, associatedPois)
     const exportablePois = getNumberedPOIs(
