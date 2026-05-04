@@ -29,6 +29,8 @@ import { VideoButton }       from '@Components/MainUI/video/VideoButton'
 import { VideoDownloadAndShareDialog } from '@Components/MainUI/video/VideoDownloadAndShareDialog'
 import { TextButton }        from '@Components/Text/TextButton'
 import { TracksEditor }                         from '@Components/TracksEditor/TracksEditor'
+import { WanderControlsWidget } from '@Components/Wander/WanderControlsWidget'
+import { WanderDrawer }         from '@Components/Wander/WanderDrawer'
 import {
     BOTTOM, END, EVENTS, MENU_BOTTOM_END, MENU_BOTTOM_START, MENU_END_END, MENU_END_START, MENU_START_END,
     MENU_START_START, SCENE_MODE_2D, SECOND, START, TOP,
@@ -248,6 +250,7 @@ export const MainUI = memo(() => {
                         {geocoderDialog.mounted && <GeocodingWidget/>}
                         <RotationWidget/>
                         <PanoramaWidget/>
+                        <WanderControlsWidget/>
                     </>
                 )}
 
@@ -272,6 +275,7 @@ export const MainUI = memo(() => {
                 <SettingsPanel/>
                 <LayersPanel/>
                 <TracksEditor/>
+                <WanderDrawer/>
                 <MapPOIEditPanel/>
                 <WidgetEditorPanel/>
             </div>

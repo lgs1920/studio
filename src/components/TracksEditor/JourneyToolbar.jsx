@@ -18,7 +18,7 @@
 
 import { ToggleStateIcon }                                           from '@Components/ToggleStateIcon'
 import {
-    CLOSE_ICON, CURRENT_JOURNEY, FOCUS_ICON, ROTATION_ICON, UPDATE_JOURNEY_SILENTLY,
+    CLOSE_ICON, CURRENT_JOURNEY, FOCUS_ICON, ROTATION_ICON, UPDATE_JOURNEY_SILENTLY, WANDER_DRAWER,
 } from '@Core/constants'
 import {
     JourneySelector,
@@ -147,6 +147,11 @@ export const JourneyToolbar = (props) => {
         $journeyToolbar.show = false
     }
 
+    const openWander = (event) => {
+        event.stopPropagation()
+        __.ui.drawerManager.open(WANDER_DRAWER)
+    }
+
     useEffect(() => {
         if (toolbarRef) {
             toolbarRef.current = {
@@ -257,6 +262,16 @@ export const JourneyToolbar = (props) => {
                                          ? (<WaIcon name={ROTATION_ICON} variant="regular" animation="spin"/>)
                                          : (<WaIcon name={FOCUS_ICON} variant="regular"/>)
                                         }
+                                    </WaButton>
+
+                                    <WaTooltip for="wander-journey-toolbar">{'Wander'}</WaTooltip>
+                                    <WaButton
+                                        id="wander-journey-toolbar"
+                                        variant="brand"
+                                        appearance="plain"
+                                        onClick={openWander}
+                                    >
+                                        <WaIcon name="person-walking" variant="regular"/>
                                     </WaButton>
                             </>
                         }

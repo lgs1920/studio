@@ -22,6 +22,11 @@ export const WANDER_MODE_MARKER = 'wander-mode'
 export class WanderUtils {
 
     static initWanderMode = () => {
+        if (__.ui.wander?.start) {
+            __.ui.wander.start()
+            return
+        }
+
         __.ui.wanderer.update({
             coordinates:__.ui.wanderer.prepareData(),
                                   duration: parseInt(lgs.stores.main.components.wanderer.duration),
