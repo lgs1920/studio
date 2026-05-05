@@ -36,6 +36,7 @@ import { WaButton, WaCard, WaIcon } from '@web.awesome.me/webawesome-pro/dist/re
 import { Math as M }                                               from 'cesium'
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSnapshot }              from 'valtio'
+import { scheduleCameraAdjustmentWidgetCenter } from './cameraAdjustmentWidgetPosition'
 import { getOrbitWidgetConfig }       from './orbitWidgetConfig'
 
 const CAMERA_ADJUSTMENT_WIDGET = 'rotation-camera-adjustment-widget'
@@ -132,6 +133,7 @@ const RotationCameraAdjustmentOverlay = memo(() => {
     const [visible, setVisible] = useState(false)
     const visibleRef = useRef(false)
     const timerRef = useRef(null)
+    const centerAdjustmentCancelRef = useRef(null)
     const lastCameraKeyRef = useRef(null)
     const pointerActiveRef = useRef(false)
     const userActionUntilRef = useRef(0)
@@ -151,18 +153,23 @@ const RotationCameraAdjustmentOverlay = memo(() => {
         left:            '50%',
         margin:          0,
         opacity:         1,
-        persist:         true,
+        persist:         false,
         resizable:       false,
         rotatable:       false,
         scalable:        false,
         snappable:       true,
         stopPropagation: true,
-        top:             '60%',
+        top:             '50%',
         transient:       true,
         type:            LGS_WIDGET,
         widgetsBoard:    SCENE_WIDGETS_BOARD,
         zIndex:          11950,
     }), [])
+
+    const centerAdjustmentWidget = useCallback(() => {
+        centerAdjustmentCancelRef.current?.()
+        centerAdjustmentCancelRef.current = scheduleCameraAdjustmentWidgetCenter(CAMERA_ADJUSTMENT_WIDGET)
+    }, [])
 
     const hide = useCallback(() => {
         visibleRef.current = false
@@ -225,6 +232,8 @@ const RotationCameraAdjustmentOverlay = memo(() => {
 
     useEffect(() => {
         return () => {
+            centerAdjustmentCancelRef.current?.()
+            centerAdjustmentCancelRef.current = null
             if (timerRef.current) {
                 window.clearTimeout(timerRef.current)
                 timerRef.current = null
@@ -236,6 +245,27 @@ const RotationCameraAdjustmentOverlay = memo(() => {
             hide()
         }
     }, [hide])
+
+    const adjustmentWidgetMounted = showCameraMovementWidget
+
+    useEffect(() => {
+        if (!adjustmentWidgetMounted) {
+            centerAdjustmentCancelRef.current?.()
+            centerAdjustmentCancelRef.current = null
+            return undefined
+        }
+
+        centerAdjustmentWidget()
+
+        const handleResize = () => centerAdjustmentWidget()
+        window.addEventListener('resize', handleResize)
+
+        return () => {
+            window.removeEventListener('resize', handleResize)
+            centerAdjustmentCancelRef.current?.()
+            centerAdjustmentCancelRef.current = null
+        }
+    }, [adjustmentWidgetMounted, centerAdjustmentWidget])
 
     useEffect(() => {
         if (!showCameraMovementWidget || cameraFlightRunning || !rotate.running || panorama.active) {
@@ -374,7 +404,7 @@ const RotationCameraAdjustmentOverlay = memo(() => {
 
     return (
         <Widget
-            isVisible={visible && rotate.running && !panorama.active && !cameraFlightRunning}
+            isVisible={adjustmentWidgetMounted}
             config={config}
             className={`panorama-adjustment-widget-shell${visible ? ' adjustment-visible' : ''}`}
         >

@@ -43,6 +43,7 @@ import { Cartesian3, Math as M }                from 'cesium'
 import { WaButton, WaCard, WaIcon }             from '@web.awesome.me/webawesome-pro/dist/react'
 import { memo, useCallback, useEffect, useMemo, useRef, useState }             from 'react'
 import { useSnapshot }                          from 'valtio'
+import { scheduleCameraAdjustmentWidgetCenter } from './cameraAdjustmentWidgetPosition'
 import { getOrbitWidgetConfig }                          from './orbitWidgetConfig'
 
 const POINTER_PITCH_DEGREES_PER_PIXEL = 0.25
@@ -181,6 +182,7 @@ export const PanoramaWidget = memo(() => {
     const controllerStateRef = useRef(null)
     const interactionPersistTimerRef = useRef(null)
     const adjustmentOverlayTimerRef = useRef(null)
+    const centerAdjustmentCancelRef = useRef(null)
     const [adjustmentVisible, setAdjustmentVisible] = useState(false)
     const [adjustmentValues, setAdjustmentValues] = useState(() => ({
         height: formatPanoramaCameraAltitude(panorama.target, panorama.heightOffset),
@@ -202,13 +204,13 @@ export const PanoramaWidget = memo(() => {
         left:            '50%',
         margin:          0,
         opacity:         1,
-        persist:         true,
+        persist:         false,
         resizable:       false,
         rotatable:       false,
         scalable:        false,
         snappable:       true,
         stopPropagation: true,
-        top:             '60%',
+        top:             '50%',
         transient:       true,
         type:            LGS_WIDGET,
         widgetsBoard:    SCENE_WIDGETS_BOARD,
@@ -219,6 +221,11 @@ export const PanoramaWidget = memo(() => {
     pitchRef.current = normalizePanoramaPitch(panorama.pitch)
     rpmRef.current = panorama.rpm
     directionRef.current = panorama.direction
+
+    const centerAdjustmentWidget = useCallback(() => {
+        centerAdjustmentCancelRef.current?.()
+        centerAdjustmentCancelRef.current = scheduleCameraAdjustmentWidgetCenter(PANORAMA_ADJUSTMENT_WIDGET)
+    }, [])
 
     useEffect(() => {
         const finePointerQuery = window.matchMedia?.('(any-pointer: fine)')
@@ -232,6 +239,27 @@ export const PanoramaWidget = memo(() => {
 
         return () => finePointerQuery.removeEventListener('change', updatePointerMode)
     }, [])
+
+    const adjustmentWidgetMounted = panorama.active || showCameraMovementWidget
+
+    useEffect(() => {
+        if (!adjustmentWidgetMounted) {
+            centerAdjustmentCancelRef.current?.()
+            centerAdjustmentCancelRef.current = null
+            return undefined
+        }
+
+        centerAdjustmentWidget()
+
+        const handleResize = () => centerAdjustmentWidget()
+        window.addEventListener('resize', handleResize)
+
+        return () => {
+            window.removeEventListener('resize', handleResize)
+            centerAdjustmentCancelRef.current?.()
+            centerAdjustmentCancelRef.current = null
+        }
+    }, [adjustmentWidgetMounted, centerAdjustmentWidget])
 
     useEffect(() => {
         if (!panorama.active) {
@@ -600,6 +628,8 @@ export const PanoramaWidget = memo(() => {
                 window.clearTimeout(interactionPersistTimerRef.current)
                 interactionPersistTimerRef.current = null
             }
+            centerAdjustmentCancelRef.current?.()
+            centerAdjustmentCancelRef.current = null
             if (adjustmentOverlayTimerRef.current) {
                 window.clearTimeout(adjustmentOverlayTimerRef.current)
                 adjustmentOverlayTimerRef.current = null
@@ -949,7 +979,7 @@ export const PanoramaWidget = memo(() => {
             </Widget>
 
             <Widget
-                isVisible={panorama.active || adjustmentVisible}
+                isVisible={adjustmentWidgetMounted}
                 config={adjustmentConfig}
                 className={`panorama-adjustment-widget-shell${adjustmentVisible ? ' adjustment-visible' : ''}`}
             >
