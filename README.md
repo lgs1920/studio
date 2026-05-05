@@ -25,8 +25,10 @@ The repository already contains the main product surface used by the studio:
 ### Journey Editing
 
 - Load and manage multiple journeys at once
-- Edit journey metadata, track styling, visibility, and POI visibility
+- Edit journey metadata, activity, track styling, visibility, and POI visibility
 - Handle start / stop flags and parented POIs
+- Tune journey statistics cleaning through activity-aware thresholds persisted with each journey
+- Style tracks with presets, underlay, dash patterns, bicolor dashes, far-distance fallback lines, and locator markers
 - Persist journey camera state and orbit settings
 
 ### Scene and Camera
@@ -41,6 +43,7 @@ The repository already contains the main product surface used by the studio:
 
 - Distance, elevation, duration, speed, and slope metrics
 - Elevation profile and journey statistics widgets
+- Journey statistics can expose extrema on the map through temporary POI markers
 - Responsive date and time display for editors, POIs, and journey statistics
 - Text, credits, compass, and scene widget system
 - Export-aware widget rendering for recording and snapshots
@@ -54,6 +57,7 @@ The repository already contains the main product surface used by the studio:
 
 ### Journey Reports
 
+- Export journeys as GPX or GeoJSON, including associated POIs while excluding generated start / end system markers
 - Export journeys as PDF reports or HTML reports packaged as ZIP archives
 - Include journey metadata, description, statistics, dates, elevation profile, POI tables, coordinates, and altitude data
 - Generate 2D overview maps and 3D Cesium map captures for the four cardinal orientations

@@ -57,13 +57,12 @@ const TRACK_DISPLAY_MODES = Object.freeze({
     FAR:            'far',
     STYLE:          'style',
 })
-const TRACK_LOCATOR_MARKER_MIN_CAMERA_DISTANCE_METERS = 40000
+const TRACK_LOCATOR_MARKER_MIN_CAMERA_DISTANCE_METERS = 60000
 const TRACK_FAR_LINE_MIN_CAMERA_DISTANCE_METERS = 25000
 const TRACK_LOCATOR_MARKER_SIZE = 36
 const TRACK_LOCATOR_MARKER_BORDER_WIDTH = 2
 const TRACK_MIN_SCREEN_WIDTH = 1
 const TRACK_MAX_SCREEN_WIDTH = 256
-const TRACK_WIDTH_UPDATE_THROTTLE_MS = 180
 const TRACK_WIDTH_CHANGE_EPSILON = 0.25
 
 const isTrackStyleEntity = entity => `${entity?.id ?? ''}`.includes(TRACK_STYLE_ENTITY_MARKER)
@@ -840,15 +839,16 @@ export class TrackUtils {
 
         updateDisplay(true)
 
-        let timeout = null
+        let frameId = null
         const scheduleUpdate = () => {
-            if (timeout) {
-                clearTimeout(timeout)
+            if (frameId !== null) {
+                return
             }
-            timeout = setTimeout(() => {
-                timeout = null
+
+            frameId = requestAnimationFrame(() => {
+                frameId = null
                 updateDisplay()
-            }, TRACK_WIDTH_UPDATE_THROTTLE_MS)
+            })
         }
         const removeMoveEndListener = lgs.camera.moveEnd?.addEventListener?.(() => updateDisplay())
         const removeChangedListener = lgs.camera.changed.addEventListener(scheduleUpdate)
@@ -859,8 +859,9 @@ export class TrackUtils {
             removeMoveEndListener?.()
             removeChangedListener?.()
             canvas?.removeEventListener?.('wheel', handleWheel)
-            if (timeout) {
-                clearTimeout(timeout)
+            if (frameId !== null) {
+                cancelAnimationFrame(frameId)
+                frameId = null
             }
         }
     }
