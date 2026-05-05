@@ -73,7 +73,7 @@ import {
     WaButton, WaCard, WaDetails, WaIcon, WaInput, WaOption, WaPopup, WaSelect, WaTab, WaTabGroup, WaTabPanel,
     WaTextarea, WaTooltip,
 }                                     from '@web.awesome.me/webawesome-pro/dist/react'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { sprintf }                    from 'sprintf-js'
 import { useSnapshot }                from 'valtio'
 import {
@@ -116,6 +116,43 @@ const REPORT_EXPORT_STAGE_ICONS = {
     },
 }
 
+const journeyEditorStore = () => lgs.stores.journeyEditor
+
+const setJourneyEditorElevationServer = (value) => {
+    journeyEditorStore().journey.elevationServer = value
+}
+
+const setJourneyEditorProcessing = (value) => {
+    journeyEditorStore().isProcessing = value
+}
+
+const setJourneyEditorActivity = (activity) => {
+    const editor = journeyEditorStore()
+    editor.journey.activity = activity
+    editor.journey.activitySettings = Journey.activityProfile(activity)
+}
+
+const setJourneyEditorJourneyVisible = (value) => {
+    journeyEditorStore().journey.visible = value
+}
+
+const setJourneyEditorPOIsVisible = (value) => {
+    journeyEditorStore().journey.POIsVisible = value
+}
+
+const setJourneyEditorTabState = (tabName, eventType = 'wa-tab-show') => {
+    const editor = journeyEditorStore()
+    editor.activeTab = tabName
+    editor.showPOIsFilter = tabName === POIS && eventType === 'wa-tab-show'
+}
+
+const initializeJourneyEditorTab = (tabName) => {
+    const editor = journeyEditorStore()
+    if (!editor.activeTab) {
+        editor.activeTab = tabName
+    }
+}
+
 const ReportExportAnimation = ({animation}) => {
     const stage = typeof animation === 'string' ? animation : animation?.stage
     const icon = REPORT_EXPORT_STAGE_ICONS[stage]
@@ -145,7 +182,6 @@ export const JourneySettings = () => {
     const {running, target} = useSnapshot($uiRotate)
     const {journey: autoRotateJourney} = useSnapshot($cameraSettings)
     const {open} = useSnapshot($drawers)
-    const activitySettings = useSnapshot(lgs.settings.journey.activity)
     const journeySlug = journey?.slug ?? null
 
     const _title = useRef(null)
@@ -166,10 +202,7 @@ export const JourneySettings = () => {
     // Local state-like ref for rotation toggle
     const _allowRotation = useRef(false)
 
-    /**
-     * Memoized list of available elevation servers
-     */
-    const serverList = useMemo(() => {
+    const serverList = (() => {
         const list = []
         if (journey?.hasElevation === false) {
             list.push(ElevationServer.FAKE_SERVERS.get(journey?.elevationServer === ElevationServer.NONE ? ElevationServer.NONE : ElevationServer.CLEAR))
@@ -181,9 +214,9 @@ export const JourneySettings = () => {
             )
         }
         return list.concat(Array.from(ElevationServer.SERVERS.values()))
-    }, [journey?.hasElevation, journey?.elevationServer])
+    })()
 
-    const activityList = useMemo(() => Journey.activityProfiles(), [activitySettings.types])
+    const activityList = Journey.activityProfiles()
 
     /**
      * Coordinates preparation logic
@@ -226,8 +259,8 @@ export const JourneySettings = () => {
         }
 
         const requestId = ++_elevationRequestId.current
-        $journeyEditor.journey.elevationServer = newServer
-        $journeyEditor.isProcessing = newServer !== ElevationServer.NONE
+        setJourneyEditorElevationServer(newServer)
+        setJourneyEditorProcessing(newServer !== ElevationServer.NONE)
         const server = new ElevationServer(newServer)
 
         try {
@@ -247,7 +280,7 @@ export const JourneySettings = () => {
             if (requestId !== _elevationRequestId.current) {
                 return
             }
-            $journeyEditor.journey.elevationServer = newServer
+            setJourneyEditorElevationServer(newServer)
 
             UIToast.success({
                                 caption: 'Elevation data modified',
@@ -256,7 +289,7 @@ export const JourneySettings = () => {
         }
         catch (error) {
             if (requestId === _elevationRequestId.current) {
-                $journeyEditor.journey.elevationServer = previousServer
+                setJourneyEditorElevationServer(previousServer)
                 UIToast.error({
                                   caption: 'Calculation failed',
                                   text:    'Changes aborted.',
@@ -266,7 +299,7 @@ export const JourneySettings = () => {
         }
         finally {
             if (requestId === _elevationRequestId.current) {
-                $journeyEditor.isProcessing = false
+                setJourneyEditorProcessing(false)
             }
         }
     }
@@ -303,8 +336,7 @@ export const JourneySettings = () => {
             return
         }
 
-        $journeyEditor.journey.activity = activity
-        $journeyEditor.journey.activitySettings = Journey.activityProfile(activity)
+        setJourneyEditorActivity(activity)
         const updated = await Utils.updateJourney(UPDATE_JOURNEY_SILENTLY)
         updated.addToContext()
         const track = updated.tracks.get($journeyEditor.track?.slug) ?? Array.from(updated.tracks.values())[0]
@@ -318,14 +350,14 @@ export const JourneySettings = () => {
         if (running) {
             await __.ui.cameraManager.stopRotate()
         }
-        $journeyEditor.journey.visible = v
+        setJourneyEditorJourneyVisible(v)
         lgs.theJourney.updateVisibility(v)
         await Utils.updateJourney(UPDATE_JOURNEY_SILENTLY, {focus: false})
         Utils.renderJourneySettings()
     }
 
     const setAllPOIsVisibility = async (v) => {
-        $journeyEditor.journey.POIsVisible = v
+        setJourneyEditorPOIsVisible(v)
         TrackUtils.updatePOIsVisibility(lgs.theJourney, v)
         await Utils.updateJourney(UPDATE_JOURNEY_SILENTLY, {focus: false})
         Utils.renderJourneySettings()
@@ -363,8 +395,7 @@ export const JourneySettings = () => {
         console.log('initTab', e)
         const tabName = e.detail.name
         __.ui.drawerManager.tab = tabName
-        $journeyEditor.activeTab = tabName
-        $journeyEditor.showPOIsFilter = tabName === POIS && e.type === 'wa-tab-show'
+        setJourneyEditorTabState(tabName, e.type)
     }
 
     const setExportFormatValue = (format) => {
@@ -596,8 +627,8 @@ export const JourneySettings = () => {
     }
 
     useEffect(() => {
-        if (!$journeyEditor.activeTab) {
-            $journeyEditor.activeTab = DATA
+        if (!journeyEditorStore().activeTab) {
+            initializeJourneyEditorTab(DATA)
             __.ui.drawerManager.tab = DATA
         }
         lgs.stores.ui.mainUI.removeJourneyDialog.active.set(REMOVE_JOURNEY_IN_EDIT, false)
