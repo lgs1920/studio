@@ -38,13 +38,15 @@ import {
     WaTabGroup,
     WaTabPanel,
 }                                                                     from '@web.awesome.me/webawesome-pro/dist/react'
+import { useManagedStylesheet }                                        from '@Utils/useManagedStylesheet'
 import classNames                                                     from 'classnames'
 import { Suspense, useCallback, useEffect, useMemo, useState } from 'react'
 import { createPortal }                                               from 'react-dom'
 import { useSnapshot }                                                from 'valtio'
-import './style.css'
+import widgetEditorStylesheetHref                                      from './style.css?url'
 
 const OPEN_COMPASS_SETTINGS_ACTION = 'open-compass-settings'
+const WIDGET_EDITOR_STYLESHEET_ID = 'widget-editor-panel'
 
 const buildCanvasPreviewBackground = () => {
     try {
@@ -94,6 +96,8 @@ export const WidgetEditorPanel = () => {
     const _widgetRegistry = useMemo(() => new WidgetRegistry(), [])
 
     const isVisible = drawers.open === WIDGETS_EDITOR_DRAWER && (video.editing || cached?.widgetsBoard === SCENE_WIDGETS_BOARD)
+    useManagedStylesheet(WIDGET_EDITOR_STYLESHEET_ID, isVisible ? widgetEditorStylesheetHref : null)
+
     // Check stacked state via manager instead of snapshot property
     const isStacked = __.ui.drawerManager.isStacked(WIDGETS_EDITOR_DRAWER)
     const syncGlobalCompass = drawers.action === 'edit-global-compass'
