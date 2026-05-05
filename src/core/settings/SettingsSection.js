@@ -85,7 +85,7 @@ export class SettingsSection {
         const configFromJSON = JSON.parse(JSON.stringify(lgs.configuration[this.key]))
         const data = await this.read()
 
-        if (data === null) {
+        if (data === null || data === undefined) {
             if (lgs.configuration[this.key] !== undefined) {
                 this.#content = proxy(
                     lgs.configuration[this.key] instanceof Object
