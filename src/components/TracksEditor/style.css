@@ -230,6 +230,14 @@ wa-tab sl-icon {
     gap: var(--lgs-gutter-s);
 }
 
+.lgs--track-style-dash-colors {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    width: 100%;
+    min-width: 0;
+    gap: var(--lgs-gutter-s);
+}
+
 .lgs--track-style-dash-column {
     display: flex;
     align-items: flex-start;
@@ -324,12 +332,20 @@ wa-tab sl-icon {
 }
 
 .lgs--track-style-switch {
+    display: block;
+    align-self: stretch;
     flex: 0 0 auto;
     width: 100%;
+    min-width: 0;
     margin-top: calc(var(--lgs-gutter-xs) / 2);
 }
 
-.lgs--track-style-switch::part(control) {
+#journey-editor-drawer #track-line-settings .lgs--track-style-switch::part(base) {
+    width: 100%;
+    min-height: 0;
+}
+
+#journey-editor-drawer #track-line-settings .lgs--track-style-switch::part(control) {
     margin-left: auto;
 }
 
@@ -440,6 +456,26 @@ wa-tab sl-icon {
 .track-location wa-icon {
     flex: 0 0 auto;
     color: var(--wa-color-brand);
+}
+
+.lgs--journey-edit-card,
+.lgs--journey-activity-select,
+.lgs--journey-edit-details-list,
+.lgs--journey-edit-details {
+    width: 100%;
+    min-width: 0;
+}
+
+.lgs--journey-edit-details-list {
+    padding: 0;
+}
+
+.lgs--journey-edit-details::part(content) {
+    min-width: 0;
+}
+
+.lgs--journey-edit-details #track-line-settings {
+    margin-top: 0;
 }
 
 .lgs--journey-location-in-settings span,

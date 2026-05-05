@@ -909,7 +909,20 @@ wa-card.wa-theme-lgs1920-on-map::part(body) {
 .wa-theme-lgs1920-on-map.lgs-card,
 .wa-theme-lgs1920-on-map .lgs-card {
         border-color: var(--lgs-card-on-map-border-color);
-    }
+}
+
+.track-locator-marker-tooltip {
+    position: fixed;
+    z-index: 1200;
+    pointer-events: none;
+    white-space: nowrap;
+    user-select: none;
+    font-size: var(--lgs-font-size-s);
+}
+
+.track-locator-marker-tooltip[hidden] {
+    display: none !important;
+}
 
     .lgs-card-wrapper {
         display: flex;

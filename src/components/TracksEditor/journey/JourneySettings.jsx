@@ -70,8 +70,8 @@ import {
 }                                     from '@Utils/UIToast'
 import { decodeHTMLEntities }         from '@Utils/TextUtils'
 import {
-    WaButton, WaCard, WaIcon, WaInput, WaOption, WaPopup, WaSelect, WaTab, WaTabGroup, WaTabPanel, WaTextarea,
-    WaTooltip,
+    WaButton, WaCard, WaDetails, WaIcon, WaInput, WaOption, WaPopup, WaSelect, WaTab, WaTabGroup, WaTabPanel,
+    WaTextarea, WaTooltip,
 }                                     from '@web.awesome.me/webawesome-pro/dist/react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { sprintf }                    from 'sprintf-js'
@@ -673,47 +673,63 @@ export const JourneySettings = () => {
                             {/* Edit Panel */}
                             <WaTabPanel name={EDIT}>
                                 <LGSScrollbars>
-                                    <WaCard className="lgs--track-data" appearance="plain">
-                                    <WaInput
-                                        label={journey.tracks.size === 1 ? 'Title' : 'Journey Title'}
-                                        id={'journey-title-in-settings'}
-                                        ref={_title}
-                                        value={journey.title}
-                                        onChange={setTitle}
-                                    />
+                                    <WaCard className="lgs--track-data lgs--journey-edit-card" appearance="plain">
+                                        <WaSelect
+                                            className="lgs--journey-activity-select"
+                                            label="Activity"
+                                            value={journey.activity ?? Journey.defaultActivity()}
+                                            onChange={setActivity}
+                                        >
+                                            {activityList.map(activity => (
+                                                <WaOption key={activity.id} value={activity.id}>
+                                                    {activity.icon && <WaIcon slot="start" name={activity.icon} variant="regular"/>}
+                                                    {activity.label}
+                                                </WaOption>
+                                            ))}
+                                        </WaSelect>
 
-                                    <WaSelect
-                                        label="Activity"
-                                        size="small"
-                                        value={journey.activity ?? Journey.defaultActivity()}
-                                        onChange={setActivity}
-                                    >
-                                        {activityList.map(activity => (
-                                            <WaOption key={activity.id} value={activity.id}>
-                                                {activity.icon && <WaIcon slot="start" name={activity.icon} variant="regular"/>}
-                                                {activity.label}
-                                            </WaOption>
-                                        ))}
-                                    </WaSelect>
+                                        <div className="lgs--details-list lgs--journey-edit-details-list">
+                                            <WaDetails
+                                                small
+                                                open
+                                                className="lgs--details-hoverable lgs--journey-edit-details"
+                                            >
+                                                <span slot="summary">Journey details</span>
+                                                <WaInput
+                                                    label={journey.tracks.size === 1 ? 'Title' : 'Journey Title'}
+                                                    id={'journey-title-in-settings'}
+                                                    ref={_title}
+                                                    value={journey.title}
+                                                    onChange={setTitle}
+                                                />
 
-                                    {journeyLocation && (
-                                        <div className="lgs--journey-location-in-settings">
-                                            <WaIcon name="location-dot" variant="regular"/>
-                                            <span>{journeyLocation}</span>
+                                                {journeyLocation && (
+                                                    <div className="lgs--journey-location-in-settings">
+                                                        <WaIcon name="location-dot" variant="regular"/>
+                                                        <span>{journeyLocation}</span>
+                                                    </div>
+                                                )}
+
+                                                <WaTextarea
+                                                    label={journey.tracks.size === 1 ? 'Description' : 'Journey Description'}
+                                                    ref={_description}
+                                                    rows={3}
+                                                    size="small"
+                                                    value={decodeHTMLEntities(journey.description)}
+                                                    onChange={setDescription}
+                                                />
+                                            </WaDetails>
+
+                                            <WaDetails
+                                                small
+                                                open
+                                                className="lgs--details-hoverable lgs--journey-edit-details"
+                                            >
+                                                <span slot="summary">Track style</span>
+                                                {journey.tracks.size === 1 && <TrackStyleSettings showTitle={false}/>}
+                                                <TrackSettings/>
+                                            </WaDetails>
                                         </div>
-                                    )}
-
-                                    <WaTextarea
-                                        label={journey.tracks.size === 1 ? 'Description' : 'Journey Description'}
-                                        ref={_description}
-                                        rows={3}
-                                        size="small"
-                                        value={decodeHTMLEntities(journey.description)}
-                                        onChange={setDescription}
-                                    />
-
-                                    {journey.tracks.size === 1 && <TrackStyleSettings/>}
-                                        <TrackSettings/>
                                     </WaCard>
                                 </LGSScrollbars>
                             </WaTabPanel>

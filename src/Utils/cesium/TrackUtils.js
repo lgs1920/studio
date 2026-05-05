@@ -16,8 +16,9 @@
 
 import {
     ADD_JOURNEY, CURRENT_JOURNEY, CURRENT_POI, CURRENT_STORE, CURRENT_TRACK, DEFAULT_2D_FOCUS_PITCH, DRAWING_FROM_DB,
-    DRAWING_FROM_UI, FOCUS_ON_FEATURE, NO_FOCUS, REFRESH_DRAWING, SCENE_MODE_2D,
+    DRAWING_FROM_UI, FOCUS_ON_FEATURE, JOURNEY_EDITOR_DRAWER, NO_FOCUS, REFRESH_DRAWING, SCENE_MODE_2D,
 }                                                      from '@Core/constants'
+import { faRoute }                                     from '@fortawesome/pro-solid-svg-icons'
 import { Journey }                                     from '@Core/Journey'
 import bbox                                            from '@turf/bbox'
 import { default as centroid }                         from '@turf/centroid'
@@ -29,9 +30,9 @@ import {
     TRACK_RENDER_WIDTH_UNITS,
 }                                                      from '@Utils/cesium/trackRenderStyle'
 import {
-    Cartesian2, Cartesian3, Cartographic, Color as CColor, CustomDataSource,
-    GeoJsonDataSource, Math as M, PolylineDashMaterialProperty, PolylineOutlineMaterialProperty,
-    Rectangle, sampleTerrainMostDetailed, SceneTransforms,
+    BoundingSphere, Cartesian2, Cartesian3, Cartographic, Color as CColor, CustomDataSource, GeoJsonDataSource,
+    HeightReference, HorizontalOrigin, Math as M, PolylineDashMaterialProperty, PolylineOutlineMaterialProperty,
+    Rectangle, sampleTerrainMostDetailed, VerticalOrigin,
 }                                                      from 'cesium'
 import { UIToast }                                     from '../UIToast.js'
 import { POI_FLAG, POI_FLAG_START, POI_STD, POIUtils } from './POIUtils'
@@ -49,11 +50,27 @@ export const JOURNEY_WAITING = 3
 export const JOURNEY_DENIED = 4
 
 const TRACK_STYLE_ENTITY_MARKER = '#lgs-track-style#'
-const EARTH_RADIUS_METERS = 6378137
+const TRACK_LOCATOR_MARKER_ENTITY_MARKER = '#lgs-track-locator-marker#'
+const TRACK_LOCATOR_MARKER_TOOLTIP_CLASS = 'track-locator-marker-tooltip'
+const TRACK_DISPLAY_MODES = Object.freeze({
+    LOCATOR_MARKER: 'locator-marker',
+    FAR:            'far',
+    STYLE:          'style',
+})
+const TRACK_LOCATOR_MARKER_MIN_CAMERA_DISTANCE_METERS = 40000
+const TRACK_FAR_LINE_MIN_CAMERA_DISTANCE_METERS = 25000
+const TRACK_LOCATOR_MARKER_SIZE = 36
+const TRACK_LOCATOR_MARKER_BORDER_WIDTH = 2
+const TRACK_MIN_SCREEN_WIDTH = 1
+const TRACK_MAX_SCREEN_WIDTH = 256
+const TRACK_WIDTH_UPDATE_THROTTLE_MS = 180
+const TRACK_WIDTH_CHANGE_EPSILON = 0.25
 
 const isTrackStyleEntity = entity => `${entity?.id ?? ''}`.includes(TRACK_STYLE_ENTITY_MARKER)
+const isTrackLocatorMarkerEntity = entity => `${entity?.id ?? ''}`.includes(TRACK_LOCATOR_MARKER_ENTITY_MARKER)
 const trackReferencePointCache = new WeakMap()
-const trackMeterPixelCache = new WeakMap()
+let trackLocatorMarkerTooltipElement = null
+let activeTrackLocatorMarkerTooltipEntityId = null
 
 export const ALREADY_IMPORTED = {
     /** The file or resource is already present */
@@ -281,55 +298,81 @@ export class TrackUtils {
         }
     }
 
-    static getTrackWidthCameraKey = () => {
-        try {
-            const height = lgs?.camera?.positionCartographic?.height ?? 0
-            const zoomBucket = Math.round(Math.log2(Math.max(1, height)) * 32)
-            const canvas = lgs?.scene?.canvas
-            return `${lgs?.settings?.scene?.mode?.value ?? ''}:${zoomBucket}:${canvas?.clientWidth ?? 0}x${canvas?.clientHeight ?? 0}`
-        }
-        catch {
-            return ''
+    static getDrawingBufferSize = () => {
+        const scene = lgs?.scene
+        const canvas = scene?.canvas ?? lgs?.canvas
+
+        return {
+            width:  scene?.context?.drawingBufferWidth
+                    ?? scene?.drawingBufferWidth
+                    ?? canvas?.width
+                    ?? canvas?.clientWidth
+                    ?? 0,
+            height: scene?.context?.drawingBufferHeight
+                    ?? scene?.drawingBufferHeight
+                    ?? canvas?.height
+                    ?? canvas?.clientHeight
+                    ?? 0,
         }
     }
 
-    static meterWidthToPixelScale = (track, cameraKey = TrackUtils.getTrackWidthCameraKey()) => {
+    static getTrackReferenceCartesian = track => {
+        const referencePoint = TrackUtils.getTrackReferencePoint(track)
+        if (!referencePoint) {
+            return null
+        }
+
+        return Cartesian3.fromDegrees(
+            referencePoint.longitude,
+            referencePoint.latitude,
+            referencePoint.height ?? 0,
+        )
+    }
+
+    static getViewerCenterCartesian = () => {
+        const viewer = lgs?.viewer
+        const scene = viewer?.scene
+        const canvas = scene?.canvas
+        const camera = viewer?.camera ?? lgs?.camera
+        if (!scene || !canvas || !camera) {
+            return null
+        }
+
+        const center = new Cartesian2(
+            Math.round(canvas.clientWidth / 2),
+            Math.round(canvas.clientHeight / 2),
+        )
+        const pickRay = camera.getPickRay?.(center)
+        const globe = scene.globe
+        let cartesian = pickRay ? globe?.pick?.(pickRay, scene) : null
+
+        if (!cartesian) {
+            cartesian = camera.pickEllipsoid?.(center, globe?.ellipsoid)
+        }
+
+        return cartesian ?? null
+    }
+
+    static meterWidthToPixelScaleAtCartesian = cartesian => {
         try {
-            const referencePoint = TrackUtils.getTrackReferencePoint(track)
-            const cached = trackMeterPixelCache.get(track)
-
-            if (cached?.referencePoint === referencePoint && cached?.cameraKey === cameraKey) {
-                return cached.pixelPerMeter
-            }
-
-            if (!referencePoint || !lgs?.scene || !lgs?.camera) {
-                return 0
-            }
-            const toWindowCoordinates = SceneTransforms.worldToWindowCoordinates
-            if (typeof toWindowCoordinates !== 'function') {
+            if (!cartesian || !lgs?.camera) {
                 return 0
             }
 
-            const latitudeRad = M.toRadians(referencePoint.latitude)
-            const cosLatitude = Math.max(0.05, Math.abs(Math.cos(latitudeRad)))
-            const longitudeOffset = M.toDegrees(1 / (EARTH_RADIUS_METERS * cosLatitude))
-            const height = referencePoint.height ?? 0
-            const start = toWindowCoordinates(
-                lgs.scene,
-                Cartesian3.fromDegrees(referencePoint.longitude, referencePoint.latitude, height),
-            )
-            const end = toWindowCoordinates(
-                lgs.scene,
-                Cartesian3.fromDegrees(referencePoint.longitude + longitudeOffset, referencePoint.latitude, height),
-            )
-            const distance = start && end ? Cartesian2.distance(start, end) : 0
-            const pixelPerMeter = Number.isFinite(distance) ? distance : 0
+            const {width, height} = TrackUtils.getDrawingBufferSize()
+            if (!width || !height || typeof lgs.camera.getPixelSize !== 'function') {
+                return 0
+            }
 
-            trackMeterPixelCache.set(track, {
-                cameraKey,
-                referencePoint,
-                pixelPerMeter,
-            })
+            const metersPerPixel = lgs.camera.getPixelSize(
+                new BoundingSphere(cartesian, 1),
+                width,
+                height,
+            )
+            const pixelPerMeter = Number.isFinite(metersPerPixel) && metersPerPixel > 0
+                                  ? 1 / metersPerPixel
+                                  : 0
+
             return pixelPerMeter
         }
         catch {
@@ -337,78 +380,502 @@ export class TrackUtils {
         }
     }
 
-    static resolveTrackWidth = (track, style, meterWidth, pixelWidth, cameraKey = TrackUtils.getTrackWidthCameraKey()) => {
-        if (style.widthUnit !== TRACK_RENDER_WIDTH_UNITS.METERS) {
-            return pixelWidth
+    static getTrackReferencePixelScale = track => TrackUtils.meterWidthToPixelScaleAtCartesian(
+        TrackUtils.getTrackReferenceCartesian(track),
+    )
+
+    static getViewerCenterPixelScale = () => TrackUtils.meterWidthToPixelScaleAtCartesian(
+        TrackUtils.getViewerCenterCartesian(),
+    )
+
+    static meterWidthToPixelScale = track => Math.max(
+        TrackUtils.getViewerCenterPixelScale(),
+        TrackUtils.getTrackReferencePixelScale(track),
+    )
+
+    static normalizeTrackScreenWidth = (value, fallback = TRACK_MIN_SCREEN_WIDTH) => {
+        const fallbackWidth = Number.isFinite(Number(fallback)) ? Number(fallback) : TRACK_MIN_SCREEN_WIDTH
+        const width = Number(value)
+
+        if (!Number.isFinite(width) || width <= 0) {
+            return Math.min(TRACK_MAX_SCREEN_WIDTH, Math.max(TRACK_MIN_SCREEN_WIDTH, fallbackWidth))
         }
 
-        const meterPixels = TrackUtils.meterWidthToPixelScale(track, cameraKey) * meterWidth
-        return meterPixels > style.meterPixelThreshold ? meterPixels : pixelWidth
+        return Math.min(TRACK_MAX_SCREEN_WIDTH, Math.max(TRACK_MIN_SCREEN_WIDTH, width))
     }
 
     static removeTrackWidthUpdater = source => {
         source.__lgsTrackWidthUpdater?.()
         source.__lgsTrackWidthUpdater = null
-        source.__lgsTrackWidthCameraKey = null
+        source.__lgsTrackWidthState = null
     }
 
-    static installTrackWidthUpdater = (source, track, style, baseEntities, underlayEntities) => {
-        TrackUtils.removeTrackWidthUpdater(source)
-
-        const updateWidths = () => {
-            const cameraKey = TrackUtils.getTrackWidthCameraKey()
-            if (source.__lgsTrackWidthCameraKey === cameraKey) {
-                return
-            }
-
-            source.__lgsTrackWidthCameraKey = cameraKey
-            const mainWidth = TrackUtils.resolveTrackWidth(
-                track,
-                style,
-                style.meterWidth,
-                style.farPixelWidth,
-                cameraKey,
-            )
-
-            baseEntities.forEach(entity => {
-                if (entity.polyline) {
-                    entity.polyline.width = mainWidth
-                }
-            })
-
-            if (style.underlay.enabled) {
-                const underlayWidth = TrackUtils.resolveTrackWidth(
-                    track,
-                    style,
-                    style.underlay.meterWidth,
-                    style.underlay.pixelWidth,
-                    cameraKey,
-                )
-                underlayEntities.forEach(entity => {
-                    if (entity.polyline) {
-                        entity.polyline.width = underlayWidth
-                    }
-                })
-            }
-
-            lgs.scene.requestRender()
-        }
-
-        updateWidths()
-
-        if (style.widthUnit !== TRACK_RENDER_WIDTH_UNITS.METERS) {
+    static setPolylineWidth = (entity, width) => {
+        if (!entity?.polyline) {
             return
         }
 
-        lgs.scene.postRender.addEventListener(updateWidths)
-        source.__lgsTrackWidthUpdater = () => lgs.scene.postRender.removeEventListener(updateWidths)
+        if (typeof entity.polyline.width?.setValue === 'function') {
+            entity.polyline.width.setValue(width)
+            return
+        }
+
+        entity.polyline.width = width
+    }
+
+    static setPolylineVisibility = (entity, visible) => {
+        if (!entity?.polyline) {
+            return
+        }
+
+        if (typeof entity.polyline.show?.setValue === 'function') {
+            entity.polyline.show.setValue(visible)
+            return
+        }
+
+        entity.polyline.show = visible
+    }
+
+    static hasTrackWidthChanged = (previous, next) => previous === undefined
+                                                    || Math.abs(previous - next) >= TRACK_WIDTH_CHANGE_EPSILON
+
+    static getTrackLocatorMarkerEntityId = track => `${track?.slug ?? ''}${TRACK_LOCATOR_MARKER_ENTITY_MARKER}`
+
+    static ensureTrackLocatorMarkerTooltipElement = () => {
+        if (typeof document === 'undefined' || !document.body) {
+            return null
+        }
+
+        if (trackLocatorMarkerTooltipElement && document.body.contains(trackLocatorMarkerTooltipElement)) {
+            return trackLocatorMarkerTooltipElement
+        }
+
+        const element = document.createElement('div')
+        element.className = `${TRACK_LOCATOR_MARKER_TOOLTIP_CLASS} lgs-one-line-card wa-theme-lgs1920-on-map small`
+        element.hidden = true
+        element.setAttribute('role', 'tooltip')
+        element.setAttribute('aria-hidden', 'true')
+        document.body.appendChild(element)
+        trackLocatorMarkerTooltipElement = element
+        return element
+    }
+
+    static getCanvasEventClientPosition = event => {
+        if (Number.isFinite(event?.clientX) && Number.isFinite(event?.clientY)) {
+            return {x: event.clientX, y: event.clientY}
+        }
+
+        const canvasPosition = event?.endPosition ?? event?.position
+        const canvas = lgs.viewer?.scene?.canvas
+        if (!canvasPosition || !canvas) {
+            return null
+        }
+
+        const rect = canvas.getBoundingClientRect()
+        return {
+            x: rect.left + canvasPosition.x,
+            y: rect.top + canvasPosition.y,
+        }
+    }
+
+    static positionTrackLocatorMarkerTooltip = event => {
+        const tooltip = TrackUtils.ensureTrackLocatorMarkerTooltipElement()
+        if (!tooltip || tooltip.hidden) {
+            return
+        }
+
+        const position = TrackUtils.getCanvasEventClientPosition(event)
+        if (!position) {
+            return
+        }
+
+        const rect = tooltip.getBoundingClientRect()
+        const offsetX = 12
+        const offsetY = 10
+        let left = position.x + offsetX
+        let top = position.y - rect.height - offsetY
+
+        if (top < 8) {
+            top = position.y + offsetY
+        }
+
+        left = Math.min(Math.max(8, left), window.innerWidth - rect.width - 8)
+        top = Math.min(Math.max(8, top), window.innerHeight - rect.height - 8)
+
+        tooltip.style.left = `${left}px`
+        tooltip.style.top = `${top}px`
+    }
+
+    static showTrackLocatorMarkerTooltip = (track, event) => {
+        const tooltip = TrackUtils.ensureTrackLocatorMarkerTooltipElement()
+        const journey = lgs.journeys.get(track.parent) ?? lgs.getJourneyByTrackSlug?.(track.slug)
+        const label = journey?.title || track.title || 'Journey'
+        if (!tooltip || !label) {
+            return
+        }
+
+        activeTrackLocatorMarkerTooltipEntityId = TrackUtils.getTrackLocatorMarkerEntityId(track)
+        tooltip.textContent = label
+        tooltip.hidden = false
+        tooltip.setAttribute('aria-hidden', 'false')
+        TrackUtils.positionTrackLocatorMarkerTooltip(event)
+    }
+
+    static hideTrackLocatorMarkerTooltip = trackOrEntity => {
+        const entityId = typeof trackOrEntity === 'string'
+                         ? trackOrEntity
+                         : TrackUtils.getTrackLocatorMarkerEntityId(trackOrEntity ?? {})
+
+        if (entityId && activeTrackLocatorMarkerTooltipEntityId && entityId !== activeTrackLocatorMarkerTooltipEntityId) {
+            return
+        }
+
+        activeTrackLocatorMarkerTooltipEntityId = null
+
+        if (!trackLocatorMarkerTooltipElement) {
+            return
+        }
+
+        trackLocatorMarkerTooltipElement.hidden = true
+        trackLocatorMarkerTooltipElement.textContent = ''
+        trackLocatorMarkerTooltipElement.setAttribute('aria-hidden', 'true')
+    }
+
+    static buildTrackLocatorMarkerImage = (color) => {
+        const [iconWidth, iconHeight, , , pathData] = faRoute.icon
+        const size = TRACK_LOCATOR_MARKER_SIZE
+        const iconSize = size * 0.42
+        const scale = Math.min(iconSize / iconWidth, iconSize / iconHeight)
+        const x = (size - iconWidth * scale) / 2
+        const y = (size - iconHeight * scale) / 2
+        const routes = (Array.isArray(pathData) ? pathData : [pathData])
+                       .filter(Boolean)
+                       .map(path => `<path d="${path}" fill="${color}"/>`)
+                       .join('')
+        const backgroundColor = TrackUtils.cssColor(lgs.colors.poiDefaultBackground).withAlpha(0.6).toCssColorString()
+        const borderColor = lgs.colors.poiDefault
+        const svg = `
+            <svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+                <circle cx="${size / 2}" cy="${size / 2}" r="${size * 0.42}" fill="${backgroundColor}" stroke="${borderColor}" stroke-width="${TRACK_LOCATOR_MARKER_BORDER_WIDTH}"/>
+                <g transform="translate(${x} ${y}) scale(${scale})">${routes}</g>
+            </svg>
+        `.trim()
+
+        return {
+            src:    `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`,
+            width:  size,
+            height: size,
+        }
+    }
+
+    static getTrackDisplayDistanceThresholds = () => {
+        return {
+            locatorMarkerMinDistance: TRACK_LOCATOR_MARKER_MIN_CAMERA_DISTANCE_METERS,
+            farLineMinDistance:       TRACK_FAR_LINE_MIN_CAMERA_DISTANCE_METERS,
+        }
+    }
+
+    static getTrackDistanceScaleInfo = track => {
+        const point = TrackUtils.getTrackReferencePoint(track)
+        if (!point) {
+            return {
+                scale:                   1,
+                shouldShowLocatorMarker: false,
+                thresholds:              TrackUtils.getTrackDisplayDistanceThresholds(),
+            }
+        }
+
+        const position = TrackUtils.getTrackReferenceCartesian(track)
+        const cameraPosition = lgs.camera?.positionWC ?? lgs.camera?.position
+        const distance = position && cameraPosition ? Cartesian3.distance(position, cameraPosition) : 0
+        const minScale = lgs.settings.ui.poi.minScale
+        const distanceThreshold = lgs.settings.ui.poi.distanceThreshold
+        const scale = Math.max(minScale, Math.min(1 / (distance / distanceThreshold), 1))
+        const thresholds = TrackUtils.getTrackDisplayDistanceThresholds()
+
+        return {
+            scale,
+            cameraDistance:          distance,
+            shouldShowLocatorMarker: distance >= thresholds.locatorMarkerMinDistance,
+            shouldShowFarLine:       distance >= thresholds.farLineMinDistance && distance < thresholds.locatorMarkerMinDistance,
+            thresholds,
+        }
+    }
+
+    static resolveTrackDisplayMode = (track, scaleInfo = TrackUtils.getTrackDistanceScaleInfo(track)) => {
+        if (scaleInfo.shouldShowLocatorMarker) {
+            return TRACK_DISPLAY_MODES.LOCATOR_MARKER
+        }
+
+        if (scaleInfo.shouldShowFarLine) {
+            return TRACK_DISPLAY_MODES.FAR
+        }
+
+        return TRACK_DISPLAY_MODES.STYLE
+    }
+
+    static resolveStyledTrackWidth = (style, metricWidth, fallbackWidth) => {
+        const normalizedFallbackWidth = TrackUtils.normalizeTrackScreenWidth(fallbackWidth)
+
+        if (style.widthUnit !== TRACK_RENDER_WIDTH_UNITS.METERS) {
+            return normalizedFallbackWidth
+        }
+
+        const normalizedMetricWidth = TrackUtils.normalizeTrackScreenWidth(metricWidth, normalizedFallbackWidth)
+        return normalizedMetricWidth > style.meterPixelThreshold
+               ? normalizedMetricWidth
+               : normalizedFallbackWidth
+    }
+
+    static removeTrackLocatorMarkerEntity = (source, trackOrSlug) => {
+        const trackSlug = typeof trackOrSlug === 'string' ? trackOrSlug : trackOrSlug?.slug
+        const entityId = TrackUtils.getTrackLocatorMarkerEntityId({slug: trackSlug})
+        const entity = source?.entities?.getById?.(entityId)
+        TrackUtils.hideTrackLocatorMarkerTooltip(entityId)
+
+        if (entity) {
+            source.entities.remove(entity)
+        }
+
+        __.canvasEvents?.removeAllListenersByEntity?.(entityId)
+    }
+
+    static setTrackAsCurrent = async (trackSlug, {focus = false, openEditor = false} = {}) => {
+        const journey = lgs.getJourneyByTrackSlug(trackSlug)
+        if (!journey) {
+            return
+        }
+
+        const {Utils} = await import('@Editor/Utils')
+        await Utils.updateJourneyEditor(journey.slug, {focus: false})
+
+        const selectedTrack = lgs.getTrackBySlug(trackSlug)
+        if (selectedTrack) {
+            lgs.theJourneyEditorProxy.track = selectedTrack
+            selectedTrack.addToContext()
+            selectedTrack.addToEditor()
+            Utils.renderTracksList()
+            Utils.renderTrackSettings()
+            await TrackUtils.saveCurrentTrackToDB(selectedTrack.slug)
+        }
+
+        if (focus && journey.visible) {
+            if (__.ui.cameraManager.isRotating()) {
+                await __.ui.cameraManager.stopRotate()
+            }
+
+            journey.focus({
+                              action:      DRAWING_FROM_UI,
+                              rotate:      lgs.settings.ui.camera.start.rotate.journey,
+                              resetCamera: true,
+                          })
+        }
+
+        if (openEditor) {
+            __.ui.drawerManager.open(JOURNEY_EDITOR_DRAWER, {
+                action:              'edit-current',
+                entity:              journey.slug,
+                tab:                 'tab-data',
+                suppressFocusOnOpen: [journey.slug],
+            })
+        }
+    }
+
+    static registerTrackLocatorMarkerEvents = track => {
+        const entityId = TrackUtils.getTrackLocatorMarkerEntityId(track)
+        __.canvasEvents?.removeAllListenersByEntity?.(entityId)
+        __.canvasEvents?.onMouseEnter?.((event) => {
+            TrackUtils.showTrackLocatorMarkerTooltip(track, event)
+        }, {
+            entity: entityId,
+        })
+        __.canvasEvents?.onMouseMove?.((event) => {
+            TrackUtils.positionTrackLocatorMarkerTooltip(event)
+        }, {
+            entity: entityId,
+        })
+        __.canvasEvents?.onMouseLeave?.(() => {
+            TrackUtils.hideTrackLocatorMarkerTooltip(track)
+        }, {
+            entity: entityId,
+        })
+        __.canvasEvents?.onClick?.(() => {
+            TrackUtils.hideTrackLocatorMarkerTooltip(track)
+            void TrackUtils.setTrackAsCurrent(track.slug, {focus: true})
+        }, {
+            entity:               entityId,
+            preventLowerPriority: true,
+        })
+        __.canvasEvents?.onTap?.(() => {
+            TrackUtils.hideTrackLocatorMarkerTooltip(track)
+            void TrackUtils.setTrackAsCurrent(track.slug, {focus: true})
+        }, {
+            entity:               entityId,
+            preventLowerPriority: true,
+        })
+        __.canvasEvents?.onDoubleClick?.(() => {
+            TrackUtils.hideTrackLocatorMarkerTooltip(track)
+            void TrackUtils.setTrackAsCurrent(track.slug, {openEditor: true})
+        }, {
+            entity:               entityId,
+            preventLowerPriority: true,
+        })
+        __.canvasEvents?.onDoubleTap?.(() => {
+            TrackUtils.hideTrackLocatorMarkerTooltip(track)
+            void TrackUtils.setTrackAsCurrent(track.slug, {openEditor: true})
+        }, {
+            entity:               entityId,
+            preventLowerPriority: true,
+        })
+    }
+
+    static ensureTrackLocatorMarkerEntity = (source, track, style) => {
+        const entityId = TrackUtils.getTrackLocatorMarkerEntityId(track)
+        const position = TrackUtils.getTrackReferenceCartesian(track)
+        if (!position) {
+            return null
+        }
+
+        const image = TrackUtils.buildTrackLocatorMarkerImage(style.color)
+        const existing = source.entities.getById(entityId)
+        const options = {
+            image:                    image.src,
+            width:                    image.width,
+            height:                   image.height,
+            heightReference:          __.ui.sceneManager.noRelief() ? HeightReference.NONE : HeightReference.CLAMP_TO_GROUND,
+            disableDepthTestDistance: __.ui.sceneManager.is2D ? 0 : 1.2742018E7,
+            horizontalOrigin:         HorizontalOrigin.CENTER,
+            verticalOrigin:           VerticalOrigin.CENTER,
+        }
+
+        if (existing?.billboard) {
+            existing.position = position
+            existing.billboard.image = options.image
+            existing.billboard.width = options.width
+            existing.billboard.height = options.height
+            existing.billboard.heightReference = options.heightReference
+            existing.billboard.disableDepthTestDistance = options.disableDepthTestDistance
+            existing.billboard.horizontalOrigin = options.horizontalOrigin
+            existing.billboard.verticalOrigin = options.verticalOrigin
+            existing.show = true
+        }
+        else {
+            source.entities.add({
+                id:        entityId,
+                name:      track.title,
+                position,
+                show:      true,
+                billboard: options,
+            })
+        }
+
+        TrackUtils.registerTrackLocatorMarkerEvents(track)
+        return source.entities.getById(entityId)
+    }
+
+    static installTrackWidthUpdater = (source, track, style, entities) => {
+        TrackUtils.removeTrackWidthUpdater(source)
+        source.__lgsTrackWidthState = {}
+
+        const updateDisplay = (force = false) => {
+            const pixelsPerMeter = TrackUtils.meterWidthToPixelScale(track)
+            const scaleInfo = TrackUtils.getTrackDistanceScaleInfo(track)
+            const mainMetricWidth = pixelsPerMeter * style.meterWidth
+            const mainStyledWidth = TrackUtils.resolveStyledTrackWidth(
+                style,
+                mainMetricWidth,
+                style.farPixelWidth,
+            )
+            const underlayStyledWidth = TrackUtils.resolveStyledTrackWidth(
+                style,
+                pixelsPerMeter * style.underlay.meterWidth,
+                style.underlay.pixelWidth,
+            )
+            const displayMode = TrackUtils.resolveTrackDisplayMode(track, scaleInfo)
+            const state = source.__lgsTrackWidthState ?? {}
+            let changed = false
+
+            if (force || state.displayMode !== displayMode) {
+                const showStyled = displayMode === TRACK_DISPLAY_MODES.STYLE
+                const showFar = displayMode === TRACK_DISPLAY_MODES.FAR
+                entities.main.forEach(entity => TrackUtils.setPolylineVisibility(entity, showStyled))
+                entities.underlay.forEach(entity => TrackUtils.setPolylineVisibility(entity, showStyled))
+                entities.far.forEach(entity => TrackUtils.setPolylineVisibility(entity, showFar))
+
+                if (displayMode === TRACK_DISPLAY_MODES.LOCATOR_MARKER) {
+                    TrackUtils.ensureTrackLocatorMarkerEntity(source, track, style)
+                }
+                else {
+                    TrackUtils.removeTrackLocatorMarkerEntity(source, track)
+                }
+
+                state.displayMode = displayMode
+                changed = true
+            }
+
+            if (displayMode === TRACK_DISPLAY_MODES.STYLE) {
+                if (force || TrackUtils.hasTrackWidthChanged(state.mainWidth, mainStyledWidth)) {
+                    entities.main.forEach(entity => TrackUtils.setPolylineWidth(entity, mainStyledWidth))
+                    state.mainWidth = mainStyledWidth
+                    changed = true
+                }
+
+                if (style.underlay.enabled && (force || TrackUtils.hasTrackWidthChanged(state.underlayWidth, underlayStyledWidth))) {
+                    entities.underlay.forEach(entity => TrackUtils.setPolylineWidth(entity, underlayStyledWidth))
+                    state.underlayWidth = underlayStyledWidth
+                    changed = true
+                }
+            }
+            else if (displayMode === TRACK_DISPLAY_MODES.FAR && (force || TrackUtils.hasTrackWidthChanged(state.farWidth, style.farPixelWidth))) {
+                entities.far.forEach(entity => TrackUtils.setPolylineWidth(entity, style.farPixelWidth))
+                state.farWidth = style.farPixelWidth
+                changed = true
+            }
+
+            source.__lgsTrackWidthState = state
+            if (changed) {
+                lgs.scene.requestRender()
+            }
+        }
+
+        updateDisplay(true)
+
+        let timeout = null
+        const scheduleUpdate = () => {
+            if (timeout) {
+                clearTimeout(timeout)
+            }
+            timeout = setTimeout(() => {
+                timeout = null
+                updateDisplay()
+            }, TRACK_WIDTH_UPDATE_THROTTLE_MS)
+        }
+        const removeMoveEndListener = lgs.camera.moveEnd?.addEventListener?.(() => updateDisplay())
+        const removeChangedListener = lgs.camera.changed.addEventListener(scheduleUpdate)
+        const canvas = lgs.viewer?.scene?.canvas
+        const handleWheel = () => scheduleUpdate()
+        canvas?.addEventListener?.('wheel', handleWheel, {passive: true})
+        source.__lgsTrackWidthUpdater = () => {
+            removeMoveEndListener?.()
+            removeChangedListener?.()
+            canvas?.removeEventListener?.('wheel', handleWheel)
+            if (timeout) {
+                clearTimeout(timeout)
+            }
+        }
     }
 
     static removeTrackStyleEntities = source => {
         TrackUtils.removeTrackWidthUpdater(source)
         source.entities.values
-              .filter(isTrackStyleEntity)
-              .forEach(entity => source.entities.remove(entity))
+              .filter(entity => isTrackStyleEntity(entity) || isTrackLocatorMarkerEntity(entity))
+              .forEach(entity => {
+                  if (isTrackLocatorMarkerEntity(entity)) {
+                      TrackUtils.hideTrackLocatorMarkerTooltip(entity.id)
+                      __.canvasEvents?.removeAllListenersByEntity?.(entity.id)
+                  }
+                  source.entities.remove(entity)
+              })
     }
 
     static applyTrackRenderStyle = (source, track) => {
@@ -417,12 +884,25 @@ export class TrackUtils {
 
         const baseEntities = source.entities.values.filter(entity => entity.polyline && !isTrackStyleEntity(entity))
         const mainMaterial = TrackUtils.createTrackMaterial(style)
-        const underlayEntities = []
+        const entities = {
+            main:     [],
+            underlay: [],
+            far:      [],
+        }
+        const farMaterial = TrackUtils.createTrackMaterial({
+            ...style,
+            dash: {
+                ...style.dash,
+                enabled: false,
+            },
+        })
 
         baseEntities.forEach(entity => {
             const positions = entity.polyline.positions
+            TrackUtils.setPolylineVisibility(entity, false)
+
             if (style.underlay.enabled) {
-                underlayEntities.push(
+                entities.underlay.push(
                     source.entities.add({
                                             id:       `${entity.id}${TRACK_STYLE_ENTITY_MARKER}underlay`,
                                             polyline: {
@@ -436,18 +916,38 @@ export class TrackUtils {
                                                                                                   },
                                                                                               },
                                                                                               style.underlay.color),
-                                                zIndex:        1,
+                                                zIndex:        10,
                                             },
-                                        }),
+                    }),
                 )
             }
 
-            entity.polyline.clampToGround = true
-            entity.polyline.material = mainMaterial
-            entity.polyline.zIndex = 2
+            entities.far.push(
+                source.entities.add({
+                                        id:       `${entity.id}${TRACK_STYLE_ENTITY_MARKER}far`,
+                                        polyline: {
+                                            positions,
+                                            clampToGround: true,
+                                            material:      farMaterial,
+                                            zIndex:        15,
+                                        },
+                                    }),
+            )
+
+            entities.main.push(
+                source.entities.add({
+                                        id:       `${entity.id}${TRACK_STYLE_ENTITY_MARKER}main`,
+                                        polyline: {
+                                            positions,
+                                            clampToGround: true,
+                                            material:      mainMaterial,
+                                            zIndex:        20,
+                                        },
+                }),
+            )
         })
 
-        TrackUtils.installTrackWidthUpdater(source, track, style, baseEntities, underlayEntities)
+        TrackUtils.installTrackWidthUpdater(source, track, style, entities)
     }
 
     /**
@@ -485,6 +985,7 @@ export class TrackUtils {
         source.show = forcedToHide ? false : track.visible
         if (!source.show) {
             TrackUtils.removeTrackWidthUpdater(source)
+            TrackUtils.removeTrackLocatorMarkerEntity(source, track)
         }
         lgs.viewer.scene.requestRender()
     }

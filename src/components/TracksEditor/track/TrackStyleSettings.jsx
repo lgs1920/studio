@@ -192,7 +192,7 @@ const assignRenderSmoothing = async (editor, isJourneyScopedSmoothing, smoothing
  * Optimized for high-performance dragging
  * @returns {JSX.Element|null}
  */
-export const TrackStyleSettings = () => {
+export const TrackStyleSettings = ({showTitle = true}) => {
     const $editor = lgs.theJourneyEditorProxy
     const {journey, track} = useSnapshot($editor)
 
@@ -247,7 +247,8 @@ export const TrackStyleSettings = () => {
         const updates = {color: nextColor}
         const isPresetStyle = renderStyle.presetKey !== TRACK_RENDER_STYLE_CUSTOM_PRESET
 
-        if (renderStyle.dash.enabled && (isPresetStyle || colorEquals(renderStyle.dash.color, renderStyle.color))) {
+        if (renderStyle.dash.enabled
+            && (!renderStyle.dash.biColor || isPresetStyle || colorEquals(renderStyle.dash.color, renderStyle.color))) {
             updates.dash = {color: nextColor}
         }
 
@@ -326,6 +327,7 @@ export const TrackStyleSettings = () => {
         applyRenderStyle({
                              dash: {
                                  biColor,
+                                 color:    biColor ? renderStyle.dash.color : renderStyle.color,
                                  gapColor: biColor
                                            ? visibleTrackDashGapColor(renderStyle.dash.gapColor)
                                            : TRACK_RENDER_STYLE_TRANSPARENT_GAP_COLOR,
@@ -417,9 +419,20 @@ export const TrackStyleSettings = () => {
                               : TRACK_RENDER_STYLE_CUSTOM_PRESET
     const selectedPreset = TRACK_RENDER_STYLE_PRESETS.find(preset => preset.key === selectedPresetKey)
     const selectedPresetPreviewStyle = selectedPreset ? getPresetRenderStyle(selectedPreset) : renderStyle
+    const dashLengthField = {
+        key:     'dash-length',
+        label:   'Dash length',
+        unit:    'px',
+        hint:    'Visible dash segment length.',
+        min:     4,
+        max:     96,
+        step:    1,
+        value:   renderStyle.dash.dashLength,
+        onInput: handleDashLengthInput,
+    }
     const gapLengthField = {
         key:     'gap-length',
-        label:   'Length',
+        label:   'Gap Length',
         unit:    'px',
         hint:    'Gap segment length.',
         min:     4,
@@ -435,9 +448,9 @@ export const TrackStyleSettings = () => {
 
     return (
         <div id="track-line-settings">
-            <WaDivider/>
+            {showTitle && <WaDivider/>}
             <section className="lgs--track-style-section">
-                <h3 className="lgs--track-style-title">Track style</h3>
+                {showTitle && <h3 className="lgs--track-style-title">Track style</h3>}
                 <WaSwitch
                     className="lgs--track-style-switch"
                     label-at-start
@@ -576,6 +589,10 @@ export const TrackStyleSettings = () => {
                 </WaSwitch>
                 {renderStyle.dash.enabled && (
                     <div className="lgs--track-style-dash-grid lgs--track-style-subsection">
+                        <div className="lgs--track-style-field-grid">
+                            <TrackStyleNumberField {...dashLengthField}/>
+                            <TrackStyleNumberField {...gapLengthField}/>
+                        </div>
                         <WaSwitch
                             className="lgs--track-style-switch"
                             label-at-start
@@ -585,44 +602,26 @@ export const TrackStyleSettings = () => {
                         >
                             <span>Bicolor</span>
                         </WaSwitch>
-                        <section className="lgs--track-style-dash-column">
-                            <h4 className="lgs--track-style-dash-title">Dash</h4>
-                            <TrackStyleControlGroup
-                                colorLabel="Dash color"
-                                color={renderStyle.dash.color}
-                                onColorChange={handleDashColorInput}
-                                fields={[
-                                    {
-                                        key:     'dash-length',
-                                        label:   'Length',
-                                        unit:    'px',
-                                        hint:    'Visible dash segment length.',
-                                        min:     4,
-                                        max:     96,
-                                        step:    1,
-                                        value:   renderStyle.dash.dashLength,
-                                        onInput: handleDashLengthInput,
-                                    },
-                                ]}
-                            />
-                        </section>
-                        <section className="lgs--track-style-dash-column">
-                            <h4 className="lgs--track-style-dash-title">Gap</h4>
-                            {renderStyle.dash.biColor ? (
-                                <TrackStyleControlGroup
-                                    colorLabel="Gap color"
-                                    color={renderStyle.dash.gapColor}
-                                    onColorChange={handleDashGapColorInput}
-                                    fields={[gapLengthField]}
-                                />
-                            ) : (
-                                 <div className="lgs--track-style-control-group">
-                                     <div className="lgs--track-style-field-grid is-single">
-                                         <TrackStyleNumberField {...gapLengthField}/>
-                                     </div>
-                                 </div>
-                             )}
-                        </section>
+                        {renderStyle.dash.biColor && (
+                            <div className="lgs--track-style-dash-colors">
+                                <section className="lgs--track-style-dash-column">
+                                    <h4 className="lgs--track-style-dash-title">Dash color</h4>
+                                    <TrackStyleColorField
+                                        label="Dash color"
+                                        value={renderStyle.dash.color}
+                                        onChange={handleDashColorInput}
+                                    />
+                                </section>
+                                <section className="lgs--track-style-dash-column">
+                                    <h4 className="lgs--track-style-dash-title">Gap color</h4>
+                                    <TrackStyleColorField
+                                        label="Gap color"
+                                        value={renderStyle.dash.gapColor}
+                                        onChange={handleDashGapColorInput}
+                                    />
+                                </section>
+                            </div>
+                        )}
                     </div>
                 )}
             </section>
