@@ -19,7 +19,7 @@
  * Delegates functionality to specialized classes.
  */
 import {
-    CAMERA_INFORMATION_WIDGET, JOURNEY_EDITOR_DRAWER, PROFILE_WIDGET, SCENE_WIDGETS_BOARD, VIDEO_WIDGETS_BOARD,
+    CAMERA_INFORMATION_WIDGET, JOURNEY_EDITOR_DRAWER, JOURNEY_TOOLBAR_WIDGET, PROFILE_WIDGET, SCENE_WIDGETS_BOARD, VIDEO_WIDGETS_BOARD,
     WIDGET_EDITOR_POST_RENDER_EVENT, WIDGET_EDITOR_PRE_RENDER_EVENT, WIDGETS_EDITOR_DRAWER,
 }                             from '@Core/constants'
 import { WidgetDynamicRenderer } from '@Core/ui/widget-manager/dynamic-render/WidgetDynamicRender'
@@ -661,6 +661,10 @@ export class WidgetManager {
             cameraSettings.showPosition = false
             cameraSettings.showHPR = false
             cameraSettings.showTargetPosition = false
+        }
+
+        if (type === JOURNEY_TOOLBAR_WIDGET && lgs.settings?.ui?.journeyToolbar) {
+            lgs.settings.ui.journeyToolbar.show = false
         }
 
         const elements = lgs.settings?.widgets?.[type]?.configuration?.elements

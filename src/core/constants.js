@@ -467,6 +467,7 @@ export const VIDEO_TOOLS_WIDGETS   = 'video-tools-widgets',
 export const COMPASS_WIDGET       = 'compass-widget',
              CREDITS_WIDGET       = 'credits-widget',
              CAMERA_INFORMATION_WIDGET = 'camera-information-widget',
+             JOURNEY_TOOLBAR_WIDGET = 'journey-toolbar-widget',
              PROFILE_WIDGET       = 'profile-widget',
              TEXT_WIDGET          = 'text-widget',
              JOURNEY_STATS_WIDGET = 'journey-stats-widget'

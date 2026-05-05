@@ -16,9 +16,9 @@
 
 
 import { Widget } from '@Components/MainUI/widgets/Widget'
-import { LGS_TOOLBAR } from '@Core/constants'
+import { JOURNEY_TOOLBAR_WIDGET, LGS_TOOLBAR } from '@Core/constants'
 import { JourneyToolbar }    from '@Editor/JourneyToolbar'
-import React, { useMemo }    from 'react'
+import { useMemo }           from 'react'
 import { useSnapshot }       from 'valtio'
 
 /**
@@ -37,14 +37,17 @@ export const JourneyToolbarWidget = ({id}) => {
     // Stabilize config with useMemo
     const config = useMemo(() => {
         return {
-            top:      '70%',
-            opacity:  lgs.settings.ui.toolbars.opacity,
-            left:     '50%',
-            attachTo: 'bottom',
-            type: LGS_TOOLBAR,
-            id: id,
+            top:         '70%',
+            opacity:     lgs.settings.ui.toolbars.opacity,
+            left:        '50%',
+            attachTo:    'bottom',
+            contextMenu: {
+                canRemove: true,
+            },
+            type:        LGS_TOOLBAR,
+            id:          id ?? JOURNEY_TOOLBAR_WIDGET,
         }
-    }, [])
+    }, [id])
 
     return (
         <Widget isVisible={journeyEditor.list.length > 0 && journeyToolbar.show}

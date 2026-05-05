@@ -29,6 +29,7 @@ import { VideoButton }       from '@Components/MainUI/video/VideoButton'
 import { VideoDownloadAndShareDialog } from '@Components/MainUI/video/VideoDownloadAndShareDialog'
 import { TextButton }        from '@Components/Text/TextButton'
 import { TracksEditor }                         from '@Components/TracksEditor/TracksEditor'
+import { WanderButton }         from '@Components/Wander/WanderButton'
 import { WanderControlsWidget } from '@Components/Wander/WanderControlsWidget'
 import { WanderDrawer }         from '@Components/Wander/WanderDrawer'
 import {
@@ -245,6 +246,7 @@ export const MainUI = memo(() => {
                                 <RotateButton tooltip={toolBar.fromStart ? 'left' : 'right'}/>
                                 {!videoCaptureActive && <FullScreenButton tooltip={toolBar.fromStart ? 'left' : 'right'}/>}
                                 <VideoButton tooltip={toolBar.fromStart ? 'left' : 'right'}/>
+                                <WanderButton tooltip={toolBar.fromStart ? 'left' : 'right'}/>
                             </div>
                         </div>
                         {geocoderDialog.mounted && <GeocodingWidget/>}

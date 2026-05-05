@@ -21,6 +21,7 @@ import { SceneWidgetsRenderer } from '@Components/MainUI/widgets/SceneWidgetsRen
 import { WidgetContextMenu }    from '@Components/MainUI/widgets/WidgetContextMenu'
 import { Cropper }           from '@Components/ToolsUI/cropper/Cropper'
 import { VideoRecordingScreenArea } from '@Components/MainUI/video/VideoRecordingScreenArea'
+import { JOURNEY_TOOLBAR_WIDGET }    from '@Core/constants'
 import { JourneyToolbarWidget }     from '@Editor/JourneyToolbarWidget'
 import { useSnapshot }              from 'valtio/index'
 
@@ -46,7 +47,7 @@ export const ToolsUI = () => {
                     {(video.preRecording || video.recording || video.snapshot || video.finalizing) &&
                         <VideoRecordingScreenArea/>}
                     <CameraAndTargetPanel/>
-                    {usage && <JourneyToolbarWidget id="journey-toolbar-widget"/>}
+                    {usage && <JourneyToolbarWidget id={JOURNEY_TOOLBAR_WIDGET}/>}
                  </>
              )}
 

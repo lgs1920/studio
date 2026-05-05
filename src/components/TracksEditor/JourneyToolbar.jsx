@@ -18,7 +18,7 @@
 
 import { ToggleStateIcon }                                           from '@Components/ToggleStateIcon'
 import {
-    CLOSE_ICON, CURRENT_JOURNEY, FOCUS_ICON, ROTATION_ICON, UPDATE_JOURNEY_SILENTLY, WANDER_DRAWER,
+    CURRENT_JOURNEY, FOCUS_ICON, ROTATION_ICON, UPDATE_JOURNEY_SILENTLY,
 } from '@Core/constants'
 import {
     JourneySelector,
@@ -139,19 +139,6 @@ export const JourneyToolbar = (props) => {
                              })
     }
 
-    /**
-     * Closes the journey toolbar by hiding it.
-     * @param {Event} event - The click event
-     */
-    const closeToolbar = () => {
-        $journeyToolbar.show = false
-    }
-
-    const openWander = (event) => {
-        event.stopPropagation()
-        __.ui.drawerManager.open(WANDER_DRAWER)
-    }
-
     useEffect(() => {
         if (toolbarRef) {
             toolbarRef.current = {
@@ -193,8 +180,6 @@ export const JourneyToolbar = (props) => {
             {journeyEditor.list.length > 0 && journeyToolbar.show &&
                 <WaCard className="journey-toolbar lgs--toolbar wa-theme-lgs1920-on-map"
                         ref={_journeyToolbar}>
-                    <WaIcon className="grabber" name="grip-dots-vertical"/>
-
                     <JourneySelector onChange={newJourneySelection}
                                      single="true"
                                      closeOnOutsidePointerDown
@@ -259,32 +244,13 @@ export const JourneyToolbar = (props) => {
                                         onClick={maybeRotate}
                                     >
                                         {rotate.running && rotate.target?.instanceOf?.(CURRENT_JOURNEY)
-                                         ? (<WaIcon name={ROTATION_ICON} variant="regular" animation="spin"/>)
-                                         : (<WaIcon name={FOCUS_ICON} variant="regular"/>)
+                                        ? (<WaIcon name={ROTATION_ICON} variant="regular" animation="spin"/>)
+                                        : (<WaIcon name={FOCUS_ICON} variant="regular"/>)
                                         }
-                                    </WaButton>
-
-                                    <WaTooltip for="wander-journey-toolbar">{'Wander'}</WaTooltip>
-                                    <WaButton
-                                        id="wander-journey-toolbar"
-                                        variant="brand"
-                                        appearance="plain"
-                                        onClick={openWander}
-                                    >
-                                        <WaIcon name="person-walking" variant="regular"/>
                                     </WaButton>
                             </>
                         }
                     </>
-
-                    <WaTooltip for="close-journey-toolbar">{'Close'}</WaTooltip>
-                    <WaButton
-                        id="close-journey-toolbar"
-                        variant="brand"
-                        appearance="plain"
-                        className="close-lgs-toolbar" onClick={closeToolbar}>
-                        <WaIcon name={CLOSE_ICON} variant="regular"/>
-                    </WaButton>
                 </WaCard>
             }
         </>
