@@ -24,12 +24,17 @@ import {
 }                                      from '@web.awesome.me/webawesome-pro/dist/react'
 import * as turf                       from '@turf/helpers'
 import { UIToast }                     from '@Utils/UIToast'
+import { useManagedStylesheet }        from '@Utils/useManagedStylesheet'
 import { convert }                     from 'geo-coordinates-parser'
 import { useEffect, useRef, useState } from 'react'
 import { useSnapshot }                 from 'valtio'
-import './style.css'
+import geocodingStylesheetHref         from './style.css?url'
+
+const GEOCODING_STYLESHEET_ID = 'geocoding'
 
 export const GeocodingUI = () => {
+    useManagedStylesheet(GEOCODING_STYLESHEET_ID, geocodingStylesheetHref)
+
     const store = lgs.stores.main.components.geocoder
     const geocoder = useSnapshot(store)
     const address = useRef(null)
