@@ -208,7 +208,7 @@ export const normalizeTrackRenderStyle = (value = undefined, legacy = {}) => {
         dash:                {
             enabled:     dash.enabled === true,
             biColor,
-            color:       dash.color ?? color,
+            color,
             gapColor:    biColor ? visibleTrackDashGapColor(rawGapColor) : TRACK_RENDER_STYLE_TRANSPARENT_GAP_COLOR,
             dashLength,
             gapLength,
