@@ -15,6 +15,7 @@
  ******************************************************************************/
 
 import DrawerFooter from '@Components/DrawerFooter'
+import { FlythroughProgressBar } from '@Components/Flythrough/FlythroughProgressBar'
 import { LGSScrollbars } from '@Components/MainUI/LGSScrollbars'
 import PanelActions from '@Components/PanelsActions'
 import WaDrawer     from '@Components/WaDrawerNonModal'
@@ -27,9 +28,8 @@ import {
     FLYTHROUGH_PROGRESSION_BORDER_MAX_WIDTH, FLYTHROUGH_PROGRESSION_BORDER_MIN_WIDTH, FLYTHROUGH_PROGRESSION_FILL_MAX_WIDTH,
     FLYTHROUGH_PROGRESSION_FILL_MIN_WIDTH,
 } from '@Core/ui/flythrough/FlythroughProgressionStyle'
-import { km, UnitUtils } from '@Utils/UnitUtils'
 import {
-    WaButton, WaColorPicker, WaDivider, WaIcon, WaInput, WaNumberInput, WaOption, WaSelect, WaSlider, WaSwitch, WaTab,
+    WaColorPicker, WaDivider, WaIcon, WaInput, WaNumberInput, WaOption, WaSelect, WaSlider, WaSwitch, WaTab,
     WaTabGroup, WaTabPanel,
 } from '@web.awesome.me/webawesome-pro/dist/react'
 import { colord }          from 'colord'
@@ -47,8 +47,6 @@ const toOpaqueColorValue = value => {
     const color = colord(value ?? '#ffffff')
     return color.isValid() ? color.alpha(1).toHex() : '#ffffff'
 }
-
-const formatDistanceKm = value => (UnitUtils.convert(value ?? 0).to(km) ?? 0).toFixed(1)
 
 const FlythroughStyleField = ({label, children}) => (
     <div className="flythrough-style-field">
@@ -155,15 +153,11 @@ const FlythroughProgressionGroup = ({
 export const FlythroughDrawer = memo(() => {
     const {drawers: {open: drawerOpen}} = useSnapshot(lgs.stores.ui)
     ensureFlythroughSettings()
-    const flythroughState = useSnapshot(lgs.stores.ui.mainUI.flythrough)
     const flythroughSettings = useSnapshot(lgs.settings.ui.flythrough)
     const {drawer: drawerPlacement} = useSnapshot(lgs.editorSettingsProxy.menu)
     const swatches = useMemo(() => lgs.settings.getSwatches.list.join(';'), [])
     const journeySlug = lgs.theJourney?.slug
     const hasJourney = Boolean(journeySlug)
-    const coveredDistance = flythroughState.sample?.distanceFromStart
-        ?? (flythroughState.totalDistance ?? 0) * (flythroughState.progress ?? 0)
-    const progressPercent = ((flythroughState.progress ?? 0) * 100).toFixed(1)
     const progression = normalizeFlythroughProgressionStyle(flythroughSettings.progression)
     const fillColor = toOpaqueColorValue(progression.fill.color)
     const borderColor = toOpaqueColorValue(progression.border.color)
@@ -187,6 +181,18 @@ export const FlythroughDrawer = memo(() => {
         flythroughSettings.scope,
         journeySlug,
     ])
+
+    useEffect(() => {
+        if (drawerOpen !== FLYTHROUGH_DRAWER || !hasJourney) {
+            return
+        }
+
+        const flythroughRuntime = lgs.stores.ui.mainUI.flythrough
+        flythroughRuntime.toolbarVisible = true
+        if (!flythroughRuntime.active && !flythroughRuntime.playing && !flythroughRuntime.paused) {
+            __.ui.flythrough?.configure?.({progress: flythroughRuntime.progress ?? 0})
+        }
+    }, [drawerOpen, flythroughSettings.direction, flythroughSettings.duration, flythroughSettings.loop, flythroughSettings.scope, hasJourney])
 
     const refreshFlythrough = useCallback(() => {
         __.ui.flythrough?.refresh?.()
@@ -263,22 +269,6 @@ export const FlythroughDrawer = memo(() => {
                               },
                           })
     }, [progression.border.width, updateProgression])
-
-    const start = useCallback(() => {
-        __.ui.flythrough?.start()
-    }, [])
-
-    const pause = useCallback(() => {
-        __.ui.flythrough?.pause()
-    }, [])
-
-    const resume = useCallback(() => {
-        __.ui.flythrough?.resume()
-    }, [])
-
-    const stop = useCallback(() => {
-        __.ui.flythrough?.stop()
-    }, [])
 
     const handleRequestClose = useCallback((event) => {
         if (event.target.tagName !== 'WA-DRAWER') {
@@ -361,37 +351,7 @@ export const FlythroughDrawer = memo(() => {
                                                  </WaSwitch>
                                              </div>
 
-                                             <div className="flythrough-status">
-                                                 <span>{'Progress'}</span>
-                                                 <strong>{`${formatDistanceKm(coveredDistance)}/${formatDistanceKm(flythroughState.totalDistance)} km (${progressPercent}%)`}</strong>
-                                             </div>
-
-                                             <div className="flythrough-actions">
-                                                 {!flythroughState.playing && !flythroughState.paused &&
-                                                     <WaButton variant="brand" appearance="filled" onClick={start}>
-                                                         <WaIcon slot="start" name="play" variant="regular"/>
-                                                         {'Start'}
-                                                     </WaButton>
-                                                 }
-                                                 {flythroughState.playing &&
-                                                     <WaButton variant="brand" appearance="outlined" onClick={pause}>
-                                                         <WaIcon slot="start" name="pause" variant="regular"/>
-                                                         {'Pause'}
-                                                     </WaButton>
-                                                 }
-                                                 {flythroughState.paused &&
-                                                     <WaButton variant="brand" appearance="filled" onClick={resume}>
-                                                         <WaIcon slot="start" name="play" variant="regular"/>
-                                                         {'Resume'}
-                                                     </WaButton>
-                                                 }
-                                                 {(flythroughState.active || flythroughState.paused) &&
-                                                     <WaButton variant="neutral" appearance="outlined" onClick={stop}>
-                                                         <WaIcon slot="start" name="stop" variant="regular"/>
-                                                         {'Stop'}
-                                                     </WaButton>
-                                                 }
-                                             </div>
+                                             <FlythroughProgressBar className="flythrough-progress-bar-in-drawer"/>
                                          </div>
                                      </LGSScrollbars>
                                  </WaTabPanel>

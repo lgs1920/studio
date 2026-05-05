@@ -37,24 +37,6 @@
     gap: var(--wa-space-s, 0.75rem);
 }
 
-.flythrough-status {
-    align-items: center;
-    display: flex;
-    justify-content: space-between;
-    min-height: 2rem;
-}
-
-.flythrough-status strong,
-.flythrough-controls-progress {
-    font-variant-numeric: tabular-nums;
-}
-
-.flythrough-actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--wa-space-xs, 0.5rem);
-}
-
 .flythrough-empty-state {
     margin: 0;
     opacity: 0.72;
@@ -190,17 +172,75 @@
 .flythrough-controls {
     align-items: center;
     display: flex;
-    gap: 0.25rem;
-    min-height: 2.4rem;
-    padding: 0.2rem 0.35rem;
+    font-size: var(--lgs-font-size-s);
+    position: relative;
 }
 
-.flythrough-controls .grabber {
-    cursor: grab;
-    opacity: 0.7;
+.flythrough-controls::part(body) {
+    align-items: center;
+    display: flex;
+    flex-direction: row;
+    gap: 0;
 }
 
-.flythrough-controls-progress {
-    min-width: 3rem;
-    text-align: center;
+.flythrough-progress-bar {
+    align-items: center;
+    display: inline-flex;
+    flex: 0 0 auto;
+    font-size: var(--lgs-font-size-s);
+    gap: 0;
+    max-width: 100%;
+    min-height: calc(var(--lgs-dimension-s) - 2 * var(--lgs-gutter-xxs));
+}
+
+.flythrough-progress-segment,
+.flythrough-progress-settings {
+    align-items: center;
+    display: inline-flex;
+    min-height: calc(var(--lgs-dimension-s) - 2 * var(--lgs-gutter-xxs));
+    white-space: nowrap;
+}
+
+.flythrough-progress-segment {
+    border-right: 1px solid var(--lgs-card-on-map-border-color);
+    font-variant-numeric: tabular-nums;
+    margin-right: var(--lgs-gutter-s);
+    padding-inline-end: var(--lgs-gutter-s);
+}
+
+.flythrough-progress-segment:last-child {
+    border-right: none;
+    margin-right: 0;
+    padding-inline-end: 0;
+}
+
+.flythrough-progress-actions {
+    gap: 0;
+}
+
+.flythrough-progress-settings {
+    margin-left: 0;
+}
+
+.flythrough-progress-action::part(base) {
+    min-height: calc(var(--lgs-dimension-s) - 2 * var(--lgs-gutter-xxs));
+    min-width: calc(var(--lgs-dimension-s) - 2 * var(--lgs-gutter-xxs));
+    padding: 0;
+}
+
+.flythrough-progress-action wa-icon {
+    font-size: var(--lgs-font-size);
+}
+
+.flythrough-progress-bar-in-drawer {
+    align-self: flex-start;
+    flex-wrap: wrap;
+    row-gap: var(--lgs-gutter-xs, 0.25rem);
+}
+
+@media (max-width: 640px) {
+    .flythrough-progress-bar {
+        flex-wrap: wrap;
+        row-gap: var(--lgs-gutter-xs, 0.25rem);
+    }
 }

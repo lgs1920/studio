@@ -157,6 +157,7 @@ export class FlythroughMode {
             store.active = false
             store.playing = false
             store.paused = false
+            store.toolbarVisible = false
         }
         return sample
     }
@@ -208,10 +209,18 @@ export class FlythroughMode {
             this.#controller.on(FLYTHROUGH_EVENT_STOP, () => {
                 this.#setContinuousRender(false)
                 this.#renderer.clear()
+                const store = flythroughStore()
+                if (store) {
+                    store.toolbarVisible = false
+                }
             }),
             this.#controller.on(FLYTHROUGH_EVENT_END, () => {
                 this.#setContinuousRender(false)
                 this.#renderer.clear()
+                const store = flythroughStore()
+                if (store) {
+                    store.toolbarVisible = false
+                }
             }),
         )
     }

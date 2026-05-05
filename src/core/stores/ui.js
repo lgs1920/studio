@@ -84,6 +84,7 @@ export const ui = {
             sample:         null,
             markerRadius:   35,
             totalDistance:  0,
+            toolbarVisible: false,
             recordingSync:  false,
         },
     },
