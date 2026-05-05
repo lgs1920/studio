@@ -14,8 +14,8 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { SLOGAN }   from '@Core/constants'
-import { DateTime } from 'luxon'
+import { SLOGAN }          from '@Core/constants'
+import { formatBuildInfo } from '@Utils/BuildInfoUtils'
 
 export const StudioLogo = (props) => {
     let style = {}
@@ -38,8 +38,7 @@ export const StudioLogo = (props) => {
                                                                                 : 'normal'
     const src = `/assets/images/logo-lgs1920-studio${sizes[size]}.png`
 
-    const date = `${DateTime.fromMillis(lgs.build.date ?? Date.now()).toLocaleString(DateTime.DATE_MED)} \
-    ${DateTime.fromMillis(lgs.build.date ?? Date.now()).toLocaleString(DateTime.TIME_SIMPLE)}`
+    const date = formatBuildInfo(lgs.build)
 
     return (
         <div className={`main-logo signage-style ${size} ${addClass}`} style={style}>

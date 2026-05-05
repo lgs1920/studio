@@ -15,6 +15,7 @@
  ******************************************************************************/
 
 import { APP_EVENT, MILLIS, SECOND, SLOGAN }                 from '@Core/constants'
+import { formatBuildInfo }                                   from '@Utils/BuildInfoUtils'
 import { UIToast }                                           from '@Utils/UIToast'
 import { WaButton, WaIcon, WaPopup, WaSpinner } from '@web.awesome.me/webawesome-pro/dist/react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -27,20 +28,6 @@ const WELCOME_FALLBACK_IMAGE = '/assets/images/welcome-splash.png'
 const WELCOME_MAX_FOG_DURATION = 3 * MILLIS
 const WELCOME_FOG_UPDATE_INTERVAL = 100
 const WELCOME_EXIT_DURATION = 3000
-
-const formatBuildInfo = build => {
-    const rawBuild = build?.date ?? build?.buildTime ?? build?.id ?? build?.hash
-    if (!rawBuild) {
-        return new Date().toLocaleString()
-    }
-
-    const timestamp = Number(rawBuild)
-    if (Number.isFinite(timestamp)) {
-        return new Date(timestamp).toLocaleString()
-    }
-
-    return String(rawBuild)
-}
 
 export const WelcomeModal = ({initComplete = false, appReady = false, settingsReady = false, onEnter}) => {
     const enterHandled = useRef(false)
