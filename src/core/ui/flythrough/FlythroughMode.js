@@ -2,7 +2,7 @@
  *
  * This file is part of the LGS1920/studio project.
  *
- * File: WanderMode.js
+ * File: FlythroughMode.js
  *
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
@@ -14,20 +14,20 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { WanderCesiumRenderer } from './WanderCesiumRenderer'
+import { FlythroughCesiumRenderer } from './FlythroughCesiumRenderer'
 import {
-    WANDER_EVENT_END, WANDER_EVENT_PAUSE, WANDER_EVENT_RESUME, WANDER_EVENT_START, WANDER_EVENT_STOP,
-    WANDER_EVENT_UPDATE,
-    WanderPlaybackController,
-} from './WanderPlaybackController'
-import { WanderPathSampler, WANDER_SCOPE_VISIBLE_TRACKS } from './WanderPathSampler'
-import { getWanderSettings } from './WanderProgressionStyle'
+    FLYTHROUGH_EVENT_END, FLYTHROUGH_EVENT_PAUSE, FLYTHROUGH_EVENT_RESUME, FLYTHROUGH_EVENT_START, FLYTHROUGH_EVENT_STOP,
+    FLYTHROUGH_EVENT_UPDATE,
+    FlythroughPlaybackController,
+} from './FlythroughPlaybackController'
+import { FlythroughPathSampler, FLYTHROUGH_SCOPE_VISIBLE_TRACKS } from './FlythroughPathSampler'
+import { getFlythroughSettings } from './FlythroughProgressionStyle'
 
 const DEFAULT_DURATION = 60
 
-const wanderStore = () => globalThis.lgs?.stores?.ui?.mainUI?.wander
+const flythroughStore = () => globalThis.lgs?.stores?.ui?.mainUI?.flythrough
 
-export class WanderMode {
+export class FlythroughMode {
     #controller
     #renderer
     #sampler = null
@@ -35,8 +35,8 @@ export class WanderMode {
     #requestRenderMode = null
 
     constructor({
-                    controller = new WanderPlaybackController(),
-                    renderer = new WanderCesiumRenderer(),
+                    controller = new FlythroughPlaybackController(),
+                    renderer = new FlythroughCesiumRenderer(),
                 } = {}) {
         this.#controller = controller
         this.#renderer = renderer
@@ -64,19 +64,19 @@ export class WanderMode {
     }
 
     configure = (options = {}) => {
-        const store = wanderStore()
+        const store = flythroughStore()
         const journey = options.journey ?? globalThis.lgs?.theJourney
 
         if (!journey) {
             return null
         }
 
-        const wander = getWanderSettings()
-        const scope = options.scope ?? wander.scope ?? store?.scope ?? WANDER_SCOPE_VISIBLE_TRACKS
+        const flythrough = getFlythroughSettings()
+        const scope = options.scope ?? flythrough.scope ?? store?.scope ?? FLYTHROUGH_SCOPE_VISIBLE_TRACKS
         const trackSlug = options.trackSlug ?? globalThis.lgs?.theTrack?.slug ?? store?.trackSlug
-        const progression = options.progression ?? wander.progression
+        const progression = options.progression ?? flythrough.progression
 
-        this.#sampler = new WanderPathSampler({
+        this.#sampler = new FlythroughPathSampler({
             journey,
             scope,
             trackSlug,
@@ -93,9 +93,9 @@ export class WanderMode {
 
         this.#controller.configure({
             sampler:   this.#sampler,
-            duration:  options.duration ?? wander.duration ?? store?.duration ?? DEFAULT_DURATION,
-            direction: options.direction ?? wander.direction ?? store?.direction ?? 1,
-            loop:      options.loop ?? wander.loop ?? store?.loop ?? false,
+            duration:  options.duration ?? flythrough.duration ?? store?.duration ?? DEFAULT_DURATION,
+            direction: options.direction ?? flythrough.direction ?? store?.direction ?? 1,
+            loop:      options.loop ?? flythrough.loop ?? store?.loop ?? false,
             progress:  options.progress ?? store?.progress ?? 0,
         })
 
@@ -152,7 +152,7 @@ export class WanderMode {
     stop = (options = {}) => {
         const sample = this.#controller.stop(options)
         this.#renderer.clear()
-        const store = wanderStore()
+        const store = flythroughStore()
         if (store) {
             store.active = false
             store.playing = false
@@ -191,25 +191,25 @@ export class WanderMode {
 
     #bindRenderer = () => {
         this.#unbind.push(
-            this.#controller.on(WANDER_EVENT_START, detail => {
+            this.#controller.on(FLYTHROUGH_EVENT_START, detail => {
                 this.#setContinuousRender(true)
                 this.#renderer.show({sampler: detail.sampler})
                 this.#renderer.update(detail)
             }),
-            this.#controller.on(WANDER_EVENT_UPDATE, detail => this.#renderer.update(detail)),
-            this.#controller.on(WANDER_EVENT_PAUSE, detail => {
+            this.#controller.on(FLYTHROUGH_EVENT_UPDATE, detail => this.#renderer.update(detail)),
+            this.#controller.on(FLYTHROUGH_EVENT_PAUSE, detail => {
                 this.#renderer.update(detail)
                 this.#setContinuousRender(false)
             }),
-            this.#controller.on(WANDER_EVENT_RESUME, detail => {
+            this.#controller.on(FLYTHROUGH_EVENT_RESUME, detail => {
                 this.#setContinuousRender(true)
                 this.#renderer.update(detail)
             }),
-            this.#controller.on(WANDER_EVENT_STOP, () => {
+            this.#controller.on(FLYTHROUGH_EVENT_STOP, () => {
                 this.#setContinuousRender(false)
                 this.#renderer.clear()
             }),
-            this.#controller.on(WANDER_EVENT_END, () => {
+            this.#controller.on(FLYTHROUGH_EVENT_END, () => {
                 this.#setContinuousRender(false)
                 this.#renderer.clear()
             }),

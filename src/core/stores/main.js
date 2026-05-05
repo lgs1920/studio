@@ -114,7 +114,7 @@ export const main = {
             overlay: null,
         },
 
-        wanderer: {
+        flythroughRunner: {
             run:   false,
             pause: false,
             forward: true,

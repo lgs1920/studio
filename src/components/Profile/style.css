@@ -216,7 +216,7 @@ sl-input.widget-border-field-width::part(input) {
     justify-self: flex-end;
 }
 
-.profile-toolbar .wander-menu {
+.profile-toolbar .flythrough-menu {
     display: flex;
     gap: var(--lgs-gutter-xs);
 }

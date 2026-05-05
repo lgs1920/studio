@@ -2,7 +2,7 @@
  *
  * This file is part of the LGS1920/studio project.
  *
- * File: WanderButton.jsx
+ * File: FlythroughButton.jsx
  *
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
@@ -14,28 +14,28 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { WANDER_DRAWER } from '@Core/constants'
-import { WANDER_LABEL } from '@Core/ui/wander/WanderProgressionStyle'
+import { FLYTHROUGH_DRAWER } from '@Core/constants'
+import { FLYTHROUGH_LABEL } from '@Core/ui/flythrough/FlythroughProgressionStyle'
 import { WaButton, WaIcon, WaTooltip } from '@web.awesome.me/webawesome-pro/dist/react'
 import { useCallback } from 'react'
 import { useSnapshot } from 'valtio'
 
-export const WanderButton = (props) => {
+export const FlythroughButton = (props) => {
     const $video = lgs.stores.ui.video
     const video = useSnapshot($video)
 
     const handleClick = useCallback(() => {
-        __.ui.drawerManager.open(WANDER_DRAWER)
+        __.ui.drawerManager.open(FLYTHROUGH_DRAWER)
     }, [])
 
     return (
         <>
             {!video.recording && !video.preRecording && !video.snapshot &&
                 <>
-                    <WaTooltip for="launch-the-wander-editor" placement={props.tooltip}>{WANDER_LABEL}</WaTooltip>
+                    <WaTooltip for="launch-the-flythrough-editor" placement={props.tooltip}>{FLYTHROUGH_LABEL}</WaTooltip>
                     <WaButton
                         className="square-button"
-                        id="launch-the-wander-editor"
+                        id="launch-the-flythrough-editor"
                         onClick={handleClick}
                         variant="brand"
                         appearance="Filled"

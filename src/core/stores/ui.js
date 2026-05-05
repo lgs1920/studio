@@ -15,7 +15,7 @@
  ******************************************************************************/
 
 import { DEFAULT_PANORAMA_HEIGHT_OFFSET, DEFAULT_PANORAMA_PITCH } from '@Core/OrbitSettings'
-import { defaultWanderSettings } from '@Core/ui/wander/WanderProgressionStyle'
+import { defaultFlythroughSettings } from '@Core/ui/flythrough/FlythroughProgressionStyle'
 import { proxyMap } from 'valtio/utils'
 
 /**
@@ -73,8 +73,8 @@ export const ui = {
             rpm:          1,
             direction:    1,
         },
-        wander:              {
-            ...defaultWanderSettings(),
+        flythrough:              {
+            ...defaultFlythroughSettings(),
             active:        false,
             playing:       false,
             paused:        false,

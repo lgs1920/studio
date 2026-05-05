@@ -2,7 +2,7 @@
  *
  * This file is part of the LGS1920/studio project.
  *
- * File: Wanderer.js
+ * File: FlythroughRunner.js
  *
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
@@ -18,7 +18,7 @@ import { MILLIS }   from '@Core/constants'
 import { POIUtils } from '@Utils/cesium/POIUtils.js'
 import { Track }    from '../Track'
 
-export class Wanderer {
+export class FlythroughRunner {
     /**
      * Duration of a tour
      *
@@ -129,24 +129,24 @@ export class Wanderer {
     #step
     constructor(options) {
         // Singleton
-        if (Wanderer.instance) {
-            return Wanderer.instance
+        if (FlythroughRunner.instance) {
+            return FlythroughRunner.instance
         }
         this.forward = true
         this.marker ==null
         this.update(options)
         this.#current = 1
 
-        Wanderer.instance = this
+        FlythroughRunner.instance = this
 
     }
 
     /**
-     * Update the Wanderer
+     * Update the FlythroughRunner
      *
      * @param options
      *
-     * @return {Wanderer}
+     * @return {FlythroughRunner}
      *
      */
     update = (options) => {
@@ -266,7 +266,7 @@ export class Wanderer {
     }
 
     /**
-     * Run or continue the Wander runner
+     * Run or continue the Flythrough runner
      */
     play = () => {
         this.running = true
@@ -275,20 +275,20 @@ export class Wanderer {
     }
 
     /**
-     * Pause the Wander runner
+     * Pause the Flythrough runner
      */
     pause = () => {
         this.running = false
-        lgs.events.emit(Wanderer.PAUSE_TICK_EVENT, this.current, this.#pathway[this.#current]??null)
+        lgs.events.emit(FlythroughRunner.PAUSE_TICK_EVENT, this.current, this.#pathway[this.#current]??null)
     }
 
     /**
-     * Start the Wander runner
+     * Start the Flythrough runner
      */
     start = () => {
         this.#clearTimer()
         this.#current = this.#start
-        lgs.events.emit(Wanderer.START_TICK_EVENT, this.current, this.#pathway[this.#current]??null)
+        lgs.events.emit(FlythroughRunner.START_TICK_EVENT, this.current, this.#pathway[this.#current]??null)
         this.play()
         this.tick()
     }
@@ -305,7 +305,7 @@ export class Wanderer {
     resume = this.start
 
     /**
-     * Stop the Wander runner
+     * Stop the Flythrough runner
      */
     stop = () => {
         if (this.running) {
@@ -313,7 +313,7 @@ export class Wanderer {
             const track = Track.deserialize({object: Track.unproxify(lgs.theTrack)}) // TODO Check
             track.marker.hide()
             clearInterval(this.#timer)
-            lgs.events.emit(Wanderer.STOP_TICK_EVENT, this.current, this.#pathway[this.#current] ?? null)
+            lgs.events.emit(FlythroughRunner.STOP_TICK_EVENT, this.current, this.#pathway[this.#current] ?? null)
             this.#events.forEach((callback, event) => {
                 lgs.events.off(event)
             })
@@ -365,7 +365,7 @@ export class Wanderer {
                 }
             }
             // New tick, we dispatch a new event    //TODO Change 0 to series index
-            lgs.events.emit(Wanderer.UPDATE_TICK_EVENT, [lgs.theJourney.getTrackIndex(lgs.theTrack.slug),this.#current, this.#pathway[this.#current]??null])
+            lgs.events.emit(FlythroughRunner.UPDATE_TICK_EVENT, [lgs.theJourney.getTrackIndex(lgs.theTrack.slug),this.#current, this.#pathway[this.#current]??null])
         }
     }
 

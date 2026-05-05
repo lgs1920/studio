@@ -2,7 +2,7 @@
  *
  * This file is part of the LGS1920/studio project.
  *
- * File: wander-phase1.test.js
+ * File: flythrough-phase1.test.js
  *
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
@@ -16,10 +16,10 @@
 
 import { describe, expect, it } from 'vitest'
 import { proxy } from 'valtio'
-import { WanderPlaybackController, WANDER_EVENT_UPDATE } from '@Core/ui/wander/WanderPlaybackController'
+import { FlythroughPlaybackController, FLYTHROUGH_EVENT_UPDATE } from '@Core/ui/flythrough/FlythroughPlaybackController'
 import {
-    WanderPathSampler, WANDER_SCOPE_ALL_TRACKS, WANDER_SCOPE_CURRENT_TRACK, WANDER_SCOPE_VISIBLE_TRACKS,
-} from '@Core/ui/wander/WanderPathSampler'
+    FlythroughPathSampler, FLYTHROUGH_SCOPE_ALL_TRACKS, FLYTHROUGH_SCOPE_CURRENT_TRACK, FLYTHROUGH_SCOPE_VISIBLE_TRACKS,
+} from '@Core/ui/flythrough/FlythroughPathSampler'
 
 const makeTrack = ({
                        slug,
@@ -44,7 +44,7 @@ const makeJourney = tracks => ({
     tracks: new Map(tracks.map(track => [track.slug, track])),
 })
 
-describe('wander phase 1 sampler', () => {
+describe('flythrough phase 1 sampler', () => {
     it('samples a line by cumulative distance and includes the real first point', () => {
         const journey = makeJourney([
             makeTrack({
@@ -57,7 +57,7 @@ describe('wander phase 1 sampler', () => {
             }),
         ])
 
-        const sampler = new WanderPathSampler({journey})
+        const sampler = new FlythroughPathSampler({journey})
 
         expect(sampler.samples).toHaveLength(3)
         expect(sampler.atProgress(0).longitude).toBe(0)
@@ -91,7 +91,7 @@ describe('wander phase 1 sampler', () => {
             }),
         ])
 
-        const sampler = new WanderPathSampler({journey, scope: WANDER_SCOPE_ALL_TRACKS})
+        const sampler = new FlythroughPathSampler({journey, scope: FLYTHROUGH_SCOPE_ALL_TRACKS})
         const completed = sampler.completedSegmentsAt(0.75)
 
         expect(completed).toHaveLength(2)
@@ -114,7 +114,7 @@ describe('wander phase 1 sampler', () => {
             }),
         ])
 
-        const sampler = new WanderPathSampler({journey})
+        const sampler = new FlythroughPathSampler({journey})
         const remaining = sampler.remainingSegmentsAt(0.5)
 
         expect(remaining).toHaveLength(1)
@@ -134,17 +134,17 @@ describe('wander phase 1 sampler', () => {
         })
         const journey = makeJourney([visible, hidden])
 
-        expect(new WanderPathSampler({journey, scope: WANDER_SCOPE_VISIBLE_TRACKS}).samples[0].trackSlug)
+        expect(new FlythroughPathSampler({journey, scope: FLYTHROUGH_SCOPE_VISIBLE_TRACKS}).samples[0].trackSlug)
             .toBe(visible.slug)
-        expect(new WanderPathSampler({
+        expect(new FlythroughPathSampler({
             journey,
-            scope: WANDER_SCOPE_CURRENT_TRACK,
+            scope: FLYTHROUGH_SCOPE_CURRENT_TRACK,
             trackSlug: hidden.slug,
         }).samples[0].trackSlug).toBe(hidden.slug)
     })
 })
 
-describe('wander phase 1 playback controller', () => {
+describe('flythrough phase 1 playback controller', () => {
     it('advances from elapsed time rather than point count', () => {
         const journey = makeJourney([
             makeTrack({
@@ -152,10 +152,10 @@ describe('wander phase 1 playback controller', () => {
                 coordinates: [[0, 0, 0], [0.002, 0, 0]],
             }),
         ])
-        const sampler = new WanderPathSampler({journey})
+        const sampler = new FlythroughPathSampler({journey})
         const frames = []
         let now = 0
-        const controller = new WanderPlaybackController({
+        const controller = new FlythroughPlaybackController({
             requestFrame: callback => {
                 frames.push(callback)
                 return frames.length
@@ -165,7 +165,7 @@ describe('wander phase 1 playback controller', () => {
         })
         const updates = []
 
-        controller.on(WANDER_EVENT_UPDATE, detail => updates.push(detail.sample))
+        controller.on(FLYTHROUGH_EVENT_UPDATE, detail => updates.push(detail.sample))
         controller.configure({sampler, duration: 10})
         controller.start()
 
@@ -183,10 +183,10 @@ describe('wander phase 1 playback controller', () => {
                 coordinates: [[0, 0, 0], [0.002, 0, 0]],
             }),
         ])
-        const sampler = new WanderPathSampler({journey})
+        const sampler = new FlythroughPathSampler({journey})
         const frames = []
         let now = 0
-        const controller = new WanderPlaybackController({
+        const controller = new FlythroughPlaybackController({
             requestFrame: callback => {
                 frames.push(callback)
                 return frames.length
@@ -217,7 +217,7 @@ describe('wander phase 1 playback controller', () => {
                 coordinates: [[0, 0, 0], [0.002, 0, 0]],
             }),
         ])
-        const sampler = new WanderPathSampler({journey})
+        const sampler = new FlythroughPathSampler({journey})
         const previousLgs = globalThis.lgs
 
         globalThis.lgs = {
@@ -226,7 +226,7 @@ describe('wander phase 1 playback controller', () => {
             stores: {
                 ui: {
                     mainUI: {
-                        wander: proxy({
+                        flythrough: proxy({
                                           active: false,
                                           playing: false,
                                           paused: false,
@@ -239,7 +239,7 @@ describe('wander phase 1 playback controller', () => {
         }
 
         try {
-            const controller = new WanderPlaybackController({
+            const controller = new FlythroughPlaybackController({
                 requestFrame: () => 1,
                 cancelFrame:  () => {},
                 now:          () => 0,
@@ -247,7 +247,7 @@ describe('wander phase 1 playback controller', () => {
 
             expect(() => controller.configure({sampler, duration: 10})).not.toThrow()
             expect(() => controller.start()).not.toThrow()
-            expect(() => JSON.stringify(globalThis.lgs.stores.ui.mainUI.wander.sample)).not.toThrow()
+            expect(() => JSON.stringify(globalThis.lgs.stores.ui.mainUI.flythrough.sample)).not.toThrow()
         }
         finally {
             globalThis.lgs = previousLgs

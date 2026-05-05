@@ -2,7 +2,7 @@
  *
  * This file is part of the LGS1920/studio project.
  *
- * File: WanderControlsWidget.jsx
+ * File: FlythroughControlsWidget.jsx
  *
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
@@ -15,18 +15,18 @@
  ******************************************************************************/
 
 import { Widget } from '@Components/MainUI/widgets/Widget'
-import { LGS_TOOLBAR, WANDER_DRAWER } from '@Core/constants'
-import { WANDER_LABEL } from '@Core/ui/wander/WanderProgressionStyle'
+import { LGS_TOOLBAR, FLYTHROUGH_DRAWER } from '@Core/constants'
+import { FLYTHROUGH_LABEL } from '@Core/ui/flythrough/FlythroughProgressionStyle'
 import { WaButton, WaCard, WaIcon, WaTooltip } from '@web.awesome.me/webawesome-pro/dist/react'
 import { memo, useCallback, useMemo } from 'react'
 import { useSnapshot } from 'valtio'
 import './style.css'
 
-export const WanderControlsWidget = memo(() => {
-    const wander = useSnapshot(lgs.stores.ui.mainUI.wander)
+export const FlythroughControlsWidget = memo(() => {
+    const flythrough = useSnapshot(lgs.stores.ui.mainUI.flythrough)
 
     const config = useMemo(() => ({
-        id:             'wander-controls-widget',
+        id:             'flythrough-controls-widget',
         top:            '82%',
         left:           '50%',
         attachTo:       'bottom',
@@ -37,49 +37,49 @@ export const WanderControlsWidget = memo(() => {
         zIndex:         11800,
     }), [])
 
-    const pause = useCallback(() => __.ui.wander?.pause(), [])
-    const resume = useCallback(() => __.ui.wander?.resume(), [])
-    const stop = useCallback(() => __.ui.wander?.stop(), [])
+    const pause = useCallback(() => __.ui.flythrough?.pause(), [])
+    const resume = useCallback(() => __.ui.flythrough?.resume(), [])
+    const stop = useCallback(() => __.ui.flythrough?.stop(), [])
     const openSettings = useCallback(() => {
-        __.ui.drawerManager.open(WANDER_DRAWER)
+        __.ui.drawerManager.open(FLYTHROUGH_DRAWER)
     }, [])
 
-    if (!wander.active && !wander.paused) {
+    if (!flythrough.active && !flythrough.paused) {
         return null
     }
 
     return (
         <Widget isVisible={true} config={config}>
-            <WaCard className="wander-controls lgs--toolbar wa-theme-lgs1920-on-map">
+            <WaCard className="flythrough-controls lgs--toolbar wa-theme-lgs1920-on-map">
                 <WaIcon className="grabber" name="grip-dots-vertical"/>
-                <span className="wander-controls-progress">{`${Math.round((wander.progress ?? 0) * 100)}%`}</span>
+                <span className="flythrough-controls-progress">{`${Math.round((flythrough.progress ?? 0) * 100)}%`}</span>
 
-                {wander.playing ? (
+                {flythrough.playing ? (
                     <>
-                        <WaTooltip for="wander-controls-pause">{`Pause ${WANDER_LABEL}`}</WaTooltip>
-                        <WaButton id="wander-controls-pause" appearance="plain" variant="brand"
+                        <WaTooltip for="flythrough-controls-pause">{`Pause ${FLYTHROUGH_LABEL}`}</WaTooltip>
+                        <WaButton id="flythrough-controls-pause" appearance="plain" variant="brand"
                                   onClick={pause}>
                             <WaIcon name="pause" variant="regular"/>
                         </WaButton>
                     </>
                 ) : (
                      <>
-                         <WaTooltip for="wander-controls-resume">{`Resume ${WANDER_LABEL}`}</WaTooltip>
-                         <WaButton id="wander-controls-resume" appearance="plain" variant="brand"
+                         <WaTooltip for="flythrough-controls-resume">{`Resume ${FLYTHROUGH_LABEL}`}</WaTooltip>
+                         <WaButton id="flythrough-controls-resume" appearance="plain" variant="brand"
                                    onClick={resume}>
                              <WaIcon name="play" variant="regular"/>
                          </WaButton>
                      </>
                  )}
 
-                <WaTooltip for="wander-controls-settings">{`${WANDER_LABEL} settings`}</WaTooltip>
-                <WaButton id="wander-controls-settings" appearance="plain" variant="brand"
+                <WaTooltip for="flythrough-controls-settings">{`${FLYTHROUGH_LABEL} settings`}</WaTooltip>
+                <WaButton id="flythrough-controls-settings" appearance="plain" variant="brand"
                           onClick={openSettings}>
                     <WaIcon name="sliders" variant="regular"/>
                 </WaButton>
 
-                <WaTooltip for="wander-controls-stop">{`Stop ${WANDER_LABEL}`}</WaTooltip>
-                <WaButton id="wander-controls-stop" appearance="plain" variant="brand"
+                <WaTooltip for="flythrough-controls-stop">{`Stop ${FLYTHROUGH_LABEL}`}</WaTooltip>
+                <WaButton id="flythrough-controls-stop" appearance="plain" variant="brand"
                           onClick={stop}>
                     <WaIcon name="stop" variant="regular"/>
                 </WaButton>

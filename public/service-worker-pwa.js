@@ -276,6 +276,10 @@ const isRangeRequest = request => request.headers.has('range')
 
 const isPartialResponse = response => response?.status === 206
 
+const isHtmlResponse = response => /text\/html/i.test(response?.headers?.get('content-type') ?? '')
+
+const isNonNavigationHtmlResponse = (request, response) => !isNavigationRequest(request) && isHtmlResponse(response)
+
 function isFreshnessCriticalRequest(request) {
     const url = new URL(request.url)
     return url.origin === self.location.origin && FRESHNESS_CRITICAL_PATHS.has(url.pathname)
@@ -320,6 +324,10 @@ function isCacheableResponse(request, response) {
         return false
     }
 
+    if (isNonNavigationHtmlResponse(request, response)) {
+        return false
+    }
+
     if (response.status !== 200) {
         return false
     }
@@ -356,6 +364,12 @@ async function networkFirst(event, options = {}) {
 
     try {
         const networkResp = await fetch(withCacheMode(request, options.cacheMode))
+        if (isNonNavigationHtmlResponse(request, networkResp)) {
+            return new Response('Unexpected HTML response for application asset', {
+                status:     502,
+                statusText: 'Bad Gateway',
+            })
+        }
         if (isCacheableResponse(request, networkResp)) {
             event.waitUntil(cache.put(request, networkResp.clone()).catch(() => null))
         }
@@ -367,9 +381,11 @@ async function networkFirst(event, options = {}) {
             return cached
         }
 
-        const offlineFallback = await cache.match('/index.html')
-        if (offlineFallback) {
-            return offlineFallback
+        if (isNavigationRequest(request)) {
+            const offlineFallback = await cache.match('/index.html')
+            if (offlineFallback) {
+                return offlineFallback
+            }
         }
 
         return new Response('Offline', {status: 503, statusText: 'Offline'})
@@ -383,6 +399,9 @@ async function staleWhileRevalidate(event) {
     const networkPromise = (async () => {
         try {
             const networkResp = await fetch(request)
+            if (isNonNavigationHtmlResponse(request, networkResp)) {
+                return null
+            }
             if (isCacheableResponse(request, networkResp)) {
                 await cache.put(request, networkResp.clone()).catch(() => null)
             }

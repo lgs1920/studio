@@ -167,8 +167,8 @@ journey:
     # Default POI
     color: ''      # Color
     bgColor: '#ffffff99'   # Border
-    ## Wanderer mode
-    wanderer:
+    ## FlythroughRunner mode
+    flythroughRunner:
       color: '#1689CCff'
       border: '#FFF'
     ## Start POI
@@ -337,8 +337,8 @@ ui:
     defaultOpacity: 0.9
     opacity: 0.9   # 0.3 - 1
 
-  ## Wander
-  wander:
+  ## Flythrough
+  flythrough:
     duration: 60
     direction: 1
     loop: false

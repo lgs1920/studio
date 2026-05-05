@@ -2,7 +2,7 @@
  *
  * This file is part of the LGS1920/studio project.
  *
- * File: WanderDrawer.jsx
+ * File: FlythroughDrawer.jsx
  *
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
@@ -18,15 +18,15 @@ import DrawerFooter from '@Components/DrawerFooter'
 import { LGSScrollbars } from '@Components/MainUI/LGSScrollbars'
 import PanelActions from '@Components/PanelsActions'
 import WaDrawer     from '@Components/WaDrawerNonModal'
-import { WANDER_DRAWER } from '@Core/constants'
+import { FLYTHROUGH_DRAWER } from '@Core/constants'
 import {
-    WANDER_SCOPE_ALL_TRACKS, WANDER_SCOPE_CURRENT_TRACK, WANDER_SCOPE_VISIBLE_TRACKS,
-} from '@Core/ui/wander/WanderPathSampler'
+    FLYTHROUGH_SCOPE_ALL_TRACKS, FLYTHROUGH_SCOPE_CURRENT_TRACK, FLYTHROUGH_SCOPE_VISIBLE_TRACKS,
+} from '@Core/ui/flythrough/FlythroughPathSampler'
 import {
-    clampWanderNumber, ensureWanderSettings, WANDER_LABEL, normalizeWanderProgressionStyle,
-    WANDER_PROGRESSION_BORDER_MAX_WIDTH, WANDER_PROGRESSION_BORDER_MIN_WIDTH, WANDER_PROGRESSION_FILL_MAX_WIDTH,
-    WANDER_PROGRESSION_FILL_MIN_WIDTH,
-} from '@Core/ui/wander/WanderProgressionStyle'
+    clampFlythroughNumber, ensureFlythroughSettings, FLYTHROUGH_LABEL, normalizeFlythroughProgressionStyle,
+    FLYTHROUGH_PROGRESSION_BORDER_MAX_WIDTH, FLYTHROUGH_PROGRESSION_BORDER_MIN_WIDTH, FLYTHROUGH_PROGRESSION_FILL_MAX_WIDTH,
+    FLYTHROUGH_PROGRESSION_FILL_MIN_WIDTH,
+} from '@Core/ui/flythrough/FlythroughProgressionStyle'
 import { km, UnitUtils } from '@Utils/UnitUtils'
 import {
     WaButton, WaColorPicker, WaDivider, WaIcon, WaInput, WaNumberInput, WaOption, WaSelect, WaSlider, WaSwitch, WaTab,
@@ -50,14 +50,14 @@ const toOpaqueColorValue = value => {
 
 const formatDistanceKm = value => (UnitUtils.convert(value ?? 0).to(km) ?? 0).toFixed(1)
 
-const WanderStyleField = ({label, children}) => (
-    <div className="wander-style-field">
-        <span className="wander-style-label">{label}</span>
+const FlythroughStyleField = ({label, children}) => (
+    <div className="flythrough-style-field">
+        <span className="flythrough-style-label">{label}</span>
         {children}
     </div>
 )
 
-const mergeProgressionStyle = (current, updates) => normalizeWanderProgressionStyle({
+const mergeProgressionStyle = (current, updates) => normalizeFlythroughProgressionStyle({
     ...current,
     ...updates,
     fill:   {
@@ -70,11 +70,11 @@ const mergeProgressionStyle = (current, updates) => normalizeWanderProgressionSt
     },
 })
 
-const WanderColorField = ({label, color, opacity, swatches, onColorInput, onOpacityInput}) => (
-    <WanderStyleField label={label}>
-        <div className="wander-color-control">
+const FlythroughColorField = ({label, color, opacity, swatches, onColorInput, onOpacityInput}) => (
+    <FlythroughStyleField label={label}>
+        <div className="flythrough-color-control">
             <WaColorPicker
-                className="wander-color-picker"
+                className="flythrough-color-picker"
                 size="small"
                 aria-label={label}
                 value={color}
@@ -82,7 +82,7 @@ const WanderColorField = ({label, color, opacity, swatches, onColorInput, onOpac
                 onInput={onColorInput}
             />
             <WaSlider
-                className="wander-opacity-slider"
+                className="flythrough-opacity-slider"
                 size="small"
                 label="Opacity"
                 min="0"
@@ -97,13 +97,13 @@ const WanderColorField = ({label, color, opacity, swatches, onColorInput, onOpac
                 onInput={onOpacityInput}
             />
         </div>
-    </WanderStyleField>
+    </FlythroughStyleField>
 )
 
-const WanderWidthField = ({label, unit = 'm', value, min, max, step, onInput}) => (
-    <WanderStyleField label={`${label} (${unit})`}>
+const FlythroughWidthField = ({label, unit = 'm', value, min, max, step, onInput}) => (
+    <FlythroughStyleField label={`${label} (${unit})`}>
         <WaNumberInput
-            className="wander-width-input"
+            className="flythrough-width-input"
             size="small"
             appearance="filled"
             min={min}
@@ -112,10 +112,10 @@ const WanderWidthField = ({label, unit = 'm', value, min, max, step, onInput}) =
             value={value}
             onInput={onInput}
         />
-    </WanderStyleField>
+    </FlythroughStyleField>
 )
 
-const WanderProgressionGroup = ({
+const FlythroughProgressionGroup = ({
                                     title,
                                     color,
                                     opacity,
@@ -127,10 +127,10 @@ const WanderProgressionGroup = ({
                                     onOpacityInput,
                                     onWidthInput,
                                 }) => (
-    <section className="wander-style-subsection">
-        <h4 className="wander-style-subtitle">{title}</h4>
-        <div className="wander-style-control-group">
-            <WanderColorField
+    <section className="flythrough-style-subsection">
+        <h4 className="flythrough-style-subtitle">{title}</h4>
+        <div className="flythrough-style-control-group">
+            <FlythroughColorField
                 label="Color"
                 color={color}
                 opacity={opacity}
@@ -138,8 +138,8 @@ const WanderProgressionGroup = ({
                 onColorInput={onColorInput}
                 onOpacityInput={onOpacityInput}
             />
-            <div className="wander-style-field-grid is-single">
-                <WanderWidthField
+            <div className="flythrough-style-field-grid is-single">
+                <FlythroughWidthField
                     label="Width"
                     value={width}
                     min={widthMin}
@@ -152,19 +152,19 @@ const WanderProgressionGroup = ({
     </section>
 )
 
-export const WanderDrawer = memo(() => {
+export const FlythroughDrawer = memo(() => {
     const {drawers: {open: drawerOpen}} = useSnapshot(lgs.stores.ui)
-    ensureWanderSettings()
-    const wanderState = useSnapshot(lgs.stores.ui.mainUI.wander)
-    const wanderSettings = useSnapshot(lgs.settings.ui.wander)
+    ensureFlythroughSettings()
+    const flythroughState = useSnapshot(lgs.stores.ui.mainUI.flythrough)
+    const flythroughSettings = useSnapshot(lgs.settings.ui.flythrough)
     const {drawer: drawerPlacement} = useSnapshot(lgs.editorSettingsProxy.menu)
     const swatches = useMemo(() => lgs.settings.getSwatches.list.join(';'), [])
     const journeySlug = lgs.theJourney?.slug
     const hasJourney = Boolean(journeySlug)
-    const coveredDistance = wanderState.sample?.distanceFromStart
-        ?? (wanderState.totalDistance ?? 0) * (wanderState.progress ?? 0)
-    const progressPercent = ((wanderState.progress ?? 0) * 100).toFixed(1)
-    const progression = normalizeWanderProgressionStyle(wanderSettings.progression)
+    const coveredDistance = flythroughState.sample?.distanceFromStart
+        ?? (flythroughState.totalDistance ?? 0) * (flythroughState.progress ?? 0)
+    const progressPercent = ((flythroughState.progress ?? 0) * 100).toFixed(1)
+    const progression = normalizeFlythroughProgressionStyle(flythroughSettings.progression)
     const fillColor = toOpaqueColorValue(progression.fill.color)
     const borderColor = toOpaqueColorValue(progression.border.color)
     const fillOpacity = progression.fill.opacity
@@ -173,53 +173,53 @@ export const WanderDrawer = memo(() => {
     const borderWidth = progression.border.width
 
     useEffect(() => {
-        lgs.stores.ui.mainUI.wander.journeySlug = journeySlug
-        lgs.stores.ui.mainUI.wander.duration = wanderSettings.duration
-        lgs.stores.ui.mainUI.wander.direction = wanderSettings.direction
-        lgs.stores.ui.mainUI.wander.loop = wanderSettings.loop
-        lgs.stores.ui.mainUI.wander.scope = wanderSettings.scope
-        lgs.stores.ui.mainUI.wander.progression = normalizeWanderProgressionStyle(wanderSettings.progression)
+        lgs.stores.ui.mainUI.flythrough.journeySlug = journeySlug
+        lgs.stores.ui.mainUI.flythrough.duration = flythroughSettings.duration
+        lgs.stores.ui.mainUI.flythrough.direction = flythroughSettings.direction
+        lgs.stores.ui.mainUI.flythrough.loop = flythroughSettings.loop
+        lgs.stores.ui.mainUI.flythrough.scope = flythroughSettings.scope
+        lgs.stores.ui.mainUI.flythrough.progression = normalizeFlythroughProgressionStyle(flythroughSettings.progression)
     }, [
-        wanderSettings.direction,
-        wanderSettings.duration,
-        wanderSettings.loop,
-        wanderSettings.progression,
-        wanderSettings.scope,
+        flythroughSettings.direction,
+        flythroughSettings.duration,
+        flythroughSettings.loop,
+        flythroughSettings.progression,
+        flythroughSettings.scope,
         journeySlug,
     ])
 
-    const refreshWander = useCallback(() => {
-        __.ui.wander?.refresh?.()
+    const refreshFlythrough = useCallback(() => {
+        __.ui.flythrough?.refresh?.()
         lgs.scene?.requestRender?.()
     }, [])
 
     const updateProgression = useCallback((updates) => {
-        const nextProgression = mergeProgressionStyle(lgs.settings.ui.wander.progression, updates)
-        lgs.settings.ui.wander.progression = nextProgression
-        lgs.stores.ui.mainUI.wander.progression = nextProgression
-        refreshWander()
-    }, [refreshWander])
+        const nextProgression = mergeProgressionStyle(lgs.settings.ui.flythrough.progression, updates)
+        lgs.settings.ui.flythrough.progression = nextProgression
+        lgs.stores.ui.mainUI.flythrough.progression = nextProgression
+        refreshFlythrough()
+    }, [refreshFlythrough])
 
     const updateDuration = useCallback((event) => {
         const duration = clampDuration(event.target.value)
-        lgs.settings.ui.wander.duration = duration
-        lgs.stores.ui.mainUI.wander.duration = duration
+        lgs.settings.ui.flythrough.duration = duration
+        lgs.stores.ui.mainUI.flythrough.duration = duration
     }, [])
 
     const updateScope = useCallback((event) => {
-        lgs.settings.ui.wander.scope = event.target.value
-        lgs.stores.ui.mainUI.wander.scope = event.target.value
+        lgs.settings.ui.flythrough.scope = event.target.value
+        lgs.stores.ui.mainUI.flythrough.scope = event.target.value
     }, [])
 
     const updateDirection = useCallback((event) => {
         const direction = Number(event.target.value) < 0 ? -1 : 1
-        lgs.settings.ui.wander.direction = direction
-        lgs.stores.ui.mainUI.wander.direction = direction
+        lgs.settings.ui.flythrough.direction = direction
+        lgs.stores.ui.mainUI.flythrough.direction = direction
     }, [])
 
     const updateLoop = useCallback((event) => {
-        lgs.settings.ui.wander.loop = event.target.checked
-        lgs.stores.ui.mainUI.wander.loop = event.target.checked
+        lgs.settings.ui.flythrough.loop = event.target.checked
+        lgs.stores.ui.mainUI.flythrough.loop = event.target.checked
     }, [])
 
     const updateFillColor = useCallback((event) => {
@@ -227,17 +227,17 @@ export const WanderDrawer = memo(() => {
     }, [updateProgression])
 
     const updateFillOpacity = useCallback((event) => {
-        updateProgression({fill: {opacity: clampWanderNumber(event.target.value, progression.fill.opacity, 0, 1)}})
+        updateProgression({fill: {opacity: clampFlythroughNumber(event.target.value, progression.fill.opacity, 0, 1)}})
     }, [progression.fill.opacity, updateProgression])
 
     const updateFillWidth = useCallback((event) => {
         updateProgression({
                               fill: {
-                                  width: clampWanderNumber(
+                                  width: clampFlythroughNumber(
                                       event.target.value,
                                       progression.fill.width,
-                                      WANDER_PROGRESSION_FILL_MIN_WIDTH,
-                                      WANDER_PROGRESSION_FILL_MAX_WIDTH,
+                                      FLYTHROUGH_PROGRESSION_FILL_MIN_WIDTH,
+                                      FLYTHROUGH_PROGRESSION_FILL_MAX_WIDTH,
                                   ),
                               },
                           })
@@ -248,36 +248,36 @@ export const WanderDrawer = memo(() => {
     }, [updateProgression])
 
     const updateBorderOpacity = useCallback((event) => {
-        updateProgression({border: {opacity: clampWanderNumber(event.target.value, progression.border.opacity, 0, 1)}})
+        updateProgression({border: {opacity: clampFlythroughNumber(event.target.value, progression.border.opacity, 0, 1)}})
     }, [progression.border.opacity, updateProgression])
 
     const updateBorderWidth = useCallback((event) => {
         updateProgression({
                               border: {
-                                  width: clampWanderNumber(
+                                  width: clampFlythroughNumber(
                                       event.target.value,
                                       progression.border.width,
-                                      WANDER_PROGRESSION_BORDER_MIN_WIDTH,
-                                      WANDER_PROGRESSION_BORDER_MAX_WIDTH,
+                                      FLYTHROUGH_PROGRESSION_BORDER_MIN_WIDTH,
+                                      FLYTHROUGH_PROGRESSION_BORDER_MAX_WIDTH,
                                   ),
                               },
                           })
     }, [progression.border.width, updateProgression])
 
     const start = useCallback(() => {
-        __.ui.wander?.start()
+        __.ui.flythrough?.start()
     }, [])
 
     const pause = useCallback(() => {
-        __.ui.wander?.pause()
+        __.ui.flythrough?.pause()
     }, [])
 
     const resume = useCallback(() => {
-        __.ui.wander?.resume()
+        __.ui.flythrough?.resume()
     }, [])
 
     const stop = useCallback(() => {
-        __.ui.wander?.stop()
+        __.ui.flythrough?.stop()
     }, [])
 
     const handleRequestClose = useCallback((event) => {
@@ -289,7 +289,7 @@ export const WanderDrawer = memo(() => {
     }, [])
 
     const closeDrawer = useCallback((event) => {
-        if (window.isOK(event) && __.ui.drawerManager.isCurrent(WANDER_DRAWER)) {
+        if (window.isOK(event) && __.ui.drawerManager.isCurrent(FLYTHROUGH_DRAWER)) {
             __.ui.drawerManager.close()
         }
     }, [])
@@ -297,26 +297,26 @@ export const WanderDrawer = memo(() => {
     const drawerRoot = __.ui.drawerManager.drawerRoot
     const content = (
         <>
-            {drawerOpen === WANDER_DRAWER &&
+            {drawerOpen === FLYTHROUGH_DRAWER &&
                 <WaDrawer
-                    id={WANDER_DRAWER}
+                    id={FLYTHROUGH_DRAWER}
                     open={true}
                     onWaAfterHide={handleRequestClose}
                     onSlAfterHide={closeDrawer}
                     placement={drawerPlacement}
-                    className="wander-drawer"
+                    className="flythrough-drawer"
                 >
-                    <span slot="label" className="wander-drawer-title">
+                    <span slot="label" className="flythrough-drawer-title">
                         <WaIcon name="person-walking" variant="regular"/>
-                        {WANDER_LABEL}
+                        {FLYTHROUGH_LABEL}
                     </span>
                     <PanelActions/>
 
-                    <div className="wander-drawer-content">
+                    <div className="flythrough-drawer-content">
                         {!hasJourney ? (
-                            <p className="wander-empty-state">{`Import or select a journey to use ${WANDER_LABEL}.`}</p>
+                            <p className="flythrough-empty-state">{`Import or select a journey to use ${FLYTHROUGH_LABEL}.`}</p>
                         ) : (
-                             <WaTabGroup className="wander-tabs">
+                             <WaTabGroup className="flythrough-tabs">
                                  <WaTab slot="nav" panel="runner">
                                      <WaIcon name="person-walking" variant="regular"/>
                                      {'Runner'}
@@ -328,64 +328,64 @@ export const WanderDrawer = memo(() => {
 
                                  <WaTabPanel name="runner">
                                      <LGSScrollbars>
-                                         <div className="wander-tab-panel">
-                                             <div className="wander-fieldset">
+                                         <div className="flythrough-tab-panel">
+                                             <div className="flythrough-fieldset">
                                                  <WaInput
                                                      label="Duration"
                                                      size="small"
                                                      type="number"
                                                      min="1"
-                                                     value={wanderSettings.duration}
+                                                     value={flythroughSettings.duration}
                                                      onInput={updateDuration}
                                                      withoutSpinButtons
                                                  >
                                                      <span slot="end">{'s'}</span>
                                                  </WaInput>
 
-                                                 <WaSelect label="Scope" size="small" value={wanderSettings.scope}
+                                                 <WaSelect label="Scope" size="small" value={flythroughSettings.scope}
                                                            onChange={updateScope}>
-                                                     <WaOption value={WANDER_SCOPE_VISIBLE_TRACKS}>{'Visible tracks'}</WaOption>
-                                                     <WaOption value={WANDER_SCOPE_CURRENT_TRACK}>{'Current track'}</WaOption>
-                                                     <WaOption value={WANDER_SCOPE_ALL_TRACKS}>{'All tracks'}</WaOption>
+                                                     <WaOption value={FLYTHROUGH_SCOPE_VISIBLE_TRACKS}>{'Visible tracks'}</WaOption>
+                                                     <WaOption value={FLYTHROUGH_SCOPE_CURRENT_TRACK}>{'Current track'}</WaOption>
+                                                     <WaOption value={FLYTHROUGH_SCOPE_ALL_TRACKS}>{'All tracks'}</WaOption>
                                                  </WaSelect>
 
-                                                 <WaSelect label="Direction" size="small" value={String(wanderSettings.direction)}
+                                                 <WaSelect label="Direction" size="small" value={String(flythroughSettings.direction)}
                                                            onChange={updateDirection}>
                                                      <WaOption value="1">{'Forward'}</WaOption>
                                                      <WaOption value="-1">{'Reverse'}</WaOption>
                                                  </WaSelect>
 
-                                                 <WaSwitch size="xsmall" label-at-start checked={wanderSettings.loop}
+                                                 <WaSwitch size="xsmall" label-at-start checked={flythroughSettings.loop}
                                                            onInput={updateLoop}>
                                                      {'Loop'}
                                                  </WaSwitch>
                                              </div>
 
-                                             <div className="wander-status">
+                                             <div className="flythrough-status">
                                                  <span>{'Progress'}</span>
-                                                 <strong>{`${formatDistanceKm(coveredDistance)}/${formatDistanceKm(wanderState.totalDistance)} km (${progressPercent}%)`}</strong>
+                                                 <strong>{`${formatDistanceKm(coveredDistance)}/${formatDistanceKm(flythroughState.totalDistance)} km (${progressPercent}%)`}</strong>
                                              </div>
 
-                                             <div className="wander-actions">
-                                                 {!wanderState.playing && !wanderState.paused &&
+                                             <div className="flythrough-actions">
+                                                 {!flythroughState.playing && !flythroughState.paused &&
                                                      <WaButton variant="brand" appearance="filled" onClick={start}>
                                                          <WaIcon slot="start" name="play" variant="regular"/>
                                                          {'Start'}
                                                      </WaButton>
                                                  }
-                                                 {wanderState.playing &&
+                                                 {flythroughState.playing &&
                                                      <WaButton variant="brand" appearance="outlined" onClick={pause}>
                                                          <WaIcon slot="start" name="pause" variant="regular"/>
                                                          {'Pause'}
                                                      </WaButton>
                                                  }
-                                                 {wanderState.paused &&
+                                                 {flythroughState.paused &&
                                                      <WaButton variant="brand" appearance="filled" onClick={resume}>
                                                          <WaIcon slot="start" name="play" variant="regular"/>
                                                          {'Resume'}
                                                      </WaButton>
                                                  }
-                                                 {(wanderState.active || wanderState.paused) &&
+                                                 {(flythroughState.active || flythroughState.paused) &&
                                                      <WaButton variant="neutral" appearance="outlined" onClick={stop}>
                                                          <WaIcon slot="start" name="stop" variant="regular"/>
                                                          {'Stop'}
@@ -398,29 +398,29 @@ export const WanderDrawer = memo(() => {
 
                                  <WaTabPanel name="edit">
                                      <LGSScrollbars>
-                                         <div className="wander-tab-panel">
-                                             <section className="wander-progression-section">
+                                         <div className="flythrough-tab-panel">
+                                             <section className="flythrough-progression-section">
                                                  <h3>{'Progression'}</h3>
-                                                 <WanderProgressionGroup
+                                                 <FlythroughProgressionGroup
                                                      title="Fill"
                                                      color={fillColor}
                                                      opacity={fillOpacity}
                                                      width={fillWidth}
-                                                     widthMin={WANDER_PROGRESSION_FILL_MIN_WIDTH}
-                                                     widthMax={WANDER_PROGRESSION_FILL_MAX_WIDTH}
+                                                     widthMin={FLYTHROUGH_PROGRESSION_FILL_MIN_WIDTH}
+                                                     widthMax={FLYTHROUGH_PROGRESSION_FILL_MAX_WIDTH}
                                                      swatches={swatches}
                                                      onColorInput={updateFillColor}
                                                      onOpacityInput={updateFillOpacity}
                                                      onWidthInput={updateFillWidth}
                                                  />
                                                  <WaDivider/>
-                                                 <WanderProgressionGroup
+                                                 <FlythroughProgressionGroup
                                                      title="Border"
                                                      color={borderColor}
                                                      opacity={borderOpacity}
                                                      width={borderWidth}
-                                                     widthMin={WANDER_PROGRESSION_BORDER_MIN_WIDTH}
-                                                     widthMax={WANDER_PROGRESSION_BORDER_MAX_WIDTH}
+                                                     widthMin={FLYTHROUGH_PROGRESSION_BORDER_MIN_WIDTH}
+                                                     widthMax={FLYTHROUGH_PROGRESSION_BORDER_MAX_WIDTH}
                                                      swatches={swatches}
                                                      onColorInput={updateBorderColor}
                                                      onOpacityInput={updateBorderOpacity}

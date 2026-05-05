@@ -124,7 +124,7 @@ export class Profiler {
      */
     tooltipElevationVsDistance = ([serie, index, distance, elevation, time, point, distances, colors]) => {
 
-        if (__.ui.wander?.running || __.ui.wanderer.running) {
+        if (__.ui.flythrough?.running || __.ui.flythroughRunner.running) {
             return ''
         }
 
@@ -327,7 +327,7 @@ ${sprintf('%\' .1f', elevation ?? 0)} ${ELEVATION_UNITS[lgs.settings.unitSystem.
                     border:  {color: borderColor ?? 'transparent'},
                 },
             )
-            __.ui.wanderer.marker = lgs.theTrack.marker
+            __.ui.flythroughRunner.marker = lgs.theTrack.marker
         }
     }
 

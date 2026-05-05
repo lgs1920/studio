@@ -1,4 +1,4 @@
-.wander-drawer-content {
+.flythrough-drawer-content {
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
@@ -9,76 +9,76 @@
     padding: var(--wa-space-m, 1rem);
 }
 
-.wander-drawer-title {
+.flythrough-drawer-title {
     align-items: center;
     display: inline-flex;
     gap: var(--wa-space-xs, 0.5rem);
 }
 
-.wander-tabs::part(base) {
+.flythrough-tabs::part(base) {
     height: 100%;
     width: 100%;
 }
 
-.wander-tabs {
+.flythrough-tabs {
     flex: 1 1 auto;
     min-height: 0;
 }
 
-.wander-tab-panel {
+.flythrough-tab-panel {
     display: flex;
     flex-direction: column;
     gap: var(--wa-space-m, 1rem);
     padding-block: var(--wa-space-m, 1rem);
 }
 
-.wander-fieldset {
+.flythrough-fieldset {
     display: grid;
     gap: var(--wa-space-s, 0.75rem);
 }
 
-.wander-status {
+.flythrough-status {
     align-items: center;
     display: flex;
     justify-content: space-between;
     min-height: 2rem;
 }
 
-.wander-status strong,
-.wander-controls-progress {
+.flythrough-status strong,
+.flythrough-controls-progress {
     font-variant-numeric: tabular-nums;
 }
 
-.wander-actions {
+.flythrough-actions {
     display: flex;
     flex-wrap: wrap;
     gap: var(--wa-space-xs, 0.5rem);
 }
 
-.wander-empty-state {
+.flythrough-empty-state {
     margin: 0;
     opacity: 0.72;
 }
 
-.wander-progression-section {
+.flythrough-progression-section {
     display: grid;
     gap: var(--wa-space-s, 0.75rem);
 }
 
-.wander-progression-section h3 {
+.flythrough-progression-section h3 {
     font-size: 1rem;
     font-weight: 600;
     margin: 0;
 }
 
-.wander-style-subsection {
+.flythrough-style-subsection {
     box-sizing: border-box;
     display: grid;
     gap: var(--wa-space-s, 0.75rem);
     padding-left: var(--wa-space-s, 0.75rem);
 }
 
-.wander-style-subtitle {
+.flythrough-style-subtitle {
     color: var(--wa-form-control-label-color);
     font-size: var(--wa-form-control-label-font-size);
     font-weight: 600;
@@ -86,7 +86,7 @@
     margin: 0;
 }
 
-.wander-style-control-group {
+.flythrough-style-control-group {
     align-items: flex-start;
     display: flex;
     flex-direction: column;
@@ -95,7 +95,7 @@
     width: 100%;
 }
 
-.wander-style-field {
+.flythrough-style-field {
     align-items: flex-start;
     display: flex;
     flex-direction: column;
@@ -104,13 +104,13 @@
     width: 100%;
 }
 
-.wander-style-label {
+.flythrough-style-label {
     color: var(--wa-form-control-label-color);
     font-size: var(--wa-form-control-label-font-size);
     line-height: var(--wa-form-control-label-line-height);
 }
 
-.wander-color-control {
+.flythrough-color-control {
     align-items: center;
     display: flex;
     gap: var(--wa-space-s, 0.75rem);
@@ -119,16 +119,16 @@
     width: 100%;
 }
 
-.wander-color-picker {
+.flythrough-color-picker {
     min-width: 0;
 }
 
-.wander-opacity-slider {
+.flythrough-opacity-slider {
     justify-self: end;
     margin-left: auto;
 }
 
-.wander-opacity-slider[label-at-start][width-auto] {
+.flythrough-opacity-slider[label-at-start][width-auto] {
     display: grid;
     flex: 0 1 auto;
     gap: var(--wa-space-s, 0.75rem);
@@ -137,7 +137,7 @@
     width: auto;
 }
 
-.wander-style-field-grid {
+.flythrough-style-field-grid {
     align-self: flex-end;
     display: grid;
     gap: var(--wa-space-s, 0.75rem);
@@ -147,47 +147,47 @@
     width: 100%;
 }
 
-.wander-style-field-grid.is-single {
+.flythrough-style-field-grid.is-single {
     grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-.wander-style-field-grid.is-single .wander-style-field {
+.flythrough-style-field-grid.is-single .flythrough-style-field {
     grid-column: 2;
 }
 
-.wander-width-input {
+.flythrough-width-input {
     box-sizing: border-box;
     margin-right: 2px;
     min-width: 0;
     width: calc(100% - 2px);
 }
 
-.wander-width-input::part(input) {
+.flythrough-width-input::part(input) {
     text-align: center;
 }
 
-.wander-opacity-slider {
+.flythrough-opacity-slider {
     min-width: 0;
 }
 
 @media (max-width: 640px) {
-    .wander-color-control,
-    .wander-style-field-grid,
-    .wander-style-field-grid.is-single {
+    .flythrough-color-control,
+    .flythrough-style-field-grid,
+    .flythrough-style-field-grid.is-single {
         grid-template-columns: 1fr;
     }
 
-    .wander-style-field-grid.is-single .wander-style-field {
+    .flythrough-style-field-grid.is-single .flythrough-style-field {
         grid-column: 1;
     }
 
-    .wander-color-control {
+    .flythrough-color-control {
         align-items: stretch;
         display: grid;
     }
 }
 
-.wander-controls {
+.flythrough-controls {
     align-items: center;
     display: flex;
     gap: 0.25rem;
@@ -195,12 +195,12 @@
     padding: 0.2rem 0.35rem;
 }
 
-.wander-controls .grabber {
+.flythrough-controls .grabber {
     cursor: grab;
     opacity: 0.7;
 }
 
-.wander-controls-progress {
+.flythrough-controls-progress {
     min-width: 3rem;
     text-align: center;
 }

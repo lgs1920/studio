@@ -2,7 +2,7 @@
  *
  * This file is part of the LGS1920/studio project.
  *
- * File: WanderCesiumRenderer.js
+ * File: FlythroughCesiumRenderer.js
  *
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
@@ -18,9 +18,9 @@ import {
     Cartesian3, Cartographic, Color, CornerType, CustomDataSource, HeightReference,
 } from 'cesium'
 import { TrackUtils } from '@Utils/cesium/TrackUtils'
-import { getWanderSettings, normalizeWanderProgressionStyle } from './WanderProgressionStyle'
+import { getFlythroughSettings, normalizeFlythroughProgressionStyle } from './FlythroughProgressionStyle'
 
-export const WANDER_DATA_SOURCE_PREFIX = 'wander'
+export const FLYTHROUGH_DATA_SOURCE_PREFIX = 'flythrough'
 
 const DEFAULT_COLOR = '#ff6a00'
 const DEFAULT_BORDER = '#FFFFFF'
@@ -39,7 +39,7 @@ const finiteNumber = value => {
     return Number.isFinite(number) ? number : null
 }
 
-export class WanderCesiumRenderer {
+export class FlythroughCesiumRenderer {
     #source = null
     #cursor = null
     #lineEntities = new Map()
@@ -107,7 +107,7 @@ export class WanderCesiumRenderer {
             return null
         }
 
-        const name = `${WANDER_DATA_SOURCE_PREFIX}#${this.#journeySlug ?? 'current'}`
+        const name = `${FLYTHROUGH_DATA_SOURCE_PREFIX}#${this.#journeySlug ?? 'current'}`
         const existing = viewer.dataSources.getByName?.(name)?.[0]
         this.#source = existing ?? new CustomDataSource(name)
 
@@ -230,9 +230,9 @@ export class WanderCesiumRenderer {
     }
 
     #style = () => {
-        const settings = getWanderSettings()
-        const progression = normalizeWanderProgressionStyle(
-            globalThis.lgs?.stores?.ui?.mainUI?.wander?.progression ?? settings.progression,
+        const settings = getFlythroughSettings()
+        const progression = normalizeFlythroughProgressionStyle(
+            globalThis.lgs?.stores?.ui?.mainUI?.flythrough?.progression ?? settings.progression,
         )
         const fill = progression.fill
         const border = progression.border
@@ -307,7 +307,7 @@ export class WanderCesiumRenderer {
                                               material: trackLine.underlayMaterial,
                                               width:    trackLine.underlayWidth,
                                               zIndex:   REMAINING_TRACK_Z_INDEX_UNDERLAY,
-                                              name:     'Wander remaining track underlay',
+                                              name:     'Flythrough remaining track underlay',
                                           })
             }
 
@@ -319,7 +319,7 @@ export class WanderCesiumRenderer {
                                           material: trackLine.mainMaterial,
                                           width:    trackLine.mainWidth,
                                           zIndex:   REMAINING_TRACK_Z_INDEX_MAIN,
-                                          name:     'Wander remaining track',
+                                          name:     'Flythrough remaining track',
                                       })
         })
 
@@ -350,7 +350,7 @@ export class WanderCesiumRenderer {
             this.#cursor = {
                 border: source.entities.add({
                     id:       `${source.name}#cursor#border`,
-                    name:     'Wander cursor border',
+                    name:     'Flythrough cursor border',
                     position: Cartesian3.fromDegrees(sample.longitude, sample.latitude, cursorHeight),
                     ellipse:  {
                         semiMajorAxis: radius + borderWidth,
@@ -361,7 +361,7 @@ export class WanderCesiumRenderer {
                 }),
                 fill:   source.entities.add({
                     id:       `${source.name}#cursor#fill`,
-                    name:     'Wander cursor',
+                    name:     'Flythrough cursor',
                     position: Cartesian3.fromDegrees(sample.longitude, sample.latitude, cursorHeight + 0.1),
                     ellipse:  {
                         semiMajorAxis: radius,
@@ -412,7 +412,7 @@ export class WanderCesiumRenderer {
             if (!entities) {
                 const border = source.entities.add({
                     id:       `${source.name}#completed#${segment.key}#border`,
-                    name:     'Wander completed track border',
+                    name:     'Flythrough completed track border',
                     corridor: {
                         positions,
                         width:      width + (borderWidth * 2),
@@ -424,7 +424,7 @@ export class WanderCesiumRenderer {
                 })
                 const fill = source.entities.add({
                     id:       `${source.name}#completed#${segment.key}#fill`,
-                    name:     'Wander completed track',
+                    name:     'Flythrough completed track',
                     corridor: {
                         positions,
                         width,

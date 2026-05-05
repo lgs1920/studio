@@ -515,9 +515,9 @@ body.mobile .rotation-widget-body {
 }
 
 /***************************************
- * Wander Controls
+ * Flythrough Controls
  */
-.wanderDuration {
+.flythroughDuration {
     width: 7rem;
 }
 

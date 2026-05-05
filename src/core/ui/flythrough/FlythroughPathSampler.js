@@ -2,7 +2,7 @@
  *
  * This file is part of the LGS1920/studio project.
  *
- * File: WanderPathSampler.js
+ * File: FlythroughPathSampler.js
  *
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
@@ -19,9 +19,9 @@ import { getTrackRenderContent } from '@Utils/cesium/trackRenderSmoothing'
 
 const LINE_STRING = 'LineString'
 const MULTI_LINE_STRING = 'MultiLineString'
-export const WANDER_SCOPE_VISIBLE_TRACKS = 'visible-tracks'
-export const WANDER_SCOPE_CURRENT_TRACK = 'current-track'
-export const WANDER_SCOPE_ALL_TRACKS = 'all-tracks'
+export const FLYTHROUGH_SCOPE_VISIBLE_TRACKS = 'visible-tracks'
+export const FLYTHROUGH_SCOPE_CURRENT_TRACK = 'current-track'
+export const FLYTHROUGH_SCOPE_ALL_TRACKS = 'all-tracks'
 
 const finiteNumber = value => {
     if (value === null || value === undefined || value === '') {
@@ -114,9 +114,9 @@ const interpolateSample = (start, end, targetDistance, totalDistance) => {
     }
 }
 
-export class WanderPathSampler {
+export class FlythroughPathSampler {
     #journey = null
-    #scope = WANDER_SCOPE_VISIBLE_TRACKS
+    #scope = FLYTHROUGH_SCOPE_VISIBLE_TRACKS
     #trackSlug = null
     #includeHiddenTracks = false
     #samples = []
@@ -173,11 +173,11 @@ export class WanderPathSampler {
         const tracks = Array.from(this.#journey?.tracks?.values?.() ?? [])
             .map((track, index) => ({track, index}))
 
-        if (this.#scope === WANDER_SCOPE_ALL_TRACKS) {
+        if (this.#scope === FLYTHROUGH_SCOPE_ALL_TRACKS) {
             return tracks
         }
 
-        if (this.#scope === WANDER_SCOPE_CURRENT_TRACK) {
+        if (this.#scope === FLYTHROUGH_SCOPE_CURRENT_TRACK) {
             const currentTrackSlug = this.#trackSlug ?? globalThis.lgs?.theTrack?.slug
             const current = tracks.filter(({track}) => track?.slug === currentTrackSlug)
             if (current.length > 0) {
@@ -201,7 +201,7 @@ export class WanderPathSampler {
         let cumulativeDistance = 0
 
         selectedTracks.forEach(({track, index: trackIndex}) => {
-            const coordinateSegments = WanderPathSampler.coordinateSegmentsFromTrack(track)
+            const coordinateSegments = FlythroughPathSampler.coordinateSegmentsFromTrack(track)
 
             coordinateSegments.forEach((coordinates, segmentIndex) => {
                 const points = coordinates.map(pointFromCoordinate).filter(Boolean)
@@ -377,14 +377,14 @@ export class WanderPathSampler {
         const segmentSamples = this.#samples.slice(segment.startIndex, segment.endIndex + 1)
         segmentSamples.forEach(sample => {
             if (sample.distanceFromStart <= targetDistance) {
-                coordinates.push(WanderPathSampler.sampleCoordinates(sample))
+                coordinates.push(FlythroughPathSampler.sampleCoordinates(sample))
             }
         })
 
         if (targetDistance < segment.endDistance) {
             const interpolated = this.#interpolateInSegment(segmentSamples, targetDistance)
             const last = coordinates[coordinates.length - 1]
-            const next = WanderPathSampler.sampleCoordinates(interpolated)
+            const next = FlythroughPathSampler.sampleCoordinates(interpolated)
             if (!last || last[0] !== next[0] || last[1] !== next[1] || last[2] !== next[2]) {
                 coordinates.push(next)
             }
@@ -402,12 +402,12 @@ export class WanderPathSampler {
         const segmentSamples = this.#samples.slice(segment.startIndex, segment.endIndex + 1)
 
         if (targetDistance > segment.startDistance) {
-            coordinates.push(WanderPathSampler.sampleCoordinates(this.#interpolateInSegment(segmentSamples, targetDistance)))
+            coordinates.push(FlythroughPathSampler.sampleCoordinates(this.#interpolateInSegment(segmentSamples, targetDistance)))
         }
 
         segmentSamples.forEach(sample => {
             if (sample.distanceFromStart >= targetDistance) {
-                const next = WanderPathSampler.sampleCoordinates(sample)
+                const next = FlythroughPathSampler.sampleCoordinates(sample)
                 const last = coordinates[coordinates.length - 1]
                 if (!last || last[0] !== next[0] || last[1] !== next[1] || last[2] !== next[2]) {
                     coordinates.push(next)

@@ -48,8 +48,8 @@ import { JourneyEditor }       from './ui/JourneyEditor'
 import { PanelManager }        from './ui/panels/PanelManager'
 import { Profiler }            from './ui/Profiler'
 import { SceneManager }        from './ui/SceneManager'
-import { Wanderer }    from './ui/Wanderer'
-import { WanderMode }      from './ui/wander/WanderMode'
+import { FlythroughRunner }    from './ui/FlythroughRunner'
+import { FlythroughMode }      from './ui/flythrough/FlythroughMode'
 
 export class LGS1920Context {
     /** @type {Proxy} */
@@ -398,8 +398,8 @@ export class LGS1920Context {
             journey: new JourneyEditor(),
         }
 
-        __.ui.wanderer = new Wanderer()
-        __.ui.wander = new WanderMode()
+        __.ui.flythroughRunner = new FlythroughRunner()
+        __.ui.flythrough = new FlythroughMode()
         __.ui.cameraManager = new CameraManager()
         __.ui.drawerManager = new PanelManager()
         __.ui.sceneManager = new SceneManager()

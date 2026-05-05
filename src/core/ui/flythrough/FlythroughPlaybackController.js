@@ -2,7 +2,7 @@
  *
  * This file is part of the LGS1920/studio project.
  *
- * File: WanderPlaybackController.js
+ * File: FlythroughPlaybackController.js
  *
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
@@ -14,19 +14,19 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-export const WANDER_EVENT_START = 'wander/start'
-export const WANDER_EVENT_UPDATE = 'wander/update'
-export const WANDER_EVENT_PAUSE = 'wander/pause'
-export const WANDER_EVENT_RESUME = 'wander/resume'
-export const WANDER_EVENT_STOP = 'wander/stop'
-export const WANDER_EVENT_END = 'wander/end'
-export const WANDER_EVENTS = [
-    WANDER_EVENT_START,
-    WANDER_EVENT_UPDATE,
-    WANDER_EVENT_PAUSE,
-    WANDER_EVENT_RESUME,
-    WANDER_EVENT_STOP,
-    WANDER_EVENT_END,
+export const FLYTHROUGH_EVENT_START = 'flythrough/start'
+export const FLYTHROUGH_EVENT_UPDATE = 'flythrough/update'
+export const FLYTHROUGH_EVENT_PAUSE = 'flythrough/pause'
+export const FLYTHROUGH_EVENT_RESUME = 'flythrough/resume'
+export const FLYTHROUGH_EVENT_STOP = 'flythrough/stop'
+export const FLYTHROUGH_EVENT_END = 'flythrough/end'
+export const FLYTHROUGH_EVENTS = [
+    FLYTHROUGH_EVENT_START,
+    FLYTHROUGH_EVENT_UPDATE,
+    FLYTHROUGH_EVENT_PAUSE,
+    FLYTHROUGH_EVENT_RESUME,
+    FLYTHROUGH_EVENT_STOP,
+    FLYTHROUGH_EVENT_END,
 ]
 
 const DEFAULT_DURATION = 60
@@ -39,7 +39,7 @@ const safeDuration = duration => {
     return Number.isFinite(numeric) && numeric > 0 ? numeric : DEFAULT_DURATION
 }
 
-export class WanderPlaybackController {
+export class FlythroughPlaybackController {
     #sampler = null
     #duration = DEFAULT_DURATION
     #direction = 1
@@ -71,7 +71,7 @@ export class WanderPlaybackController {
         this.#requestFrame = requestFrame
         this.#cancelFrame = cancelFrame
         this.#now = now
-        WANDER_EVENTS.forEach(event => this.#listeners.set(event, new Set()))
+        FLYTHROUGH_EVENTS.forEach(event => this.#listeners.set(event, new Set()))
     }
 
     configure = ({
@@ -152,8 +152,8 @@ export class WanderPlaybackController {
 
         const sample = this.currentSample()
         this.#syncStore(sample)
-        this.#emit(WANDER_EVENT_START, sample)
-        this.#emit(WANDER_EVENT_UPDATE, sample)
+        this.#emit(FLYTHROUGH_EVENT_START, sample)
+        this.#emit(FLYTHROUGH_EVENT_UPDATE, sample)
         this.#schedule()
         return sample
     }
@@ -168,7 +168,7 @@ export class WanderPlaybackController {
         this.#cancelCurrentFrame()
         const sample = this.currentSample()
         this.#syncStore(sample)
-        this.#emit(WANDER_EVENT_PAUSE, sample)
+        this.#emit(FLYTHROUGH_EVENT_PAUSE, sample)
         return sample
     }
 
@@ -185,7 +185,7 @@ export class WanderPlaybackController {
         this.#paused = false
         const sample = this.currentSample()
         this.#syncStore(sample)
-        this.#emit(WANDER_EVENT_RESUME, sample)
+        this.#emit(FLYTHROUGH_EVENT_RESUME, sample)
         this.#schedule()
         return sample
     }
@@ -205,7 +205,7 @@ export class WanderPlaybackController {
         const sample = this.currentSample()
         this.#syncStore(sample)
         if (emit) {
-            this.#emit(WANDER_EVENT_STOP, sample)
+            this.#emit(FLYTHROUGH_EVENT_STOP, sample)
         }
         return sample
     }
@@ -217,7 +217,7 @@ export class WanderPlaybackController {
         }
         const sample = this.currentSample()
         this.#syncStore(sample)
-        this.#emit(WANDER_EVENT_UPDATE, sample)
+        this.#emit(FLYTHROUGH_EVENT_UPDATE, sample)
         return sample
     }
 
@@ -260,7 +260,7 @@ export class WanderPlaybackController {
             this.#progress = this.#progressFromElapsed(elapsed)
             const sample = this.currentSample()
             this.#syncStore(sample)
-            this.#emit(WANDER_EVENT_UPDATE, sample)
+            this.#emit(FLYTHROUGH_EVENT_UPDATE, sample)
             globalThis.lgs?.scene?.requestRender?.()
 
             if (reachedEnd) {
@@ -275,13 +275,13 @@ export class WanderPlaybackController {
                 this.#running = false
                 this.#paused = false
                 this.#frame = null
-                this.#emit(WANDER_EVENT_END, this.currentSample())
+                this.#emit(FLYTHROUGH_EVENT_END, this.currentSample())
                 this.#syncStore(this.currentSample())
                 return
             }
         }
         catch (error) {
-            console.error('[WanderPlaybackController] Tick failed.', error)
+            console.error('[FlythroughPlaybackController] Tick failed.', error)
         }
 
         this.#schedule()
@@ -306,19 +306,19 @@ export class WanderPlaybackController {
                 callback(detail)
             }
             catch (error) {
-                console.error(`[WanderPlaybackController] Listener failed for "${event}".`, error)
+                console.error(`[FlythroughPlaybackController] Listener failed for "${event}".`, error)
             }
         })
         try {
             globalThis.lgs?.events?.emit?.(event, detail)
         }
         catch (error) {
-            console.error(`[WanderPlaybackController] Global event failed for "${event}".`, error)
+            console.error(`[FlythroughPlaybackController] Global event failed for "${event}".`, error)
         }
     }
 
     #syncStore = (sample) => {
-        const store = globalThis.lgs?.stores?.ui?.mainUI?.wander
+        const store = globalThis.lgs?.stores?.ui?.mainUI?.flythrough
         if (!store) {
             return
         }

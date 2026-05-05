@@ -29,9 +29,9 @@ import { VideoButton }       from '@Components/MainUI/video/VideoButton'
 import { VideoDownloadAndShareDialog } from '@Components/MainUI/video/VideoDownloadAndShareDialog'
 import { TextButton }        from '@Components/Text/TextButton'
 import { TracksEditor }                         from '@Components/TracksEditor/TracksEditor'
-import { WanderButton }         from '@Components/Wander/WanderButton'
-import { WanderControlsWidget } from '@Components/Wander/WanderControlsWidget'
-import { WanderDrawer }         from '@Components/Wander/WanderDrawer'
+import { FlythroughButton }         from '@Components/Flythrough/FlythroughButton'
+import { FlythroughControlsWidget } from '@Components/Flythrough/FlythroughControlsWidget'
+import { FlythroughDrawer }         from '@Components/Flythrough/FlythroughDrawer'
 import {
     BOTTOM, END, EVENTS, MENU_BOTTOM_END, MENU_BOTTOM_START, MENU_END_END, MENU_END_START, MENU_START_END,
     MENU_START_START, SCENE_MODE_2D, SECOND, START, TOP,
@@ -246,13 +246,13 @@ export const MainUI = memo(() => {
                                 <RotateButton tooltip={toolBar.fromStart ? 'left' : 'right'}/>
                                 {!videoCaptureActive && <FullScreenButton tooltip={toolBar.fromStart ? 'left' : 'right'}/>}
                                 <VideoButton tooltip={toolBar.fromStart ? 'left' : 'right'}/>
-                                <WanderButton tooltip={toolBar.fromStart ? 'left' : 'right'}/>
+                                <FlythroughButton tooltip={toolBar.fromStart ? 'left' : 'right'}/>
                             </div>
                         </div>
                         {geocoderDialog.mounted && <GeocodingWidget/>}
                         <RotationWidget/>
                         <PanoramaWidget/>
-                        <WanderControlsWidget/>
+                        <FlythroughControlsWidget/>
                     </>
                 )}
 
@@ -277,7 +277,7 @@ export const MainUI = memo(() => {
                 <SettingsPanel/>
                 <LayersPanel/>
                 <TracksEditor/>
-                <WanderDrawer/>
+                <FlythroughDrawer/>
                 <MapPOIEditPanel/>
                 <WidgetEditorPanel/>
             </div>

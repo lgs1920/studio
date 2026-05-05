@@ -2,7 +2,7 @@
  *
  * This file is part of the LGS1920/studio project.
  *
- * File: WanderUtils.js
+ * File: FlythroughUtils.js
  *
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
@@ -15,43 +15,43 @@
  ******************************************************************************/
 
 import { Track }    from '@Core/Track'
-import { Wanderer } from '@Core/ui/Wanderer.js'
+import { FlythroughRunner } from '@Core/ui/FlythroughRunner.js'
 
-export const WANDER_MODE_MARKER = 'wander-mode'
+export const FLYTHROUGH_MODE_MARKER = 'flythrough-mode'
 
-export class WanderUtils {
+export class FlythroughUtils {
 
-    static initWanderMode = () => {
-        if (__.ui.wander?.start) {
-            __.ui.wander.start()
+    static initFlythroughMode = () => {
+        if (__.ui.flythrough?.start) {
+            __.ui.flythrough.start()
             return
         }
 
-        __.ui.wanderer.update({
-            coordinates:__.ui.wanderer.prepareData(),
-                                  duration: parseInt(lgs.stores.main.components.wanderer.duration),
+        __.ui.flythroughRunner.update({
+            coordinates:__.ui.flythroughRunner.prepareData(),
+                                  duration: parseInt(lgs.stores.main.components.flythroughRunner.duration),
             events: new Map(
                 [
                     // args[0] = index,
                     // args[1] = {longitude,latitude,height}
 
-                     [Wanderer.START_TICK_EVENT, () => {
+                     [FlythroughRunner.START_TICK_EVENT, () => {
 
                      }],
-                     [Wanderer.PAUSE_TICK_EVENT, (args) => {
+                     [FlythroughRunner.PAUSE_TICK_EVENT, (args) => {
                          const [serie, index] = args
                          __.ui.profiler.updateChartMarker(serie,index)
 
                      }],
-                    [Wanderer.UPDATE_TICK_EVENT, async (args) => {
+                    [FlythroughRunner.UPDATE_TICK_EVENT, async (args) => {
                        const [serie,index,point] =args
                         lgs.theTrack = Track.deserialize({object: Track.unproxify(Array.from(lgs.theJourney.tracks.values())[serie])}) // TODO Ameliorer
                        await  lgs.theTrack.marker.showOnTrack([point.longitude,point.latitude, point.height])
                        __.ui.profiler.updateChartMarker(serie,index)
                     }],
-                    [Wanderer.STOP_TICK_EVENT, () => {
+                    [FlythroughRunner.STOP_TICK_EVENT, () => {
                        // Change UI
-                        lgs.stores.main.components.wanderer.run = undefined
+                        lgs.stores.main.components.flythroughRunner.run = undefined
                     }],
                 ]
             ),

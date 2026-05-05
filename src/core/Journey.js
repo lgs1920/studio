@@ -64,7 +64,7 @@ export class Journey extends MapElement {
     cameraOrigin = {}
     rotation = {}
     panorama = {}
-    wander = {}
+    flythrough = {}
 
     hasElevation = false
     hasTime = false

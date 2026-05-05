@@ -14,7 +14,7 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { CURRENT_MAP_POINT, CURRENT_POI, SCENE_MODE_2D, VIDEO_CROP_ZONE, WANDER_DRAWER } from '@Core/constants'
+import { CURRENT_MAP_POINT, CURRENT_POI, SCENE_MODE_2D, VIDEO_CROP_ZONE, FLYTHROUGH_DRAWER } from '@Core/constants'
 import { hasActiveAppShortcutBlocker } from '@Core/events/shortcutBlockers'
 import { MapTarget } from '@Core/MapTarget'
 import { getOrbitSettings, setOrbitStoreSettings } from '@Core/OrbitSettings'
@@ -208,9 +208,9 @@ const openJourneyImporter = () => {
     return true
 }
 
-const openWanderManagement = () => {
+const openFlythroughManagement = () => {
     lgs.stores.ui.mainUI.callForActions.active = false
-    __.ui.drawerManager?.open?.(WANDER_DRAWER)
+    __.ui.drawerManager?.open?.(FLYTHROUGH_DRAWER)
     return true
 }
 
@@ -616,11 +616,11 @@ export const SHORTCUTS_CATALOG = [
         scope:       'App',
     },
     {
-        action:      'Show Wander controls',
-        description: 'Opens the Wander management drawer.',
-        id:          'wander-management-show',
+        action:      'Show Flythrough controls',
+        description: 'Opens the Flythrough management drawer.',
+        id:          'flythrough-management-show',
         keys:        ['Alt+Shift+W'],
-        scope:       'Wander mode',
+        scope:       'Flythrough mode',
     },
     {
         action:      'Toggle rotation',
@@ -821,7 +821,7 @@ export const SHORTCUTS_CATALOG = [
 const SHORTCUT_ACTIONS = {
     'journey-import':       openJourneyImporter,
     'journey-toolbar-show': toggleJourneyToolbar,
-    'wander-management-show': openWanderManagement,
+    'flythrough-management-show': openFlythroughManagement,
     'video-recording':      launchVideoRecording,
     'rotation-toggle':      toggleRotation,
     'panorama-toggle':      togglePanorama,
