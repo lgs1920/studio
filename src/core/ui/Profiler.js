@@ -16,6 +16,10 @@
 
 import { faMountains }                                   from '@fortawesome/pro-regular-svg-icons'
 import { faArrowLeftLongToLine, faArrowRightLongToLine } from '@fortawesome/pro-solid-svg-icons'
+import {
+    appendFlythroughProfileMetadata,
+    extendFlythroughProfileDimensions,
+}                                                         from '@Core/ui/flythrough/FlythroughProfileProgress'
 import { FA2SL }                                         from '@Utils/FA2SL'
 import { DISTANCE_UNITS, ELEVATION_UNITS }               from '@Utils/UnitUtils'
 import * as echarts                                      from 'echarts/core'
@@ -63,18 +67,18 @@ export class Profiler {
             dataset:    [],
             options:    [],
             axisNames:  {},
-            dimensions: [DISTANCE, ELEVATION, TIME, POINT],
+            dimensions: extendFlythroughProfileDimensions([DISTANCE, ELEVATION, TIME, POINT, UNIT_SYSTEM]),
         }
 
         // Let's define missing values
         let distance = 0
-        lgs.theJourney.tracks.forEach((track) => {
+        lgs.theJourney.tracks.forEach((track, trackIndex) => {
             if (track.visible && track.metrics.points !== undefined) {
                 const trackDataset = {
                     id:     track.slug,
                     source: [],
                 }
-                track.metrics.points.forEach(point => {
+                track.metrics.points.forEach((point, pointIndex) => {
                     distance += point.distance ?? 0
                     const elevation = Number(point.altitude)
                     if (!Number.isFinite(elevation)) {
@@ -83,13 +87,18 @@ export class Profiler {
                     let coords = []
                     switch (type) {
                         case ELEVATION_VS_DISTANCE : {
-                            coords = [
+                            coords = appendFlythroughProfileMetadata([
                                 __.convert(distance).to(units.x[lgs.settings.unitSystem.current]),
                                 __.convert(elevation).to(units.y[lgs.settings.unitSystem.current]),
                                 null, //TODO Time
                                 point,
                                 lgs.settings.unitSystem.current,  // unit system
-                            ]
+                            ], {
+                                distanceFromStart: distance,
+                                trackSlug:         track.slug,
+                                trackIndex,
+                                pointIndex,
+                            })
                         }
                     }
                     trackDataset.source.push(coords)
@@ -198,6 +207,19 @@ ${sprintf('%\' .1f', elevation ?? 0)} ${ELEVATION_UNITS[lgs.settings.unitSystem.
             await theTrack.marker.draw()
         }
         await theTrack.marker.move([longitude, latitude, elevation])
+    }
+
+    showSampleOnMap = async (sample) => {
+        if (!sample?.trackSlug || !lgs.theJourney?.tracks?.has?.(sample.trackSlug)) {
+            return
+        }
+
+        const track = lgs.theJourney.tracks.get(sample.trackSlug)
+        const theTrack = Track.deserialize({object: Track.unproxify(track)})
+        if (!theTrack.marker.drawn) {
+            await theTrack.marker.draw()
+        }
+        await theTrack.marker.move([sample.longitude, sample.latitude, sample.altitude ?? sample.height])
     }
 
     /**
@@ -358,4 +380,5 @@ export const ELEVATION = 'Elevation'
 export const DISTANCE = 'Distance'
 export const TIME = 'Time'
 export const POINT = 'point'
+export const UNIT_SYSTEM = 'UnitSystem'
 export const CHART_ELEVATION_VS_DISTANCE = `${ELEVATION}-${DISTANCE}`

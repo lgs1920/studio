@@ -24,6 +24,8 @@ import { FlythroughPathSampler, FLYTHROUGH_SCOPE_VISIBLE_TRACKS } from './Flythr
 import { getFlythroughSettings } from './FlythroughProgressionStyle'
 
 const DEFAULT_DURATION = 60
+const PROFILE_HOVER_RENDER_INTERVAL = 120
+const METRIC_OVERLAY_TTL = 2000
 
 const flythroughStore = () => globalThis.lgs?.stores?.ui?.mainUI?.flythrough
 
@@ -33,6 +35,9 @@ export class FlythroughMode {
     #sampler = null
     #unbind = []
     #requestRenderMode = null
+    #pendingProfileHoverSample = null
+    #profileHoverTimeout = null
+    #lastProfileHoverRender = 0
 
     constructor({
                     controller = new FlythroughPlaybackController(),
@@ -75,6 +80,7 @@ export class FlythroughMode {
         const scope = options.scope ?? flythrough.scope ?? store?.scope ?? FLYTHROUGH_SCOPE_VISIBLE_TRACKS
         const trackSlug = options.trackSlug ?? globalThis.lgs?.theTrack?.slug ?? store?.trackSlug
         const progression = options.progression ?? flythrough.progression
+        const profileInfo = options.profileInfo ?? flythrough.profileInfo
 
         this.#sampler = new FlythroughPathSampler({
             journey,
@@ -89,6 +95,7 @@ export class FlythroughMode {
             store.scope = scope
             store.totalDistance = this.#sampler.totalDistance
             store.progression = progression
+            store.profileInfo = profileInfo
         }
 
         this.#controller.configure({
@@ -149,6 +156,38 @@ export class FlythroughMode {
         return sample
     }
 
+    handleProfileHover = ({sample, source = 'profile'} = {}) => {
+        if (!sample) {
+            return null
+        }
+
+        const store = flythroughStore()
+        if (store) {
+            store.hoverSample = sample
+            store.metricOverlay = {
+                visible:   true,
+                source,
+                anchor:    {
+                    longitude: sample.longitude,
+                    latitude:  sample.latitude,
+                    altitude:  sample.altitude ?? sample.height,
+                },
+                sample,
+                expiresAt: Date.now() + METRIC_OVERLAY_TTL,
+            }
+        }
+
+        this.#scheduleProfileHoverMarker(sample)
+        return sample
+    }
+
+    handleProfileLeave = () => {
+        const store = flythroughStore()
+        if (store) {
+            store.hoverSample = null
+        }
+    }
+
     stop = (options = {}) => {
         const sample = this.#controller.stop(options)
         this.#renderer.clear()
@@ -158,12 +197,23 @@ export class FlythroughMode {
             store.playing = false
             store.paused = false
             store.toolbarVisible = false
+            store.hoverSample = null
+            store.metricOverlay = {
+                ...store.metricOverlay,
+                visible:   false,
+                sample:    null,
+                expiresAt: 0,
+            }
         }
         return sample
     }
 
     dispose = () => {
         this.stop({emit: false})
+        if (this.#profileHoverTimeout !== null) {
+            clearTimeout(this.#profileHoverTimeout)
+            this.#profileHoverTimeout = null
+        }
         this.#unbind.forEach(unbind => unbind())
         this.#unbind = []
     }
@@ -190,6 +240,37 @@ export class FlythroughMode {
         scene.requestRender?.()
     }
 
+    #scheduleProfileHoverMarker = (sample) => {
+        this.#pendingProfileHoverSample = sample
+        const now = performance.now()
+        const elapsed = now - this.#lastProfileHoverRender
+
+        if (elapsed >= PROFILE_HOVER_RENDER_INTERVAL) {
+            this.#renderProfileHoverMarker()
+            return
+        }
+
+        if (this.#profileHoverTimeout === null) {
+            this.#profileHoverTimeout = setTimeout(
+                this.#renderProfileHoverMarker,
+                PROFILE_HOVER_RENDER_INTERVAL - elapsed,
+            )
+        }
+    }
+
+    #renderProfileHoverMarker = () => {
+        this.#profileHoverTimeout = null
+        this.#lastProfileHoverRender = performance.now()
+
+        const sample = this.#pendingProfileHoverSample
+        this.#pendingProfileHoverSample = null
+        if (!sample) {
+            return
+        }
+
+        globalThis.__?.ui?.profiler?.showSampleOnMap?.(sample)
+    }
+
     #bindRenderer = () => {
         this.#unbind.push(
             this.#controller.on(FLYTHROUGH_EVENT_START, detail => {
@@ -212,6 +293,13 @@ export class FlythroughMode {
                 const store = flythroughStore()
                 if (store) {
                     store.toolbarVisible = false
+                    store.hoverSample = null
+                    store.metricOverlay = {
+                        ...store.metricOverlay,
+                        visible:   false,
+                        sample:    null,
+                        expiresAt: 0,
+                    }
                 }
             }),
             this.#controller.on(FLYTHROUGH_EVENT_END, () => {
@@ -220,6 +308,13 @@ export class FlythroughMode {
                 const store = flythroughStore()
                 if (store) {
                     store.toolbarVisible = false
+                    store.hoverSample = null
+                    store.metricOverlay = {
+                        ...store.metricOverlay,
+                        visible:   false,
+                        sample:    null,
+                        expiresAt: 0,
+                    }
                 }
             }),
         )

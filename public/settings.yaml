@@ -352,6 +352,8 @@ ui:
         color: '#ffffff'
         opacity: 1
         width: 0.75
+    profileInfo:
+      color: '#ffffff'
 
   ## JourneyToolbar
   journeyToolbar:

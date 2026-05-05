@@ -54,6 +54,34 @@ const finiteNumber = value => {
     return Number.isFinite(numeric) ? numeric : null
 }
 
+const upperBoundDistance = (distances, targetDistance) => {
+    let low = 0
+    let high = distances.length
+
+    while (low < high) {
+        const mid = Math.floor((low + high) / 2)
+        if ((distances[mid] ?? Infinity) <= targetDistance) {
+            low = mid + 1
+        }
+        else {
+            high = mid
+        }
+    }
+
+    return low
+}
+
+export const createFlythroughProfileDatasetLookup = (dataset, dimensions) => {
+    const indexes = flythroughProfileDimensionIndexes(dimensions)
+    const source = Array.isArray(dataset?.source) ? dataset.source : []
+
+    return {
+        dataset,
+        source,
+        distances: source.map(row => finiteNumber(row?.[indexes.distanceFromStart])),
+    }
+}
+
 export const convertFlythroughDistance = (distance, unitSystem = INTERNATIONAL) =>
     UnitUtils.convert(distance ?? 0).to(DISTANCE_UNITS[unitSystem] ?? DISTANCE_UNITS[INTERNATIONAL])
 
@@ -132,11 +160,13 @@ export const flythroughSampleFromProfileRow = (row, dimensions, sampler = null) 
 
 export const buildFlythroughCompletedProfileSource = ({
     dataset,
+    lookup,
     dimensions,
     sample,
     unitSystem = INTERNATIONAL,
 }) => {
-    if (!dataset || !sample || !Array.isArray(dataset.source)) {
+    const sourceRows = lookup?.source ?? dataset?.source
+    if (!dataset || !sample || !Array.isArray(sourceRows)) {
         return []
     }
 
@@ -146,10 +176,12 @@ export const buildFlythroughCompletedProfileSource = ({
         return []
     }
 
-    const source = dataset.source.filter(row => {
-        const rowDistance = finiteNumber(row?.[indexes.distanceFromStart])
-        return rowDistance !== null && rowDistance <= targetDistance
-    })
+    const source = lookup?.distances
+                   ? sourceRows.slice(0, upperBoundDistance(lookup.distances, targetDistance))
+                   : sourceRows.filter(row => {
+                       const rowDistance = finiteNumber(row?.[indexes.distanceFromStart])
+                       return rowDistance !== null && rowDistance <= targetDistance
+                   })
 
     if (sample.trackSlug === dataset.id) {
         const lastDistance = finiteNumber(source.at(-1)?.[indexes.distanceFromStart])

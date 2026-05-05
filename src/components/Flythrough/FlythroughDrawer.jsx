@@ -24,7 +24,8 @@ import {
     FLYTHROUGH_SCOPE_ALL_TRACKS, FLYTHROUGH_SCOPE_CURRENT_TRACK, FLYTHROUGH_SCOPE_VISIBLE_TRACKS,
 } from '@Core/ui/flythrough/FlythroughPathSampler'
 import {
-    clampFlythroughNumber, ensureFlythroughSettings, FLYTHROUGH_LABEL, normalizeFlythroughProgressionStyle,
+    clampFlythroughNumber, ensureFlythroughSettings, FLYTHROUGH_LABEL, normalizeFlythroughProfileInfo,
+    normalizeFlythroughProgressionStyle,
     FLYTHROUGH_PROGRESSION_BORDER_MAX_WIDTH, FLYTHROUGH_PROGRESSION_BORDER_MIN_WIDTH, FLYTHROUGH_PROGRESSION_FILL_MAX_WIDTH,
     FLYTHROUGH_PROGRESSION_FILL_MIN_WIDTH,
 } from '@Core/ui/flythrough/FlythroughProgressionStyle'
@@ -66,6 +67,11 @@ const mergeProgressionStyle = (current, updates) => normalizeFlythroughProgressi
         ...(current?.border ?? {}),
         ...(updates?.border ?? {}),
     },
+})
+
+const mergeProfileInfo = (current, updates) => normalizeFlythroughProfileInfo({
+    ...current,
+    ...updates,
 })
 
 const FlythroughColorField = ({label, color, opacity, swatches, onColorInput, onOpacityInput}) => (
@@ -165,6 +171,8 @@ export const FlythroughDrawer = memo(() => {
     const borderOpacity = progression.border.opacity
     const fillWidth = progression.fill.width
     const borderWidth = progression.border.width
+    const profileInfo = normalizeFlythroughProfileInfo(flythroughSettings.profileInfo)
+    const profileInfoColor = toOpaqueColorValue(profileInfo.color)
 
     useEffect(() => {
         lgs.stores.ui.mainUI.flythrough.journeySlug = journeySlug
@@ -173,10 +181,12 @@ export const FlythroughDrawer = memo(() => {
         lgs.stores.ui.mainUI.flythrough.loop = flythroughSettings.loop
         lgs.stores.ui.mainUI.flythrough.scope = flythroughSettings.scope
         lgs.stores.ui.mainUI.flythrough.progression = normalizeFlythroughProgressionStyle(flythroughSettings.progression)
+        lgs.stores.ui.mainUI.flythrough.profileInfo = normalizeFlythroughProfileInfo(flythroughSettings.profileInfo)
     }, [
         flythroughSettings.direction,
         flythroughSettings.duration,
         flythroughSettings.loop,
+        flythroughSettings.profileInfo,
         flythroughSettings.progression,
         flythroughSettings.scope,
         journeySlug,
@@ -205,6 +215,12 @@ export const FlythroughDrawer = memo(() => {
         lgs.stores.ui.mainUI.flythrough.progression = nextProgression
         refreshFlythrough()
     }, [refreshFlythrough])
+
+    const updateProfileInfo = useCallback((updates) => {
+        const nextProfileInfo = mergeProfileInfo(lgs.settings.ui.flythrough.profileInfo, updates)
+        lgs.settings.ui.flythrough.profileInfo = nextProfileInfo
+        lgs.stores.ui.mainUI.flythrough.profileInfo = nextProfileInfo
+    }, [])
 
     const updateDuration = useCallback((event) => {
         const duration = clampDuration(event.target.value)
@@ -269,6 +285,10 @@ export const FlythroughDrawer = memo(() => {
                               },
                           })
     }, [progression.border.width, updateProgression])
+
+    const updateProfileInfoColor = useCallback((event) => {
+        updateProfileInfo({color: toOpaqueColorValue(event.target.value)})
+    }, [updateProfileInfo])
 
     const handleRequestClose = useCallback((event) => {
         if (event.target.tagName !== 'WA-DRAWER') {
@@ -388,6 +408,22 @@ export const FlythroughDrawer = memo(() => {
                                                      onOpacityInput={updateBorderOpacity}
                                                      onWidthInput={updateBorderWidth}
                                                  />
+                                                 <WaDivider/>
+                                                 <section className="flythrough-style-subsection">
+                                                     <h4 className="flythrough-style-subtitle">{'Profile info'}</h4>
+                                                     <div className="flythrough-style-control-group">
+                                                         <FlythroughStyleField label="Color">
+                                                             <WaColorPicker
+                                                                 className="flythrough-color-picker"
+                                                                 size="small"
+                                                                 aria-label="Profile info color"
+                                                                 value={profileInfoColor}
+                                                                 swatches={swatches}
+                                                                 onInput={updateProfileInfoColor}
+                                                             />
+                                                         </FlythroughStyleField>
+                                                     </div>
+                                                 </section>
                                              </section>
                                          </div>
                                      </LGSScrollbars>

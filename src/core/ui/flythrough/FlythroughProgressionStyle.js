@@ -35,10 +35,16 @@ export const DEFAULT_FLYTHROUGH_PROGRESSION = {
     },
 }
 
+export const DEFAULT_FLYTHROUGH_PROFILE_INFO = {
+    color: '#ffffff',
+}
+
 export const defaultFlythroughProgressionStyle = () => ({
     fill:   {...DEFAULT_FLYTHROUGH_PROGRESSION.fill},
     border: {...DEFAULT_FLYTHROUGH_PROGRESSION.border},
 })
+
+export const defaultFlythroughProfileInfoStyle = () => ({...DEFAULT_FLYTHROUGH_PROFILE_INFO})
 
 export const defaultFlythroughSettings = () => ({
     duration:    DEFAULT_FLYTHROUGH_DURATION,
@@ -46,6 +52,7 @@ export const defaultFlythroughSettings = () => ({
     loop:        false,
     scope:       DEFAULT_FLYTHROUGH_SCOPE,
     progression: defaultFlythroughProgressionStyle(),
+    profileInfo: defaultFlythroughProfileInfoStyle(),
 })
 
 const finiteNumber = value => {
@@ -86,6 +93,10 @@ export const normalizeFlythroughProgressionStyle = (progression = {}) => {
     }
 }
 
+export const normalizeFlythroughProfileInfo = (profileInfo = {}) => ({
+    color: profileInfo?.color ?? DEFAULT_FLYTHROUGH_PROFILE_INFO.color,
+})
+
 export const normalizeFlythroughSettings = (settings = {}) => {
     const duration = finiteNumber(settings?.duration) ?? DEFAULT_FLYTHROUGH_DURATION
     const direction = Number(settings?.direction) < 0 ? -1 : 1
@@ -96,6 +107,7 @@ export const normalizeFlythroughSettings = (settings = {}) => {
         loop:        settings?.loop === true,
         scope:       settings?.scope ?? DEFAULT_FLYTHROUGH_SCOPE,
         progression: normalizeFlythroughProgressionStyle(settings?.progression),
+        profileInfo: normalizeFlythroughProfileInfo(settings?.profileInfo),
     }
 }
 
