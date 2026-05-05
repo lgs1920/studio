@@ -474,18 +474,18 @@ export const TrackStyleSettings = ({showTitle = true}) => {
                         value={selectedPresetKey}
                         onChange={handlePresetChange}
                     >
-                        <div slot="start">
+                        <div slot="start" className="lgs--track-style-preview-slot">
                             <TrackStylePreview track={track} renderStyle={selectedPresetPreviewStyle}/>
                         </div>
                         <WaOption value={TRACK_RENDER_STYLE_CUSTOM_PRESET}>
-                            <div slot="start">
+                            <div slot="start" className="lgs--track-style-preview-slot">
                                 <TrackStylePreview track={track} renderStyle={renderStyle}/>
                             </div>
                             Custom
                         </WaOption>
                         {TRACK_RENDER_STYLE_PRESETS.map(preset => (
                             <WaOption key={preset.key} value={preset.key}>
-                                <div slot="start">
+                                <div slot="start" className="lgs--track-style-preview-slot">
                                     <TrackStylePreview track={track} renderStyle={getPresetRenderStyle(preset)}/>
                                 </div>
                                 {preset.label}

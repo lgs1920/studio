@@ -58,15 +58,19 @@ export const JourneySelector = memo(({
                                      }) => {
     // Valtio proxy references following '$' prefix convention
     const $journeyEditor = lgs.stores.main.components.journeyEditor
-    const $journeyStore = lgs.stores.journeyEditor.journey
+    const $editorStore = lgs.theJourneyEditorProxy
     const _select = useRef(null)
 
     // Snapshot values for reactivity
     const {list, keys} = useSnapshot($journeyEditor)
-    const theJourney = useSnapshot($journeyStore)
+    const {journey: theJourney} = useSnapshot($editorStore)
+    const journeyListVersion = keys.journey.list
+    const currentJourney = $editorStore.journey ?? theJourney
 
     // Memoized sorted journeys
     const journeys = useMemo(() => {
+        void journeyListVersion
+
         if (Array.isArray(providedJourneys)) {
             return providedJourneys.filter(Boolean)
         }
@@ -75,13 +79,18 @@ export const JourneySelector = memo(({
         return journeyList.length > 1
                ? journeyList.sort((a, b) => b.title.localeCompare(a.title))
                : journeyList
-    }, [list, providedJourneys])
+    }, [list, providedJourneys, journeyListVersion])
 
     const selectedValue = value ?? theJourney?.slug ?? ''
-    const selectedJourney = useMemo(
-        () => journeys.find(journey => journey.slug === selectedValue) ?? (selectedValue ? theJourney : null),
-        [journeys, selectedValue, theJourney],
+    const getReactiveJourney = useCallback(
+        journey => theJourney?.slug === journey?.slug ? currentJourney : journey,
+        [currentJourney, theJourney?.slug],
     )
+    const selectedJourney = useMemo(
+        () => getReactiveJourney(journeys.find(journey => journey.slug === selectedValue)) ?? (selectedValue ? currentJourney : null),
+        [journeys, selectedValue, currentJourney, getReactiveJourney],
+    )
+    const singleJourney = journeys.length === 1 ? getReactiveJourney(journeys[0]) : null
     const shouldRenderSelect = allowEmptyOption || journeys.length > 1
 
     // Handle selection change
@@ -189,7 +198,7 @@ export const JourneySelector = memo(({
                     value={selectedValue}
                     disabled={disabled}
                 >
-                    <div slot="start">
+                    <div slot="start" className="lgs--journey-selector-start">
                         {selectedJourney
                          ? renderJourneyIcons(selectedJourney)
                          : allowEmptyOption && <WaIcon name="link-slash" variant="regular"/>}
@@ -200,26 +209,30 @@ export const JourneySelector = memo(({
                             <div>{emptyLabel}</div>
                         </WaOption>
                     )}
-                    {journeys.map(journey => (
-                        <WaOption
-                            key={journey.slug}
-                            value={journey.slug}
-                            className={classNames('journey-title', {masked: !journey.visible})}
-                        >
-                            <div slot="start">
-                                {renderJourneyIcons(journey)}
-                            </div>
-                            <div>{journey.title}</div>
-                        </WaOption>
-                    ))}
+                    {journeys.map(journey => {
+                        const reactiveJourney = getReactiveJourney(journey)
+
+                        return (
+                            <WaOption
+                                key={journey.slug}
+                                value={journey.slug}
+                                className={classNames('journey-title', {masked: !reactiveJourney.visible})}
+                            >
+                                <div slot="start" className="lgs--journey-selector-start">
+                                    {renderJourneyIcons(reactiveJourney)}
+                                </div>
+                                <div>{reactiveJourney.title}</div>
+                            </WaOption>
+                        )
+                    })}
                     {hint && <span slot="hint">{hint}</span>}
                 </WaSelect>
             )}
 
-            {journeys.length === 1 && !allowEmptyOption && single && (
+            {singleJourney && !allowEmptyOption && single && (
                 <WaCard className="journey-title" appearance="plain">
                     <span>
-                        {renderJourneyIcons(journeys[0])} {journeys[0].title}
+                        {renderJourneyIcons(singleJourney)} {singleJourney.title}
                     </span>
                 </WaCard>
             )}
