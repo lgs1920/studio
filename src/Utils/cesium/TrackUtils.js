@@ -71,6 +71,50 @@ const trackReferencePointCache = new WeakMap()
 let trackLocatorMarkerTooltipElement = null
 let activeTrackLocatorMarkerTooltipEntityId = null
 
+const finiteColorChannel = value => {
+    const number = Number(value)
+    return Number.isFinite(number) ? number : null
+}
+
+const normalizeColorChannel = value => {
+    const channel = finiteColorChannel(value)
+    if (channel === null) {
+        return null
+    }
+
+    return channel > 1 ? Math.min(1, Math.max(0, channel / 255)) : Math.min(1, Math.max(0, channel))
+}
+
+const colorFromUnknown = (value, fallback = CColor.WHITE) => {
+    const fallbackColor = fallback instanceof CColor ? fallback : CColor.WHITE
+
+    if (value instanceof CColor) {
+        return value
+    }
+
+    if (typeof value === 'string') {
+        const color = value.trim()
+        return color ? (CColor.fromCssColorString(color) ?? fallbackColor) : fallbackColor
+    }
+
+    if (value && typeof value.toCssColorString === 'function') {
+        return colorFromUnknown(value.toCssColorString(), fallbackColor)
+    }
+
+    if (value && typeof value === 'object') {
+        const red = normalizeColorChannel(value.red ?? value.r)
+        const green = normalizeColorChannel(value.green ?? value.g)
+        const blue = normalizeColorChannel(value.blue ?? value.b)
+        const alpha = normalizeColorChannel(value.alpha ?? value.a ?? 1)
+
+        if (red !== null && green !== null && blue !== null) {
+            return new CColor(red, green, blue, alpha ?? 1)
+        }
+    }
+
+    return fallbackColor
+}
+
 export const ALREADY_IMPORTED = {
     /** The file or resource is already present */
     caption: 'Already exists!',
@@ -237,7 +281,7 @@ export class TrackUtils {
         thickness: track?.thickness,
     })
 
-    static cssColor = (value, fallback = CColor.WHITE) => CColor.fromCssColorString(value ?? '') ?? fallback
+    static cssColor = (value, fallback = CColor.WHITE) => colorFromUnknown(value, fallback)
 
     static createTrackMaterial = (style, color = style.color) => {
         if (style.dash.enabled) {
@@ -547,12 +591,13 @@ export class TrackUtils {
         const scale = Math.min(iconSize / iconWidth, iconSize / iconHeight)
         const x = (size - iconWidth * scale) / 2
         const y = (size - iconHeight * scale) / 2
+        const routeColor = TrackUtils.cssColor(color).toCssColorString()
         const routes = (Array.isArray(pathData) ? pathData : [pathData])
                        .filter(Boolean)
-                       .map(path => `<path d="${path}" fill="${color}"/>`)
+                       .map(path => `<path d="${path}" fill="${routeColor}"/>`)
                        .join('')
         const backgroundColor = TrackUtils.cssColor(lgs.colors.poiDefaultBackground).withAlpha(0.6).toCssColorString()
-        const borderColor = lgs.colors.poiDefault
+        const borderColor = TrackUtils.cssColor(lgs.colors.poiDefault).toCssColorString()
         const svg = `
             <svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
                 <circle cx="${size / 2}" cy="${size / 2}" r="${size * 0.42}" fill="${backgroundColor}" stroke="${borderColor}" stroke-width="${TRACK_LOCATOR_MARKER_BORDER_WIDTH}"/>
