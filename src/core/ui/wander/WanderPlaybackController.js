@@ -57,8 +57,15 @@ export class WanderPlaybackController {
     #now
 
     constructor({
-                    requestFrame = callback => globalThis.requestAnimationFrame?.(callback),
-                    cancelFrame = frame => globalThis.cancelAnimationFrame?.(frame),
+                    requestFrame = callback => globalThis.__?.requestAnimationFrame?.(callback)
+                        ?? globalThis.requestAnimationFrame?.(callback),
+                    cancelFrame = frame => {
+                        if (globalThis.__?.cancelAnimationFrame) {
+                            globalThis.__.cancelAnimationFrame(frame)
+                            return
+                        }
+                        globalThis.cancelAnimationFrame?.(frame)
+                    },
                     now = () => globalThis.performance?.now?.() ?? Date.now(),
                 } = {}) {
         this.#requestFrame = requestFrame
@@ -245,31 +252,36 @@ export class WanderPlaybackController {
             return
         }
 
-        const elapsed = this.#now() - this.#startedAt - this.#pauseDuration
-        const playbackProgress = elapsed / (this.#duration * MILLIS)
-        const reachedEnd = playbackProgress >= 1
+        try {
+            const elapsed = this.#now() - this.#startedAt - this.#pauseDuration
+            const playbackProgress = elapsed / (this.#duration * MILLIS)
+            const reachedEnd = playbackProgress >= 1
 
-        this.#progress = this.#progressFromElapsed(elapsed)
-        const sample = this.currentSample()
-        this.#syncStore(sample)
-        this.#emit(WANDER_EVENT_UPDATE, sample)
-        globalThis.lgs?.scene?.requestRender?.()
+            this.#progress = this.#progressFromElapsed(elapsed)
+            const sample = this.currentSample()
+            this.#syncStore(sample)
+            this.#emit(WANDER_EVENT_UPDATE, sample)
+            globalThis.lgs?.scene?.requestRender?.()
 
-        if (reachedEnd) {
-            if (this.#loop) {
-                this.#startedAt = this.#now()
-                this.#pauseDuration = 0
-                this.#progress = this.#direction > 0 ? 0 : 1
-                this.#schedule()
+            if (reachedEnd) {
+                if (this.#loop) {
+                    this.#startedAt = this.#now()
+                    this.#pauseDuration = 0
+                    this.#progress = this.#direction > 0 ? 0 : 1
+                    this.#schedule()
+                    return
+                }
+
+                this.#running = false
+                this.#paused = false
+                this.#frame = null
+                this.#emit(WANDER_EVENT_END, this.currentSample())
+                this.#syncStore(this.currentSample())
                 return
             }
-
-            this.#running = false
-            this.#paused = false
-            this.#frame = null
-            this.#emit(WANDER_EVENT_END, this.currentSample())
-            this.#syncStore(this.currentSample())
-            return
+        }
+        catch (error) {
+            console.error('[WanderPlaybackController] Tick failed.', error)
         }
 
         this.#schedule()
@@ -289,8 +301,20 @@ export class WanderPlaybackController {
 
     #emit = (event, sample) => {
         const detail = this.#eventDetail(sample)
-        this.#listeners.get(event)?.forEach(callback => callback(detail))
-        globalThis.lgs?.events?.emit?.(event, detail)
+        this.#listeners.get(event)?.forEach(callback => {
+            try {
+                callback(detail)
+            }
+            catch (error) {
+                console.error(`[WanderPlaybackController] Listener failed for "${event}".`, error)
+            }
+        })
+        try {
+            globalThis.lgs?.events?.emit?.(event, detail)
+        }
+        catch (error) {
+            console.error(`[WanderPlaybackController] Global event failed for "${event}".`, error)
+        }
     }
 
     #syncStore = (sample) => {

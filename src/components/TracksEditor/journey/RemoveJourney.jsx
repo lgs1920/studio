@@ -71,7 +71,7 @@ export const RemoveJourney = (props) => {
 
             //TODO add a REMOVE_JOURNEY event
 
-            // Stop wanderer
+            // Stop Wander runner
             __.ui.wander?.stop?.()
             __.ui.wanderer.stop()
         }

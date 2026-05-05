@@ -102,6 +102,26 @@ describe('wander phase 1 sampler', () => {
         expect(completed[1].coordinates.at(-1)[0]).toBeLessThan(1.001)
     })
 
+    it('returns only the not-yet-covered coordinates for remaining track rendering', () => {
+        const journey = makeJourney([
+            makeTrack({
+                slug:        'track#journey#gpx#main',
+                coordinates: [
+                    [0, 0, 0],
+                    [0.001, 0, 0],
+                    [0.002, 0, 0],
+                ],
+            }),
+        ])
+
+        const sampler = new WanderPathSampler({journey})
+        const remaining = sampler.remainingSegmentsAt(0.5)
+
+        expect(remaining).toHaveLength(1)
+        expect(remaining[0].coordinates[0][0]).toBeCloseTo(0.001, 5)
+        expect(remaining[0].coordinates.at(-1)[0]).toBeCloseTo(0.002, 5)
+    })
+
     it('filters visible and current tracks according to scope', () => {
         const visible = makeTrack({
             slug:        'track#journey#gpx#visible',

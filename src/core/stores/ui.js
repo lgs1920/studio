@@ -15,6 +15,7 @@
  ******************************************************************************/
 
 import { DEFAULT_PANORAMA_HEIGHT_OFFSET, DEFAULT_PANORAMA_PITCH } from '@Core/OrbitSettings'
+import { defaultWanderSettings } from '@Core/ui/wander/WanderProgressionStyle'
 import { proxyMap } from 'valtio/utils'
 
 /**
@@ -73,6 +74,7 @@ export const ui = {
             direction:    1,
         },
         wander:              {
+            ...defaultWanderSettings(),
             active:        false,
             playing:       false,
             paused:        false,
@@ -80,10 +82,6 @@ export const ui = {
             trackSlug:      null,
             progress:       0,
             sample:         null,
-            duration:       60,
-            direction:      1,
-            loop:           false,
-            scope:          'visible-tracks',
             markerRadius:   35,
             totalDistance:  0,
             recordingSync:  false,

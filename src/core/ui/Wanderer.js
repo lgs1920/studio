@@ -266,7 +266,7 @@ export class Wanderer {
     }
 
     /**
-     * Run or continue the wanderer
+     * Run or continue the Wander runner
      */
     play = () => {
         this.running = true
@@ -275,7 +275,7 @@ export class Wanderer {
     }
 
     /**
-     * Pause the wanderer
+     * Pause the Wander runner
      */
     pause = () => {
         this.running = false
@@ -283,7 +283,7 @@ export class Wanderer {
     }
 
     /**
-     * Start the wanderer
+     * Start the Wander runner
      */
     start = () => {
         this.#clearTimer()
@@ -305,7 +305,7 @@ export class Wanderer {
     resume = this.start
 
     /**
-     * Stop the wanderer
+     * Stop the Wander runner
      */
     stop = () => {
         if (this.running) {

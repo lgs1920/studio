@@ -16,6 +16,7 @@
 
 import { Widget } from '@Components/MainUI/widgets/Widget'
 import { LGS_TOOLBAR, WANDER_DRAWER } from '@Core/constants'
+import { WANDER_LABEL } from '@Core/ui/wander/WanderProgressionStyle'
 import { WaButton, WaCard, WaIcon, WaTooltip } from '@web.awesome.me/webawesome-pro/dist/react'
 import { memo, useCallback, useMemo } from 'react'
 import { useSnapshot } from 'valtio'
@@ -55,7 +56,7 @@ export const WanderControlsWidget = memo(() => {
 
                 {wander.playing ? (
                     <>
-                        <WaTooltip for="wander-controls-pause">{'Pause Wander'}</WaTooltip>
+                        <WaTooltip for="wander-controls-pause">{`Pause ${WANDER_LABEL}`}</WaTooltip>
                         <WaButton id="wander-controls-pause" appearance="plain" variant="brand"
                                   onClick={pause}>
                             <WaIcon name="pause" variant="regular"/>
@@ -63,7 +64,7 @@ export const WanderControlsWidget = memo(() => {
                     </>
                 ) : (
                      <>
-                         <WaTooltip for="wander-controls-resume">{'Resume Wander'}</WaTooltip>
+                         <WaTooltip for="wander-controls-resume">{`Resume ${WANDER_LABEL}`}</WaTooltip>
                          <WaButton id="wander-controls-resume" appearance="plain" variant="brand"
                                    onClick={resume}>
                              <WaIcon name="play" variant="regular"/>
@@ -71,13 +72,13 @@ export const WanderControlsWidget = memo(() => {
                      </>
                  )}
 
-                <WaTooltip for="wander-controls-settings">{'Wander settings'}</WaTooltip>
+                <WaTooltip for="wander-controls-settings">{`${WANDER_LABEL} settings`}</WaTooltip>
                 <WaButton id="wander-controls-settings" appearance="plain" variant="brand"
                           onClick={openSettings}>
                     <WaIcon name="sliders" variant="regular"/>
                 </WaButton>
 
-                <WaTooltip for="wander-controls-stop">{'Stop Wander'}</WaTooltip>
+                <WaTooltip for="wander-controls-stop">{`Stop ${WANDER_LABEL}`}</WaTooltip>
                 <WaButton id="wander-controls-stop" appearance="plain" variant="brand"
                           onClick={stop}>
                     <WaIcon name="stop" variant="regular"/>

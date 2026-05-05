@@ -48,8 +48,8 @@ import { JourneyEditor }       from './ui/JourneyEditor'
 import { PanelManager }        from './ui/panels/PanelManager'
 import { Profiler }            from './ui/Profiler'
 import { SceneManager }        from './ui/SceneManager'
-import { Wanderer }            from './ui/Wanderer'
-import { WanderMode }          from './ui/wander/WanderMode'
+import { Wanderer }    from './ui/Wanderer'
+import { WanderMode }      from './ui/wander/WanderMode'
 
 export class LGS1920Context {
     /** @type {Proxy} */

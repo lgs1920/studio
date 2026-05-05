@@ -15,6 +15,7 @@
  ******************************************************************************/
 
 import { Mobility } from '@Utils/Mobility'
+import { getTrackRenderContent } from '@Utils/cesium/trackRenderSmoothing'
 
 const LINE_STRING = 'LineString'
 const MULTI_LINE_STRING = 'MultiLineString'
@@ -354,6 +355,19 @@ export class WanderPathSampler {
             .filter(segment => segment.coordinates.length >= 2)
     }
 
+    remainingSegmentsAt = (sampleOrProgress) => {
+        const sample = typeof sampleOrProgress === 'number' ? this.atProgress(sampleOrProgress) : sampleOrProgress
+        if (!sample || this.#segments.length === 0) {
+            return []
+        }
+
+        const targetDistance = clamp(sample.distanceFromStart, 0, this.#totalDistance)
+
+        return this.#segments
+            .map(segment => this.#remainingSegment(segment, targetDistance))
+            .filter(segment => segment.coordinates.length >= 2)
+    }
+
     #completedSegment = (segment, targetDistance) => {
         const coordinates = []
         if (targetDistance < segment.startDistance) {
@@ -379,6 +393,31 @@ export class WanderPathSampler {
         return {...segment, coordinates}
     }
 
+    #remainingSegment = (segment, targetDistance) => {
+        const coordinates = []
+        if (targetDistance > segment.endDistance) {
+            return {...segment, coordinates}
+        }
+
+        const segmentSamples = this.#samples.slice(segment.startIndex, segment.endIndex + 1)
+
+        if (targetDistance > segment.startDistance) {
+            coordinates.push(WanderPathSampler.sampleCoordinates(this.#interpolateInSegment(segmentSamples, targetDistance)))
+        }
+
+        segmentSamples.forEach(sample => {
+            if (sample.distanceFromStart >= targetDistance) {
+                const next = WanderPathSampler.sampleCoordinates(sample)
+                const last = coordinates[coordinates.length - 1]
+                if (!last || last[0] !== next[0] || last[1] !== next[1] || last[2] !== next[2]) {
+                    coordinates.push(next)
+                }
+            }
+        })
+
+        return {...segment, coordinates}
+    }
+
     #interpolateInSegment = (segmentSamples, targetDistance) => {
         for (let index = 1; index < segmentSamples.length; index++) {
             const start = segmentSamples[index - 1]
@@ -400,7 +439,7 @@ export class WanderPathSampler {
     ]
 
     static coordinateSegmentsFromTrack = (track) => {
-        const geometry = track?.content?.geometry
+        const geometry = getTrackRenderContent(track)?.geometry
         if (!geometry) {
             return []
         }

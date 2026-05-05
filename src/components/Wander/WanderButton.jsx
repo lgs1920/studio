@@ -15,6 +15,7 @@
  ******************************************************************************/
 
 import { WANDER_DRAWER } from '@Core/constants'
+import { WANDER_LABEL } from '@Core/ui/wander/WanderProgressionStyle'
 import { WaButton, WaIcon, WaTooltip } from '@web.awesome.me/webawesome-pro/dist/react'
 import { useCallback } from 'react'
 import { useSnapshot } from 'valtio'
@@ -31,7 +32,7 @@ export const WanderButton = (props) => {
         <>
             {!video.recording && !video.preRecording && !video.snapshot &&
                 <>
-                    <WaTooltip for="launch-the-wander-editor" placement={props.tooltip}>{'Wander'}</WaTooltip>
+                    <WaTooltip for="launch-the-wander-editor" placement={props.tooltip}>{WANDER_LABEL}</WaTooltip>
                     <WaButton
                         className="square-button"
                         id="launch-the-wander-editor"

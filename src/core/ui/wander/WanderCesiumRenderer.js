@@ -15,48 +15,40 @@
  ******************************************************************************/
 
 import {
-    Cartesian3, Color, CustomDataSource, PolylineOutlineMaterialProperty,
+    Cartesian3, Cartographic, Color, CornerType, CustomDataSource, HeightReference,
 } from 'cesium'
+import { TrackUtils } from '@Utils/cesium/TrackUtils'
+import { getWanderSettings, normalizeWanderProgressionStyle } from './WanderProgressionStyle'
 
 export const WANDER_DATA_SOURCE_PREFIX = 'wander'
 
-const DEFAULT_RADIUS = 35
-const DEFAULT_COLOR = '#1689CC'
+const DEFAULT_COLOR = '#ff6a00'
 const DEFAULT_BORDER = '#FFFFFF'
-const EARTH_RADIUS = 6378137
-const CURSOR_RING_SEGMENTS = 72
+const CURSOR_HEIGHT_OFFSET = 3
+const CURSOR_DIAMETER_MULTIPLIER = 2
+const MIN_CURSOR_RADIUS = 0.5
+const REMAINING_TRACK_Z_INDEX_UNDERLAY = 10
+const REMAINING_TRACK_Z_INDEX_MAIN = 20
+const PROGRESS_Z_INDEX_BORDER = 40
+const PROGRESS_Z_INDEX_FILL = 41
 
 const cssColor = (value, fallback) => Color.fromCssColorString(value ?? '') ?? fallback
 
-const positionsFromCoordinates = coordinates => coordinates.map(([longitude, latitude, altitude = 0]) =>
-    Cartesian3.fromDegrees(longitude, latitude, altitude))
-
-const cursorRingPositions = (sample, radius) => {
-    const latitudeRadians = sample.latitude * Math.PI / 180
-    const angularRadius = radius / EARTH_RADIUS
-    const latitudeDelta = angularRadius * 180 / Math.PI
-    const longitudeDelta = latitudeDelta / Math.max(Math.cos(latitudeRadians), 0.000001)
-    const positions = []
-
-    for (let index = 0; index <= CURSOR_RING_SEGMENTS; index++) {
-        const angle = (index / CURSOR_RING_SEGMENTS) * Math.PI * 2
-        positions.push(Cartesian3.fromDegrees(
-            sample.longitude + (Math.cos(angle) * longitudeDelta),
-            sample.latitude + (Math.sin(angle) * latitudeDelta),
-            sample.altitude ?? sample.height ?? 0,
-        ))
-    }
-
-    return positions
+const finiteNumber = value => {
+    const number = Number(value)
+    return Number.isFinite(number) ? number : null
 }
 
 export class WanderCesiumRenderer {
     #source = null
     #cursor = null
     #lineEntities = new Map()
+    #remainingLineEntities = new Map()
+    #maskedTrackSources = new Map()
     #sampler = null
     #journeySlug = null
     #options = {}
+    #terrainHeightCache = new Map()
 
     constructor(options = {}) {
         this.#options = options
@@ -77,6 +69,8 @@ export class WanderCesiumRenderer {
 
         this.#sampler = sampler
         this.#ensureSource()
+        this.#updateOriginalTrackMask()
+        this.#updateRemainingTrackLines(sample)
         this.#updateCursor(sample)
         this.#updateCompletedLines(sample)
         globalThis.lgs?.scene?.requestRender?.()
@@ -96,7 +90,10 @@ export class WanderCesiumRenderer {
         this.#source = null
         this.#cursor = null
         this.#lineEntities.clear()
+        this.#remainingLineEntities.clear()
+        this.#restoreOriginalTrackSources()
         this.#sampler = null
+        this.#terrainHeightCache.clear()
         globalThis.lgs?.scene?.requestRender?.()
     }
 
@@ -115,28 +112,222 @@ export class WanderCesiumRenderer {
         this.#source = existing ?? new CustomDataSource(name)
 
         if (!existing) {
-            viewer.dataSources.add(this.#source)
+            viewer.dataSources.add(this.#source).then(source => {
+                viewer.dataSources.raiseToTop(source)
+                globalThis.lgs?.scene?.requestRender?.()
+            })
+        }
+        else {
+            viewer.dataSources.raiseToTop(existing)
         }
         this.#source.show = true
 
         return this.#source
     }
 
-    #style = () => {
-        const track = globalThis.lgs?.theTrack
-        const settings = globalThis.lgs?.settings?.getJourney?.pois?.wanderer
-            ?? globalThis.lgs?.configuration?.journey?.pois?.wanderer
-            ?? {}
-        const color = this.#options.color ?? settings.color ?? track?.color ?? DEFAULT_COLOR
-        const border = this.#options.border ?? settings.border ?? DEFAULT_BORDER
+    #terrainHeightAt = (longitude, latitude) => {
+        const key = `${longitude.toFixed(6)}:${latitude.toFixed(6)}`
+        if (this.#terrainHeightCache.has(key)) {
+            return this.#terrainHeightCache.get(key)
+        }
 
-        const radius = Number(this.#options.radius ?? globalThis.lgs?.stores?.ui?.mainUI?.wander?.markerRadius ?? DEFAULT_RADIUS)
+        const height = globalThis.lgs?.scene?.globe?.getHeight?.(Cartographic.fromDegrees(longitude, latitude))
+        const resolved = finiteNumber(height)
+        this.#terrainHeightCache.set(key, resolved)
+        return resolved
+    }
+
+    #resolveHeight = (longitude, latitude, altitude, offset = 0) => {
+        const sampleAltitude = finiteNumber(altitude)
+        const terrainHeight = this.#terrainHeightAt(longitude, latitude)
+        const baseHeight = sampleAltitude !== null && terrainHeight !== null
+                           ? Math.max(sampleAltitude, terrainHeight)
+                           : (sampleAltitude ?? terrainHeight ?? 0)
+        return baseHeight + offset
+    }
+
+    #groundPositionFromCoordinate = (coordinate) => {
+        const longitude = finiteNumber(Array.isArray(coordinate) ? coordinate[0] : coordinate?.longitude)
+        const latitude = finiteNumber(Array.isArray(coordinate) ? coordinate[1] : coordinate?.latitude)
+        if (longitude === null || latitude === null) {
+            return null
+        }
+
+        return Cartesian3.fromDegrees(longitude, latitude, 0)
+    }
+
+    #groundPositionsFromCoordinates = coordinates => coordinates
+        .map(coordinate => this.#groundPositionFromCoordinate(coordinate))
+        .filter(Boolean)
+
+    #trackForSlug = trackSlug => this.#sampler?.journey?.tracks?.get?.(trackSlug)
+        ?? globalThis.lgs?.getJourneyByTrackSlug?.(trackSlug)?.tracks?.get?.(trackSlug)
+        ?? null
+
+    #trackSource = trackSlug => globalThis.lgs?.viewer?.dataSources?.getByName?.(trackSlug)?.[0] ?? null
+
+    #updateOriginalTrackMask = () => {
+        const selectedTrackSlugs = new Set(this.#sampler?.segments?.map(segment => segment.trackSlug) ?? [])
+
+        selectedTrackSlugs.forEach(trackSlug => {
+            const source = this.#trackSource(trackSlug)
+            if (!source) {
+                return
+            }
+
+            if (!this.#maskedTrackSources.has(trackSlug)) {
+                this.#maskedTrackSources.set(trackSlug, {
+                    source,
+                    show: source.show,
+                })
+            }
+            source.show = false
+        })
+
+        Array.from(this.#maskedTrackSources.entries()).forEach(([trackSlug, entry]) => {
+            if (!selectedTrackSlugs.has(trackSlug)) {
+                entry.source.show = entry.show
+                this.#maskedTrackSources.delete(trackSlug)
+            }
+        })
+    }
+
+    #restoreOriginalTrackSources = () => {
+        this.#maskedTrackSources.forEach(entry => {
+            entry.source.show = entry.show
+        })
+        this.#maskedTrackSources.clear()
+    }
+
+    #trackLineStyle = track => {
+        const style = TrackUtils.getTrackRenderStyle(track)
+        const pixelsPerMeter = TrackUtils.meterWidthToPixelScale(track)
+        const mainWidth = TrackUtils.resolveStyledTrackWidth(
+            style,
+            pixelsPerMeter * style.meterWidth,
+            style.farPixelWidth,
+        )
+        const underlayWidth = TrackUtils.resolveStyledTrackWidth(
+            style,
+            pixelsPerMeter * style.underlay.meterWidth,
+            style.underlay.pixelWidth,
+        )
 
         return {
-            radius: Number.isFinite(radius) ? Math.max(radius, DEFAULT_RADIUS) : DEFAULT_RADIUS,
-            color:  cssColor(color, Color.fromCssColorString(DEFAULT_COLOR)),
-            border: cssColor(border, Color.WHITE),
+            style,
+            mainWidth,
+            underlayWidth,
+            mainMaterial:     TrackUtils.createTrackMaterial(style),
+            underlayMaterial: TrackUtils.createTrackMaterial({
+                                                                ...style,
+                                                                dash: {
+                                                                    ...style.dash,
+                                                                    enabled: false,
+                                                                },
+                                                            },
+                                                            style.underlay.color),
         }
+    }
+
+    #style = () => {
+        const settings = getWanderSettings()
+        const progression = normalizeWanderProgressionStyle(
+            globalThis.lgs?.stores?.ui?.mainUI?.wander?.progression ?? settings.progression,
+        )
+        const fill = progression.fill
+        const border = progression.border
+        const fillColor = fill.color ?? this.#options.color ?? DEFAULT_COLOR
+        const borderColor = border.color ?? this.#options.border ?? DEFAULT_BORDER
+
+        return {
+            fillColor:    cssColor(fillColor, Color.fromCssColorString(DEFAULT_COLOR)).withAlpha(fill.opacity),
+            borderColor:  cssColor(borderColor, Color.WHITE).withAlpha(border.opacity),
+            fillWidth:    fill.width,
+            borderWidth:  border.width,
+            cursorRadius: Math.max(MIN_CURSOR_RADIUS, fill.width * CURSOR_DIAMETER_MULTIPLIER / 2),
+        }
+    }
+
+    #upsertRemainingLine = ({key, positions, material, width, zIndex, name}) => {
+        const source = this.#ensureSource()
+        if (!source || positions.length < 2) {
+            return
+        }
+
+        const entity = this.#remainingLineEntities.get(key)
+        if (!entity) {
+            this.#remainingLineEntities.set(
+                key,
+                source.entities.add({
+                    id:       `${source.name}#remaining#${key}`,
+                    name,
+                    polyline: {
+                        positions,
+                        clampToGround: true,
+                        material,
+                        width,
+                        zIndex,
+                    },
+                }),
+            )
+            return
+        }
+
+        entity.polyline.positions = positions
+        entity.polyline.material = material
+        entity.polyline.width = width
+        entity.polyline.zIndex = zIndex
+        entity.show = true
+    }
+
+    #updateRemainingTrackLines = (sample) => {
+        const source = this.#ensureSource()
+        if (!source || !this.#sampler) {
+            return
+        }
+
+        const activeKeys = new Set()
+        const segments = this.#sampler.remainingSegmentsAt(sample)
+
+        segments.forEach(segment => {
+            const positions = this.#groundPositionsFromCoordinates(segment.coordinates)
+            const track = this.#trackForSlug(segment.trackSlug)
+            if (!track || positions.length < 2) {
+                return
+            }
+
+            const trackLine = this.#trackLineStyle(track)
+
+            if (trackLine.style.underlay.enabled) {
+                const key = `${segment.key}#underlay`
+                activeKeys.add(key)
+                this.#upsertRemainingLine({
+                                              key,
+                                              positions,
+                                              material: trackLine.underlayMaterial,
+                                              width:    trackLine.underlayWidth,
+                                              zIndex:   REMAINING_TRACK_Z_INDEX_UNDERLAY,
+                                              name:     'Wander remaining track underlay',
+                                          })
+            }
+
+            const key = `${segment.key}#main`
+            activeKeys.add(key)
+            this.#upsertRemainingLine({
+                                          key,
+                                          positions,
+                                          material: trackLine.mainMaterial,
+                                          width:    trackLine.mainWidth,
+                                          zIndex:   REMAINING_TRACK_Z_INDEX_MAIN,
+                                          name:     'Wander remaining track',
+                                      })
+        })
+
+        Array.from(this.#remainingLineEntities.entries()).forEach(([key, entity]) => {
+            if (!activeKeys.has(key)) {
+                entity.show = false
+            }
+        })
     }
 
     #updateCursor = (sample) => {
@@ -146,32 +337,56 @@ export class WanderCesiumRenderer {
         }
 
         const style = this.#style()
+        const cursorHeight = this.#resolveHeight(
+            sample.longitude,
+            sample.latitude,
+            sample.altitude ?? sample.height,
+            CURSOR_HEIGHT_OFFSET,
+        )
+        const radius = style.cursorRadius
+        const borderWidth = style.borderWidth
+
         if (!this.#cursor) {
-            this.#cursor = source.entities.add({
-                id:       `${source.name}#cursor`,
-                name:     'Wander cursor',
-                polyline: {
-                    positions:     cursorRingPositions(sample, style.radius),
-                    clampToGround: true,
-                    width:         5,
-                    material:      new PolylineOutlineMaterialProperty({
-                                                                            color:        style.color.withAlpha(0.95),
-                                                                            outlineColor: style.border.withAlpha(0.95),
-                                                                            outlineWidth: 2,
-                                                                        }),
-                    zIndex:        40,
-                },
-            })
+            this.#cursor = {
+                border: source.entities.add({
+                    id:       `${source.name}#cursor#border`,
+                    name:     'Wander cursor border',
+                    position: Cartesian3.fromDegrees(sample.longitude, sample.latitude, cursorHeight),
+                    ellipse:  {
+                        semiMajorAxis: radius + borderWidth,
+                        semiMinorAxis: radius + borderWidth,
+                        material:      style.borderColor,
+                        height:        cursorHeight,
+                    },
+                }),
+                fill:   source.entities.add({
+                    id:       `${source.name}#cursor#fill`,
+                    name:     'Wander cursor',
+                    position: Cartesian3.fromDegrees(sample.longitude, sample.latitude, cursorHeight + 0.1),
+                    ellipse:  {
+                        semiMajorAxis: radius,
+                        semiMinorAxis: radius,
+                        material:      style.fillColor,
+                        height:        cursorHeight + 0.1,
+                    },
+                }),
+            }
             return
         }
 
-        this.#cursor.polyline.positions = cursorRingPositions(sample, style.radius)
-        this.#cursor.polyline.material = new PolylineOutlineMaterialProperty({
-                                                                                 color:        style.color.withAlpha(0.95),
-                                                                                 outlineColor: style.border.withAlpha(0.95),
-                                                                                 outlineWidth: 2,
-                                                                             })
-        this.#cursor.show = true
+        this.#cursor.border.position = Cartesian3.fromDegrees(sample.longitude, sample.latitude, cursorHeight)
+        this.#cursor.border.ellipse.semiMajorAxis = radius + borderWidth
+        this.#cursor.border.ellipse.semiMinorAxis = radius + borderWidth
+        this.#cursor.border.ellipse.material = style.borderColor
+        this.#cursor.border.ellipse.height = cursorHeight
+        this.#cursor.border.show = true
+
+        this.#cursor.fill.position = Cartesian3.fromDegrees(sample.longitude, sample.latitude, cursorHeight + 0.1)
+        this.#cursor.fill.ellipse.semiMajorAxis = radius
+        this.#cursor.fill.ellipse.semiMinorAxis = radius
+        this.#cursor.fill.ellipse.material = style.fillColor
+        this.#cursor.fill.ellipse.height = cursorHeight + 0.1
+        this.#cursor.fill.show = true
     }
 
     #updateCompletedLines = (sample) => {
@@ -186,36 +401,62 @@ export class WanderCesiumRenderer {
 
         segments.forEach(segment => {
             activeKeys.add(segment.key)
-            const positions = positionsFromCoordinates(segment.coordinates)
+            const positions = this.#groundPositionsFromCoordinates(segment.coordinates)
+            const width = style.fillWidth
+            const borderWidth = style.borderWidth
             if (positions.length < 2) {
                 return
             }
 
-            const entity = this.#lineEntities.get(segment.key)
-            if (!entity) {
-                const created = source.entities.add({
-                    id:       `${source.name}#completed#${segment.key}`,
-                    name:     'Wander completed track',
-                    polyline: {
+            const entities = this.#lineEntities.get(segment.key)
+            if (!entities) {
+                const border = source.entities.add({
+                    id:       `${source.name}#completed#${segment.key}#border`,
+                    name:     'Wander completed track border',
+                    corridor: {
                         positions,
-                        clampToGround: true,
-                        material:      style.color.withAlpha(0.9),
-                        width:         6,
-                        zIndex:        20,
+                        width:      width + (borderWidth * 2),
+                        material:   style.borderColor,
+                        cornerType: CornerType.ROUNDED,
+                        heightReference: HeightReference.CLAMP_TO_GROUND,
+                        zIndex:     PROGRESS_Z_INDEX_BORDER,
                     },
                 })
-                this.#lineEntities.set(segment.key, created)
+                const fill = source.entities.add({
+                    id:       `${source.name}#completed#${segment.key}#fill`,
+                    name:     'Wander completed track',
+                    corridor: {
+                        positions,
+                        width,
+                        material:   style.fillColor,
+                        cornerType: CornerType.ROUNDED,
+                        heightReference: HeightReference.CLAMP_TO_GROUND,
+                        zIndex:     PROGRESS_Z_INDEX_FILL,
+                    },
+                })
+                this.#lineEntities.set(segment.key, {border, fill})
                 return
             }
 
-            entity.polyline.positions = positions
-            entity.polyline.material = style.color.withAlpha(0.9)
-            entity.show = true
+            entities.border.corridor.positions = positions
+            entities.border.corridor.width = width + (borderWidth * 2)
+            entities.border.corridor.material = style.borderColor
+            entities.border.corridor.heightReference = HeightReference.CLAMP_TO_GROUND
+            entities.border.corridor.zIndex = PROGRESS_Z_INDEX_BORDER
+            entities.border.show = true
+
+            entities.fill.corridor.positions = positions
+            entities.fill.corridor.width = width
+            entities.fill.corridor.material = style.fillColor
+            entities.fill.corridor.heightReference = HeightReference.CLAMP_TO_GROUND
+            entities.fill.corridor.zIndex = PROGRESS_Z_INDEX_FILL
+            entities.fill.show = true
         })
 
-        Array.from(this.#lineEntities.entries()).forEach(([key, entity]) => {
+        Array.from(this.#lineEntities.entries()).forEach(([key, entities]) => {
             if (!activeKeys.has(key)) {
-                entity.show = false
+                entities.border.show = false
+                entities.fill.show = false
             }
         })
     }

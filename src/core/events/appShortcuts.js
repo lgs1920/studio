@@ -14,7 +14,7 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { CURRENT_MAP_POINT, CURRENT_POI, SCENE_MODE_2D, VIDEO_CROP_ZONE } from '@Core/constants'
+import { CURRENT_MAP_POINT, CURRENT_POI, SCENE_MODE_2D, VIDEO_CROP_ZONE, WANDER_DRAWER } from '@Core/constants'
 import { hasActiveAppShortcutBlocker } from '@Core/events/shortcutBlockers'
 import { MapTarget } from '@Core/MapTarget'
 import { getOrbitSettings, setOrbitStoreSettings } from '@Core/OrbitSettings'
@@ -205,6 +205,12 @@ const openJourneyImporter = () => {
     const mainUI = lgs.stores.ui.mainUI
     mainUI.callForActions.active = false
     mainUI.journeyLoader.visible = true
+    return true
+}
+
+const openWanderManagement = () => {
+    lgs.stores.ui.mainUI.callForActions.active = false
+    __.ui.drawerManager?.open?.(WANDER_DRAWER)
     return true
 }
 
@@ -610,6 +616,13 @@ export const SHORTCUTS_CATALOG = [
         scope:       'App',
     },
     {
+        action:      'Show Wander controls',
+        description: 'Opens the Wander management drawer.',
+        id:          'wander-management-show',
+        keys:        ['Alt+Shift+W'],
+        scope:       'Wander mode',
+    },
+    {
         action:      'Toggle rotation',
         description: 'Starts or stops map rotation around the current target.',
         id:          'rotation-toggle',
@@ -808,6 +821,7 @@ export const SHORTCUTS_CATALOG = [
 const SHORTCUT_ACTIONS = {
     'journey-import':       openJourneyImporter,
     'journey-toolbar-show': toggleJourneyToolbar,
+    'wander-management-show': openWanderManagement,
     'video-recording':      launchVideoRecording,
     'rotation-toggle':      toggleRotation,
     'panorama-toggle':      togglePanorama,
