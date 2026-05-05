@@ -51,8 +51,13 @@ export const TrackStylePreview = ({
             }}
             aria-hidden="true"
         >
-            <span className="lgs--track-style-preview-underlay"/>
-            <span className="lgs--track-style-preview-line"/>
+            <span className="lgs--track-style-preview-band is-underlay"/>
+            <span className="lgs--track-style-preview-band is-main">
+                <span className="lgs--track-style-preview-segment is-dash"/>
+                <span className="lgs--track-style-preview-segment is-gap"/>
+                <span className="lgs--track-style-preview-segment is-dash"/>
+            </span>
+            <span className="lgs--track-style-preview-band is-underlay"/>
         </span>
     )
 }

@@ -64,12 +64,6 @@ const composeColorValue = (color, opacity) => {
     return (nextColor.isValid() ? nextColor : colord('#ffffff')).alpha(nextOpacity).toRgbString()
 }
 
-const colorEquals = (first, second) => {
-    const firstColor = colord(first ?? '')
-    const secondColor = colord(second ?? '')
-    return firstColor.isValid() && secondColor.isValid() && firstColor.toRgbString() === secondColor.toRgbString()
-}
-
 const TrackStyleField = ({label, hint, className = '', children}) => (
     <div className={`lgs--track-style-field ${className}`.trim()}>
         <span className="lgs--track-style-label">{label}</span>
@@ -245,10 +239,8 @@ export const TrackStyleSettings = ({showTitle = true}) => {
     const handleColorInput = (color) => {
         const nextColor = toColorValue(color)
         const updates = {color: nextColor}
-        const isPresetStyle = renderStyle.presetKey !== TRACK_RENDER_STYLE_CUSTOM_PRESET
 
-        if (renderStyle.dash.enabled
-            && (!renderStyle.dash.biColor || isPresetStyle || colorEquals(renderStyle.dash.color, renderStyle.color))) {
+        if (renderStyle.dash.enabled) {
             updates.dash = {color: nextColor}
         }
 
@@ -302,17 +294,12 @@ export const TrackStyleSettings = ({showTitle = true}) => {
         applyRenderStyle({
                              dash: {
                                  enabled: event.target.checked,
+                                 color:   renderStyle.color,
                              },
                          })
     }
 
-    const handleDashColorInput = color => {
-        applyRenderStyle({
-                             dash: {
-                                 color: toColorValue(color),
-                             },
-                         })
-    }
+    const handleDashColorInput = color => handleColorInput(color)
 
     const handleDashGapColorInput = color => {
         applyRenderStyle({
@@ -361,7 +348,7 @@ export const TrackStyleSettings = ({showTitle = true}) => {
             presetKey: preset.key,
             dash:      {
                 ...presetDash,
-                color: presetDash.color ?? renderStyle.color,
+                color: renderStyle.color,
             },
         }, {
             color:     track?.color,
@@ -605,17 +592,15 @@ export const TrackStyleSettings = ({showTitle = true}) => {
                         {renderStyle.dash.biColor && (
                             <div className="lgs--track-style-dash-colors">
                                 <section className="lgs--track-style-dash-column">
-                                    <h4 className="lgs--track-style-dash-title">Dash color</h4>
                                     <TrackStyleColorField
-                                        label="Dash color"
-                                        value={renderStyle.dash.color}
+                                        label="Dash"
+                                        value={renderStyle.color}
                                         onChange={handleDashColorInput}
                                     />
                                 </section>
                                 <section className="lgs--track-style-dash-column">
-                                    <h4 className="lgs--track-style-dash-title">Gap color</h4>
                                     <TrackStyleColorField
-                                        label="Gap color"
+                                        label="Gap"
                                         value={renderStyle.dash.gapColor}
                                         onChange={handleDashGapColorInput}
                                     />
