@@ -23,15 +23,44 @@ import { useSnapshot } from 'valtio'
 
 const MINUTE_MILLIS = 60 * 1000
 const clampProgress = value => Math.max(0, Math.min(1, Number(value) || 0))
+const finiteNumber = value => {
+    const numeric = Number(value)
+    return Number.isFinite(numeric) ? numeric : null
+}
 
 const formatHoursMinutes = (millis, {ceil = false} = {}) => {
     const minutes = Math.max(0, ceil ? Math.ceil(millis / MINUTE_MILLIS) : Math.floor(millis / MINUTE_MILLIS))
     const hours = Math.floor(minutes / 60)
     const remainingMinutes = String(minutes % 60).padStart(2, '0')
-    return `${hours}h ${remainingMinutes}m`
+    return `${String(hours).padStart(2, '0')}:${remainingMinutes}`
+}
+
+const formatElapsedHoursMinutes = (elapsedMillis, totalMillis, progress) => {
+    if (clampProgress(progress) <= 0) {
+        return formatHoursMinutes(0)
+    }
+    return formatHoursMinutes(Math.min(elapsedMillis, totalMillis), {ceil: true})
 }
 
 const formatDistance = (value, unit) => (UnitUtils.convert(value ?? 0).to(unit) ?? 0).toFixed(1)
+
+const playbackProgressFromSample = ({sample, totalDistance, direction, fallback}) => {
+    const sampleProgress = finiteNumber(sample?.progress)
+    const total = finiteNumber(totalDistance)
+    const coveredDistance = direction < 0
+                            ? finiteNumber(sample?.remainingDistance)
+                            : finiteNumber(sample?.distanceFromStart)
+
+    if (total !== null && total > 0 && coveredDistance !== null) {
+        return clampProgress(coveredDistance / total)
+    }
+
+    if (sampleProgress !== null) {
+        return clampProgress(direction < 0 ? 1 - sampleProgress : sampleProgress)
+    }
+
+    return fallback
+}
 
 export const FlythroughProgressBar = memo(({showSettings = false, className = ''}) => {
     const flythrough = useSnapshot(lgs.stores.ui.mainUI.flythrough)
@@ -40,11 +69,16 @@ export const FlythroughProgressBar = memo(({showSettings = false, className = ''
     const idPrefix = useId().replace(/[^a-zA-Z0-9_-]/g, '')
     const progress = clampProgress(flythrough.progress)
     const direction = Number(flythrough.direction) < 0 ? -1 : 1
-    const playbackProgress = direction < 0 ? 1 - progress : progress
     const duration = Number(flythrough.duration)
     const hasDuration = Number.isFinite(duration) && duration > 0
     const totalDistance = flythrough.totalDistance ?? 0
     const distanceUnit = DISTANCE_UNITS[unitSystem] ?? km
+    const playbackProgress = playbackProgressFromSample({
+        sample: flythrough.sample,
+        totalDistance,
+        direction,
+        fallback: direction < 0 ? 1 - progress : progress,
+    })
     const coveredDistance = flythrough.sample
                             ? (direction < 0 ? flythrough.sample.remainingDistance : flythrough.sample.distanceFromStart)
                             : totalDistance * playbackProgress
@@ -56,7 +90,7 @@ export const FlythroughProgressBar = memo(({showSettings = false, className = ''
 
         const totalMillis = duration * 1000
         const elapsedMillis = totalMillis * clampProgress(playbackProgress)
-        return `${formatHoursMinutes(elapsedMillis)} / ${formatHoursMinutes(totalMillis, {ceil: true})}`
+        return `${formatElapsedHoursMinutes(elapsedMillis, totalMillis, playbackProgress)} / ${formatHoursMinutes(totalMillis, {ceil: true})}`
     }, [duration, hasDuration, playbackProgress])
 
     const distanceLabel = useMemo(() => {
@@ -157,7 +191,7 @@ export const FlythroughProgressBar = memo(({showSettings = false, className = ''
                         size="small"
                         onClick={toggleSettings}
                     >
-                        <WaIcon name="gear" variant="regular"/>
+                        <WaIcon name="sliders" variant="regular"/>
                     </WaButton>
                 </span>}
         </div>

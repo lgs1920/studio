@@ -29,7 +29,7 @@ import {
     FLYTHROUGH_PROGRESSION_FILL_MIN_WIDTH,
 } from '@Core/ui/flythrough/FlythroughProgressionStyle'
 import {
-    WaColorPicker, WaDivider, WaIcon, WaInput, WaNumberInput, WaOption, WaSelect, WaSlider, WaSwitch, WaTab,
+    WaCard, WaColorPicker, WaDivider, WaIcon, WaInput, WaNumberInput, WaOption, WaSelect, WaSlider, WaSwitch, WaTab,
     WaTabGroup, WaTabPanel,
 } from '@web.awesome.me/webawesome-pro/dist/react'
 import { colord }          from 'colord'
@@ -351,7 +351,9 @@ export const FlythroughDrawer = memo(() => {
                                                  </WaSwitch>
                                              </div>
 
-                                             <FlythroughProgressBar className="flythrough-progress-bar-in-drawer"/>
+                                             <WaCard appearance="outlined" className="flythrough-progress-card-in-drawer">
+                                                 <FlythroughProgressBar className="flythrough-progress-bar-in-drawer"/>
+                                             </WaCard>
                                          </div>
                                      </LGSScrollbars>
                                  </WaTabPanel>

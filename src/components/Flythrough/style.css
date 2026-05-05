@@ -171,8 +171,11 @@
 
 .flythrough-controls {
     align-items: center;
+    box-sizing: border-box;
     display: flex;
     font-size: var(--lgs-font-size-s);
+    justify-content: center;
+    max-width: calc(100vw - var(--lgs-gutter-s, 0.75rem) - var(--lgs-gutter-s, 0.75rem));
     position: relative;
 }
 
@@ -181,12 +184,15 @@
     display: flex;
     flex-direction: row;
     gap: 0;
+    justify-content: center;
+    min-width: 0;
 }
 
 .flythrough-progress-bar {
     align-items: center;
     display: inline-flex;
     flex: 0 0 auto;
+    flex-wrap: nowrap;
     font-size: var(--lgs-font-size-s);
     gap: 0;
     max-width: 100%;
@@ -197,6 +203,7 @@
 .flythrough-progress-settings {
     align-items: center;
     display: inline-flex;
+    flex: 0 0 auto;
     min-height: calc(var(--lgs-dimension-s) - 2 * var(--lgs-gutter-xxs));
     white-space: nowrap;
 }
@@ -232,14 +239,39 @@
     font-size: var(--lgs-font-size);
 }
 
+.flythrough-progress-card-in-drawer {
+    align-self: center;
+    max-width: 100%;
+    width: 100%;
+}
+
+.flythrough-progress-card-in-drawer::part(body) {
+    align-items: center;
+    display: flex;
+    justify-content: center;
+    min-width: 0;
+    width: 100%;
+}
+
 .flythrough-progress-bar-in-drawer {
-    align-self: flex-start;
+    align-self: center;
     flex-wrap: wrap;
+    justify-content: center;
     row-gap: var(--lgs-gutter-xs, 0.25rem);
+    width: 100%;
 }
 
 @media (max-width: 640px) {
-    .flythrough-progress-bar {
+    .flythrough-controls .flythrough-progress-segment {
+        margin-right: var(--lgs-gutter-xs, 0.25rem);
+        padding-inline-end: var(--lgs-gutter-xs, 0.25rem);
+    }
+
+    .flythrough-controls .flythrough-progress-time {
+        display: none;
+    }
+
+    .flythrough-progress-bar-in-drawer {
         flex-wrap: wrap;
         row-gap: var(--lgs-gutter-xs, 0.25rem);
     }
