@@ -5,11 +5,12 @@
   "type": "commonjs",
   "scripts": {
     "dev": "bunx --bun vite --mode development",
-    "build": "bunx --bun vite build",
+    "build": "bun run test:stores && bunx --bun vite build",
     "deploy": "bun deploy.js",
     "lint": "eslint . --ext js,jsx,ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "bunx --bun vite preview",
     "test": "vitest run",
+    "test:stores": "vitest run src/__tests__/store-proxy-contracts.test.js",
     "test:watch": "vitest"
   },
   "dependencies": {
