@@ -235,3 +235,31 @@
     background-image: var(--lgs-select-option-current-bg-image);
     background-blend-mode: var(--lgs-card-on-map-selected-bg-blend-mode);
 }
+
+.wa-theme-lgs1920-on-map.lgs-widget-collapsed .lgs-widget-collapsed-icon,
+.wa-theme-lgs1920-on-map.lgs-widget-collapsed .lgs-widget-collapsed-icon wa-icon {
+    color: var(--lgs-text-on-color, var(--lgs-light-color)) !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+}
+
+.wa-theme-lgs1920-on-map.lgs-widget-collapsed .lgs-widget-collapsed-icon wa-icon {
+    position: relative;
+    z-index: 1;
+    display: inline-flex !important;
+    width: 1.25em;
+    min-width: 1.25em;
+    height: 1em;
+    min-height: 1em;
+    fill: currentColor !important;
+}
+
+.wa-theme-lgs1920-on-map.lgs-widget-collapsed .lgs-widget-collapsed-icon wa-icon::part(svg) {
+    display: block !important;
+    width: 1.25em;
+    height: 1em;
+    color: currentColor !important;
+    fill: currentColor !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+}

@@ -31,6 +31,7 @@ const REMAINING_TRACK_Z_INDEX_UNDERLAY = 10
 const REMAINING_TRACK_Z_INDEX_MAIN = 20
 const PROGRESS_Z_INDEX_BORDER = 40
 const PROGRESS_Z_INDEX_FILL = 41
+const PATH_GEOMETRY_UPDATE_INTERVAL = 120
 
 const cssColor = (value, fallback) => Color.fromCssColorString(value ?? '') ?? fallback
 
@@ -49,6 +50,11 @@ export class FlythroughCesiumRenderer {
     #journeySlug = null
     #options = {}
     #terrainHeightCache = new Map()
+    #lineStyleCache = new Map()
+    #lastPathGeometryUpdate = 0
+    #lastPathGeometryDistance = null
+    #sourceRaised = false
+    #sourceAddPending = false
 
     constructor(options = {}) {
         this.#options = options
@@ -59,70 +65,139 @@ export class FlythroughCesiumRenderer {
         this.#options = {...this.#options, ...options}
         this.#journeySlug = this.#sampler?.journey?.slug ?? globalThis.lgs?.theJourney?.slug ?? 'current'
         this.#ensureSource()
+        this.#raiseSourceToTop()
+        this.#updateOriginalTrackMask()
         return this
     }
 
-    update = ({sample, sampler = this.#sampler} = {}) => {
+    update = ({sample, sampler = this.#sampler, forceGeometry = false} = {}) => {
         if (!sample || !sampler) {
             return
         }
 
         this.#sampler = sampler
         this.#ensureSource()
-        this.#updateOriginalTrackMask()
-        this.#updateRemainingTrackLines(sample)
         this.#updateCursor(sample)
-        this.#updateCompletedLines(sample)
+        if (forceGeometry || this.#shouldUpdatePathGeometry(sample)) {
+            this.#updateRemainingTrackLines(sample)
+            this.#updateCompletedLines(sample)
+        }
         globalThis.lgs?.scene?.requestRender?.()
     }
 
     clear = () => {
-        const viewer = globalThis.lgs?.viewer
-        if (viewer && this.#source) {
+        if (this.#source) {
             try {
-                viewer.dataSources.remove(this.#source, true)
+                this.#source.entities.removeAll()
+                this.#source.show = false
             }
             catch {
-                this.#source.entities.removeAll()
+                // The source may already have been removed by Cesium during a journey switch.
             }
         }
 
-        this.#source = null
         this.#cursor = null
         this.#lineEntities.clear()
         this.#remainingLineEntities.clear()
         this.#restoreOriginalTrackSources()
         this.#sampler = null
         this.#terrainHeightCache.clear()
+        this.#lineStyleCache.clear()
+        this.#lastPathGeometryUpdate = 0
+        this.#lastPathGeometryDistance = null
+        this.#sourceRaised = false
+        this.#sourceAddPending = false
         globalThis.lgs?.scene?.requestRender?.()
     }
 
+    #resetSourceEntities = () => {
+        this.#cursor = null
+        this.#lineEntities.clear()
+        this.#remainingLineEntities.clear()
+        this.#lastPathGeometryUpdate = 0
+        this.#lastPathGeometryDistance = null
+        this.#sourceRaised = false
+        this.#sourceAddPending = false
+    }
+
+    #dataSources = () => globalThis.lgs?.viewer?.dataSources ?? null
+
+    #sourceInCollection = (source = this.#source) => {
+        const dataSources = this.#dataSources()
+        return Boolean(source && dataSources?.contains?.(source))
+    }
+
     #ensureSource = () => {
-        if (this.#source) {
+        if (this.#source && (this.#sourceInCollection() || this.#sourceAddPending)) {
+            this.#source.show = true
             return this.#source
         }
 
-        const viewer = globalThis.lgs?.viewer
-        if (!viewer) {
+        if (this.#source && !this.#sourceInCollection()) {
+            this.#source = null
+            this.#resetSourceEntities()
+        }
+
+        const dataSources = this.#dataSources()
+        if (!dataSources) {
             return null
         }
 
         const name = `${FLYTHROUGH_DATA_SOURCE_PREFIX}#${this.#journeySlug ?? 'current'}`
-        const existing = viewer.dataSources.getByName?.(name)?.[0]
+        const existing = dataSources.getByName?.(name)?.[0]
         this.#source = existing ?? new CustomDataSource(name)
+        this.#sourceAddPending = false
 
         if (!existing) {
-            viewer.dataSources.add(this.#source).then(source => {
-                viewer.dataSources.raiseToTop(source)
+            this.#sourceAddPending = true
+            dataSources.add(this.#source).then(source => {
+                if (this.#source === source && dataSources.contains?.(source)) {
+                    dataSources.raiseToTop(source)
+                    this.#sourceRaised = true
+                }
+                this.#sourceAddPending = false
                 globalThis.lgs?.scene?.requestRender?.()
+            }).catch(() => {
+                this.#sourceAddPending = false
             })
-        }
-        else {
-            viewer.dataSources.raiseToTop(existing)
         }
         this.#source.show = true
 
         return this.#source
+    }
+
+    #raiseSourceToTop = () => {
+        if (!this.#source || this.#sourceRaised || this.#sourceAddPending) {
+            return
+        }
+
+        const dataSources = this.#dataSources()
+        if (!dataSources?.contains?.(this.#source)) {
+            return
+        }
+
+        dataSources.raiseToTop?.(this.#source)
+        this.#sourceRaised = true
+    }
+
+    #shouldUpdatePathGeometry = (sample) => {
+        const now = globalThis.performance?.now?.() ?? Date.now()
+        const distance = finiteNumber(sample.distanceFromStart) ?? 0
+        const previousDistance = this.#lastPathGeometryDistance
+        const distanceDelta = previousDistance === null ? Infinity : Math.abs(distance - previousDistance)
+        const minDistanceDelta = Math.max(25, (this.#sampler?.totalDistance ?? 0) / 600)
+
+        if (
+            this.#lastPathGeometryUpdate === 0
+            || now - this.#lastPathGeometryUpdate >= PATH_GEOMETRY_UPDATE_INTERVAL
+            || distanceDelta >= minDistanceDelta
+        ) {
+            this.#lastPathGeometryUpdate = now
+            this.#lastPathGeometryDistance = distance
+            return true
+        }
+
+        return false
     }
 
     #terrainHeightAt = (longitude, latitude) => {
@@ -200,6 +275,11 @@ export class FlythroughCesiumRenderer {
     }
 
     #trackLineStyle = track => {
+        const cacheKey = track?.slug
+        if (cacheKey && this.#lineStyleCache.has(cacheKey)) {
+            return this.#lineStyleCache.get(cacheKey)
+        }
+
         const style = TrackUtils.getTrackRenderStyle(track)
         const pixelsPerMeter = TrackUtils.meterWidthToPixelScale(track)
         const mainWidth = TrackUtils.resolveStyledTrackWidth(
@@ -213,7 +293,7 @@ export class FlythroughCesiumRenderer {
             style.underlay.pixelWidth,
         )
 
-        return {
+        const trackLine = {
             style,
             mainWidth,
             underlayWidth,
@@ -227,12 +307,18 @@ export class FlythroughCesiumRenderer {
                                                             },
                                                             style.underlay.color),
         }
+
+        if (cacheKey) {
+            this.#lineStyleCache.set(cacheKey, trackLine)
+        }
+
+        return trackLine
     }
 
     #style = () => {
         const settings = getFlythroughSettings()
         const progression = normalizeFlythroughProgressionStyle(
-            globalThis.lgs?.stores?.ui?.mainUI?.flythrough?.progression ?? settings.progression,
+            globalThis.lgs?.stores?.flythrough?.progression ?? settings.progression,
         )
         const fill = progression.fill
         const border = progression.border

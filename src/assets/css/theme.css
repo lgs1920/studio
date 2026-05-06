@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-05-05
- * Last modified: 2026-05-05
+ * Created on: 2026-05-06
+ * Last modified: 2026-05-06
  *
  *
  * Copyright © 2026 LGS1920
@@ -204,9 +204,6 @@
     --lgs-disabled-bg-color: var(--wa-color-neutral-fill-quiet);
 
     /* Background gradients and overlay shadows. */
-    --lgs-theme-gradient-1: linear-gradient(to right, rgba(192, 134, 24, 0.75), rgba(142, 120, 6, 0.65));
-    --lgs-theme-gradient-2: linear-gradient(61deg, rgba(142, 212, 244, 0.64) 20%, rgba(13, 127, 204, 0.55) 90%);
-    --lgs-theme-gradient-3: linear-gradient(130deg, rgba(146, 64, 14, 0.8) 22%, rgba(194, 124, 8, 0.6) 69%, rgba(255, 202, 0, 1));
     --lgs-brand-overlay-gradient: linear-gradient(32deg, color-mix(in oklab, var(--wa-color-brand) 46%, transparent) 0%, transparent 32%, var(--lgs-light-color-25) 66%, transparent 100%),
     linear-gradient(138deg, transparent 0%, color-mix(in oklab, var(--wa-color-brand-60, var(--wa-color-brand)) 42%, transparent) 40%, transparent 76%),
     linear-gradient(166deg, var(--lgs-light-color-15) 0%, color-mix(in oklab, var(--wa-color-brand) 16%, transparent) 34%, var(--lgs-dark-color-70) 58%, var(--lgs-dark-color-95) 100%);
@@ -219,8 +216,6 @@
     --lgs-brand-overlay-shadow-filter: color-mix(in oklab, color-mix(in oklab, var(--wa-color-brand) 10%, var(--lgs-dark-color-95) 90%) 64%, transparent);
     --lgs-overlay-floating-shadow: 0 0.08rem 0.18rem var(--lgs-brand-overlay-shadow-core), 0 0.26rem 0.58rem var(--lgs-brand-overlay-shadow-ambient), 0 0.02rem 0.12rem var(--lgs-brand-overlay-shadow-rim);
     --lgs-overlay-floating-drop-shadow: 0 0.2rem 0.46rem var(--lgs-brand-overlay-shadow-filter);
-
-    --lgs-theme-background-image: var(--lgs-theme-gradient-1);
 
     /* Brand signage and logo text tokens. */
     --lgs-signage-bg-color: var(--lgs-third-color);
@@ -1943,20 +1938,77 @@ wa-dialog::part(dialog)::backdrop {
         transition: opacity 160ms ease;
     }
 
-    .lgs-widget.lgs-widget-locked.lgs-widget-lock-hint-active > :not(.lgs-widget-inner-overlay):not(.lgs-widget-lock-overlay) {
+    .lgs-widget.lgs-widget-locked.lgs-widget-lock-hint-active:not(.lgs-visual-widget) > :not(.lgs-widget-inner-overlay):not(.lgs-widget-lock-overlay) {
         opacity: 0;
     }
 
     .lgs-widget-collapsed-icon {
         font-size: var(--lgs-font-size);
         line-height: 1;
+        position: absolute;
+        z-index: 2;
+        inset: 0;
         display: flex;
         align-items: center;
         justify-content: center;
-        width: 100%;
-        height: 100%;
-        color: var(--lgs-light-color);
+        width: auto;
+        height: auto;
+        color: var(--lgs-text-on-color, var(--lgs-light-color));
         pointer-events: none;
+        opacity: 1;
+        visibility: visible;
+    }
+
+    .lgs-widget-collapsed-icon wa-icon {
+        font-size: inherit;
+        line-height: 1;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 1.25em;
+        min-width: 1.25em;
+        height: 1em;
+        min-height: 1em;
+        color: inherit;
+        fill: currentColor;
+        opacity: 1;
+        visibility: visible;
+    }
+
+    .lgs-widget-collapsed-icon wa-icon::part(svg) {
+        display: block;
+        width: 1.25em;
+        height: 1em;
+        color: currentColor;
+        fill: currentColor;
+        opacity: 1;
+        visibility: visible;
+    }
+
+    .lgs-widget.lgs-widget-collapsed-toolbar,
+    .lgs-widget.lgs-widget-collapsed-toolbar > .lgs-widget-collapsed-icon,
+    .lgs-widget.lgs-widget-collapsed-toolbar > .lgs-widget-collapsed-icon wa-icon {
+        color: var(--lgs-text-on-color, var(--lgs-light-color)) !important;
+        opacity: 1 !important;
+        visibility: visible !important;
+    }
+
+    .lgs-widget.lgs-widget-collapsed-toolbar > .lgs-widget-collapsed-icon wa-icon {
+        font-size: var(--lgs-font-size);
+        position: relative;
+        z-index: 3;
+        display: inline-flex !important;
+        color: var(--lgs-text-on-color, var(--lgs-light-color)) !important;
+        fill: currentColor !important;
+        stroke: currentColor !important;
+    }
+
+    .lgs-widget.lgs-widget-collapsed-toolbar > .lgs-widget-collapsed-icon wa-icon::part(svg) {
+        color: currentColor !important;
+        fill: currentColor !important;
+        stroke: currentColor !important;
+        opacity: 1 !important;
+        visibility: visible !important;
     }
 
     .lgs-widget-lock-overlay {
@@ -1972,6 +2024,35 @@ wa-dialog::part(dialog)::backdrop {
         pointer-events: none;
         opacity: 0;
         transition: opacity 160ms ease;
+    }
+
+    .lgs-widget-lock-badge {
+        font-size: var(--lgs-font-size-m);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-sizing: border-box;
+        width: 2.25rem;
+        min-width: 2.25rem;
+        height: 2.25rem;
+        min-height: 2.25rem;
+        padding: 0;
+        color: var(--wa-color-brand-on-quiet);
+        border: 0;
+        border-radius: var(--lgs-border-radius-s);
+        background: color-mix(in oklab, var(--wa-color-brand-fill-quiet) 15%, transparent);
+        text-shadow: 0 1px 4px color-mix(in oklab, black 34%, transparent);
+        backdrop-filter: blur(var(--lgs-blur));
+        transform: scale(var(--lgs-widget-scale-correction, 1));
+        transform-origin: center;
+        aspect-ratio: 1;
+        opacity: 0.92;
+    }
+
+    .lgs-widget-lock-badge wa-icon {
+        font-size: var(--lgs-font-size);
+        line-height: 1;
+        color: inherit;
     }
 
     .lgs-widget-lock-overlay.is-visible {

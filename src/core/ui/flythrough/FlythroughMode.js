@@ -29,6 +29,31 @@ const METRIC_OVERLAY_TTL = 2000
 
 const flythroughStore = () => globalThis.lgs?.stores?.flythrough
 
+const resetRuntimeProgress = (store) => {
+    if (!store) {
+        return
+    }
+
+    store.active = false
+    store.playing = false
+    store.paused = false
+    store.progress = 0
+    store.elapsedMillis = null
+    store.durationMillis = null
+    store.sample = null
+    store.totalDistance = 0
+    store.toolbarVisible = false
+    store.hoverSample = null
+    store.metricOverlay = {
+        ...store.metricOverlay,
+        visible:   false,
+        source:    null,
+        anchor:    null,
+        sample:    null,
+        expiresAt: 0,
+    }
+}
+
 export class FlythroughMode {
     #controller
     #renderer
@@ -200,22 +225,12 @@ export class FlythroughMode {
     }
 
     stop = (options = {}) => {
-        const sample = this.#controller.stop(options)
+        const sample = this.#controller.stop({
+            ...options,
+            clearProgress: options.clearProgress ?? true,
+        })
         this.#renderer.clear()
-        const store = flythroughStore()
-        if (store) {
-            store.active = false
-            store.playing = false
-            store.paused = false
-            store.toolbarVisible = false
-            store.hoverSample = null
-            store.metricOverlay = {
-                ...store.metricOverlay,
-                visible:   false,
-                sample:    null,
-                expiresAt: 0,
-            }
-        }
+        resetRuntimeProgress(flythroughStore())
         return sample
     }
 
@@ -301,32 +316,12 @@ export class FlythroughMode {
             this.#controller.on(FLYTHROUGH_EVENT_STOP, () => {
                 this.#setContinuousRender(false)
                 this.#renderer.clear()
-                const store = flythroughStore()
-                if (store) {
-                    store.toolbarVisible = false
-                    store.hoverSample = null
-                    store.metricOverlay = {
-                        ...store.metricOverlay,
-                        visible:   false,
-                        sample:    null,
-                        expiresAt: 0,
-                    }
-                }
+                resetRuntimeProgress(flythroughStore())
             }),
             this.#controller.on(FLYTHROUGH_EVENT_END, () => {
                 this.#setContinuousRender(false)
                 this.#renderer.clear()
-                const store = flythroughStore()
-                if (store) {
-                    store.toolbarVisible = false
-                    store.hoverSample = null
-                    store.metricOverlay = {
-                        ...store.metricOverlay,
-                        visible:   false,
-                        sample:    null,
-                        expiresAt: 0,
-                    }
-                }
+                resetRuntimeProgress(flythroughStore())
             }),
         )
     }

@@ -148,38 +148,47 @@ export const FlythroughProgressBar = memo(({showSettings = false, className = ''
     const {current: unitSystem} = useSnapshot(lgs.settings.unitSystem)
     const {drawers: {open: openDrawer}} = useSnapshot(lgs.stores.ui)
     const idPrefix = useMemo(() => `flythrough-progress-${uuid()}`, [])
-    const progress = clampProgress(flythrough.progress)
+    const hasPlaybackSample = Boolean((flythrough.active || flythrough.playing || flythrough.paused) && flythrough.sample)
+    const progress = hasPlaybackSample ? clampProgress(flythrough.progress) : 0
     const direction = Number(flythrough.direction) < 0 ? -1 : 1
     const totalMillis = finiteNumber(flythrough.durationMillis)
     const elapsedMillis = finiteNumber(flythrough.elapsedMillis)
-    const hasJourneyTime = totalMillis !== null && totalMillis > 0 && elapsedMillis !== null
-    const totalDistance = flythrough.totalDistance ?? 0
+    const hasJourneyTime = hasPlaybackSample && totalMillis !== null && totalMillis > 0 && elapsedMillis !== null
+    const totalDistance = hasPlaybackSample ? flythrough.totalDistance ?? 0 : 0
     const distanceUnit = DISTANCE_UNITS[unitSystem] ?? km
     const playbackProgress = playbackProgressFromSample({
-        sample: flythrough.sample,
+        sample: hasPlaybackSample ? flythrough.sample : null,
         totalDistance,
         direction,
         fallback: direction < 0 ? 1 - progress : progress,
     })
-    const coveredDistance = flythrough.sample
+    const coveredDistance = hasPlaybackSample && flythrough.sample
                             ? (direction < 0 ? flythrough.sample.remainingDistance : flythrough.sample.distanceFromStart)
                             : totalDistance * playbackProgress
 
     const timeLabel = useMemo(() => {
+        if (!hasPlaybackSample) {
+            return '--'
+        }
+
         if (!hasJourneyTime) {
             return null
         }
 
         return `${formatElapsedHoursMinutes(elapsedMillis, totalMillis)} / ${formatHoursMinutes(totalMillis, {ceil: true})}`
-    }, [elapsedMillis, hasJourneyTime, totalMillis])
+    }, [elapsedMillis, hasJourneyTime, hasPlaybackSample, totalMillis])
 
     const distanceLabel = useMemo(() => {
+        if (!hasPlaybackSample) {
+            return '--'
+        }
+
         const covered = formatDistance(coveredDistance, distanceUnit)
         const total = formatDistance(totalDistance, distanceUnit)
         return `${covered} / ${total} ${distanceUnit}`
-    }, [coveredDistance, distanceUnit, totalDistance])
+    }, [coveredDistance, distanceUnit, hasPlaybackSample, totalDistance])
 
-    const percentLabel = `${(playbackProgress * 100).toFixed(0)}%`
+    const percentLabel = hasPlaybackSample ? `${(playbackProgress * 100).toFixed(0)}%` : '--'
     const playing = flythrough.playing
     const paused = flythrough.paused
     const playLabel = paused ? `Resume ${FLYTHROUGH_LABEL}` : `Start ${FLYTHROUGH_LABEL}`

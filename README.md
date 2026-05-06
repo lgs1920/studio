@@ -13,6 +13,7 @@ The repository already contains the main product surface used by the studio:
 - Cesium-based 2D / 3D / Columbus scene navigation
 - Journey and POI focus workflows
 - Live orbit rotation and panorama controls
+- Camera interaction hints and a shortcuts reference panel for app, map, and widget controls
 - Elevation-aware metrics and profile widgets
 - Widget rendering, placement, ordering, reduction, locking, and export-aware capture
 - Geocoding tools and coordinate utilities
@@ -37,6 +38,7 @@ The repository already contains the main product surface used by the studio:
 - Focus on journeys, tracks, POIs, or arbitrary coordinates
 - Continuous orbit rotation with live speed and direction controls
 - Panorama mode with live height, pitch, speed, and direction controls
+- Camera movement feedback with lock-aware on-map display
 - Compass, scene mode switching, and camera targeting helpers
 
 ### Metrics and Visualization
@@ -67,6 +69,7 @@ The repository already contains the main product surface used by the studio:
 
 - Local browser persistence with IndexedDB
 - Settings and widget configuration from YAML files in `public/`
+- Shared shortcut catalog displayed in the information drawer
 - PWA service worker and version-aware caching
 
 ## Technology Stack

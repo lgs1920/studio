@@ -319,6 +319,71 @@ describe('flythrough phase 1 playback controller', () => {
         expect(ends).toHaveLength(1)
     })
 
+    it('does not repopulate runtime progress after the end listener resets it', () => {
+        const journey = makeJourney([
+            makeTrack({
+                slug:        'track#journey#gpx#main',
+                coordinates: [[0, 0, 0], [0.001, 0, 0]],
+            }),
+        ])
+        const sampler = new FlythroughPathSampler({journey})
+        const previousLgs = globalThis.lgs
+        const frames = []
+        let now = 0
+
+        globalThis.lgs = {
+            events: {emit: () => {}},
+            scene:  {requestRender: () => {}},
+            stores: {
+                flythrough: proxy({
+                                      active: false,
+                                      playing: false,
+                                      paused: false,
+                                      progress: 0,
+                                      elapsedMillis: null,
+                                      durationMillis: null,
+                                      sample: null,
+                                      totalDistance: 0,
+                                  }),
+            },
+        }
+
+        try {
+            const controller = new FlythroughPlaybackController({
+                requestFrame: callback => {
+                    frames.push(callback)
+                    return frames.length
+                },
+                cancelFrame: () => {},
+                now:         () => now,
+            })
+
+            controller.on(FLYTHROUGH_EVENT_END, () => {
+                const store = globalThis.lgs.stores.flythrough
+                store.progress = 0
+                store.elapsedMillis = null
+                store.durationMillis = null
+                store.sample = null
+                store.totalDistance = 0
+            })
+
+            controller.configure({sampler, duration: 10})
+            controller.start()
+
+            now = 10000
+            frames.shift()()
+
+            expect(globalThis.lgs.stores.flythrough.progress).toBe(0)
+            expect(globalThis.lgs.stores.flythrough.elapsedMillis).toBeNull()
+            expect(globalThis.lgs.stores.flythrough.durationMillis).toBeNull()
+            expect(globalThis.lgs.stores.flythrough.sample).toBeNull()
+            expect(globalThis.lgs.stores.flythrough.totalDistance).toBe(0)
+        }
+        finally {
+            globalThis.lgs = previousLgs
+        }
+    })
+
     it('syncs serializable samples into the Valtio flythrough runtime store', () => {
         const journey = makeJourney([
             makeTrack({

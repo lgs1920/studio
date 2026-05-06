@@ -30,6 +30,7 @@ export const FlythroughControlsWidget = memo(() => {
         top:            '82%',
         left:           '50%',
         attachTo:       'bottom',
+        icon:           'video-arrow-up-right',
         opacity:        lgs.settings.ui.toolbars.opacity,
         type:           LGS_TOOLBAR,
         persist:        true,

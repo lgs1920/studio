@@ -129,6 +129,7 @@ const RotationCameraAdjustmentOverlay = memo(() => {
     const panorama = useSnapshot(lgs.stores.ui.mainUI.panorama)
     const cameraFlight = useSnapshot(lgs.stores.ui.mainUI.cameraFlight)
     const cameraSettings = useSnapshot(lgs.settings.ui.camera)
+    const widgetListSnapshot = useSnapshot(lgs.stores.ui.widget.list)
     useSnapshot(lgs.settings.unitSystem)
     const [visible, setVisible] = useState(false)
     const visibleRef = useRef(false)
@@ -141,8 +142,13 @@ const RotationCameraAdjustmentOverlay = memo(() => {
     const [values, setValues] = useState(() => formatCameraAdjustmentValues(currentCameraMovementSnapshot()?.position))
     const showCameraMovementWidget = cameraSettings.showMovementWidget ?? true
     const cameraFlightRunning = cameraFlight.running
+    const adjustmentWidgetLocked = Boolean(
+        widgetListSnapshot.get(CAMERA_ADJUSTMENT_WIDGET)?.locked
+        ?? __.ui.widgetManager.getWidgetConfig(CAMERA_ADJUSTMENT_WIDGET)?.locked,
+    )
     const config = useMemo(() => ({
         attachTo:        'center',
+        canReduce:       false,
         contextMenu:     {
             canRemove: false,
         },
@@ -188,11 +194,46 @@ const RotationCameraAdjustmentOverlay = memo(() => {
             window.clearTimeout(timerRef.current)
         }
 
-        timerRef.current = window.setTimeout(() => {
-            hide()
-            timerRef.current = null
-        }, ADJUSTMENT_OVERLAY_DELAY)
-    }, [hide])
+        if (!adjustmentWidgetLocked) {
+            timerRef.current = window.setTimeout(() => {
+                hide()
+                timerRef.current = null
+            }, ADJUSTMENT_OVERLAY_DELAY)
+        }
+    }, [adjustmentWidgetLocked, hide])
+
+    useEffect(() => {
+        if (adjustmentWidgetLocked) {
+            if (timerRef.current) {
+                window.clearTimeout(timerRef.current)
+                timerRef.current = null
+            }
+            return
+        }
+
+        if (visibleRef.current && !timerRef.current) {
+            timerRef.current = window.setTimeout(() => {
+                hide()
+                timerRef.current = null
+            }, ADJUSTMENT_OVERLAY_DELAY)
+        }
+    }, [adjustmentWidgetLocked, hide])
+
+    const unlockAdjustmentWidget = useCallback((event) => {
+        event.preventDefault()
+        event.stopPropagation()
+        event.nativeEvent?.stopImmediatePropagation?.()
+
+        const widgetConfig = __.ui.widgetManager.getWidgetConfig(CAMERA_ADJUSTMENT_WIDGET)
+        if (widgetConfig) {
+            widgetConfig.locked = false
+            __.ui.widgetManager.setConfig(CAMERA_ADJUSTMENT_WIDGET, widgetConfig)
+        }
+
+        const currentEntry = lgs.stores.ui.widget.list.get(CAMERA_ADJUSTMENT_WIDGET) ?? {}
+        lgs.stores.ui.widget.list.set(CAMERA_ADJUSTMENT_WIDGET, {...currentEntry, locked: false})
+        lgs.stores.ui.widget.current = {id: CAMERA_ADJUSTMENT_WIDGET}
+    }, [])
 
     const update = useCallback((position) => {
         setValues(formatCameraAdjustmentValues(position))
@@ -201,6 +242,19 @@ const RotationCameraAdjustmentOverlay = memo(() => {
     const showCurrentSnapshot = useCallback(() => {
         const snapshot = currentCameraMovementSnapshot()
         if (!snapshot) {
+            return false
+        }
+
+        lastCameraKeyRef.current = snapshot.key
+        show(snapshot.position)
+        return true
+    }, [show])
+
+    const showPersistentSnapshot = useCallback(() => {
+        const snapshot = currentCameraMovementSnapshot()
+        if (!snapshot) {
+            visibleRef.current = true
+            setVisible(true)
             return false
         }
 
@@ -268,7 +322,27 @@ const RotationCameraAdjustmentOverlay = memo(() => {
     }, [adjustmentWidgetMounted, centerAdjustmentWidget])
 
     useEffect(() => {
-        if (!showCameraMovementWidget || cameraFlightRunning || !rotate.running || panorama.active) {
+        if (!showCameraMovementWidget) {
+            hide()
+            return undefined
+        }
+
+        if (adjustmentWidgetLocked) {
+            showPersistentSnapshot()
+            const interval = window.setInterval(() => {
+                const snapshot = currentCameraMovementSnapshot()
+                if (!snapshot || snapshot.key === lastCameraKeyRef.current) {
+                    return
+                }
+
+                lastCameraKeyRef.current = snapshot.key
+                update(snapshot.position)
+            }, CAMERA_MOVEMENT_OVERLAY_UPDATE_DELAY)
+
+            return () => window.clearInterval(interval)
+        }
+
+        if (cameraFlightRunning || !rotate.running || panorama.active) {
             hide()
             return undefined
         }
@@ -350,7 +424,18 @@ const RotationCameraAdjustmentOverlay = memo(() => {
             window.clearInterval(interval)
             clearInitialRetry()
         }
-    }, [cameraFlightRunning, hide, panorama.active, rotate.running, show, showCameraMovementWidget, showCurrentSnapshot, update])
+    }, [
+        adjustmentWidgetLocked,
+        cameraFlightRunning,
+        hide,
+        panorama.active,
+        rotate.running,
+        show,
+        showCameraMovementWidget,
+        showCurrentSnapshot,
+        showPersistentSnapshot,
+        update,
+    ])
 
     useEffect(() => {
         if (!showCameraMovementWidget || cameraFlightRunning || !rotate.running || panorama.active) {
@@ -417,6 +502,17 @@ const RotationCameraAdjustmentOverlay = memo(() => {
                     <sl-icon library="fa" name={FA2SL.set(faAngle)}/>
                     <strong>{values.pitch}</strong>
                 </span>
+                {adjustmentWidgetLocked && (
+                    <button
+                        type="button"
+                        className="panorama-adjustment-lock-control"
+                        aria-label="Unlock camera adjustment widget"
+                        onClick={unlockAdjustmentWidget}
+                        onPointerDown={event => event.stopPropagation()}
+                    >
+                        <WaIcon name="lock" variant="regular"/>
+                    </button>
+                )}
             </div>
         </Widget>
     )

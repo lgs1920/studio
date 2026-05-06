@@ -477,7 +477,7 @@ export class WidgetCoreRegistry {
                         config.dimensions = {width, height}
                     }
                 }
-                config.icon = savedWidget.icon ?? config.icon
+                config.icon = initialConfig.icon ?? savedWidget.icon ?? config.icon
                 config.scale = savedWidget.scale || {x: 1, y: 1}
                 config.rotate = savedWidget.rotate || 0
                 const savedRatioValue = savedWidget.ratio?.value ?? savedWidget.ratio

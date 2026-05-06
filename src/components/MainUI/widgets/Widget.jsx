@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-05-01
- * Last modified: 2026-05-01
+ * Created on: 2026-05-06
+ * Last modified: 2026-05-06
  *
  *
  * Copyright © 2026 LGS1920
@@ -35,10 +35,12 @@ import Moveable                   from 'react-moveable'
 import { useSnapshot }            from 'valtio'
 
 const COLLAPSED_WIDGET_SIZE = 40
+const DEFAULT_COLLAPSED_WIDGET_ICON = 'sliders'
 const DRAG_THRESHOLD = {touch: 30, mouse: 5}
 const LOCKED_FLASH_TIMEOUT = 650
 const LOCKED_HINT_ICON = 'lock'
 const LOCKED_HINT_TIMEOUT = 2000
+const ROTATION_CAMERA_ADJUSTMENT_WIDGET = 'rotation-camera-adjustment-widget'
 const SUPPRESS_DOUBLE_CLICK_MS = 350
 const SNAPSHOT_MAX_SIZE = 1024
 const SNAPSHOT_MIN_SIZE = 240
@@ -46,6 +48,18 @@ const SNAPSHOT_MIN_PADDING = 80
 const SNAPSHOT_MAX_PADDING = 220
 
 const clamp = (value, min, max) => Math.min(Math.max(value, min), max)
+
+const normalizeWidgetIcon = icon => {
+    if (typeof icon !== 'string') {
+        return null
+    }
+    const normalized = icon.trim()
+    return normalized.length > 0 ? normalized : null
+}
+
+const resolveCollapsedWidgetIcon = (...icons) => icons
+    .map(normalizeWidgetIcon)
+    .find(Boolean) ?? DEFAULT_COLLAPSED_WIDGET_ICON
 
 const resolveSnapshotPreviewerRect = (widgetId) => {
     if (typeof document === 'undefined') {
@@ -177,12 +191,12 @@ const expandWidgetAroundCenter = (element, config) => {
         top:  centerY - (height / 2),
     }
     const inlineDimensions = config.expandedInlineDimensions
-    const fallbackToAutoSize = !inlineDimensions && config.type === LGS_TOOLBAR
+    const isToolbar = config.type === LGS_TOOLBAR
 
     element.style.left = `${position.left}px`
     element.style.top = `${position.top}px`
-    element.style.width = inlineDimensions ? inlineDimensions.width : (fallbackToAutoSize ? '' : `${width}px`)
-    element.style.height = inlineDimensions ? inlineDimensions.height : (fallbackToAutoSize ? '' : `${height}px`)
+    element.style.width = isToolbar ? `${width}px` : (inlineDimensions ? inlineDimensions.width : `${width}px`)
+    element.style.height = isToolbar ? `${height}px` : (inlineDimensions ? inlineDimensions.height : `${height}px`)
     config.dimensions = {width, height}
     config.position = position
 }
@@ -279,6 +293,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
     const [boardContainer, setBoardContainer] = useState(null)
     const [collapsed, setCollapsed] = useState(false)
     const [locked, setLocked] = useState(false)
+    const [collapsedIconFallback, setCollapsedIconFallback] = useState(false)
     const [showLockedHint, setShowLockedHint] = useState(false)
 
     // Global stores (valtio)
@@ -301,9 +316,6 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
     const isSelected = selectedId === widgetId
     const keyboardUpdate = widget.current?.keyboardUpdate ?? 0
     const widgetTypeId = widgetId?.split('#')[0] ?? widgetId
-    const liveOpacity = config.type === LGS_TOOLBAR
-                        ? toolbars.opacity
-                        : (config.opacity ?? 1)
     const isTargetingBoard = Boolean(config.widgetsBoard && config.widgetsBoard !== SCENE_WIDGETS_BOARD)
     const sceneContainer = useMemo(() => {
         return isTargetingBoard ? null : __.ui.widgetManager.resolveWidgetsBoardContainer(config.widgetsBoard)
@@ -313,12 +325,22 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
         const definition = config.group ? __.widgets.get(config.group)?.widgets?.get(widgetTypeId) : null
         return definition ?? null
     }, [config.group, widgetTypeId])
-    const collapsedIcon = config.icon ?? widgetDefinition?.icon ?? 'box'
+    const collapsedIcon = useMemo(
+        () => resolveCollapsedWidgetIcon(config.icon, widgetDefinition?.icon),
+        [config.icon, widgetDefinition?.icon],
+    )
+    const renderedCollapsedIcon = collapsedIconFallback ? DEFAULT_COLLAPSED_WIDGET_ICON : collapsedIcon
+    const isVisualWidget = config.type === LGS_VISUAL_WIDGET
     const canLock = config.canLock ?? true
-    const canReduce = config.canReduce ?? true
+    const canReduce = !isVisualWidget && (config.canReduce ?? true)
     const effectiveCollapsed = canReduce && collapsed
     const effectiveLocked = canLock && locked
-    const showLockedOverlay = effectiveLocked && showLockedHint
+    const suppressLockedOverlay = widgetId === ROTATION_CAMERA_ADJUSTMENT_WIDGET
+    const isCollapsedToolbar = effectiveCollapsed && config.type === LGS_TOOLBAR
+    const showLockedOverlay = effectiveLocked && showLockedHint && !suppressLockedOverlay
+    const liveOpacity = config.type === LGS_TOOLBAR
+                        ? (effectiveCollapsed ? 1 : (toolbars.opacity ?? config.opacity ?? 1))
+                        : (config.opacity ?? 1)
 
     // Reactive depth resolution: priority to Store, fallback to initial Config
     const activeZIndex = widgetListSnapshot.get(widgetId)?.zIndex ?? config.zIndex
@@ -330,6 +352,10 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
             _moveable.current.updateRect()
         }
     }, [activeZIndex])
+
+    useEffect(() => {
+        setCollapsedIconFallback(false)
+    }, [collapsedIcon])
 
     useEffect(() => {
         return () => {
@@ -523,10 +549,10 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
     }, [$widget.list, widgetId])
 
     const showLockedHoverHint = useCallback(() => {
-        if (!effectiveLocked) {
+        if (!effectiveLocked || suppressLockedOverlay) {
             return
         }
-        if (!effectiveCollapsed && _lockedFlashShown.current) {
+        if (!isVisualWidget && !effectiveCollapsed && _lockedFlashShown.current) {
             return
         }
 
@@ -534,16 +560,17 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
             clearTimeout(_lockedHintTimer.current)
         }
 
-        if (!effectiveCollapsed) {
+        if (!isVisualWidget && !effectiveCollapsed) {
             _lockedFlashShown.current = true
         }
 
         setShowLockedHint(true)
+        const timeout = effectiveCollapsed || isVisualWidget ? LOCKED_HINT_TIMEOUT : LOCKED_FLASH_TIMEOUT
         _lockedHintTimer.current = setTimeout(() => {
             setShowLockedHint(false)
             _lockedHintTimer.current = null
-        }, effectiveCollapsed ? LOCKED_HINT_TIMEOUT : LOCKED_FLASH_TIMEOUT)
-    }, [effectiveCollapsed, effectiveLocked])
+        }, timeout)
+    }, [effectiveCollapsed, effectiveLocked, isVisualWidget, suppressLockedOverlay])
 
     const hideLockedHoverHint = useCallback(() => {
         if (_lockedHintTimer.current) {
@@ -553,8 +580,14 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
         setShowLockedHint(false)
     }, [])
 
+    const handleCollapsedIconError = useCallback(() => {
+        if (renderedCollapsedIcon !== DEFAULT_COLLAPSED_WIDGET_ICON) {
+            setCollapsedIconFallback(true)
+        }
+    }, [renderedCollapsedIcon])
+
     const persistInteractionState = useCallback((widgetConfig, patch) => {
-        widgetConfig.icon = widgetConfig.icon ?? collapsedIcon
+        widgetConfig.icon = collapsedIcon
         __.ui.widgetManager.setConfig(widgetId, widgetConfig)
         updateWidgetStoreEntry({icon: widgetConfig.icon, ...patch})
         if (widgetConfig.persist) {
@@ -571,6 +604,19 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
         event?.stopImmediatePropagation?.()
         _suppressClickUntil.current = performance.now() + SUPPRESS_DOUBLE_CLICK_MS
     }, [])
+
+    const openEditorFromDoubleClick = useCallback((event) => {
+        if (!isVisualWidget || interactionLocked || effectiveLocked || !__.ui.widgetManager.canEditWidget(widgetId)) {
+            return false
+        }
+
+        event?.preventDefault?.()
+        event?.stopPropagation?.()
+        event?.nativeEvent?.stopImmediatePropagation?.()
+        event?.stopImmediatePropagation?.()
+        __.ui.widgetManager.editWidget(widgetId)
+        return true
+    }, [effectiveLocked, interactionLocked, isVisualWidget, widgetId])
 
     const toggleCollapsed = useCallback(() => {
         if (!canReduce || interactionLocked || effectiveLocked) {
@@ -592,6 +638,11 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                 width:  COLLAPSED_WIDGET_SIZE,
                 height: COLLAPSED_WIDGET_SIZE,
             })
+            if (config.type === LGS_TOOLBAR) {
+                element.style.opacity = '1'
+                element.style.color = 'var(--lgs-text-on-color, var(--lgs-light-color))'
+                widgetConfig.opacity = 1
+            }
         }
         else {
             expandWidgetAroundCenter(element, widgetConfig)
@@ -604,7 +655,53 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
             expandedDimensions: widgetConfig.expandedDimensions,
             expandedInlineDimensions: widgetConfig.expandedInlineDimensions,
         })
-    }, [canReduce, effectiveCollapsed, effectiveLocked, interactionLocked, persistInteractionState, widgetId])
+    }, [canReduce, config.type, effectiveCollapsed, effectiveLocked, interactionLocked, persistInteractionState, widgetId])
+
+    useEffect(() => {
+        if (effectiveCollapsed || config.type !== LGS_TOOLBAR || !_initialized.current || !_widget.current) {
+            return
+        }
+
+        const frameId = requestAnimationFrame(() => {
+            const element = _widget.current
+            const widgetConfig = __.ui.widgetManager.getWidgetConfig(widgetId)
+            if (!element || !widgetConfig || widgetConfig.collapsed) {
+                return
+            }
+
+            const previousDimensions = readLogicalDimensions(element, widgetConfig)
+            const previousPosition = readLogicalPosition(element, widgetConfig)
+            const centerX = previousPosition.left + (previousDimensions.width / 2)
+            const centerY = previousPosition.top + (previousDimensions.height / 2)
+
+            element.style.width = ''
+            element.style.height = ''
+
+            const dimensions = readLogicalDimensions(element, widgetConfig)
+            const position = {
+                left: centerX - (dimensions.width / 2),
+                top:  centerY - (dimensions.height / 2),
+            }
+
+            element.style.left = `${position.left}px`
+            element.style.top = `${position.top}px`
+            widgetConfig.position = position
+            widgetConfig.dimensions = dimensions
+            widgetConfig.expandedDimensions = dimensions
+            widgetConfig.expandedInlineDimensions = {width: '', height: ''}
+            __.ui.widgetManager.setConfig(widgetId, widgetConfig)
+            updateWidgetStoreEntry({
+                                       expandedDimensions:       dimensions,
+                                       expandedInlineDimensions: widgetConfig.expandedInlineDimensions,
+                                   })
+            if (widgetConfig.persist) {
+                void __.ui.widgetManager.saveWidgetPosition(widgetId, widgetConfig)
+            }
+            _moveable.current?.updateRect()
+        })
+
+        return () => cancelAnimationFrame(frameId)
+    }, [config.type, effectiveCollapsed, updateWidgetStoreEntry, widgetId])
 
     const toggleLocked = useCallback(() => {
         if (interactionLocked || !canLock) {
@@ -720,11 +817,12 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
 
     const handleDoubleClick = useCallback((event) => {
         if (!canReduce) {
+            openEditorFromDoubleClick(event)
             return
         }
         blockDoubleClick(event)
         toggleCollapsed()
-    }, [blockDoubleClick, canReduce, toggleCollapsed])
+    }, [blockDoubleClick, canReduce, openEditorFromDoubleClick, toggleCollapsed])
 
     const handlePointerDownCapture = useCallback((event) => {
         if (!canReduce || !isPrimaryLeftPointer(event) || event.ctrlKey) {
@@ -1004,8 +1102,8 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                 container:      __.ui.widgetManager.resolveWidgetsBoardReferenceContainer(config.widgetsBoard) ?? actualContainer,
                 boundsContainer: actualContainer,
                 canLock:        config.canLock ?? true,
-                canReduce:      config.canReduce ?? true,
-                collapsed:      config.collapsed ?? false,
+                canReduce:      isVisualWidget ? false : (config.canReduce ?? true),
+                collapsed:      isVisualWidget ? false : (config.collapsed ?? false),
                 contextMenu:    __.ui.widgetManager.cloneContext(config?.contextMenu ?? {}, WIDGETS_CAPABILITIES),
                 cropDimensions: config.cropDimensions ?? {left: 0, top: 0, width: 0, height: 0},
                 dynamic:        config.dynamic ?? false,
@@ -1014,7 +1112,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                 forceEven:      config.forceEven ?? false,
                 group:          config.group ?? null,
                 handle:         config.handle ?? null,
-                icon:           config.icon ?? collapsedIcon,
+                icon:           collapsedIcon,
                 id: widgetId,
                 isCropper:      config.isCropper ?? false,
                 left:           config.left,
@@ -1048,13 +1146,15 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
             // Critical: Force the reactive zIndex over retrieved stale persistence during launch
             resolved.zIndex = activeZIndex
             resolved.showControlBox = fullConfig.showControlBox
-            resolved.icon = fullConfig.icon ?? collapsedIcon
+            resolved.icon = collapsedIcon
 
 
             const success = await __.ui.widgetManager.setupElement(_widget.current, resolved, setBounds, setPosition, _moveable)
 
             if (success) {
                 _initialized.current = true
+                resolved.icon = collapsedIcon
+                __.ui.widgetManager.setConfig(widgetId, resolved)
                 __.ui.widgetCache.mount(widgetId)
                 setCollapsed(Boolean(resolved.collapsed))
                 setLocked(Boolean(resolved.locked))
@@ -1064,7 +1164,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                     $widget.list.set(widgetId, {
                         zIndex:      activeZIndex,
                         collapsed:   Boolean(resolved.collapsed),
-                        icon:        resolved.icon,
+                        icon:        collapsedIcon,
                         locked:      Boolean(resolved.locked),
                         widgetsBoard: resolved.widgetsBoard,
                     })
@@ -1072,7 +1172,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                 else {
                     updateWidgetStoreEntry({
                         collapsed:   Boolean(resolved.collapsed),
-                        icon:        resolved.icon,
+                        icon:        collapsedIcon,
                         locked:      Boolean(resolved.locked),
                         widgetsBoard: resolved.widgetsBoard,
                     })
@@ -1117,7 +1217,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
         if (config.type === LGS_VISUAL_WIDGET && !$widget.list.has(widgetId)) {
             $widget.list.set(widgetId, {
                 zIndex:      activeZIndex,
-                collapsed:   Boolean(config.collapsed),
+                collapsed:   false,
                 icon:        config.icon ?? collapsedIcon,
                 locked:      Boolean(config.locked),
                 widgetsBoard: config.widgetsBoard,
@@ -1175,11 +1275,12 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
             <div
                 className={classNames(LGS_WIDGET, {
                     [className]:    !!className && !effectiveCollapsed,
-                    [config?.type]: config?.type && config?.type !== LGS_WIDGET,
+                    [config?.type]: config?.type && config?.type !== LGS_WIDGET && !effectiveCollapsed,
                     [LGS_ANIMATION_DRAGGING]: config.animationWhenDragging,
                     [LGS_ANIMATION_RESIZING]: config.animationWhenResizing,
                     dragging: isDragging,
                     'lgs-widget-collapsed': effectiveCollapsed,
+                    'lgs-widget-collapsed-toolbar': isCollapsedToolbar,
                     'lgs-widget-locked': effectiveLocked,
                     'lgs-widget-lock-hint-active': showLockedOverlay,
                     'lgs-one-line-card': effectiveCollapsed,
@@ -1192,6 +1293,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                 }}
                 onClickCapture={handleClickCapture}
                 onDoubleClickCapture={handleDoubleClickCapture}
+                onDoubleClick={handleDoubleClick}
                 onPointerDownCapture={handlePointerDownCapture}
                 onPointerDown={handlePointerDown}
                 onMouseEnter={handleMouseEnter}
@@ -1199,16 +1301,30 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
             >
                 {effectiveCollapsed
                  ? (
-                     <div className="lgs-widget-collapsed-icon" title={effectiveLocked ? 'Locked widget' : 'Collapsed widget'}>
-                         <WaIcon name={collapsedIcon} variant="regular"/>
+                     <div
+                         className="lgs-widget-collapsed-icon"
+                         data-collapsed-icon={renderedCollapsedIcon}
+                         data-widget-type={config.type}
+                         title={effectiveLocked ? 'Locked widget' : 'Collapsed widget'}
+                     >
+                         <WaIcon
+                             key={renderedCollapsedIcon}
+                             name={renderedCollapsedIcon}
+                             variant="regular"
+                             label={showLockedOverlay ? '' : (effectiveLocked ? 'Locked widget' : 'Collapsed widget')}
+                             onWaError={handleCollapsedIconError}
+                             aria-hidden={showLockedOverlay}
+                         />
                      </div>
                  )
                  : children
                 }
-                {effectiveLocked && (
+                {effectiveLocked && !suppressLockedOverlay && (
                     <div className={classNames('lgs-widget-lock-overlay', {'is-visible': showLockedOverlay})}
                          aria-hidden={!showLockedOverlay}>
-                        <WaIcon name={LOCKED_HINT_ICON} variant="regular"/>
+                        <div className="lgs-widget-lock-badge">
+                            <WaIcon name={LOCKED_HINT_ICON} variant="regular"/>
+                        </div>
                     </div>
                 )}
             </div>

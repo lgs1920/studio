@@ -412,6 +412,49 @@ body.mobile .rotation-widget-body {
     font-size: var(--lgs-font-size-m);
 }
 
+.panorama-adjustment-lock-control {
+    font: inherit;
+    line-height: 1;
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 var(--lgs-font-size-m);
+    align-self: center;
+    width: var(--lgs-font-size-m);
+    height: var(--lgs-font-size-m);
+    min-width: 0;
+    margin: 0;
+    margin-left: var(--lgs-gutter-s);
+    padding: 0;
+    cursor: pointer;
+    color: inherit;
+    border: 0;
+    background: transparent;
+}
+
+.panorama-adjustment-lock-control::before {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: calc(-0.5 * var(--lgs-gutter));
+    width: 1px;
+    content: '';
+    pointer-events: none;
+    background: color-mix(in oklab, var(--wa-color-brand-on-quiet) 38%, transparent);
+}
+
+.panorama-adjustment-lock-control:hover {
+    color: inherit;
+    background: transparent;
+}
+
+.panorama-adjustment-lock-control wa-icon {
+    font-size: var(--lgs-font-size-m);
+    width: 1em;
+    height: 1em;
+}
+
 .panorama-adjustment-overlay strong {
     font-size: var(--lgs-font-size-m);
 }

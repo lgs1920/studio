@@ -286,8 +286,8 @@ export class FlythroughPlaybackController {
                 this.#running = false
                 this.#paused = false
                 this.#frame = null
-                this.#emit(FLYTHROUGH_EVENT_END, this.currentSample())
-                this.#syncStore(this.currentSample(), {force: true})
+                this.#syncStore(sample, {force: true})
+                this.#emit(FLYTHROUGH_EVENT_END, sample)
                 return
             }
         }
