@@ -16,8 +16,10 @@
 
 import { WIDGET_FONT_FAMILIES, WIDGET_SYSTEM_FONT_STACK } from '@Core/constants'
 
-import { sanitizeNumericControlValue } from '@Components/MainUI/widgets/editor/elements/sliderUtils'
-import { FA2SL }  from '@Utils/FA2SL'
+import {
+    formatSliderPercent,
+    sanitizeNumericControlValue,
+}                                      from '@Components/MainUI/widgets/editor/elements/sliderUtils'
 import {
     WaButton, WaButtonGroup, WaColorPicker, WaIcon, WaInput, WaOption, WaSelect, WaSlider,
 }                 from '@web.awesome.me/webawesome-pro/dist/react'
@@ -174,7 +176,7 @@ export const TextEditorToolbar = ({id, fonts = false, color = true, align = true
                         max="1"
                         step="0.05"
                         value={textOpacity}
-                        tooltipFormatter={v => `${Math.floor(v * 100)}%`}
+                        valueFormatter={formatSliderPercent}
                         onInput={handleOpacityChange}
                         style={{width: '100px'}}
                     />

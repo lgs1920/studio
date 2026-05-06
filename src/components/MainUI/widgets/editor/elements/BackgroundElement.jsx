@@ -15,8 +15,8 @@
  ******************************************************************************/
 
 import { WaColorPicker, WaSlider, WaSwitch } from '@web.awesome.me/webawesome-pro/dist/react'
-import { sanitizeNumericControlValue } from './sliderUtils'
-import React, { useEffect, useRef }    from 'react'
+import { formatSliderPercent, sanitizeNumericControlValue } from './sliderUtils'
+import { useEffect, useRef }    from 'react'
 
 export const BackgroundElement = ({
                                       element,
@@ -77,7 +77,7 @@ export const BackgroundElement = ({
                                   placement="top"
                                   size="small"
                                   withTooltip
-                                  valueFormatter={value => `${Math.floor(value * 100)}%`}
+                                  valueFormatter={formatSliderPercent}
                                   defaultValue={opacityValue}
                                   onInput={(e) => updateValue(
                                       'background.opacity',

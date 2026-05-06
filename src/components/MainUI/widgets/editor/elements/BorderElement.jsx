@@ -17,7 +17,7 @@
 import { WIDGET_RADIUS }               from '@Core/constants'
 import { WaColorPicker, WaOption, WaSelect, WaSlider, WaSwitch } from '@web.awesome.me/webawesome-pro/dist/react'
 import { ScaleSwitchElement }          from './ScaleSwitchElement'
-import { sanitizeNumericControlValue } from './sliderUtils'
+import { formatSliderPercent, sanitizeNumericControlValue } from './sliderUtils'
 
 /**
  * Common border & radius editor element
@@ -100,7 +100,7 @@ export const BorderElement = ({
                                     step="0.05"
                                     label-at-start
                                     placement="top"
-                                    valueFormatter={value => `${Math.floor(value * 100)}%`}
+                                    valueFormatter={formatSliderPercent}
                                     value={sanitizeSliderValue(element.border?.opacity, 1, {min: 0, max: 1})}
                                     onInput={(e) => updateValue(
                                         'border.opacity',

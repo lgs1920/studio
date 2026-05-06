@@ -17,7 +17,7 @@
 import { WaColorPicker, WaSlider, WaSwitch } from '@web.awesome.me/webawesome-pro/dist/react'
 import { colord }                            from 'colord'
 import { useEffect, useMemo, useRef } from 'react'
-import { sanitizeNumericControlValue }       from './sliderUtils'
+import { formatSliderPercent, sanitizeNumericControlValue } from './sliderUtils'
 
 /**
  * Text Stroke editor element.
@@ -114,7 +114,7 @@ export const StrokeElement = ({
                                 label-at-start
                                 placement="top"
                                 withTooltip
-                                valueFormatter={value => `${Math.floor(value * 100)}%`}
+                                valueFormatter={formatSliderPercent}
                                 defaultValue={strokeOpacity}
                                 onInput={(e) => updateValue(
                                     'text.stroke.opacity',

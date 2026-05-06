@@ -34,6 +34,10 @@ import {
     ShadowElement,
 }                                                                   from '@Components/MainUI/widgets/editor/elements/ShadowElement'
 import {
+    formatSliderPercent,
+    formatSliderPixels,
+}                                                                   from '@Components/MainUI/widgets/editor/elements/sliderUtils'
+import {
     isJourneyStatsSummaryTextItem,
     isJourneyStatsTextItemEnabled,
     normalizeJourneyStatsSummaryBreaks,
@@ -784,7 +788,7 @@ export const JourneyStatsWidgetEditor = ({entity}) => {
                                               label-at-start
                                               withTooltip
                                               placement="top"
-                                              valueFormatter={v => `${Math.floor(v * 100)}%`}
+                                              valueFormatter={formatSliderPercent}
                                               defaultValue={getSliderValue('text.opacity')}
                                               onInput={(e) => handleSliderInput('text.opacity', e.target.value)}/>
                                 </div>
@@ -809,7 +813,7 @@ export const JourneyStatsWidgetEditor = ({entity}) => {
                                                   label-at-start
                                                   withTooltip
                                                   placement="top"
-                                                  valueFormatter={v => `${Math.floor(v * 100)}%`}
+                                                  valueFormatter={formatSliderPercent}
                                                   defaultValue={getSliderValue('separator.opacity')}
                                                   onInput={(e) => handleSliderInput('separator.opacity', e.target.value)}/>
                                     </div>
@@ -823,7 +827,7 @@ export const JourneyStatsWidgetEditor = ({entity}) => {
                                                   label-at-start
                                                   withTooltip
                                                   placement="top"
-                                                  valueFormatter={v => `${Math.round(v)}px`}
+                                                  valueFormatter={formatSliderPixels}
                                                   defaultValue={getSliderValue('separator.padding')}
                                                   onInput={(e) => handleSliderInput('separator.padding', e.target.value)}/>
                                     </div>

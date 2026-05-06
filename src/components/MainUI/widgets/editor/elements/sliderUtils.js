@@ -14,12 +14,18 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-export const sanitizeNumericControlValue = (rawValue, fallback, options = {}) => {
+export const sanitizeNumericControlValue = (rawValue, fallback = 0, options = {}) => {
     const value = Array.isArray(rawValue) ? rawValue[0] : rawValue
     const numericValue = Number(value)
+    const fallbackValue = Number(fallback)
 
     if (!Number.isFinite(numericValue)) {
-        return fallback
+        if (Number.isFinite(fallbackValue)) {
+            return fallbackValue
+        }
+
+        const min = Number(options.min)
+        return Number.isFinite(min) ? min : 0
     }
 
     const min = Number(options.min)
@@ -35,4 +41,14 @@ export const sanitizeNumericControlValue = (rawValue, fallback, options = {}) =>
     }
 
     return finalValue
+}
+
+export const formatSliderPercent = (value) => {
+    const numericValue = sanitizeNumericControlValue(value, 0, {min: 0, max: 1})
+    return `${Math.round(numericValue * 100)}%`
+}
+
+export const formatSliderPixels = (value) => {
+    const numericValue = sanitizeNumericControlValue(value, 0)
+    return `${Math.round(numericValue)}px`
 }

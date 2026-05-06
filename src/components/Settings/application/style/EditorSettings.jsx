@@ -14,11 +14,11 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
+import { formatSliderPercent } from '@Components/MainUI/widgets/editor/elements/sliderUtils'
 import { WaButton, WaDivider, WaIcon, WaSlider, WaSwitch, WaTooltip } from '@web.awesome.me/webawesome-pro/dist/react'
-import React from 'react'
 import { useSnapshot }                             from 'valtio'
 
-export const EditorSettings = (props) => {
+export const EditorSettings = () => {
 
     const $toolbars = lgs.settings.ui.toolbars
     const toolbars = useSnapshot($toolbars)
@@ -31,11 +31,8 @@ export const EditorSettings = (props) => {
         }
     }
 
-    const toggleUsage = (event) => {
-
-    }
     const setToolbarOpacity = (event) => $toolbars.opacity = event.target.value
-    const resetToolbarOpacity = (event) => {
+    const resetToolbarOpacity = () => {
         $toolbars.opacity = toolbars.defaultOpacity
     }
 
@@ -66,7 +63,7 @@ export const EditorSettings = (props) => {
                               label-at-right
                               onInput={setToolbarOpacity}
                               min={0.3} max={1} step={0.05} withTooltip
-                              valueFormatter={(value) => `${Math.round(value * 100)}%`}
+                              valueFormatter={formatSliderPercent}
                     />
                     </div>
             </div>

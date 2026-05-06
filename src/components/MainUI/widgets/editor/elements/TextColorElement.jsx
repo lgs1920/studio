@@ -14,7 +14,10 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { sanitizeNumericControlValue }            from '@Components/MainUI/widgets/editor/elements/sliderUtils'
+import {
+    formatSliderPercent,
+    sanitizeNumericControlValue,
+}                                                 from '@Components/MainUI/widgets/editor/elements/sliderUtils'
 import { WaColorPicker, WaSlider }                from '@web.awesome.me/webawesome-pro/dist/react'
 import { colord }                                 from 'colord'
 import { useCallback, useEffect, useMemo } from 'react'
@@ -91,7 +94,7 @@ export const TextColorElement = ({id}) => {
                         max="1"
                         step="0.05"
                         value={textOpacity}
-                        valueFormatter={v => `${Math.floor(v * 100)}%`}
+                        valueFormatter={formatSliderPercent}
                         onInput={handleOpacityChange}
                     />
                 </div>

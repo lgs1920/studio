@@ -27,6 +27,7 @@ import {
 import {
     ScaleSwitchElement,
 } from '@Components/MainUI/widgets/editor/elements/ScaleSwitchElement'
+import { formatSliderPercent }    from '@Components/MainUI/widgets/editor/elements/sliderUtils'
 import {
     WaButton, WaCard, WaColorPicker, WaDivider, WaIcon, WaSlider, WaSwitch,
 }                                                         from '@web.awesome.me/webawesome-pro/dist/react'
@@ -351,7 +352,7 @@ export const ProfileWidgetEditor = ({entity}) => {
                                               step={PROFILE_WIDGET_SLIDERS['mainAxis.opacity'].step}
                                               label-at-start
                                               withTooltip
-                                              valueFormatter={v => `${Math.floor(v * 100)}%`}
+                                              valueFormatter={formatSliderPercent}
                                               defaultValue={getProfileSliderValue('mainAxis.opacity')}
                                               onInput={(e) => handleProfileSliderInput('mainAxis.opacity', e.target.value)}/>
                                 </div>
@@ -398,7 +399,7 @@ export const ProfileWidgetEditor = ({entity}) => {
                                               max={PROFILE_WIDGET_SLIDERS['secondAxis.opacity'].max}
                                               step={PROFILE_WIDGET_SLIDERS['secondAxis.opacity'].step}
                                               label-at-start withTooltip
-                                              valueFormatter={v => `${Math.floor(v * 100)}%`}
+                                              valueFormatter={formatSliderPercent}
                                               defaultValue={getProfileSliderValue('secondAxis.opacity')}
                                               onInput={(e) => handleProfileSliderInput('secondAxis.opacity', e.target.value)}/>
                                 </div>

@@ -17,7 +17,7 @@
 import { WaColorPicker, WaSlider }                        from '@web.awesome.me/webawesome-pro/dist/react'
 import { colord }                                         from 'colord'
 import { useCallback, useEffect, useMemo, useRef } from 'react'
-import { sanitizeNumericControlValue }                    from './sliderUtils'
+import { formatSliderPercent, sanitizeNumericControlValue } from './sliderUtils'
 
 /**
  * Standardized color and opacity control element.
@@ -109,7 +109,7 @@ export const ColorElement = ({
                         label-at-start
                         placement="top"
                         withTooltip
-                        valueFormatter={v => `${Math.floor(v * 100)}%`}
+                        valueFormatter={formatSliderPercent}
                         defaultValue={currentOpacity}
                         onInput={(e) => updateValue(
                             `${path}.opacity`,

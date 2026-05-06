@@ -28,7 +28,10 @@ import {
     normalizeTrackRenderStyle,
     visibleTrackDashGapColor,
 }                                                   from '@Utils/cesium/trackRenderStyle'
-import { sanitizeNumericControlValue }              from '@Components/MainUI/widgets/editor/elements/sliderUtils'
+import {
+    formatSliderPercent,
+    sanitizeNumericControlValue,
+}                                                   from '@Components/MainUI/widgets/editor/elements/sliderUtils'
 import {
     WaColorPicker, WaDivider, WaNumberInput, WaOption, WaSelect, WaSlider, WaSwitch,
 }                                                   from '@web.awesome.me/webawesome-pro/dist/react'
@@ -95,7 +98,7 @@ const TrackStyleColorField = ({label, hint, value, onChange, className = ''}) =>
                 placement="top"
                 withTooltip
                 value={getOpacityValue(value)}
-                valueFormatter={v => `${Math.floor(v * 100)}%`}
+                valueFormatter={formatSliderPercent}
                 onInput={(event) => onChange(composeColorValue(toOpaqueColorValue(value), event.target.value))}
             />
         </div>

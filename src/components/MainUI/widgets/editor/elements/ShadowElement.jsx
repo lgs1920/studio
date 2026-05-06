@@ -16,7 +16,7 @@
 
 import { WaColorPicker, WaOption, WaSelect, WaSlider, WaSwitch } from '@web.awesome.me/webawesome-pro/dist/react'
 import { useEffect, useRef } from 'react'
-import { sanitizeNumericControlValue }                           from './sliderUtils'
+import { formatSliderPercent, sanitizeNumericControlValue }      from './sliderUtils'
 
 export const ShadowElement = ({element, swatches, updateValue}) => {
     const sliderRef = useRef(null)
@@ -68,7 +68,7 @@ export const ShadowElement = ({element, swatches, updateValue}) => {
                                       label-at-start
                                       placement="top"
                                       withTooltip
-                                      valueFormatter={value => `${Math.floor(value * 100)}%`}
+                                      valueFormatter={formatSliderPercent}
                                       defaultValue={opacityValue}
                                       onInput={(e) => updateValue(
                                           'text.shadow.opacity',
