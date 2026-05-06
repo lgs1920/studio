@@ -14,7 +14,13 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { CURRENT_MAP_POINT, CURRENT_POI, SCENE_MODE_2D, VIDEO_CROP_ZONE, FLYTHROUGH_DRAWER } from '@Core/constants'
+import {
+    CURRENT_MAP_POINT,
+    CURRENT_POI,
+    FLYTHROUGH_DRAWER,
+    SCENE_MODE_2D,
+    VIDEO_CROP_ZONE,
+} from '@Core/constants'
 import { hasActiveAppShortcutBlocker } from '@Core/events/shortcutBlockers'
 import { MapTarget } from '@Core/MapTarget'
 import { getOrbitSettings, setOrbitStoreSettings } from '@Core/OrbitSettings'
@@ -22,6 +28,7 @@ import { Cartesian2, Cartographic, Math as CesiumMath } from 'cesium'
 
 const MAP_POINT_PRECISION = 6
 const APP_SHORTCUT_TARGET = () => globalThis.window ?? globalThis.document
+const JOURNEY_GROUPS_DRAWER = 'journey-groups-drawer'
 const MIN_MAP_TARGET_HEIGHT = -12000
 const WIDGET_MOVE_STEP = 2
 const WIDGET_FAST_MOVE_STEP = 20
@@ -205,6 +212,14 @@ const openJourneyImporter = () => {
     const mainUI = lgs.stores.ui.mainUI
     mainUI.callForActions.active = false
     mainUI.journeyLoader.visible = true
+    return true
+}
+
+const openJourneyGroups = () => {
+    lgs.stores.ui.mainUI.callForActions.active = false
+    __.ui.drawerManager?.open?.(JOURNEY_GROUPS_DRAWER, {
+        entity: lgs.theJourney?.slug ?? null,
+    })
     return true
 }
 
@@ -611,6 +626,13 @@ export const SHORTCUTS_CATALOG = [
         scope:       'App',
     },
     {
+        action:      'Show journey groups',
+        description: 'Opens the journey groups management drawer.',
+        id:          'journey-groups-show',
+        keys:        ['Alt+Shift+G'],
+        scope:       'App',
+    },
+    {
         action:      'Video recording',
         description: 'Opens video setup, then starts recording when setup is already open.',
         id:          'video-recording',
@@ -918,6 +940,7 @@ export const SHORTCUTS_CATALOG = [
 
 const SHORTCUT_ACTIONS = {
     'journey-import':       openJourneyImporter,
+    'journey-groups-show':  openJourneyGroups,
     'journey-toolbar-show': toggleJourneyToolbar,
     'flythrough-management-show': openFlythroughManagement,
     'video-recording':      launchVideoRecording,

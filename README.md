@@ -9,6 +9,7 @@ media capture for map storytelling.
 The repository already contains the main product surface used by the studio:
 
 - Journey, track, and POI management
+- Journey group management
 - GeoJSON, KML, and GPX import
 - Cesium-based 2D / 3D / Columbus scene navigation
 - Journey and POI focus workflows
@@ -26,6 +27,7 @@ The repository already contains the main product surface used by the studio:
 ### Journey Editing
 
 - Load and manage multiple journeys at once
+- Organize journeys into reusable groups from the Journey Groups drawer
 - Edit journey metadata, activity, track styling, visibility, and POI visibility
 - Handle start / stop flags and parented POIs
 - Tune journey statistics cleaning through activity-aware thresholds persisted with each journey

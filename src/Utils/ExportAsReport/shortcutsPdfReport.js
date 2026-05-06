@@ -37,10 +37,10 @@ const COLUMN_DEFS = [
     {key: 'platform', label: 'Platform', width: 0.14},
 ]
 const KEY_TOKEN_LABELS = {
-    ArrowDown:  '↓',
-    ArrowLeft:  '←',
-    ArrowRight: '→',
-    ArrowUp:    '↑',
+    ArrowDown:  'Down',
+    ArrowLeft:  'Left',
+    ArrowRight: 'Right',
+    ArrowUp:    'Up',
     Minus:      '-',
     Plus:       '+',
 }
