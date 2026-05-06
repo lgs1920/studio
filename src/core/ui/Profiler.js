@@ -21,6 +21,7 @@ import {
     extendFlythroughProfileDimensions,
 }                                                         from '@Core/ui/flythrough/FlythroughProfileProgress'
 import { FA2SL }                                         from '@Utils/FA2SL'
+import { normalizeTrackRenderStyle }                     from '@Utils/cesium/trackRenderStyle'
 import { DISTANCE_UNITS, ELEVATION_UNITS }               from '@Utils/UnitUtils'
 import * as echarts                                      from 'echarts/core'
 
@@ -106,10 +107,14 @@ export class Profiler {
                 if (trackDataset.source.length > 0) {
                     data.dataset.push(trackDataset)
                     data.options.push({
-                                          color: track.color,
-                                          name:  track.title,
+                                          color:       track.color,
+                                          name:        track.title,
                                           //  marker:  track.marker.foregroundColor,
-                                          dataset: track.slug,
+                                          dataset:     track.slug,
+                                          renderStyle: normalizeTrackRenderStyle(track.renderStyle, {
+                                              color:     track.color,
+                                              thickness: track.thickness,
+                                          }),
                                       })
                 }
 

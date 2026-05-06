@@ -122,9 +122,78 @@ const FLYTHROUGH_PROFILE_LABEL_LEFT_GRAPHIC = 'flythrough-profile-label-left-gra
 const FLYTHROUGH_PROFILE_LABEL_TEXT_GRAPHIC = 'flythrough-profile-label-text-graphic'
 const FLYTHROUGH_PROFILE_LABEL_RIGHT_GRAPHIC = 'flythrough-profile-label-right-graphic'
 const FLYTHROUGH_PROFILE_UPDATE_INTERVAL = 33
+const PROFILE_LINE_WIDTH = 2
 
 const isFlythroughSeries = seriesId => String(seriesId ?? '').startsWith('flythrough-')
 const isFiniteCoordinate = value => Number.isFinite(Number(value))
+const finitePositive = (value, fallback) => {
+    const numeric = Number(value)
+    return Number.isFinite(numeric) && numeric > 0 ? numeric : fallback
+}
+const profileColor = (value, fallback = '#ff6a00') => {
+    const color = colord(value ?? fallback)
+    if (color.isValid()) {
+        return color.toRgbString()
+    }
+
+    return colord(fallback).toRgbString()
+}
+const isVisibleProfileColor = value => {
+    const color = colord(value ?? '')
+    return color.isValid() && color.alpha() > 0
+}
+const profileLineModels = ({color, renderStyle, useTrackStyle}) => {
+    const mainColor = profileColor(renderStyle?.color ?? color)
+    const dash = renderStyle?.dash
+
+    if (!useTrackStyle || dash?.enabled !== true) {
+        return [{key: 'solid', color: mainColor, type: 'solid'}]
+    }
+
+    const dashLength = finitePositive(dash.dashLength, 16)
+    const gapLength = finitePositive(dash.gapLength, 16)
+    const models = [
+        {
+            key:   'dash',
+            color: mainColor,
+            type:  [dashLength, gapLength],
+        },
+    ]
+
+    if (dash.biColor === true && isVisibleProfileColor(dash.gapColor)) {
+        models.push({
+                        key:   'gap',
+                        color: profileColor(dash.gapColor),
+                        type:  [0, dashLength, gapLength, 0],
+                    })
+    }
+
+    return models
+}
+const profileSeriesLineStyle = model => ({
+    color:      model.color,
+    width:      PROFILE_LINE_WIDTH,
+    type:       model.type,
+    dashOffset: model.dashOffset ?? 0,
+    cap:        'butt',
+    opacity:    1,
+})
+const profileGraphicLineStyle = model => {
+    const style = {
+        stroke:    model.color,
+        lineWidth: PROFILE_LINE_WIDTH,
+        opacity:   0.85,
+        fill:      null,
+        lineCap:   'butt',
+    }
+
+    if (Array.isArray(model.type)) {
+        style.lineDash = model.type
+        style.lineDashOffset = model.dashOffset ?? 0
+    }
+
+    return style
+}
 const iconPathData = icon => icon?.icon?.[4] ?? ''
 const profileInfoIconSvgCache = new Map()
 const profileInfoIconSvg = (icon, color) => {
@@ -258,6 +327,11 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
     const $unitStore = lgs.settings.unitSystem
     const unitStore = useSnapshot($unitStore)
     const unitSystem = unitStore.current
+    const flythroughProfileInfoSettings = useSnapshot(lgs.settings.ui.flythrough.profileInfo)
+    const flythroughProfileInfo = useMemo(
+        () => normalizeFlythroughProfileInfo(flythroughProfileInfoSettings),
+        [flythroughProfileInfoSettings],
+    )
 
     const _chart = useRef(null)
     const _chartDom = useRef(null)
@@ -440,7 +514,12 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
      * Build ECharts series object with optional gradient
      */
     const buildSerie = useCallback((params, config) => {
-        const rgbColor = colord(params.color).toRgbString()
+        const lineModels = profileLineModels({
+                                                 color:         params.color,
+                                                 renderStyle:   params.renderStyle,
+                                                 useTrackStyle: flythroughProfileInfo.useTrackStyle,
+                                             })
+        const rgbColor = lineModels[0]?.color ?? profileColor(params.color)
 
         // Handle optional gradient show/hide and custom color
         const showGradient = config.gradient?.show ?? true
@@ -455,19 +534,23 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
             ]),
         } : undefined
 
-        return {
-            name:       params.name,
-            type:       'line',
-            datasetId:  params.dataset,
-            smooth:     true,
-            encode:     {x: DISTANCE, y: ELEVATION},
-            showSymbol: false,
-            emphasis:   {disabled: true},
-            lineStyle:  {color: rgbColor, width: 2, type: 'solid', opacity: 1},
-            areaStyle: areaStyle,
-            dimensions: params.dimensions,
-        }
-    }, [setColor])
+        return lineModels.map((lineModel, index) => ({
+            id:              `${params.dataset}:profile:${lineModel.key}`,
+            name:            params.name,
+            type:            'line',
+            datasetId:       params.dataset,
+            smooth:          true,
+            encode:          {x: DISTANCE, y: ELEVATION},
+            showSymbol:      false,
+            emphasis:        {disabled: true},
+            lineStyle:       profileSeriesLineStyle(lineModel),
+            areaStyle:       index === 0 ? areaStyle : undefined,
+            dimensions:      params.dimensions,
+            silent:          index > 0,
+            legendHoverLink: index === 0,
+            z:               2 + index,
+        }))
+    }, [flythroughProfileInfo.useTrackStyle, setColor])
 
     const flythroughMarkerStyle = useCallback(() => {
         const progression = normalizeFlythroughProgressionStyle(
@@ -487,12 +570,13 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
             return {}
         }
 
-        const series = data.dataset.map((_, index) => buildSerie({
-                                                                     name:       data.options[index].name,
-                                                                     dataset:    data.options[index].dataset,
-                                                                     color:      data.options[index].color,
-                                                                     dimensions: data.dimensions,
-                                                                 }, element))
+        const series = data.dataset.flatMap((_, index) => buildSerie({
+                                                                         name:        data.options[index].name,
+                                                                         dataset:     data.options[index].dataset,
+                                                                         color:       data.options[index].color,
+                                                                         renderStyle: data.options[index].renderStyle,
+                                                                         dimensions:  data.dimensions,
+                                                                     }, element))
         const styles = getStyleOptions(element)
         const yFloor = unitSystem === INTERNATIONAL ? 100 : 300
         const xCeiling = 1
@@ -598,6 +682,14 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
         }
     }, [])
 
+    const profileTrackStyleKey = useMemo(() => JSON.stringify({
+                                                                  useTrackStyle: flythroughProfileInfo.useTrackStyle,
+                                                                  options:       data?.options?.map(option => ({
+                                                                      color:       option?.color,
+                                                                      renderStyle: option?.renderStyle,
+                                                                  })),
+                                                              }), [data?.options, flythroughProfileInfo.useTrackStyle])
+
     const flythroughCompletedGraphics = useCallback((sample, chart) => {
         const gridRect = readChartGridRect(chart)
         if (!sample || !chart || !gridRect || !data?.dimensions) {
@@ -621,6 +713,7 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
             gridRect.height,
             readChartAxisExtent(chart, 'xAxis'),
             readChartAxisExtent(chart, 'yAxis'),
+            profileTrackStyleKey,
         ].join(':')
         let geometries = _flythroughProfileGraphics.current.geometries
 
@@ -662,7 +755,12 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
                     }
 
                     const option = data.options?.[index] ?? {}
-                    const rgbColor = colord(option.color ?? '#ff6a00').toRgbString()
+                    const lineModels = profileLineModels({
+                                                             color:         option.color,
+                                                             renderStyle:   option.renderStyle,
+                                                             useTrackStyle: flythroughProfileInfo.useTrackStyle,
+                                                         })
+                    const rgbColor = lineModels[0]?.color ?? profileColor(option.color)
                     const gradientColor = element.gradient?.color
                                           ? colord(setColor(element.gradient)).toRgbString()
                                           : rgbColor
@@ -682,7 +780,7 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
                         ],
                         linePoints: points,
                         fill,
-                        stroke:     rgbColor,
+                        lineModels,
                     }
                 })
                 .filter(Boolean)
@@ -728,8 +826,8 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
                         opacity: 1,
                     },
                 },
-                {
-                    id:      `${FLYTHROUGH_PROFILE_COMPLETED_GRAPHIC}:${geometry.id}:line`,
+                ...geometry.lineModels.map(lineModel => ({
+                    id:      `${FLYTHROUGH_PROFILE_COMPLETED_GRAPHIC}:${geometry.id}:line:${lineModel.key}`,
                     type:    'polyline',
                     silent:  true,
                     z:       9,
@@ -737,19 +835,22 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
                         points: geometry.linePoints,
                         smooth: 0.35,
                     },
-                    style:   {
-                        stroke:  geometry.stroke,
-                        lineWidth: 2,
-                        opacity: 0.85,
-                        fill:    null,
-                    },
-                },
+                    style:   profileGraphicLineStyle(lineModel),
+                })),
             ])
             _flythroughProfileGraphics.current.renderedKey = cacheKey
         }
 
         return graphic
-    }, [chartPixelFromSample, data, element, processedDataset, setColor])
+    }, [
+        chartPixelFromSample,
+        data,
+        element,
+        flythroughProfileInfo.useTrackStyle,
+        processedDataset,
+        profileTrackStyleKey,
+        setColor,
+    ])
 
     const flythroughMarkerGraphic = useCallback(({id, sample, chart, size, z}) => {
         const pixel = chartPixelFromSample(sample, chart)
@@ -791,12 +892,8 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
         UnitUtils.formatMetric(value, {units, ...options}).full.trim(), [])
 
     const flythroughProfileInfoColor = useCallback(() => {
-        const profileInfo = normalizeFlythroughProfileInfo(
-            lgs.stores.flythrough?.profileInfo ?? lgs.settings.ui?.flythrough?.profileInfo,
-        )
-
-        return colord(profileInfo.color).toRgbString()
-    }, [])
+        return colord(flythroughProfileInfo.color).toRgbString()
+    }, [flythroughProfileInfo.color])
 
     const flythroughMetricText = useCallback((sample, flythroughState) => {
         if (!sample) {
