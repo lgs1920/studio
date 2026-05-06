@@ -17,8 +17,9 @@
 import { LGSScrollbars }      from '@Components/MainUI/LGSScrollbars'
 import { OS_ICONS }           from '@Core/constants'
 import { SHORTCUTS_CATALOG } from '@Core/events/appShortcuts'
-import { WaCard, WaIcon }     from '@web.awesome.me/webawesome-pro/dist/react'
-import { Fragment }           from 'react'
+import { UIToast }            from '@Utils/UIToast'
+import { WaButton, WaCard, WaIcon, WaTooltip } from '@web.awesome.me/webawesome-pro/dist/react'
+import { Fragment, useCallback, useState }     from 'react'
 
 const MOUSE_TOKEN_ICONS = {
     'Double click':     'computer-mouse-button-left',
@@ -53,6 +54,7 @@ const byScope = SHORTCUTS_CATALOG.reduce((groups, shortcut) => {
     groups.set(shortcut.scope, group)
     return groups
 }, new Map())
+const shortcutSections = Array.from(byScope.entries()).map(([scope, shortcuts]) => ({scope, shortcuts}))
 
 const cardAppearanceProps = index => index % 2 === 0 ? {appearance: 'filled-outlined'} : {}
 
@@ -111,40 +113,86 @@ const ShortcutCombo = ({combo}) => {
     )
 }
 
-export const ShortcutsPanel = () => (
-    <LGSScrollbars>
-        <div className="lgs--shortcuts-list">
-            {Array.from(byScope.entries()).map(([scope, shortcuts], sectionIndex) => (
-                <WaCard {...cardAppearanceProps(sectionIndex)} className="lgs--shortcuts-section-card" key={scope}>
-                    <section className="lgs--shortcuts-section">
-                        <h3>{scope}</h3>
-                        <div className="lgs--shortcuts-table">
-                            {shortcuts.map(shortcut => (
-                                <div className="lgs--shortcuts-row" key={shortcut.id}>
-                                    <div className="lgs--shortcuts-keys">
-                                        {shortcut.keys.map((key, index) => (
-                                            index > 0 ? (
-                                                <span className="lgs--shortcut-alternative" key={key}>
-                                                    <ShortcutCombo combo={key}/>
-                                                </span>
-                                            ) : (
-                                                <ShortcutCombo combo={key} key={key}/>
-                                            )
-                                        ))}
-                                    </div>
-                                    <div className="lgs--shortcuts-action">
-                                        <div className="lgs--shortcuts-action-heading">
-                                            <strong>{shortcut.action}</strong>
-                                            {shortcut.platform && <PlatformIcons platform={shortcut.platform}/>}
+export const ShortcutsPanel = () => {
+    const [exporting, setExporting] = useState(false)
+
+    const exportPDF = useCallback(async () => {
+        if (exporting) {
+            return
+        }
+
+        setExporting(true)
+        try {
+            const {exportShortcutsToPDF} = await import('@Utils/ExportAsReport/shortcutsPdfReport')
+            const result = exportShortcutsToPDF(shortcutSections)
+            UIToast.success({
+                                caption: 'Export success',
+                                text:    result.fileName,
+                            })
+        }
+        catch (error) {
+            UIToast.error({
+                              caption: 'Export failed',
+                              text:    'The shortcuts PDF could not be generated.',
+                              errors:  error,
+                          })
+        }
+        finally {
+            setExporting(false)
+        }
+    }, [exporting])
+
+    return (
+        <div className="lgs--shortcuts-panel">
+            <WaTooltip for="lgs--shortcuts-export-pdf" placement="left">{'Export PDF'}</WaTooltip>
+            <WaButton
+                id="lgs--shortcuts-export-pdf"
+                className="lgs--shortcuts-export-button"
+                aria-label="Export shortcuts PDF"
+                appearance="filled"
+                variant="brand"
+                size="small"
+                disabled={exporting}
+                onClick={exportPDF}
+            >
+                <WaIcon name="download" variant="regular"/>
+            </WaButton>
+
+            <LGSScrollbars>
+                <div className="lgs--shortcuts-list">
+                    {shortcutSections.map(({scope, shortcuts}, sectionIndex) => (
+                        <WaCard {...cardAppearanceProps(sectionIndex)} className="lgs--shortcuts-section-card" key={scope}>
+                            <section className="lgs--shortcuts-section">
+                                <h3>{scope}</h3>
+                                <div className="lgs--shortcuts-table">
+                                    {shortcuts.map(shortcut => (
+                                        <div className="lgs--shortcuts-row" key={shortcut.id}>
+                                            <div className="lgs--shortcuts-keys">
+                                                {shortcut.keys.map((key, index) => (
+                                                    index > 0 ? (
+                                                        <span className="lgs--shortcut-alternative" key={key}>
+                                                            <ShortcutCombo combo={key}/>
+                                                        </span>
+                                                    ) : (
+                                                        <ShortcutCombo combo={key} key={key}/>
+                                                    )
+                                                ))}
+                                            </div>
+                                            <div className="lgs--shortcuts-action">
+                                                <div className="lgs--shortcuts-action-heading">
+                                                    <strong>{shortcut.action}</strong>
+                                                    {shortcut.platform && <PlatformIcons platform={shortcut.platform}/>}
+                                                </div>
+                                                <span>{shortcut.description}</span>
+                                            </div>
                                         </div>
-                                        <span>{shortcut.description}</span>
-                                    </div>
+                                    ))}
                                 </div>
-                            ))}
-                        </div>
-                    </section>
-                </WaCard>
-            ))}
+                            </section>
+                        </WaCard>
+                    ))}
+                </div>
+            </LGSScrollbars>
         </div>
-    </LGSScrollbars>
-)
+    )
+}

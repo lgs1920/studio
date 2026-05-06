@@ -75,10 +75,23 @@
     gap: var(--lgs-gutter-s);
 }
 
+.lgs--shortcuts-panel {
+    position: relative;
+    height: 100%;
+    min-height: 0;
+}
+
+.lgs--shortcuts-export-button {
+    position: absolute;
+    z-index: 1;
+    top: var(--lgs-gutter-s);
+    right: calc(2 * var(--lgs-gutter));
+}
+
 .lgs--shortcuts-list {
     display: flex;
     flex-direction: column;
-    padding: var(--lgs-gutter-s);
+    padding: calc(var(--lgs-gutter-s) + 2rem + var(--lgs-gutter-xs)) var(--lgs-gutter-s) var(--lgs-gutter-s);
     gap: var(--lgs-gutter-s);
 }
 
