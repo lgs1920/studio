@@ -21,7 +21,12 @@ import { WaCard, WaIcon }     from '@web.awesome.me/webawesome-pro/dist/react'
 import { Fragment }           from 'react'
 
 const MOUSE_TOKEN_ICONS = {
+    'Double click':     'computer-mouse-button-left',
+    'Double tap':       'hand-pointer',
+    'Left click':       'computer-mouse-button-left',
     'Left drag':        'computer-mouse-button-left',
+    'Long tap':         'hand-pointer',
+    'Right click':      'computer-mouse-button-right',
     'Middle drag':      'computer-mouse-scrollwheel',
     'Right drag':       'computer-mouse-button-right',
     'Trackpad scroll':  'computer-mouse-scrollwheel',
