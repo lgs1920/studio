@@ -51,6 +51,7 @@
     --lgs-card-on-map-selected-bg: var(--lgs-card-on-map-selected-bg-color);
     --lgs-card-on-map-selected-border-color: var(--lgs-card-on-map-border-color);
     --lgs-card-on-map-selected-color: var(--lgs-text-on-color);
+    --lgs-widget-collapsed-icon-color: var(--wa-color-brand-on-quiet);
     --lgs-disabled-color: var(--lgs-light-color-20);
     --lgs-disabled-bg-color: var(--lgs-dark-color-20);
     --lgs-card-on-map-disabled-color: var(--lgs-light-color-30);
@@ -269,9 +270,17 @@
     background-blend-mode: var(--lgs-card-on-map-selected-bg-blend-mode);
 }
 
+.lgs-widget-lock-badge.lgs-widget-lock-badge-on-map {
+    --lgs-widget-lock-badge-on-map-color: color-mix(in oklab, var(--lgs-text-on-color) 72%, var(--wa-color-brand) 28%);
+    --lgs-card-on-map-bg-color: color-mix(in oklab, var(--lgs-dark-color-80) 84%, var(--wa-color-brand) 16%);
+    --lgs-card-on-map-bg-image: var(--lgs-on-map-surface-gradient);
+    --lgs-card-on-map-bg-blend-mode: soft-light, soft-light, normal;
+    --lgs-card-on-map-border-color: color-mix(in oklab, color-mix(in oklab, var(--wa-color-brand) 26%, var(--lgs-light-color) 10%) 58%, transparent);
+}
+
 .wa-theme-lgs1920-on-map.lgs-widget-collapsed .lgs-widget-collapsed-icon,
 .wa-theme-lgs1920-on-map.lgs-widget-collapsed .lgs-widget-collapsed-icon wa-icon {
-    color: var(--lgs-text-on-color, var(--lgs-light-color)) !important;
+    color: var(--lgs-widget-collapsed-icon-color, var(--wa-color-brand-on-quiet)) !important;
     opacity: 1 !important;
     visibility: visible !important;
 }

@@ -1275,7 +1275,20 @@ wa-dialog::part(dialog)::backdrop {
         list-style: none;
     }
 
-.lgs-context-menu li {
+    .lgs-context-menu ul:has(> li:only-child) {
+        margin-bottom: 0;
+        padding: var(--lgs-gutter-xs);
+    }
+
+    .lgs-context-menu ul:has(> li:only-child) > li {
+        margin: 0;
+    }
+
+    .lgs-context-menu ul:has(> li:only-child) > li:is(.widget-grid-position, .widget-grid-one-line) {
+        margin-top: 0 !important;
+    }
+
+    .lgs-context-menu li {
         display: flex;
         align-items: center;
         box-sizing: border-box;
@@ -1286,7 +1299,7 @@ wa-dialog::part(dialog)::backdrop {
         transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
         white-space: nowrap;
         border: 1px solid transparent;
-    border-radius: var(--lgs-on-map-interactive-radius, var(--lgs-border-radius-xs));
+        border-radius: var(--lgs-on-map-interactive-radius, var(--lgs-border-radius-xs));
     }
 
     .lgs-context-menu li:hover {
@@ -2052,7 +2065,7 @@ wa-dialog::part(dialog)::backdrop {
     }
 
     .lgs-widget-lock-badge.lgs-widget-lock-badge-on-map {
-        color: var(--lgs-text-on-color);
+        color: var(--lgs-widget-lock-badge-on-map-color, var(--lgs-text-on-color));
         border: 1px solid var(--lgs-card-on-map-border-color);
         background-color: var(--lgs-card-on-map-bg-color);
         background-image: var(--lgs-card-on-map-bg-image);
