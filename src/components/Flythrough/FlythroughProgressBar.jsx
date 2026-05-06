@@ -18,8 +18,9 @@ import { FLYTHROUGH_DRAWER } from '@Core/constants'
 import { FLYTHROUGH_LABEL }  from '@Core/ui/flythrough/FlythroughProgressionStyle'
 import { DISTANCE_UNITS, km, UnitUtils } from '@Utils/UnitUtils'
 import { WaButton, WaIcon, WaTooltip } from '@web.awesome.me/webawesome-pro/dist/react'
-import { memo, useCallback, useId, useMemo } from 'react'
+import { memo, useCallback, useEffect, useMemo, useRef } from 'react'
 import { useSnapshot } from 'valtio'
+import { v4 as uuid } from 'uuid'
 
 const MINUTE_MILLIS = 60 * 1000
 const clampProgress = value => Math.max(0, Math.min(1, Number(value) || 0))
@@ -28,18 +29,32 @@ const finiteNumber = value => {
     return Number.isFinite(numeric) ? numeric : null
 }
 
-const formatHoursMinutes = (millis, {ceil = false} = {}) => {
-    const minutes = Math.max(0, ceil ? Math.ceil(millis / MINUTE_MILLIS) : Math.floor(millis / MINUTE_MILLIS))
-    const hours = Math.floor(minutes / 60)
-    const remainingMinutes = String(minutes % 60).padStart(2, '0')
+const formatMinutes = minutes => {
+    const safeMinutes = Math.max(0, Number.isFinite(minutes) ? minutes : 0)
+    const hours = Math.floor(safeMinutes / 60)
+    const remainingMinutes = String(safeMinutes % 60).padStart(2, '0')
     return `${String(hours).padStart(2, '0')}:${remainingMinutes}`
 }
 
-const formatElapsedHoursMinutes = (elapsedMillis, totalMillis, progress) => {
-    if (clampProgress(progress) <= 0) {
-        return formatHoursMinutes(0)
+const formatHoursMinutes = (millis, {ceil = false, round = false} = {}) => {
+    const rawMinutes = millis / MINUTE_MILLIS
+    const minutes = Math.max(0, ceil ? Math.ceil(rawMinutes) : (round ? Math.round(rawMinutes) : Math.floor(rawMinutes)))
+    return formatMinutes(minutes)
+}
+
+const formatElapsedHoursMinutes = (elapsedMillis, totalMillis) => {
+    const safeTotalMillis = Math.max(0, finiteNumber(totalMillis) ?? 0)
+    if (safeTotalMillis <= 0) {
+        return null
     }
-    return formatHoursMinutes(Math.min(elapsedMillis, totalMillis), {ceil: true})
+
+    const totalMinutes = Math.max(1, Math.ceil(safeTotalMillis / MINUTE_MILLIS))
+    const elapsedMinutes = Math.min(
+        totalMinutes,
+        Math.max(0, Math.round(Math.max(0, finiteNumber(elapsedMillis) ?? 0) / MINUTE_MILLIS)),
+    )
+
+    return formatMinutes(elapsedMinutes)
 }
 
 const formatDistance = (value, unit) => (UnitUtils.convert(value ?? 0).to(unit) ?? 0).toFixed(1)
@@ -62,15 +77,82 @@ const playbackProgressFromSample = ({sample, totalDistance, direction, fallback}
     return fallback
 }
 
+const FlythroughTooltip = ({targetId, children}) => {
+    const tooltipRef = useRef(null)
+
+    useEffect(() => {
+        let frame = null
+        let detach = () => {}
+        let cancelled = false
+
+        const attach = () => {
+            const tooltip = tooltipRef.current
+            const anchor = document.getElementById(targetId)
+
+            if (cancelled) {
+                return
+            }
+
+            if (!tooltip?.isConnected || !anchor) {
+                frame = requestAnimationFrame(attach)
+                return
+            }
+
+            tooltip.removeAttribute('for')
+            tooltip.for = null
+            tooltip.trigger = 'manual'
+            tooltip.anchor = anchor
+
+            const show = () => {
+                tooltip.show?.()
+            }
+            const hide = () => {
+                tooltip.hide?.()
+            }
+
+            anchor.addEventListener('mouseenter', show)
+            anchor.addEventListener('mouseleave', hide)
+            anchor.addEventListener('focus', show, true)
+            anchor.addEventListener('blur', hide, true)
+
+            detach = () => {
+                anchor.removeEventListener('mouseenter', show)
+                anchor.removeEventListener('mouseleave', hide)
+                anchor.removeEventListener('focus', show, true)
+                anchor.removeEventListener('blur', hide, true)
+                tooltip.hide?.()
+                tooltip.anchor = null
+            }
+        }
+
+        frame = requestAnimationFrame(attach)
+
+        return () => {
+            cancelled = true
+            if (frame !== null) {
+                cancelAnimationFrame(frame)
+            }
+            detach()
+        }
+    }, [targetId])
+
+    return (
+        <WaTooltip ref={tooltipRef} trigger="manual">
+            {children}
+        </WaTooltip>
+    )
+}
+
 export const FlythroughProgressBar = memo(({showSettings = false, className = ''}) => {
-    const flythrough = useSnapshot(lgs.stores.ui.mainUI.flythrough)
+    const flythrough = useSnapshot(lgs.stores.flythrough)
     const {current: unitSystem} = useSnapshot(lgs.settings.unitSystem)
     const {drawers: {open: openDrawer}} = useSnapshot(lgs.stores.ui)
-    const idPrefix = useId().replace(/[^a-zA-Z0-9_-]/g, '')
+    const idPrefix = useMemo(() => `flythrough-progress-${uuid()}`, [])
     const progress = clampProgress(flythrough.progress)
     const direction = Number(flythrough.direction) < 0 ? -1 : 1
-    const duration = Number(flythrough.duration)
-    const hasDuration = Number.isFinite(duration) && duration > 0
+    const totalMillis = finiteNumber(flythrough.durationMillis)
+    const elapsedMillis = finiteNumber(flythrough.elapsedMillis)
+    const hasJourneyTime = totalMillis !== null && totalMillis > 0 && elapsedMillis !== null
     const totalDistance = flythrough.totalDistance ?? 0
     const distanceUnit = DISTANCE_UNITS[unitSystem] ?? km
     const playbackProgress = playbackProgressFromSample({
@@ -84,14 +166,12 @@ export const FlythroughProgressBar = memo(({showSettings = false, className = ''
                             : totalDistance * playbackProgress
 
     const timeLabel = useMemo(() => {
-        if (!hasDuration) {
+        if (!hasJourneyTime) {
             return null
         }
 
-        const totalMillis = duration * 1000
-        const elapsedMillis = totalMillis * clampProgress(playbackProgress)
-        return `${formatElapsedHoursMinutes(elapsedMillis, totalMillis, playbackProgress)} / ${formatHoursMinutes(totalMillis, {ceil: true})}`
-    }, [duration, hasDuration, playbackProgress])
+        return `${formatElapsedHoursMinutes(elapsedMillis, totalMillis)} / ${formatHoursMinutes(totalMillis, {ceil: true})}`
+    }, [elapsedMillis, hasJourneyTime, totalMillis])
 
     const distanceLabel = useMemo(() => {
         const covered = formatDistance(coveredDistance, distanceUnit)
@@ -99,12 +179,16 @@ export const FlythroughProgressBar = memo(({showSettings = false, className = ''
         return `${covered} / ${total} ${distanceUnit}`
     }, [coveredDistance, distanceUnit, totalDistance])
 
-    const percentLabel = `${(playbackProgress * 100).toFixed(1)}%`
+    const percentLabel = `${(playbackProgress * 100).toFixed(0)}%`
     const playing = flythrough.playing
     const paused = flythrough.paused
+    const playLabel = paused ? `Resume ${FLYTHROUGH_LABEL}` : `Start ${FLYTHROUGH_LABEL}`
+    const pauseLabel = `Pause ${FLYTHROUGH_LABEL}`
+    const stopLabel = `Stop ${FLYTHROUGH_LABEL}`
+    const settingsLabel = `${FLYTHROUGH_LABEL} settings`
 
     const playOrResume = useCallback(() => {
-        lgs.stores.ui.mainUI.flythrough.toolbarVisible = true
+        lgs.stores.flythrough.toolbarVisible = true
         if (__.ui.flythrough?.paused) {
             __.ui.flythrough.resume()
             return
@@ -118,7 +202,7 @@ export const FlythroughProgressBar = memo(({showSettings = false, className = ''
 
     const stop = useCallback(() => {
         __.ui.flythrough?.stop()
-        lgs.stores.ui.mainUI.flythrough.toolbarVisible = false
+        lgs.stores.flythrough.toolbarVisible = false
     }, [])
 
     const toggleSettings = useCallback(() => {
@@ -126,7 +210,7 @@ export const FlythroughProgressBar = memo(({showSettings = false, className = ''
             __.ui.drawerManager.close()
             return
         }
-        lgs.stores.ui.mainUI.flythrough.toolbarVisible = true
+        lgs.stores.flythrough.toolbarVisible = true
         __.ui.drawerManager.open(FLYTHROUGH_DRAWER)
     }, [openDrawer])
 
@@ -139,13 +223,15 @@ export const FlythroughProgressBar = memo(({showSettings = false, className = ''
             <span className="flythrough-progress-segment flythrough-progress-actions">
                 {playing ? (
                     <>
-                        <WaTooltip for={`${idPrefix}-pause`}>{`Pause ${FLYTHROUGH_LABEL}`}</WaTooltip>
+                        <FlythroughTooltip targetId={`${idPrefix}-pause`}>{pauseLabel}</FlythroughTooltip>
                         <WaButton
                             id={`${idPrefix}-pause`}
                             className="flythrough-progress-action"
                             appearance="plain"
                             variant="brand"
                             size="small"
+                            title={pauseLabel}
+                            aria-label={pauseLabel}
                             onClick={pause}
                         >
                             <WaIcon name="pause" variant="regular"/>
@@ -153,28 +239,30 @@ export const FlythroughProgressBar = memo(({showSettings = false, className = ''
                     </>
                 ) : (
                      <>
-                         <WaTooltip for={`${idPrefix}-play`}>
-                             {paused ? `Resume ${FLYTHROUGH_LABEL}` : `Start ${FLYTHROUGH_LABEL}`}
-                         </WaTooltip>
+                         <FlythroughTooltip targetId={`${idPrefix}-play`}>{playLabel}</FlythroughTooltip>
                          <WaButton
                              id={`${idPrefix}-play`}
                              className="flythrough-progress-action"
                              appearance="plain"
                              variant="brand"
                              size="small"
+                             title={playLabel}
+                             aria-label={playLabel}
                              onClick={playOrResume}
                          >
                              <WaIcon name="play" variant="regular"/>
                          </WaButton>
                      </>
                  )}
-                <WaTooltip for={`${idPrefix}-stop`}>{`Stop ${FLYTHROUGH_LABEL}`}</WaTooltip>
+                <FlythroughTooltip targetId={`${idPrefix}-stop`}>{stopLabel}</FlythroughTooltip>
                 <WaButton
                     id={`${idPrefix}-stop`}
                     className="flythrough-progress-action"
                     appearance="plain"
                     variant="brand"
                     size="small"
+                    title={stopLabel}
+                    aria-label={stopLabel}
                     onClick={stop}
                 >
                     <WaIcon name="stop" variant="regular"/>
@@ -182,13 +270,15 @@ export const FlythroughProgressBar = memo(({showSettings = false, className = ''
             </span>
             {showSettings &&
                 <span className="flythrough-progress-settings">
-                    <WaTooltip for={`${idPrefix}-settings`}>{`${FLYTHROUGH_LABEL} settings`}</WaTooltip>
+                    <FlythroughTooltip targetId={`${idPrefix}-settings`}>{settingsLabel}</FlythroughTooltip>
                     <WaButton
                         id={`${idPrefix}-settings`}
                         className="flythrough-progress-action"
                         appearance="plain"
                         variant="brand"
                         size="small"
+                        title={settingsLabel}
+                        aria-label={settingsLabel}
                         onClick={toggleSettings}
                     >
                         <WaIcon name="sliders" variant="regular"/>

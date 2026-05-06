@@ -37,6 +37,12 @@
     gap: var(--wa-space-s, 0.75rem);
 }
 
+.flythrough-duration-input {
+    box-sizing: border-box;
+    max-width: 50%;
+    width: 50%;
+}
+
 .flythrough-empty-state {
     margin: 0;
     opacity: 0.72;

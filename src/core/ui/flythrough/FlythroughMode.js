@@ -20,14 +20,14 @@ import {
     FLYTHROUGH_EVENT_UPDATE,
     FlythroughPlaybackController,
 } from './FlythroughPlaybackController'
-import { FlythroughPathSampler, FLYTHROUGH_SCOPE_VISIBLE_TRACKS } from './FlythroughPathSampler'
+import { FlythroughPathSampler, FLYTHROUGH_SCOPE_ALL_TRACKS } from './FlythroughPathSampler'
 import { getFlythroughSettings } from './FlythroughProgressionStyle'
 
 const DEFAULT_DURATION = 60
 const PROFILE_HOVER_RENDER_INTERVAL = 120
 const METRIC_OVERLAY_TTL = 2000
 
-const flythroughStore = () => globalThis.lgs?.stores?.ui?.mainUI?.flythrough
+const flythroughStore = () => globalThis.lgs?.stores?.flythrough
 
 export class FlythroughMode {
     #controller
@@ -77,7 +77,7 @@ export class FlythroughMode {
         }
 
         const flythrough = getFlythroughSettings()
-        const scope = options.scope ?? flythrough.scope ?? store?.scope ?? FLYTHROUGH_SCOPE_VISIBLE_TRACKS
+        const scope = FLYTHROUGH_SCOPE_ALL_TRACKS
         const trackSlug = options.trackSlug ?? globalThis.lgs?.theTrack?.slug ?? store?.trackSlug
         const progression = options.progression ?? flythrough.progression
         const profileInfo = options.profileInfo ?? flythrough.profileInfo
@@ -101,7 +101,7 @@ export class FlythroughMode {
         this.#controller.configure({
             sampler:   this.#sampler,
             duration:  options.duration ?? flythrough.duration ?? store?.duration ?? DEFAULT_DURATION,
-            direction: options.direction ?? flythrough.direction ?? store?.direction ?? 1,
+            direction: 1,
             loop:      options.loop ?? flythrough.loop ?? store?.loop ?? false,
             progress:  options.progress ?? store?.progress ?? 0,
         })
@@ -117,13 +117,14 @@ export class FlythroughMode {
     }
 
     start = (options = {}) => {
+        this.#renderer.clear()
         const sampler = this.configure(options)
         if (!sampler?.hasSamples) {
             return null
         }
 
         return this.#controller.start({
-            progress: options.progress ?? (this.#controller.direction > 0 ? 0 : 1),
+            progress: options.progress ?? 0,
         })
     }
 
@@ -151,6 +152,7 @@ export class FlythroughMode {
             this.#renderer.update({
                 sample,
                 sampler: this.#sampler,
+                forceGeometry: true,
             })
         }
         return sample
@@ -276,16 +278,16 @@ export class FlythroughMode {
             this.#controller.on(FLYTHROUGH_EVENT_START, detail => {
                 this.#setContinuousRender(true)
                 this.#renderer.show({sampler: detail.sampler})
-                this.#renderer.update(detail)
+                this.#renderer.update({...detail, forceGeometry: true})
             }),
             this.#controller.on(FLYTHROUGH_EVENT_UPDATE, detail => this.#renderer.update(detail)),
             this.#controller.on(FLYTHROUGH_EVENT_PAUSE, detail => {
-                this.#renderer.update(detail)
+                this.#renderer.update({...detail, forceGeometry: true})
                 this.#setContinuousRender(false)
             }),
             this.#controller.on(FLYTHROUGH_EVENT_RESUME, detail => {
                 this.#setContinuousRender(true)
-                this.#renderer.update(detail)
+                this.#renderer.update({...detail, forceGeometry: true})
             }),
             this.#controller.on(FLYTHROUGH_EVENT_STOP, () => {
                 this.#setContinuousRender(false)

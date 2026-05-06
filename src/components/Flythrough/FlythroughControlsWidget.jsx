@@ -23,7 +23,7 @@ import { useSnapshot } from 'valtio'
 import './style.css'
 
 export const FlythroughControlsWidget = memo(() => {
-    const flythrough = useSnapshot(lgs.stores.ui.mainUI.flythrough)
+    const flythrough = useSnapshot(lgs.stores.flythrough)
 
     const config = useMemo(() => ({
         id:             'flythrough-controls-widget',

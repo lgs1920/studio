@@ -17,24 +17,23 @@
 import DrawerFooter from '@Components/DrawerFooter'
 import { FlythroughProgressBar } from '@Components/Flythrough/FlythroughProgressBar'
 import { LGSScrollbars } from '@Components/MainUI/LGSScrollbars'
+import { formatSliderPercent } from '@Components/MainUI/widgets/editor/elements/sliderUtils'
 import PanelActions from '@Components/PanelsActions'
 import WaDrawer     from '@Components/WaDrawerNonModal'
 import { FLYTHROUGH_DRAWER } from '@Core/constants'
 import {
-    FLYTHROUGH_SCOPE_ALL_TRACKS, FLYTHROUGH_SCOPE_CURRENT_TRACK, FLYTHROUGH_SCOPE_VISIBLE_TRACKS,
-} from '@Core/ui/flythrough/FlythroughPathSampler'
-import {
-    clampFlythroughNumber, ensureFlythroughSettings, FLYTHROUGH_LABEL, normalizeFlythroughProfileInfo,
+    clampFlythroughNumber, DEFAULT_FLYTHROUGH_SCOPE, ensureFlythroughSettings, FLYTHROUGH_LABEL, normalizeFlythroughProfileInfo,
     normalizeFlythroughProgressionStyle,
+    FLYTHROUGH_PROFILE_MARKER_BORDER_MAX_WIDTH, FLYTHROUGH_PROFILE_MARKER_BORDER_MIN_WIDTH,
+    FLYTHROUGH_PROFILE_MARKER_FILL_MAX_SIZE, FLYTHROUGH_PROFILE_MARKER_FILL_MIN_SIZE,
     FLYTHROUGH_PROGRESSION_BORDER_MAX_WIDTH, FLYTHROUGH_PROGRESSION_BORDER_MIN_WIDTH, FLYTHROUGH_PROGRESSION_FILL_MAX_WIDTH,
     FLYTHROUGH_PROGRESSION_FILL_MIN_WIDTH,
 } from '@Core/ui/flythrough/FlythroughProgressionStyle'
 import {
-    WaCard, WaColorPicker, WaDivider, WaIcon, WaInput, WaNumberInput, WaOption, WaSelect, WaSlider, WaSwitch, WaTab,
-    WaTabGroup, WaTabPanel,
+    WaCard, WaColorPicker, WaDivider, WaIcon, WaNumberInput, WaSlider, WaSwitch, WaTab, WaTabGroup, WaTabPanel,
 } from '@web.awesome.me/webawesome-pro/dist/react'
 import { colord }          from 'colord'
-import { memo, useCallback, useEffect, useMemo } from 'react'
+import { memo, useCallback, useEffect, useMemo, useRef } from 'react'
 import { createPortal }      from 'react-dom'
 import { useSnapshot }       from 'valtio'
 import './style.css'
@@ -97,7 +96,7 @@ const FlythroughColorField = ({label, color, opacity, swatches, onColorInput, on
                 withTooltip
                 placement="top"
                 value={opacity}
-                valueFormatter={v => `${Math.floor(v * 100)}%`}
+                valueFormatter={formatSliderPercent}
                 onInput={onOpacityInput}
             />
         </div>
@@ -126,10 +125,14 @@ const FlythroughProgressionGroup = ({
                                     width,
                                     widthMin,
                                     widthMax,
+                                    profileMarker,
+                                    profileMarkerMin,
+                                    profileMarkerMax,
                                     swatches,
                                     onColorInput,
                                     onOpacityInput,
                                     onWidthInput,
+                                    onProfileMarkerInput,
                                 }) => (
     <section className="flythrough-style-subsection">
         <h4 className="flythrough-style-subtitle">{title}</h4>
@@ -142,7 +145,7 @@ const FlythroughProgressionGroup = ({
                 onColorInput={onColorInput}
                 onOpacityInput={onOpacityInput}
             />
-            <div className="flythrough-style-field-grid is-single">
+            <div className="flythrough-style-field-grid">
                 <FlythroughWidthField
                     label="Width"
                     value={width}
@@ -151,6 +154,15 @@ const FlythroughProgressionGroup = ({
                     step="0.5"
                     onInput={onWidthInput}
                 />
+                <FlythroughWidthField
+                    label="Profile Marker"
+                    unit="px"
+                    value={profileMarker}
+                    min={profileMarkerMin}
+                    max={profileMarkerMax}
+                    step="0.5"
+                    onInput={onProfileMarkerInput}
+                />
             </div>
         </div>
     </section>
@@ -158,12 +170,14 @@ const FlythroughProgressionGroup = ({
 
 export const FlythroughDrawer = memo(() => {
     const {drawers: {open: drawerOpen}} = useSnapshot(lgs.stores.ui)
+    const {theJourney: currentJourney} = useSnapshot(lgs.stores.main)
     ensureFlythroughSettings()
     const flythroughSettings = useSnapshot(lgs.settings.ui.flythrough)
     const {drawer: drawerPlacement} = useSnapshot(lgs.editorSettingsProxy.menu)
     const swatches = useMemo(() => lgs.settings.getSwatches.list.join(';'), [])
-    const journeySlug = lgs.theJourney?.slug
+    const journeySlug = currentJourney?.slug
     const hasJourney = Boolean(journeySlug)
+    const previousJourneySlug = useRef(journeySlug)
     const progression = normalizeFlythroughProgressionStyle(flythroughSettings.progression)
     const fillColor = toOpaqueColorValue(progression.fill.color)
     const borderColor = toOpaqueColorValue(progression.border.color)
@@ -171,24 +185,41 @@ export const FlythroughDrawer = memo(() => {
     const borderOpacity = progression.border.opacity
     const fillWidth = progression.fill.width
     const borderWidth = progression.border.width
+    const fillProfileMarker = progression.fill.profileMarker
+    const borderProfileMarker = progression.border.profileMarker
     const profileInfo = normalizeFlythroughProfileInfo(flythroughSettings.profileInfo)
     const profileInfoColor = toOpaqueColorValue(profileInfo.color)
 
     useEffect(() => {
-        lgs.stores.ui.mainUI.flythrough.journeySlug = journeySlug
-        lgs.stores.ui.mainUI.flythrough.duration = flythroughSettings.duration
-        lgs.stores.ui.mainUI.flythrough.direction = flythroughSettings.direction
-        lgs.stores.ui.mainUI.flythrough.loop = flythroughSettings.loop
-        lgs.stores.ui.mainUI.flythrough.scope = flythroughSettings.scope
-        lgs.stores.ui.mainUI.flythrough.progression = normalizeFlythroughProgressionStyle(flythroughSettings.progression)
-        lgs.stores.ui.mainUI.flythrough.profileInfo = normalizeFlythroughProfileInfo(flythroughSettings.profileInfo)
+        const flythroughRuntime = lgs.stores.flythrough
+        const journeyChanged = previousJourneySlug.current !== journeySlug
+        previousJourneySlug.current = journeySlug
+
+        if (journeyChanged && (flythroughRuntime.active || flythroughRuntime.playing || flythroughRuntime.paused)) {
+            __.ui.flythrough?.stop?.()
+        }
+
+        flythroughRuntime.journeySlug = journeySlug
+        flythroughRuntime.duration = flythroughSettings.duration
+        lgs.settings.ui.flythrough.direction = 1
+        flythroughRuntime.direction = 1
+        flythroughRuntime.loop = flythroughSettings.loop
+        flythroughRuntime.scope = DEFAULT_FLYTHROUGH_SCOPE
+        flythroughRuntime.progression = normalizeFlythroughProgressionStyle(flythroughSettings.progression)
+        flythroughRuntime.profileInfo = normalizeFlythroughProfileInfo(flythroughSettings.profileInfo)
+
+        if (journeyChanged) {
+            flythroughRuntime.progress = 0
+            flythroughRuntime.sample = null
+            flythroughRuntime.elapsedMillis = null
+            flythroughRuntime.durationMillis = null
+            flythroughRuntime.totalDistance = 0
+        }
     }, [
-        flythroughSettings.direction,
         flythroughSettings.duration,
         flythroughSettings.loop,
         flythroughSettings.profileInfo,
         flythroughSettings.progression,
-        flythroughSettings.scope,
         journeySlug,
     ])
 
@@ -197,12 +228,13 @@ export const FlythroughDrawer = memo(() => {
             return
         }
 
-        const flythroughRuntime = lgs.stores.ui.mainUI.flythrough
+        const flythroughRuntime = lgs.stores.flythrough
         flythroughRuntime.toolbarVisible = true
+
         if (!flythroughRuntime.active && !flythroughRuntime.playing && !flythroughRuntime.paused) {
             __.ui.flythrough?.configure?.({progress: flythroughRuntime.progress ?? 0})
         }
-    }, [drawerOpen, flythroughSettings.direction, flythroughSettings.duration, flythroughSettings.loop, flythroughSettings.scope, hasJourney])
+    }, [drawerOpen, flythroughSettings.duration, flythroughSettings.loop, hasJourney, journeySlug])
 
     const refreshFlythrough = useCallback(() => {
         __.ui.flythrough?.refresh?.()
@@ -212,36 +244,25 @@ export const FlythroughDrawer = memo(() => {
     const updateProgression = useCallback((updates) => {
         const nextProgression = mergeProgressionStyle(lgs.settings.ui.flythrough.progression, updates)
         lgs.settings.ui.flythrough.progression = nextProgression
-        lgs.stores.ui.mainUI.flythrough.progression = nextProgression
+        lgs.stores.flythrough.progression = nextProgression
         refreshFlythrough()
     }, [refreshFlythrough])
 
     const updateProfileInfo = useCallback((updates) => {
         const nextProfileInfo = mergeProfileInfo(lgs.settings.ui.flythrough.profileInfo, updates)
         lgs.settings.ui.flythrough.profileInfo = nextProfileInfo
-        lgs.stores.ui.mainUI.flythrough.profileInfo = nextProfileInfo
+        lgs.stores.flythrough.profileInfo = nextProfileInfo
     }, [])
 
     const updateDuration = useCallback((event) => {
         const duration = clampDuration(event.target.value)
         lgs.settings.ui.flythrough.duration = duration
-        lgs.stores.ui.mainUI.flythrough.duration = duration
-    }, [])
-
-    const updateScope = useCallback((event) => {
-        lgs.settings.ui.flythrough.scope = event.target.value
-        lgs.stores.ui.mainUI.flythrough.scope = event.target.value
-    }, [])
-
-    const updateDirection = useCallback((event) => {
-        const direction = Number(event.target.value) < 0 ? -1 : 1
-        lgs.settings.ui.flythrough.direction = direction
-        lgs.stores.ui.mainUI.flythrough.direction = direction
+        lgs.stores.flythrough.duration = duration
     }, [])
 
     const updateLoop = useCallback((event) => {
         lgs.settings.ui.flythrough.loop = event.target.checked
-        lgs.stores.ui.mainUI.flythrough.loop = event.target.checked
+        lgs.stores.flythrough.loop = event.target.checked
     }, [])
 
     const updateFillColor = useCallback((event) => {
@@ -265,6 +286,19 @@ export const FlythroughDrawer = memo(() => {
                           })
     }, [progression.fill.width, updateProgression])
 
+    const updateFillProfileMarker = useCallback((event) => {
+        updateProgression({
+                              fill: {
+                                  profileMarker: clampFlythroughNumber(
+                                      event.target.value,
+                                      progression.fill.profileMarker,
+                                      FLYTHROUGH_PROFILE_MARKER_FILL_MIN_SIZE,
+                                      FLYTHROUGH_PROFILE_MARKER_FILL_MAX_SIZE,
+                                  ),
+                              },
+                          })
+    }, [progression.fill.profileMarker, updateProgression])
+
     const updateBorderColor = useCallback((event) => {
         updateProgression({border: {color: toOpaqueColorValue(event.target.value)}})
     }, [updateProgression])
@@ -285,6 +319,19 @@ export const FlythroughDrawer = memo(() => {
                               },
                           })
     }, [progression.border.width, updateProgression])
+
+    const updateBorderProfileMarker = useCallback((event) => {
+        updateProgression({
+                              border: {
+                                  profileMarker: clampFlythroughNumber(
+                                      event.target.value,
+                                      progression.border.profileMarker,
+                                      FLYTHROUGH_PROFILE_MARKER_BORDER_MIN_WIDTH,
+                                      FLYTHROUGH_PROFILE_MARKER_BORDER_MAX_WIDTH,
+                                  ),
+                              },
+                          })
+    }, [progression.border.profileMarker, updateProgression])
 
     const updateProfileInfoColor = useCallback((event) => {
         updateProfileInfo({color: toOpaqueColorValue(event.target.value)})
@@ -340,30 +387,16 @@ export const FlythroughDrawer = memo(() => {
                                      <LGSScrollbars>
                                          <div className="flythrough-tab-panel">
                                              <div className="flythrough-fieldset">
-                                                 <WaInput
-                                                     label="Duration"
+                                                 <WaNumberInput
+                                                     className="flythrough-duration-input"
+                                                     label="Duration (s)"
                                                      size="small"
-                                                     type="number"
+                                                     appearance="filled"
                                                      min="1"
+                                                     step="1"
                                                      value={flythroughSettings.duration}
                                                      onInput={updateDuration}
-                                                     withoutSpinButtons
-                                                 >
-                                                     <span slot="end">{'s'}</span>
-                                                 </WaInput>
-
-                                                 <WaSelect label="Scope" size="small" value={flythroughSettings.scope}
-                                                           onChange={updateScope}>
-                                                     <WaOption value={FLYTHROUGH_SCOPE_VISIBLE_TRACKS}>{'Visible tracks'}</WaOption>
-                                                     <WaOption value={FLYTHROUGH_SCOPE_CURRENT_TRACK}>{'Current track'}</WaOption>
-                                                     <WaOption value={FLYTHROUGH_SCOPE_ALL_TRACKS}>{'All tracks'}</WaOption>
-                                                 </WaSelect>
-
-                                                 <WaSelect label="Direction" size="small" value={String(flythroughSettings.direction)}
-                                                           onChange={updateDirection}>
-                                                     <WaOption value="1">{'Forward'}</WaOption>
-                                                     <WaOption value="-1">{'Reverse'}</WaOption>
-                                                 </WaSelect>
+                                                 />
 
                                                  <WaSwitch size="xsmall" label-at-start checked={flythroughSettings.loop}
                                                            onInput={updateLoop}>
@@ -390,10 +423,14 @@ export const FlythroughDrawer = memo(() => {
                                                      width={fillWidth}
                                                      widthMin={FLYTHROUGH_PROGRESSION_FILL_MIN_WIDTH}
                                                      widthMax={FLYTHROUGH_PROGRESSION_FILL_MAX_WIDTH}
+                                                     profileMarker={fillProfileMarker}
+                                                     profileMarkerMin={FLYTHROUGH_PROFILE_MARKER_FILL_MIN_SIZE}
+                                                     profileMarkerMax={FLYTHROUGH_PROFILE_MARKER_FILL_MAX_SIZE}
                                                      swatches={swatches}
                                                      onColorInput={updateFillColor}
                                                      onOpacityInput={updateFillOpacity}
                                                      onWidthInput={updateFillWidth}
+                                                     onProfileMarkerInput={updateFillProfileMarker}
                                                  />
                                                  <WaDivider/>
                                                  <FlythroughProgressionGroup
@@ -403,10 +440,14 @@ export const FlythroughDrawer = memo(() => {
                                                      width={borderWidth}
                                                      widthMin={FLYTHROUGH_PROGRESSION_BORDER_MIN_WIDTH}
                                                      widthMax={FLYTHROUGH_PROGRESSION_BORDER_MAX_WIDTH}
+                                                     profileMarker={borderProfileMarker}
+                                                     profileMarkerMin={FLYTHROUGH_PROFILE_MARKER_BORDER_MIN_WIDTH}
+                                                     profileMarkerMax={FLYTHROUGH_PROFILE_MARKER_BORDER_MAX_WIDTH}
                                                      swatches={swatches}
                                                      onColorInput={updateBorderColor}
                                                      onOpacityInput={updateBorderOpacity}
                                                      onWidthInput={updateBorderWidth}
+                                                     onProfileMarkerInput={updateBorderProfileMarker}
                                                  />
                                                  <WaDivider/>
                                                  <section className="flythrough-style-subsection">
