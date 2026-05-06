@@ -65,9 +65,9 @@ export class WidgetCoreControls {
             const config = this.#registry.getWidgetConfig(elementId)
             config.overlay = overlay
             Object.assign(overlay.style, {display: 'block'})
-            overlay.classList.add('lgs-widget-inner-overlay', config.type)
+            overlay.classList.add('lgs-widget-inner-overlay')
             if (config.stopPropagation) {
-                overlay.classList.add('no-propagation', config.type)
+                overlay.classList.add('no-propagation')
             }
             element.appendChild(overlay)
         }

@@ -277,7 +277,6 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
     const _dragStart = useRef({x: 0, y: 0})
     const _initialized = useRef(false)
     const _lastPointerDown = useRef({time: 0, x: 0, y: 0, pointerType: ''})
-    const _lockedFlashShown = useRef(false)
     const _lockedHintTimer = useRef(null)
     const _prevRotate = useRef(0)
     const _suppressClickUntil = useRef(0)
@@ -337,6 +336,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
     const effectiveLocked = canLock && locked
     const suppressLockedOverlay = widgetId === ROTATION_CAMERA_ADJUSTMENT_WIDGET
     const isCollapsedToolbar = effectiveCollapsed && config.type === LGS_TOOLBAR
+    const isOnMapWidget = !isTargetingBoard
     const showLockedOverlay = effectiveLocked && showLockedHint && !suppressLockedOverlay
     const liveOpacity = config.type === LGS_TOOLBAR
                         ? (effectiveCollapsed ? 1 : (toolbars.opacity ?? config.opacity ?? 1))
@@ -383,7 +383,6 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
 
     useEffect(() => {
         if (!effectiveLocked) {
-            _lockedFlashShown.current = false
             clearTimeout(_lockedHintTimer.current)
             _lockedHintTimer.current = null
             const frameId = requestAnimationFrame(() => setShowLockedHint(false))
@@ -398,12 +397,6 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
         })
         return () => cancelAnimationFrame(frameId)
     }, [effectiveLocked, widgetId])
-
-    useEffect(() => {
-        if (effectiveCollapsed) {
-            _lockedFlashShown.current = false
-        }
-    }, [effectiveCollapsed])
 
     /**
      * Target board/container detection logic.
@@ -552,16 +545,9 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
         if (!effectiveLocked || suppressLockedOverlay) {
             return
         }
-        if (!isVisualWidget && !effectiveCollapsed && _lockedFlashShown.current) {
-            return
-        }
 
         if (_lockedHintTimer.current) {
             clearTimeout(_lockedHintTimer.current)
-        }
-
-        if (!isVisualWidget && !effectiveCollapsed) {
-            _lockedFlashShown.current = true
         }
 
         setShowLockedHint(true)
@@ -1322,7 +1308,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                 {effectiveLocked && !suppressLockedOverlay && (
                     <div className={classNames('lgs-widget-lock-overlay', {'is-visible': showLockedOverlay})}
                          aria-hidden={!showLockedOverlay}>
-                        <div className="lgs-widget-lock-badge">
+                        <div className={classNames('lgs-widget-lock-badge', {'lgs-widget-lock-badge-on-map': isOnMapWidget})}>
                             <WaIcon name={LOCKED_HINT_ICON} variant="regular"/>
                         </div>
                     </div>

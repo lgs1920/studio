@@ -1938,10 +1938,6 @@ wa-dialog::part(dialog)::backdrop {
         transition: opacity 160ms ease;
     }
 
-    .lgs-widget.lgs-widget-locked.lgs-widget-lock-hint-active:not(.lgs-visual-widget) > :not(.lgs-widget-inner-overlay):not(.lgs-widget-lock-overlay) {
-        opacity: 0;
-    }
-
     .lgs-widget-collapsed-icon {
         font-size: var(--lgs-font-size);
         line-height: 1;
@@ -2055,6 +2051,15 @@ wa-dialog::part(dialog)::backdrop {
         color: inherit;
     }
 
+    .lgs-widget-lock-badge.lgs-widget-lock-badge-on-map {
+        color: var(--lgs-text-on-color);
+        border: 1px solid var(--lgs-card-on-map-border-color);
+        background-color: var(--lgs-card-on-map-bg-color);
+        background-image: var(--lgs-card-on-map-bg-image);
+        background-blend-mode: var(--lgs-card-on-map-bg-blend-mode);
+        box-shadow: var(--lgs-on-map-floating-shadow, var(--lgs-overlay-floating-shadow));
+    }
+
     .lgs-widget-lock-overlay.is-visible {
         opacity: 1;
     }
@@ -2063,7 +2068,7 @@ wa-dialog::part(dialog)::backdrop {
         cursor: default;
     }
 
-    .lgs-visual-widget.lgs-widget-inner-overlay.no-propagation {
+    .lgs-visual-widget > .lgs-widget-inner-overlay.no-propagation {
         pointer-events: auto !important;
     }
 
