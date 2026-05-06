@@ -26,12 +26,18 @@ const makeTrack = ({
                        visible = true,
                        coordinates,
                        type = 'LineString',
+                       times,
+                       metrics,
                    }) => ({
     slug,
     visible,
+    hasTime: Boolean(times),
+    metrics: metrics ?? {},
     content: {
         type:       'Feature',
-        properties: {},
+        properties: times ? {
+            coordinateProperties: {times},
+        } : {},
         geometry:   {
             type,
             coordinates,
@@ -122,6 +128,70 @@ describe('flythrough phase 1 sampler', () => {
         expect(remaining[0].coordinates.at(-1)[0]).toBeCloseTo(0.002, 5)
     })
 
+    it('interpolates journey time on flythrough samples', () => {
+        const journey = makeJourney([
+            makeTrack({
+                slug:        'track#journey#gpx#timed',
+                coordinates: [
+                    [0, 0, 0],
+                    [0.001, 0, 0],
+                    [0.002, 0, 0],
+                ],
+                times: [
+                    '2026-05-05T10:00:00.000Z',
+                    '2026-05-05T10:10:00.000Z',
+                    '2026-05-05T10:20:00.000Z',
+                ],
+            }),
+        ])
+
+        const sampler = new FlythroughPathSampler({journey})
+        const middle = sampler.atProgress(0.5)
+
+        expect(sampler.durationMillis).toBe(20 * 60 * 1000)
+        expect(middle.time).toBe('2026-05-05T10:10:00.000Z')
+        expect(middle.journeyElapsedMillis).toBe(10 * 60 * 1000)
+        expect(middle.journeyDurationMillis).toBe(20 * 60 * 1000)
+    })
+
+    it('falls back to metric point times when coordinate times are missing', () => {
+        const journey = makeJourney([
+            makeTrack({
+                slug:        'track#journey#gpx#metric-time',
+                coordinates: [
+                    [0, 0, 0],
+                    [0.001, 0, 0],
+                    [0.002, 0, 0],
+                ],
+                metrics: {
+                    points: [
+                        {
+                            longitude: 0.001,
+                            latitude:  0,
+                            altitude:  0,
+                            distance:  100,
+                            duration:  600,
+                            time:      '2026-05-05T10:10:00.000Z',
+                        },
+                        {
+                            longitude: 0.002,
+                            latitude:  0,
+                            altitude:  0,
+                            distance:  100,
+                            duration:  600,
+                            time:      '2026-05-05T10:20:00.000Z',
+                        },
+                    ],
+                },
+            }),
+        ])
+
+        const sampler = new FlythroughPathSampler({journey})
+
+        expect(sampler.durationMillis).toBe(20 * 60 * 1000)
+        expect(sampler.atProgress(0.5).journeyElapsedMillis).toBe(10 * 60 * 1000)
+    })
+
     it('filters visible and current tracks according to scope', () => {
         const visible = makeTrack({
             slug:        'track#journey#gpx#visible',
@@ -150,6 +220,7 @@ describe('flythrough phase 1 playback controller', () => {
             makeTrack({
                 slug:        'track#journey#gpx#main',
                 coordinates: [[0, 0, 0], [0.002, 0, 0]],
+                times:       ['2026-05-05T10:00:00.000Z', '2026-05-05T10:20:00.000Z'],
             }),
         ])
         const sampler = new FlythroughPathSampler({journey})
@@ -181,6 +252,7 @@ describe('flythrough phase 1 playback controller', () => {
             makeTrack({
                 slug:        'track#journey#gpx#main',
                 coordinates: [[0, 0, 0], [0.002, 0, 0]],
+                times:       ['2026-05-05T10:00:00.000Z', '2026-05-05T10:20:00.000Z'],
             }),
         ])
         const sampler = new FlythroughPathSampler({journey})
@@ -210,11 +282,12 @@ describe('flythrough phase 1 playback controller', () => {
         expect(controller.progress).toBeCloseTo(0.5, 4)
     })
 
-    it('syncs serializable samples into the Valtio UI store', () => {
+    it('syncs serializable samples into the Valtio flythrough runtime store', () => {
         const journey = makeJourney([
             makeTrack({
                 slug:        'track#journey#gpx#main',
                 coordinates: [[0, 0, 0], [0.002, 0, 0]],
+                times:       ['2026-05-05T10:00:00.000Z', '2026-05-05T10:20:00.000Z'],
             }),
         ])
         const sampler = new FlythroughPathSampler({journey})
@@ -224,17 +297,15 @@ describe('flythrough phase 1 playback controller', () => {
             events: {emit: () => {}},
             scene:  {requestRender: () => {}},
             stores: {
-                ui: {
-                    mainUI: {
-                        flythrough: proxy({
-                                          active: false,
-                                          playing: false,
-                                          paused: false,
-                                          progress: 0,
-                                          sample: null,
-                                      }),
-                    },
-                },
+                flythrough: proxy({
+                                      active: false,
+                                      playing: false,
+                                      paused: false,
+                                      progress: 0,
+                                      elapsedMillis: null,
+                                      durationMillis: null,
+                                      sample: null,
+                                  }),
             },
         }
 
@@ -247,7 +318,10 @@ describe('flythrough phase 1 playback controller', () => {
 
             expect(() => controller.configure({sampler, duration: 10})).not.toThrow()
             expect(() => controller.start()).not.toThrow()
-            expect(() => JSON.stringify(globalThis.lgs.stores.ui.mainUI.flythrough.sample)).not.toThrow()
+            expect(() => controller.seek(0.5)).not.toThrow()
+            expect(globalThis.lgs.stores.flythrough.elapsedMillis).toBe(10 * 60 * 1000)
+            expect(globalThis.lgs.stores.flythrough.durationMillis).toBe(20 * 60 * 1000)
+            expect(() => JSON.stringify(globalThis.lgs.stores.flythrough.sample)).not.toThrow()
         }
         finally {
             globalThis.lgs = previousLgs

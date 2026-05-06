@@ -34,6 +34,17 @@ const finiteNumber = value => {
 
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value))
 
+const parseTimeMillis = value => {
+    if (!value) {
+        return null
+    }
+
+    const millis = Date.parse(value)
+    return Number.isFinite(millis) ? millis : null
+}
+
+const isoTime = millis => Number.isFinite(millis) ? new Date(millis).toISOString() : null
+
 const pointFromCoordinate = (coordinate) => {
     if (!coordinate) {
         return null
@@ -64,6 +75,10 @@ const sampleReference = sample => sample ? {
     progress:          sample.progress,
     distanceFromStart: sample.distanceFromStart,
     remainingDistance: sample.remainingDistance,
+    time:              sample.time,
+    timeMillis:        sample.timeMillis,
+    journeyElapsedMillis: sample.journeyElapsedMillis,
+    journeyDurationMillis: sample.journeyDurationMillis,
     trackSlug:         sample.trackSlug,
     trackIndex:        sample.trackIndex,
     pointIndex:        sample.pointIndex,
@@ -88,15 +103,31 @@ const cloneSample = sample => sample ? {
 
 const interpolateValue = (start, end, ratio) => start + ((end - start) * ratio)
 
+const interpolateNullableValue = (start, end, ratio) => {
+    const startValue = finiteNumber(start)
+    const endValue = finiteNumber(end)
+
+    if (startValue === null || endValue === null) {
+        return startValue ?? endValue
+    }
+
+    return interpolateValue(startValue, endValue, ratio)
+}
+
 const interpolateSample = (start, end, targetDistance, totalDistance) => {
     const distance = end.distanceFromStart - start.distanceFromStart
     const segmentRatio = distance > 0 ? clamp((targetDistance - start.distanceFromStart) / distance, 0, 1) : 0
     const altitude = interpolateValue(start.altitude ?? 0, end.altitude ?? 0, segmentRatio)
+    const timeMillis = interpolateNullableValue(start.timeMillis, end.timeMillis, segmentRatio)
 
     return {
         progress: totalDistance > 0 ? clamp(targetDistance / totalDistance, 0, 1) : 0,
         distanceFromStart: targetDistance,
         remainingDistance: Math.max(0, totalDistance - targetDistance),
+        time: isoTime(timeMillis),
+        timeMillis,
+        journeyElapsedMillis: interpolateNullableValue(start.journeyElapsedMillis, end.journeyElapsedMillis, segmentRatio),
+        journeyDurationMillis: start.journeyDurationMillis ?? end.journeyDurationMillis ?? null,
         trackSlug: end.trackSlug,
         trackIndex: end.trackIndex,
         pointIndex: end.pointIndex,
@@ -122,6 +153,9 @@ export class FlythroughPathSampler {
     #samples = []
     #segments = []
     #totalDistance = 0
+    #startTimeMillis = null
+    #endTimeMillis = null
+    #durationMillis = null
 
     constructor(options = {}) {
         this.update(options)
@@ -165,6 +199,18 @@ export class FlythroughPathSampler {
         return this.#totalDistance
     }
 
+    get startTimeMillis() {
+        return this.#startTimeMillis
+    }
+
+    get endTimeMillis() {
+        return this.#endTimeMillis
+    }
+
+    get durationMillis() {
+        return this.#durationMillis
+    }
+
     get hasSamples() {
         return this.#samples.length > 0
     }
@@ -192,6 +238,9 @@ export class FlythroughPathSampler {
         this.#samples = []
         this.#segments = []
         this.#totalDistance = 0
+        this.#startTimeMillis = null
+        this.#endTimeMillis = null
+        this.#durationMillis = null
 
         if (!this.#journey?.tracks) {
             return
@@ -199,15 +248,20 @@ export class FlythroughPathSampler {
 
         const selectedTracks = this.#selectedTracks()
         let cumulativeDistance = 0
+        const metricTimeBreakpoints = []
 
         selectedTracks.forEach(({track, index: trackIndex}) => {
+            const trackStartDistance = cumulativeDistance
             const coordinateSegments = FlythroughPathSampler.coordinateSegmentsFromTrack(track)
+            const timeSegments = FlythroughPathSampler.timeSegmentsFromTrack(track)
 
             coordinateSegments.forEach((coordinates, segmentIndex) => {
                 const points = coordinates.map(pointFromCoordinate).filter(Boolean)
                 if (points.length < 2) {
                     return
                 }
+
+                FlythroughPathSampler.assignSegmentTimes(points, timeSegments[segmentIndex])
 
                 const startIndex = this.#samples.length
                 const startDistance = cumulativeDistance
@@ -222,6 +276,10 @@ export class FlythroughPathSampler {
                         progress: 0,
                         distanceFromStart: cumulativeDistance,
                         remainingDistance: 0,
+                        time: point.time,
+                        timeMillis: point.timeMillis,
+                        journeyElapsedMillis: null,
+                        journeyDurationMillis: null,
                         trackSlug: track.slug,
                         trackIndex,
                         pointIndex,
@@ -253,9 +311,14 @@ export class FlythroughPathSampler {
                     endDistance: cumulativeDistance,
                 })
             })
+
+            metricTimeBreakpoints.push(
+                ...FlythroughPathSampler.metricTimeBreakpointsFromTrack(track, trackStartDistance, cumulativeDistance),
+            )
         })
 
         this.#totalDistance = cumulativeDistance
+        this.#resolveJourneyTime(metricTimeBreakpoints)
         this.#samples.forEach((sample, index) => {
             sample.progress = this.#totalDistance > 0
                               ? clamp(sample.distanceFromStart / this.#totalDistance, 0, 1)
@@ -272,6 +335,44 @@ export class FlythroughPathSampler {
                 startPoint: sameSegment(previous) ? sampleReference(previous) : null,
                 endPoint:   sameSegment(next) ? sampleReference(next) : null,
             }
+        })
+    }
+
+    #resolveJourneyTime = (fallbackBreakpoints = []) => {
+        const sampleBreakpoints = this.#samples
+            .filter(sample => Number.isFinite(sample.timeMillis))
+            .map(sample => ({
+                distance:   sample.distanceFromStart,
+                timeMillis: sample.timeMillis,
+            }))
+        const breakpoints = sampleBreakpoints.length >= 2
+                            ? sampleBreakpoints
+                            : fallbackBreakpoints.filter(point => Number.isFinite(point.distance) && Number.isFinite(point.timeMillis))
+
+        if (breakpoints.length < 2) {
+            return
+        }
+
+        this.#startTimeMillis = breakpoints[0].timeMillis
+        this.#endTimeMillis = breakpoints[breakpoints.length - 1].timeMillis
+        const durationMillis = Math.abs(this.#endTimeMillis - this.#startTimeMillis)
+        if (!Number.isFinite(durationMillis) || durationMillis <= 0) {
+            this.#startTimeMillis = null
+            this.#endTimeMillis = null
+            return
+        }
+
+        this.#durationMillis = durationMillis
+        this.#samples.forEach(sample => {
+            const timeMillis = FlythroughPathSampler.timeAtDistance(breakpoints, sample.distanceFromStart)
+            if (!Number.isFinite(timeMillis)) {
+                return
+            }
+
+            sample.timeMillis = timeMillis
+            sample.time = isoTime(timeMillis)
+            sample.journeyElapsedMillis = clamp(Math.abs(sample.timeMillis - this.#startTimeMillis), 0, durationMillis)
+            sample.journeyDurationMillis = durationMillis
         })
     }
 
@@ -438,6 +539,23 @@ export class FlythroughPathSampler {
         sample.altitude ?? sample.height ?? 0,
     ]
 
+    static rawCoordinateSegmentsFromTrack = (track) => {
+        const geometry = track?.content?.geometry
+        if (!geometry) {
+            return []
+        }
+
+        if (geometry.type === LINE_STRING && Array.isArray(geometry.coordinates)) {
+            return [geometry.coordinates]
+        }
+
+        if (geometry.type === MULTI_LINE_STRING && Array.isArray(geometry.coordinates)) {
+            return geometry.coordinates.filter(Array.isArray)
+        }
+
+        return []
+    }
+
     static coordinateSegmentsFromTrack = (track) => {
         const geometry = getTrackRenderContent(track)?.geometry
         if (!geometry) {
@@ -453,5 +571,193 @@ export class FlythroughPathSampler {
         }
 
         return []
+    }
+
+    static timeSegmentsFromTrack = (track) => {
+        const rawSegments = FlythroughPathSampler.rawCoordinateSegmentsFromTrack(track)
+        const geometryType = track?.content?.geometry?.type
+        const times = track?.content?.properties?.coordinateProperties?.times
+        let timeCursor = 0
+
+        return rawSegments.map((coordinates, index) => {
+            let segmentTimes = []
+
+            if (geometryType === LINE_STRING && Array.isArray(times)) {
+                segmentTimes = times
+            }
+            else if (Array.isArray(times?.[index])) {
+                segmentTimes = times[index]
+            }
+            else if (Array.isArray(times)) {
+                segmentTimes = times.slice(timeCursor, timeCursor + coordinates.length)
+            }
+
+            timeCursor += coordinates.length
+
+            return {
+                coordinates,
+                times: segmentTimes,
+            }
+        })
+    }
+
+    static timeBreakpointsFromSegment = (segment) => {
+        const coordinates = Array.isArray(segment?.coordinates) ? segment.coordinates : []
+        const times = Array.isArray(segment?.times) ? segment.times : []
+        const points = coordinates
+            .map((coordinate, index) => ({
+                point:      pointFromCoordinate(coordinate),
+                timeMillis: parseTimeMillis(times[index]),
+            }))
+            .filter(item => item.point)
+
+        if (points.length < 2) {
+            return []
+        }
+
+        let distance = 0
+        points.forEach((item, index) => {
+            if (index > 0) {
+                distance += Mobility.distance(points[index - 1].point, item.point)
+            }
+            item.distance = distance
+        })
+
+        return points
+            .map((item, index) => ({
+                ratio:      distance > 0 ? clamp(item.distance / distance, 0, 1) : (points.length > 1 ? index / (points.length - 1) : 0),
+                timeMillis: item.timeMillis,
+            }))
+            .filter(item => Number.isFinite(item.timeMillis))
+    }
+
+    static timeAtRatio = (breakpoints, ratio) => {
+        if (!Array.isArray(breakpoints) || breakpoints.length === 0) {
+            return null
+        }
+
+        const safeRatio = clamp(Number(ratio) || 0, 0, 1)
+        if (safeRatio <= breakpoints[0].ratio) {
+            return breakpoints[0].timeMillis
+        }
+        if (safeRatio >= breakpoints[breakpoints.length - 1].ratio) {
+            return breakpoints[breakpoints.length - 1].timeMillis
+        }
+
+        for (let index = 1; index < breakpoints.length; index++) {
+            const start = breakpoints[index - 1]
+            const end = breakpoints[index]
+            if (safeRatio <= end.ratio) {
+                const span = end.ratio - start.ratio
+                const segmentRatio = span > 0 ? clamp((safeRatio - start.ratio) / span, 0, 1) : 0
+                return interpolateValue(start.timeMillis, end.timeMillis, segmentRatio)
+            }
+        }
+
+        return breakpoints[breakpoints.length - 1].timeMillis
+    }
+
+    static timeAtDistance = (breakpoints, distance) => {
+        if (!Array.isArray(breakpoints) || breakpoints.length === 0) {
+            return null
+        }
+
+        const targetDistance = Number(distance) || 0
+        if (targetDistance <= breakpoints[0].distance) {
+            return breakpoints[0].timeMillis
+        }
+        if (targetDistance >= breakpoints[breakpoints.length - 1].distance) {
+            return breakpoints[breakpoints.length - 1].timeMillis
+        }
+
+        for (let index = 1; index < breakpoints.length; index++) {
+            const start = breakpoints[index - 1]
+            const end = breakpoints[index]
+            if (targetDistance <= end.distance) {
+                const span = end.distance - start.distance
+                const segmentRatio = span > 0 ? clamp((targetDistance - start.distance) / span, 0, 1) : 0
+                return interpolateValue(start.timeMillis, end.timeMillis, segmentRatio)
+            }
+        }
+
+        return breakpoints[breakpoints.length - 1].timeMillis
+    }
+
+    static metricTimeBreakpointsFromTrack = (track, trackStartDistance, trackEndDistance) => {
+        const metricPoints = Array.isArray(track?.metrics?.points) ? track.metrics.points : []
+        const timedPoints = []
+        let metricDistance = 0
+
+        metricPoints.forEach(point => {
+            const pointDistance = finiteNumber(point?.distance) ?? 0
+            const timeMillis = parseTimeMillis(point?.time)
+
+            metricDistance += pointDistance
+            if (Number.isFinite(timeMillis)) {
+                timedPoints.push({
+                                     distance: metricDistance,
+                                     timeMillis,
+                                     duration: finiteNumber(point?.duration),
+                                 })
+            }
+        })
+
+        if (timedPoints.length === 0) {
+            return []
+        }
+
+        const firstPoint = timedPoints[0]
+        if (Number.isFinite(firstPoint.duration) && firstPoint.duration > 0) {
+            timedPoints.unshift({
+                                   distance:   Math.max(0, firstPoint.distance - (finiteNumber(metricPoints[0]?.distance) ?? 0)),
+                                   timeMillis: firstPoint.timeMillis - (firstPoint.duration * 1000),
+                               })
+        }
+
+        if (timedPoints.length < 2) {
+            return []
+        }
+
+        const metricStartDistance = timedPoints[0].distance
+        const metricEndDistance = timedPoints[timedPoints.length - 1].distance
+        const metricSpan = metricEndDistance - metricStartDistance
+        const renderSpan = trackEndDistance - trackStartDistance
+
+        return timedPoints.map(point => {
+            const ratio = metricSpan > 0 ? clamp((point.distance - metricStartDistance) / metricSpan, 0, 1) : 0
+            return {
+                distance:   trackStartDistance + (renderSpan * ratio),
+                timeMillis: point.timeMillis,
+            }
+        })
+    }
+
+    static assignSegmentTimes = (points, timeSegment) => {
+        const breakpoints = FlythroughPathSampler.timeBreakpointsFromSegment(timeSegment)
+        if (breakpoints.length < 2 || !Array.isArray(points) || points.length === 0) {
+            return
+        }
+
+        let distance = 0
+        points.forEach((point, index) => {
+            if (index > 0) {
+                distance += Mobility.distance(points[index - 1], point)
+            }
+            point.flythroughSegmentDistance = distance
+        })
+
+        points.forEach((point, index) => {
+            const ratio = distance > 0
+                          ? clamp(point.flythroughSegmentDistance / distance, 0, 1)
+                          : (points.length > 1 ? index / (points.length - 1) : 0)
+            const timeMillis = FlythroughPathSampler.timeAtRatio(breakpoints, ratio)
+
+            if (Number.isFinite(timeMillis)) {
+                point.timeMillis = timeMillis
+                point.time = isoTime(timeMillis)
+            }
+
+            delete point.flythroughSegmentDistance
+        })
     }
 }

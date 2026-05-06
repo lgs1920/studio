@@ -90,7 +90,7 @@ export class Profiler {
                             coords = appendFlythroughProfileMetadata([
                                 __.convert(distance).to(units.x[lgs.settings.unitSystem.current]),
                                 __.convert(elevation).to(units.y[lgs.settings.unitSystem.current]),
-                                null, //TODO Time
+                                point.time ?? null,
                                 point,
                                 lgs.settings.unitSystem.current,  // unit system
                             ], {

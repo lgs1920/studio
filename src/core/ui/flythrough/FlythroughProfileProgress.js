@@ -109,7 +109,7 @@ export const flythroughProfileRowFromSample = (sample, {
 
     row[distanceIndex] = convertFlythroughDistance(sample.distanceFromStart, unitSystem)
     row[elevationIndex] = convertFlythroughElevation(sample.altitude ?? sample.height, unitSystem)
-    row[timeIndex] = null
+    row[timeIndex] = sample.time ?? null
     row[pointIndex] = sample
 
     if (indexes.distanceFromStart >= 0) {

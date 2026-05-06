@@ -31,6 +31,8 @@ export const FLYTHROUGH_EVENTS = [
 
 const DEFAULT_DURATION = 60
 const MILLIS = 1000
+const STORE_SYNC_INTERVAL = 250
+const GLOBAL_UPDATE_EVENT_INTERVAL = 250
 
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value))
 
@@ -55,6 +57,8 @@ export class FlythroughPlaybackController {
     #requestFrame
     #cancelFrame
     #now
+    #lastStoreSync = 0
+    #lastGlobalUpdate = 0
 
     constructor({
                     requestFrame = callback => globalThis.__?.requestAnimationFrame?.(callback)
@@ -86,7 +90,7 @@ export class FlythroughPlaybackController {
         this.#direction = Number(direction) < 0 ? -1 : 1
         this.#loop = Boolean(loop)
         this.#progress = clamp(Number(progress) || 0, 0, 1)
-        this.#syncStore(this.currentSample())
+        this.#syncStore(this.currentSample(), {force: true})
         return this
     }
 
@@ -148,10 +152,11 @@ export class FlythroughPlaybackController {
         this.#paused = false
         this.#pauseDuration = 0
         this.#pausedAt = 0
+        this.#lastGlobalUpdate = 0
         this.#startedAt = this.#now() - this.#elapsedFromProgress(this.#progress)
 
         const sample = this.currentSample()
-        this.#syncStore(sample)
+        this.#syncStore(sample, {force: true})
         this.#emit(FLYTHROUGH_EVENT_START, sample)
         this.#emit(FLYTHROUGH_EVENT_UPDATE, sample)
         this.#schedule()
@@ -167,7 +172,7 @@ export class FlythroughPlaybackController {
         this.#pausedAt = this.#now()
         this.#cancelCurrentFrame()
         const sample = this.currentSample()
-        this.#syncStore(sample)
+        this.#syncStore(sample, {force: true})
         this.#emit(FLYTHROUGH_EVENT_PAUSE, sample)
         return sample
     }
@@ -184,7 +189,7 @@ export class FlythroughPlaybackController {
         this.#pausedAt = 0
         this.#paused = false
         const sample = this.currentSample()
-        this.#syncStore(sample)
+        this.#syncStore(sample, {force: true})
         this.#emit(FLYTHROUGH_EVENT_RESUME, sample)
         this.#schedule()
         return sample
@@ -203,7 +208,7 @@ export class FlythroughPlaybackController {
             this.#progress = this.#direction > 0 ? 0 : 1
         }
         const sample = this.currentSample()
-        this.#syncStore(sample)
+        this.#syncStore(sample, {force: true})
         if (emit) {
             this.#emit(FLYTHROUGH_EVENT_STOP, sample)
         }
@@ -216,7 +221,7 @@ export class FlythroughPlaybackController {
             this.#startedAt = this.#now() - this.#elapsedFromProgress(this.#progress) - this.#pauseDuration
         }
         const sample = this.currentSample()
-        this.#syncStore(sample)
+        this.#syncStore(sample, {force: true})
         this.#emit(FLYTHROUGH_EVENT_UPDATE, sample)
         return sample
     }
@@ -276,7 +281,7 @@ export class FlythroughPlaybackController {
                 this.#paused = false
                 this.#frame = null
                 this.#emit(FLYTHROUGH_EVENT_END, this.currentSample())
-                this.#syncStore(this.currentSample())
+                this.#syncStore(this.currentSample(), {force: true})
                 return
             }
         }
@@ -309,6 +314,10 @@ export class FlythroughPlaybackController {
                 console.error(`[FlythroughPlaybackController] Listener failed for "${event}".`, error)
             }
         })
+        if (!this.#shouldEmitGlobalEvent(event)) {
+            return
+        }
+
         try {
             globalThis.lgs?.events?.emit?.(event, detail)
         }
@@ -317,16 +326,38 @@ export class FlythroughPlaybackController {
         }
     }
 
-    #syncStore = (sample) => {
-        const store = globalThis.lgs?.stores?.ui?.mainUI?.flythrough
+    #shouldEmitGlobalEvent = event => {
+        if (event !== FLYTHROUGH_EVENT_UPDATE || !this.#running || this.#paused) {
+            return true
+        }
+
+        const now = this.#now()
+        if (now - this.#lastGlobalUpdate < GLOBAL_UPDATE_EVENT_INTERVAL) {
+            return false
+        }
+
+        this.#lastGlobalUpdate = now
+        return true
+    }
+
+    #syncStore = (sample, {force = false} = {}) => {
+        const store = globalThis.lgs?.stores?.flythrough
         if (!store) {
             return
         }
+
+        const now = this.#now()
+        if (!force && now - this.#lastStoreSync < STORE_SYNC_INTERVAL) {
+            return
+        }
+        this.#lastStoreSync = now
 
         store.active = this.#running || this.#paused
         store.playing = this.#running && !this.#paused
         store.paused = this.#paused
         store.progress = this.#progress
+        store.elapsedMillis = sample?.journeyElapsedMillis ?? null
+        store.durationMillis = sample?.journeyDurationMillis ?? this.#sampler?.durationMillis ?? null
         store.sample = sample
         store.duration = this.#duration
         store.direction = this.#direction
