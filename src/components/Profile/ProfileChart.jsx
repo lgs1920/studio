@@ -327,10 +327,10 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
     const $unitStore = lgs.settings.unitSystem
     const unitStore = useSnapshot($unitStore)
     const unitSystem = unitStore.current
-    const flythroughProfileInfoSettings = useSnapshot(lgs.settings.ui.flythrough.profileInfo)
+    const flythroughSettings = useSnapshot(lgs.settings.ui.flythrough)
     const flythroughProfileInfo = useMemo(
-        () => normalizeFlythroughProfileInfo(flythroughProfileInfoSettings),
-        [flythroughProfileInfoSettings],
+        () => normalizeFlythroughProfileInfo(flythroughSettings.profileInfo),
+        [flythroughSettings.profileInfo],
     )
 
     const _chart = useRef(null)

@@ -80,7 +80,7 @@ export const ProfileWidgetEditor = ({entity}) => {
     const $configuration = lgs.settings.widgets['profile-widget'].configuration
     const configuration = useSnapshot($configuration)
     ensureFlythroughSettings()
-    const flythroughProfileInfoSettings = useSnapshot(lgs.settings.ui.flythrough.profileInfo)
+    const flythroughSettings = useSnapshot(lgs.settings.ui.flythrough)
     const sliderRefs = useRef({})
 
     const sanitizeSliderValue = useCallback((rawValue, fallback, options = {}) => {
@@ -116,8 +116,8 @@ export const ProfileWidgetEditor = ({entity}) => {
 
     const swatches = useMemo(() => lgs.settings.getSwatches.list.join(';'), [])
     const flythroughProfileInfo = useMemo(
-        () => normalizeFlythroughProfileInfo(flythroughProfileInfoSettings),
-        [flythroughProfileInfoSettings],
+        () => normalizeFlythroughProfileInfo(flythroughSettings.profileInfo),
+        [flythroughSettings.profileInfo],
     )
     const gradientFallbackColor = useMemo(() => {
         const fallbackColor = __.ui.profiler?.prepareData()?.options?.[0]?.color ?? '#3b82f6'
