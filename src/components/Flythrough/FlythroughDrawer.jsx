@@ -50,7 +50,7 @@ const toOpaqueColorValue = value => {
 
 const FlythroughStyleField = ({label, children}) => (
     <div className="flythrough-style-field">
-        <span className="flythrough-style-label">{label}</span>
+        {label && <span className="flythrough-style-label">{label}</span>}
         {children}
     </div>
 )
@@ -73,13 +73,13 @@ const mergeProfileInfo = (current, updates) => normalizeFlythroughProfileInfo({
     ...updates,
 })
 
-const FlythroughColorField = ({label, color, opacity, swatches, onColorInput, onOpacityInput}) => (
+const FlythroughColorField = ({label, ariaLabel = label || 'Color', color, opacity, swatches, onColorInput, onOpacityInput}) => (
     <FlythroughStyleField label={label}>
         <div className="flythrough-color-control">
             <WaColorPicker
                 className="flythrough-color-picker"
                 size="small"
-                aria-label={label}
+                aria-label={ariaLabel}
                 value={color}
                 swatches={swatches}
                 onInput={onColorInput}
@@ -125,27 +125,24 @@ const FlythroughProgressionGroup = ({
                                     width,
                                     widthMin,
                                     widthMax,
-                                    profileMarker,
-                                    profileMarkerMin,
-                                    profileMarkerMax,
                                     swatches,
                                     onColorInput,
                                     onOpacityInput,
                                     onWidthInput,
-                                    onProfileMarkerInput,
                                 }) => (
     <section className="flythrough-style-subsection">
         <h4 className="flythrough-style-subtitle">{title}</h4>
         <div className="flythrough-style-control-group">
             <FlythroughColorField
-                label="Color"
+                label=""
+                ariaLabel={`${title} color`}
                 color={color}
                 opacity={opacity}
                 swatches={swatches}
                 onColorInput={onColorInput}
                 onOpacityInput={onOpacityInput}
             />
-            <div className="flythrough-style-field-grid">
+            <div className="flythrough-style-field-grid is-single flythrough-progression-width-grid">
                 <FlythroughWidthField
                     label="Width"
                     value={width}
@@ -153,15 +150,6 @@ const FlythroughProgressionGroup = ({
                     max={widthMax}
                     step="0.5"
                     onInput={onWidthInput}
-                />
-                <FlythroughWidthField
-                    label="Profile Marker"
-                    unit="px"
-                    value={profileMarker}
-                    min={profileMarkerMin}
-                    max={profileMarkerMax}
-                    step="0.5"
-                    onInput={onProfileMarkerInput}
                 />
             </div>
         </div>
@@ -190,6 +178,7 @@ export const FlythroughDrawer = memo(() => {
     const borderProfileMarker = progression.border.profileMarker
     const profileInfo = normalizeFlythroughProfileInfo(flythroughSettings.profileInfo)
     const profileInfoColor = toOpaqueColorValue(profileInfo.color)
+    const profileInfoUseTrackStyle = profileInfo.useTrackStyle
     const durationLocked = flythroughState.active || flythroughState.playing || flythroughState.paused
 
     useEffect(() => {
@@ -344,6 +333,11 @@ export const FlythroughDrawer = memo(() => {
         updateProfileInfo({color: toOpaqueColorValue(event.target.value)})
     }, [updateProfileInfo])
 
+    const updateProfileInfoUseTrackStyle = useCallback((event) => {
+        updateProfileInfo({useTrackStyle: event.target.checked})
+        __.ui.profiler?.draw?.()
+    }, [updateProfileInfo])
+
     const handleRequestClose = useCallback((event) => {
         if (event.target.tagName !== 'WA-DRAWER') {
             event.preventDefault()
@@ -425,54 +419,77 @@ export const FlythroughDrawer = memo(() => {
                                                  <section className="flythrough-progression-section">
                                                      <h3>{'Progression'}</h3>
                                                      <FlythroughProgressionGroup
-                                                         title="Fill"
+                                                         title="Marker"
                                                          color={fillColor}
                                                          opacity={fillOpacity}
                                                          width={fillWidth}
                                                          widthMin={FLYTHROUGH_PROGRESSION_FILL_MIN_WIDTH}
                                                          widthMax={FLYTHROUGH_PROGRESSION_FILL_MAX_WIDTH}
-                                                         profileMarker={fillProfileMarker}
-                                                         profileMarkerMin={FLYTHROUGH_PROFILE_MARKER_FILL_MIN_SIZE}
-                                                         profileMarkerMax={FLYTHROUGH_PROFILE_MARKER_FILL_MAX_SIZE}
                                                          swatches={swatches}
                                                          onColorInput={updateFillColor}
                                                          onOpacityInput={updateFillOpacity}
                                                          onWidthInput={updateFillWidth}
-                                                         onProfileMarkerInput={updateFillProfileMarker}
                                                      />
                                                      <WaDivider/>
                                                      <FlythroughProgressionGroup
-                                                         title="Border"
+                                                         title="Marker border"
                                                          color={borderColor}
                                                          opacity={borderOpacity}
                                                          width={borderWidth}
                                                          widthMin={FLYTHROUGH_PROGRESSION_BORDER_MIN_WIDTH}
                                                          widthMax={FLYTHROUGH_PROGRESSION_BORDER_MAX_WIDTH}
-                                                         profileMarker={borderProfileMarker}
-                                                         profileMarkerMin={FLYTHROUGH_PROFILE_MARKER_BORDER_MIN_WIDTH}
-                                                         profileMarkerMax={FLYTHROUGH_PROFILE_MARKER_BORDER_MAX_WIDTH}
                                                          swatches={swatches}
                                                          onColorInput={updateBorderColor}
                                                          onOpacityInput={updateBorderOpacity}
                                                          onWidthInput={updateBorderWidth}
-                                                         onProfileMarkerInput={updateBorderProfileMarker}
                                                      />
-                                                     <WaDivider/>
-                                                     <section className="flythrough-style-subsection">
-                                                         <h4 className="flythrough-style-subtitle">{'Profile info'}</h4>
-                                                         <div className="flythrough-style-control-group">
-                                                             <FlythroughStyleField label="Color">
+                                                 </section>
+                                                 <WaDivider/>
+                                                 <section className="flythrough-progression-section">
+                                                     <h3>{'Profile Info'}</h3>
+                                                     <div className="flythrough-style-control-group">
+                                                         <WaSwitch
+                                                             className="flythrough-track-style-switch"
+                                                             size="xsmall"
+                                                             label-at-start
+                                                             checked={profileInfoUseTrackStyle}
+                                                             onInput={updateProfileInfoUseTrackStyle}
+                                                         >
+                                                             {'Use track style'}
+                                                         </WaSwitch>
+                                                         <div className="flythrough-style-field-grid">
+                                                             <FlythroughWidthField
+                                                                 label="Marker Size"
+                                                                 unit="px"
+                                                                 value={fillProfileMarker}
+                                                                 min={FLYTHROUGH_PROFILE_MARKER_FILL_MIN_SIZE}
+                                                                 max={FLYTHROUGH_PROFILE_MARKER_FILL_MAX_SIZE}
+                                                                 step="0.5"
+                                                                 onInput={updateFillProfileMarker}
+                                                             />
+                                                             <FlythroughWidthField
+                                                                 label="Marker Border"
+                                                                 unit="px"
+                                                                 value={borderProfileMarker}
+                                                                 min={FLYTHROUGH_PROFILE_MARKER_BORDER_MIN_WIDTH}
+                                                                 max={FLYTHROUGH_PROFILE_MARKER_BORDER_MAX_WIDTH}
+                                                                 step="0.5"
+                                                                 onInput={updateBorderProfileMarker}
+                                                             />
+                                                         </div>
+                                                         <FlythroughStyleField label="Text color">
+                                                             <div className="flythrough-color-control">
                                                                  <WaColorPicker
                                                                      className="flythrough-color-picker"
                                                                      size="small"
-                                                                     aria-label="Profile info color"
+                                                                     aria-label="Profile info text color"
                                                                      value={profileInfoColor}
                                                                      swatches={swatches}
                                                                      onInput={updateProfileInfoColor}
                                                                  />
-                                                             </FlythroughStyleField>
-                                                         </div>
-                                                     </section>
+                                                             </div>
+                                                         </FlythroughStyleField>
+                                                     </div>
                                                  </section>
                                              </div>
                                          </LGSScrollbars>

@@ -63,7 +63,8 @@
     box-sizing: border-box;
     display: grid;
     gap: var(--wa-space-s, 0.75rem);
-    padding-left: var(--wa-space-s, 0.75rem);
+    padding-left: 0;
+    width: 100%;
 }
 
 .flythrough-style-subtitle {
@@ -111,6 +112,16 @@
     min-width: 0;
 }
 
+.flythrough-track-style-switch {
+    flex: 1 1 auto;
+    margin-left: auto;
+    min-width: 0;
+}
+
+.flythrough-track-style-switch::part(base) {
+    width: 100%;
+}
+
 .flythrough-opacity-slider {
     justify-self: end;
     margin-left: auto;
@@ -126,20 +137,28 @@
 }
 
 .flythrough-style-field-grid {
-    align-self: flex-end;
+    align-self: stretch;
     display: grid;
     gap: var(--wa-space-s, 0.75rem);
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    max-width: 22rem;
+    max-width: none;
     min-width: 0;
     width: 100%;
 }
 
 .flythrough-style-field-grid.is-single {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: 1fr;
 }
 
 .flythrough-style-field-grid.is-single .flythrough-style-field {
+    grid-column: 1;
+}
+
+.flythrough-style-field-grid.is-single.flythrough-progression-width-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, calc(50% - var(--wa-space-s, 0.75rem) / 2));
+}
+
+.flythrough-style-field-grid.is-single.flythrough-progression-width-grid .flythrough-style-field {
     grid-column: 2;
 }
 
