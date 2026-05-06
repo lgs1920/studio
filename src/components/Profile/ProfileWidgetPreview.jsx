@@ -33,12 +33,21 @@ import { useSnapshot }                                from 'valtio'
 export const ProfileWidgetPreview = ({entity}) => {
     const $unitSystem = lgs.settings.unitSystem
     const currentUnit = useSnapshot($unitSystem).current
+    const profile = useSnapshot(lgs.stores.main.components.profile)
+    const flythroughSettings = useSnapshot(lgs.settings.ui.flythrough)
 
     const _preview = useRef(null)
     const [previewSize, setPreviewSize] = useState({width: 0, height: 0})
 
     // Reuse the exact same dataset as the live profile widget.
     const realData = __.ui.profiler?.prepareData()
+    const previewChartKey = [
+        entity,
+        currentUnit,
+        profile.key,
+        flythroughSettings.profileInfo?.useTrackStyle === true ? 'track-style' : 'track-color',
+        flythroughSettings.profileInfo?.color ?? '',
+    ].join(':')
 
     useLayoutEffect(() => {
         if (!_preview.current) {
@@ -80,6 +89,7 @@ export const ProfileWidgetPreview = ({entity}) => {
             {previewSize.width > 0 && previewSize.height > 0 && realData && (
                 <div style={{width: `${previewSize.width}px`, height: `${previewSize.height}px`, position: 'relative'}}>
                     <ProfileChart
+                        key={previewChartKey}
                         preview
                         data={realData}
                         id={entity}

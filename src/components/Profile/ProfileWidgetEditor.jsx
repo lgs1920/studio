@@ -349,7 +349,7 @@ export const ProfileWidgetEditor = ({entity}) => {
                     size="xsmall"
                     label-at-start
                     checked={flythroughProfileInfo.useTrackStyle}
-                    onInput={(e) => updateFlythroughProfileInfo({useTrackStyle: e.target.checked})}
+                    onChange={(e) => updateFlythroughProfileInfo({useTrackStyle: e.target.checked})}
                 >
                     {'Use track style'}
                 </WaSwitch>

@@ -453,7 +453,7 @@ export const FlythroughDrawer = memo(() => {
                                                              size="xsmall"
                                                              label-at-start
                                                              checked={profileInfoUseTrackStyle}
-                                                             onInput={updateProfileInfoUseTrackStyle}
+                                                             onChange={updateProfileInfoUseTrackStyle}
                                                          >
                                                              {'Use track style'}
                                                          </WaSwitch>
