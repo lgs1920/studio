@@ -16,7 +16,7 @@
 
 import { CacheManager }        from '@Core/cache/CacheManager'
 import {
-    APP_KEY, CONFIGURATION, CURRENT_JOURNEY, CURRENT_STORE, CURRENT_TRACK, GLOBAL_PARENT, JOURNEYS_STORE, MONTH,
+    APP_KEY, CONFIGURATION, CURRENT_JOURNEY, CURRENT_STORE, CURRENT_TRACK, GLOBAL_PARENT, JOURNEY_GROUPS_STORE, JOURNEYS_STORE, MONTH,
     ORIGIN_STORE, platforms, POIS_STORE, SERVERS, SETTINGS_STORE, VAULT_STORE, WIDGETS_STORE,
 }                              from '@Core/constants'
 import { StoresManager }       from '@Core/stores/StoresManager'
@@ -27,6 +27,7 @@ import { AppUpdateManager }    from '@Core/ui/AppUpdateManager'
 import { ContextMenu }         from '@Core/ui/context-menu/ContextMenu'
 import { DeviceManager }       from '@Core/ui/DeviceManager'
 import { Geocoder }            from '@Core/ui/Geocoder'
+import { JourneyGroupManager }  from '@Core/ui/JourneyGroupManager'
 import { MenuManager }         from '@Core/ui/MenuManager'
 import { POIManager }          from '@Core/ui/POIManager'
 import { ScreenMediaRecorder } from '@Core/ui/screen-media-recorder/recorder/ScreenMediaRecorder'
@@ -214,14 +215,14 @@ export class LGS1920Context {
             lgs1920:  new LocalDB({
                                       name:             `${APP_KEY}${dbPrefix}`,
                                       stores:  [
-                                          JOURNEYS_STORE, CURRENT_STORE, ORIGIN_STORE, POIS_STORE,
+                                          JOURNEYS_STORE, JOURNEY_GROUPS_STORE, CURRENT_STORE, ORIGIN_STORE, POIS_STORE,
                                           {
                                               name:    WIDGETS_STORE,
                                               indexes: [{name: 'group', keyPath: 'data.group'}],
                                           },
                                       ],
                                       manageTransients: false,
-                                      version: 21, // integer
+                                      version: 22, // integer
                                   }),
             settings: new LocalDB({
                                       name:    `settings-${APP_KEY}${dbPrefix}`,
@@ -400,6 +401,7 @@ export class LGS1920Context {
 
         __.ui.flythroughRunner = new FlythroughRunner()
         __.ui.flythrough = new FlythroughMode()
+        __.ui.journeyGroupManager = new JourneyGroupManager()
         __.ui.cameraManager = new CameraManager()
         __.ui.drawerManager = new PanelManager()
         __.ui.sceneManager = new SceneManager()

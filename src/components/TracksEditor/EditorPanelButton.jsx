@@ -14,7 +14,7 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { JOURNEY_EDITOR_DRAWER, REMOVE_JOURNEY_IN_TOOLBAR } from '@Core/constants'
+import { JOURNEY_EDITOR_DRAWER, JOURNEY_GROUPS_DRAWER, REMOVE_JOURNEY_IN_TOOLBAR } from '@Core/constants'
 import { WaButton, WaIcon, WaPopup, WaTooltip } from '@web.awesome.me/webawesome-pro/dist/react'
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSnapshot }                           from 'valtio'
@@ -97,7 +97,15 @@ export const EditorPanelButton = memo((props) => {
             suppressFocusOnOpen: [
                                      lgs.theJourney?.slug,
                                      lgs.stores.main.components.pois.current,
-                                 ].filter(Boolean),
+            ].filter(Boolean),
+        })
+    }, [clearTriggerClickTimer])
+
+    const openJourneyGroups = useCallback(() => {
+        clearTriggerClickTimer()
+        setOpen(false)
+        __.ui.drawerManager.open(JOURNEY_GROUPS_DRAWER, {
+            entity: lgs.theJourney?.slug ?? null,
         })
     }, [clearTriggerClickTimer])
 
@@ -172,8 +180,22 @@ export const EditorPanelButton = memo((props) => {
                      distance={lgs.gutter.xs}
                      flip
                      shift>
-                <div className={`toolbar-action-popup ${hasJourney && popupPlacement === 'right-start' ? 'toolbar-action-popup--reverse' : ''}`}
+                <div className={`toolbar-action-popup ${hasJourney && popupPlacement === 'left-start' ? 'toolbar-action-popup--reverse' : ''}`}
                      role="menu">
+                    {hasJourney && (
+                        <>
+                            <WaTooltip for="journey-action-edit" placement="top">{'Edit Journey'}</WaTooltip>
+                            <WaButton id="journey-action-edit"
+                                      className="square-button"
+                                      variant="brand"
+                                      appearance="Filled"
+                                      onClick={editJourney}
+                                      role="menuitem">
+                                <WaIcon name="pen-to-square" variant="regular"/>
+                            </WaButton>
+                        </>
+                    )}
+
                     <WaTooltip for="journey-action-import" placement="top">{'Import journey'}</WaTooltip>
                     <WaButton id="journey-action-import"
                               className="square-button"
@@ -187,14 +209,14 @@ export const EditorPanelButton = memo((props) => {
 
                     {hasJourney && (
                         <>
-                            <WaTooltip for="journey-action-edit" placement="top">{'Edit Journey'}</WaTooltip>
-                            <WaButton id="journey-action-edit"
+                            <WaTooltip for="journey-action-groups" placement="top">{'Journey groups'}</WaTooltip>
+                            <WaButton id="journey-action-groups"
                                       className="square-button"
                                       variant="brand"
                                       appearance="Filled"
-                                      onClick={editJourney}
+                                      onClick={openJourneyGroups}
                                       role="menuitem">
-                                <WaIcon name="pen-to-square" variant="regular"/>
+                                <WaIcon name="folders" variant="regular"/>
                             </WaButton>
                         </>
                     )}

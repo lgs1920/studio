@@ -67,6 +67,7 @@ export const RemoveJourney = (props) => {
             $store.components.journeyEditor.list.splice(index, 1)
 
             // Remove the journey and it's children
+            await __.ui.journeyGroupManager?.removeJourneyFromAll?.(journey.slug)
             journey.remove()
 
             //TODO add a REMOVE_JOURNEY event

@@ -239,6 +239,7 @@ export const LGS1920 = () => {
     const initializeData = async lgs => {
         await TerrainUtils.changeTerrain(lgs.settings.layers.terrain)
         await TrackUtils.readAllFromDB()
+        await __.ui.journeyGroupManager.initialize()
         await __.ui.poiManager.initialize()
         await __.ui.poiManager.readAllFromDB()
     }

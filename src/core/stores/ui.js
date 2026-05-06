@@ -139,6 +139,12 @@ export const ui = {
         restrictions: new proxyMap(),
     },
 
+    journeyGroups: {
+        list: {},
+        ready: false,
+        version: 0,
+    },
+
     appUpdate: {
         isInstallPromptAvailable: false,
         isUpdateAvailable:        false,

@@ -42,6 +42,7 @@ import { Export }                     from '@Core/ui/Export'
 import {
     RemoveJourney,
 }                                     from '@Editor/journey/RemoveJourney'
+import { JourneyGroupsInfo }          from '@Editor/groups/JourneyGroupsInfo'
 import {
     TrackData,
 }                                     from '@Editor/track/TrackData'
@@ -740,6 +741,8 @@ export const JourneySettings = () => {
                                                         <span>{journeyLocation}</span>
                                                     </div>
                                                 )}
+
+                                                <JourneyGroupsInfo journey={journey}/>
 
                                                 <WaTextarea
                                                     label={journey.tracks.size === 1 ? 'Description' : 'Journey Description'}
