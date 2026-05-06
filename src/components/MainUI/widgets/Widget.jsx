@@ -535,6 +535,15 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
     }, [widgetId])
 
     const hasDrawerInPath = (event) => event.composedPath().some(target => target.tagName?.toLowerCase() === 'wa-drawer')
+    const hasNoDragInPath = (event) => {
+        const ElementClass = globalThis.Element
+        if (!ElementClass) {
+            return false
+        }
+
+        const path = event?.composedPath?.() ?? [event?.target]
+        return path.some(target => target instanceof ElementClass && Boolean(target.closest?.('.lgs-widget-no-drag')))
+    }
 
     const updateWidgetStoreEntry = useCallback((patch) => {
         const currentEntry = $widget.list.get(widgetId) ?? {}
@@ -745,7 +754,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
 
     const handleDragStart = useCallback((event) => {
         const input = event?.inputEvent
-        if (!canDrag || !input || hasDrawerInPath(input)) {
+        if (!canDrag || !input || hasDrawerInPath(input) || hasNoDragInPath(input)) {
             event.stopDrag()
             return
         }
@@ -762,7 +771,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
 
     const handleDrag = useCallback((event) => {
         const input = event.inputEvent
-        if (!canDrag || !input || hasDrawerInPath(input)) {
+        if (!canDrag || !input || hasDrawerInPath(input) || hasNoDragInPath(input)) {
             event.stopDrag()
             return
         }

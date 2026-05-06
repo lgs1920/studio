@@ -121,16 +121,21 @@ html {
 }
 
 .orbit-widget {
+    position: relative;
     display: flex;
     flex-direction: column;
     width: max-content;
     max-width: calc(100vw - var(--left) - var(--right) - var(--lgs-gutter-s) - var(--lgs-gutter-s));
+    height: auto !important;
+    min-height: 0;
+    overflow: hidden;
     padding: var(--lgs-gutter-s) !important;
     pointer-events: auto;
-    gap: var(--lgs-gutter-s);
+    gap: var(--lgs-gutter-xxs);
 }
 
 .orbit-widget.wa-theme-lgs1920-on-map {
+    --orbit-widget-icon-color: var(--wa-color-brand-on-quiet);
     padding: var(--lgs-on-map-padding, var(--lgs-gutter-xs)) !important;
     border-radius: var(--lgs-on-map-border-radius, var(--lgs-border-radius-s));
     background-color: color-mix(in oklab, var(--lgs-card-on-map-bg-color) 96%, black 4%);
@@ -138,24 +143,84 @@ html {
     box-shadow: none !important;
     background-blend-mode: var(--lgs-card-on-map-bg-blend-mode);
     backdrop-filter: none !important;
-    contain: layout paint;
+    contain: layout;
+}
+
+.orbit-widget::part(base) {
+    height: auto;
+    min-height: 0;
+    overflow: hidden;
 }
 
 .orbit-widget::part(body) {
     display: flex;
     flex-direction: column;
+    height: auto;
+    min-height: 0;
+    overflow: hidden;
     gap: var(--lgs-gutter-s);
 }
 
 .orbit-widget-header {
+    --orbit-widget-control-size: var(--lgs-dimension-s);
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: var(--lgs-gutter-s);
+    line-height: 1;
+    gap: var(--lgs-gutter-xs);
 }
 
-.orbit-widget-header wa-button {
+.orbit-widget-header-end {
+    justify-content: flex-end;
+}
+
+.orbit-widget-footer {
+    --orbit-widget-control-size: var(--lgs-dimension-s);
+    display: flex;
+    align-items: center;
+    gap: var(--lgs-gutter-xs);
+}
+
+.orbit-widget-footer-centered {
+    justify-content: center;
+}
+
+.orbit-widget-divider {
+    width: 100%;
+    height: 1px;
+    background-color: var(--lgs-card-on-map-border-color);
+    opacity: 0.55;
+}
+
+.orbit-widget-header-button,
+.orbit-widget-footer-button {
     cursor: pointer;
+    line-height: 1;
+}
+
+.orbit-widget-header-button::part(base),
+.orbit-widget-footer-button::part(base),
+.orbit-widget-stop-button::part(base),
+.orbit-direction-button::part(base) {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--orbit-widget-control-size, var(--lgs-dimension-s));
+    height: var(--orbit-widget-control-size, var(--lgs-dimension-s));
+    min-width: var(--orbit-widget-control-size, var(--lgs-dimension-s));
+    padding: 0;
+}
+
+.orbit-widget-header-button wa-icon {
+    font-size: var(--lgs-font-size-m);
+    line-height: 1;
+    color: var(--orbit-widget-icon-color);
+}
+
+.orbit-widget-footer-button wa-icon {
+    font-size: var(--lgs-font-size);
+    line-height: 1;
+    color: var(--orbit-widget-icon-color);
 }
 
 .panorama-widget-title {
@@ -175,56 +240,123 @@ html {
     flex-wrap: wrap;
     justify-content: center;
     max-width: 100%;
-    gap: var(--lgs-gutter);
+    gap: var(--lgs-gutter-xxs);
 }
 
 .panorama-widget-slider {
     display: flex;
     align-items: center;
     flex-direction: column;
-    min-width: 3.5rem;
+    min-width: var(--lgs-dimension-s);
+    white-space: nowrap;
     gap: var(--lgs-gutter-xs);
+}
+
+.orbit-widget-drag-lane {
+    align-self: stretch;
+    flex: 0 0 var(--lgs-gutter-s);
+    cursor: grab;
+    touch-action: none;
+}
+
+.orbit-widget-drag-lane:active {
+    cursor: grabbing;
+}
+
+.panorama-widget-slider-label {
+    font-size: var(--lgs-font-size-xs);
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    color: var(--orbit-widget-icon-color);
+    gap: var(--lgs-gutter-xxs);
+}
+
+.panorama-widget-slider-label wa-icon {
+    font-size: var(--lgs-font-size);
+    color: var(--orbit-widget-icon-color);
 }
 
 .panorama-widget-range {
-    width: 1.25rem;
-    height: 10rem;
-    writing-mode: vertical-lr;
-    direction: rtl;
-    accent-color: var(--wa-color-brand-50);
+    width: var(--lgs-dimension-s);
+    min-width: var(--lgs-dimension-s);
+    height: clamp(6.3rem, 18vh, 7.65rem);
+    --track-size: 0.22rem;
+    --thumb-width: 0.8rem;
+    --thumb-height: 0.8rem;
+    --lgs-slider-track-color: color-mix(in oklab, var(--lgs-card-on-map-bg-color) 74%, var(--wa-color-brand) 26%);
+    --lgs-slider-thumb-color: var(--wa-color-brand);
+}
+
+.orbit-widget.wa-theme-lgs1920-on-map .panorama-widget-range::part(slider) {
+    height: 100%;
+    align-items: center;
+}
+
+.orbit-widget.wa-theme-lgs1920-on-map .panorama-widget-range::part(track) {
+    height: calc(100% - var(--thumb-height));
+    min-height: var(--lgs-dimension-s);
+    margin-block: calc(var(--thumb-height) / 2);
+    background-color: var(--lgs-slider-track-color);
+}
+
+.orbit-widget.wa-theme-lgs1920-on-map .panorama-widget-range::part(indicator),
+.orbit-widget.wa-theme-lgs1920-on-map .panorama-widget-range::part(thumb) {
+    background-color: var(--lgs-slider-thumb-color);
+}
+
+.panorama-widget-slider strong {
+    font-size: var(--lgs-font-size-s);
+    font-weight: 400;
+    line-height: 1;
+    color: var(--wa-color-brand);
+}
+
+.orbit-direction-toggle,
+.orbit-direction-button {
+    line-height: 1;
+    height: var(--lgs-dimension-s);
+}
+
+.orbit-direction-toggle wa-button::part(base) {
+    width: var(--lgs-dimension-s);
+    height: var(--lgs-dimension-s);
+    padding: 0;
 }
 
 body.mobile .panorama-widget {
-    width: min(100%, calc(100vw - var(--left) - var(--right) - var(--lgs-gutter-s) - var(--lgs-gutter-s)));
+    width: max-content;
+    max-width: calc(100vw - var(--left) - var(--right) - var(--lgs-gutter-s) - var(--lgs-gutter-s));
 }
 
 body.mobile .panorama-widget-body {
-    display: grid;
+    display: flex;
     align-items: center;
-    justify-items: center;
-    grid-template-columns: repeat(4, minmax(3.25rem, 1fr));
-    gap: var(--lgs-gutter-xs);
+    flex-wrap: nowrap;
+    justify-content: center;
+    gap: var(--lgs-gutter-xxs);
 }
 
 body.mobile .rotation-widget-body {
-    grid-template-columns: repeat(2, minmax(3.25rem, 1fr));
+    justify-content: center;
 }
 
 @media (max-width: 640px) {
     .panorama-widget {
-        width: min(100%, calc(100vw - var(--left) - var(--right) - var(--lgs-gutter-s) - var(--lgs-gutter-s)));
+        width: max-content;
+        max-width: calc(100vw - var(--left) - var(--right) - var(--lgs-gutter-s) - var(--lgs-gutter-s));
     }
 
     .panorama-widget-body {
-        display: grid;
+        display: flex;
         align-items: center;
-        justify-items: center;
-        grid-template-columns: repeat(4, minmax(3.25rem, 1fr));
-        gap: var(--lgs-gutter-xs);
+        flex-wrap: nowrap;
+        justify-content: center;
+        gap: var(--lgs-gutter-xxs);
     }
 
     .rotation-widget-body {
-        grid-template-columns: repeat(2, minmax(3.25rem, 1fr));
+        justify-content: center;
     }
 }
 

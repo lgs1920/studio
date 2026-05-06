@@ -15,10 +15,6 @@
  ******************************************************************************/
 
 import {
-    getOrbitDirectionLabel,
-    ORBIT_DIRECTION_MAX,
-    ORBIT_DIRECTION_MIN,
-    ORBIT_DIRECTION_STEP,
     ORBIT_RPM_MAX,
     ORBIT_RPM_MIN,
     ORBIT_RPM_STEP,
@@ -32,12 +28,13 @@ import { LGS_WIDGET, SCENE_WIDGETS, SCENE_WIDGETS_BOARD }          from '@Core/c
 import { faAngle, faVideo }                                        from '@fortawesome/pro-regular-svg-icons'
 import { FA2SL }                                                   from '@Utils/FA2SL'
 import { foot, meter, UnitUtils }                                  from '@Utils/UnitUtils'
-import { WaButton, WaCard, WaIcon } from '@web.awesome.me/webawesome-pro/dist/react'
+import { WaButton, WaCard, WaIcon, WaSlider, WaTooltip } from '@web.awesome.me/webawesome-pro/dist/react'
 import { Math as M }                                               from 'cesium'
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSnapshot }              from 'valtio'
 import { scheduleCameraAdjustmentWidgetCenter } from './cameraAdjustmentWidgetPosition'
 import { getOrbitWidgetConfig }       from './orbitWidgetConfig'
+import { getOrbitRPMGaugeIcon }        from './orbitWidgetPresentation'
 
 const CAMERA_ADJUSTMENT_WIDGET = 'rotation-camera-adjustment-widget'
 const CAMERA_MOVEMENT_OVERLAY_UPDATE_DELAY = 500
@@ -529,6 +526,11 @@ export const RotationWidget = memo(() => {
         event.stopPropagation()
     }, [])
 
+    const blockWidgetDrag = useCallback((event) => {
+        event.stopPropagation()
+        event.nativeEvent?.stopImmediatePropagation?.()
+    }, [])
+
     const stopRotation = useCallback((event) => {
         event?.stopPropagation?.()
         void __.ui.poiManager.stopRotationAndSync()
@@ -574,15 +576,12 @@ export const RotationWidget = memo(() => {
         void persistOrbitSettings(rotate.target, 'rotation', {rpm: value})
     }, [rotate.target])
 
-    const updateDirection = useCallback((event) => {
-        const value = Number(event.target.value)
-        $rotate.direction = value
-    }, [$rotate])
-
-    const persistDirection = useCallback((event) => {
-        const value = Number(event.target.value)
-        void persistOrbitSettings(rotate.target, 'rotation', {direction: value})
-    }, [rotate.target])
+    const toggleDirection = useCallback((event) => {
+        event?.stopPropagation?.()
+        const direction = Number($rotate.direction) < 0 ? 1 : -1
+        $rotate.direction = direction
+        void persistOrbitSettings(rotate.target, 'rotation', {direction})
+    }, [$rotate, rotate.target])
 
     useEffect(() => {
         if (!rotate.running || panorama.active) {
@@ -621,6 +620,13 @@ export const RotationWidget = memo(() => {
         return () => window.removeEventListener('keydown', handleKeyDown, {capture: true})
     }, [$rotate, panorama.active, rotate.running, setRotationDirectionSign, setRotationRPM])
 
+    const directionIsAntiClockwise = rotate.direction < 0
+    const directionTooltip = directionIsAntiClockwise ? 'Anti-clockwise' : 'Clockwise'
+    const directionIcon = directionIsAntiClockwise ? 'arrow-rotate-right' : 'arrow-rotate-left'
+    const directionAnimation = directionIsAntiClockwise ? 'spin' : 'spin-reverse'
+    const directionAnimationStyle = {'--animation-duration': `${30 / normalizeOrbitRPM(rotate.rpm)}s`}
+    const rpmGaugeIcon = getOrbitRPMGaugeIcon(rotate.rpm)
+
     return (
         <div className="orbit-mode-widgets">
             <OrbitInteractionHintsWidget/>
@@ -635,26 +641,39 @@ export const RotationWidget = memo(() => {
                     className="orbit-widget rotation-widget lgs-card wa-theme-lgs1920-on-map"
                     onWheel={stopPropagation}
                 >
-                    <div className="orbit-widget-header">
-                        <div className="panorama-widget-title">
+                    <div className="orbit-widget-header orbit-widget-header-end">
+                        <WaTooltip for="rotation-direction-toggle" placement="top">
+                            {directionTooltip}
+                        </WaTooltip>
+                        <WaButton
+                            id="rotation-direction-toggle"
+                            aria-label={directionTooltip}
+                            appearance="outlined"
+                            className="orbit-widget-header-button orbit-direction-button lgs-widget-no-drag"
+                            size="small"
+                            variant="brand"
+                            onClick={toggleDirection}
+                            onPointerDownCapture={blockWidgetDrag}
+                        >
                             <WaIcon
-                                className="orbit-widget-title-icon"
-                                name="arrows-rotate"
+                                name={directionIcon}
+                                animation={directionAnimation}
                                 variant="regular"
+                                style={directionAnimationStyle}
                             />
-                            <span>{'Rotation'}</span>
-                        </div>
-                        <WaButton appearance="plain" size="small" onClick={stopRotation}>
-                            <WaIcon name="xmark" variant="regular"/>
                         </WaButton>
                     </div>
 
                     <div className="panorama-widget-body rotation-widget-body">
                         <div className="panorama-widget-slider">
-                            <span>{'RPM'}</span>
-                            <input
-                                className="panorama-widget-range"
-                                type="range"
+                            <span className="panorama-widget-slider-label">
+                                <WaIcon name={rpmGaugeIcon} variant="regular" label="RPM"/>
+                            </span>
+                            <WaSlider
+                                aria-label="RPM"
+                                className="panorama-widget-range lgs-widget-no-drag"
+                                orientation="vertical"
+                                size="small"
                                 min={ORBIT_RPM_MIN}
                                 max={ORBIT_RPM_MAX}
                                 step={ORBIT_RPM_STEP}
@@ -664,27 +683,21 @@ export const RotationWidget = memo(() => {
                             />
                             <strong>{rotate.rpm.toFixed(1)}</strong>
                         </div>
-
-                        <div className="panorama-widget-slider">
-                            <span>{'Sense'}</span>
-                            <input
-                                className="panorama-widget-range"
-                                type="range"
-                                min={ORBIT_DIRECTION_MIN}
-                                max={ORBIT_DIRECTION_MAX}
-                                step={ORBIT_DIRECTION_STEP}
-                                value={rotate.direction}
-                                onInput={updateDirection}
-                                onChange={persistDirection}
-                            />
-                            <strong>{getOrbitDirectionLabel(rotate.direction)}</strong>
-                        </div>
                     </div>
 
-                    <WaButton appearance="outlined" size="small" onClick={stopRotation}>
-                        <WaIcon slot="start" name="arrows-rotate" animation="spin" variant="regular"/>
-                        {'Stop'}
-                    </WaButton>
+                    <div className="orbit-widget-footer orbit-widget-footer-centered">
+                        <WaButton
+                            aria-label="Stop rotation"
+                            appearance="outlined"
+                            className="orbit-widget-footer-button orbit-widget-stop-button lgs-widget-no-drag"
+                            size="small"
+                            variant="brand"
+                            onClick={stopRotation}
+                            onPointerDownCapture={blockWidgetDrag}
+                        >
+                            <WaIcon name="xmark" variant="regular"/>
+                        </WaButton>
+                    </div>
                 </WaCard>
             </Widget>
         </div>
