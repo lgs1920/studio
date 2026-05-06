@@ -14,6 +14,19 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
+/*******************************************************************************
+ * App-level local variables
+ ******************************************************************************/
+
+:root {
+    /* Default toolbar direction for on-map button stacks; video toolbars override it locally. */
+    --buttons-bar-on-map-direction: column;
+}
+
+/*******************************************************************************
+ * App shell
+ ******************************************************************************/
+
 html {
     height: 100%;
 }
@@ -92,7 +105,7 @@ body.lgs-app-booting #cesium-viewer {
     border-color: var(--lgs-signage-border-color);
     border-radius: var(--lgs-border-radius-s);
     background: var(--lgs-signage-bg-color);
-    box-shadow: var(--sl-shadow-medium);
+    box-shadow: var(--wa-shadow-m);
 }
 
 
@@ -135,8 +148,11 @@ body.lgs-app-booting #cesium-viewer {
 
 .installing-dialog > wa-spinner {
     font-size: var(--lgs-font-size-xl);
+    /* Installing spinner stroke width. */
     --track-width: var(--lgs-gutter-xs);
+    /* Installing spinner active stroke color. */
     --indicator-color: black;
+    /* Installing spinner inactive track color. */
     --track-color: var(--lgs-signage-disabled-color);
 }
 
@@ -146,25 +162,30 @@ body.lgs-app-booting #cesium-viewer {
     align-items: center;
     justify-content: center;
     padding: var(--padding);
+    /* Base logo padding; size modifiers override this local token. */
     --padding: calc(6 * var(--lgs-gutter));
     aspect-ratio: 2.813;
 }
 
 .main-logo.xlarge {
+    /* Large splash variant keeps the base logo padding. */
     --padding: calc(6 * var(--lgs-gutter));
 }
 
 .main-logo.large {
+    /* Standard large logo padding used in dialogs and banners. */
     --padding: calc(4 * var(--lgs-gutter-s));
 }
 
 .main-logo.small {
     border-radius: var(--lgs-border-radius-xs);
+    /* Compact logo padding for panel-level usage. */
     --padding: calc(2 * var(--lgs-gutter-xs));
 }
 
 .main-logo.xsmall {
     border-radius: var(--lgs-border-radius-xs);
+    /* Tightest logo padding for toolbar-level usage. */
     --padding: calc(var(--lgs-gutter-xs));
 }
 
@@ -330,16 +351,21 @@ body.lgs-app-booting #cesium-viewer {
     border: 1px solid var(--lgs-dark-color) !important;
     border-radius: var(--lgs-border-radius-s) !important;
     background: var(--moveable-color);
+    /* Default Moveable control width. */
     --width: var(--lgs-gutter);
+    /* Default Moveable control height. */
     --height: var(--lgs-gutter);
+    /* Default Moveable control fill color. */
     --moveable-color: var(--lgs-light-color);
 }
 
 .lgs-widget-control-box .moveable-control.moveable-n, .lgs-widget-control-box .moveable-control.moveable-s {
+    /* Horizontal resize handles are wider than corner handles. */
     --width: calc(2 * var(--lgs-gutter)) !important;
 }
 
 .lgs-widget-control-box .moveable-control.moveable-w, .lgs-widget-control-box .moveable-control.moveable-e {
+    /* Vertical resize handles are taller than corner handles. */
     --height: calc(2 * var(--lgs-gutter)) !important;
 }
 
@@ -459,10 +485,6 @@ body.lgs-app-booting #cesium-viewer {
  * Widgets and Cropper Menus
  ******************************************************************************/
 
-:root {
-    --buttons-bar-on-map-direction: column;
-}
-
 .widget-grid-position, .widget-grid-one-line {
     display: grid !important;
     margin-top: var(--lgs-gutter-xs) !important;
@@ -540,13 +562,13 @@ body.lgs-app-booting #cesium-viewer {
     width: max-content;
     min-width: max-content;
     padding: var(--lgs-gutter-xs);
-    box-shadow: var(--lgs-on-map-floating-shadow, var(--sl-shadow-large));
+    box-shadow: var(--lgs-on-map-floating-shadow, var(--wa-shadow-l));
     padding-block-end: calc(var(--lgs-gutter-s) + var(--lgs-gutter-xs));
     gap: 0;
 }
 
 .widget-deck-panel.lgs-card.wa-theme-lgs1920-on-map {
-    box-shadow: var(--lgs-on-map-floating-shadow, var(--sl-shadow-large)) !important;
+    box-shadow: var(--lgs-on-map-floating-shadow, var(--wa-shadow-l)) !important;
     filter: drop-shadow(var(--lgs-on-map-floating-drop-shadow, 0 0.45rem 1rem rgb(0 0 0 / 0.22)));
 }
 
@@ -789,8 +811,8 @@ body.lgs-app-booting #cesium-viewer {
 .lgs-widget-preview {
     height: 250px;
     padding: var(--lgs-gutter-xs);
-    border-radius: var(--sl-border-radius-medium);
-    background-color: var(--sl-panel-background-color);
+    border-radius: var(--wa-border-radius-m);
+    background-color: var(--wa-color-surface-raised);
 }
 
 .lgs-widget-preview > div {
@@ -818,6 +840,7 @@ sl-color-picker::part(format-button), sl-color-picker::part(input), sl-color-pic
 
 wa-skeleton::part(indicator) {
     border-radius: var(--lgs-border-radius-s);
+    /* Skeleton shimmer color aligned with the current brand. */
     --color: var(--wa-color-brand);
 }
 
