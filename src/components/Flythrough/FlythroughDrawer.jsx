@@ -373,103 +373,104 @@ export const FlythroughDrawer = memo(() => {
                         {!hasJourney ? (
                             <p className="flythrough-empty-state">{`Import or select a journey to use ${FLYTHROUGH_LABEL}.`}</p>
                         ) : (
-                             <WaTabGroup className="flythrough-tabs">
-                                 <WaTab slot="nav" panel="runner">
-                                     <WaIcon name="person-walking" variant="regular"/>
-                                     {'Runner'}
-                                 </WaTab>
-                                 <WaTab slot="nav" panel="edit">
-                                     <WaIcon name="paintbrush-pencil" variant="regular"/>
-                                     {'Edit'}
-                                 </WaTab>
+                             <>
+                                 <WaCard appearance="outlined" className="flythrough-progress-card-in-drawer">
+                                     <FlythroughProgressBar className="flythrough-progress-bar-in-drawer"/>
+                                 </WaCard>
+                                 <WaTabGroup className="flythrough-tabs">
+                                     <WaTab slot="nav" panel="runner">
+                                         <WaIcon name="person-walking" variant="regular"/>
+                                         {'Runner'}
+                                     </WaTab>
+                                     <WaTab slot="nav" panel="edit">
+                                         <WaIcon name="paintbrush-pencil" variant="regular"/>
+                                         {'Edit'}
+                                     </WaTab>
 
-                                 <WaTabPanel name="runner">
-                                     <LGSScrollbars>
-                                         <div className="flythrough-tab-panel">
-                                             <div className="flythrough-fieldset">
-                                                 <WaNumberInput
-                                                     className="flythrough-duration-input"
-                                                     label="Duration (s)"
-                                                     size="small"
-                                                     appearance="filled"
-                                                     min="1"
-                                                     step="1"
-                                                     value={flythroughSettings.duration}
-                                                     onInput={updateDuration}
-                                                 />
+                                     <WaTabPanel name="runner">
+                                         <LGSScrollbars>
+                                             <div className="flythrough-tab-panel">
+                                                 <div className="flythrough-fieldset">
+                                                     <WaNumberInput
+                                                         className="flythrough-duration-input"
+                                                         label="Duration (s)"
+                                                         size="small"
+                                                         appearance="filled"
+                                                         min="1"
+                                                         step="1"
+                                                         value={flythroughSettings.duration}
+                                                         onInput={updateDuration}
+                                                     />
 
-                                                 <WaSwitch size="xsmall" label-at-start checked={flythroughSettings.loop}
-                                                           onInput={updateLoop}>
-                                                     {'Loop'}
-                                                 </WaSwitch>
+                                                     <WaSwitch size="xsmall" label-at-start checked={flythroughSettings.loop}
+                                                               onInput={updateLoop}>
+                                                         {'Loop'}
+                                                     </WaSwitch>
+                                                 </div>
                                              </div>
+                                         </LGSScrollbars>
+                                     </WaTabPanel>
 
-                                             <WaCard appearance="outlined" className="flythrough-progress-card-in-drawer">
-                                                 <FlythroughProgressBar className="flythrough-progress-bar-in-drawer"/>
-                                             </WaCard>
-                                         </div>
-                                     </LGSScrollbars>
-                                 </WaTabPanel>
-
-                                 <WaTabPanel name="edit">
-                                     <LGSScrollbars>
-                                         <div className="flythrough-tab-panel">
-                                             <section className="flythrough-progression-section">
-                                                 <h3>{'Progression'}</h3>
-                                                 <FlythroughProgressionGroup
-                                                     title="Fill"
-                                                     color={fillColor}
-                                                     opacity={fillOpacity}
-                                                     width={fillWidth}
-                                                     widthMin={FLYTHROUGH_PROGRESSION_FILL_MIN_WIDTH}
-                                                     widthMax={FLYTHROUGH_PROGRESSION_FILL_MAX_WIDTH}
-                                                     profileMarker={fillProfileMarker}
-                                                     profileMarkerMin={FLYTHROUGH_PROFILE_MARKER_FILL_MIN_SIZE}
-                                                     profileMarkerMax={FLYTHROUGH_PROFILE_MARKER_FILL_MAX_SIZE}
-                                                     swatches={swatches}
-                                                     onColorInput={updateFillColor}
-                                                     onOpacityInput={updateFillOpacity}
-                                                     onWidthInput={updateFillWidth}
-                                                     onProfileMarkerInput={updateFillProfileMarker}
-                                                 />
-                                                 <WaDivider/>
-                                                 <FlythroughProgressionGroup
-                                                     title="Border"
-                                                     color={borderColor}
-                                                     opacity={borderOpacity}
-                                                     width={borderWidth}
-                                                     widthMin={FLYTHROUGH_PROGRESSION_BORDER_MIN_WIDTH}
-                                                     widthMax={FLYTHROUGH_PROGRESSION_BORDER_MAX_WIDTH}
-                                                     profileMarker={borderProfileMarker}
-                                                     profileMarkerMin={FLYTHROUGH_PROFILE_MARKER_BORDER_MIN_WIDTH}
-                                                     profileMarkerMax={FLYTHROUGH_PROFILE_MARKER_BORDER_MAX_WIDTH}
-                                                     swatches={swatches}
-                                                     onColorInput={updateBorderColor}
-                                                     onOpacityInput={updateBorderOpacity}
-                                                     onWidthInput={updateBorderWidth}
-                                                     onProfileMarkerInput={updateBorderProfileMarker}
-                                                 />
-                                                 <WaDivider/>
-                                                 <section className="flythrough-style-subsection">
-                                                     <h4 className="flythrough-style-subtitle">{'Profile info'}</h4>
-                                                     <div className="flythrough-style-control-group">
-                                                         <FlythroughStyleField label="Color">
-                                                             <WaColorPicker
-                                                                 className="flythrough-color-picker"
-                                                                 size="small"
-                                                                 aria-label="Profile info color"
-                                                                 value={profileInfoColor}
-                                                                 swatches={swatches}
-                                                                 onInput={updateProfileInfoColor}
-                                                             />
-                                                         </FlythroughStyleField>
-                                                     </div>
+                                     <WaTabPanel name="edit">
+                                         <LGSScrollbars>
+                                             <div className="flythrough-tab-panel">
+                                                 <section className="flythrough-progression-section">
+                                                     <h3>{'Progression'}</h3>
+                                                     <FlythroughProgressionGroup
+                                                         title="Fill"
+                                                         color={fillColor}
+                                                         opacity={fillOpacity}
+                                                         width={fillWidth}
+                                                         widthMin={FLYTHROUGH_PROGRESSION_FILL_MIN_WIDTH}
+                                                         widthMax={FLYTHROUGH_PROGRESSION_FILL_MAX_WIDTH}
+                                                         profileMarker={fillProfileMarker}
+                                                         profileMarkerMin={FLYTHROUGH_PROFILE_MARKER_FILL_MIN_SIZE}
+                                                         profileMarkerMax={FLYTHROUGH_PROFILE_MARKER_FILL_MAX_SIZE}
+                                                         swatches={swatches}
+                                                         onColorInput={updateFillColor}
+                                                         onOpacityInput={updateFillOpacity}
+                                                         onWidthInput={updateFillWidth}
+                                                         onProfileMarkerInput={updateFillProfileMarker}
+                                                     />
+                                                     <WaDivider/>
+                                                     <FlythroughProgressionGroup
+                                                         title="Border"
+                                                         color={borderColor}
+                                                         opacity={borderOpacity}
+                                                         width={borderWidth}
+                                                         widthMin={FLYTHROUGH_PROGRESSION_BORDER_MIN_WIDTH}
+                                                         widthMax={FLYTHROUGH_PROGRESSION_BORDER_MAX_WIDTH}
+                                                         profileMarker={borderProfileMarker}
+                                                         profileMarkerMin={FLYTHROUGH_PROFILE_MARKER_BORDER_MIN_WIDTH}
+                                                         profileMarkerMax={FLYTHROUGH_PROFILE_MARKER_BORDER_MAX_WIDTH}
+                                                         swatches={swatches}
+                                                         onColorInput={updateBorderColor}
+                                                         onOpacityInput={updateBorderOpacity}
+                                                         onWidthInput={updateBorderWidth}
+                                                         onProfileMarkerInput={updateBorderProfileMarker}
+                                                     />
+                                                     <WaDivider/>
+                                                     <section className="flythrough-style-subsection">
+                                                         <h4 className="flythrough-style-subtitle">{'Profile info'}</h4>
+                                                         <div className="flythrough-style-control-group">
+                                                             <FlythroughStyleField label="Color">
+                                                                 <WaColorPicker
+                                                                     className="flythrough-color-picker"
+                                                                     size="small"
+                                                                     aria-label="Profile info color"
+                                                                     value={profileInfoColor}
+                                                                     swatches={swatches}
+                                                                     onInput={updateProfileInfoColor}
+                                                                 />
+                                                             </FlythroughStyleField>
+                                                         </div>
+                                                     </section>
                                                  </section>
-                                             </section>
-                                         </div>
-                                     </LGSScrollbars>
-                                 </WaTabPanel>
-                             </WaTabGroup>
+                                             </div>
+                                         </LGSScrollbars>
+                                     </WaTabPanel>
+                                 </WaTabGroup>
+                             </>
                          )}
                     </div>
                     <DrawerFooter/>
