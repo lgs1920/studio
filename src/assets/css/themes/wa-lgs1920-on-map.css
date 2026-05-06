@@ -39,7 +39,7 @@
     --lgs-card-on-map-bg-image: var(--lgs-on-map-surface-gradient);
     --lgs-card-on-map-bg-blend-mode: soft-light, soft-light, normal;
     --lgs-card-on-map-border-color: color-mix(in oklab, color-mix(in oklab, var(--wa-color-brand) 26%, var(--lgs-light-color) 10%) 58%, transparent);
-    --lgs-card-on-map-hover-bg-color: transparent;
+    --lgs-card-on-map-hover-bg-color: color-mix(in oklab, var(--lgs-light-color) 10%, transparent);
     --lgs-card-on-map-hover-border-color: transparent;
     --lgs-card-on-map-hover-outline-color: color-mix(in oklab, var(--lgs-light-color) 34%, transparent);
     --lgs-card-on-map-hover-outline: 1px solid var(--lgs-card-on-map-hover-outline-color);
@@ -57,14 +57,14 @@
     --lgs-card-on-map-disabled-bg-color: var(--lgs-dark-color-20);
     --lgs-card-on-map-disabled-border-color: var(--lgs-light-color-10);
 
-    --lgs-hover-context-menu-bg-color: transparent;
+    --lgs-hover-context-menu-bg-color: var(--lgs-card-on-map-hover-bg-color);
     --lgs-switch-active-track-color: var(--wa-color-brand);
     --lgs-switch-active-thumb-color: var(--wa-color-brand-40);
     --lgs-switch-inactive-thumb-color: var(--wa-color-brand-80);
     --lgs-select-bg-color: var(--wa-form-control-background-color);
     --lgs-select-border-color: var(--lgs-card-on-map-border-color);
     --lgs-select-color: var(--wa-form-control-value-color);
-    --lgs-select-option-hover-bg-color: transparent;
+    --lgs-select-option-hover-bg-color: var(--lgs-card-on-map-hover-bg-color);
     --lgs-select-option-hover-color: var(--lgs-card-on-map-hover-color);
     --lgs-select-option-current-bg-color: var(--lgs-card-on-map-selected-bg-color);
     --lgs-select-option-current-bg-image: none;
@@ -112,10 +112,10 @@
     --lgs-button-bg-color: var(--wa-color-neutral-fill-normal);
     --lgs-button-border-hover-color: transparent;
     --lgs-button-hover-color: var(--lgs-card-on-map-hover-color);
-    --lgs-button-bg-hover-color: transparent;
+    --lgs-button-bg-hover-color: var(--lgs-card-on-map-hover-bg-color);
     --lgs-button-plain-color: var(--wa-color-neutral-on-normal);
     --lgs-button-plain-hover-color: var(--lgs-card-on-map-hover-color);
-    --lgs-button-plain-bg-hover-color: transparent;
+    --lgs-button-plain-bg-hover-color: var(--lgs-card-on-map-hover-bg-color);
 }
 
 .wa-theme-lgs1920-on-map:is(wa-button, wa-icon-button),
@@ -205,8 +205,8 @@
     color: var(--lgs-card-on-map-hover-color);
     border-color: transparent !important;
     outline-color: var(--lgs-card-on-map-hover-outline-color);
-    background: transparent !important;
-    background-color: transparent !important;
+    background: var(--lgs-card-on-map-hover-bg-color) !important;
+    background-color: var(--lgs-card-on-map-hover-bg-color) !important;
     background-image: none !important;
 }
 
