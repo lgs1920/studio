@@ -171,6 +171,7 @@ const FlythroughProgressionGroup = ({
 export const FlythroughDrawer = memo(() => {
     const {drawers: {open: drawerOpen}} = useSnapshot(lgs.stores.ui)
     const {theJourney: currentJourney} = useSnapshot(lgs.stores.main)
+    const flythroughState = useSnapshot(lgs.stores.flythrough)
     ensureFlythroughSettings()
     const flythroughSettings = useSnapshot(lgs.settings.ui.flythrough)
     const {drawer: drawerPlacement} = useSnapshot(lgs.editorSettingsProxy.menu)
@@ -189,6 +190,7 @@ export const FlythroughDrawer = memo(() => {
     const borderProfileMarker = progression.border.profileMarker
     const profileInfo = normalizeFlythroughProfileInfo(flythroughSettings.profileInfo)
     const profileInfoColor = toOpaqueColorValue(profileInfo.color)
+    const durationLocked = flythroughState.active || flythroughState.playing || flythroughState.paused
 
     useEffect(() => {
         const flythroughRuntime = lgs.stores.flythrough
@@ -255,10 +257,13 @@ export const FlythroughDrawer = memo(() => {
     }, [])
 
     const updateDuration = useCallback((event) => {
+        if (durationLocked) {
+            return
+        }
         const duration = clampDuration(event.target.value)
         lgs.settings.ui.flythrough.duration = duration
         lgs.stores.flythrough.duration = duration
-    }, [])
+    }, [durationLocked])
 
     const updateLoop = useCallback((event) => {
         lgs.settings.ui.flythrough.loop = event.target.checked
@@ -399,6 +404,7 @@ export const FlythroughDrawer = memo(() => {
                                                          min="1"
                                                          step="1"
                                                          value={flythroughSettings.duration}
+                                                         disabled={durationLocked}
                                                          onInput={updateDuration}
                                                      />
 
