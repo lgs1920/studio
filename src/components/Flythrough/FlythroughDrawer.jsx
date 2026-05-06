@@ -364,7 +364,7 @@ export const FlythroughDrawer = memo(() => {
                     className="flythrough-drawer"
                 >
                     <span slot="label" className="flythrough-drawer-title">
-                        <WaIcon name="person-walking" variant="regular"/>
+                        <WaIcon name="video-arrow-up-right" variant="regular"/>
                         {FLYTHROUGH_LABEL}
                     </span>
                     <PanelActions/>

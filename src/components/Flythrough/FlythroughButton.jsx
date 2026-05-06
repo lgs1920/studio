@@ -40,7 +40,7 @@ export const FlythroughButton = (props) => {
                         variant="brand"
                         appearance="Filled"
                     >
-                        <WaIcon name="person-walking" variant="regular"/>
+                        <WaIcon name="video-arrow-up-right" variant="regular"/>
                     </WaButton>
                 </>
             }
