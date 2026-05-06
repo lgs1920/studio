@@ -42,7 +42,8 @@ export const DEFAULT_FLYTHROUGH_PROGRESSION = {
 }
 
 export const DEFAULT_FLYTHROUGH_PROFILE_INFO = {
-    color: '#ffffff',
+    color:         '#ffffff',
+    useTrackStyle: false,
 }
 
 export const defaultFlythroughProgressionStyle = () => ({
@@ -112,7 +113,8 @@ export const normalizeFlythroughProgressionStyle = (progression = {}) => {
 }
 
 export const normalizeFlythroughProfileInfo = (profileInfo = {}) => ({
-    color: profileInfo?.color ?? DEFAULT_FLYTHROUGH_PROFILE_INFO.color,
+    color:         profileInfo?.color ?? DEFAULT_FLYTHROUGH_PROFILE_INFO.color,
+    useTrackStyle: profileInfo?.useTrackStyle === true,
 })
 
 export const normalizeFlythroughSettings = (settings = {}) => {

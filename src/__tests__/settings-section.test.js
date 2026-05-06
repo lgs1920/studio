@@ -105,7 +105,8 @@ describe('SettingsSection', () => {
                         },
                     },
                     profileInfo: {
-                        color: '#ffffff',
+                        color:         '#ffffff',
+                        useTrackStyle: false,
                     },
                 },
             },
@@ -119,5 +120,6 @@ describe('SettingsSection', () => {
         expect(merged.flythrough.progression.fill.profileMarker).toBe(8)
         expect(merged.flythrough.progression.border.profileMarker).toBe(2)
         expect(merged.flythrough.profileInfo.color).toBe('#ffffff')
+        expect(merged.flythrough.profileInfo.useTrackStyle).toBe(false)
     })
 })
