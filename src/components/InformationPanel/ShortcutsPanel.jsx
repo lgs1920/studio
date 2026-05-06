@@ -29,6 +29,7 @@ const MOUSE_TOKEN_ICONS = {
     'Right click':      'computer-mouse-button-right',
     'Middle drag':      'computer-mouse-scrollwheel',
     'Right drag':       'computer-mouse-button-right',
+    Tap:                'hand-pointer',
     'Trackpad scroll':  'computer-mouse-scrollwheel',
     Wheel:              'computer-mouse-scrollwheel',
 }
