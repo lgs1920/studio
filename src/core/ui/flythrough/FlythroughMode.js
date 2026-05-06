@@ -132,6 +132,15 @@ export class FlythroughMode {
 
     resume = () => this.#controller.resume()
 
+    setLoop = loop => {
+        const enabled = this.#controller.setLoop(loop)
+        const store = flythroughStore()
+        if (store) {
+            store.loop = enabled
+        }
+        return enabled
+    }
+
     toggle = () => {
         if (this.#controller.playing) {
             return this.pause()

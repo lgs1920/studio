@@ -16,7 +16,9 @@
 
 import { describe, expect, it } from 'vitest'
 import { proxy } from 'valtio'
-import { FlythroughPlaybackController, FLYTHROUGH_EVENT_UPDATE } from '@Core/ui/flythrough/FlythroughPlaybackController'
+import {
+    FLYTHROUGH_EVENT_END, FLYTHROUGH_EVENT_UPDATE, FlythroughPlaybackController,
+} from '@Core/ui/flythrough/FlythroughPlaybackController'
 import {
     FlythroughPathSampler, FLYTHROUGH_SCOPE_ALL_TRACKS, FLYTHROUGH_SCOPE_CURRENT_TRACK, FLYTHROUGH_SCOPE_VISIBLE_TRACKS,
 } from '@Core/ui/flythrough/FlythroughPathSampler'
@@ -280,6 +282,41 @@ describe('flythrough phase 1 playback controller', () => {
         frames.shift()()
 
         expect(controller.progress).toBeCloseTo(0.5, 4)
+    })
+
+    it('applies loop changes while playback is running', () => {
+        const journey = makeJourney([
+            makeTrack({
+                slug:        'track#journey#gpx#main',
+                coordinates: [[0, 0, 0], [0.002, 0, 0]],
+                times:       ['2026-05-05T10:00:00.000Z', '2026-05-05T10:20:00.000Z'],
+            }),
+        ])
+        const sampler = new FlythroughPathSampler({journey})
+        const frames = []
+        const ends = []
+        let now = 0
+        const controller = new FlythroughPlaybackController({
+            requestFrame: callback => {
+                frames.push(callback)
+                return frames.length
+            },
+            cancelFrame: () => {},
+            now:         () => now,
+        })
+
+        controller.on(FLYTHROUGH_EVENT_END, detail => ends.push(detail))
+        controller.configure({sampler, duration: 10, loop: true})
+        controller.start()
+
+        controller.setLoop(false)
+        now = 10000
+        frames.shift()()
+
+        expect(controller.loop).toBe(false)
+        expect(controller.running).toBe(false)
+        expect(controller.progress).toBeCloseTo(1, 4)
+        expect(ends).toHaveLength(1)
     })
 
     it('syncs serializable samples into the Valtio flythrough runtime store', () => {

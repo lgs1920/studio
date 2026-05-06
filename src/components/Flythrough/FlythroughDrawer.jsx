@@ -266,8 +266,10 @@ export const FlythroughDrawer = memo(() => {
     }, [durationLocked])
 
     const updateLoop = useCallback((event) => {
-        lgs.settings.ui.flythrough.loop = event.target.checked
-        lgs.stores.flythrough.loop = event.target.checked
+        const loop = event.target.checked
+        lgs.settings.ui.flythrough.loop = loop
+        lgs.stores.flythrough.loop = loop
+        __.ui.flythrough?.setLoop?.(loop)
     }, [])
 
     const updateFillColor = useCallback((event) => {

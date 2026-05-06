@@ -110,6 +110,12 @@ export class FlythroughPlaybackController {
         return this.#loop
     }
 
+    setLoop = loop => {
+        this.#loop = Boolean(loop)
+        this.#syncStore(this.currentSample(), {force: true})
+        return this.#loop
+    }
+
     get progress() {
         return this.#progress
     }
