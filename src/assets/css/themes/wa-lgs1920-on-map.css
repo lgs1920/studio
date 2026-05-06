@@ -186,6 +186,7 @@
 
 .wa-theme-lgs1920-on-map .buttons-bar-on-map > :is(wa-icon, div):not(.selected):not(.is-selected),
 .wa-theme-lgs1920-on-map .widget-deck-item:not(.selected):not(.is-selected),
+.wa-theme-lgs1920-on-map:is(.crop-ratio-popup-menu) li.crop-ratio-choice-button:not(.is-selected),
 .wa-theme-lgs1920-on-map .crop-ratio-popup-menu li.crop-ratio-choice-button:not(.is-selected),
 .wa-theme-lgs1920-on-map.lgs-context-menu li,
 .wa-theme-lgs1920-on-map .lgs-context-menu li,
@@ -198,6 +199,7 @@
 .wa-theme-lgs1920-on-map .fa-icon-button:not(.is-selected):not([aria-pressed="true"]):not([aria-selected="true"]):hover,
 .wa-theme-lgs1920-on-map .buttons-bar-on-map > :is(wa-icon, div):not(.selected):not(.is-selected):hover,
 .wa-theme-lgs1920-on-map .widget-deck-item:not(.selected):not(.is-selected):hover,
+.wa-theme-lgs1920-on-map:is(.crop-ratio-popup-menu) li.crop-ratio-choice-button:not(.is-selected):hover,
 .wa-theme-lgs1920-on-map .crop-ratio-popup-menu li.crop-ratio-choice-button:not(.is-selected):hover,
 .wa-theme-lgs1920-on-map.lgs-context-menu li:hover,
 .wa-theme-lgs1920-on-map .lgs-context-menu li:hover,
@@ -210,6 +212,36 @@
     background-image: none !important;
 }
 
+.wa-theme-lgs1920-on-map.widget-context-menu .context-menu-icon-button,
+.wa-theme-lgs1920-on-map .widget-context-menu .context-menu-icon-button {
+    --lgs-square-dimension: var(--lgs-dimension);
+}
+
+.wa-theme-lgs1920-on-map.widget-context-menu .context-menu-icon-button::part(base),
+.wa-theme-lgs1920-on-map .widget-context-menu .context-menu-icon-button::part(base) {
+    box-sizing: border-box;
+    padding: var(--lgs-gutter-s) !important;
+    border-color: var(--lgs-card-on-map-border-color) !important;
+}
+
+.wa-theme-lgs1920-on-map.widget-context-menu .context-menu-icon-button wa-icon,
+.wa-theme-lgs1920-on-map .widget-context-menu .context-menu-icon-button wa-icon {
+    margin-right: 0;
+}
+
+.wa-theme-lgs1920-on-map.lgs-context-menu li.widget-no-hover,
+.wa-theme-lgs1920-on-map.lgs-context-menu li.widget-no-hover:hover,
+.wa-theme-lgs1920-on-map .lgs-context-menu li.widget-no-hover,
+.wa-theme-lgs1920-on-map .lgs-context-menu li.widget-no-hover:hover {
+    cursor: default;
+    color: inherit !important;
+    border-color: transparent !important;
+    outline-color: transparent !important;
+    background: transparent !important;
+    background-color: transparent !important;
+    background-image: none !important;
+}
+
 .wa-theme-lgs1920-on-map wa-button.is-selected::part(base),
 .wa-theme-lgs1920-on-map wa-button[aria-pressed="true"]::part(base),
 .wa-theme-lgs1920-on-map wa-button[aria-selected="true"]::part(base),
@@ -217,6 +249,7 @@
 .wa-theme-lgs1920-on-map .buttons-bar-on-map > .is-selected,
 .wa-theme-lgs1920-on-map .widget-deck-item.selected,
 .wa-theme-lgs1920-on-map .widget-deck-item.is-selected,
+.wa-theme-lgs1920-on-map:is(.crop-ratio-popup-menu) li.crop-ratio-choice-button.is-selected,
 .wa-theme-lgs1920-on-map .crop-ratio-popup-menu li.crop-ratio-choice-button.is-selected {
     color: var(--lgs-card-on-map-selected-color);
     border-color: var(--lgs-card-on-map-selected-border-color);

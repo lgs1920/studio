@@ -190,6 +190,9 @@
     color: var(--lgs-light-color-75);
     border: 1px solid transparent;
     border-radius: var(--lgs-on-map-interactive-radius, var(--lgs-border-radius-xs));
+    outline: var(--lgs-card-on-map-hover-outline);
+    outline-color: transparent;
+    outline-offset: var(--lgs-card-on-map-hover-outline-offset);
 }
 
 .crop-ratio-popup-menu li.crop-ratio-choice-button span {
@@ -200,13 +203,19 @@
 
 .crop-ratio-popup-menu li.crop-ratio-choice-button:not(.is-selected):hover {
     color: var(--lgs-card-on-map-hover-color);
-    border-color: var(--lgs-card-on-map-hover-border-color);
-    background: var(--lgs-card-on-map-hover-bg-color);
+    border-color: transparent !important;
+    outline-color: var(--lgs-card-on-map-hover-outline-color);
+    background: var(--lgs-card-on-map-hover-bg-color) !important;
+    background-color: var(--lgs-card-on-map-hover-bg-color) !important;
+    background-image: none !important;
 }
 
 .crop-ratio-popup-menu li.crop-ratio-choice-button.is-selected,
 .crop-ratio-popup-menu li.crop-ratio-choice-button.is-selected:hover {
     color: var(--lgs-card-on-map-selected-color);
     border-color: var(--lgs-card-on-map-selected-border-color);
-    background: var(--lgs-card-on-map-selected-bg-color);
+    outline-color: transparent;
+    background-color: var(--lgs-card-on-map-selected-bg-color) !important;
+    background-image: var(--lgs-card-on-map-selected-bg-image) !important;
+    background-blend-mode: var(--lgs-card-on-map-selected-bg-blend-mode);
 }

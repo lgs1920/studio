@@ -491,11 +491,25 @@ body.lgs-app-booting #cesium-viewer {
     padding: 0 !important;
     grid-template-columns: repeat(3, 1fr);
     grid-template-rows: repeat(3, 1fr);
-    gap: var(--lgs-gutter-s);
+    gap: var(--lgs-gutter-xs);
 }
 
 .widget-grid-one-line {
     grid-template-rows: none
+}
+
+.widget-context-menu .context-menu-icon-button {
+    --lgs-square-dimension: var(--lgs-dimension);
+}
+
+.widget-context-menu .context-menu-icon-button::part(base) {
+    box-sizing: border-box;
+    padding: var(--lgs-gutter-s) !important;
+    border-color: var(--lgs-card-on-map-border-color) !important;
+}
+
+.widget-context-menu .context-menu-icon-button wa-icon {
+    margin-right: 0;
 }
 
 .widget-no-hover:hover {

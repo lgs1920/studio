@@ -17,11 +17,24 @@
 import {
     EDIT_WIDGET_ICON, WIDGETS_CAPABILITIES, WIDGETS_EDITOR_DRAWER,
 } from '@Core/constants'
-import { WaIcon, WaTooltip }     from '@web.awesome.me/webawesome-pro/dist/react'
+import { WaButton, WaIcon, WaTooltip } from '@web.awesome.me/webawesome-pro/dist/react'
 import { useMemo } from 'react'
 import { useSnapshot }           from 'valtio'
 
 const PERCENTAGE = 0.1
+
+const WidgetContextIconButton = ({id, icon, label, onClick}) => (
+    <WaButton
+        id={id}
+        className="context-menu-icon-button widget-context-icon-button square-button"
+        aria-label={label}
+        appearance="outlined"
+        variant="neutral"
+        onClick={onClick}
+    >
+        <WaIcon name={icon} variant="regular"/>
+    </WaButton>
+)
 
 /**
  * Renders the context menu for a specific widget.
@@ -163,31 +176,31 @@ export const WidgetContextMenu = ({targetId, menuRef}) => {
                 {!isLocked && capabilities.canReset && (
                     <li className="widget-grid-one-line widget-no-hover buttons-bar-on-map">
                         <WaTooltip placement="top" for="compress-widget-context">{'Reset size'}</WaTooltip>
-                        <WaIcon name="compress"
-                                variant="regular"
-                                id="compress-widget-context"
-                                className="lgs-one-line-card wa-theme-lgs1920-on-map"
-                                onClick={() => resetSize(1)}
+                        <WidgetContextIconButton
+                            id="compress-widget-context"
+                            icon="compress"
+                            label="Reset size"
+                            onClick={() => resetSize(1)}
                         />
 
 
                         <WaTooltip placement="top"
                                    for="shrink-widget-context">{`Shrink -${PERCENTAGE * 100}%`}</WaTooltip>
-                        <WaIcon id="shrink-widget-context"
-                                variant="regular"
-                                name="arrow-down-left-and-arrow-up-right-to-center"
-                                className="lgs-one-line-card wa-theme-lgs1920-on-map"
-                                onClick={() => resetSize(-PERCENTAGE)}
+                        <WidgetContextIconButton
+                            id="shrink-widget-context"
+                            icon="arrow-down-left-and-arrow-up-right-to-center"
+                            label={`Shrink -${PERCENTAGE * 100}%`}
+                            onClick={() => resetSize(-PERCENTAGE)}
                         />
 
 
                         <WaTooltip placement="top"
                                    for="expand-widget-context">{`Expand +${PERCENTAGE * 100}%`}</WaTooltip>
-                        <WaIcon id="expand-widget-context"
-                                variant="regular"
-                                name="arrow-up-right-and-arrow-down-left-from-center"
-                                className="lgs-one-line-card wa-theme-lgs1920-on-map"
-                                onClick={() => resetSize(PERCENTAGE)}
+                        <WidgetContextIconButton
+                            id="expand-widget-context"
+                            icon="arrow-up-right-and-arrow-down-left-from-center"
+                            label={`Expand +${PERCENTAGE * 100}%`}
+                            onClick={() => resetSize(PERCENTAGE)}
                         />
 
                     </li>
@@ -218,41 +231,32 @@ export const WidgetContextMenu = ({targetId, menuRef}) => {
                 {/* Positioning Grid */}
                 {!isLocked && capabilities.canPosition && (
                     <li className="widget-grid-position widget-no-hover buttons-bar-on-map">
-                        <WaIcon name="arrow-up-left" className="lgs-one-line-card wa-theme-lgs1920-on-map"
-                                variant="regular"
-                                onClick={() => moveTo('toTopLeft')}/>
+                        <WidgetContextIconButton icon="arrow-up-left" label="Move to top left"
+                                                 onClick={() => moveTo('toTopLeft')}/>
 
-                        <WaIcon name="arrow-up" className="lgs-one-line-card wa-theme-lgs1920-on-map"
-                                variant="regular"
-                                onClick={() => moveTo('toTop')}/>
+                        <WidgetContextIconButton icon="arrow-up" label="Move to top"
+                                                 onClick={() => moveTo('toTop')}/>
 
-                        <WaIcon name="arrow-up-right" className="lgs-one-line-card wa-theme-lgs1920-on-map"
-                                variant="regular"
-                                onClick={() => moveTo('toTopRight')}/>
+                        <WidgetContextIconButton icon="arrow-up-right" label="Move to top right"
+                                                 onClick={() => moveTo('toTopRight')}/>
 
-                        <WaIcon name="arrow-left" className="lgs-one-line-card wa-theme-lgs1920-on-map"
-                                variant="regular"
-                                onClick={() => moveTo('toLeft')}/>
+                        <WidgetContextIconButton icon="arrow-left" label="Move to left"
+                                                 onClick={() => moveTo('toLeft')}/>
 
-                        <WaIcon name="plus" className="lgs-one-line-card wa-theme-lgs1920-on-map"
-                                variant="regular"
-                                onClick={() => moveTo('toCenter')}/>
+                        <WidgetContextIconButton icon="plus" label="Move to center"
+                                                 onClick={() => moveTo('toCenter')}/>
 
-                        <WaIcon name="arrow-right" className="lgs-one-line-card wa-theme-lgs1920-on-map"
-                                variant="regular"
-                                onClick={() => moveTo('toRight')}/>
+                        <WidgetContextIconButton icon="arrow-right" label="Move to right"
+                                                 onClick={() => moveTo('toRight')}/>
 
-                        <WaIcon name="arrow-down-left" className="lgs-one-line-card wa-theme-lgs1920-on-map"
-                                variant="regular"
-                                onClick={() => moveTo('toBottomLeft')}/>
+                        <WidgetContextIconButton icon="arrow-down-left" label="Move to bottom left"
+                                                 onClick={() => moveTo('toBottomLeft')}/>
 
-                        <WaIcon name="arrow-down" className="lgs-one-line-card wa-theme-lgs1920-on-map"
-                                variant="regular"
-                                onClick={() => moveTo('toBottom')}/>
+                        <WidgetContextIconButton icon="arrow-down" label="Move to bottom"
+                                                 onClick={() => moveTo('toBottom')}/>
 
-                        <WaIcon name="arrow-down-right" className="lgs-one-line-card wa-theme-lgs1920-on-map"
-                                variant="regular"
-                                onClick={() => moveTo('toBottomRight')}/>
+                        <WidgetContextIconButton icon="arrow-down-right" label="Move to bottom right"
+                                                 onClick={() => moveTo('toBottomRight')}/>
 
                     </li>
                 )}
