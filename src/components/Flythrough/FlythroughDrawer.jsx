@@ -379,8 +379,8 @@ export const FlythroughDrawer = memo(() => {
                                  </WaCard>
                                  <WaTabGroup className="flythrough-tabs">
                                      <WaTab slot="nav" panel="runner">
-                                         <WaIcon name="person-walking" variant="regular"/>
-                                         {'Runner'}
+                                         <WaIcon name="clock" variant="regular"/>
+                                         {'Playback'}
                                      </WaTab>
                                      <WaTab slot="nav" panel="edit">
                                          <WaIcon name="paintbrush-pencil" variant="regular"/>
