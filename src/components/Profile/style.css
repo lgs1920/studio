@@ -271,3 +271,7 @@ sl-input.widget-border-field-width::part(input) {
     width: 100%;
     gap: 2rem
 }
+
+.profile-widget-flythrough-track-style-switch::part(base) {
+    width: 100%;
+}

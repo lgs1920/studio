@@ -29,6 +29,10 @@ import {
 } from '@Components/MainUI/widgets/editor/elements/ScaleSwitchElement'
 import { formatSliderPercent }    from '@Components/MainUI/widgets/editor/elements/sliderUtils'
 import {
+    ensureFlythroughSettings,
+    normalizeFlythroughProfileInfo,
+}                                                         from '@Core/ui/flythrough/FlythroughProgressionStyle'
+import {
     WaButton, WaCard, WaColorPicker, WaDivider, WaIcon, WaSlider, WaSwitch,
 }                                                         from '@web.awesome.me/webawesome-pro/dist/react'
 import { colord }                      from 'colord'
@@ -75,6 +79,8 @@ const PROFILE_WIDGET_SLIDERS = {
 export const ProfileWidgetEditor = ({entity}) => {
     const $configuration = lgs.settings.widgets['profile-widget'].configuration
     const configuration = useSnapshot($configuration)
+    ensureFlythroughSettings()
+    const flythroughProfileInfoSettings = useSnapshot(lgs.settings.ui.flythrough.profileInfo)
     const sliderRefs = useRef({})
 
     const sanitizeSliderValue = useCallback((rawValue, fallback, options = {}) => {
@@ -109,6 +115,10 @@ export const ProfileWidgetEditor = ({entity}) => {
     }, [configuration, entity])
 
     const swatches = useMemo(() => lgs.settings.getSwatches.list.join(';'), [])
+    const flythroughProfileInfo = useMemo(
+        () => normalizeFlythroughProfileInfo(flythroughProfileInfoSettings),
+        [flythroughProfileInfoSettings],
+    )
     const gradientFallbackColor = useMemo(() => {
         const fallbackColor = __.ui.profiler?.prepareData()?.options?.[0]?.color ?? '#3b82f6'
         return colord(fallbackColor).alpha(1).toRgbString()
@@ -168,6 +178,18 @@ export const ProfileWidgetEditor = ({entity}) => {
 
         curr[keys[keys.length - 1]] = value
     }, [$configuration, element, entity])
+
+    const updateFlythroughProfileInfo = useCallback((updates) => {
+        const nextProfileInfo = normalizeFlythroughProfileInfo({
+                                                                   ...lgs.settings.ui.flythrough.profileInfo,
+                                                                   ...updates,
+                                                               })
+        lgs.settings.ui.flythrough.profileInfo = nextProfileInfo
+        if (lgs.stores.flythrough) {
+            lgs.stores.flythrough.profileInfo = nextProfileInfo
+        }
+        __.ui.profiler?.draw?.()
+    }, [])
 
     const setSliderRef = useCallback((path) => {
         return (node) => {
@@ -317,6 +339,20 @@ export const ProfileWidgetEditor = ({entity}) => {
                         </div>
                     </div>
                 )}
+
+                <WaDivider/>
+                <div className="drawer-horizontal-line">
+                    <div className="drawer-horizontal-element">{'Flythrough'}</div>
+                </div>
+                <WaSwitch
+                    className="profile-widget-flythrough-track-style-switch"
+                    size="xsmall"
+                    label-at-start
+                    checked={flythroughProfileInfo.useTrackStyle}
+                    onInput={(e) => updateFlythroughProfileInfo({useTrackStyle: e.target.checked})}
+                >
+                    {'Use track style'}
+                </WaSwitch>
 
                 {/* Stylization for Main Axes and Labels */}
                 {(element.xAxis?.main || element.yAxis?.main || element.xAxis?.labels || element.yAxis?.labels) && (
