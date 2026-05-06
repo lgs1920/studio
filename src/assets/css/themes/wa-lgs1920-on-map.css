@@ -35,15 +35,21 @@
     gap: var(--lgs-gutter-s);
     backdrop-filter: blur(var(--lgs-blur));
 
-    --lgs-card-on-map-bg-color: var(--lgs-dark-color-70);
+    --lgs-card-on-map-bg-color: color-mix(in oklab, var(--lgs-dark-color-80) 84%, var(--wa-color-brand) 16%);
     --lgs-card-on-map-bg-image: var(--lgs-on-map-surface-gradient);
-    --lgs-card-on-map-bg-blend-mode: soft-light, screen, normal;
-    --lgs-card-on-map-border-color: var(--lgs-light-color-40);
-    --lgs-card-on-map-hover-bg-color: var(--lgs-light-color-50);
-    --lgs-card-on-map-hover-border-color: var(--lgs-dark-color);
-    --lgs-card-on-map-hover-color: var(--lgs-dark-color);
-    --lgs-card-on-map-selected-bg-color: var(--lgs-dark-color);
-    --lgs-card-on-map-selected-border-color: var(--lgs-light-color);
+    --lgs-card-on-map-bg-blend-mode: soft-light, soft-light, normal;
+    --lgs-card-on-map-border-color: color-mix(in oklab, color-mix(in oklab, var(--wa-color-brand) 26%, var(--lgs-light-color) 10%) 58%, transparent);
+    --lgs-card-on-map-hover-bg-color: transparent;
+    --lgs-card-on-map-hover-border-color: transparent;
+    --lgs-card-on-map-hover-outline-color: color-mix(in oklab, var(--lgs-light-color) 34%, transparent);
+    --lgs-card-on-map-hover-outline: 1px solid var(--lgs-card-on-map-hover-outline-color);
+    --lgs-card-on-map-hover-outline-offset: 0;
+    --lgs-card-on-map-hover-color: var(--lgs-text-on-color);
+    --lgs-card-on-map-selected-bg-color: color-mix(in oklab, var(--wa-color-brand) 46%, var(--lgs-dark-color-90) 54%);
+    --lgs-card-on-map-selected-bg-image: none;
+    --lgs-card-on-map-selected-bg-blend-mode: normal;
+    --lgs-card-on-map-selected-bg: var(--lgs-card-on-map-selected-bg-color);
+    --lgs-card-on-map-selected-border-color: var(--lgs-card-on-map-border-color);
     --lgs-card-on-map-selected-color: var(--lgs-text-on-color);
     --lgs-disabled-color: var(--lgs-light-color-20);
     --lgs-disabled-bg-color: var(--lgs-dark-color-20);
@@ -51,18 +57,19 @@
     --lgs-card-on-map-disabled-bg-color: var(--lgs-dark-color-20);
     --lgs-card-on-map-disabled-border-color: var(--lgs-light-color-10);
 
-    --lgs-hover-context-menu-bg-color: var(--lgs-card-on-map-hover-bg-color);
+    --lgs-hover-context-menu-bg-color: transparent;
     --lgs-switch-active-track-color: var(--wa-color-brand);
     --lgs-switch-active-thumb-color: var(--wa-color-brand-40);
     --lgs-switch-inactive-thumb-color: var(--wa-color-brand-80);
     --lgs-select-bg-color: var(--wa-form-control-background-color);
-    --lgs-select-border-color: var(--wa-form-control-border-color);
+    --lgs-select-border-color: var(--lgs-card-on-map-border-color);
     --lgs-select-color: var(--wa-form-control-value-color);
-    --lgs-select-option-hover-bg-color: var(--lgs-card-on-map-hover-bg-color);
+    --lgs-select-option-hover-bg-color: transparent;
     --lgs-select-option-hover-color: var(--lgs-card-on-map-hover-color);
     --lgs-select-option-current-bg-color: var(--lgs-card-on-map-selected-bg-color);
+    --lgs-select-option-current-bg-image: none;
     --lgs-select-option-current-color: var(--lgs-card-on-map-selected-color);
-    --lgs-select-option-current-outline-color: var(--lgs-select-option-hover-bg-color);
+    --lgs-select-option-current-outline-color: var(--lgs-card-on-map-selected-border-color);
     --lgs-select-option-current-outline-width: 1px;
     --lgs-select-option-current-expand: 3px;
     --lgs-select-option-current-gap-inline: 4px;
@@ -72,7 +79,7 @@
     --lgs-track-color-active: var(--lgs-slider-thumb-color);
     --lgs-track-color-inactive: var(--lgs-slider-track-color);
     --lgs-scrollbar-track-color: color-mix(in oklab, var(--lgs-card-on-map-bg-color) 82%, black 18%);
-    --lgs-scrollbar-thumb-color: var(--lgs-card-on-map-border-color);
+    --lgs-scrollbar-thumb-color: color-mix(in oklab, var(--lgs-card-on-map-border-color) 72%, transparent);
     --lgs-scroolbar-track-color: var(--lgs-scrollbar-track-color);
     --lgs-scroolbar-thumb-color: var(--lgs-scrollbar-thumb-color);
 
@@ -84,9 +91,9 @@
     --wa-color-neutral-fill-quiet: var(--lgs-dark-color-50);
     --wa-color-neutral-fill-normal: var(--lgs-card-on-map-bg-color);
     --wa-color-neutral-fill-loud: var(--lgs-card-on-map-hover-bg-color);
-    --wa-color-neutral-border-quiet: var(--lgs-light-color-25);
+    --wa-color-neutral-border-quiet: var(--lgs-card-on-map-border-color);
     --wa-color-neutral-border-normal: var(--lgs-card-on-map-border-color);
-    --wa-color-neutral-border-loud: var(--lgs-card-on-map-hover-border-color);
+    --wa-color-neutral-border-loud: var(--lgs-card-on-map-hover-outline-color);
     --wa-color-neutral-on-quiet: var(--lgs-light-color-75);
     --wa-color-neutral-on-normal: var(--lgs-light-color-90);
     --wa-color-neutral-on-loud: var(--lgs-text-on-color);
@@ -94,20 +101,21 @@
     --wa-color-text-normal: var(--lgs-text-on-color);
     --wa-color-text-quiet: var(--lgs-light-color-75);
     --wa-color-text-link: var(--lgs-light-color-95);
-    --wa-color-focus: var(--lgs-card-on-map-hover-bg-color);
+    --wa-color-focus: var(--lgs-card-on-map-hover-outline-color);
+    --wa-form-control-border-color: var(--lgs-card-on-map-border-color);
     --wa-form-control-placeholder-color: var(--lgs-light-color-40);
-    --wa-form-control-activated-color: var(--lgs-card-on-map-hover-bg-color);
-    --wa-color-mix-hover: var(--lgs-light-color) 90%;
+    --wa-form-control-activated-color: var(--lgs-card-on-map-selected-bg-color);
+    --wa-color-mix-hover: transparent 0%;
 
     --lgs-button-border-color: var(--wa-color-neutral-border-normal);
     --lgs-button-color: var(--wa-color-neutral-on-loud);
     --lgs-button-bg-color: var(--wa-color-neutral-fill-normal);
-    --lgs-button-border-hover-color: var(--lgs-card-on-map-hover-border-color);
+    --lgs-button-border-hover-color: transparent;
     --lgs-button-hover-color: var(--lgs-card-on-map-hover-color);
-    --lgs-button-bg-hover-color: var(--lgs-card-on-map-hover-bg-color);
+    --lgs-button-bg-hover-color: transparent;
     --lgs-button-plain-color: var(--wa-color-neutral-on-normal);
     --lgs-button-plain-hover-color: var(--lgs-card-on-map-hover-color);
-    --lgs-button-plain-bg-hover-color: var(--lgs-card-on-map-hover-bg-color);
+    --lgs-button-plain-bg-hover-color: transparent;
 }
 
 .wa-theme-lgs1920-on-map:is(wa-button, wa-icon-button),
@@ -121,6 +129,14 @@
     --wa-color-on-loud: var(--wa-color-neutral-on-loud);
     --wa-color-on-normal: var(--wa-color-neutral-on-normal);
     --wa-color-on-quiet: var(--wa-color-neutral-on-quiet);
+}
+
+.wa-theme-lgs1920-on-map wa-button[variant="neutral"]::part(base),
+.wa-theme-lgs1920-on-map wa-button[variant="neutral"]::part(prefix),
+.wa-theme-lgs1920-on-map wa-button[variant="neutral"]::part(suffix),
+.wa-theme-lgs1920-on-map wa-icon-button::part(base),
+.wa-theme-lgs1920-on-map .fa-icon-button {
+    border-color: var(--lgs-card-on-map-border-color);
 }
 
 .wa-theme-lgs1920-on-map:is(wa-switch, wa-radio, wa-checkbox),
@@ -145,4 +161,77 @@
     border-color: transparent !important;
     background: transparent !important;
     box-shadow: none !important;
+}
+
+.wa-theme-lgs1920-on-map:is(.lgs-context-menu, .crop-ratio-popup-menu) li,
+.wa-theme-lgs1920-on-map :is(.lgs-context-menu, .crop-ratio-popup-menu) li {
+    padding: 2px;
+}
+
+.wa-theme-lgs1920-on-map:is(wa-button, wa-icon-button)::part(base),
+.wa-theme-lgs1920-on-map :is(wa-button, wa-icon-button)::part(base),
+.wa-theme-lgs1920-on-map .fa-icon-button,
+.wa-theme-lgs1920-on-map .buttons-bar-on-map > :is(wa-icon, div),
+.wa-theme-lgs1920-on-map .widget-deck-item,
+.wa-theme-lgs1920-on-map .crop-ratio-popup-menu li.crop-ratio-choice-button,
+.wa-theme-lgs1920-on-map.lgs-context-menu li,
+.wa-theme-lgs1920-on-map .lgs-context-menu li,
+.wa-theme-lgs1920-on-map wa-option {
+    border-radius: var(--lgs-on-map-interactive-radius, var(--lgs-border-radius-xs)) !important;
+    outline: var(--lgs-card-on-map-hover-outline);
+    outline-color: transparent;
+    outline-offset: var(--lgs-card-on-map-hover-outline-offset);
+    transition: background-color 120ms ease, color 120ms ease, outline-color 120ms ease !important;
+}
+
+.wa-theme-lgs1920-on-map .buttons-bar-on-map > :is(wa-icon, div):not(.selected):not(.is-selected),
+.wa-theme-lgs1920-on-map .widget-deck-item:not(.selected):not(.is-selected),
+.wa-theme-lgs1920-on-map .crop-ratio-popup-menu li.crop-ratio-choice-button:not(.is-selected),
+.wa-theme-lgs1920-on-map.lgs-context-menu li,
+.wa-theme-lgs1920-on-map .lgs-context-menu li,
+.wa-theme-lgs1920-on-map wa-option:not([aria-selected="true"]):not(:state(current)) {
+    border-color: transparent !important;
+}
+
+.wa-theme-lgs1920-on-map:is(wa-button, wa-icon-button):not(.is-selected):not([aria-pressed="true"]):not([aria-selected="true"]):not([disabled]):hover::part(base),
+.wa-theme-lgs1920-on-map :is(wa-button, wa-icon-button):not(.is-selected):not([aria-pressed="true"]):not([aria-selected="true"]):not([disabled]):hover::part(base),
+.wa-theme-lgs1920-on-map .fa-icon-button:not(.is-selected):not([aria-pressed="true"]):not([aria-selected="true"]):hover,
+.wa-theme-lgs1920-on-map .buttons-bar-on-map > :is(wa-icon, div):not(.selected):not(.is-selected):hover,
+.wa-theme-lgs1920-on-map .widget-deck-item:not(.selected):not(.is-selected):hover,
+.wa-theme-lgs1920-on-map .crop-ratio-popup-menu li.crop-ratio-choice-button:not(.is-selected):hover,
+.wa-theme-lgs1920-on-map.lgs-context-menu li:hover,
+.wa-theme-lgs1920-on-map .lgs-context-menu li:hover,
+.wa-theme-lgs1920-on-map wa-option:not([disabled]):not([aria-selected="true"]):not(:state(current)):hover {
+    color: var(--lgs-card-on-map-hover-color);
+    border-color: transparent !important;
+    outline-color: var(--lgs-card-on-map-hover-outline-color);
+    background: transparent !important;
+    background-color: transparent !important;
+    background-image: none !important;
+}
+
+.wa-theme-lgs1920-on-map wa-button.is-selected::part(base),
+.wa-theme-lgs1920-on-map wa-button[aria-pressed="true"]::part(base),
+.wa-theme-lgs1920-on-map wa-button[aria-selected="true"]::part(base),
+.wa-theme-lgs1920-on-map .buttons-bar-on-map > .selected,
+.wa-theme-lgs1920-on-map .buttons-bar-on-map > .is-selected,
+.wa-theme-lgs1920-on-map .widget-deck-item.selected,
+.wa-theme-lgs1920-on-map .widget-deck-item.is-selected,
+.wa-theme-lgs1920-on-map .crop-ratio-popup-menu li.crop-ratio-choice-button.is-selected {
+    color: var(--lgs-card-on-map-selected-color);
+    border-color: var(--lgs-card-on-map-selected-border-color);
+    border-radius: var(--lgs-on-map-interactive-radius, var(--lgs-border-radius-xs)) !important;
+    outline-color: transparent;
+    background-color: var(--lgs-card-on-map-selected-bg-color) !important;
+    background-image: var(--lgs-card-on-map-selected-bg-image) !important;
+    background-blend-mode: var(--lgs-card-on-map-selected-bg-blend-mode);
+}
+
+.wa-theme-lgs1920-on-map wa-option[aria-selected="true"],
+.wa-theme-lgs1920-on-map wa-option:state(current) {
+    color: var(--lgs-select-option-current-color);
+    outline-color: var(--lgs-select-option-current-outline-color);
+    background-color: var(--lgs-select-option-current-bg-color);
+    background-image: var(--lgs-select-option-current-bg-image);
+    background-blend-mode: var(--lgs-card-on-map-selected-bg-blend-mode);
 }

@@ -16,9 +16,9 @@
 
 import { Widget } from '@Components/MainUI/widgets/Widget'
 import {
-    LGS_TOOLBAR, VIDEO_TOOLS_WIDGETS, MULTI_PURPOSE_WIDGETS, CROP_TOOLS_WIDGETS,
+    LGS_TOOLBAR, CROP_TOOLS_WIDGETS,
 }                 from '@Core/constants'
-import React, { useMemo } from 'react'
+import { useMemo } from 'react'
 import { useSnapshot }            from 'valtio'
 import { CropRatioEditorToolbar } from './CropRatioEditorToolbar'
 
@@ -39,11 +39,12 @@ export const CropRatioEditorWidget = ({context, id}) => {
             type: LGS_TOOLBAR,
             id: id,
             group: CROP_TOOLS_WIDGETS,
+            icon: 'square',
         }
     }, [])
 
     return (
-        <Widget isVisible={context.ratioEditor} config={config}>
+        <Widget isVisible={video.ratioEditor} config={config}>
             <CropRatioEditorToolbar context={context} cropzoneId={context.id}/>
         </Widget>
     )

@@ -408,6 +408,12 @@
     padding-inline-end: 0;
 }
 
+.video-preset-custom .video-fps-widget > span,
+.video-preset-custom .video-quality-widget > span {
+    font-size: var(--lgs-font-size-s);
+    line-height: 1;
+}
+
 .video-preset-widget-wrapper.lgs-card.wa-theme-lgs1920-on-map,
 .video-preset-custom.lgs-card.wa-theme-lgs1920-on-map {
     box-shadow: var(--lgs-on-map-floating-shadow, var(--sl-shadow-large)) !important;

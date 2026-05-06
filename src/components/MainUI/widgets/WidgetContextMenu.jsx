@@ -38,20 +38,28 @@ export const WidgetContextMenu = ({targetId, menuRef}) => {
     // Core widget data
     const element = __.ui.widgetManager.getElementById(targetId)
     const config = __.ui.widgetManager.getWidgetConfig(targetId)
+    const canLock = config?.canLock ?? true
+    const isLocked = canLock && Boolean(config?.locked)
 
     // Memoized capabilities for performance
     const capabilities = useMemo(() => {
         if (!config?.contextMenu) {
-            return {}
+            return {
+                hasAny:      canLock,
+                canReset:    false,
+                canEdit:     false,
+                canRemove:   false,
+                canPosition: false,
+            }
         }
         return {
-            hasAny:      __.ui.widgetManager.hasCapabilities(config.contextMenu, WIDGETS_CAPABILITIES),
+            hasAny:      canLock || __.ui.widgetManager.hasCapabilities(config.contextMenu, WIDGETS_CAPABILITIES),
             canReset:    config.contextMenu.canReset,
             canEdit:     config.contextMenu.canEdit,
             canRemove:   config.contextMenu.canRemove,
             canPosition: config.contextMenu.canPosition,
         }
-    }, [config])
+    }, [canLock, config])
 
     // Early return if widget is invalid
     if (!element || !config || !capabilities.hasAny) {
@@ -72,6 +80,32 @@ export const WidgetContextMenu = ({targetId, menuRef}) => {
      */
     const editWidget = () => {
         __.ui.widgetManager.editWidget(targetId, {toggle: true})
+        closeMenu()
+    }
+
+    const toggleLocked = () => {
+        const widgetConfig = __.ui.widgetManager.getWidgetConfig(targetId)
+        if (!widgetConfig || widgetConfig.canLock === false) {
+            return
+        }
+
+        const nextLocked = !widgetConfig.locked
+        widgetConfig.locked = nextLocked
+        __.ui.widgetManager.setConfig(targetId, widgetConfig)
+        const currentEntry = lgs.stores.ui.widget.list.get(targetId) ?? {}
+        lgs.stores.ui.widget.list.set(targetId, {...currentEntry, locked: nextLocked})
+
+        if (nextLocked && lgs.stores.ui.widget.current?.id === targetId) {
+            lgs.stores.ui.widget.current = {id: null}
+        }
+        else if (!nextLocked) {
+            lgs.stores.ui.widget.current = {id: targetId}
+        }
+
+        if (widgetConfig.persist) {
+            void __.ui.widgetManager.saveWidgetPosition(targetId, widgetConfig)
+        }
+
         closeMenu()
     }
 
@@ -126,7 +160,7 @@ export const WidgetContextMenu = ({targetId, menuRef}) => {
              style={{'--lgs-on-map-ui-opacity': toolbars.opacity}}>
             <ul>
                 {/* Size controls */}
-                {capabilities.canReset && (
+                {!isLocked && capabilities.canReset && (
                     <li className="widget-grid-one-line widget-no-hover buttons-bar-on-map">
                         <WaTooltip placement="top" for="compress-widget-context">{'Reset size'}</WaTooltip>
                         <WaIcon name="compress"
@@ -159,8 +193,15 @@ export const WidgetContextMenu = ({targetId, menuRef}) => {
                     </li>
                 )}
 
+                {canLock && (
+                    <li onClick={toggleLocked}>
+                        <WaIcon name={isLocked ? 'unlock' : 'lock'} variant="regular"/>
+                        <span>{isLocked ? 'Unlock' : 'Lock'}</span>
+                    </li>
+                )}
+
                 {/* Edit action - Only show if not already being edited in the current entity context */}
-                {capabilities.canEdit && (drawers.open !== WIDGETS_EDITOR_DRAWER || drawers.entity !== targetId) && (
+                {!isLocked && capabilities.canEdit && (drawers.open !== WIDGETS_EDITOR_DRAWER || drawers.entity !== targetId) && (
                     <li onClick={editWidget}>
                         <WaIcon name={EDIT_WIDGET_ICON} variant="regular"/>
                         <WaTooltip content="Edit Widget" placement="left"></WaTooltip>
@@ -170,12 +211,12 @@ export const WidgetContextMenu = ({targetId, menuRef}) => {
                 )}
 
                 {/* Remove action */}
-                {capabilities.canRemove && (
+                {!isLocked && capabilities.canRemove && (
                     <li onClick={removeWidget}><WaIcon name="trash-can" variant="regular"/>{'Remove'}</li>
                 )}
 
                 {/* Positioning Grid */}
-                {capabilities.canPosition && (
+                {!isLocked && capabilities.canPosition && (
                     <li className="widget-grid-position widget-no-hover buttons-bar-on-map">
                         <WaIcon name="arrow-up-left" className="lgs-one-line-card wa-theme-lgs1920-on-map"
                                 variant="regular"

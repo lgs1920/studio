@@ -380,7 +380,7 @@ const selectedWidgetContext = () => {
     const element = widgetId ? __.ui.widgetManager.getElementById(widgetId) : null
     const config = widgetId ? __.ui.widgetManager.getWidgetConfig(widgetId) : null
 
-    if (!widgetId || !element || !config) {
+    if (!widgetId || !element || !config || (config.canLock !== false && config.locked)) {
         return null
     }
 
@@ -388,6 +388,8 @@ const selectedWidgetContext = () => {
 }
 
 const widgetBoundsRect = config => (config.boundsContainer ?? config.container ?? lgs.canvas)?.getBoundingClientRect?.() ?? null
+
+const isWidgetReduced = config => config.canReduce !== false && config.collapsed
 
 const syncCropperKeyboardMove = (config) => {
     if (!config.isCropper || !config.cropDimensions) {
@@ -471,7 +473,7 @@ const moveSelectedWidget = async (dx, dy) => {
 const resizeSelectedWidget = async (factor) => {
     const context = selectedWidgetContext()
 
-    if (!context || (!context.config.scalable && !context.config.contextMenu?.canReset)) {
+    if (!context || isWidgetReduced(context.config) || (!context.config.scalable && !context.config.contextMenu?.canReset)) {
         return false
     }
 
@@ -550,14 +552,14 @@ const widgetKeyboardShortcutAction = event => {
     }
 
     if (isPlusKey(event)) {
-        if (!context.config.scalable && !context.config.contextMenu?.canReset) {
+        if (isWidgetReduced(context.config) || (!context.config.scalable && !context.config.contextMenu?.canReset)) {
             return null
         }
         return () => resizeSelectedWidget(scaleStep)
     }
 
     if (isMinusKey(event)) {
-        if (event.shiftKey || (!context.config.scalable && !context.config.contextMenu?.canReset)) {
+        if (event.shiftKey || isWidgetReduced(context.config) || (!context.config.scalable && !context.config.contextMenu?.canReset)) {
             return null
         }
         return () => resizeSelectedWidget(-scaleStep)

@@ -14,7 +14,7 @@ The repository already contains the main product surface used by the studio:
 - Journey and POI focus workflows
 - Live orbit rotation and panorama controls
 - Elevation-aware metrics and profile widgets
-- Widget rendering, placement, ordering, and export-aware capture
+- Widget rendering, placement, ordering, reduction, locking, and export-aware capture
 - Geocoding tools and coordinate utilities
 - Video recording and image snapshot workflows
 - IndexedDB persistence for editor state and loaded content
@@ -45,7 +45,7 @@ The repository already contains the main product surface used by the studio:
 - Elevation profile and journey statistics widgets
 - Journey statistics can expose extrema on the map through temporary POI markers
 - Responsive date and time display for editors, POIs, and journey statistics
-- Text, credits, compass, and scene widget system
+- Text, credits, compass, and scene widget system with draggable, reducible, and lockable on-map controls
 - Export-aware widget rendering for recording and snapshots
 
 ### Media Workflows

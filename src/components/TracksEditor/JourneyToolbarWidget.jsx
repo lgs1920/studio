@@ -44,6 +44,7 @@ export const JourneyToolbarWidget = ({id}) => {
             contextMenu: {
                 canRemove: true,
             },
+            icon:        'route',
             type:        LGS_TOOLBAR,
             id:          id ?? JOURNEY_TOOLBAR_WIDGET,
         }

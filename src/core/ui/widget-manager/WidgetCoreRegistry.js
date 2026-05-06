@@ -329,7 +329,10 @@ export class WidgetCoreRegistry {
                 attachTo:               anchor,
                 boundStatus:            {left: false, top: false, right: false, bottom: false},
                 bounds:                 {left: 0, top: 0, right: 0, bottom: 0},
+                canLock:                initialConfig.canLock ?? true,
+                canReduce:              initialConfig.canReduce ?? true,
                 centerRatio:            {x: 0.5, y: 0.5},
+                collapsed:              initialConfig.collapsed ?? false,
                 container:              initialConfig.container,
                 contextMenu:            this.cloneContext(initialConfig?.contextMenu ?? {}, WIDGETS_CAPABILITIES),
                 boundsContainer:        initialConfig.boundsContainer ?? initialConfig.container,
@@ -338,11 +341,15 @@ export class WidgetCoreRegistry {
                 dynamic:                initialConfig.dynamic ?? false,
                 element:                initialConfig.element,
                 elementObserver:        null,
+                expandedDimensions:     initialConfig.expandedDimensions ?? null,
+                expandedInlineDimensions: initialConfig.expandedInlineDimensions ?? null,
                 group:                  initialConfig.group ?? null,
+                icon:                   initialConfig.icon ?? null,
                 id:                     elementId,
                 isCropper:              initialConfig.isCropper,
                 isMobile:               initialConfig.isMobile,
                 left:                   initialConfig.left,
+                locked:                 initialConfig.locked ?? false,
                 mandatory:              initialConfig.mandatory ?? false,
                 margin:                 initialConfig.margin,
                 max:                    initialConfig.max ?? {width: 500, height: 500},
@@ -381,11 +388,20 @@ export class WidgetCoreRegistry {
             if (initialConfig.container) {
                 config.container = initialConfig.container
             }
+            if (initialConfig.canLock !== undefined) {
+                config.canLock = initialConfig.canLock
+            }
+            if (initialConfig.canReduce !== undefined) {
+                config.canReduce = initialConfig.canReduce
+            }
             if (initialConfig.boundsContainer) {
                 config.boundsContainer = initialConfig.boundsContainer
             }
             if (initialConfig.group !== undefined) {
                 config.group = initialConfig.group
+            }
+            if (initialConfig.icon !== undefined) {
+                config.icon = initialConfig.icon
             }
             if (initialConfig.widgetsBoard !== undefined) {
                 config.widgetsBoard = initialConfig.widgetsBoard
@@ -449,6 +465,19 @@ export class WidgetCoreRegistry {
                 }
 
                 config.group = savedWidget.group || config.group
+                config.collapsed = Boolean(savedWidget.collapsed)
+                config.locked = Boolean(savedWidget.locked)
+                config.expandedDimensions = savedWidget.expandedDimensions ?? config.expandedDimensions
+                config.expandedInlineDimensions = savedWidget.expandedInlineDimensions ?? config.expandedInlineDimensions
+                if (config.canReduce === false && config.collapsed) {
+                    const width = config.expandedDimensions?.width
+                    const height = config.expandedDimensions?.height
+                    config.collapsed = false
+                    if (Number.isFinite(width) && Number.isFinite(height) && width > 0 && height > 0) {
+                        config.dimensions = {width, height}
+                    }
+                }
+                config.icon = savedWidget.icon ?? config.icon
                 config.scale = savedWidget.scale || {x: 1, y: 1}
                 config.rotate = savedWidget.rotate || 0
                 const savedRatioValue = savedWidget.ratio?.value ?? savedWidget.ratio
@@ -585,6 +614,11 @@ export class WidgetCoreRegistry {
             attachTo:  config.attachTo || 'center',
             zIndex: config.zIndex || 0,
             positionReference: config.widgetsBoard && config.widgetsBoard !== SCENE_WIDGETS_BOARD ? 'board' : 'scene',
+            collapsed:          Boolean(config.collapsed),
+            locked:             Boolean(config.locked),
+            expandedDimensions: config.expandedDimensions ?? null,
+            expandedInlineDimensions: config.expandedInlineDimensions ?? null,
+            icon:               config.icon ?? null,
         }
     }
 

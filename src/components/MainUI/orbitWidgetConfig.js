@@ -50,6 +50,7 @@ export const getOrbitWidgetConfig = (id, fromStart) => {
         dynamic:         true,
         group:           SCENE_WIDGETS,
         id,
+        icon:            id === 'rotation-widget' ? 'arrows-rotate' : 'camera',
         left:            `${Math.round(horizontalAnchor)}px`,
         mandatory:       false,
         opacity:         1,

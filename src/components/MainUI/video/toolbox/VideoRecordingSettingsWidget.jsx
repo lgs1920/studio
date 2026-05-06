@@ -42,6 +42,8 @@ export const VideoRecordingSettingsWidget = ({id}) => {
             left: '50%',
             top: __.device.isMobile && __.device.isPortrait ? '90%' : '80%',
             attachTo: 'bottom',
+            canLock: false,
+            canReduce: false,
             opacity:  lgs.settings.ui.toolbars.opacity,
             type:   LGS_TOOLBAR,
             zIndex:         VIDEO_RECORDING_SETTINGS_TOOLBAR_ZINDEX,

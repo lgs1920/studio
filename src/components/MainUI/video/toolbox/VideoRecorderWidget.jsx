@@ -35,6 +35,8 @@ export const VideoRecorderWidget = ({id}) => {
             left:           `${left}px`,
             top:            `${top}px`,
             attachTo,
+            canLock:        false,
+            canReduce:      false,
             margin:         lgs.gutter?.s ?? 8,
             opacity:        lgs.settings.ui.toolbars.opacity,
             type:           LGS_TOOLBAR,
