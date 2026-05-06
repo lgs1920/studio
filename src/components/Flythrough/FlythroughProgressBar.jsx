@@ -23,6 +23,7 @@ import { useSnapshot } from 'valtio'
 import { v4 as uuid } from 'uuid'
 
 const MINUTE_MILLIS = 60 * 1000
+const PLACEHOLDER_VALUE = '--'
 const clampProgress = value => Math.max(0, Math.min(1, Number(value) || 0))
 const finiteNumber = value => {
     const numeric = Number(value)
@@ -168,7 +169,7 @@ export const FlythroughProgressBar = memo(({showSettings = false, className = ''
 
     const timeLabel = useMemo(() => {
         if (!hasPlaybackSample) {
-            return '--'
+            return `${PLACEHOLDER_VALUE} / ${PLACEHOLDER_VALUE}`
         }
 
         if (!hasJourneyTime) {
@@ -180,7 +181,7 @@ export const FlythroughProgressBar = memo(({showSettings = false, className = ''
 
     const distanceLabel = useMemo(() => {
         if (!hasPlaybackSample) {
-            return '--'
+            return `${PLACEHOLDER_VALUE} / ${PLACEHOLDER_VALUE} ${distanceUnit}`
         }
 
         const covered = formatDistance(coveredDistance, distanceUnit)
@@ -188,7 +189,7 @@ export const FlythroughProgressBar = memo(({showSettings = false, className = ''
         return `${covered} / ${total} ${distanceUnit}`
     }, [coveredDistance, distanceUnit, hasPlaybackSample, totalDistance])
 
-    const percentLabel = hasPlaybackSample ? `${(playbackProgress * 100).toFixed(0)}%` : '--'
+    const percentLabel = hasPlaybackSample ? `${(playbackProgress * 100).toFixed(0)}%` : `${PLACEHOLDER_VALUE}%`
     const playing = flythrough.playing
     const paused = flythrough.paused
     const playLabel = paused ? `Resume ${FLYTHROUGH_LABEL}` : `Start ${FLYTHROUGH_LABEL}`
