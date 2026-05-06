@@ -342,16 +342,18 @@ ui:
     duration: 60
     direction: 1
     loop: false
-    scope: visible-tracks
+    scope: all-tracks
     progression:
       fill:
         color: '#ff6a00'
         opacity: 1
         width: 2
+        profileMarker: 8
       border:
         color: '#ffffff'
         opacity: 1
         width: 0.75
+        profileMarker: 2
     profileInfo:
       color: '#ffffff'
 

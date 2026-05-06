@@ -18,8 +18,12 @@ export const FLYTHROUGH_PROGRESSION_FILL_MIN_WIDTH = 1
 export const FLYTHROUGH_PROGRESSION_FILL_MAX_WIDTH = 10
 export const FLYTHROUGH_PROGRESSION_BORDER_MIN_WIDTH = 0
 export const FLYTHROUGH_PROGRESSION_BORDER_MAX_WIDTH = 4
+export const FLYTHROUGH_PROFILE_MARKER_FILL_MIN_SIZE = 2
+export const FLYTHROUGH_PROFILE_MARKER_FILL_MAX_SIZE = 32
+export const FLYTHROUGH_PROFILE_MARKER_BORDER_MIN_WIDTH = 0
+export const FLYTHROUGH_PROFILE_MARKER_BORDER_MAX_WIDTH = 12
 export const FLYTHROUGH_LABEL = 'Flythrough'
-export const DEFAULT_FLYTHROUGH_SCOPE = 'visible-tracks'
+export const DEFAULT_FLYTHROUGH_SCOPE = 'all-tracks'
 export const DEFAULT_FLYTHROUGH_DURATION = 60
 
 export const DEFAULT_FLYTHROUGH_PROGRESSION = {
@@ -27,11 +31,13 @@ export const DEFAULT_FLYTHROUGH_PROGRESSION = {
         color:   '#ff6a00',
         opacity: 1,
         width:   2,
+        profileMarker: 8,
     },
     border: {
         color:   '#ffffff',
         opacity: 1,
         width:   0.75,
+        profileMarker: 2,
     },
 }
 
@@ -79,6 +85,12 @@ export const normalizeFlythroughProgressionStyle = (progression = {}) => {
                 FLYTHROUGH_PROGRESSION_FILL_MIN_WIDTH,
                 FLYTHROUGH_PROGRESSION_FILL_MAX_WIDTH,
             ),
+            profileMarker: clampFlythroughNumber(
+                fill.profileMarker,
+                DEFAULT_FLYTHROUGH_PROGRESSION.fill.profileMarker,
+                FLYTHROUGH_PROFILE_MARKER_FILL_MIN_SIZE,
+                FLYTHROUGH_PROFILE_MARKER_FILL_MAX_SIZE,
+            ),
         },
         border: {
             color:   border.color ?? DEFAULT_FLYTHROUGH_PROGRESSION.border.color,
@@ -88,6 +100,12 @@ export const normalizeFlythroughProgressionStyle = (progression = {}) => {
                 DEFAULT_FLYTHROUGH_PROGRESSION.border.width,
                 FLYTHROUGH_PROGRESSION_BORDER_MIN_WIDTH,
                 FLYTHROUGH_PROGRESSION_BORDER_MAX_WIDTH,
+            ),
+            profileMarker: clampFlythroughNumber(
+                border.profileMarker,
+                DEFAULT_FLYTHROUGH_PROGRESSION.border.profileMarker,
+                FLYTHROUGH_PROFILE_MARKER_BORDER_MIN_WIDTH,
+                FLYTHROUGH_PROFILE_MARKER_BORDER_MAX_WIDTH,
             ),
         },
     }
@@ -99,13 +117,12 @@ export const normalizeFlythroughProfileInfo = (profileInfo = {}) => ({
 
 export const normalizeFlythroughSettings = (settings = {}) => {
     const duration = finiteNumber(settings?.duration) ?? DEFAULT_FLYTHROUGH_DURATION
-    const direction = Number(settings?.direction) < 0 ? -1 : 1
 
     return {
         duration:    Math.max(1, duration),
-        direction,
+        direction:   1,
         loop:        settings?.loop === true,
-        scope:       settings?.scope ?? DEFAULT_FLYTHROUGH_SCOPE,
+        scope:       DEFAULT_FLYTHROUGH_SCOPE,
         progression: normalizeFlythroughProgressionStyle(settings?.progression),
         profileInfo: normalizeFlythroughProfileInfo(settings?.profileInfo),
     }

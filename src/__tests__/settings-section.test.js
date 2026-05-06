@@ -72,4 +72,52 @@ describe('SettingsSection', () => {
             SETTINGS_STORE,
         )
     })
+
+    it('keeps user flythrough settings while adding new default keys', () => {
+        const section = new SettingsSection('ui')
+        const merged = section.update(
+            {
+                flythrough: {
+                    duration:    240,
+                    loop:        true,
+                    progression: {
+                        fill: {
+                            color:   '#123456',
+                            opacity: 0.4,
+                            width:   7,
+                        },
+                    },
+                },
+            },
+            {
+                flythrough: {
+                    duration:    60,
+                    loop:        false,
+                    progression: {
+                        fill: {
+                            color:   '#ff6a00',
+                            opacity: 1,
+                            width:   2,
+                            profileMarker: 8,
+                        },
+                        border: {
+                            profileMarker: 2,
+                        },
+                    },
+                    profileInfo: {
+                        color: '#ffffff',
+                    },
+                },
+            },
+        )
+
+        expect(merged.flythrough.duration).toBe(240)
+        expect(merged.flythrough.loop).toBe(true)
+        expect(merged.flythrough.progression.fill.color).toBe('#123456')
+        expect(merged.flythrough.progression.fill.opacity).toBe(0.4)
+        expect(merged.flythrough.progression.fill.width).toBe(7)
+        expect(merged.flythrough.progression.fill.profileMarker).toBe(8)
+        expect(merged.flythrough.progression.border.profileMarker).toBe(2)
+        expect(merged.flythrough.profileInfo.color).toBe('#ffffff')
+    })
 })

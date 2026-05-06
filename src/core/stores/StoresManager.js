@@ -16,6 +16,7 @@
 
 import { proxy }            from 'valtio'
 import { editorSettings }   from './editorSettings.js'
+import { flythrough }       from './flythrough.js'
 import { main }             from './main.js'
 import { theJourneyEditor } from './theJourneyEditor.js'
 import { ui }               from './ui.js'
@@ -45,6 +46,9 @@ export class StoresManager {
     /** @type {Object} Editor settings store */
     #editorSettings
 
+    /** @type {Object} Flythrough runtime store */
+    #flythrough
+
     /**
      * Creates or returns existing StoresManager instance
      * Initializes proxy stores if instance doesn't exist
@@ -61,6 +65,7 @@ export class StoresManager {
         this.#ui = proxy(ui)
         this.#journeyEditor = proxy(theJourneyEditor)
         this.#editorSettings = proxy(editorSettings)
+        this.#flythrough = proxy(flythrough)
 
         StoresManager.#instance = this
     }
@@ -95,5 +100,13 @@ export class StoresManager {
      */
     get editorSettings() {
         return this.#editorSettings
+    }
+
+    /**
+     * Gets the flythrough runtime store
+     * @returns {Object} Proxied flythrough runtime store
+     */
+    get flythrough() {
+        return this.#flythrough
     }
 }

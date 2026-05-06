@@ -15,7 +15,6 @@
  ******************************************************************************/
 
 import { DEFAULT_PANORAMA_HEIGHT_OFFSET, DEFAULT_PANORAMA_PITCH } from '@Core/OrbitSettings'
-import { defaultFlythroughSettings } from '@Core/ui/flythrough/FlythroughProgressionStyle'
 import { proxyMap } from 'valtio/utils'
 
 /**
@@ -72,28 +71,6 @@ export const ui = {
             heading:      0,
             rpm:          1,
             direction:    1,
-        },
-        flythrough:              {
-            ...defaultFlythroughSettings(),
-            active:        false,
-            playing:       false,
-            paused:        false,
-            journeySlug:    null,
-            trackSlug:      null,
-            progress:       0,
-            sample:         null,
-            hoverSample:    null,
-            metricOverlay:  {
-                visible:   false,
-                source:    null,
-                anchor:    null,
-                sample:    null,
-                expiresAt: 0,
-            },
-            markerRadius:   35,
-            totalDistance:  0,
-            toolbarVisible: false,
-            recordingSync:  false,
         },
     },
 

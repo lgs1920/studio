@@ -21,6 +21,7 @@ import {
 import { ElevationServer } from '@Core/Elevation/ElevationServer'
 import { Settings }        from '@Core/settings/Settings'
 import { SettingsSection } from '@Core/settings/SettingsSection'
+import { ensureFlythroughSettings } from '@Core/ui/flythrough/FlythroughProgressionStyle'
 import axios               from 'axios'
 import * as Cesium         from 'cesium'
 import YAML                from 'yaml'
@@ -359,6 +360,7 @@ export class AppUtils {
         })
         await Promise.all(promises)
 
+        Object.assign(lgs.stores.flythrough, ensureFlythroughSettings())
 
         // Removed useless sections in DB  //TODO do not read and check if nothing changed
         const DBSections = await lgs.db.settings.keys(SETTINGS_STORE)

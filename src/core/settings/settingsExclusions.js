@@ -21,7 +21,7 @@ export const SETTING_EXCLUSIONS = [
         'layers.filter', 'layers.colorSettings',
         'app', 'scene', 'starter', 'coordinateSystem', 'unitSystem', 'poi.filter',
         'ui.camera', 'ui.welcome', 'swatches.current',
-        'ui.menu', 'ui.poi.rotate', 'ui.poi.focusOnEdit', 'ui.journeyToolbar',
+        'ui.flythrough', 'ui.menu', 'ui.poi.rotate', 'ui.poi.focusOnEdit', 'ui.journeyToolbar',
         'ui.compass.mode', 'ui.video.fps', 'ui.video.quality', 'ui.video.ratio', 'ui.pwa',
         'widgets',
     ].sort((a, b) => {
