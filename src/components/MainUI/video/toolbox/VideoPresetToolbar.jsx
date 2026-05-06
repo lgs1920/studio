@@ -26,7 +26,7 @@ import {
     ScreenMediaRecorder,
 }                                                                          from '@Core/ui/screen-media-recorder/recorder/ScreenMediaRecorder'
 import {
-    WaButton, WaIcon, WaPopup,
+    WaButton, WaPopup,
 }                                                                          from '@web.awesome.me/webawesome-pro/dist/react'
 import classNames                                                          from 'classnames'
 import { Fragment, memo, useCallback, useEffect, useRef, useState }        from 'react'
@@ -136,10 +136,7 @@ export const VideoPresetToolbar = memo(() => {
 
     return (
         <div ref={_toolbarRef} className="video-preset-widget-wrapper lgs-card wa-theme-lgs1920-on-map">
-            <div
-                className={classNames('video-preset-widget', 'video-preset-grid', {'video-preset-grid-open': preset === 'custom'})}>
-                <WaIcon id="grabber-video-preset" className="grabber" name="grip-dots" variant="solid"/>
-
+            <div className="video-preset-widget">
                 <div className="buttons-bar-on-map video-choice-buttons video-choice-buttons-on-map">
                     {Array.from(ScreenMediaRecorder.VIDEO_PRESETS).map(([key, value]) => (
                         <Fragment key={key}>
@@ -165,9 +162,8 @@ export const VideoPresetToolbar = memo(() => {
                                 >
                                     <div className="video-preset-custom lgs-card wa-theme-lgs1920-on-map"
                                          style={{opacity: toolbars.opacity}}>
-                                        <div className="video-preset-grid"><span/><VideoFPSToolbar choicesOnMap/></div>
-                                        <div className="video-preset-grid"><span/><VideoQualityToolbar choicesOnMap/>
-                                        </div>
+                                        <VideoFPSToolbar choicesOnMap/>
+                                        <VideoQualityToolbar choicesOnMap/>
                                     </div>
                                 </WaPopup>
                             )}

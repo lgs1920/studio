@@ -637,8 +637,11 @@ export const RotationWidget = memo(() => {
                 >
                     <div className="orbit-widget-header">
                         <div className="panorama-widget-title">
-                            <WaIcon className="grabber orbit-widget-grabber" name="grip-dots" variant="solid"/>
-                            <WaIcon name="arrows-rotate" animation="spin" variant="regular"/>
+                            <WaIcon
+                                className="orbit-widget-title-icon"
+                                name="arrows-rotate"
+                                variant="regular"
+                            />
                             <span>{'Rotation'}</span>
                         </div>
                         <WaButton appearance="plain" size="small" onClick={stopRotation}>

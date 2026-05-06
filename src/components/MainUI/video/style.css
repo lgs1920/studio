@@ -368,16 +368,13 @@
     opacity: 1;
 }
 
-.video-fps-widget .grabber {
-    rotate: 90deg;
-}
-
 /***************************************
  * Video Preset selector
  */
 
 .video-preset-widget {
     position: relative;
+    display: flex;
     align-items: center;
     flex-direction: var(--buttons-bar-on-map-direction);
     width: auto;
@@ -385,27 +382,14 @@
     gap: var(--lgs-gutter-xs);
 }
 
-.video-preset-grid {
-    display: grid;
-    grid-template-columns: auto 1fr;
-}
-
 .video-preset-widget.lgs-toolbar {
     opacity: 1;
-}
-
-.video-preset-widget .grabber {
-    rotate: 90deg;
 }
 
 .video-preset-custom {
     display: flex;
     flex-direction: column;
     gap: var(--lgs-gutter-xs);
-}
-
-.video-preset-custom.lgs-card.wa-theme-lgs1920-on-map {
-    padding-inline-end: 0;
 }
 
 .video-preset-custom .video-fps-widget > span,
@@ -423,7 +407,7 @@
 .video-preset-widget-wrapper {
     display: flex;
     flex-direction: column;
-    padding: 0;
+    padding: var(--lgs-on-map-padding, var(--lgs-gutter-xs));
     gap: 0;
 
 }

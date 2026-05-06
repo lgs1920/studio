@@ -165,9 +165,8 @@ html {
     gap: var(--lgs-gutter-xs);
 }
 
-.orbit-widget-grabber {
-    opacity: 0.65;
-    rotate: 90deg;
+.orbit-widget-title-icon {
+    display: inline-flex;
 }
 
 .panorama-widget-body {
@@ -504,13 +503,15 @@ body.mobile .rotation-widget-body {
 .journey-toolbar {
     position: relative;
     max-width: 100%;
-    padding: var(--lgs-gutter-xxs);
+    padding: var(--lgs-on-map-padding, var(--lgs-gutter-xs));
 }
 
 .journey-toolbar::part(body) {
     display: flex;
     align-items: center;
     flex-direction: row;
+    padding: 0 !important;
+    --spacing: 0;
     gap: var(--lgs-gutter-xs)
 }
 

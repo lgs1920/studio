@@ -154,14 +154,11 @@
     align-items: center;
     flex-direction: row;
     width: auto;
-    padding: var(--lgs-gutter-xs);
+    padding: var(--lgs-on-map-padding, var(--lgs-gutter-xs));
     box-shadow: var(--lgs-on-map-floating-shadow, var(--sl-shadow-large));
     gap: var(--lgs-gutter-xs);
 }
 
-.crop-ratio-widget .grabber {
-    rotate: 90deg;
-}
 .crop-ratio-widget.lgs-toolbar {
     opacity: 1;
 }

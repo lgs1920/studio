@@ -15,7 +15,7 @@
  ******************************************************************************/
 
 import { useOptionalSnapshot }                                      from '@Utils/ValtioUtils'
-import { WaButton, WaIcon, WaTooltip, WaPopup } from '@web.awesome.me/webawesome-pro/dist/react'
+import { WaButton, WaTooltip, WaPopup } from '@web.awesome.me/webawesome-pro/dist/react'
 import classNames from 'classnames'
 import { Fragment, memo, useCallback, useEffect, useRef, useState } from 'react'
 import { useSnapshot }                          from 'valtio'
@@ -166,9 +166,6 @@ export const CropRatioEditorToolbar = memo(({context, cropzoneId}) => {
         <>
             {cropper.ratioEditor && (
                 <div ref={_widget} className="crop-ratio-widget lgs-card wa-theme-lgs1920-on-map">
-                    <WaTooltip for="crop-ratio-grabber" placement="top">{'Drag me'}</WaTooltip>
-                    <WaIcon id="crop-ratio-grabber" className="grabber" name="grip-dots" variant="solid"/>
-
                     <span>{'Format:'}</span>
 
                     <WaButton
