@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-29
- * Last modified: 2026-04-29
+ * Created on: 2026-05-07
+ * Last modified: 2026-05-07
  *
  *
  * Copyright © 2026 LGS1920
@@ -304,4 +304,42 @@
     fill: currentColor !important;
     opacity: 1 !important;
     visibility: visible !important;
+}
+
+
+.wa-theme-lgs1920-on-map .journey-selector-tree-panel {
+    backdrop-filter: blur(var(--lgs-blur));
+    padding-inline: 3px;
+}
+
+.wa-theme-lgs1920-on-map .journey-selector-tree-panel wa-tree {
+    --indent-size: 0;
+}
+
+.wa-theme-lgs1920-on-map .journey-selector-tree-panel wa-tree-item::part(item) {
+    padding-inline: var(--wa-space-m, 0.75rem);
+    margin-block: 2px;
+}
+
+@media (hover: hover) {
+    .wa-theme-lgs1920-on-map .journey-selector-tree-panel wa-tree-item::part(item):hover {
+        color: var(--lgs-card-on-map-hover-color);
+        border-color: transparent;
+        border-radius: var(--lgs-on-map-interactive-radius, var(--lgs-border-radius-xs));
+        outline: 1px solid var(--lgs-card-on-map-hover-outline-color);
+        background: var(--lgs-card-on-map-hover-bg-color) !important;
+        background-color: var(--lgs-card-on-map-hover-bg-color) !important;
+        background-image: none !important;
+        padding-inline: var(--wa-space-m, 0.75rem);
+    }
+}
+
+.wa-theme-lgs1920-on-map .journey-selector-tree-panel wa-tree-item[aria-selected="true"]::part(item) {
+    color: var(--lgs-select-option-current-color);
+    border-radius: var(--lgs-on-map-interactive-radius, var(--lgs-border-radius-xs));
+    outline: var(--lgs-select-option-current-outline-width, 1px) solid var(--lgs-select-option-current-outline-color);
+    background-color: var(--lgs-select-option-current-bg-color);
+    background-image: var(--lgs-select-option-current-bg-image);
+    background-blend-mode: var(--lgs-card-on-map-selected-bg-blend-mode);
+    padding-inline: var(--wa-space-m, 0.75rem);
 }

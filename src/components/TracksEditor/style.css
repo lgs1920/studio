@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-15
- * Last modified: 2026-04-15
+ * Created on: 2026-05-07
+ * Last modified: 2026-05-07
  *
  *
  * Copyright © 2026 LGS1920
@@ -33,7 +33,9 @@
     gap: var(--lgs-gutter-s);
 }
 
-#journey-editor-drawer .selector-wrapper wa-select, #journey-editor-drawer .selector-wrapper .journey-title {
+#journey-editor-drawer .selector-wrapper wa-select,
+#journey-editor-drawer .selector-wrapper .journey-title,
+#journey-editor-drawer .selector-wrapper .journey-selector--tree {
     flex-grow: 1;
 }
 
@@ -769,6 +771,155 @@ wa-tab::part(base) {
 }
 
 /*******************************************************************************
+ * Journey Selector Tree
+ ******************************************************************************/
+
+.journey-selector--tree {
+    position: relative;
+    width: 100%;
+    min-width: 10rem;
+}
+
+.journey-selector-trigger {
+    font-size: var(--wa-font-size-m, 1rem);
+    display: flex;
+    align-items: center;
+    min-height: var(--wa-form-control-height, 2.5rem);
+    padding: 0 var(--wa-space-m, 0.75rem);
+    cursor: pointer;
+    user-select: none;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    color: var(--lgs-select-color, inherit);
+    border: solid var(--wa-form-control-border-width, 1px) var(--lgs-select-border-color, var(--wa-color-surface-border));
+    border-radius: var(--wa-border-radius-m, 0.25rem);
+    background-color: var(--lgs-select-bg-color, var(--wa-color-surface));
+    gap: var(--lgs-gutter-xs);
+}
+
+.journey-selector-trigger:hover:not(.disabled) {
+    border-color: var(--wa-color-form-border-hover, var(--wa-color-brand));
+}
+
+.journey-selector-trigger.open {
+    border-color: var(--wa-color-brand);
+    box-shadow: 0 0 0 var(--wa-focus-ring-width, 3px) var(--wa-color-focus-ring, color-mix(in oklab, var(--wa-color-brand) 30%, transparent));
+}
+
+.journey-selector-trigger.disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+.journey-selector-label {
+    overflow: hidden;
+    flex: 1;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.journey-selector-chevron {
+    flex: 0 0 auto;
+    transition: transform 0.2s ease;
+}
+
+.journey-selector-trigger.open .journey-selector-chevron {
+    transform: rotate(-180deg);
+}
+
+.journey-selector-tree-panel {
+    font: inherit;
+    position: relative;
+    display: block;
+    min-width: 12rem;
+    border-width: var(--wa-border-width-s);
+    border-style: var(--wa-border-style);
+    border-color: var(--wa-color-surface-border);
+    border-radius: var(--wa-border-radius-m);
+    background: var(--wa-color-surface-raised);
+    box-shadow: var(--wa-shadow-m);
+    overscroll-behavior: none;
+    padding-block: 0.5em;
+}
+
+.journey-selector-tree-panel wa-tree {
+    --indent-guide-width: 1px;
+}
+
+.journey-selector-tree-panel wa-tree-item.lgs--journey-tree-ungrouped::part(expand-button) {
+    display: none;
+    width: 0;
+}
+
+.wa-dark .journey-selector-tree-panel wa-tree {
+    --indent-guide-color: var(--wa-color-neutral-fill-normal);
+
+}
+
+@media (hover: hover) {
+    .journey-selector-tree-panel wa-tree-item::part(item):hover {
+        color: var(--lgs-select-option-hover-color);
+        border-color: transparent;
+        background-color: var(--lgs-select-option-hover-bg-color);
+    }
+}
+
+.journey-selector-tree-panel wa-tree-item[aria-expanded="true"] {
+    outline-color: var(--lgs-select-option-current-outline-color);
+}
+
+.journey-selector-tree-panel wa-tree-item {
+    line-height: var(--wa-line-height-normal);
+    box-sizing: border-box;
+    transition: background-color 120ms ease, color 120ms ease, outline-color 120ms ease;
+}
+
+.journey-selector-tree-panel wa-tree-item::part(item) {
+    overflow: hidden;
+    max-width: 100%;
+    min-height: var(--wa-form-control-height, 2.5rem);
+    cursor: pointer;
+}
+
+.journey-selector-tree-panel wa-tree-item::part(label) {
+    display: flex;
+    overflow: hidden;
+    align-items: center;
+    flex: 1;
+    min-width: 0;
+    gap: 0;
+}
+
+/* Journey item content: icons + title side by side */
+.lgs--journey-tree-item-content {
+    display: flex;
+    overflow: hidden;
+    align-items: center;
+    min-width: 0;
+    gap: var(--lgs-gutter-xs);
+}
+
+.lgs--journey-tree-item-title {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+/* Group header: color swatch + folder icon + name */
+.lgs--journey-tree-group-header {
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    min-width: 0;
+    gap: var(--lgs-gutter-xs);
+}
+
+.lgs--journey-tree-group-header > span {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+/*******************************************************************************
  * Journey Groups
  ******************************************************************************/
 .journey-groups-drawer-title,
@@ -805,7 +956,7 @@ wa-tab::part(base) {
 .journey-group-create-header {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: flex-end;
     min-width: 0;
     gap: var(--lgs-gutter-s);
 }
@@ -821,13 +972,36 @@ wa-tab::part(base) {
     flex: 0 0 auto;
 }
 
+.journey-group-create-popup-title {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--lgs-gutter-xs);
+}
+
 .journey-group-create-popup wa-input,
 .journey-group-create-popup wa-textarea {
     width: 100%;
 }
 
-.journey-group-create-popup .journey-group-color-row {
+.journey-group-create-title-row {
+    display: flex;
+    align-items: flex-end;
     width: 100%;
+    min-width: 0;
+    gap: var(--lgs-gutter-s);
+}
+
+.journey-group-create-title-input {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.journey-group-create-popup .journey-group-create-color-row {
+    align-self: flex-end;
+    flex: 0 0 auto;
+    width: auto;
+    max-width: none;
+    transform: translateY(-3px);
 }
 
 .journey-group-form {
@@ -874,10 +1048,15 @@ wa-tab::part(base) {
     gap: var(--lgs-gutter-s);
 }
 
+.journey-group-detail-wrapper,
 .journey-group-detail,
 .journey-groups-list wa-callout {
     width: 100%;
     min-width: 0;
+}
+
+.journey-group-detail-wrapper {
+    position: relative;
 }
 
 .journey-group-detail::part(content) {
@@ -887,17 +1066,54 @@ wa-tab::part(base) {
     gap: var(--lgs-gutter-s);
 }
 
+.journey-group-detail::part(summary) {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
 .journey-group-detail-summary {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    min-width: 0;
+    padding-right: 2.25rem;
+    gap: var(--lgs-gutter-xs);
+}
+
+.journey-group-detail-summary-main {
     display: inline-flex;
     align-items: center;
     min-width: 0;
     gap: var(--lgs-gutter-xs);
 }
 
-.journey-group-detail-summary span:last-child {
+.journey-group-detail-summary-main .journey-group-color-icon {
+    font-size: 1rem;
+    align-self: center;
+    width: 1rem;
+    height: 1rem;
+}
+
+.journey-group-detail-title {
     overflow: hidden;
-    text-overflow: ellipsis;
     white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.journey-group-detail-actions {
+    position: absolute;
+    z-index: 1;
+    top: var(--lgs-gutter-xs);
+    right: 1.75rem;
+    display: inline-flex;
+    align-items: center;
+    flex: 0 0 auto;
+}
+
+.journey-group-delete-confirmation {
+    display: flex;
+    flex-direction: column;
+    gap: var(--lgs-gutter-xs);
 }
 
 .journey-group-journey-title {

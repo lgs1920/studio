@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-05-06
- * Last modified: 2026-05-06
+ * Created on: 2026-05-07
+ * Last modified: 2026-05-07
  *
  *
  * Copyright © 2026 LGS1920
@@ -23,6 +23,7 @@ import { JOURNEY_GROUPS_DRAWER }    from '@Core/constants'
 import { UIToast }                  from '@Utils/UIToast'
 import {
     WaButton, WaCallout, WaCard, WaColorPicker, WaDetails, WaDivider, WaIcon, WaInput, WaPopup, WaSwitch, WaTextarea,
+    WaTooltip,
 }                                   from '@web.awesome.me/webawesome-pro/dist/react'
 import classNames                   from 'classnames'
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -81,6 +82,73 @@ const JourneySortableRow = ({journey, actionIcon, actionLabel, onAction}) => {
                 </WaButton>
             )}
         </WaCard>
+    )
+}
+
+const JourneyGroupDeleteButton = ({group, onDelete}) => {
+    const [dialog, setDialog] = useState(false)
+    const removeButtonId = useMemo(
+        () => `remove-${group.id.replace(/[^a-zA-Z0-9_-]/g, '-')}`,
+        [group.id],
+    )
+
+    const hideRemoveDialog = useCallback(event => {
+        event?.preventDefault?.()
+        event?.stopPropagation?.()
+        setDialog(false)
+    }, [])
+
+    const toggleRemoveDialog = useCallback(event => {
+        event.preventDefault()
+        event.stopPropagation()
+        setDialog(open => !open)
+    }, [])
+
+    const removeGroup = useCallback(async event => {
+        event?.preventDefault?.()
+        event?.stopPropagation?.()
+        setDialog(false)
+        await onDelete(group)
+    }, [group, onDelete])
+
+    return (
+        <span className="journey-group-detail-actions">
+            <WaTooltip placement="bottom" for={removeButtonId}>{'Remove group'}</WaTooltip>
+            <WaButton
+                id={removeButtonId}
+                size="small"
+                variant="brand"
+                appearance="plain"
+                aria-label={`Remove ${group.name}`}
+                onClick={toggleRemoveDialog}
+            >
+                <WaIcon name="trash-can" variant="regular"/>
+            </WaButton>
+            <WaPopup
+                anchor={removeButtonId}
+                active={dialog}
+                hover-bridge="true"
+                shift="true"
+                placement="bottom-end"
+                distance={lgs.gutter.xs}
+            >
+                <WaCard className="lgs--popup-in-drawer lgs--popup-in-drawer-small lgs-slide-down">
+                    <div className="journey-group-delete-confirmation">
+                        <span>{'Are you sure to remove this group? (Your journeys won\'t be deleted.)'}</span>
+                    </div>
+                    <div slot="footer">
+                        <div className="lgs--popup-in-drawer-footer">
+                            <WaButton variant="neutral" appearance="outlined" size="small" onClick={hideRemoveDialog}>
+                                <WaIcon name="xmark"/> {'No'}
+                            </WaButton>
+                            <WaButton variant="danger" appearance="filled-outlined" size="small" onClick={removeGroup}>
+                                <WaIcon name="trash-can"/> {'Yes'}
+                            </WaButton>
+                        </div>
+                    </div>
+                </WaCard>
+            </WaPopup>
+        </span>
     )
 }
 
@@ -297,17 +365,28 @@ export const JourneyGroupsDrawer = memo(() => {
         UIToast.success({caption: group.name, text: 'Group updated.'})
     }, [selectedEditForm, selectedGroup])
 
-    const deleteGroup = useCallback(async () => {
-        if (!selectedGroup) {
+    const deleteGroup = useCallback(async group => {
+        if (!group) {
             return
         }
 
-        const groupName = selectedGroup.name
-        await __.ui.journeyGroupManager.remove(selectedGroup.id)
-        setSelectedGroupId(groups.find(group => group.id !== selectedGroup.id)?.id ?? null)
-        setEditForm({id: null, ...emptyGroupForm()})
+        const groupName = group.name
+        const removed = await __.ui.journeyGroupManager.remove(group.id)
+        if (!removed) {
+            return
+        }
+
+        const nextGroupId = groups.find(item => item.id !== group.id)?.id ?? null
+        if (group.id === effectiveSelectedGroupId) {
+            setSelectedGroupId(nextGroupId)
+            setEditForm({id: null, ...emptyGroupForm()})
+        }
+        else {
+            setEditForm(current => current.id === group.id ? {id: null, ...emptyGroupForm()} : current)
+        }
+
         UIToast.success({caption: groupName, text: 'Group removed.'})
-    }, [groups, selectedGroup])
+    }, [effectiveSelectedGroupId, groups])
 
     const addJourneyToSelectedGroup = useCallback(async journeySlug => {
         if (!selectedGroup) {
@@ -411,17 +490,13 @@ export const JourneyGroupsDrawer = memo(() => {
                             <div className="journey-groups-layout">
                                 <section className="journey-groups-section">
                                     <div className="journey-group-create-header">
-                                        <div className="journey-groups-section-title">
-                                            <WaIcon name="folder-plus" variant="regular"/>
-                                            <span>{'Create group'}</span>
-                                        </div>
                                         <WaButton
                                             variant="brand"
                                             appearance="filled"
                                             size="small"
                                             onClick={openCreatePopup}
                                         >
-                                            <WaIcon name="folder-plus" variant="regular"/>
+                                            <WaIcon slot="start" name="circle-plus" variant="regular"/>
                                             {'Create'}
                                         </WaButton>
                                     </div>
@@ -435,26 +510,28 @@ export const JourneyGroupsDrawer = memo(() => {
                                                 <WaIcon size="small" name="xmark" variant="regular"/>
                                             </WaButton>
 
-                                            <h3 slot="header">
+                                            <h3 slot="header" className="journey-group-create-popup-title">
                                                 <WaIcon name="folder-plus" variant="regular"/>
-                                                {'Create group'}
+                                                <span>{'Create group'}</span>
                                             </h3>
 
-                                            <WaInput
-                                                label="Title"
-                                                size="small"
-                                                value={newForm.name}
-                                                onInput={event => updateNewForm('name', event.target.value)}
-                                            />
-
-                                            <div className="journey-group-color-row">
-                                                <span>{'Color'}</span>
-                                                <WaColorPicker
+                                            <div className="journey-group-create-title-row">
+                                                <WaInput
+                                                    className="journey-group-create-title-input"
+                                                    label="Title"
                                                     size="small"
-                                                    swatches={groupColorSwatches}
-                                                    value={newForm.color}
-                                                    onInput={event => updateNewForm('color', event.target.value)}
+                                                    value={newForm.name}
+                                                    onInput={event => updateNewForm('name', event.target.value)}
                                                 />
+                                                <div className="journey-group-color-row journey-group-create-color-row">
+                                                    <WaColorPicker
+                                                        size="small"
+                                                        placement="bottom"
+                                                        swatches={groupColorSwatches}
+                                                        value={newForm.color}
+                                                        onInput={event => updateNewForm('color', event.target.value)}
+                                                    />
+                                                </div>
                                             </div>
 
                                             <WaTextarea
@@ -499,125 +576,125 @@ export const JourneyGroupsDrawer = memo(() => {
                                     <div className="journey-groups-list">
                                         {groups.length > 0
                                          ? groups.map(group => (
-                                             <WaDetails
-                                                 key={group.id}
-                                                 small
-                                                 open={group.id === effectiveSelectedGroupId}
-                                                 className="lgs--details-hoverable journey-group-detail"
-                                                 onWaShow={() => selectGroup(group.id)}
-                                             >
-                                                 <span slot="summary" className="journey-group-detail-summary">
-                                                     <JourneyGroupColorIcon color={group.color}/>
-                                                     <span>{group.name}</span>
-                                                 </span>
-                                                 {group.id === effectiveSelectedGroupId && selectedGroup && (
-                                                     <>
-                                                         <div className="journey-group-form">
-                                                             <WaInput
-                                                                 label="Name"
-                                                                 size="small"
-                                                                 value={selectedEditForm.name}
-                                                                 onInput={event => updateEditForm('name', event.target.value)}
-                                                             />
-                                                             <WaTextarea
-                                                                 label="Description"
-                                                                 size="small"
-                                                                 rows={3}
-                                                                 value={selectedEditForm.description}
-                                                                 onInput={event => updateEditForm('description', event.target.value)}
-                                                             />
-                                                             <div className="journey-group-color-row">
-                                                                 <span>{'Color'}</span>
-                                                                 <WaColorPicker
-                                                                     size="small"
-                                                                     swatches={groupColorSwatches}
-                                                                     value={selectedEditForm.color}
-                                                                     onInput={event => updateEditForm('color', event.target.value)}
-                                                                 />
-                                                             </div>
-                                                             {currentJourney && (
-                                                                 <div className="journey-group-current-association">
-                                                                     <div>
-                                                                         <WaIcon name="route" variant="regular"/>
-                                                                         <span>{currentJourney.title}</span>
-                                                                     </div>
-                                                                     <WaSwitch
-                                                                         size="xsmall"
-                                                                         label-at-start
-                                                                         checked={selectedHasCurrentJourney}
-                                                                         onChange={toggleCurrentJourneyInSelectedGroup}
-                                                                     >
-                                                                         {'Current journey'}
-                                                                     </WaSwitch>
-                                                                 </div>
-                                                             )}
-                                                             <div className="journey-group-form-actions">
-                                                                 <WaButton
-                                                                     variant="brand"
-                                                                     appearance="filled"
-                                                                     size="small"
-                                                                     onClick={saveGroup}
-                                                                     disabled={!selectedEditForm.name.trim()}
-                                                                 >
-                                                                     <WaIcon name="floppy-disk" variant="regular"/>
-                                                                     {'Save'}
-                                                                 </WaButton>
-                                                                 <WaButton
-                                                                     variant="danger"
-                                                                     appearance="plain"
-                                                                     size="small"
-                                                                     onClick={deleteGroup}
-                                                                 >
-                                                                     <WaIcon name="trash-can" variant="regular"/>
-                                                                     {'Delete'}
-                                                                 </WaButton>
-                                                             </div>
-                                                         </div>
+                                                <div key={group.id} className="journey-group-detail-wrapper">
+                                                    <WaDetails
+                                                        small
+                                                        open={group.id === effectiveSelectedGroupId}
+                                                        className="lgs--details-hoverable journey-group-detail"
+                                                        onWaShow={() => selectGroup(group.id)}
+                                                    >
+                                                        <div slot="summary" className="journey-group-detail-summary">
+                                                         <span className="journey-group-detail-summary-main">
+                                                             <JourneyGroupColorIcon color={group.color}/>
+                                                             <span
+                                                                 className="journey-group-detail-title">{group.name}</span>
+                                                         </span>
+                                                        </div>
+                                                        {group.id === effectiveSelectedGroupId && selectedGroup && (
+                                                            <>
+                                                                <div className="journey-group-form">
+                                                                    <WaInput
+                                                                        label="Name"
+                                                                        size="small"
+                                                                        value={selectedEditForm.name}
+                                                                        onInput={event => updateEditForm('name', event.target.value)}
+                                                                    />
+                                                                    <WaTextarea
+                                                                        label="Description"
+                                                                        size="small"
+                                                                        rows={3}
+                                                                        value={selectedEditForm.description}
+                                                                        onInput={event => updateEditForm('description', event.target.value)}
+                                                                    />
+                                                                    <div className="journey-group-color-row">
+                                                                        <span>{'Color'}</span>
+                                                                        <WaColorPicker
+                                                                            size="small"
+                                                                            swatches={groupColorSwatches}
+                                                                            value={selectedEditForm.color}
+                                                                            onInput={event => updateEditForm('color', event.target.value)}
+                                                                        />
+                                                                    </div>
+                                                                    {currentJourney && (
+                                                                        <div
+                                                                            className="journey-group-current-association">
+                                                                            <div>
+                                                                                <WaIcon name="route" variant="regular"/>
+                                                                                <span>{currentJourney.title}</span>
+                                                                            </div>
+                                                                            <WaSwitch
+                                                                                size="xsmall"
+                                                                                label-at-start
+                                                                                checked={selectedHasCurrentJourney}
+                                                                                onChange={toggleCurrentJourneyInSelectedGroup}
+                                                                            >
+                                                                                {'Current journey'}
+                                                                            </WaSwitch>
+                                                                        </div>
+                                                                    )}
+                                                                    <div className="journey-group-form-actions">
+                                                                        <WaButton
+                                                                            variant="brand"
+                                                                            appearance="filled"
+                                                                            size="small"
+                                                                            onClick={saveGroup}
+                                                                            disabled={!selectedEditForm.name.trim()}
+                                                                        >
+                                                                            <WaIcon name="floppy-disk"
+                                                                                    variant="regular"/>
+                                                                            {'Save'}
+                                                                        </WaButton>
+                                                                    </div>
+                                                                </div>
 
-                                                         <WaDivider/>
+                                                                <WaDivider/>
 
-                                                         <div className="journey-group-assignment">
-                                                             <div className="journey-groups-section-title">
-                                                                 <WaIcon name="route" variant="regular"/>
-                                                                 <span>{'Journeys in group'}</span>
-                                                             </div>
-                                                             <div ref={memberListRef} className="widget-sortable-list journey-group-sortable-list">
-                                                                 {groupJourneys.map(journey => (
-                                                                     <JourneySortableRow
-                                                                         key={journey.slug}
-                                                                         journey={journey}
-                                                                         actionIcon="link-slash"
-                                                                         actionLabel="Remove journey from group"
-                                                                         onAction={removeJourneyFromSelectedGroup}
-                                                                     />
-                                                                 ))}
-                                                                 {groupJourneys.length === 0 && (
-                                                                     <p className="journey-groups-empty-state">{'Drag journeys here.'}</p>
-                                                                 )}
-                                                             </div>
+                                                                <div className="journey-group-assignment">
+                                                                    <div className="journey-groups-section-title">
+                                                                        <WaIcon name="route" variant="regular"/>
+                                                                        <span>{'Journeys in group'}</span>
+                                                                    </div>
+                                                                    <div ref={memberListRef}
+                                                                         className="widget-sortable-list journey-group-sortable-list">
+                                                                        {groupJourneys.map(journey => (
+                                                                            <JourneySortableRow
+                                                                                key={journey.slug}
+                                                                                journey={journey}
+                                                                                actionIcon="link-slash"
+                                                                                actionLabel="Remove journey from group"
+                                                                                onAction={removeJourneyFromSelectedGroup}
+                                                                            />
+                                                                        ))}
+                                                                        {groupJourneys.length === 0 && (
+                                                                            <p className="journey-groups-empty-state">{'Drag journeys here.'}</p>
+                                                                        )}
+                                                                    </div>
 
-                                                             <div className="journey-groups-section-title">
-                                                                 <WaIcon name="plus" variant="regular"/>
-                                                                 <span>{'Available journeys'}</span>
-                                                             </div>
-                                                             <div ref={availableListRef} className="widget-sortable-list journey-group-sortable-list">
-                                                                 {availableJourneys.map(journey => (
-                                                                     <JourneySortableRow
-                                                                         key={journey.slug}
-                                                                         journey={journey}
-                                                                         actionIcon="link"
-                                                                         actionLabel="Add journey to group"
-                                                                         onAction={addJourneyToSelectedGroup}
-                                                                     />
-                                                                 ))}
-                                                                 {availableJourneys.length === 0 && (
-                                                                     <p className="journey-groups-empty-state">{'No available journey.'}</p>
-                                                                 )}
-                                                             </div>
-                                                         </div>
-                                                     </>
-                                                 )}
-                                             </WaDetails>
+                                                                    <div className="journey-groups-section-title">
+                                                                        <WaIcon name="plus" variant="regular"/>
+                                                                        <span>{'Available journeys'}</span>
+                                                                    </div>
+                                                                    <div ref={availableListRef}
+                                                                         className="widget-sortable-list journey-group-sortable-list">
+                                                                        {availableJourneys.map(journey => (
+                                                                            <JourneySortableRow
+                                                                                key={journey.slug}
+                                                                                journey={journey}
+                                                                                actionIcon="link"
+                                                                                actionLabel="Add journey to group"
+                                                                                onAction={addJourneyToSelectedGroup}
+                                                                            />
+                                                                        ))}
+                                                                        {availableJourneys.length === 0 && (
+                                                                            <p className="journey-groups-empty-state">{'No available journey.'}</p>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                            </>
+                                                        )}
+                                                    </WaDetails>
+                                                    <JourneyGroupDeleteButton group={group} onDelete={deleteGroup}/>
+                                                </div>
                                          ))
                                          : (
                                              <WaCallout size="small" variant="warning" appearance="outlined">

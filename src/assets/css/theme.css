@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-05-06
- * Last modified: 2026-05-06
+ * Created on: 2026-05-07
+ * Last modified: 2026-05-07
  *
  *
  * Copyright © 2026 LGS1920
@@ -301,43 +301,43 @@
     --lgs-compass-size: 50px;
 }
 
-    /*******************************************************************************
-     * Globals
-     ******************************************************************************/
+/*******************************************************************************
+ * Globals
+ ******************************************************************************/
 
-    body {
-        & h1,
-        & h2 {
-            margin: var(--lgs-gutter) 0;
-            color: var(--wa-color-brand-60);
-        }
-
-        & h3 {
-            margin: var(--lgs-gutter) 0;
-        }
-
-        & strong {
-            color: var(--wa-color-brand-60);
-        }
-
-        & ul, & ol {
-            padding-right: var(--lgs-gutter);
-            list-style-position: inside;
-
-            & li {
-                padding-left: 0;
-            }
-        }
+body {
+    & h1,
+    & h2 {
+        margin: var(--lgs-gutter) 0;
+        color: var(--wa-color-brand-60);
     }
 
-    /*******************************************************************************
-     * Theme Selector
-     ******************************************************************************/
-
-    .lgs--theme-selector {
-        font-size: var(--lgs-font-size-s);
-        font-weight: normal;
+    & h3 {
+        margin: var(--lgs-gutter) 0;
     }
+
+    & strong {
+        color: var(--wa-color-brand-60);
+    }
+
+    & ul, & ol {
+        padding-right: var(--lgs-gutter);
+        list-style-position: inside;
+
+        & li {
+            padding-left: 0;
+        }
+    }
+}
+
+/*******************************************************************************
+ * Theme Selector
+ ******************************************************************************/
+
+.lgs--theme-selector {
+    font-size: var(--lgs-font-size-s);
+    font-weight: normal;
+}
 
 .lgs--theme-controls {
     display: inline-flex;
@@ -365,29 +365,29 @@
  * Canvas
  */
 
-    canvas {
-        image-rendering: crisp-edges !important;
-        will-change: 'transform';
-    }
+canvas {
+    image-rendering: crisp-edges !important;
+    will-change: 'transform';
+}
 
-    /*******************************************************************************
-     * Buttons
-     ******************************************************************************/
+/*******************************************************************************
+ * Buttons
+ ******************************************************************************/
 
 :is(wa-button, .wa-button):is(:not([variant]), [variant="neutral"], [variant="brand"]):not([appearance="plain"]):not([appearance="Plain"]):not([appearance="outlined"]):not([appearance="Outlined"])::part(base) {
-        display: flex;
-        align-items: center;
-        color: var(--lgs-button-color);
-        border-color: var(--lgs-button-border-color);
-        background-color: var(--lgs-button-bg-color) !important;
-        gap: var(--lgs-gutter-s);
-    }
+    display: flex;
+    align-items: center;
+    color: var(--lgs-button-color);
+    border-color: var(--lgs-button-border-color);
+    background-color: var(--lgs-button-bg-color) !important;
+    gap: var(--lgs-gutter-s);
+}
 
 :is(wa-button, .wa-button):is(:not([variant]), [variant="neutral"], [variant="brand"]):not([appearance="plain"]):not([appearance="Plain"]):not([appearance="outlined"]):not([appearance="Outlined"]):not(.button--disabled):hover::part(base) {
-        color: var(--lgs-button-hover-color);
-        border-color: var(--lgs-button-border-hover-color);
-        background-color: var(--lgs-button-bg-hover-color);
-    }
+    color: var(--lgs-button-hover-color);
+    border-color: var(--lgs-button-border-hover-color);
+    background-color: var(--lgs-button-bg-hover-color);
+}
 
 :is(wa-button, .wa-button):is(:not([variant]), [variant="neutral"], [variant="brand"]):is([appearance="outlined"], [appearance="Outlined"])::part(base) {
     color: var(--lgs-button-plain-color);
@@ -414,102 +414,102 @@
 }
 
 wa-button::part(label) {
-        display: flex;
-        align-items: center;
-        padding-left: 0;
-        text-transform: capitalize;
-        gap: var(--lgs-gutter-s);
-    }
+    display: flex;
+    align-items: center;
+    padding-left: 0;
+    text-transform: capitalize;
+    gap: var(--lgs-gutter-s);
+}
 
-    .buttons-bar {
-        display: flex;
-        justify-content: flex-end;
-        gap: var(--lgs-gutter-s);
-    }
+.buttons-bar {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--lgs-gutter-s);
+}
 
-    .square-button {
-        width: var(--lgs-square-dimension) !important;
-        --lgs-square-dimension: var(--lgs-dimension);
-        aspect-ratio: 1;
-    }
+.square-button {
+    width: var(--lgs-square-dimension) !important;
+    --lgs-square-dimension: var(--lgs-dimension);
+    aspect-ratio: 1;
+}
 
-    .square-button.transparent::part(base) {
-        border: none;
-        background: transparent;
-    }
+.square-button.transparent::part(base) {
+    border: none;
+    background: transparent;
+}
 
-    .square-button.small {
-        font-size: var(--wa-font-size-s) !important;
-        --lgs-square-dimension: var(--lgs-dimension-s);
-    }
+.square-button.small {
+    font-size: var(--wa-font-size-s) !important;
+    --lgs-square-dimension: var(--lgs-dimension-s);
+}
 
-    .square-button::part(base) {
-        width: var(--lgs-square-dimension);
-        height: var(--lgs-square-dimension);
-        padding: 0;
-    }
+.square-button::part(base) {
+    width: var(--lgs-square-dimension);
+    height: var(--lgs-square-dimension);
+    padding: 0;
+}
 
-    .square-button wa-icon::part(svg) {
-        height: var(--lgs-font-size-m);
-    }
+.square-button wa-icon::part(svg) {
+    height: var(--lgs-font-size-m);
+}
 
-    .toolbar-action-popup-host {
-        display: flex;
-    }
+.toolbar-action-popup-host {
+    display: flex;
+}
 
-    .toolbar-action-popup {
-        display: flex;
-        align-items: center;
-        flex-direction: row;
-        width: max-content;
-        min-width: max-content;
-        padding: 0;
-        gap: var(--lgs-gutter-xs);
-        border: 0;
-        background: transparent;
-        box-shadow: none;
-    }
+.toolbar-action-popup {
+    display: flex;
+    align-items: center;
+    flex-direction: row;
+    width: max-content;
+    min-width: max-content;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+    gap: var(--lgs-gutter-xs);
+}
 
-    .toolbar-action-popup--reverse {
-        flex-direction: row-reverse;
-    }
+.toolbar-action-popup--reverse {
+    flex-direction: row-reverse;
+}
 
-    wa-button:not(.square-button) wa-icon[slot="start"] {
-        margin-right: var(--lgs-gutter-s);
-    }
+wa-button:not(.square-button) wa-icon[slot="start"] {
+    margin-right: var(--lgs-gutter-s);
+}
 
-    wa-button:not(.square-button) wa-icon[slot="end"] {
-        margin-left: var(--lgs-gutter-s);
-    }
+wa-button:not(.square-button) wa-icon[slot="end"] {
+    margin-left: var(--lgs-gutter-s);
+}
 
 .wa-theme-lgs1920-on-map wa-button[variant="neutral"]::part(base),
 .wa-theme-lgs1920-on-map wa-button[variant="neutral"]::part(prefix),
 .wa-theme-lgs1920-on-map wa-button[variant="neutral"]::part(suffix),
 .wa-theme-lgs1920-on-map wa-icon-button::part(base) {
-        color: var(--lgs-light-color-75);
-        border-color: var(--lgs-light-color-25);
-    }
+    color: var(--lgs-light-color-75);
+    border-color: var(--lgs-light-color-25);
+}
 
-    .fa-icon-button {
-        font-size: var(--wa-font-size-l);
-        display: flex;
-        align-items: center;
-        flex: 0 auto;
+.fa-icon-button {
+    font-size: var(--wa-font-size-l);
+    display: flex;
+    align-items: center;
+    flex: 0 auto;
 
-        padding: var(--wa-space-xs);
-        cursor: pointer;
-        transition: var(--wa-transition-fast) color;
-        color: var(--wa-color-text-quiet);
-        border: none;
-        border-radius: var(--wa-border-radius-m);
-        background: none;
-        -webkit-appearance: none;
-    }
+    padding: var(--wa-space-xs);
+    cursor: pointer;
+    transition: var(--wa-transition-fast) color;
+    color: var(--wa-color-text-quiet);
+    border: none;
+    border-radius: var(--wa-border-radius-m);
+    background: none;
+    -webkit-appearance: none;
+}
 
 .wa-theme-lgs1920-on-map .fa-icon-button {
-        transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
+    transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
     color: var(--lgs-light-color-75);
-        border: 1px solid transparent;
+    border: 1px solid transparent;
     border-color: var(--lgs-light-color-25);
     background: transparent;
 }
@@ -518,117 +518,124 @@ wa-button::part(label) {
     color: var(--lgs-card-on-map-hover-color);
     border-color: var(--lgs-card-on-map-hover-border-color);
     background: var(--lgs-card-on-map-hover-bg-color);
-    }
+}
 
-    /*******************************************************************************
-     * Color Picker
-     ******************************************************************************/
+/*******************************************************************************
+ * Color Picker
+ ******************************************************************************/
 
-    wa-color-picker[size="small"]::part(trigger) {
-        margin-top: 5px;
-    }
+wa-color-picker[size="small"]::part(trigger) {
+    margin-top: 5px;
+}
 
-    /*******************************************************************************
-     * Spinner
-     ******************************************************************************/
+/*******************************************************************************
+ * Tree
+ ******************************************************************************/
+wa-tree {
+    --indent-size: 0 !important;
+}
 
-    :root {
-        --map-rotation-speed: 60s
-    }
+/*******************************************************************************
+ * Spinner
+ ******************************************************************************/
 
-    wa-button::part(spinner) {
-        font-size: var(--lgs-font-size-l);
-    }
+:root {
+    --map-rotation-speed: 60s
+}
 
-    sl-menu-item::part(spinner) {
-        font-size: var(--lgs-font-size-m);
-    }
+wa-button::part(spinner) {
+    font-size: var(--lgs-font-size-l);
+}
 
-    sl-menu-item::part(spinner) {
-        margin-right: 2px
-    }
+sl-menu-item::part(spinner) {
+    font-size: var(--lgs-font-size-m);
+}
 
-    ::part(spinner) {
-        font-size: var(--lgs-font-size-l);
-        --track-width: 3px;
-        --speed: var(--map-rotation-speed);
-    }
+sl-menu-item::part(spinner) {
+    margin-right: 2px
+}
+
+::part(spinner) {
+    font-size: var(--lgs-font-size-l);
+    --track-width: 3px;
+    --speed: var(--map-rotation-speed);
+}
 
 .wa-theme-lgs1920-on-map wa-spinner,
 .wa-theme-lgs1920-on-map ::part(spinner) {
-        --indicator-color: var(--lgs-light-color);
-        --track-color: var(--lgs-light-color-25);
-        --track-width: 2px;
-        --speed: var(--map-rotation-speed);
-    }
+    --indicator-color: var(--lgs-light-color);
+    --track-color: var(--lgs-light-color-25);
+    --track-width: 2px;
+    --speed: var(--map-rotation-speed);
+}
 
-    /*******************************************************************************
-     * Main CFA
-     ******************************************************************************/
+/*******************************************************************************
+ * Main CFA
+ ******************************************************************************/
 
-    .call-for-actions {
-        justify-content: center;
-        width: max-content;
-        pointer-events: auto;
-    }
+.call-for-actions {
+    justify-content: center;
+    width: max-content;
+    pointer-events: auto;
+}
 
-    .call-for-actions .buttons-bar {
-        display: flex;
-        justify-content: space-between;
-        min-width: 200px;
-        gap: var(--lgs-gutter) !important;
-    }
+.call-for-actions .buttons-bar {
+    display: flex;
+    justify-content: space-between;
+    min-width: 200px;
+    gap: var(--lgs-gutter) !important;
+}
 
-    .call-for-actions.buttons-bar {
-        position: relative;
-        top: unset;
-        display: flex;
-        gap: var(--lgs-gutter) !important;
-    }
+.call-for-actions.buttons-bar {
+    position: relative;
+    top: unset;
+    display: flex;
+    gap: var(--lgs-gutter) !important;
+}
 
-    .call-for-actions [outline] {
-        border-color: var(--lgs-border-on-color) !important;
-        background: rgba(255, 255, 255, 0.3);
-        backdrop-filter: blur(var(--lgs-blur));
-    }
+.call-for-actions [outline] {
+    border-color: var(--lgs-border-on-color) !important;
+    background: rgba(255, 255, 255, 0.3);
+    backdrop-filter: blur(var(--lgs-blur));
+}
 
-    .call-for-actions [outline]::part(base) {
-        color: rgba(255, 255, 255, 1);;
-    }
+.call-for-actions [outline]::part(base) {
+    color: rgba(255, 255, 255, 1);;
+}
 
-    /*******************************************************************************
-     * Drawers
-     ******************************************************************************/
+/*******************************************************************************
+ * Drawers
+ ******************************************************************************/
 
-    :root {
-        --lgs-vertical-panel-width: var(--lgs-width-unit);
-        --lgs-vertical-panel-height: 85%;
+:root {
+    --lgs-vertical-panel-width: var(--lgs-width-unit);
+    --lgs-vertical-panel-height: 85%;
 
-        --lgs-horizontal-panel-width: 100%;
-        --lgs-horizontal-panel-left: 0;
+    --lgs-horizontal-panel-width: 100%;
+    --lgs-horizontal-panel-left: 0;
 
-        /* Used in left and margin-left so we need to divide by 2 */
-        --lgs-vertical-panel-offset-left: calc(var(--lgs-vertical-panel-width) / 2 + var(--lgs-gutter-xs));
-        --lgs-horizontal-panel-offset-left: calc(var(--lgs-vertical-panel-width) + var(--lgs-gutter-xs));
-        --lgs-vertical-panel-offset-right: calc(var(--lgs-vertical-panel-width) + var(--lgs-gutter-xs));
-        --lgs-horizontal-panel-offset-right: var(--lgs-vertical-panel-offset-right);
-    }
+    /* Used in left and margin-left so we need to divide by 2 */
+    --lgs-vertical-panel-offset-left: calc(var(--lgs-vertical-panel-width) / 2 + var(--lgs-gutter-xs));
+    --lgs-horizontal-panel-offset-left: calc(var(--lgs-vertical-panel-width) + var(--lgs-gutter-xs));
+    --lgs-vertical-panel-offset-right: calc(var(--lgs-vertical-panel-width) + var(--lgs-gutter-xs));
+    --lgs-horizontal-panel-offset-right: var(--lgs-vertical-panel-offset-right);
+}
 
-    wa-drawer {
-        --size: var(--lgs-vertical-panel-width);
-        --spacing: var(--lgs-gutter);
-        --showDuration: 300;
-        --hideDuration: 300;
-    }
+wa-drawer {
+    --size: var(--lgs-vertical-panel-width);
+    --spacing: var(--lgs-gutter);
+    --showDuration: 300;
+    --hideDuration: 300;
+}
 
 
-    wa-drawer::part(base) {
-        pointer-events: auto
-    }
+wa-drawer::part(base) {
+    pointer-events: auto
+}
 
-    wa-drawer::part(dialog) {
-        border-radius: var(--lgs-border-radius);
-    }
+wa-drawer::part(dialog) {
+    border-radius: var(--lgs-border-radius);
+}
 
 body.mobile .drawer-wrapper {
     right: auto;
@@ -639,80 +646,80 @@ body.mobile .drawer-wrapper {
 
 
 wa-drawer section {
-        width: 100%;
-    }
+    width: 100%;
+}
 
-    .mobile.portrait wa-drawer {
-        --size: var(--lgs-vertical-panel-height)
-    }
+.mobile.portrait wa-drawer {
+    --size: var(--lgs-vertical-panel-height)
+}
 
-    wa-drawer::part(panel) {
-        z-index: 1;
-        pointer-events: auto;
-        border-radius: var(--wa-border-radius-m);
-    }
+wa-drawer::part(panel) {
+    z-index: 1;
+    pointer-events: auto;
+    border-radius: var(--wa-border-radius-m);
+}
 
-    wa-drawer::part(body) {
-        overflow: hidden;
-    }
+wa-drawer::part(body) {
+    overflow: hidden;
+}
 
-    wa-tab-panel {
-        overflow-y: hidden;
-        --padding: var(--lgs-gutter-s) 0 0
-    }
+wa-tab-panel {
+    overflow-y: hidden;
+    --padding: var(--lgs-gutter-s) 0 0
+}
 
-    wa-drawer wa-tab-group::part(base),
-    wa-drawer wa-tab-group::part(body),
-    wa-drawer wa-tab-panel::part(base),
-    wa-drawer wa-tab-panel::part(body),
-    wa-drawer wa-tab-panel, wa-tab-group {
-        height: 100%;
-        max-height: 100%;
-    }
+wa-drawer wa-tab-group::part(base),
+wa-drawer wa-tab-group::part(body),
+wa-drawer wa-tab-panel::part(base),
+wa-drawer wa-tab-panel::part(body),
+wa-drawer wa-tab-panel, wa-tab-group {
+    height: 100%;
+    max-height: 100%;
+}
 
-    .tab-group--top ::slotted(wa-tab-panel) {
-        --padding: var(--lgs-gutter-s) 0;
-    }
+.tab-group--top ::slotted(wa-tab-panel) {
+    --padding: var(--lgs-gutter-s) 0;
+}
 
-    wa-tab-group .lgs--tabs-right-menu {
-        display: flex;
-        align-items: center;
-        margin-left: auto;
-        gap: 0;
-    }
+wa-tab-group .lgs--tabs-right-menu {
+    display: flex;
+    align-items: center;
+    margin-left: auto;
+    gap: 0;
+}
 
-    wa-drawer:not([placement="bottom"]):not([placement="top"]) wa-tab-panel::part(base) {
-        overflow-x: hidden;
-        padding-bottom: 1px;
-    }
+wa-drawer:not([placement="bottom"]):not([placement="top"]) wa-tab-panel::part(base) {
+    overflow-x: hidden;
+    padding-bottom: 1px;
+}
 
-    .lgs--popup-anchor {
-        width: 100%;
-        margin: 0;
-        background: transparent;
-    }
+.lgs--popup-anchor {
+    width: 100%;
+    margin: 0;
+    background: transparent;
+}
 
-    .lgs--popup-in-drawer {
-        width: var(--width-popup);
-        max-width: var(--width-popup);
-        margin-left: var(--margin);
-        pointer-events: auto;
-        border-radius: var(--lgs-border-radius);
-        box-shadow: var(--wa-shadow-l);
-        --spacing: var(--lgs-gutter);
-        --margin: calc(var(--lgs-gutter) - var(--lgs-gutter-xs));
-        --width-popup: calc(var(--lgs-vertical-panel-width) - 2 * var(--margin));
+.lgs--popup-in-drawer {
+    width: var(--width-popup);
+    max-width: var(--width-popup);
+    margin-left: var(--margin);
+    pointer-events: auto;
+    border-radius: var(--lgs-border-radius);
+    box-shadow: var(--wa-shadow-l);
+    --spacing: var(--lgs-gutter);
+    --margin: calc(var(--lgs-gutter) - var(--lgs-gutter-xs));
+    --width-popup: calc(var(--lgs-vertical-panel-width) - 2 * var(--margin));
 
-    }
+}
 
-    .lgs--popup-in-drawer-small {
-        --width-popup: 15rem /*calc(var(--lgs-vertical-panel-width) - 2 * var(--margin));*/
+.lgs--popup-in-drawer-small {
+    --width-popup: 15rem /*calc(var(--lgs-vertical-panel-width) - 2 * var(--margin));*/
 
-    }
+}
 
-    .lgs--popup-in-drawer.fix-margin {
-        margin-left: calc(var(--margin) - var(--lgs-gutter-s));
-    }
+.lgs--popup-in-drawer.fix-margin {
+    margin-left: calc(var(--margin) - var(--lgs-gutter-s));
+}
 
 body.mobile .lgs--popup-in-drawer {
     width: 100%;
@@ -730,110 +737,110 @@ body.mobile wa-popup:has(.lgs--popup-in-drawer)::part(popup) {
 }
 
 .lgs--popup-in-drawer::part(body) {
-        display: flex;
-        align-content: center;
-        align-items: flex-start;
-        flex-direction: column;
-        gap: var(--lgs-gutter-s);
-    }
+    display: flex;
+    align-content: center;
+    align-items: flex-start;
+    flex-direction: column;
+    gap: var(--lgs-gutter-s);
+}
 
-    .lgs--popup-in-drawer::part(header) {
-        color: var(--wa-color-brand-60);
-    }
+.lgs--popup-in-drawer::part(header) {
+    color: var(--wa-color-brand-60);
+}
 
-    .lgs--popup-in-drawer-footer {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        width: 100%;
-        gap: var(--lgs-gutter-xs);
-    }
+.lgs--popup-in-drawer-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    gap: var(--lgs-gutter-xs);
+}
 
-    .drawer-pane-footer {
-        font-size: var(--lgs-font-size-s);
-        display: flex;
-        align-items: center;
-        width: 100%;
-        gap: var(--lgs-gutter);
-    }
+.drawer-pane-footer {
+    font-size: var(--lgs-font-size-s);
+    display: flex;
+    align-items: center;
+    width: 100%;
+    gap: var(--lgs-gutter);
+}
 
-    .drawer-pane-footer strong {
-        font-weight: 600;
-    }
+.drawer-pane-footer strong {
+    font-weight: 600;
+}
 
-    .drawer-pane-footer strong:after {
-        font-weight: normal;
-        content: ': ';
-    }
+.drawer-pane-footer strong:after {
+    font-weight: normal;
+    content: ': ';
+}
 
-    .drawer-pane-footer .drawer-footer-url {
-        display: flex;
-        margin-left: auto;
-        gap: var(--lgs-gutter-s);
-    }
+.drawer-pane-footer .drawer-footer-url {
+    display: flex;
+    margin-left: auto;
+    gap: var(--lgs-gutter-s);
+}
 
-    .panel-wrapper {
-        display: flex;
-        flex-direction: column;
-        height: 100%;
-        padding-bottom: var(--lgs-gutter-s);
-    }
+.panel-wrapper {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    padding-bottom: var(--lgs-gutter-s);
+}
 
-    .credits-pane-footer {
-        flex-direction: row !important;
-    }
+.credits-pane-footer {
+    flex-direction: row !important;
+}
 
 
 wa-drawer.drawer-is-stacked::part(close-button) {
-        display: none;
-    }
+    display: none;
+}
 
 wa-drawer.drawer-is-stacked::part(header-actions) {
-        margin-top: var(--lgs-gutter-xs);
-        padding-inline-end: var(--spacing);
-    }
+    margin-top: var(--lgs-gutter-xs);
+    padding-inline-end: var(--spacing);
+}
 
-    /*******************************************************************************
-     * Cards
-     ******************************************************************************/
+/*******************************************************************************
+ * Cards
+ ******************************************************************************/
 
-    wa-card {
-        box-shadow: none;
-        --wa-panel-border-radius: var(--lgs-border-radius-s);
-    }
+wa-card {
+    box-shadow: none;
+    --wa-panel-border-radius: var(--lgs-border-radius-s);
+}
 
-    wa-card::part(body) {
-        display: flex;
-        padding: var(--lgs-gutter-s);
-        --spacing: var(--lgs-gutter-s);
-    }
+wa-card::part(body) {
+    display: flex;
+    padding: var(--lgs-gutter-s);
+    --spacing: var(--lgs-gutter-s);
+}
 
-    .wa-card.lgs--card-hoverable {
-        transition: outline-color 0.3s ease,
-        outline-offset 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
-        box-shadow 0.3s ease,
-        transform 0.2s ease;
-        outline: 4px solid transparent;
-        outline-offset: 4px;
-        backface-visibility: hidden;
-    }
+.wa-card.lgs--card-hoverable {
+    transition: outline-color 0.3s ease,
+    outline-offset 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 0.3s ease,
+    transform 0.2s ease;
+    outline: 4px solid transparent;
+    outline-offset: 4px;
+    backface-visibility: hidden;
+}
 
-    wa-card.lgs--card-hoverable:hover {
-        color: var(--wa-color-brand-on-normal);
-        outline: 2px solid var(--wa-color-brand-50);
-        outline-offset: 2px;
-        box-shadow: var(--wa-shadow-l);
-    }
+wa-card.lgs--card-hoverable:hover {
+    color: var(--wa-color-brand-on-normal);
+    outline: 2px solid var(--wa-color-brand-50);
+    outline-offset: 2px;
+    box-shadow: var(--wa-shadow-l);
+}
 
-    wa-card.lgs--card-selected {
-        outline: 2px solid var(--wa-color-brand);
-        outline-offset: 2px;
-    }
+wa-card.lgs--card-selected {
+    outline: 2px solid var(--wa-color-brand);
+    outline-offset: 2px;
+}
 
-    wa-card.lgs--toolbar::part(body) {
-        padding: var(--lgs-gutter-xs);
-        --spacing: var(--lgs-gutter-xs);
-    }
+wa-card.lgs--toolbar::part(body) {
+    padding: var(--lgs-gutter-xs);
+    --spacing: var(--lgs-gutter-xs);
+}
 
 wa-card.wa-theme-lgs1920-on-map::part(body) {
     padding: 0;
@@ -841,45 +848,45 @@ wa-card.wa-theme-lgs1920-on-map::part(body) {
 }
 
 .lgs-card, .lgs-card::part(base), .lgs-one-line-card, .lgs-one-line-card::part(base) {
-        display: flex;
-        padding: var(--lgs-gutter-s);
-        border: 1px solid var(--lgs-card-border-color);
-        border-radius: var(--lgs-border-radius-s);
-        background-color: rgba(255, 255, 255, 0.15);
-    }
+    display: flex;
+    padding: var(--lgs-gutter-s);
+    border: 1px solid var(--lgs-card-border-color);
+    border-radius: var(--lgs-border-radius-s);
+    background-color: rgba(255, 255, 255, 0.15);
+}
 
-    .lgs-one-line-card {
-        line-height: 1;
-        align-items: center;
-        flex-direction: row;
-        height: var(--lgs-line-dimension);
-        padding: var(--lgs-gutter-xs);
-        background-color: var(--wa-color-surface-default);
-    }
+.lgs-one-line-card {
+    line-height: 1;
+    align-items: center;
+    flex-direction: row;
+    height: var(--lgs-line-dimension);
+    padding: var(--lgs-gutter-xs);
+    background-color: var(--wa-color-surface-default);
+}
 
-    .lgs-card.small, .lgs-card.small::part(base), .lgs-one-line-card.small, .lgs-one-line-card.small::part(base) {
-        height: var(--lgs-dimension-s);
-        padding: var(--lgs-gutter-xs);
-        border-radius: var(--lgs-border-radius-xs);
-    }
+.lgs-card.small, .lgs-card.small::part(base), .lgs-one-line-card.small, .lgs-one-line-card.small::part(base) {
+    height: var(--lgs-dimension-s);
+    padding: var(--lgs-gutter-xs);
+    border-radius: var(--lgs-border-radius-xs);
+}
 
 .wa-theme-lgs1920-on-map:is(.lgs-card, .lgs-one-line-card, .lgs-toolbar, .lgs-context-menu),
 .wa-theme-lgs1920-on-map .lgs-card,
 .wa-theme-lgs1920-on-map .lgs-one-line-card,
 .wa-theme-lgs1920-on-map .lgs-toolbar,
 .wa-theme-lgs1920-on-map .lgs-context-menu {
-        align-items: center;
-        color: var(--lgs-text-on-color);
-        border-color: var(--lgs-card-on-map-border-color);
+    align-items: center;
+    color: var(--lgs-text-on-color);
+    border-color: var(--lgs-card-on-map-border-color);
     border-radius: var(--lgs-on-map-border-radius, var(--lgs-border-radius-s));
     background-color: var(--lgs-card-on-map-bg-color);
     background-image: var(--lgs-card-on-map-bg-image);
     box-shadow: var(--wa-shadow-m);
-        background-blend-mode: var(--lgs-card-on-map-bg-blend-mode);
-        gap: var(--lgs-gutter-s);
-        backdrop-filter: blur(var(--lgs-blur));
+    background-blend-mode: var(--lgs-card-on-map-bg-blend-mode);
+    gap: var(--lgs-gutter-s);
+    backdrop-filter: blur(var(--lgs-blur));
 
-    }
+}
 
 .wa-theme-lgs1920-on-map:is(.lgs-card, .lgs-one-line-card, .lgs-toolbar, .lgs-context-menu)::part(base),
 .wa-theme-lgs1920-on-map .lgs-card::part(base),
@@ -898,7 +905,7 @@ wa-card.wa-theme-lgs1920-on-map::part(body) {
 
 .wa-theme-lgs1920-on-map.lgs-card,
 .wa-theme-lgs1920-on-map .lgs-card {
-        border-color: var(--lgs-card-on-map-border-color);
+    border-color: var(--lgs-card-on-map-border-color);
 }
 
 .track-locator-marker-tooltip {
@@ -914,161 +921,161 @@ wa-card.wa-theme-lgs1920-on-map::part(body) {
     display: none !important;
 }
 
-    .lgs-card-wrapper {
-        display: flex;
-        flex-direction: column;
-        gap: var(--lgs-gutter-s);
-    }
+.lgs-card-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: var(--lgs-gutter-s);
+}
 
-    /*******************************************************************************
-     * Compass
-     ******************************************************************************/
+/*******************************************************************************
+ * Compass
+ ******************************************************************************/
 
-    .lgs-compass {
-        position: relative;
-        display: none;
-        pointer-events: all;
-    }
+.lgs-compass {
+    position: relative;
+    display: none;
+    pointer-events: all;
+}
 
 .lgs-compass.mode-full, .lgs-compass.mode-light, .lgs-compass.mode-wind-rose {
-        display: block;
-        width: var(--lgs-compass-size);
-        height: var(--lgs-compass-size);
-    }
+    display: block;
+    width: var(--lgs-compass-size);
+    height: var(--lgs-compass-size);
+}
 
-    .lgs-compass.mode-light {
-        --lgs-compass-size: var(--lgs-dimension);
-    }
+.lgs-compass.mode-light {
+    --lgs-compass-size: var(--lgs-dimension);
+}
 
-    .lgs-compass-needle {
-        transform-origin: center;
-        will-change: transform;
-        backface-visibility: hidden;
-    }
+.lgs-compass-needle {
+    transform-origin: center;
+    will-change: transform;
+    backface-visibility: hidden;
+}
 
-    .lgs-compass-needle-north {
-        fill: var(--lgs-compass-needle-north, var(--wa-color-danger-20));
-    }
+.lgs-compass-needle-north {
+    fill: var(--lgs-compass-needle-north, var(--wa-color-danger-20));
+}
 
-    .lgs-compass-needle-south {
-        fill: var(--lgs-compass-needle-south, var(--wa-color-yellow-90));
-    }
+.lgs-compass-needle-south {
+    fill: var(--lgs-compass-needle-south, var(--wa-color-yellow-90));
+}
 
-    .lgs-compass-text {
-        fill: var(--lgs-compass-text, var(--lgs-light-color));
-    }
+.lgs-compass-text {
+    fill: var(--lgs-compass-text, var(--lgs-light-color));
+}
 
-    .lgs-compass-poles, .lgs-compass-poles-circle {
-        fill: var(--lgs-compass-poles, var(--lgs-light-color-50));
-    }
+.lgs-compass-poles, .lgs-compass-poles-circle {
+    fill: var(--lgs-compass-poles, var(--lgs-light-color-50));
+}
 
-    .lgs-compass-needle-center {
-        fill: var(--lgs-compass-needle-center, var(--wa-color-yellow-50));
-    }
+.lgs-compass-needle-center {
+    fill: var(--lgs-compass-needle-center, var(--wa-color-yellow-50));
+}
 
-    .lgs-compass-background {
-        fill: var(--lgs-compass-background, var(--lgs-dark-color-75));
-    }
+.lgs-compass-background {
+    fill: var(--lgs-compass-background, var(--lgs-dark-color-75));
+}
 
-    .lgs-compass-over-background {
-        fill: var(--lgs-compass-over-background, var(--lgs-light-color-15));
-    }
+.lgs-compass-over-background {
+    fill: var(--lgs-compass-over-background, var(--lgs-light-color-15));
+}
 
-    .compass-widget-preview {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        width: 100%;
-        height: 100%;
-    }
+.compass-widget-preview {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+}
 
-    .compass-widget-preview .lgs-compass {
-        width: 160px;
-        height: 160px;
-    }
+.compass-widget-preview .lgs-compass {
+    width: 160px;
+    height: 160px;
+}
 
-    /*******************************************************************************
-     * Scrollbars
-     ******************************************************************************/
+/*******************************************************************************
+ * Scrollbars
+ ******************************************************************************/
 
-    /* * The view needs to maintain its negative margins to hide native bars.
-     * Avoid using !important on padding here as it can conflict with
-     * the library's inline calculations.
-     */
+/* * The view needs to maintain its negative margins to hide native bars.
+ * Avoid using !important on padding here as it can conflict with
+ * the library's inline calculations.
+ */
 
-    .lgs-scrollbars {
-        overflow: hidden !important;
-        width: 100%;
-        height: 100%;
-    }
+.lgs-scrollbars {
+    overflow: hidden !important;
+    width: 100%;
+    height: 100%;
+}
 
-    .lgs-scrollbars .view {
-        /* Ensures content doesn't touch the custom scrollbar thumb */
-        overflow-x: hidden !important;
-        overflow-y: scroll !important;
-        box-sizing: content-box !important;
-        /* Crucial: prevents ghost native bars on some browsers */
-        padding-right: 10px;
-        padding-bottom: var(--lgs-gutter-s);
-    }
+.lgs-scrollbars .view {
+    /* Ensures content doesn't touch the custom scrollbar thumb */
+    overflow-x: hidden !important;
+    overflow-y: scroll !important;
+    box-sizing: content-box !important;
+    /* Crucial: prevents ghost native bars on some browsers */
+    padding-right: 10px;
+    padding-bottom: var(--lgs-gutter-s);
+}
 
-    /* Common track styles */
+/* Common track styles */
 
-    .lgs-scrollbars .track-vertical,
-    .lgs-scrollbars .track-horizontal {
-        position: absolute;
-        z-index: 10;
-        transition: opacity 0.2s ease;
-        border-radius: 999px;
-        background-color: var(--lgs-scrollbar-track-color, var(--lgs-slider-track-color));
-    }
+.lgs-scrollbars .track-vertical,
+.lgs-scrollbars .track-horizontal {
+    position: absolute;
+    z-index: 10;
+    transition: opacity 0.2s ease;
+    border-radius: 999px;
+    background-color: var(--lgs-scrollbar-track-color, var(--lgs-slider-track-color));
+}
 
-    .lgs-scrollbars .track-horizontal {
-        right: 2px;
-        bottom: 2px;
-        left: 2px;
-        display: none !important;
-        height: var(--lgs-scrollbar-size) !important;
-    }
+.lgs-scrollbars .track-horizontal {
+    right: 2px;
+    bottom: 2px;
+    left: 2px;
+    display: none !important;
+    height: var(--lgs-scrollbar-size) !important;
+}
 
-    .lgs-scrollbars .track-vertical {
-        top: 2px;
-        right: 2px;
-        bottom: 2px;
-        width: var(--lgs-scrollbar-size) !important;
-    }
+.lgs-scrollbars .track-vertical {
+    top: 2px;
+    right: 2px;
+    bottom: 2px;
+    width: var(--lgs-scrollbar-size) !important;
+}
 
-    /* Thumb styles (the draggable part) */
+/* Thumb styles (the draggable part) */
 
-    .lgs-scrollbars .thumb-horizontal,
-    .lgs-scrollbars .thumb-vertical {
-        position: relative;
-        display: block;
-        cursor: pointer;
-        transition: background-color 0.2s ease;
-        border: none;
-        border-radius: inherit;
-        background-color: var(--lgs-scrollbar-thumb-color, var(--lgs-slider-thumb-color));
-    }
+.lgs-scrollbars .thumb-horizontal,
+.lgs-scrollbars .thumb-vertical {
+    position: relative;
+    display: block;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    border: none;
+    border-radius: inherit;
+    background-color: var(--lgs-scrollbar-thumb-color, var(--lgs-slider-thumb-color));
+}
 
 .lgs-scrollbars .thumb-horizontal {
     display: none !important;
-    }
+}
 
-    .lgs-scrollbars .thumb-vertical:hover,
-    .lgs-scrollbars .thumb-horizontal:hover {
-        background-color: color-mix(
-                in oklab,
-                var(--lgs-scrollbar-thumb-color, var(--lgs-slider-thumb-color)) 82%,
-                black 18%
-        );
-    }
+.lgs-scrollbars .thumb-vertical:hover,
+.lgs-scrollbars .thumb-horizontal:hover {
+    background-color: color-mix(
+            in oklab,
+            var(--lgs-scrollbar-thumb-color, var(--lgs-slider-thumb-color)) 82%,
+            black 18%
+    );
+}
 
 @supports (-moz-appearance: none) {
     .lgs-scrollbars .view {
         scrollbar-width: none;
     }
-    }
+}
 
 /* Specific context: when panel uses wa-theme-lgs1920-on-map */
 
@@ -1078,564 +1085,564 @@ wa-card.wa-theme-lgs1920-on-map::part(body) {
     --lgs-scrollbar-thumb-color: var(--lgs-card-on-map-border-color);
     --lgs-scroolbar-track-color: var(--lgs-scrollbar-track-color);
     --lgs-scroolbar-thumb-color: var(--lgs-scrollbar-thumb-color);
-    }
+}
 
-    wa-scroller {
-        height: 100%;
-        --shadow-size: 4rem;
-    }
+wa-scroller {
+    height: 100%;
+    --shadow-size: 4rem;
+}
 
-    /*******************************************************************************
-     * Tooltips
-     ******************************************************************************/
+/*******************************************************************************
+ * Tooltips
+ ******************************************************************************/
 
-    wa-tooltip {
-        /*--wa-tooltip-border-radius: var(--lgs-border-radius-xs);*/
-        /*--wa-tooltip-background-color: var(--lgs-tooltip-bg-color);*/
-        /*--wa-tooltip-content-color: var(--lgs-text-on-color);*/
-        /*--wa-tooltip-font-family: var(--wa-font-family-body);*/
-        /*--wa-tooltip-font-weight: var(--wa-font-weight-normal);*/
-        /*--wa-tooltip-font-size: var(--lgs-font-size-s);*/
-        /*--wa-tooltip-line-height: var(--wa-line-height-condensed);*/
-        /*--wa-tooltip-padding: var(--lgs-gutter-xs);*/
-        /*--wa-tooltip-arrow-size: 0;*/
+wa-tooltip {
+    /*--wa-tooltip-border-radius: var(--lgs-border-radius-xs);*/
+    /*--wa-tooltip-background-color: var(--lgs-tooltip-bg-color);*/
+    /*--wa-tooltip-content-color: var(--lgs-text-on-color);*/
+    /*--wa-tooltip-font-family: var(--wa-font-family-body);*/
+    /*--wa-tooltip-font-weight: var(--wa-font-weight-normal);*/
+    /*--wa-tooltip-font-size: var(--lgs-font-size-s);*/
+    /*--wa-tooltip-line-height: var(--wa-line-height-condensed);*/
+    /*--wa-tooltip-padding: var(--lgs-gutter-xs);*/
+    /*--wa-tooltip-arrow-size: 0;*/
 
-        /*box-shadow: var(--wa-shadow-l);*/
-        /*border-color: var(--lgs-tooltip-border-color);*/
-        --hide-delay: 0.2s;
-    }
+    /*box-shadow: var(--wa-shadow-l);*/
+    /*border-color: var(--lgs-tooltip-border-color);*/
+    --hide-delay: 0.2s;
+}
 
-    wa-tooltip::part(body)::first-letter {
-        text-transform: capitalize;
-    }
+wa-tooltip::part(body)::first-letter {
+    text-transform: capitalize;
+}
 
-    wa-tooltip.tooltip-help ::part(base) {
-        cursor: help !important;
-    }
+wa-tooltip.tooltip-help ::part(base) {
+    cursor: help !important;
+}
 
-    /*******************************************************************************
-     * Dialogs / Modals
-     ******************************************************************************/
+/*******************************************************************************
+ * Dialogs / Modals
+ ******************************************************************************/
 
-    wa-dialog {
-        --backdrop-filter: var(--lgs-blur);
-        --header-spacing: var(--body-spacing) var(--body-spacing) 0 var(--body-spacing);
-    }
+wa-dialog {
+    --backdrop-filter: var(--lgs-blur);
+    --header-spacing: var(--body-spacing) var(--body-spacing) 0 var(--body-spacing);
+}
 
 wa-dialog::part(dialog)::backdrop {
     backdrop-filter: blur(var(--backdrop-filter));
-    }
-
-    wa-dialog::part(base) {
-        z-index: calc(var(--lgs-ui-layer-zindex) + 1)
-    }
-
-    wa-dialog [slot="label"] {
-        display: flex;
-        overflow: hidden;
-        align-items: center;
-        white-space: nowrap;
-        text-overflow: ellipsis;
-    }
-
-    wa-dialog [slot="label"] sl-icon {
-        margin-right: var(--lgs-gutter-s);
-    }
-
-    wa-dialog::part(title) {
-        width: 100%;
-    }
-
-    .dialog__header-actions sl-icon-button, .dialog__header-actions ::slotted(sl-icon-button) {
-        display: flex;
-        align-items: flex-start;
-        flex: 0 0 auto;
-    }
-
-
-    .lgs-mini-remove-dialog::part(footer) {
-        display: flex;
-        margin-left: auto;
-        gap: var(--lgs-gutter-xs);
-    }
-
-    /*******************************************************************************
-     * Wa Details
-     ******************************************************************************/
-
-    wa-details::part(header) {
-        padding: var(--lgs-gutter-s) var(--lgs-gutter-xs)
-    }
-
-    wa-details::part(base) {
-        border-radius: var(--lgs-border-radius-s);
-    }
-
-    wa-details::part(header) {
-        border-radius: var(--lgs-border-radius-s);
-
-    }
-
-    wa-details [slot="heade"] > svg,
-    wa-details [slot="summary"] > span > svg:first-child {
-        margin-right: var(--lgs-gutter-s);
-    }
-
-
-    wa-details {
-        border-color: var(--wa-color-brand-fill-quiet);;
-    }
-
-    wa-details::part(content) {
-        display: flex;
-        flex-direction: column;
-        margin-top: calc(-1 * var(--lgs-gutter-s));
-        padding: var(--lgs-gutter-s);
-        gap: var(--lgs-gutter-s);
-    }
-
-    wa-details > wa-divider {
-        margin-bottom: 0
-    }
-
-    .lgs--details-list {
-        display: flex;
-        flex-direction: column;
-        padding: 4px;
-        transition: outline-color 0.3s ease,
-        outline-offset 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
-        box-shadow 0.3s ease,
-        transform 0.2s ease;
-        border-radius: var(--lgs-border-radius-s);
-        outline: 4px solid transparent;
-        outline-offset: 4px;
-        gap: var(--lgs-gutter-xs);
-        backface-visibility: hidden;
-    }
-
-    wa-details.lgs--details-hoverable:not([open]):hover {
-        color: var(--wa-color-brand-on-normal);
-        border-radius: var(--lgs-border-radius-s);
-        outline: 2px solid var(--wa-color-brand-50);
-        outline-offset: 2px;
-        box-shadow: var(--wa-shadow-l);
-    }
-
-    /*******************************************************************************
-     * Context menu
-     ******************************************************************************/
-
-    #lgs-context-menu-hook { /* id defined in LGS_CONTEXT_MENU_HOOK */
-        position: absolute;
-        z-index: calc(var(--lgs-tools-ui-zindex) - 1);
-        top: -1000px;
-        left: -1000px;
-        width: 10px;
-        height: 50px;
-        transform: translate(-50%, -10px);
-        background-color: red;
-    }
-
-    .lgs-context-menu {
-        position: fixed !important;
-        top: 0;
-        left: 0;
-        display: flex;
-        visibility: hidden;
-        flex-direction: column;
-        width: auto;
-        margin: 0;
-        padding: 0 !important;
-
-        transition: opacity 120ms ease, transform 120ms ease, visibility 0s 120ms;
-        transform: translateY(-8px);
-        opacity: 0;
-    }
-
-    .lgs-context-menu.visible {
-        z-index: var(--lgs-context-menu-zindex);
-        visibility: visible;
-        transition: opacity 120ms ease, transform 120ms ease, visibility 0s 0s;
-        transform: translateY(0);
-        pointer-events: all;
-        opacity: var(--lgs-on-map-ui-opacity, 1);
-
-    }
-
-    :root {
-        --lgs-hover-context-menu-bg-color: var(--lgs-card-on-map-hover-bg-color)
-    }
-
-    .lgs-context-menu ul {
-        font-size: var(--lgs-font-size);
-        width: 100%;
-        margin: 0;
-        margin-bottom: var(--lgs-gutter-xs);
-        padding: 0 var(--lgs-gutter-xs);
-        list-style: none;
-    }
-
-    .lgs-context-menu ul:has(> li:only-child) {
-        margin-bottom: 0;
-        padding: var(--lgs-gutter-xs);
-    }
-
-    .lgs-context-menu ul:has(> li:only-child) > li {
-        margin: 0;
-    }
-
-    .lgs-context-menu ul:has(> li:only-child) > li:is(.widget-grid-position, .widget-grid-one-line) {
-        margin-top: 0 !important;
-    }
-
-    .lgs-context-menu li {
-        display: flex;
-        align-items: center;
-        box-sizing: border-box;
-        max-width: 150px;
-        margin: 2px;
-        padding: 2px;
-        cursor: pointer;
-        transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
-        white-space: nowrap;
-        border: 1px solid transparent;
-        border-radius: var(--lgs-on-map-interactive-radius, var(--lgs-border-radius-xs));
-    }
-
-    .lgs-context-menu li:hover {
-        color: var(--lgs-card-on-map-hover-color, inherit);
-        border-color: var(--lgs-card-on-map-hover-border-color);
-        background: var(--lgs-hover-context-menu-bg-color);
-    }
-
-    .lgs-context-menu wa-divider {
-        --color: var(--lgs-card-on-map-border-color);
-    }
-
-    .lgs-context-menu wa-icon, .lgs-context-menu svg, .lgs-context-menu wa-spinner {
-        margin-right: var(--lgs-gutter-s);
-    }
-
-    /*******************************************************************************
-     * Form elements
-     ******************************************************************************/
-
-    [small]::part(input) {
-        width: 4rem;
-    }
-
-    ::part(hint) {
-        font-size: var(--lgs-font-size-s);
-        margin: 0;
-        color: var(--wa-color-text-quiet);
-    }
-
-    wa-divider {
-        --spacing: var(--lgs-gutter-xs);
-    }
-
-    .wa-dark wa-divider {
-        --color: var(--wa-color-neutral-fill-normal);
-    }
-
-    wa-input, wa-number-input {
-        font-size: var(--lgs-font-size) !important;
-        color: var(--wa-color-brand-fill-loud);
-    }
-
-    wa-input.lgs--short-input::part(input), wa-number-input.lgs--short-input::part(input) {
-        width: 3rem;
-        padding: 0
-    }
-
-    .wa-dark wa-input::part(input),
-    .wa-dark wa-number-input::part(input),
-    .wa-dark wa-number-input::part(stepper),
-    .wa-dark wa-number-input::part(start),
-    .wa-dark wa-number-input::part(start),
-    .wa-dark wa-number-input::part(end),
-    .wa-dark wa-number-input::part(end) {
-        color: var(--wa-color-brand-fill-loud)
-    }
-
-    wa-input[label-at-start], wa-number-input[label-at-start] {
-        display: flex;
-        align-items: center;
-        flex-direction: row;
-        justify-content: space-between;
-        width: 100%;
-        gap: var(--lgs-gutter-s);
-    }
-
-    wa-input.lgs--short-input[label-at-start], wa-number-input.lgs--short-input[label-at-start] {
-        flex: none;
-    }
-
-    :is([part~='form-control-label'], [part~='label']):has(:not(:empty)), :is([part~='form-control-label'], [part~='label']).has-label {
-        font-size: var(--lgs-font-size) !important;
-        font-weight: normal !important;
-        line-height: var(--wa-form-control-label-line-height);
-        margin-block-end: 0 !important
-    }
-
-    wa-input[label-at-start] label, wa-number-input[label-at-start] label {
-        font-size: var(--lgs-font-size) !important;
-        flex: none;
-        width: auto;
-        margin-block-end: 0 !important;
-    }
-
-    wa-input[label-at-start]::part(base), wa-number-input[label-at-start]::part(base) {
-        flex: none;
-        width: auto;
-    }
-
-
-    wa-input [slot="suffix"] {
-        margin: 0 var(--lgs-gutter-xs);
-    }
-
-    wa-number-input[no-end]::part(end), wa-number-input[no-start]::part(start) {
-        display: none;
-    }
-
-    /*******************************************************************************
-     * Sliders
-     ******************************************************************************/
-
-    wa-slider {
-
-        width: 100%;
-
-    }
-
-    wa-slider[label-at-start] {
-        display: grid;
-        align-items: center;
-        flex: 1;
-        grid-template-columns: 50% 50%;
-        gap: var(--lgs-gutter-s);
-    }
-
-    wa-slider[size="small"] {
-        --thumb-width: calc(var(--lgs-gutter) * 1.2);
-        --thumb-height: calc(var(--lgs-gutter) * 1.2);
-    }
-
-    wa-slider[label-at-start]::part(label) {
-        margin-block-end: 0;
-    }
-
-    wa-slider::part(track) {
-        background-color: var(--lgs-slider-track-color);
-    }
-
-    wa-slider::part(thumb) {
-        background-color: var(--lgs-slider-thumb-color);
-    }
-
-    wa-slider::part(indicator) {
-        background-color: var(--lgs-slider-thumb-color);
-    }
-
-    .lgs--range-container {
-        display: flex;
-        align-items: center;
-        width: 100%;
-        gap: var(--lgs-gutter-s);
-    }
-
-    .lgs--range-label {
-
-        overflow: hidden;
-        flex: 0 0 30%;
-        white-space: nowrap;
-        text-overflow: ellipsis;
-    }
-
-    .lgs--range-controls {
-        display: flex;
-        align-items: center;
-        flex: 1;
-        gap: var(--lgs-gutter-s);
-    }
-
-    .lgs--range-slider {
-        flex: 1;
-        margin: 0 var(--lgs-gutter);
-    }
-
-    /* Remove default margins from WebAwesome components if necessary */
-
-    .lgs--range-slider::part(base) {
-        margin: 0;
-    }
-
-    /*******************************************************************************
-     * Switches
-     ******************************************************************************/
-
-    wa-switch[label-at-start], wa-switch[label-at-end] {
-        width: 100%;
-    }
-
-    wa-switch[label-at-start][width-auto], wa-switch[label-at-end][width-auto] {
-        width: auto;
-    }
-
-    wa-switch[label-at-start][width-auto]::part(control), wa-switch[label-at-end][width-auto]::part(control) {
-        margin-left: var(--lgs-gutter-s);
-    }
-
-
-    wa-switch[label-at-start]::part(control) {
-        order: 2;
-        margin-left: auto;
-    }
-
-    wa-switch[label-at-start]::part(label) {
-        display: contents;
-        order: 1;
-    }
-
-    wa-switch[label-at-end]::part(control) {
-        display: contents;
-        order: 2;
-    }
-
-    wa-switch[label-at-end]::part(label) {
-        order: 1;
-        margin-left: auto;
-    }
-
-    wa-switch[size="xsmall"] {
-        --width: 24px; --height: 12px; --thumb-size: 8px;
-    }
-
-    wa-switch {
-        --wa-form-control-activated-color: var(--lgs-switch-active-track-color);
-    }
-
-    /*******************************************************************************
-     * Radios
-     */
-
-    wa-radio {
-        --checked-icon-color: var(--wa-color-brand-40);
-        --wa-form-control-border-color: var(--wa-color-brand-50);
-        --wa-form-control-border-width: 3px;
-        --wa-form-control-activated-color: var(--wa-color-brand-fill-loud)
-    }
-
-    wa-radio[size="xsmall"], [size="xsmall"] > wa-radio {
-        --wa-form-control-toggle-size: 16px
-    }
-
-    wa-radio, & input[type="radio"] {
-        &:checked, &:state(checked)::part(control) {
-            background-color: var(--wa-color-brand-40);
-        }
-    }
-
-    /**
-     * Global width for the component
-     */
-
-    wa-radio-group[label-at-start],
-    wa-radio-group[label-at-end] {
-        width: 100%;
-    }
-
-    /**
-     * Generic layout for WaRadioGroup with integrated Hint.
-     * Refined vertical spacing to prevent the hint from being too far down.
-     */
-
-    wa-radio-group[label-at-start],
-    wa-radio-group[label-at-end] {
-        width: 100%;
-    }
-
-    wa-radio-group[label-at-start]::part(form-control),
-    wa-radio-group[label-at-end]::part(form-control) {
-        display: grid;
-        /* Use column-gap for horizontal spacing and a smaller row-gap for the hint */
-        align-items: center;
-        width: 100%;
-        column-gap: var(--lgs-gutter-s);
-        row-gap: 4px; /* Reduced vertical gap for the hint */
-    }
-
-    /* --- CASE: LABEL AT START --- */
-
-    wa-radio-group[label-at-start]::part(form-control) {
-        grid-template-columns: auto 1fr;
-    }
-
-    wa-radio-group[label-at-start]::part(form-control-label) {
-        grid-column: 1;
-        grid-row: 1;
-        justify-self: start;
-    }
-
-    wa-radio-group[label-at-start]::part(form-control-input) {
-        grid-column: 2;
-        grid-row: 1;
-        justify-self: end;
-    }
-
-    wa-radio-group[label-at-start]::part(hint) {
-        margin-top: 0;
-        grid-column: 1 / -1;
-        grid-row: 2;
-        /* Ensure the hint text doesn't inherit unnecessary top margins */
-        justify-self: start;
-    }
-
-    /* --- CASE: LABEL AT END --- */
-
-    wa-radio-group[label-at-end]::part(form-control) {
-        grid-template-columns: 1fr auto;
-    }
-
-    wa-radio-group[label-at-end]::part(form-control-label) {
-        grid-column: 2;
-        grid-row: 1;
-        justify-self: end;
-    }
-
-    wa-radio-group[label-at-end]::part(form-control-input) {
-        grid-column: 1;
-        grid-row: 1;
-        justify-self: start;
-    }
-
-    wa-radio-group[label-at-end]::part(hint) {
-        margin-top: 0;
-        grid-column: 1 / -1;
-        grid-row: 2;
-        justify-self: end;
-    }
-
-    /*******************************************************************************
-     * Callouts
-     ******************************************************************************/
-
-    wa-callout {
-        border-radius: var(--lgs-border-radius);
-    }
-
-    wa-callout::part(icon) {
-        padding-inline-start: var(--lgs-gutter-s)
-    }
-
-    wa-callout::part(message) {
-        padding: var(--lgs-gutter-s);
-    }
-
-    /*******************************************************************************
-     * Toasts
-     ******************************************************************************/
+}
+
+wa-dialog::part(base) {
+    z-index: calc(var(--lgs-ui-layer-zindex) + 1)
+}
+
+wa-dialog [slot="label"] {
+    display: flex;
+    overflow: hidden;
+    align-items: center;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+wa-dialog [slot="label"] sl-icon {
+    margin-right: var(--lgs-gutter-s);
+}
+
+wa-dialog::part(title) {
+    width: 100%;
+}
+
+.dialog__header-actions sl-icon-button, .dialog__header-actions ::slotted(sl-icon-button) {
+    display: flex;
+    align-items: flex-start;
+    flex: 0 0 auto;
+}
+
+
+.lgs-mini-remove-dialog::part(footer) {
+    display: flex;
+    margin-left: auto;
+    gap: var(--lgs-gutter-xs);
+}
+
+/*******************************************************************************
+ * Wa Details
+ ******************************************************************************/
+
+wa-details::part(header) {
+    padding: var(--lgs-gutter-s) var(--lgs-gutter-xs)
+}
+
+wa-details::part(base) {
+    border-radius: var(--lgs-border-radius-s);
+}
+
+wa-details::part(header) {
+    border-radius: var(--lgs-border-radius-s);
+
+}
+
+wa-details [slot="heade"] > svg,
+wa-details [slot="summary"] > span > svg:first-child {
+    margin-right: var(--lgs-gutter-s);
+}
+
+
+wa-details {
+    border-color: var(--wa-color-brand-fill-quiet);;
+}
+
+wa-details::part(content) {
+    display: flex;
+    flex-direction: column;
+    margin-top: calc(-1 * var(--lgs-gutter-s));
+    padding: var(--lgs-gutter-s);
+    gap: var(--lgs-gutter-s);
+}
+
+wa-details > wa-divider {
+    margin-bottom: 0
+}
+
+.lgs--details-list {
+    display: flex;
+    flex-direction: column;
+    padding: 4px;
+    transition: outline-color 0.3s ease,
+    outline-offset 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 0.3s ease,
+    transform 0.2s ease;
+    border-radius: var(--lgs-border-radius-s);
+    outline: 4px solid transparent;
+    outline-offset: 4px;
+    gap: var(--lgs-gutter-xs);
+    backface-visibility: hidden;
+}
+
+wa-details.lgs--details-hoverable:not([open]):hover {
+    color: var(--wa-color-brand-on-normal);
+    border-radius: var(--lgs-border-radius-s);
+    outline: 2px solid var(--wa-color-brand-50);
+    outline-offset: 2px;
+    box-shadow: var(--wa-shadow-l);
+}
+
+/*******************************************************************************
+ * Context menu
+ ******************************************************************************/
+
+#lgs-context-menu-hook { /* id defined in LGS_CONTEXT_MENU_HOOK */
+    position: absolute;
+    z-index: calc(var(--lgs-tools-ui-zindex) - 1);
+    top: -1000px;
+    left: -1000px;
+    width: 10px;
+    height: 50px;
+    transform: translate(-50%, -10px);
+    background-color: red;
+}
+
+.lgs-context-menu {
+    position: fixed !important;
+    top: 0;
+    left: 0;
+    display: flex;
+    visibility: hidden;
+    flex-direction: column;
+    width: auto;
+    margin: 0;
+    padding: 0 !important;
+
+    transition: opacity 120ms ease, transform 120ms ease, visibility 0s 120ms;
+    transform: translateY(-8px);
+    opacity: 0;
+}
+
+.lgs-context-menu.visible {
+    z-index: var(--lgs-context-menu-zindex);
+    visibility: visible;
+    transition: opacity 120ms ease, transform 120ms ease, visibility 0s 0s;
+    transform: translateY(0);
+    pointer-events: all;
+    opacity: var(--lgs-on-map-ui-opacity, 1);
+
+}
+
+:root {
+    --lgs-hover-context-menu-bg-color: var(--lgs-card-on-map-hover-bg-color)
+}
+
+.lgs-context-menu ul {
+    font-size: var(--lgs-font-size);
+    width: 100%;
+    margin: 0;
+    margin-bottom: var(--lgs-gutter-xs);
+    padding: 0 var(--lgs-gutter-xs);
+    list-style: none;
+}
+
+.lgs-context-menu ul:has(> li:only-child) {
+    margin-bottom: 0;
+    padding: var(--lgs-gutter-xs);
+}
+
+.lgs-context-menu ul:has(> li:only-child) > li {
+    margin: 0;
+}
+
+.lgs-context-menu ul:has(> li:only-child) > li:is(.widget-grid-position, .widget-grid-one-line) {
+    margin-top: 0 !important;
+}
+
+.lgs-context-menu li {
+    display: flex;
+    align-items: center;
+    box-sizing: border-box;
+    max-width: 150px;
+    margin: 2px;
+    padding: 2px;
+    cursor: pointer;
+    transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
+    white-space: nowrap;
+    border: 1px solid transparent;
+    border-radius: var(--lgs-on-map-interactive-radius, var(--lgs-border-radius-xs));
+}
+
+.lgs-context-menu li:hover {
+    color: var(--lgs-card-on-map-hover-color, inherit);
+    border-color: var(--lgs-card-on-map-hover-border-color);
+    background: var(--lgs-hover-context-menu-bg-color);
+}
+
+.lgs-context-menu wa-divider {
+    --color: var(--lgs-card-on-map-border-color);
+}
+
+.lgs-context-menu wa-icon, .lgs-context-menu svg, .lgs-context-menu wa-spinner {
+    margin-right: var(--lgs-gutter-s);
+}
+
+/*******************************************************************************
+ * Form elements
+ ******************************************************************************/
+
+[small]::part(input) {
+    width: 4rem;
+}
+
+::part(hint) {
+    font-size: var(--lgs-font-size-s);
+    margin: 0;
+    color: var(--wa-color-text-quiet);
+}
+
+wa-divider {
+    --spacing: var(--lgs-gutter-xs);
+}
+
+.wa-dark wa-divider {
+    --color: var(--wa-color-neutral-fill-normal);
+}
+
+wa-input, wa-number-input {
+    font-size: var(--lgs-font-size) !important;
+    color: var(--wa-color-brand-fill-loud);
+}
+
+wa-input.lgs--short-input::part(input), wa-number-input.lgs--short-input::part(input) {
+    width: 3rem;
+    padding: 0
+}
+
+.wa-dark wa-input::part(input),
+.wa-dark wa-number-input::part(input),
+.wa-dark wa-number-input::part(stepper),
+.wa-dark wa-number-input::part(start),
+.wa-dark wa-number-input::part(start),
+.wa-dark wa-number-input::part(end),
+.wa-dark wa-number-input::part(end) {
+    color: var(--wa-color-brand-fill-loud)
+}
+
+wa-input[label-at-start], wa-number-input[label-at-start] {
+    display: flex;
+    align-items: center;
+    flex-direction: row;
+    justify-content: space-between;
+    width: 100%;
+    gap: var(--lgs-gutter-s);
+}
+
+wa-input.lgs--short-input[label-at-start], wa-number-input.lgs--short-input[label-at-start] {
+    flex: none;
+}
+
+:is([part~='form-control-label'], [part~='label']):has(:not(:empty)), :is([part~='form-control-label'], [part~='label']).has-label {
+    font-size: var(--lgs-font-size) !important;
+    font-weight: normal !important;
+    line-height: var(--wa-form-control-label-line-height);
+    margin-block-end: 0 !important
+}
+
+wa-input[label-at-start] label, wa-number-input[label-at-start] label {
+    font-size: var(--lgs-font-size) !important;
+    flex: none;
+    width: auto;
+    margin-block-end: 0 !important;
+}
+
+wa-input[label-at-start]::part(base), wa-number-input[label-at-start]::part(base) {
+    flex: none;
+    width: auto;
+}
+
+
+wa-input [slot="suffix"] {
+    margin: 0 var(--lgs-gutter-xs);
+}
+
+wa-number-input[no-end]::part(end), wa-number-input[no-start]::part(start) {
+    display: none;
+}
+
+/*******************************************************************************
+ * Sliders
+ ******************************************************************************/
+
+wa-slider {
+
+    width: 100%;
+
+}
+
+wa-slider[label-at-start] {
+    display: grid;
+    align-items: center;
+    flex: 1;
+    grid-template-columns: 50% 50%;
+    gap: var(--lgs-gutter-s);
+}
+
+wa-slider[size="small"] {
+    --thumb-width: calc(var(--lgs-gutter) * 1.2);
+    --thumb-height: calc(var(--lgs-gutter) * 1.2);
+}
+
+wa-slider[label-at-start]::part(label) {
+    margin-block-end: 0;
+}
+
+wa-slider::part(track) {
+    background-color: var(--lgs-slider-track-color);
+}
+
+wa-slider::part(thumb) {
+    background-color: var(--lgs-slider-thumb-color);
+}
+
+wa-slider::part(indicator) {
+    background-color: var(--lgs-slider-thumb-color);
+}
+
+.lgs--range-container {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    gap: var(--lgs-gutter-s);
+}
+
+.lgs--range-label {
+
+    overflow: hidden;
+    flex: 0 0 30%;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.lgs--range-controls {
+    display: flex;
+    align-items: center;
+    flex: 1;
+    gap: var(--lgs-gutter-s);
+}
+
+.lgs--range-slider {
+    flex: 1;
+    margin: 0 var(--lgs-gutter);
+}
+
+/* Remove default margins from WebAwesome components if necessary */
+
+.lgs--range-slider::part(base) {
+    margin: 0;
+}
+
+/*******************************************************************************
+ * Switches
+ ******************************************************************************/
+
+wa-switch[label-at-start], wa-switch[label-at-end] {
+    width: 100%;
+}
+
+wa-switch[label-at-start][width-auto], wa-switch[label-at-end][width-auto] {
+    width: auto;
+}
+
+wa-switch[label-at-start][width-auto]::part(control), wa-switch[label-at-end][width-auto]::part(control) {
+    margin-left: var(--lgs-gutter-s);
+}
+
+
+wa-switch[label-at-start]::part(control) {
+    order: 2;
+    margin-left: auto;
+}
+
+wa-switch[label-at-start]::part(label) {
+    display: contents;
+    order: 1;
+}
+
+wa-switch[label-at-end]::part(control) {
+    display: contents;
+    order: 2;
+}
+
+wa-switch[label-at-end]::part(label) {
+    order: 1;
+    margin-left: auto;
+}
+
+wa-switch[size="xsmall"] {
+    --width: 24px; --height: 12px; --thumb-size: 8px;
+}
+
+wa-switch {
+    --wa-form-control-activated-color: var(--lgs-switch-active-track-color);
+}
+
+/*******************************************************************************
+ * Radios
+ */
+
+wa-radio {
+    --checked-icon-color: var(--wa-color-brand-40);
+    --wa-form-control-border-color: var(--wa-color-brand-50);
+    --wa-form-control-border-width: 3px;
+    --wa-form-control-activated-color: var(--wa-color-brand-fill-loud)
+}
+
+wa-radio[size="xsmall"], [size="xsmall"] > wa-radio {
+    --wa-form-control-toggle-size: 16px
+}
+
+wa-radio, & input[type="radio"] {
+    &:checked, &:state(checked)::part(control) {
+        background-color: var(--wa-color-brand-40);
+    }
+}
+
+/**
+ * Global width for the component
+ */
+
+wa-radio-group[label-at-start],
+wa-radio-group[label-at-end] {
+    width: 100%;
+}
+
+/**
+ * Generic layout for WaRadioGroup with integrated Hint.
+ * Refined vertical spacing to prevent the hint from being too far down.
+ */
+
+wa-radio-group[label-at-start],
+wa-radio-group[label-at-end] {
+    width: 100%;
+}
+
+wa-radio-group[label-at-start]::part(form-control),
+wa-radio-group[label-at-end]::part(form-control) {
+    display: grid;
+    /* Use column-gap for horizontal spacing and a smaller row-gap for the hint */
+    align-items: center;
+    width: 100%;
+    column-gap: var(--lgs-gutter-s);
+    row-gap: 4px; /* Reduced vertical gap for the hint */
+}
+
+/* --- CASE: LABEL AT START --- */
+
+wa-radio-group[label-at-start]::part(form-control) {
+    grid-template-columns: auto 1fr;
+}
+
+wa-radio-group[label-at-start]::part(form-control-label) {
+    grid-column: 1;
+    grid-row: 1;
+    justify-self: start;
+}
+
+wa-radio-group[label-at-start]::part(form-control-input) {
+    grid-column: 2;
+    grid-row: 1;
+    justify-self: end;
+}
+
+wa-radio-group[label-at-start]::part(hint) {
+    margin-top: 0;
+    grid-column: 1 / -1;
+    grid-row: 2;
+    /* Ensure the hint text doesn't inherit unnecessary top margins */
+    justify-self: start;
+}
+
+/* --- CASE: LABEL AT END --- */
+
+wa-radio-group[label-at-end]::part(form-control) {
+    grid-template-columns: 1fr auto;
+}
+
+wa-radio-group[label-at-end]::part(form-control-label) {
+    grid-column: 2;
+    grid-row: 1;
+    justify-self: end;
+}
+
+wa-radio-group[label-at-end]::part(form-control-input) {
+    grid-column: 1;
+    grid-row: 1;
+    justify-self: start;
+}
+
+wa-radio-group[label-at-end]::part(hint) {
+    margin-top: 0;
+    grid-column: 1 / -1;
+    grid-row: 2;
+    justify-self: end;
+}
+
+/*******************************************************************************
+ * Callouts
+ ******************************************************************************/
+
+wa-callout {
+    border-radius: var(--lgs-border-radius);
+}
+
+wa-callout::part(icon) {
+    padding-inline-start: var(--lgs-gutter-s)
+}
+
+wa-callout::part(message) {
+    padding: var(--lgs-gutter-s);
+}
+
+/*******************************************************************************
+ * Toasts
+ ******************************************************************************/
 
 
 .lgs-toast-layer {
@@ -1664,7 +1671,7 @@ wa-dialog::part(dialog)::backdrop {
 .Toastify__toast-container--bottom-left.lgs-toaster {
     bottom: var(--bottom);
     left: var(--left);
-    }
+}
 
 .Toastify__toast.lgs-toast {
     position: relative;
@@ -1683,16 +1690,16 @@ wa-dialog::part(dialog)::backdrop {
 }
 
 .Toastify__toast-body {
-        margin: 0;
-        padding: 0;
-    }
+    margin: 0;
+    padding: 0;
+}
 
 .Toastify__close-button {
     position: absolute;
     z-index: 1;
     top: var(--lgs-gutter-xs);
     right: var(--lgs-gutter-xs);
-        opacity: 1;
+    opacity: 1;
     color: var(--lgs-toast-close-color, var(--wa-color-text-normal));
 }
 
@@ -1715,17 +1722,17 @@ wa-dialog::part(dialog)::backdrop {
 .lgs-toast-callout::part(message) {
     padding-right: calc(var(--lgs-gutter) + 1.5rem);
     padding-bottom: calc(var(--lgs-gutter-s) + 0.45rem);
-    }
+}
 
-    .toast-caption {
-        font-weight: 700;
-        color: inherit;
-    }
+.toast-caption {
+    font-weight: 700;
+    color: inherit;
+}
 
-    .toast-text {
-        font-size: var(--lgs-font-size-s);
-        margin-top: var(--lgs-gutter-xxs);
-    }
+.toast-text {
+    font-size: var(--lgs-font-size-s);
+    margin-top: var(--lgs-gutter-xxs);
+}
 
 .toast-action-stack {
     display: flex;
@@ -1783,545 +1790,545 @@ wa-dialog::part(dialog)::backdrop {
     opacity: 1;
     border-radius: 999px;
     background: var(--lgs-toast-progress-color) !important;
-    }
+}
 
-    .toast-error {
-        font-size: var(--lgs-font-size-s);
-        padding: var(--lgs-gutter-s);
-        color: var(--lgs-error-color);
-        border: 1px solid var(--lgs-error-color);
-        border-radius: var(--lgs-border-radius-s);
-        background-color: var(--lgs-error-bg-color);
-    }
+.toast-error {
+    font-size: var(--lgs-font-size-s);
+    padding: var(--lgs-gutter-s);
+    color: var(--lgs-error-color);
+    border: 1px solid var(--lgs-error-color);
+    border-radius: var(--lgs-border-radius-s);
+    background-color: var(--lgs-error-bg-color);
+}
 
-    /*******************************************************************************
-     * Progress Bars
-     ******************************************************************************/
+/*******************************************************************************
+ * Progress Bars
+ ******************************************************************************/
 
-    wa-progress-bar {
-        margin-top: var(--lgs-gutter-xs);
-        margin-bottom: var(--lgs-gutter-xs);
-        --track-height: var(--lgs-gutter-s);
-    }
+wa-progress-bar {
+    margin-top: var(--lgs-gutter-xs);
+    margin-bottom: var(--lgs-gutter-xs);
+    --track-height: var(--lgs-gutter-s);
+}
 
-    wa-progress-bar.normal {
-        --track-height: var(--lgs-gutter)
-    }
+wa-progress-bar.normal {
+    --track-height: var(--lgs-gutter)
+}
 
-    /*******************************************************************************
-     * Toggle State Icon
-     ******************************************************************************/
-    /*.toggle-state-icon wa-button {*/
-    /*    font-size: var(--lgs-font-size-m);*/
-    /*}*/
+/*******************************************************************************
+ * Toggle State Icon
+ ******************************************************************************/
+/*.toggle-state-icon wa-button {*/
+/*    font-size: var(--lgs-font-size-m);*/
+/*}*/
 
-    /*.toggle-state-icon.small sl-icon-button {*/
-    /*    font-size: var(--lgs-font-size-s);*/
-    /*}*/
+/*.toggle-state-icon.small sl-icon-button {*/
+/*    font-size: var(--lgs-font-size-s);*/
+/*}*/
 
-    /*.toggle-state-icon.medium sl-icon-button {*/
-    /*    font-size: var(--lgs-font-size-m);*/
-    /*}*/
+/*.toggle-state-icon.medium sl-icon-button {*/
+/*    font-size: var(--lgs-font-size-m);*/
+/*}*/
 
-    /*.toggle-state-icon.large sl-icon-button {*/
-    /*    font-size: var(--lgs-font-size-l);*/
-    /*}*/
+/*.toggle-state-icon.large sl-icon-button {*/
+/*    font-size: var(--lgs-font-size-l);*/
+/*}*/
 
-    /*******************************************************************************
-     * Misc.
-     */
+/*******************************************************************************
+ * Misc.
+ */
 
-    :root {
-        --lgs-freemium-color: dodgerblue;
-        --lgs-premium-color: goldenrod;
-        --lgs-animation-duration: 1s;
-        --lgs-animation-duration-on: var(--lgs-animation-duration);
-        --lgs-animation-duration-off: var(--lgs-animation-duration);
-        --lgs-animation-delay: 0s;
+:root {
+    --lgs-freemium-color: dodgerblue;
+    --lgs-premium-color: goldenrod;
+    --lgs-animation-duration: 1s;
+    --lgs-animation-duration-on: var(--lgs-animation-duration);
+    --lgs-animation-duration-off: var(--lgs-animation-duration);
+    --lgs-animation-delay: 0s;
 
-    }
+}
 
-    h1, h2, h3, p, ul, li {
-        margin: var(--lgs-gutter-xs) 0;
-    }
+h1, h2, h3, p, ul, li {
+    margin: var(--lgs-gutter-xs) 0;
+}
 
-    h1 {
-        font-size: var(--lgs-font-size-l);
-    }
+h1 {
+    font-size: var(--lgs-font-size-l);
+}
 
-    h2 {
-        font-size: var(--lgs-font-size-m);
-    }
+h2 {
+    font-size: var(--lgs-font-size-m);
+}
 
-    ul {
-        list-style-type: square;
-    }
+ul {
+    list-style-type: square;
+}
 
-    h3 {
-        font-size: var(--lgs-font-size);
-        font-weight: bold;
-    }
+h3 {
+    font-size: var(--lgs-font-size);
+    font-weight: bold;
+}
 
-    hr {
-        width: calc(100% - 2 * var(--lgs-gutter-xs));
-        height: 1px;
-        margin: var(--lgs-gutter-xs);
-        border: none;
-        background: var(--lgs-card-on-map-border-color)
-    }
+hr {
+    width: calc(100% - 2 * var(--lgs-gutter-xs));
+    height: 1px;
+    margin: var(--lgs-gutter-xs);
+    border: none;
+    background: var(--lgs-card-on-map-border-color)
+}
 
-    [readonly] {
-        user-select: none;
-        pointer-events: none;
-    }
+[readonly] {
+    user-select: none;
+    pointer-events: none;
+}
 
-    /*******************************************************************************
-     * Widgets and toolbars
-     ******************************************************************************/
+/*******************************************************************************
+ * Widgets and toolbars
+ ******************************************************************************/
 
-    .lgs-widget-container {
-        position: absolute;
-        top: 0;
-        left: 0;
-        z-index: calc(var(--crop-zindex) + 2);
-        /*width: 100%;*/
-        /*height: 100%;*/
-    }
+.lgs-widget-container {
+    position: absolute;
+    z-index: calc(var(--crop-zindex) + 2);
+    top: 0;
+    left: 0;
+    /*width: 100%;*/
+    /*height: 100%;*/
+}
 
-    .lgs-widget {
-        position: absolute;
-        z-index: calc(var(--lgs-tools-ui-zindex) - 1);
-        display: flex;
-        align-items: center;
-        flex-direction: row;
-        flex-shrink: 0;
-        width: auto;
-        margin: var(--lgs-gutter-xs);
-        pointer-events: auto;
+.lgs-widget {
+    position: absolute;
+    z-index: calc(var(--lgs-tools-ui-zindex) - 1);
+    display: flex;
+    align-items: center;
+    flex-direction: row;
+    flex-shrink: 0;
+    width: auto;
+    margin: var(--lgs-gutter-xs);
+    pointer-events: auto;
+    opacity: 0;
+    gap: var(--lgs-gutter-xs);
+    touchAction: 'pan-x pan-y'
+}
+
+.lgs-widget.lgs-widget-hidden {
+    top: -9999px !important;
+    left: -9999px !important;
+    visibility: hidden !important;
+}
+
+.lgs-widget * {
+    user-select: none !important;
+}
+
+.lgs-widget-inner-overlay {
+    position: absolute;
+    z-index: 9999;
+    top: 0;
+    left: 0;
+    display: none;
+    width: 100%;
+    height: 100%;
+    cursor: grabbing !important;
+    pointer-events: none;
+    background: transparent;
+}
+
+.lgs-visual-widget {
+    margin: 0 !important;
+    transition: transform 0s ease-in-out;
+    transform: var(--lgs-tx-transform);
+}
+
+.lgs-widget.lgs-widget-collapsed {
+    overflow: hidden;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    min-width: 40px;
+    height: 40px;
+    min-height: 40px;
+    cursor: grab;
+}
+
+.lgs-widget.lgs-widget-collapsed.lgs-widget-locked {
+    cursor: default;
+}
+
+.lgs-widget.lgs-widget-locked > :not(.lgs-widget-inner-overlay):not(.lgs-widget-lock-overlay) {
+    transition: opacity 160ms ease;
+}
+
+.lgs-widget-collapsed-icon {
+    font-size: var(--lgs-font-size);
+    line-height: 1;
+    position: absolute;
+    z-index: 2;
+    display: flex;
+    visibility: visible;
+    align-items: center;
+    justify-content: center;
+    width: auto;
+    height: auto;
+    pointer-events: none;
+    opacity: 1;
+    color: var(--lgs-text-on-color, var(--lgs-light-color));
+    inset: 0;
+}
+
+.lgs-widget-collapsed-icon wa-icon {
+    font-size: inherit;
+    line-height: 1;
+    display: inline-flex;
+    visibility: visible;
+    align-items: center;
+    justify-content: center;
+    width: 1.25em;
+    min-width: 1.25em;
+    height: 1em;
+    min-height: 1em;
+    opacity: 1;
+    color: inherit;
+    fill: currentColor;
+}
+
+.lgs-widget-collapsed-icon wa-icon::part(svg) {
+    display: block;
+    visibility: visible;
+    width: 1.25em;
+    height: 1em;
+    opacity: 1;
+    color: currentColor;
+    fill: currentColor;
+}
+
+.lgs-widget.lgs-widget-collapsed-toolbar,
+.lgs-widget.lgs-widget-collapsed-toolbar > .lgs-widget-collapsed-icon,
+.lgs-widget.lgs-widget-collapsed-toolbar > .lgs-widget-collapsed-icon wa-icon {
+    visibility: visible !important;
+    opacity: 1 !important;
+    color: var(--lgs-text-on-color, var(--lgs-light-color)) !important;
+}
+
+.lgs-widget.lgs-widget-collapsed-toolbar > .lgs-widget-collapsed-icon wa-icon {
+    font-size: var(--lgs-font-size);
+    position: relative;
+    z-index: 3;
+    display: inline-flex !important;
+    color: var(--lgs-text-on-color, var(--lgs-light-color)) !important;
+    fill: currentColor !important;
+    stroke: currentColor !important;
+}
+
+.lgs-widget.lgs-widget-collapsed-toolbar > .lgs-widget-collapsed-icon wa-icon::part(svg) {
+    visibility: visible !important;
+    opacity: 1 !important;
+    color: currentColor !important;
+    fill: currentColor !important;
+    stroke: currentColor !important;
+}
+
+.lgs-widget-lock-overlay {
+    font-size: var(--lgs-font-size);
+    line-height: 1;
+    position: absolute;
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: opacity 160ms ease;
+    pointer-events: none;
+    opacity: 0;
+    color: var(--lgs-light-color);
+    inset: 0;
+}
+
+.lgs-widget-lock-badge {
+    font-size: var(--lgs-font-size-m);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    width: 2.25rem;
+    min-width: 2.25rem;
+    height: 2.25rem;
+    min-height: 2.25rem;
+    padding: 0;
+    transform: scale(var(--lgs-widget-scale-correction, 1));
+    transform-origin: center;
+    opacity: 0.92;
+    color: var(--wa-color-brand-on-quiet);
+    border: 0;
+    border-radius: var(--lgs-border-radius-s);
+    background: color-mix(in oklab, var(--wa-color-brand-fill-quiet) 15%, transparent);
+    text-shadow: 0 1px 4px color-mix(in oklab, black 34%, transparent);
+    backdrop-filter: blur(var(--lgs-blur));
+    aspect-ratio: 1;
+}
+
+.lgs-widget-lock-badge wa-icon {
+    font-size: var(--lgs-font-size);
+    line-height: 1;
+    color: inherit;
+}
+
+.lgs-widget-lock-badge.lgs-widget-lock-badge-on-map {
+    color: var(--lgs-widget-lock-badge-on-map-color, var(--lgs-text-on-color));
+    border: 1px solid var(--lgs-card-on-map-border-color);
+    background-color: var(--lgs-card-on-map-bg-color);
+    background-image: var(--lgs-card-on-map-bg-image);
+    box-shadow: var(--lgs-on-map-floating-shadow, var(--lgs-overlay-floating-shadow));
+    background-blend-mode: var(--lgs-card-on-map-bg-blend-mode);
+}
+
+.lgs-widget-lock-overlay.is-visible {
+    opacity: 1;
+}
+
+.lgs-widget.lgs-widget-locked:not(.recording-locked) {
+    cursor: default;
+}
+
+.lgs-visual-widget > .lgs-widget-inner-overlay.no-propagation {
+    pointer-events: auto !important;
+}
+
+.dragging .lgs-widget-inner-overlay {
+    display: block;
+    cursor: grabbing !important;
+    pointer-events: auto;
+}
+
+
+.dragging.lgs-widget *, .dragging.lgs-widget ::part(base), .dragging.lgs-widget ::part(combobox) {
+    cursor: grabbing !important;
+}
+
+.lgs-widget .grabber {
+    font-size: var(--lgs-font-size) !important;
+    flex-shrink: 0;
+    cursor: grab;
+}
+
+.lgs-widget .grabber::part(base) {
+    font-size: var(--lgs-font-size);
+    padding-right: 0;
+    padding-left: 0;
+}
+
+.lgs-widget.dragging .grabber {
+    cursor: grabbing !important;
+}
+
+.lgs-widget sl-button::part(base) {
+    border: none;
+    background: transparent;
+}
+
+.close-lgs-toolbar {
+    font-size: var(--lgs-font-size);
+}
+
+.lgs-widget-container ::part(listbox) {
+    opacity: 1;
+}
+
+.lgs-widget-container .dragging ::part(listbox) {
+    opacity: 0;
+}
+
+.lgs-toolbar.dragging-animation {
+    background-color: var(--lgs-light-color-25);
+}
+
+.lgs-widget-clone {
+    position: absolute !important;
+    z-index: 10000;
+    top: -9999px !important;
+    left: -9999px !important;
+    visibility: visible !important;
+    pointer-events: none !important;
+    contain: layout style paint;
+}
+
+.lgs-widget-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    display: block;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    opacity: 1;
+    contain: layout style paint;
+}
+
+.lgs-widget.recording-locked {
+    user-select: none;
+    pointer-events: none;
+}
+
+/*******************************************************************************
+ * Cesium Selection indicator
+ ******************************************************************************/
+
+.cesium-selection-wrapper {
+    position: absolute;
+    visibility: hidden;
+    width: var(--lgs-dimension);
+
+    height: var(--lgs-dimension);
+    transition: opacity 0.5s ease-in;
+    pointer-events: none;
+    opacity: 0;
+}
+
+.cesium-selection-wrapper.cesium-selection-wrapper-visible {
+    /*visibility: visible;*/
+    visibility: hidden;
+    animation: scaleSelector 1s ease-in-out;
+    opacity: 1;
+}
+
+@keyframes scaleSelector {
+    0% {
+        transform: scale(1.5);
         opacity: 0;
-        gap: var(--lgs-gutter-xs);
-        touchAction: 'pan-x pan-y'
     }
-
-    .lgs-widget.lgs-widget-hidden {
-        top: -9999px !important;
-        left: -9999px !important;
-        visibility: hidden !important;
-    }
-
-    .lgs-widget * {
-        user-select: none !important;
-    }
-
-    .lgs-widget-inner-overlay {
-        position: absolute;
-        z-index: 9999;
-        top: 0;
-        left: 0;
-        display: none;
-        width: 100%;
-        height: 100%;
-        cursor: grabbing !important;
-        pointer-events: none;
-        background: transparent;
-    }
-
-    .lgs-visual-widget {
-        margin: 0 !important;
-        transition: transform 0s ease-in-out;
-        transform: var(--lgs-tx-transform);
-    }
-
-    .lgs-widget.lgs-widget-collapsed {
-        align-items: center;
-        justify-content: center;
-        overflow: hidden;
-        width: 40px;
-        height: 40px;
-        min-width: 40px;
-        min-height: 40px;
-        cursor: grab;
-    }
-
-    .lgs-widget.lgs-widget-collapsed.lgs-widget-locked {
-        cursor: default;
-    }
-
-    .lgs-widget.lgs-widget-locked > :not(.lgs-widget-inner-overlay):not(.lgs-widget-lock-overlay) {
-        transition: opacity 160ms ease;
-    }
-
-    .lgs-widget-collapsed-icon {
-        font-size: var(--lgs-font-size);
-        line-height: 1;
-        position: absolute;
-        z-index: 2;
-        inset: 0;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        width: auto;
-        height: auto;
-        color: var(--lgs-text-on-color, var(--lgs-light-color));
-        pointer-events: none;
-        opacity: 1;
-        visibility: visible;
-    }
-
-    .lgs-widget-collapsed-icon wa-icon {
-        font-size: inherit;
-        line-height: 1;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        width: 1.25em;
-        min-width: 1.25em;
-        height: 1em;
-        min-height: 1em;
-        color: inherit;
-        fill: currentColor;
-        opacity: 1;
-        visibility: visible;
-    }
-
-    .lgs-widget-collapsed-icon wa-icon::part(svg) {
-        display: block;
-        width: 1.25em;
-        height: 1em;
-        color: currentColor;
-        fill: currentColor;
-        opacity: 1;
-        visibility: visible;
-    }
-
-    .lgs-widget.lgs-widget-collapsed-toolbar,
-    .lgs-widget.lgs-widget-collapsed-toolbar > .lgs-widget-collapsed-icon,
-    .lgs-widget.lgs-widget-collapsed-toolbar > .lgs-widget-collapsed-icon wa-icon {
-        color: var(--lgs-text-on-color, var(--lgs-light-color)) !important;
-        opacity: 1 !important;
-        visibility: visible !important;
-    }
-
-    .lgs-widget.lgs-widget-collapsed-toolbar > .lgs-widget-collapsed-icon wa-icon {
-        font-size: var(--lgs-font-size);
-        position: relative;
-        z-index: 3;
-        display: inline-flex !important;
-        color: var(--lgs-text-on-color, var(--lgs-light-color)) !important;
-        fill: currentColor !important;
-        stroke: currentColor !important;
-    }
-
-    .lgs-widget.lgs-widget-collapsed-toolbar > .lgs-widget-collapsed-icon wa-icon::part(svg) {
-        color: currentColor !important;
-        fill: currentColor !important;
-        stroke: currentColor !important;
-        opacity: 1 !important;
-        visibility: visible !important;
-    }
-
-    .lgs-widget-lock-overlay {
-        font-size: var(--lgs-font-size);
-        line-height: 1;
-        position: absolute;
-        z-index: 10000;
-        inset: 0;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: var(--lgs-light-color);
-        pointer-events: none;
-        opacity: 0;
-        transition: opacity 160ms ease;
-    }
-
-    .lgs-widget-lock-badge {
-        font-size: var(--lgs-font-size-m);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        box-sizing: border-box;
-        width: 2.25rem;
-        min-width: 2.25rem;
-        height: 2.25rem;
-        min-height: 2.25rem;
-        padding: 0;
-        color: var(--wa-color-brand-on-quiet);
-        border: 0;
-        border-radius: var(--lgs-border-radius-s);
-        background: color-mix(in oklab, var(--wa-color-brand-fill-quiet) 15%, transparent);
-        text-shadow: 0 1px 4px color-mix(in oklab, black 34%, transparent);
-        backdrop-filter: blur(var(--lgs-blur));
-        transform: scale(var(--lgs-widget-scale-correction, 1));
-        transform-origin: center;
-        aspect-ratio: 1;
-        opacity: 0.92;
-    }
-
-    .lgs-widget-lock-badge wa-icon {
-        font-size: var(--lgs-font-size);
-        line-height: 1;
-        color: inherit;
-    }
-
-    .lgs-widget-lock-badge.lgs-widget-lock-badge-on-map {
-        color: var(--lgs-widget-lock-badge-on-map-color, var(--lgs-text-on-color));
-        border: 1px solid var(--lgs-card-on-map-border-color);
-        background-color: var(--lgs-card-on-map-bg-color);
-        background-image: var(--lgs-card-on-map-bg-image);
-        background-blend-mode: var(--lgs-card-on-map-bg-blend-mode);
-        box-shadow: var(--lgs-on-map-floating-shadow, var(--lgs-overlay-floating-shadow));
-    }
-
-    .lgs-widget-lock-overlay.is-visible {
+    100% {
+        transform: scale(1);
         opacity: 1;
     }
+}
 
-    .lgs-widget.lgs-widget-locked:not(.recording-locked) {
-        cursor: default;
+.cesium-selection-wrapper-one {
+    fill: var(--lgs-card-on-map-bg-color);
+    stroke: var(--lgs-card-on-map-border-color);
+}
+
+.cesium-selection-wrapper-two {
+    fill: chartreuse;
+    stroke: chartreuse
+}
+
+/*******************************************************************************
+ * Blinking
+ ******************************************************************************/
+
+:root {
+    --blink-speed: 1s
+}
+
+.blinking {
+    animation: blink var(--blink-speed) step-start infinite
+}
+
+.flashing {
+    animation: blink 0.7s step-start infinite
+
+}
+
+@keyframes blink {
+    50% {
+        opacity: 0
     }
-
-    .lgs-visual-widget > .lgs-widget-inner-overlay.no-propagation {
-        pointer-events: auto !important;
-    }
-
-    .dragging .lgs-widget-inner-overlay {
-        display: block;
-        cursor: grabbing !important;
-        pointer-events: auto;
-    }
+}
 
 
-    .dragging.lgs-widget *, .dragging.lgs-widget ::part(base), .dragging.lgs-widget ::part(combobox) {
-        cursor: grabbing !important;
-    }
+/*******************************************************************************
+ * Camera flash
+ ******************************************************************************/
 
-    .lgs-widget .grabber {
-        font-size: var(--lgs-font-size) !important;
-        flex-shrink: 0;
-        cursor: grab;
-    }
+.lgs-flash-effect::after {
+    position: absolute;
+    top: 0;
+    right: 0; bottom: 0; left: 0; content: "";
+    pointer-events: none;
+    opacity: 0;
+    background: radial-gradient(
+            circle at 50% 50%, /* lumière décalée */ rgba(255, 255, 150, 0.8),
+            transparent 40%
+    );
+}
 
-    .lgs-widget .grabber::part(base) {
-        font-size: var(--lgs-font-size);
-        padding-right: 0;
-        padding-left: 0;
-    }
+.lgs-flash-effect.flash-on::after {
+    animation: lgs-flash-light 1.2s ease-out forwards;
+}
 
-    .lgs-widget.dragging .grabber {
-        cursor: grabbing !important;
-    }
+@keyframes lgs-flash-light {
+    0% { opacity: 0; }
+    10% { opacity: 1; }
+    /* pic lumineux */
+    40% { opacity: 0.4; }
+    /* décroissance */
+    100% { opacity: 0; }
+}
 
-    .lgs-widget sl-button::part(base) {
-        border: none;
-        background: transparent;
-    }
+/*******************************************************************************
+ * Console
+ ******************************************************************************/
 
-    .close-lgs-toolbar {
-        font-size: var(--lgs-font-size);
-    }
+.lgs-console {
+    padding: var(--lgs-gutter-xs);
+    white-space: break-spaces;
+    color: var(--wa-color-neutral-95);
+    border-radius: var(--lgs-border-radius-xs);
+    background-color: var(--wa-color-neutral-20);
+}
 
-    .lgs-widget-container ::part(listbox) {
-        opacity: 1;
-    }
+/*******************************************************************************
+ * Specific inputs
+ ******************************************************************************/
 
-    .lgs-widget-container .dragging ::part(listbox) {
-        opacity: 0;
-    }
+.lgs-journey-metrics-origine-user::part(base) {
+    border-color: var(--lgs-warning-bg-color) !important;
+}
 
-    .lgs-toolbar.dragging-animation {
-        background-color: var(--lgs-light-color-25);
-    }
+.lgs-journey-metrics-origine-user sl-icon-button::part(base) {
+    color: var(--lgs-warning-color) !important;
+}
 
-    .lgs-widget-clone {
-        position: absolute !important;
-        z-index: 10000;
-        top: -9999px !important;
-        left: -9999px !important;
-        visibility: visible !important;
-        pointer-events: none !important;
-        contain: layout style paint;
-    }
+/*******************************************************************************
+ * Screen readers
+ ******************************************************************************/
 
-    .lgs-widget-canvas {
-        position: absolute;
-        top: 0;
-        left: 0;
-        display: block;
-        width: 100%;
-        height: 100%;
-        pointer-events: none;
-        opacity: 1;
-        contain: layout style paint;
-    }
+.screen-reader-only {
+    position: absolute;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0); /* Legacy support */
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    white-space: nowrap;
+    border: 0;
+    clip-path: inset(50%); /* Modern clipping */
+}
 
-    .lgs-widget.recording-locked {
-        user-select: none;
-        pointer-events: none;
-    }
+/*******************************************************************************
+ * wa-copy-button
+ ******************************************************************************/
 
-    /*******************************************************************************
-     * Cesium Selection indicator
-     ******************************************************************************/
+wa-copy-button[variant="brand"] {
+    color: var(--wa-color-brand);
+}
 
-    .cesium-selection-wrapper {
-        position: absolute;
-        visibility: hidden;
-        width: var(--lgs-dimension);
+wa-copy-button::part(button) {
+    font-size: var(--wa-font-size-m) !important;
+}
 
-        height: var(--lgs-dimension);
-        transition: opacity 0.5s ease-in;
-        pointer-events: none;
-        opacity: 0;
-    }
+wa-copy-button[variant="brand"]::part(button):hover {
+    background-color: var(--wa-color-brand-fill-quiet);
+}
 
-    .cesium-selection-wrapper.cesium-selection-wrapper-visible {
-        /*visibility: visible;*/
-        visibility: hidden;
-        animation: scaleSelector 1s ease-in-out;
-        opacity: 1;
-    }
+/*******************************************************************************
+ * wa-select
+ ******************************************************************************/
 
-    @keyframes scaleSelector {
-        0% {
-            transform: scale(1.5);
-            opacity: 0;
-        }
-        100% {
-            transform: scale(1);
-            opacity: 1;
-        }
-    }
-
-    .cesium-selection-wrapper-one {
-        fill: var(--lgs-card-on-map-bg-color);
-        stroke: var(--lgs-card-on-map-border-color);
-    }
-
-    .cesium-selection-wrapper-two {
-        fill: chartreuse;
-        stroke: chartreuse
-    }
-
-    /*******************************************************************************
-     * Blinking
-     ******************************************************************************/
-
-    :root {
-        --blink-speed: 1s
-    }
-
-    .blinking {
-        animation: blink var(--blink-speed) step-start infinite
-    }
-
-    .flashing {
-        animation: blink 0.7s step-start infinite
-
-    }
-
-    @keyframes blink {
-        50% {
-            opacity: 0
-        }
-    }
-
-
-    /*******************************************************************************
-     * Camera flash
-     ******************************************************************************/
-
-    .lgs-flash-effect::after {
-        position: absolute;
-        top: 0;
-        right: 0; bottom: 0; left: 0; content: "";
-        pointer-events: none;
-        opacity: 0;
-        background: radial-gradient(
-                circle at 50% 50%, /* lumière décalée */ rgba(255, 255, 150, 0.8),
-                transparent 40%
-        );
-    }
-
-    .lgs-flash-effect.flash-on::after {
-        animation: lgs-flash-light 1.2s ease-out forwards;
-    }
-
-    @keyframes lgs-flash-light {
-        0% { opacity: 0; }
-        10% { opacity: 1; }
-        /* pic lumineux */
-        40% { opacity: 0.4; }
-        /* décroissance */
-        100% { opacity: 0; }
-    }
-
-    /*******************************************************************************
-     * Console
-     ******************************************************************************/
-
-    .lgs-console {
-        padding: var(--lgs-gutter-xs);
-        white-space: break-spaces;
-        color: var(--wa-color-neutral-95);
-        border-radius: var(--lgs-border-radius-xs);
-        background-color: var(--wa-color-neutral-20);
-    }
-
-    /*******************************************************************************
-     * Specific inputs
-     ******************************************************************************/
-
-    .lgs-journey-metrics-origine-user::part(base) {
-        border-color: var(--lgs-warning-bg-color) !important;
-    }
-
-    .lgs-journey-metrics-origine-user sl-icon-button::part(base) {
-        color: var(--lgs-warning-color) !important;
-    }
-
-    /*******************************************************************************
-     * Screen readers
-     ******************************************************************************/
-
-    .screen-reader-only {
-        position: absolute;
-        overflow: hidden;
-        clip: rect(0, 0, 0, 0); /* Legacy support */
-        width: 1px;
-        height: 1px;
-        margin: -1px;
-        padding: 0;
-        white-space: nowrap;
-        border: 0;
-        clip-path: inset(50%); /* Modern clipping */
-    }
-
-    /*******************************************************************************
-     * wa-copy-button
-     ******************************************************************************/
-
-    wa-copy-button[variant="brand"] {
-        color: var(--wa-color-brand);
-    }
-
-    wa-copy-button::part(button) {
-        font-size: var(--wa-font-size-m) !important;
-    }
-
-    wa-copy-button[variant="brand"]::part(button):hover {
-        background-color: var(--wa-color-brand-fill-quiet);
-    }
-
-    /*******************************************************************************
-     * wa-select
-     ******************************************************************************/
-
-    wa-select[label-at-start]::part(form-control) {
-        display: flex;
-        align-items: center;
-        gap: var(--lgs-gutter-s);
-    }
+wa-select[label-at-start]::part(form-control) {
+    display: flex;
+    align-items: center;
+    gap: var(--lgs-gutter-s);
+}
 
 wa-select::part(listbox) {
     font-size: var(--lgs-font-size);
