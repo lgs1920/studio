@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-26
- * Last modified: 2026-03-26
+ * Created on: 2026-05-07
+ * Last modified: 2026-05-07
  *
  *
  * Copyright © 2026 LGS1920
@@ -274,6 +274,7 @@ export const MapPOIContent = ({poi, useInMenu = false, style}) => {
             className={classNames(
                 'poi-icon-wrapper',
                 (!point?.expanded || useInMenu) && 'poi-shrinked',
+                !point?.expanded && 'lgs--location-pin',
                 useInMenu && 'used-in-menu',
             )}
             style={{
@@ -285,7 +286,6 @@ export const MapPOIContent = ({poi, useInMenu = false, style}) => {
         >
             <div className="poi-card" ref={_poiContent}>
                 <div className="poi-card-inner">
-                    {!useInMenu && <div className="poi-card-triangle-down"/>}
                     <div className="poi-card-inner-background"/>
 
                     {point?.expanded && !useInMenu ? (
@@ -293,10 +293,24 @@ export const MapPOIContent = ({poi, useInMenu = false, style}) => {
                             <h3>{point.title ?? 'Point Of Interest'}</h3>
                             {point.location && (
                                 <div className="poi-location" title={point.location}>
-                                    <WaIcon name="location-dot" variant="regular"/>
+                                    <WaIcon name="location-dot"
+                                            variant="regular"
+                                            onWaLoad={renderToCanvasAfterIconLoad}
+                                    />
                                     <span>{point.location}</span>
                                 </div>
                             )}
+
+                            <div className="poi-location" title={point.location}>
+                                <WaIcon name={iconName}
+                                        variant="regular"
+                                        src={point?.visible && isSvgIcon ? `${ICONS_PATH}/${iconName}` : ''}
+                                        onWaLoad={renderToCanvasAfterIconLoad}
+                                />
+                                <span>{point.category}</span>
+                            </div>
+
+
                             <div className="poi-full-coordinates">
                                 {point.height > 0 && point.height !== point.simulatedHeight && (
                                     <NameValueUnit
@@ -334,11 +348,11 @@ export const MapPOIContent = ({poi, useInMenu = false, style}) => {
                      )}
                 </div>
 
-                {point?.expanded && !useInMenu && (
-                    <div className="poi-menu-icons">
-                        <MapPOIContent poi={point.id} useInMenu={true}/>
-                    </div>
-                )}
+                {/* {point?.expanded && !useInMenu && ( */}
+                {/*     <div className="poi-menu-icons"> */}
+                {/*         /!* <MapPOIContent poi={point.id} useInMenu={true}/> *!/ */}
+                {/*     </div> */}
+                {/* )} */}
             </div>
         </div>
     )

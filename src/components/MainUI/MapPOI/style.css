@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-27
- * Last modified: 2026-04-27
+ * Created on: 2026-05-07
+ * Last modified: 2026-05-07
  *
  *
  * Copyright © 2026 LGS1920
@@ -36,8 +36,9 @@
     font-size: var(--lgs-font-size);
     font-weight: normal;
     position: absolute;
+    z-index: 1000000;
     top: -9999px;
-    left: -9999px;
+    left: 500px;
     display: flex;
 }
 
@@ -49,10 +50,11 @@
 }
 
 .poi-icon-wrapper.poi-shrinked {
-    font-size: var(--dimension);
+    font-size: calc(0.8 * var(--dimension));
     line-height: 1;
     width: var(--dimension);
     height: var(--dimension);
+    transform: rotate(-45deg)
     --poi-delta-x: 0;
     --dimension: var(--poi-reduce-dimension);
 }
@@ -105,17 +107,6 @@
 }
 
 .poi-card-triangle-down {
-    position: absolute;
-    bottom: calc(-1 * var(--triangle-size) - var(--poi-border-width));
-    left: 50%;
-    width: 0;
-    height: 0;
-    transform: translateX(-50%);
-    opacity: 1;
-    border-top: calc(var(--triangle-size)) solid var(--lgs-poi-color);
-    border-right: calc(var(--demi)) solid transparent;
-    border-left: calc(var(--demi)) solid transparent;
-    --demi: var(--triangle-size)/2;
 }
 
 .poi-shrinked .poi-card {
@@ -132,7 +123,7 @@
     margin-left: calc(1 * var(--poi-menu-icons-column-width));
     border: var(--poi-border-width) solid var(--lgs-poi-border-color);
     border-radius: var(--lgs-border-radius-s);
-    backdrop-filter: blur(var(--lgs-blur));
+    background-color: var(--lgs-poi-background-color);
 }
 
 .poi-shrinked .poi-card-inner {
@@ -142,6 +133,12 @@
     width: var(--dimension);
     height: var(--dimension);
     margin: 0;
+    transform: rotate(45deg);
+    border: none;
+    border-radius: 50% 50% 12% 50%;
+    box-shadow: inset 0 0 0 var(--poi-border-width) var(--lgs-poi-color);
+
+
 }
 
 .used-in-menu .poi-card-inner {
@@ -156,7 +153,6 @@
     margin: calc(var(--poi-padding) * -1);
     opacity: 0.7;
     border-radius: var(--lgs-border-radius-xs);
-    background-color: var(--lgs-poi-background-color);
 }
 
 .poi-icon-wrapper:not(.poi-shrinked) .poi-card-inner {
@@ -175,9 +171,14 @@
     margin: 0;
 }
 
-.poi-card-inner svg, .poi-card-inner wa-icon::part(svg) {
+.poi-card-inner svg, :not(.poi-shrinked) .poi-card-inner wa-icon::part(svg) {
     align-self: center;
-    max-width: var(--dimension) !important;
+    max-width: calc(0.8 * var(--dimension)) !important;
+    transform: rotate(-45deg);
+}
+
+.poi-card-inner .poi-location wa-icon::part(svg) {
+    transform: rotate(0);
 }
 
 .poi-card-inner h3 {
@@ -234,13 +235,11 @@
     font-size: calc(var(--lgs-font-size-s));
 }
 
-.poi-as-flag { font-size: calc(var(--dimension) * var(--reducer));
-
+.poi-as-flag {
+    font-size: calc(var(--dimension) * var(--reducer));
     line-height: 1;
     color: var(--lgs-poi-color);
-    --reducer: 0.6;
-
-
+    --reducer: 0.45;
     --fa-primary-color: var(--lgs-poi-color); /* Couche primaire */
     --fa-secondary-color: var(--lgs-poi-background-color); /* Couche secondaire */
     --fa-secondary-opacity: 1;
