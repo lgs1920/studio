@@ -164,18 +164,16 @@ journey:
         stopSpeedLimit: 0.25
   ## POIs
   pois:
-    # Default POI
-    color: ''      # Color
-    bgColor: '#ffffff99'   # Border
+
     ## FlythroughRunner mode
     flythroughRunner:
       color: '#1689CCff'
       border: '#FFF'
-    ## Start POI
+    ## Start POI colors
     start:
       color: '#DC143C'
       bgColor: '#f2c55c'
-    ## Stop POI
+    ## Stop POI colors
     stop:
       color: '#228B22'
       bgColor: '#f2c55c'
