@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-26
- * Last modified: 2026-04-26
+ * Created on: 2026-05-08
+ * Last modified: 2026-05-08
  *
  *
  * Copyright © 2026 LGS1920
@@ -18,10 +18,11 @@ import {
     CURRENT_JOURNEY, DRAWING_FROM_DB, DRAWING_FROM_UI, FOCUS_ON_FEATURE, GEOJSON, GPX, JOURNEYS_STORE, JSON_, KML, KMZ,
     NO_FOCUS, ORIGIN_STORE, POI_FLAG_START, POI_FLAG_STOP, POI_STANDARD_TYPE, SIMULATE_ALTITUDE, TRACK_SLUG,
     UPDATE_JOURNEY_SILENTLY,
-}                   from '@Core/constants'
-import { MapPOI }   from '@Core/MapPOI'
-import { gpx, kml } from '@tmcw/togeojson'
-import { getGeom }  from '@turf/invariant'
+}                                        from '@Core/constants'
+import { MapPOI }                        from '@Core/MapPOI'
+import { gpx, kml }                      from '@tmcw/togeojson'
+import { getGeom }                       from '@turf/invariant'
+import { normalizeTrackRenderSmoothing } from '@Utils/cesium/trackRenderSmoothing'
 
 import {
     FEATURE_COLLECTION, FEATURE_LINE_STRING, FEATURE_MULTILINE_STRING, FEATURE_POINT, IMPORT_LOADING_ERROR, TrackUtils,
@@ -30,7 +31,6 @@ import {
     extractJourneyMetadataFromGeoJson, extractJourneyMetadataFromGpxDocument, extractLgsPoiProperties,
     extractLgsTrackProperties,
 }                             from '@Utils/JourneyGpxUtils'
-import { normalizeTrackRenderSmoothing } from '@Utils/cesium/trackRenderSmoothing'
 import { decodeHTMLEntities } from '@Utils/TextUtils'
 import { UIToast }            from '@Utils/UIToast'
 import { ElevationServer }    from './Elevation/ElevationServer'
@@ -601,8 +601,8 @@ export class Journey extends MapElement {
                         latitude:        lat,
                         height:          importedHeight,
                         simulatedHeight: clampedHeight,
-                        color:           lgsPoi.color,
-                        bgColor:         lgsPoi.bgColor,
+                        color:   lgsPoi.color ?? lgs.colors.dark,
+                        bgColor: lgsPoi.bgColor ?? lgs.colors.light,
                         visible:         lgsPoi.visible ?? true,
                         expanded:        lgsPoi.expanded ?? false,
                         animated:        lgsPoi.animated ?? false,
@@ -623,6 +623,11 @@ export class Journey extends MapElement {
                         if (lgsPoi.id && !__.ui.poiManager.list.has(lgsPoi.id)) {
                             poiData.id = lgsPoi.id
                         }
+
+                        // We need colors
+                        poiData.color = lgsPoi.color ?? lgs.colors.dark
+                        poiData.bgColor = lgsPoi.bgColor ?? lgs.colors.light
+
                         const poi = new MapPOI({
                                                    ...poiData,
                                                })
