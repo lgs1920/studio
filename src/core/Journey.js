@@ -70,7 +70,6 @@ export class Journey extends MapElement {
     hasTime = false
 
     tracksLoaded = false
-    poisLoaded = false
 
     constructor(title, type, options = {}) {
         super(CURRENT_JOURNEY)
@@ -718,8 +717,6 @@ export class Journey extends MapElement {
                 }
             })
         }
-
-        this.poisLoaded = true
     }
 
     /**

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-30
- * Last modified: 2026-04-30
+ * Created on: 2026-05-08
+ * Last modified: 2026-05-08
  *
  *
  * Copyright © 2026 LGS1920
@@ -23,9 +23,7 @@
 
 import { MapPOIListItem }        from '@Components/MainUI/MapPOI/MapPOIListItem'
 import { JOURNEY_EDITOR_DRAWER } from '@Core/constants'
-import { faTriangleExclamation } from '@fortawesome/pro-regular-svg-icons'
-import { FA2SL }                       from '@Utils/FA2SL'
-import { WaButton, WaCallout, WaIcon } from '@web.awesome.me/webawesome-pro/dist/react'
+import { WaCallout, WaIcon } from '@web.awesome.me/webawesome-pro/dist/react'
 import { useEffect, useMemo }          from 'react'
 import { useSnapshot }           from 'valtio'
 
@@ -46,10 +44,6 @@ const filterAndSortPois = (onlyJourney, filterSettings, list) => {
               alphabetic = true,
           } = filterSettings
     const {theJourney} = lgs
-
-    if (onlyJourney && theJourney?.poisLoaded !== true) {
-        return []
-    }
 
     const ids = new Set()
     const journeySlug = theJourney?.slug ?? null
@@ -104,12 +98,16 @@ export const MapPOIFilteredList = () => {
     const pois = useSnapshot($pois)
     const settings = useSnapshot($settings)
     const drawers = useSnapshot($drawers)
+    const {theJourney} = useSnapshot(lgs.mainProxy)
 
     const onlyJourney = useMemo(() => drawers.open === JOURNEY_EDITOR_DRAWER, [drawers.open])
 
     const filteredPois = useMemo(
-        () => filterAndSortPois(onlyJourney, settings.filter, pois.list),
-        [onlyJourney, settings.filter, pois.list],
+        () => {
+            void theJourney?.slug
+            return filterAndSortPois(onlyJourney, settings.filter, pois.list)
+        },
+        [onlyJourney, theJourney?.slug, settings.filter, pois.list],
     )
 
     /**
@@ -124,10 +122,11 @@ export const MapPOIFilteredList = () => {
         filteredPois.forEach(id => {
             targetMap.set(id, true)
         })
+    }, [filteredPois, onlyJourney, $pois.filtered, pois.list])
 
-        // Production note: also clean the other map if needed or leave as is for persistence
-    }, [filteredPois, onlyJourney, $pois.filtered])
-
+    useEffect(() => {
+        console.log('filteredPois', filteredPois, theJourney?.slug)
+    })
     /**
      * Automatic scroll to the currently selected POI
      */
@@ -148,6 +147,10 @@ export const MapPOIFilteredList = () => {
                 ))}
             </div>
         )
+    }
+
+    if (!settings.filter.active) {
+        return
     }
 
     return (

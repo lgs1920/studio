@@ -7,15 +7,15 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-25
- * Last modified: 2026-03-25
+ * Created on: 2026-05-08
+ * Last modified: 2026-05-08
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
-import { MapPOIEditFilterPopup }                from '@Components/MainUI/MapPOI/MapPOIEditFilterPopup'
-import { POIS_EDITOR_DRAWER }                   from '@Core/constants'
-import { WaButton, WaIcon, WaPopup, WaTooltip } from '@web.awesome.me/webawesome-pro/dist/react'
+import { MapPOIEditFilterPopup }                     from '@Components/MainUI/MapPOI/MapPOIEditFilterPopup'
+import { JOURNEY_EDITOR_DRAWER, POIS_EDITOR_DRAWER } from '@Core/constants'
+import { WaButton, WaIcon, WaPopup, WaTooltip }      from '@web.awesome.me/webawesome-pro/dist/react'
 import React, { memo, useCallback, useMemo }    from 'react'
 import { useSnapshot }                          from 'valtio/index'
 
@@ -45,7 +45,7 @@ export const MapPOIEditFilterButton = memo(() => {
 
     // Memoize visibility condition
     const shouldShow = useMemo(() => {
-        return enoughPOIs && (showPOIsFilter || drawerOpen === POIS_EDITOR_DRAWER)
+        return enoughPOIs && (showPOIsFilter || drawerOpen === POIS_EDITOR_DRAWER || drawerOpen === JOURNEY_EDITOR_DRAWER)
     }, [enoughPOIs, showPOIsFilter, drawerOpen])
 
     // Memoize button class name
