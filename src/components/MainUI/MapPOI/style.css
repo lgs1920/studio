@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-05-07
- * Last modified: 2026-05-07
+ * Created on: 2026-05-08
+ * Last modified: 2026-05-08
  *
  *
  * Copyright © 2026 LGS1920
@@ -23,7 +23,7 @@
     --poi-in-menu-dimension: calc(var(--lgs-dimension-s));
     --poi-menu-icons-column-width: calc(0.8 * var(--lgs-dimension));
     --poi-delta-x: calc(var(--poi-menu-icons-column-width) / 2);
-    --poi-expanded-dimension: 140px;
+    --poi-expanded-dimension: 200px;
     --triangle-size: calc(3 * var(--poi-border-width));
     --poi-padding: var(--lgs-gutter-xs);
     --poi-primary-default-color: var(--wa-color-yellow-60);
@@ -38,7 +38,7 @@
     position: absolute;
     z-index: 1000000;
     top: -9999px;
-    left: 500px;
+    left: -9999px;
     display: flex;
 }
 
@@ -118,7 +118,8 @@
     display: flex;
     flex-direction: column;
     flex-wrap: nowrap;
-    width: var(--poi-expanded-dimension);
+    width: fit-content;
+    max-width: var(--poi-expanded-dimension);
     margin-bottom: var(--triangle-size);
     margin-left: calc(1 * var(--poi-menu-icons-column-width));
     border: var(--poi-border-width) solid var(--lgs-poi-border-color);
@@ -135,7 +136,7 @@
     margin: 0;
     transform: rotate(45deg);
     border: none;
-    border-radius: 50% 50% 12% 50%;
+    border-radius: 50% 50% 20% 50%;
     box-shadow: inset 0 0 0 var(--poi-border-width) var(--lgs-poi-color);
 
 
@@ -182,32 +183,26 @@
 }
 
 .poi-card-inner h3 {
-    font-size: calc(1.1 * var(--lgs-font-size));
-    font-weight: 500;
+    font-size: var(--lgs-font-size);
+    font-weight: 600;
     line-height: normal;
     display: block;
-    max-width: 100%;
-    margin: 0;
-    text-wrap: wrap;
-    overflow-wrap: anywhere;
-    word-wrap: normal;
+    overflow: hidden;
+    width: 100%;
+    margin: 0 0 var(--lgs-gutter-s);
+    white-space: nowrap;
+    text-overflow: ellipsis;
 }
 
 .poi-card-inner .poi-location {
     font-size: var(--lgs-font-size);
-    line-height: var(--wa-form-control-label-line-height);
+    line-height: 1.4;
     display: flex;
     align-items: center;
-    max-width: 100%;
     min-width: 0;
-    margin-top: var(--lgs-gutter-xs);
-    color: var(--lgs-poi-color, var(--wa-form-control-label-color));
-    gap: var(--lgs-gutter-xs);
-}
-
-.poi-card-inner .poi-location wa-icon {
-    flex: 0 0 auto;
-    color: var(--lgs-poi-color, var(--wa-color-brand));
+    max-width: 100%;
+    margin-top: 0;
+    color: var(--lgs-poi-color);
 }
 
 .poi-card-inner .poi-location span {
@@ -217,6 +212,9 @@
     text-overflow: ellipsis;
 }
 
+.poi-card-inner .poi-location wa-icon {
+    color: var(--lgs-poi-color, var(--wa-color-brand));
+}
 .poi-card-inner .poi-elevation {
     line-height: normal;
     margin-top: var(--lgs-gutter-s);
@@ -224,10 +222,10 @@
 
 .poi-card-inner .poi-full-coordinates {
     font-size: calc(1.1 * var(--lgs-font-size-s));
-    line-height: 1.2;
+    line-height: 1;
     display: flex;
     flex-direction: column;
-    gap: var(--lgs-gutter-s);
+    gap: var(--lgs-gutter-xxs);
     text-wrap-mode: nowrap;
 }
 

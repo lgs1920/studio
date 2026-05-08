@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-05-07
- * Last modified: 2026-05-07
+ * Created on: 2026-05-08
+ * Last modified: 2026-05-08
  *
  *
  * Copyright © 2026 LGS1920
@@ -315,7 +315,7 @@ export const MapPOIContent = ({poi, useInMenu = false, style}) => {
                                 {point.height > 0 && point.height !== point.simulatedHeight && (
                                     <NameValueUnit
                                         className="poi-elevation"
-                                        text="Altitude: "
+                                        text={'Altitude:'}
                                         value={point.height.toFixed()}
                                         format="%d"
                                         units={ELEVATION_UNITS}
@@ -347,12 +347,6 @@ export const MapPOIContent = ({poi, useInMenu = false, style}) => {
                          />
                      )}
                 </div>
-
-                {/* {point?.expanded && !useInMenu && ( */}
-                {/*     <div className="poi-menu-icons"> */}
-                {/*         /!* <MapPOIContent poi={point.id} useInMenu={true}/> *!/ */}
-                {/*     </div> */}
-                {/* )} */}
             </div>
         </div>
     )
