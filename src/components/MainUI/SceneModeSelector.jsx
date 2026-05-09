@@ -7,16 +7,17 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-26
- * Last modified: 2026-04-26
+ * Created on: 2026-05-09
+ * Last modified: 2026-05-09
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { SCENE_MODES }                                             from '@Core/constants'
-import { WaButton, WaIcon, WaPopup, WaTooltip }                    from '@web.awesome.me/webawesome-pro/dist/react'
-import { Fragment, useCallback, useEffect, useRef, useState }       from 'react'
+import { LGSPopup }                                           from '@Components/LGSPopup'
+import { WaButton, WaIcon, WaTooltip }                        from '@web.awesome.me/webawesome-pro/dist/react'
+import { Fragment, useCallback, useEffect, useRef, useState } from 'react'
 import { useSnapshot }                                             from 'valtio/index'
 
 /**
@@ -61,31 +62,6 @@ export const SceneModeSelector = (props) => {
         return () => window.cancelAnimationFrame(animationFrame)
     }, [disabled, open])
 
-    useEffect(() => {
-        if (!open || disabled) {
-            return
-        }
-
-        const handlePointerDown = (event) => {
-            if (_selector.current && !event.composedPath().includes(_selector.current)) {
-                setOpen(false)
-            }
-        }
-
-        const handleKeyDown = (event) => {
-            if (event.key === 'Escape') {
-                setOpen(false)
-            }
-        }
-
-        document.addEventListener('pointerdown', handlePointerDown)
-        window.addEventListener('keydown', handleKeyDown, true)
-        return () => {
-            document.removeEventListener('pointerdown', handlePointerDown)
-            window.removeEventListener('keydown', handleKeyDown, true)
-        }
-    }, [disabled, open])
-
     const currentModeInfo = SCENE_MODES.get(scene.mode.value)
     const alternateModes = scene.mode.available.filter(mode => Number(mode) !== Number(scene.mode.value))
 
@@ -105,8 +81,9 @@ export const SceneModeSelector = (props) => {
                 <WaIcon name={currentModeInfo.icon} variant="regular"/>
             </WaButton>
 
-            <WaPopup active={open && !disabled && alternateModes.length > 0}
+            <LGSPopup active={open && !disabled && alternateModes.length > 0}
                      anchor="scene-mode-trigger"
+                      onRequestClose={() => setOpen(false)}
                      placement={popupPlacement}
                      distance={lgs.gutter.xs}
                      flip
@@ -135,7 +112,7 @@ export const SceneModeSelector = (props) => {
                         })
                     }
                 </div>
-            </WaPopup>
+            </LGSPopup>
         </div>
     )
 }

@@ -7,15 +7,16 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-29
- * Last modified: 2026-04-29
+ * Created on: 2026-05-09
+ * Last modified: 2026-05-09
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { useOptionalSnapshot }                                      from '@Utils/ValtioUtils'
-import { WaButton, WaTooltip, WaPopup } from '@web.awesome.me/webawesome-pro/dist/react'
+import { LGSPopup }            from '@Components/LGSPopup'
+import { WaButton, WaTooltip } from '@web.awesome.me/webawesome-pro/dist/react'
 import classNames from 'classnames'
 import { Fragment, memo, useCallback, useEffect, useRef, useState } from 'react'
 import { useSnapshot }                          from 'valtio'
@@ -68,26 +69,6 @@ export const CropRatioEditorToolbar = memo(({context, cropzoneId}) => {
         document.addEventListener('onCropUpdate', handleCropUpdate)
         return () => document.removeEventListener('onCropUpdate', handleCropUpdate)
     }, [$video, getPresetByValue])
-
-    /**
-     * Handles global pointerdown to close popup when clicking outside the widget
-     */
-    useEffect(() => {
-        if (!_isPopupOpen) {
-            return
-        }
-
-        const handlePointerDown = (event) => {
-            const path = event.composedPath()
-            // Close if click target is outside the widget container
-            if (_widget.current && !path.includes(_widget.current)) {
-                setIsPopupOpen(false)
-            }
-        }
-
-        document.addEventListener('pointerdown', handlePointerDown)
-        return () => document.removeEventListener('pointerdown', handlePointerDown)
-    }, [_isPopupOpen])
 
     /**
      * Handles selection of a crop ratio preset and updates stores
@@ -181,10 +162,11 @@ export const CropRatioEditorToolbar = memo(({context, cropzoneId}) => {
                         {currentPreset?.label || video.ratio}
                     </WaButton>
 
-                    <WaPopup
+                    <LGSPopup
                         flip
                         anchor="current-crop-ratio"
                         active={_isPopupOpen}
+                        onRequestClose={() => setIsPopupOpen(false)}
                         placement="bottom-end"
                         distance={2}
                         strategy="fixed"
@@ -213,7 +195,7 @@ export const CropRatioEditorToolbar = memo(({context, cropzoneId}) => {
                                 ))}
                             </ul>
                         </div>
-                    </WaPopup>
+                    </LGSPopup>
                 </div>
             )}
         </>

@@ -7,17 +7,16 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-05-08
- * Last modified: 2026-05-08
+ * Created on: 2026-05-09
+ * Last modified: 2026-05-09
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
-import { MapPOIEditFilterPopup }                     from '@Components/MainUI/MapPOI/MapPOIEditFilterPopup'
 import { JOURNEY_EDITOR_DRAWER, POIS_EDITOR_DRAWER } from '@Core/constants'
-import { WaButton, WaIcon, WaPopup, WaTooltip }      from '@web.awesome.me/webawesome-pro/dist/react'
-import React, { memo, useCallback, useMemo }    from 'react'
-import { useSnapshot }                          from 'valtio/index'
+import { WaButton, WaIcon, WaTooltip } from '@web.awesome.me/webawesome-pro/dist/react'
+import { memo, useCallback, useMemo }  from 'react'
+import { useSnapshot }                 from 'valtio/index'
 
 // Pre-calculate icon names to avoid repeated calculations
 const ICON_FILTER = 'filter'
@@ -34,9 +33,7 @@ export const MapPOIEditFilterButton = memo(() => {
     const handleFilter = useCallback((event) => {
         event.preventDefault()
         $poi.filter.open = !$poi.filter.open
-        console.log($poi.filter.open)
-
-    }, [])
+    }, [$poi])
 
     // Memoize the POI count calculation
     const enoughPOIs = useMemo(() => {

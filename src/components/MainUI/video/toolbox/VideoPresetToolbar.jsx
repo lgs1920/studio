@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-28
- * Last modified: 2026-04-28
+ * Created on: 2026-05-09
+ * Last modified: 2026-05-09
  *
  *
  * Copyright © 2026 LGS1920
@@ -25,8 +25,9 @@ import {
 import {
     ScreenMediaRecorder,
 }                                                                          from '@Core/ui/screen-media-recorder/recorder/ScreenMediaRecorder'
+import { LGSPopup }                                                        from '@Components/LGSPopup'
 import {
-    WaButton, WaPopup,
+    WaButton,
 }                                                                          from '@web.awesome.me/webawesome-pro/dist/react'
 import classNames                                                          from 'classnames'
 import { Fragment, memo, useCallback, useEffect, useRef, useState }        from 'react'
@@ -97,22 +98,6 @@ export const VideoPresetToolbar = memo(() => {
     }, [video.fps, video.quality, getPresets])
 
     /**
-     * Handle click-away to close custom popup
-     */
-    useEffect(() => {
-        if (!open) {
-            return
-        }
-        const handlePointerDown = (event) => {
-            if (_toolbarRef.current && !event.composedPath().includes(_toolbarRef.current)) {
-                setOpen(false)
-            }
-        }
-        document.addEventListener('pointerdown', handlePointerDown)
-        return () => document.removeEventListener('pointerdown', handlePointerDown)
-    }, [open])
-
-    /**
      * Update store indexes based on preset selection
      */
     const handleChangePreset = useCallback((key, event) => {
@@ -153,9 +138,10 @@ export const VideoPresetToolbar = memo(() => {
                             </WaButton>
 
                             {value.submenu && (
-                                <WaPopup
+                                <LGSPopup
                                     anchor={`video-preset-${key}`}
                                     active={open}
+                                    onRequestClose={() => setOpen(false)}
                                     placement="bottom-end"
                                     strategy="fixed"
                                     distance={4}
@@ -165,7 +151,7 @@ export const VideoPresetToolbar = memo(() => {
                                         <VideoFPSToolbar choicesOnMap/>
                                         <VideoQualityToolbar choicesOnMap/>
                                     </div>
-                                </WaPopup>
+                                </LGSPopup>
                             )}
                         </Fragment>
                     ))}

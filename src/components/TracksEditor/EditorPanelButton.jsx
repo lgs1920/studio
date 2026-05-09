@@ -15,7 +15,8 @@
  ******************************************************************************/
 
 import { JOURNEY_EDITOR_DRAWER, JOURNEY_GROUPS_DRAWER, REMOVE_JOURNEY_IN_TOOLBAR } from '@Core/constants'
-import { WaButton, WaIcon, WaPopup, WaTooltip } from '@web.awesome.me/webawesome-pro/dist/react'
+import { LGSPopup }                    from '@Components/LGSPopup'
+import { WaButton, WaIcon, WaTooltip } from '@web.awesome.me/webawesome-pro/dist/react'
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSnapshot }                           from 'valtio'
 
@@ -135,31 +136,6 @@ export const EditorPanelButton = memo((props) => {
         return () => clearTriggerClickTimer()
     }, [clearTriggerClickTimer])
 
-    useEffect(() => {
-        if (!open) {
-            return
-        }
-
-        const handlePointerDown = (event) => {
-            if (_popupHost.current && !event.composedPath().includes(_popupHost.current)) {
-                setOpen(false)
-            }
-        }
-
-        const handleKeyDown = (event) => {
-            if (event.key === 'Escape') {
-                setOpen(false)
-            }
-        }
-
-        document.addEventListener('pointerdown', handlePointerDown)
-        window.addEventListener('keydown', handleKeyDown, true)
-        return () => {
-            document.removeEventListener('pointerdown', handlePointerDown)
-            window.removeEventListener('keydown', handleKeyDown, true)
-        }
-    }, [open])
-
     return (
         <div className="toolbar-action-popup-host journey-action-popup-host" ref={_popupHost}>
             <WaTooltip for="open-journey-editor" placement={tooltipPlacement}>{'Journey'}</WaTooltip>
@@ -174,8 +150,9 @@ export const EditorPanelButton = memo((props) => {
                 <WaIcon name={'route'} variant="regular"/>
             </WaButton>
 
-            <WaPopup anchor="open-journey-editor"
+            <LGSPopup anchor="open-journey-editor"
                      active={open}
+                      onRequestClose={() => setOpen(false)}
                      placement={popupPlacement}
                      distance={lgs.gutter.xs}
                      flip
@@ -221,7 +198,7 @@ export const EditorPanelButton = memo((props) => {
                         </>
                     )}
                 </div>
-            </WaPopup>
+            </LGSPopup>
         </div>
     )
 })

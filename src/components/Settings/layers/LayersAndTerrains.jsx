@@ -7,19 +7,19 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-22
- * Last modified: 2026-03-22
+ * Created on: 2026-05-09
+ * Last modified: 2026-05-09
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { PopupAnchor }                  from '@Components/PopupAnchor'
+import { LGSPopup }                     from '@Components/LGSPopup'
 import { ALL, BASE_ENTITY, FREE_ANONYMOUS_ACCESS, OVERLAY_ENTITY, TERRAIN_ENTITY, UNLOCKED } from '@Core/constants'
 import {
-    WaButton, WaIcon, WaPopup, WaTab, WaTabGroup, WaTabPanel, WaTooltip,
+    WaButton, WaIcon, WaTab, WaTabGroup, WaTabPanel, WaTooltip,
 }                                       from '@web.awesome.me/webawesome-pro/dist/react'
-import { useRef }                       from 'react'
 import { useSnapshot }                  from 'valtio'
 import {
     ToggleStateIcon,
@@ -178,17 +178,23 @@ export const LayersAndTerrains = () => {
 
     return (
         <div id="layers-and-terrains-settings">
-            <WaPopup active={editor.openFilter} anchor="layers-and-terrains-filter-separator"
+            <LGSPopup active={editor.openFilter} anchor="layers-and-terrains-filter-separator"
+                      onRequestClose={() => {
+                          $editor.openFilter = false
+                      }}
                      distance={lgs.gutter.s}
                      placement="top" flip shift>
                 <LayersFilterPopup/>
-            </WaPopup>
+            </LGSPopup>
 
-            <WaPopup active={editor.openSettings} anchor="layers-and-terrains-filter-separator"
+            <LGSPopup active={editor.openSettings} anchor="layers-and-terrains-filter-separator"
+                      onRequestClose={() => {
+                          $editor.openSettings = false
+                      }}
                      distance={lgs.gutter.s}
                      placement="top" flip shift>
                 <LayersColorsAdjustementPopup visible={canViewSettings}/>
-            </WaPopup>
+            </LGSPopup>
 
 
             <WaTabGroup className="lgs--layers-and-terrains-tabs">

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-05-07
- * Last modified: 2026-05-07
+ * Created on: 2026-05-09
+ * Last modified: 2026-05-09
  *
  *
  * Copyright © 2026 LGS1920
@@ -18,11 +18,12 @@ import DrawerFooter                 from '@Components/DrawerFooter'
 import { LGSScrollbars }            from '@Components/MainUI/LGSScrollbars'
 import PanelActions                 from '@Components/PanelsActions'
 import { PopupAnchor }              from '@Components/PopupAnchor'
+import { LGSPopup }                 from '@Components/LGSPopup'
 import WaDrawer                     from '@Components/WaDrawerNonModal'
 import { JOURNEY_GROUPS_DRAWER }    from '@Core/constants'
 import { UIToast }                  from '@Utils/UIToast'
 import {
-    WaButton, WaCallout, WaCard, WaColorPicker, WaDetails, WaDivider, WaIcon, WaInput, WaPopup, WaSwitch, WaTextarea,
+    WaButton, WaCallout, WaCard, WaColorPicker, WaDetails, WaDivider, WaIcon, WaInput, WaSwitch, WaTextarea,
     WaTooltip,
 }                                   from '@web.awesome.me/webawesome-pro/dist/react'
 import classNames                   from 'classnames'
@@ -124,9 +125,10 @@ const JourneyGroupDeleteButton = ({group, onDelete}) => {
             >
                 <WaIcon name="trash-can" variant="regular"/>
             </WaButton>
-            <WaPopup
+            <LGSPopup
                 anchor={removeButtonId}
                 active={dialog}
+                onRequestClose={hideRemoveDialog}
                 hover-bridge="true"
                 shift="true"
                 placement="bottom-end"
@@ -147,7 +149,7 @@ const JourneyGroupDeleteButton = ({group, onDelete}) => {
                         </div>
                     </div>
                 </WaCard>
-            </WaPopup>
+            </LGSPopup>
         </span>
     )
 }
@@ -500,9 +502,10 @@ export const JourneyGroupsDrawer = memo(() => {
                                             {'Create'}
                                         </WaButton>
                                     </div>
-                                    <WaPopup
+                                    <LGSPopup
                                         active={createPopupOpen}
                                         anchor={CREATE_GROUP_POPUP_ANCHOR}
+                                        onRequestClose={closeCreatePopup}
                                         placement="bottom"
                                     >
                                         <WaCard className="lgs--popup-in-drawer lgs-slide-down journey-group-create-popup">
@@ -566,7 +569,7 @@ export const JourneyGroupsDrawer = memo(() => {
                                                 </div>
                                             </div>
                                         </WaCard>
-                                    </WaPopup>
+                                    </LGSPopup>
                                     <PopupAnchor id={CREATE_GROUP_POPUP_ANCHOR}/>
                                 </section>
 

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-06
- * Last modified: 2026-04-02
+ * Created on: 2026-05-09
+ * Last modified: 2026-05-09
  *
  *
  * Copyright © 2026 LGS1920
@@ -21,7 +21,8 @@ import {
 }                                                       from '@Core/ui/widget-manager/dynamic-render/WidgetDynamicRender'
 import { Utils }                                        from '@Editor/Utils'
 import { UIToast }                                      from '@Utils/UIToast'
-import { WaButton, WaCard, WaIcon, WaPopup, WaTooltip } from '@web.awesome.me/webawesome-pro/dist/react'
+import { LGSPopup }                            from '@Components/LGSPopup'
+import { WaButton, WaCard, WaIcon, WaTooltip } from '@web.awesome.me/webawesome-pro/dist/react'
 import { useCallback, useEffect, useState }             from 'react'
 import { useSnapshot }                                  from 'valtio'
 
@@ -170,8 +171,9 @@ export const RemoveJourney = (props) => {
             </WaButton>
 
 
-            <WaPopup anchor={removeButtonId}
+            <LGSPopup anchor={removeButtonId}
                      active={dialog}
+                      onRequestClose={hideRemoveDialog}
                      data-lgs-shortcut-blocker={dialog ? 'true' : undefined}
                      hover-bridge="true" shift="true"
                      placement={placement}
@@ -191,7 +193,7 @@ export const RemoveJourney = (props) => {
                         </div>
                     </div>
                 </WaCard>
-            </WaPopup>
+            </LGSPopup>
 
 
         </>
