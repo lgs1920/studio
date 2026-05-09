@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-29
- * Last modified: 2026-04-29
+ * Created on: 2026-05-09
+ * Last modified: 2026-05-09
  *
  *
  * Copyright © 2026 LGS1920
@@ -21,7 +21,8 @@
  *
  * @module Tunnel
  */
-import { WaButton, WaIcon, WaPopup }                                      from '@web.awesome.me/webawesome-pro/dist/react'
+import { LGSPopup }         from '@Components/LGSPopup'
+import { WaButton, WaIcon } from '@web.awesome.me/webawesome-pro/dist/react'
 import classNames                                                  from 'classnames'
 import { memo, useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import './style.css'
@@ -91,10 +92,11 @@ const TunnelTooltip = memo(({anchorId, tooltip, icon, placement = 'top', childre
             >
                 {children}
             </span>
-            <WaPopup
+            <LGSPopup
                 className="lgs-tunnel-tooltip-popup"
                 anchor={anchorId}
                 active={active}
+                onRequestClose={hide}
                 placement={placement}
                 distance={8}
                 arrow
@@ -108,7 +110,7 @@ const TunnelTooltip = memo(({anchorId, tooltip, icon, placement = 'top', childre
                 <div className="lgs-tunnel-tooltip lgs-card wa-theme-lgs1920-on-map" role="tooltip">
                     <TunnelTooltipContent tooltip={content} icon={icon}/>
                 </div>
-            </WaPopup>
+            </LGSPopup>
         </>
     )
 })

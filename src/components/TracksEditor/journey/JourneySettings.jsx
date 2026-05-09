@@ -26,6 +26,7 @@ import {
 import {
     useConfirm,
 }                                     from '@Components/Modals/ConfirmUI'
+import { LGSPopup }                   from '@Components/LGSPopup'
 import {
     ToggleStateIcon,
 }                                     from '@Components/ToggleStateIcon'
@@ -71,7 +72,7 @@ import {
 }                                     from '@Utils/UIToast'
 import { decodeHTMLEntities }         from '@Utils/TextUtils'
 import {
-    WaButton, WaCard, WaDetails, WaIcon, WaInput, WaOption, WaPopup, WaSelect, WaTab, WaTabGroup, WaTabPanel,
+    WaButton, WaCard, WaDetails, WaIcon, WaInput, WaOption, WaSelect, WaTab, WaTabGroup, WaTabPanel,
     WaTextarea, WaTooltip,
 }                                     from '@web.awesome.me/webawesome-pro/dist/react'
 import { useEffect, useRef, useState } from 'react'
@@ -851,9 +852,10 @@ export const JourneySettings = () => {
                                           variant="brand">
                                     <WaIcon name="download" variant="regular"/>
                                 </WaButton>
-                                <WaPopup
+                                <LGSPopup
                                     active={exportChoiceOpen}
                                     anchor="export-journey-in-settings"
+                                    onRequestClose={() => setExportChoiceOpen(false)}
                                     placement="bottom-end"
                                     strategy="fixed"
                                     distance={lgs.gutter?.xs ?? 4}
@@ -888,7 +890,7 @@ export const JourneySettings = () => {
                                             <span>Export a Report</span>
                                         </WaButton>
                                     </div>
-                                </WaPopup>
+                                </LGSPopup>
                                 <RemoveJourney tooltip="left-start" name={REMOVE_JOURNEY_IN_EDIT}/>
                             </div>
                         </div>

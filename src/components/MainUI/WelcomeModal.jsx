@@ -7,17 +7,18 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-05-01
- * Last modified: 2026-05-01
+ * Created on: 2026-05-09
+ * Last modified: 2026-05-09
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { APP_EVENT, MILLIS, SECOND, SLOGAN }                 from '@Core/constants'
+import { LGSPopup }                    from '@Components/LGSPopup'
 import { formatBuildInfo }                                   from '@Utils/BuildInfoUtils'
 import { UIToast }                                           from '@Utils/UIToast'
-import { WaButton, WaIcon, WaPopup, WaSpinner } from '@web.awesome.me/webawesome-pro/dist/react'
+import { WaButton, WaIcon, WaSpinner } from '@web.awesome.me/webawesome-pro/dist/react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { StudioLogo }                                        from './StudioLogo'
 
@@ -276,9 +277,10 @@ export const WelcomeModal = ({initComplete = false, appReady = false, settingsRe
                     >
                         <WaIcon name="circle-info" variant="regular"/>
                     </WaButton>
-                    <WaPopup
+                    <LGSPopup
                         active={buildInfoOpen}
                         anchor="welcome-build-info-button"
+                        onRequestClose={() => setBuildInfoOpen(false)}
                         placement="top-end"
                         distance={lgs.gutter?.s ?? 8}
                         flip
@@ -294,7 +296,7 @@ export const WelcomeModal = ({initComplete = false, appReady = false, settingsRe
                                 <strong>{buildInfo}</strong>
                             </div>
                         </div>
-                    </WaPopup>
+                    </LGSPopup>
                 </div>
             )}
         </div>

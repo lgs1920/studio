@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-01
- * Last modified: 2026-04-01
+ * Created on: 2026-05-09
+ * Last modified: 2026-05-09
  *
  *
  * Copyright © 2026 LGS1920
@@ -18,10 +18,11 @@ import { MapPOIBulkActionsMenu }               from '@Components/MainUI/MapPOI/M
 import { MapPOIEditFilterButton }              from '@Components/MainUI/MapPOI/MapPOIEditFilterButton'
 import { MapPOIEditFilterPopup }               from '@Components/MainUI/MapPOI/MapPOIEditFilterPopup'
 import { PopupAnchor }                         from '@Components/PopupAnchor'
+import { LGSPopup }                   from '@Components/LGSPopup'
 import { JOURNEY_EDITOR_DRAWER }               from '@Core/constants'
-import { WaIcon, WaPopup, WaSwitch } from '@web.awesome.me/webawesome-pro/dist/react'
+import { WaIcon, WaSwitch }           from '@web.awesome.me/webawesome-pro/dist/react'
 import classNames                              from 'classnames'
-import { memo, useCallback, useMemo, useRef }  from 'react'
+import { memo, useCallback, useMemo } from 'react'
 import { useSnapshot }                         from 'valtio'
 
 /**
@@ -32,7 +33,7 @@ import { useSnapshot }                         from 'valtio'
  * @param {boolean} [props.globals=true] - Context flag.
  * @returns {JSX.Element} The rendered settings component.
  */
-export const MapPOIEditListActions = memo(({globals = true}) => {
+export const MapPOIEditListActions = memo(() => {
     const $poi = lgs.settings.poi
     const poi = useSnapshot($poi)
 
@@ -134,13 +135,16 @@ export const MapPOIEditListActions = memo(({globals = true}) => {
                     <MapPOIEditFilterButton/>
                 </div>
 
-                <WaPopup
+                <LGSPopup
                     active={poi.filter.open}
                     anchor="map-poi-edit-popup-anchor"
+                    onRequestClose={() => {
+                        $poi.filter.open = false
+                    }}
                     placement="bottom"
                 >
                     <MapPOIEditFilterPopup/>
-                </WaPopup>
+                </LGSPopup>
             </div>
 
             <PopupAnchor id="map-poi-edit-popup-anchor"/>

@@ -7,17 +7,17 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-05-07
- * Last modified: 2026-05-07
+ * Created on: 2026-05-09
+ * Last modified: 2026-05-09
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { LGSScrollbars }                                                  from '@Components/MainUI/LGSScrollbars'
+import { LGSPopup }                                                       from '@Components/LGSPopup'
 import { Journey }                                                        from '@Core/Journey'
 import {
-    WaCard, WaIcon, WaOption, WaPopup, WaSelect, WaTree, WaTreeItem,
+    WaCard, WaIcon, WaOption, WaSelect, WaTree, WaTreeItem,
 }                                                                         from '@web.awesome.me/webawesome-pro/dist/react'
 import classNames                                                         from 'classnames'
 import { memo, useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
@@ -228,22 +228,6 @@ export const JourneySelector = memo(({
         return () => document.removeEventListener('pointerdown', handlePointerDownOutside, true)
     }, [closeOnOutsidePointerDown])
 
-    useEffect(() => {
-        if (!treeOpen) {
-            return
-        }
-
-        const handlePointerDown = (event) => {
-            const path = event.composedPath()
-            if (!path.includes(_treeTrigger.current) && !path.includes(_treePanel.current)) {
-                setTreeOpen(false)
-            }
-        }
-
-        document.addEventListener('pointerdown', handlePointerDown, true)
-        return () => document.removeEventListener('pointerdown', handlePointerDown, true)
-    }, [treeOpen])
-
     const renderActivityIcon = useCallback((journey = theJourney) => {
         const activity = Journey.activityProfile(journey?.activity, journey?.activitySettings)
 
@@ -343,9 +327,10 @@ export const JourneySelector = memo(({
                         <WaIcon name="chevron-down" className="journey-selector-chevron" variant="regular"/>
                     </div>
 
-                    <WaPopup
+                    <LGSPopup
                         anchor={anchorId}
                         active={treeOpen}
+                        onRequestClose={() => setTreeOpen(false)}
                         placement="bottom-start"
                         flip
                         shift
@@ -387,7 +372,7 @@ export const JourneySelector = memo(({
                             </WaTree>
                         </div>
                         {/* </LGSScrollbars> */}
-                    </WaPopup>
+                    </LGSPopup>
                 </div>
             )}
 

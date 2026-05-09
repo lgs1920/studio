@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-29
- * Last modified: 2026-04-29
+ * Created on: 2026-05-09
+ * Last modified: 2026-05-09
  *
  *
  * Copyright © 2026 LGS1920
@@ -22,9 +22,10 @@
  * All refs prefixed with _, no default export, no semicolons.
  */
 import { RecordingInfo } from '@Components/MainUI/video/RecordingInfo'
+import { LGSPopup }      from '@Components/LGSPopup'
 import { ScreenMediaRecorder } from '@Core/ui/screen-media-recorder/recorder/ScreenMediaRecorder'
 import {
-    WaButton, WaDialog, WaIcon, WaInput, WaPopup, WaTooltip,
+    WaButton, WaDialog, WaIcon, WaInput, WaTooltip,
 }                        from '@web.awesome.me/webawesome-pro/dist/react'
 import {
     UIToast,
@@ -474,10 +475,11 @@ export const VideoDownloadAndShareDialog = () => {
                         .{isVideo ? getVideoExtension() : lgs.settings.ui.video.image}
                     </span>
                 </WaInput>
-                <WaPopup
+                <LGSPopup
                     ref={_recordingInfoPopup}
                     anchor="video-recording-info-trigger"
                     active={isRecordingInfoOpen}
+                    onRequestClose={() => setIsRecordingInfoOpen(false)}
                     placement="top-end"
                     distance={lgs.gutter.xs}
                     flip
@@ -488,7 +490,7 @@ export const VideoDownloadAndShareDialog = () => {
                         mediaData={mediaData}
                         isVideo={isVideo}
                     />
-                </WaPopup>
+                </LGSPopup>
             </div>
 
             <div slot="footer" id="video-preview-dialog-footer">
