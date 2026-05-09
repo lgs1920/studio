@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-05-08
- * Last modified: 2026-05-08
+ * Created on: 2026-05-09
+ * Last modified: 2026-05-09
  *
  *
  * Copyright © 2026 LGS1920
@@ -111,7 +111,7 @@ export const MapPOIFilteredList = () => {
     )
 
     /**
-     * Synchronize the store's filtered maps with the current UI results
+     * ynchronize the store's filtered maps with the current UI results
      * This allows the bulk actions checkbox to know exactly which POIs are targeted
      */
     useEffect(() => {
@@ -124,9 +124,6 @@ export const MapPOIFilteredList = () => {
         })
     }, [filteredPois, onlyJourney, $pois.filtered, pois.list])
 
-    useEffect(() => {
-        console.log('filteredPois', filteredPois, theJourney?.slug)
-    })
     /**
      * Automatic scroll to the currently selected POI
      */
