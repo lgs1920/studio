@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-05-01
- * Last modified: 2026-05-01
+ * Created on: 2026-05-09
+ * Last modified: 2026-05-09
  *
  *
  * Copyright © 2026 LGS1920
@@ -171,7 +171,7 @@ export const EditorPanelButton = memo((props) => {
                       appearance="Filled"
                       aria-haspopup="menu"
                       aria-expanded={open ? 'true' : 'false'}>
-                <WaIcon name={hasJourney ? 'route' : 'circle-plus'} variant="regular"/>
+                <WaIcon name={'route'} variant="regular"/>
             </WaButton>
 
             <WaPopup anchor="open-journey-editor"
