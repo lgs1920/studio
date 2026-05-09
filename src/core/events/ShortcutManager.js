@@ -7,14 +7,30 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-05-02
- * Last modified: 2026-05-02
+ * Created on: 2026-05-09
+ * Last modified: 2026-05-09
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-const EDITABLE_SELECTOR = 'input, textarea, select, [contenteditable=""], [contenteditable="true"], [role="textbox"]'
+const EDITABLE_SELECTOR = [
+    'input',
+    'textarea',
+    'select',
+    'wa-input',
+    'wa-number-input',
+    'wa-textarea',
+    'wa-select',
+    'wa-combobox',
+    'sl-input',
+    'sl-textarea',
+    'sl-select',
+    '[contenteditable=""]',
+    '[contenteditable="true"]',
+    '[role="textbox"]',
+    '[data-lgs-shortcut-editable="true"]',
+].join(', ')
 const MODIFIER_ALIASES = {
     cmd:     'meta',
     command: 'meta',
@@ -167,6 +183,15 @@ const isEditableTarget = (target) => {
     return ElementClass && target instanceof ElementClass && Boolean(target.closest(EDITABLE_SELECTOR))
 }
 
+const isEditableEventTarget = (event) => {
+    if (isEditableTarget(event?.target)) {
+        return true
+    }
+
+    const path = event?.composedPath?.() ?? []
+    return path.some(node => isEditableTarget(node))
+}
+
 const isFocusable = (element) => {
     const HTMLElementClass = globalThis.HTMLElement
     if (!HTMLElementClass || !(element instanceof HTMLElementClass)) {
@@ -213,7 +238,7 @@ export class ShortcutManager {
             if (!binding.options.repeat && event.repeat) {
                 return
             }
-            if (!binding.options.allowInEditable && isEditableTarget(event.target) && event.target !== element) {
+            if (!binding.options.allowInEditable && isEditableEventTarget(event) && event.target !== element) {
                 return
             }
 
@@ -295,7 +320,7 @@ export class ShortcutManager {
         }
 
         binding.pointerListener = (event) => {
-            if (isEditableTarget(event.target)) {
+            if (isEditableEventTarget(event)) {
                 return
             }
             if (!element.contains(globalThis.document?.activeElement)) {

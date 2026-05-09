@@ -7,15 +7,15 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-05-02
- * Last modified: 2026-05-02
+ * Created on: 2026-05-09
+ * Last modified: 2026-05-09
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
+import { JSDOM }                               from 'jsdom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { JSDOM }                                from 'jsdom'
 import { addShortcut, ShortcutManager }        from '../core/events/ShortcutManager'
 
 let manager
@@ -169,6 +169,20 @@ describe('ShortcutManager', () => {
         manager.addShortcut(element, 'Ctrl+K', callback)
 
         dispatchKey(input, 'k', {ctrlKey: true})
+        expect(callback).not.toHaveBeenCalled()
+    })
+
+    it('ignores web component form controls such as wa-number-input', () => {
+        const element = document.createElement('div')
+        const input = document.createElement('wa-number-input')
+        const callback = vi.fn()
+        element.append(input)
+        document.body.append(element)
+        manager = new ShortcutManager()
+
+        manager.addShortcut(window, 'Backspace', callback)
+
+        dispatchKey(input, 'Backspace')
         expect(callback).not.toHaveBeenCalled()
     })
 
