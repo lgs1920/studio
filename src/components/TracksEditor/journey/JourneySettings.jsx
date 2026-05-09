@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-25
- * Last modified: 2026-04-25
+ * Created on: 2026-05-09
+ * Last modified: 2026-05-09
  *
  *
  * Copyright © 2026 LGS1920
@@ -393,7 +393,6 @@ export const JourneySettings = () => {
     }
 
     const initTab = (e) => {
-        console.log('initTab', e)
         const tabName = e.detail.name
         __.ui.drawerManager.tab = tabName
         setJourneyEditorTabState(tabName, e.type)
