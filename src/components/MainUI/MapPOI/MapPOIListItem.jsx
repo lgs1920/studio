@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-25
- * Last modified: 2026-04-25
+ * Created on: 2026-05-09
+ * Last modified: 2026-05-09
  *
  *
  * Copyright © 2026 LGS1920
@@ -26,7 +26,7 @@ import { MapPOISummary }                                   from '@Components/Mai
 import { POI_FLAG_START, POI_FLAG_STOP, POI_STARTER_TYPE } from '@Core/constants'
 import { WaDetails, WaIcon }                               from '@web.awesome.me/webawesome-pro/dist/react'
 import classNames                                          from 'classnames'
-import { memo, useCallback }                               from 'react'
+import { memo, useCallback, useRef } from 'react'
 import { proxy, useSnapshot } from 'valtio'
 
 const EMPTY_POI_PROXY = proxy({})
@@ -63,9 +63,14 @@ export const MapPOIListItem = memo(({id, canSelect}) => {
     const $poi = $pois.list.get(id)
     const {current, bulkList} = useSnapshot($pois)
     const poi = useSnapshot($poi ?? EMPTY_POI_PROXY)
+    const itemRef = useRef(null)
 
     const isCurrent = current === id
     const isSelected = bulkList.has(id)
+
+    const scrollIntoView = useCallback(() => {
+        itemRef.current?.scrollIntoView({behavior: 'smooth', block: 'nearest'})
+    }, [])
 
     const handleDetailsShow = useCallback((event) => {
         if (event?.target !== event?.currentTarget) {
@@ -74,7 +79,8 @@ export const MapPOIListItem = memo(({id, canSelect}) => {
         if ($pois.current !== id) {
             $pois.current = id
         }
-    }, [$pois, id])
+        scrollIntoView()
+    }, [$pois, id, scrollIntoView])
 
     const handleDetailsHide = useCallback((event) => {
         if (event?.target !== event?.currentTarget) {
@@ -92,12 +98,17 @@ export const MapPOIListItem = memo(({id, canSelect}) => {
     }
 
     return (
-        <div className={classNames('edit-map-poi-item-wrapper', {'is-selected': isSelected})}>
+        <div
+            id={`edit-map-poi-${id}`}
+            ref={itemRef}
+            className={classNames('edit-map-poi-item-wrapper', {'is-selected': isSelected})}
+        >
             {canSelect && <POIBulkToggle id={id}/>}
             <WaDetails
                 className={classNames('edit-map-poi-item', {'map-poi-hidden': !poi.visible}, 'lgs--details-hoverable')}
                 open={isCurrent}
                 onWaShow={handleDetailsShow}
+                onWaAfterShow={scrollIntoView}
                 onWaHide={handleDetailsHide}
             >
                 <div slot="summary">

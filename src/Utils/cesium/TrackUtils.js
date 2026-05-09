@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-20
- * Last modified: 2026-04-20
+ * Created on: 2026-05-09
+ * Last modified: 2026-05-09
  *
  *
  * Copyright © 2026 LGS1920
@@ -18,16 +18,18 @@ import {
     ADD_JOURNEY, CURRENT_JOURNEY, CURRENT_POI, CURRENT_STORE, CURRENT_TRACK, DEFAULT_2D_FOCUS_PITCH, DRAWING_FROM_DB,
     DRAWING_FROM_UI, FOCUS_ON_FEATURE, JOURNEY_EDITOR_DRAWER, NO_FOCUS, REFRESH_DRAWING, SCENE_MODE_2D,
 }                                                      from '@Core/constants'
-import { faRoute }                                     from '@fortawesome/pro-solid-svg-icons'
 import { Journey }                                     from '@Core/Journey'
+import {
+    faRoute,
+}                                                      from '@fortawesome/pro-solid-svg-icons'
 import bbox                                            from '@turf/bbox'
 import { default as centroid }                         from '@turf/centroid'
 import { SceneUtils }                                  from '@Utils/cesium/SceneUtils'
-import { getTrackRenderContent, trackRenderSmoothingKey } from '@Utils/cesium/trackRenderSmoothing'
 import {
-    getTrackDashPattern,
-    normalizeTrackRenderStyle,
-    TRACK_RENDER_WIDTH_UNITS,
+    getTrackRenderContent, trackRenderSmoothingKey,
+}                                                      from '@Utils/cesium/trackRenderSmoothing'
+import {
+    getTrackDashPattern, normalizeTrackRenderStyle, TRACK_RENDER_WIDTH_UNITS,
 }                                                      from '@Utils/cesium/trackRenderStyle'
 import {
     BoundingSphere, Cartesian2, Cartesian3, Cartographic, Color as CColor, CustomDataSource, GeoJsonDataSource,

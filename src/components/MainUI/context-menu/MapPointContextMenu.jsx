@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-27
- * Last modified: 2026-04-27
+ * Created on: 2026-05-09
+ * Last modified: 2026-05-09
  *
  *
  * Copyright © 2026 LGS1920
@@ -17,6 +17,7 @@
 import {
     CURRENT_MAP_POINT, POI_STANDARD_TYPE, POIS_EDITOR_DRAWER, ROTATION_ICON, SCENE_MODE_2D,
 } from '@Core/constants'
+import { openPOIEditor } from '@Components/MainUI/MapPOI/openPOIEditor'
 import { MapPOI }                                                                  from '@Core/MapPOI'
 import { getOrbitSettings, setOrbitStoreSettings }                                 from '@Core/OrbitSettings'
 import { ELEVATION_UNITS, UnitUtils }                                              from '@Utils/UnitUtils'
@@ -37,17 +38,12 @@ export const MapPointContextMenu = ({target, menuRef}) => {
     const panoramaAllowed = Number(sceneMode.value) !== Number(SCENE_MODE_2D.value)
 
     const hideMenu = useCallback(() => __.ui.contextMenu.hide(), [])
-    const openEditDrawer = useCallback((poiId) => {
+    const openEditDrawer = useCallback(async (poiId) => {
         if (!poiId) {
             return
         }
 
-        lgs.stores.main.components.pois.current = poiId
-        __.ui.drawerManager.open(POIS_EDITOR_DRAWER, {
-            action: 'edit-current',
-            entity: poiId,
-            tab:    null,
-        })
+        await openPOIEditor(poiId)
     }, [])
 
     const createPOI = useCallback(async () => {

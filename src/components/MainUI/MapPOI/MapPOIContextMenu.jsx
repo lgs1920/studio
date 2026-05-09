@@ -7,17 +7,18 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-27
- * Last modified: 2026-04-27
+ * Created on: 2026-05-09
+ * Last modified: 2026-05-09
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import {
-    CURRENT_POI, POI_FLAG_START, POI_FLAG_STOP, POI_STANDARD_TYPE, POI_STARTER_TYPE, POI_TMP_TYPE, POIS_EDITOR_DRAWER,
+    CURRENT_POI, POI_FLAG_START, POI_FLAG_STOP, POI_STANDARD_TYPE, POI_STARTER_TYPE, POI_TMP_TYPE,
     ROTATION_ICON, SCENE_MODE_2D,
-}                                       from '@Core/constants'
+}                        from '@Core/constants'
+import { openPOIEditor } from '@Components/MainUI/MapPOI/openPOIEditor'
 import { DEFAULT_PANORAMA_HEIGHT_OFFSET, DEFAULT_PANORAMA_PITCH, getOrbitSettings, setOrbitStoreSettings } from '@Core/OrbitSettings'
 import { ELEVATION_UNITS, UnitUtils }       from '@Utils/UnitUtils'
 import { UIToast }                                from '@Utils/UIToast'
@@ -101,14 +102,10 @@ export const MapPOIContextMenu = ({menuRef, targetId}) => {
     }, [thePOI, hideMenu, $pois])
 
     /** Opens the POI editor drawer for the current POI. */
-    const openEditDrawer = useCallback(() => {
-        __.ui.drawerManager.open(POIS_EDITOR_DRAWER, {
-            action: 'edit-current',
-            entity: thePOI,
-            tab: currentPoi?.parent ? 'pois' : null,
-        })
+    const openEditDrawer = useCallback(async () => {
+        await openPOIEditor(thePOI)
         hideMenu()
-    }, [thePOI, currentPoi.parent, hideMenu])
+    }, [thePOI, hideMenu])
 
     /** Toggles the expanded/reduced state of the POI. */
     const toggleExpanded = useCallback(() => {

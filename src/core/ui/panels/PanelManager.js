@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-05-01
- * Last modified: 2026-05-01
+ * Created on: 2026-05-09
+ * Last modified: 2026-05-09
  *
  *
  * Copyright © 2026 LGS1920
@@ -168,6 +168,7 @@ export class PanelManager {
 
         ui.drawers.open = id
         ui.drawers.action = options.action ?? ''
+        ui.drawers.options = options
         ui.drawers.entity = options.entity ?? null
         ui.drawers.suppressFocusOnOpen = Array.isArray(options.suppressFocusOnOpen) && options.suppressFocusOnOpen.length === 0
                                          ? false

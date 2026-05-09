@@ -124,18 +124,6 @@ export const MapPOIFilteredList = () => {
         })
     }, [filteredPois, onlyJourney, $pois.filtered, pois.list])
 
-    /**
-     * Automatic scroll to the currently selected POI
-     */
-    useEffect(() => {
-        if (pois.current) {
-            const element = document.getElementById(`edit-map-poi-${pois.current}`)
-            if (element) {
-                element.scrollIntoView({behavior: 'smooth', block: 'nearest'})
-            }
-        }
-    }, [pois.current])
-
     if (filteredPois.length > 0) {
         return (
             <div className="lgs--details-list">

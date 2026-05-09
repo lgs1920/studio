@@ -7,25 +7,25 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-05-08
- * Last modified: 2026-05-08
+ * Created on: 2026-05-09
+ * Last modified: 2026-05-09
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { NameValueUnit }                             from '@Components/DataDisplay/NameValueUnit'
-import { DateTimeDisplay }                           from '@Components/DateTimeDisplay'
-import { stylePOIDuotoneIcon }                                   from '@Components/MainUI/MapPOI/duotoneIconUtils'
-import { ICONS_PATH, JOURNEY_EDITOR_DRAWER, POIS_EDITOR_DRAWER } from '@Core/constants'
-import { MapPOI }                                                  from '@Core/MapPOI'
-import { Utils }                                                   from '@Editor/Utils'
-import { ELEVATION_UNITS }                           from '@Utils/UnitUtils'
-import { WaIcon }                                                from '@web.awesome.me/webawesome-pro/dist/react'
-import { snapdom }                                   from '@zumer/snapdom'
-import classNames                                    from 'classnames'
-import { useCallback, useEffect, useMemo, useRef }                 from 'react'
-import { useSnapshot }                               from 'valtio'
+import { NameValueUnit }                           from '@Components/DataDisplay/NameValueUnit'
+import { DateTimeDisplay }                         from '@Components/DateTimeDisplay'
+import { stylePOIDuotoneIcon }                     from '@Components/MainUI/MapPOI/duotoneIconUtils'
+import { openPOIEditor }                           from '@Components/MainUI/MapPOI/openPOIEditor'
+import { ICONS_PATH }                              from '@Core/constants'
+import { MapPOI }                                  from '@Core/MapPOI'
+import { ELEVATION_UNITS }                         from '@Utils/UnitUtils'
+import { WaIcon }                                  from '@web.awesome.me/webawesome-pro/dist/react'
+import { snapdom }                                 from '@zumer/snapdom'
+import classNames                                  from 'classnames'
+import { useCallback, useEffect, useMemo, useRef } from 'react'
+import { useSnapshot }                             from 'valtio'
 import './style.css'
 
 /**
@@ -46,7 +46,6 @@ export const MapPOIContent = ({poi, useInMenu = false, style}) => {
     /** * Direct reactive access to the point from the snapshot.
      */
     const point = useMemo(() => poisSnap.list.get(poi), [poisSnap.list, poi])
-    const currentPOI = poisSnap.current
     const pointId = point?.id
     const pointParent = point?.parent
     const pointType = point?.type
@@ -64,36 +63,8 @@ export const MapPOIContent = ({poi, useInMenu = false, style}) => {
             return
         }
         __.ui.contextMenu.hide()
-
-        const alreadyOpen = __.ui.drawerManager.drawers.open
-        const samePOI = entity === currentPOI
-
-        if (alreadyOpen && samePOI) {
-            __.ui.drawerManager.close()
-            return
-        }
-
-        const drawer = point.parent ? JOURNEY_EDITOR_DRAWER : POIS_EDITOR_DRAWER
-        const tab = 'tab-pois'
-
-        if (point.parent) {
-            const newJourney = lgs.getJourneyByTrackSlug(point.parent)
-            const sameJourney = newJourney?.slug === lgs.theJourney.slug
-
-            if (!sameJourney) {
-                await Utils.updateJourneyEditor(newJourney.slug, {focus: false})
-            }
-            else {
-                const newTrack = lgs.getTrackBySlug(point.parent)
-                if (newTrack && newTrack.slug !== lgs.theTrack.slug) {
-                    newTrack.addToContext()
-                    newTrack.addToEditor()
-                }
-            }
-        }
-
-        __.ui.drawerManager.open(drawer, {action: 'edit-current', entity, tab})
-    }, [useInMenu, point, currentPOI])
+        await openPOIEditor(entity)
+    }, [useInMenu, point])
 
     /** Global POI menu trigger */
     const openContextMenu = useCallback((event) => {
