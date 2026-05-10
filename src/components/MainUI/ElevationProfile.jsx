@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-05-01
- * Last modified: 2026-05-01
+ * Created on: 2026-05-10
+ * Last modified: 2026-05-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -361,7 +361,7 @@ export const ElevationProfile = (props) => {
     const exportChartToPNG = () => {
         const _name = `${journey.title}-profile`
         Export.toPNG('#journey-profile-chart-in-settings', _name, 2).then(() => {
-            UIToast.success({caption: 'Export success', text: `${_name}.png`})
+            UIToast.success({caption: 'Export success', text: `Exported to ${_name}.png`})
         })
     }
 
