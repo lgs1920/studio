@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-12
- * Last modified: 2026-04-12
+ * Created on: 2026-05-10
+ * Last modified: 2026-05-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -112,7 +112,7 @@ export const SelectEntity = (props) => {
                     <WaIcon name="square-ellipsis-vertical" slot="trigger" variant="solid"/>
 
                     {entity.usage.doc &&
-                        <WaDropdownItem size="small" value="read" key="read-entity-doc">
+                        <WaDropdownItem size="s" value="read" key="read-entity-doc">
                             <WaIcon slot="icon" name="arrow-up-right-from-square" variant="regular"/>{'Read Doc'}
                         </WaDropdownItem>
                     }
@@ -282,7 +282,7 @@ export const SelectEntity = (props) => {
                         <p>{`No ${props.type} entity found.`}</p>
                         <p>{'Please check your filter criteria.'}</p>
                         {!editor.openFilter &&
-                            <WaButton size="small"
+                            <WaButton size="s"
                                       onClick={() => $editor.openFilter = true}
                                       variant="brand">
                                 <WaIcon slot="start" name="filter" variant="regular"/>

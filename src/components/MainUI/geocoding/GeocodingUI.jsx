@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-25
- * Last modified: 2026-04-25
+ * Created on: 2026-05-10
+ * Last modified: 2026-05-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -256,7 +256,7 @@ export const GeocodingUI = () => {
                             {exactMatch ? 'Show on map' : 'Search nearest'}
                         </WaTooltip>
                         <WaButton
-                            size="small"
+                            size="s"
                             className="square-button"
                             type="submit"
                             id="geocoder-search-location-submit"
@@ -272,7 +272,7 @@ export const GeocodingUI = () => {
                 {coordinates &&
                     <WaSwitch
                         label-at-start width-auto
-                        size="xsmall"
+                        size="xs"
                         checked={exactMatch}
                         onChange={(event) => setExactMatch(event.target.checked)}
                     >

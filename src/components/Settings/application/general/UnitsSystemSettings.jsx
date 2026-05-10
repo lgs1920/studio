@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-19
- * Last modified: 2026-04-19
+ * Created on: 2026-05-10
+ * Last modified: 2026-05-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -39,7 +39,7 @@ export const UnitsSystemSettings = (props) => {
                 <WaRadioGroup value={us.current}
                               label-at-start
                               orientation="horizontal"
-                              size="xsmall"
+                              size="xs"
                               onChange={handleDistanceUnits}
                 >
                     <label slot="label">{'Distances/Elevations:'}</label>
@@ -53,7 +53,7 @@ export const UnitsSystemSettings = (props) => {
                               label-at-start
                               orientation="horizontal"
                               className="label-at-start"
-                              size={'xsmall'}
+                              size={'xs'}
                               onChange={handleCoordinateUnits}
                 >
                     <label slot="label">{'Coordinates:'}</label>

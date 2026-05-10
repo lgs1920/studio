@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-05-09
- * Last modified: 2026-05-09
+ * Created on: 2026-05-10
+ * Last modified: 2026-05-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -99,7 +99,7 @@ export const SceneModeSelector = (props) => {
                                     <WaButton
                                         id={`scene-mode-${modeData.value}`}
                                         className="square-button"
-                                        size="small"
+                                        size="s"
                                         variant="brand"
                                         appearance="Filled"
                                         onClick={() => handleSelect(modeData.value)}

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-05-05
- * Last modified: 2026-05-05
+ * Created on: 2026-05-10
+ * Last modified: 2026-05-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -239,7 +239,7 @@ export const FlythroughProgressBar = memo(({showSettings = false, className = ''
                             className="flythrough-progress-action"
                             appearance="plain"
                             variant="brand"
-                            size="small"
+                            size="s"
                             title={pauseLabel}
                             aria-label={pauseLabel}
                             onClick={pause}
@@ -255,7 +255,7 @@ export const FlythroughProgressBar = memo(({showSettings = false, className = ''
                              className="flythrough-progress-action"
                              appearance="plain"
                              variant="brand"
-                             size="small"
+                             size="s"
                              title={playLabel}
                              aria-label={playLabel}
                              onClick={playOrResume}
@@ -270,7 +270,7 @@ export const FlythroughProgressBar = memo(({showSettings = false, className = ''
                     className="flythrough-progress-action"
                     appearance="plain"
                     variant="brand"
-                    size="small"
+                    size="s"
                     title={stopLabel}
                     aria-label={stopLabel}
                     onClick={stop}
@@ -286,7 +286,7 @@ export const FlythroughProgressBar = memo(({showSettings = false, className = ''
                         className="flythrough-progress-action"
                         appearance="plain"
                         variant="brand"
-                        size="small"
+                        size="s"
                         title={settingsLabel}
                         aria-label={settingsLabel}
                         onClick={toggleSettings}

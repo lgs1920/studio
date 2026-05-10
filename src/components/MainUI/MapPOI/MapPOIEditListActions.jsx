@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-05-09
- * Last modified: 2026-05-09
+ * Created on: 2026-05-10
+ * Last modified: 2026-05-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -123,7 +123,7 @@ export const MapPOIEditListActions = memo(() => {
                     </div>
 
                     <WaSwitch
-                        size="xsmall" label-at-start width-auto
+                        size="xs" label-at-start width-auto
                         checked={lgs.settings.ui.poi.focusOnEdit}
                         onChange={(e) => {
                             lgs.settings.ui.poi.focusOnEdit = e.target.checked

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-05-07
- * Last modified: 2026-05-07
+ * Created on: 2026-05-10
+ * Last modified: 2026-05-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -524,10 +524,14 @@ wa-button:not(.square-button) wa-icon[slot="end"] {
  * Color Picker
  ******************************************************************************/
 
-wa-color-picker[size="small"]::part(trigger) {
+
+wa-color-picker[size="s"]::part(trigger) {
     margin-top: 5px;
 }
 
+wa-color-picker[size="s"]::part(base) {
+    font-size: var(--lgs-font-size)
+}
 /*******************************************************************************
  * Tree
  ******************************************************************************/
@@ -1424,7 +1428,7 @@ wa-slider[label-at-start] {
     gap: var(--lgs-gutter-s);
 }
 
-wa-slider[size="small"] {
+wa-slider[size="s"] {
     --thumb-width: calc(var(--lgs-gutter) * 1.2);
     --thumb-height: calc(var(--lgs-gutter) * 1.2);
 }
@@ -1515,11 +1519,12 @@ wa-switch[label-at-end]::part(label) {
     margin-left: auto;
 }
 
-wa-switch[size="xsmall"] {
+wa-switch[size="xs"] {
     --width: 24px; --height: 12px; --thumb-size: 8px;
 }
 
 wa-switch {
+    font-size: var(--lgs-font-size);
     --wa-form-control-activated-color: var(--lgs-switch-active-track-color);
 }
 
@@ -1534,7 +1539,7 @@ wa-radio {
     --wa-form-control-activated-color: var(--wa-color-brand-fill-loud)
 }
 
-wa-radio[size="xsmall"], [size="xsmall"] > wa-radio {
+wa-radio[size="xs"], [size="xs"] > wa-radio {
     --wa-form-control-toggle-size: 16px
 }
 
@@ -2346,6 +2351,7 @@ wa-select::part(combobox) {
 }
 
 wa-select::part(display-input),
+wa-select::part(label),
 wa-select::part(tag),
 wa-select::part(tag__content) {
     font-size: var(--lgs-font-size);

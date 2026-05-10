@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-30
- * Last modified: 2026-04-30
+ * Created on: 2026-05-10
+ * Last modified: 2026-05-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -263,13 +263,13 @@ export const CompassWidgetEditor = ({entity, syncGlobalCompass = false}) => {
                     <div className="drawer-horizontal-element">
                         <WaSelect
                             className="compass-mode-select"
-                            size="small"
+                            size="s"
                             value={compassMode}
                             label="Model"
                             label-at-start
                             onChange={handleCompassMode}
                         >
-                            <WaIcon slot="start" size="small" variant="regular" name="compass"/>
+                            <WaIcon slot="start" size="s" variant="regular" name="compass"/>
                             <WaOption value={COMPASS_FULL.toString()} label="Full">
                                 <span slot="start" className="compass-select-thumbnail">
                                     <CompassFull width="24" height="24"/>
@@ -292,8 +292,8 @@ export const CompassWidgetEditor = ({entity, syncGlobalCompass = false}) => {
                     </div>
                     <div className="drawer-horizontal-element">
                         <div className="widget-editor-reset-menus">
-                            <WaButton size="small" appearance="plain" onClick={handleReset} aria-label="Reset">
-                                <WaIcon size="small" variant="regular" name="arrow-rotate-left"/>
+                            <WaButton size="s" appearance="plain" onClick={handleReset} aria-label="Reset">
+                                <WaIcon size="s" variant="regular" name="arrow-rotate-left"/>
                             </WaButton>
                         </div>
                     </div>

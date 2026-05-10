@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-05-01
- * Last modified: 2026-05-01
+ * Created on: 2026-05-10
+ * Last modified: 2026-05-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -342,7 +342,7 @@ export const MapPOIEditContent = memo(({poi}) => {
                                                       className={classNames('map-poi-edit-item', 'map-poi', {
                                                           'map-poi-edit-warning-altitude': simulated,
                                                       })}
-                                                      size="small"
+                                                      size="s"
                                                       withoutSpinButtons
                                                       inputMode="numeric"
                                                       value={Math.round(height ?? simulatedHeight ?? 0)}
@@ -366,7 +366,7 @@ export const MapPOIEditContent = memo(({poi}) => {
                                                                            appearance="plain"
                                                                            variant="brand"
                                                                            id={`simulated-altitude-reset-${id}`}
-                                                                           size="small"
+                                                                           size="s"
                                                                            onClick={handleResetAltitude}
                                                                            disabled={!Number.isFinite(simulatedHeight)}
                                                                        >
@@ -386,7 +386,8 @@ export const MapPOIEditContent = memo(({poi}) => {
                                                           <WaIcon slot="icon" variant="regular" name="location-exclamation"/>
                                                           <div>
                                                               {'This POI is temporary and won\'t be saved. Add it to the library to save it.'}
-                                                              <WaButton size="small" slot="end" variant="warning" onClick={handleAddToLibrary}>
+                                                              <WaButton size="s" slot="end" variant="warning"
+                                                                        onClick={handleAddToLibrary}>
                                                                   <WaIcon slot="start" name="location-dot" variant="regular"/>{'Add it'}
                                                               </WaButton>
                                                           </div>
@@ -394,7 +395,7 @@ export const MapPOIEditContent = memo(({poi}) => {
 
                                                   <div className="edit-map-poi-wrapper" id={`edit-map-poi-content-${id}`}>
                                                       <WaInput
-                                                          size="small"
+                                                          size="s"
                                                           value={title}
                                                           onInput={handleChangeTitle}
                                                           className="edit-title-map-poi-input"
@@ -408,7 +409,7 @@ export const MapPOIEditContent = memo(({poi}) => {
                                                                           <WaTooltip for={`map-poi-bg-${id}`}>{'Background Color'}</WaTooltip>
                                                                           <WaColorPicker
                                                                               id={`map-poi-bg-${id}`}
-                                                                              size="small"
+                                                                              size="s"
                                                                               value={bgColor ?? lgs.colors.poiDefaultBackground}
                                                                               swatches={swatches}
                                                                               onChange={handleChangeColor}
@@ -420,7 +421,7 @@ export const MapPOIEditContent = memo(({poi}) => {
                                                                           <WaTooltip for={`map-poi-fg-${id}`}>{'Foreground Color'}</WaTooltip>
                                                                           <WaColorPicker
                                                                               id={`map-poi-fg-${id}`}
-                                                                              size="small"
+                                                                              size="s"
                                                                               value={color ?? lgs.colors.poiDefault}
                                                                               swatches={swatches}
                                                                               onChange={handleChangeColor}
@@ -439,7 +440,7 @@ export const MapPOIEditContent = memo(({poi}) => {
                                                           <JourneySelector
                                                               label="Journey"
                                                               value={journeyAssociation.selectedJourneySlug}
-                                                              size="small"
+                                                              size="s"
                                                               className="map-poi-journey-selector"
                                                               onChange={journeyAssociation.handleChangeJourney}
                                                               disabled={!visible}
@@ -451,7 +452,6 @@ export const MapPOIEditContent = memo(({poi}) => {
                                                           />
                                                       )}
                                                       <WaTextarea
-                                                          size="small"
                                                           value={description}
                                                           onInput={handleChangeDescription}
                                                           className="edit-title-map-poi-input"
@@ -480,7 +480,7 @@ export const MapPOIEditContent = memo(({poi}) => {
                                                       <div className="map-poi-edit-row-coordinates">
                                                           <WaInput
                                                               className={classNames({'map-poi-edit-warning-coordinate': coordinateError.latitude})}
-                                                              size="small"
+                                                              size="s"
                                                               inputMode="decimal"
                                                               withoutSpinButtons
                                                               value={coordinateDraft.latitude}
@@ -490,7 +490,7 @@ export const MapPOIEditContent = memo(({poi}) => {
                                                           />
                                                           <WaInput
                                                               className={classNames({'map-poi-edit-warning-coordinate': coordinateError.longitude})}
-                                                              size="small"
+                                                              size="s"
                                                               inputMode="decimal"
                                                               withoutSpinButtons
                                                               value={coordinateDraft.longitude}
@@ -503,7 +503,7 @@ export const MapPOIEditContent = memo(({poi}) => {
                                                               variant="brand"
                                                               appearance="plain"
                                                               value={formattedCoordinates}
-                                                              size="small"
+                                                              size="s"
                                                               onWaCopy={handleCopySuccess}
                                                               disabled={!visible}
                                                           />

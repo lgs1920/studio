@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-05-09
- * Last modified: 2026-05-09
+ * Created on: 2026-05-10
+ * Last modified: 2026-05-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -37,7 +37,7 @@ const ToolbarHeader = memo(({show, usage, onToggle}) => {
     return (
         <WaSwitch
             label-at-start width-auto
-            size="xsmall"
+            size="xs"
                 checked={show}
             onChange={onToggle}
             >

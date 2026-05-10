@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-01
- * Last modified: 2026-04-01
+ * Created on: 2026-05-10
+ * Last modified: 2026-05-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -104,7 +104,7 @@ export const LayersColorsAdjustementPopup = (props) => {
                     <WaButton appearance="plain"
                               slot="header-actions"
                               onClick={close}>
-                        <WaIcon size="small" name="xmark" variant="regular"/>
+                        <WaIcon size="s" name="xmark" variant="regular"/>
                     </WaButton>
 
                     <h3 slot="header">
@@ -146,29 +146,29 @@ export const LayersColorsAdjustementPopup = (props) => {
                         <div className="lgs--popup-in-drawer-footer">
                             <WaTooltip for="lgs--reset-layer-settings-to-factory">{'Reset to factory'}</WaTooltip>
                             <WaButton id="lgs--reset-layer-settings-to-factory"
-                                      size="small" onClick={resetToFactory}
+                                      size="s" onClick={resetToFactory}
                                       appearance="outlined"
                                       variant="brand"
                             >
-                                <WaIcon slot="start" size="small" name="arrow-rotate-left"/> {'Reset'}
+                                <WaIcon slot="start" size="s" name="arrow-rotate-left"/> {'Reset'}
                             </WaButton>
 
                             <div className="buttons-bar">
                                 <WaTooltip for="lgs--undo-layer-settings-last-changes">{'Undo Last Changes'}</WaTooltip>
                                 <WaButton id="lgs--undo-layer-settings-last-changes"
-                                          size="small"
+                                          size="s"
                                           appearance="plain"
                                           disabled={!editor.layer.settingsChanged} onClick={undoChanges}>
-                                    <WaIcon slot="start" size="small" name="arrow-u-turn-up-left"
+                                    <WaIcon slot="start" size="s" name="arrow-u-turn-up-left"
                                             variant="regular"/> {'Undo'}
                                 </WaButton>
 
                                 <WaTooltip for="lgs--close-layer-settings">{'Close settings'}</WaTooltip>
                                 <WaButton id="lgs--close-layer-settings"
-                                          size="small"
+                                          size="s"
                                           variant="brand"
                                           onClick={close}>
-                                    <WaIcon slot="start" size="small" name="xmark" variant="regular"/> {'Close'}
+                                    <WaIcon slot="start" size="s" name="xmark" variant="regular"/> {'Close'}
                                 </WaButton>
                             </div>
                         </div>

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-27
- * Last modified: 2026-04-27
+ * Created on: 2026-05-10
+ * Last modified: 2026-05-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -262,7 +262,7 @@ export const AppUpdate = ({mode = 'banner'}) => {
                         {/* Dismiss Button (Install only, in standard banner flow) */}
                         {!isUpdate && isStandardBannerFlow && (
                             <WaButton
-                                size="small"
+                                size="s"
                                 variant="default"
                                 outline
                                 onClick={handleDismiss} // Permanent dismissal for install
@@ -275,7 +275,7 @@ export const AppUpdate = ({mode = 'banner'}) => {
                         {/* Later/Close Button (only in standard banner flow) */}
                         {isStandardBannerFlow && (
                             <WaButton
-                                size="small"
+                                size="s"
                                 variant="default"
                                 onClick={() => setShowUnifiedBanner(false)}
                             >
@@ -287,7 +287,7 @@ export const AppUpdate = ({mode = 'banner'}) => {
                         {/* Primary Action Button (Install or Update) */}
                         {!(isUpdate && updateError) && ( // Don't show update button if there's an update error
                             <WaButton
-                                size="small"
+                                size="s"
                                 onClick={handlePrimaryAction}
                                 variant="brand"
                             >

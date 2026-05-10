@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-30
- * Last modified: 2026-04-30
+ * Created on: 2026-05-10
+ * Last modified: 2026-05-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -201,7 +201,7 @@ export const WhatsNew = ({visible = false}) => {
                     <div className="lgs--whats-new-pagination">
                         {state.hasPrevious
                          ? (
-                             <WaButton size="small"
+                             <WaButton size="s"
                                        appearance="plain"
                                        variant="brand"
                                        disabled={state.loading}
@@ -216,7 +216,7 @@ export const WhatsNew = ({visible = false}) => {
 
                         {state.hasNext
                          ? (
-                             <WaButton size="small"
+                             <WaButton size="s"
                                        appearance="plain"
                                        variant="brand"
                                        disabled={state.loading}

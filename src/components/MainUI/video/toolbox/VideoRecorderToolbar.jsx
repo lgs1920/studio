@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-05-01
- * Last modified: 2026-05-01
+ * Created on: 2026-05-10
+ * Last modified: 2026-05-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -54,7 +54,7 @@ const RecorderControls = memo(({recording, paused, recorder, starting, onFinaliz
                 id="video-recorder-play-pause"
                 appearance="plain"
                 variant="brand"
-                size="small"
+                size="s"
                 className="video-recorder-action"
                 onClick={handlePlayPause}
                 disabled={!recorder || starting || !recording}
@@ -68,7 +68,7 @@ const RecorderControls = memo(({recording, paused, recorder, starting, onFinaliz
                         id="video-recorder-stop"
                         appearance="plain"
                         variant="brand"
-                        size="small"
+                        size="s"
                         className="video-recorder-action"
                         onClick={handleStop}
                     >
@@ -302,7 +302,7 @@ export const VideoRecorderToolbar = ({toolbar}) => {
                 id="video-recorder-cancel"
                 appearance="plain"
                 variant="brand"
-                size="small"
+                size="s"
                 onPointerDown={handleCancel}
                 disabled={video.preRecording}
                 className="video-recorder-action lgs-cancel-recording"

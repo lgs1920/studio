@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-29
- * Last modified: 2026-04-29
+ * Created on: 2026-05-10
+ * Last modified: 2026-05-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -72,13 +72,13 @@ export const CameraSettings = () => {
                 {sceneMode.value * 1 === SCENE_MODE_3D.value &&
                     <>
                         <div className="drawer-horizontal-line align-to-top">
-                            <WaSwitch size="xsmall" label-at-start checked={camera.showPosition}
+                            <WaSwitch size="xs" label-at-start checked={camera.showPosition}
                                       onChange={(event) => updateCameraBoolean('showPosition', event.target.checked)}>
                                 {' Show Position '}
                                 <span slot="hint">{' Longitude, Latitude, Altitude '}</span>
                             </WaSwitch>
                             <WaDivider orientation="vertical"/>
-                            <WaSwitch size="xsmall" label-at-start checked={camera.showHPR}
+                            <WaSwitch size="xs" label-at-start checked={camera.showHPR}
                                       onChange={(event) => updateCameraBoolean('showHPR', event.target.checked)}>
                                 {' Show HPR '}
                                 <span slot="hint">{' Head, Pitch, Roll '}</span>
@@ -88,7 +88,7 @@ export const CameraSettings = () => {
                 }
 
                 <div className="drawer-horizontal-line align-to-top">
-                    <WaSwitch size="xsmall" label-at-start checked={camera.targetIcon.show}
+                    <WaSwitch size="xs" label-at-start checked={camera.targetIcon.show}
                               onChange={updateTargetMarker}>
                         {' Show Target Marker '}
                         <span slot="hint">
@@ -97,7 +97,7 @@ export const CameraSettings = () => {
                         </span>
                     </WaSwitch>
                     <WaDivider orientation="vertical"/>
-                    <WaSwitch size="xsmall" label-at-start checked={camera.showTargetPosition} ref={_targetPosition}
+                    <WaSwitch size="xs" label-at-start checked={camera.showTargetPosition} ref={_targetPosition}
                               onChange={(event) => updateCameraBoolean('showTargetPosition', event.target.checked)}>
                         {' Show Target Position '}
                         <span slot="hint">
@@ -108,7 +108,7 @@ export const CameraSettings = () => {
                 </div>
                 <WaDivider/>
                 <div className="drawer-horizontal-line align-to-top">
-                    <WaSwitch size="xsmall" label-at-start checked={camera.showMovementWidget ?? true}
+                    <WaSwitch size="xs" label-at-start checked={camera.showMovementWidget ?? true}
                               onChange={(event) => updateCameraBoolean('showMovementWidget', event.target.checked)}>
                         {' Camera Info '}
                         <span slot="hint">{' Angle and altitude while moving the camera '}</span>
@@ -127,7 +127,7 @@ export const CameraSettings = () => {
             <>
                 <div className="drawer-horizontal-line two-columns align-to-top">
                     <WaRadioGroup value={camera.start.app}
-                                  size={'xsmall'}
+                                  size={'xs'}
                                   onChange={(event) => updateCameraStart('app', event.target.value)}
                     >
                         <label slot="label">{' Start focus: '}</label>
@@ -137,7 +137,7 @@ export const CameraSettings = () => {
                     </WaRadioGroup>
 
                     <WaRadioGroup value={camera.start.journey}
-                                  size={'xsmall'}
+                                  size={'xs'}
                                   onChange={(event) => updateCameraStart('journey', event.target.value)}>
                         <label slot="label">{' Journey focus: '}</label>
                         <WaRadio value={FOCUS_CENTROID}>{' Center '}</WaRadio>
@@ -146,7 +146,7 @@ export const CameraSettings = () => {
                 </div>
                 <WaDivider/>
                 <div className="drawer-horizontal-line two-columns">
-                    <WaSwitch size="xsmall" label-at-start checked={camera.start.rotate.app}
+                    <WaSwitch size="xs" label-at-start checked={camera.start.rotate.app}
                               onChange={(event) => updateCameraStartRotate('app', event.target.checked)}>
                         {' Rotation after initial focus '}
                     </WaSwitch>
@@ -154,12 +154,12 @@ export const CameraSettings = () => {
 
                 <WaDivider/>
                 <div>
-                    <WaSwitch size="xsmall" label-at-start checked={poi.rotate}
+                    <WaSwitch size="xs" label-at-start checked={poi.rotate}
                               onChange={updatePoiRotate}>
                         {' Rotation after focusing on a POI '}
                     </WaSwitch>
                     <br/>
-                    <WaSwitch size="xsmall" label-at-start checked={camera.start.rotate.journey}
+                    <WaSwitch size="xs" label-at-start checked={camera.start.rotate.journey}
                               onChange={(event) => updateCameraStartRotate('journey', event.target.checked)}>
                         {' Rotation after focusing on a journey '}
                     </WaSwitch>

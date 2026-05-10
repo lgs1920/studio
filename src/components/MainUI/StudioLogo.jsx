@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-05-10
+ * Last modified: 2026-05-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -26,13 +26,13 @@ export const StudioLogo = (props) => {
         style = {height: props.height}
     }
     const sizes = {
-        xsmall: '-xs', small: '-s', 'normal': '', 'large': '-l', 'xlarge': '-xl',
+        xs: '-xs', small: '-s', 'normal': '', 'large': '-l', 'xlarge': '-xl',
     }
 
     const addClass = props.addClassName ? props.addClassName : ''
 
     const size = (props.small) ? 'small'
-                               : (props.xsmall) ? 'xsmall'
+                               : (props.xs) ? 'xs'
                                                 : (props.large) ? 'large'
                                                                 : (props.large) ? 'xlarge'
                                                                                 : 'normal'

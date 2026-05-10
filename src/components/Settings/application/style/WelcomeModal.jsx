@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-11
- * Last modified: 2026-03-11
+ * Created on: 2026-05-10
+ * Last modified: 2026-05-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -31,7 +31,7 @@ export const WelcomeModal = (props) => {
             <span slot="summary">{'Welcome Modal'}</span>
             <WaDivider/>
             <WaSwitch
-                size="xsmall"
+                size="xs"
                 label-at-start
                 checked={welcome.showIntro}
                 onChange={(event) => {
@@ -43,7 +43,7 @@ export const WelcomeModal = (props) => {
             {welcome.showIntro &&
                 <>
                     <WaSwitch
-                        size="xsmall"
+                        size="xs"
                         label-at-start
                         checked={welcome.autoClose}
                         onChange={(event) => {
@@ -57,7 +57,7 @@ export const WelcomeModal = (props) => {
                             className="lgs--short-input lgs--no-margin"
                             label-at-start no-start
                             min="5" max="30"
-                            size="small"
+                            size="s"
                             value={welcome.displayTime}
                             appearance="filled"
                             onInput={(event) => {

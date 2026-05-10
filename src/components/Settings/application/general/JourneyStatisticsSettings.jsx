@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-05-09
- * Last modified: 2026-05-09
+ * Created on: 2026-05-10
+ * Last modified: 2026-05-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -167,7 +167,7 @@ const ThresholdFieldRow = ({
                     key={`${profileId}-${field.key}`}
                     className="journey-statistics-threshold-input"
                     label={field.label}
-                    size="small"
+                    size="s"
                     defaultValue={getDisplayValue(profileValue, field)}
                     value={getDisplayValue(profileValue, field)}
                     hint={field.hint}
@@ -183,7 +183,7 @@ const ThresholdFieldRow = ({
             <WaButton
                 id={`journey-statistics-settings-reset-button-${field.key}`}
                 className="journey-statistics-field-reset"
-                size="small"
+                size="s"
                 appearance="plain"
                 variant="brand"
                 disabled={!isModified}
@@ -275,7 +275,7 @@ export const JourneyStatisticsSettings = () => {
             <div className="journey-statistics-scroll-area">
                 <LGSScrollbars>
                     <div id="journey-statistics-settings">
-                        <WaCallout open size="small" variant="neutral">
+                        <WaCallout open size="s" variant="neutral">
                             <WaIcon slot="icon" name="circle-info" variant="regular"/>
                             {
                                 'Choose the activity profile to tune here. The activity used by a journey is selected in the journey editor; these thresholds only define how statistics are cleaned for that activity.'
@@ -285,7 +285,7 @@ export const JourneyStatisticsSettings = () => {
                         <div className="journey-statistics-settings-row">
                             <WaSelect
                                 label="Activity profile"
-                                size="small"
+                                size="s"
                                 value={selectedProfileId}
                                 onChange={(event) => setSelectedActivity(event.target.value)}
                             >
@@ -297,7 +297,7 @@ export const JourneyStatisticsSettings = () => {
                                 ))}
                             </WaSelect>
                             <WaButton
-                                size="small"
+                                size="s"
                                 appearance="outlined"
                                 variant="brand"
                                 disabled={!isModified}

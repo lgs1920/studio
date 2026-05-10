@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-14
- * Last modified: 2026-04-14
+ * Created on: 2026-05-10
+ * Last modified: 2026-05-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -41,7 +41,7 @@ export const TypefaceElement = ({id}) => {
 
     return (
         <WaSelect
-            size="small"
+            size="s"
             value={currentFont.replace(/\s/g, '_')}
             className="lgs--text-widget-typeface-trigger"
             onChange={handleFontChange}

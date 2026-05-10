@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-30
- * Last modified: 2026-04-30
+ * Created on: 2026-05-10
+ * Last modified: 2026-05-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -30,7 +30,7 @@ const PanelActions = ({stackedPanel = false, onBack = null, children}) => {
             <ThemeSelector/>
             {stackedPanel &&
                 <WaButton
-                    size="small"
+                    size="s"
                     variant="brand"
                     appearance="plain"
                     {...backButtonProps}

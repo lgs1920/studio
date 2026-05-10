@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-05-09
- * Last modified: 2026-05-09
+ * Created on: 2026-05-10
+ * Last modified: 2026-05-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -442,14 +442,14 @@ export const JourneySettings = () => {
                         aria-label="Export file name"
                         className="journey-export-file-name"
                         value={exportFileName}
-                        size="small"
+                        size="s"
                         onInput={handleExportFileNameChange}
                     />
                     <WaSelect
                         aria-label="Export format"
                         className="journey-export-format"
                         value={exportFormat}
-                        size="small"
+                        size="s"
                         onChange={handleExportFormatChange}
                         onWaShow={keepExportFormatPopoverInDialog}
                         onWaAfterShow={keepExportFormatPopoverInDialog}
@@ -748,7 +748,6 @@ export const JourneySettings = () => {
                                                     label={journey.tracks.size === 1 ? 'Description' : 'Journey Description'}
                                                     ref={_description}
                                                     rows={3}
-                                                    size="small"
                                                     value={decodeHTMLEntities(journey.description)}
                                                     onChange={setDescription}
                                                 />
@@ -791,7 +790,7 @@ export const JourneySettings = () => {
                                                     {running && target?.instanceOf?.(CURRENT_JOURNEY) ? 'Stop rotation' : 'Start rotation'}
                                                 </WaTooltip>
                                                 <WaButton
-                                                    size="small"
+                                                    size="s"
                                                     onClick={forceRotate}
                                                     ref={_manualRotate}
                                                     id="rotation-in-settings"
@@ -809,7 +808,7 @@ export const JourneySettings = () => {
                                             {running && target?.instanceOf?.(CURRENT_JOURNEY) ? 'Stop rotation' : 'Focus on Journey'}
                                         </WaTooltip>
                                         <WaButton id="auto-rotate-in-settings"
-                                                  size="small"
+                                                  size="s"
                                                   onClick={maybeRotate}
                                                   id="auto-rotate-in-settings"
                                                   variant="brand"
@@ -847,7 +846,7 @@ export const JourneySettings = () => {
                                            for="export-journey-in-settings">{'Export Journey'}</WaTooltip>
                                 <WaButton onClick={exportJourney}
                                           id="export-journey-in-settings"
-                                          size="small"
+                                          size="s"
                                           appearance="plain"
                                           variant="brand">
                                     <WaIcon name="download" variant="regular"/>

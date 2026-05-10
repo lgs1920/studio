@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-29
- * Last modified: 2026-04-29
+ * Created on: 2026-05-10
+ * Last modified: 2026-05-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -91,7 +91,7 @@ export const ColorElement = ({
             <div className="drawer-horizontal-line three-columns">
                 <div className="drawer-horizontal-element">
                     <WaColorPicker
-                        size="small"
+                        size="s"
                         swatches={swatches}
                         value={colorForPicker}
                         onInput={handleColorInput}
@@ -101,7 +101,7 @@ export const ColorElement = ({
                 <div className="drawer-horizontal-element xlarge-element">
                     <WaSlider
                         ref={sliderRef}
-                        size="small"
+                        size="s"
                         label="Opacity"
                         min="0"
                         max="1"

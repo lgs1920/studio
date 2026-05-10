@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-06
- * Last modified: 2026-04-03
+ * Created on: 2026-05-10
+ * Last modified: 2026-05-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -80,7 +80,7 @@ const TrackStyleColorField = ({label, hint, value, onChange, className = ''}) =>
         <div className="lgs--track-style-color-control">
             <WaColorPicker
                 className="lgs--track-style-color-picker"
-                size="small"
+                size="s"
                 aria-label={label}
                 value={toOpaqueColorValue(value)}
                 swatches={lgs.settings.getSwatches.list.join(';')}
@@ -88,7 +88,7 @@ const TrackStyleColorField = ({label, hint, value, onChange, className = ''}) =>
             />
             <WaSlider
                 className="lgs--track-style-opacity-slider"
-                size="small"
+                size="s"
                 label="Opacity"
                 min="0"
                 max="1"
@@ -113,7 +113,7 @@ const TrackStyleNumberField = ({label, unit, hint, className = '', ...props}) =>
     >
         <WaNumberInput
             className="lgs--track-style-number-input"
-            size="small"
+            size="s"
             appearance="filled"
             {...props}
         />
@@ -444,7 +444,7 @@ export const TrackStyleSettings = ({showTitle = true}) => {
                 <WaSwitch
                     className="lgs--track-style-switch"
                     label-at-start
-                    size="xsmall"
+                    size="xs"
                     checked={smoothing.enabled}
                     onInput={handleSmoothingEnabled}
                 >
@@ -473,7 +473,7 @@ export const TrackStyleSettings = ({showTitle = true}) => {
                 >
                     <WaSelect
                         className="lgs--track-style-preset-select"
-                        size="small"
+                        size="s"
                         value={selectedPresetKey}
                         onChange={handlePresetChange}
                     >
@@ -529,7 +529,7 @@ export const TrackStyleSettings = ({showTitle = true}) => {
                 <WaSwitch
                     className="lgs--track-style-switch"
                     label-at-start
-                    size="xsmall"
+                    size="xs"
                     checked={renderStyle.underlay.enabled}
                     onInput={handleUnderlayEnabled}
                 >
@@ -571,7 +571,7 @@ export const TrackStyleSettings = ({showTitle = true}) => {
                 <WaSwitch
                     className="lgs--track-style-switch"
                     label-at-start
-                    size="xsmall"
+                    size="xs"
                     checked={renderStyle.dash.enabled}
                     onInput={handleDashEnabled}
                 >
@@ -586,7 +586,7 @@ export const TrackStyleSettings = ({showTitle = true}) => {
                         <WaSwitch
                             className="lgs--track-style-switch"
                             label-at-start
-                            size="xsmall"
+                            size="xs"
                             checked={renderStyle.dash.biColor}
                             onInput={handleDashBiColor}
                         >

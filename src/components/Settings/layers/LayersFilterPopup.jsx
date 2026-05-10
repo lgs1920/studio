@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-06
- * Last modified: 2026-04-03
+ * Created on: 2026-05-10
+ * Last modified: 2026-05-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -168,7 +168,7 @@ export const LayersFilterPopup = () => {
                     <WaButton appearance="plain"
                               slot="header-actions"
                               onClick={close}>
-                        <WaIcon size="small" name="xmark" variant="regular"/>
+                        <WaIcon size="s" name="xmark" variant="regular"/>
                     </WaButton>
 
                     <h3 slot="header">
@@ -179,7 +179,7 @@ export const LayersFilterPopup = () => {
                     <WaRadioGroup name="usage" orientation="horizontal" label-at-start
                                   id="lgs--layers-filter-by-usage"
                                   onChange={handleUsage}
-                                  value={layers.filter.byUsage} size="small">
+                                  value={layers.filter.byUsage} size="s">
                         <span slot="label">{'By Usage'}</span>
                         <WaRadio value={ALL}>{'All'}</WaRadio>
                         <WaRadio value={UNLOCKED}>{'Unlocked'}</WaRadio>
@@ -188,7 +188,7 @@ export const LayersFilterPopup = () => {
 
                     <WaTooltip for="lgs--layers-filter-by-countries">"By Countries"</WaTooltip>
                     <WaSelect multiple with-clear
-                              onChange={handleCountries} size="small"
+                              onChange={handleCountries} size="s"
                               id="lgs--layers-filter-by-countries"
                               value={layers.filter.byCountries ?? []}
                               key="filter-by-countries"
@@ -212,18 +212,18 @@ export const LayersFilterPopup = () => {
                     <WaTooltip for="lgs--layers-filter-by-name">"By Layer Name"</WaTooltip>
                     <WaInput placeholder="By name"
                              id="lgs--layers-filter-by-name"
-                             onInput={handleName} size="small"
+                             onInput={handleName} size="s"
                              value={layers.filter.byName}
                              key="filter-by-name"
                              with-clear
                     />
 
                     <WaCallout
-                        size="small"
+                        size="s"
                         variant={layers.filter.count === 0 ? 'danger' : 'neutral'}
                         className="map-poi-filter-count-info"
                     >
-                        <WaIcon slot="icon" size="small" variant="regular"
+                        <WaIcon slot="icon" size="s" variant="regular"
                                 name={layers.filter.count === 0 ? 'warning' : 'layer-group'}/>
                         <div>
                             <div>
@@ -235,7 +235,7 @@ export const LayersFilterPopup = () => {
                             {layers.filter.count === 0 && (
                                 <WaButton id="lgs--reset-layers-filters-callout" size="x-small" onClick={disableFilter}
                                           appearance="outlined" variant="danger" disabled={!layers.filter.active}>
-                                    <WaIcon slot="start" size="small" variant="regular"
+                                    <WaIcon slot="start" size="s" variant="regular"
                                             name="filter-circle-xmark"/>{'Reset'}
                                 </WaButton>
                             )}
@@ -246,20 +246,20 @@ export const LayersFilterPopup = () => {
                         <div className="lgs--popup-in-drawer-footer">
                             <WaTooltip for="lgs--reset-filter-to-factory">"Reset Filters"</WaTooltip>
                             <WaButton id="lgs--reset-filter-to-factory"
-                                      size="small" onClick={disableFilter}
+                                      size="s" onClick={disableFilter}
                                       appearance="outlined"
                                       variant="brand"
                                       disabled={!layers.filter.active}
                             >
-                                <WaIcon slot="start" size="small" name="arrow-rotate-left"/>{'Reset'}
+                                <WaIcon slot="start" size="s" name="arrow-rotate-left"/>{'Reset'}
                             </WaButton>
 
                             <WaTooltip for="lgs--close-layer-settings">"Close settings"</WaTooltip>
                             <WaButton id="lgs--close-layer-settings"
-                                      size="small"
+                                      size="s"
                                       variant="brand"
                                       onClick={close}>
-                                <WaIcon slot="start" size="small" name="xmark" variant="regular"/>{'Close'}
+                                <WaIcon slot="start" size="s" name="xmark" variant="regular"/>{'Close'}
                             </WaButton>
                         </div>
                     </div>

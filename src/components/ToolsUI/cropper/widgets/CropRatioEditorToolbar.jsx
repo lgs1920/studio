@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-05-09
- * Last modified: 2026-05-09
+ * Created on: 2026-05-10
+ * Last modified: 2026-05-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -151,7 +151,7 @@ export const CropRatioEditorToolbar = memo(({context, cropzoneId}) => {
 
                     <WaButton
                         id="current-crop-ratio"
-                        size="small"
+                        size="s"
                         appearance="outlined"
                         onClick={(e) => {
                             e.stopPropagation()

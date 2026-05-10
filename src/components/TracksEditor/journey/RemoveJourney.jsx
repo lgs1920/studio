@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-05-09
- * Last modified: 2026-05-09
+ * Created on: 2026-05-10
+ * Last modified: 2026-05-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -162,7 +162,7 @@ export const RemoveJourney = (props) => {
     return (
         <>
             <WaTooltip placement="bottom" for={removeButtonId}>{'Remove journey'}</WaTooltip>
-            <WaButton size="small"
+            <WaButton size="s"
                       id={removeButtonId}
                       variant="brand"
                       appearance="plain"

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-30
- * Last modified: 2026-04-30
+ * Created on: 2026-05-10
+ * Last modified: 2026-05-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -54,7 +54,7 @@ export const BorderElement = ({
         <div>
             <WaSwitch
                 label-at-start
-                size="xsmall"
+                size="xs"
                 checked={element.border?.show ?? false}
                 onInput={(e) => updateValue('border.show', e.target.checked)}
             >
@@ -66,7 +66,7 @@ export const BorderElement = ({
                     <div className="lgs-widget-color-control-grid lgs-widget-border-control-grid">
                         <div className="lgs-widget-color-control-color">
                             <WaColorPicker
-                                size="small"
+                                size="s"
                                 swatches={swatches}
                                 value={getColor(element.border)}
                                 onInput={(e) => updateValue('border.color', e.target.value)}
@@ -76,7 +76,7 @@ export const BorderElement = ({
                             <div className="drawer-horizontal-element lgs-widget-border-control">
                                 <WaSlider
                                     withTooltip
-                                    size="small"
+                                    size="s"
                                     label="Width"
                                     min="0"
                                     max="10"
@@ -93,7 +93,7 @@ export const BorderElement = ({
                             <div className="drawer-horizontal-element lgs-widget-border-control">
                                 <WaSlider
                                     withTooltip
-                                    size="small"
+                                    size="s"
                                     label="Opacity"
                                     min="0"
                                     max="1"
@@ -126,7 +126,7 @@ export const BorderElement = ({
                         <>
                             <div className="drawer-horizontal-line lgs-widget-border-radius-line">
                                 <WaSelect
-                                    size="small"
+                                    size="s"
                                     label={'Radius'}
                                     label-at-start
                                     style={{marginLeft: 'auto', width: '10rem'}}

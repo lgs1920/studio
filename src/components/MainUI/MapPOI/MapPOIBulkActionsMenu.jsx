@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-01
- * Last modified: 2026-04-01
+ * Created on: 2026-05-10
+ * Last modified: 2026-05-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -177,8 +177,8 @@ export const MapPOIBulkActionsMenu = React.memo((globals) => {
     }
 
     return (
-        <WaDropdown disabled={disabled} onSlAfterHide={handleAfterHide} size="small">
-            <WaButton slot="trigger" size="small" disabled={disabled} variant="brand" withCaret>
+        <WaDropdown disabled={disabled} onSlAfterHide={handleAfterHide} size="s">
+            <WaButton slot="trigger" size="s" disabled={disabled} variant="brand" withCaret>
                 <WaIcon slot="start" name="location-dot" variant="regular"/>{'Select an action'}
             </WaButton>
 

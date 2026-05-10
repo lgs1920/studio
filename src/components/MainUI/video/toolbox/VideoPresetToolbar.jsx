@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-05-09
- * Last modified: 2026-05-09
+ * Created on: 2026-05-10
+ * Last modified: 2026-05-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -127,7 +127,7 @@ export const VideoPresetToolbar = memo(() => {
                         <Fragment key={key}>
                             <WaButton
                                 className={classNames('video-choice-button', {'is-selected': key === preset})}
-                                size="small"
+                                size="s"
                                 variant="neutral"
                                 appearance={key === preset ? 'outlined' : 'plain'}
                                 id={`video-preset-${key}`}

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-30
- * Last modified: 2026-04-30
+ * Created on: 2026-05-10
+ * Last modified: 2026-05-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -63,7 +63,7 @@ export const StrokeElement = ({
         <>
             <WaSwitch
                 label-at-start
-                size="xsmall"
+                size="xs"
                 checked={stroke.show ?? false}
                 onInput={(e) => updateValue('text.stroke.show', e.target.checked)}
             >
@@ -75,7 +75,7 @@ export const StrokeElement = ({
                     <div className="drawer-horizontal-line three-columns">
                         <div className="drawer-horizontal-element">
                             <WaColorPicker
-                                size="small"
+                                size="s"
                                 swatches={swatches}
                                 value={colorForPicker}
                                 onInput={(e) => {
@@ -87,7 +87,7 @@ export const StrokeElement = ({
                         </div>
                         <div className="drawer-horizontal-element xlarge-element">
                             <WaSlider
-                                size="small"
+                                size="s"
                                 ref={widthRef}
                                 label="Width"
                                 min="0"
@@ -105,7 +105,7 @@ export const StrokeElement = ({
                         </div>
                         <div className="drawer-horizontal-element xlarge-element">
                             <WaSlider
-                                size="small"
+                                size="s"
                                 ref={opacityRef}
                                 label="Opacity"
                                 min="0"

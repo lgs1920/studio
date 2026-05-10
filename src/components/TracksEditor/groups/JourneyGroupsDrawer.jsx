@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-05-09
- * Last modified: 2026-05-09
+ * Created on: 2026-05-10
+ * Last modified: 2026-05-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -73,7 +73,7 @@ const JourneySortableRow = ({journey, actionIcon, actionLabel, onAction}) => {
             <span className="journey-group-journey-title">{journey.title}</span>
             {onAction && (
                 <WaButton
-                    size="small"
+                    size="s"
                     variant="brand"
                     appearance="plain"
                     onClick={handleAction}
@@ -117,7 +117,7 @@ const JourneyGroupDeleteButton = ({group, onDelete}) => {
             <WaTooltip placement="bottom" for={removeButtonId}>{'Remove group'}</WaTooltip>
             <WaButton
                 id={removeButtonId}
-                size="small"
+                size="s"
                 variant="brand"
                 appearance="plain"
                 aria-label={`Remove ${group.name}`}
@@ -140,10 +140,10 @@ const JourneyGroupDeleteButton = ({group, onDelete}) => {
                     </div>
                     <div slot="footer">
                         <div className="lgs--popup-in-drawer-footer">
-                            <WaButton variant="neutral" appearance="outlined" size="small" onClick={hideRemoveDialog}>
+                            <WaButton variant="neutral" appearance="outlined" size="s" onClick={hideRemoveDialog}>
                                 <WaIcon name="xmark"/> {'No'}
                             </WaButton>
-                            <WaButton variant="danger" appearance="filled-outlined" size="small" onClick={removeGroup}>
+                            <WaButton variant="danger" appearance="filled-outlined" size="s" onClick={removeGroup}>
                                 <WaIcon name="trash-can"/> {'Yes'}
                             </WaButton>
                         </div>
@@ -495,7 +495,7 @@ export const JourneyGroupsDrawer = memo(() => {
                                         <WaButton
                                             variant="brand"
                                             appearance="filled"
-                                            size="small"
+                                            size="s"
                                             onClick={openCreatePopup}
                                         >
                                             <WaIcon slot="start" name="circle-plus" variant="regular"/>
@@ -510,7 +510,7 @@ export const JourneyGroupsDrawer = memo(() => {
                                     >
                                         <WaCard className="lgs--popup-in-drawer lgs-slide-down journey-group-create-popup">
                                             <WaButton appearance="plain" slot="header-actions" onClick={closeCreatePopup}>
-                                                <WaIcon size="small" name="xmark" variant="regular"/>
+                                                <WaIcon size="s" name="xmark" variant="regular"/>
                                             </WaButton>
 
                                             <h3 slot="header" className="journey-group-create-popup-title">
@@ -522,13 +522,13 @@ export const JourneyGroupsDrawer = memo(() => {
                                                 <WaInput
                                                     className="journey-group-create-title-input"
                                                     label="Title"
-                                                    size="small"
+                                                    size="s"
                                                     value={newForm.name}
                                                     onInput={event => updateNewForm('name', event.target.value)}
                                                 />
                                                 <div className="journey-group-color-row journey-group-create-color-row">
                                                     <WaColorPicker
-                                                        size="small"
+                                                        size="s"
                                                         placement="bottom"
                                                         swatches={groupColorSwatches}
                                                         value={newForm.color}
@@ -539,7 +539,6 @@ export const JourneyGroupsDrawer = memo(() => {
 
                                             <WaTextarea
                                                 label="Description"
-                                                size="small"
                                                 rows={3}
                                                 value={newForm.description}
                                                 onInput={event => updateNewForm('description', event.target.value)}
@@ -548,22 +547,23 @@ export const JourneyGroupsDrawer = memo(() => {
                                             <div slot="footer">
                                                 <div className="lgs--popup-in-drawer-footer">
                                                     <WaButton
-                                                        size="small"
+                                                        size="s"
                                                         variant="brand"
                                                         appearance="outlined"
                                                         onClick={closeCreatePopup}
                                                     >
-                                                        <WaIcon slot="start" size="small" name="xmark" variant="regular"/>
+                                                        <WaIcon slot="start" size="s" name="xmark" variant="regular"/>
                                                         {'Close'}
                                                     </WaButton>
                                                     <WaButton
-                                                        size="small"
+                                                        size="s"
                                                         variant="brand"
                                                         appearance="filled"
                                                         onClick={createGroup}
                                                         disabled={!newForm.name.trim()}
                                                     >
-                                                        <WaIcon slot="start" size="small" name="folder-plus" variant="regular"/>
+                                                        <WaIcon slot="start" size="s" name="folder-plus"
+                                                                variant="regular"/>
                                                         {'Create'}
                                                     </WaButton>
                                                 </div>
@@ -598,13 +598,12 @@ export const JourneyGroupsDrawer = memo(() => {
                                                                 <div className="journey-group-form">
                                                                     <WaInput
                                                                         label="Name"
-                                                                        size="small"
+                                                                        size="s"
                                                                         value={selectedEditForm.name}
                                                                         onInput={event => updateEditForm('name', event.target.value)}
                                                                     />
                                                                     <WaTextarea
                                                                         label="Description"
-                                                                        size="small"
                                                                         rows={3}
                                                                         value={selectedEditForm.description}
                                                                         onInput={event => updateEditForm('description', event.target.value)}
@@ -612,7 +611,7 @@ export const JourneyGroupsDrawer = memo(() => {
                                                                     <div className="journey-group-color-row">
                                                                         <span>{'Color'}</span>
                                                                         <WaColorPicker
-                                                                            size="small"
+                                                                            size="s"
                                                                             swatches={groupColorSwatches}
                                                                             value={selectedEditForm.color}
                                                                             onInput={event => updateEditForm('color', event.target.value)}
@@ -626,7 +625,7 @@ export const JourneyGroupsDrawer = memo(() => {
                                                                                 <span>{currentJourney.title}</span>
                                                                             </div>
                                                                             <WaSwitch
-                                                                                size="xsmall"
+                                                                                size="xs"
                                                                                 label-at-start
                                                                                 checked={selectedHasCurrentJourney}
                                                                                 onChange={toggleCurrentJourneyInSelectedGroup}
@@ -639,7 +638,7 @@ export const JourneyGroupsDrawer = memo(() => {
                                                                         <WaButton
                                                                             variant="brand"
                                                                             appearance="filled"
-                                                                            size="small"
+                                                                            size="s"
                                                                             onClick={saveGroup}
                                                                             disabled={!selectedEditForm.name.trim()}
                                                                         >
@@ -700,7 +699,7 @@ export const JourneyGroupsDrawer = memo(() => {
                                                 </div>
                                          ))
                                          : (
-                                             <WaCallout size="small" variant="warning" appearance="outlined">
+                                             <WaCallout size="s" variant="warning" appearance="outlined">
                                                  <WaIcon slot="icon" name="warning" variant="regular"/>
                                                  {'No journey groups yet.'}
                                              </WaCallout>

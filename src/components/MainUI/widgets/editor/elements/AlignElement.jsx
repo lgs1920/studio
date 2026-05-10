@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-14
- * Last modified: 2026-04-14
+ * Created on: 2026-05-10
+ * Last modified: 2026-05-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -42,11 +42,11 @@ export const AlignElement = ({id}) => {
     }, [alignmentDisabled, $element])
 
     return (
-        <WaButtonGroup size="small">
+        <WaButtonGroup size="s">
             {ALIGNMENT_MODES.map((mode) => (
                 <WaButton
                     key={mode}
-                    size="small"
+                    size="s"
                     disabled={alignmentDisabled}
                     variant={!alignmentDisabled && element?.align === mode ? 'brand' : 'default'}
                     onClick={() => {

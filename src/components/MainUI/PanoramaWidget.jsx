@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-30
- * Last modified: 2026-04-30
+ * Created on: 2026-05-10
+ * Last modified: 2026-05-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -911,7 +911,7 @@ export const PanoramaWidget = memo(() => {
                             aria-label={directionTooltip}
                             appearance="outlined"
                             className="orbit-widget-header-button orbit-direction-button lgs-widget-no-drag"
-                            size="small"
+                            size="s"
                             variant="brand"
                             onClick={toggleDirection}
                             onPointerDownCapture={blockWidgetDrag}
@@ -928,7 +928,7 @@ export const PanoramaWidget = memo(() => {
                                 aria-label="Stop panorama"
                                 appearance="outlined"
                                 className="orbit-widget-header-button orbit-widget-stop-button lgs-widget-no-drag"
-                                size="small"
+                                size="s"
                                 variant="brand"
                                 onClick={closePanorama}
                                 onPointerDownCapture={blockWidgetDrag}
@@ -951,7 +951,7 @@ export const PanoramaWidget = memo(() => {
                                         aria-label="Height"
                                         className="panorama-widget-range lgs-widget-no-drag"
                                         orientation="vertical"
-                                        size="small"
+                                        size="s"
                                         min={PANORAMA_HEIGHT_OFFSET_MIN}
                                         max={PANORAMA_HEIGHT_OFFSET_MAX}
                                         step={PANORAMA_HEIGHT_OFFSET_STEP}
@@ -972,7 +972,7 @@ export const PanoramaWidget = memo(() => {
                                         aria-label="Angle"
                                         className="panorama-widget-range lgs-widget-no-drag"
                                         orientation="vertical"
-                                        size="small"
+                                        size="s"
                                         min={PANORAMA_PITCH_MIN}
                                         max={PANORAMA_PITCH_MAX}
                                         step={PANORAMA_PITCH_STEP}
@@ -995,7 +995,7 @@ export const PanoramaWidget = memo(() => {
                                 aria-label="RPM"
                                 className="panorama-widget-range lgs-widget-no-drag"
                                 orientation="vertical"
-                                size="small"
+                                size="s"
                                 min={ORBIT_RPM_MIN}
                                 max={ORBIT_RPM_MAX}
                                 step={ORBIT_RPM_STEP}
@@ -1013,7 +1013,7 @@ export const PanoramaWidget = memo(() => {
                                 aria-label="Stop panorama"
                                 appearance="outlined"
                                 className="orbit-widget-footer-button orbit-widget-stop-button lgs-widget-no-drag"
-                                size="small"
+                                size="s"
                                 variant="brand"
                                 onClick={closePanorama}
                                 onPointerDownCapture={blockWidgetDrag}

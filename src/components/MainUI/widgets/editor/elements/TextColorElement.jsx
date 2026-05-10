@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-29
- * Last modified: 2026-04-29
+ * Created on: 2026-05-10
+ * Last modified: 2026-05-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -80,14 +80,14 @@ export const TextColorElement = ({id}) => {
                     <WaColorPicker
                         value={element?.text?.color ?? 'white'}
                         onInput={handleColorChange}
-                        size="small"
+                        size="s"
                         swatches={swatches}
                     />
                 </div>
                 <div className="drawer-horizontal-element xlarge-element"></div>
                 <div className="drawer-horizontal-element xlarge-element">
                     <WaSlider
-                        size="small"
+                        size="s"
                         label="Opacity"
                         label-at-start
                         min="0"

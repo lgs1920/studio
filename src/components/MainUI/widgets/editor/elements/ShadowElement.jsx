@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-30
- * Last modified: 2026-04-30
+ * Created on: 2026-05-10
+ * Last modified: 2026-05-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -35,7 +35,7 @@ export const ShadowElement = ({element, swatches, updateValue}) => {
     return (
         <>
             <WaSwitch label-at-start
-                      size="xsmall"
+                      size="xs"
                       checked={element.text?.shadow?.show ?? false}
                       onInput={(e) => updateValue('text.shadow.show', e.target.checked)}>
                 <label>{'Text elevation'}</label>
@@ -45,11 +45,11 @@ export const ShadowElement = ({element, swatches, updateValue}) => {
                 <>
                     <div className="drawer-horizontal-line three-columns">
                         <div className="drawer-horizontal-element">
-                            <WaColorPicker size="small" swatches={swatches} value={element.text.shadow.color}
+                            <WaColorPicker size="s" swatches={swatches} value={element.text.shadow.color}
                                            onInput={(e) => updateValue('text.shadow.color', e.target.value)}/>
                         </div>
                         <div className="drawer-horizontal-element">
-                            <WaSelect size="small" value={element.text.shadow?.value ?? 'normal'}
+                            <WaSelect size="s" value={element.text.shadow?.value ?? 'normal'}
                                       label-at-start
                                       style={{marginLeft: 'auto', width: '6.5rem'}}
                                       onChange={(e) => updateValue('text.shadow.value', e.target.value)}>
@@ -60,7 +60,7 @@ export const ShadowElement = ({element, swatches, updateValue}) => {
                         </div>
                         <div className="drawer-horizontal-element xlarge-element">
                             <WaSlider ref={sliderRef}
-                                      size="small"
+                                      size="s"
                                       label="Opacity"
                                       min="0"
                                       max="1"

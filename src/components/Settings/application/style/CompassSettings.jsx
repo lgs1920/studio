@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-30
- * Last modified: 2026-04-30
+ * Created on: 2026-05-10
+ * Last modified: 2026-05-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -77,13 +77,13 @@ export const CompassSettings = () => {
             <div className="compass-settings">
                 <div className="compass-settings-row">
                     <WaSelect id="compass-selector-settings"
-                              size="small"
+                              size="s"
                               name="compassSelector"
                               label="Type"
                               label-at-start
                               value={settings.mode.toString()}
                               onChange={setCompassMode}>
-                        <WaIcon slot="start" size="small" variant="regular" name="compass"/>
+                        <WaIcon slot="start" size="s" variant="regular" name="compass"/>
                         <WaOption value={NO_COMPASS.toString()} label="None">{'None'}</WaOption>
                         <WaOption value={COMPASS_FULL.toString()} label="Full">
                             <span slot="start" className="compass-select-thumbnail">

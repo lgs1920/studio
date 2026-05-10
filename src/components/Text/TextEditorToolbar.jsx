@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-14
- * Last modified: 2026-04-14
+ * Created on: 2026-05-10
+ * Last modified: 2026-05-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -168,7 +168,7 @@ export const TextEditorToolbar = ({id, fonts = false, color = true, align = true
                     <WaColorPicker
                         value={element?.text?.color ?? 'white'}
                         onInput={handleColorChange}
-                        size="small"
+                        size="s"
                         swatches={swatches}
                     />
                     <WaSlider
@@ -185,16 +185,16 @@ export const TextEditorToolbar = ({id, fonts = false, color = true, align = true
 
             {style && (
                 <div className="drawer-horizontal-element">
-                    <WaButtonGroup size="small">
+                    <WaButtonGroup size="s">
                         <WaButton
-                            size="small"
+                            size="s"
                             variant={element?.weight === 'bold' ? 'brand' : 'default'}
                             onClick={toggleBold}
                         >
                             <WaIcon variant="regular" name="bold"/>
                         </WaButton>
                         <WaButton
-                            size="small"
+                            size="s"
                             variant={element?.style === 'italic' ? 'brand' : 'default'}
                             onClick={toggleItalic}
                         >
@@ -206,11 +206,11 @@ export const TextEditorToolbar = ({id, fonts = false, color = true, align = true
 
             {align && (
                 <div className="drawer-horizontal-element">
-                    <WaButtonGroup size="small">
+                    <WaButtonGroup size="s">
                         {['left', 'center', 'right'].map((mode) => (
                             <WaButton
                                 key={mode}
-                                size="small"
+                                size="s"
                                 disabled={alignmentDisabled}
                                 variant={!alignmentDisabled && element?.align === mode ? 'brand' : 'default'}
                                 onClick={() => {
@@ -232,7 +232,7 @@ export const TextEditorToolbar = ({id, fonts = false, color = true, align = true
                     <div className="drawer-horizontal-element">
 
                         <WaSelect
-                            size="small"
+                            size="s"
                             value={currentFont.replace(/\s/g, '_')}
                             onChange={handleFontChange}
                             style={{
@@ -252,7 +252,7 @@ export const TextEditorToolbar = ({id, fonts = false, color = true, align = true
                     <div className="drawer-horizontal-element">
                         <WaSelect
                             hoist
-                            size="small"
+                            size="s"
                             value={element?.lineHeight ?? '1'}
                             onChange={handleLineHeightChange}
                             style={{width: '8rem'}}
@@ -270,7 +270,7 @@ export const TextEditorToolbar = ({id, fonts = false, color = true, align = true
                     </div>
                     <div className="drawer-horizontal-element">
                         <WaInput
-                            size="small"
+                            size="s"
                             type="number"
                             min="8"
                             max="48"

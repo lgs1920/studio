@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-19
- * Last modified: 2026-04-19
+ * Created on: 2026-05-10
+ * Last modified: 2026-05-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -114,7 +114,7 @@ export const ResetProfile = () => {
 
                 <WaSwitch
                     label-at-start
-                    size="xsmall"
+                    size="xs"
                     checked={account.reset.lgs1920}
                     onChange={(event) => {
                         $account.reset.lgs1920 = event.target.checked
@@ -126,7 +126,7 @@ export const ResetProfile = () => {
 
                 <WaSwitch
                     label-at-start
-                    size="xsmall"
+                    size="xs"
                     checked={account.reset.widgets}
                     onChange={(event) => {
                         $account.reset.widgets = event.target.checked
@@ -138,7 +138,7 @@ export const ResetProfile = () => {
 
                 <WaSwitch
                     label-at-start
-                    size="xsmall"
+                    size="xs"
                     checked={account.reset.settings}
                     onChange={(event) => {
                         $account.reset.settings = event.target.checked
@@ -150,7 +150,7 @@ export const ResetProfile = () => {
 
                 <WaSwitch
                     label-at-start
-                    size="xsmall"
+                    size="xs"
                     checked={account.reset.vault}
                     onChange={(event) => {
                         $account.reset.vault = event.target.checked

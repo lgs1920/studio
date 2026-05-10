@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-27
- * Last modified: 2026-04-27
+ * Created on: 2026-05-10
+ * Last modified: 2026-05-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -183,7 +183,7 @@ export const JourneyToolbar = (props) => {
                     <JourneySelector onChange={newJourneySelection}
                                      single="true"
                                      closeOnOutsidePointerDown
-                                     size="small"
+                                     size="s"
                                      ref={_journeySelector}/>
 
                     <WaTooltip for="create-journey-toolbar">{'Import journey'}</WaTooltip>
@@ -222,10 +222,10 @@ export const JourneyToolbar = (props) => {
                                             id="rotate-journey-toolbar"
                                             ref={manualRotate}
                                             onClick={forceRotate}
-                                            size="small"
+                                            size="s"
                                         >
                                             {rotate.running && rotate.target?.instanceOf?.(CURRENT_JOURNEY)
-                                             ? (<WaSpinner size="small"/>)
+                                             ? (<WaSpinner size="s"/>)
                                              : (<WaIcon name={FOCUS_ICON} variant="regular"/>)
                                             }
                                         </WaButton>

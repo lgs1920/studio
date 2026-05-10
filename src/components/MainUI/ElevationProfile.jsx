@@ -396,7 +396,7 @@ export const ElevationProfile = (props) => {
     return (
         <>
             <WaSelect className="lgs--elevation-source-select"
-                      size="small"
+                      size="s"
                       label={props.label}
                       value={selectedServer}
                       onChange={handleServerChange}>
@@ -414,7 +414,7 @@ export const ElevationProfile = (props) => {
             ) : (
                  <div className="journey-profile-chart-menu">
                      <WaSwitch
-                         size="xsmall"
+                         size="xs"
                          label-at-start
                          width-auto
                          disabled={!data.hasElevation}

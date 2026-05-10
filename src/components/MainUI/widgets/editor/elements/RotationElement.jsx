@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-29
- * Last modified: 2026-04-29
+ * Created on: 2026-05-10
+ * Last modified: 2026-05-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -68,7 +68,7 @@ export const RotationElement = ({
             <div className="drawer-horizontal-element">
                 <label>{'Rotation'}</label>
                 <WaInput
-                    size="small"
+                    size="s"
                     type="number"
                     value={displayValue}
                     style={{marginLeft: 'auto', width: '5rem'}}
@@ -82,7 +82,7 @@ export const RotationElement = ({
             <div className="drawer-horizontal-element">
                 <WaSlider
                     ref={sliderRef}
-                    size="small"
+                    size="s"
                     min={min}
                     max={max}
                     step={step}
@@ -96,9 +96,9 @@ export const RotationElement = ({
 
             <div className="drawer-horizontal-element widget-editor-rotation-reset">
                 {isRotated && (
-                    <WaButton size="small" appearance="plain" aria-label="Reset rotation"
+                    <WaButton size="s" appearance="plain" aria-label="Reset rotation"
                               onClick={() => applyRotation(0)}>
-                        <WaIcon size="small" name="arrow-rotate-left" variant="regular"/>
+                        <WaIcon size="s" name="arrow-rotate-left" variant="regular"/>
                     </WaButton>
                 )}
             </div>

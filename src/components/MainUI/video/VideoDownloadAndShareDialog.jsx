@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-05-09
- * Last modified: 2026-05-09
+ * Created on: 2026-05-10
+ * Last modified: 2026-05-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -443,7 +443,7 @@ export const VideoDownloadAndShareDialog = () => {
             <div className="video-file-actions">
                 <WaInput
                     appearance="outlined"
-                    size="small"
+                    size="s"
                     name="video-file-name"
                     onInput={handleFilenameChange}
                     value={filename}
@@ -459,7 +459,7 @@ export const VideoDownloadAndShareDialog = () => {
                                 ref={_recordingInfoButton}
                                 className="video-recording-info-trigger"
                                 appearance="plain"
-                                size="small"
+                                size="s"
                                 variant="brand"
                                 onClick={(event) => {
                                     event.preventDefault()

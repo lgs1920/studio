@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-30
- * Last modified: 2026-04-30
+ * Created on: 2026-05-10
+ * Last modified: 2026-05-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -34,7 +34,7 @@ export const ScaleSwitchElement = ({
                 style={switchStyle}
                 label-at-start
                 width-auto={widthAuto || undefined}
-                size="xsmall"
+                size="xs"
                 checked={checked}
                 onClick={stopPropagation}
                 onInput={(e) => {

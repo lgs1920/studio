@@ -738,7 +738,7 @@ export const SHORTCUTS_CATALOG = [
     },
     {
         action:      'Snapshot widget',
-        description: 'Snapshot some widget content in png. Not all widgets support this.',
+        description: 'Snapshots widget content. Not all widgets support this.',
         id:          'widget-snapshot',
         keys:        ['Alt+Shift+S'],
         reference:   true,

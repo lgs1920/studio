@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-10
- * Last modified: 2026-04-10
+ * Created on: 2026-05-10
+ * Last modified: 2026-05-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -52,7 +52,7 @@ export const BackgroundElement = ({
 
     return (
         <>
-            <WaSwitch label-at-start size="xsmall" checked={element.background?.show ?? false}
+            <WaSwitch label-at-start size="xs" checked={element.background?.show ?? false}
                       onInput={(e) => handleToggle(e.target.checked)}>
                 <label>{'Background'}</label>
             </WaSwitch>
@@ -60,13 +60,13 @@ export const BackgroundElement = ({
             {element.background?.show && (
                 <div className="drawer-horizontal-line three-columns">
                     <div className="drawer-horizontal-element">
-                        <WaColorPicker size="small" swatches={swatches}
+                        <WaColorPicker size="s" swatches={swatches}
                                        value={getColor(element.background)}
                                        onInput={(e) => updateValue('background.color', e.target.value)}/>
                     </div>
                     <div className="drawer-horizontal-element">
                         {'Blur'}&nbsp;
-                        <WaSwitch label-at-start size="xsmall" checked={element.background.blur ?? false}
+                        <WaSwitch label-at-start size="xs" checked={element.background.blur ?? false}
                                   onInput={(e) => updateValue('background.blur', e.target.checked)}/>
                     </div>
                     <div className="drawer-horizontal-element xlarge-element">
@@ -75,7 +75,7 @@ export const BackgroundElement = ({
                                   min="0" max="1" step="0.05"
                                   label-at-start
                                   placement="top"
-                                  size="small"
+                                  size="s"
                                   withTooltip
                                   valueFormatter={formatSliderPercent}
                                   defaultValue={opacityValue}

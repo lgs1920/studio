@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-05-01
- * Last modified: 2026-05-01
+ * Created on: 2026-05-10
+ * Last modified: 2026-05-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -273,12 +273,12 @@ export const WidgetEditorPanel = () => {
                 <div className="editor-header-zones">
                     <WaTabGroup className="editor-tabs">
                         <WaTab slot="nav" panel="preview">
-                            <WaIcon size="small" name="image"/> Preview
+                            <WaIcon size="s" name="image"/> Preview
                         </WaTab>
 
                         {activeWidgets.length > 1 &&
                         <WaTab slot="nav" panel="ordering">
-                            <WaIcon size="small" name="layer"/> Widgets stack
+                            <WaIcon size="s" name="layer"/> Widgets stack
                         </WaTab>
                         }
 

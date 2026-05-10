@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-30
- * Last modified: 2026-04-30
+ * Created on: 2026-05-10
+ * Last modified: 2026-05-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -775,7 +775,7 @@ export const TrackData = memo(() => {
         <div ref={_rootRef} className="track-data-container">
             <div className="journey-profile-chart-menu">
                 <WaSwitch
-                    size="xsmall"
+                    size="xs"
                     label-at-start
                     width-auto
                     checked={journeyStats.show}
@@ -805,7 +805,7 @@ export const TrackData = memo(() => {
                             copyLabel={'Copy data'}
                             success-label={'Copied!'}
                             variant="brand"
-                            size="small"
+                            size="s"
                             appearance="plain"
                         />
                     </>
@@ -826,7 +826,7 @@ export const TrackData = memo(() => {
                             copyLabel={'Copy data'}
                             success-label={'Copied!'}
                             variant="brand"
-                            size="small"
+                            size="s"
                             appearance="plain"
                         />
                     </div>

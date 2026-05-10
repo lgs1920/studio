@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-05-02
- * Last modified: 2026-05-02
+ * Created on: 2026-05-10
+ * Last modified: 2026-05-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -855,7 +855,7 @@ export const JourneyLoaderUI = (props) => {
                     <form className="add-url" onSubmit={processRemoteUrl}>
                         <WaInput
                             appearance="outlined"
-                            size="small"
+                            size="s"
                             name="journey-url"
                             value={remoteUrl}
                             placeholder="Paste public file link"
@@ -871,7 +871,7 @@ export const JourneyLoaderUI = (props) => {
                             id="import-remote-journey"
                             type="submit"
                             variant="brand"
-                            size="small"
+                            size="s"
                             loading={remoteLoading}
                             disabled={remoteLoading || !remoteUrl.trim()}
                             aria-label="Import journey"
@@ -899,7 +899,7 @@ export const JourneyLoaderUI = (props) => {
                         <WaButton
                             onClick={loadSample}
                             variant="brand"
-                            size="small"
+                            size="s"
                             loading={sampleLoading}
                             disabled={sampleLoading}
                         >

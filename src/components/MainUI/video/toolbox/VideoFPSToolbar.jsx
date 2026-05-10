@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-27
- * Last modified: 2026-04-27
+ * Created on: 2026-05-10
+ * Last modified: 2026-05-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -47,7 +47,7 @@ export const VideoFPSToolbar = memo(({choicesOnMap = false}) => {
                     <Fragment key={index}>
                         <WaButton
                             className={classNames('video-choice-button', {'is-selected': index === video.fps})}
-                            size="small"
+                            size="s"
                             variant="neutral"
                             appearance={index === video.fps ? 'outlined' : 'plain'}
                             onClick={() => handleChangeFPS(index)}

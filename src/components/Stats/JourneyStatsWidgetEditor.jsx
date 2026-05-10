@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-30
- * Last modified: 2026-04-30
+ * Created on: 2026-05-10
+ * Last modified: 2026-05-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -432,9 +432,9 @@ export const JourneyStatsWidgetEditor = ({entity}) => {
     const sourceSelector = isDataTabWithExternal || isUserOrExternalAvailable
                            ? (
             <div className="source-selector-wrapper" style={{marginLeft: 'auto'}}>
-                <WaButtonGroup size="small">
+                <WaButtonGroup size="s">
                     <WaButton
-                        size="small"
+                        size="s"
                         variant={dataSource === 'global' ? 'warning' : 'neutral'}
                         onClick={() => updateValue('dataSource', 'global')}
                     >
@@ -442,7 +442,7 @@ export const JourneyStatsWidgetEditor = ({entity}) => {
                     </WaButton>
                     {hasExternal && (
                         <WaButton
-                            size="small"
+                            size="s"
                             variant={dataSource === 'external' ? 'warning' : 'neutral'}
                             onClick={() => updateValue('dataSource', 'external')}
                         >
@@ -450,7 +450,7 @@ export const JourneyStatsWidgetEditor = ({entity}) => {
                         </WaButton>
                     )}
                     <WaButton
-                        size="small"
+                        size="s"
                         variant={dataSource === 'user' ? 'warning' : 'default'}
                         onClick={() => updateValue('dataSource', 'user')}
                     >
@@ -461,7 +461,7 @@ export const JourneyStatsWidgetEditor = ({entity}) => {
                            )
                            : (
                                <div className="source-selector-wrapper" style={{marginLeft: 'auto'}}>
-                                   <WaButton disabled size="small" variant="brand">{'Data'}</WaButton>
+                                   <WaButton disabled size="s" variant="brand">{'Data'}</WaButton>
                                </div>
                            )
 
@@ -523,7 +523,7 @@ export const JourneyStatsWidgetEditor = ({entity}) => {
                     <WaButton
                         appearance="plain"
                         variant="brand"
-                        size="small"
+                        size="s"
                         className="journey-stats-text-order-lock-button"
                         title={summaryLockState.isOpen ? 'Align summary metrics' : 'Force line break'}
                         onClick={event => toggleSummaryLineBreak(item.id, event)}
@@ -541,7 +541,7 @@ export const JourneyStatsWidgetEditor = ({entity}) => {
     const renderSummaryMetricToggle = (itemId, label) => (
         <WaSwitch
             label-at-start
-            size="xsmall"
+            size="xs"
             checked={isSummaryMetricEnabled(itemId)}
             onInput={(e) => updateValue(itemId, e.target.checked)}
         >
@@ -565,7 +565,7 @@ export const JourneyStatsWidgetEditor = ({entity}) => {
                 }
                 return (
                     <>
-                        <WaSwitch label-at-start size="xsmall" checked={element.date ?? false}
+                        <WaSwitch label-at-start size="xs" checked={element.date ?? false}
                                   onInput={(e) => updateValue('date', e.target.checked)}><span>Date</span></WaSwitch>
                         {element.date && renderReadOnlyDataValue(
                             <DateTimeDisplay
@@ -579,7 +579,7 @@ export const JourneyStatsWidgetEditor = ({entity}) => {
             case 'location':
                 return (
                     <>
-                        <WaSwitch label-at-start size="xsmall" checked={element.location ?? false}
+                        <WaSwitch label-at-start size="xs" checked={element.location ?? false}
                                   onInput={(e) => updateValue('location', e.target.checked)}><span>Location</span></WaSwitch>
                         {element.location && journeyLocation && renderReadOnlyDataValue(journeyLocation)}
                     </>
@@ -630,7 +630,7 @@ export const JourneyStatsWidgetEditor = ({entity}) => {
             case 'altitude':
                 return (
                     <>
-                        <WaSwitch label-at-start size="xsmall" checked={element.altitude ?? false}
+                        <WaSwitch label-at-start size="xs" checked={element.altitude ?? false}
                                   onInput={(e) => updateValue('altitude', e.target.checked)}><span>Altitude</span></WaSwitch>
                         {element.altitude && (
                             <div className="drawer-horizontal-line three-columns">
@@ -658,7 +658,7 @@ export const JourneyStatsWidgetEditor = ({entity}) => {
                 return (
                     <>
                         {showPerformanceToggle && (
-                            <WaSwitch label-at-start size="xsmall" checked={element.performance ?? false}
+                            <WaSwitch label-at-start size="xs" checked={element.performance ?? false}
                                       onInput={(e) => updateValue('performance', e.target.checked)}><span>Speed/Pace</span></WaSwitch>
                         )}
                         {element.performance && (
@@ -689,7 +689,7 @@ export const JourneyStatsWidgetEditor = ({entity}) => {
                 return (
                     <>
                         {showPerformanceToggle && (
-                            <WaSwitch label-at-start size="xsmall" checked={element.performance ?? false}
+                            <WaSwitch label-at-start size="xs" checked={element.performance ?? false}
                                       onInput={(e) => updateValue('performance', e.target.checked)}><span>Speed/Pace</span></WaSwitch>
                         )}
                         {element.performance && (
@@ -752,13 +752,13 @@ export const JourneyStatsWidgetEditor = ({entity}) => {
                 onWaTabShow={e => setActiveTab(e.detail.name)}
             >
                 <WaTab slot="nav" panel="style">
-                    <WaIcon size="small" name="pen-paintbrush"/> Style
+                    <WaIcon size="s" name="pen-paintbrush"/> Style
                 </WaTab>
                 <WaTab slot="nav" panel="data">
-                    <WaIcon size="small" name="money-check-pen"/> Data editor
+                    <WaIcon size="s" name="money-check-pen"/> Data editor
                 </WaTab>
                 <WaTab slot="nav" panel="text-order">
-                    <WaIcon size="small" name="arrow-down-arrow-up"/> Text order
+                    <WaIcon size="s" name="arrow-down-arrow-up"/> Text order
                 </WaTab>
 
                 <WaTabPanel name="style">
@@ -774,13 +774,13 @@ export const JourneyStatsWidgetEditor = ({entity}) => {
                             </div>
                             <div className="drawer-horizontal-line three-columns">
                                 <div className="drawer-horizontal-element">
-                                    <WaColorPicker size="small" swatches={swatches} value={getColor(element.text)}
+                                    <WaColorPicker size="s" swatches={swatches} value={getColor(element.text)}
                                                    onInput={(e) => updateValue('text.color', e.target.value)}/>
                                 </div>
                                 <div className="drawer-horizontal-element xlarge-element"></div>
                                 <div className="drawer-horizontal-element xlarge-element">
                                     <WaSlider ref={setSliderRef('text.opacity')}
-                                              size="small"
+                                              size="s"
                                               label="Opacity"
                                               min={JOURNEY_STATS_SLIDERS['text.opacity'].min}
                                               max={JOURNEY_STATS_SLIDERS['text.opacity'].max}
@@ -794,18 +794,18 @@ export const JourneyStatsWidgetEditor = ({entity}) => {
                                 </div>
                             </div>
                             <WaDivider/>
-                            <WaSwitch label-at-start size="xsmall" checked={element.separator?.show ?? false}
+                            <WaSwitch label-at-start size="xs" checked={element.separator?.show ?? false}
                                       onInput={(e) => updateValue('separator.show', e.target.checked)}><span>Separator</span></WaSwitch>
                             {element.separator?.show && (
                                 <div className="drawer-horizontal-line three-columns">
                                     <div className="drawer-horizontal-element">
-                                        <WaColorPicker size="small" swatches={swatches}
+                                        <WaColorPicker size="s" swatches={swatches}
                                                        value={getColor(element.separator)}
                                                        onInput={(e) => updateValue('separator.color', e.target.value)}/>
                                     </div>
                                     <div className="drawer-horizontal-element xlarge-element">
                                         <WaSlider ref={setSliderRef('separator.opacity')}
-                                                  size="small"
+                                                  size="s"
                                                   label="Opacity"
                                                   min={JOURNEY_STATS_SLIDERS['separator.opacity'].min}
                                                   max={JOURNEY_STATS_SLIDERS['separator.opacity'].max}
@@ -819,7 +819,7 @@ export const JourneyStatsWidgetEditor = ({entity}) => {
                                     </div>
                                     <div className="drawer-horizontal-element xlarge-element">
                                         <WaSlider ref={setSliderRef('separator.padding')}
-                                                  size="small"
+                                                  size="s"
                                                   label="Padding"
                                                   min={JOURNEY_STATS_SLIDERS['separator.padding'].min}
                                                   max={JOURNEY_STATS_SLIDERS['separator.padding'].max}

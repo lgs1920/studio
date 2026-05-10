@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-05-09
- * Last modified: 2026-05-09
+ * Created on: 2026-05-10
+ * Last modified: 2026-05-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -140,11 +140,11 @@ export const MapPOIFilteredList = () => {
 
     return (
         <WaCallout
-            size="small"
+            size="s"
             variant="danger"
             className="map-poi-filter-count-info"
         >
-            <WaIcon slot="icon" size="small" name="warning"/>
+            <WaIcon slot="icon" size="s" name="warning"/>
             <span>{'No POIs match the current filter criteria.'}</span>
         </WaCallout>
     )

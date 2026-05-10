@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-05-02
- * Last modified: 2026-05-02
+ * Created on: 2026-05-10
+ * Last modified: 2026-05-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -151,7 +151,7 @@ export const ShortcutsPanel = () => {
                 aria-label="Export shortcuts PDF"
                 appearance="filled"
                 variant="brand"
-                size="small"
+                size="s"
                 disabled={exporting}
                 onClick={exportPDF}
             >

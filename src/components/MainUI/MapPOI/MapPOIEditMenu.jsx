@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-26
- * Last modified: 2026-04-26
+ * Created on: 2026-05-10
+ * Last modified: 2026-05-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -217,12 +217,12 @@ export const MapPOIEditMenu = memo(({poiId}) => {
     return (
         <div className="poi-edit-menu-container">
             {!isVisible ? (
-                <WaButton size="small" onClick={toggleVisibility} variant="brand">
+                <WaButton size="s" onClick={toggleVisibility} variant="brand">
                     <WaIcon slot="start" size={'small'} name={'eye'} variant="regular"/>{'Show'}
                 </WaButton>
             ) : (
-                 <WaDropdown className="edit-poi-menu" size="small" variant="brand">
-                     <WaButton slot="trigger" withCaret size="small" variant="brand">
+                 <WaDropdown className="edit-poi-menu" size="s" variant="brand">
+                     <WaButton slot="trigger" withCaret size="s" variant="brand">
                          <WaIcon slot="start" variant="regular" name="location-dot"/>{'Select an action'}
                      </WaButton>
                      {menuItems}

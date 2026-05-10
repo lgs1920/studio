@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-27
- * Last modified: 2026-04-27
+ * Created on: 2026-05-10
+ * Last modified: 2026-05-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -41,7 +41,7 @@ export const EditorSettings = () => {
             <span slot="summary">{'Editors Settings'}</span>
             <WaDivider/>
             <div className="journey-editor-settings">
-                <WaSwitch size="xsmall" label-at-start
+                <WaSwitch size="xs" label-at-start
                           checked={journeyToolbar.usage}
                           onChange={(event) => {
                               $journeyToolbar.usage = switchValue(event)
@@ -53,13 +53,13 @@ export const EditorSettings = () => {
                     {'Floating Toolbars Opacity'}
                     <WaTooltip for="toolbars-opacity-reset">{'Reset to default'}</WaTooltip>
                     <WaButton onClick={resetToolbarOpacity}
-                              size="small"
+                              size="s"
                               appearance="plain" variant="brand">
                         <WaIcon slot="start" name="arrows-rotate" variant="regular" id={'toolbars-opacity-reset'}>
                         </WaIcon>
                     </WaButton>
                     <WaSlider value={toolbars.opacity * 1.0}
-                              size="small"
+                              size="s"
                               label-at-right
                               onInput={setToolbarOpacity}
                               min={0.3} max={1} step={0.05} withTooltip

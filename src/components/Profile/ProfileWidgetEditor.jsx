@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-30
- * Last modified: 2026-04-30
+ * Created on: 2026-05-10
+ * Last modified: 2026-05-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -251,14 +251,14 @@ export const ProfileWidgetEditor = ({entity}) => {
                 {/* X-Axis (Distance) Settings */}
                 <div className="drawer-horizontal-element">{'Distance Axis'}</div>
                 <div className="profile-chart-switches">
-                    <WaSwitch size="xsmall"
+                    <WaSwitch size="xs"
                               checked={element.xAxis?.main ?? false}
                               label-at-start width-auto
                               onInput={(e) => updateValue('xAxis.main', e.target.checked)}>
                         {'Axis'}
                     </WaSwitch>
 
-                    <WaSwitch size="xsmall"
+                    <WaSwitch size="xs"
                               checked={element.xAxis?.second ?? false}
                               label-at-start width-auto
                               onInput={(e) => updateValue('xAxis.second', e.target.checked)}>
@@ -266,14 +266,14 @@ export const ProfileWidgetEditor = ({entity}) => {
                     </WaSwitch>
 
                     <WaSwitch
-                        size="xsmall"
+                        size="xs"
                         checked={element.xAxis?.labels ?? false}
                         label-at-start width-auto
                         onInput={(e) => updateValue('xAxis.labels', e.target.checked)}>
                         {'Labels'}
                     </WaSwitch>
 
-                    <WaSwitch size="xsmall"
+                    <WaSwitch size="xs"
                               checked={element.xAxis?.units ?? false}
                               disabled={!element.xAxis?.labels}
                               label-at-start width-auto
@@ -287,25 +287,25 @@ export const ProfileWidgetEditor = ({entity}) => {
                 {/* Y-Axis (Elevation) Settings */}
                 <div className="drawer-horizontal-element">{'Elevation Axis'}</div>
                 <div className="profile-chart-switches">
-                    <WaSwitch size="xsmall" checked={element.yAxis?.main ?? false}
+                    <WaSwitch size="xs" checked={element.yAxis?.main ?? false}
                               label-at-start width-auto
                               onInput={(e) => updateValue('yAxis.main', e.target.checked)}>
                         {'Axis'}
                     </WaSwitch>
 
-                    <WaSwitch size="xsmall" checked={element.yAxis?.second ?? false}
+                    <WaSwitch size="xs" checked={element.yAxis?.second ?? false}
                               label-at-start width-auto
                               onInput={(e) => updateValue('yAxis.second', e.target.checked)}>
                         {'Grid'}
                     </WaSwitch>
 
-                    <WaSwitch size="xsmall" checked={element.yAxis?.labels ?? false}
+                    <WaSwitch size="xs" checked={element.yAxis?.labels ?? false}
                               label-at-start width-auto
                               onInput={(e) => updateValue('yAxis.labels', e.target.checked)}>
                         {'Labels'}
                     </WaSwitch>
 
-                    <WaSwitch size="xsmall" checked={element.yAxis?.units ?? false}
+                    <WaSwitch size="xs" checked={element.yAxis?.units ?? false}
                               disabled={!element.yAxis?.labels}
                               label-at-start width-auto
                               onInput={(e) => updateValue('yAxis.units', e.target.checked)}>
@@ -316,7 +316,7 @@ export const ProfileWidgetEditor = ({entity}) => {
                 <WaDivider/>
 
                 {/* Chart Area Gradient */}
-                <WaSwitch size="xsmall" label-at-start checked={element.gradient?.show ?? false}
+                <WaSwitch size="xs" label-at-start checked={element.gradient?.show ?? false}
                           onInput={(e) => updateValue('gradient.show', e.target.checked)}>
                     <span>{'Gradient'}</span>
                 </WaSwitch>
@@ -325,14 +325,14 @@ export const ProfileWidgetEditor = ({entity}) => {
                     <div className="drawer-horizontal-line three-columns">
                         <div className="drawer-horizontal-element">
                             <div style={{display: 'flex', alignItems: 'center', gap: 'var(--sl-spacing-x-small)'}}>
-                                <WaColorPicker size="small" swatches={swatches}
+                                <WaColorPicker size="s" swatches={swatches}
                                                value={element.gradient?.color ? getColor(element.gradient) : gradientFallbackColor}
                                                onInput={(e) => updateValue('gradient.color', e.target.value)}/>
                                 {element.gradient?.color && (
                                     <WaButton onClick={() => updateValue('gradient.color', null)}
                                               className="reset-profile-widget-color"
                                               variant="brand" appearance="plain">
-                                        <WaIcon name="arrow-rotate-left" variant="regular" size="small"/>
+                                        <WaIcon name="arrow-rotate-left" variant="regular" size="s"/>
                                     </WaButton>
                                 )}
                             </div>
@@ -346,7 +346,7 @@ export const ProfileWidgetEditor = ({entity}) => {
                 </div>
                 <WaSwitch
                     className="profile-widget-flythrough-track-style-switch"
-                    size="xsmall"
+                    size="xs"
                     label-at-start
                     checked={flythroughProfileInfo.useTrackStyle}
                     onChange={(e) => updateFlythroughProfileInfo({useTrackStyle: e.target.checked})}
@@ -363,13 +363,13 @@ export const ProfileWidgetEditor = ({entity}) => {
                         </div>
                         <div className="lgs-widget-color-control-grid">
                             <div className="lgs-widget-color-control-color">
-                                <WaColorPicker size="small" swatches={swatches} value={getColor(element.mainAxis)}
+                                <WaColorPicker size="s" swatches={swatches} value={getColor(element.mainAxis)}
                                                onInput={(e) => updateValue('mainAxis.color', e.target.value)}/>
                             </div>
                             <div className="lgs-widget-border-control-row">
                                 <div className="drawer-horizontal-element lgs-widget-border-control">
                                     <WaSlider ref={setSliderRef('mainAxis.thickness')}
-                                              size="small"
+                                              size="s"
                                               label="Width"
                                               min={PROFILE_WIDGET_SLIDERS['mainAxis.thickness'].min}
                                               max={PROFILE_WIDGET_SLIDERS['mainAxis.thickness'].max}
@@ -381,7 +381,7 @@ export const ProfileWidgetEditor = ({entity}) => {
                                 </div>
                                 <div className="drawer-horizontal-element lgs-widget-border-control">
                                     <WaSlider ref={setSliderRef('mainAxis.opacity')}
-                                              size="small"
+                                              size="s"
                                               label="Opacity"
                                               min={PROFILE_WIDGET_SLIDERS['mainAxis.opacity'].min}
                                               max={PROFILE_WIDGET_SLIDERS['mainAxis.opacity'].max}
@@ -412,13 +412,13 @@ export const ProfileWidgetEditor = ({entity}) => {
                         </div>
                         <div className="lgs-widget-color-control-grid">
                             <div className="lgs-widget-color-control-color">
-                                <WaColorPicker size="small" swatches={swatches} value={getColor(element.secondAxis)}
+                                <WaColorPicker size="s" swatches={swatches} value={getColor(element.secondAxis)}
                                                onInput={(e) => updateValue('secondAxis.color', e.target.value)}/>
                             </div>
                             <div className="lgs-widget-border-control-row">
                                 <div className="drawer-horizontal-element lgs-widget-border-control">
                                     <WaSlider ref={setSliderRef('secondAxis.thickness')}
-                                              size="small"
+                                              size="s"
                                               label="Width"
                                               min={PROFILE_WIDGET_SLIDERS['secondAxis.thickness'].min}
                                               max={PROFILE_WIDGET_SLIDERS['secondAxis.thickness'].max}
@@ -429,7 +429,7 @@ export const ProfileWidgetEditor = ({entity}) => {
                                 </div>
                                 <div className="drawer-horizontal-element lgs-widget-border-control">
                                     <WaSlider ref={setSliderRef('secondAxis.opacity')}
-                                              size="small"
+                                              size="s"
                                               label="Opacity"
                                               min={PROFILE_WIDGET_SLIDERS['secondAxis.opacity'].min}
                                               max={PROFILE_WIDGET_SLIDERS['secondAxis.opacity'].max}

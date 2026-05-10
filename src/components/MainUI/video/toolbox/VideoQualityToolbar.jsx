@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-28
- * Last modified: 2026-04-28
+ * Created on: 2026-05-10
+ * Last modified: 2026-05-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -50,7 +50,7 @@ export const VideoQualityToolbar = ({choicesOnMap = false}) => {
                         <WaButton
                             id={`q-${index}`}
                             className={classNames('video-choice-button', {'is-selected': index === video.quality})}
-                            size="small"
+                            size="s"
                             variant="neutral"
                             appearance={index === video.quality ? 'outlined' : 'plain'}
                             onClick={() => handleChangeQuality(index)}

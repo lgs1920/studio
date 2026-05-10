@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-05-09
- * Last modified: 2026-05-09
+ * Created on: 2026-05-10
+ * Last modified: 2026-05-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -177,7 +177,7 @@ export const WelcomeModal = ({initComplete = false, appReady = false, settingsRe
         return (
             <div id="welcome-links">
                 <div id="welcome-links-do-not-show">
-                    <WaButton size="small" appearance="plain" variant="neutral" onClick={setShowModal}>
+                    <WaButton size="s" appearance="plain" variant="neutral" onClick={setShowModal}>
                         {'Don\'t show intro anymore'}
                     </WaButton>
                 </div>
@@ -268,7 +268,7 @@ export const WelcomeModal = ({initComplete = false, appReady = false, settingsRe
                         id="welcome-build-info-button"
                         className="welcome-build-info-button"
                         appearance="plain"
-                        size="small"
+                        size="s"
                         aria-label="Version and build information"
                         onClick={(event) => {
                             event.stopPropagation()

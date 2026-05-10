@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-24
- * Last modified: 2026-04-24
+ * Created on: 2026-05-10
+ * Last modified: 2026-05-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -146,7 +146,7 @@ export const CalloutToast = ({message, type = LGS_INFORMATION_TOAST}) => {
         <WaCallout
             className={`lgs-toast-callout ${toastClass}`}
             appearance="filled-outlined"
-            size="small"
+            size="s"
             variant={LGS_TOAST_VARIANTS[type] || 'brand'}
         >
             <WaIcon

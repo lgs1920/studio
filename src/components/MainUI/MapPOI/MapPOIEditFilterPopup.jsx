@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-15
- * Last modified: 2026-04-15
+ * Created on: 2026-05-10
+ * Last modified: 2026-05-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -144,7 +144,7 @@ export const MapPOIEditFilterPopup = memo(() => {
     return (
         <WaCard className="lgs--popup-in-drawer lgs-slide-down">
             <WaButton appearance="plain" slot="header-actions" onClick={handleClose}>
-                <WaIcon size="small" name="xmark" variant="regular"/>
+                <WaIcon size="s" name="xmark" variant="regular"/>
             </WaButton>
 
             <h3 slot="header">
@@ -155,7 +155,7 @@ export const MapPOIEditFilterPopup = memo(() => {
                 <WaInput
                     label="By Name"
                     type="text"
-                    size="small"
+                    size="s"
                     withClear
                     value={poi.filter.byName}
                     onInput={handleFilterByName}
@@ -182,11 +182,11 @@ export const MapPOIEditFilterPopup = memo(() => {
             <div className="map-poi-filter-by-type">
                 {!onlyJourney && (
                     <>
-                        <WaSwitch size="xsmall" label-at-start checked={poi.filter.global} onChange={handleGlobal}>
+                        <WaSwitch size="xs" label-at-start checked={poi.filter.global} onChange={handleGlobal}>
                             {'Display Global POIs'}
                         </WaSwitch>
                         {lgs.theJourney && (
-                            <WaSwitch size="xsmall" label-at-start checked={poi.filter.journey}
+                            <WaSwitch size="xs" label-at-start checked={poi.filter.journey}
                                       onChange={handleJourney}>
                                 {'Display Journey POIs'}
                             </WaSwitch>
@@ -196,11 +196,11 @@ export const MapPOIEditFilterPopup = memo(() => {
             </div>
 
             <WaCallout
-                size="small"
+                size="s"
                 variant={poi.filter.count === 0 ? 'danger' : 'neutral'}
                 className="map-poi-filter-count-info"
             >
-                <WaIcon slot="icon" size="small" name={poi.filter.count === 0 ? 'warning' : 'list'}/>
+                <WaIcon slot="icon" size="s" name={poi.filter.count === 0 ? 'warning' : 'list'}/>
                 <div>
                     <span>
                         {poi.filter.count === 0 ? 'No POIs match the current filter criteria.' : `Showing ${poi.filter.count} POIs`}
@@ -208,7 +208,7 @@ export const MapPOIEditFilterPopup = memo(() => {
                     {poi.filter.count === 0 && (
                         <WaButton id="lgs--reset-pois-filters-callout" size="x-small" onClick={resetFilter}
                                   appearance="outlined" variant="danger" disabled={!poi.filter.active}>
-                            <WaIcon slot="start" size="small" name="filter-circle-xmark"/> {'Reset'}
+                            <WaIcon slot="start" size="s" name="filter-circle-xmark"/> {'Reset'}
                         </WaButton>
                     )}
                 </div>
@@ -219,23 +219,23 @@ export const MapPOIEditFilterPopup = memo(() => {
                     <WaTooltip for="lgs--reset-pois-filters">{'Reset Filters'}</WaTooltip>
                     <WaButton
                         id="lgs--reset-pois-filters"
-                        size="small"
+                        size="s"
                         onClick={resetFilter}
                         appearance="outlined"
                         variant="brand"
                         disabled={!poi.filter.active}
                     >
-                        <WaIcon slot="start" size="small" name="filter-circle-xmark"/> {'Reset'}
+                        <WaIcon slot="start" size="s" name="filter-circle-xmark"/> {'Reset'}
                     </WaButton>
 
                     <WaTooltip for="lgs--close-pois-filters">{'Close settings'}</WaTooltip>
                     <WaButton
                         id="lgs--close-pois-filters"
-                        size="small"
+                        size="s"
                         variant="brand"
                         onClick={handleClose}
                     >
-                        <WaIcon slot="start" size="small" name="xmark" variant="regular"/> {'Close'}
+                        <WaIcon slot="start" size="s" name="xmark" variant="regular"/> {'Close'}
                     </WaButton>
                 </div>
             </div>
