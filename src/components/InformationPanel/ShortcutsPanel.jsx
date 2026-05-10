@@ -16,7 +16,7 @@
 
 import { LGSScrollbars }      from '@Components/MainUI/LGSScrollbars'
 import { OS_ICONS }           from '@Core/constants'
-import { SHORTCUTS_CATALOG } from '@Core/events/appShortcuts'
+import { SHORTCUTS } from '@Core/events/appShortcuts'
 import { UIToast }            from '@Utils/UIToast'
 import { WaButton, WaCard, WaIcon, WaTooltip } from '@web.awesome.me/webawesome-pro/dist/react'
 import { Fragment, useCallback, useState }     from 'react'
@@ -48,7 +48,7 @@ const KEY_TOKEN_LABELS = {
     Plus:       '+',
 }
 
-const byScope = SHORTCUTS_CATALOG.reduce((groups, shortcut) => {
+const byScope = SHORTCUTS.reduce((groups, shortcut) => {
     const group = groups.get(shortcut.scope) ?? []
     group.push(shortcut)
     groups.set(shortcut.scope, group)

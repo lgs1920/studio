@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-29
- * Last modified: 2026-04-29
+ * Created on: 2026-05-10
+ * Last modified: 2026-05-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -17,16 +17,16 @@
 import {
     BUILD, CONFIGURATION, COUNTRIES, FREE_ANONYMOUS_ACCESS, LAYERS_TERRAINS_SETTINGS, LGS_CONTEXT_MENU_HOOK, MILLIS,
     platforms, SERVERS, SETTINGS, SETTINGS_STORE, VAULT_STORE, WIDGET_LAYER_TOP, WIDGETS,
-}                          from '@Core/constants'
-import { ElevationServer } from '@Core/Elevation/ElevationServer'
-import { Settings }        from '@Core/settings/Settings'
-import { SettingsSection } from '@Core/settings/SettingsSection'
+}                                   from '@Core/constants'
+import { ElevationServer }          from '@Core/Elevation/ElevationServer'
+import { Settings }                 from '@Core/settings/Settings'
+import { SettingsSection }          from '@Core/settings/SettingsSection'
 import { ensureFlythroughSettings } from '@Core/ui/flythrough/FlythroughProgressionStyle'
-import axios               from 'axios'
-import * as Cesium         from 'cesium'
-import YAML                from 'yaml'
-import { EventEmitter }    from '../assets/libs/EventEmitter/EventEmitter'
-import { FA2SL }           from './FA2SL'
+import axios                        from 'axios'
+import * as Cesium                  from 'cesium'
+import YAML                         from 'yaml'
+import { EventEmitter }             from '../assets/libs/EventEmitter/EventEmitter'
+import { FA2SL }                    from './FA2SL'
 
 export class AppUtils {
     static THEME_STORAGE_KEY = 'theme'
@@ -247,6 +247,7 @@ export class AppUtils {
             .then(res => res.text())
             .then(text => YAML.parse(text),
             )
+
 
         // add settings section
         settings.widgets = raw.widgets

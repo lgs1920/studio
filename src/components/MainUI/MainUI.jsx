@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-29
- * Last modified: 2026-04-29
+ * Created on: 2026-05-10
+ * Last modified: 2026-05-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -88,7 +88,6 @@ export const MainUI = memo(() => {
         if (event.key === 'Escape') {
             closeDrawer()
         }
-        console.log(event.key)
     }, [closeDrawer])
 
     const arrangeDrawers = useCallback(() => {

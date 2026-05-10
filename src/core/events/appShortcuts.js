@@ -14,13 +14,14 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { CURRENT_MAP_POINT, CURRENT_POI, FLYTHROUGH_DRAWER, SCENE_MODE_2D, VIDEO_CROP_ZONE } from '@Core/constants'
 import {
-    hasActiveAppShortcutBlocker,
-}                                                                                            from '@Core/events/shortcutBlockers'
-import { MapTarget }                                                                         from '@Core/MapTarget'
-import { getOrbitSettings, setOrbitStoreSettings }                                           from '@Core/OrbitSettings'
-import { Cartesian2, Cartographic, Math as CesiumMath }                                      from 'cesium'
+    CURRENT_MAP_POINT, CURRENT_POI, FLYTHROUGH_DRAWER, SCENE_MODE_2D, SHORTCUTS_CATALOG, VIDEO_CROP_ZONE,
+}                                                       from '@Core/constants'
+import { hasActiveAppShortcutBlocker }                  from '@Core/events/shortcutBlockers'
+import { MapTarget }                                    from '@Core/MapTarget'
+import { getOrbitSettings, setOrbitStoreSettings }      from '@Core/OrbitSettings'
+import { Cartesian2, Cartographic, Math as CesiumMath } from 'cesium'
+import YAML                                             from 'yaml'
 
 const MAP_POINT_PRECISION = 6
 const APP_SHORTCUT_TARGET = () => globalThis.window ?? globalThis.document
@@ -313,9 +314,9 @@ const toggleRotation = () => {
             direction:  rotationSettings.direction,
             flyingTime: 0,
             ...currentCameraOrbitOptions(),
-            infinite:   true,
-            rotate:     true,
-            rpm:        rotationSettings.rpm,
+            infinite: true,
+            rotate:   true,
+            rpm:      rotationSettings.rpm,
             target,
         })
         return true
@@ -497,15 +498,15 @@ const resizeSelectedWidget = async (factor) => {
     const {config, element, widgetId} = context
     const currentScale = config.scale ?? {x: 1, y: 1}
     const nextScale = __.ui.widgetManager.clampScale({
-        x: currentScale.x * (1 + factor),
-        y: currentScale.y * (1 + factor),
-    }, config)
+                                                         x: currentScale.x * (1 + factor),
+                                                         y: currentScale.y * (1 + factor),
+                                                     }, config)
     const boundsRect = widgetBoundsRect(config)
 
     config.scale = boundsRect ? __.ui.widgetManager.adaptScaleToContainer({
-        ...config,
-        scale: nextScale,
-    }, boundsRect) : nextScale
+                                                                              ...config,
+                                                                              scale: nextScale,
+                                                                          }, boundsRect) : nextScale
     config.position = boundsRect ? __.ui.widgetManager.adaptPositionToContainer(config, boundsRect) : config.position
 
     __.ui.widgetManager.setScale(element, config.scale.x, config.scale.y)
@@ -589,7 +590,8 @@ const installWidgetKeyboardShortcuts = () => {
     const target = APP_SHORTCUT_TARGET()
 
     if (!target?.addEventListener) {
-        return () => {}
+        return () => {
+        }
     }
 
     const listener = event => {
@@ -612,341 +614,10 @@ const installWidgetKeyboardShortcuts = () => {
     return () => target.removeEventListener('keydown', listener, {capture: true})
 }
 
-export const SHORTCUTS_CATALOG = [
-    {
-        action:      'Import journey',
-        description: 'Opens the journey import dialog.',
-        id:          'journey-import',
-        keys:        ['Alt+Shift+I'],
-        scope:       'App',
-    },
-    {
-        action:      'Show journey toolbar',
-        description: 'Makes the journey toolbar available on the map.',
-        id:          'journey-toolbar-show',
-        keys:        ['Alt+Shift+J'],
-        scope:       'App',
-    },
-    {
-        action:      'Show journey groups',
-        description: 'Opens the journey groups management drawer.',
-        id:          'journey-groups-show',
-        keys:        ['Alt+Shift+G'],
-        scope:       'App',
-    },
-    {
-        action:      'Video recording',
-        description: 'Opens video setup, then starts recording when setup is already open.',
-        id:          'video-recording',
-        keys:        ['Alt+Shift+V'],
-        scope:       'App',
-    },
-    {
-        action:      'Show Flythrough controls',
-        description: 'Opens the Flythrough management drawer.',
-        id:          'flythrough-management-show',
-        keys:        ['Alt+Shift+W'],
-        scope:       'Flythrough mode',
-    },
-    {
-        action:      'Toggle rotation',
-        description: 'Starts or stops map rotation around the current target.',
-        id:          'rotation-toggle',
-        keys: ['Alt+Shift+R'],
-        scope:       'App',
-    },
-    {
-        action:      'Toggle panorama',
-        description: 'Starts or stops panorama mode around the current target.',
-        id:          'panorama-toggle',
-        keys: ['Alt+Shift+P'],
-        scope:       'App',
-    },
-    {
-        action:      'Close active panel',
-        description: 'Closes the active drawer, popup, or dialog when supported by the current view.',
-        id:          'app-close-active-panel',
-        keys:        ['Escape'],
-        reference:   true,
-        scope:       'App',
-    },
-    {
-        action:      'Edit selected widget',
-        description: 'Opens the editor for the selected widget.',
-        id:          'widget-edit',
-        keys:        ['Enter'],
-        scope:       'Selected widget',
-    },
-    {
-        action:      'Remove selected widget',
-        description: 'Deletes the selected removable widget.',
-        id:          'widget-remove',
-        keys:        ['Delete', 'Backspace'],
-        scope:       'Selected widget',
-    },
-    {
-        action:      'Resize selected widget',
-        description: 'Increases or decreases the selected widget size by 1%.',
-        id:          'widget-resize',
-        keys:        ['Plus', 'Minus'],
-        scope:       'Selected widget',
-    },
-    {
-        action:      'Resize selected widget faster',
-        description: 'Increases or decreases the selected widget size by 10%.',
-        id:          'widget-resize-fast',
-        keys:        ['Ctrl+Plus', 'Ctrl+Minus'],
-        scope:       'Selected widget',
-    },
-    {
-        action:      'Move selected widget',
-        description: 'Moves the selected widget by 2 px.',
-        id:          'widget-move',
-        keys:        ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'],
-        scope:       'Selected widget',
-    },
-    {
-        action:      'Move selected widget faster',
-        description: 'Moves the selected widget by 20 px.',
-        id:          'widget-move-fast',
-        keys:        ['Ctrl+ArrowUp', 'Ctrl+ArrowDown', 'Ctrl+ArrowLeft', 'Ctrl+ArrowRight'],
-        scope:       'Selected widget',
-    },
-    {
-        action:      'Select widget',
-        description: 'Selects an interactive on-map widget.',
-        id:          'widget-select-pointer',
-        keys:        ['Left click', 'Tap'],
-        reference:   true,
-        scope:       'Widget interaction',
-    },
-    {
-        action:      'Move widget',
-        description: 'Drags a movable on-map widget.',
-        id:          'widget-move-pointer',
-        keys:        ['Left drag'],
-        reference:   true,
-        scope:       'Widget interaction',
-    },
-    {
-        action:      'Double-click widget',
-        description: 'Reduces or expands a reducible widget; opens the editor for visual widgets.',
-        id:          'widget-reduce-toggle',
-        keys:        ['Double click', 'Double tap'],
-        reference:   true,
-        scope:       'Widget interaction',
-    },
-    {
-        action:      'Snapshot widget',
-        description: 'Snapshots widget content. Not all widgets support this.',
-        id:          'widget-snapshot',
-        keys:        ['Alt+Shift+S'],
-        reference:   true,
-        scope:       'Widget interaction',
-    },
-    {
-        action:      'Lock or unlock widget',
-        description: 'Locks or unlocks a lockable on-map widget in its current position.',
-        id:          'widget-lock-toggle',
-        keys:        ['Ctrl+Left click'],
-        reference:   true,
-        scope:       'Widget interaction',
-    },
-    {
-        action:      'Open widget menu',
-        description: 'Opens the context menu for an on-map widget, including reduced widgets.',
-        id:          'widget-context-menu',
-        keys:        ['Right click', 'Long tap'],
-        reference:   true,
-        scope:       'Widget interaction',
-    },
-    {
-        action:      'Toggle POI expansion',
-        description: 'Expands or shrinks a point of interest on the map.',
-        id:          'poi-toggle-expansion',
-        keys:        ['Left click', 'Tap'],
-        reference:   true,
-        scope:       'Map objects',
-    },
-    {
-        action:      'Edit POI',
-        description: 'Opens the editor for a point of interest on the map.',
-        id:          'poi-edit',
-        keys:        ['Double click', 'Double tap'],
-        reference:   true,
-        scope:       'Map objects',
-    },
-    {
-        action:      'Open POI menu',
-        description: 'Opens the context menu for a point of interest on the map.',
-        id:          'poi-context-menu',
-        keys:        ['Right click', 'Long tap'],
-        reference:   true,
-        scope:       'Map objects',
-    },
-    {
-        action:      'Open map point menu',
-        description: 'Opens the context menu at the clicked map position.',
-        id:          'map-point-context-menu',
-        keys:        ['Right click', 'Long tap'],
-        reference:   true,
-        scope:       'Map objects',
-    },
-    {
-        action:      'Focus track marker',
-        description: 'Focuses the track linked to a visible locator marker.',
-        id:          'track-marker-focus',
-        keys:        ['Left click', 'Tap'],
-        reference:   true,
-        scope:       'Map objects',
-    },
-    {
-        action:      'Edit track marker',
-        description: 'Opens the editor for the track linked to a visible locator marker.',
-        id:          'track-marker-edit',
-        keys:        ['Double click', 'Double tap'],
-        reference:   true,
-        scope:       'Map objects',
-    },
-    {
-        action:      'Adjust angle',
-        description: 'Drag on the globe while rotation mode is active.',
-        id:          'rotation-angle',
-        keys:        ['Left drag'],
-        platform:    'macOS / Windows / Linux',
-        reference:   true,
-        scope:       'Rotation mode',
-    },
-    {
-        action:      'Adjust distance',
-        description: 'Move the camera closer to or farther from the active target.',
-        id:          'rotation-distance-macos',
-        keys:        ['Trackpad scroll'],
-        platform:    'macOS',
-        reference:   true,
-        scope:       'Rotation mode',
-    },
-    {
-        action:      'Adjust distance',
-        description: 'Move the camera closer to or farther from the active target.',
-        id:          'rotation-distance-windows-linux',
-        keys:        ['Wheel'],
-        platform:    'Windows / Linux',
-        reference:   true,
-        scope:       'Rotation mode',
-    },
-    {
-        action:      'Adjust RPM',
-        description: 'Increase or decrease rotation speed by 0.1 RPM.',
-        id:          'rotation-rpm-keyboard',
-        keys:        ['Plus', 'Minus'],
-        reference:   true,
-        scope:       'Rotation mode',
-    },
-    {
-        action:      'Adjust direction',
-        description: 'Set clockwise or counterclockwise rotation.',
-        id:          'rotation-direction-keyboard',
-        keys:        ['ArrowLeft', 'ArrowRight'],
-        reference:   true,
-        scope:       'Rotation mode',
-    },
-    {
-        action:      'Adjust angle',
-        description: 'Drag on the globe while panorama mode is active.',
-        id:          'panorama-angle',
-        keys:        ['Left drag'],
-        platform:    'macOS / Windows / Linux',
-        reference:   true,
-        scope:       'Panorama mode',
-    },
-    {
-        action:      'Adjust height',
-        description: 'Change the panorama camera altitude.',
-        id:          'panorama-height-macos',
-        keys:        ['Trackpad scroll', 'Option+Left drag', 'Shift+Left drag', 'Right drag'],
-        platform:    'macOS',
-        reference:   true,
-        scope:       'Panorama mode',
-    },
-    {
-        action:      'Adjust height',
-        description: 'Change the panorama camera altitude.',
-        id:          'panorama-height-windows-linux',
-        keys:        ['Wheel', 'Alt+Left drag', 'Shift+Left drag', 'Right drag'],
-        platform:    'Windows / Linux',
-        reference:   true,
-        scope:       'Panorama mode',
-    },
-    {
-        action:      'Adjust height',
-        description: 'Change the panorama camera altitude by 2 m.',
-        id:          'panorama-height-keyboard',
-        keys:        ['ArrowUp', 'ArrowDown'],
-        reference:   true,
-        scope:       'Panorama mode',
-    },
-    {
-        action:      'Adjust height faster',
-        description: 'Change the panorama camera altitude by 10 m.',
-        id:          'panorama-height-keyboard-fast',
-        keys:        ['Ctrl+ArrowUp', 'Ctrl+ArrowDown'],
-        reference:   true,
-        scope:       'Panorama mode',
-    },
-    {
-        action:      'Adjust RPM',
-        description: 'Increase or decrease panorama speed by 0.1 RPM.',
-        id:          'panorama-rpm-keyboard',
-        keys:        ['Plus', 'Minus'],
-        reference:   true,
-        scope:       'Panorama mode',
-    },
-    {
-        action:      'Adjust direction',
-        description: 'Set clockwise or counterclockwise panorama rotation.',
-        id:          'panorama-direction-keyboard',
-        keys:        ['ArrowLeft', 'ArrowRight'],
-        reference:   true,
-        scope:       'Panorama mode',
-    },
-    {
-        action:      'Rotate or pan',
-        description: 'Cesium default: rotate the camera in 3D, or pan the map in 2D.',
-        id:          'cesium-rotate-pan',
-        keys:        ['Left drag'],
-        platform:    'macOS / Windows / Linux',
-        reference:   true,
-        scope:       'Cesium navigation',
-    },
-    {
-        action:      'Zoom',
-        description: 'Cesium default zoom controls.',
-        id:          'cesium-zoom',
-        keys:        ['Right drag', 'Wheel', 'Pinch'],
-        platform:    'macOS / Windows / Linux',
-        reference:   true,
-        scope:       'Cesium navigation',
-    },
-    {
-        action:      'Tilt or twist',
-        description: 'Cesium default tilt controls in 3D and Columbus View, or twist in 2D.',
-        id:          'cesium-tilt',
-        keys:        ['Middle drag', 'Pinch', 'Ctrl+Left drag', 'Ctrl+Right drag'],
-        platform:    'macOS / Windows / Linux',
-        reference:   true,
-        scope:       'Cesium navigation',
-    },
-    {
-        action:      'Look around',
-        description: 'Cesium default look control in 3D and Columbus View.',
-        id:          'cesium-look',
-        keys:        ['Shift+Left drag'],
-        platform:    'macOS / Windows / Linux',
-        reference:   true,
-        scope:       'Cesium navigation',
-    },
-]
+export const SHORTCUTS = await fetch(SHORTCUTS_CATALOG, {cache: 'no-store'})
+    .then(res => res.text())
+    .then(text => YAML.parse(text),
+    )
 
 const SHORTCUT_ACTIONS = {
     'journey-import':       openJourneyImporter,
@@ -966,7 +637,7 @@ export const installAppShortcuts = (shortcutManager) => {
         return []
     }
 
-    const removers = SHORTCUTS_CATALOG.filter(shortcut => SHORTCUT_ACTIONS[shortcut.id]).map(shortcut => {
+    const removers = SHORTCUTS.filter(shortcut => SHORTCUT_ACTIONS[shortcut.id]).map(shortcut => {
         const action = SHORTCUT_ACTIONS[shortcut.id]
 
         return shortcutManager.addShortcut(APP_SHORTCUT_TARGET(), shortcut.keys, async (event) => {
