@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-30
- * Last modified: 2026-04-30
+ * Created on: 2026-05-10
+ * Last modified: 2026-05-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -80,6 +80,7 @@ export const ProfileWidget = ({id, context, zIndex, widgetsBoard: persistedWidge
                 canEdit:     true,
                 canRemove:   true,
                 canPosition: true,
+                canSnapshot: true,
             },
             top:         '100%',
             left:        '0px',

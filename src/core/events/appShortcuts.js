@@ -7,24 +7,20 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-05-02
- * Last modified: 2026-05-02
+ * Created on: 2026-05-10
+ * Last modified: 2026-05-10
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
+import { CURRENT_MAP_POINT, CURRENT_POI, FLYTHROUGH_DRAWER, SCENE_MODE_2D, VIDEO_CROP_ZONE } from '@Core/constants'
 import {
-    CURRENT_MAP_POINT,
-    CURRENT_POI,
-    FLYTHROUGH_DRAWER,
-    SCENE_MODE_2D,
-    VIDEO_CROP_ZONE,
-} from '@Core/constants'
-import { hasActiveAppShortcutBlocker } from '@Core/events/shortcutBlockers'
-import { MapTarget } from '@Core/MapTarget'
-import { getOrbitSettings, setOrbitStoreSettings } from '@Core/OrbitSettings'
-import { Cartesian2, Cartographic, Math as CesiumMath } from 'cesium'
+    hasActiveAppShortcutBlocker,
+}                                                                                            from '@Core/events/shortcutBlockers'
+import { MapTarget }                                                                         from '@Core/MapTarget'
+import { getOrbitSettings, setOrbitStoreSettings }                                           from '@Core/OrbitSettings'
+import { Cartesian2, Cartographic, Math as CesiumMath }                                      from 'cesium'
 
 const MAP_POINT_PRECISION = 6
 const APP_SHORTCUT_TARGET = () => globalThis.window ?? globalThis.document
@@ -375,6 +371,12 @@ const removeSelectedWidget = () => {
     return __.ui.widgetManager.removeWidget(widgetId).then(() => true)
 }
 
+const takeWidgetSnapshot = () => {
+    const widgetId = lgs.stores.ui.widget.current?.id
+
+    return __.ui.widgetManager.snapWidget(widgetId).then(() => true)
+}
+
 const editSelectedWidget = () => {
     const widgetId = lgs.stores.ui.widget.current?.id
     if (!__.ui.widgetManager.canEditWidget(widgetId)) {
@@ -650,14 +652,14 @@ export const SHORTCUTS_CATALOG = [
         action:      'Toggle rotation',
         description: 'Starts or stops map rotation around the current target.',
         id:          'rotation-toggle',
-        keys:        ['Alt+Shift+R', 'Alt+Shift+O'],
+        keys: ['Alt+Shift+R'],
         scope:       'App',
     },
     {
         action:      'Toggle panorama',
         description: 'Starts or stops panorama mode around the current target.',
         id:          'panorama-toggle',
-        keys:        ['Alt+Shift+P', 'Alt+Shift+N'],
+        keys: ['Alt+Shift+P'],
         scope:       'App',
     },
     {
@@ -731,6 +733,14 @@ export const SHORTCUTS_CATALOG = [
         description: 'Reduces or expands a reducible widget; opens the editor for visual widgets.',
         id:          'widget-reduce-toggle',
         keys:        ['Double click', 'Double tap'],
+        reference:   true,
+        scope:       'Widget interaction',
+    },
+    {
+        action:      'Snapshot widget',
+        description: 'Snapshot some widget content in png. Not all widgets support this.',
+        id:          'widget-snapshot',
+        keys:        ['Alt+Shift+S'],
         reference:   true,
         scope:       'Widget interaction',
     },
@@ -948,6 +958,7 @@ const SHORTCUT_ACTIONS = {
     'panorama-toggle':      togglePanorama,
     'widget-edit':          editSelectedWidget,
     'widget-remove':        removeSelectedWidget,
+    'widget-snapshot': takeWidgetSnapshot,
 }
 
 export const installAppShortcuts = (shortcutManager) => {

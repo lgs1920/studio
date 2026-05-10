@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-05-03
- * Last modified: 2026-05-03
+ * Created on: 2026-05-10
+ * Last modified: 2026-05-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -68,6 +68,7 @@ export const JourneyStatsWidget = ({id, context, zIndex, widgetsBoard: persisted
                 canEdit: true,
                 canRemove:   true,
                 canPosition: true,
+                canSnapshot: true,
             },
             width:           400,
             top:             '0%',
