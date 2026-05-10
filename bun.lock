@@ -859,7 +859,7 @@
 
     "base64-js": ["base64-js@0.0.2", "", {}, "sha512-Pj9L87dCdGcKlSqPVUjD+q96pbIx1zQQLb2CUiWURfjiBELv84YX+0nGnKmyT/9KkC7PQk7UN1w+Al8bBozaxQ=="],
 
-    "baseline-browser-mapping": ["baseline-browser-mapping@2.10.28", "", { "bin": { "baseline-browser-mapping": "dist/cli.cjs" } }, "sha512-Ic44hnOtFIgravCunj1ifSoQPSUrkNiJuH9Mf6jr2jjoA74icqV8wU0KuadXeOR8zuIJMOoTv0GuQjZ9ZYNMeA=="],
+    "baseline-browser-mapping": ["baseline-browser-mapping@2.10.29", "", { "bin": { "baseline-browser-mapping": "dist/cli.cjs" } }, "sha512-Asa2krT+XTPZINCS+2QcyS8WTkObE77RwkydwF7h6DmnKqbvlalz93m/dnphUyCa6SWSP51VgtEUf2FN+gelFQ=="],
 
     "basic-ftp": ["basic-ftp@5.2.0", "", {}, "sha512-VoMINM2rqJwJgfdHq6RiUudKt2BV+FY5ZFezP/ypmwayk68+NzzAQy4XXLlqsGD4MCzq3DrmNFD/uUmBJuGoXw=="],
 
