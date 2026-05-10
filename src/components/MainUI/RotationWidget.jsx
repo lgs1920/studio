@@ -620,7 +620,7 @@ export const RotationWidget = memo(() => {
         return () => window.removeEventListener('keydown', handleKeyDown, {capture: true})
     }, [$rotate, panorama.active, rotate.running, setRotationDirectionSign, setRotationRPM])
 
-    const directionIsAntiClockwise = rotate.direction < 0
+    const directionIsAntiClockwise = rotate.direction > 0
     const directionTooltip = directionIsAntiClockwise ? 'Anti-clockwise' : 'Clockwise'
     const directionIcon = directionIsAntiClockwise ? 'arrow-rotate-right' : 'arrow-rotate-left'
     const directionAnimation = directionIsAntiClockwise ? 'spin' : 'spin-reverse'
