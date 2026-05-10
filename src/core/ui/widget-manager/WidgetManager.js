@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-05-01
- * Last modified: 2026-05-01
+ * Created on: 2026-05-10
+ * Last modified: 2026-05-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -19,20 +19,22 @@
  * Delegates functionality to specialized classes.
  */
 import {
-    CAMERA_INFORMATION_WIDGET, JOURNEY_EDITOR_DRAWER, JOURNEY_TOOLBAR_WIDGET, PROFILE_WIDGET, SCENE_WIDGETS_BOARD, VIDEO_WIDGETS_BOARD,
-    WIDGET_EDITOR_POST_RENDER_EVENT, WIDGET_EDITOR_PRE_RENDER_EVENT, WIDGETS_EDITOR_DRAWER,
-}                             from '@Core/constants'
+    CAMERA_INFORMATION_WIDGET, JOURNEY_EDITOR_DRAWER, JOURNEY_TOOLBAR_WIDGET, PROFILE_WIDGET, SCENE_WIDGETS_BOARD,
+    VIDEO_WIDGETS_BOARD, WIDGET_EDITOR_POST_RENDER_EVENT, WIDGET_EDITOR_PRE_RENDER_EVENT, WIDGETS_EDITOR_DRAWER,
+}                                from '@Core/constants'
+import { Export }                from '@Core/ui/Export'
 import { WidgetDynamicRenderer } from '@Core/ui/widget-manager/dynamic-render/WidgetDynamicRender'
-import { WidgetDBManager }    from '@Core/ui/widget-manager/WidgetDBManager'
-import { WidgetRotatable }    from '@Core/ui/widget-manager/WidgetRotatable'
-import { WidgetCoreControls } from './WidgetCoreControls'
-import { WidgetCoreRegistry } from './WidgetCoreRegistry'
-import { WidgetCropper }      from './WidgetCropper'
-import { WidgetDraggable }    from './WidgetDraggable'
-import { WidgetPosition }     from './WidgetPosition'
-import { WidgetResizable }    from './WidgetResizable'
-import { WidgetScalable }     from './WidgetScalable'
-import { WidgetTransform }    from './WidgetTransform'
+import { WidgetDBManager }       from '@Core/ui/widget-manager/WidgetDBManager'
+import { WidgetRotatable }       from '@Core/ui/widget-manager/WidgetRotatable'
+import { UIToast }               from '@Utils/UIToast'
+import { WidgetCoreControls }    from './WidgetCoreControls'
+import { WidgetCoreRegistry }    from './WidgetCoreRegistry'
+import { WidgetCropper }         from './WidgetCropper'
+import { WidgetDraggable }       from './WidgetDraggable'
+import { WidgetPosition }        from './WidgetPosition'
+import { WidgetResizable }       from './WidgetResizable'
+import { WidgetScalable }        from './WidgetScalable'
+import { WidgetTransform }       from './WidgetTransform'
 
 export class WidgetManager {
     // Singleton instance
@@ -571,7 +573,19 @@ export class WidgetManager {
 
         dispatch()
     }
-
+    /**
+     * Checks whether a widget can be snapped from the scene.
+     *
+     * @param {string|null|undefined} widgetId - The widget ID
+     * @returns {boolean} True if the widget can be snapped
+     */
+    canSnapshotWidget = (widgetId) => {
+        if (!widgetId) {
+            return false
+        }
+        const config = this.getWidgetConfig(widgetId)
+        return Boolean(config?.contextMenu?.canSnapshot && this.getElementById(widgetId))
+    }
     /**
      * Checks whether a widget can be removed from the scene.
      *
@@ -637,6 +651,26 @@ export class WidgetManager {
             detail: {entity: widgetId},
         }))
 
+        return true
+    }
+
+    /**
+     * Opens or toggles the editor drawer for a widget.
+     *
+     * @param {string|null|undefined} widgetId - The widget ID
+     * @returns {boolean} True when the widget was snapped
+     */
+    snapWidget = (widgetId) => {
+        if (!widgetId || !this.canSnapshotWidget(widgetId)) {
+            return false
+        }
+        const cached = lgs.stores.ui.widget.cache.get(widgetId)
+        const theWidget = __.widgets.get(cached.group).widgets.get(widgetId.split('#')[0])
+
+        const _name = `${lgs.theJourney.title} - ${theWidget.name}`
+        Export.toPNG(document.querySelector(`[data-widget-id="${widgetId}"]`), _name, 2).then(() => {
+            UIToast.success({caption: 'Export success', text: `Exported to ${_name}.png`})
+        })
         return true
     }
 

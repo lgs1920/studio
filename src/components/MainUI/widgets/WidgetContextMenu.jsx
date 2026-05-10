@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-29
- * Last modified: 2026-04-29
+ * Created on: 2026-05-10
+ * Last modified: 2026-05-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -71,6 +71,7 @@ export const WidgetContextMenu = ({targetId, menuRef}) => {
             canEdit:     config.contextMenu.canEdit,
             canRemove:   config.contextMenu.canRemove,
             canPosition: config.contextMenu.canPosition,
+            canSnapshot: config.contextMenu.canSnapshot,
         }
     }, [canLock, config])
 
@@ -86,6 +87,13 @@ export const WidgetContextMenu = ({targetId, menuRef}) => {
      */
     const removeWidget = () => {
         void __.ui.widgetManager.removeWidget(targetId)
+    }
+
+    /**
+     * Triggers widget snap
+     */
+    const snapWidget = () => {
+        void __.ui.widgetManager.snapWidget(targetId)
     }
 
     /**
@@ -221,6 +229,11 @@ export const WidgetContextMenu = ({targetId, menuRef}) => {
                         <span>Edit</span>
 
                     </li>
+                )}
+
+                {/* Snap action */}
+                {!isLocked && capabilities.canSnapshot && (
+                    <li onClick={snapWidget}><WaIcon name="camera" variant="regular"/>{'Snap'}</li>
                 )}
 
                 {/* Remove action */}
