@@ -7,15 +7,16 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-05-02
- * Last modified: 2026-05-02
+ * Created on: 2026-05-10
+ * Last modified: 2026-05-10
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { SETTINGS_STORE } from '@Core/constants'
-import { SettingsSection } from '@Core/settings/SettingsSection'
+import { SETTINGS_STORE }                                  from '@Core/constants'
+import { SettingsSection }                                 from '@Core/settings/SettingsSection'
+import { Track }                                           from '@Core/Track'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const waitForSubscription = () => new Promise(resolve => globalThis.setTimeout(resolve, 0))
@@ -26,11 +27,33 @@ describe('SettingsSection', () => {
             configuration: {
                 journey: {
                     activity: {
+                        default: 'trek',
                         types: [
                             {
                                 id:       'trek',
                                 label:    'Trek',
+                                icon:         'person-hiking',
                                 maxSpeed: 3,
+                                stopDuration: 60,
+                            },
+                        ],
+                    },
+                },
+            },
+            savedConfiguration: {
+                journey: {
+                    activity: {
+                        default: 'trek',
+                        types:   [
+                            {
+                                id:             'trek',
+                                label:          'Trek',
+                                icon:           'person-hiking',
+                                maxSpeed:       3,
+                                maxClimbRate:   1.5,
+                                maxDescentRate: 2.5,
+                                stopDuration:   60,
+                                stopSpeedLimit: 0.2,
                             },
                         ],
                     },
@@ -71,6 +94,32 @@ describe('SettingsSection', () => {
             }),
             SETTINGS_STORE,
         )
+    })
+
+    it('keeps persisted journey activity thresholds on restart', async () => {
+        lgs.db.settings.get.mockResolvedValue({
+                                                  activity: {
+                                                      default: 'trek',
+                                                      types:   [
+                                                          {
+                                                              id:             'trek',
+                                                              label:          'Trek',
+                                                              icon:           'person-hiking',
+                                                              maxSpeed:       4.25,
+                                                              maxClimbRate:   1.5,
+                                                              maxDescentRate: 2.5,
+                                                              stopDuration:   60,
+                                                              stopSpeedLimit: 0.2,
+                                                          },
+                                                      ],
+                                                  },
+                                              })
+
+        const section = new SettingsSection('journey')
+        await section.init()
+
+        expect(section.content.activity.types[0].maxSpeed).toBe(4.25)
+        expect(lgs.configuration.journey.activity.types[0].maxSpeed).toBe(4.25)
     })
 
     it('keeps user flythrough settings while adding new default keys', () => {
@@ -121,5 +170,61 @@ describe('SettingsSection', () => {
         expect(merged.flythrough.progression.border.profileMarker).toBe(2)
         expect(merged.flythrough.profileInfo.color).toBe('#ffffff')
         expect(merged.flythrough.profileInfo.useTrackStyle).toBe(false)
+    })
+
+    it('hydrates and persists the full activity catalog when only partial values exist', async () => {
+        const section = new SettingsSection('journey')
+        await section.init()
+        lgs.settings = {
+            journey: section.content,
+        }
+        section.content.activity.types = [
+            {
+                id:       'trek',
+                maxSpeed: 4.25,
+            },
+        ]
+        await waitForSubscription()
+        lgs.db.settings.put.mockClear()
+
+        const catalog = Track.ensureActivityCatalogPersistence()
+        await waitForSubscription()
+
+        expect(catalog).toEqual({
+                                    default: 'trek',
+                                    types:   [
+                                        expect.objectContaining({
+                                                                    id:             'trek',
+                                                                    label:          'Trek',
+                                                                    icon:           'person-hiking',
+                                                                    maxSpeed:       4.25,
+                                                                    maxClimbRate:   1.5,
+                                                                    maxDescentRate: 2.5,
+                                                                    stopDuration:   60,
+                                                                    stopSpeedLimit: 0.2,
+                                                                }),
+                                    ],
+                                })
+        expect(lgs.db.settings.put).toHaveBeenCalledWith(
+            'journey',
+            expect.objectContaining({
+                                        activity: expect.objectContaining({
+                                                                              default: 'trek',
+                                                                              types:   [
+                                                                                  expect.objectContaining({
+                                                                                                              id:             'trek',
+                                                                                                              label:          'Trek',
+                                                                                                              icon:           'person-hiking',
+                                                                                                              maxSpeed:       4.25,
+                                                                                                              maxClimbRate:   1.5,
+                                                                                                              maxDescentRate: 2.5,
+                                                                                                              stopDuration:   60,
+                                                                                                              stopSpeedLimit: 0.2,
+                                                                                                          }),
+                                                                              ],
+                                                                          }),
+                                    }),
+            SETTINGS_STORE,
+        )
     })
 })

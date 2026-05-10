@@ -380,3 +380,40 @@ ui:
   ## PWA
   pwa:
     canInstall: true
+
+  ## Journey Settings
+  activities:
+    default: trek
+    list:
+      - id: trek
+        label: Trek
+        icon: person-hiking
+        maxSpeed: 3.0
+        maxClimbRate: 1.5
+        maxDescentRate: 2.5
+        stopDuration: 60
+        stopSpeedLimit: 0.2
+      - id: trail
+        label: Trail
+        icon: person-running
+        maxSpeed: 5.5
+        maxClimbRate: 2.0
+        maxDescentRate: 3.0
+        stopDuration: 45
+        stopSpeedLimit: 0.3
+      - id: bike
+        label: Bike
+        icon: bicycle
+        maxSpeed: 16.0
+        maxClimbRate: 2.5
+        maxDescentRate: 4.0
+        stopDuration: 45
+        stopSpeedLimit: 0.6
+      - id: ski-touring
+        label: Ski touring
+        icon: person-skiing-nordic
+        maxSpeed: 8.0
+        maxClimbRate: 1.6
+        maxDescentRate: 6.0
+        stopDuration: 60
+        stopSpeedLimit: 0.25

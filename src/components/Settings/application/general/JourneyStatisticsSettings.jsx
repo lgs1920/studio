@@ -21,7 +21,7 @@ import { Utils } from '@Editor/Utils'
 import {
     WaButton, WaCallout, WaDivider, WaIcon, WaInput, WaOption, WaSelect,
 }                            from '@web.awesome.me/webawesome-pro/dist/react'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useSnapshot }                  from 'valtio/index'
 
 const SPEED_FACTOR = 3.6
@@ -81,8 +81,14 @@ const roundValue = (value, precision = 2) => {
 }
 
 const getStandardProfile = activityId => {
-    return Track.DEFAULT_ACTIVITY_PROFILES.find(profile => profile.id === activityId)
-           ?? Track.DEFAULT_ACTIVITY_PROFILES.find(profile => profile.id === Track.DEFAULT_ACTIVITY)
+    const configured = globalThis.lgs?.savedConfiguration?.journey?.activity?.types
+    if (Array.isArray(configured) && configured.length > 0) {
+        return configured.find(profile => profile.id === activityId)
+            ?? configured.find(profile => profile.id === (globalThis.lgs?.savedConfiguration?.journey?.activity?.default ?? Track.DEFAULT_ACTIVITY))
+            ?? configured[0]
+    }
+
+    return undefined
 }
 
 const setActivityThreshold = (activityId, key, value) => {
@@ -121,6 +127,11 @@ const hasCustomThresholds = (profile, standardProfile) => {
 export const JourneyStatisticsSettings = () => {
     const $activity = lgs.settings.journey.activity
     const activity = useSnapshot($activity)
+
+    useEffect(() => {
+        Track.ensureActivityCatalogPersistence()
+    }, [])
+
     const refreshJourneyStatistics = useMemo(() => __.tools.debounce(async (activityId) => {
         const editorJourney = lgs.theJourneyEditorProxy?.journey
         if (!editorJourney?.slug || editorJourney.activity !== activityId) {
@@ -142,7 +153,7 @@ export const JourneyStatisticsSettings = () => {
     const profiles = useMemo(() => {
         return Array.isArray(activity.types) && activity.types.length > 0
                ? activity.types
-               : Track.DEFAULT_ACTIVITY_PROFILES
+               : Track.activityDefaultProfiles()
     }, [activity.types])
 
     const [selectedActivity, setSelectedActivity] = useState(activity.default ?? profiles[0]?.id ?? Track.DEFAULT_ACTIVITY)

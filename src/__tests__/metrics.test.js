@@ -7,17 +7,17 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-05-02
- * Last modified: 2026-05-02
+ * Created on: 2026-05-10
+ * Last modified: 2026-05-10
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { Journey }                              from '@Core/Journey'
 import { Track }                                from '@Core/Track'
 import { mkm, mpmile, UnitUtils }               from '@Utils/UnitUtils'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const makeLineTrack = ({slug = 'track-1', coordinates, times, hasTime = true, activity = 'trek'}) => {
     return new Track(slug, {
@@ -45,40 +45,82 @@ const makeLineTrack = ({slug = 'track-1', coordinates, times, hasTime = true, ac
 
 describe('journey metrics', () => {
     beforeEach(() => {
+        const activitySettings = {
+            default: 'trek',
+            types:   [
+                {
+                    id:             'trek',
+                    label:          'Trek',
+                    maxSpeed:       3.0,
+                    maxClimbRate:   1.5,
+                    maxDescentRate: 2.5,
+                    stopDuration:   60,
+                    stopSpeedLimit: 0.2,
+                },
+                {
+                    id:             'bike',
+                    label:          'Bike',
+                    maxSpeed:       16.0,
+                    maxClimbRate:   2.5,
+                    maxDescentRate: 4.0,
+                    stopDuration:   45,
+                    stopSpeedLimit: 0.6,
+                },
+            ],
+        }
+
         vi.stubGlobal('lgs', {
-            settings: {
+            settings:           {
                 getMetrics: {
                     minSlope:       2,
                     stopDuration:   60,
                     stopSpeedLimit: 0.2,
                 },
                 getJourney: {
-                    activity: {
-                        default: 'trek',
-                        types:   [
-                            {
-                                id:             'trek',
-                                label:          'Trek',
-                                maxSpeed:       3.0,
-                                maxClimbRate:   1.5,
-                                maxDescentRate: 2.5,
-                                stopDuration:   60,
-                                stopSpeedLimit: 0.2,
-                            },
-                            {
-                                id:             'bike',
-                                label:          'Bike',
-                                maxSpeed:       16.0,
-                                maxClimbRate:   2.5,
-                                maxDescentRate: 4.0,
-                                stopDuration:   45,
-                                stopSpeedLimit: 0.6,
-                            },
-                        ],
-                    },
+                    activity: activitySettings,
+                },
+            },
+            configuration:      {
+                journey: {
+                    activity: activitySettings,
+                },
+            },
+            savedConfiguration: {
+                journey: {
+                    activity: activitySettings,
                 },
             },
         })
+    })
+
+    it('falls back to saved configuration for activity catalog defaults', () => {
+        delete globalThis.lgs.settings.getJourney
+        globalThis.lgs.savedConfiguration.journey.activity = {
+            default: 'ski',
+            types:   [
+                {
+                    id:             'ski',
+                    label:          'Ski',
+                    maxSpeed:       7.2,
+                    maxClimbRate:   1.7,
+                    maxDescentRate: 5.4,
+                    stopDuration:   75,
+                    stopSpeedLimit: 0.35,
+                },
+            ],
+        }
+        globalThis.lgs.configuration.journey.activity = globalThis.lgs.savedConfiguration.journey.activity
+
+        expect(Track.defaultActivity()).toBe('ski')
+        expect(Track.activityProfiles()).toEqual(globalThis.lgs.savedConfiguration.journey.activity.types)
+        expect(Track.activityProfile('ski')).toEqual(expect.objectContaining({
+                                                                                 id:             'ski',
+                                                                                 maxSpeed:       7.2,
+                                                                                 maxClimbRate:   1.7,
+                                                                                 maxDescentRate: 5.4,
+                                                                                 stopDuration:   75,
+                                                                                 stopSpeedLimit: 0.35,
+                                                                             }))
     })
 
     it('computes weighted track speed, pace, altitude, and elevation metrics', () => {

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-05-10
+ * Last modified: 2026-05-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,9 +16,9 @@
 
 import { CURRENT_TRACK, DRAWING_FROM_UI, FOCUS_ON_FEATURE }                   from '@Core/constants'
 import { MapElement }                                                         from '@Core/MapElement'
-import { FEATURE, FEATURE_LINE_STRING, FEATURE_MULTILINE_STRING, TrackUtils } from '@Utils/cesium/TrackUtils'
 import { normalizeTrackRenderSmoothing }                                      from '@Utils/cesium/trackRenderSmoothing'
 import { normalizeTrackRenderStyle }                                          from '@Utils/cesium/trackRenderStyle'
+import { FEATURE, FEATURE_LINE_STRING, FEATURE_MULTILINE_STRING, TrackUtils } from '@Utils/cesium/TrackUtils'
 import { Mobility }                                                           from '@Utils/Mobility'
 import { decodeHTMLEntities }                                                 from '@Utils/TextUtils'
 import { v4 as uuid }                                                         from 'uuid'
@@ -57,48 +57,6 @@ const coordinatePoint = coordinates => {
 export class Track extends MapElement {
 
     static DEFAULT_ACTIVITY = 'trek'
-    static DEFAULT_ACTIVITY_PROFILES = [
-        {
-            id:             'trek',
-            label:          'Trek',
-            icon:           'person-hiking',
-            maxSpeed:       3.0,
-            maxClimbRate:   1.5,
-            maxDescentRate: 2.5,
-            stopDuration:   60,
-            stopSpeedLimit: 0.2,
-        },
-        {
-            id:             'trail',
-            label:          'Trail',
-            icon:           'person-running',
-            maxSpeed:       5.5,
-            maxClimbRate:   2.0,
-            maxDescentRate: 3.0,
-            stopDuration:   45,
-            stopSpeedLimit: 0.3,
-        },
-        {
-            id:             'bike',
-            label:          'Bike',
-            icon:           'bicycle',
-            maxSpeed:       16.0,
-            maxClimbRate:   2.5,
-            maxDescentRate: 4.0,
-            stopDuration:   45,
-            stopSpeedLimit: 0.6,
-        },
-        {
-            id:             'ski-touring',
-            label:          'Ski touring',
-            icon:           'person-skiing-nordic',
-            maxSpeed:       8.0,
-            maxClimbRate:   1.6,
-            maxDescentRate: 6.0,
-            stopDuration:   60,
-            stopSpeedLimit: 0.25,
-        },
-    ]
 
     id
     /** @type {string} */
@@ -198,22 +156,93 @@ export class Track extends MapElement {
         this.calculateMetrics()
     }
 
+    static activityCatalogDefaults = () => {
+        return globalThis.lgs?.savedConfiguration?.journey?.activity
+            ?? globalThis.lgs?.configuration?.journey?.activity
+            ?? {}
+    }
+
+    static normalizeActivityCatalog = (activity = undefined) => {
+        const defaults = Track.activityCatalogDefaults()
+        const defaultProfiles = Array.isArray(defaults.types) ? defaults.types : []
+        const currentProfiles = Array.isArray(activity?.types) ? activity.types : []
+        const currentProfileMap = new Map(
+            currentProfiles
+                .filter(profile => profile?.id)
+                .map(profile => [profile.id, profile]),
+        )
+        const normalizedProfiles = defaultProfiles.map(profile => ({
+            ...profile,
+            ...(currentProfileMap.get(profile.id) ?? {}),
+        }))
+
+        currentProfiles.forEach((profile) => {
+            if (!profile?.id) {
+                return
+            }
+            if (!normalizedProfiles.some(item => item.id === profile.id)) {
+                normalizedProfiles.push({...profile})
+            }
+        })
+
+        const preferredDefault = activity?.default
+            ?? defaults.default
+            ?? normalizedProfiles[0]?.id
+            ?? Track.DEFAULT_ACTIVITY
+        const normalizedDefault = normalizedProfiles.some(profile => profile.id === preferredDefault)
+                                  ? preferredDefault
+                                  : defaults.default ?? normalizedProfiles[0]?.id ?? Track.DEFAULT_ACTIVITY
+
+        return {
+            default: normalizedDefault,
+            types:   normalizedProfiles,
+        }
+    }
+
+    static ensureActivityCatalogPersistence = () => {
+        const activitySettings = globalThis.lgs?.settings?.journey?.activity
+        const normalized = Track.normalizeActivityCatalog(activitySettings)
+
+        if (!activitySettings || typeof activitySettings !== 'object') {
+            return normalized
+        }
+
+        const current = {
+            default: activitySettings.default,
+            types:   Array.isArray(activitySettings.types) ? JSON.parse(JSON.stringify(activitySettings.types)) : [],
+        }
+
+        if (JSON.stringify(current) !== JSON.stringify(normalized)) {
+            activitySettings.default = normalized.default
+            activitySettings.types = normalized.types
+        }
+
+        return normalized
+    }
+
     static defaultActivity = () => {
-        return globalThis.lgs?.settings?.getJourney?.activity?.default ?? Track.DEFAULT_ACTIVITY
+        return Track.ensureActivityCatalogPersistence().default
+    }
+
+    static activityDefaultProfiles = () => {
+        return Track.normalizeActivityCatalog(Track.activityCatalogDefaults()).types
     }
 
     static activityProfiles = () => {
-        const configured = globalThis.lgs?.settings?.getJourney?.activity?.types
-        return Array.isArray(configured) && configured.length > 0 ? configured : Track.DEFAULT_ACTIVITY_PROFILES
+        return Track.ensureActivityCatalogPersistence().types
     }
 
     static activityProfile = (activity = Track.defaultActivity(), overrides = undefined) => {
+        const defaultProfiles = Track.activityDefaultProfiles()
+        const profiles = Track.activityProfiles()
         const fallback = {
-            ...(Track.DEFAULT_ACTIVITY_PROFILES.find(profile => profile.id === Track.DEFAULT_ACTIVITY) ?? {}),
+            ...(defaultProfiles.find(profile => profile.id === Track.defaultActivity())
+                ?? defaultProfiles.find(profile => profile.id === Track.DEFAULT_ACTIVITY)
+                ?? {}),
             ...(globalThis.lgs?.settings?.getMetrics ?? {}),
         }
-        const profile = Track.activityProfiles().find(item => item.id === activity)
-                        ?? Track.activityProfiles().find(item => item.id === Track.defaultActivity())
+        const profile = profiles.find(item => item.id === activity)
+            ?? profiles.find(item => item.id === Track.defaultActivity())
                         ?? fallback
 
         return {
