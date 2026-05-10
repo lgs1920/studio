@@ -19,7 +19,7 @@ import { Track } from '@Core/Track'
 import { UPDATE_JOURNEY_SILENTLY } from '@Core/constants'
 import { Utils } from '@Editor/Utils'
 import {
-    WaButton, WaCallout, WaDivider, WaIcon, WaInput, WaNumberInput, WaOption, WaSelect, WaTooltip,
+    WaButton, WaCallout, WaDivider, WaIcon, WaInput, WaOption, WaSelect,
 }                            from '@web.awesome.me/webawesome-pro/dist/react'
 import { useMemo, useState } from 'react'
 import { useSnapshot }                  from 'valtio/index'
@@ -118,88 +118,6 @@ const hasCustomThresholds = (profile, standardProfile) => {
     return THRESHOLDS.some(({key}) => Number(profile[key]) !== Number(standardProfile[key]))
 }
 
-const getDisplayValue = (profile, field) => {
-    const value = Number(profile?.[field.key])
-    const display = field.toDisplay ? field.toDisplay(value) : value
-    const rounded = roundValue(display, field.precision)
-
-    return rounded === '' ? '' : String(rounded)
-}
-
-const parseThresholdInput = (field, rawValue) => {
-    const normalized = String(rawValue ?? '').trim().replace(',', '.')
-
-    if (normalized === '') {
-        return null
-    }
-
-    const input = Number.parseFloat(normalized)
-    if (!Number.isFinite(input) || input < 0) {
-        return null
-    }
-
-    const value = field.toStorage ? field.toStorage(input) : input
-    return roundValue(value, 4)
-}
-
-const ThresholdFieldRow = ({
-                               profileId,
-                               profileValue,
-                               field,
-                               isModified,
-                               onCommit,
-                               onReset,
-                           }) => {
-    const commitDraft = (rawValue) => {
-        const parsedValue = parseThresholdInput(field, rawValue)
-
-        if (parsedValue === null) {
-            return
-        }
-
-        onCommit(field.key, parsedValue)
-    }
-
-    return (
-        <div className="journey-statistics-threshold-row">
-            <div className="journey-statistics-threshold-field">
-                <WaInput
-                    key={`${profileId}-${field.key}`}
-                    className="journey-statistics-threshold-input"
-                    label={field.label}
-                    size="s"
-                    defaultValue={getDisplayValue(profileValue, field)}
-                    value={getDisplayValue(profileValue, field)}
-                    hint={field.hint}
-                    onInput={(event) => console.log('nnn', event.target.value)}
-                    onBlur={(event) => commitDraft(event.target.value)}
-                >
-                    <span slot="end">{field.suffix}</span>
-                </WaInput>
-            </div>
-            <WaTooltip placement="top" for={`journey-statistics-settings-reset-button-${field.key}`}>
-                {'Reset Activity Profile to Default'}
-            </WaTooltip>
-            <WaButton
-                id={`journey-statistics-settings-reset-button-${field.key}`}
-                className="journey-statistics-field-reset"
-                size="s"
-                appearance="plain"
-                variant="brand"
-                disabled={!isModified}
-                onClick={(event) => {
-                    event.stopPropagation()
-                    onReset(field.key)
-                }}
-                aria-label={`Reset ${field.label}`}
-                title={`Reset ${field.label}`}
-            >
-                <WaIcon name="arrow-rotate-left" variant="regular"/>
-            </WaButton>
-        </div>
-    )
-}
-
 export const JourneyStatisticsSettings = () => {
     const $activity = lgs.settings.journey.activity
     const activity = useSnapshot($activity)
@@ -235,8 +153,16 @@ export const JourneyStatisticsSettings = () => {
     const standardProfile = getStandardProfile(selectedProfile?.id)
     const isModified = hasCustomThresholds(selectedProfile, standardProfile)
 
-    const updateThreshold = (key, value) => {
-        if (setActivityThreshold(selectedProfile.id, key, value)) {
+    const updateThreshold = (key, event) => {
+        const input = Number.parseFloat(event.target.value)
+        if (!Number.isFinite(input) || input < 0) {
+            return
+        }
+
+        const field = THRESHOLDS.find(item => item.key === key)
+        const value = field?.toStorage ? field.toStorage(input) : input
+
+        if (setActivityThreshold(selectedProfile.id, key, roundValue(value, 4))) {
             refreshJourneyStatistics(selectedProfile.id)
         }
     }
@@ -265,6 +191,12 @@ export const JourneyStatisticsSettings = () => {
         }
     }
 
+    const displayValue = (field) => {
+        const value = Number(selectedProfile?.[field.key])
+        const display = field.toDisplay ? field.toDisplay(value) : value
+        return roundValue(display, field.precision)
+    }
+
     return (
         <>
             <span slot="summary">
@@ -275,7 +207,7 @@ export const JourneyStatisticsSettings = () => {
             <div className="journey-statistics-scroll-area">
                 <LGSScrollbars>
                     <div id="journey-statistics-settings">
-                        <WaCallout open size="s" variant="neutral">
+                        <WaCallout open variant="neutral">
                             <WaIcon slot="icon" name="circle-info" variant="regular"/>
                             {
                                 'Choose the activity profile to tune here. The activity used by a journey is selected in the journey editor; these thresholds only define how statistics are cleaned for that activity.'
@@ -309,18 +241,41 @@ export const JourneyStatisticsSettings = () => {
 
                         <div className="journey-statistics-threshold-grid">
                             {THRESHOLDS.map(field => (
-                                <ThresholdFieldRow
-                                    key={`${selectedProfileId}-${field.key}-${selectedProfile?.[field.key] ?? ''}`}
-                                    profileId={selectedProfileId}
-                                    profileValue={selectedProfile}
-                                    field={field}
-                                    isModified={isThresholdModified(field.key)}
-                                    onCommit={updateThreshold}
-                                    onReset={resetThreshold}
-                                />
+                                <div className="journey-statistics-threshold-row" key={field.key}>
+                                    <div className="journey-statistics-threshold-field">
+                                        <WaInput
+                                            className="journey-statistics-threshold-input"
+                                            label={field.label}
+                                            size="s"
+                                            type="number"
+                                            min="0"
+                                            step={field.step}
+                                            value={displayValue(field)}
+                                            onInput={(event) => updateThreshold(field.key, event)}
+                                            withoutSpinButtons
+                                        >
+                                            <span slot="end">{field.suffix}</span>
+                                        </WaInput>
+                                        <span className="journey-statistics-threshold-hint">{field.hint}</span>
+                                    </div>
+                                    <WaButton
+                                        className="journey-statistics-field-reset"
+                                        size="s"
+                                        appearance="plain"
+                                        variant="brand"
+                                        disabled={!isThresholdModified(field.key)}
+                                        onClick={(event) => {
+                                            event.stopPropagation()
+                                            resetThreshold(field.key)
+                                        }}
+                                        aria-label={`Reset ${field.label}`}
+                                        title={`Reset ${field.label}`}
+                                    >
+                                        <WaIcon name="arrow-rotate-left" variant="regular"/>
+                                    </WaButton>
+                                </div>
                             ))}
                         </div>
-
                     </div>
                 </LGSScrollbars>
             </div>
