@@ -7,21 +7,20 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-05-04
- * Last modified: 2026-05-04
+ * Created on: 2026-05-11
+ * Last modified: 2026-05-11
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { FlythroughCesiumRenderer } from './FlythroughCesiumRenderer'
+import { FlythroughCesiumRenderer }                           from './FlythroughCesiumRenderer'
+import { FLYTHROUGH_SCOPE_ALL_TRACKS, FlythroughPathSampler } from './FlythroughPathSampler'
 import {
-    FLYTHROUGH_EVENT_END, FLYTHROUGH_EVENT_PAUSE, FLYTHROUGH_EVENT_RESUME, FLYTHROUGH_EVENT_START, FLYTHROUGH_EVENT_STOP,
-    FLYTHROUGH_EVENT_UPDATE,
-    FlythroughPlaybackController,
-} from './FlythroughPlaybackController'
-import { FlythroughPathSampler, FLYTHROUGH_SCOPE_ALL_TRACKS } from './FlythroughPathSampler'
-import { getFlythroughSettings } from './FlythroughProgressionStyle'
+    FLYTHROUGH_EVENT_END, FLYTHROUGH_EVENT_PAUSE, FLYTHROUGH_EVENT_RESUME, FLYTHROUGH_EVENT_START,
+    FLYTHROUGH_EVENT_STOP, FLYTHROUGH_EVENT_UPDATE, FlythroughPlaybackController,
+}                                                             from './FlythroughPlaybackController'
+import { getFlythroughSettings }                              from './FlythroughProgressionStyle'
 
 const DEFAULT_DURATION = 60
 const PROFILE_HOVER_RENDER_INTERVAL = 120
@@ -129,13 +128,6 @@ export class FlythroughMode {
             direction: 1,
             loop:      options.loop ?? flythrough.loop ?? store?.loop ?? false,
             progress:  options.progress ?? store?.progress ?? 0,
-        })
-
-        this.#renderer.show({
-            sampler: this.#sampler,
-            options: {
-                radius: store?.markerRadius,
-            },
         })
 
         return this.#sampler
