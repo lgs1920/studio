@@ -7,20 +7,20 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-05-03
- * Last modified: 2026-05-03
+ * Created on: 2026-05-11
+ * Last modified: 2026-05-11
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import {
-    GLOBAL_PARENT, POI_FLAG_START, POI_FLAG_STOP, POI_JOURNEY_ASSOCIATION_DISTANCE, POI_STARTER_TYPE,
-}                         from '@Core/constants'
+    GLOBAL_PARENT, POI_FLAG_START, POI_FLAG_STOP, POI_JOURNEY_ASSOCIATION_DISTANCE, POI_STARTER_TYPE, POI_TMP_TYPE,
+}                                                    from '@Core/constants'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useSnapshot }     from 'valtio'
+import { useSnapshot }                               from 'valtio'
 
-const NON_ASSOCIABLE_POI_TYPES = new Set([POI_STARTER_TYPE, POI_FLAG_START, POI_FLAG_STOP])
+const NON_ASSOCIABLE_POI_TYPES = new Set([POI_STARTER_TYPE, POI_FLAG_START, POI_FLAG_STOP, POI_TMP_TYPE])
 export const NO_ASSOCIATED_JOURNEY_LABEL = 'No associated journey'
 const EMPTY_CANDIDATES = []
 
