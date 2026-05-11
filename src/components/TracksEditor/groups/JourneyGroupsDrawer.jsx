@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-05-10
- * Last modified: 2026-05-10
+ * Created on: 2026-05-11
+ * Last modified: 2026-05-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -662,7 +662,7 @@ export const JourneyGroupsDrawer = memo(() => {
                                                                             <JourneySortableRow
                                                                                 key={journey.slug}
                                                                                 journey={journey}
-                                                                                actionIcon="link-slash"
+                                                                                actionIcon="link-simple-slash"
                                                                                 actionLabel="Remove journey from group"
                                                                                 onAction={removeJourneyFromSelectedGroup}
                                                                             />
@@ -682,7 +682,7 @@ export const JourneyGroupsDrawer = memo(() => {
                                                                             <JourneySortableRow
                                                                                 key={journey.slug}
                                                                                 journey={journey}
-                                                                                actionIcon="link"
+                                                                                actionIcon="link-simple"
                                                                                 actionLabel="Add journey to group"
                                                                                 onAction={addJourneyToSelectedGroup}
                                                                             />

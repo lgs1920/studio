@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-05-10
- * Last modified: 2026-05-10
+ * Created on: 2026-05-11
+ * Last modified: 2026-05-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -391,11 +391,11 @@ export const JourneySelector = memo(({
                     <div slot="start" className="lgs--journey-selector-start">
                         {selectedJourney
                          ? renderJourneyIcons(selectedJourney)
-                         : allowEmptyOption && <WaIcon name="link-slash" variant="regular"/>}
+                         : allowEmptyOption && <WaIcon name="link-simple-slash" variant="regular"/>}
                     </div>
                     {allowEmptyOption && (
                         <WaOption value="">
-                            <WaIcon slot="start" name="link-slash" variant="regular"/>
+                            <WaIcon slot="start" name="link-simple-slash" variant="regular"/>
                             <div>{emptyLabel}</div>
                         </WaOption>
                     )}
