@@ -133,7 +133,7 @@ describe('startup camera positioning', () => {
                                                         })
 
             expect(manager.readCameraInformation).toHaveBeenCalledWith({fallback: false})
-            expect(result.focusTarget).toBeNull()
+            expect(result.focusTarget).toEqual(validSavedTarget)
             expect(result.cameraStore.restoreCameraPosition).toBe(true)
             expect(result.cameraStore.target).toEqual(validSavedTarget)
             expect(result.cameraStore.position.range).toBe(5555)

@@ -189,7 +189,7 @@ export const lastCameraConfiguration = async ({
         const target = savedTargetIsValid ? savedCamera.target : fallbackConfiguration.cameraStore.target
 
         return {
-            focusTarget: savedTargetIsValid ? null : fallbackConfiguration.focusTarget,
+            focusTarget: savedTargetIsValid ? target : fallbackConfiguration.focusTarget,
             cameraStore: {
                 restoreCameraPosition: true,
                 target:                target,

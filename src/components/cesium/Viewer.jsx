@@ -19,13 +19,15 @@ import '@shoelace-style/shoelace/dist/themes/light.css'
 import { CanvasEventManager } from '@Core/events/CanvasEventManager'
 import { LayersUtils }        from '@Utils/cesium/LayersUtils'
 import { SceneUtils }                                                                                  from '@Utils/cesium/SceneUtils'
-import { ImageryLayerCollection, ScreenSpaceEventType, Viewer as CesiumViewer, WebMercatorProjection } from 'cesium'
+import { Color, ImageryLayerCollection, ScreenSpaceEventType, Viewer as CesiumViewer, WebMercatorProjection } from 'cesium'
 import { useEffect }                                                                                   from 'react'
 
 let layersInitialized = false
 let cameraUpdateHandlerAttached = false
 let canvasEventsInitialized = false
 let cameraUpdateInProgress = false
+
+const VIEWER_BASE_COLOR = Color.fromCssColorString('hsla(125, 87%, 18%, 0.95)')
 
 export const ensureViewer = () => {
 
@@ -87,6 +89,8 @@ export const ensureViewer = () => {
     // Add some globe parameters
     lgs.scene.globe.enableLighting = false
     lgs.scene.globe.depthTestAgainstTerrain = true
+    lgs.scene.globe.baseColor = VIEWER_BASE_COLOR.clone()
+    lgs.scene.backgroundColor = VIEWER_BASE_COLOR.clone()
 
     //lgs.scene.maximumRenderTimeChange = 0.2
     //lgs.scene.debugShowFramesPerSecond=true

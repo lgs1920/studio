@@ -19,7 +19,7 @@ import {
     ImageryLayer, NeverTileDiscardPolicy, OpenStreetMapImageryProvider, UrlTemplateImageryProvider,
     WebMapTileServiceImageryProvider,
 }                                                       from 'cesium'
-import { useEffect }              from 'react'
+import { useEffect, useMemo }     from 'react'
 import { subscribe, useSnapshot } from 'valtio'
 import { BASE_INDEX, DEFAULT_LAYERS_COLOR_SETTINGS, OVERLAY_INDEX } from '../../core/constants'
 
@@ -37,16 +37,6 @@ const stripTrailingSlash = url => (url?.endsWith('/') ? url.replace(/\/+$/, '') 
 const readLevelOption = value => {
     const level = Number(value)
     return Number.isInteger(level) && level >= 0 ? level : undefined
-}
-
-const imageryLevelOptions = layer => {
-    const minimumLevel = readLevelOption(layer.minimumLevel)
-    const maximumLevel = readLevelOption(layer.maximumLevel)
-
-    return {
-        ...(minimumLevel !== undefined ? {minimumLevel} : {}),
-        ...(maximumLevel !== undefined ? {maximumLevel} : {}),
-    }
 }
 
 const buildLegacyWmtsUrl = layer => {
@@ -134,6 +124,139 @@ export const MapLayer = (props) => {
     const manager = __.layersAndTerrainManager
     const snapLayer = isBase ? layers.base : layers.overlay
     const theLayer = isLayerType && snapLayer ? manager.getEntityProxy(snapLayer) : null
+    const layerId = theLayer?.id
+    const layerType = theLayer?.type
+    const layerTile = theLayer?.tile
+    const layerUrl = theLayer?.url ?? ''
+    const layerStyle = theLayer?.style
+    const layerName = theLayer?.layer
+    const layerFormat = theLayer?.format
+    const layerTileMatrixSetID = theLayer?.tileMatrixSetID
+    const layerApiKey = theLayer?.apikey
+    const layerOther = theLayer?.other
+    const layerUsageName = theLayer?.usage?.name
+    const layerUsageToken = theLayer?.usage?.token
+    const layerUsageUnlocked = theLayer?.usage?.unlocked
+    const layerMinimumLevel = theLayer?.minimumLevel
+    const layerMaximumLevel = theLayer?.maximumLevel
+    const minLevel = readLevelOption(layerMinimumLevel)
+    const maxLevel = readLevelOption(layerMaximumLevel)
+    const imageryProvider = useMemo(() => {
+        if (!isLayerType || !layerType || !layerTile) {
+            return null
+        }
+
+        let theURL = layerUrl
+        if (theURL && theURL.includes(URL_AUTHENT_KEY)) {
+            if (layerUsageUnlocked && layerUsageName) {
+                theURL = theURL.replace(URL_AUTHENT_KEY, `${layerUsageName}=${layerUsageToken}`)
+            }
+            else {
+                theURL = theURL.replace(URL_AUTHENT_KEY, '')
+            }
+        }
+
+        const levelOptions = {
+            ...(minLevel !== undefined ? {minimumLevel: minLevel} : {}),
+            ...(maxLevel !== undefined ? {maximumLevel: maxLevel} : {}),
+        }
+
+        if (layerTile === SLIPPY && layerType === props.type) {
+            return new OpenStreetMapImageryProvider({
+                                                        url:               theURL,
+                                                        credit:            props.type,
+                                                        tileDiscardPolicy: NeverTileDiscardPolicy(),
+                                                        ...levelOptions,
+                                                    })
+        }
+
+        if (layerTile === MAPTILER && layerType === props.type) {
+            return new UrlTemplateImageryProvider({
+                                                      url:               theURL,
+                                                      credit:            props.type,
+                                                      tileDiscardPolicy: NeverTileDiscardPolicy(),
+                                                      ...levelOptions,
+                                                  })
+        }
+
+        if (layerTile === THUNDERFOREST && layerType === props.type) {
+            return new UrlTemplateImageryProvider({
+                                                      url:               `${theURL}{z}/{x}/{y}.png?${layerUsageName}=${layerUsageToken}`,
+                                                      credit:            props.type,
+                                                      tileDiscardPolicy: NeverTileDiscardPolicy(),
+                                                      style:             layerStyle,
+                                                      ...levelOptions,
+                                                  })
+        }
+
+        if (layerTile === SWISSTOPO && layerType === props.type) {
+            return new UrlTemplateImageryProvider({
+                                                      url:               theURL,
+                                                      credit:            props.type,
+                                                      tileDiscardPolicy: NeverTileDiscardPolicy(),
+                                                      style:             layerStyle,
+                                                      ...levelOptions,
+                                                  })
+        }
+
+        if (layerTile === WMTS && layerType === props.type) {
+            return new WebMapTileServiceImageryProvider({
+                                                            url:             theURL,
+                                                            layer:           layerName,
+                                                            style:           layerStyle,
+                                                            format:          layerFormat,
+                                                            tileMatrixSetID: layerTileMatrixSetID,
+                                                            ...levelOptions,
+                                                            // We credit to get if it is base or overlay.
+                                                            credit: props.type,
+                                                        })
+        }
+
+        if (layerTile === WMTS_LEGACY && layerType === props.type) {
+            return new UrlTemplateImageryProvider({
+                                                      url:               buildLegacyWmtsUrl({
+                                                                                               url:             layerUrl,
+                                                                                               apikey:          layerApiKey,
+                                                                                               other:           layerOther,
+                                                                                               layer:           layerName,
+                                                                                               style:           layerStyle,
+                                                                                               format:          layerFormat,
+                                                                                               tileMatrixSetID: layerTileMatrixSetID,
+                                                                                           }),
+                                                      credit:            props.type,
+                                                      tileDiscardPolicy: NeverTileDiscardPolicy(),
+                                                      ...levelOptions,
+                                                  })
+        }
+
+        if (layerTile === WAYBACK && layerType === props.type) {
+            return new UrlTemplateImageryProvider({
+                                                      url:               `${stripTrailingSlash(theURL)}/{z}/{y}/{x}`,
+                                                      credit:            props.type,
+                                                      tileDiscardPolicy: NeverTileDiscardPolicy(),
+                                                      ...levelOptions,
+                                                  })
+        }
+
+        return null
+    }, [
+        isLayerType,
+        props.type,
+        layerType,
+        layerTile,
+        layerUrl,
+        layerName,
+        layerFormat,
+        layerStyle,
+        layerTileMatrixSetID,
+        layerUsageName,
+        layerUsageToken,
+        layerUsageUnlocked,
+        layerApiKey,
+        layerOther,
+        minLevel,
+        maxLevel,
+    ])
 
     /**
      * We need to update some information when layer settings
@@ -181,111 +304,11 @@ export const MapLayer = (props) => {
         return null
     }
 
-    // If we have authent in the url, we need to replace it
-    let theURL = theLayer.url || ''
-    if (theURL && theURL.includes(URL_AUTHENT_KEY)) {
-        if (theLayer.usage?.unlocked && theLayer.usage?.name) {
-            theURL = theURL.replace(URL_AUTHENT_KEY, `${theLayer.usage.name}=${theLayer.usage.token}`)
-        }
-        else {
-            theURL = theURL.replace(URL_AUTHENT_KEY, '')
-        }
-    }
-
     return (
         <>
-            {  //OpenStreet Map type  layers (ie slippy)
-                theLayer.tile === SLIPPY && theLayer.type === props.type &&
-                <MapLayerImagery key={theURL + '-' + theLayer.type} isBase={isBase} layerId={theLayer.id} imageryProvider={
-                    new OpenStreetMapImageryProvider(
-                        {
-                            url:               theURL,
-                            credit:            props.type,
-                            tileDiscardPolicy: NeverTileDiscardPolicy(),
-                            ...imageryLevelOptions(theLayer),
-                        })}
-                />
-            }
-
-            {  //MapTiler
-                theLayer.tile === MAPTILER && theLayer.type === props.type &&
-                <MapLayerImagery key={theURL + '-' + theLayer.type} isBase={isBase} layerId={theLayer.id} imageryProvider={
-                    new UrlTemplateImageryProvider(
-                        {
-                            url:               theURL,
-                            credit:            props.type,
-                            tileDiscardPolicy: NeverTileDiscardPolicy(),
-                            ...imageryLevelOptions(theLayer),
-                        })}
-                />
-            }
-
-            {  // Thunderforest Map Type Layers
-                theLayer.tile === THUNDERFOREST && theLayer.type === props.type &&
-                <MapLayerImagery key={theURL + '-' + theLayer.type} isBase={isBase} layerId={theLayer.id} imageryProvider={
-                    new UrlTemplateImageryProvider({
-                                                       url:               `${theURL}{z}/{x}/{y}.png?${theLayer.usage.name}=${theLayer.usage.token}`,
-                                                       credit:            props.type,
-                                                       tileDiscardPolicy: NeverTileDiscardPolicy(),
-                                                       style:             theLayer.style,
-                                                       ...imageryLevelOptions(theLayer),
-
-                                                   })}
-                />
-            }
-
-            {  // SwissTopo Map Type Layers
-                theLayer.tile === SWISSTOPO && theLayer.type === props.type &&
-                <MapLayerImagery key={theURL + '-' + theLayer.type} isBase={isBase} layerId={theLayer.id} imageryProvider={
-                    new UrlTemplateImageryProvider({
-                                                       url:               theURL,
-                                                       credit:            props.type,
-                                                       tileDiscardPolicy: NeverTileDiscardPolicy(),
-                                                       style:             theLayer.style,
-                                                       ...imageryLevelOptions(theLayer),
-
-                                                   })}
-                />
-            }
-
-            {   // WMTS layers
-                theLayer.tile === WMTS && theLayer.type === props.type &&
-                <MapLayerImagery key={theURL + '-' + theLayer.type} isBase={isBase} layerId={theLayer.id} imageryProvider={
-                    new WebMapTileServiceImageryProvider({
-                                                             url:             theURL,
-                                                             layer:           theLayer.layer,
-                                                             style:           theLayer.style,
-                                                             format:          theLayer.format,
-                                                             tileMatrixSetID: theLayer.tileMatrixSetID,
-                                                             ...imageryLevelOptions(theLayer),
-                                                             // We credit to get if it is base or overlay.
-                                                             credit: props.type,
-                                                         })
-                }/>
-            }
-
-            {   // WMTS Legacy
-                theLayer.tile === WMTS_LEGACY && theLayer.type === props.type &&
-                <MapLayerImagery key={theURL + '-' + theLayer.type} isBase={isBase} layerId={theLayer.id} imageryProvider={
-                    new UrlTemplateImageryProvider({
-                                                       url:               buildLegacyWmtsUrl(theLayer),
-                                                       credit:            props.type,
-                                                       tileDiscardPolicy: NeverTileDiscardPolicy(),
-                                                       ...imageryLevelOptions(theLayer),
-                                                   })}
-                />
-            }
-
-            {   // Wayback layers
-                theLayer.tile === WAYBACK && theLayer.type === props.type &&
-                <MapLayerImagery key={theURL + '-' + theLayer.type} isBase={isBase} layerId={theLayer.id}
-                         imageryProvider={new UrlTemplateImageryProvider({
-                                                                             url:               `${stripTrailingSlash(theURL)}/{z}/{y}/{x}`,
-                                                                             credit:            props.type,
-                                                                             tileDiscardPolicy: NeverTileDiscardPolicy(),
-                                                                             ...imageryLevelOptions(theLayer),
-                                                                         })}/>
-            }
+            {imageryProvider && (
+                <MapLayerImagery key={`${layerUrl}-${layerType}`} isBase={isBase} layerId={layerId} imageryProvider={imageryProvider}/>
+            )}
         </>
     )
 }
