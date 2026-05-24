@@ -47,7 +47,7 @@ import {
     WelcomeModal,
 }                       from '@Components/MainUI/WelcomeModal'
 import {
-    APP_EVENT, BASE_ENTITY, OVERLAY_ENTITY, POI_STARTER_TYPE, WIDGET_GOOGLE_FONTS,
+    APP_EVENT, BASE_ENTITY, CURRENT_JOURNEY, OVERLAY_ENTITY, POI_STARTER_TYPE,
 }                       from '@Core/constants'
 import {
     LayersAndTerrainManager,
@@ -56,6 +56,7 @@ import {
     buildStartupCameraFocusOptions,
     configureStartupCamera,
 }                       from '@Core/ui/cameraStartup'
+import { runDeferredJourneyDataLoad } from '@Core/ui/deferredJourneyData'
 import {
     TerrainUtils,
 }                       from '@Utils/cesium/TerrainUtils'
@@ -66,20 +67,15 @@ import {
     UIToast,
 }                       from '@Utils/UIToast'
 import {
-    preCache,
-}                       from '@zumer/snapdom'
-import {
-    useCallback, useEffect, useState,
+    useCallback, useEffect, useRef, useState,
 }                       from 'react'
 
-const APP_SURFACE_READY_TIMEOUT = 10000
-const APP_SURFACE_READY_STABLE_FRAMES = 2
+const APP_SURFACE_READY_TIMEOUT = 1500
 
 const nextFrame = () => new Promise(resolve => requestAnimationFrame(resolve))
 
 const waitForAppSurfaceReady = () => new Promise(resolve => {
     const scene = lgs?.scene
-    const globe = scene?.globe
 
     if (!scene) {
         nextFrame().then(resolve)
@@ -87,8 +83,6 @@ const waitForAppSurfaceReady = () => new Promise(resolve => {
     }
 
     let done = false
-    let stableFrames = 0
-    let lastQueueLength = null
     const cleanup = []
 
     const finish = () => {
@@ -104,46 +98,13 @@ const waitForAppSurfaceReady = () => new Promise(resolve => {
     const timeout = window.setTimeout(finish, APP_SURFACE_READY_TIMEOUT)
     cleanup.push(() => window.clearTimeout(timeout))
 
-    const isLoaded = queueLength => {
-        const queueReady = !Number.isFinite(queueLength) || queueLength === 0
-        return queueReady && globe?.tilesLoaded !== false
-    }
-
-    const check = queueLength => {
-        if (done) {
-            return
-        }
-
-        if (Number.isFinite(queueLength)) {
-            lastQueueLength = queueLength
-        }
-
-        if (isLoaded(lastQueueLength)) {
-            stableFrames += 1
-        }
-        else {
-            stableFrames = 0
-        }
-
-        if (stableFrames >= APP_SURFACE_READY_STABLE_FRAMES) {
-            finish()
-            return
-        }
-
-        scene.requestRender?.()
-    }
-
-    cleanup.push(scene.postRender.addEventListener(() => check(lastQueueLength)))
-
-    if (globe?.tileLoadProgressEvent) {
-        cleanup.push(globe.tileLoadProgressEvent.addEventListener(queueLength => check(queueLength)))
-    }
+    cleanup.push(scene.postRender.addEventListener(finish))
 
     scene.requestRender?.()
     nextFrame().then(() => {
         scene.requestRender?.()
-        check(lastQueueLength)
-    })
+        return nextFrame()
+    }).then(finish)
 })
 
 const AppSurface = ({onReady}) => {
@@ -192,6 +153,7 @@ export const LGS1920 = () => {
     const [appVisible, setAppVisible] = useState(false)
     const [initialFocusReady, setInitialFocusReady] = useState(false)
     const [appSurfaceReady, setAppSurfaceReady] = useState(false)
+    const deferredJourneyDataStarted = useRef(false)
 
     const revealApp = useCallback(() => {
         document.body.classList.remove('lgs-app-booting')
@@ -238,40 +200,65 @@ export const LGS1920 = () => {
      */
     const initializeData = async lgs => {
         await TerrainUtils.changeTerrain(lgs.settings.layers.terrain)
-        await TrackUtils.readAllFromDB()
-        await __.ui.journeyGroupManager.initialize()
-        await __.ui.poiManager.initialize()
-        await __.ui.poiManager.readAllFromDB()
+        await TrackUtils.readCurrentFromDB()
     }
+
+    const initializeDeferredJourneyData = useCallback(() => runDeferredJourneyDataLoad(), [])
 
     /**
      * Sets up the starter POI if not present
      * @param {LGS1920Context} lgs - The application context
      * @returns {Promise<Object>} The starter POI
      */
-    const setupStarterPOI = async lgs => {
-        let starter = __.ui.poiManager.starter
-        if (!starter) {
-            starter = await __.ui.poiManager.add({
-                                                     longitude:   lgs.settings.starter.longitude,
-                                                     latitude:    lgs.settings.starter.latitude,
-                                                     height:      lgs.settings.starter.height,
-                                                     title:       lgs.settings.starter.title,
-                                                     location:    lgs.settings.starter.location,
-                                                     country:     lgs.settings.starter.country,
-                                                     countryCode: lgs.settings.starter.countryCode,
-                                                     countries:   lgs.settings.starter.countries,
-                                                     countryCodes: lgs.settings.starter.countryCodes,
-                                                     description: lgs.settings.starter.description,
-                                                     color:       lgs.settings.starter.color,
-                                                     bgColor:     lgs.settings.starter.bgColor,
-                                                     type:        POI_STARTER_TYPE,
-                                                 }, false, true)
+    const createStarterFromSettings = useCallback(lgs => ({
+        longitude:   lgs.settings.starter.longitude,
+        latitude:    lgs.settings.starter.latitude,
+        height:      lgs.settings.starter.height,
+        title:       lgs.settings.starter.title,
+        location:    lgs.settings.starter.location,
+        country:     lgs.settings.starter.country,
+        countryCode: lgs.settings.starter.countryCode,
+        countries:   lgs.settings.starter.countries,
+        countryCodes: lgs.settings.starter.countryCodes,
+        description: lgs.settings.starter.description,
+        color:       lgs.settings.starter.color,
+        bgColor:     lgs.settings.starter.bgColor,
+        type:        POI_STARTER_TYPE,
+    }), [])
+
+    const setupStarterPOI = useCallback(async (lgs, {persist = true} = {}) => {
+        let starter = __.ui.poiManager.starter ?? createStarterFromSettings(lgs)
+        if (!persist) {
+            return starter
         }
+
+        if (!starter) {
+            starter = createStarterFromSettings(lgs)
+        }
+        if (!starter.id) {
+            starter = await __.ui.poiManager.add(starter, false, true)
+        }
+
         await __.ui.poiManager.ensurePOILocation(starter.id)
         lgs.stores.main.components.pois.current = starter.id
         return starter
-    }
+    }, [createStarterFromSettings])
+
+    const initializeStartupPOIs = useCallback(async ({focusTarget, cameraStore, starter}) => {
+        const currentJourney = lgs.theJourney
+        const target = cameraStore?.target
+        const starterFocused = focusTarget === starter || target?.element === POI_STARTER_TYPE || (!currentJourney && target?.id === starter?.id)
+        const journeyFocused = focusTarget === currentJourney || target?.element === CURRENT_JOURNEY
+
+        await __.ui.poiManager.initializeStartupPOIs({
+                                                        includeStarter: starterFocused,
+                                                        journey:        journeyFocused ? currentJourney : null,
+                                                    })
+
+        if (starterFocused) {
+            await setupStarterPOI(lgs)
+        }
+    }, [setupStarterPOI])
 
     /**
      * Sets the camera focus and dispatches initialization event
@@ -338,8 +325,8 @@ export const LGS1920 = () => {
                 // Initialize data (terrain, journeys, POIs)
                 await initializeData(lgs)
 
-                // Set up starter POI
-                const starter = await setupStarterPOI(lgs)
+                // Set up starter target from settings. It is persisted only if the first view needs it.
+                const starter = await setupStarterPOI(lgs, {persist: false})
 
                 // Configure camera
                 const {focusTarget, cameraStore} = await configureStartupCamera({
@@ -351,20 +338,8 @@ export const LGS1920 = () => {
                                                                                 })
 
                 // Set camera focus
+                await initializeStartupPOIs({focusTarget, cameraStore, starter})
                 setCameraFocus(lgs, starter, focusTarget, cameraStore)
-                // Initialize the widget cache
-                await __.ui.widgetCache.init()
-
-                // Add font to snapdom cache
-                await preCache({
-                                   root:       document.body,
-                                   embedFonts: true,
-                                   localFonts: WIDGET_GOOGLE_FONTS.map(family => ({
-                                       family,
-                                       src:    `https://fonts.googleapis.com/css2?family=${family.replace(/\s+/g, '+')}:wght@400;700&display=swap`,
-                                       weight: 400,
-                                   })),
-                               })
 
                 // Mark UI as initialized
                 __.app.uiInit = true
@@ -386,7 +361,23 @@ export const LGS1920 = () => {
         }
 
         initialize()
-    }, [])
+    }, [initializeStartupPOIs, setupStarterPOI])
+
+    useEffect(() => {
+        if (deferredJourneyDataStarted.current || initStatus !== true || !initialFocusReady || !appSurfaceReady) {
+            return
+        }
+
+        deferredJourneyDataStarted.current = true
+        void initializeDeferredJourneyData().catch(error => {
+            console.error('[LGS1920] Deferred journey loading failed:', error)
+            UIToast.error({
+                              caption: 'Journey loading failed!',
+                              text:    error.message,
+                          })
+        })
+    }, [appSurfaceReady, initStatus, initialFocusReady, initializeDeferredJourneyData])
+
     return (
         <>
             {!initStatus && initError && <InitErrorMessage error={initError}/>}

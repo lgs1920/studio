@@ -255,6 +255,10 @@ export class POIManager {
         }
     }
 
+    async initializeStartupPOIs({includeStarter = true, journey = lgs.theJourney} = {}) {
+        await this.readStartupPOIsFromDB({includeStarter, journey})
+    }
+
     isInitialized() {
         return this.#initialized
     }
@@ -672,13 +676,69 @@ export class POIManager {
         }
     }
 
-    readAllFromDB = async () => {
+    isPOIVisibleForJourney = (poi, journey = lgs.theJourney) => {
+        if (!poi || !journey?.visible || !journey?.POIsVisible || poi.visible === false) {
+            return false
+        }
+
+        if (poi.parent === journey.slug) {
+            return true
+        }
+
+        if (journey.tracks?.has?.(poi.parent)) {
+            return true
+        }
+
+        return lgs.getJourneyByTrackSlug?.(poi.parent)?.slug === journey.slug
+    }
+
+    shouldLoadStartupPOI = (poi, {includeStarter = true, journey = lgs.theJourney} = {}) => {
+        if (!poi) {
+            return false
+        }
+
+        if (poi.type === POI_STARTER_TYPE) {
+            return includeStarter && poi.visible !== false
+        }
+
+        return this.isPOIVisibleForJourney(poi, journey)
+    }
+
+    readStartupPOIsFromDB = async ({includeStarter = true, journey = lgs.theJourney} = {}) => {
+        try {
+            const keys = await lgs.db.lgs1920.keys(POIS_STORE)
+            const loaded = []
+
+            for (const key of keys) {
+                const data = await lgs.db.lgs1920.get(key, POIS_STORE)
+                if (!this.shouldLoadStartupPOI(data, {includeStarter, journey})) {
+                    continue
+                }
+
+                const poi = new MapPOI(data)
+                this.list.set(poi.id, poi)
+                this.addToJourneyIndex(poi.id, poi)
+                loaded.push(poi)
+            }
+
+            return loaded
+        }
+        catch (e) {
+            console.error('[POIManager] Startup POI DB read error:', e)
+            return []
+        }
+    }
+
+    readAllFromDB = async ({ensureLocations = true} = {}) => {
         try {
             const keys = await lgs.db.lgs1920.keys(POIS_STORE)
             const rawList = await Promise.all(keys.map(k => lgs.db.lgs1920.get(k, POIS_STORE)))
 
             for (const data of rawList) {
                 if (!data) {
+                    continue
+                }
+                if (this.list.has(data.id)) {
                     continue
                 }
                 const poi = new MapPOI(data)
@@ -690,12 +750,21 @@ export class POIManager {
                 // peut ne pas se déclencher pendant le chargement initial.
                 this.addToJourneyIndex(poi.id, poi)
             }
-            await this.ensureAllPOILocations()
+            if (ensureLocations) {
+                await this.ensureAllPOILocations()
+            }
             return this.list
         }
         catch (e) {
             console.error('[POIManager] DB Read Error:', e)
             return false
+        }
+    }
+
+    rebuildJourneyIndex = () => {
+        this.#journeyIndex.clear()
+        for (const [id, poi] of this.list.entries()) {
+            this.addToJourneyIndex(id, poi)
         }
     }
 

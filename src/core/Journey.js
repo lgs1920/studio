@@ -245,19 +245,31 @@ export class Journey extends MapElement {
      *
      * @return {Promise<Awaited<unknown>[]|*[]>}
      */
-    static readAllFromDB = async () => {
+    static readFromDB = async slug => {
+        if (!slug) {
+            return null
+        }
+
+        const data = await lgs.db.lgs1920.get(slug, JOURNEYS_STORE)
+        if (!data) {
+            return null
+        }
+
+        return Journey.deserialize({
+                                       object: data,
+                                       reset:  true,
+                                   })
+    }
+
+    static readAllFromDB = async ({excludeSlugs = []} = {}) => {
         try {
+            const excluded = new Set(excludeSlugs)
             // get all slugs
             const slugs = await lgs.db.lgs1920.keys(JOURNEYS_STORE)
             // Get each journey content
-            const journeyPromises = slugs.map(async (slug) => {
-                return Journey.deserialize(
-                    {
-                        object: await lgs.db.lgs1920.get(slug, JOURNEYS_STORE),
-                        reset:  true,
-                    },
-                )
-            })
+            const journeyPromises = slugs
+                .filter(slug => !excluded.has(slug))
+                .map(slug => Journey.readFromDB(slug))
             return await Promise.all(journeyPromises)
         }
         catch (error) {

@@ -1257,6 +1257,75 @@ export class TrackUtils {
         __.ui.cameraManager.settings = lgs.theJourney.cameraOrigin
     }
 
+    static readCurrentFromDB = async () => {
+        const currentJourneyName = await lgs.db.lgs1920.get(CURRENT_JOURNEY, CURRENT_STORE)
+
+        if (!currentJourneyName) {
+            lgs.stores.main.readyForTheShow = true
+            lgs.theJourney = null
+            lgs.theTrack = null
+            lgs.thePOI = null
+            return null
+        }
+
+        const currentJourney = await Journey.readFromDB(currentJourneyName)
+
+        if (!currentJourney) {
+            lgs.stores.main.readyForTheShow = true
+            lgs.theJourney = null
+            lgs.theTrack = null
+            lgs.thePOI = null
+            return null
+        }
+
+        currentJourney.cameraOrigin = currentJourney.camera
+        lgs.theJourney = currentJourney
+        lgs.saveJourneyInContext(currentJourney)
+        lgs.stores.main.readyForTheShow = true
+
+        await TrackUtils.setTheTrack()
+
+        currentJourney.addToEditor()
+        lgs.theTrack?.addToContext()
+        lgs.theTrack?.addToEditor()
+
+        TrackUtils.setProfileVisibility(currentJourney)
+        await currentJourney.prepareDrawing()
+        await currentJourney.draw({
+                                      action: DRAWING_FROM_DB,
+                                      mode:   FOCUS_ON_FEATURE,
+                                  })
+
+        __.ui.cameraManager.settings = currentJourney.cameraOrigin
+
+        return currentJourney
+    }
+
+    static readRemainingFromDB = async () => {
+        const currentJourneySlug = lgs.theJourney?.slug ?? null
+        const journeys = await Journey.readAllFromDB({
+                                                         excludeSlugs: currentJourneySlug ? [currentJourneySlug] : [],
+                                                     })
+
+        const newJourneys = journeys.filter(Boolean)
+
+        newJourneys.forEach(journey => {
+            journey.cameraOrigin = journey.camera
+            lgs.saveJourneyInContext(journey)
+        })
+
+        for (const journey of newJourneys) {
+            await journey.prepareDrawing()
+        }
+
+        await Promise.all(newJourneys.map(journey => journey.draw({
+                                                                      action: DRAWING_FROM_DB,
+                                                                      mode:   NO_FOCUS,
+                                                                  })))
+
+        return newJourneys
+    }
+
     static setTheTrack = async (fromDB = true) => {
         if (lgs.theJourney.tracks.size === 0) {
             lgs.theTrack = null
