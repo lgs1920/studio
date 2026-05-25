@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-05-07
- * Last modified: 2026-05-07
+ * Created on: 2026-05-25
+ * Last modified: 2026-05-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -841,11 +841,32 @@ wa-tab::part(base) {
     padding-block: 0.5em;
 }
 
+.journey-selector-tree-card {
+    display: block;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+    padding-block: 0;
+    --spacing: 0;
+}
+
+.journey-selector-tree-card::part(body) {
+    padding-block: 0.5em;
+}
+
 .journey-selector-tree-panel wa-tree {
+    display: block;
+    width: 100%;
+    min-width: 0;
     --indent-guide-width: 1px;
 }
 
 .journey-selector-tree-panel wa-tree-item.lgs--journey-tree-ungrouped::part(expand-button) {
+    display: none;
+    width: 0;
+}
+
+.journey-selector-tree-panel wa-tree-item.lgs--journey-tree-leaf::part(expand-button) {
     display: none;
     width: 0;
 }
@@ -859,7 +880,6 @@ wa-tab::part(base) {
     .journey-selector-tree-panel wa-tree-item::part(item):hover {
         color: var(--lgs-select-option-hover-color);
         border-color: transparent;
-        background-color: var(--lgs-select-option-hover-bg-color);
     }
 }
 
@@ -873,32 +893,87 @@ wa-tab::part(base) {
     transition: background-color 120ms ease, color 120ms ease, outline-color 120ms ease;
 }
 
+.journey-selector-tree-panel wa-tree-item::part(base) {
+    width: 100%;
+    min-width: 0;
+}
+
 .journey-selector-tree-panel wa-tree-item::part(item) {
+    display: flex;
+    flex: 1 1 auto;
+    width: 100%;
     overflow: hidden;
     max-width: 100%;
+    min-width: 0;
     min-height: var(--wa-form-control-height, 2.5rem);
+    box-sizing: border-box;
+    padding-inline-end: var(--wa-space-2xs);
+    border-radius: var(--wa-border-radius-m);
     cursor: pointer;
+}
+
+.journey-selector-tree-panel wa-tree-item[selected]::part(item) {
+    background: transparent;
+    border-inline-start-color: transparent;
+}
+
+.journey-selector-tree-panel wa-tree-item.lgs--tree-item-hoverable::part(item) {
+    transition: outline-color 0.3s ease,
+    outline-offset 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 0.3s ease,
+    transform 0.2s ease;
+    outline: 4px solid transparent;
+    outline-offset: 0;
+    backface-visibility: hidden;
+}
+
+@media (hover: hover) {
+    .journey-selector-tree-panel wa-tree-item.lgs--tree-item-hoverable::part(item):hover {
+        color: var(--wa-color-brand-on-normal);
+        outline: 2px solid var(--wa-color-brand-50);
+        outline-offset: 0;
+        box-shadow: var(--wa-shadow-l);
+    }
 }
 
 .journey-selector-tree-panel wa-tree-item::part(label) {
     display: flex;
     overflow: hidden;
     align-items: center;
-    flex: 1;
+    flex: 1 1 0;
+    width: 100%;
+    max-width: 100%;
     min-width: 0;
+    box-sizing: border-box;
     gap: 0;
 }
 
 /* Journey item content: icons + title side by side */
+.journey-group-tree-row {
+    display: flex;
+    align-items: center;
+    flex: 1;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    overflow: hidden;
+    box-sizing: border-box;
+    gap: var(--lgs-gutter-xs);
+}
+
 .lgs--journey-tree-item-content {
     display: flex;
     overflow: hidden;
     align-items: center;
+    flex: 1;
     min-width: 0;
     gap: var(--lgs-gutter-xs);
 }
 
 .lgs--journey-tree-item-title {
+    display: block;
+    flex: 1;
+    min-width: 0;
     overflow: hidden;
     white-space: nowrap;
     text-overflow: ellipsis;
@@ -909,14 +984,41 @@ wa-tab::part(base) {
     font-weight: 600;
     display: flex;
     align-items: center;
+    flex: 1;
+    position: relative;
     min-width: 0;
+    overflow: hidden;
     gap: var(--lgs-gutter-xs);
 }
 
+.journey-group-tree-empty-folder {
+    position: absolute;
+    inset-inline-start: -2em;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2em;
+    color: var(--wa-color-text-quiet);
+    pointer-events: none;
+}
+
 .lgs--journey-tree-group-header > span {
+    display: block;
+    flex: 1;
+    min-width: 0;
     overflow: hidden;
     white-space: nowrap;
     text-overflow: ellipsis;
+}
+
+.journey-group-tree-unlink {
+    flex: 0 0 auto;
+    margin-inline-start: auto;
+}
+
+.journey-group-tree-action {
+    flex: 0 0 auto;
+    margin-inline-start: auto;
 }
 
 /*******************************************************************************
@@ -932,6 +1034,7 @@ wa-tab::part(base) {
 }
 
 .journey-groups-drawer-content {
+    position: relative;
     display: flex;
     flex-direction: column;
     height: 100%;
@@ -966,6 +1069,12 @@ wa-tab::part(base) {
     font-weight: 600;
     line-height: 1.2;
     color: var(--wa-color-text-normal);
+}
+
+.journey-group-tabs-actions {
+    display: flex;
+    align-items: center;
+    margin-left: auto;
 }
 
 .journey-group-create-header wa-button {
@@ -1055,74 +1164,60 @@ wa-tab::part(base) {
     min-width: 0;
 }
 
-.journey-group-detail-wrapper {
-    position: relative;
+.journey-group-tree {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    --indent-guide-width: 1px;
+    --indent-size: var(--wa-space-m);
 }
 
-.journey-group-detail::part(content) {
+.journey-group-editor {
     display: flex;
     flex-direction: column;
+    min-width: 0;
+    padding: var(--lgs-gutter-s);
+    border: 1px solid var(--wa-color-surface-border);
+    border-radius: var(--lgs-border-radius-s);
+    background: var(--wa-color-surface-raised);
+    gap: var(--lgs-gutter-s);
+}
+
+.journey-group-edit-popup {
+    --width-popup: min(42rem, calc(var(--lgs-vertical-panel-width) - 2 * var(--margin)));
+}
+
+.journey-group-editor-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
     min-width: 0;
     gap: var(--lgs-gutter-s);
 }
 
-.journey-group-detail::part(summary) {
-    flex: 1 1 auto;
-    min-width: 0;
-}
-
-.journey-group-detail-summary {
-    display: flex;
-    align-items: center;
-    width: 100%;
-    min-width: 0;
-    padding-right: 2.25rem;
-    gap: var(--lgs-gutter-xs);
-}
-
-.journey-group-detail-summary-main {
+.journey-group-editor-title {
     display: inline-flex;
     align-items: center;
     min-width: 0;
     gap: var(--lgs-gutter-xs);
 }
 
-.journey-group-detail-summary-main .journey-group-color-icon {
-    font-size: 1rem;
-    align-self: center;
-    width: 1rem;
-    height: 1rem;
-}
-
-.journey-group-detail-title {
+.journey-group-editor-title > span {
     overflow: hidden;
     white-space: nowrap;
     text-overflow: ellipsis;
-}
-
-.journey-group-detail-actions {
-    position: absolute;
-    z-index: 1;
-    top: var(--lgs-gutter-xs);
-    right: 1.75rem;
-    display: inline-flex;
-    align-items: center;
-    flex: 0 0 auto;
-}
-
-.journey-group-delete-confirmation {
-    display: flex;
-    flex-direction: column;
-    gap: var(--lgs-gutter-xs);
 }
 
 .journey-group-journey-title {
+    display: inline-flex;
     overflow: hidden;
-    text-overflow: ellipsis;
+    align-items: center;
+    min-width: 0;
     white-space: nowrap;
+    text-overflow: ellipsis;
+    gap: var(--lgs-gutter-xs);
 }
 
-.journey-groups-empty-state,
 .lgs--journey-groups-empty {
     font-size: var(--lgs-font-size-s);
     color: var(--wa-color-text-quiet);
@@ -1144,8 +1239,44 @@ wa-tab::part(base) {
     text-wrap: wrap;
 }
 
-.journey-group-journey-row::part(body) {
+.journey-group-journey-row {
+    display: block;
+    width: 100%;
     min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+.journey-group-journey-row::part(body) {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+    overflow: hidden;
+    gap: var(--lgs-gutter-xs);
+}
+
+.details-sortable-list {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    padding-inline: 4px;
+    overflow: visible;
+    gap: var(--lgs-gutter-xs);
+}
+
+.details-sortable-list > * {
+    min-width: 0;
+}
+
+.details-sortable-list .journey-group-journey-title {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .journey-group-drag-handle {
@@ -1162,13 +1293,6 @@ wa-tab::part(base) {
 .journey-group-journey-title {
     flex: 1 1 auto;
     min-width: 0;
-}
-
-.journey-groups-empty-state {
-    margin: 0;
-    padding: var(--lgs-gutter-s);
-    border: 1px dashed var(--wa-color-surface-border);
-    border-radius: var(--lgs-border-radius-s);
 }
 
 .lgs--journey-groups-info {

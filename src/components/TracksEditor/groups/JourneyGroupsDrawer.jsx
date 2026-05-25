@@ -7,33 +7,45 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-05-11
- * Last modified: 2026-05-11
+ * Created on: 2026-05-25
+ * Last modified: 2026-05-25
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import DrawerFooter                 from '@Components/DrawerFooter'
-import { LGSScrollbars }            from '@Components/MainUI/LGSScrollbars'
-import PanelActions                 from '@Components/PanelsActions'
-import { PopupAnchor }              from '@Components/PopupAnchor'
-import { LGSPopup }                 from '@Components/LGSPopup'
-import WaDrawer                     from '@Components/WaDrawerNonModal'
-import { JOURNEY_GROUPS_DRAWER }    from '@Core/constants'
-import { UIToast }                  from '@Utils/UIToast'
+import DrawerFooter              from '@Components/DrawerFooter'
+import { LGSPopup }              from '@Components/LGSPopup'
+import { LGSScrollbars }         from '@Components/MainUI/LGSScrollbars'
+import PanelActions              from '@Components/PanelsActions'
+import { PopupAnchor }           from '@Components/PopupAnchor'
+import WaDrawer                  from '@Components/WaDrawerNonModal'
+import { JOURNEY_GROUPS_DRAWER } from '@Core/constants'
+import { UIToast }               from '@Utils/UIToast'
+import { Journey }               from '@Core/Journey'
 import {
-    WaButton, WaCallout, WaCard, WaColorPicker, WaDetails, WaDivider, WaIcon, WaInput, WaSwitch, WaTextarea,
-    WaTooltip,
-}                                   from '@web.awesome.me/webawesome-pro/dist/react'
-import classNames                   from 'classnames'
+    WaButton, WaCallout, WaCard, WaColorPicker, WaDivider, WaIcon, WaInput, WaOption,
+    WaSelect, WaTab, WaTabGroup, WaTabPanel, WaTextarea, WaTooltip, WaTree, WaTreeItem,
+}                                from '@web.awesome.me/webawesome-pro/dist/react'
+import classNames                from 'classnames'
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { createPortal }             from 'react-dom'
-import Sortable                     from 'sortablejs'
-import { useSnapshot }              from 'valtio'
-import { JourneyGroupColorIcon }    from './JourneyGroupsInfo'
+import { createPortal }          from 'react-dom'
+import Sortable                  from 'sortablejs'
+import { useSnapshot }           from 'valtio'
+import { JourneyGroupColorIcon } from './JourneyGroupsInfo'
+import { TrackStylePreview }     from '@Components/TracksEditor/track/TrackStylePreview'
 
-const DEFAULT_GROUP_COLOR = '#f2b705'
+
+const emptyGroupForm = () => ({
+    name:        '',
+    description: '',
+    color:       '#ffffff',
+    parentGroup: null,
+})
+
+const CREATE_GROUP_POPUP_ANCHOR = 'journey-group-create-popup-anchor'
+const EDIT_GROUP_POPUP_ANCHOR = 'journey-group-edit-popup-anchor'
+const EDIT_GROUP_AVAILABLE_POPUP_ANCHOR = 'journey-group-edit-available-popup-anchor'
 const GROUP_COLOR_SWATCHES = [
     '#f2b705',
     '#f97316',
@@ -46,13 +58,47 @@ const GROUP_COLOR_SWATCHES = [
     '#64748b',
 ].join(';')
 
-const emptyGroupForm = () => ({
-    name:        '',
-    description: '',
-    color:       DEFAULT_GROUP_COLOR,
-})
+const groupTabId = (groupId, suffix) => `journey-group-${groupId.replace(/[^a-zA-Z0-9_-]/g, '-')}-${suffix}`
 
-const CREATE_GROUP_POPUP_ANCHOR = 'journey-group-create-popup-anchor'
+const renderJourneyIcons = (journey) => {
+    const tracks = Array.from(journey.tracks?.values?.() ?? [])
+
+    if (tracks.length === 0) {
+        return <WaIcon name="route" variant="regular"/>
+    }
+
+    if (tracks.length === 1) {
+        return (
+            <span className="lgs--journey-icons-in-settings">
+                <TrackStylePreview track={tracks[0]} compact
+                                   visible={journey.visible !== false && tracks[0].visible !== false}/>
+                <WaIcon className="lgs--journey-activity-icon"
+                        name={Journey.activityProfile(journey?.activity, journey?.activitySettings).icon ?? 'person-hiking'}
+                        title={Journey.activityProfile(journey?.activity, journey?.activitySettings).label}
+                        variant="regular"/>
+            </span>
+        )
+    }
+
+    return (
+        <span className="lgs--journey-icons-in-settings">
+            <span className="lgs--track-colors-in-settings">
+                {tracks.slice(0, 3).map(track => (
+                    <TrackStylePreview
+                        key={track.slug}
+                        track={track}
+                        compact
+                        visible={journey.visible !== false && track.visible !== false}
+                    />
+                ))}
+            </span>
+            <WaIcon className="lgs--journey-activity-icon"
+                    name={Journey.activityProfile(journey?.activity, journey?.activitySettings).icon ?? 'person-hiking'}
+                    title={Journey.activityProfile(journey?.activity, journey?.activitySettings).label}
+                    variant="regular"/>
+        </span>
+    )
+}
 
 const JourneySortableRow = ({journey, actionIcon, actionLabel, onAction}) => {
     const handleAction = event => {
@@ -63,14 +109,16 @@ const JourneySortableRow = ({journey, actionIcon, actionLabel, onAction}) => {
     return (
         <WaCard
             appearance="outlined"
-            className="lgs--card-hoverable widget-ordering-row journey-group-journey-row"
+            className="lgs--card-hoverable journey-group-journey-row"
             data-id={journey.slug}
         >
-            <span className="journey-group-drag-handle">
+            <span className="journey-group-drag-handle" aria-hidden="true">
                 <WaIcon name="grip-dots-vertical" variant="solid"/>
             </span>
-            <WaIcon name="route" variant="regular"/>
-            <span className="journey-group-journey-title">{journey.title}</span>
+            {renderJourneyIcons(journey)}
+            <span className="journey-group-journey-title">
+                {journey.title}
+            </span>
             {onAction && (
                 <WaButton
                     size="s"
@@ -86,71 +134,341 @@ const JourneySortableRow = ({journey, actionIcon, actionLabel, onAction}) => {
     )
 }
 
-const JourneyGroupDeleteButton = ({group, onDelete}) => {
-    const [dialog, setDialog] = useState(false)
-    const removeButtonId = useMemo(
-        () => `remove-${group.id.replace(/[^a-zA-Z0-9_-]/g, '-')}`,
-        [group.id],
-    )
-
-    const hideRemoveDialog = useCallback(event => {
-        event?.preventDefault?.()
-        event?.stopPropagation?.()
-        setDialog(false)
-    }, [])
-
-    const toggleRemoveDialog = useCallback(event => {
-        event.preventDefault()
-        event.stopPropagation()
-        setDialog(open => !open)
-    }, [])
-
-    const removeGroup = useCallback(async event => {
-        event?.preventDefault?.()
-        event?.stopPropagation?.()
-        setDialog(false)
-        await onDelete(group)
-    }, [group, onDelete])
+const renderJourneyGroupTreeItems = (
+    groups,
+    childrenByParent,
+    selectedGroupId,
+    onSelect,
+    onEditGroup     = null,
+    onRemoveGroup   = null,
+    onUnlinkJourney = null,
+    showJourneys    = true,
+) => groups.map(group => {
+    const childGroups = childrenByParent.get(group.id) ?? []
+    const journeys = showJourneys
+                     ? group.journeys
+                         .map(slug => lgs.getJourneyBySlug(slug))
+                         .filter(Boolean)
+                         .sort((a, b) => a.title.localeCompare(b.title))
+                     : []
+    const hasItems = childGroups.length > 0 || journeys.length > 0
 
     return (
-        <span className="journey-group-detail-actions">
-            <WaTooltip placement="bottom" for={removeButtonId}>{'Remove group'}</WaTooltip>
-            <WaButton
-                id={removeButtonId}
-                size="s"
-                variant="brand"
-                appearance="plain"
-                aria-label={`Remove ${group.name}`}
-                onClick={toggleRemoveDialog}
+        <WaTreeItem
+            key={group.id}
+            className="lgs--tree-item-hoverable"
+            data-empty-group={hasItems ? undefined : ''}
+            selected={selectedGroupId === group.id}
+            onClick={event => {
+                event.stopPropagation()
+                onSelect?.(group.id)
+            }}
+        >
+            <span
+                className="journey-group-tree-row"
+                onClick={event => {
+                    event.preventDefault()
+                    event.stopPropagation()
+                    onSelect?.(group.id)
+                    if (!hasItems) {
+                        onEditGroup?.(group.id)
+                    }
+                }}
             >
-                <WaIcon name="trash-can" variant="regular"/>
-            </WaButton>
-            <LGSPopup
-                anchor={removeButtonId}
-                active={dialog}
-                onRequestClose={hideRemoveDialog}
-                hover-bridge="true"
-                shift="true"
-                placement="bottom-end"
-                distance={lgs.gutter.xs}
-            >
-                <WaCard className="lgs--popup-in-drawer lgs--popup-in-drawer-small lgs-slide-down">
-                    <div className="journey-group-delete-confirmation">
-                        <span>{'Are you sure to remove this group? (Your journeys won\'t be deleted.)'}</span>
-                    </div>
-                    <div slot="footer">
-                        <div className="lgs--popup-in-drawer-footer">
-                            <WaButton variant="neutral" appearance="outlined" size="s" onClick={hideRemoveDialog}>
-                                <WaIcon name="xmark"/> {'No'}
+                <span className="lgs--journey-tree-group-header">
+                    {!hasItems && (
+                        <span className="journey-group-tree-empty-folder">
+                            <WaIcon name="folder" variant="regular"/>
+                        </span>
+                    )}
+                    <JourneyGroupColorIcon color={group.color}/>
+                    <span>{group.name}</span>
+                </span>
+                {onRemoveGroup && !hasItems && (
+                    <WaButton
+                        size="s"
+                        variant="brand"
+                        appearance="plain"
+                        className="journey-group-tree-action"
+                        aria-label={`Remove ${group.name}`}
+                        onClick={event => {
+                            event.preventDefault()
+                            event.stopPropagation()
+                            onRemoveGroup(group.id)
+                        }}
+                    >
+                        <WaIcon name="trash" variant="regular"/>
+                    </WaButton>
+                )}
+                {onEditGroup && (
+                    <WaButton
+                        size="s"
+                        variant="brand"
+                        appearance="plain"
+                        className="journey-group-tree-action"
+                        aria-label={`Edit ${group.name}`}
+                        onClick={event => {
+                            event.preventDefault()
+                            event.stopPropagation()
+                            onEditGroup(group.id)
+                        }}
+                    >
+                        <WaIcon name="pen-to-square" variant="regular"/>
+                    </WaButton>
+                )}
+            </span>
+            <WaIcon slot="expand-icon" name="folder" variant="regular"/>
+            <WaIcon slot="collapse-icon" name="folder-open" style={{transform: 'rotate(-90deg)'}} variant="regular"/>
+            {renderJourneyGroupTreeItems(childGroups, childrenByParent, selectedGroupId, onSelect, onEditGroup, onRemoveGroup, onUnlinkJourney, showJourneys)}
+            {journeys.map(journey => (
+                <WaTreeItem
+                    key={journey.slug}
+                    className="lgs--tree-item-hoverable lgs--journey-tree-leaf"
+                    onClick={event => event.stopPropagation()}
+                >
+                    <span className="journey-group-tree-row">
+                        <span className="lgs--journey-tree-item-content">
+                            <WaIcon name="route" variant="regular"/>
+                            {renderJourneyIcons(journey)}
+                            <span className="lgs--journey-tree-item-title">{journey.title}</span>
+                        </span>
+                        {onUnlinkJourney && (
+                            <WaButton
+                                size="s"
+                                variant="brand"
+                                appearance="plain"
+                                className="journey-group-tree-unlink"
+                                aria-label={`Remove ${journey.title} from ${group.name}`}
+                                onClick={event => {
+                                    event.preventDefault()
+                                    event.stopPropagation()
+                                    onUnlinkJourney(group.id, journey.slug)
+                                }}
+                            >
+                                <WaIcon name="link-simple-slash" variant="regular"/>
                             </WaButton>
-                            <WaButton variant="danger" appearance="filled-outlined" size="s" onClick={removeGroup}>
-                                <WaIcon name="trash-can"/> {'Yes'}
+                        )}
+                    </span>
+                </WaTreeItem>
+            ))}
+        </WaTreeItem>
+    )
+})
+
+const renderUngroupedJourneyTreeItems = (journeys, onLinkJourney = null) => journeys.map(journey => (
+    <WaTreeItem
+        key={journey.slug}
+        className="lgs--tree-item-hoverable lgs--journey-tree-leaf lgs--journey-tree-ungrouped"
+        onClick={event => event.stopPropagation()}
+    >
+        <span className="journey-group-tree-row">
+            <span className="lgs--journey-tree-item-content">
+                <WaIcon name="route" variant="regular"/>
+                {renderJourneyIcons(journey)}
+                <span className="lgs--journey-tree-item-title">{journey.title}</span>
+            </span>
+            {onLinkJourney && (
+                <WaButton
+                    size="s"
+                    variant="brand"
+                    appearance="plain"
+                    className="journey-group-tree-action"
+                    aria-label={`Link ${journey.title} to selected group`}
+                    onClick={event => {
+                        event.preventDefault()
+                        event.stopPropagation()
+                        onLinkJourney(journey.slug)
+                    }}
+                >
+                    <WaIcon name="link-simple" variant="regular"/>
+                </WaButton>
+            )}
+        </span>
+    </WaTreeItem>
+))
+
+const JourneyGroupEditorPanel = ({
+                                     group,
+                                     childrenByParent,
+                                     groupJourneys,
+                                     groupColorSwatches,
+                                     selectedEditForm,
+                                     updateEditForm,
+                                     saveGroup,
+                                     parentGroupOptions,
+                                     availableJourneys,
+                                     availablePopupOpen,
+                                     availablePopupAnchorId,
+                                     closeAvailablePopup,
+                                     openAvailablePopup,
+                                     addJourneyToGroup,
+                                     removeGroup,
+                                     removeJourneyFromGroup,
+                                     memberListRef,
+                                     availableListRef,
+                                     onCreateChildGroup,
+                                     onEditGroup,
+                                     onSelectGroup,
+                                     selectedGroupId,
+                                 }) => {
+    const childGroups = childrenByParent.get(group.id) ?? []
+    const detailsPanelId = groupTabId(group.id, 'details')
+    const contentPanelId = groupTabId(group.id, 'content')
+    const contentIcon = childGroups.length > 1 ? 'folders' : 'folder'
+    const addJourneyButtonId = groupTabId(group.id, 'add-journey')
+    const addGroupButtonId = groupTabId(group.id, 'add-group')
+
+    return (
+        <section className="journey-group-editor">
+            <WaTabGroup className="journey-group-editor-tabs">
+                <WaTab panel={contentPanelId}>
+                    <WaIcon name={contentIcon} variant="regular"/>
+                    {'Content'}
+                </WaTab>
+                <WaTab panel={detailsPanelId}>
+                    <WaIcon name="paintbrush-pencil" variant="regular"/>
+                    {'Details'}
+                </WaTab>
+                <div className="lgs--tabs-right-menu journey-group-tabs-actions" slot="nav">
+                    <WaTooltip for={addJourneyButtonId} placement="bottom">{'Add journey'}</WaTooltip>
+                    <WaButton
+                        id={addJourneyButtonId}
+                        appearance="plain"
+                        variant="neutral"
+                        size="s"
+                        aria-label="Add journey"
+                        disabled={availableJourneys.length === 0}
+                        onClick={() => openAvailablePopup?.()}
+                    >
+                        <WaIcon name="route" variant="regular"/>
+                    </WaButton>
+                    <WaTooltip for={addGroupButtonId} placement="bottom">{'Add group'}</WaTooltip>
+                    <WaButton
+                        id={addGroupButtonId}
+                        appearance="plain"
+                        variant="neutral"
+                        size="s"
+                        aria-label="Add group"
+                        onClick={() => onCreateChildGroup?.(group.id)}
+                    >
+                        <WaIcon name="folder-plus" variant="regular"/>
+                    </WaButton>
+                </div>
+
+                <WaTabPanel name={contentPanelId}>
+                    <PopupAnchor id={availablePopupAnchorId}/>
+                    <LGSPopup
+                        active={availablePopupOpen}
+                        anchor={availablePopupAnchorId}
+                        onRequestClose={closeAvailablePopup}
+                        placement="bottom"
+                    >
+                        <WaCard className="lgs--popup-in-drawer lgs-slide-down" appearance="plain">
+                            <WaButton appearance="plain" slot="header-actions" onClick={closeAvailablePopup}>
+                                <WaIcon size="s" name="xmark" variant="regular"/>
+                            </WaButton>
+                            <WaDivider/>
+                            <div ref={availableListRef} className="details-sortable-list">
+                                {availableJourneys.map(journey => (
+                                    <JourneySortableRow
+                                        key={journey.slug}
+                                        journey={journey}
+                                        actionIcon="link-simple"
+                                        actionLabel="Add journey to group"
+                                        onAction={slug => addJourneyToGroup(group.id, slug)}
+                                    />
+                                ))}
+                            </div>
+                        </WaCard>
+                    </LGSPopup>
+
+                    {childGroups.length > 0 && (
+                        <WaCard
+                            appearance="plain"
+                            className="journey-group-content-tree journey-selector-tree-panel journey-selector-tree-card"
+                        >
+                            <WaTree selection="leaf" className="journey-group-tree">
+                                {renderJourneyGroupTreeItems(childGroups, childrenByParent, selectedGroupId, onSelectGroup, onEditGroup, removeGroup, removeJourneyFromGroup)}
+                            </WaTree>
+                        </WaCard>
+                    )}
+
+                    <div className="journey-group-assignment">
+                        <div ref={memberListRef} className="lgs--details-list">
+                            {groupJourneys.map(journey => (
+                                <JourneySortableRow
+                                    key={journey.slug}
+                                    journey={journey}
+                                    actionIcon="link-simple-slash"
+                                    actionLabel="Remove journey from group"
+                                    onAction={slug => removeJourneyFromGroup(group.id, slug)}
+                                />
+                            ))}
+                            {groupJourneys.length === 0 && childGroups.length === 0 && (
+                                <WaCallout size="s" variant="warning" appearance="outlined">
+                                    <WaIcon slot="icon" name="warning" variant="regular"/>
+                                    {'This group is empty.'}
+                                </WaCallout>
+                            )}
+                        </div>
+                    </div>
+                </WaTabPanel>
+
+                <WaTabPanel name={detailsPanelId}>
+                    <div className="journey-group-form">
+                        <div className="journey-group-create-title-row">
+                            <WaInput
+                                className="journey-group-create-title-input"
+                                required
+                                label="Name"
+                                size="s"
+                                value={selectedEditForm.name}
+                                onInput={event => updateEditForm('name', event.target.value)}
+                            />
+                            <div className="journey-group-color-row">
+                                <WaColorPicker
+                                    size="s"
+                                    swatches={groupColorSwatches}
+                                    value={selectedEditForm.color}
+                                    onInput={event => updateEditForm('color', event.target.value)}
+                                />
+                            </div>
+                        </div>
+                        <WaSelect
+                            label="Parent group"
+                            size="s"
+                            value={selectedEditForm.parentGroup ?? ''}
+                            onInput={event => updateEditForm('parentGroup', event.target.value || null)}
+                        >
+                            <WaOption value="">{'No parent'}</WaOption>
+                            {parentGroupOptions.map(groupOption => (
+                                <WaOption key={groupOption.id} value={groupOption.id}>
+                                    {groupOption.name}
+                                </WaOption>
+                            ))}
+                        </WaSelect>
+                        <WaTextarea
+                            label="Description"
+                            rows={3}
+                            value={selectedEditForm.description}
+                            onInput={event => updateEditForm('description', event.target.value)}
+                        />
+                        <div className="journey-group-form-actions journey-group-form-actions-end">
+                            <WaButton
+                                size="s"
+                                variant="brand"
+                                appearance="filled"
+                                onClick={saveGroup}
+                                disabled={!selectedEditForm.name.trim()}
+                            >
+                                <WaIcon name="floppy-disk" variant="regular"/>
+                                {'Save changes'}
                             </WaButton>
                         </div>
                     </div>
-                </WaCard>
-            </LGSPopup>
-        </span>
+                </WaTabPanel>
+            </WaTabGroup>
+        </section>
     )
 }
 
@@ -169,7 +487,8 @@ export const JourneyGroupsDrawer = memo(() => {
     const [newForm, setNewForm] = useState(emptyGroupForm)
     const [editForm, setEditForm] = useState({id: null, ...emptyGroupForm()})
     const [createPopupOpen, setCreatePopupOpen] = useState(false)
-
+    const [editPopupOpen, setEditPopupOpen] = useState(false)
+    const [availablePopupOpen, setAvailablePopupOpen] = useState(false)
     const isStacked = __.ui.drawerManager.isStacked(JOURNEY_GROUPS_DRAWER)
     const groupColorSwatches = useMemo(
         () => lgs.settings.getSwatches?.list?.join(';') || GROUP_COLOR_SWATCHES,
@@ -182,6 +501,25 @@ export const JourneyGroupsDrawer = memo(() => {
             .filter(Boolean)
             .sort((a, b) => a.name.localeCompare(b.name))
     }, [groupStore.list, groupStore.version])
+
+    const groupsByParent = useMemo(() => {
+        const map = new Map()
+
+        for (const group of groups) {
+            const parentId = group.parentGroup ?? null
+            if (!map.has(parentId)) {
+                map.set(parentId, [])
+            }
+            map.get(parentId).push(group)
+        }
+
+        for (const children of map.values()) {
+            children.sort((a, b) => a.name.localeCompare(b.name))
+        }
+
+        return map
+    }, [groups])
+    const rootGroups = useMemo(() => groupsByParent.get(null) ?? [], [groupsByParent])
 
     const journeys = useMemo(() => {
         void journeyEditor.keys?.journey?.list
@@ -197,11 +535,6 @@ export const JourneyGroupsDrawer = memo(() => {
 
         return lgs.theJourney?.slug ?? null
     }, [entity])
-
-    const currentJourney = useMemo(
-        () => currentJourneySlug ? lgs.getJourneyBySlug(currentJourneySlug) : null,
-        [currentJourneySlug],
-    )
 
     const effectiveSelectedGroupId = useMemo(() => {
         if (selectedGroupId && groups.some(group => group.id === selectedGroupId)) {
@@ -219,6 +552,13 @@ export const JourneyGroupsDrawer = memo(() => {
         () => groups.find(group => group.id === effectiveSelectedGroupId) ?? null,
         [effectiveSelectedGroupId, groups],
     )
+    const selectedGroupDescendants = useMemo(() => {
+        if (!selectedGroup) {
+            return new Set()
+        }
+
+        return new Set(__.ui.journeyGroupManager?.descendantsOf?.(selectedGroup.id) ?? [])
+    }, [selectedGroup])
 
     const selectedJourneySlugs = useMemo(() => selectedGroup?.journeys ?? [], [selectedGroup])
     const selectedJourneySlugSet = useMemo(() => new Set(selectedJourneySlugs), [selectedJourneySlugs])
@@ -230,8 +570,15 @@ export const JourneyGroupsDrawer = memo(() => {
         () => journeys.filter(journey => !selectedJourneySlugSet.has(journey.slug)),
         [journeys, selectedJourneySlugSet],
     )
+    const assignedJourneySlugSet = useMemo(
+        () => new Set(groups.flatMap(group => group.journeys ?? [])),
+        [groups],
+    )
+    const ungroupedJourneys = useMemo(
+        () => journeys.filter(journey => !assignedJourneySlugSet.has(journey.slug)),
+        [assignedJourneySlugSet, journeys],
+    )
 
-    const selectedHasCurrentJourney = Boolean(currentJourneySlug && selectedJourneySlugSet.has(currentJourneySlug))
     const selectedEditForm = useMemo(() => {
         if (!selectedGroup) {
             return {id: null, ...emptyGroupForm()}
@@ -246,9 +593,17 @@ export const JourneyGroupsDrawer = memo(() => {
             name:        selectedGroup.name,
             description: selectedGroup.description,
             color:       selectedGroup.color,
+            parentGroup: selectedGroup.parentGroup ?? null,
         }
     }, [editForm, selectedGroup])
 
+    const parentGroupOptions = useMemo(() => {
+        if (!selectedGroup) {
+            return groups
+        }
+
+        return groups.filter(group => group.id !== selectedGroup.id && !selectedGroupDescendants.has(group.id))
+    }, [groups, selectedGroup, selectedGroupDescendants])
     useEffect(() => {
         if (drawerOpen === JOURNEY_GROUPS_DRAWER && !groupStore.ready) {
             void __.ui.journeyGroupManager.initialize()
@@ -260,6 +615,7 @@ export const JourneyGroupsDrawer = memo(() => {
         setSelectedGroupId(null)
         setEditForm({id: null, ...emptyGroupForm()})
         setCreatePopupOpen(false)
+        setEditPopupOpen(false)
         if (__.ui.drawerManager.isCurrent(JOURNEY_GROUPS_DRAWER)) {
             __.ui.drawerManager.close()
         }
@@ -274,19 +630,29 @@ export const JourneyGroupsDrawer = memo(() => {
         closeDrawerWithManager()
     }, [closeDrawerWithManager])
 
-    const closeDrawer = useCallback((event) => {
-        if (window.isOK(event) && __.ui.drawerManager.isCurrent(JOURNEY_GROUPS_DRAWER)) {
-            closeDrawerWithManager()
-        }
-    }, [closeDrawerWithManager])
-
     const updateNewForm = useCallback((key, value) => {
         setNewForm(current => ({...current, [key]: value}))
     }, [])
 
-    const openCreatePopup = useCallback(() => {
-        setNewForm(emptyGroupForm())
+    const openCreatePopup = useCallback((parentGroup = null) => {
+        setNewForm({
+                       ...emptyGroupForm(),
+                       parentGroup,
+                   })
         setCreatePopupOpen(true)
+    }, [])
+
+    const openAvailablePopup = useCallback(() => {
+        setAvailablePopupOpen(true)
+    }, [])
+
+    const closeAvailablePopup = useCallback(() => {
+        setAvailablePopupOpen(false)
+    }, [])
+
+    const closeEditPopup = useCallback((event) => {
+        event?.preventDefault?.()
+        setEditPopupOpen(false)
     }, [])
 
     const closeCreatePopup = useCallback((event) => {
@@ -295,11 +661,14 @@ export const JourneyGroupsDrawer = memo(() => {
     }, [])
 
     const updateEditForm = useCallback((key, value) => {
+        const swatches = Array.from(lgs.settings.getSwatches.list.values())
+        const lastValue = swatches[swatches.length - 1]
         setEditForm(current => ({
-            id: selectedGroup?.id ?? current.id,
-            name: current.id === selectedGroup?.id ? current.name : selectedGroup?.name ?? '',
+            id:          selectedGroup?.id ?? current.id,
+            name:        current.id === selectedGroup?.id ? current.name : selectedGroup?.name ?? '',
             description: current.id === selectedGroup?.id ? current.description : selectedGroup?.description ?? '',
-            color: current.id === selectedGroup?.id ? current.color : selectedGroup?.color ?? DEFAULT_GROUP_COLOR,
+            color:       current.id === selectedGroup?.id ? current.color : selectedGroup?.color ?? lastValue,
+            parentGroup: current.id === selectedGroup?.id ? current.parentGroup ?? null : selectedGroup?.parentGroup ?? null,
             [key]: value,
         }))
     }, [selectedGroup])
@@ -313,9 +682,31 @@ export const JourneyGroupsDrawer = memo(() => {
                             name:        group.name,
                             description: group.description,
                             color:       group.color,
+                            parentGroup: group.parentGroup ?? null,
                         })
         }
     }, [groups])
+
+    const openEditPopup = useCallback((groupId = null) => {
+        if (groupId) {
+            selectGroup(groupId)
+        }
+        setEditPopupOpen(true)
+    }, [selectGroup])
+
+    const selectEditablePopupGroup = useCallback(groupId => {
+        const group = groups.find(item => item.id === groupId)
+        if (!group) {
+            return
+        }
+
+        const childGroups = groupsByParent.get(group.id) ?? []
+        const hasItems = childGroups.length > 0 || (group.journeys?.length ?? 0) > 0
+
+        if (!hasItems) {
+            selectGroup(groupId)
+        }
+    }, [groups, groupsByParent, selectGroup])
 
     const createGroup = useCallback(async () => {
         const name = newForm.name.trim()
@@ -325,17 +716,20 @@ export const JourneyGroupsDrawer = memo(() => {
         }
 
         const group = await __.ui.journeyGroupManager.create({
-                                                                name,
-                                                                description: newForm.description,
-                                                                color:       newForm.color,
-        })
+                                                                 name,
+                                                                 description: newForm.description,
+                                                                 color:       newForm.color,
+                                                                 parentGroup: newForm.parentGroup,
+                                                             })
         setSelectedGroupId(group.id)
         setCreatePopupOpen(false)
+        setEditPopupOpen(true)
         setEditForm({
                         id:          group.id,
                         name:        group.name,
                         description: group.description,
                         color:       group.color,
+                        parentGroup: group.parentGroup ?? null,
                     })
         setNewForm(emptyGroupForm())
         UIToast.success({caption: group.name, text: 'Group created.'})
@@ -356,6 +750,7 @@ export const JourneyGroupsDrawer = memo(() => {
             name,
             description: selectedEditForm.description,
             color:       selectedEditForm.color,
+            parentGroup: selectedEditForm.parentGroup,
         })
 
         setEditForm({
@@ -363,56 +758,56 @@ export const JourneyGroupsDrawer = memo(() => {
                         name:        group.name,
                         description: group.description,
                         color:       group.color,
+                        parentGroup: group.parentGroup ?? null,
                     })
+        setEditPopupOpen(false)
         UIToast.success({caption: group.name, text: 'Group updated.'})
     }, [selectedEditForm, selectedGroup])
 
-    const deleteGroup = useCallback(async group => {
-        if (!group) {
+    const addJourneyToGroup = useCallback(async (groupId, journeySlug) => {
+        if (!groupId) {
             return
         }
 
-        const groupName = group.name
-        const removed = await __.ui.journeyGroupManager.remove(group.id)
+        await __.ui.journeyGroupManager.addJourneyToGroup(groupId, journeySlug)
+    }, [])
+
+    const linkUngroupedJourneyToSelectedGroup = useCallback((journeySlug) => {
+        if (!effectiveSelectedGroupId) {
+            return
+        }
+
+        void addJourneyToGroup(effectiveSelectedGroupId, journeySlug)
+    }, [addJourneyToGroup, effectiveSelectedGroupId])
+
+    const removeJourneyFromGroup = useCallback(async (groupId, journeySlug) => {
+        if (!groupId) {
+            return
+        }
+
+        await __.ui.journeyGroupManager.removeJourneyFromGroup(groupId, journeySlug)
+    }, [])
+
+    const removeGroup = useCallback(async groupId => {
+        if (!groupId) {
+            return
+        }
+
+        const removed = await __.ui.journeyGroupManager.remove(groupId)
         if (!removed) {
+            UIToast.warning({caption: 'Journey group', text: 'Only empty groups can be removed.'})
             return
         }
 
-        const nextGroupId = groups.find(item => item.id !== group.id)?.id ?? null
-        if (group.id === effectiveSelectedGroupId) {
-            setSelectedGroupId(nextGroupId)
+        if (selectedGroupId === groupId || effectiveSelectedGroupId === groupId) {
+            setSelectedGroupId(null)
             setEditForm({id: null, ...emptyGroupForm()})
-        }
-        else {
-            setEditForm(current => current.id === group.id ? {id: null, ...emptyGroupForm()} : current)
+            setEditPopupOpen(false)
         }
 
-        UIToast.success({caption: groupName, text: 'Group removed.'})
-    }, [effectiveSelectedGroupId, groups])
+        UIToast.success({caption: 'Journey group', text: 'Group removed.'})
+    }, [effectiveSelectedGroupId, selectedGroupId])
 
-    const addJourneyToSelectedGroup = useCallback(async journeySlug => {
-        if (!selectedGroup) {
-            return
-        }
-
-        await __.ui.journeyGroupManager.addJourneyToGroup(selectedGroup.id, journeySlug)
-    }, [selectedGroup])
-
-    const removeJourneyFromSelectedGroup = useCallback(async journeySlug => {
-        if (!selectedGroup) {
-            return
-        }
-
-        await __.ui.journeyGroupManager.removeJourneyFromGroup(selectedGroup.id, journeySlug)
-    }, [selectedGroup])
-
-    const toggleCurrentJourneyInSelectedGroup = useCallback(async event => {
-        if (!selectedGroup || !currentJourneySlug) {
-            return
-        }
-
-        await __.ui.journeyGroupManager.toggleJourneyInGroup(selectedGroup.id, currentJourneySlug, event.target.checked)
-    }, [currentJourneySlug, selectedGroup])
 
     const persistMembersOrder = useCallback(async () => {
         if (!selectedGroup || !memberSortableRef.current) {
@@ -446,9 +841,15 @@ export const JourneyGroupsDrawer = memo(() => {
         memberSortableRef.current = new Sortable(memberListRef.current, {
             ...sharedOptions,
             group:    {name: sortableGroup, pull: true, put: true},
-            onAdd:    () => { void persistMembersOrder() },
-            onUpdate: () => { void persistMembersOrder() },
-            onRemove: () => { void persistMembersOrder() },
+            onAdd:    () => {
+                void persistMembersOrder()
+            },
+            onUpdate: () => {
+                void persistMembersOrder()
+            },
+            onRemove: () => {
+                void persistMembersOrder()
+            },
         })
 
         availableSortableRef.current = new Sortable(availableListRef.current, {
@@ -477,7 +878,6 @@ export const JourneyGroupsDrawer = memo(() => {
                     id={JOURNEY_GROUPS_DRAWER}
                     open={true}
                     onWaAfterHide={handleRequestClose}
-                    onSlAfterHide={closeDrawer}
                     placement={drawerPlacement}
                     className={classNames('journey-groups-drawer', {'drawer-is-stacked': isStacked})}
                 >
@@ -488,9 +888,11 @@ export const JourneyGroupsDrawer = memo(() => {
                     <PanelActions stackedPanel={isStacked} onBack={isStacked ? closeDrawerWithManager : null}/>
 
                     <div className="journey-groups-drawer-content">
+                        <PopupAnchor id={EDIT_GROUP_POPUP_ANCHOR}/>
+                        <PopupAnchor id={CREATE_GROUP_POPUP_ANCHOR}/>
                         <LGSScrollbars>
                             <div className="journey-groups-layout">
-                                <section className="journey-groups-section">
+                                <section className="journey-groups-section journey-groups-tree-panel">
                                     <div className="journey-group-create-header">
                                         <WaButton
                                             variant="brand"
@@ -498,214 +900,165 @@ export const JourneyGroupsDrawer = memo(() => {
                                             size="s"
                                             onClick={openCreatePopup}
                                         >
-                                            <WaIcon slot="start" name="circle-plus" variant="regular"/>
-                                            {'Create'}
+                                            <WaIcon slot="start" name="folder-plus" variant="regular"/>
+                                            {'New group'}
                                         </WaButton>
                                     </div>
-                                    <LGSPopup
-                                        active={createPopupOpen}
-                                        anchor={CREATE_GROUP_POPUP_ANCHOR}
-                                        onRequestClose={closeCreatePopup}
-                                        placement="bottom"
+
+                                    {rootGroups.length > 0 || ungroupedJourneys.length > 0
+                                     ? (
+                                         <WaCard
+                                             appearance="plain"
+                                             className="journey-selector-tree-panel journey-selector-tree-card"
+                                         >
+                                             <WaTree selection="leaf" className="journey-group-tree">
+                                                 {renderJourneyGroupTreeItems(rootGroups, groupsByParent, effectiveSelectedGroupId, selectGroup, openEditPopup, removeGroup, removeJourneyFromGroup)}
+                                                 {renderUngroupedJourneyTreeItems(ungroupedJourneys, effectiveSelectedGroupId ? linkUngroupedJourneyToSelectedGroup : null)}
+                                             </WaTree>
+                                         </WaCard>
+                                     )
+                                     : (
+                                         <WaCallout size="s" variant="warning" appearance="outlined">
+                                             <WaIcon slot="icon" name="warning" variant="regular"/>
+                                             {'No journey groups yet.'}
+                                         </WaCallout>
+                                     )}
+                                </section>
+
+                                <LGSPopup
+                                    active={editPopupOpen && Boolean(selectedGroup)}
+                                    anchor={EDIT_GROUP_POPUP_ANCHOR}
+                                    onRequestClose={closeEditPopup}
+                                    placement="bottom"
+                                >
+                                    <WaCard
+                                        className="lgs--popup-in-drawer lgs-slide-down journey-group-edit-popup"
                                     >
-                                        <WaCard className="lgs--popup-in-drawer lgs-slide-down journey-group-create-popup">
-                                            <WaButton appearance="plain" slot="header-actions" onClick={closeCreatePopup}>
-                                                <WaIcon size="s" name="xmark" variant="regular"/>
-                                            </WaButton>
+                                        <WaButton appearance="plain" slot="header-actions" onClick={closeEditPopup}>
+                                            <WaIcon size="s" name="xmark" variant="regular"/>
+                                        </WaButton>
 
-                                            <h3 slot="header" className="journey-group-create-popup-title">
-                                                <WaIcon name="folder-plus" variant="regular"/>
-                                                <span>{'Create group'}</span>
-                                            </h3>
+                                        <h3 slot="header" className="journey-group-create-popup-title">
+                                            <JourneyGroupColorIcon color={selectedGroup?.color ?? '#ffffff'}/>
+                                            <WaIcon
+                                                name={selectedGroup && (selectedGroup.journeys.length > 1 ? 'folders' : 'folder')}
+                                                variant="regular"/>
+                                            <span>{selectedGroup?.name ?? 'Group'}</span>
+                                        </h3>
 
-                                            <div className="journey-group-create-title-row">
-                                                <WaInput
-                                                    className="journey-group-create-title-input"
-                                                    label="Title"
-                                                    size="s"
-                                                    value={newForm.name}
-                                                    onInput={event => updateNewForm('name', event.target.value)}
-                                                />
-                                                <div className="journey-group-color-row journey-group-create-color-row">
-                                                    <WaColorPicker
-                                                        size="s"
-                                                        placement="bottom"
-                                                        swatches={groupColorSwatches}
-                                                        value={newForm.color}
-                                                        onInput={event => updateNewForm('color', event.target.value)}
-                                                    />
-                                                </div>
-                                            </div>
-
-                                            <WaTextarea
-                                                label="Description"
-                                                rows={3}
-                                                value={newForm.description}
-                                                onInput={event => updateNewForm('description', event.target.value)}
+                                        {selectedGroup && (
+                                            <JourneyGroupEditorPanel
+                                                group={selectedGroup}
+                                                childrenByParent={groupsByParent}
+                                                groupJourneys={groupJourneys}
+                                                groupColorSwatches={groupColorSwatches}
+                                                selectedEditForm={selectedEditForm}
+                                                updateEditForm={updateEditForm}
+                                                saveGroup={saveGroup}
+                                                parentGroupOptions={parentGroupOptions}
+                                                availableJourneys={availableJourneys}
+                                                availablePopupOpen={availablePopupOpen}
+                                                availablePopupAnchorId={EDIT_GROUP_AVAILABLE_POPUP_ANCHOR}
+                                                closeAvailablePopup={closeAvailablePopup}
+                                                openAvailablePopup={openAvailablePopup}
+                                                addJourneyToGroup={addJourneyToGroup}
+                                                removeGroup={removeGroup}
+                                                removeJourneyFromGroup={removeJourneyFromGroup}
+                                                memberListRef={memberListRef}
+                                                availableListRef={availableListRef}
+                                                onCreateChildGroup={openCreatePopup}
+                                                onEditGroup={openEditPopup}
+                                                onSelectGroup={selectEditablePopupGroup}
+                                                selectedGroupId={effectiveSelectedGroupId}
                                             />
+                                        )}
+                                    </WaCard>
+                                </LGSPopup>
 
-                                            <div slot="footer">
-                                                <div className="lgs--popup-in-drawer-footer">
-                                                    <WaButton
-                                                        size="s"
-                                                        variant="brand"
-                                                        appearance="outlined"
-                                                        onClick={closeCreatePopup}
-                                                    >
-                                                        <WaIcon slot="start" size="s" name="xmark" variant="regular"/>
-                                                        {'Close'}
-                                                    </WaButton>
-                                                    <WaButton
-                                                        size="s"
-                                                        variant="brand"
-                                                        appearance="filled"
-                                                        onClick={createGroup}
-                                                        disabled={!newForm.name.trim()}
-                                                    >
-                                                        <WaIcon slot="start" size="s" name="folder-plus"
-                                                                variant="regular"/>
-                                                        {'Create'}
-                                                    </WaButton>
-                                                </div>
+                                <LGSPopup
+                                    active={createPopupOpen}
+                                    anchor={CREATE_GROUP_POPUP_ANCHOR}
+                                    onRequestClose={closeCreatePopup}
+                                    placement="bottom"
+                                >
+                                    <WaCard
+                                        className="lgs--popup-in-drawer lgs-slide-down journey-group-create-popup">
+                                        <WaButton appearance="plain" slot="header-actions"
+                                                  onClick={closeCreatePopup}>
+                                            <WaIcon size="s" name="xmark" variant="regular"/>
+                                        </WaButton>
+
+                                        <h3 slot="header" className="journey-group-create-popup-title">
+                                            <WaIcon name="folder-plus" variant="regular"/>
+                                            <span>{'Add a new group'}</span>
+                                        </h3>
+
+                                        <div className="journey-group-create-title-row">
+                                            <WaInput
+                                                className="journey-group-create-title-input"
+                                                required
+                                                label="Name"
+                                                size="s"
+                                                value={newForm.name}
+                                                onInput={event => updateNewForm('name', event.target.value)}
+                                            />
+                                            <div className="journey-group-color-row journey-group-create-color-row">
+                                                <WaColorPicker
+                                                    size="s"
+                                                    placement="bottom"
+                                                    swatches={groupColorSwatches}
+                                                    value={newForm.color}
+                                                    onInput={event => updateNewForm('color', event.target.value)}
+                                                />
                                             </div>
-                                        </WaCard>
-                                    </LGSPopup>
-                                    <PopupAnchor id={CREATE_GROUP_POPUP_ANCHOR}/>
-                                </section>
+                                        </div>
+                                        <WaSelect
+                                            label="Parent group"
+                                            size="s"
+                                            value={newForm.parentGroup ?? ''}
+                                            onInput={event => updateNewForm('parentGroup', event.target.value || null)}
+                                        >
+                                            <WaOption value="">{'No parent'}</WaOption>
+                                            {groups.map(groupOption => (
+                                                <WaOption key={groupOption.id} value={groupOption.id}>
+                                                    {groupOption.name}
+                                                </WaOption>
+                                            ))}
+                                        </WaSelect>
 
-                                <WaDivider/>
+                                        <WaTextarea
+                                            label="Description"
+                                            rows={3}
+                                            value={newForm.description}
+                                            onInput={event => updateNewForm('description', event.target.value)}
+                                        />
 
-                                <section className="journey-groups-section">
-                                    <div className="journey-groups-list">
-                                        {groups.length > 0
-                                         ? groups.map(group => (
-                                                <div key={group.id} className="journey-group-detail-wrapper">
-                                                    <WaDetails
-                                                        small
-                                                        open={group.id === effectiveSelectedGroupId}
-                                                        className="lgs--details-hoverable journey-group-detail"
-                                                        onWaShow={() => selectGroup(group.id)}
-                                                    >
-                                                        <div slot="summary" className="journey-group-detail-summary">
-                                                         <span className="journey-group-detail-summary-main">
-                                                             <JourneyGroupColorIcon color={group.color}/>
-                                                             <span
-                                                                 className="journey-group-detail-title">{group.name}</span>
-                                                         </span>
-                                                        </div>
-                                                        {group.id === effectiveSelectedGroupId && selectedGroup && (
-                                                            <>
-                                                                <div className="journey-group-form">
-                                                                    <WaInput
-                                                                        label="Name"
-                                                                        size="s"
-                                                                        value={selectedEditForm.name}
-                                                                        onInput={event => updateEditForm('name', event.target.value)}
-                                                                    />
-                                                                    <WaTextarea
-                                                                        label="Description"
-                                                                        rows={3}
-                                                                        value={selectedEditForm.description}
-                                                                        onInput={event => updateEditForm('description', event.target.value)}
-                                                                    />
-                                                                    <div className="journey-group-color-row">
-                                                                        <span>{'Color'}</span>
-                                                                        <WaColorPicker
-                                                                            size="s"
-                                                                            swatches={groupColorSwatches}
-                                                                            value={selectedEditForm.color}
-                                                                            onInput={event => updateEditForm('color', event.target.value)}
-                                                                        />
-                                                                    </div>
-                                                                    {currentJourney && (
-                                                                        <div
-                                                                            className="journey-group-current-association">
-                                                                            <div>
-                                                                                <WaIcon name="route" variant="regular"/>
-                                                                                <span>{currentJourney.title}</span>
-                                                                            </div>
-                                                                            <WaSwitch
-                                                                                size="xs"
-                                                                                label-at-start
-                                                                                checked={selectedHasCurrentJourney}
-                                                                                onChange={toggleCurrentJourneyInSelectedGroup}
-                                                                            >
-                                                                                {'Current journey'}
-                                                                            </WaSwitch>
-                                                                        </div>
-                                                                    )}
-                                                                    <div className="journey-group-form-actions">
-                                                                        <WaButton
-                                                                            variant="brand"
-                                                                            appearance="filled"
-                                                                            size="s"
-                                                                            onClick={saveGroup}
-                                                                            disabled={!selectedEditForm.name.trim()}
-                                                                        >
-                                                                            <WaIcon name="floppy-disk"
-                                                                                    variant="regular"/>
-                                                                            {'Save'}
-                                                                        </WaButton>
-                                                                    </div>
-                                                                </div>
-
-                                                                <WaDivider/>
-
-                                                                <div className="journey-group-assignment">
-                                                                    <div className="journey-groups-section-title">
-                                                                        <WaIcon name="route" variant="regular"/>
-                                                                        <span>{'Journeys in group'}</span>
-                                                                    </div>
-                                                                    <div ref={memberListRef}
-                                                                         className="widget-sortable-list journey-group-sortable-list">
-                                                                        {groupJourneys.map(journey => (
-                                                                            <JourneySortableRow
-                                                                                key={journey.slug}
-                                                                                journey={journey}
-                                                                                actionIcon="link-simple-slash"
-                                                                                actionLabel="Remove journey from group"
-                                                                                onAction={removeJourneyFromSelectedGroup}
-                                                                            />
-                                                                        ))}
-                                                                        {groupJourneys.length === 0 && (
-                                                                            <p className="journey-groups-empty-state">{'Drag journeys here.'}</p>
-                                                                        )}
-                                                                    </div>
-
-                                                                    <div className="journey-groups-section-title">
-                                                                        <WaIcon name="plus" variant="regular"/>
-                                                                        <span>{'Available journeys'}</span>
-                                                                    </div>
-                                                                    <div ref={availableListRef}
-                                                                         className="widget-sortable-list journey-group-sortable-list">
-                                                                        {availableJourneys.map(journey => (
-                                                                            <JourneySortableRow
-                                                                                key={journey.slug}
-                                                                                journey={journey}
-                                                                                actionIcon="link-simple"
-                                                                                actionLabel="Add journey to group"
-                                                                                onAction={addJourneyToSelectedGroup}
-                                                                            />
-                                                                        ))}
-                                                                        {availableJourneys.length === 0 && (
-                                                                            <p className="journey-groups-empty-state">{'No available journey.'}</p>
-                                                                        )}
-                                                                    </div>
-                                                                </div>
-                                                            </>
-                                                        )}
-                                                    </WaDetails>
-                                                    <JourneyGroupDeleteButton group={group} onDelete={deleteGroup}/>
-                                                </div>
-                                         ))
-                                         : (
-                                             <WaCallout size="s" variant="warning" appearance="outlined">
-                                                 <WaIcon slot="icon" name="warning" variant="regular"/>
-                                                 {'No journey groups yet.'}
-                                             </WaCallout>
-                                         )}
-                                    </div>
-                                </section>
+                                        <div slot="footer">
+                                            <div className="lgs--popup-in-drawer-footer">
+                                                <WaButton
+                                                    size="s"
+                                                    variant="brand"
+                                                    appearance="outlined"
+                                                    onClick={closeCreatePopup}
+                                                >
+                                                    <WaIcon slot="start" size="s" name="xmark" variant="regular"/>
+                                                    {'Close'}
+                                                </WaButton>
+                                                <WaButton
+                                                    size="s"
+                                                    variant="brand"
+                                                    appearance="filled"
+                                                    onClick={createGroup}
+                                                    disabled={!newForm.name.trim()}
+                                                >
+                                                    <WaIcon slot="start" size="s" name="folder-plus"
+                                                            variant="regular"/>
+                                                    {'Create'}
+                                                </WaButton>
+                                            </div>
+                                        </div>
+                                    </WaCard>
+                                </LGSPopup>
                             </div>
                         </LGSScrollbars>
                     </div>
