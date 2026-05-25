@@ -19,6 +19,10 @@ import { JOURNEY_GROUPS_STORE } from '@Core/constants'
 const DEFAULT_GROUP_COLOR = '#f2b705'
 
 const uniqueList = values => Array.from(new Set((values ?? []).filter(Boolean)))
+const normalizeGroupParent = parentGroup => {
+    const value = typeof parentGroup === 'string' ? parentGroup.trim() : parentGroup
+    return value ? value : null
+}
 
 export class JourneyGroupManager {
     static #instance = null
@@ -38,6 +42,7 @@ export class JourneyGroupManager {
     initialize = async () => {
         await this.readAll()
         await this.pruneMissingJourneys()
+        await this.pruneInvalidParentGroups()
         this.store.ready = true
     }
 
@@ -57,7 +62,7 @@ export class JourneyGroupManager {
         this.bumpVersion()
     }
 
-    create = async ({name, description = '', color = DEFAULT_GROUP_COLOR}) => {
+    create = async ({name, description = '', color = DEFAULT_GROUP_COLOR, parentGroup = null}) => {
         const now = Date.now()
         const idBase = __.app.slugify(name) || 'group'
         const group = this.normalizeGroup({
@@ -65,6 +70,7 @@ export class JourneyGroupManager {
                                               name,
                                               description,
                                               color,
+                                              parentGroup: this.resolveValidParentGroup(null, parentGroup),
                                               journeys:  [],
                                               createdAt: now,
                                               updatedAt: now,
@@ -80,10 +86,15 @@ export class JourneyGroupManager {
             return null
         }
 
+        const parentGroup = Object.prototype.hasOwnProperty.call(changes, 'parentGroup')
+                              ? this.resolveValidParentGroup(id, changes.parentGroup)
+                              : current.parentGroup ?? null
+
         const next = this.normalizeGroup({
                                              ...current,
                                              ...changes,
                                              id:        current.id,
+                                             parentGroup,
                                              updatedAt: Date.now(),
                                          })
         await this.persist(next)
@@ -91,7 +102,13 @@ export class JourneyGroupManager {
     }
 
     remove = async id => {
-        if (!this.store.list[id]) {
+        const current = this.get(id)
+        if (!current) {
+            return false
+        }
+
+        const hasChildren = this.childrenOf(id).length > 0
+        if (current.journeys.length > 0 || hasChildren) {
             return false
         }
 
@@ -107,6 +124,43 @@ export class JourneyGroupManager {
     }
 
     list = () => Object.values(this.store.list).map(this.normalizeGroup)
+
+    roots = () => this.list()
+        .filter(group => !group.parentGroup)
+        .sort((a, b) => a.name.localeCompare(b.name))
+
+    childrenOf = groupId => this.list()
+        .filter(group => group.parentGroup === groupId)
+        .sort((a, b) => a.name.localeCompare(b.name))
+
+    descendantsOf = (groupId, visited = new Set()) => {
+        if (!groupId || visited.has(groupId)) {
+            return []
+        }
+
+        visited.add(groupId)
+        const children = this.childrenOf(groupId)
+        return children.flatMap(child => [child.id, ...this.descendantsOf(child.id, visited)])
+    }
+
+    resolveValidParentGroup = (groupId, parentGroup) => {
+        const nextParent = normalizeGroupParent(parentGroup)
+        if (!nextParent || nextParent === groupId) {
+            return null
+        }
+
+        const knownGroups = new Set(this.list().map(group => group.id))
+        if (!knownGroups.has(nextParent)) {
+            return null
+        }
+
+        const descendants = new Set(this.descendantsOf(groupId))
+        if (descendants.has(nextParent)) {
+            return null
+        }
+
+        return nextParent
+    }
 
     groupsForJourney = journeySlug => {
         if (!journeySlug) {
@@ -196,10 +250,20 @@ export class JourneyGroupManager {
             description: String(group.description ?? '').trim(),
             color:       group.color || DEFAULT_GROUP_COLOR,
             icon:        'folder',
+            parentGroup: normalizeGroupParent(group.parentGroup),
             journeys:    uniqueList(group.journeys),
             createdAt:   group.createdAt ?? now,
             updatedAt:   group.updatedAt ?? now,
         }
+    }
+
+    pruneInvalidParentGroups = async () => {
+        const knownGroups = new Set(this.list().map(group => group.id))
+        const updates = this.list()
+            .filter(group => group.parentGroup && (!knownGroups.has(group.parentGroup) || group.parentGroup === group.id))
+            .map(group => this.update(group.id, {parentGroup: null}))
+
+        await Promise.all(updates)
     }
 
     bumpVersion = () => {
