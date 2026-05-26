@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-05-25
- * Last modified: 2026-05-25
+ * Created on: 2026-05-26
+ * Last modified: 2026-05-26
  *
  *
  * Copyright © 2026 LGS1920
@@ -59,6 +59,7 @@ const GROUP_COLOR_SWATCHES = [
 ].join(';')
 
 const groupTabId = (groupId, suffix) => `journey-group-${groupId.replace(/[^a-zA-Z0-9_-]/g, '-')}-${suffix}`
+const groupPopupAnchorId = groupId => groupTabId(groupId, 'popup-anchor')
 
 const renderJourneyIcons = (journey) => {
     const tracks = Array.from(journey.tracks?.values?.() ?? [])
@@ -152,6 +153,7 @@ const renderJourneyGroupTreeItems = (
                          .sort((a, b) => a.title.localeCompare(b.title))
                      : []
     const hasItems = childGroups.length > 0 || journeys.length > 0
+    const popupAnchorId = groupPopupAnchorId(group.id)
 
     return (
         <WaTreeItem
@@ -164,14 +166,14 @@ const renderJourneyGroupTreeItems = (
                 onSelect?.(group.id)
             }}
         >
-            <span
+            <div
                 className="journey-group-tree-row"
                 onClick={event => {
                     event.preventDefault()
                     event.stopPropagation()
                     onSelect?.(group.id)
                     if (!hasItems) {
-                        onEditGroup?.(group.id)
+                        onEditGroup?.(group.id, popupAnchorId)
                     }
                 }}
             >
@@ -210,13 +212,16 @@ const renderJourneyGroupTreeItems = (
                         onClick={event => {
                             event.preventDefault()
                             event.stopPropagation()
-                            onEditGroup(group.id)
+                            onEditGroup(group.id, popupAnchorId)
                         }}
                     >
                         <WaIcon name="pen-to-square" variant="regular"/>
                     </WaButton>
                 )}
-            </span>
+                <div className="journey-group-tree-popup-anchor">
+                    <PopupAnchor id={popupAnchorId}/>
+                </div>
+            </div>
             <WaIcon slot="expand-icon" name="folder" variant="regular"/>
             <WaIcon slot="collapse-icon" name="folder-open" style={{transform: 'rotate(-90deg)'}} variant="regular"/>
             {renderJourneyGroupTreeItems(childGroups, childrenByParent, selectedGroupId, onSelect, onEditGroup, onRemoveGroup, onUnlinkJourney, showJourneys)}
@@ -255,7 +260,7 @@ const renderJourneyGroupTreeItems = (
     )
 })
 
-const renderUngroupedJourneyTreeItems = (journeys, onLinkJourney = null) => journeys.map(journey => (
+const renderUngroupedJourneyTreeItems = (journeys) => journeys.map(journey => (
     <WaTreeItem
         key={journey.slug}
         className="lgs--tree-item-hoverable lgs--journey-tree-leaf lgs--journey-tree-ungrouped"
@@ -267,22 +272,6 @@ const renderUngroupedJourneyTreeItems = (journeys, onLinkJourney = null) => jour
                 {renderJourneyIcons(journey)}
                 <span className="lgs--journey-tree-item-title">{journey.title}</span>
             </span>
-            {onLinkJourney && (
-                <WaButton
-                    size="s"
-                    variant="brand"
-                    appearance="plain"
-                    className="journey-group-tree-action"
-                    aria-label={`Link ${journey.title} to selected group`}
-                    onClick={event => {
-                        event.preventDefault()
-                        event.stopPropagation()
-                        onLinkJourney(journey.slug)
-                    }}
-                >
-                    <WaIcon name="link-simple" variant="regular"/>
-                </WaButton>
-            )}
         </span>
     </WaTreeItem>
 ))
@@ -294,7 +283,7 @@ const JourneyGroupEditorPanel = ({
                                      groupColorSwatches,
                                      selectedEditForm,
                                      updateEditForm,
-                                     saveGroup,
+                                     closeEditPopup,
                                      parentGroupOptions,
                                      availableJourneys,
                                      availablePopupOpen,
@@ -351,7 +340,7 @@ const JourneyGroupEditorPanel = ({
                         aria-label="Add group"
                         onClick={() => onCreateChildGroup?.(group.id)}
                     >
-                        <WaIcon name="folder-plus" variant="regular"/>
+                        <WaIcon name="folder" variant="regular"/>
                     </WaButton>
                 </div>
 
@@ -458,11 +447,10 @@ const JourneyGroupEditorPanel = ({
                                 size="s"
                                 variant="brand"
                                 appearance="filled"
-                                onClick={saveGroup}
-                                disabled={!selectedEditForm.name.trim()}
+                                onClick={closeEditPopup}
                             >
-                                <WaIcon name="floppy-disk" variant="regular"/>
-                                {'Save changes'}
+                                <WaIcon name="xmark" variant="regular"/>
+                                {'Close'}
                             </WaButton>
                         </div>
                     </div>
@@ -488,6 +476,7 @@ export const JourneyGroupsDrawer = memo(() => {
     const [editForm, setEditForm] = useState({id: null, ...emptyGroupForm()})
     const [createPopupOpen, setCreatePopupOpen] = useState(false)
     const [editPopupOpen, setEditPopupOpen] = useState(false)
+    const [editPopupAnchorId, setEditPopupAnchorId] = useState(EDIT_GROUP_POPUP_ANCHOR)
     const [availablePopupOpen, setAvailablePopupOpen] = useState(false)
     const isStacked = __.ui.drawerManager.isStacked(JOURNEY_GROUPS_DRAWER)
     const groupColorSwatches = useMemo(
@@ -653,6 +642,7 @@ export const JourneyGroupsDrawer = memo(() => {
     const closeEditPopup = useCallback((event) => {
         event?.preventDefault?.()
         setEditPopupOpen(false)
+        setEditPopupAnchorId(EDIT_GROUP_POPUP_ANCHOR)
     }, [])
 
     const closeCreatePopup = useCallback((event) => {
@@ -687,9 +677,13 @@ export const JourneyGroupsDrawer = memo(() => {
         }
     }, [groups])
 
-    const openEditPopup = useCallback((groupId = null) => {
+    const openEditPopup = useCallback((groupId = null, anchorId = null) => {
         if (groupId) {
             selectGroup(groupId)
+            setEditPopupAnchorId(anchorId ?? groupPopupAnchorId(groupId))
+        }
+        else if (anchorId) {
+            setEditPopupAnchorId(anchorId)
         }
         setEditPopupOpen(true)
     }, [selectGroup])
@@ -723,6 +717,7 @@ export const JourneyGroupsDrawer = memo(() => {
                                                              })
         setSelectedGroupId(group.id)
         setCreatePopupOpen(false)
+        setEditPopupAnchorId(groupPopupAnchorId(group.id))
         setEditPopupOpen(true)
         setEditForm({
                         id:          group.id,
@@ -735,34 +730,38 @@ export const JourneyGroupsDrawer = memo(() => {
         UIToast.success({caption: group.name, text: 'Group created.'})
     }, [newForm])
 
-    const saveGroup = useCallback(async () => {
-        if (!selectedGroup) {
+    const editFormIsSynced = useMemo(() => {
+        if (!selectedGroup || selectedEditForm.id !== selectedGroup.id) {
+            return true
+        }
+
+        return selectedEditForm.name.trim() === selectedGroup.name
+            && selectedEditForm.description === selectedGroup.description
+            && selectedEditForm.color === selectedGroup.color
+            && (selectedEditForm.parentGroup ?? null) === (selectedGroup.parentGroup ?? null)
+    }, [selectedEditForm, selectedGroup])
+
+    useEffect(() => {
+        if (!editPopupOpen || !selectedGroup || selectedEditForm.id !== selectedGroup.id || editFormIsSynced) {
             return
         }
 
         const name = selectedEditForm.name.trim()
         if (!name) {
-            UIToast.warning({caption: 'Journey group', text: 'A group name is required.'})
             return
         }
 
-        const group = await __.ui.journeyGroupManager.update(selectedGroup.id, {
-            name,
-            description: selectedEditForm.description,
-            color:       selectedEditForm.color,
-            parentGroup: selectedEditForm.parentGroup,
-        })
+        const timeoutId = window.setTimeout(() => {
+            void __.ui.journeyGroupManager.update(selectedGroup.id, {
+                name,
+                description: selectedEditForm.description,
+                color:       selectedEditForm.color,
+                parentGroup: selectedEditForm.parentGroup,
+            })
+        }, 200)
 
-        setEditForm({
-                        id:          group.id,
-                        name:        group.name,
-                        description: group.description,
-                        color:       group.color,
-                        parentGroup: group.parentGroup ?? null,
-                    })
-        setEditPopupOpen(false)
-        UIToast.success({caption: group.name, text: 'Group updated.'})
-    }, [selectedEditForm, selectedGroup])
+        return () => window.clearTimeout(timeoutId)
+    }, [editFormIsSynced, editPopupOpen, selectedEditForm, selectedGroup])
 
     const addJourneyToGroup = useCallback(async (groupId, journeySlug) => {
         if (!groupId) {
@@ -771,14 +770,6 @@ export const JourneyGroupsDrawer = memo(() => {
 
         await __.ui.journeyGroupManager.addJourneyToGroup(groupId, journeySlug)
     }, [])
-
-    const linkUngroupedJourneyToSelectedGroup = useCallback((journeySlug) => {
-        if (!effectiveSelectedGroupId) {
-            return
-        }
-
-        void addJourneyToGroup(effectiveSelectedGroupId, journeySlug)
-    }, [addJourneyToGroup, effectiveSelectedGroupId])
 
     const removeJourneyFromGroup = useCallback(async (groupId, journeySlug) => {
         if (!groupId) {
@@ -803,6 +794,7 @@ export const JourneyGroupsDrawer = memo(() => {
             setSelectedGroupId(null)
             setEditForm({id: null, ...emptyGroupForm()})
             setEditPopupOpen(false)
+            setEditPopupAnchorId(EDIT_GROUP_POPUP_ANCHOR)
         }
 
         UIToast.success({caption: 'Journey group', text: 'Group removed.'})
@@ -913,7 +905,7 @@ export const JourneyGroupsDrawer = memo(() => {
                                          >
                                              <WaTree selection="leaf" className="journey-group-tree">
                                                  {renderJourneyGroupTreeItems(rootGroups, groupsByParent, effectiveSelectedGroupId, selectGroup, openEditPopup, removeGroup, removeJourneyFromGroup)}
-                                                 {renderUngroupedJourneyTreeItems(ungroupedJourneys, effectiveSelectedGroupId ? linkUngroupedJourneyToSelectedGroup : null)}
+                                                 {renderUngroupedJourneyTreeItems(ungroupedJourneys)}
                                              </WaTree>
                                          </WaCard>
                                      )
@@ -927,9 +919,10 @@ export const JourneyGroupsDrawer = memo(() => {
 
                                 <LGSPopup
                                     active={editPopupOpen && Boolean(selectedGroup)}
-                                    anchor={EDIT_GROUP_POPUP_ANCHOR}
+                                    anchor={editPopupAnchorId}
                                     onRequestClose={closeEditPopup}
                                     placement="bottom"
+                                    distance={lgs.gutter.xs}
                                 >
                                     <WaCard
                                         className="lgs--popup-in-drawer lgs-slide-down journey-group-edit-popup"
@@ -954,7 +947,7 @@ export const JourneyGroupsDrawer = memo(() => {
                                                 groupColorSwatches={groupColorSwatches}
                                                 selectedEditForm={selectedEditForm}
                                                 updateEditForm={updateEditForm}
-                                                saveGroup={saveGroup}
+                                                closeEditPopup={closeEditPopup}
                                                 parentGroupOptions={parentGroupOptions}
                                                 availableJourneys={availableJourneys}
                                                 availablePopupOpen={availablePopupOpen}
