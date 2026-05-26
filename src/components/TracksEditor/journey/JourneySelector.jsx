@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-05-11
- * Last modified: 2026-05-11
+ * Created on: 2026-05-26
+ * Last modified: 2026-05-26
  *
  *
  * Copyright © 2026 LGS1920
@@ -321,7 +321,9 @@ export const JourneySelector = memo(({
             .filter(Boolean)
             .sort(naturalSortJourneys)
         const hasItems = childGroups.length > 0 || groupJourneys.length > 0
-
+        if (!hasItems) {
+            return null
+        }
         return (
             <WaTreeItem
                 key={group.id}
