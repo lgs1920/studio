@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-05-23
- * Last modified: 2026-05-23
+ * Created on: 2026-05-10
+ * Last modified: 2026-05-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -883,7 +883,7 @@ export const PanoramaWidget = memo(() => {
     }, [panorama.active, panorama.target, panorama.heading, $panorama, hideAdjustmentOverlay, setPoiAnimated])
 
     const directionIsAntiClockwise = panorama.direction < 0
-    const directionTooltip = 'Change direction'
+    const directionTooltip = directionIsAntiClockwise ? 'Anti-clockwise' : 'Clockwise'
     const directionIcon = directionIsAntiClockwise ? 'arrow-rotate-right' : 'arrow-rotate-left'
     const directionAnimation = directionIsAntiClockwise ? 'spin' : 'spin-reverse'
     const directionAnimationStyle = {'--animation-duration': `${30 / normalizeOrbitRPM(panorama.rpm)}s`}
