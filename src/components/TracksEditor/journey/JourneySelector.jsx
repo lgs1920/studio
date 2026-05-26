@@ -22,6 +22,7 @@ import {
 import classNames                                                         from 'classnames'
 import { memo, useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { useSnapshot }                                                    from 'valtio'
+import { JourneyGroupColorIcon }                                          from '../groups/JourneyGroupsInfo'
 import { TrackStylePreview }                                              from '../track/TrackStylePreview'
 
 const GROUPS_EXPANDED_KEY = 'lgs1920-journey-selector-groups-expanded'
@@ -102,36 +103,49 @@ export const JourneySelector = memo(({
                : journeyList
     }, [list, providedJourneys, journeyListVersion])
 
-    const {groupedSections, ungroupedJourneys, hasGroups} = useMemo(() => {
+    const {rootGroups, childrenByParent, ungroupedJourneys, hasGroups} = useMemo(() => {
         void groupsVersion
         const manager = __.ui?.journeyGroupManager
         if (!manager) {
-            return {groupedSections: [], ungroupedJourneys: journeys, hasGroups: false}
+            return {rootGroups: [], childrenByParent: new Map(), ungroupedJourneys: journeys, hasGroups: false}
         }
 
         const allGroups = manager.list()
         if (allGroups.length === 0) {
-            return {groupedSections: [], ungroupedJourneys: journeys, hasGroups: false}
+            return {rootGroups: [], childrenByParent: new Map(), ungroupedJourneys: journeys, hasGroups: false}
         }
 
         const journeyMap = new Map(journeys.map(j => [j.slug, j]))
         const assignedSlugs = new Set()
+        const map = new Map()
 
-        const sections = allGroups
-            .map(group => {
-                const groupJourneys = group.journeys
-                    .map(slug => journeyMap.get(slug))
-                    .filter(Boolean)
-                groupJourneys.forEach(j => assignedSlugs.add(j.slug))
-                return {group, journeys: groupJourneys}
-            })
-            .filter(({journeys: gj}) => gj.length > 0)
+        for (const group of allGroups) {
+            const parentId = group.parentGroup ?? null
+            if (!map.has(parentId)) {
+                map.set(parentId, [])
+            }
+            map.get(parentId).push(group)
+
+            group.journeys
+                .map(slug => journeyMap.get(slug))
+                .filter(Boolean)
+                .forEach(journey => assignedSlugs.add(journey.slug))
+        }
+
+        for (const children of map.values()) {
+            children.sort((a, b) => a.name.localeCompare(b.name))
+        }
 
         const ungrouped = journeys
             .filter(j => !assignedSlugs.has(j.slug))
             .sort(naturalSortJourneys)
 
-        return {groupedSections: sections, ungroupedJourneys: ungrouped, hasGroups: sections.length > 0}
+        return {
+            rootGroups:        map.get(null) ?? [],
+            childrenByParent:  map,
+            ungroupedJourneys: ungrouped,
+            hasGroups:         allGroups.length > 0,
+        }
     }, [journeys, groupsVersion])
 
     const selectedValue = value ?? theJourney?.slug ?? ''
@@ -277,28 +291,79 @@ export const JourneySelector = memo(({
         )
     }, [renderActivityIcon, renderTrackPreview, theJourney])
 
-    if (journeys.length === 0 && !allowEmptyOption) {
-        return null
-    }
-
-    // WaTreeItem only has default slot — icons + title go inline together
-    const renderTreeJourneyItem = (journey, ungrouped = false) => {
+    const renderTreeJourneyItem = useCallback((journey, ungrouped = false) => {
         const rj = getReactiveJourney(journey)
         return (
             <WaTreeItem
                 key={journey.slug}
                 data-slug={journey.slug}
-                className={classNames('lgs--journey-tree-item', {
+                selected={selectedValue === journey.slug}
+                className={classNames('lgs--tree-item-hoverable lgs--journey-tree-leaf', {
                     'lgs--journey-tree-ungrouped': ungrouped,
                     masked:                        !rj.visible,
                 })}
             >
-                <span className="lgs--journey-tree-item-content">
-                    {renderJourneyIcons(rj)}
-                    <span className="lgs--journey-tree-item-title">{rj.title}</span>
+                <span className="journey-group-tree-row">
+                    <span className="lgs--journey-tree-item-content">
+                        <WaIcon name="route" variant="regular"/>
+                        {renderJourneyIcons(rj)}
+                        <span className="lgs--journey-tree-item-title">{rj.title}</span>
+                    </span>
                 </span>
             </WaTreeItem>
         )
+    }, [getReactiveJourney, renderJourneyIcons, selectedValue])
+
+    const renderTreeGroupItems = useCallback((groups) => groups.map(group => {
+        const childGroups = childrenByParent.get(group.id) ?? []
+        const groupJourneys = group.journeys
+            .map(slug => lgs.getJourneyBySlug(slug))
+            .filter(Boolean)
+            .sort(naturalSortJourneys)
+        const hasItems = childGroups.length > 0 || groupJourneys.length > 0
+
+        return (
+            <WaTreeItem
+                key={group.id}
+                className="lgs--tree-item-hoverable"
+                data-empty-group={hasItems ? undefined : ''}
+                expanded={expandedGroups[group.id] !== false}
+                onWaExpand={event => {
+                    event.stopPropagation()
+                    if (event.target !== event.currentTarget) {
+                        return
+                    }
+                    handleGroupExpand(group.id)
+                }}
+                onWaCollapse={event => {
+                    event.stopPropagation()
+                    if (event.target !== event.currentTarget) {
+                        return
+                    }
+                    handleGroupCollapse(group.id)
+                }}
+            >
+                <span className="journey-group-tree-row">
+                    <span className="lgs--journey-tree-group-header">
+                        {!hasItems && (
+                            <span className="journey-group-tree-empty-folder">
+                                <WaIcon name="folder" variant="regular"/>
+                            </span>
+                        )}
+                        <JourneyGroupColorIcon color={group.color}/>
+                        <span>{group.name}</span>
+                    </span>
+                </span>
+                <WaIcon slot="expand-icon" name="folder" variant="regular"/>
+                <WaIcon slot="collapse-icon" name="folder-open" variant="regular" style={{transform: 'rotate(-90deg)'}}/>
+                {renderTreeGroupItems(childGroups)}
+                {groupJourneys.map(journey => renderTreeJourneyItem(journey))}
+            </WaTreeItem>
+        )
+    }), [childrenByParent, expandedGroups, handleGroupCollapse, handleGroupExpand, renderTreeJourneyItem])
+
+    if (journeys.length === 0 && !allowEmptyOption) {
+        return null
     }
 
     return (
@@ -343,31 +408,11 @@ export const JourneySelector = memo(({
                         >
 
                             <WaTree
+                                className="journey-group-tree"
                                 selection="leaf"
                                 onWaSelectionChange={handleTreeSelection}
                             >
-                                <WaIcon name="folder" variant="regular" slot="expand-icon"/>
-                                <WaIcon name="folder-open" variant="regular" slot="collapse-icon"
-                                        style={{transform: 'rotate(-90deg)'}}/>
-                                {groupedSections.map(({group, journeys: groupJourneys}) => (
-                                    <WaTreeItem
-                                        key={group.id}
-                                        expanded={expandedGroups[group.id] !== false}
-                                        onWaExpand={() => handleGroupExpand(group.id)}
-                                        onWaCollapse={() => handleGroupCollapse(group.id)}
-                                    >
-                                        <span className="lgs--journey-tree-group-header">
-                                            <WaIcon
-                                                name="square"
-                                                variant="solid"
-                                                className="journey-group-color-icon"
-                                                style={{color: group.color}}
-                                            />
-                                            <span>{group.name}</span>
-                                        </span>
-                                        {groupJourneys.map(journey => renderTreeJourneyItem(journey))}
-                                    </WaTreeItem>
-                                ))}
+                                {renderTreeGroupItems(rootGroups)}
                                 {ungroupedJourneys.map(journey => renderTreeJourneyItem(journey, true))}
                             </WaTree>
                         </div>
