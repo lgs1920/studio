@@ -38,7 +38,7 @@ const COLLAPSED_WIDGET_SIZE = 40
 const DEFAULT_COLLAPSED_WIDGET_ICON = 'sliders'
 const DRAG_THRESHOLD = {touch: 30, mouse: 5}
 const LOCKED_FLASH_TIMEOUT = 650
-const LOCKED_HINT_ICON = 'lock'
+const LOCKED_HINT_ICON = 'thumbtack'
 const LOCKED_HINT_TIMEOUT = 2000
 const ROTATION_CAMERA_ADJUSTMENT_WIDGET = 'rotation-camera-adjustment-widget'
 const SUPPRESS_DOUBLE_CLICK_MS = 350
@@ -820,6 +820,10 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
     }, [blockDoubleClick, canReduce, openEditorFromDoubleClick, toggleCollapsed])
 
     const handlePointerDownCapture = useCallback((event) => {
+        if (hasNoDragInPath(event)) {
+            return
+        }
+
         if (!canReduce || !isPrimaryLeftPointer(event) || event.ctrlKey) {
             return
         }
@@ -847,6 +851,10 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
     }, [blockDoubleClick, canReduce, toggleCollapsed])
 
     const handleDoubleClickCapture = useCallback((event) => {
+        if (hasNoDragInPath(event)) {
+            return
+        }
+
         if (!canReduce) {
             return
         }
@@ -854,6 +862,10 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
     }, [blockDoubleClick, canReduce])
 
     const handleClickCapture = useCallback((event) => {
+        if (hasNoDragInPath(event)) {
+            return
+        }
+
         if (performance.now() <= _suppressClickUntil.current) {
             event.preventDefault()
             event.stopPropagation()
@@ -875,6 +887,10 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
         if (interactionLocked) {
             return
         }
+        event?.preventDefault?.()
+        event?.stopPropagation?.()
+        event?.nativeEvent?.stopImmediatePropagation?.()
+        event?.stopImmediatePropagation?.()
         const clientX = event.clientX ?? event.touches?.[0]?.clientX ?? 0
         const clientY = event.clientY ?? event.touches?.[0]?.clientY ?? 0
         lgs.stores.ui.contextMenu.visible = true
@@ -991,6 +1007,10 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
     }, [widgetId, drawers.entity, drawers.open, canInteract])
 
     const handlePointerDown = useCallback((event) => {
+        if (hasNoDragInPath(event)) {
+            return
+        }
+
         if (event.ctrlKey && canLock) {
             event.preventDefault()
             event.stopPropagation()
@@ -1287,6 +1307,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                     pointerInteractionsRef(el)
                 }}
                 onClickCapture={handleClickCapture}
+                onContextMenuCapture={openContextMenu}
                 onDoubleClickCapture={handleDoubleClickCapture}
                 onDoubleClick={handleDoubleClick}
                 onPointerDownCapture={handlePointerDownCapture}
