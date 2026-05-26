@@ -127,4 +127,42 @@ describe('JourneyGroupManager subgroups', () => {
         expect(db.api.delete).not.toHaveBeenCalledWith(group.id, JOURNEY_GROUPS_STORE)
         expect(manager.get(group.id)?.journeys).toEqual(['journey-a'])
     })
+
+    it('moves a journey to the new group instead of duplicating it', async () => {
+        const first = await manager.create({name: 'Alpha'})
+        const second = await manager.create({name: 'Beta'})
+
+        await manager.addJourneyToGroup(first.id, 'journey-a')
+        await manager.addJourneyToGroup(second.id, 'journey-a')
+
+        expect(manager.get(first.id)?.journeys).toEqual([])
+        expect(manager.get(second.id)?.journeys).toEqual(['journey-a'])
+        expect(manager.groupsForJourney('journey-a').map(group => group.id)).toEqual([second.id])
+    })
+
+    it('prunes duplicate journey assignments on initialize', async () => {
+        db.store.set('group-a', {
+            data: {
+                id: 'group-a',
+                name: 'Alpha',
+                color: '#f2b705',
+                journeys: ['journey-a', 'journey-b'],
+            },
+        })
+        db.store.set('group-b', {
+            data: {
+                id: 'group-b',
+                name: 'Beta',
+                color: '#f97316',
+                journeys: ['journey-a', 'journey-c'],
+            },
+        })
+        lgs.stores.main.components.journeyEditor.list = ['journey-a', 'journey-b', 'journey-c']
+
+        await manager.initialize()
+
+        expect(manager.get('group-a')?.journeys).toEqual(['journey-a', 'journey-b'])
+        expect(manager.get('group-b')?.journeys).toEqual(['journey-c'])
+        expect(manager.groupsForJourney('journey-a').map(group => group.id)).toEqual(['group-a'])
+    })
 })

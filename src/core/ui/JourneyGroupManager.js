@@ -42,6 +42,7 @@ export class JourneyGroupManager {
     initialize = async () => {
         await this.readAll()
         await this.pruneMissingJourneys()
+        await this.pruneDuplicateJourneyAssignments()
         await this.pruneInvalidParentGroups()
         this.store.ready = true
     }
@@ -178,8 +179,19 @@ export class JourneyGroupManager {
             return null
         }
 
+        const conflictingGroups = this.list()
+            .filter(current => current.id !== groupId && current.journeys.includes(journeySlug))
+
+        if (conflictingGroups.length > 0) {
+            await Promise.all(
+                conflictingGroups.map(current => this.update(current.id, {
+                    journeys: current.journeys.filter(slug => slug !== journeySlug),
+                })),
+            )
+        }
+
         if (group.journeys.includes(journeySlug)) {
-            return group
+            return this.get(groupId)
         }
 
         return this.update(groupId, {journeys: [...group.journeys, journeySlug]})
@@ -232,6 +244,29 @@ export class JourneyGroupManager {
             }))
             .filter(({group, journeys}) => journeys.length !== group.journeys.length)
             .map(({group, journeys}) => this.update(group.id, {journeys}))
+
+        await Promise.all(updates)
+    }
+
+    pruneDuplicateJourneyAssignments = async () => {
+        const assignedJourneys = new Set()
+        const updates = this.list()
+            .sort((a, b) => a.name.localeCompare(b.name))
+            .map(group => {
+                const journeys = group.journeys.filter(slug => {
+                    if (assignedJourneys.has(slug)) {
+                        return false
+                    }
+
+                    assignedJourneys.add(slug)
+                    return true
+                })
+
+                return journeys.length === group.journeys.length
+                       ? null
+                       : this.update(group.id, {journeys})
+            })
+            .filter(Boolean)
 
         await Promise.all(updates)
     }
