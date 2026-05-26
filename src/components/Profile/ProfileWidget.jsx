@@ -48,6 +48,7 @@ export const ProfileWidget = ({id, context, zIndex, widgetsBoard: persistedWidge
      */
     const $unitStore = lgs.settings.unitSystem
     const unitStore = useSnapshot($unitStore)
+    const widgetListSnapshot = useSnapshot(lgs.stores.ui.widget.list)
 
     /**
      * State for the container element where the widget should attach.
@@ -68,6 +69,10 @@ export const ProfileWidget = ({id, context, zIndex, widgetsBoard: persistedWidge
     const hasAltitudeData = useMemo(() => {
         return data?.dataset?.some(dataset => Array.isArray(dataset.source) && dataset.source.length > 0) ?? false
     }, [data])
+    const isLocked = Boolean(
+        widgetListSnapshot.get(id)?.locked
+        ?? __.ui.widgetManager.getWidgetConfig(id)?.locked,
+    )
 
     /**
      * Memoizes the configuration object for the Widget component.
@@ -95,7 +100,7 @@ export const ProfileWidget = ({id, context, zIndex, widgetsBoard: persistedWidge
             transient:       true,
             ttl:             HOUR,
             mandatory:       false,
-            stopPropagation: true,
+            stopPropagation: false,
             snap:        false,
             widgetsBoard: widgetsBoard,
             zIndex:      zIndex,
@@ -112,6 +117,7 @@ export const ProfileWidget = ({id, context, zIndex, widgetsBoard: persistedWidge
                 <ProfileChart data={data}
                               id={id}
                               height={profile.height}
+                              locked={isLocked}
                               width={profile.width}
                 />
             }

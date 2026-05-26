@@ -181,7 +181,7 @@ export const WidgetContextMenu = ({targetId, menuRef}) => {
              style={{'--lgs-on-map-ui-opacity': toolbars.opacity}}>
             <ul>
                 {/* Size controls */}
-                {!isLocked && capabilities.canReset && (
+                {capabilities.canReset && (
                     <li className="widget-grid-one-line widget-no-hover buttons-bar-on-map">
                         <WaTooltip placement="top" for="compress-widget-context">{'Reset size'}</WaTooltip>
                         <WidgetContextIconButton
@@ -216,13 +216,13 @@ export const WidgetContextMenu = ({targetId, menuRef}) => {
 
                 {canLock && (
                     <li onClick={toggleLocked}>
-                        <WaIcon name={isLocked ? 'unlock' : 'lock'} variant="regular"/>
+                        <WaIcon name={isLocked ? 'thumbtack-slash' : 'thumbtack'} variant="regular"/>
                         <span>{isLocked ? 'Unlock' : 'Lock'}</span>
                     </li>
                 )}
 
                 {/* Edit action - Only show if not already being edited in the current entity context */}
-                {!isLocked && capabilities.canEdit && (drawers.open !== WIDGETS_EDITOR_DRAWER || drawers.entity !== targetId) && (
+                {capabilities.canEdit && (drawers.open !== WIDGETS_EDITOR_DRAWER || drawers.entity !== targetId) && (
                     <li onClick={editWidget}>
                         <WaIcon name={EDIT_WIDGET_ICON} variant="regular"/>
                         <WaTooltip content="Edit Widget" placement="left"></WaTooltip>
@@ -232,17 +232,17 @@ export const WidgetContextMenu = ({targetId, menuRef}) => {
                 )}
 
                 {/* Snap action */}
-                {!isLocked && capabilities.canSnapshot && (
+                {capabilities.canSnapshot && (
                     <li onClick={snapWidget}><WaIcon name="camera" variant="regular"/>{'Snap'}</li>
                 )}
 
                 {/* Remove action */}
-                {!isLocked && capabilities.canRemove && (
+                {capabilities.canRemove && (
                     <li onClick={removeWidget}><WaIcon name="trash-can" variant="regular"/>{'Remove'}</li>
                 )}
 
                 {/* Positioning Grid */}
-                {!isLocked && capabilities.canPosition && (
+                {capabilities.canPosition && (
                     <li className="widget-grid-position widget-no-hover buttons-bar-on-map">
                         <WidgetContextIconButton icon="arrow-up-left" label="Move to top left"
                                                  onClick={() => moveTo('toTopLeft')}/>

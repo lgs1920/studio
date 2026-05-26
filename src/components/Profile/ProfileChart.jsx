@@ -17,6 +17,8 @@
 import './style.css'
 import { useWidgetScaleCorrection } from '@Components/MainUI/widgets/useWidgetScaleCorrection'
 import {
+    buildFlythroughProfileMetricSummary,
+    flythroughProfileDimensionIndexes,
     flythroughProfileRowFromSample,
     flythroughSampleFromProfileRow,
 } from '@Core/ui/flythrough/FlythroughProfileProgress'
@@ -33,14 +35,14 @@ import {
     FLYTHROUGH_EVENT_UPDATE,
 } from '@Core/ui/flythrough/FlythroughPlaybackController'
 import { CHART_ELEVATION_VS_DISTANCE, DISTANCE, ELEVATION, POINT, TIME } from '@Core/ui/Profiler'
-import { DISTANCE_UNITS, ELEVATION_UNITS, INTERNATIONAL, UnitUtils } from '@Utils/UnitUtils'
-import { faCaretLargeLeft, faCaretLargeRight } from '@fortawesome/pro-solid-svg-icons'
+import { INTERNATIONAL } from '@Utils/UnitUtils'
 import { colord }        from 'colord'
 import * as echarts                                from 'echarts'
-import { useCallback, useEffect, useMemo, useRef } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { subscribe, useSnapshot } from 'valtio'
 import { usePreviewChartResize } from '@Components/MainUI/widgets/editor/usePreviewChartResize'
 import { v4 as uuid } from 'uuid'
+import { WaIcon } from '@web.awesome.me/webawesome-pro/dist/react'
 
 const scaleValue = (value, correction = 1) => {
     const numericValue = Number(value)
@@ -117,10 +119,9 @@ const toNumber = value => {
 const FLYTHROUGH_PROFILE_COMPLETED_GRAPHIC = 'flythrough-profile-completed-graphic'
 const FLYTHROUGH_PROFILE_CURRENT_MARKER_GRAPHIC = 'flythrough-profile-current-marker-graphic'
 const FLYTHROUGH_PROFILE_HOVER_MARKER_GRAPHIC = 'flythrough-profile-hover-marker-graphic'
+const FLYTHROUGH_PROFILE_LOCKED_HORIZONTAL_GUIDE_GRAPHIC = 'flythrough-profile-locked-horizontal-guide-graphic'
+const FLYTHROUGH_PROFILE_LOCKED_VERTICAL_GUIDE_GRAPHIC = 'flythrough-profile-locked-vertical-guide-graphic'
 const FLYTHROUGH_PROFILE_OVERLAY_GRAPHIC = 'flythrough-profile-overlay-graphic'
-const FLYTHROUGH_PROFILE_LABEL_LEFT_GRAPHIC = 'flythrough-profile-label-left-graphic'
-const FLYTHROUGH_PROFILE_LABEL_TEXT_GRAPHIC = 'flythrough-profile-label-text-graphic'
-const FLYTHROUGH_PROFILE_LABEL_RIGHT_GRAPHIC = 'flythrough-profile-label-right-graphic'
 const FLYTHROUGH_PROFILE_UPDATE_INTERVAL = 33
 const PROFILE_LINE_WIDTH = 2
 
@@ -194,34 +195,6 @@ const profileGraphicLineStyle = model => {
 
     return style
 }
-const iconPathData = icon => icon?.icon?.[4] ?? ''
-const profileInfoIconSvgCache = new Map()
-const profileInfoIconSvg = (icon, color) => {
-    const [width = 320, height = 512] = icon?.icon ?? []
-    const path = iconPathData(icon)
-    const cacheKey = `${width}:${height}:${color}:${path}`
-
-    if (profileInfoIconSvgCache.has(cacheKey)) {
-        return profileInfoIconSvgCache.get(cacheKey)
-    }
-
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}"><path fill="${color}" d="${path}"/></svg>`
-    const dataUri = `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`
-
-    profileInfoIconSvgCache.set(cacheKey, dataUri)
-    return dataUri
-}
-let textMeasureContext = null
-const measureTextWidth = (text, font) => {
-    if (typeof document === 'undefined') {
-        return text.length * 7
-    }
-
-    textMeasureContext ??= document.createElement('canvas').getContext('2d')
-    textMeasureContext.font = font
-    return textMeasureContext.measureText(text).width
-}
-
 const flythroughProfileOverlayResetGraphic = () => ({
     id:        FLYTHROUGH_PROFILE_OVERLAY_GRAPHIC,
     type:      'group',
@@ -262,51 +235,25 @@ const flythroughProfileHiddenGraphics = () => [
         shape:     {cx: 0, cy: 0, r: 0},
         style:     {opacity: 0},
     },
+    {
+        id:        FLYTHROUGH_PROFILE_LOCKED_HORIZONTAL_GUIDE_GRAPHIC,
+        type:      'line',
+        $action:   'replace',
+        invisible: true,
+        silent:    true,
+        shape:     {x1: 0, y1: 0, x2: 0, y2: 0},
+        style:     {opacity: 0},
+    },
+    {
+        id:        FLYTHROUGH_PROFILE_LOCKED_VERTICAL_GUIDE_GRAPHIC,
+        type:      'line',
+        $action:   'replace',
+        invisible: true,
+        silent:    true,
+        shape:     {x1: 0, y1: 0, x2: 0, y2: 0},
+        style:     {opacity: 0},
+    },
     flythroughProfileOverlayResetGraphic(),
-    {
-        id:        FLYTHROUGH_PROFILE_LABEL_LEFT_GRAPHIC,
-        type:      'image',
-        $action:   'replace',
-        left:      0,
-        top:       0,
-        invisible: true,
-        silent:    true,
-        style:     {
-            image:   profileInfoIconSvg(faCaretLargeLeft, '#000000'),
-            width:   1,
-            height:  1,
-            opacity: 0,
-        },
-    },
-    {
-        id:        FLYTHROUGH_PROFILE_LABEL_TEXT_GRAPHIC,
-        type:      'text',
-        $action:   'replace',
-        left:      0,
-        top:       0,
-        invisible: true,
-        silent:    true,
-        style:     {
-            text:    '',
-            width:   1,
-            opacity: 0,
-        },
-    },
-    {
-        id:        FLYTHROUGH_PROFILE_LABEL_RIGHT_GRAPHIC,
-        type:      'image',
-        $action:   'replace',
-        left:      0,
-        top:       0,
-        invisible: true,
-        silent:    true,
-        style:     {
-            image:   profileInfoIconSvg(faCaretLargeRight, '#000000'),
-            width:   1,
-            height:  1,
-            opacity: 0,
-        },
-    },
 ]
 
 /**
@@ -320,7 +267,7 @@ const flythroughProfileHiddenGraphics = () => [
  * @param {boolean} props.preview
  * @returns {React.JSX.Element}
  */
-export const ProfileChart = ({data, id, configId, width, height, preview = false}) => {
+export const ProfileChart = ({data, id, configId, width, height, preview = false, locked = false}) => {
     const $configuration = lgs.settings.widgets['profile-widget'].configuration
     const configuration = useSnapshot($configuration)
 
@@ -335,6 +282,7 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
 
     const _chart = useRef(null)
     const _chartDom = useRef(null)
+    const _profileMetricBadge = useRef(null)
     const _instance = useRef({
                                  getEchartsInstance: () => _chart.current,
                              })
@@ -343,6 +291,7 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
                                                   renderedKey: null,
                                                   geometries: [],
                                               })
+    const [lockedProfileSample, setLockedProfileSample] = useState(null)
     const configKey = configId ?? id
     const scaleCorrection = useWidgetScaleCorrection(preview ? null : id)
 
@@ -506,10 +455,41 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
         }
         return data.dataset
     }, [data])
+    const profileTooltipMeta = useMemo(() => {
+        const indexes = flythroughProfileDimensionIndexes(data?.dimensions)
+
+        return {
+            totalDistanceFromStart: processedDataset.reduce((last, dataset) => {
+                const source = Array.isArray(dataset?.source) ? dataset.source : []
+                const value = Number(source.at(-1)?.[indexes.distanceFromStart])
+                return Number.isFinite(value) ? value : last
+            }, 0),
+        }
+    }, [data, processedDataset])
     const hasAltitudeData = useMemo(() => {
         return processedDataset.some(dataset => Array.isArray(dataset.source) && dataset.source.length > 0)
     }, [processedDataset])
+    const interactiveSeriesIndexes = useMemo(() => {
+        const indexes = new Map()
+        let seriesIndex = 0
 
+        data?.dataset?.forEach((dataset, datasetIndex) => {
+            const option = data?.options?.[datasetIndex]
+            const lineModels = profileLineModels({
+                color:         option?.color,
+                renderStyle:   option?.renderStyle,
+                useTrackStyle: flythroughProfileInfo.useTrackStyle,
+            })
+
+            if (dataset?.id && !indexes.has(dataset.id)) {
+                indexes.set(dataset.id, seriesIndex)
+            }
+
+            seriesIndex += lineModels.length
+        })
+
+        return indexes
+    }, [data?.dataset, data?.options, flythroughProfileInfo.useTrackStyle])
     /**
      * Build ECharts series object with optional gradient
      */
@@ -540,6 +520,7 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
             type:            'line',
             datasetId:       params.dataset,
             smooth:          true,
+            triggerLineEvent: true,
             encode:          {x: DISTANCE, y: ELEVATION},
             showSymbol:      false,
             emphasis:        {disabled: true},
@@ -586,12 +567,7 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
             toolbox:  {show: false},
             title:    {show: false},
             animation: preview ? false : undefined,
-            // tooltip:   preview ? {show: false} : {
-            //     trigger:     'axis',
-            //     axisPointer: {type: 'line'},
-            //     formatter:   (params) => __.ui.profiler.tooltipElevationVsDistance([
-            //                                                                            params[0].seriesIndex,
-            // params[0].dataIndex, ...params[0].data, distances, unitSystem, ]), padding:     0, enterable:   true, },
+            tooltip: {show: false},
             xAxis:    [
                 {
                     ...styles.xAxis[0],
@@ -673,6 +649,74 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
             return null
         }
     }, [markerDataFromSample])
+
+    const nearestProfilePointFromPixel = useCallback((event, chart) => {
+        if (!chart || !Array.isArray(data?.dataset) || !Array.isArray(data?.dimensions)) {
+            return null
+        }
+
+        const offsetX = Number(event?.offsetX)
+        const offsetY = Number(event?.offsetY)
+        if (!Number.isFinite(offsetX) || !Number.isFinite(offsetY)) {
+            return null
+        }
+
+        const gridRect = readChartGridRect(chart)
+        if (!gridRect) {
+            return null
+        }
+
+        if (offsetX < gridRect.x || offsetX > gridRect.x + gridRect.width || offsetY < gridRect.y || offsetY > gridRect.y + gridRect.height) {
+            return null
+        }
+
+        const distanceIndex = data.dimensions.indexOf(DISTANCE)
+        const elevationIndex = data.dimensions.indexOf(ELEVATION)
+        if (distanceIndex < 0 || elevationIndex < 0) {
+            return null
+        }
+
+        let nearest = null
+        const sampler = __.ui.flythrough?.sampler ?? null
+
+        data.dataset.forEach((dataset) => {
+            const source = Array.isArray(dataset?.source) ? dataset.source : []
+            const seriesIndex = interactiveSeriesIndexes.get(dataset?.id)
+            if (!Number.isInteger(seriesIndex)) {
+                return
+            }
+
+            source.forEach((row, dataIndex) => {
+                const distance = row?.[distanceIndex]
+                const elevation = row?.[elevationIndex]
+                if (!isFiniteCoordinate(distance) || !isFiniteCoordinate(elevation)) {
+                    return
+                }
+
+                try {
+                    const pixel = chart.convertToPixel({xAxisIndex: 0, yAxisIndex: 0}, [distance, elevation])
+                    if (!Array.isArray(pixel) || !isFiniteCoordinate(pixel[0]) || !isFiniteCoordinate(pixel[1])) {
+                        return
+                    }
+
+                    const delta = Math.hypot(pixel[0] - offsetX, pixel[1] - offsetY)
+                    if (!nearest || delta < nearest.delta) {
+                        nearest = {
+                            seriesIndex,
+                            dataIndex,
+                            delta,
+                            sample: flythroughSampleFromProfileRow(row, data.dimensions, sampler),
+                        }
+                    }
+                }
+                catch {
+                    return
+                }
+            })
+        })
+
+        return nearest
+    }, [data, interactiveSeriesIndexes])
 
     const clearFlythroughProfileGraphicsCache = useCallback(() => {
         _flythroughProfileGraphics.current = {
@@ -888,162 +932,137 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
         }
     }, [chartPixelFromSample, flythroughMarkerStyle])
 
-    const metric = useCallback((value, units, options = {}) =>
-        UnitUtils.formatMetric(value, {units, ...options}).full.trim(), [])
-
     const flythroughProfileInfoColor = useCallback(() => {
         return colord(flythroughProfileInfo.color).toRgbString()
     }, [flythroughProfileInfo.color])
 
-    const flythroughMetricText = useCallback((sample, flythroughState) => {
-        if (!sample) {
-            return ''
+    const lockedGuideGraphics = useCallback((sample, chart) => {
+        const pixel = chartPixelFromSample(sample, chart)
+        const gridRect = readChartGridRect(chart)
+        const color = colord(flythroughProfileInfoColor()).alpha(0.45).toRgbString()
+
+        if (!pixel || !gridRect) {
+            return [
+                {
+                    id:        FLYTHROUGH_PROFILE_LOCKED_HORIZONTAL_GUIDE_GRAPHIC,
+                    type:      'line',
+                    $action:   'replace',
+                    invisible: true,
+                    silent:    true,
+                    shape:     {x1: 0, y1: 0, x2: 0, y2: 0},
+                    style:     {opacity: 0},
+                },
+                {
+                    id:        FLYTHROUGH_PROFILE_LOCKED_VERTICAL_GUIDE_GRAPHIC,
+                    type:      'line',
+                    $action:   'replace',
+                    invisible: true,
+                    silent:    true,
+                    shape:     {x1: 0, y1: 0, x2: 0, y2: 0},
+                    style:     {opacity: 0},
+                },
+            ]
         }
 
-        const totalDistance = Number(flythroughState?.totalDistance) || 0
-        const direction = Number(flythroughState?.direction) < 0 ? -1 : 1
-        const coveredDistance = direction < 0
-                                ? (sample.remainingDistance ?? Math.max(0, totalDistance - (sample.distanceFromStart ?? 0)))
-                                : (sample.distanceFromStart ?? 0)
-        const remainingDistance = Math.max(0, totalDistance - coveredDistance)
-        const altitude = metric(sample.altitude ?? sample.height, ELEVATION_UNITS, {precision: 0})
+        return [
+            {
+                id:      FLYTHROUGH_PROFILE_LOCKED_HORIZONTAL_GUIDE_GRAPHIC,
+                type:    'line',
+                $action: 'replace',
+                silent:  true,
+                z:       18,
+                shape:   {
+                    x1: gridRect.x,
+                    y1: pixel[1],
+                    x2: gridRect.x + gridRect.width,
+                    y2: pixel[1],
+                },
+                style:   {
+                    stroke:    color,
+                    lineWidth: 1,
+                    opacity:   1,
+                },
+            },
+            {
+                id:      FLYTHROUGH_PROFILE_LOCKED_VERTICAL_GUIDE_GRAPHIC,
+                type:    'line',
+                $action: 'replace',
+                silent:  true,
+                z:       18,
+                shape:   {
+                    x1: pixel[0],
+                    y1: gridRect.y,
+                    x2: pixel[0],
+                    y2: gridRect.y + gridRect.height,
+                },
+                style:   {
+                    stroke:    color,
+                    lineWidth: 1,
+                    opacity:   1,
+                },
+            },
+        ]
+    }, [chartPixelFromSample, flythroughProfileInfoColor])
 
-        return `${metric(coveredDistance, DISTANCE_UNITS, {precision: 1})} | ${altitude} | ${metric(remainingDistance, DISTANCE_UNITS, {precision: 1})}`
-    }, [metric])
+    const flythroughMetricLabel = useCallback((sample, flythroughState) => {
+        const summary = buildFlythroughProfileMetricSummary(sample, {
+            totalDistance:      Number(flythroughState?.totalDistance) || 0,
+            direction:          flythroughState?.direction,
+            unitSystem,
+            distancePrecision:  1,
+            elevationPrecision: 0,
+        })
+
+        if (!summary) {
+            return null
+        }
+
+        return {
+            covered:   summary.covered,
+            altitude:  summary.altitudeLabel,
+            remaining: summary.remaining,
+        }
+    }, [unitSystem])
+
+    const hideProfileMetricBadge = useCallback(() => {
+        _profileMetricBadge.current?.classList.add('profile-chart-metric-badge--hidden')
+    }, [])
 
     const flythroughMetricGraphic = useCallback((sample, flythroughState, chart) => {
-        const text = flythroughMetricText(sample, flythroughState)
-        if (!text) {
+        const label = flythroughMetricLabel(sample, flythroughState)
+        const badge = _profileMetricBadge.current
+        if (!label) {
+            badge?.classList.add('profile-chart-metric-badge--hidden')
             return []
         }
 
         const {width: chartWidth, height: chartHeight} = readChartSize(chart, _chartDom.current)
         if (chartWidth <= 0 || chartHeight <= 0) {
+            badge?.classList.add('profile-chart-metric-badge--hidden')
             return []
         }
 
-        const color = flythroughProfileInfoColor()
-        const availableWidth = Math.max(24, chartWidth - 12)
-        const minFontSize = 5
-        const maxFontSize = Math.max(7, Math.min(10, Math.round(chartHeight * 0.055)))
-        const iconAspectRatio = (faCaretLargeLeft.icon?.[0] ?? 256) / (faCaretLargeLeft.icon?.[1] ?? 512)
-        const metricsFor = (fontSize, showIcons) => {
-            const lineHeight = Math.ceil(fontSize * 1.2)
-            const font = `${fontSize}px sans-serif`
-            const textWidth = Math.ceil(measureTextWidth(text, font))
-            const iconHeight = Math.ceil(fontSize * 1.05)
-            const iconWidth = Math.ceil(iconHeight * iconAspectRatio)
-            const gap = Math.max(3, Math.round(fontSize * 0.45))
-            const iconsWidth = showIcons ? (iconWidth * 2) + (gap * 2) : 0
-
-            return {
-                fontSize,
-                lineHeight,
-                font,
-                textWidth,
-                iconHeight,
-                iconWidth,
-                gap,
-                showIcons,
-                groupWidth: iconsWidth + textWidth,
-            }
-        }
-
-        let labelMetrics = null
-        for (let fontSize = maxFontSize; fontSize >= minFontSize; fontSize--) {
-            const candidate = metricsFor(fontSize, true)
-            if (candidate.groupWidth <= availableWidth) {
-                labelMetrics = candidate
-                break
-            }
-        }
-
-        if (!labelMetrics) {
-            for (let fontSize = maxFontSize; fontSize >= minFontSize; fontSize--) {
-                const candidate = metricsFor(fontSize, false)
-                if (candidate.groupWidth <= availableWidth) {
-                    labelMetrics = candidate
-                    break
-                }
-            }
-        }
-
-        labelMetrics ??= metricsFor(minFontSize, false)
-
-        const {
-            font,
-            lineHeight,
-            textWidth,
-            iconHeight,
-            iconWidth,
-            gap,
-            showIcons,
-            groupWidth,
-        } = labelMetrics
-        const left = Math.max(6, (chartWidth - groupWidth) / 2)
-        const textLeft = showIcons ? iconWidth + gap : 0
-        const rightLeft = textLeft + textWidth + gap
         const gridRect = readChartGridRect(chart)
         const axisY = Number.isFinite(gridRect?.y) && Number.isFinite(gridRect?.height)
                       ? gridRect.y + gridRect.height
                       : chartHeight - 22
-        const top = Math.max(4, Math.min(chartHeight - lineHeight - 2, axisY - lineHeight - 3))
-        const iconTop = top + Math.max(0, (lineHeight - iconHeight) / 2)
-        const children = [
-            {
-                id:        FLYTHROUGH_PROFILE_LABEL_LEFT_GRAPHIC,
-                type:      'image',
-                $action:   'replace',
-                left,
-                top:       iconTop,
-                invisible: !showIcons,
-                silent:    true,
-                z:         32,
-                style:     {
-                    image:   profileInfoIconSvg(faCaretLargeLeft, color),
-                    width:   iconWidth,
-                    height:  iconHeight,
-                    opacity: showIcons ? 1 : 0,
-                },
-            },
-            {
-                id:      FLYTHROUGH_PROFILE_LABEL_TEXT_GRAPHIC,
-                type:    'text',
-                $action: 'replace',
-                left:    left + textLeft,
-                top,
-                silent:  true,
-                z:       32,
-                style:   {
-                    text,
-                    width:         textWidth,
-                    lineHeight,
-                    font,
-                    fill:          color,
-                    align:         'left',
-                    verticalAlign: 'top',
-                },
-            },
-            {
-                id:        FLYTHROUGH_PROFILE_LABEL_RIGHT_GRAPHIC,
-                type:      'image',
-                $action:   'replace',
-                left:      left + rightLeft,
-                top:       iconTop,
-                invisible: !showIcons,
-                silent:    true,
-                z:         32,
-                style:     {
-                    image:   profileInfoIconSvg(faCaretLargeRight, color),
-                    width:   iconWidth,
-                    height:  iconHeight,
-                    opacity: showIcons ? 1 : 0,
-                },
-            },
-        ]
 
-        return children
-    }, [flythroughMetricText, flythroughProfileInfoColor])
+        if (badge) {
+            badge.querySelector('[data-profile-metric="covered"]').textContent = label.covered
+            badge.querySelector('[data-profile-metric="altitude"]').textContent = label.altitude
+            badge.querySelector('[data-profile-metric="remaining"]').textContent = label.remaining
+            badge.classList.remove('profile-chart-metric-badge--hidden')
+
+            const badgeWidth = badge.offsetWidth
+            const badgeHeight = badge.offsetHeight
+            const left = Math.max(6, Math.min(chartWidth - badgeWidth - 6, (chartWidth - badgeWidth) / 2))
+            const top = Math.max(4, Math.min(chartHeight - badgeHeight - 2, axisY - badgeHeight - 3))
+
+            badge.style.transform = `translate3d(${Math.round(left)}px, ${Math.round(top)}px, 0)`
+        }
+
+        return []
+    }, [flythroughMetricLabel])
 
     const flythroughProfileOption = useCallback((flythroughState, chart) => {
         if (!data?.dataset || !data?.dimensions) {
@@ -1058,10 +1077,21 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
         const activeSample = visible
                              ? (flythroughState?.playing ? (controllerSample ?? flythroughState?.sample) : (flythroughState?.sample ?? controllerSample))
                              : null
+        const lockedSample = !activeSample && locked ? lockedProfileSample : null
+        const displaySample = activeSample ?? lockedSample
         const hoverSample = flythroughState?.hoverSample
-        const overlayGraphics = flythroughMetricGraphic(hoverSample ?? activeSample, flythroughState, chart)
+        const metricState = activeSample
+                            ? flythroughState
+                            : (lockedSample ? {
+                                totalDistance: profileTooltipMeta.totalDistanceFromStart,
+                                direction:     1,
+                            } : null)
+        const overlayGraphics = flythroughMetricGraphic(hoverSample ?? displaySample, metricState, chart)
         if (!activeSample) {
             _flythroughProfileGraphics.current.renderedKey = null
+        }
+        if (!displaySample) {
+            hideProfileMetricBadge()
         }
         const graphics = activeSample
                          ? [
@@ -1081,6 +1111,24 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
                              flythroughProfileOverlayResetGraphic(),
                              ...overlayGraphics,
                          ]
+                         : lockedSample
+                           ? [
+                               ...lockedGuideGraphics(lockedSample, chart),
+                               flythroughMarkerGraphic({
+                                   id:     FLYTHROUGH_PROFILE_CURRENT_MARKER_GRAPHIC,
+                                   sample: lockedSample,
+                                   chart,
+                                   z:      20,
+                               }),
+                               flythroughMarkerGraphic({
+                                   id:        FLYTHROUGH_PROFILE_HOVER_MARKER_GRAPHIC,
+                                   sample:    null,
+                                   chart,
+                                   z:         21,
+                               }),
+                               flythroughProfileOverlayResetGraphic(),
+                               ...overlayGraphics,
+                           ]
                          : flythroughProfileHiddenGraphics()
 
         return {
@@ -1092,6 +1140,11 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
         flythroughCompletedGraphics,
         flythroughMetricGraphic,
         flythroughMarkerGraphic,
+        hideProfileMetricBadge,
+        lockedGuideGraphics,
+        locked,
+        lockedProfileSample,
+        profileTooltipMeta.totalDistanceFromStart,
     ])
 
     const handleFlythroughProfileHover = useCallback((params) => {
@@ -1118,6 +1171,53 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
             __.ui.flythrough?.handleProfileLeave?.()
         }
     }, [preview])
+
+    const handleProfileBlankClick = useCallback((event) => {
+        if (preview || !locked) {
+            return
+        }
+
+        const chart = _instance.current?.getEchartsInstance?.()
+        if (!chart) {
+            return
+        }
+
+        const nearest = nearestProfilePointFromPixel(event, chart)
+        if (nearest?.sample) {
+            setLockedProfileSample(nearest.sample)
+            void __.ui.profiler?.showSampleOnMap?.(nearest.sample)
+            _chartDom.current?.focus?.()
+            return
+        }
+
+        if (!event?.target) {
+            setLockedProfileSample(null)
+        }
+    }, [locked, nearestProfilePointFromPixel, preview])
+
+    useEffect(() => {
+        if (preview || !locked || !lockedProfileSample || typeof document === 'undefined') {
+            return
+        }
+
+        const handleDocumentPointerDown = (event) => {
+            const chartElement = _chartDom.current
+            const target = event.target
+
+            if (!chartElement || !(target instanceof Node)) {
+                return
+            }
+
+            if (chartElement === target || chartElement.contains(target)) {
+                return
+            }
+
+            setLockedProfileSample(null)
+        }
+
+        document.addEventListener('pointerdown', handleDocumentPointerDown, true)
+        return () => document.removeEventListener('pointerdown', handleDocumentPointerDown, true)
+    }, [locked, lockedProfileSample, preview])
 
     useEffect(() => {
         clearFlythroughProfileGraphicsCache()
@@ -1181,6 +1281,36 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
     }, [clearFlythroughProfileGraphicsCache, handleResize, preview])
 
     useEffect(() => {
+        if (locked) {
+            return
+        }
+
+        const frameId = requestAnimationFrame(() => {
+            setLockedProfileSample(null)
+            hideProfileMetricBadge()
+        })
+        return () => cancelAnimationFrame(frameId)
+    }, [hideProfileMetricBadge, locked])
+
+    useEffect(() => {
+        if (preview || !locked) {
+            return
+        }
+
+        const chart = _instance.current?.getEchartsInstance?.()
+        const option = flythroughProfileOption(lgs.stores.flythrough ?? {}, chart)
+        if (!chart || !option) {
+            return
+        }
+
+        chart.setOption(option, {
+            replaceMerge: ['graphic'],
+            lazyUpdate:   false,
+            silent:       true,
+        })
+    }, [flythroughProfileOption, locked, lockedProfileSample, preview])
+
+    useEffect(() => {
         if (preview) {
             return
         }
@@ -1189,15 +1319,23 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
         if (!chart) {
             return
         }
+        const zr = chart.getZr?.()
 
         chart.on('mousemove', handleFlythroughProfileHover)
         chart.on('globalout', handleFlythroughProfileLeave)
+        zr?.on?.('click', handleProfileBlankClick)
 
         return () => {
             chart.off('mousemove', handleFlythroughProfileHover)
             chart.off('globalout', handleFlythroughProfileLeave)
+            zr?.off?.('click', handleProfileBlankClick)
         }
-    }, [handleFlythroughProfileHover, handleFlythroughProfileLeave, preview])
+    }, [
+        handleFlythroughProfileHover,
+        handleFlythroughProfileLeave,
+        handleProfileBlankClick,
+        preview,
+    ])
 
     useEffect(() => {
         if (preview || !lgs.stores.flythrough) {
@@ -1223,8 +1361,9 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
                 }
                 lastUpdate = performance.now()
                 chart.setOption(option, {
-                    lazyUpdate: false,
-                    silent:     true,
+                    replaceMerge: ['graphic'],
+                    lazyUpdate:   false,
+                    silent:       true,
                 })
             })
         }
@@ -1357,7 +1496,28 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
                 overflow:        'hidden',
             }}
         >
-            <div ref={_chartDom} className="echarts-for-react" style={{width: '100%', height: '100%'}}/>
+            <div
+                ref={_chartDom}
+                className="echarts-for-react"
+                style={{width: '100%', height: '100%'}}
+            />
+            <div ref={_profileMetricBadge} className="profile-chart-metric-badge profile-chart-metric-badge--hidden">
+                <span className="profile-chart-metric-badge__chevron" aria-hidden="true">
+                    <WaIcon name="chevron-left" variant="solid"/>
+                </span>
+                <span className="profile-chart-metric-badge__value" data-profile-metric="covered"/>
+                <span className="profile-chart-metric-badge__separator" aria-hidden="true"/>
+                <span className="profile-chart-metric-badge__altitude">
+                    <WaIcon name="mountains" variant="regular"/>
+                    {'\u00a0'}
+                    <span data-profile-metric="altitude"/>
+                </span>
+                <span className="profile-chart-metric-badge__separator" aria-hidden="true"/>
+                <span className="profile-chart-metric-badge__value" data-profile-metric="remaining"/>
+                <span className="profile-chart-metric-badge__chevron" aria-hidden="true">
+                    <WaIcon name="chevron-right" variant="solid"/>
+                </span>
+            </div>
         </div>
     )
 }

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-05-04
- * Last modified: 2026-05-04
+ * Created on: 2026-05-10
+ * Last modified: 2026-05-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -78,7 +78,7 @@ const FlythroughColorField = ({label, ariaLabel = label || 'Color', color, opaci
         <div className="flythrough-color-control">
             <WaColorPicker
                 className="flythrough-color-picker"
-                size="small"
+                size="s"
                 aria-label={ariaLabel}
                 value={color}
                 swatches={swatches}
@@ -86,7 +86,7 @@ const FlythroughColorField = ({label, ariaLabel = label || 'Color', color, opaci
             />
             <WaSlider
                 className="flythrough-opacity-slider"
-                size="small"
+                size="s"
                 label="Opacity"
                 min="0"
                 max="1"
@@ -107,7 +107,7 @@ const FlythroughWidthField = ({label, unit = 'm', value, min, max, step, onInput
     <FlythroughStyleField label={`${label} (${unit})`}>
         <WaNumberInput
             className="flythrough-width-input"
-            size="small"
+            size="s"
             appearance="filled"
             min={min}
             max={max}
@@ -378,6 +378,12 @@ export const FlythroughDrawer = memo(() => {
                                  <WaCard appearance="outlined" className="flythrough-progress-card-in-drawer">
                                      <FlythroughProgressBar className="flythrough-progress-bar-in-drawer"/>
                                  </WaCard>
+                                 <WaSwitch label-at-start size="xs">
+                                     {'Export to video'}
+                                     <span slot="hint">
+                                         {'You can configure your video before viewing it, and then save/share it.'}
+                                     </span>
+                                 </WaSwitch>
                                  <WaTabGroup className="flythrough-tabs">
                                      <WaTab slot="nav" panel="runner">
                                          <WaIcon name="clock" variant="regular"/>
@@ -395,7 +401,7 @@ export const FlythroughDrawer = memo(() => {
                                                      <WaNumberInput
                                                          className="flythrough-duration-input"
                                                          label="Duration (s)"
-                                                         size="small"
+                                                         size="s"
                                                          appearance="filled"
                                                          min="1"
                                                          step="1"
@@ -404,7 +410,8 @@ export const FlythroughDrawer = memo(() => {
                                                          onInput={updateDuration}
                                                      />
 
-                                                     <WaSwitch size="xsmall" label-at-start checked={flythroughSettings.loop}
+                                                     <WaSwitch size="xs" label-at-start
+                                                               checked={flythroughSettings.loop}
                                                                onInput={updateLoop}>
                                                          {'Loop'}
                                                      </WaSwitch>
@@ -450,7 +457,7 @@ export const FlythroughDrawer = memo(() => {
                                                      <div className="flythrough-style-control-group">
                                                          <WaSwitch
                                                              className="flythrough-track-style-switch"
-                                                             size="xsmall"
+                                                             size="xs"
                                                              label-at-start
                                                              checked={profileInfoUseTrackStyle}
                                                              onChange={updateProfileInfoUseTrackStyle}
@@ -481,7 +488,7 @@ export const FlythroughDrawer = memo(() => {
                                                              <div className="flythrough-color-control">
                                                                  <WaColorPicker
                                                                      className="flythrough-color-picker"
-                                                                     size="small"
+                                                                     size="s"
                                                                      aria-label="Profile info text color"
                                                                      value={profileInfoColor}
                                                                      swatches={swatches}
