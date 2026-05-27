@@ -25,7 +25,7 @@ import {
     WaButton, WaCallout, WaCard, WaDivider, WaDropdown, WaDropdownItem, WaIcon, WaTooltip,
 }                                        from '@web.awesome.me/webawesome-pro/dist/react'
 import parse               from 'html-react-parser'
-import React, { Fragment, useRef, useLayoutEffect } from 'react'
+import { Fragment, useRef, useLayoutEffect } from 'react'
 
 import { useSnapshot }                   from 'valtio'
 import { DEFAULT_LAYERS_COLOR_SETTINGS } from '@Core/constants'
@@ -81,7 +81,7 @@ export const SelectEntity = (props) => {
         const handleSelect = async (event) => {
             event.preventDefault()
             switch (event.detail.item.value) {
-                case 'remove':
+                case 'remove': {
                     const confirmation = await confirmRemoveToken()
                     if (confirmation) {
                         $entity.usage.token = ''
@@ -89,6 +89,7 @@ export const SelectEntity = (props) => {
                         await lgs.db.vault.put($entity.id, $entity.usage.token, VAULT_STORE)
                     }
                     break
+                }
                 case 'update':
                     $editor.layer.tmpEntity = $entity
                     $editor.layer.tokenDialog = true
@@ -197,22 +198,18 @@ export const SelectEntity = (props) => {
         )
     }
 
-    const list = props.list
-    list.map((entity, index) => {
-        entity.providerName = __.layersAndTerrainManager.providers.get(entity.provider).name
-        list[index] = entity
-    })
+    const list = props.list.map(entity => ({
+        ...entity,
+        providerName: __.layersAndTerrainManager.providers.get(entity.provider).name,
+    }))
 
     const selectEntityHandler = (event) => {
-        let type = event.target.getAttribute('type')
-        let id = event.target.getAttribute('name')
+        let type = event.currentTarget?.getAttribute('type') ?? event.target.getAttribute('type')
+        let id = event.currentTarget?.getAttribute('name') ?? event.target.getAttribute('name')
 
-        if (type === null || id === null) {
-            const _parent = event.target.parentElement
-            if (_parent) {
-                type = _parent.getAttribute('type')
-                id = _parent.getAttribute('name')
-            }
+        if ((type === null || id === null) && event.target.parentElement) {
+            type = type ?? event.target.parentElement.getAttribute('type')
+            id = id ?? event.target.parentElement.getAttribute('name')
         }
 
         if (type === null || id === null) {
@@ -220,13 +217,18 @@ export const SelectEntity = (props) => {
         }
 
         const $entity = __.layersAndTerrainManager.getALayer(id)
+        if (!$entity) {
+            return
+        }
+
+        const isSelectedOverlay = type === OVERLAY_ENTITY && layers[type] === id
         if ($entity.usage.type === FREE_ANONYMOUS_ACCESS) {
-            $layers[type] = (type === OVERLAY_ENTITY && lgs.settings.$layers[type] === id) ? '' : id
+            $layers[type] = isSelectedOverlay ? '' : id
         }
         else {
             const theProxy = __.layersAndTerrainManager.getEntityProxy(id)
             if (theProxy.usage.unlocked) {
-                $layers[type] = (type === OVERLAY_ENTITY && layers[type] === id) ? '' : id
+                $layers[type] = isSelectedOverlay ? '' : id
                 $editor.layer.tokenDialog = false
             }
             else {
@@ -247,7 +249,6 @@ export const SelectEntity = (props) => {
         }
     }
 
-    $editor.layer.refreshList = true
     const fill = list.length > 0
     let classes = ['layer-entities-wrapper']
     classes.push(layers.filter.provider ? 'by-provider' : 'by-layer')
