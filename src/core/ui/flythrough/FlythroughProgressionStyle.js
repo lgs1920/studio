@@ -25,6 +25,13 @@ export const FLYTHROUGH_PROFILE_MARKER_BORDER_MAX_WIDTH = 12
 export const FLYTHROUGH_LABEL = 'Flythrough'
 export const DEFAULT_FLYTHROUGH_SCOPE = 'all-tracks'
 export const DEFAULT_FLYTHROUGH_DURATION = 60
+export const FLYTHROUGH_TRACE_MODE_PROGRESSIVE = 'progressive'
+export const FLYTHROUGH_TRACE_MODE_FULL = 'full'
+export const FLYTHROUGH_MARKER_MODE_TRACE = 'trace'
+export const FLYTHROUGH_MARKER_MODE_NAVIGATION = 'navigation'
+export const FLYTHROUGH_MARKER_MODE_HYSTERESIS = 'hysteresis'
+export const FLYTHROUGH_CAMERA_ALTITUDE_CONSTANT = 'constant'
+export const FLYTHROUGH_CAMERA_ALTITUDE_GROUND_OFFSET = 'ground-offset'
 
 export const DEFAULT_FLYTHROUGH_PROGRESSION = {
     fill:   {
@@ -46,12 +53,43 @@ export const DEFAULT_FLYTHROUGH_PROFILE_INFO = {
     useTrackStyle: false,
 }
 
+export const DEFAULT_FLYTHROUGH_TRACE = {
+    mode:      FLYTHROUGH_TRACE_MODE_PROGRESSIVE,
+    remaining: {
+        color:   '#6f7d8c',
+        opacity: 0.45,
+    },
+}
+
+export const DEFAULT_FLYTHROUGH_MARKER = {
+    mode: FLYTHROUGH_MARKER_MODE_TRACE,
+}
+
+export const DEFAULT_FLYTHROUGH_CAMERA = {
+    keepNorth:     true,
+    altitudeMode:  FLYTHROUGH_CAMERA_ALTITUDE_CONSTANT,
+    altitude:      1200,
+    groundOffset:  800,
+    pitch:         -65,
+    hysteresis:    {
+        marginRatio:   0.2,
+        easing:        0.14,
+        stopThreshold: 0.00001,
+    },
+}
+
 export const defaultFlythroughProgressionStyle = () => ({
     fill:   {...DEFAULT_FLYTHROUGH_PROGRESSION.fill},
     border: {...DEFAULT_FLYTHROUGH_PROGRESSION.border},
 })
 
 export const defaultFlythroughProfileInfoStyle = () => ({...DEFAULT_FLYTHROUGH_PROFILE_INFO})
+export const defaultFlythroughTraceStyle = () => ({
+    mode:      DEFAULT_FLYTHROUGH_TRACE.mode,
+    remaining: {...DEFAULT_FLYTHROUGH_TRACE.remaining},
+})
+export const defaultFlythroughMarkerStyle = () => ({...DEFAULT_FLYTHROUGH_MARKER})
+export const defaultFlythroughCameraStyle = () => ({...DEFAULT_FLYTHROUGH_CAMERA})
 
 export const defaultFlythroughSettings = () => ({
     duration:    DEFAULT_FLYTHROUGH_DURATION,
@@ -60,6 +98,9 @@ export const defaultFlythroughSettings = () => ({
     scope:       DEFAULT_FLYTHROUGH_SCOPE,
     progression: defaultFlythroughProgressionStyle(),
     profileInfo: defaultFlythroughProfileInfoStyle(),
+    trace:       defaultFlythroughTraceStyle(),
+    marker:      defaultFlythroughMarkerStyle(),
+    camera:      defaultFlythroughCameraStyle(),
 })
 
 const finiteNumber = value => {
@@ -117,6 +158,62 @@ export const normalizeFlythroughProfileInfo = (profileInfo = {}) => ({
     useTrackStyle: profileInfo?.useTrackStyle === true,
 })
 
+export const normalizeFlythroughTrace = (trace = {}) => {
+    const remaining = trace?.remaining ?? {}
+    return {
+        mode:      trace?.mode === FLYTHROUGH_TRACE_MODE_FULL
+                   ? FLYTHROUGH_TRACE_MODE_FULL
+                   : FLYTHROUGH_TRACE_MODE_PROGRESSIVE,
+        remaining: {
+            color:   remaining.color ?? DEFAULT_FLYTHROUGH_TRACE.remaining.color,
+            opacity: clampFlythroughNumber(
+                remaining.opacity,
+                DEFAULT_FLYTHROUGH_TRACE.remaining.opacity,
+                0,
+                1,
+            ),
+        },
+    }
+}
+
+export const normalizeFlythroughMarker = (marker = {}) => ({
+    mode: marker?.mode === FLYTHROUGH_MARKER_MODE_NAVIGATION
+          ? FLYTHROUGH_MARKER_MODE_NAVIGATION
+          : marker?.mode === FLYTHROUGH_MARKER_MODE_HYSTERESIS || marker?.mode === 'centered'
+            ? FLYTHROUGH_MARKER_MODE_HYSTERESIS
+            : FLYTHROUGH_MARKER_MODE_TRACE,
+})
+
+export const normalizeFlythroughCamera = (camera = {}) => ({
+    keepNorth:    camera?.keepNorth !== false,
+    altitudeMode: camera?.altitudeMode === FLYTHROUGH_CAMERA_ALTITUDE_GROUND_OFFSET
+                  ? FLYTHROUGH_CAMERA_ALTITUDE_GROUND_OFFSET
+                  : FLYTHROUGH_CAMERA_ALTITUDE_CONSTANT,
+    altitude:     clampFlythroughNumber(camera?.altitude, DEFAULT_FLYTHROUGH_CAMERA.altitude, 50, 100000),
+    groundOffset: clampFlythroughNumber(camera?.groundOffset, DEFAULT_FLYTHROUGH_CAMERA.groundOffset, 10, 100000),
+    pitch:        clampFlythroughNumber(camera?.pitch, DEFAULT_FLYTHROUGH_CAMERA.pitch, -89, -5),
+    hysteresis:   {
+        marginRatio: clampFlythroughNumber(
+            camera?.hysteresis?.marginRatio,
+            DEFAULT_FLYTHROUGH_CAMERA.hysteresis.marginRatio,
+            0.05,
+            0.45,
+        ),
+        easing: clampFlythroughNumber(
+            camera?.hysteresis?.easing,
+            DEFAULT_FLYTHROUGH_CAMERA.hysteresis.easing,
+            0.02,
+            0.5,
+        ),
+        stopThreshold: clampFlythroughNumber(
+            camera?.hysteresis?.stopThreshold,
+            DEFAULT_FLYTHROUGH_CAMERA.hysteresis.stopThreshold,
+            0.000001,
+            0.001,
+        ),
+    },
+})
+
 export const normalizeFlythroughSettings = (settings = {}) => {
     const duration = finiteNumber(settings?.duration) ?? DEFAULT_FLYTHROUGH_DURATION
 
@@ -127,6 +224,9 @@ export const normalizeFlythroughSettings = (settings = {}) => {
         scope:       DEFAULT_FLYTHROUGH_SCOPE,
         progression: normalizeFlythroughProgressionStyle(settings?.progression),
         profileInfo: normalizeFlythroughProfileInfo(settings?.profileInfo),
+        trace:       normalizeFlythroughTrace(settings?.trace),
+        marker:      normalizeFlythroughMarker(settings?.marker),
+        camera:      normalizeFlythroughCamera(settings?.camera),
     }
 }
 

@@ -14,6 +14,8 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
+import { recordFlythroughDebug } from './FlythroughDebug'
+
 export const FLYTHROUGH_EVENT_START = 'flythrough/start'
 export const FLYTHROUGH_EVENT_UPDATE = 'flythrough/update'
 export const FLYTHROUGH_EVENT_PAUSE = 'flythrough/pause'
@@ -163,6 +165,11 @@ export class FlythroughPlaybackController {
 
         const sample = this.currentSample()
         this.#syncStore(sample, {force: true})
+        recordFlythroughDebug('flythrough:start', {
+            progress: this.#progress,
+            duration: this.#duration,
+            distance: sample?.distanceFromStart,
+        })
         this.#emit(FLYTHROUGH_EVENT_START, sample)
         this.#emit(FLYTHROUGH_EVENT_UPDATE, sample)
         this.#schedule()
@@ -179,6 +186,12 @@ export class FlythroughPlaybackController {
         this.#cancelCurrentFrame()
         const sample = this.currentSample()
         this.#syncStore(sample, {force: true})
+        recordFlythroughDebug('flythrough:pause', {
+            progress: this.#progress,
+            duration: this.#duration,
+            distance: sample?.distanceFromStart,
+            forceLog: true,
+        })
         this.#emit(FLYTHROUGH_EVENT_PAUSE, sample)
         return sample
     }
@@ -196,6 +209,12 @@ export class FlythroughPlaybackController {
         this.#paused = false
         const sample = this.currentSample()
         this.#syncStore(sample, {force: true})
+        recordFlythroughDebug('flythrough:resume', {
+            progress: this.#progress,
+            duration: this.#duration,
+            distance: sample?.distanceFromStart,
+            forceLog: true,
+        })
         this.#emit(FLYTHROUGH_EVENT_RESUME, sample)
         this.#schedule()
         return sample
@@ -215,6 +234,12 @@ export class FlythroughPlaybackController {
         }
         const sample = this.currentSample()
         this.#syncStore(sample, {force: true})
+        recordFlythroughDebug('flythrough:stop', {
+            progress: this.#progress,
+            duration: this.#duration,
+            distance: sample?.distanceFromStart,
+            forceLog: true,
+        })
         if (emit) {
             this.#emit(FLYTHROUGH_EVENT_STOP, sample)
         }
@@ -228,6 +253,12 @@ export class FlythroughPlaybackController {
         }
         const sample = this.currentSample()
         this.#syncStore(sample, {force: true})
+        recordFlythroughDebug('flythrough:seek', {
+            progress: this.#progress,
+            duration: this.#duration,
+            distance: sample?.distanceFromStart,
+            forceLog: true,
+        })
         this.#emit(FLYTHROUGH_EVENT_UPDATE, sample)
         return sample
     }
@@ -271,6 +302,13 @@ export class FlythroughPlaybackController {
             this.#progress = this.#progressFromElapsed(elapsed)
             const sample = this.currentSample()
             this.#syncStore(sample)
+            recordFlythroughDebug('playback:update', {
+                progress: this.#progress,
+                duration: this.#duration,
+                elapsedMs: elapsed,
+                distance: sample?.distanceFromStart,
+                reachedEnd,
+            })
             this.#emit(FLYTHROUGH_EVENT_UPDATE, sample)
             globalThis.lgs?.scene?.requestRender?.()
 
@@ -287,6 +325,12 @@ export class FlythroughPlaybackController {
                 this.#paused = false
                 this.#frame = null
                 this.#syncStore(sample, {force: true})
+                recordFlythroughDebug('flythrough:end', {
+                    progress: this.#progress,
+                    duration: this.#duration,
+                    distance: sample?.distanceFromStart,
+                    forceLog: true,
+                })
                 this.#emit(FLYTHROUGH_EVENT_END, sample)
                 return
             }

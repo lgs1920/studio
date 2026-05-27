@@ -354,6 +354,23 @@ ui:
         profileMarker: 2
     profileInfo:
       color: '#ffffff'
+    trace:
+      mode: progressive
+      remaining:
+        color: '#6f7d8c'
+        opacity: 0.45
+    marker:
+      mode: trace
+    camera:
+      keepNorth: true
+      altitudeMode: constant
+      altitude: 1200
+      groundOffset: 800
+      pitch: -65
+      hysteresis:
+        marginRatio: 0.2
+        easing: 0.14
+        stopThreshold: 0.00001
 
   ## JourneyToolbar
   journeyToolbar:

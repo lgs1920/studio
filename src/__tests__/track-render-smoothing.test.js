@@ -51,7 +51,7 @@ describe('track render smoothing', () => {
         })
         expect(normalizeTrackRenderSmoothing({enabled: false, step: 12})).toEqual({
             enabled: false,
-            step:    4,
+            step:    6,
         })
     })
 

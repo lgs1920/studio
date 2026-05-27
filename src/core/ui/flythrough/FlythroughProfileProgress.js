@@ -88,6 +88,45 @@ export const convertFlythroughDistance = (distance, unitSystem = INTERNATIONAL) 
 export const convertFlythroughElevation = (altitude, unitSystem = INTERNATIONAL) =>
     UnitUtils.convert(altitude ?? 0).to(ELEVATION_UNITS[unitSystem] ?? ELEVATION_UNITS[INTERNATIONAL])
 
+export const buildFlythroughProfileMetricSummary = (sample, {
+    totalDistance = 0,
+    direction = 1,
+    unitSystem = INTERNATIONAL,
+    distancePrecision = 1,
+    elevationPrecision = 0,
+} = {}) => {
+    if (!sample) {
+        return null
+    }
+
+    const normalizedDirection = Number(direction) < 0 ? -1 : 1
+    const coveredDistance = normalizedDirection < 0
+                            ? (sample.remainingDistance ?? Math.max(0, totalDistance - (sample.distanceFromStart ?? 0)))
+                            : (sample.distanceFromStart ?? 0)
+    const remainingDistance = Math.max(0, totalDistance - coveredDistance)
+
+    return {
+        coveredDistance,
+        remainingDistance,
+        altitude: sample.altitude ?? sample.height ?? 0,
+        covered: UnitUtils.formatMetric(coveredDistance, {
+            units:     DISTANCE_UNITS,
+            unitSystem,
+            precision: distancePrecision,
+        }).full.trim(),
+        altitudeLabel: UnitUtils.formatMetric(sample.altitude ?? sample.height ?? 0, {
+            units:     ELEVATION_UNITS,
+            unitSystem,
+            precision: elevationPrecision,
+        }).full.trim(),
+        remaining: UnitUtils.formatMetric(remainingDistance, {
+            units:     DISTANCE_UNITS,
+            unitSystem,
+            precision: distancePrecision,
+        }).full.trim(),
+    }
+}
+
 export const flythroughProfileRowFromSample = (sample, {
     dimensions,
     unitSystem = INTERNATIONAL,

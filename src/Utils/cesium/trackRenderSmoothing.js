@@ -20,7 +20,7 @@ export const TRACK_RENDER_SMOOTHING_DEFAULT = Object.freeze({
 })
 
 export const TRACK_RENDER_SMOOTHING_MIN_STEP = 1
-export const TRACK_RENDER_SMOOTHING_MAX_STEP = 4
+export const TRACK_RENDER_SMOOTHING_MAX_STEP = 6
 
 const LINE_STRING = 'LineString'
 const MULTI_LINE_STRING = 'MultiLineString'

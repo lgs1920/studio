@@ -22,6 +22,12 @@ import {
 import {
     FlythroughPathSampler, FLYTHROUGH_SCOPE_ALL_TRACKS, FLYTHROUGH_SCOPE_CURRENT_TRACK, FLYTHROUGH_SCOPE_VISIBLE_TRACKS,
 } from '@Core/ui/flythrough/FlythroughPathSampler'
+import {
+    FLYTHROUGH_MARKER_MODE_HYSTERESIS,
+    FLYTHROUGH_MARKER_MODE_NAVIGATION,
+    FLYTHROUGH_MARKER_MODE_TRACE,
+    normalizeFlythroughMarker,
+} from '@Core/ui/flythrough/FlythroughProgressionStyle'
 
 const makeTrack = ({
                        slug,
@@ -428,5 +434,17 @@ describe('flythrough phase 1 playback controller', () => {
         finally {
             globalThis.lgs = previousLgs
         }
+    })
+})
+
+describe('flythrough settings normalization', () => {
+    it('maps the legacy centered marker mode to hysteresis', () => {
+        expect(normalizeFlythroughMarker({mode: 'centered'}).mode).toBe(FLYTHROUGH_MARKER_MODE_HYSTERESIS)
+    })
+
+    it('keeps supported marker tracking modes', () => {
+        expect(normalizeFlythroughMarker({mode: FLYTHROUGH_MARKER_MODE_TRACE}).mode).toBe(FLYTHROUGH_MARKER_MODE_TRACE)
+        expect(normalizeFlythroughMarker({mode: FLYTHROUGH_MARKER_MODE_NAVIGATION}).mode).toBe(FLYTHROUGH_MARKER_MODE_NAVIGATION)
+        expect(normalizeFlythroughMarker({mode: FLYTHROUGH_MARKER_MODE_HYSTERESIS}).mode).toBe(FLYTHROUGH_MARKER_MODE_HYSTERESIS)
     })
 })
