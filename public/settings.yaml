@@ -357,8 +357,9 @@ ui:
     trace:
       mode: progressive
       remaining:
+        useDefinedTrackStyle: true
         color: '#6f7d8c'
-        opacity: 0.45
+        opacity: 0.35
     marker:
       mode: trace
     camera:

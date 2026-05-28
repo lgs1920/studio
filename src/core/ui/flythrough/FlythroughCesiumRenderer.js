@@ -7,42 +7,32 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-05-04
- * Last modified: 2026-05-04
+ * Created on: 2026-05-28
+ * Last modified: 2026-05-28
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import {
-    CallbackProperty,
-    Cartesian3,
-    Color,
-    CustomDataSource,
-    ArcType,
-    HeightReference,
-    ExtrapolationType,
-    JulianDate,
-    LinearApproximation,
-    SampledPositionProperty,
-} from 'cesium'
-import {
-    FLYTHROUGH_TRACE_MODE_FULL,
-    getFlythroughSettings,
-    normalizeFlythroughProgressionStyle,
-    normalizeFlythroughTrace,
-} from './FlythroughProgressionStyle'
-import { isFlythroughDebugEnabled, recordFlythroughDebug } from './FlythroughDebug'
 import { normalizeTrackRenderSmoothing, smoothCoordinateSegment } from '@Utils/cesium/trackRenderSmoothing'
+import { TrackUtils }                                              from '@Utils/cesium/TrackUtils'
+import {
+    ArcType, CallbackProperty, Cartesian3, Color, CustomDataSource, ExtrapolationType, HeightReference, JulianDate,
+    LinearApproximation, SampledPositionProperty,
+}                                                                 from 'cesium'
+import { isFlythroughDebugEnabled, recordFlythroughDebug }        from './FlythroughDebug'
+import {
+    FLYTHROUGH_TRACE_MODE_FULL, getFlythroughSettings, normalizeFlythroughProgressionStyle, normalizeFlythroughTrace,
+}                                                                 from './FlythroughProgressionStyle'
 
 export const FLYTHROUGH_DATA_SOURCE_PREFIX = 'flythrough'
 
 const DEFAULT_COLOR = '#ff6a00'
 const DEFAULT_BORDER = '#FFFFFF'
+
 const CURSOR_MIN_RADIUS_METERS = 0.1
 const MIN_PROGRESS_WIDTH = 3
 const MIN_PROGRESS_BORDER_WIDTH = 1
-const PROGRESS_Z_INDEX_REMAINING_BORDER = 38
 const PROGRESS_Z_INDEX_REMAINING_FILL = 39
 const PROGRESS_Z_INDEX_BORDER = 40
 const PROGRESS_Z_INDEX_FILL = 41
@@ -642,11 +632,17 @@ export class FlythroughCesiumRenderer {
             cursorColor:    cssColor(fillColor, Color.fromCssColorString(DEFAULT_COLOR)).withAlpha(Math.max(0.85, fill.opacity)),
             borderColor:    cssColor(borderColor, Color.WHITE).withAlpha(border.opacity),
             remainingColor: cssColor(remaining.color, Color.GRAY).withAlpha(remaining.opacity),
+            remainingUseDefinedTrackStyle: remaining.useDefinedTrackStyle !== false,
             fillWidth:      Math.max(MIN_PROGRESS_WIDTH, fill.width),
             borderWidth:    Math.max(MIN_PROGRESS_BORDER_WIDTH, border.width),
             cursorDiameter:  Math.max(CURSOR_MIN_RADIUS_METERS * 2, fill.width),
             cursorBorder:    Math.max(0, border.width),
         }
+    }
+
+    #trackStyleForSegment = (segment) => {
+        const track = this.#sampler?.journey?.tracks?.get?.(segment?.trackSlug)
+        return TrackUtils.getTrackRenderStyle(track)
     }
 
     #updateCursor = (sample) => {
@@ -1054,25 +1050,19 @@ export class FlythroughCesiumRenderer {
         const smoothedPositions = this.#smoothedGroundPositions()
         if (smoothedPositions.length >= 2) {
             const fillWidth = style.fillWidth
-            const borderWidth = Math.max(fillWidth + (style.borderWidth * 2), fillWidth + 2)
-            const activeKeys = new Set([`${REMAINING_KEY_PREFIX}smoothed#border`, `${REMAINING_KEY_PREFIX}smoothed#fill`])
+            const activeKeys = new Set([`${REMAINING_KEY_PREFIX}smoothed#fill`])
+            const trackStyle = style.remainingUseDefinedTrackStyle ? this.#trackStyleForSegment(this.#sampler?.segments?.[0]) : null
+            const remainingMaterial = style.remainingUseDefinedTrackStyle && trackStyle
+                                      ? TrackUtils.createTrackMaterial(trackStyle, trackStyle.color)
+                                      : style.remainingColor
             const playing = globalThis.lgs?.stores?.flythrough?.playing === true
             if (playing) {
-                this.#upsertDynamicPolyline({
-                    key:       `${REMAINING_KEY_PREFIX}smoothed#border`,
-                    id:        `${source.name}#remaining#smoothed#border`,
-                    name:      'Flythrough remaining track border',
-                    positionsFactory: this.#liveRemainingSmoothedPositions,
-                    material:  style.borderColor.withAlpha(Math.min(1, style.remainingColor.alpha + 0.25)),
-                    width:     borderWidth,
-                    zIndex:    PROGRESS_Z_INDEX_REMAINING_BORDER,
-                })
                 this.#upsertDynamicPolyline({
                     key:       `${REMAINING_KEY_PREFIX}smoothed#fill`,
                     id:        `${source.name}#remaining#smoothed#fill`,
                     name:      'Flythrough remaining track',
                     positionsFactory: this.#liveRemainingSmoothedPositions,
-                    material:  style.remainingColor,
+                    material:  remainingMaterial,
                     width:     fillWidth,
                     zIndex:    PROGRESS_Z_INDEX_REMAINING_FILL,
                 })
@@ -1081,20 +1071,11 @@ export class FlythroughCesiumRenderer {
             }
 
             this.#upsertDynamicPolyline({
-                key:      `${REMAINING_KEY_PREFIX}smoothed#border`,
-                id:       `${source.name}#remaining#smoothed#border`,
-                name:     'Flythrough remaining track border',
-                positionsFactory: this.#remainingSmoothedPositions,
-                material: style.borderColor.withAlpha(Math.min(1, style.remainingColor.alpha + 0.25)),
-                width:    borderWidth,
-                zIndex:   PROGRESS_Z_INDEX_REMAINING_BORDER,
-            })
-            this.#upsertDynamicPolyline({
                 key:      `${REMAINING_KEY_PREFIX}smoothed#fill`,
                 id:       `${source.name}#remaining#smoothed#fill`,
                 name:     'Flythrough remaining track',
                 positionsFactory: this.#remainingSmoothedPositions,
-                material: style.remainingColor,
+                material: remainingMaterial,
                 width:    fillWidth,
                 zIndex:   PROGRESS_Z_INDEX_REMAINING_FILL,
             })
@@ -1109,22 +1090,13 @@ export class FlythroughCesiumRenderer {
         segments.forEach(segment => {
             const positions = this.#groundPositionsFromCoordinates(segment.coordinates ?? [])
             const fillWidth = style.fillWidth
-            const borderWidth = Math.max(fillWidth + (style.borderWidth * 2), fillWidth + 2)
             if (positions.length < 2) {
                 return
             }
-
-            const borderKey = `${REMAINING_KEY_PREFIX}${segment.key}#border`
-            activeKeys.add(borderKey)
-            this.#upsertPolyline({
-                                     key:      borderKey,
-                                     id:       `${source.name}#remaining#${segment.key}#border`,
-                                     name:     'Flythrough remaining track border',
-                                     positions,
-                                     material: style.borderColor.withAlpha(Math.min(1, style.remainingColor.alpha + 0.25)),
-                                     width:    borderWidth,
-                                     zIndex:   PROGRESS_Z_INDEX_REMAINING_BORDER,
-                                 })
+            const trackStyle = style.remainingUseDefinedTrackStyle ? this.#trackStyleForSegment(segment) : null
+            const remainingMaterial = style.remainingUseDefinedTrackStyle && trackStyle
+                                      ? TrackUtils.createTrackMaterial(trackStyle, trackStyle.color)
+                                      : style.remainingColor
 
             const fillKey = `${REMAINING_KEY_PREFIX}${segment.key}#fill`
             activeKeys.add(fillKey)
@@ -1133,7 +1105,7 @@ export class FlythroughCesiumRenderer {
                 id:       `${source.name}#remaining#${segment.key}#fill`,
                 name:     'Flythrough remaining track',
                 positions,
-                material: style.remainingColor,
+                material: remainingMaterial,
                 width:    fillWidth,
                 zIndex:   PROGRESS_Z_INDEX_REMAINING_FILL,
             })

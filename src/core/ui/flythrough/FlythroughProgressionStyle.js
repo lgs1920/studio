@@ -56,8 +56,9 @@ export const DEFAULT_FLYTHROUGH_PROFILE_INFO = {
 export const DEFAULT_FLYTHROUGH_TRACE = {
     mode:      FLYTHROUGH_TRACE_MODE_PROGRESSIVE,
     remaining: {
-        color:   '#6f7d8c',
-        opacity: 0.45,
+        useDefinedTrackStyle: true,
+        color:                '#6f7d8c',
+        opacity:              0.45,
     },
 }
 
@@ -165,8 +166,9 @@ export const normalizeFlythroughTrace = (trace = {}) => {
                    ? FLYTHROUGH_TRACE_MODE_FULL
                    : FLYTHROUGH_TRACE_MODE_PROGRESSIVE,
         remaining: {
-            color:   remaining.color ?? DEFAULT_FLYTHROUGH_TRACE.remaining.color,
-            opacity: clampFlythroughNumber(
+            useDefinedTrackStyle: remaining.useDefinedTrackStyle !== false,
+            color:                remaining.color ?? DEFAULT_FLYTHROUGH_TRACE.remaining.color,
+            opacity:              clampFlythroughNumber(
                 remaining.opacity,
                 DEFAULT_FLYTHROUGH_TRACE.remaining.opacity,
                 0,

@@ -201,6 +201,7 @@ export const FlythroughDrawer = memo(() => {
     const profileInfoColor = toOpaqueColorValue(profileInfo.color)
     const profileInfoUseTrackStyle = profileInfo.useTrackStyle
     const trace = normalizeFlythroughTrace(flythroughSettings.trace)
+    const remainingUseDefinedTrackStyle = trace.remaining.useDefinedTrackStyle !== false
     const remainingColor = toOpaqueColorValue(trace.remaining.color)
     const camera = normalizeFlythroughCamera(flythroughSettings.camera)
     const marker = normalizeFlythroughMarker(flythroughSettings.marker)
@@ -402,6 +403,10 @@ export const FlythroughDrawer = memo(() => {
         updateTrace({remaining: {opacity: clampFlythroughNumber(event.target.value, trace.remaining.opacity, 0, 1)}})
     }, [trace.remaining.opacity, updateTrace])
 
+    const updateRemainingUseDefinedTrackStyle = useCallback((event) => {
+        updateTrace({remaining: {useDefinedTrackStyle: event.target.checked}})
+    }, [updateTrace])
+
     const updateKeepNorth = useCallback((event) => {
         updateCamera({keepNorth: event.target.checked})
     }, [updateCamera])
@@ -497,13 +502,24 @@ export const FlythroughDrawer = memo(() => {
                                  <WaCard appearance="outlined" className="flythrough-progress-card-in-drawer">
                                      <FlythroughProgressBar className="flythrough-progress-bar-in-drawer"/>
                                  </WaCard>
-                                 <WaSwitch label-at-start size="xs">
-                                     {'Export to video'}
-                                     <span slot="hint">
-                                         {'You can configure your video before viewing it, and then save/share it.'}
-                                     </span>
-                                 </WaSwitch>
-                                 <WaTabGroup className="flythrough-tabs">
+                                <WaSwitch label-at-start size="xs">
+                                    {'Export to video'}
+                                    <span slot="hint">
+                                        {'You can configure your video before viewing it, and then save/share it.'}
+                                    </span>
+                                </WaSwitch>
+                                <WaSelect
+                                    className="flythrough-progression-select"
+                                    label="Progression"
+                                    label-at-start
+                                    size="s"
+                                    value={trace.mode}
+                                    onChange={updateTraceMode}
+                                >
+                                    <WaOption value={FLYTHROUGH_TRACE_MODE_PROGRESSIVE}>{'Progressive'}</WaOption>
+                                    <WaOption value={FLYTHROUGH_TRACE_MODE_FULL}>{'Full trace'}</WaOption>
+                                </WaSelect>
+                                <WaTabGroup className="flythrough-tabs">
                                      <WaTab slot="nav" panel="runner">
                                          <WaIcon name="clock" variant="regular"/>
                                          {'Playback'}
@@ -639,33 +655,34 @@ export const FlythroughDrawer = memo(() => {
                                      <WaTabPanel name="edit">
                                          <LGSScrollbars>
                                              <div className="flythrough-tab-panel">
-                                                 <section className="flythrough-progression-section">
-                                                     <h3>{'Progression'}</h3>
-                                                     <div className="flythrough-style-control-group">
-                                                         <WaSelect
-                                                             label="Trace mode"
-                                                             label-at-start
-                                                             size="s"
-                                                             value={trace.mode}
-                                                             onChange={updateTraceMode}
-                                                         >
-                                                             <WaOption value={FLYTHROUGH_TRACE_MODE_PROGRESSIVE}>{'Progressive'}</WaOption>
-                                                             <WaOption value={FLYTHROUGH_TRACE_MODE_FULL}>{'Full trace'}</WaOption>
-                                                         </WaSelect>
-                                                         {trace.mode === FLYTHROUGH_TRACE_MODE_FULL && (
-                                                             <FlythroughColorField
-                                                                 label="Remaining trace"
-                                                                 color={remainingColor}
-                                                                 opacity={trace.remaining.opacity}
-                                                                 swatches={swatches}
-                                                                 onColorInput={updateRemainingColor}
-                                                                 onOpacityInput={updateRemainingOpacity}
-                                                             />
-                                                         )}
-                                                     </div>
-                                                     <WaDivider/>
-                                                     <FlythroughProgressionGroup
-                                                         title="Marker"
+                                                <section className="flythrough-progression-section">
+                                                    <h3>{'Progression'}</h3>
+                                                    <div className="flythrough-style-control-group">
+                                                        {trace.mode === FLYTHROUGH_TRACE_MODE_FULL && !remainingUseDefinedTrackStyle && (
+                                                            <FlythroughColorField
+                                                                label="Remaining trace"
+                                                                color={remainingColor}
+                                                                opacity={trace.remaining.opacity}
+                                                                swatches={swatches}
+                                                                onColorInput={updateRemainingColor}
+                                                                onOpacityInput={updateRemainingOpacity}
+                                                            />
+                                                        )}
+                                                    </div>
+                                                    {trace.mode === FLYTHROUGH_TRACE_MODE_FULL && (
+                                                        <WaSwitch
+                                                            className="flythrough-track-style-switch"
+                                                            size="xs"
+                                                            label-at-start
+                                                            checked={remainingUseDefinedTrackStyle}
+                                                            onChange={updateRemainingUseDefinedTrackStyle}
+                                                        >
+                                                            {'Use defined track style'}
+                                                        </WaSwitch>
+                                                    )}
+                                                    <WaDivider/>
+                                                    <FlythroughProgressionGroup
+                                                        title="Marker"
                                                          color={fillColor}
                                                          opacity={fillOpacity}
                                                          width={fillWidth}
