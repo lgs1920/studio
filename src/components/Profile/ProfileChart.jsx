@@ -280,6 +280,10 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
         () => normalizeFlythroughProfileInfo(flythroughSettings.profileInfo),
         [flythroughSettings.profileInfo],
     )
+    const flythroughProgression = useMemo(
+        () => normalizeFlythroughProgressionStyle(flythroughSettings.progression),
+        [flythroughSettings.progression],
+    )
     const flythroughTrace = useMemo(
         () => normalizeFlythroughTrace(flythroughSettings.trace),
         [flythroughSettings.trace],
@@ -810,24 +814,16 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
                                                              useTrackStyle: flythroughProfileInfo.useTrackStyle,
                                                          })
                     const rgbColor = lineModels[0]?.color ?? profileColor(option.color)
-                    const isFlythroughActive = Boolean(lgs.stores.flythrough?.active || lgs.stores.flythrough?.playing)
-                    const customRemainingStyle = flythroughTrace.remaining.useDefinedTrackStyle === false && isFlythroughActive
-                                                 ? {
-                                                     color:   profileColor(flythroughTrace.remaining.color, rgbColor),
-                                                     opacity: flythroughTrace.remaining.opacity,
-                                                 }
-                                                 : null
-                    const gradientColor = customRemainingStyle
-                                          ? customRemainingStyle.color
-                                          : (element.gradient?.color
-                                             ? colord(setColor(element.gradient)).toRgbString()
-                                             : rgbColor)
+                    const doneColor = profileColor(flythroughProgression.fill.color, rgbColor)
+                    const gradientColor = element.gradient?.color
+                                          ? colord(setColor(element.gradient)).toRgbString()
+                                          : doneColor
                     const fill = (element.gradient?.show ?? true)
                                  ? new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                                     {offset: 0.2, color: __.ui.ui.RGB2RGBA(gradientColor, customRemainingStyle?.opacity ?? 0.5)},
+                                     {offset: 0.2, color: __.ui.ui.RGB2RGBA(gradientColor, 0.5)},
                                      {offset: 1, color: __.ui.ui.RGB2RGBA(gradientColor, 0.0)},
                                  ])
-                                 : __.ui.ui.RGB2RGBA(gradientColor, customRemainingStyle?.opacity ?? 0.5)
+                                 : __.ui.ui.RGB2RGBA(gradientColor, 0.5)
 
                     return {
                         id:         dataset.id ?? option.dataset ?? index,
@@ -852,6 +848,12 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
         const samplePixel = chartPixelFromSample(sample, chart)
         const clipRight = samplePixel?.[0] ?? gridRect.x
         const clipWidth = Math.max(0, Math.min(gridRect.width, clipRight - gridRect.x))
+        const isFlythroughActive = Boolean(lgs.stores.flythrough?.active || lgs.stores.flythrough?.playing)
+        const showRemainingOverlay = isFlythroughActive
+                                     && flythroughTrace.remaining.useDefinedTrackStyle === false
+                                     && flythroughTrace.mode === 'full'
+        const remainingColor = profileColor(flythroughTrace.remaining.color, flythroughProgression.fill.color)
+        const doneColor = profileColor(flythroughProgression.fill.color, flythroughProgression.fill.color)
 
         const shouldReplaceChildren = _flythroughProfileGraphics.current.renderedKey !== cacheKey
         const graphic = {
@@ -892,40 +894,63 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
                     points: geometry.linePoints,
                     smooth: 0.35,
                 },
-                style:   profileGraphicLineStyle(lineModel),
+                style:   {
+                    ...profileGraphicLineStyle(lineModel),
+                    stroke: doneColor,
+                    opacity: 1,
+                },
             })),
-            ...(lgs.stores.flythrough?.active || lgs.stores.flythrough?.playing)
-                && flythroughTrace.remaining.useDefinedTrackStyle === false
-                ? geometry.lineModels.map(lineModel => ({
-                    id:      `${FLYTHROUGH_PROFILE_COMPLETED_GRAPHIC}:${geometry.id}:line:${lineModel.key}:ft`,
-                    type:    'polyline',
-                    silent:  true,
-                    z:       10,
-                    shape:   {
-                        points: geometry.linePoints,
-                        smooth: 0.35,
-                    },
-                    style:   {
-                        ...profileGraphicLineStyle(lineModel),
-                        stroke:  profileColor(flythroughTrace.remaining.color, lineModel.color),
-                        opacity: 1,
-                    },
-                }))
-                : [],
         ])
 
         if (shouldReplaceChildren) {
             _flythroughProfileGraphics.current.renderedKey = cacheKey
         }
 
-        return graphic
+        const remainingGraphic = showRemainingOverlay
+                                 ? {
+                                     id:      `${FLYTHROUGH_PROFILE_COMPLETED_GRAPHIC}:remaining`,
+                                     type:    'group',
+                                     $action: 'replace',
+                                     silent:  true,
+                                     z:       7,
+                                     clipPath: {
+                                         type:  'rect',
+                                         shape: {
+                                             x:      clipRight,
+                                             y:      gridRect.y,
+                                             width:  Math.max(0, gridRect.x + gridRect.width - clipRight),
+                                             height: gridRect.height,
+                                         },
+                                     },
+                                     children: geometries.flatMap(geometry => [
+                                         ...geometry.lineModels.map(lineModel => ({
+                                             id:      `${FLYTHROUGH_PROFILE_COMPLETED_GRAPHIC}:${geometry.id}:line:${lineModel.key}:remaining`,
+                                             type:    'polyline',
+                                             silent:  true,
+                                             z:       7,
+                                             shape:   {
+                                                 points: geometry.linePoints,
+                                                 smooth:  0.35,
+                                             },
+                                             style:   {
+                                                 ...profileGraphicLineStyle(lineModel),
+                                                 stroke:  remainingColor,
+                                                 opacity: 1,
+                                             },
+                                         })),
+                                     ]),
+                                 }
+                                 : null
+
+        return remainingGraphic ? [graphic, remainingGraphic] : [graphic]
     }, [
         chartPixelFromSample,
         data,
         element,
         flythroughProfileInfo.useTrackStyle,
+        flythroughProgression.fill.color,
+        flythroughTrace.mode,
         flythroughTrace.remaining.color,
-        flythroughTrace.remaining.opacity,
         flythroughTrace.remaining.useDefinedTrackStyle,
         processedDataset,
         profileTrackStyleKey,
@@ -994,14 +1019,10 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
         }
     }, [chartPixelFromSample, flythroughMarkerStyle])
 
-    const flythroughProfileInfoColor = useCallback(() => {
-        return colord(flythroughProfileInfo.color).toRgbString()
-    }, [flythroughProfileInfo.color])
-
     const lockedGuideGraphics = useCallback((sample, chart) => {
         const pixel = chartPixelFromSample(sample, chart)
         const gridRect = readChartGridRect(chart)
-        const color = colord(flythroughProfileInfoColor()).alpha(0.45).toRgbString()
+        const color = colord(flythroughMarkerStyle().color).alpha(0.7).toRgbString()
 
         if (!pixel || !gridRect) {
             return [
@@ -1064,7 +1085,7 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
                 },
             },
         ]
-    }, [chartPixelFromSample, flythroughProfileInfoColor])
+    }, [chartPixelFromSample, flythroughMarkerStyle])
 
     const flythroughMetricLabel = useCallback((sample, flythroughState) => {
         const summary = buildFlythroughProfileMetricSummary(sample, {
@@ -1157,7 +1178,8 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
         }
         const graphics = activeSample
                          ? [
-                             flythroughCompletedGraphics(activeSample, chart),
+                             ...flythroughCompletedGraphics(activeSample, chart),
+                             ...lockedGuideGraphics(activeSample, chart),
                              flythroughMarkerGraphic({
                                  id:     FLYTHROUGH_PROFILE_CURRENT_MARKER_GRAPHIC,
                                  sample: activeSample,
