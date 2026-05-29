@@ -26,8 +26,19 @@ import {
     FLYTHROUGH_MARKER_MODE_HYSTERESIS,
     FLYTHROUGH_MARKER_MODE_NAVIGATION,
     FLYTHROUGH_MARKER_MODE_TRACE,
+    FLYTHROUGH_CAMERA_POSITION_AHEAD,
+    FLYTHROUGH_CAMERA_POSITION_BEHIND,
+    FLYTHROUGH_CAMERA_POSITION_SYSTEM,
     normalizeFlythroughMarker,
+    normalizeFlythroughCamera,
 } from '@Core/ui/flythrough/FlythroughProgressionStyle'
+import {
+    flythroughAngularDelta,
+    flythroughCameraHeadingForPositionMode,
+    flythroughCameraHeadingWithHysteresis,
+    flythroughCameraRangeFromPitch,
+    flythroughHeadingFromLocalAxisAngle,
+} from '@Core/ui/flythrough/FlythroughMode'
 
 const makeTrack = ({
                        slug,
@@ -446,5 +457,84 @@ describe('flythrough settings normalization', () => {
         expect(normalizeFlythroughMarker({mode: FLYTHROUGH_MARKER_MODE_TRACE}).mode).toBe(FLYTHROUGH_MARKER_MODE_TRACE)
         expect(normalizeFlythroughMarker({mode: FLYTHROUGH_MARKER_MODE_NAVIGATION}).mode).toBe(FLYTHROUGH_MARKER_MODE_NAVIGATION)
         expect(normalizeFlythroughMarker({mode: FLYTHROUGH_MARKER_MODE_HYSTERESIS}).mode).toBe(FLYTHROUGH_MARKER_MODE_HYSTERESIS)
+    })
+
+    it('preserves an editable marker position when normalizing marker settings', () => {
+        const marker = normalizeFlythroughMarker({
+            mode: FLYTHROUGH_MARKER_MODE_NAVIGATION,
+            position: {
+                longitude: '2.123456',
+                latitude:  48.765432,
+                altitude:  321,
+            },
+        })
+
+        expect(marker.position).toEqual({
+            longitude: 2.123456,
+            latitude:  48.765432,
+            altitude:  321,
+        })
+    })
+
+    it('defaults camera position mode behind and accepts ahead', () => {
+        expect(normalizeFlythroughCamera({}).positionMode).toBe(FLYTHROUGH_CAMERA_POSITION_SYSTEM)
+        expect(normalizeFlythroughCamera({positionMode: FLYTHROUGH_CAMERA_POSITION_BEHIND}).positionMode)
+            .toBe(FLYTHROUGH_CAMERA_POSITION_BEHIND)
+        expect(normalizeFlythroughCamera({positionMode: FLYTHROUGH_CAMERA_POSITION_AHEAD}).positionMode)
+            .toBe(FLYTHROUGH_CAMERA_POSITION_AHEAD)
+    })
+
+    it('keeps behind and ahead as distinct camera positions', () => {
+        const camera = normalizeFlythroughCamera({positionMode: FLYTHROUGH_CAMERA_POSITION_BEHIND})
+        expect(camera.positionMode).toBe(FLYTHROUGH_CAMERA_POSITION_BEHIND)
+    })
+
+    it('normalizes pitch and altitude settings while preserving the camera mode', () => {
+        const camera = normalizeFlythroughCamera({
+            altitudeMode: 'constant',
+            altitude:     1500,
+            pitch:        -50,
+            positionMode: FLYTHROUGH_CAMERA_POSITION_AHEAD,
+        })
+
+        expect(camera.altitude).toBe(1500)
+        expect(camera.pitch).toBe(-50)
+        expect(camera.positionMode).toBe(FLYTHROUGH_CAMERA_POSITION_AHEAD)
+    })
+
+    it('keeps the camera farther from the anchor when pitch is not top-down', () => {
+        expect(flythroughCameraRangeFromPitch(1200, -Math.PI / 2)).toBeCloseTo(1200, 6)
+        expect(flythroughCameraRangeFromPitch(1200, -Math.PI / 4)).toBeCloseTo(1697.056, 3)
+    })
+
+    it('converts local trace axis angles to Cesium headings', () => {
+        expect(flythroughHeadingFromLocalAxisAngle(0)).toBeCloseTo(Math.PI / 2, 6)
+        expect(flythroughHeadingFromLocalAxisAngle(Math.PI / 2)).toBeCloseTo(0, 6)
+    })
+
+    it('places behind on the trace heading and ahead on the opposite side', () => {
+        expect(flythroughCameraHeadingForPositionMode({
+            axisHeading:   0.75,
+            positionMode: FLYTHROUGH_CAMERA_POSITION_BEHIND,
+        })).toBeCloseTo(0.75, 6)
+        expect(flythroughCameraHeadingForPositionMode({
+            axisHeading:   0.75,
+            positionMode: FLYTHROUGH_CAMERA_POSITION_AHEAD,
+        })).toBeCloseTo(0.75 + Math.PI, 6)
+    })
+
+    it('keeps the last heading when the requested change stays within hysteresis', () => {
+        expect(flythroughAngularDelta(0, 0.01)).toBeCloseTo(0.01, 6)
+        expect(flythroughAngularDelta(Math.PI - 0.01, -Math.PI + 0.01)).toBeCloseTo(0.02, 6)
+        expect(flythroughCameraHeadingWithHysteresis({
+            previousHeading: 0,
+            nextHeading:     0.05,
+            threshold:       0.1,
+        })).toBeCloseTo(0, 6)
+        expect(flythroughCameraHeadingWithHysteresis({
+            previousHeading: 0,
+            nextHeading:     0.2,
+            threshold:       0.1,
+        })).toBeCloseTo(0.2, 6)
     })
 })

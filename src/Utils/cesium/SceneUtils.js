@@ -151,18 +151,18 @@ export class SceneUtils {
         }
 
         if (distance < 4000) {
-            return resetCamera ? 1.25 : Math.max(baseDuration, 0.75)
+            return resetCamera ? 0.35 : Math.max(0.15, Math.min(baseDuration, 0.25))
         }
 
         if (distance < 15000) {
-            return Math.max(baseDuration, resetCamera ? 1.65 : 1.2)
+            return Math.max(0.3, Math.min(baseDuration, resetCamera ? 0.6 : 0.4))
         }
 
         if (distance < 80000) {
-            return Math.max(baseDuration, resetCamera ? 2.2 : 1.8)
+            return Math.max(0.8, Math.min(baseDuration, resetCamera ? 1.2 : 1.0))
         }
 
-        return Math.max(baseDuration, resetCamera ? 2.8 : 2.2)
+        return Math.max(baseDuration, resetCamera ? 1.8 : 1.4)
     }
 
     static resolveFlightEasing = (resetCamera = false) =>

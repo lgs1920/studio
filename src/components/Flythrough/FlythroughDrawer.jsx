@@ -23,7 +23,8 @@ import WaDrawer     from '@Components/WaDrawerNonModal'
 import { FLYTHROUGH_DRAWER } from '@Core/constants'
 import {
     clampFlythroughNumber, DEFAULT_FLYTHROUGH_SCOPE, ensureFlythroughSettings, FLYTHROUGH_CAMERA_ALTITUDE_CONSTANT,
-    FLYTHROUGH_CAMERA_ALTITUDE_GROUND_OFFSET, FLYTHROUGH_LABEL, FLYTHROUGH_MARKER_MODE_HYSTERESIS,
+    FLYTHROUGH_CAMERA_ALTITUDE_GROUND_OFFSET, FLYTHROUGH_CAMERA_POSITION_AHEAD, FLYTHROUGH_CAMERA_POSITION_BEHIND,
+    FLYTHROUGH_CAMERA_POSITION_SYSTEM, FLYTHROUGH_LABEL, FLYTHROUGH_MARKER_MODE_HYSTERESIS,
     FLYTHROUGH_MARKER_MODE_NAVIGATION, FLYTHROUGH_MARKER_MODE_TRACE, FLYTHROUGH_PROFILE_MARKER_BORDER_MAX_WIDTH,
     FLYTHROUGH_PROFILE_MARKER_BORDER_MIN_WIDTH, FLYTHROUGH_PROFILE_MARKER_FILL_MAX_SIZE,
     FLYTHROUGH_PROFILE_MARKER_FILL_MIN_SIZE, FLYTHROUGH_PROGRESSION_BORDER_MAX_WIDTH,
@@ -33,8 +34,8 @@ import {
     normalizeFlythroughProgressionStyle, normalizeFlythroughTrace,
 }                 from '@Core/ui/flythrough/FlythroughProgressionStyle'
 import {
-    WaCard, WaColorPicker, WaDivider, WaIcon, WaNumberInput, WaOption, WaSelect, WaSlider, WaSwitch, WaTab, WaTabGroup,
-    WaTabPanel,
+    WaCard, WaColorPicker, WaDivider, WaIcon, WaNumberInput, WaOption, WaSelect, WaSwitch, WaTab, WaTabGroup,
+    WaTabPanel, WaSlider,
 }                 from '@web.awesome.me/webawesome-pro/dist/react'
 import { colord } from 'colord'
 import { memo, useCallback, useEffect, useMemo, useRef } from 'react'
@@ -89,6 +90,17 @@ const mergeCamera = (current, updates) => normalizeFlythroughCamera({
                                                                             ...(updates?.hysteresis ?? {}),
                                                                         },
                                                                     })
+
+const mergeMarker = (current, updates) => normalizeFlythroughMarker({
+                                                                       ...current,
+                                                                       ...updates,
+                                                                       position: updates?.position === null
+                                                                                 ? null
+                                                                                 : {
+                                                                                     ...(current?.position ?? {}),
+                                                                                     ...(updates?.position ?? {}),
+                                                                                 },
+                                                                   })
 
 const FlythroughColorField = ({
                                   label,
@@ -262,6 +274,7 @@ export const FlythroughDrawer = memo(() => {
 
     const refreshFlythrough = useCallback(() => {
         __.ui.flythrough?.refresh?.()
+        __.ui.flythrough?.refreshCamera?.()
         lgs.scene?.requestRender?.()
     }, [])
 
@@ -280,7 +293,7 @@ export const FlythroughDrawer = memo(() => {
     }, [refreshFlythrough])
 
     const updateMarker = useCallback((event) => {
-        const nextMarker = normalizeFlythroughMarker({mode: event.target.value})
+        const nextMarker = mergeMarker(lgs.settings.ui.flythrough.marker, {mode: event.target.value})
         lgs.settings.ui.flythrough.marker = nextMarker
         lgs.stores.flythrough.marker = nextMarker
         refreshFlythrough()
@@ -399,6 +412,10 @@ export const FlythroughDrawer = memo(() => {
 
     const updateAltitudeMode = useCallback((event) => {
         updateCamera({altitudeMode: event.target.value})
+    }, [updateCamera])
+
+    const updateCameraPositionMode = useCallback((event) => {
+        updateCamera({positionMode: event.target.value})
     }, [updateCamera])
 
     const updateCameraAltitude = useCallback((event) => {
@@ -550,12 +567,23 @@ export const FlythroughDrawer = memo(() => {
                                                                onInput={updateLoop}>
                                                          {'Loop'}
                                                      </WaSwitch>
-                                                     <WaSwitch size="xs" label-at-start
-                                                               checked={camera.keepNorth}
-                                                               onInput={updateKeepNorth}>
-                                                         {'Keep north'}
-                                                     </WaSwitch>
-                                                 </div>
+                                                    <WaSwitch size="xs" label-at-start
+                                                              checked={camera.keepNorth}
+                                                              onInput={updateKeepNorth}>
+                                                        {'Keep north'}
+                                                    </WaSwitch>
+                                                    <WaSelect
+                                                        label="Camera position"
+                                                        label-at-start
+                                                        size="s"
+                                                        value={camera.positionMode}
+                                                        onChange={updateCameraPositionMode}
+                                                    >
+                                                        <WaOption value={FLYTHROUGH_CAMERA_POSITION_SYSTEM}>{'System'}</WaOption>
+                                                        <WaOption value={FLYTHROUGH_CAMERA_POSITION_BEHIND}>{'Behind marker'}</WaOption>
+                                                        <WaOption value={FLYTHROUGH_CAMERA_POSITION_AHEAD}>{'Ahead marker'}</WaOption>
+                                                    </WaSelect>
+                                                </div>
                                                  {marker.mode !== FLYTHROUGH_MARKER_MODE_TRACE && (
                                                      <div className="flythrough-fieldset">
                                                          <WaSelect
@@ -570,39 +598,41 @@ export const FlythroughDrawer = memo(() => {
                                                              <WaOption
                                                                  value={FLYTHROUGH_CAMERA_ALTITUDE_GROUND_OFFSET}>{'Ground offset'}</WaOption>
                                                          </WaSelect>
-                                                         {camera.altitudeMode === FLYTHROUGH_CAMERA_ALTITUDE_CONSTANT ? (
+                                                         <div className="flythrough-style-field-grid is-single">
+                                                             {camera.altitudeMode === FLYTHROUGH_CAMERA_ALTITUDE_CONSTANT ? (
+                                                                 <WaNumberInput
+                                                                     label="Altitude (m)"
+                                                                     size="s"
+                                                                     appearance="filled"
+                                                                     min="50"
+                                                                     step="50"
+                                                                     value={camera.altitude}
+                                                                     onInput={updateCameraAltitude}
+                                                                 />
+                                                             ) : (
+                                                                  <WaNumberInput
+                                                                      label="Ground offset (m)"
+                                                                      size="s"
+                                                                      appearance="filled"
+                                                                      min="10"
+                                                                      step="25"
+                                                                      value={camera.groundOffset}
+                                                                      onInput={updateCameraGroundOffset}
+                                                                  />
+                                                              )}
                                                              <WaNumberInput
-                                                                 label="Altitude (m)"
+                                                                 label="Pitch (deg)"
                                                                  size="s"
                                                                  appearance="filled"
-                                                                 min="50"
-                                                                 step="50"
-                                                                 value={camera.altitude}
-                                                                 onInput={updateCameraAltitude}
+                                                                 min="-89"
+                                                                 max="-5"
+                                                                 step="1"
+                                                                 value={camera.pitch}
+                                                                 onInput={event => updateCamera({
+                                                                     pitch: clampFlythroughNumber(event.target.value, camera.pitch, -89, -5),
+                                                                 })}
                                                              />
-                                                         ) : (
-                                                              <WaNumberInput
-                                                                  label="Ground offset (m)"
-                                                                  size="s"
-                                                                  appearance="filled"
-                                                                  min="10"
-                                                                  step="25"
-                                                                  value={camera.groundOffset}
-                                                                  onInput={updateCameraGroundOffset}
-                                                              />
-                                                          )}
-                                                         <WaNumberInput
-                                                             label="Pitch (deg)"
-                                                             size="s"
-                                                             appearance="filled"
-                                                             min="-89"
-                                                             max="-5"
-                                                             step="1"
-                                                             value={camera.pitch}
-                                                             onInput={event => updateCamera({
-                                                                                                pitch: clampFlythroughNumber(event.target.value, camera.pitch, -89, -5),
-                                                                                            })}
-                                                         />
+                                                         </div>
                                                      </div>
                                                  )}
                                                  {marker.mode === FLYTHROUGH_MARKER_MODE_HYSTERESIS && (

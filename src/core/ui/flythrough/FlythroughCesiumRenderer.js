@@ -20,7 +20,6 @@ import {
     ArcType, CallbackProperty, Cartesian3, Color, CustomDataSource, ExtrapolationType, HeightReference, JulianDate,
     LinearApproximation, SampledPositionProperty,
 }                                                                 from 'cesium'
-import { isFlythroughDebugEnabled, recordFlythroughDebug }        from './FlythroughDebug'
 import {
     FLYTHROUGH_TRACE_MODE_FULL, getFlythroughSettings, normalizeFlythroughProgressionStyle, normalizeFlythroughTrace,
 }                                                                 from './FlythroughProgressionStyle'
@@ -99,8 +98,6 @@ export class FlythroughCesiumRenderer {
             return
         }
 
-        const debugEnabled = isFlythroughDebugEnabled()
-        const debugStartedAt = debugEnabled ? (globalThis.performance?.now?.() ?? Date.now()) : 0
         let geometryUpdated = false
 
         this.#sampler = sampler
@@ -109,13 +106,6 @@ export class FlythroughCesiumRenderer {
         this.#updateCursor(sample)
         if (freezeDynamic) {
             this.#freezeDynamicLines()
-            if (debugEnabled) {
-                this.#recordDebugUpdate({
-                    sample,
-                    geometryUpdated: false,
-                    startedAt: debugStartedAt,
-                })
-            }
             globalThis.lgs?.scene?.requestRender?.()
             return
         }
@@ -123,13 +113,6 @@ export class FlythroughCesiumRenderer {
             geometryUpdated = true
             this.#updateCompletedLines(sample)
             this.#updateRemainingLines(sample)
-        }
-        if (debugEnabled) {
-            this.#recordDebugUpdate({
-                sample,
-                geometryUpdated,
-                startedAt: debugStartedAt,
-            })
         }
         globalThis.lgs?.scene?.requestRender?.()
     }
@@ -805,31 +788,6 @@ export class FlythroughCesiumRenderer {
                 name,
                 ...options,
             })
-        })
-    }
-
-    #recordDebugUpdate = ({sample, geometryUpdated, startedAt}) => {
-        const progressCursor = this.#smoothedProgressCursor()
-        const hasSmoothedGuide = progressCursor.guide.length >= 2
-        const completedPoints = hasSmoothedGuide
-                                ? Math.min(progressCursor.guide.length, progressCursor.leftIndex + 2)
-                                : this.#completedSmoothedPositions().length
-        const remainingPoints = hasSmoothedGuide
-                                ? Math.max(0, progressCursor.guide.length - progressCursor.rightIndex + 1)
-                                : this.#remainingSmoothedPositions().length
-        const finishedAt = globalThis.performance?.now?.() ?? Date.now()
-
-        recordFlythroughDebug('renderer:update', {
-            progress:          sample.progress,
-            distance:          sample.distanceFromStart,
-            geometryUpdated,
-            durationMs:        finishedAt - startedAt,
-            completedPoints,
-            remainingPoints,
-            lineEntities:      this.#lineEntities.size,
-            smoothedGuideSize: this.#options.smoothedGuide?.length ?? 0,
-            cursorShown:       this.#cursor?.show ?? null,
-            sourceShown:       this.#source?.show ?? null,
         })
     }
 

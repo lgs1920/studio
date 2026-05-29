@@ -32,6 +32,9 @@ export const FLYTHROUGH_MARKER_MODE_NAVIGATION = 'navigation'
 export const FLYTHROUGH_MARKER_MODE_HYSTERESIS = 'hysteresis'
 export const FLYTHROUGH_CAMERA_ALTITUDE_CONSTANT = 'constant'
 export const FLYTHROUGH_CAMERA_ALTITUDE_GROUND_OFFSET = 'ground-offset'
+export const FLYTHROUGH_CAMERA_POSITION_BEHIND = 'behind'
+export const FLYTHROUGH_CAMERA_POSITION_AHEAD = 'ahead'
+export const FLYTHROUGH_CAMERA_POSITION_SYSTEM = 'system'
 
 export const DEFAULT_FLYTHROUGH_PROGRESSION = {
     fill:   {
@@ -64,10 +67,12 @@ export const DEFAULT_FLYTHROUGH_TRACE = {
 
 export const DEFAULT_FLYTHROUGH_MARKER = {
     mode: FLYTHROUGH_MARKER_MODE_TRACE,
+    position: null,
 }
 
 export const DEFAULT_FLYTHROUGH_CAMERA = {
     keepNorth:     true,
+    positionMode:  FLYTHROUGH_CAMERA_POSITION_SYSTEM,
     altitudeMode:  FLYTHROUGH_CAMERA_ALTITUDE_CONSTANT,
     altitude:      1200,
     groundOffset:  800,
@@ -184,10 +189,24 @@ export const normalizeFlythroughMarker = (marker = {}) => ({
           : marker?.mode === FLYTHROUGH_MARKER_MODE_HYSTERESIS || marker?.mode === 'centered'
             ? FLYTHROUGH_MARKER_MODE_HYSTERESIS
             : FLYTHROUGH_MARKER_MODE_TRACE,
+    position: marker?.position && Number.isFinite(Number(marker.position.longitude)) && Number.isFinite(Number(marker.position.latitude))
+              ? {
+                  longitude: Number(marker.position.longitude),
+                  latitude:  Number(marker.position.latitude),
+                  altitude:  Number.isFinite(Number(marker.position.altitude ?? marker.position.height))
+                             ? Number(marker.position.altitude ?? marker.position.height)
+                             : null,
+              }
+              : null,
 })
 
 export const normalizeFlythroughCamera = (camera = {}) => ({
     keepNorth:    camera?.keepNorth !== false,
+    positionMode: camera?.positionMode === FLYTHROUGH_CAMERA_POSITION_AHEAD
+                  ? FLYTHROUGH_CAMERA_POSITION_AHEAD
+                  : camera?.positionMode === FLYTHROUGH_CAMERA_POSITION_BEHIND
+                    ? FLYTHROUGH_CAMERA_POSITION_BEHIND
+                    : FLYTHROUGH_CAMERA_POSITION_SYSTEM,
     altitudeMode: camera?.altitudeMode === FLYTHROUGH_CAMERA_ALTITUDE_GROUND_OFFSET
                   ? FLYTHROUGH_CAMERA_ALTITUDE_GROUND_OFFSET
                   : FLYTHROUGH_CAMERA_ALTITUDE_CONSTANT,
