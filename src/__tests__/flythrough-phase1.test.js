@@ -7,38 +7,33 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-05-04
- * Last modified: 2026-05-04
+ * Created on: 2026-05-31
+ * Last modified: 2026-05-31
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { describe, expect, it } from 'vitest'
-import { proxy } from 'valtio'
+import {
+    flythroughAngularDelta, flythroughCameraHeadingForPositionMode, flythroughCameraHeadingWithHysteresis,
+    flythroughCameraRangeFromPitch, flythroughCameraRecenterHeight, flythroughCameraRecenterHorizontalDistance,
+    flythroughHeadingFromLocalAxisAngle, flythroughIsWindowPointOutsideToleranceZone, FlythroughMode,
+    flythroughToleranceZoneBounds,
+}                                          from '@Core/ui/flythrough/FlythroughMode'
+import {
+    FLYTHROUGH_SCOPE_ALL_TRACKS, FLYTHROUGH_SCOPE_CURRENT_TRACK, FLYTHROUGH_SCOPE_VISIBLE_TRACKS, FlythroughPathSampler,
+}                                          from '@Core/ui/flythrough/FlythroughPathSampler'
 import {
     FLYTHROUGH_EVENT_END, FLYTHROUGH_EVENT_UPDATE, FlythroughPlaybackController,
-} from '@Core/ui/flythrough/FlythroughPlaybackController'
+}                                          from '@Core/ui/flythrough/FlythroughPlaybackController'
 import {
-    FlythroughPathSampler, FLYTHROUGH_SCOPE_ALL_TRACKS, FLYTHROUGH_SCOPE_CURRENT_TRACK, FLYTHROUGH_SCOPE_VISIBLE_TRACKS,
-} from '@Core/ui/flythrough/FlythroughPathSampler'
-import {
-    FLYTHROUGH_MARKER_MODE_HYSTERESIS,
-    FLYTHROUGH_MARKER_MODE_NAVIGATION,
-    FLYTHROUGH_MARKER_MODE_TRACE,
-    FLYTHROUGH_CAMERA_POSITION_AHEAD,
-    FLYTHROUGH_CAMERA_POSITION_BEHIND,
-    FLYTHROUGH_CAMERA_POSITION_SYSTEM,
-    normalizeFlythroughMarker,
-    normalizeFlythroughCamera,
-} from '@Core/ui/flythrough/FlythroughProgressionStyle'
-import {
-    flythroughAngularDelta,
-    flythroughCameraHeadingForPositionMode,
-    flythroughCameraHeadingWithHysteresis,
-    flythroughCameraRangeFromPitch,
-    flythroughHeadingFromLocalAxisAngle,
-} from '@Core/ui/flythrough/FlythroughMode'
+    defaultFlythroughSettings, FLYTHROUGH_CAMERA_POSITION_AHEAD, FLYTHROUGH_CAMERA_POSITION_BEHIND,
+    FLYTHROUGH_CAMERA_POSITION_SYSTEM, FLYTHROUGH_MARKER_MODE_HYSTERESIS, FLYTHROUGH_MARKER_MODE_NAVIGATION,
+    FLYTHROUGH_MARKER_MODE_TRACE, normalizeFlythroughCamera, normalizeFlythroughMarker,
+}                                          from '@Core/ui/flythrough/FlythroughProgressionStyle'
+import { Cartesian3, Matrix4, Transforms } from 'cesium'
+import { proxy }                           from 'valtio'
+import { describe, expect, it, vi }        from 'vitest'
 
 const makeTrack = ({
                        slug,
@@ -446,6 +441,1742 @@ describe('flythrough phase 1 playback controller', () => {
             globalThis.lgs = previousLgs
         }
     })
+
+    it('syncs the live Cesium camera into runtime and persisted flythrough camera settings', () => {
+        const journey = makeJourney([
+                                        makeTrack({
+                                                      slug:        'track#journey#gpx#main',
+                                                      coordinates: [[2, 48, 120], [2.001, 48.001, 130]],
+                                                  }),
+                                    ])
+        const previousLgs = globalThis.lgs
+        const flythrough = defaultFlythroughSettings()
+
+        globalThis.lgs = {
+            theJourney: journey,
+            theTrack:   null,
+            settings:   {ui: {flythrough}},
+            stores:     {
+                flythrough: proxy({
+                                      progress: 0,
+                                      camera:   flythrough.camera,
+                                  }),
+            },
+            viewer:     {
+                trackedEntity: null,
+                camera:        {
+                    positionCartographic: {height: 1840},
+                    pitch:                -Math.PI / 4,
+                    moveStart:            {
+                        addEventListener:       () => {
+                        }, removeEventListener: () => {
+                        },
+                    },
+                    moveEnd:              {
+                        addEventListener:       () => {
+                        }, removeEventListener: () => {
+                        },
+                    },
+                    cancelFlight:         () => {
+                    },
+                },
+            },
+            scene:      {
+                requestRender: () => {
+                },
+            },
+        }
+
+        try {
+            const mode = new FlythroughMode({
+                                                controller: new FlythroughPlaybackController({
+                                                                                                 requestFrame: () => 1,
+                                                                                                 cancelFrame:  () => {
+                                                                                                 },
+                                                                                                 now:          () => 0,
+                                                                                             }),
+                                                renderer:   {
+                                                    clear:  () => {
+                                                    },
+                                                    show:   () => {
+                                                    },
+                                                    update: () => {
+                                                    },
+                                                },
+                                            })
+            mode.configure()
+
+            const camera = mode.syncCameraFromCesiumControls()
+
+            expect(camera.altitude).toBe(1840)
+            expect(camera.pitch).toBeCloseTo(-45, 6)
+            expect(globalThis.lgs.settings.ui.flythrough.camera.altitude).toBe(1840)
+            expect(globalThis.lgs.stores.flythrough.camera.pitch).toBeCloseTo(-45, 6)
+        }
+        finally {
+            globalThis.lgs = previousLgs
+        }
+    })
+
+    it('can refresh flythrough rendering without moving the camera', () => {
+        const journey = makeJourney([
+                                        makeTrack({
+                                                      slug:        'track#journey#gpx#main',
+                                                      coordinates: [[2, 48, 120], [2.001, 48.001, 130]],
+                                                  }),
+                                    ])
+        const previousLgs = globalThis.lgs
+        const flythrough = defaultFlythroughSettings()
+        let setViewCalls = 0
+        let renderUpdates = 0
+
+        globalThis.lgs = {
+            theJourney: journey,
+            theTrack:   null,
+            settings:   {
+                ui: {
+                    flythrough: {
+                        ...flythrough,
+                        marker: {
+                            ...flythrough.marker,
+                            mode: FLYTHROUGH_MARKER_MODE_NAVIGATION,
+                        },
+                    },
+                },
+            },
+            stores:     {
+                flythrough: proxy({
+                                      progress: 0,
+                                  }),
+            },
+            viewer:     {
+                trackedEntity: null,
+                camera:        {
+                    moveStart:    {
+                        addEventListener:       () => {
+                        }, removeEventListener: () => {
+                        },
+                    },
+                    moveEnd:      {
+                        addEventListener:       () => {
+                        }, removeEventListener: () => {
+                        },
+                    },
+                    cancelFlight: () => {
+                    },
+                    setView:      () => {
+                        setViewCalls += 1
+                    },
+                },
+            },
+            scene:      {
+                requestRender: () => {
+                }, globe:      {},
+            },
+        }
+
+        try {
+            const mode = new FlythroughMode({
+                                                controller: new FlythroughPlaybackController({
+                                                                                                 requestFrame: () => 1,
+                                                                                                 cancelFrame:  () => {
+                                                                                                 },
+                                                                                                 now:          () => 0,
+                                                                                             }),
+                                                renderer:   {
+                                                    clear:  () => {
+                                                    },
+                                                    show:   () => {
+                                                    },
+                                                    update: () => {
+                                                        renderUpdates += 1
+                                                    },
+                                                },
+                                            })
+            mode.configure()
+            mode.refresh({camera: false})
+
+            expect(renderUpdates).toBe(1)
+            expect(setViewCalls).toBe(0)
+        }
+        finally {
+            globalThis.lgs = previousLgs
+        }
+    })
+
+    it('keeps the manually adjusted Cesium heading in system camera mode', () => {
+        const journey = makeJourney([
+                                        makeTrack({
+                                                      slug:        'track#journey#gpx#main',
+                                                      coordinates: [[2, 48, 120], [2.001, 48.001, 130]],
+                                                  }),
+                                    ])
+        const previousLgs = globalThis.lgs
+        const flythrough = defaultFlythroughSettings()
+        const lookAtTransformCalls = []
+        const setViewCalls = []
+
+        globalThis.lgs = {
+            theJourney: journey,
+            theTrack:   null,
+            settings:   {
+                ui: {
+                    flythrough: {
+                        ...flythrough,
+                        marker: {
+                            ...flythrough.marker,
+                            mode: FLYTHROUGH_MARKER_MODE_NAVIGATION,
+                        },
+                        camera: {
+                            ...flythrough.camera,
+                            positionMode: FLYTHROUGH_CAMERA_POSITION_SYSTEM,
+                        },
+                    },
+                },
+            },
+            stores:     {
+                flythrough: proxy({
+                                      progress: 0,
+                                      camera:   flythrough.camera,
+                                  }),
+            },
+            viewer:     {
+                trackedEntity: null,
+                camera:        {
+                    heading:              1.25,
+                    pitch:                -Math.PI / 4,
+                    positionCartographic: {height: 1840},
+                    moveStart:            {
+                        addEventListener:       () => {
+                        }, removeEventListener: () => {
+                        },
+                    },
+                    moveEnd:              {
+                        addEventListener:       () => {
+                        }, removeEventListener: () => {
+                        },
+                    },
+                    cancelFlight:         () => {
+                    },
+                    lookAtTransform:      (...args) => lookAtTransformCalls.push(args),
+                    setView:              options => setViewCalls.push(options),
+                },
+            },
+            scene:      {
+                requestRender: () => {
+                },
+                globe:         {getHeight: () => 120},
+            },
+        }
+
+        try {
+            const mode = new FlythroughMode({
+                                                controller: new FlythroughPlaybackController({
+                                                                                                 requestFrame: () => 1,
+                                                                                                 cancelFrame:  () => {
+                                                                                                 },
+                                                                                                 now:          () => 0,
+                                                                                             }),
+                                                renderer:   {
+                                                    clear:  () => {
+                                                    },
+                                                    show:   () => {
+                                                    },
+                                                    update: () => {
+                                                    },
+                                                },
+                                            })
+            mode.configure()
+            mode.syncCameraFromCesiumControls()
+            mode.refreshCamera()
+
+            expect(lookAtTransformCalls).toHaveLength(1)
+            expect(setViewCalls).toHaveLength(1)
+            expect(globalThis.lgs.settings.ui.flythrough.camera.pitch).toBeCloseTo(-45, 6)
+        }
+        finally {
+            globalThis.lgs = previousLgs
+        }
+    })
+
+    it('lets Cesium pointer interactions override navigation camera pitch before tracking resumes', () => {
+        vi.useFakeTimers()
+        const journey = makeJourney([
+                                        makeTrack({
+                                                      slug:        'track#journey#gpx#main',
+                                                      coordinates: [[2, 48, 120], [2.001, 48.001, 130]],
+                                                  }),
+                                    ])
+        const previousLgs = globalThis.lgs
+        const flythrough = defaultFlythroughSettings()
+        const lookAtTransformCalls = []
+        const setViewCalls = []
+        const canvasListeners = new Map()
+        const canvas = {
+            addEventListener:    (type, listener) => canvasListeners.set(type, listener),
+            removeEventListener: type => canvasListeners.delete(type),
+        }
+        const camera = {
+            heading:              0.8,
+            pitch:                -Math.PI / 4,
+            positionCartographic: {height: 1840},
+            moveStart:            {
+                addEventListener:       () => {
+                }, removeEventListener: () => {
+                },
+            },
+            moveEnd:              {
+                addEventListener:       () => {
+                }, removeEventListener: () => {
+                },
+            },
+            cancelFlight:         () => {
+            },
+            lookAtTransform:      (...args) => lookAtTransformCalls.push(args),
+            setView:              options => setViewCalls.push(options),
+        }
+
+        globalThis.lgs = {
+            theJourney: journey,
+            theTrack:   null,
+            settings:   {
+                ui: {
+                    flythrough: {
+                        ...flythrough,
+                        marker: {
+                            ...flythrough.marker,
+                            mode: FLYTHROUGH_MARKER_MODE_NAVIGATION,
+                        },
+                        camera: {
+                            ...flythrough.camera,
+                            positionMode: FLYTHROUGH_CAMERA_POSITION_SYSTEM,
+                        },
+                    },
+                },
+            },
+            stores:     {
+                flythrough: proxy({
+                                      progress: 0,
+                                      camera:   flythrough.camera,
+                                  }),
+            },
+            viewer:     {
+                canvas,
+                trackedEntity: null,
+                camera,
+            },
+            scene:      {
+                canvas,
+                requestRender: () => {
+                },
+                globe:         {getHeight: () => 120},
+            },
+        }
+
+        try {
+            const mode = new FlythroughMode({
+                                                controller: new FlythroughPlaybackController({
+                                                                                                 requestFrame: () => 1,
+                                                                                                 cancelFrame:  () => {
+                                                                                                 },
+                                                                                                 now:          () => 0,
+                                                                                             }),
+                                                renderer:   {
+                                                    clear:  () => {
+                                                    },
+                                                    show:   () => {
+                                                    },
+                                                    update: () => {
+                                                    },
+                                                },
+                                            })
+            mode.configure()
+
+            canvasListeners.get('pointerdown')()
+            camera.pitch = -Math.PI / 6
+            camera.positionCartographic.height = 2200
+            mode.refreshCamera()
+            expect(lookAtTransformCalls).toHaveLength(0)
+
+            canvasListeners.get('pointerup')()
+            vi.advanceTimersByTime(130)
+            mode.refreshCamera()
+
+            expect(globalThis.lgs.settings.ui.flythrough.camera.altitude).toBe(2200)
+            expect(globalThis.lgs.settings.ui.flythrough.camera.pitch).toBeCloseTo(-30, 6)
+            expect(lookAtTransformCalls).toHaveLength(1)
+            expect(setViewCalls).toHaveLength(1)
+        }
+        finally {
+            vi.useRealTimers()
+            globalThis.lgs = previousLgs
+        }
+    })
+
+    it('ignores Cesium move events emitted by navigation tracking itself', () => {
+        const journey = makeJourney([
+                                        makeTrack({
+                                                      slug:        'track#journey#gpx#main',
+                                                      coordinates: [[2, 48, 120], [2.001, 48.001, 130]],
+                                                  }),
+                                    ])
+        const previousLgs = globalThis.lgs
+        const flythrough = defaultFlythroughSettings()
+        const cameraSettings = {
+            ...flythrough.camera,
+            positionMode: FLYTHROUGH_CAMERA_POSITION_SYSTEM,
+            altitude:     3200,
+            pitch:        -62,
+        }
+        let moveStart
+        let moveEnd
+
+        globalThis.lgs = {
+            theJourney: journey,
+            theTrack:   null,
+            settings:   {
+                ui: {
+                    flythrough: {
+                        ...flythrough,
+                        marker: {
+                            ...flythrough.marker,
+                            mode: FLYTHROUGH_MARKER_MODE_NAVIGATION,
+                        },
+                        camera: cameraSettings,
+                    },
+                },
+            },
+            stores:     {
+                flythrough: proxy({
+                                      progress: 0,
+                                      camera:   cameraSettings,
+                                  }),
+            },
+            viewer:     {
+                trackedEntity: null,
+                camera:        {
+                    heading:              0.8,
+                    pitch:                -0.096865,
+                    positionCartographic: {height: 950},
+                    moveStart:            {
+                        addEventListener:    listener => {
+                            moveStart = listener
+                        },
+                        removeEventListener: () => {
+                        },
+                    },
+                    moveEnd:              {
+                        addEventListener:    listener => {
+                            moveEnd = listener
+                        },
+                        removeEventListener: () => {
+                        },
+                    },
+                    cancelFlight:         () => {
+                    },
+                    lookAtTransform:      () => {
+                    },
+                },
+            },
+            scene:      {
+                requestRender: () => {
+                },
+                globe:         {getHeight: () => 120},
+            },
+        }
+
+        try {
+            const mode = new FlythroughMode({
+                                                controller: new FlythroughPlaybackController({
+                                                                                                 requestFrame: () => 1,
+                                                                                                 cancelFrame:  () => {
+                                                                                                 },
+                                                                                                 now:          () => 0,
+                                                                                             }),
+                                                renderer:   {
+                                                    clear:  () => {
+                                                    },
+                                                    show:   () => {
+                                                    },
+                                                    update: () => {
+                                                    },
+                                                },
+                                            })
+            mode.configure()
+            mode.refreshCamera()
+            moveStart()
+            moveEnd()
+
+            expect(globalThis.lgs.settings.ui.flythrough.camera.altitude).toBe(3200)
+            expect(globalThis.lgs.settings.ui.flythrough.camera.pitch).toBe(-62)
+        }
+        finally {
+            globalThis.lgs = previousLgs
+        }
+    })
+
+    it('captures mouse wheel zoom in navigation even after a programmatic camera update', () => {
+        vi.useFakeTimers()
+        const journey = makeJourney([
+                                        makeTrack({
+                                                      slug:        'track#journey#gpx#main',
+                                                      coordinates: [[2, 48, 120], [2.001, 48.001, 130]],
+                                                  }),
+                                    ])
+        const previousLgs = globalThis.lgs
+        const flythrough = defaultFlythroughSettings()
+        const canvasListeners = new Map()
+        const canvas = {
+            addEventListener:    (type, listener) => canvasListeners.set(type, listener),
+            removeEventListener: type => canvasListeners.delete(type),
+        }
+        const camera = {
+            heading:              0.8,
+            pitch:                -Math.PI / 4,
+            positionCartographic: {height: 1800},
+            moveStart:            {
+                addEventListener:       () => {
+                }, removeEventListener: () => {
+                },
+            },
+            moveEnd:              {
+                addEventListener:       () => {
+                }, removeEventListener: () => {
+                },
+            },
+            cancelFlight:         () => {
+            },
+            lookAtTransform:      () => {
+            },
+        }
+
+        globalThis.lgs = {
+            theJourney: journey,
+            theTrack:   null,
+            settings:   {
+                ui: {
+                    flythrough: {
+                        ...flythrough,
+                        marker: {
+                            ...flythrough.marker,
+                            mode: FLYTHROUGH_MARKER_MODE_NAVIGATION,
+                        },
+                        camera: {
+                            ...flythrough.camera,
+                            positionMode: FLYTHROUGH_CAMERA_POSITION_SYSTEM,
+                        },
+                    },
+                },
+            },
+            stores:     {
+                flythrough: proxy({
+                                      progress: 0,
+                                      camera:   flythrough.camera,
+                                  }),
+            },
+            viewer:     {
+                canvas,
+                trackedEntity: null,
+                camera,
+            },
+            scene:      {
+                canvas,
+                requestRender: () => {
+                },
+                globe:         {getHeight: () => 120},
+            },
+        }
+
+        try {
+            const mode = new FlythroughMode({
+                                                controller: new FlythroughPlaybackController({
+                                                                                                 requestFrame: () => 1,
+                                                                                                 cancelFrame:  () => {
+                                                                                                 },
+                                                                                                 now:          () => 0,
+                                                                                             }),
+                                                renderer:   {
+                                                    clear:  () => {
+                                                    },
+                                                    show:   () => {
+                                                    },
+                                                    update: () => {
+                                                    },
+                                                },
+                                            })
+            mode.configure()
+            mode.refreshCamera()
+            camera.positionCartographic.height = 2600
+            canvasListeners.get('wheel')()
+            vi.advanceTimersByTime(130)
+
+            expect(globalThis.lgs.settings.ui.flythrough.camera.altitude).toBe(2600)
+        }
+        finally {
+            vi.useRealTimers()
+            globalThis.lgs = previousLgs
+        }
+    })
+
+    it('rechecks tolerance zone after camera zoom and recenters when the marker is outside', () => {
+        vi.useFakeTimers()
+        const journey = makeJourney([
+                                        makeTrack({
+                                                      slug:        'track#journey#gpx#main',
+                                                      coordinates: [[2, 48, 120], [2.001, 48.001, 130]],
+                                                  }),
+                                    ])
+        const previousLgs = globalThis.lgs
+        const flythrough = defaultFlythroughSettings()
+        const canvasListeners = new Map()
+        const appCanvas = {
+            clientWidth:         1000,
+            clientHeight:        1000,
+            addEventListener:    (type, listener) => canvasListeners.set(type, listener),
+            removeEventListener: type => canvasListeners.delete(type),
+        }
+        const flyToCalls = []
+        const camera = {
+            heading:              0.8,
+            pitch:                -Math.PI / 4,
+            positionCartographic: {height: 1800},
+            moveStart:            {
+                addEventListener:       () => {
+                }, removeEventListener: () => {
+                },
+            },
+            moveEnd:              {
+                addEventListener:       () => {
+                }, removeEventListener: () => {
+                },
+            },
+            cancelFlight:         () => {
+            },
+            flyTo:                options => flyToCalls.push(options),
+            lookAtTransform:      () => {
+            },
+        }
+
+        globalThis.lgs = {
+            theJourney: journey,
+            theTrack:   null,
+            canvas:     appCanvas,
+            settings:   {
+                ui: {
+                    flythrough: {
+                        ...flythrough,
+                        marker: {
+                            ...flythrough.marker,
+                            mode: FLYTHROUGH_MARKER_MODE_HYSTERESIS,
+                        },
+                    },
+                },
+            },
+            stores:     {
+                flythrough: proxy({
+                                      progress: 0,
+                                      camera:   flythrough.camera,
+                                  }),
+            },
+            viewer:     {
+                trackedEntity: null,
+                canvas:        appCanvas,
+                camera,
+            },
+            scene:      {
+                canvas:                       appCanvas,
+                cartesianToCanvasCoordinates: () => ({x: 990, y: 990}),
+                requestRender:                () => {
+                },
+                globe:                        {getHeight: () => 120},
+            },
+        }
+
+        try {
+            const mode = new FlythroughMode({
+                                                controller: new FlythroughPlaybackController({
+                                                                                                 requestFrame: () => 1,
+                                                                                                 cancelFrame:  () => {
+                                                                                                 },
+                                                                                                 now:          () => 0,
+                                                                                             }),
+                                                renderer:   {
+                                                    clear:  () => {
+                                                    },
+                                                    show:   () => {
+                                                    },
+                                                    update: () => {
+                                                    },
+                                                },
+                                            })
+            mode.configure()
+            camera.positionCartographic.height = 2600
+            canvasListeners.get('wheel')()
+            vi.advanceTimersByTime(130)
+
+            expect(globalThis.lgs.settings.ui.flythrough.camera.altitude).toBe(2600)
+            expect(flyToCalls).toHaveLength(1)
+        }
+        finally {
+            vi.useRealTimers()
+            globalThis.lgs = previousLgs
+        }
+    })
+
+    it('recenters immediately on flythrough start when the first tolerance marker is outside the window', () => {
+        const journey = makeJourney([
+                                        makeTrack({
+                                                      slug:        'track#journey#gpx#main',
+                                                      coordinates: [[2, 48, 120], [2.001, 48.001, 130]],
+                                                  }),
+                                    ])
+        const previousLgs = globalThis.lgs
+        const flythrough = defaultFlythroughSettings()
+        const appCanvas = {
+            clientWidth:         1000,
+            clientHeight:        1000,
+            addEventListener:    () => {
+            },
+            removeEventListener: () => {
+            },
+        }
+        const flyToCalls = []
+        const setViewCalls = []
+        const camera = {
+            heading:              0.8,
+            pitch:                -Math.PI / 4,
+            roll:                 0,
+            positionCartographic: {longitude: 0.1, latitude: 0.2, height: 1800},
+            moveStart:            {
+                addEventListener:       () => {
+                }, removeEventListener: () => {
+                },
+            },
+            moveEnd:              {
+                addEventListener:       () => {
+                }, removeEventListener: () => {
+                },
+            },
+            cancelFlight:         () => {
+            },
+            flyTo:                options => flyToCalls.push(options),
+            setView:              options => setViewCalls.push(options),
+            lookAtTransform:      () => {
+            },
+        }
+
+        globalThis.lgs = {
+            theJourney: journey,
+            theTrack:   null,
+            canvas:     appCanvas,
+            settings:   {
+                ui: {
+                    flythrough: {
+                        ...flythrough,
+                        marker: {
+                            ...flythrough.marker,
+                            mode: FLYTHROUGH_MARKER_MODE_HYSTERESIS,
+                        },
+                    },
+                },
+            },
+            stores:     {
+                flythrough: proxy({
+                                      progress: 0,
+                                      camera:   flythrough.camera,
+                                  }),
+            },
+            viewer:     {
+                trackedEntity: null,
+                canvas:        appCanvas,
+                camera,
+            },
+            scene:      {
+                canvas:                       appCanvas,
+                cartesianToCanvasCoordinates: () => ({x: -120, y: 500}),
+                requestRender:                () => {
+                },
+                globe:                        {getHeight: () => 120},
+            },
+        }
+
+        try {
+            const mode = new FlythroughMode({
+                                                controller: new FlythroughPlaybackController({
+                                                                                                 requestFrame: () => 1,
+                                                                                                 cancelFrame:  () => {
+                                                                                                 },
+                                                                                                 now:          () => 0,
+                                                                                             }),
+                                                renderer:   {
+                                                    clear:  () => {
+                                                    },
+                                                    show:   () => {
+                                                    },
+                                                    update: () => {
+                                                    },
+                                                },
+                                            })
+            mode.start()
+
+            const target = Cartesian3.fromDegrees(2, 48, 120)
+            const expectedDirection = Cartesian3.normalize(
+                Cartesian3.subtract(target, setViewCalls[0].destination, new Cartesian3()),
+                new Cartesian3(),
+            )
+
+            expect(flyToCalls).toHaveLength(0)
+            expect(setViewCalls).toHaveLength(1)
+            expect(setViewCalls[0].orientation.direction.x).toBeCloseTo(expectedDirection.x, 6)
+            expect(setViewCalls[0].orientation.direction.y).toBeCloseTo(expectedDirection.y, 6)
+            expect(setViewCalls[0].orientation.direction.z).toBeCloseTo(expectedDirection.z, 6)
+        }
+        finally {
+            globalThis.lgs = previousLgs
+        }
+    })
+
+    it('recenters immediately on flythrough start even when the first tolerance marker is already inside the zone', () => {
+        const journey = makeJourney([
+                                        makeTrack({
+                                                      slug:        'track#journey#gpx#main',
+                                                      coordinates: [[2, 48, 120], [2.001, 48.001, 130]],
+                                                  }),
+                                    ])
+        const previousLgs = globalThis.lgs
+        const flythrough = defaultFlythroughSettings()
+        const appCanvas = {
+            clientWidth:         1000,
+            clientHeight:        1000,
+            addEventListener:    () => {
+            },
+            removeEventListener: () => {
+            },
+        }
+        const flyToCalls = []
+        const setViewCalls = []
+
+        globalThis.lgs = {
+            theJourney: journey,
+            theTrack:   null,
+            canvas:     appCanvas,
+            settings:   {
+                ui: {
+                    flythrough: {
+                        ...flythrough,
+                        marker: {
+                            ...flythrough.marker,
+                            mode: FLYTHROUGH_MARKER_MODE_HYSTERESIS,
+                        },
+                    },
+                },
+            },
+            stores:     {
+                flythrough: proxy({
+                                      progress: 0,
+                                      camera:   flythrough.camera,
+                                  }),
+            },
+            viewer:     {
+                trackedEntity: null,
+                canvas:        appCanvas,
+                camera:        {
+                    heading:              0.8,
+                    pitch:                -Math.PI / 4,
+                    roll:                 0,
+                    positionCartographic: {longitude: 0.1, latitude: 0.2, height: 1800},
+                    moveStart:            {
+                        addEventListener:       () => {
+                        }, removeEventListener: () => {
+                        },
+                    },
+                    moveEnd:              {
+                        addEventListener:       () => {
+                        }, removeEventListener: () => {
+                        },
+                    },
+                    cancelFlight:         () => {
+                    },
+                    flyTo:                options => flyToCalls.push(options),
+                    setView:              options => setViewCalls.push(options),
+                    lookAtTransform:      () => {
+                    },
+                },
+            },
+            scene:      {
+                canvas:                       appCanvas,
+                cartesianToCanvasCoordinates: () => ({x: 500, y: 500}),
+                requestRender:                () => {
+                },
+                globe:                        {getHeight: () => 120},
+            },
+        }
+
+        try {
+            const mode = new FlythroughMode({
+                                                controller: new FlythroughPlaybackController({
+                                                                                                 requestFrame: () => 1,
+                                                                                                 cancelFrame:  () => {
+                                                                                                 },
+                                                                                                 now:          () => 0,
+                                                                                             }),
+                                                renderer:   {
+                                                    clear:  () => {
+                                                    },
+                                                    show:   () => {
+                                                    },
+                                                    update: () => {
+                                                    },
+                                                },
+                                            })
+            mode.start()
+
+            expect(flyToCalls).toHaveLength(0)
+            expect(setViewCalls).toHaveLength(1)
+        }
+        finally {
+            globalThis.lgs = previousLgs
+        }
+    })
+
+    it('draws the tolerance zone overlay over the Cesium canvas', () => {
+        const journey = makeJourney([
+                                        makeTrack({
+                                                      slug:        'track#journey#gpx#main',
+                                                      coordinates: [[2, 48, 120], [2.001, 48.001, 130]],
+                                                  }),
+                                    ])
+        const previousLgs = globalThis.lgs
+        const flythrough = defaultFlythroughSettings()
+        const canvas = {
+            clientWidth:           1000,
+            clientHeight:          800,
+            addEventListener:      () => {
+            },
+            removeEventListener:   () => {
+            },
+            getBoundingClientRect: () => ({
+                left:   10,
+                top:    20,
+                width:  1000,
+                height: 800,
+            }),
+        }
+
+        globalThis.lgs = {
+            theJourney: journey,
+            theTrack:   null,
+            canvas,
+            settings:   {
+                ui: {
+                    flythrough: {
+                        ...flythrough,
+                        marker: {
+                            ...flythrough.marker,
+                            mode: FLYTHROUGH_MARKER_MODE_HYSTERESIS,
+                        },
+                    },
+                },
+            },
+            stores:     {
+                flythrough: proxy({
+                                      progress: 0,
+                                      camera:   flythrough.camera,
+                                  }),
+            },
+            viewer:     {
+                trackedEntity: null,
+                canvas,
+                camera:        {
+                    heading:              0.8,
+                    pitch:                -Math.PI / 4,
+                    positionCartographic: {longitude: 0.1, latitude: 0.2, height: 1800},
+                    moveStart:            {
+                        addEventListener:       () => {
+                        }, removeEventListener: () => {
+                        },
+                    },
+                    moveEnd:              {
+                        addEventListener:       () => {
+                        }, removeEventListener: () => {
+                        },
+                    },
+                    cancelFlight:         () => {
+                    },
+                    flyTo:                () => {
+                    },
+                    setView:              () => {
+                    },
+                    lookAtTransform:      () => {
+                    },
+                },
+            },
+            scene:      {
+                canvas,
+                cartesianToCanvasCoordinates: () => ({x: 500, y: 400}),
+                requestRender:                () => {
+                },
+                globe:                        {getHeight: () => 120},
+            },
+        }
+
+        try {
+            const mode = new FlythroughMode({
+                                                controller: new FlythroughPlaybackController({
+                                                                                                 requestFrame: () => 1,
+                                                                                                 cancelFrame:  () => {
+                                                                                                 },
+                                                                                                 now:          () => 0,
+                                                                                             }),
+                                                renderer:   {
+                                                    clear:  () => {
+                                                    },
+                                                    show:   () => {
+                                                    },
+                                                    update: () => {
+                                                    },
+                                                },
+                                            })
+            mode.start()
+
+            const overlay = document.querySelector('.flythrough-tolerance-zone-overlay')
+            expect(overlay).not.toBeNull()
+            expect(overlay.style.left).toBe('260px')
+            expect(overlay.style.top).toBe('220px')
+            expect(overlay.style.width).toBe('500px')
+            expect(overlay.style.height).toBe('400px')
+            expect(overlay.style.border).toContain('solid')
+
+            mode.stop()
+            expect(document.querySelector('.flythrough-tolerance-zone-overlay')).toBeNull()
+        }
+        finally {
+            document.querySelector('.flythrough-tolerance-zone-overlay')?.remove()
+            globalThis.lgs = previousLgs
+        }
+    })
+
+    it('recenters tolerance tracking after a user zoom even when the marker was still inside the zone', () => {
+        vi.useFakeTimers()
+        const journey = makeJourney([
+                                        makeTrack({
+                                                      slug:        'track#journey#gpx#main',
+                                                      coordinates: [[2, 48, 120], [2.001, 48.001, 130]],
+                                                  }),
+                                    ])
+        const previousLgs = globalThis.lgs
+        const flythrough = defaultFlythroughSettings()
+        const canvasListeners = new Map()
+        const appCanvas = {
+            clientWidth:         1000,
+            clientHeight:        1000,
+            addEventListener:    (type, listener) => canvasListeners.set(type, listener),
+            removeEventListener: type => canvasListeners.delete(type),
+        }
+        const flyToCalls = []
+        const camera = {
+            heading:              0.8,
+            pitch:                -Math.PI / 6,
+            positionCartographic: {height: 2600},
+            moveStart:            {
+                addEventListener:       () => {
+                }, removeEventListener: () => {
+                },
+            },
+            moveEnd:              {
+                addEventListener:       () => {
+                }, removeEventListener: () => {
+                },
+            },
+            cancelFlight:         () => {
+            },
+            flyTo:                options => flyToCalls.push(options),
+            lookAtTransform:      () => {
+            },
+        }
+
+        globalThis.lgs = {
+            theJourney: journey,
+            theTrack:   null,
+            canvas:     appCanvas,
+            settings:   {
+                ui: {
+                    flythrough: {
+                        ...flythrough,
+                        marker: {
+                            ...flythrough.marker,
+                            mode: FLYTHROUGH_MARKER_MODE_HYSTERESIS,
+                        },
+                    },
+                },
+            },
+            stores:     {
+                flythrough: proxy({
+                                      progress: 0,
+                                      camera:   flythrough.camera,
+                                  }),
+            },
+            viewer:     {
+                trackedEntity: null,
+                canvas:        appCanvas,
+                camera,
+            },
+            scene:      {
+                canvas:                       appCanvas,
+                cartesianToCanvasCoordinates: () => ({x: 500, y: 500}),
+                requestRender:                () => {
+                },
+                globe:                        {getHeight: () => 120},
+            },
+        }
+
+        try {
+            const mode = new FlythroughMode({
+                                                controller: new FlythroughPlaybackController({
+                                                                                                 requestFrame: () => 1,
+                                                                                                 cancelFrame:  () => {
+                                                                                                 },
+                                                                                                 now:          () => 0,
+                                                                                             }),
+                                                renderer:   {
+                                                    clear:  () => {
+                                                    },
+                                                    show:   () => {
+                                                    },
+                                                    update: () => {
+                                                    },
+                                                },
+                                            })
+            mode.configure()
+            canvasListeners.get('wheel')()
+            vi.advanceTimersByTime(130)
+
+            const target = Cartesian3.fromDegrees(2, 48, 120)
+            const up = Matrix4.getColumn(Transforms.eastNorthUpToFixedFrame(target), 2, new Cartesian3())
+            const verticalComponent = Cartesian3.dot(flyToCalls[0].orientation.direction, up)
+
+            expect(globalThis.lgs.settings.ui.flythrough.camera.altitude).toBe(2600)
+            expect(globalThis.lgs.settings.ui.flythrough.camera.pitch).toBeCloseTo(-30, 6)
+            expect(flyToCalls).toHaveLength(1)
+            expect(verticalComponent).toBeCloseTo(-0.5, 2)
+        }
+        finally {
+            vi.useRealTimers()
+            globalThis.lgs = previousLgs
+        }
+    })
+
+    it('recenters tolerance tracking on the rendered ground marker instead of the sample altitude', () => {
+        vi.useFakeTimers()
+        const journey = makeJourney([
+                                        makeTrack({
+                                                      slug:        'track#journey#gpx#main',
+                                                      coordinates: [[2, 48, 120], [2.001, 48.001, 130]],
+                                                  }),
+                                    ])
+        const previousLgs = globalThis.lgs
+        const flythrough = defaultFlythroughSettings()
+        const appCanvas = {
+            clientWidth:         1000,
+            clientHeight:        1000,
+            addEventListener:    () => {
+            },
+            removeEventListener: () => {
+            },
+        }
+        const flyToCalls = []
+        const camera = {
+            heading:              0.8,
+            pitch:                -Math.PI / 4,
+            positionCartographic: {height: 1800},
+            moveStart:            {
+                addEventListener:       () => {
+                }, removeEventListener: () => {
+                },
+            },
+            moveEnd:              {
+                addEventListener:       () => {
+                }, removeEventListener: () => {
+                },
+            },
+            cancelFlight:         () => {
+            },
+            flyTo:                options => flyToCalls.push(options),
+            lookAtTransform:      () => {
+            },
+        }
+
+        globalThis.lgs = {
+            theJourney: journey,
+            theTrack:   null,
+            canvas:     appCanvas,
+            settings:   {
+                ui: {
+                    flythrough: {
+                        ...flythrough,
+                        marker: {
+                            ...flythrough.marker,
+                            mode: FLYTHROUGH_MARKER_MODE_HYSTERESIS,
+                        },
+                    },
+                },
+            },
+            stores:     {
+                flythrough: proxy({
+                                      progress: 0,
+                                      camera:   flythrough.camera,
+                                  }),
+            },
+            viewer:     {
+                trackedEntity: null,
+                canvas:        appCanvas,
+                camera,
+            },
+            scene:      {
+                canvas:                       appCanvas,
+                cartesianToCanvasCoordinates: () => ({x: 990, y: 990}),
+                requestRender:                () => {
+                },
+                globe:                        {getHeight: () => 20},
+            },
+        }
+
+        try {
+            const mode = new FlythroughMode({
+                                                controller: new FlythroughPlaybackController({
+                                                                                                 requestFrame: () => 1,
+                                                                                                 cancelFrame:  () => {
+                                                                                                 },
+                                                                                                 now:          () => 0,
+                                                                                             }),
+                                                renderer:   {
+                                                    clear:  () => {
+                                                    },
+                                                    show:   () => {
+                                                    },
+                                                    update: () => {
+                                                    },
+                                                },
+                                            })
+            mode.configure()
+            mode.refreshCamera()
+
+            const target = Cartesian3.fromDegrees(2, 48, 20)
+            const expectedDirection = Cartesian3.normalize(
+                Cartesian3.subtract(target, flyToCalls[0].destination, new Cartesian3()),
+                new Cartesian3(),
+            )
+
+            expect(flyToCalls).toHaveLength(1)
+            expect(flyToCalls[0].orientation.direction.x).toBeCloseTo(expectedDirection.x, 6)
+            expect(flyToCalls[0].orientation.direction.y).toBeCloseTo(expectedDirection.y, 6)
+            expect(flyToCalls[0].orientation.direction.z).toBeCloseTo(expectedDirection.z, 6)
+        }
+        finally {
+            vi.useRealTimers()
+            globalThis.lgs = previousLgs
+        }
+    })
+
+    it('cancels an active tolerance recenter before applying a user zoom recenter', () => {
+        vi.useFakeTimers()
+        const journey = makeJourney([
+                                        makeTrack({
+                                                      slug:        'track#journey#gpx#main',
+                                                      coordinates: [[2, 48, 120], [2.001, 48.001, 130]],
+                                                  }),
+                                    ])
+        const previousLgs = globalThis.lgs
+        const flythrough = defaultFlythroughSettings()
+        const canvasListeners = new Map()
+        const appCanvas = {
+            clientWidth:         1000,
+            clientHeight:        1000,
+            addEventListener:    (type, listener) => canvasListeners.set(type, listener),
+            removeEventListener: type => canvasListeners.delete(type),
+        }
+        const flyToCalls = []
+        let cancelFlightCalls = 0
+        const camera = {
+            heading:              0.8,
+            pitch:                -Math.PI / 4,
+            positionCartographic: {height: 1800},
+            moveStart:            {
+                addEventListener:       () => {
+                }, removeEventListener: () => {
+                },
+            },
+            moveEnd:              {
+                addEventListener:       () => {
+                }, removeEventListener: () => {
+                },
+            },
+            cancelFlight:         () => {
+                cancelFlightCalls += 1
+            },
+            flyTo:                options => flyToCalls.push(options),
+            lookAtTransform:      () => {
+            },
+        }
+
+        globalThis.lgs = {
+            theJourney: journey,
+            theTrack:   null,
+            canvas:     appCanvas,
+            settings:   {
+                ui: {
+                    flythrough: {
+                        ...flythrough,
+                        marker: {
+                            ...flythrough.marker,
+                            mode: FLYTHROUGH_MARKER_MODE_HYSTERESIS,
+                        },
+                    },
+                },
+            },
+            stores:     {
+                flythrough: proxy({
+                                      progress: 0,
+                                      camera:   flythrough.camera,
+                                  }),
+            },
+            viewer:     {
+                trackedEntity: null,
+                canvas:        appCanvas,
+                camera,
+            },
+            scene:      {
+                canvas:                       appCanvas,
+                cartesianToCanvasCoordinates: () => ({x: 990, y: 990}),
+                requestRender:                () => {
+                },
+                globe:                        {getHeight: () => 120},
+            },
+        }
+
+        try {
+            const mode = new FlythroughMode({
+                                                controller: new FlythroughPlaybackController({
+                                                                                                 requestFrame: () => 1,
+                                                                                                 cancelFrame:  () => {
+                                                                                                 },
+                                                                                                 now:          () => 0,
+                                                                                             }),
+                                                renderer:   {
+                                                    clear:  () => {
+                                                    },
+                                                    show:   () => {
+                                                    },
+                                                    update: () => {
+                                                    },
+                                                },
+                                            })
+            mode.configure()
+            mode.refreshCamera()
+            expect(flyToCalls).toHaveLength(1)
+
+            camera.positionCartographic.height = 2600
+            canvasListeners.get('wheel')()
+            vi.advanceTimersByTime(130)
+
+            expect(cancelFlightCalls).toBeGreaterThan(0)
+            expect(flyToCalls).toHaveLength(2)
+        }
+        finally {
+            vi.useRealTimers()
+            globalThis.lgs = previousLgs
+        }
+    })
+
+    it('replaces a stale tolerance recenter when the moving marker remains outside the zone', () => {
+        vi.useFakeTimers()
+        const journey = makeJourney([
+                                        makeTrack({
+                                                      slug:        'track#journey#gpx#main',
+                                                      coordinates: [[2, 48, 120], [2.001, 48.001, 130]],
+                                                  }),
+                                    ])
+        const previousLgs = globalThis.lgs
+        const flythrough = defaultFlythroughSettings()
+        const appCanvas = {
+            clientWidth:         1000,
+            clientHeight:        1000,
+            addEventListener:    () => {
+            },
+            removeEventListener: () => {
+            },
+        }
+        const flyToCalls = []
+        let cancelFlightCalls = 0
+        const camera = {
+            heading:              0.8,
+            pitch:                -Math.PI / 4,
+            positionCartographic: {height: 1800},
+            moveStart:            {
+                addEventListener:       () => {
+                }, removeEventListener: () => {
+                },
+            },
+            moveEnd:              {
+                addEventListener:       () => {
+                }, removeEventListener: () => {
+                },
+            },
+            cancelFlight:         () => {
+                cancelFlightCalls += 1
+            },
+            flyTo:                options => flyToCalls.push(options),
+            lookAtTransform:      () => {
+            },
+        }
+
+        globalThis.lgs = {
+            theJourney: journey,
+            theTrack:   null,
+            canvas:     appCanvas,
+            settings:   {
+                ui: {
+                    flythrough: {
+                        ...flythrough,
+                        marker: {
+                            ...flythrough.marker,
+                            mode: FLYTHROUGH_MARKER_MODE_HYSTERESIS,
+                        },
+                    },
+                },
+            },
+            stores:     {
+                flythrough: proxy({
+                                      progress: 0,
+                                      camera:   flythrough.camera,
+                                  }),
+            },
+            viewer:     {
+                trackedEntity: null,
+                canvas:        appCanvas,
+                camera,
+            },
+            scene:      {
+                canvas:                       appCanvas,
+                cartesianToCanvasCoordinates: () => ({x: 990, y: 990}),
+                requestRender:                () => {
+                },
+                globe:                        {getHeight: () => 120},
+            },
+        }
+
+        try {
+            const mode = new FlythroughMode({
+                                                controller: new FlythroughPlaybackController({
+                                                                                                 requestFrame: () => 1,
+                                                                                                 cancelFrame:  () => {
+                                                                                                 },
+                                                                                                 now:          () => 0,
+                                                                                             }),
+                                                renderer:   {
+                                                    clear:  () => {
+                                                    },
+                                                    show:   () => {
+                                                    },
+                                                    update: () => {
+                                                    },
+                                                },
+                                            })
+            mode.configure()
+            mode.refreshCamera()
+            expect(flyToCalls).toHaveLength(1)
+
+            vi.advanceTimersByTime(360)
+            mode.refreshCamera()
+
+            expect(cancelFlightCalls).toBeGreaterThan(0)
+            expect(flyToCalls).toHaveLength(2)
+        }
+        finally {
+            vi.useRealTimers()
+            globalThis.lgs = previousLgs
+        }
+    })
+
+    it('restores the captured camera state when stopping an active flythrough', () => {
+        const journey = makeJourney([
+                                        makeTrack({
+                                                      slug:        'track#journey#gpx#main',
+                                                      coordinates: [[2, 48, 120], [2.001, 48.001, 130]],
+                                                  }),
+                                    ])
+        const previousLgs = globalThis.lgs
+        const flythrough = defaultFlythroughSettings()
+        const setViewCalls = []
+        let cancelFlightCalls = 0
+
+        globalThis.lgs = {
+            theJourney: journey,
+            theTrack:   null,
+            settings:   {ui: {flythrough}},
+            stores:     {
+                flythrough: proxy({
+                                      progress: 0,
+                                      camera:   flythrough.camera,
+                                  }),
+            },
+            viewer:     {
+                trackedEntity: null,
+                camera:        {
+                    heading:              0.4,
+                    pitch:                -0.7,
+                    roll:                 0,
+                    positionCartographic: {longitude: 0.1, latitude: 0.2, height: 3456},
+                    moveStart:            {
+                        addEventListener:       () => {
+                        }, removeEventListener: () => {
+                        },
+                    },
+                    moveEnd:              {
+                        addEventListener:       () => {
+                        }, removeEventListener: () => {
+                        },
+                    },
+                    cancelFlight:         () => {
+                        cancelFlightCalls += 1
+                    },
+                    lookAtTransform:      () => {
+                    },
+                    setView:              options => setViewCalls.push(options),
+                },
+            },
+            scene:      {
+                requestRender: () => {
+                }, globe:      {getHeight: () => 120},
+            },
+        }
+
+        try {
+            const mode = new FlythroughMode({
+                                                controller: new FlythroughPlaybackController({
+                                                                                                 requestFrame: () => 1,
+                                                                                                 cancelFrame:  () => {
+                                                                                                 },
+                                                                                                 now:          () => 0,
+                                                                                             }),
+                                                renderer:   {
+                                                    clear:  () => {
+                                                    },
+                                                    show:   () => {
+                                                    },
+                                                    update: () => {
+                                                    },
+                                                },
+                                            })
+            mode.start()
+            mode.stop()
+
+            expect(cancelFlightCalls).toBeGreaterThan(0)
+            expect(setViewCalls.at(-1).orientation).toEqual({
+                                                                heading: 0.4,
+                                                                pitch:   -0.7,
+                                                                roll:    0,
+                                                            })
+        }
+        finally {
+            globalThis.lgs = previousLgs
+        }
+    })
+
+    it('does not recenter the camera when pausing an active flythrough', () => {
+        const journey = makeJourney([
+                                        makeTrack({
+                                                      slug:        'track#journey#gpx#main',
+                                                      coordinates: [[2, 48, 120], [2.001, 48.001, 130]],
+                                                  }),
+                                    ])
+        const previousLgs = globalThis.lgs
+        const flythrough = defaultFlythroughSettings()
+        const flyToCalls = []
+
+        globalThis.lgs = {
+            theJourney: journey,
+            theTrack:   null,
+            canvas:     {
+                clientWidth:            1000, clientHeight: 1000, addEventListener: () => {
+                }, removeEventListener: () => {
+                },
+            },
+            settings:   {
+                ui: {
+                    flythrough: {
+                        ...flythrough,
+                        marker: {
+                            ...flythrough.marker,
+                            mode: FLYTHROUGH_MARKER_MODE_HYSTERESIS,
+                        },
+                    },
+                },
+            },
+            stores:     {
+                flythrough: proxy({
+                                      progress: 0,
+                                      camera:   flythrough.camera,
+                                  }),
+            },
+            viewer:     {
+                trackedEntity: null,
+                canvas:        {clientWidth: 1000, clientHeight: 1000},
+                camera:        {
+                    heading:              0.4,
+                    pitch:                -0.7,
+                    roll:                 0,
+                    positionCartographic: {longitude: 0.1, latitude: 0.2, height: 3456},
+                    moveStart:            {
+                        addEventListener:       () => {
+                        }, removeEventListener: () => {
+                        },
+                    },
+                    moveEnd:              {
+                        addEventListener:       () => {
+                        }, removeEventListener: () => {
+                        },
+                    },
+                    cancelFlight:         () => {
+                    },
+                    lookAtTransform:      () => {
+                    },
+                    flyTo:                options => flyToCalls.push(options),
+                    setView:              () => {
+                    },
+                },
+            },
+            scene:      {
+                cartesianToCanvasCoordinates: () => ({x: 990, y: 990}),
+                requestRender:                () => {
+                },
+                globe:                        {getHeight: () => 120},
+            },
+        }
+
+        try {
+            const mode = new FlythroughMode({
+                                                controller: new FlythroughPlaybackController({
+                                                                                                 requestFrame: () => 1,
+                                                                                                 cancelFrame:  () => {
+                                                                                                 },
+                                                                                                 now:          () => 0,
+                                                                                             }),
+                                                renderer:   {
+                                                    clear:  () => {
+                                                    },
+                                                    show:   () => {
+                                                    },
+                                                    update: () => {
+                                                    },
+                                                },
+                                            })
+            mode.start()
+            flyToCalls.length = 0
+            mode.pause()
+
+            expect(flyToCalls).toHaveLength(0)
+        }
+        finally {
+            globalThis.lgs = previousLgs
+        }
+    })
+
+    it('focuses the full journey when playback naturally ends', () => {
+        const journey = makeJourney([
+                                        makeTrack({
+                                                      slug:        'track#journey#gpx#main',
+                                                      coordinates: [[2, 48, 120], [2.001, 48.001, 130]],
+                                                  }),
+                                    ])
+        const previousLgs = globalThis.lgs
+        const previousDoubleUnderscore = globalThis.__
+        const focusCalls = []
+        const frames = []
+        let now = 0
+        const flythrough = defaultFlythroughSettings()
+        journey.focus = props => focusCalls.push(props)
+
+        globalThis.__ = {ui: {}}
+        globalThis.lgs = {
+            theJourney: journey,
+            theTrack:   null,
+            settings:   {
+                ui: {
+                    camera: {start: {rotate: {journey: true}}},
+                    flythrough,
+                },
+            },
+            stores:     {
+                flythrough: proxy({
+                                      active:   false,
+                                      playing:  false,
+                                      paused:   false,
+                                      progress: 0,
+                                      camera:   flythrough.camera,
+                                  }),
+            },
+            viewer:     {
+                trackedEntity: null,
+                camera:        {
+                    heading:              0,
+                    pitch:                -Math.PI / 4,
+                    positionCartographic: {longitude: 0, latitude: 0, height: 1000},
+                    moveStart:            {
+                        addEventListener:       () => {
+                        }, removeEventListener: () => {
+                        },
+                    },
+                    moveEnd:              {
+                        addEventListener:       () => {
+                        }, removeEventListener: () => {
+                        },
+                    },
+                    cancelFlight:         () => {
+                    },
+                },
+            },
+            scene:      {
+                requestRender: () => {
+                }, globe:      {},
+            },
+        }
+
+        try {
+            const mode = new FlythroughMode({
+                                                controller: new FlythroughPlaybackController({
+                                                                                                 requestFrame: callback => {
+                                                                                                     frames.push(callback)
+                                                                                                     return frames.length
+                                                                                                 },
+                                                                                                 cancelFrame:  () => {
+                                                                                                 },
+                                                                                                 now:          () => now,
+                                                                                             }),
+                                                renderer:   {
+                                                    clear:  () => {
+                                                    },
+                                                    show:   () => {
+                                                    },
+                                                    update: () => {
+                                                    },
+                                                },
+                                            })
+            mode.start({duration: 1})
+            now = 1000
+            frames.shift()()
+
+            expect(focusCalls).toHaveLength(1)
+            expect(focusCalls[0]).toEqual({
+                                              resetCamera: true,
+                                              rotate:      true,
+                                          })
+        }
+        finally {
+            globalThis.lgs = previousLgs
+            globalThis.__ = previousDoubleUnderscore
+        }
+    })
 })
 
 describe('flythrough settings normalization', () => {
@@ -502,9 +2233,87 @@ describe('flythrough settings normalization', () => {
         expect(camera.positionMode).toBe(FLYTHROUGH_CAMERA_POSITION_AHEAD)
     })
 
+    it('keeps a default tolerance zone aligned to the window and clamps custom rectangles', () => {
+        const camera = normalizeFlythroughCamera({})
+        expect(camera.hysteresis.zone).toEqual({
+                                                   top:    0.25,
+                                                   left:   0.25,
+                                                   width:  0.5,
+                                                   height: 0.5,
+                                               })
+
+        const bounds = flythroughToleranceZoneBounds({
+                                                         top:    0.15,
+                                                         left:   0.1,
+                                                         width:  0.5,
+                                                         height: 0.3,
+                                                     })
+        expect(bounds.top).toBeCloseTo(0.15, 6)
+        expect(bounds.left).toBeCloseTo(0.1, 6)
+        expect(bounds.right).toBeCloseTo(0.6, 6)
+        expect(bounds.bottom).toBeCloseTo(0.45, 6)
+    })
+
+    it('detects tolerance exits from Cesium window coordinates', () => {
+        const zone = {
+            top:    0.25,
+            left:   0.25,
+            width:  0.5,
+            height: 0.5,
+        }
+        expect(flythroughIsWindowPointOutsideToleranceZone({
+                                                               point:  {x: 500, y: 500},
+                                                               width:  1000,
+                                                               height: 1000,
+                                                               zone,
+                                                           })).toBe(false)
+        expect(flythroughIsWindowPointOutsideToleranceZone({
+                                                               point:  {x: 750, y: 500},
+                                                               width:  1000,
+                                                               height: 1000,
+                                                               zone,
+                                                           })).toBe(true)
+        expect(flythroughIsWindowPointOutsideToleranceZone({
+                                                               point:  {x: 760, y: 500},
+                                                               width:  1000,
+                                                               height: 1000,
+                                                               zone,
+                                                           })).toBe(true)
+        expect(flythroughIsWindowPointOutsideToleranceZone({
+                                                               point:  null,
+                                                               width:  1000,
+                                                               height: 1000,
+                                                               zone,
+                                                           })).toBe(true)
+    })
+
     it('keeps the camera farther from the anchor when pitch is not top-down', () => {
         expect(flythroughCameraRangeFromPitch(1200, -Math.PI / 2)).toBeCloseTo(1200, 6)
         expect(flythroughCameraRangeFromPitch(1200, -Math.PI / 4)).toBeCloseTo(1697.056, 3)
+    })
+
+    it('keeps the current camera height when recentering', () => {
+        expect(flythroughCameraRecenterHeight(840, 1200)).toBe(840)
+        expect(flythroughCameraRecenterHeight(null, 1200)).toBe(1200)
+    })
+
+    it('keeps the recentering pitch by moving horizontally instead of changing height', () => {
+        expect(flythroughCameraRecenterHorizontalDistance({
+                                                              cameraHeight: 1000,
+                                                              targetHeight: 0,
+                                                              pitchRadians: -Math.PI / 4,
+                                                          })).toBeCloseTo(1000, 6)
+        expect(flythroughCameraRecenterHorizontalDistance({
+                                                              cameraHeight: 1000,
+                                                              targetHeight: 500,
+                                                              pitchRadians: -Math.PI / 4,
+                                                          })).toBeCloseTo(500, 6)
+        expect(flythroughCameraRecenterHorizontalDistance({
+                                                              cameraHeight:  1000,
+                                                              targetHeight:  0,
+                                                              pitchRadians:  0,
+                                                              fallbackRange: 750,
+                                                          })).toBe(750)
     })
 
     it('converts local trace axis angles to Cesium headings', () => {

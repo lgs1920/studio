@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-05-26
- * Last modified: 2026-05-26
+ * Created on: 2026-05-31
+ * Last modified: 2026-05-31
  *
  *
  * Copyright © 2026 LGS1920
@@ -249,6 +249,8 @@
     --lgs-card-on-map-disabled-border-color: var(--lgs-light-color-10);
 
     /* Form controls and selection tokens shared by WebAwesome wrappers. */
+
+
     --lgs-switch-active-track-color: var(--wa-color-brand);
     --lgs-switch-active-thumb-color: var(--wa-color-brand-40);
     --lgs-switch-inactive-thumb-color: var(--wa-color-brand-80);
@@ -1367,7 +1369,7 @@ wa-input.lgs--short-input::part(input), wa-number-input.lgs--short-input::part(i
     color: var(--wa-color-brand-fill-loud)
 }
 
-wa-input[label-at-start], wa-number-input[label-at-start] {
+wa-input[label-at-start], wa-number-input[label-at-start], wa-select[label-at-start] {
     display: flex;
     align-items: center;
     flex-direction: row;
@@ -1375,6 +1377,7 @@ wa-input[label-at-start], wa-number-input[label-at-start] {
     width: 100%;
     gap: var(--lgs-gutter-s);
 }
+
 
 wa-input.lgs--short-input[label-at-start], wa-number-input.lgs--short-input[label-at-start] {
     flex: none;
@@ -1394,10 +1397,14 @@ wa-input[label-at-start] label, wa-number-input[label-at-start] label {
     margin-block-end: 0 !important;
 }
 
-wa-input[label-at-start]::part(base), wa-number-input[label-at-start]::part(base) {
+[label-at-start]::part(base) {
     flex: none;
     width: auto;
 }
+
+wa-input[label-at-start].half-width::part(base), wa-number-input[label-at-start].half-width::part(base) {
+    width: 50% !important;
+    margin-left: auto !important; }
 
 
 wa-input [slot="suffix"] {
@@ -2330,6 +2337,8 @@ wa-copy-button[variant="brand"]::part(button):hover {
 wa-select[label-at-start]::part(form-control) {
     display: flex;
     align-items: center;
+    width: 100%;
+    margin-left: auto !important;
     gap: var(--lgs-gutter-s);
 }
 
@@ -2346,6 +2355,11 @@ wa-select::part(combobox) {
     color: var(--lgs-select-color);
     border-color: var(--lgs-select-border-color);
     background-color: var(--lgs-select-bg-color);
+}
+
+wa-select[label-at-start]::part(form-control-input) {
+    width: 50% !important;
+    margin-left: auto !important;
 }
 
 wa-select::part(display-input),

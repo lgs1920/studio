@@ -1,3 +1,19 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: style.css
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2026-05-31
+ * Last modified: 2026-05-31
+ *
+ *
+ * Copyright © 2026 LGS1920
+ ******************************************************************************/
+
 .flythrough-drawer-content {
     box-sizing: border-box;
     display: flex;
@@ -37,11 +53,6 @@
     gap: var(--wa-space-s, 0.75rem);
 }
 
-.flythrough-duration-input {
-    box-sizing: border-box;
-    max-width: 50%;
-    width: 50%;
-}
 
 .flythrough-empty-state {
     margin: 0;

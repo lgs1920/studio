@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-05-28
- * Last modified: 2026-05-28
+ * Created on: 2026-05-31
+ * Last modified: 2026-05-31
  *
  *
  * Copyright © 2026 LGS1920
@@ -34,8 +34,8 @@ import {
     normalizeFlythroughProgressionStyle, normalizeFlythroughTrace,
 }                 from '@Core/ui/flythrough/FlythroughProgressionStyle'
 import {
-    WaCard, WaColorPicker, WaDivider, WaIcon, WaNumberInput, WaOption, WaSelect, WaSwitch, WaTab, WaTabGroup,
-    WaTabPanel, WaSlider,
+    WaCard, WaColorPicker, WaDivider, WaIcon, WaNumberInput, WaOption, WaSelect, WaSlider, WaSwitch, WaTab, WaTabGroup,
+    WaTabPanel,
 }                 from '@web.awesome.me/webawesome-pro/dist/react'
 import { colord } from 'colord'
 import { memo, useCallback, useEffect, useMemo, useRef } from 'react'
@@ -53,9 +53,8 @@ const toOpaqueColorValue = value => {
     return color.isValid() ? color.alpha(1).toHex() : '#ffffff'
 }
 
-const FlythroughStyleField = ({label, children}) => (
+const FlythroughStyleField = ({children}) => (
     <div className="flythrough-style-field">
-        {label && <span className="flythrough-style-label">{label}</span>}
         {children}
     </div>
 )
@@ -92,15 +91,15 @@ const mergeCamera = (current, updates) => normalizeFlythroughCamera({
                                                                     })
 
 const mergeMarker = (current, updates) => normalizeFlythroughMarker({
-                                                                       ...current,
-                                                                       ...updates,
-                                                                       position: updates?.position === null
-                                                                                 ? null
-                                                                                 : {
-                                                                                     ...(current?.position ?? {}),
-                                                                                     ...(updates?.position ?? {}),
-                                                                                 },
-                                                                   })
+                                                                        ...current,
+                                                                        ...updates,
+                                                                        position: updates?.position === null
+                                                                                  ? null
+                                                                                  : {
+                                                                                ...(current?.position ?? {}),
+                                                                                ...(updates?.position ?? {}),
+                                                                            },
+                                                                    })
 
 const FlythroughColorField = ({
                                   label,
@@ -111,7 +110,7 @@ const FlythroughColorField = ({
                                   onColorInput,
                                   onOpacityInput,
                               }) => (
-    <FlythroughStyleField label={label}>
+    <FlythroughStyleField>
         <div className="flythrough-color-control">
             <WaColorPicker
                 className="flythrough-color-picker"
@@ -122,7 +121,7 @@ const FlythroughColorField = ({
                 onInput={onColorInput}
             />
             <WaSlider
-                className="flythrough-opacity-slider"
+                className="flythrough-opacity-slider half-width"
                 size="s"
                 label="Opacity"
                 min="0"
@@ -141,9 +140,10 @@ const FlythroughColorField = ({
 )
 
 const FlythroughWidthField = ({label, unit = 'm', value, min, max, step, onInput}) => (
-    <FlythroughStyleField label={`${label} (${unit})`}>
+    <FlythroughStyleField>
         <WaNumberInput
-            className="flythrough-width-input"
+            label={`${label} (${unit})`}
+            className="flythrough-width-input half-width"
             size="s"
             appearance="filled"
             min={min}
@@ -151,7 +151,7 @@ const FlythroughWidthField = ({label, unit = 'm', value, min, max, step, onInput
             step={step}
             value={value}
             onInput={onInput}
-        />
+            label-at-start/>
     </FlythroughStyleField>
 )
 
@@ -179,7 +179,6 @@ const FlythroughProgressionGroup = ({
                 onColorInput={onColorInput}
                 onOpacityInput={onOpacityInput}
             />
-            <div className="flythrough-style-field-grid is-single flythrough-progression-width-grid">
                 <FlythroughWidthField
                     label="Width"
                     value={width}
@@ -188,7 +187,6 @@ const FlythroughProgressionGroup = ({
                     step="0.5"
                     onInput={onWidthInput}
                 />
-            </div>
         </div>
     </section>
 )
@@ -233,7 +231,6 @@ export const FlythroughDrawer = memo(() => {
         flythroughRuntime.duration = flythroughSettings.duration
         lgs.settings.ui.flythrough.direction = 1
         flythroughRuntime.direction = 1
-        flythroughRuntime.loop = flythroughSettings.loop
         flythroughRuntime.scope = DEFAULT_FLYTHROUGH_SCOPE
         flythroughRuntime.progression = normalizeFlythroughProgressionStyle(flythroughSettings.progression)
         flythroughRuntime.profileInfo = normalizeFlythroughProfileInfo(flythroughSettings.profileInfo)
@@ -250,7 +247,6 @@ export const FlythroughDrawer = memo(() => {
         }
     }, [
         flythroughSettings.duration,
-        flythroughSettings.loop,
         flythroughSettings.profileInfo,
         flythroughSettings.progression,
         flythroughSettings.trace,
@@ -270,7 +266,7 @@ export const FlythroughDrawer = memo(() => {
         if (!flythroughRuntime.active && !flythroughRuntime.playing && !flythroughRuntime.paused) {
             __.ui.flythrough?.configure?.({progress: flythroughRuntime.progress ?? 0})
         }
-    }, [drawerOpen, flythroughSettings.duration, flythroughSettings.loop, hasJourney, journeySlug])
+    }, [drawerOpen, flythroughSettings.duration, hasJourney, journeySlug])
 
     const refreshFlythrough = useCallback(() => {
         __.ui.flythrough?.refresh?.()
@@ -314,13 +310,6 @@ export const FlythroughDrawer = memo(() => {
         lgs.settings.ui.flythrough.duration = duration
         lgs.stores.flythrough.duration = duration
     }, [durationLocked])
-
-    const updateLoop = useCallback((event) => {
-        const loop = event.target.checked
-        lgs.settings.ui.flythrough.loop = loop
-        lgs.stores.flythrough.loop = loop
-        __.ui.flythrough?.setLoop?.(loop)
-    }, [])
 
     const updateFillColor = useCallback((event) => {
         updateProgression({fill: {color: toOpaqueColorValue(event.target.value)}})
@@ -405,10 +394,6 @@ export const FlythroughDrawer = memo(() => {
     const updateRemainingUseDefinedTrackStyle = useCallback((event) => {
         updateTrace({remaining: {useDefinedTrackStyle: event.target.checked}})
     }, [updateTrace])
-
-    const updateKeepNorth = useCallback((event) => {
-        updateCamera({keepNorth: event.target.checked})
-    }, [updateCamera])
 
     const updateAltitudeMode = useCallback((event) => {
         updateCamera({altitudeMode: event.target.value})
@@ -505,22 +490,22 @@ export const FlythroughDrawer = memo(() => {
                                  <WaCard appearance="outlined" className="flythrough-progress-card-in-drawer">
                                      <FlythroughProgressBar className="flythrough-progress-bar-in-drawer"/>
                                  </WaCard>
-                                 <WaSwitch label-at-start size="xs">
+                                 <WaSwitch label-at-start size="xs" className="half-width">
                                      {'Export to video'}
                                      <span slot="hint">
                                         {'You can configure your video before viewing it, and then save/share it.'}
                                     </span>
                                  </WaSwitch>
                                  <WaSelect
-                                     className="flythrough-progression-select"
-                                     label="Progression"
+                                     className="flythrough-progression-select half-width"
+                                     label="Show"
                                      label-at-start
                                      size="s"
                                      value={trace.mode}
                                      onChange={updateTraceMode}
                                  >
-                                     <WaOption value={FLYTHROUGH_TRACE_MODE_PROGRESSIVE}>{'Progressive'}</WaOption>
-                                     <WaOption value={FLYTHROUGH_TRACE_MODE_FULL}>{'Full trace'}</WaOption>
+                                     <WaOption value={FLYTHROUGH_TRACE_MODE_PROGRESSIVE}>{'Progress'}</WaOption>
+                                     <WaOption value={FLYTHROUGH_TRACE_MODE_FULL}>{'Progress - Remain'}</WaOption>
                                  </WaSelect>
                                  <WaSelect
                                      label="Tracking"
@@ -528,13 +513,13 @@ export const FlythroughDrawer = memo(() => {
                                      size="s"
                                      value={marker.mode}
                                      onChange={updateMarker}
-                                 >
+                                     className="half-width">
                                      <WaOption
                                          value={FLYTHROUGH_MARKER_MODE_TRACE}>{'Passive'}</WaOption>
                                      <WaOption
                                          value={FLYTHROUGH_MARKER_MODE_NAVIGATION}>{'Navigation'}</WaOption>
                                      <WaOption
-                                         value={FLYTHROUGH_MARKER_MODE_HYSTERESIS}>{'Tolerance zone'}</WaOption>
+                                         value={FLYTHROUGH_MARKER_MODE_HYSTERESIS}>{'Dynamic'}</WaOption>
                                  </WaSelect>
                                  <WaTabGroup className="flythrough-tabs">
                                      <WaTab slot="nav" panel="runner">
@@ -551,7 +536,7 @@ export const FlythroughDrawer = memo(() => {
                                              <div className="flythrough-tab-panel">
                                                  <div className="flythrough-fieldset">
                                                      <WaNumberInput
-                                                         className="flythrough-duration-input"
+                                                         className="flythrough-duration-input half-width"
                                                          label="Duration (s)"
                                                          size="s"
                                                          appearance="filled"
@@ -560,30 +545,24 @@ export const FlythroughDrawer = memo(() => {
                                                          value={flythroughSettings.duration}
                                                          disabled={durationLocked}
                                                          onInput={updateDuration}
-                                                     />
-
-                                                     <WaSwitch size="xs" label-at-start
-                                                               checked={flythroughSettings.loop}
-                                                               onInput={updateLoop}>
-                                                         {'Loop'}
-                                                     </WaSwitch>
-                                                    <WaSwitch size="xs" label-at-start
-                                                              checked={camera.keepNorth}
-                                                              onInput={updateKeepNorth}>
-                                                        {'Keep north'}
-                                                    </WaSwitch>
-                                                    <WaSelect
-                                                        label="Camera position"
-                                                        label-at-start
-                                                        size="s"
-                                                        value={camera.positionMode}
-                                                        onChange={updateCameraPositionMode}
-                                                    >
-                                                        <WaOption value={FLYTHROUGH_CAMERA_POSITION_SYSTEM}>{'System'}</WaOption>
-                                                        <WaOption value={FLYTHROUGH_CAMERA_POSITION_BEHIND}>{'Behind marker'}</WaOption>
-                                                        <WaOption value={FLYTHROUGH_CAMERA_POSITION_AHEAD}>{'Ahead marker'}</WaOption>
-                                                    </WaSelect>
-                                                </div>
+                                                         label-at-start/>
+                                                     {marker.mode !== FLYTHROUGH_MARKER_MODE_TRACE &&
+                                                         <WaSelect
+                                                             label="Camera position"
+                                                             label-at-start
+                                                             size="s"
+                                                             value={camera.positionMode}
+                                                             onChange={updateCameraPositionMode}
+                                                             className="half-width">
+                                                             <WaOption
+                                                                 value={FLYTHROUGH_CAMERA_POSITION_SYSTEM}>{'Fixed'}</WaOption>
+                                                             <WaOption
+                                                                 value={FLYTHROUGH_CAMERA_POSITION_BEHIND}>{'Behind'}</WaOption>
+                                                             <WaOption
+                                                                 value={FLYTHROUGH_CAMERA_POSITION_AHEAD}>{'Ahead'}</WaOption>
+                                                         </WaSelect>
+                                                     }
+                                                 </div>
                                                  {marker.mode !== FLYTHROUGH_MARKER_MODE_TRACE && (
                                                      <div className="flythrough-fieldset">
                                                          <WaSelect
@@ -592,9 +571,9 @@ export const FlythroughDrawer = memo(() => {
                                                              size="s"
                                                              value={camera.altitudeMode}
                                                              onChange={updateAltitudeMode}
-                                                         >
+                                                             className="half-width">
                                                              <WaOption
-                                                                 value={FLYTHROUGH_CAMERA_ALTITUDE_CONSTANT}>{'Constant'}</WaOption>
+                                                                 value={FLYTHROUGH_CAMERA_ALTITUDE_CONSTANT}>{'Fixed'}</WaOption>
                                                              <WaOption
                                                                  value={FLYTHROUGH_CAMERA_ALTITUDE_GROUND_OFFSET}>{'Ground offset'}</WaOption>
                                                          </WaSelect>
@@ -608,7 +587,7 @@ export const FlythroughDrawer = memo(() => {
                                                                      step="50"
                                                                      value={camera.altitude}
                                                                      onInput={updateCameraAltitude}
-                                                                 />
+                                                                     label-at-start className="half-width"/>
                                                              ) : (
                                                                   <WaNumberInput
                                                                       label="Ground offset (m)"
@@ -618,7 +597,7 @@ export const FlythroughDrawer = memo(() => {
                                                                       step="25"
                                                                       value={camera.groundOffset}
                                                                       onInput={updateCameraGroundOffset}
-                                                                  />
+                                                                      label-at-start className="half-width"/>
                                                               )}
                                                              <WaNumberInput
                                                                  label="Pitch (deg)"
@@ -629,16 +608,16 @@ export const FlythroughDrawer = memo(() => {
                                                                  step="1"
                                                                  value={camera.pitch}
                                                                  onInput={event => updateCamera({
-                                                                     pitch: clampFlythroughNumber(event.target.value, camera.pitch, -89, -5),
-                                                                 })}
-                                                             />
+                                                                                                    pitch: clampFlythroughNumber(event.target.value, camera.pitch, -89, -5),
+                                                                                                })}
+                                                                 label-at-start className="half-width"/>
                                                          </div>
                                                      </div>
                                                  )}
                                                  {marker.mode === FLYTHROUGH_MARKER_MODE_HYSTERESIS && (
                                                      <div className="flythrough-fieldset">
                                                          <WaNumberInput
-                                                             label="Tolerance zone"
+                                                             label="Dynamic"
                                                              size="s"
                                                              appearance="filled"
                                                              min="0.05"
@@ -646,7 +625,7 @@ export const FlythroughDrawer = memo(() => {
                                                              step="0.01"
                                                              value={camera.hysteresis.marginRatio}
                                                              onInput={updateHysteresisMarginRatio}
-                                                         />
+                                                             label-at-start className="half-width"/>
                                                          <WaNumberInput
                                                              label="Recenter easing"
                                                              size="s"
@@ -656,7 +635,7 @@ export const FlythroughDrawer = memo(() => {
                                                              step="0.01"
                                                              value={camera.hysteresis.easing}
                                                              onInput={updateHysteresisEasing}
-                                                         />
+                                                             label-at-start className="half-width"/>
                                                          <WaNumberInput
                                                              label="Stop threshold"
                                                              size="s"
@@ -666,7 +645,7 @@ export const FlythroughDrawer = memo(() => {
                                                              step="0.000001"
                                                              value={camera.hysteresis.stopThreshold}
                                                              onInput={updateHysteresisStopThreshold}
-                                                         />
+                                                             label-at-start className="half-width"/>
                                                      </div>
                                                  )}
                                              </div>
@@ -676,66 +655,67 @@ export const FlythroughDrawer = memo(() => {
                                      <WaTabPanel name="edit">
                                          <LGSScrollbars>
                                              <div className="flythrough-tab-panel">
-                                                 {trace.mode === FLYTHROUGH_TRACE_MODE_FULL &&
-                                                     <>
-                                                         <section className="flythrough-progression-section">
-                                                             <h3>{'Remaining trace'}</h3>
+                                                 <>
+                                                     <section className="flythrough-progression-section">
+                                                         {trace.mode === FLYTHROUGH_TRACE_MODE_FULL &&
+                                                             <>
+                                                                 <h3>{'Remaining trace'}</h3>
 
-                                                             <WaSwitch
-                                                                 className="flythrough-track-style-switch"
-                                                                 size="xs"
-                                                                 label-at-start
-                                                                 checked={remainingUseDefinedTrackStyle}
-                                                                 onChange={updateRemainingUseDefinedTrackStyle}
-                                                             >
-                                                                 {'Use defined track style'}
-                                                             </WaSwitch>
+                                                                 <WaSwitch
+                                                                     className="flythrough-track-style-switch half-width"
+                                                                     size="xs"
+                                                                     label-at-start
+                                                                     checked={remainingUseDefinedTrackStyle}
+                                                                     onChange={updateRemainingUseDefinedTrackStyle}
+                                                                 >
+                                                                     {'Use defined track style'}
+                                                                 </WaSwitch>
 
-                                                             <div className="flythrough-style-control-group">
-                                                                 {!remainingUseDefinedTrackStyle && (
-                                                                     <FlythroughColorField
-                                                                         color={remainingColor}
-                                                                         opacity={trace.remaining.opacity}
-                                                                         swatches={swatches}
-                                                                         onColorInput={updateRemainingColor}
-                                                                         onOpacityInput={updateRemainingOpacity}
-                                                                     />
-                                                                 )}
-                                                             </div>
+                                                                 <div className="flythrough-style-control-group">
+                                                                     {!remainingUseDefinedTrackStyle && (
+                                                                         <FlythroughColorField
+                                                                             color={remainingColor}
+                                                                             opacity={trace.remaining.opacity}
+                                                                             swatches={swatches}
+                                                                             onColorInput={updateRemainingColor}
+                                                                             onOpacityInput={updateRemainingOpacity}
+                                                                         />
+                                                                     )}
+                                                                 </div>
+                                                                 <WaDivider/>
+                                                             </>
+                                                         }
+                                                         <FlythroughProgressionGroup
+                                                             title="Trace and Marker"
+                                                             color={fillColor}
+                                                             opacity={fillOpacity}
+                                                             width={fillWidth}
+                                                             widthMin={FLYTHROUGH_PROGRESSION_FILL_MIN_WIDTH}
+                                                             widthMax={FLYTHROUGH_PROGRESSION_FILL_MAX_WIDTH}
+                                                             swatches={swatches}
+                                                             onColorInput={updateFillColor}
+                                                             onOpacityInput={updateFillOpacity}
+                                                             onWidthInput={updateFillWidth}
+                                                         />
+                                                         <FlythroughProgressionGroup
+                                                             title="Border"
+                                                             color={borderColor}
+                                                             opacity={borderOpacity}
+                                                             width={borderWidth}
+                                                             widthMin={FLYTHROUGH_PROGRESSION_BORDER_MIN_WIDTH}
+                                                             widthMax={FLYTHROUGH_PROGRESSION_BORDER_MAX_WIDTH}
+                                                             swatches={swatches}
+                                                             onColorInput={updateBorderColor}
+                                                             onOpacityInput={updateBorderOpacity}
+                                                             onWidthInput={updateBorderWidth}
+                                                         />
+                                                     </section>
+                                                     <WaDivider/>
+                                                 </>
 
-                                                             <WaDivider/>
-                                                             <FlythroughProgressionGroup
-                                                                 title="Trace and Marker"
-                                                                 color={fillColor}
-                                                                 opacity={fillOpacity}
-                                                                 width={fillWidth}
-                                                                 widthMin={FLYTHROUGH_PROGRESSION_FILL_MIN_WIDTH}
-                                                                 widthMax={FLYTHROUGH_PROGRESSION_FILL_MAX_WIDTH}
-                                                                 swatches={swatches}
-                                                                 onColorInput={updateFillColor}
-                                                                 onOpacityInput={updateFillOpacity}
-                                                                 onWidthInput={updateFillWidth}
-                                                             />
-                                                             <FlythroughProgressionGroup
-                                                                 title="Border"
-                                                                 color={borderColor}
-                                                                 opacity={borderOpacity}
-                                                                 width={borderWidth}
-                                                                 widthMin={FLYTHROUGH_PROGRESSION_BORDER_MIN_WIDTH}
-                                                                 widthMax={FLYTHROUGH_PROGRESSION_BORDER_MAX_WIDTH}
-                                                                 swatches={swatches}
-                                                                 onColorInput={updateBorderColor}
-                                                                 onOpacityInput={updateBorderOpacity}
-                                                                 onWidthInput={updateBorderWidth}
-                                                             />
-                                                         </section>
-                                                         <WaDivider/>
-                                                     </>
-                                                 }
                                                  <section className="flythrough-progression-section">
                                                      <h3>{'Profile'}</h3>
                                                      <div className="flythrough-style-control-group">
-                                                         <div className="flythrough-style-field-grid">
                                                              <FlythroughWidthField
                                                                  label="Marker Size"
                                                                  unit="px"
@@ -754,7 +734,6 @@ export const FlythroughDrawer = memo(() => {
                                                                  step="0.5"
                                                                  onInput={updateBorderProfileMarker}
                                                              />
-                                                         </div>
                                                      </div>
                                                  </section>
                                              </div>

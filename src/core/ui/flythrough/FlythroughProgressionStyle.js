@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-05-05
- * Last modified: 2026-05-05
+ * Created on: 2026-05-31
+ * Last modified: 2026-05-31
  *
  *
  * Copyright © 2026 LGS1920
@@ -71,14 +71,19 @@ export const DEFAULT_FLYTHROUGH_MARKER = {
 }
 
 export const DEFAULT_FLYTHROUGH_CAMERA = {
-    keepNorth:     true,
     positionMode:  FLYTHROUGH_CAMERA_POSITION_SYSTEM,
     altitudeMode:  FLYTHROUGH_CAMERA_ALTITUDE_CONSTANT,
     altitude:      1200,
     groundOffset:  800,
     pitch:         -65,
     hysteresis:    {
-        marginRatio:   0.2,
+        marginRatio: 0.25,
+        zone:        {
+            top:    0.25,
+            left:   0.25,
+            width:  0.5,
+            height: 0.5,
+        },
         easing:        0.14,
         stopThreshold: 0.00001,
     },
@@ -114,9 +119,33 @@ const finiteNumber = value => {
     return Number.isFinite(number) ? number : null
 }
 
-export const clampFlythroughNumber = (value, fallback, min, max) => {
-    const number = finiteNumber(value) ?? fallback
-    return Math.min(max, Math.max(min, number))
+export const clampFlythroughNumber = (value, fallback, min, max, rounded = false) => {
+    const number = Math.min(max, Math.max(min, finiteNumber(value) ?? fallback))
+    return rounded ? Math.ceil(number) : number
+}
+
+const normalizeFlythroughToleranceZone = (zone = {}, fallback = DEFAULT_FLYTHROUGH_CAMERA.hysteresis.zone) => {
+    const top = clampFlythroughNumber(zone?.top, fallback.top, 0, 1)
+    const left = clampFlythroughNumber(zone?.left, fallback.left, 0, 1)
+    const width = clampFlythroughNumber(zone?.width, fallback.width, 0, 1)
+    const height = clampFlythroughNumber(zone?.height, fallback.height, 0, 1)
+    return {
+        top,
+        left,
+        width:  Math.min(width, 1 - left),
+        height: Math.min(height, 1 - top),
+    }
+}
+
+const normalizeFlythroughHysteresisMarginRatio = (zone, fallback = DEFAULT_FLYTHROUGH_CAMERA.hysteresis.marginRatio) => {
+    const margins = [
+        zone.left,
+        zone.top,
+        1 - (zone.left + zone.width),
+        1 - (zone.top + zone.height),
+    ]
+    const edgeMargin = margins.reduce((minimum, value) => Math.min(minimum, value), 1)
+    return clampFlythroughNumber(edgeMargin, fallback, 0.05, 0.45)
 }
 
 export const normalizeFlythroughProgressionStyle = (progression = {}) => {
@@ -201,7 +230,6 @@ export const normalizeFlythroughMarker = (marker = {}) => ({
 })
 
 export const normalizeFlythroughCamera = (camera = {}) => ({
-    keepNorth:    camera?.keepNorth !== false,
     positionMode: camera?.positionMode === FLYTHROUGH_CAMERA_POSITION_AHEAD
                   ? FLYTHROUGH_CAMERA_POSITION_AHEAD
                   : camera?.positionMode === FLYTHROUGH_CAMERA_POSITION_BEHIND
@@ -210,29 +238,36 @@ export const normalizeFlythroughCamera = (camera = {}) => ({
     altitudeMode: camera?.altitudeMode === FLYTHROUGH_CAMERA_ALTITUDE_GROUND_OFFSET
                   ? FLYTHROUGH_CAMERA_ALTITUDE_GROUND_OFFSET
                   : FLYTHROUGH_CAMERA_ALTITUDE_CONSTANT,
-    altitude:     clampFlythroughNumber(camera?.altitude, DEFAULT_FLYTHROUGH_CAMERA.altitude, 50, 100000),
-    groundOffset: clampFlythroughNumber(camera?.groundOffset, DEFAULT_FLYTHROUGH_CAMERA.groundOffset, 10, 100000),
-    pitch:        clampFlythroughNumber(camera?.pitch, DEFAULT_FLYTHROUGH_CAMERA.pitch, -89, -5),
-    hysteresis:   {
-        marginRatio: clampFlythroughNumber(
-            camera?.hysteresis?.marginRatio,
-            DEFAULT_FLYTHROUGH_CAMERA.hysteresis.marginRatio,
-            0.05,
-            0.45,
-        ),
-        easing: clampFlythroughNumber(
-            camera?.hysteresis?.easing,
-            DEFAULT_FLYTHROUGH_CAMERA.hysteresis.easing,
-            0.02,
-            0.5,
-        ),
-        stopThreshold: clampFlythroughNumber(
-            camera?.hysteresis?.stopThreshold,
-            DEFAULT_FLYTHROUGH_CAMERA.hysteresis.stopThreshold,
-            0.000001,
-            0.001,
-        ),
-    },
+    altitude:     clampFlythroughNumber(camera?.altitude, DEFAULT_FLYTHROUGH_CAMERA.altitude, 50, 100000, true),
+    groundOffset: clampFlythroughNumber(camera?.groundOffset, DEFAULT_FLYTHROUGH_CAMERA.groundOffset, 10, 100000, true),
+    pitch:        clampFlythroughNumber(camera?.pitch, DEFAULT_FLYTHROUGH_CAMERA.pitch, -89, -5, true),
+    hysteresis:   (() => {
+        const zone = normalizeFlythroughToleranceZone(camera?.hysteresis?.zone, DEFAULT_FLYTHROUGH_CAMERA.hysteresis.zone)
+        return {
+            zone,
+            marginRatio:   normalizeFlythroughHysteresisMarginRatio(
+                zone,
+                clampFlythroughNumber(
+                    camera?.hysteresis?.marginRatio,
+                    DEFAULT_FLYTHROUGH_CAMERA.hysteresis.marginRatio,
+                    0.05,
+                    0.45,
+                ),
+            ),
+            easing:        clampFlythroughNumber(
+                camera?.hysteresis?.easing,
+                DEFAULT_FLYTHROUGH_CAMERA.hysteresis.easing,
+                0.02,
+                0.5,
+            ),
+            stopThreshold: clampFlythroughNumber(
+                camera?.hysteresis?.stopThreshold,
+                DEFAULT_FLYTHROUGH_CAMERA.hysteresis.stopThreshold,
+                0.000001,
+                0.001,
+            ),
+        }
+    })(),
 })
 
 export const normalizeFlythroughSettings = (settings = {}) => {
