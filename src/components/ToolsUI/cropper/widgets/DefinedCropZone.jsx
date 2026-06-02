@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-04-29
+ * Last modified: 2026-04-29
  *
  *
  * Copyright © 2026 LGS1920
@@ -21,8 +21,8 @@
  *
  ******************************************************************************/
 
-import { VideoMessage }                             from '@Components/MainUI/video/VideoMessage'
-import React, { memo, useEffect, useRef, useState } from 'react'
+import classNames                            from 'classnames'
+import { memo, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useSnapshot }                              from 'valtio'
 import { CropZoneInfo }                             from './CropZoneInfo'
 
@@ -38,36 +38,57 @@ export const DefinedCropZone = memo(function DefinedCropZone({
     const $video = lgs.stores.ui.video
     const video = useSnapshot($video)
 
-    const [crop, setCrop] = useState(() => {
+    const readCrop = useCallback(() => {
         const config = __.ui.widgetManager.getWidgetConfig(context.id)
-        return config?.cropDimensions ?? {left: 0, top: 0, width: 0, height: 0}
-    })
+        return config?.cropDimensions
+               ? {...config.cropDimensions}
+               : {left: 0, top: 0, width: 0, height: 0}
+    }, [context.id])
+
+    const [crop, setCrop] = useState(() => readCrop())
+
+    useEffect(() => {
+        const syncCrop = () => {
+            const next = readCrop()
+            setCrop(current => (
+                                   current.left === next.left &&
+                                   current.top === next.top &&
+                                   current.width === next.width &&
+                                   current.height === next.height
+                               ) ? current : next)
+        }
+
+        syncCrop()
+
+        const handleCropUpdate = (event) => {
+            if (!event?.detail || event.detail.id === context.id) {
+                syncCrop()
+            }
+        }
+
+        document.addEventListener('onCropUpdate', handleCropUpdate)
+        return () => document.removeEventListener('onCropUpdate', handleCropUpdate)
+    }, [context.id, readCrop])
 
     // Store the crop zone DOM element in Valtio store when mounted
     useEffect(() => {
         if (_definedCropZone.current) {
             context.widgetsBoard = _definedCropZone.current.id
-            context.resizable = $video.resizable
-            context.widgetEditor = true
+            context.resizable = video.cropper?.resizable ?? context.resizable
+            context.widgetEditor = !video.cropper?.ratioEditor
         }
-
-
-        return () => {
-            if (context) {
-                context.widgetsBoard = null
-                // we need widgetEditor later...
-            }
-        }
-    }, [_definedCropZone.current, $video.resizable])
+    }, [context, video.cropper?.ratioEditor, video.cropper?.resizable])
 
     // Apply DOM styles for the static crop box
-    useEffect(() => {
+    useLayoutEffect(() => {
         if (!_definedCropZone.current) {
             return
         }
         const el = _definedCropZone.current
         el.style.left = `${crop.left}px`
         el.style.top = `${crop.top}px`
+        el.style.right = 'auto'
+        el.style.bottom = 'auto'
         el.style.width = `${crop.width}px`
         el.style.height = `${crop.height}px`
         el.style.position = 'absolute'
@@ -86,26 +107,41 @@ export const DefinedCropZone = memo(function DefinedCropZone({
                 __.ui.widgetManager.applyCropToOverlay({...config, cropDimensions: crop})
             }
         }
-        catch (_) {
+        catch {
+            // Ignore overlay sync errors for non-mounted/static states.
         }
-    }, [])
+    }, [context.id, crop, overlay])
+
+    const zoneClassName = classNames(
+        'crop-zone',
+        'defined',
+        'defined-crop-zone',
+        className,
+        {
+            'video-pre-recording-in-progress': video.preRecording,
+            'video-recording-in-progress':     video.recording,
+            'video-finalizing-in-progress': video.finalizing,
+            'photo-snapshot-in-progress':      video.snapshot,
+            finalizing:                        video.finalizing,
+        },
+    )
 
     return (
         <>
             <div
                 ref={_definedCropZone}
-                className={`crop-zone defined ${className}`}
+                className={zoneClassName}
                 aria-label="defined-crop-zone"
                 id={context.id}
             >
                 {infoPosition && (
-                    <div className="crop-info lgs-one-line-card on-map small">
+                    <div className="crop-info lgs-one-line-card wa-theme-lgs1920-on-map small">
                         <CropZoneInfo id={context.id}/>
                     </div>
                 )}
 
                 {infoComponent && (
-                    <div className="crop-info-custom lgs-one-line-card on-map small">
+                    <div className="crop-info-custom lgs-one-line-card wa-theme-lgs1920-on-map small">
                         {infoComponent}
                     </div>
                 )}
@@ -113,7 +149,6 @@ export const DefinedCropZone = memo(function DefinedCropZone({
                 {children}
 
             </div>
-            {video.step === 1 && <VideoMessage>{'Add some widgets'}</VideoMessage>}
         </>
     )
 })

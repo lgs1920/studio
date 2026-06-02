@@ -7,16 +7,17 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-24
- * Last modified: 2026-02-24
+ * Created on: 2026-05-10
+ * Last modified: 2026-05-10
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { WIDGET_RADIUS }                                        from '@Core/constants'
-import { SlColorPicker, SlOption, SlRange, SlSelect, SlSwitch } from '@shoelace-style/shoelace/dist/react'
-import React                                                    from 'react'
+import { WIDGET_RADIUS }               from '@Core/constants'
+import { WaColorPicker, WaOption, WaSelect, WaSlider, WaSwitch } from '@web.awesome.me/webawesome-pro/dist/react'
+import { ScaleSwitchElement }          from './ScaleSwitchElement'
+import { formatSliderPercent, sanitizeNumericControlValue } from './sliderUtils'
 
 /**
  * Common border & radius editor element
@@ -30,6 +31,9 @@ export const BorderElement = ({
                                   updateValue,
                                   showPill = false,
                                   showRadius = true,
+                                  showScale = true,
+                                  showRadiusScale = true,
+                                  sanitizeSliderValue = sanitizeNumericControlValue,
                               }) => {
     const currentRadius = element.border?.radius ?? 'none'
 
@@ -47,82 +51,111 @@ export const BorderElement = ({
     }
 
     return (
-        <React.Fragment>
-            <SlSwitch
-                align-right
-                size="x-small"
+        <div>
+            <WaSwitch
+                label-at-start
+                size="xs"
                 checked={element.border?.show ?? false}
-                onSlInput={(e) => updateValue('border.show', e.target.checked)}
+                onInput={(e) => updateValue('border.show', e.target.checked)}
             >
                 <span>{'Border'}</span>
-            </SlSwitch>
+            </WaSwitch>
 
             {element.border?.show && (
-                <React.Fragment>
-                    <div className="drawer-horizontal-line three-columns">
-                        <div className="drawer-horizontal-element">
-                            <SlColorPicker
-                                size="small"
+                <>
+                    <div className="lgs-widget-color-control-grid lgs-widget-border-control-grid">
+                        <div className="lgs-widget-color-control-color">
+                            <WaColorPicker
+                                size="s"
                                 swatches={swatches}
                                 value={getColor(element.border)}
-                                onSlInput={(e) => updateValue('border.color', e.target.value)}
+                                onInput={(e) => updateValue('border.color', e.target.value)}
                             />
                         </div>
-                        <div className="drawer-horizontal-element xlarge-element">
-                            <SlRange
-                                label="Width"
-                                min="0"
-                                max="10"
-                                step="0.5"
-                                align-right
-                                tooltip="top"
-                                value={element.border.thickness ?? 1}
-                                onSlInput={(e) => updateValue('border.thickness', parseFloat(e.target.value))}
-                            />
+                        <div className="lgs-widget-border-control-row">
+                            <div className="drawer-horizontal-element lgs-widget-border-control">
+                                <WaSlider
+                                    withTooltip
+                                    size="s"
+                                    label="Width"
+                                    min="0"
+                                    max="10"
+                                    step="0.5"
+                                    label-at-start
+                                    placement="top"
+                                    value={sanitizeSliderValue(element.border?.thickness, 1, {min: 0, max: 10})}
+                                    onInput={(e) => updateValue(
+                                        'border.thickness',
+                                        sanitizeSliderValue(e.target.value, 1, {min: 0, max: 10}),
+                                    )}
+                                />
+                            </div>
+                            <div className="drawer-horizontal-element lgs-widget-border-control">
+                                <WaSlider
+                                    withTooltip
+                                    size="s"
+                                    label="Opacity"
+                                    min="0"
+                                    max="1"
+                                    step="0.05"
+                                    label-at-start
+                                    placement="top"
+                                    valueFormatter={formatSliderPercent}
+                                    value={sanitizeSliderValue(element.border?.opacity, 1, {min: 0, max: 1})}
+                                    onInput={(e) => updateValue(
+                                        'border.opacity',
+                                        sanitizeSliderValue(e.target.value, 1, {min: 0, max: 1}),
+                                    )}
+                                />
+                            </div>
                         </div>
-                        <div className="drawer-horizontal-element xlarge-element">
-                            <SlRange
-                                label="Opacity"
-                                min="0"
-                                max="1"
-                                step="0.05"
-                                align-right
-                                tooltip="top"
-                                tooltipFormatter={value => `${Math.floor(value * 100)}%`}
-                                value={element.border.opacity ?? 1}
-                                onSlInput={(e) => updateValue('border.opacity', parseFloat(e.target.value))}
-                            />
-                        </div>
+                        {showScale && (
+                            <>
+                                <div className="lgs-widget-color-control-spacer" aria-hidden="true"/>
+                                <ScaleSwitchElement
+                                    checked={element.border?.scaled ?? false}
+                                    onChange={(checked) => updateValue('border.scaled', checked)}
+                                    className="lgs-widget-color-control-scaled-line lgs-widget-border-scaled-line"
+                                    widthAuto
+                                />
+                            </>
+                        )}
                     </div>
 
                     {showRadius && (
-                        <div className="drawer-horizontal-line">
-                            <div className="drawer-horizontal-element xlarge-element">
-                                <SlSelect
-                                    hoist
-                                    size="small"
+                        <>
+                            <div className="drawer-horizontal-line lgs-widget-border-radius-line">
+                                <WaSelect
+                                    size="s"
                                     label={'Radius'}
-                                    align-right
+                                    label-at-start
                                     style={{marginLeft: 'auto', width: '10rem'}}
                                     value={currentRadius}
-                                    onSlChange={handleRadiusChange}
+                                    onChange={handleRadiusChange}
                                 >
                                     {[...WIDGET_RADIUS.entries()].map(([_key, _data]) => {
                                         if (!showPill && _key === 'pill') {
                                             return null
                                         }
                                         return (
-                                            <SlOption key={_key} value={_key}>
+                                            <WaOption key={_key} value={_key}>
                                                 {_data.name}
-                                            </SlOption>
+                                            </WaOption>
                                         )
                                     })}
-                                </SlSelect>
+                                </WaSelect>
                             </div>
-                        </div>
+                            {showRadiusScale && (
+                                <ScaleSwitchElement
+                                    checked={element.border?.radiusScaled ?? false}
+                                    onChange={(checked) => updateValue('border.radiusScaled', checked)}
+                                    className="lgs-widget-radius-scaled-line lgs-widget-border-radius-scaled-line"
+                                />
+                            )}
+                        </>
                     )}
-                </React.Fragment>
+                </>
             )}
-        </React.Fragment>
+        </div>
     )
 }

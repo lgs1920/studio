@@ -7,27 +7,28 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-05-26
+ * Last modified: 2026-05-26
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { FontAwesomeIcon } from '@Components/FontAwesomeIcon'
-import { memo, useCallback, useRef, useEffect, useMemo } from 'react'
-import { useSnapshot }     from 'valtio'
-import { SlIcon, SlOption, SlSelect } from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }           from '@Utils/FA2SL'
-import { faChevronDown }   from '@fortawesome/pro-regular-svg-icons'
-import { faMask, faSquare } from '@fortawesome/pro-solid-svg-icons'
-import classNames          from 'classnames'
+import { LGSPopup }                                                       from '@Components/LGSPopup'
+import { Journey }                                                        from '@Core/Journey'
+import {
+    WaCard, WaIcon, WaOption, WaSelect, WaTree, WaTreeItem,
+}                                                                         from '@web.awesome.me/webawesome-pro/dist/react'
+import classNames                                                         from 'classnames'
+import { memo, useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
+import { useSnapshot }                                                    from 'valtio'
+import { JourneyGroupColorIcon }                                          from '../groups/JourneyGroupsInfo'
+import { TrackStylePreview }                                              from '../track/TrackStylePreview'
 
-// Static icon names to avoid recalculation
-const ICON_CHEVRON_DOWN = faChevronDown
-const ICON_MULTI = 'multi-tracks.svg'
-const ICON_MASK = faMask
-const ICON_SQUARE = faSquare
+const GROUPS_EXPANDED_KEY = 'lgs1920-journey-selector-groups-expanded'
+
+const naturalSortJourneys = (a, b) =>
+    a.title.localeCompare(b.title, undefined, {numeric: true, sensitivity: 'base'})
 
 /**
  * A memoized React component for selecting or displaying a journey.
@@ -35,138 +36,442 @@ const ICON_SQUARE = faSquare
  * @param {string} [props.label] - Label for the select dropdown
  * @param {string} [props.size='medium'] - Size of the select dropdown
  * @param {Function} [props.onChange] - Handler for selection changes
+ * @param {Object[]} [props.journeys] - Optional pre-filtered journey list
+ * @param {string} [props.value] - Optional controlled selected journey slug
+ * @param {boolean} [props.allowEmptyOption=false] - Whether to display an empty association option
+ * @param {string} [props.emptyLabel='No associated journey'] - Empty option label
+ * @param {string} [props.hint] - Optional select hint
+ * @param {boolean} [props.disabled=false] - Disabled state
+ * @param {boolean} [props.syncEditorSelection=true] - Whether selection should update the journey editor current
+ *     journey
+ * @param {string} [props.className] - Extra CSS class
  * @param {boolean} [props.single] - Whether to display a single journey title
- * @param {string} [props.style] - Style variant ('card' for card-like display)
+ * @param {boolean} [props.closeOnOutsidePointerDown=false] - Forces close on outside pointerdown
+ * @param {React.Ref} [props.ref] - Forwarded ref
  * @returns {JSX.Element|null} The rendered component or null if no journeys
  */
-export const JourneySelector = memo(({label, size = 'medium', onChange, single, style, ref}) => {
-    // Granular snapshots to minimize re-renders
-    const {list, keys} = useSnapshot(lgs.stores.main.components.journeyEditor)
-    const theJourney = useSnapshot(lgs.stores.journeyEditor.journey)
+export const JourneySelector = memo(({
+                                         label,
+                                         size = 'm',
+                                         onChange,
+                                         journeys: providedJourneys = null,
+                                         value = undefined,
+                                         allowEmptyOption = false,
+                                         emptyLabel = 'No associated journey',
+                                         hint = undefined,
+                                         disabled = false,
+                                         syncEditorSelection = true,
+                                         className,
+                                         single,
+                                         closeOnOutsidePointerDown = false,
+                                         ref,
+                                     }) => {
+    const $journeyEditor = lgs.stores.main.components.journeyEditor
+    const $editorStore = lgs.theJourneyEditorProxy
+    const _select = useRef(null)
+    const _treeTrigger = useRef(null)
+    const _treePanel = useRef(null)
 
-    // Snapshot the editor store to be reactive to track changes
-    const editorStore = useSnapshot(lgs.theJourneyEditorProxy)
+    const rawId = useId()
+    const anchorId = 'lgs-jst' + rawId.replace(/:/g, '')
 
-    // Memoized sorted journeys
+    const [treeOpen, setTreeOpen] = useState(false)
+    const [triggerWidth, setTriggerWidth] = useState(0)
+    const [expandedGroups, setExpandedGroups] = useState(() => {
+        try {
+            return JSON.parse(localStorage.getItem(GROUPS_EXPANDED_KEY) ?? '{}')
+        }
+        catch {
+            return {}
+        }
+    })
+
+    const {list, keys} = useSnapshot($journeyEditor)
+    const {journey: theJourney} = useSnapshot($editorStore)
+    const {version: groupsVersion} = useSnapshot(lgs.stores.ui.journeyGroups)
+    const journeyListVersion = keys.journey.list
+    const currentJourney = $editorStore.journey ?? theJourney
+
     const journeys = useMemo(() => {
+        void journeyListVersion
+        if (Array.isArray(providedJourneys)) {
+            return providedJourneys.filter(Boolean)
+        }
         const journeyList = Array.from(list, slug => lgs.getJourneyBySlug(slug)).filter(Boolean)
         return journeyList.length > 1
                ? journeyList.sort((a, b) => b.title.localeCompare(a.title))
                : journeyList
-    }, [list])
+    }, [list, providedJourneys, journeyListVersion])
 
-    // Derive track colors for reactivity - use both theJourney.tracks and editorStore.track
-    const trackColors = useMemo(() => {
-        // For single track, use the editor store to be reactive to color changes
-        if (theJourney.tracks.size === 1 && editorStore.track) {
-            return editorStore.track.color
+    const {rootGroups, childrenByParent, ungroupedJourneys, hasGroups} = useMemo(() => {
+        void groupsVersion
+        const manager = __.ui?.journeyGroupManager
+        if (!manager) {
+            return {rootGroups: [], childrenByParent: new Map(), ungroupedJourneys: journeys, hasGroups: false}
         }
-        // For multiple tracks, use the journey tracks
-        return Array.from(theJourney.tracks.values()).map(track => track.color).join('-')
-    }, [theJourney.tracks, editorStore.track?.color])
 
-    // Handle selection change
+        const allGroups = manager.list()
+        if (allGroups.length === 0) {
+            return {rootGroups: [], childrenByParent: new Map(), ungroupedJourneys: journeys, hasGroups: false}
+        }
+
+        const journeyMap = new Map(journeys.map(j => [j.slug, j]))
+        const assignedSlugs = new Set()
+        const map = new Map()
+
+        for (const group of allGroups) {
+            const parentId = group.parentGroup ?? null
+            if (!map.has(parentId)) {
+                map.set(parentId, [])
+            }
+            map.get(parentId).push(group)
+
+            group.journeys
+                .map(slug => journeyMap.get(slug))
+                .filter(Boolean)
+                .forEach(journey => assignedSlugs.add(journey.slug))
+        }
+
+        for (const children of map.values()) {
+            children.sort((a, b) => a.name.localeCompare(b.name))
+        }
+
+        const ungrouped = journeys
+            .filter(j => !assignedSlugs.has(j.slug))
+            .sort(naturalSortJourneys)
+
+        return {
+            rootGroups:        map.get(null) ?? [],
+            childrenByParent:  map,
+            ungroupedJourneys: ungrouped,
+            hasGroups:         allGroups.length > 0,
+        }
+    }, [journeys, groupsVersion])
+
+    const selectedValue = value ?? theJourney?.slug ?? ''
+    const getReactiveJourney = useCallback(
+        journey => theJourney?.slug === journey?.slug ? currentJourney : journey,
+        [currentJourney, theJourney?.slug],
+    )
+    const selectedJourney = useMemo(
+        () => getReactiveJourney(journeys.find(journey => journey.slug === selectedValue)) ?? (selectedValue ? currentJourney : null),
+        [journeys, selectedValue, currentJourney, getReactiveJourney],
+    )
+    const singleJourney = journeys.length === 1 ? getReactiveJourney(journeys[0]) : null
+    const shouldRenderSelect = allowEmptyOption || journeys.length > 1
+
     const handleChange = useCallback(event => {
-        const newSlug = event.target.value
-        lgs.stores.main.components.journeyEditor.theJourney = newSlug
+        if (syncEditorSelection && event.target.value) {
+            $journeyEditor.theJourney = event.target.value
+        }
         if (onChange) {
             onChange(event)
         }
-    }, [onChange])
+    }, [onChange, $journeyEditor, syncEditorSelection])
 
-    /**
-     * Determines the icon based on the number of tracks in the journey.
-     * @param {Object} [journey] - The journey object
-     * @return {string|Object} The icon to use
-     */
-    const icon = (journey = theJourney) => {
-        return journey.tracks.size === 1 ? ICON_SQUARE : ICON_MULTI
-    }
-
-    /**
-     * Computes the icon style based on journey visibility and track colors.
-     * @param {Object} [journey] - The journey object
-     * @return {Object} The style object for the icon
-     */
-    const getIconStyle = useCallback((journey = theJourney) => {
-        if (!journey.tracks.size) {
-            return {color: 'var(--lgs-disabled-color)'}
+    const handleTreeSelection = useCallback(event => {
+        const selectedItem = event.detail.selection[0]
+        if (!selectedItem) {
+            return
         }
-        if (journey.tracks.size === 1) {
-            // For single track, use the editor store color to be reactive
-            const trackColor = (journey === theJourney && editorStore.track)
-                               ? editorStore.track.color
-                               : journey.tracks.values().next().value?.color
-            return {
-                color: journey.visible
-                       ? trackColor || 'var(--lgs-disabled-color)'
-                       : 'var(--lgs-disabled-color)',
+        const slug = selectedItem.dataset.slug
+        if (!slug) {
+            return
+        }
+        setTreeOpen(false)
+        if (syncEditorSelection) {
+            $journeyEditor.theJourney = slug
+        }
+        if (onChange) {
+            onChange({target: {value: slug}})
+        }
+    }, [onChange, $journeyEditor, syncEditorSelection])
+
+    const handleGroupExpand = useCallback(groupId => {
+        setExpandedGroups(prev => {
+            const next = {...prev, [groupId]: true}
+            localStorage.setItem(GROUPS_EXPANDED_KEY, JSON.stringify(next))
+            return next
+        })
+    }, [])
+
+    const handleGroupCollapse = useCallback(groupId => {
+        setExpandedGroups(prev => {
+            const next = {...prev, [groupId]: false}
+            localStorage.setItem(GROUPS_EXPANDED_KEY, JSON.stringify(next))
+            return next
+        })
+    }, [])
+
+    const handleToggleTree = useCallback(() => {
+        if (disabled) {
+            return
+        }
+        if (!treeOpen && _treeTrigger.current) {
+            setTriggerWidth(_treeTrigger.current.getBoundingClientRect().width)
+        }
+        setTreeOpen(o => !o)
+    }, [disabled, treeOpen])
+
+    const setSelectRef = useCallback((element) => {
+        _select.current = element
+        if (typeof ref === 'function') {
+            ref(element)
+        }
+        else if (ref) {
+            ref.current = element
+        }
+    }, [ref])
+
+    useEffect(() => {
+        if (!closeOnOutsidePointerDown) {
+            return
+        }
+
+        const handlePointerDownOutside = (event) => {
+            const select = _select.current
+            if (!select?.open) {
+                return
+            }
+            if (!event.composedPath().includes(select)) {
+                select.hide()
             }
         }
-        const [[, first], [, second]] = journey.tracks
-        return {
-            '--fa-primary-color':     first?.color || 'black',
-            '--fa-secondary-color':   second?.color || 'black',
-            '--fa-primary-opacity':   1,
-            '--fa-secondary-opacity': 1,
-        }
-    }, [theJourney, editorStore.track?.color])
 
-    if (journeys.length === 0) {
+        document.addEventListener('pointerdown', handlePointerDownOutside, true)
+        return () => document.removeEventListener('pointerdown', handlePointerDownOutside, true)
+    }, [closeOnOutsidePointerDown])
+
+    const renderActivityIcon = useCallback((journey = theJourney) => {
+        const activity = Journey.activityProfile(journey?.activity, journey?.activitySettings)
+
+        return (
+            <WaIcon
+                className="lgs--journey-activity-icon"
+                name={activity.icon ?? 'person-hiking'}
+                title={activity.label}
+                variant="regular"
+            />
+        )
+    }, [theJourney])
+
+    const renderTrackPreview = useCallback((journey, track) => (
+        <TrackStylePreview
+            track={track}
+            compact
+            visible={journey?.visible !== false && track?.visible !== false}
+        />
+    ), [])
+
+    const renderJourneyIcons = useCallback((journey = theJourney) => {
+        const tracks = Array.from(journey.tracks.values())
+        if (tracks.length === 1) {
+            return (
+                <span className="lgs--journey-icons-in-settings">
+                    {renderTrackPreview(journey, tracks[0])}
+                    {renderActivityIcon(journey)}
+                </span>
+            )
+        }
+
+        return (
+            <span className="lgs--journey-icons-in-settings">
+                <span className="lgs--track-colors-in-settings">
+                    {tracks.slice(0, 3).map(track => (
+                        <TrackStylePreview
+                            key={track.slug}
+                            track={track}
+                            compact
+                            visible={journey.visible !== false && track.visible !== false}
+                        />
+                    ))}
+                </span>
+                {renderActivityIcon(journey)}
+            </span>
+        )
+    }, [renderActivityIcon, renderTrackPreview, theJourney])
+
+    const renderTreeJourneyItem = useCallback((journey, ungrouped = false) => {
+        const rj = getReactiveJourney(journey)
+        return (
+            <WaTreeItem
+                key={journey.slug}
+                data-slug={journey.slug}
+                selected={selectedValue === journey.slug}
+                className={classNames('lgs--tree-item-hoverable lgs--journey-tree-leaf', {
+                    'lgs--journey-tree-ungrouped': ungrouped,
+                    masked:                        !rj.visible,
+                })}
+            >
+                <span className="journey-group-tree-row">
+                    <span className="lgs--journey-tree-item-content">
+                        <WaIcon name="route" variant="regular"/>
+                        {renderJourneyIcons(rj)}
+                        <span className="lgs--journey-tree-item-title">{rj.title}</span>
+                    </span>
+                </span>
+            </WaTreeItem>
+        )
+    }, [getReactiveJourney, renderJourneyIcons, selectedValue])
+
+    const renderTreeGroupItems = useCallback((groups) => groups.map(group => {
+        const childGroups = childrenByParent.get(group.id) ?? []
+        const groupJourneys = group.journeys
+            .map(slug => lgs.getJourneyBySlug(slug))
+            .filter(Boolean)
+            .sort(naturalSortJourneys)
+        const hasItems = childGroups.length > 0 || groupJourneys.length > 0
+        if (!hasItems) {
+            return null
+        }
+        return (
+            <WaTreeItem
+                key={group.id}
+                className="lgs--tree-item-hoverable"
+                data-empty-group={hasItems ? undefined : ''}
+                expanded={expandedGroups[group.id] !== false}
+                onWaExpand={event => {
+                    event.stopPropagation()
+                    if (event.target !== event.currentTarget) {
+                        return
+                    }
+                    handleGroupExpand(group.id)
+                }}
+                onWaCollapse={event => {
+                    event.stopPropagation()
+                    if (event.target !== event.currentTarget) {
+                        return
+                    }
+                    handleGroupCollapse(group.id)
+                }}
+            >
+                <span className="journey-group-tree-row">
+                    <span className="lgs--journey-tree-group-header">
+                        {!hasItems && (
+                            <span className="journey-group-tree-empty-folder">
+                                <WaIcon name="folder" variant="regular"/>
+                            </span>
+                        )}
+                        <JourneyGroupColorIcon color={group.color}/>
+                        <span>{group.name}</span>
+                    </span>
+                </span>
+                <WaIcon slot="expand-icon" name="folder" variant="regular"/>
+                <WaIcon slot="collapse-icon" name="folder-open" variant="regular" style={{transform: 'rotate(-90deg)'}}/>
+                {renderTreeGroupItems(childGroups)}
+                {groupJourneys.map(journey => renderTreeJourneyItem(journey))}
+            </WaTreeItem>
+        )
+    }), [childrenByParent, expandedGroups, handleGroupCollapse, handleGroupExpand, renderTreeJourneyItem])
+
+    if (journeys.length === 0 && !allowEmptyOption) {
         return null
     }
 
-    const isStyledCard = style === 'card'
-
     return (
         <>
-            {journeys.length > 1 && (
-                <SlSelect
+            {shouldRenderSelect && hasGroups && !allowEmptyOption && (
+                <div
+                    className={classNames('journey-selector journey-selector--tree', className, {masked: selectedJourney?.visible === false})}
+                    onClick={e => e.stopPropagation()}>
+                    <div
+                        ref={_treeTrigger}
+                        id={anchorId}
+                        className={classNames('journey-selector-trigger', {open: treeOpen, disabled})}
+                        onClick={handleToggleTree}
+                        role="combobox"
+                        aria-expanded={treeOpen}
+                        aria-haspopup="tree"
+                    >
+                        <div className="lgs--journey-selector-start">
+                            {selectedJourney
+                             ? renderJourneyIcons(selectedJourney)
+                             : <WaIcon name="route" variant="regular"/>}
+                        </div>
+                        <span className="journey-selector-label">
+                            {selectedJourney?.title ?? label ?? ''}
+                        </span>
+                        <WaIcon name="chevron-down" className="journey-selector-chevron" variant="regular"/>
+                    </div>
+
+                    <LGSPopup
+                        anchor={anchorId}
+                        active={treeOpen}
+                        onRequestClose={() => setTreeOpen(false)}
+                        placement="bottom-start"
+                        flip
+                        shift
+                    >
+                        {/* <LGSScrollbars style={{maxHeight: '20rem'}}> */}
+                        <div
+                            ref={_treePanel}
+                            className="journey-selector-tree-panel"
+                            style={triggerWidth > 0 ? {minWidth: `${triggerWidth}px`} : undefined}
+                        >
+
+                            <WaTree
+                                className="journey-group-tree"
+                                selection="leaf"
+                                onWaSelectionChange={handleTreeSelection}
+                            >
+                                {renderTreeGroupItems(rootGroups)}
+                                {ungroupedJourneys.map(journey => renderTreeJourneyItem(journey, true))}
+                            </WaTree>
+                        </div>
+                        {/* </LGSScrollbars> */}
+                    </LGSPopup>
+                </div>
+            )}
+
+            {shouldRenderSelect && (!hasGroups || allowEmptyOption) && (
+                <WaSelect
                     label={label}
                     size={size}
-                    value={theJourney.slug || ''}
-                    onSlChange={handleChange}
+                    onChange={handleChange}
                     key={keys.journey.list}
-                    className={classNames('journey-selector', {masked: !theJourney.visible})}
-                    ref={ref}
+                    className={classNames('journey-selector', className, {masked: selectedJourney?.visible === false})}
+                    ref={setSelectRef}
+                    value={selectedValue}
+                    disabled={disabled}
+                    onClick={e => e.stopPropagation()}
                 >
-                    <FontAwesomeIcon
-                        icon={theJourney.visible ? icon() : ICON_MASK}
-                        slot="prefix"
-                        style={getIconStyle()}
-                    />
-                    <SlIcon library="fa" name={FA2SL.set(ICON_CHEVRON_DOWN)} slot="expand-icon"/>
-                    {journeys.map(journey => (
-                        <SlOption
-                            key={journey.slug}
-                            value={journey.slug}
-                            className={classNames('journey-title', {masked: !journey.visible})}
-                        >
-                            <FontAwesomeIcon
-                                icon={journey.visible ? icon(journey) : ICON_MASK}
-                                slot="prefix"
-                                style={getIconStyle(journey)}
-                            />
-                            {journey.title}
-                        </SlOption>
-                    ))}
-                </SlSelect>
-            )}
-            {journeys.length === 1 && single && (
-                <div
-                    className={classNames(
-                        'journey-title', 'lgs-one-line-card',
-                        {masked: !theJourney.visible},
+                    <div slot="start" className="lgs--journey-selector-start">
+                        {selectedJourney
+                         ? renderJourneyIcons(selectedJourney)
+                         : allowEmptyOption && <WaIcon name="link-simple-slash" variant="regular"/>}
+                    </div>
+                    {allowEmptyOption && (
+                        <WaOption value="">
+                            <WaIcon slot="start" name="link-simple-slash" variant="regular"/>
+                            <div>{emptyLabel}</div>
+                        </WaOption>
                     )}
-                >
-                    <FontAwesomeIcon
-                        className="journey-title-prefix"
-                        icon={theJourney.visible ? icon() : ICON_MASK}
-                        slot="prefix"
-                        style={getIconStyle()}
-                    />
-                    {theJourney.title}
-                </div>
+                    {journeys.map(journey => {
+                        const reactiveJourney = getReactiveJourney(journey)
+
+                        return (
+                            <WaOption
+                                key={journey.slug}
+                                value={journey.slug}
+                                className={classNames('journey-title', {masked: !reactiveJourney.visible})}
+                            >
+                                <div slot="start" className="lgs--journey-selector-start">
+                                    {renderJourneyIcons(reactiveJourney)}
+                                </div>
+                                <div>{reactiveJourney.title}</div>
+                            </WaOption>
+                        )
+                    })}
+                    {hint && <span slot="hint">{hint}</span>}
+                </WaSelect>
+            )}
+
+            {singleJourney && !allowEmptyOption && single && (
+                <WaCard className="journey-title" appearance="plain" onClick={e => e.stopPropagation()}>
+                    <span>
+                        {renderJourneyIcons(singleJourney)} {singleJourney.title}
+                    </span>
+                </WaCard>
             )}
         </>
     )

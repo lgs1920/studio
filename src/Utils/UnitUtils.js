@@ -7,15 +7,16 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-10
- * Last modified: 2026-02-10
+ * Created on: 2026-04-11
+ * Last modified: 2026-04-11
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { DAY, HOUR, MILLIS, MINUTE } from '@Core/constants'
-import { Duration }                  from 'luxon'
+import { DAY, HOUR, LATITUDE_FORMAT, LONGITUDE_FORMAT, MILLIS, MINUTE } from '@Core/constants'
+import { Duration }                                                     from 'luxon'
+import { sprintf }                                                      from 'sprintf-js'
 
 // Unit system constants
 export const INTERNATIONAL = 0
@@ -34,19 +35,51 @@ export const TB = GB * 1024
 
 /** Distance constants to convert from meter (International System) */
 export const METER = 1
-export const FOOT = 3.280839895             // foot
-export const KM = 0.001                     // meters to km
-export const KMH = 3.6                      // m/s to Km/h
-export const MPH = 2.236936                 // m/s to MPH
-export const MILE = 0.00062137119223        // meters to miles
-export const YARD = 1.09361                 // meters to yards
-export const INCHES = 39.3701               // meters to inches
+export const FOOT = 3.280839895
+export const KM = 0.001
+export const KMH = 3.6
+export const MPH = 2.236936
+export const MILE = 0.00062137119223
+export const YARD = 1.09361
+export const INCHES = 39.3701
+
+/** Units Definition */
+export const km = 'km'
+export const mile = 'mi'
+export const kmh = 'km/h'
+export const hkm = 'h/km'
+export const mkm = 'min/km'
+export const mpmile = 'min/mile'
+export const ms = 'm/s'
+export const mph = 'mph'
+export const foot = 'ft'
+export const yard = 'yd'
+export const inche = 'in'
+export const hour = 'hr'
+export const min = 'mn'
+export const sec = 's'
+export const meter = 'm'
+export const dd = DD
+export const dms = DMS
+export const units = [km, mile, kmh, hkm, mkm, mpmile, ms, mph, meter, foot, yard, inche, hour, min, sec, dd, dms]
+
+export const ELEVATION_UNITS = [meter, foot]
+export const DISTANCE_UNITS = [km, mile]
+export const SPEED_UNITS = [kmh, mph]
+export const PACE_UNITS = [mkm, mpmile]
+
+export const byte = 'B'
+export const kb = 'KB'
+export const mb = 'MB'
+export const gb = 'GB'
+export const tb = 'TB'
+export const BYTE_UNITS = [byte, kb, mb, gb, tb]
 
 export class UnitUtils {
 
     /**
      * Converter from international system unit (ie m, s, m/s) to UI unit.
-     * @param {number} input - Value in metric-based unit
+     * @param {number|string} input - Value in metric-based unit or DOM selector
      * @return {Object}
      */
     static convert = (input) => {
@@ -78,7 +111,7 @@ export class UnitUtils {
                     case mkm:
                         return input / KM / MINUTE * MILLIS
                     case mpmile:
-                        return input / MPH * MILE * HOUR
+                        return input / MILE / MINUTE * MILLIS
                     case dms: {
                         const degrees = Math.floor(input)
                         const minutesFloat = (input - degrees) * 60
@@ -142,13 +175,12 @@ export class UnitUtils {
                                        ? Math.round(value)
                                        : value.toFixed(unit.decimals).replace(/^0+/, '')
                 return `${formattedValue}${unit.label}`
-            }
+            },
         }
-    }
+    } // End of convert
 
     /**
      * Revert from UI unit back to international system (m, s, m/s).
-     * Prevents the "climbing numbers" bug by ensuring store storage is always metric.
      * @param {number|string} input - The value from the UI input
      * @param {string} unit - The unit label used for display
      * @returns {number} The raw value in metric system
@@ -158,7 +190,6 @@ export class UnitUtils {
             return 0
         }
 
-        // Clean input: replace comma, remove non-numeric chars except dot and minus
         const cleanInput = typeof input === 'string'
                            ? input.replace(',', '.').replace(/[^\d.-]/g, '')
                            : input
@@ -168,7 +199,6 @@ export class UnitUtils {
             return 0
         }
 
-        // Prevent division by zero for inverse units (Pace)
         const safeVal = Math.abs(val) < 0.000001 ? 0.000001 : val
 
         switch (unit) {
@@ -186,7 +216,6 @@ export class UnitUtils {
                 return val / YARD
             case inche:
                 return val / INCHES
-            // PACE (min/km -> m/s): 1 / (min * 60 * 0.001)
             case mkm:
                 return (1 / (safeVal * 60)) / KM
             case mpmile:
@@ -226,40 +255,86 @@ export class UnitUtils {
 
         return {
             value: toShow,
-            unit:  unitText,
-            full:  `${toShow}${unitText ? ' ' + unitText : ''}`,
+            unit: unitText,
+            full: `${toShow}${unitText ? ' ' + unitText : ''}`,
         }
     }
+
+    static convertToDD = (value, isLatitude = true) => {
+        if (!value) {
+            return null
+        }
+
+        const $regex = new RegExp(isLatitude ? LATITUDE_FORMAT : LONGITUDE_FORMAT, 'i')
+        const $match = value.trim().match($regex)
+
+        if (!$match) {
+            return null
+        }
+
+        if ($match[4] === undefined && $match[7] === undefined) {
+            return parseFloat(value.replace(',', '.'))
+        }
+
+        const $offset = isLatitude ? 4 : 7
+        const $deg = parseFloat($match[$offset]) || 0
+        const $min = parseFloat($match[$offset + 1]) || 0
+        const $sec = parseFloat($match[$offset + 2]) || 0
+        const $hemisphere = value.slice(-1).toUpperCase()
+
+        let $dd = $deg + ($min / 60) + ($sec / 3600)
+
+        if ($hemisphere === 'S' || $hemisphere === 'W' || value.startsWith('-')) {
+            $dd = $dd * -1
+        }
+
+        return parseFloat($dd.toFixed(6))
+    }
+
+    static parseCoordinateInput = (rawValue, isLatitude = true) => {
+        const value = `${rawValue ?? ''}`
+        const trimmedValue = value.trim()
+
+        const allowedChars = /^[0-9+\-.,\sNSEWnsew°'"]*$/
+        if (!allowedChars.test(value)) {
+            return {accepted: false}
+        }
+
+        const hemisphereMatches = value.toUpperCase().match(/[NSEW]/g) ?? []
+        const invalidHemisphere = hemisphereMatches.some((h) => isLatitude ? (h === 'E' || h === 'W') : (h === 'N' || h === 'S'))
+
+        if (invalidHemisphere || hemisphereMatches.length > 1) {
+            return {accepted: false}
+        }
+
+        if (!trimmedValue) {
+            return {accepted: true, completeValid: false}
+        }
+
+        const format = isLatitude ? LATITUDE_FORMAT : LONGITUDE_FORMAT
+        const regex = new RegExp(format, 'i')
+        if (!regex.test(trimmedValue)) {
+            return {accepted: true, completeValid: false}
+        }
+
+        const val = UnitUtils.convertToDD(trimmedValue, isLatitude)
+        if (!Number.isFinite(val)) {
+            return {accepted: false}
+        }
+
+        return {
+            accepted:     true,
+            completeValid: true,
+            decimalValue: val,
+            typedFormat:  /[NSEWnsew°'"]/.test(trimmedValue) ? DMS : DD,
+        }
+    }
+
+    static formatCoordinate = (ddValue, targetFormat = DD) => {
+        if (!Number.isFinite(ddValue)) {
+            return '0'
+        }
+        const safeTargetFormat = targetFormat === DMS ? DMS : DD
+        return `${UnitUtils.convert(ddValue).to(safeTargetFormat)}`
+    }
 }
-
-/** Units Export */
-export const km = 'km'
-export const mile = 'mi'
-export const kmh = 'km/h'
-export const hkm = 'h/km'
-export const mkm = 'min/km'
-export const mpmile = 'min/mile'
-export const ms = 'm/s'
-export const mph = 'mph'
-export const foot = 'ft'
-export const yard = 'yd'
-export const inche = 'in'
-export const hour = 'hr'
-export const min = 'mn'
-export const sec = 's'
-export const meter = 'm'
-export const dd = DD
-export const dms = DMS
-export const units = [km, mile, kmh, hkm, mkm, mpmile, ms, mph, meter, foot, yard, inche, hour, min, sec, dd, dms]
-
-export const ELEVATION_UNITS = [meter, foot]
-export const DISTANCE_UNITS = [km, mile]
-export const SPEED_UNITS = [kmh, mph]
-export const PACE_UNITS = [mkm, mpmile]
-
-export const byte = 'B'
-export const kb = 'KB'
-export const mb = 'MB'
-export const gb = 'GB'
-export const tb = 'TB'
-export const BYTE_UNITS = [byte, kb, mb, gb, tb]

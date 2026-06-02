@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-05-01
+ * Last modified: 2026-05-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -42,9 +42,19 @@ export class Utils {
     }
 
     static initJourneyEdition = async (event = undefined) => {
-        if (window.isOK(event)) {
-            Utils.updateJourneyEditor(event.target.value, {})
+        const journeySlug = event?.target?.value
+        const editorStore = lgs.theJourneyEditorProxy
+
+        if (!journeySlug) {
+            return
         }
+
+        if (editorStore.journey?.slug === journeySlug) {
+            __.ui.drawerManager.consumeSuppressFocusOnOpen?.(journeySlug)
+            return
+        }
+
+        Utils.updateJourneyEditor(journeySlug, {})
     }
     static updateJourneyEditor = async (journeySlug, {
         rotate = lgs.settings.ui.camera.start.rotate.journey,
@@ -52,6 +62,13 @@ export class Utils {
         focus = true,
     }) => {
         const editorStore = lgs.theJourneyEditorProxy
+        const shouldFocus = focus && !__.ui.drawerManager.consumeSuppressFocusOnOpen?.(journeySlug)
+        if (__.ui.cameraManager.isRotating()) {
+            await __.ui.cameraManager.stopRotate()
+            // Drop the previous rotation target before switching journeys so the next focus
+            // path does not inherit a stale orbit anchor from the journey that was just left.
+            lgs.stores.ui.mainUI.rotate.target = null
+        }
         editorStore.journey = lgs.getJourneyBySlug(journeySlug)
 
         lgs.saveJourneyInContext(editorStore.journey)
@@ -80,21 +97,26 @@ export class Utils {
         __.ui.profiler.draw()
 
         // Save information
-        TrackUtils.saveCurrentJourneyToDB(lgs.theJourney).then(async () => {
-            if (editorStore.journey.visible && focus) {
-                lgs.theJourney.focus({action: action, rotate: rotate})
-            }
-            await TrackUtils.saveCurrentJourneyToDB(lgs.theJourney)
-            await TrackUtils.saveCurrentTrackToDB(null)
-            await TrackUtils.saveCurrentPOIToDB(null)
-        })
+        await TrackUtils.saveCurrentJourneyToDB(lgs.theJourney)
+        if (editorStore.journey.visible && shouldFocus) {
+            lgs.theJourney.focus({action, rotate, resetCamera: true})
+        }
+        await TrackUtils.saveCurrentTrackToDB(null)
+        await TrackUtils.saveCurrentPOIToDB(null)
 
     }
 
     static initTrackEdition = async (event) => {
-        if (window.isOK(event)) {
+        const trackSlug = event?.target?.value
             const editorStore = lgs.theJourneyEditorProxy
-            editorStore.track = lgs.getTrackBySlug(event.target.value)
+
+        if (!trackSlug || editorStore.track?.slug === trackSlug) {
+            __.ui.drawerManager.consumeSuppressFocusOnOpen?.(editorStore.journey?.slug)
+            return
+        }
+
+        const shouldFocus = !__.ui.drawerManager.consumeSuppressFocusOnOpen?.(editorStore.journey?.slug)
+        editorStore.track = lgs.getTrackBySlug(trackSlug)
             editorStore.track.addToContext()
 
             // Force POI in editor
@@ -105,15 +127,14 @@ export class Utils {
             Utils.renderTrackSettings()
 
             // Save information
-            TrackUtils.saveCurrentTrackToDB(event.target.value).then(async () => {
-                if (editorStore.journey.visible) {
+        TrackUtils.saveCurrentTrackToDB(trackSlug).then(async () => {
+            if (editorStore.journey.visible && shouldFocus) {
                     editorStore.journey.focus({rotate: lgs.settings.ui.camera.start.rotate.journey})
                 }
                 await TrackUtils.saveCurrentPOIToDB(null)
 
             })
 
-        }
     }
 
     static updateTrack = async (action) => {
@@ -142,7 +163,7 @@ export class Utils {
      * @param {Number} action
      * @return {Journey}
      */
-    static updateJourney = async action => {
+    static updateJourney = async (action, {focus = action !== UPDATE_JOURNEY_SILENTLY} = {}) => {
 
         const journey = Journey.deserialize({object: Journey.unproxify(lgs.theJourneyEditorProxy.journey)})
         await journey.extractMetrics()
@@ -154,7 +175,8 @@ export class Utils {
 
         if (action !== UPDATE_JOURNEY_SILENTLY) {
             await journey.draw({action: action})
-        } else {
+        }
+        else if (focus) {
             journey.focus({action: action, rotate: lgs.settings.ui.camera.start.rotate.journey})
         }
 

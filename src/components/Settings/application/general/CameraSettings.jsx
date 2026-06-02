@@ -7,146 +7,176 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-05-10
+ * Last modified: 2026-05-10
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { FOCUS_CENTROID, FOCUS_LAST, FOCUS_STARTER, SCENE_MODE_3D } from '@Core/constants'
-import { faArrowsToCircle, faVideo }                                from '@fortawesome/pro-regular-svg-icons'
-import { FontAwesomeIcon }                                          from '@fortawesome/react-fontawesome'
-import { SlDivider, SlIcon, SlRadio, SlRadioGroup, SlSwitch }       from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                                                    from '@Utils/FA2SL'
-import React, { useRef }                                            from 'react'
-import { useSnapshot }                                              from 'valtio/index'
+import { WaDivider, WaIcon, WaRadio, WaRadioGroup, WaSwitch } from '@web.awesome.me/webawesome-pro/dist/react'
+import { useCallback, useRef } from 'react'
+import { useSnapshot }                                        from 'valtio/index'
 
-export const CameraSettings = (props) => {
+/**
+ * CameraSettings component.
+ * Manages camera display options and focus behaviors.
+ * @param {Object} props - Component properties.
+ */
+export const CameraSettings = () => {
+    // Valtio Proxies
+    const $camera = lgs.settings.ui.camera
+    const $poi = lgs.settings.ui.poi
+    const $sceneMode = lgs.settings.scene.mode
 
-    const switchValue = (event) => {
-        if (window.isOK(event)) {
-            return event.target.checked
+    // Snapshots
+    const camera = useSnapshot($camera)
+    const poi = useSnapshot($poi)
+    const sceneMode = useSnapshot($sceneMode)
+
+    // Ref naming convention: starts with _ and no Ref suffix
+    const _targetPosition = useRef(null)
+
+    const updateCameraBoolean = useCallback((key, value) => {
+        lgs.settings.ui.camera[key] = value
+    }, [])
+
+    const updateCameraStart = useCallback((key, value) => {
+        lgs.settings.ui.camera.start[key] = value
+    }, [])
+
+    const updateCameraStartRotate = useCallback((key, value) => {
+        lgs.settings.ui.camera.start.rotate[key] = value
+    }, [])
+
+    const updateTargetMarker = useCallback((event) => {
+        const isChecked = event.target.checked
+        lgs.settings.ui.camera.targetIcon.show = isChecked
+        if (!isChecked && _targetPosition.current?.checked) {
+            _targetPosition.current.click()
         }
-    }
+    }, [])
 
-    const camera = useSnapshot(lgs.editorSettingsProxy.camera)
-    const settings = useSnapshot(lgs.settings.ui.camera)
-    const poi = useSnapshot(lgs.settings.ui.poi)
-    const targetPosition = useRef(null)
-    lgs.editorSettingsProxy.camera.showTargetPosition = lgs.settings.ui.camera.showTargetPosition
+    const updatePoiRotate = useCallback((event) => {
+        lgs.settings.ui.poi.rotate = event.target.checked
+    }, [])
 
-    const TabInfo = () => {
+    /**
+     * Renders information toggles.
+     * Used as a function to maintain DOM structure without re-mounting components.
+     */
+    const renderTabInfo = () => {
         return (
             <>
-                {useSnapshot(lgs.settings.scene.mode).value * 1 === SCENE_MODE_3D.value &&
+                {sceneMode.value * 1 === SCENE_MODE_3D.value &&
                     <>
-                        <div className="drawer-horizontal-line">
-                            <SlSwitch size="small" align-right checked={settings.showPosition}
-                                      onSlChange={(event) => lgs.settings.ui.camera.showPosition = switchValue(event)}>
-                                {'Show Position'}
-                                <span slot="help-text">{'Longitude, Latitude, Altitude'}</span>
-                            </SlSwitch>
-
-                            <SlSwitch size="small" align-right checked={settings.showHPR}
-                                      onSlChange={(event) => lgs.settings.ui.camera.showHPR = switchValue(event)}>
-                                {'Show HPR'}
-                                <span slot="help-text">{'Head, Pitch, Roll'}</span>
-                            </SlSwitch>
+                        <div className="drawer-horizontal-line align-to-top">
+                            <WaSwitch size="xs" label-at-start checked={camera.showPosition}
+                                      onChange={(event) => updateCameraBoolean('showPosition', event.target.checked)}>
+                                {' Show Position '}
+                                <span slot="hint">{' Longitude, Latitude, Altitude '}</span>
+                            </WaSwitch>
+                            <WaDivider orientation="vertical"/>
+                            <WaSwitch size="xs" label-at-start checked={camera.showHPR}
+                                      onChange={(event) => updateCameraBoolean('showHPR', event.target.checked)}>
+                                {' Show HPR '}
+                                <span slot="hint">{' Head, Pitch, Roll '}</span>
+                            </WaSwitch>
                         </div>
-                        <SlDivider/>
                     </>
-
                 }
 
-                <div className="drawer-horizontal-line">
-                    <SlSwitch size="small" align-right checked={settings.targetIcon.show}
-                              onSlChange={(event) => {
-                                  lgs.settings.ui.camera.targetIcon.show = switchValue(event)
-                                  if (!lgs.settings.ui.camera.targetIcon.show) {
-                                      lgs.editorSettingsProxy.camera.showTargetPosition = false
-                                      if (targetPosition.current.checked) {
-                                          targetPosition.current.click()
-                                      }
-                                  }
-                              }}>
-                        {'Show Target Marker'}
-                        <span slot="help-text">Marked with<SlIcon library="fa"
-                                                                  name={FA2SL.set(faArrowsToCircle)}/></span>
-                    </SlSwitch>
-
-
-                    <SlSwitch size="small" align-right checked={camera.showTargetPosition} ref={targetPosition}
-                              onSlChange={(event) => lgs.settings.ui.camera.showTargetPosition = switchValue(event)}>
-                        {'Show Target Position'}
-                        <span slot="help-text">Marked with<SlIcon library="fa"
-                                                                  name={FA2SL.set(faArrowsToCircle)}/></span>
-                    </SlSwitch>
+                <div className="drawer-horizontal-line align-to-top">
+                    <WaSwitch size="xs" label-at-start checked={camera.targetIcon.show}
+                              onChange={updateTargetMarker}>
+                        {' Show Target Marker '}
+                        <span slot="hint">
+                            {' Marked with '}
+                            <WaIcon name="arrows-to-circle" variant="regular"/>
+                        </span>
+                    </WaSwitch>
+                    <WaDivider orientation="vertical"/>
+                    <WaSwitch size="xs" label-at-start checked={camera.showTargetPosition} ref={_targetPosition}
+                              onChange={(event) => updateCameraBoolean('showTargetPosition', event.target.checked)}>
+                        {' Show Target Position '}
+                        <span slot="hint">
+                            {' Marked with '}
+                            <WaIcon name="arrows-to-circle" variant="regular"/>
+                        </span>
+                    </WaSwitch>
                 </div>
-                <SlDivider/>
+                <WaDivider/>
+                <div className="drawer-horizontal-line align-to-top">
+                    <WaSwitch size="xs" label-at-start checked={camera.showMovementWidget ?? true}
+                              onChange={(event) => updateCameraBoolean('showMovementWidget', event.target.checked)}>
+                        {' Camera Info '}
+                        <span slot="hint">{' Angle and altitude while moving the camera '}</span>
+                    </WaSwitch>
+                </div>
+                <WaDivider/>
             </>
         )
     }
 
-    const TabPosition = () => {
+    /**
+     * Renders position and rotation controls.
+     */
+    const renderTabPosition = () => {
         return (
             <>
-                <div className="drawer-horizontal-line two-columns">
-                    <SlRadioGroup value={settings.start.app}
-                                  size={'small'} onSlChange={handleStartFocus}
+                <div className="drawer-horizontal-line two-columns align-to-top">
+                    <WaRadioGroup value={camera.start.app}
+                                  size={'xs'}
+                                  onChange={(event) => updateCameraStart('app', event.target.value)}
                     >
-                        <label slot="label">{'Start focus:'}</label>
-                        <SlRadio value={FOCUS_STARTER}>{'Starter POI'}</SlRadio>
-                        <SlRadio value={FOCUS_LAST}>{'Last Camera Location'}</SlRadio>
-                        <SlRadio value={FOCUS_CENTROID}>{'Last Journey'}</SlRadio>
-                    </SlRadioGroup>
+                        <label slot="label">{' Start focus: '}</label>
+                        <WaRadio value={FOCUS_STARTER}>{' Starter POI '}</WaRadio>
+                        <WaRadio value={FOCUS_LAST}>{' Last Camera Location '}</WaRadio>
+                        <WaRadio value={FOCUS_CENTROID}>{' Last Journey '}</WaRadio>
+                    </WaRadioGroup>
 
-                    <SlRadioGroup value={settings.start.journey}
-                                  size={'small'}
-                                  onSlChange={handleJourneyFocus}>
-                        <label slot="label">{'Journey focus:'}</label>
-                        <SlRadio value={FOCUS_CENTROID}>{'Center'}</SlRadio>
-                        <SlRadio value={FOCUS_LAST}>{'Last Camera Location'}</SlRadio>
-                    </SlRadioGroup>
+                    <WaRadioGroup value={camera.start.journey}
+                                  size={'xs'}
+                                  onChange={(event) => updateCameraStart('journey', event.target.value)}>
+                        <label slot="label">{' Journey focus: '}</label>
+                        <WaRadio value={FOCUS_CENTROID}>{' Center '}</WaRadio>
+                        <WaRadio value={FOCUS_LAST}>{' Last Camera Location '}</WaRadio>
+                    </WaRadioGroup>
                 </div>
+                <WaDivider/>
                 <div className="drawer-horizontal-line two-columns">
-                    <SlSwitch size="small" align-right checked={settings.start.rotate.app}
-                              onSlChange={(event) => lgs.settings.ui.camera.start.rotate.app = switchValue(event)}>
-                        {'Rotation after initial focus'}
-                    </SlSwitch>
+                    <WaSwitch size="xs" label-at-start checked={camera.start.rotate.app}
+                              onChange={(event) => updateCameraStartRotate('app', event.target.checked)}>
+                        {' Rotation after initial focus '}
+                    </WaSwitch>
                 </div>
 
-                <SlDivider/>
+                <WaDivider/>
                 <div>
-                    <SlSwitch size="small" align-right checked={poi.rotate}
-                              onSlChange={(event) => lgs.settings.ui.poi.rotate = switchValue(event)}>
-                        {'Rotation after focusing on a POI'}
-                    </SlSwitch>
+                    <WaSwitch size="xs" label-at-start checked={poi.rotate}
+                              onChange={updatePoiRotate}>
+                        {' Rotation after focusing on a POI '}
+                    </WaSwitch>
                     <br/>
-                    <SlSwitch size="small" align-right checked={settings.start.rotate.journey}
-                              onSlChange={(event) => lgs.settings.ui.camera.start.rotate.journey = switchValue(event)}>
-                        {'Rotation after focusing on a journey'}
-                    </SlSwitch>
+                    <WaSwitch size="xs" label-at-start checked={camera.start.rotate.journey}
+                              onChange={(event) => updateCameraStartRotate('journey', event.target.checked)}>
+                        {' Rotation after focusing on a journey '}
+                    </WaSwitch>
                 </div>
             </>
-
         )
     }
-
-    const handleStartFocus = (event) => {
-        lgs.settings.ui.camera.start.app = event.srcElement.value
-    }
-    const handleJourneyFocus = (event) => {
-        lgs.settings.ui.camera.start.journey = event.srcElement.value
-    }
-
 
     return (
         <>
-            <span slot="summary"><FontAwesomeIcon icon={faVideo}/>{'Camera Settings'}</span>
-            <SlDivider/>
-            <TabInfo/>
-            <TabPosition/>
+            <span slot="summary">
+                <WaIcon name="video" variant="regular"/>
+                {' Camera Settings '}
+            </span>
+            <WaDivider/>
+            {renderTabInfo()}
+            {renderTabPosition()}
         </>
     )
 }

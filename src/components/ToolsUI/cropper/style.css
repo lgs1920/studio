@@ -1,14 +1,14 @@
 /*******************************************************************************
  *
  * This file is part of the LGS1920/studio project.
- *
+ *  
  * File: style.css
  *
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-04-29
+ * Last modified: 2026-04-29
  *
  *
  * Copyright © 2026 LGS1920
@@ -41,9 +41,10 @@
  *   Crop Box Container
  **************************************/
 
-.video-cropper {
-    margin: 0;
+.video-cropper, video-cropper.defined {
+    margin: 0 !important;
 }
+
 .crop-zone {
     position: absolute;
     z-index: calc(var(--crop-zindex) + 1);
@@ -51,20 +52,27 @@
     right: 0;
     bottom: 0;
     left: 0;
-    overflow: hidden;
+    overflow: visible;
     box-sizing: border-box;
     user-select: none;
     pointer-events: none;
     border: var(--border-width) solid var(--crop-border-color);
     background-color: transparent;
+    box-shadow: var(--lgs-on-map-floating-shadow, var(--lgs-overlay-floating-shadow));
     --border-width: 1px;
     touch-action: none;
 }
 
 
 .defined-crop-zone {
+    right: auto;
+    bottom: auto;
     cursor: default;
     pointer-events: none;
+}
+
+.defined-crop-zone-hidden {
+    visibility: hidden;
 }
 
 /***************************************
@@ -79,8 +87,14 @@
     align-items: center;
     width: max-content;
     pointer-events: none;
-    opacity: 0.7;
+    opacity: 0.92;
     gap: var(--lgs-gutter-xs);
+}
+
+.crop-ratio-widget.lgs-card.wa-theme-lgs1920-on-map,
+.crop-ratio-popup-menu.lgs-card.wa-theme-lgs1920-on-map {
+    box-shadow: var(--lgs-on-map-floating-shadow, var(--sl-shadow-large)) !important;
+    filter: drop-shadow(var(--lgs-on-map-floating-drop-shadow, 0 0.45rem 1rem rgb(0 0 0 / 0.22)));
 }
 
 .crop-info {
@@ -113,14 +127,9 @@
     height: 100%;
     user-select: none;
     pointer-events: none;
-    background-color: var(--lgs-dark-color-90);
-    background-image: repeating-linear-gradient(
-            135deg,
-            var(--lgs-light-color-25) 0px,
-            var(--lgs-light-color-25) 2px,
-            transparent 2px,
-            transparent 20px
-    );
+    background-color: var(--lgs-dark-color-80);
+    background-image: var(--lgs-brand-overlay-gradient);
+    background-blend-mode: screen, soft-light, normal;
 
     clip-path: inset(0 0 0 0);
     clip-rule: evenodd;
@@ -139,12 +148,14 @@
 
 
 .crop-ratio-widget {
+    font-size: var(--lgs-font-size-s);
     position: relative;
     display: flex;
     align-items: center;
-    flex-direction: var(--buttons-bar-on-map-direction);
+    flex-direction: row;
     width: auto;
-    padding: var(--lgs-gutter-xs);
+    padding: var(--lgs-on-map-padding, var(--lgs-gutter-xs));
+    box-shadow: var(--lgs-on-map-floating-shadow, var(--sl-shadow-large));
     gap: var(--lgs-gutter-xs);
 }
 
@@ -152,3 +163,56 @@
     opacity: 1;
 }
 
+.crop-ratio-popup-menu ul {
+    width: 100%;
+    margin: 0;
+    padding: 0 var(--lgs-gutter-xs);
+    list-style: none;
+}
+
+.crop-ratio-popup-menu {
+    box-shadow: var(--lgs-on-map-floating-shadow, var(--sl-shadow-large));
+}
+
+.crop-ratio-popup-menu li.crop-ratio-choice-button {
+    display: flex;
+    align-items: center;
+    box-sizing: border-box;
+    min-width: 6rem;
+    margin: 2px;
+    padding: 2px;
+    cursor: pointer;
+    transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
+    white-space: nowrap;
+    color: var(--lgs-light-color-75);
+    border: 1px solid transparent;
+    border-radius: var(--lgs-on-map-interactive-radius, var(--lgs-border-radius-xs));
+    outline: var(--lgs-card-on-map-hover-outline);
+    outline-color: transparent;
+    outline-offset: var(--lgs-card-on-map-hover-outline-offset);
+}
+
+.crop-ratio-popup-menu li.crop-ratio-choice-button span {
+    display: block;
+    width: 100%;
+    text-align: left;
+}
+
+.crop-ratio-popup-menu li.crop-ratio-choice-button:not(.is-selected):hover {
+    color: var(--lgs-card-on-map-hover-color);
+    border-color: transparent !important;
+    outline-color: var(--lgs-card-on-map-hover-outline-color);
+    background: var(--lgs-card-on-map-hover-bg-color) !important;
+    background-color: var(--lgs-card-on-map-hover-bg-color) !important;
+    background-image: none !important;
+}
+
+.crop-ratio-popup-menu li.crop-ratio-choice-button.is-selected,
+.crop-ratio-popup-menu li.crop-ratio-choice-button.is-selected:hover {
+    color: var(--lgs-card-on-map-selected-color);
+    border-color: var(--lgs-card-on-map-selected-border-color);
+    outline-color: transparent;
+    background-color: var(--lgs-card-on-map-selected-bg-color) !important;
+    background-image: var(--lgs-card-on-map-selected-bg-image) !important;
+    background-blend-mode: var(--lgs-card-on-map-selected-bg-blend-mode);
+}

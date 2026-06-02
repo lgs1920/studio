@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-28
- * Last modified: 2026-02-28
+ * Created on: 2026-04-30
+ * Last modified: 2026-04-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -22,6 +22,18 @@ import { SceneUtils }              from '@Utils/cesium/SceneUtils'
 import { Mobility }                from '@Utils/Mobility'
 import { UIToast }                 from '@Utils/UIToast'
 import { LayersAndTerrainManager } from './LayerAndTerrainManager'
+
+const finiteNumber = value => {
+    if (value === null || value === undefined || value === '') {
+        return null
+    }
+
+    const number = Number(value)
+    return Number.isFinite(number) ? number : null
+}
+
+const hasMapCoordinates = target => finiteNumber(target?.longitude) !== null
+    && finiteNumber(target?.latitude) !== null
 
 export class SceneManager {
 
@@ -44,6 +56,10 @@ export class SceneManager {
      * @param callback {function}   called  at the end of morphing
      */
     morph = (mode, callback = null) => {
+        if (Number(mode) === Number(SCENE_MODE_2D.value) && lgs.stores.ui.mainUI.panorama.active) {
+            void __.ui.poiManager?.stopRotationAndSync?.()
+        }
+
         // update settings
         lgs.settings.scene.mode.value = mode
         SceneUtils.morph(mode, callback)
@@ -152,32 +168,51 @@ export class SceneManager {
         return lgs.stores.ui.mainUI.rotate.running
     }
 
-    focusPostProcessing = (point, options) => {
+    focusPostProcessing = () => {
         // console.log(point, options)
     }
 
     //
     focusPreProcessing = (point, options) => {
-        const from = lgs.stores.ui.mainUI.rotate.target
-        if (point instanceof MapTarget) {
+        if (options?.rotate && !__.ui.cameraManager?.isRotating?.() && !__.ui.cameraManager?.isFlying?.()) {
+            __.ui.cameraManager?.syncPositionInformation?.()
+        }
+        const cameraTarget = __.ui.cameraManager?.target
+        const rotateTarget = lgs.stores.ui.mainUI.rotate.target
+        const from = hasMapCoordinates(cameraTarget)
+                     ? cameraTarget
+                     : hasMapCoordinates(rotateTarget) ? rotateTarget : null
+        const rotateTargetId = rotateTarget?.slug ?? rotateTarget?.id
+        const pointId = point?.slug ?? point?.id
+        const sameRotateTarget = Boolean(
+            point?.element
+            && rotateTarget?.element === point.element
+            && pointId
+            && rotateTargetId === pointId,
+        )
+        if (options?.target?.element && hasMapCoordinates(options.target)) {
+            lgs.stores.ui.mainUI.rotate.target = options.target
+        }
+        else if (point instanceof MapTarget) {
             lgs.stores.ui.mainUI.rotate.target = point
         }
         else {
             lgs.stores.ui.mainUI.rotate.target = new MapTarget(point.element, point)
         }
-        const distance = Mobility.distance(from, point)
+        const distance = from && hasMapCoordinates(point) ? Mobility.distance(from, point) : 0
         return {
-            distance: distance,
-            height:   Math.max(from.height, point.height),
+            distance:         distance,
+            height:           Math.max(from?.height ?? 0, point?.height ?? 0),
+            sameRotateTarget: sameRotateTarget,
         }
     }
 
     getJourneyCentroid = async journey => await this.utils.getJourneyCentroid(journey)
 
-    focus = (point, options) => {
+    focus = (point, options = {}) => {
         this.#focusTarget = options.target ?? null
 
-        this.utils.focus(point, {
+        return this.utils.focus(point, {
             ...options,
             initializer: options.initializer ?? this.focusPreProcessing,
             callback:    options.callback ?? this.focusPostProcessing,
@@ -213,11 +248,15 @@ export class SceneManager {
      *
      * @return {Array|number} altitude
      */
-    getHeightFromTerrain = async ({coordinates, precision = HIGH_TERRAIN_PRECISION, level = 11}) => {
+    getHeightFromTerrain = async (args = {}) => {
+        const normalizedArgs = (args && typeof args === 'object' && 'coordinates' in args)
+                               ? args
+                               : {coordinates: args}
+
         return this.utils.getHeightFromTerrain({
-                                                   coordinates: coordinates,
-                                                   precision:   precision,
-                                                   level:       level,
+                                                   coordinates: normalizedArgs.coordinates,
+                                                   precision:   normalizedArgs.precision ?? HIGH_TERRAIN_PRECISION,
+                                                   level:       normalizedArgs.level ?? 11,
                                                })
     }
 

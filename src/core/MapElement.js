@@ -14,6 +14,8 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
+import { decodeHTMLEntities } from '@Utils/TextUtils'
+
 export class MapElement {
 
     /** @type {string} */
@@ -66,7 +68,9 @@ export class MapElement {
                 })
                 instance[prop] = myMap
             } else {
-                instance[prop] = object[prop]
+                instance[prop] = prop === 'description'
+                                 ? decodeHTMLEntities(object[prop])
+                                 : object[prop]
             }
         }
         return instance

@@ -7,62 +7,56 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-28
- * Last modified: 2026-02-28
+ * Created on: 2026-05-10
+ * Last modified: 2026-05-10
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { Utils }                                              from '@Editor/Utils'
-import { JOURNEY_WIDGETS }       from '@Core/constants'
-import { WidgetDynamicRenderer } from '@Core/ui/widget-manager/dynamic-render/WidgetDynamicRender'
-import { faTrashCan }                                         from '@fortawesome/pro-regular-svg-icons'
-import { SlButton, SlIcon, SlIconButton, SlPopup, SlTooltip } from '@shoelace-style/shoelace/dist/react'
-import { TrackUtils }                                         from '@Utils/cesium/TrackUtils'
-import { FA2SL }                                              from '@Utils/FA2SL'
-import { UIToast }                                            from '@Utils/UIToast'
-import React, { useEffect, useRef }                           from 'react'
-import { useSnapshot }                                        from 'valtio'
+import { JOURNEY_WIDGETS }                              from '@Core/constants'
+import { hasActiveRemoveJourneyDialog }                 from '@Core/events/shortcutBlockers'
+import {
+    WidgetDynamicRenderer,
+}                                                       from '@Core/ui/widget-manager/dynamic-render/WidgetDynamicRender'
+import { Utils }                                        from '@Editor/Utils'
+import { UIToast }                                      from '@Utils/UIToast'
+import { LGSPopup }                            from '@Components/LGSPopup'
+import { WaButton, WaCard, WaIcon, WaTooltip } from '@web.awesome.me/webawesome-pro/dist/react'
+import { useCallback, useEffect, useState }             from 'react'
+import { useSnapshot }                                  from 'valtio'
 
 export const RemoveJourney = (props) => {
     const mainUI = lgs.stores.ui.mainUI
     const editorStore = lgs.theJourneyEditorProxy
-    const snap = useSnapshot(mainUI)
 
-    const removeButton = useRef(null)
-    const tooltipElement = useRef(null)
-    const distance = 0
-    const tooltip = props?.tooltip ?? 'top-start'
     const settings = useSnapshot(lgs.settings.ui.menu)
-    const placement = props.placement ?? (settings.toolBar.fromStart ? 'top-start' : 'top-end')
+    const placement = props.placement ?? (settings.toolBar.fromStart ? 'bottom-end' : 'bottom-start')
+    const [dialog, setDialog] = useState(false)
+    const dialogName = props?.name ?? 'remove-journey'
+    const removeButtonId = `remove-journey-in-settings-${dialogName}`
 
+    const hideRemoveDialog = useCallback(() => {
+        setDialog(false)
+    }, [])
 
-    const hideRemoveDialog = () => {
-        mainUI.removeJourneyDialog.active.set(props.name, false)
-        // clearTimeout(timer)
-    }
-    const toggleRemoveDialog = (event) => {
-        if (mainUI.removeJourneyDialog.active.get(props.name)) {
-            hideRemoveDialog()
-        }
-        else {
-            mainUI.removeJourneyDialog.active.set(props.name, true)
-            tooltipElement.current.hide()
-        }
-    }
+    const toggleRemoveDialog = useCallback(() => {
+        setDialog(open => !open)
+    }, [])
 
     /**
      * Remove journey
      */
-    const removeJourney = async () => {
+    const removeJourney = useCallback(async () => {
 
         hideRemoveDialog()
 
         const $store = lgs.stores.main
-        const $pois = $store.components.pois.list
 
         const journey = lgs.getJourneyBySlug(editorStore.journey.slug)
+        if (!journey) {
+            return
+        }
         // get Journey index
         const index = $store.components.journeyEditor.list.findIndex((list) => list === journey.slug)
 
@@ -74,12 +68,14 @@ export const RemoveJourney = (props) => {
             $store.components.journeyEditor.list.splice(index, 1)
 
             // Remove the journey and it's children
+            await __.ui.journeyGroupManager?.removeJourneyFromAll?.(journey.slug)
             journey.remove()
 
             //TODO add a REMOVE_JOURNEY event
 
-            // Stop wanderer
-            __.ui.wanderer.stop()
+            // Stop Flythrough runner
+            __.ui.flythrough?.stop?.()
+            __.ui.flythroughRunner.stop()
         }
 
         // Let's inform the user
@@ -93,7 +89,6 @@ export const RemoveJourney = (props) => {
          * If we have some other journeys, we'll take the first and render the editor.
          * Otherwise we close the editing.
          */
-        let text = ''
         if ($store.components.journeyEditor.list.length >= 1) {
             // New current is the first.
             lgs.theJourney = lgs.getJourneyBySlug($store.components.journeyEditor.list[0])
@@ -106,7 +101,6 @@ export const RemoveJourney = (props) => {
         }
         else {
             lgs.cleanContext()
-            text = ''
             $store.canViewJourneyData = false
             __.ui.drawerManager.close()
             $store.components.profile.show = false
@@ -125,46 +119,81 @@ export const RemoveJourney = (props) => {
                                 text:    `It's time to load a new one!`,
                             })
         }
-    }
-
+    }, [editorStore.journey.slug, hideRemoveDialog])
 
     useEffect(() => {
-        mainUI.removeJourneyDialog.active.set(props.name, false)
+        mainUI.removeJourneyDialog.active.set(dialogName, dialog)
+
         return () => {
-            mainUI.removeJourneyDialog.active.set(props.name, false)
+            mainUI.removeJourneyDialog.active.set(dialogName, false)
         }
-    }, [])
+    }, [dialog, dialogName, mainUI.removeJourneyDialog.active])
+
+    useEffect(() => {
+        if (!dialog) {
+            return undefined
+        }
+
+        const handleConfirmShortcuts = event => {
+            if (!hasActiveRemoveJourneyDialog()) {
+                return
+            }
+
+            if (event.key !== 'Escape' && event.key !== 'Delete') {
+                return
+            }
+
+            event.preventDefault()
+            event.stopPropagation()
+            event.stopImmediatePropagation?.()
+
+            if (event.key === 'Escape') {
+                hideRemoveDialog()
+                return
+            }
+
+            void removeJourney()
+        }
+
+        window.addEventListener('keydown', handleConfirmShortcuts, true)
+        return () => window.removeEventListener('keydown', handleConfirmShortcuts, true)
+    }, [dialog, hideRemoveDialog, removeJourney])
+
     return (
         <>
+            <WaTooltip placement="bottom" for={removeButtonId}>{'Remove journey'}</WaTooltip>
+            <WaButton size="s"
+                      id={removeButtonId}
+                      variant="brand"
+                      appearance="plain"
+                      onClick={toggleRemoveDialog}>
+                <WaIcon name="trash-can"/>
+            </WaButton>
 
-            <SlTooltip hoist content={'Remove the current journey'} placement={tooltip} ref={tooltipElement}>
-                {props.style !== 'button' &&
-                    <SlIconButton ref={removeButton}
-                                  onClick={toggleRemoveDialog}
-                                  library="fa" name={FA2SL.set(faTrashCan)}/>
-                }
-                {props.style === 'button' &&
 
-                    <SlButton ref={removeButton} size={'small'} className={'square-button'}
-                              onClick={toggleRemoveDialog}
-                    >
-                        <SlIcon slot="prefix" library="fa" name={FA2SL.set(faTrashCan)}/>
-                    </SlButton>
-                }
-            </SlTooltip>
-                <SlPopup anchor={removeButton.current}
-                         active={snap.removeJourneyDialog.active.get(props.name)}
-                         hover-bridge="true" shift="true"
-                         placement={placement}
-                         distance={distance}
-                >
-                    <div className="lgs-one-line-card lgs-mini-remove-dialog">
-                        {'Remove this journey ?'}
-                        <SlButton variant="danger" size={'small'} onClick={removeJourney}>
-                            <SlIcon slot="prefix" library="fa" name={FA2SL.set(faTrashCan)}/> {'Yes'}
-                        </SlButton>
+            <LGSPopup anchor={removeButtonId}
+                     active={dialog}
+                      onRequestClose={hideRemoveDialog}
+                     data-lgs-shortcut-blocker={dialog ? 'true' : undefined}
+                     hover-bridge="true" shift="true"
+                     placement={placement}
+                     distance={lgs.gutter.xs}
+            >
+                <WaCard className="lgs--popup-in-drawer lgs--popup-in-drawer-small lgs-slide-down">
+                    {'Are you sure to remove this journey ?'}
+                    <div slot="footer">
+                        <div className="lgs--popup-in-drawer-footer">
+                            <WaButton variant="neutral" appearance="outlined" size={'small'} onClick={hideRemoveDialog}>
+                                <WaIcon name="xmark"/> {'No'}
+                            </WaButton>
+                            <WaButton variant="danger" appearance="filled-outlined" size={'small'}
+                                      onClick={removeJourney}>
+                                <WaIcon name="trash-can"/> {'Yes'}
+                            </WaButton>
+                        </div>
                     </div>
-                </SlPopup>
+                </WaCard>
+            </LGSPopup>
 
 
         </>

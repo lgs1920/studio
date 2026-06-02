@@ -7,65 +7,91 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-04-30
+ * Last modified: 2026-04-30
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-.camera-position {
+.camera-information-widget-shell {
+    overflow: visible !important;
+    align-items: flex-start !important;
+    justify-content: flex-start !important;
+    width: max-content !important;
+    min-width: 0 !important;
+    max-width: calc(100vw - var(--left) - var(--right) - 2 * var(--lgs-gutter-s)) !important;
+    height: auto !important;
+    min-height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    cursor: grab;
+    text-align: left;
+    border: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+}
+
+.camera-information-panel {
+    font-size: var(--lgs-font-size-s);
     display: flex;
+    align-items: flex-start;
+    flex-direction: column;
+    width: max-content;
+    max-width: 100%;
+    text-align: left;
+    pointer-events: auto;
+    gap: var(--lgs-gutter-xs) !important;
+}
+
+.camera-information-widget-shell.dragging,
+.camera-information-widget-shell.dragging .camera-information-panel {
+    cursor: grabbing !important;
+}
+
+.camera-information-line {
+    display: inline-flex;
+    align-items: center;
+    align-self: flex-start;
+    justify-content: flex-start;
+    width: max-content;
+    max-width: 100%;
+    text-align: left;
+    white-space: nowrap;
     gap: var(--lgs-gutter-s);
 }
 
-.camera-data-panel {
+.camera-information-line > sl-icon:first-child {
+    display: flex;
     align-items: center;
-    flex-direction: row;
-    flex-wrap: wrap;
-    pointer-events: auto;
-}
-
-.camera-data-panel > sl-icon:first-child {
+    align-self: stretch;
+    flex: 0 0 2rem;
     width: 2rem;
     border-right: 1px solid var(--lgs-card-on-map-border-color);
 }
 
-.camera-data-panel > div {
+.camera-information-values {
+    line-height: 1.4;
     display: flex;
     align-items: center;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    min-width: 0;
+    text-align: left;
+    white-space: nowrap;
     gap: var(--lgs-gutter-s);
-    line-height: 1.4
 }
 
-.camera-data-panel > div:nth-child(3) {
-    padding-left: calc(2rem + var(--lgs-gutter-s));
+.camera-information-values > sl-icon {
+    flex: 0 0 auto;
 }
 
-.camera-data-panel > sl-icon {
-    align-items: center;
+.camera-metric-compact-unit {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0;
 }
 
-.camera-data-panel::part(base) {
-    --padding: 0 var(--lgs-gutter-s);
+.camera-metric-compact-unit .lgs-nvu-unit {
+    margin-left: 1px;
 }
-
-.camera-data-panel::part(body) {
-    display: flex;
-    gap: var(--lgs-gutter-s);
-    align-items: center;
-}
-
-#camera-and-target-position-panel {
-    font-size: var(--lgs-font-size-s);
-    position: absolute;
-    z-index: calc(var(--lgs-ui-layer-zindex) - 10);
-    top: var(--top);
-    left: var(--left);
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    width: calc(100vw - var(--left) - var(--right));
-    opacity: 0;
-}
-

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-28
- * Last modified: 2026-01-28
+ * Created on: 2026-05-01
+ * Last modified: 2026-05-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -51,7 +51,8 @@ export class WidgetPosition {
             return config?.position || {left: 0, top: 0}
         }
 
-        const container = config.container.getBoundingClientRect()
+        const boundsContainer = (config.boundsContainer ?? config.container).getBoundingClientRect()
+        const referenceContainer = config.container.getBoundingClientRect()
         const widget = element.getBoundingClientRect()
         const scaleX = config.scale?.x ?? 1
         const scaleY = config.scale?.y ?? 1
@@ -78,40 +79,40 @@ export class WidgetPosition {
         // Calculate position based on anchor point
         const positionMap = {
             'center':       () => ({
-                centerX: container.left + (container.width / 2),
-                centerY: container.top + (container.height / 2),
+                centerX: boundsContainer.left + (boundsContainer.width / 2),
+                centerY: boundsContainer.top + (boundsContainer.height / 2),
             }),
             'top':          () => ({
-                centerX: container.left + (container.width / 2),
-                centerY: container.top + margin + (rotatedHeight / 2),
+                centerX: boundsContainer.left + (boundsContainer.width / 2),
+                centerY: boundsContainer.top + margin + (rotatedHeight / 2),
             }),
             'left':         () => ({
-                centerX: container.left + margin + (rotatedWidth / 2),
-                centerY: container.top + (container.height / 2),
+                centerX: boundsContainer.left + margin + (rotatedWidth / 2),
+                centerY: boundsContainer.top + (boundsContainer.height / 2),
             }),
             'right':        () => ({
-                centerX: container.right - margin - (rotatedWidth / 2),
-                centerY: container.top + (container.height / 2),
+                centerX: boundsContainer.right - margin - (rotatedWidth / 2),
+                centerY: boundsContainer.top + (boundsContainer.height / 2),
             }),
             'bottom':       () => ({
-                centerX: container.left + (container.width / 2),
-                centerY: container.bottom - margin - (rotatedHeight / 2),
+                centerX: boundsContainer.left + (boundsContainer.width / 2),
+                centerY: boundsContainer.bottom - margin - (rotatedHeight / 2),
             }),
             'top-left':     () => ({
-                centerX: container.left + margin + (rotatedWidth / 2),
-                centerY: container.top + margin + (rotatedHeight / 2),
+                centerX: boundsContainer.left + margin + (rotatedWidth / 2),
+                centerY: boundsContainer.top + margin + (rotatedHeight / 2),
             }),
             'top-right':    () => ({
-                centerX: container.right - margin - (rotatedWidth / 2),
-                centerY: container.top + margin + (rotatedHeight / 2),
+                centerX: boundsContainer.right - margin - (rotatedWidth / 2),
+                centerY: boundsContainer.top + margin + (rotatedHeight / 2),
             }),
             'bottom-left':  () => ({
-                centerX: container.left + margin + (rotatedWidth / 2),
-                centerY: container.bottom - margin - (rotatedHeight / 2),
+                centerX: boundsContainer.left + margin + (rotatedWidth / 2),
+                centerY: boundsContainer.bottom - margin - (rotatedHeight / 2),
             }),
             'bottom-right': () => ({
-                centerX: container.right - margin - (rotatedWidth / 2),
-                centerY: container.bottom - margin - (rotatedHeight / 2),
+                centerX: boundsContainer.right - margin - (rotatedWidth / 2),
+                centerY: boundsContainer.bottom - margin - (rotatedHeight / 2),
             }),
         }
 
@@ -124,16 +125,17 @@ export class WidgetPosition {
         }
 
         // Constrain visual bounds by clamping the center point
-        const minCenterX = container.left + margin + (rotatedWidth / 2)
-        const maxCenterX = container.right - margin - (rotatedWidth / 2)
-        const minCenterY = container.top + margin + (rotatedHeight / 2)
-        const maxCenterY = container.bottom - margin - (rotatedHeight / 2)
+        const minCenterX = boundsContainer.left + margin + (rotatedWidth / 2)
+        const maxCenterX = boundsContainer.right - margin - (rotatedWidth / 2)
+        const minCenterY = boundsContainer.top + margin + (rotatedHeight / 2)
+        const maxCenterY = boundsContainer.bottom - margin - (rotatedHeight / 2)
         const clampedCenterX = Math.min(Math.max(centerX, minCenterX), maxCenterX)
         const clampedCenterY = Math.min(Math.max(centerY, minCenterY), maxCenterY)
         config.position = {
             left: clampedCenterX - (baseWidth / 2),
             top:  clampedCenterY - (baseHeight / 2),
         }
+        config.runtimeReady = true
 
         config.attachTo = anchor
 
@@ -153,11 +155,11 @@ export class WidgetPosition {
         const ratioHeight = useCropDimensions ? config.cropDimensions.height : baseHeight
         const ratioCenterX = config.position.left + (ratioWidth / 2)
         const ratioCenterY = config.position.top + (ratioHeight / 2)
-        const relativeCenterX = ratioCenterX - container.left
-        const relativeCenterY = ratioCenterY - container.top
+        const relativeCenterX = ratioCenterX - referenceContainer.left
+        const relativeCenterY = ratioCenterY - referenceContainer.top
         config.savedRatios = {
-            leftRatio: container.width > 0 ? (relativeCenterX / container.width) * 100 : 0,
-            topRatio:  container.height > 0 ? (relativeCenterY / container.height) * 100 : 0,
+            leftRatio: referenceContainer.width > 0 ? (relativeCenterX / referenceContainer.width) * 100 : 0,
+            topRatio:  referenceContainer.height > 0 ? (relativeCenterY / referenceContainer.height) * 100 : 0,
         }
 
         if (config.persist) {
@@ -168,6 +170,8 @@ export class WidgetPosition {
         if (moveable?.current) {
             moveable.current.updateRect()
         }
+
+        this.#widgetManager.refreshEditorPreviewSnapshot(elementId)
 
         return config.position
     }

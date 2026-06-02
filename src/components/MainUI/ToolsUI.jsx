@@ -7,14 +7,13 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-04-24
+ * Last modified: 2026-04-24
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 import { CameraAndTargetPanel }     from '@Components/cesium/CameraAndTargetPanel/CameraAndTargetPanel'
-import { MapPOIContextMenu } from '@Components/MainUI/MapPOI/MapPOIContextMenu'
 import { VideoPresetWidget } from '@Components/MainUI/video/toolbox/VideoPresetWidget'
 import { VideoRecordingSettingsWidget } from '@Components/MainUI/video/toolbox/VideoRecordingSettingsWidget'
 import { VideoSettingsInfo }    from '@Components/MainUI/video/VideoSettingsInfo'
@@ -22,8 +21,8 @@ import { SceneWidgetsRenderer } from '@Components/MainUI/widgets/SceneWidgetsRen
 import { WidgetContextMenu }    from '@Components/MainUI/widgets/WidgetContextMenu'
 import { Cropper }           from '@Components/ToolsUI/cropper/Cropper'
 import { VideoRecordingScreenArea } from '@Components/MainUI/video/VideoRecordingScreenArea'
+import { JOURNEY_TOOLBAR_WIDGET }    from '@Core/constants'
 import { JourneyToolbarWidget }     from '@Editor/JourneyToolbarWidget'
-import React                        from 'react'
 import { useSnapshot }              from 'valtio/index'
 
 export const ToolsUI = () => {
@@ -45,10 +44,10 @@ export const ToolsUI = () => {
             ) : (
 
                 <>
-                    {(video.preRecording || video.recording || video.snapshot) && <VideoRecordingScreenArea/>}
+                    {(video.preRecording || video.recording || video.snapshot || video.finalizing) &&
+                        <VideoRecordingScreenArea/>}
                     <CameraAndTargetPanel/>
-                     <MapPOIContextMenu/>
-                    {usage && <JourneyToolbarWidget id="journey-toolbar-widget"/>}
+                    {usage && <JourneyToolbarWidget id={JOURNEY_TOOLBAR_WIDGET}/>}
                  </>
              )}
 

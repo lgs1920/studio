@@ -3,7 +3,7 @@
      creator="IGNrando Android 1.97.05" version="1.1"
      xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd">
     <metadata>
-        <name>20240725 Sure par Jusson</name>
+        <name>LGS1920 Sample</name>
         <desc></desc>
         <author>
             <name>Christian Denat</name>
@@ -11,7 +11,7 @@
         <time>2024-07-27T08:04:18Z</time>
     </metadata>
     <trk>
-        <name>20240725 Sure par Jusson</name>
+        <name>LGS1920 Sample</name>
         <desc></desc>
         <uid>54</uid>
         <trkseg>

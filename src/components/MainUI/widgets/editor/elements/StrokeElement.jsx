@@ -7,16 +7,17 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-24
- * Last modified: 2026-02-24
+ * Created on: 2026-05-10
+ * Last modified: 2026-05-10
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { SlColorPicker, SlRange, SlSwitch } from '@shoelace-style/shoelace/dist/react'
-import { colord }                           from 'colord'
-import React, { useMemo }                   from 'react'
+import { WaColorPicker, WaSlider, WaSwitch } from '@web.awesome.me/webawesome-pro/dist/react'
+import { colord }                            from 'colord'
+import { useEffect, useMemo, useRef } from 'react'
+import { formatSliderPercent, sanitizeNumericControlValue } from './sliderUtils'
 
 /**
  * Text Stroke editor element.
@@ -28,7 +29,11 @@ export const StrokeElement = ({
                                   getColor,
                                   updateValue,
                               }) => {
-    const stroke = element.text?.stroke ?? {}
+    const stroke = useMemo(() => element.text?.stroke ?? {}, [element.text?.stroke])
+    const widthRef = useRef(null)
+    const opacityRef = useRef(null)
+    const strokeWidth = sanitizeNumericControlValue(stroke.width, 0, {min: 0, max: 2})
+    const strokeOpacity = sanitizeNumericControlValue(stroke.opacity, 1, {min: 0, max: 1})
 
     /**
      * Get the raw color and ensure it is treated as opaque for the picker.
@@ -38,26 +43,42 @@ export const StrokeElement = ({
         return colord(rawColor).alpha(1).toHex()
     }, [stroke, getColor])
 
+    useEffect(() => {
+        if (widthRef.current) {
+            widthRef.current.value = strokeWidth
+        }
+        if (opacityRef.current) {
+            opacityRef.current.value = strokeOpacity
+        }
+
+        if (stroke.width !== undefined && stroke.width !== null && stroke.width !== strokeWidth) {
+            updateValue('text.stroke.width', strokeWidth)
+        }
+        if (stroke.opacity !== undefined && stroke.opacity !== null && stroke.opacity !== strokeOpacity) {
+            updateValue('text.stroke.opacity', strokeOpacity)
+        }
+    }, [stroke.width, stroke.opacity, strokeWidth, strokeOpacity, updateValue])
+
     return (
-        <React.Fragment>
-            <SlSwitch
-                align-right
-                size="x-small"
+        <>
+            <WaSwitch
+                label-at-start
+                size="xs"
                 checked={stroke.show ?? false}
-                onSlInput={(e) => updateValue('text.stroke.show', e.target.checked)}
+                onInput={(e) => updateValue('text.stroke.show', e.target.checked)}
             >
                 <span>Text Stroke</span>
-            </SlSwitch>
+            </WaSwitch>
 
             {stroke.show && (
-                <React.Fragment>
+                <>
                     <div className="drawer-horizontal-line three-columns">
                         <div className="drawer-horizontal-element">
-                            <SlColorPicker
-                                size="small"
+                            <WaColorPicker
+                                size="s"
                                 swatches={swatches}
                                 value={colorForPicker}
-                                onSlInput={(e) => {
+                                onInput={(e) => {
                                     // Update color without alpha channel
                                     const newColor = colord(e.target.value).alpha(1).toHex()
                                     updateValue('text.stroke.color', newColor)
@@ -65,33 +86,45 @@ export const StrokeElement = ({
                             />
                         </div>
                         <div className="drawer-horizontal-element xlarge-element">
-                            <SlRange
+                            <WaSlider
+                                size="s"
+                                ref={widthRef}
                                 label="Width"
                                 min="0"
                                 max="2"
                                 step="0.1"
-                                align-right
-                                tooltip="top"
-                                value={stroke.width ?? 0}
-                                onSlInput={(e) => updateValue('text.stroke.width', parseFloat(e.target.value))}
+                                label-at-start
+                                placement="top"
+                                withTooltip
+                                defaultValue={strokeWidth}
+                                onInput={(e) => updateValue(
+                                    'text.stroke.width',
+                                    sanitizeNumericControlValue(e.target.value, 0, {min: 0, max: 2}),
+                                )}
                             />
                         </div>
                         <div className="drawer-horizontal-element xlarge-element">
-                            <SlRange
+                            <WaSlider
+                                size="s"
+                                ref={opacityRef}
                                 label="Opacity"
                                 min="0"
                                 max="1"
                                 step="0.05"
-                                align-right
-                                tooltip="top"
-                                tooltipFormatter={value => `${Math.floor(value * 100)}%`}
-                                value={stroke.opacity ?? 1}
-                                onSlInput={(e) => updateValue('text.stroke.opacity', parseFloat(e.target.value))}
+                                label-at-start
+                                placement="top"
+                                withTooltip
+                                valueFormatter={formatSliderPercent}
+                                defaultValue={strokeOpacity}
+                                onInput={(e) => updateValue(
+                                    'text.stroke.opacity',
+                                    sanitizeNumericControlValue(e.target.value, 1, {min: 0, max: 1}),
+                                )}
                             />
                         </div>
                     </div>
-                </React.Fragment>
+                </>
             )}
-        </React.Fragment>
+        </>
     )
 }

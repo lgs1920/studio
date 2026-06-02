@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-28
- * Last modified: 2026-02-28
+ * Created on: 2026-04-30
+ * Last modified: 2026-04-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,11 +16,27 @@
 
 import { CURRENT_CAMERA, CURRENT_STORE, FOCUS_STARTER, JOURNEYS_STORE, MILLIS, MINUTE } from '@Core/constants'
 
-import { CameraUtils } from '@Utils/cesium/CameraUtils.js'
-import { UIToast }     from '@Utils/UIToast'
-import { snapshot }    from 'valtio'
-import { deepClone }   from 'valtio/utils'
-import { Journey }     from '../Journey'
+import { normalizeOrbitDirection, normalizeOrbitRPM } from '@Core/OrbitSettings'
+import { CameraUtils }                                from '@Utils/cesium/CameraUtils.js'
+import { UIToast }                                    from '@Utils/UIToast'
+import { snapshot }                                   from 'valtio'
+import { deepClone }                                  from 'valtio/utils'
+import { Journey }                                    from '../Journey'
+
+const finiteNumber = value => {
+    if (value === null || value === undefined || value === '') {
+        return null
+    }
+
+    const number = Number(value)
+    return Number.isFinite(number) ? number : null
+}
+
+const targetHeightOf = target => target?.simulatedHeight ?? target?.height
+
+const hasMapCoordinates = target => finiteNumber(target?.longitude) !== null
+    && finiteNumber(target?.latitude) !== null
+    && finiteNumber(targetHeightOf(target)) !== null
 
 export class CameraManager {
     static CLOCKWISE = true
@@ -31,6 +47,13 @@ export class CameraManager {
     position = {}
     orbitalInPause = false
     saveTimer = null
+    flightLocks = 0
+    renderQuality = {
+        locks:           0,
+        msaaSamples:     null,
+        resolutionScale: null,
+        shadows:         null,
+    }
 
     constructor(settings) {
 
@@ -107,16 +130,51 @@ export class CameraManager {
      *
      * @return {Promise<void>}
      */
-    raiseUpdateEvent = async () => {
-        await this.updatePositionInformation()
+    raiseUpdateEvent = async (options = {}) => {
+        await this.updatePositionInformation(options)
     }
 
     stopWatching = () => {
         if (this.move.stopWatching) {
             this.move.stopWatching()
+            this.move.stopWatching = null
             clearInterval(this.saveTimer)
             this.saveTimer = null
         }
+    }
+
+    getCurrentUpdateOptions = () => {
+        if (lgs.stores.ui.mainUI.rotate.running && hasMapCoordinates(lgs.stores.ui.mainUI.rotate.target)) {
+            return {
+                skipTargetPick: true,
+                target:         lgs.stores.ui.mainUI.rotate.target,
+            }
+        }
+
+        if (lgs.stores.ui.mainUI.panorama.active && hasMapCoordinates(lgs.stores.ui.mainUI.panorama.target)) {
+            return {
+                skipTargetPick: true,
+                target:         lgs.stores.ui.mainUI.panorama.target,
+            }
+        }
+
+        return {}
+    }
+
+    syncPositionInformation = (options = this.getCurrentUpdateOptions()) => {
+        const data = this.proxy.updatePositionInformationSync?.(null, options)
+        if (!data) {
+            return null
+        }
+
+        this.settings = data
+        this.clone()
+
+        if (lgs.theJourney) {
+            lgs.theJourney.camera = snapshot(this.store)
+        }
+
+        return data
     }
 
     /**
@@ -125,16 +183,21 @@ export class CameraManager {
      * @param last is the reference time (ie the last known)
      *
      */
-    saveInformation = (last) => {
+    saveInformation = (last, {sync = true} = {}) => {
+        if (sync) {
+            this.syncPositionInformation()
+        }
+
         if (Date.now() - last >= lgs.configuration.db.IDBDelay * MILLIS) {
             clearInterval(this.saveTimer)
             this.saveTimer = null
         }
+        const currentCamera = snapshot(this.store)
         if (lgs.theJourney) {
-            lgs.theJourney.camera = snapshot(this.store)
+            lgs.theJourney.camera = currentCamera
             lgs.db.lgs1920.put(lgs.theJourney.slug, Journey.unproxify(snapshot(lgs.theJourney)), JOURNEYS_STORE)
         }
-        lgs.db.lgs1920.put(CURRENT_CAMERA, snapshot(this.store), CURRENT_STORE)
+        lgs.db.lgs1920.put(CURRENT_CAMERA, currentCamera, CURRENT_STORE)
     }
 
     /**
@@ -159,10 +222,10 @@ export class CameraManager {
      *
      * @return {Promise<*|null>}
      */
-    readCameraInformation = async () => {
+    readCameraInformation = async ({fallback = true} = {}) => {
         let data = await lgs.db.lgs1920.get(CURRENT_CAMERA, CURRENT_STORE)
         if (!data || __.app.isEmpty(data.target)) {
-            return this.focusToStarterPOI()
+            return fallback ? this.focusToStarterPOI() : null
         }
         return data
     }
@@ -173,8 +236,7 @@ export class CameraManager {
      *
      */
     enableMapDragging = () => {
-        // Bail early if such tracking is already in action
-        if (!this.isRotating()) {
+        if (this.move.type === CameraManager.NORMAL && this.move.stopWatching) {
             return
         }
 
@@ -194,19 +256,35 @@ export class CameraManager {
         }
     }
 
+    beginFlight = () => {
+        this.flightLocks += 1
+        if (lgs.stores?.ui?.mainUI?.cameraFlight) {
+            lgs.stores.ui.mainUI.cameraFlight.running = true
+        }
+    }
+
+    endFlight = () => {
+        this.flightLocks = Math.max(0, this.flightLocks - 1)
+        if (lgs.stores?.ui?.mainUI?.cameraFlight) {
+            lgs.stores.ui.mainUI.cameraFlight.running = this.flightLocks > 0
+        }
+    }
+
+    isFlying = () => Boolean(lgs.stores?.ui?.mainUI?.cameraFlight?.running)
+
     /**
      * Update and maintain camera position
      *
      * @return {Promise<void>}
      */
-    updatePositionInformation = async () => {
-        const data = await this.proxy.updatePositionInformation()
+    updatePositionInformation = async (options = {}) => {
+        const data = await this.proxy.updatePositionInformation(null, options)
         // Update Camera Manager information
         if (data) {
             this.settings = data
         }
         else {
-            this.reset()
+            this.resetCameraInformation()
         }
         // Update camera proxy
         this.clone()
@@ -225,6 +303,65 @@ export class CameraManager {
         lgs.stores.main.components.camera.target = deepClone(this.target)
     }
 
+    optimizeContinuousCameraRender = () => {
+        if (!lgs.viewer) {
+            return
+        }
+
+        const scene = lgs.scene ?? lgs.viewer.scene
+        this.renderQuality.locks += 1
+        if (this.renderQuality.locks !== 1) {
+            return
+        }
+
+        this.renderQuality.resolutionScale = lgs.viewer.resolutionScale
+        if (lgs.viewer.resolutionScale > 1) {
+            lgs.viewer.resolutionScale = 1
+        }
+
+        this.renderQuality.msaaSamples = scene?.msaaSamples ?? null
+        if (scene?.msaaSamples > 1) {
+            scene.msaaSamples = 1
+        }
+
+        this.renderQuality.shadows = scene?.shadows ?? null
+        if (scene?.shadows) {
+            scene.shadows = false
+        }
+    }
+
+    restoreContinuousCameraRender = () => {
+        if (!lgs.viewer || this.renderQuality.locks === 0) {
+            return
+        }
+
+        const scene = lgs.scene ?? lgs.viewer.scene
+        this.renderQuality.locks -= 1
+        if (this.renderQuality.locks > 0) {
+            return
+        }
+
+        let shouldRequestRender = false
+        if (this.renderQuality.resolutionScale !== null) {
+            lgs.viewer.resolutionScale = this.renderQuality.resolutionScale
+            this.renderQuality.resolutionScale = null
+            shouldRequestRender = true
+        }
+        if (scene && this.renderQuality.msaaSamples !== null) {
+            scene.msaaSamples = this.renderQuality.msaaSamples
+            this.renderQuality.msaaSamples = null
+            shouldRequestRender = true
+        }
+        if (scene && this.renderQuality.shadows !== null) {
+            scene.shadows = this.renderQuality.shadows
+            this.renderQuality.shadows = null
+            shouldRequestRender = true
+        }
+        if (shouldRequestRender) {
+            scene?.requestRender?.()
+        }
+    }
+
 
     /**
      * Get the data of the camera instance
@@ -238,7 +375,7 @@ export class CameraManager {
      *
      *
      */
-    reset = () => {
+    resetCameraInformation = () => {
         this.settings = this.focusToStarterPOI()
     }
 
@@ -292,12 +429,13 @@ export class CameraManager {
     rotateAround = async (point = null, options) => {
 
         // Let's stop any rotation
-        this.stopRotate()
+        await this.stopRotate()
 
         // And any related event
         this.stopWatching()
 
         __.ui.sceneManager.startRotate
+        this.optimizeContinuousCameraRender()
 
         if (point === null) {
             //take current settings from proxy
@@ -308,6 +446,11 @@ export class CameraManager {
             }
         }
 
+        const preserveView = options?.preserveView === true
+        const cameraPosition = preserveView
+                               ? snapshot(this.store).position
+                               : point.camera
+
         // Update target and camera position
         this.settings = {
             target:   {
@@ -317,42 +460,67 @@ export class CameraManager {
                 simulatedHeight: point.simulatedHeight ?? point.height,
             },
             position: {
-                heading: point.camera.heading,
-                pitch:   point.camera.pitch,
-                roll:    point.camera.roll,
-                range:   point.camera.range,
+                heading: cameraPosition.heading,
+                pitch:   cameraPosition.pitch,
+                roll:    cameraPosition.roll,
+                range:   cameraPosition.range,
             },
         }
 
         // Set some configuration parameters
-        const rpm = (options?.rpm ?? lgs.settings.camera.rpm)
+        const $rotate = lgs.stores.ui.mainUI.rotate
+        $rotate.rpm = normalizeOrbitRPM(options?.rpm ?? $rotate.rpm)
+        $rotate.direction = normalizeOrbitDirection(options?.direction ?? $rotate.direction)
 
-        const fps = lgs.settings.camera.fps
         const infinite = options?.infinite ?? true
         const rotations = options?.rotations ?? lgs.settings.camera.rotations
         const lookAt = options?.lookAt ?? true
 
         // Do we need a camera pre-positioning ?
-        if (lookAt) {
+        if (preserveView) {
+            this.proxy.setOrbitTransform(lgs.camera, point)
+            lgs.scene?.requestRender?.()
+        }
+        else if (lookAt) {
             this.lookAt(point)
+            lgs.scene?.requestRender?.()
         }
         // Setting spinner speed
-        __.ui.css.setCSSVariable('--map-rotation-speed', `${60 / rpm}s`)
+        __.ui.css.setCSSVariable('--map-rotation-speed', `${60 / Math.max($rotate.rpm * Math.abs($rotate.direction), 0.2)}s`)
 
-
-        const angleRotation = 2 * Math.PI / (MINUTE / MILLIS * fps) * rpm
         let totalRotation = 0
         const totalTurns = rotations * 2 * Math.PI
         lgs.camera.percentageChanged = lgs.settings.camera.percentageChanged
         lgs.camera.orbitalPercentageChanged = lgs.settings.camera.orbitalPercentageChanged
 
+        let lastFrameTime = null
 
-        const rotateCamera = async (startTime, currentTime) => {
+        const rotateCamera = () => {
             if (this.isRotating()) {
+                const currentTime = performance.now()
+                if (lastFrameTime === null) {
+                    lastFrameTime = currentTime
+                }
+
+                const elapsedSeconds = (currentTime - lastFrameTime) / MILLIS
+                lastFrameTime = currentTime
+                const rpm = normalizeOrbitRPM($rotate.rpm)
+                const direction = normalizeOrbitDirection($rotate.direction)
+                const effectiveRpm = rpm * Math.abs(direction)
+                const angleRotation = 2 * Math.PI / (MINUTE / MILLIS) * effectiveRpm * elapsedSeconds
+
                 if (lgs.camera && infinite || totalRotation < totalTurns) {
-                    lgs.camera.rotateRight(angleRotation)
-                    totalRotation += Math.abs(angleRotation)
-                    this.move.animation = __.requestAnimationFrame((time) => rotateCamera(time))
+                    if (effectiveRpm > 0) {
+                        if (direction >= 0) {
+                            lgs.camera.rotateRight(angleRotation)
+                        }
+                        else {
+                            lgs.camera.rotateLeft(angleRotation)
+                        }
+                        totalRotation += Math.abs(angleRotation)
+                        __.ui.css.setCSSVariable('--map-rotation-speed', `${60 / Math.max(effectiveRpm, 0.2)}s`)
+                    }
+                    this.move.animation = __.requestAnimationFrame(rotateCamera)
                 }
                 else {
                     this.stopRotate()
@@ -362,12 +530,8 @@ export class CameraManager {
         }
         this.move = {
             type:         CameraManager.ROTATE,
-            animation: __.requestAnimationFrame((time) => rotateCamera(time)),
-            stopWatching: lgs.camera.changed.addEventListener(async () => {
-                if (!this.saveTimer) {
-                    await this.startWatching()
-                }
-            }),
+            animation: __.requestAnimationFrame(rotateCamera),
+            stopWatching: null,
         }
     }
 
@@ -378,11 +542,20 @@ export class CameraManager {
      */
     stopRotate = async () => {
         if (this.isRotating()) {
+            const target = lgs.stores.ui.mainUI.rotate.target
+            __.cancelAnimationFrame(this.move.animation)
+            this.move.animation = null
+            this.stopWatching()
             this.unlock()
             __.ui.sceneManager.stopRotate
-            cancelAnimationFrame(this.move.animation)
+            this.restoreContinuousCameraRender()
+            await this.updatePositionInformation(target ? {
+                skipTargetPick: true,
+                target,
+            } : undefined)
+            this.saveInformation(Date.now(), {sync: false})
             this.enableMapDragging()
-
+            lgs.scene?.requestRender?.()
         }
     }
 
@@ -404,7 +577,6 @@ export class CameraManager {
 
 
     }
-
     /**
      * Reset focus to STARTER
      */
@@ -440,4 +612,3 @@ export class CameraManager {
     }
 
 }
-

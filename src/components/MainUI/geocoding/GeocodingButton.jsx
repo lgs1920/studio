@@ -7,16 +7,14 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-28
- * Last modified: 2026-02-28
+ * Created on: 2026-04-25
+ * Last modified: 2026-04-25
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { faMapLocationDot }            from '@fortawesome/pro-regular-svg-icons'
-import { SlButton, SlIcon, SlTooltip } from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                       from '@Utils/FA2SL.js'
+import { WaButton, WaIcon, WaTooltip } from '@web.awesome.me/webawesome-pro/dist/react'
 import { useSnapshot }                 from 'valtio'
 
 
@@ -24,25 +22,41 @@ export const GeocodingButton = (props) => {
     const store = lgs.stores.main.components.geocoder
     const snap = useSnapshot(store)
 
-    const handleClick = () => {
-        store.dialog.visible = !store.dialog.visible
-
+    const resetDialogState = () => {
         __.ui.geocoder.init()
         store.list.clear()
-
-        if (!store.dialog.visible) {
-            document.getElementById('geocoder-search-location').value = ''
-        }
+        store.dialog.loading = false
+        store.dialog.moreResults = false
+        store.dialog.noResults = false
+        store.dialog.error = false
         store.dialog.submitDisabled = true
-
     }
+
+    const handleClick = () => {
+        if (snap.dialog.visible) {
+            resetDialogState()
+            store.dialog.visible = false
+            store.dialog.mounted = false
+            return
+        }
+
+        __.ui.drawerManager.forceClose()
+        resetDialogState()
+        store.dialog.mounted = true
+        store.dialog.visible = true
+    }
+
     return (
         <>
-            <SlTooltip hoist placement={props.tooltip} content="Search location">
-                <SlButton size={'small'} className={'square-button'} id={'launch-the-geocoder'} onClick={handleClick}>
-                    <SlIcon slot="prefix" library="fa" name={FA2SL.set(faMapLocationDot)}></SlIcon>
-                </SlButton>
-            </SlTooltip>
+            <WaTooltip for="launch-the-geocoder" placement={props.tooltip}>{'Search location'}</WaTooltip>
+            <WaButton className="square-button"
+                      id="launch-the-geocoder"
+                      onClick={handleClick}
+                      variant={'brand'}
+                      appearance="Filled">
+                <WaIcon name="map-location-dot" variant="regular"/>
+            </WaButton>
+
         </>
     )
 }

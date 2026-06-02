@@ -7,17 +7,37 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-28
- * Last modified: 2026-02-28
+ * Created on: 2026-04-30
+ * Last modified: 2026-04-30
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import * as Cesium from 'cesium'
+import { DEFAULT_2D_FOCUS_PITCH } from '@Core/constants'
 import {
     Cartesian2, Cartesian3, Cartographic, Ellipsoid, HeadingPitchRange, Math as M, Matrix4, SceneMode, Transforms,
 }                  from 'cesium'
+
+const finiteNumber = value => {
+    const number = Number(value)
+    return Number.isFinite(number) ? number : null
+}
+const cameraWorldPosition = camera => camera?.positionWC ?? camera?.position
+const targetHeightOf = target => target?.simulatedHeight ?? target?.height
+const cameraRangeToTarget = (camera, target) => {
+    const longitude = finiteNumber(target?.longitude)
+    const latitude = finiteNumber(target?.latitude)
+    const height = finiteNumber(targetHeightOf(target))
+    const cameraPosition = cameraWorldPosition(camera)
+
+    if ([longitude, latitude, height].some(value => value === null) || !cameraPosition) {
+        return undefined
+    }
+
+    return Cartesian3.distance(Cartesian3.fromDegrees(longitude, latitude, height), cameraPosition)
+}
 
 export class CameraUtils {
 
@@ -25,6 +45,11 @@ export class CameraUtils {
         // Lock camera to a point
         const point = Cesium.Cartesian3.fromDegrees(target.longitude, target.latitude, target.height)
         camera.lookAtTransform(Transforms.eastNorthUpToFixedFrame(point), new HeadingPitchRange(hpr.heading, hpr.pitch, hpr.range))
+    }
+
+    static setOrbitTransform = (camera, target) => {
+        const point = Cartesian3.fromDegrees(target.longitude, target.latitude, targetHeightOf(target))
+        camera.lookAtTransform(Transforms.eastNorthUpToFixedFrame(point))
     }
 
     static unlock = (camera) => {
@@ -37,19 +62,19 @@ export class CameraUtils {
     static getHeadingPitchRoll = (camera) => {
         if (camera && lgs.scene.mode === SceneMode.SCENE3D) {
             return {
-                heading: Math.max(0, Math.min(M.toDegrees(Math.round(camera.heading)), 360)),
+                heading: M.toDegrees(M.zeroToTwoPi(camera.heading)),
                 pitch: M.toDegrees(camera.pitch),
                 roll: M.toDegrees(camera.roll),
             }
         } else {
-            return {heading: 360, pitch: -90, roll: 360}
+            return {heading: 360, pitch: DEFAULT_2D_FOCUS_PITCH, roll: 360}
         }
     }
 
     /**
      * get Camera target and position in degrees
      */
-    static getPositions = async (camera) => {
+    static getPositionsSync = (camera, options = {}) => {
         // If we do not have camera, we try to set one or return zeros
         if (!camera) {
             camera = lgs.camera
@@ -70,8 +95,11 @@ export class CameraUtils {
             }
         }
 
-        const target = CameraUtils.getCameraTargetPosition()
-        const {longitude, latitude, height} = await camera.positionCartographic
+        const target = options.skipTargetPick
+                       ? options.target ?? lgs.stores.main.components.camera.target
+                       : CameraUtils.getCameraTargetPosition(camera)
+        const targetHeight = targetHeightOf(target)
+        const {longitude, latitude, height} = camera.positionCartographic
         //
         // let scratchRectangle = new Rectangle();
         // const  rect = lgs.camera.computeViewRectangle(lgs.scene.globe.ellipsoid,
@@ -82,16 +110,22 @@ export class CameraUtils {
             target: {
                 longitude: target?.longitude,
                 latitude: target?.latitude,
-                height: target?.height,
+                height: targetHeight,
             },
             position: {
                 longitude: M.toDegrees(longitude),
                 latitude: M.toDegrees(latitude),
                 height: height,
-                range: (height ?? lgs.settings.getCamera.range),
+                range: options.range ??
+                           target?.range ??
+                           cameraRangeToTarget(camera, target) ??
+                           lgs.stores.main.components.camera.position?.range ??
+                           (height ?? lgs.settings.camera.range),
             },
         }
     }
+
+    static getPositions = async (camera, options = {}) => CameraUtils.getPositionsSync(camera, options)
 
 
     /**
@@ -100,7 +134,7 @@ export class CameraUtils {
      *
      * @return {position:{object},target:{object}}
      */
-    static updatePositionInformation = async (camera) => {
+    static updatePositionInformation = async (camera, options = {}) => {
         // If we do not have camera, we try to set one or return
         if (!camera) {
             camera = lgs.camera
@@ -110,7 +144,7 @@ export class CameraUtils {
         }
 
         try {
-            const cameraData = await CameraUtils.getPositions(camera)
+            const cameraData = await CameraUtils.getPositions(camera, options)
             cameraData.position = {...cameraData.position, ...await CameraUtils.getHeadingPitchRoll(camera)}
             return cameraData
         } catch (e) {
@@ -119,9 +153,28 @@ export class CameraUtils {
         }
     }
 
+    static updatePositionInformationSync = (camera, options = {}) => {
+        if (!camera) {
+            camera = lgs.camera
+            if (camera === undefined) {
+                return undefined
+            }
+        }
+
+        try {
+            const cameraData = CameraUtils.getPositionsSync(camera, options)
+            cameraData.position = {...cameraData.position, ...CameraUtils.getHeadingPitchRoll(camera)}
+            return cameraData
+        }
+        catch (e) {
+            console.error(e)
+            return undefined
+        }
+    }
+
     //https://groups.google.com/g/cesium-dev/c/QSFf3RxNRfE
-    static getCameraTargetPosition = () => {
-        const ray = lgs.camera.getPickRay(new Cartesian2(
+    static getCameraTargetPosition = (camera = lgs.camera) => {
+        const ray = camera.getPickRay(new Cartesian2(
             Math.round(lgs.canvas.clientWidth / 2),
             Math.round(lgs.canvas.clientHeight / 2),
         ))
@@ -133,15 +186,17 @@ export class CameraUtils {
                 latitude: M.toDegrees(cartographic.latitude),
                 longitude: M.toDegrees(cartographic.longitude),
                 height: cartographic.height,
-                range: Cartesian3.distance(position, lgs.camera.position),
+                range: Cartesian3.distance(position, cameraWorldPosition(camera)),
             }
         }
         else {
+            const target = lgs.stores.main.components.camera.target
+
             return {
-                latitude:  lgs.stores.main.components.camera.target.latitude,
-                longitude: lgs.stores.main.components.camera.target.longitude,
-                height:    lgs.stores.main.components.camera.target.height,
-                range:     lgs.camera.position,
+                latitude:  target.latitude,
+                longitude: target.longitude,
+                height:    targetHeightOf(target),
+                range:     cameraRangeToTarget(camera, target),
             }
         }
     }

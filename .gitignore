@@ -24,3 +24,5 @@ dist-ssr
 *.sln
 *.sw?
 /public/branch.json
+/bunfig.toml
+/.claude/settings.local.json

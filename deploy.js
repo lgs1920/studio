@@ -16,6 +16,7 @@
 
 import argparse       from 'argparse'
 import path           from 'path'
+import process        from 'node:process'
 import { Deployment } from './deployment/Deployment.js'
 
 const platforms = {production: 'production', staging: 'staging', test: 'test'}
@@ -45,11 +46,13 @@ parser.add_argument('--test', '-t', {
     help:   'Deploy to test platform',
 })
 const args = parser.parse_args()
-new Deployment(
+const deployment = new Deployment(
     {
-        // eslint-disable-next-line no-undef
-        local:   path.dirname(process.cwd()),
-        platform:args.prod ? platforms.production : args.staging ? platforms.staging : platforms.test,
-        // eslint-disable-next-line no-undef
-        product:path.basename(process.cwd())
+        local:    path.dirname(process.cwd()),
+        platform: args.prod ? platforms.production : args.staging ? platforms.staging : platforms.test,
+        product:  path.basename(process.cwd()),
     })
+
+deployment.done
+    .then(() => process.exit(0))
+    .catch(() => process.exit(1))

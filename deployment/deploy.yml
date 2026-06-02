@@ -8,7 +8,6 @@ backend:
     domain: api.lgs1920.fr
     protocol: http
     port: 3333
-    ffmpeg: /home/bin/ffmpeg
 
     pm2:
       bin: /home/.bun/bin/pm2
@@ -20,7 +19,6 @@ backend:
     domain: api.lgs1920.fr
     protocol: http
     port: 3334
-    ffmpeg: /home/bin/ffmpeg
 
     pm2:
       bin: /home/.bun/bin/pm2
@@ -32,7 +30,6 @@ backend:
     domain: api.lgs1920.fr
     protocol: http
     port: 3335
-    ffmpeg: /home/bin/ffmpeg
 
     pm2:
       bin: /home/.bun/bin/pm2

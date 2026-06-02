@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-04-27
+ * Last modified: 2026-04-27
  *
  *
  * Copyright © 2026 LGS1920
@@ -46,24 +46,47 @@
 }
 
 .credits-bar a {
-    display: inline-flex
+    display: inline-flex;
+    align-items: center;
 }
 
 .credits-bar .main-logo {
+    border-radius: var(--lgs-border-radius-xs);
+    background: var(--wa-color-brand-fill-loud);
+    box-shadow: none;
     --padding: var(--lgs-gutter-xs);
 }
 
-.credits-bar img {
+.credits-bar .main-logo img {
+    width: 75%;
+    height: auto;
+    border-radius: 0 !important;
+}
+
+.credits-bar .provider-credits img {
+    display: block;
+    flex: 0 0 auto;
+    width: auto;
+    max-width: none;
     height: calc(100% - var(--padding));
+    border-radius: 0 !important;
     object-fit: contain;
 }
 
 .credits-bar .cesium-credits img {
+    display: block;
+    flex: 0 0 auto;
+    width: auto;
+    max-width: none;
     height: calc(100% - 2 * var(--padding));
+    border-radius: 0 !important;
+    object-fit: contain;
 }
 
-.credits-bar sl-divider {
-    --color: var('red')
+.provider-credits .credits {
+    display: flex;
+    align-items: center;
+    height: calc(100% - var(--padding));
 }
 
 .lgs-credits {
@@ -83,7 +106,7 @@
     flex: 0 1 auto;
     height: var(--lgs-credits-bar-height);
     text-decoration: none;
-    color: var(--lgs-dark-color);
+    color: var(--lgs-card-on-map-color, var(--lgs-light-color));
 }
 
 
@@ -101,9 +124,6 @@
 }
 
 .provider-credits {
-    color: var(--lgs-dark-color);
+    color: var(--lgs-card-on-map-color, var(--lgs-light-color));
     background-color: rgba(255, 255, 255, 0.5);
 }
-
-
-

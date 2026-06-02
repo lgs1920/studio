@@ -7,25 +7,23 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-22
- * Last modified: 2026-02-22
+ * Created on: 2026-04-30
+ * Last modified: 2026-04-30
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { CompassWidget } from '@Components/Compass/CompassWidget'
 import { Compass }       from '@Components/MainUI/compass/Compass'
-import React             from 'react'
 
 /**
  * Preview component for Journey Stats.
  * Simplified version focusing strictly on the widget display.
  */
-export const CompassWidgetPreview = ({entity}) => {
+export const CompassWidgetPreview = ({entity, syncGlobalCompass = false}) => {
     return (
         <div className="compass-widget-preview">
-            <Compass fixed inWidget entity={entity}/>
+            <Compass fixed inWidget={!syncGlobalCompass} entity={syncGlobalCompass ? null : entity} syncBounds={false}/>
         </div>
     )
 }

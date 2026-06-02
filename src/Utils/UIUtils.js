@@ -7,13 +7,13 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-24
- * Last modified: 2026-02-24
+ * Created on: 2026-04-24
+ * Last modified: 2026-04-24
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
-import { COUNTRY_FLAGS_DIR, WIDGET_GOOGLE_FONTS } from '@Core/constants'
+import { APP_GOOGLE_FONTS, COUNTRY_FLAGS_DIR, WIDGET_GOOGLE_FONTS } from '@Core/constants'
 import { colord }                                 from 'colord'
 import { DateTime }                               from 'luxon'
 
@@ -124,8 +124,8 @@ export class UIUtils {
 
         // Close all other details when one is shown
         detailsGroupElement.addEventListener('sl-after-show', event => {
-            if (event.target.localName === 'sl-details') {
-                [...detailsGroupElement.querySelectorAll('sl-details')]
+            if (event.target.localName === 'wa-details') {
+                [...detailsGroupElement.querySelectorAll('wa-details')]
                     .map(details => (details.open = event.target === details))
             }
         })
@@ -175,14 +175,14 @@ export class UIUtils {
     }
 
     static importFonts = () => {
-        const familiesParam = WIDGET_GOOGLE_FONTS.map(f => f.replace(/\s+/g, '+')).join('|')
         const linkId = 'google-fonts'
+        const fontFamilies = [...new Set([...WIDGET_GOOGLE_FONTS, ...APP_GOOGLE_FONTS])]
 
         if (!document.getElementById(linkId)) {
             const link = document.createElement('link')
             link.id = linkId
             link.rel = 'stylesheet'
-            link.href = `https://fonts.googleapis.com/css2?${WIDGET_GOOGLE_FONTS.map(f => `family=${f.replace(/\s+/g, '+')}`).join('&')}&display=swap`
+            link.href = `https://fonts.googleapis.com/css2?${fontFamilies.map(f => `family=${f.replace(/\s+/g, '+')}`).join('&')}&display=swap`
             document.head.appendChild(link)
         }
     }
@@ -196,7 +196,7 @@ export class UIUtils {
      */
     static formatJourneyDurationDates = (data) => {
         if (!data?.start || !data?.stop) {
-            return []
+            return {}
         }
 
         const startDT = DateTime.fromISO(data.start)
@@ -213,10 +213,11 @@ export class UIUtils {
 
         const sameDay = start.date === stop.date
 
-        // Retourne [Date, "HeureDépart - HeureArrivée"] si même jour
-        // Sinon ["Date HeureDépart", "Date HeureArrivée"]
         return {
             sameDay,
+            start,
+            stop,
+            items:  [start, stop],
             prefix: sameDay ? start.date : `${start.date} ${start.time}`,
             sufix:  sameDay ? `${start.time} - ${stop.time}` : `${stop.date} ${stop.time}`,
         }
@@ -243,5 +244,3 @@ export class UIUtils {
         return includeAlpha ? c.alpha(item.opacity ?? 1).toRgbString() : c.toRgbString()
     }
 }
-
-

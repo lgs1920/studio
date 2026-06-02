@@ -7,28 +7,63 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-04-30
+ * Last modified: 2026-04-30
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { NONE, POI_STANDARD_TYPE } from '@Core/constants'
-import { SlButton, SlIcon, SlTooltip } from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }       from '@Utils/FA2SL.js'
-import { faArrowRotateRight } from '@fortawesome/pro-regular-svg-icons'
-import { memo, useCallback, useMemo } from 'react'
+import { CURRENT_POI }                             from '@Core/constants'
+import { getOrbitSettings, setOrbitStoreSettings } from '@Core/OrbitSettings'
+import { FLYTHROUGH_MARKER_MODE_TRACE, normalizeFlythroughMarker } from '@Core/ui/flythrough/FlythroughProgressionStyle'
+import { WaButton, WaIcon, WaTooltip } from '@web.awesome.me/webawesome-pro/dist/react'
+import { memo, useCallback }                       from 'react'
 import { useSnapshot } from 'valtio'
 
-/** @constant {string} ICON_NAME - Memoized FontAwesome icon name for rotation */
-const ICON_NAME = FA2SL.set(faArrowRotateRight)
 /** @constant {string} FOCUS_TARGET - Target identifier for camera focus */
 const FOCUS_TARGET = 'target'
 /** @constant {string} TOOLTIP_STOP - Tooltip text when rotation is active */
 const TOOLTIP_STOP = 'Stop Map Rotation'
 /** @constant {string} TOOLTIP_START - Tooltip text when rotation is inactive */
 const TOOLTIP_START = 'Start Map Rotation'
+
+const finiteNumber = value => {
+    if (value === null || value === undefined || value === '') {
+        return null
+    }
+
+    const number = Number(value)
+    return Number.isFinite(number) ? number : null
+}
+
+const normalizedFocusPoint = point => {
+    const longitude = finiteNumber(point?.longitude)
+    const latitude = finiteNumber(point?.latitude)
+    const pointHeight = finiteNumber(point?.height)
+    const simulatedHeight = finiteNumber(point?.simulatedHeight)
+    const height = simulatedHeight ?? pointHeight
+
+    if ([longitude, latitude, height].some(value => value === null)) {
+        return null
+    }
+
+    const normalizedPoint = {
+        ...point,
+        longitude,
+        latitude,
+        height: pointHeight ?? height,
+    }
+
+    if (simulatedHeight !== null) {
+        normalizedPoint.simulatedHeight = simulatedHeight
+    }
+    else {
+        delete normalizedPoint.simulatedHeight
+    }
+
+    return normalizedPoint
+}
 
 /**
  * A memoized React component for toggling map rotation around a target.
@@ -38,18 +73,14 @@ const TOOLTIP_START = 'Start Map Rotation'
  */
 export const RotateButton = memo(({tooltip = 'top'}) => {
     // Targeted snapshots to minimize re-renders
-    const {rotate} = useSnapshot(lgs.stores.ui.mainUI)
+    const {rotate, panorama} = useSnapshot(lgs.stores.ui.mainUI)
+    const flythroughSettings = useSnapshot(lgs.settings.ui.flythrough)
     const {target, position} = useSnapshot(lgs.stores.main.components.camera)
-    const {current} = useSnapshot(lgs.stores.main.components.pois)
+    const rotateTarget = rotate.target
     const sceneTarget = __.ui.sceneManager.target
-
-    /**
-     * Memoized check for whether the scene target is a POI.
-     * @type {boolean}
-     */
-    const isPOITarget = useMemo(() => {
-        return sceneTarget?.element === POI_STANDARD_TYPE
-    }, [sceneTarget?.element])
+    const flythroughMarker = normalizeFlythroughMarker(flythroughSettings.marker)
+    const rotationAllowedByFlythrough = flythroughMarker.mode === FLYTHROUGH_MARKER_MODE_TRACE
+    const disableRotationStart = !rotationAllowedByFlythrough && !rotate.running && !panorama.active
 
     /**
      * Toggles map rotation and updates POI animation state if applicable.
@@ -58,9 +89,21 @@ export const RotateButton = memo(({tooltip = 'top'}) => {
      * @returns {Promise<void>}
      */
     const handleRotation = useCallback(async () => {
-        const poi = isPOITarget && current ? lgs.stores.main.components.pois.list.get(current) : null
+        const focusTarget = sceneTarget?.element ? sceneTarget : null
+        const poi = focusTarget?.element === CURRENT_POI
+                    ? lgs.stores.main.components.pois.list.get(focusTarget.slug ?? focusTarget.id)
+                    : null
 
         try {
+            if (panorama.active) {
+                lgs.stores.ui.mainUI.panorama.active = false
+                lgs.stores.ui.mainUI.panorama.target = false
+                if (poi && poi.animated) {
+                    poi.animated = false
+                }
+                return
+            }
+
             if (rotate.running) {
                 await __.ui.cameraManager.stopRotate()
                 if (poi && poi.animated) {
@@ -69,12 +112,24 @@ export const RotateButton = memo(({tooltip = 'top'}) => {
                 return
             }
 
-            await __.ui.sceneManager.focus(target, {
+            const focusPoint = normalizedFocusPoint(target)
+                ?? normalizedFocusPoint(focusTarget)
+                ?? normalizedFocusPoint(rotateTarget)
+            if (!focusPoint) {
+                console.warn('Cannot start map rotation without a valid target', {target, sceneTarget, rotateTarget})
+                return
+            }
+
+            const rotationSettings = getOrbitSettings(focusTarget ?? focusPoint, 'rotation')
+            setOrbitStoreSettings(lgs.stores.ui.mainUI.rotate, rotationSettings)
+            await __.ui.sceneManager.focus(focusPoint, {
+                direction: rotationSettings.direction,
                 ...position,
                 infinite:   true,
                 rotate:     true,
                 flyingTime: 0,
-                target:     FOCUS_TARGET,
+                rpm:       rotationSettings.rpm,
+                target:    focusTarget ?? FOCUS_TARGET,
             })
             if (poi && !poi.animated) {
                 poi.animated = true
@@ -83,19 +138,22 @@ export const RotateButton = memo(({tooltip = 'top'}) => {
         catch (error) {
             console.error('Failed to toggle map rotation:', {error, target, rotate: rotate.running})
         }
-    }, [rotate.running, target, position, current, isPOITarget])
+    }, [panorama.active, rotate.running, rotateTarget, target, position, sceneTarget])
 
-    return (
-        <SlTooltip hoist placement={tooltip} content={rotate.running ? TOOLTIP_STOP : TOOLTIP_START}>
-            <SlButton
-                size="small"
+    return (<>
+            <WaTooltip for="launch-rotation"
+                       placement={tooltip}>{rotate.running || panorama.active ? TOOLTIP_STOP : TOOLTIP_START}</WaTooltip>
+            <WaButton
                 className="square-button rotation-button"
                 id="launch-rotation"
                 onClick={handleRotation}
-                loading={rotate.running}
+                disabled={disableRotationStart}
+                variant={'brand'}
+                appearance="Filled"
             >
-                <SlIcon slot="prefix" library="fa" name={ICON_NAME}/>
-            </SlButton>
-        </SlTooltip>
+                <WaIcon name="arrows-rotate" animation={rotate.running || panorama.active ? 'spin' : 'none'}
+                        variant="regular"/>
+            </WaButton>
+        </>
     )
 })

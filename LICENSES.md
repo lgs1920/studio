@@ -1,26 +1,24 @@
 # Licensing Model
 
-This project uses a **dual‑license model**:
+This repository uses a **dual-license model**:
 
-### 1. Public License (default)
+## 1. Public License
 
-The public version of the project is distributed under the  
-**Polyform Noncommercial License 1.0.0**.
+The public version of the project is distributed under the **PolyForm Noncommercial License 1.0.0**.
 
-This license:
+- The authoritative license text is provided in [LICENSE.md](LICENSE.md)
+- Noncommercial use is permitted under the PolyForm terms
+- Commercial use is not permitted under the public license
 
-- allows personal, academic, and experimental use,
-- prohibits all commercial use,
-- prohibits SaaS offerings,
-- prohibits resale or integration into commercial products.
+## 2. Commercial License
 
-### 2. Commercial License (optional)
+A separate commercial license may be granted for organizations or individuals who wish to:
 
-A commercial license is available for organizations or individuals who wish to:
+- use the software commercially
+- integrate it into a paid product or service
+- offer it as a hosted or managed service
+- remove the Noncommercial restriction under a separate agreement
 
-- use the software commercially,
-- integrate it into a paid product,
-- offer it as a hosted service (SaaS),
-- remove the Noncommercial restrictions.
+## Contact
 
-For commercial licensing inquiries, please contact the project author.
+For commercial licensing inquiries: `contact@lgs1920.fr`

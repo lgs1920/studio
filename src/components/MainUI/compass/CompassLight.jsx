@@ -7,14 +7,12 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-22
- * Last modified: 2026-02-22
+ * Created on: 2026-04-29
+ * Last modified: 2026-04-29
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
-
-import React from 'react'
 
 /**
  * CompassLight UI
@@ -27,7 +25,13 @@ export const CompassLight = ({width = '100%', height = '100%', ref}) => {
             width={width}
             viewBox="0 0 512 512"
             xmlns="http://www.w3.org/2000/svg"
-            style={{display: 'block', overflow: 'visible', transform: 'rotate(-45deg)'}}
+            style={{
+                display:         'block',
+                overflow:        'visible',
+                transform:       'rotate(-45deg)',
+                transformBox:    'fill-box',
+                transformOrigin: '50% 50%',
+            }}
         >
             <g>
                 <g

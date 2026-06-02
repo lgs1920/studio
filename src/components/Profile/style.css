@@ -1,14 +1,14 @@
 /*******************************************************************************
  *
  * This file is part of the LGS1920/studio project.
- *
+ *  
  * File: style.css
  *
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-24
- * Last modified: 2026-02-24
+ * Created on: 2026-05-26
+ * Last modified: 2026-05-26
  *
  *
  * Copyright © 2026 LGS1920
@@ -93,6 +93,7 @@
     align-items: center;
     justify-content: center;
     height: 250px;
+    padding: var(--lgs-gutter-s);
 
     border-radius: var(--sl-border-radius-medium);
     background-color: var(--sl-panel-background-color);
@@ -105,6 +106,14 @@
     display: block;
     max-width: 100%;
     max-height: 100%;
+}
+
+.profile-widget-preview-surface .profile-chart-container {
+    box-sizing: border-box;
+}
+
+.profile-chart-container {
+    position: relative;
 }
 
 .profile-widget-editor-scroll {
@@ -122,8 +131,85 @@ sl-input.widget-border-field-width::part(input) {
     display: none
 }
 
-.lgs-ui-toolbar sl-divider + sl-divider {
+.lgs-ui-toolbar wa-divider + wa-divider {
     display: none
+}
+
+.profile-chart-metric-badge {
+    font-family: var(--lgs-font-family);
+    font-size: clamp(10px, 1.15vh, var(--lgs-font-size));
+    font-weight: 700;
+    line-height: 1;
+    position: absolute;
+    z-index: 2;
+    top: 0;
+    left: 0;
+    display: inline-flex;
+    align-items: center;
+    box-sizing: border-box;
+    max-width: calc(100% - 12px);
+    padding: 3px 6px;
+    pointer-events: none;
+    color: var(--wa-color-brand-on-normal, var(--wa-color-brand));
+    border: 1px solid var(--wa-color-brand-border-normal, var(--wa-color-surface-border));
+    border-radius: 6px;
+    background: color-mix(in oklab, var(--wa-color-surface-raised) 90%, transparent);
+    box-shadow: 0 2px 8px rgb(0 0 0 / 22%);
+    gap: 4px;
+}
+
+.profile-chart-metric-badge--hidden {
+    display: none;
+}
+
+.profile-chart-metric-badge__value,
+.profile-chart-metric-badge__altitude {
+    min-width: 0;
+    white-space: nowrap;
+}
+
+.profile-chart-metric-badge__value {
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.profile-chart-metric-badge__altitude {
+    display: inline-flex;
+    align-items: center;
+    flex: 0 0 auto;
+    color: inherit;
+    gap: 0;
+}
+
+.profile-chart-metric-badge__chevron {
+    display: inline-flex;
+    align-items: center;
+    flex: 0 0 auto;
+    color: inherit;
+}
+
+.profile-chart-metric-badge__chevron wa-icon,
+.profile-chart-metric-badge__altitude wa-icon {
+    display: block;
+    width: 0.8em;
+    height: 0.8em;
+    color: currentColor;
+}
+
+.profile-chart-metric-badge__chevron wa-icon::part(svg),
+.profile-chart-metric-badge__altitude wa-icon::part(svg) {
+    color: currentColor;
+    fill: currentColor;
+}
+
+.profile-chart-metric-badge__separator {
+    display: block;
+    align-self: center;
+    flex: 0 0 1px;
+    width: 1px;
+    height: 1em;
+    min-height: 1em;
+    background: var(--lgs-card-on-map-border-color, var(--wa-color-surface-border));
 }
 
 #elevation-distance-tooltip {
@@ -211,7 +297,7 @@ sl-input.widget-border-field-width::part(input) {
     justify-self: flex-end;
 }
 
-.profile-toolbar .wander-menu {
+.profile-toolbar .flythrough-menu {
     display: flex;
     gap: var(--lgs-gutter-xs);
 }
@@ -259,3 +345,14 @@ sl-input.widget-border-field-width::part(input) {
     font-size: var(--lgs-font-size);
 }
 
+.profile-chart-switches {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    gap: 2rem
+}
+
+.profile-widget-flythrough-track-style-switch::part(base) {
+    width: 100%;
+}

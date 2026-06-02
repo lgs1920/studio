@@ -38,7 +38,7 @@ widgets:
     configuration:
       default:
         show: true
-        mode: 1        # 0: none, 1: full, 2:light
+        mode: 1        # 0: none, 1: full, 2: light, 3: wind rose
         background:
           show: true
           color: --lgs-dark-color-75
@@ -76,7 +76,7 @@ widgets:
   credits-widget:
     id: "credits-widget"
     name: "Credits"
-    description: "A credits widget"
+    description: "Map credits"
     icon: "user"
     mandatory: true
     component: "CreditsWidget"
@@ -88,8 +88,8 @@ widgets:
 
   profile-widget:
     id: "profile-widget"
-    name: "Profile"
-    description: "The journey profile widget"
+    name: "Elevation Profile"
+    description: "Journey elevation profile"
     icon: "chart-fft"
     mandatory: false
     max: 1
@@ -121,6 +121,14 @@ widgets:
           color: "#ffffff"
           opacity: 0.5
           thickness: 1
+          scaled: false
+
+        padding:
+          top: 8
+          right: 8
+          bottom: 8
+          left: 8
+          scaled: false
 
         xAxis:
           main: true
@@ -138,11 +146,13 @@ widgets:
           color: "--lgs-dark-color" #CSS variable
           opacity: 0.8
           thickness: 1
+          scaled: false
 
         secondAxis:
           color: "--lgs-light-color" #CSS variable
           opacity: 0.6
           thickness: 0.5
+          scaled: false
 
         shadow:
           show: true
@@ -160,13 +170,13 @@ widgets:
   text-widget:
     id: "text-widget"
     name: "Text"
-    description: "The text widget"
-    icon: "Text"
+    description: "Text widget"
+    icon: "text"
     mandatory: false
     component: "TextWidget"
     type: "lgs-visual-widget"
     path: "@Components/Text"
-    max: 1000
+    max: 50
     groups:
       - "journey-widgets"
       - "scene-widgets"
@@ -182,6 +192,7 @@ widgets:
           right: 5
           bottom: 5
           left: 5
+          scaled: false
         text:
           content: "Enter text here"
           color: "#ffffff"
@@ -210,6 +221,8 @@ widgets:
           radius: none
           thickness: 1
           opacity: 1
+          scaled: false
+          radiusScaled: false
           shadow: false
           pill: false
       user:
@@ -217,8 +230,8 @@ widgets:
 
   journey-stats-widget:
     id: "journey-stats-widget"
-    name: "Stats"
-    description: "Track data rendered as SVG"
+    name: "Journey Stats"
+    description: "Journey Stats"
     icon: "route"
     mandatory: false
     max: 1
@@ -242,8 +255,16 @@ widgets:
           radius: none
           thickness: 1
           opacity: 1
+          scaled: false
+          radiusScaled: false
           shadow: false
           pill: false
+        padding:
+          top: 16
+          right: 16
+          bottom: 16
+          left: 16
+          scaled: false
         text:
           color: "#ffffff"
           shadow:
@@ -254,10 +275,25 @@ widgets:
           show: true
           color: "#ffffff"
           opacity: 1
+          padding: 0
 
         date: false
+        location: false
+        distance: true
+        elevation: true
+        duration: true
         altitude: false
         performance: false
+        textOrder:
+          - date
+          - location
+          - distance
+          - elevation
+          - duration
+          - altitude
+          - speed
+          - pace
+        summaryBreaks: []
 
       user:
       elements:

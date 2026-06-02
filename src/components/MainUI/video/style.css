@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-14
- * Last modified: 2026-02-14
+ * Created on: 2026-05-01
+ * Last modified: 2026-05-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -23,63 +23,74 @@
 }
 
 .lgs-video-recording-trigger:not(.lgs-tunnel-element-blocked) {
-    color: var(--lgs-video-recorder-color);
-    border-color: var(--lgs-video-recorder-border-color);
-    background: var(--lgs-video-recorder-bg-color);
+    border-color: var(--lgs-video-recorder-border-color, var(--lgs-error-border-color));
+    background: var(--lgs-video-recorder-bg-color, var(--lgs-error-bg-color));
 }
 
-.lgs-video-recording-trigger:not(.lgs-tunnel-element-blocked):hover {
-    color: var(--lgs-video-recorder-hover-color);
-    border-color: var(--lgs-video-recorder-hover-border-color);
-    background: var(--lgs-video-recorder-hover-bg-color);
-
-}
-
-.lgs-video-recording-trigger::part(base):hover {
-    color: var(--lgs-video-recorder-hover-color);
-    border-color: var(--lgs-video-recorder-hover-border-color)
-}
 
 .video-recorder-widget {
     font-size: var(--lgs-font-size-s);
     position: relative;
-    z-index: calc(var(--lgs-ui-layer-zindex) + 2);
-    display: flex;
-    align-items: center;
-    flex-direction: row;
-    gap: 0;
+    z-index: var(--lgs-video-recorder-toolbar-zindex);
+
+
+    &::part(body) {
+        display: flex;
+        align-items: center;
+        flex-direction: row;
+        gap: 0;
+    }
 }
 
-.video-recorder-widget span {
+.video-recorder-widget .duration,
+.video-recorder-widget .size,
+.video-recorder-widget .current-fps,
+.video-recorder-widget .video-recorder-spacer {
+    display: inline-flex;
     width: max-content;
     margin-right: var(--lgs-gutter-s);
     border-right: 1px solid var(--lgs-card-on-map-border-color);
     padding-inline-end: var(--lgs-gutter-s);
 }
 
+.video-recorder-widget .duration,
+.video-recorder-widget .size,
+.video-recorder-widget .current-fps {
+    white-space: nowrap;
+}
+
 .video-recorder-widget button {margin: 0;}
 
-.video-recorder-widget .lgs-cancel-recording {
-    font-size: var(--lgs-font-size-s);
+.video-recorder-widget .video-recorder-action::part(base) {
+    min-width: calc(var(--lgs-dimension-s) - 2 * var(--lgs-gutter-xxs));
+    min-height: calc(var(--lgs-dimension-s) - 2 * var(--lgs-gutter-xxs));
+    padding: 0;
+}
+
+.video-recorder-widget .video-recorder-action wa-icon {
+    font-size: var(--lgs-font-size);
+}
+
+.video-recorder-widget .lgs-cancel-recording::part(base) {
     border-right: none;
-    border-left: 1px solid var(--lgs-card-on-map-border-color);
+    border-radius: var(--lgs-on-map-border-radius, var(--lgs-border-radius-s));
 }
 
 .video-recorder-indicator {
     font-size: var(--lgs-font-size);
     margin: 0 var(--lgs-gutter) 0 var(--lgs-gutter-s);
-    --fa-primary-color: var(--lgs-video-recorder-color);
-    --fa-primary-opacity: 1;
-    --fa-secondary-color: var(--lgs-video-recorder-bg-color);
-    --fa-secondary-opacity: 1;
+    --primary-color: var(--lgs-video-recorder-color, var(--lgs-error-color));
+    --primary-opacity: 1;
+    --secondary-color: var(--lgs-video-recorder-bg-color, var(--lgs-error-bg-color));
+    --secondary-opacity: 1;
 }
 
 .video-recorder-indicator.finalizing {
-    --fa-primary-color: var(--lgs-video-warning-color);
-    --fa-secondary-color: var(--lgs-video-warning-bg-color);
+    --primary-color: var(--lgs-video-warning-color, var(--lgs-warning-color));
+    --secondary-color: var(--lgs-video-warning-bg-color, var(--lgs-warning-bg-color));
 }
 
-.video-pre-recording-in-progress, .video-recording-in-progress, .photo-snapshot-in-progress {
+.video-pre-recording-in-progress, .video-recording-in-progress, .video-finalizing-in-progress, .photo-snapshot-in-progress {
     padding: 20px;
     animation: border-dance var(--border-dance-duration) infinite linear;
     animation-play-state: running;
@@ -90,6 +101,10 @@
     --border-width: 4px !important;
     --dashing-width: 25px;
     --border-dance-duration: 40s;
+    --video-recorder-bg-color: var(--wa-color-red-40);
+    --video-recorder-color: white;
+    --video-warning-bg-color: var(--wa-color-orange-40);
+    --video-warning-color: white;
 }
 
 .recording-in-progress .lgs-widget-inner-overlay {
@@ -98,11 +113,11 @@
 
 
 .video-recording-in-progress, .photo-snapshot-in-progress {
-    background-image: linear-gradient(90deg, var(--lgs-video-recorder-bg-color) 50%, var(--lgs-video-recorder-color) 50%), linear-gradient(90deg, var(--lgs-video-recorder-bg-color) 50%, var(--lgs-video-recorder-color) 50%), linear-gradient(0deg, var(--lgs-video-recorder-bg-color) 50%, var(--lgs-video-recorder-color) 50%), linear-gradient(0deg, var(--lgs-video-recorder-bg-color) 50%, var(--lgs-video-recorder-color) 50%);
+    background-image: linear-gradient(90deg, var(--video-recorder-bg-color) 50%, var(--video-recorder-color) 50%), linear-gradient(90deg, var(--video-recorder-bg-color) 50%, var(--video-recorder-color) 50%), linear-gradient(0deg, var(--video-recorder-bg-color) 50%, var(--video-recorder-color) 50%), linear-gradient(0deg, var(--video-recorder-bg-color) 50%, var(--video-recorder-color) 50%);
 }
 
-.video-pre-recording-in-progress, .video-recording-in-progress.finalizing {
-    background-image: linear-gradient(90deg, var(--lgs-video-warning-bg-color) 50%, var(--lgs-video-warning-color) 50%), linear-gradient(90deg, var(--lgs-video-warning-bg-color) 50%, var(--lgs-video-warning-color) 50%), linear-gradient(0deg, var(--lgs-video-warning-bg-color) 50%, var(--lgs-video-warning-color) 50%), linear-gradient(0deg, var(--lgs-video-warning-bg-color) 50%, var(--lgs-video-warning-color) 50%);
+.video-pre-recording-in-progress, .video-finalizing-in-progress, .video-recording-in-progress.finalizing {
+    background-image: linear-gradient(90deg, var(--video-warning-bg-color) 50%, var(--video-warning-color) 50%), linear-gradient(90deg, var(--video-warning-bg-color) 50%, var(--video-warning-color) 50%), linear-gradient(0deg, var(--video-warning-bg-color) 50%, var(--video-warning-color) 50%), linear-gradient(0deg, var(--video-warning-bg-color) 50%, var(--video-warning-color) 50%);
 }
 
 @keyframes border-dance {
@@ -118,15 +133,82 @@
  * Video preview
  */
 
+#video-preview-dialog::part(dialog),
 #video-preview-dialog::part(panel) {
     width: min(100%, 600px);
     max-height: 90%;
 }
 
-#video-preview-dialog sl-input::part(form-control) {
+#video-preview-dialog {
+    --wa-color-overlay-modal: transparent;
+}
+
+.video-preview-dialog-brand-overlay {
+    position: fixed;
+    z-index: calc(var(--lgs-ui-layer-zindex) + 1);
+    pointer-events: none;
+    background-color: var(--lgs-dark-color-80);
+    background-image: var(--lgs-brand-overlay-gradient);
+    inset: 0;
+    --backdrop-filter: var(--lgs-blur);
+    background-blend-mode: screen, soft-light, normal;
+    backdrop-filter: blur(var(--backdrop-filter));
+}
+
+.video-preview-dialog-title {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--lgs-gutter-xs);
+}
+
+.video-preview-dialog-title > span {
+    line-height: 1.3;
+}
+
+.video-preview-dialog-title wa-icon,
+.video-preview-title-icon {
+    flex-shrink: 0;
+}
+
+.video-preview-action-icon {
+    flex-shrink: 0;
+}
+
+#video-preview-dialog .video-file-actions {
+    position: relative;
+    width: 100%;
+}
+
+#video-preview-dialog .video-file-actions wa-input {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+#video-preview-dialog .video-file-label {
     display: flex;
     align-items: center;
+    justify-content: space-between;
+    width: 100%;
     gap: var(--lgs-gutter-s);
+}
+
+#video-preview-dialog .video-file-label-actions {
+    display: inline-flex;
+    align-items: center;
+}
+
+#video-preview-dialog .video-recording-info-trigger::part(base) {
+    min-width: calc(var(--lgs-dimension-s) - 2 * var(--lgs-gutter-xxs));
+    min-height: calc(var(--lgs-dimension-s) - 2 * var(--lgs-gutter-xxs));
+    padding: 0;
+}
+
+#video-preview-dialog .video-recording-info-trigger wa-icon {
+    font-size: var(--lgs-font-size);
+}
+
+#video-preview-dialog .video-file-extension {
+    color: var(--wa-color-text-quiet);
 }
 
 /* Container for both videos, ensuring it takes full available space with max height */
@@ -136,10 +218,12 @@
     overflow: hidden;
     align-items: center;
     justify-content: center;
+    box-sizing: border-box;
     width: 100%;
-    height: auto;
-    max-height: var(--max-video-height);
+    height: var(--max-video-height);
     margin-bottom: var(--lgs-gutter);
+    isolation: isolate;
+    padding-inline: var(--lgs-gutter);
     --max-video-height: 50vh;
 }
 
@@ -147,12 +231,19 @@
    - landscape: grows to width; if height would exceed max, it scales down
    - portrait/square: limited by max height, uses as much width as possible */
 .main-video {
+    position: absolute;
     z-index: 1;
-    width: 100%;
+    display: block;
+    align-self: center;
+    flex: 0 0 auto;
+    width: auto;
     max-width: 100%;
     height: auto;
-    max-height: var(--max-video-height);
+    max-height: 100%;
+    margin: auto;
+    inset: 0;
     object-fit: contain;
+    object-position: center;
 }
 
 /* Wrapper for blurred video, filling the entire container */
@@ -166,6 +257,7 @@
     justify-content: center;
     width: 100%;
     height: 100%;
+    pointer-events: none;
 }
 
 /* Blurred video, scaled to cover container with blur effect */
@@ -185,56 +277,55 @@
     height: 100%;
     content: '';
     background-color: var(--lgs-dark-color-75);
-
 }
 
 /***************************************
- * Video info
+ * Recording info
  */
 
-.video-info {
-    position: absolute;
-    z-index: 2;
-    top: 0;left: 0;
-    display: flex;
-    align-items: flex-start;
-    flex-direction: column;
-    justify-content: space-between;
-    margin: var(--lgs-gutter-xs);
-    gap: var(--lgs-gutter-xs);
+.recording-info-card {
+    width: max-content;
 }
 
-.video-info div {
+.recording-info-card::part(body) {
+    display: grid;
+    align-items: stretch;
+    grid-template-columns: 1rem max-content max-content;
+    column-gap: var(--lgs-gutter-xxs, var(--lgs-gutter-xs));
+    gap: var(--lgs-gutter-xxs, var(--lgs-gutter-xs));
+}
+
+.recording-info-icon {
     font-size: var(--lgs-font-size-s);
     line-height: 1.3;
-    display: flex;
-    align-content: center;
-    align-items: center;
+    align-self: center;
+    flex-shrink: 0;
 }
 
-.video-info div sl-icon {
-    font-size: var(--lgs-font-size);
+.recording-info-label {
+    font-size: var(--lgs-font-size-s);
+    align-self: center;
+    color: var(--wa-color-text-quiet);
 }
 
-.video-info div :first-child {
-    margin-right: var(--lgs-gutter);
+.recording-info-label-offset {
+    grid-column: 2;
 }
 
-.video-info sl-input {
-    max-width: 100px;
+.recording-info-value {
+    font-size: var(--lgs-font-size-s);
+    align-self: center;
+    white-space: nowrap;
 }
 
 /***************************************
  * Video actions
  */
-.video-file-actions, .video-actions {
+.video-file-actions {
     display: flex;
     align-items: center;
-    gap: var(--lgs-gutter-s);
-}
-
-.video-file-actions {
     justify-content: space-between;
+    gap: var(--lgs-gutter-s);
 }
 /***************************************
  * Video Quality toolbar
@@ -277,16 +368,13 @@
     opacity: 1;
 }
 
-.video-fps-widget .grabber {
-    rotate: 90deg;
-}
-
 /***************************************
  * Video Preset selector
  */
 
 .video-preset-widget {
     position: relative;
+    display: flex;
     align-items: center;
     flex-direction: var(--buttons-bar-on-map-direction);
     width: auto;
@@ -294,38 +382,59 @@
     gap: var(--lgs-gutter-xs);
 }
 
-.video-preset-grid {
-    display: grid;
-    grid-template-columns: auto 1fr;
-}
-
 .video-preset-widget.lgs-toolbar {
     opacity: 1;
 }
 
-.video-preset-widget .grabber {
-    rotate: 90deg;
-}
-
 .video-preset-custom {
     display: flex;
-    flex-basis: 100%;
     flex-direction: column;
-    margin-bottom: var(--lgs-gutter-xs);
     gap: var(--lgs-gutter-xs);
+}
+
+.video-preset-custom .video-fps-widget > span,
+.video-preset-custom .video-quality-widget > span {
+    font-size: var(--lgs-font-size-s);
+    line-height: 1;
+}
+
+.video-preset-widget-wrapper.lgs-card.wa-theme-lgs1920-on-map,
+.video-preset-custom.lgs-card.wa-theme-lgs1920-on-map {
+    box-shadow: var(--lgs-on-map-floating-shadow, var(--sl-shadow-large)) !important;
+    filter: drop-shadow(var(--lgs-on-map-floating-drop-shadow, 0 0.45rem 1rem rgb(0 0 0 / 0.22)));
 }
 
 .video-preset-widget-wrapper {
     display: flex;
     flex-direction: column;
-    padding: 0;
+    padding: var(--lgs-on-map-padding, var(--lgs-gutter-xs));
     gap: 0;
 
 }
 
+.video-choice-buttons-on-map wa-button.video-choice-button::part(base) {
+    transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
+    color: var(--lgs-light-color-75);
+    border-color: transparent;
+    background: transparent !important;
+}
+
+.video-choice-buttons-on-map wa-button.video-choice-button:not(.is-selected):hover::part(base) {
+    color: var(--lgs-card-on-map-hover-color);
+    border-color: var(--lgs-card-on-map-hover-border-color);
+    background: var(--lgs-card-on-map-hover-bg-color) !important;
+}
+
+.video-choice-buttons-on-map wa-button.video-choice-button.is-selected::part(base),
+.video-choice-buttons-on-map wa-button.video-choice-button.is-selected:hover::part(base) {
+    color: var(--lgs-card-on-map-selected-color);
+    border-color: var(--lgs-card-on-map-selected-border-color);
+    background: var(--lgs-card-on-map-selected-bg-color) !important;
+}
+
 .video-fps-widget .buttons-bar-on-map, .video-quality-widget .buttons-bar-on-map {
     display: grid;
-    grid-template-columns: repeat(4, 2rem) !important;
+    grid-template-columns: repeat(3, 2rem) !important;
 }
 
 /***************************************
@@ -350,5 +459,3 @@
     white-space: nowrap;
     gap: var(--lgs-gutter-s);
 }
-
-

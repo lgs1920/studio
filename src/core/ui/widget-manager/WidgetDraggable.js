@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-25
- * Last modified: 2026-01-25
+ * Created on: 2026-05-01
+ * Last modified: 2026-05-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -32,6 +32,9 @@ export class WidgetDraggable {
     /** @type {WidgetTransform} Reference to WidgetTransform instance */
     #widgetTransform
 
+    #pendingCropUpdateFrame = null
+    #pendingCropUpdateConfig = null
+
     /**
      * Creates or returns the singleton instance of WidgetDraggable.
      * @param {WidgetManager} widgetManager - The WidgetManager instance
@@ -48,13 +51,53 @@ export class WidgetDraggable {
         WidgetDraggable.#instance = this
     }
 
+    #runPendingCropUpdate = () => {
+        this.#pendingCropUpdateFrame = null
+        const config = this.#pendingCropUpdateConfig
+        this.#pendingCropUpdateConfig = null
+
+        if (!config?.isCropper || !config.cropDimensions) {
+            return
+        }
+
+        this.#widgetCropper.applyCropToOverlay(config)
+        this.#widgetCropper.dispatchCropUpdate(config, 'drag')
+    }
+
+    #schedulePendingCropUpdate = (config) => {
+        this.#pendingCropUpdateConfig = config
+        if (this.#pendingCropUpdateFrame !== null) {
+            return
+        }
+        this.#pendingCropUpdateFrame = requestAnimationFrame(this.#runPendingCropUpdate)
+    }
+
+    #flushPendingCropUpdate = () => {
+        if (!this.#pendingCropUpdateConfig) {
+            return
+        }
+        if (this.#pendingCropUpdateFrame !== null) {
+            cancelAnimationFrame(this.#pendingCropUpdateFrame)
+        }
+        this.#runPendingCropUpdate()
+    }
+
+    #clearPendingCropUpdate = () => {
+        if (this.#pendingCropUpdateFrame !== null) {
+            cancelAnimationFrame(this.#pendingCropUpdateFrame)
+        }
+        this.#pendingCropUpdateFrame = null
+        this.#pendingCropUpdateConfig = null
+    }
+
     /**
      * Handles the start of a drag event.
      * @param {Object} event - Drag event
      */
-    onDragStart = async event => {
-        const config = await this.#widgetManager.retrieveConfig(event.target)
-        if (config.animationWhenDragging) {
+    onDragStart = event => {
+        this.#clearPendingCropUpdate()
+        const config = this.#widgetManager.getWidgetConfig(this.#widgetManager.retrieveElementId(event.target))
+        if (config?.animationWhenDragging) {
             event.target.classList.add(LGS_ANIMATION_DRAGGING)
         }
         this.#widgetManager.isDragging = true
@@ -65,8 +108,8 @@ export class WidgetDraggable {
      * Handles drag events, updating crop overlay in real-time.
      * @param {Object} event - Drag event from Moveable
      */
-    onDrag = async event => {
-        const config = await this.#widgetManager.retrieveConfig(event.target)
+    onDrag = event => {
+        const config = this.#widgetManager.getWidgetConfig(this.#widgetManager.retrieveElementId(event.target))
         if (config?.isCropper && config.outsideOverlay) {
             const [dx, dy] = event.translate || [0, 0]
             const baseLeft = __.app.parsePx(event.target.style.left || '0')
@@ -77,8 +120,7 @@ export class WidgetDraggable {
             const height = Number.isFinite(config.cropDimensions?.height) ? config.cropDimensions.height : __.app.parsePx(event.target.style.height || '0') || event.target.getBoundingClientRect().height || 200
             if (Number.isFinite(left) && Number.isFinite(top) && Number.isFinite(width) && Number.isFinite(height) && width > 0 && height > 0) {
                 config.cropDimensions = {left, top, width, height}
-                this.#widgetCropper.applyCropToOverlay(config)
-                this.#widgetCropper.dispatchCropUpdate(config, 'drag')
+                this.#schedulePendingCropUpdate(config)
             }
         }
     }
@@ -90,12 +132,14 @@ export class WidgetDraggable {
     onDragEnd = async event => {
         event.target.classList.remove('dragging', LGS_ANIMATION_DRAGGING)
         this.#widgetManager.isDragging = false
+        this.#flushPendingCropUpdate()
         const config = await this.#widgetManager.retrieveConfig(event.target)
 
         // Use transform helper to commit translate to position
         this.#widgetTransform.commitTranslateToPosition(event.target)
 
         config.element = event.target
+        config.runtimeReady = true
         // Use the updated position from config after commitTranslateToPosition
         const left = config.position.left
         const top = config.position.top
@@ -109,8 +153,8 @@ export class WidgetDraggable {
             if (config.resizeFromCenter) {
                 const container = config.container.getBoundingClientRect()
                 config.centerRatio = {
-                    x: (left + width / 2) / container.width,
-                    y: (top + height / 2) / container.height,
+                    x: (left - container.left + width / 2) / container.width,
+                    y: (top - container.top + height / 2) / container.height,
                 }
             }
             this.#widgetCropper.applyCropToOverlay(config)
@@ -118,10 +162,11 @@ export class WidgetDraggable {
         }
 
         if (config.persist) {
-            this.#widgetManager.saveWidgetPosition(config.id, config)
+            await this.#widgetManager.saveWidgetPosition(config.id, config)
         }
 
         __.ui.widgetManager.setConfig(config.id, config)
+        this.#widgetManager.refreshEditorPreviewSnapshot(config.id)
 
 
     }

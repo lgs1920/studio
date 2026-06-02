@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-23
- * Last modified: 2026-02-23
+ * Created on: 2026-04-30
+ * Last modified: 2026-04-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -90,4 +90,156 @@
     display: flex;
     margin-left: auto;
     gap: var(--lgs-gutter-xs);
+}
+
+.widget-editor-rotation-reset {
+    flex: 0 0 auto;
+    justify-content: flex-end;
+    min-width: 2rem;
+    margin-left: auto;
+}
+
+.lgs-scrollbars .view > .lgs-widget-editor-card {
+    box-sizing: border-box;
+    height: auto;
+    min-height: calc(100% - var(--lgs-gutter-s));
+    margin-right: var(--lgs-gutter-s);
+    margin-bottom: var(--lgs-gutter-s);
+}
+
+.lgs-scrollbars .view > .lgs-widget-editor-card::part(body) {
+    height: auto;
+    min-height: 100%;
+}
+
+.compass-widget-editor-colors {
+    box-sizing: border-box;
+    padding-bottom: var(--lgs-gutter-s);
+}
+
+.compass-widget-editor .compass-mode-select {
+    min-width: 10rem;
+}
+
+.compass-widget-editor .compass-select-thumbnail {
+    display: inline-flex;
+    align-items: center;
+}
+
+.compass-widget-editor .compass-select-thumbnail svg {
+    flex: 0 0 auto;
+}
+
+.lgs-widget-editor-card wa-slider[label-at-start]::part(label),
+.lgs-widget-editor-card wa-select[label-at-start]::part(form-control-label),
+.lgs-widget-editor-card wa-select[label-at-start]::part(label) {
+    font-size: var(--lgs-font-size) !important;
+    font-weight: normal !important;
+    line-height: var(--wa-form-control-label-line-height);
+    color: var(--wa-form-control-label-color);
+}
+
+.lgs-widget-scaled-line {
+    align-items: center;
+    width: 100%;
+}
+
+.lgs-widget-scaled-color-spacer {
+    flex: 0 0 2.25rem;
+}
+
+.lgs-widget-scaled-switch {
+    flex: 0 0 auto;
+}
+
+.lgs-widget-scaled-line.lgs-widget-scaled-line-right {
+    justify-content: flex-end;
+}
+
+.lgs-widget-scaled-line.lgs-widget-scaled-line-right .lgs-widget-scaled-switch {
+    flex: 0 0 auto;
+}
+
+.lgs-widget-scaled-line.lgs-widget-radius-scaled-line {
+    justify-content: flex-start;
+    width: 10rem;
+    margin-left: auto;
+}
+
+.lgs-widget-scaled-line.lgs-widget-radius-scaled-line .lgs-widget-scaled-switch {
+    flex: 0 0 auto;
+}
+
+.lgs-widget-color-control-grid {
+    display: grid;
+    align-items: center;
+    width: 100%;
+    grid-template-columns: 2.25rem minmax(0, 1fr);
+    column-gap: calc(2 * var(--lgs-gutter-xs));
+    row-gap: var(--lgs-gutter-xs);
+}
+
+.lgs-widget-color-control-color {
+    display: flex;
+    align-items: center;
+}
+
+.lgs-widget-border-control-row {
+    display: grid;
+    align-items: center;
+    width: 100%;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: calc(2 * var(--lgs-gutter-xs));
+}
+
+.lgs-widget-border-control {
+    min-width: 0;
+}
+
+.lgs-widget-color-control-scaled-line {
+    min-width: 0;
+}
+
+.lgs-widget-border-scaled-line {
+    width: 50%;
+    margin-left: 0;
+}
+
+.lgs-widget-border-scaled-line .lgs-widget-scaled-switch {
+    flex: 0 0 auto;
+}
+
+.lgs-widget-profile-axis-scaled-line {
+    width: 50%;
+    margin-left: 0;
+}
+
+.lgs-widget-profile-axis-scaled-line .lgs-widget-scaled-switch {
+    flex: 0 0 auto;
+}
+
+.lgs-widget-color-control-grid + .lgs-widget-border-radius-line,
+.lgs-widget-border-radius-scaled-line {
+    margin-top: var(--lgs-gutter-xs);
+}
+
+.lgs-widget-padding-element {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    gap: var(--lgs-gutter-xs);
+}
+
+.lgs-widget-padding-slider {
+    flex: 1 1 auto;
+}
+
+.lgs-widget-padding-scaled-line {
+    justify-content: flex-start;
+    width: 50%;
+    margin-left: 50%;
+}
+
+.lgs-widget-padding-scaled-line .lgs-widget-scaled-switch {
+    flex: 0 0 auto;
 }

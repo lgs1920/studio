@@ -7,21 +7,19 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-28
- * Last modified: 2026-02-28
+ * Created on: 2026-03-22
+ * Last modified: 2026-03-22
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { BASE_ENTITY, TERRAIN_ENTITY, VAULT_STORE }        from '@Core/constants'
-import { faCheck, faEye, faEyeSlash, faTrashCan, faXmark } from '@fortawesome/pro-regular-svg-icons'
-import { SlBadge, SlButton, SlDialog, SlIcon, SlInput }    from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                                           from '@Utils/FA2SL'
-import { UIToast }                                         from '@Utils/UIToast'
-import parse                                               from 'html-react-parser'
-import { useRef }                                          from 'react'
-import { useSnapshot }                                     from 'valtio'
+import { BASE_ENTITY, TERRAIN_ENTITY, VAULT_STORE } from '@Core/constants'
+import { UIToast }                                      from '@Utils/UIToast'
+import { WaBadge, WaButton, WaDialog, WaIcon, WaInput } from '@web.awesome.me/webawesome-pro/dist/react'
+import parse                                            from 'html-react-parser'
+import { useRef }                                   from 'react'
+import { useSnapshot }                              from 'valtio'
 
 
 export const TokenLayerModal = (props) => {
@@ -41,7 +39,7 @@ export const TokenLayerModal = (props) => {
         return ('')
     }
 
-    const accountUrl = sprintf('<a href="%s" target="_blank">%s</a>', snap.layer.tmpEntity.usage?.signin, snap.layer.tmpEntity.usage?.signin)
+    const accountUrl = sprintf('<a href="%s" target="_blank">%s</a>', snap.layer.tmpEntity.usage?.signin, 'here')
     const docUrl = sprintf('<a href="%s" target="_blank">%s</a>', snap.layer.tmpEntity.usage?.doc, 'See documentation')
     const provider = __.layersAndTerrainManager.getProviderProxy(__.layersAndTerrainManager.getProviderIdByLayerId(snap.layer.tmpEntity.id))
     const providerUrl = sprintf('<a href="%s" target="_blank">%s</a>', provider.url, 'Visit Provider')
@@ -98,49 +96,41 @@ export const TokenLayerModal = (props) => {
 
     return (
         <>
-            <SlDialog label={sprintf('Requesting access for %s', snap.layer.tmpEntity?.name)}
+            <WaDialog label={sprintf('Requesting access for %s', snap.layer.tmpEntity?.name)}
                       open={snap.layer.tokenDialog}
-                      onSlRequestClose={closeTokenModal}
+                      onWaAfterHide={closeTokenModal}
                       className={'lgs-theme'}>
 
                 <div>
-                    <ol className={'authent-tasks-list'}>
-                        <li key={'1'}><span><SlBadge pill>1</SlBadge></span>
-                            <div>{'Create an account on'}<br/>{parse(accountUrl)}</div>
-                        </li>
-                        <li key={'2'}><span><SlBadge pill>2</SlBadge></span>
-                            <div>
-                                {`Get Token/Api key and paste it here.`}
-                                <SlInput placeholder={'Paste Token/API key'} type="password"
-                                         ref={apikey} password-toggle clearable
-                                         onSlInput={handleChange}
-                                         autocomplete
-                                         value={snap.layer.tmpEntity.usage.token ?? ''}>
-                                    <SlIcon slot="show-password-icon" library="fa" name={FA2SL.set(faEye)}/>
-                                    <SlIcon slot="hide-password-icon" library="fa" name={FA2SL.set(faEyeSlash)}/>
-                                    <SlIcon slot="clear-icon" library="fa" name={FA2SL.set(faTrashCan)}/>
-                                </SlInput>
-                            </div>
-                        </li>
-                        <li key={'3'}><SlBadge pill>3</SlBadge> {`Validate.`}
-                        </li>
-                    </ol>
+                    <p><WaBadge pill>1</WaBadge> {'Create an account on the provider site'} {parse(accountUrl)}.</p>
+                    <p><WaBadge pill>2</WaBadge> {'Get Token/Api key and paste it below.'}</p>
+                    <p><WaInput placeholder={'Paste Token/API key'} type="password"
+                                ref={apikey} password-toggle
+                                clearable
+                                onInput={handleChange}
+                                passwordToggle
+                                autocomplete
+                                value={snap.layer.tmpEntity.usage.token ?? ''}>
+                    </WaInput>
+                    </p>
+                    <p><WaBadge pill>3</WaBadge> {`Validate.`}</p>
+                    <br/>
                     {snap.layer.tmpEntity.usage.doc &&
                         <>{parse(docUrl)} - </>
                     }
                     {parse(providerUrl)}
                 </div>
                 <div className="buttons-bar" slot="footer">
-                    <SlButton onClick={closeTokenModal}>
-                        <SlIcon slot="prefix" library="fa" name={FA2SL.set(faXmark)}></SlIcon>
+                    <WaButton onClick={closeTokenModal} appearance="outlined">
+                        <WaIcon slot="start" name="xmark" variant="regular"/>
                         {'Cancel'}
-                    </SlButton>
-                    <SlButton variant="primary" onClick={validateToken} ref={validate} disabled={!snap.canValidate}>
-                        <SlIcon slot="prefix" library="fa" name={FA2SL.set(faCheck)}></SlIcon>
+                    </WaButton>
+                    <WaButton variant="brand" onClick={validateToken} ref={validate} disabled={!snap.canValidate}>
+                        <WaIcon slot="start" name="check" variant="regular"/>
                         {'Validate'}
-                    </SlButton>
+                    </WaButton>
                 </div>
-            </SlDialog>
+            </WaDialog>
         </>
     )
 }

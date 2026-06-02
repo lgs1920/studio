@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-11
- * Last modified: 2026-02-11
+ * Created on: 2026-05-10
+ * Last modified: 2026-05-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -24,8 +24,9 @@
 import { SlInput, SlIconButton } from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                 from '@Utils/FA2SL'
 import { faArrowRotateLeft }     from '@fortawesome/pro-solid-svg-icons'
-import { UnitUtils }             from '@Utils/UnitUtils'
-import React, { useMemo }        from 'react'
+import { UnitUtils }                 from '@Utils/UnitUtils'
+import { WaButton, WaIcon, WaInput } from '@web.awesome.me/webawesome-pro/dist/react'
+import React, { useMemo }            from 'react'
 import { useSnapshot }           from 'valtio'
 
 export const JourneyMetricsInput = ({label, path, unit, precision = 2, dataSource}) => {
@@ -118,27 +119,30 @@ export const JourneyMetricsInput = ({label, path, unit, precision = 2, dataSourc
     }
 
     return (
-        <SlInput
+        <WaInput
             label={label}
-            size="small"
+            size="s"
             type="number"
             className={originClass}
             value={displayValue}
-            onSlChange={handleUpdate}
-            onSlBlur={handleBlur}
+            onInput={handleUpdate}
+            onBlur={handleBlur}
+            withoutSpinButtons
         >
             {origin === 'user' && (
-                <SlIconButton
-                    slot="suffix"
-                    name={FA2SL.set(faArrowRotateLeft)}
-                    library="fa"
-                    style={{fontSize: '80%'}}
+                <WaButton
+                    appearance="plain"
+                    variant="brand"
                     onClick={(e) => {
                         e.stopPropagation()
                         handleReset()
                     }}
-                />
+                    slot="end"
+                    style={{fontSize: '80%'}}
+                >
+                    <WaIcon name="arrow-rotate-left" variant="regular"/>
+                </WaButton>
             )}
-        </SlInput>
+        </WaInput>
     )
 }

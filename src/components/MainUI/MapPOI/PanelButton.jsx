@@ -7,35 +7,35 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-28
- * Last modified: 2026-02-28
+ * Created on: 2026-05-01
+ * Last modified: 2026-05-01
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { POIS_EDITOR_DRAWER }          from '@Core/constants'
-import { faLocationDot }               from '@fortawesome/pro-regular-svg-icons'
-import { SlButton, SlIcon, SlTooltip } from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                       from '@Utils/FA2SL.js'
-import { useSnapshot }                 from 'valtio'
+import { WaButton, WaIcon, WaTooltip } from '@web.awesome.me/webawesome-pro/dist/react'
+import { useCallback } from 'react'
 
 
 export const PanelButton = (props) => {
-    const store = lgs.stores.main.components.pois.editor
-    const snap = useSnapshot(store)
+    const openPanel = useCallback(() => {
+        __.ui.drawerManager.toggle(POIS_EDITOR_DRAWER, {
+            suppressFocusOnOpen: lgs.stores.main.components.pois.current || false,
+        })
+    }, [])
 
-    const handleClick = () => {
-        store.visible = !store.visible
-    }
     return (
         <>
-            <SlTooltip hoist placement={props.tooltip} content="Edit POIs">
-                <SlButton size={'small'} className={'square-button'} id={'launch-the-pois'}
-                          onClick={() => __.ui.drawerManager.toggle(POIS_EDITOR_DRAWER)}>
-                    <SlIcon slot="prefix" library="fa" name={FA2SL.set(faLocationDot)}></SlIcon>
-                </SlButton>
-            </SlTooltip>
+            <WaTooltip for="launch-the-pois" placement={props.tooltip}>{'Edit POIs'}</WaTooltip>
+            <WaButton className="square-button"
+                      id="launch-the-pois"
+                      onClick={openPanel}
+                      variant={'brand'}
+                      appearance="Filled">
+                <WaIcon name="location-dot" variant="regular"/>
+            </WaButton>
         </>
     )
 }

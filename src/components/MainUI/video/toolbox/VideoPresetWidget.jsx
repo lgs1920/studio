@@ -14,13 +14,11 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { VideoFPSToolbar }    from '@Components/MainUI/video/toolbox/VideoFPSToolbar'
 import { VideoPresetToolbar } from '@Components/MainUI/video/toolbox/VideoPresetToolbar'
 import { LGS_TOOLBAR, VIDEO_TOOLS_WIDGETS } from '@Core/constants'
-import React, { useMemo }     from 'react'
+import { useMemo }            from 'react'
 import { Widget }             from '@Components/MainUI/widgets/Widget'
 import { useSnapshot }        from 'valtio'
-import { VideoQualityToolbar } from './VideoQualityToolbar'
 
 /**
  * Component for selecting video quality with draggable toolbar
@@ -41,6 +39,7 @@ export const VideoPresetWidget = ({id}) => {
             type: LGS_TOOLBAR,
             id: id,
             group: VIDEO_TOOLS_WIDGETS,
+            icon: 'camera-polaroid',
         }
     }, [])
 

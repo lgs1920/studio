@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-28
- * Last modified: 2026-02-28
+ * Created on: 2026-04-29
+ * Last modified: 2026-04-29
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,7 +16,8 @@
 
 import { CompassFull }  from '@Components/MainUI/compass/CompassFull'
 import { CompassLight } from '@Components/MainUI/compass/CompassLight'
-import { COMPASS_FULL, COMPASS_LIGHT } from '@Core/constants'
+import { CompassWindRose }                                from '@Components/MainUI/compass/CompassWindRose'
+import { COMPASS_FULL, COMPASS_LIGHT, COMPASS_WIND_ROSE } from '@Core/constants'
 import { Math as CMath }               from 'cesium'
 import classNames                      from 'classnames'
 import { colord }                                  from 'colord'
@@ -27,10 +28,12 @@ import { useSnapshot }                 from 'valtio'
  * Compass component.
  * Synchronizes with the camera heading and resolves theme colors via global __ utility.
  */
-export const Compass = ({fixed, inWidget = false, entity}) => {
+export const Compass = ({fixed, inWidget = false, entity, syncBounds = true}) => {
     const _rotatingPart = useRef(null)
     const _compass = useRef(null)
     const _doubleTapTimeout = useRef(null)
+    const _animationFrame = useRef(null)
+    const _lastHeading = useRef(null)
 
     // Store Proxies
     const $globalCompass = lgs.settings.ui.compass
@@ -49,6 +52,15 @@ export const Compass = ({fixed, inWidget = false, entity}) => {
     }, [entity, widgetConfig])
 
     const activeConfig = inWidget ? element : globalCompass
+    const currentMode = activeConfig?.mode
+    const baseTransform = useMemo(
+        () => currentMode?.toString() === COMPASS_LIGHT.toString() ? 'scale(1.2)' : '',
+        [currentMode],
+    )
+
+    const toCompassKebab = useCallback((str) => {
+        return str.replace(/([a-z0-9])([A-Z])/g, '$1-$2').replace(/\./g, '-').toLowerCase()
+    }, [])
 
     /**
      * Resolves a CSS variable string to its computed value recursively.
@@ -73,11 +85,21 @@ export const Compass = ({fixed, inWidget = false, entity}) => {
      * Updates the rotation of the referenced element based on camera heading.
      */
     const updateRotation = useCallback(() => {
-        if (_rotatingPart.current) {
-            const headingDegrees = -CMath.toDegrees(lgs.camera.heading) % 360
-            _rotatingPart.current.style.transform = `rotate(${headingDegrees}deg)`
+        const rotatingPart = _rotatingPart.current
+        if (!rotatingPart) {
+            return
         }
-    }, [])
+
+        const headingDegrees = ((-CMath.toDegrees(lgs.camera.heading) % 360) + 360) % 360
+        if (_lastHeading.current === headingDegrees) {
+            return
+        }
+
+        rotatingPart.style.transform = baseTransform
+                                       ? `rotate(${headingDegrees}deg) ${baseTransform}`
+                                       : `rotate(${headingDegrees}deg)`
+        _lastHeading.current = headingDegrees
+    }, [baseTransform])
 
     /**
      * Maps store configuration to CSS variables.
@@ -98,7 +120,7 @@ export const Compass = ({fixed, inWidget = false, entity}) => {
             }
 
             if (part?.color) {
-                const varName = `--lgs-compass-${path.replace(/\./g, '-')}`
+                const varName = `--lgs-compass-${toCompassKebab(path)}`
                 const colorObj = colord(resolveColor(part.color))
 
                 // If part.opacity is null/undefined, use the resolved color's native alpha
@@ -106,7 +128,111 @@ export const Compass = ({fixed, inWidget = false, entity}) => {
             }
         })
         return vars
-    }, [activeConfig])
+    }, [activeConfig, toCompassKebab])
+
+    const syncWidgetBounds = useCallback(() => {
+        if (!syncBounds || !inWidget || !entity || !_compass.current) {
+            return
+        }
+
+        const widgetElement = __.ui.widgetManager.getElementById(entity) ?? _compass.current.closest('.lgs-widget')
+        if (!widgetElement) {
+            return
+        }
+
+        const elementId = __.ui.widgetManager.retrieveElementId(widgetElement) ?? entity
+        const config = __.ui.widgetManager.getWidgetConfig(elementId)
+        const moveable = __.ui.widgetManager.getMoveable(elementId)
+
+        if (!config) {
+            moveable?.current?.updateRect()
+            return
+        }
+
+        const previousWidth = config.dimensions?.width || widgetElement.offsetWidth
+        const previousHeight = config.dimensions?.height || widgetElement.offsetHeight
+        const previousLeft = Number.isFinite(config.position?.left)
+                             ? config.position.left
+                             : parseFloat(widgetElement.style.left || '')
+        const previousTop = Number.isFinite(config.position?.top)
+                            ? config.position.top
+                            : parseFloat(widgetElement.style.top || '')
+        const centerX = Number.isFinite(previousLeft) ? previousLeft + previousWidth / 2 : null
+        const centerY = Number.isFinite(previousTop) ? previousTop + previousHeight / 2 : null
+
+        widgetElement.style.width = ''
+        widgetElement.style.height = ''
+
+        const compassStyle = window.getComputedStyle(_compass.current)
+        const styledWidth = parseFloat(compassStyle.width || '')
+        const styledHeight = parseFloat(compassStyle.height || '')
+        const compassRect = _compass.current.getBoundingClientRect()
+        const nextWidth = Number.isFinite(styledWidth) && styledWidth > 0
+                          ? styledWidth
+                          : (_compass.current.offsetWidth || compassRect.width)
+        const nextHeight = Number.isFinite(styledHeight) && styledHeight > 0
+                           ? styledHeight
+                           : (_compass.current.offsetHeight || compassRect.height)
+
+        if (!Number.isFinite(nextWidth) || !Number.isFinite(nextHeight) || nextWidth <= 0 || nextHeight <= 0) {
+            moveable?.current?.updateRect()
+            return
+        }
+
+        const width = Math.round(nextWidth * 100) / 100
+        const height = Math.round(nextHeight * 100) / 100
+        config.dimensions = {width, height}
+        widgetElement.style.width = `${width}px`
+        widgetElement.style.height = `${height}px`
+
+        if (centerX !== null && centerY !== null) {
+            config.position = {
+                left: centerX - width / 2,
+                top:  centerY - height / 2,
+            }
+
+            const boundsContainer = config.boundsContainer ?? config.container
+            const boundsRect = boundsContainer?.getBoundingClientRect?.()
+            if (boundsRect) {
+                config.position = __.ui.widgetManager.adaptPositionToContainer(config, boundsRect)
+            }
+
+            widgetElement.style.left = `${config.position.left}px`
+            widgetElement.style.top = `${config.position.top}px`
+        }
+
+        if (config.persist && config.runtimeReady) {
+            void __.ui.widgetManager.saveWidgetPosition(elementId, config)
+        }
+
+        moveable?.current?.updateRect()
+    }, [entity, inWidget, syncBounds])
+
+    useEffect(() => {
+        const currentModeString = currentMode?.toString()
+        const hasVisualMode = currentModeString === COMPASS_FULL.toString() ||
+            currentModeString === COMPASS_LIGHT.toString() ||
+            currentModeString === COMPASS_WIND_ROSE.toString()
+        if (!syncBounds || !inWidget || !hasVisualMode) {
+            return
+        }
+
+        let firstFrame = null
+        let secondFrame = null
+
+        firstFrame = window.requestAnimationFrame(() => {
+            secondFrame = window.requestAnimationFrame(syncWidgetBounds)
+        })
+
+        return () => {
+            if (firstFrame !== null) {
+                window.cancelAnimationFrame(firstFrame)
+            }
+            if (secondFrame !== null) {
+                window.cancelAnimationFrame(secondFrame)
+            }
+        }
+    }, [currentMode, inWidget, syncBounds, syncWidgetBounds])
 
     useEffect(() => {
         /**
@@ -144,8 +270,13 @@ export const Compass = ({fixed, inWidget = false, entity}) => {
         }
 
         if (!fixed) {
-            lgs.camera.changed.addEventListener(updateRotation)
+            const tick = () => {
+                updateRotation()
+                _animationFrame.current = window.requestAnimationFrame(tick)
+            }
+
             updateRotation()
+            _animationFrame.current = window.requestAnimationFrame(tick)
         }
 
         return () => {
@@ -153,18 +284,22 @@ export const Compass = ({fixed, inWidget = false, entity}) => {
                 el.removeEventListener('dblclick', resetToNorth)
                 el.removeEventListener('touchend', handleDoubleTap)
             }
-            lgs.camera.changed.removeEventListener(updateRotation)
+
+            if (_animationFrame.current !== null) {
+                window.cancelAnimationFrame(_animationFrame.current)
+                _animationFrame.current = null
+            }
         }
-    }, [fixed, activeConfig.mode, updateRotation])
+    }, [fixed, currentMode, updateRotation])
 
     // Post-render effect to maintain rotation during Valtio re-renders
     useEffect(() => {
+        _lastHeading.current = null
         if (!fixed) {
             updateRotation()
         }
-    })
+    }, [currentMode, fixed, updateRotation])
 
-    const currentMode = activeConfig?.mode
     if (!currentMode) {
         return null
     }
@@ -172,8 +307,9 @@ export const Compass = ({fixed, inWidget = false, entity}) => {
     return (
         <div
             className={classNames('lgs-compass', {
-                'mode-full':  currentMode.toString() === COMPASS_FULL.toString(),
-                'mode-light': currentMode.toString() === COMPASS_LIGHT.toString(),
+                'mode-full':      currentMode.toString() === COMPASS_FULL.toString(),
+                'mode-light':     currentMode.toString() === COMPASS_LIGHT.toString(),
+                'mode-wind-rose': currentMode.toString() === COMPASS_WIND_ROSE.toString(),
             })}
             ref={_compass}
             style={dynamicVars}
@@ -183,6 +319,9 @@ export const Compass = ({fixed, inWidget = false, entity}) => {
             )}
             {currentMode.toString() === COMPASS_LIGHT.toString() && (
                 <CompassLight ref={_rotatingPart}/>
+            )}
+            {currentMode.toString() === COMPASS_WIND_ROSE.toString() && (
+                <CompassWindRose ref={_rotatingPart}/>
             )}
         </div>
     )

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-03-09
+ * Last modified: 2026-03-09
  *
  *
  * Copyright © 2026 LGS1920
@@ -28,9 +28,12 @@ export const FocusButton = (props) => {
     const snap = useSnapshot(editorStore)
 
     const focusOnJourney = async () => {
+        if (lgs.stores?.ui?.mainUI?.rotate?.running) {
+            await __.ui.cameraManager.stopRotate()
+        }
         if (!snap.journey.visible) {
-            editorStore.journey.visible = visibility
-            lgs.theJourney.updateVisibility(visibility)
+            editorStore.journey.visible = true
+            lgs.theJourney.updateVisibility(true)
             await Utils.updateJourney(UPDATE_JOURNEY_SILENTLY)
         }
         lgs.theJourney.focus({
@@ -42,7 +45,7 @@ export const FocusButton = (props) => {
     return (
         <>
             <SlTooltip hoist placement={placement} content={'Reset the Focus'}>
-                <SlButton size={'small'} className={'square-button'} id={'focus-on-current-journey'}
+                <SlButton size={'small'} className="square-button" id={'focus-on-current-journey'}
                           onClick={focusOnJourney}>
                     <SlIcon slot="prefix" library="fa" name={FA2SL.set(faCrosshairsSimple)}/>
                 </SlButton>

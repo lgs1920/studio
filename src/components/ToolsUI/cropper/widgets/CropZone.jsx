@@ -7,23 +7,22 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-04-29
+ * Last modified: 2026-04-29
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { VideoMessage }                          from '@Components/MainUI/video/VideoMessage'
-import { VIDEO_CROP_ZONE, VIDEO_WIDGETS_BOARD } from '@Core/constants'
-import React, { useCallback, useEffect, useRef } from 'react'
+import { VIDEO_CROP_ZONE }                from '@Core/constants'
+import { useCallback, useEffect, useRef } from 'react'
 import { useSnapshot }                           from 'valtio'
 import { CropZoneInfo }                          from './CropZoneInfo'
 
 /**
  * CropZone component for rendering the crop zone content with imperative API.
  */
-export const CropZone = ({onDoubleClick, infoComponent, infoPosition, overlay, children, context}) => {
+export const CropZone = ({onDoubleClick, infoComponent, infoPosition, children, context}) => {
     const _cropZone = useRef(null)
     const $video = lgs.stores.ui.video
     const video = useSnapshot($video)
@@ -33,11 +32,10 @@ export const CropZone = ({onDoubleClick, infoComponent, infoPosition, overlay, c
     }, [])
 
     useEffect(() => {
-        return async () => {
-            const config = await __.ui.widgetManager.getWidgetConfig(context.id)
-            await __.ui.widgetManager.saveWidgetPosition(context.id, config)
+        return () => {
+            void __.ui.widgetManager.syncCropDimensionsFromElement(context.id, true, 'unmount')
         }
-    }, [])
+    }, [context.id])
 
     return (
         <>
@@ -48,18 +46,17 @@ export const CropZone = ({onDoubleClick, infoComponent, infoPosition, overlay, c
                 onContextMenu={handleContextMenu}
             >
                 {infoPosition && (
-                    <div className="crop-info lgs-one-line-card on-map small">
+                    <div className="crop-info lgs-one-line-card wa-theme-lgs1920-on-map small">
                         <CropZoneInfo id={VIDEO_CROP_ZONE}/>
                     </div>
                 )}
                 {infoComponent && (
-                    <div className="crop-info-custom lgs-one-line-card on-map small">
+                    <div className="crop-info-custom lgs-one-line-card wa-theme-lgs1920-on-map small">
                         {infoComponent}
                     </div>
                 )}
                 {children}
             </div>
-            {video.step === 0 && <VideoMessage>{'Video settings'}</VideoMessage>}
         </>
 
     )

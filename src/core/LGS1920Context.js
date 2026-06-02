@@ -7,23 +7,27 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-28
- * Last modified: 2026-02-28
+ * Created on: 2026-04-01
+ * Last modified: 2026-04-01
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
+import { CacheManager }        from '@Core/cache/CacheManager'
 import {
-    APP_KEY, CONFIGURATION, CURRENT_JOURNEY, CURRENT_STORE, CURRENT_TRACK, GLOBAL_PARENT, JOURNEYS_STORE, ORIGIN_STORE,
-    platforms, POIS_STORE, SERVERS, SETTINGS_STORE, VAULT_STORE, WIDGETS_STORE,
+    APP_KEY, CONFIGURATION, CURRENT_JOURNEY, CURRENT_STORE, CURRENT_TRACK, GLOBAL_PARENT, JOURNEY_GROUPS_STORE, JOURNEYS_STORE, MONTH,
+    ORIGIN_STORE, platforms, POIS_STORE, SERVERS, SETTINGS_STORE, VAULT_STORE, WIDGETS_STORE,
 }                              from '@Core/constants'
 import { StoresManager }       from '@Core/stores/StoresManager'
+import { installAppShortcuts } from '@Core/events/appShortcuts'
+import { ShortcutManager }     from '@Core/events/ShortcutManager'
 import { AppToolsManager }     from '@Core/ui/AppToolsManager'
 import { AppUpdateManager }    from '@Core/ui/AppUpdateManager'
 import { ContextMenu }         from '@Core/ui/context-menu/ContextMenu'
 import { DeviceManager }       from '@Core/ui/DeviceManager'
 import { Geocoder }            from '@Core/ui/Geocoder'
+import { JourneyGroupManager }  from '@Core/ui/JourneyGroupManager'
 import { MenuManager }         from '@Core/ui/MenuManager'
 import { POIManager }          from '@Core/ui/POIManager'
 import { ScreenMediaRecorder } from '@Core/ui/screen-media-recorder/recorder/ScreenMediaRecorder'
@@ -45,7 +49,9 @@ import { JourneyEditor }       from './ui/JourneyEditor'
 import { PanelManager }        from './ui/panels/PanelManager'
 import { Profiler }            from './ui/Profiler'
 import { SceneManager }        from './ui/SceneManager'
-import { Wanderer }            from './ui/Wanderer'
+import { FlythroughRunner }    from './ui/FlythroughRunner'
+import { FlythroughMode }      from './ui/flythrough/FlythroughMode'
+import { FlythroughVideoSync } from './ui/flythrough/FlythroughVideoSync'
 
 export class LGS1920Context {
     /** @type {Proxy} */
@@ -54,10 +60,6 @@ export class LGS1920Context {
     #theJourneyEditorProxy
     /** @type {Proxy} */
     #editorSettingsProxy
-    /** @type {Proxy} */
-    #cameraProxy
-    /** @type {Proxy} */
-    #ui
     eventHandler = new MouseEventHandler()
     #viewer
     #lang
@@ -210,14 +212,14 @@ export class LGS1920Context {
             lgs1920:  new LocalDB({
                                       name:             `${APP_KEY}${dbPrefix}`,
                                       stores:  [
-                                          JOURNEYS_STORE, CURRENT_STORE, ORIGIN_STORE, POIS_STORE,
+                                          JOURNEYS_STORE, JOURNEY_GROUPS_STORE, CURRENT_STORE, ORIGIN_STORE, POIS_STORE,
                                           {
                                               name:    WIDGETS_STORE,
                                               indexes: [{name: 'group', keyPath: 'data.group'}],
                                           },
                                       ],
                                       manageTransients: false,
-                                      version: 21, // integer
+                                      version: 22, // integer
                                   }),
             settings: new LocalDB({
                                       name:    `settings-${APP_KEY}${dbPrefix}`,
@@ -374,12 +376,23 @@ export class LGS1920Context {
 
     initManagers = async () => {
 
+        __.app.cesiumCache = new CacheManager({
+                                                  cacheName: 'cesium-ion-assets',
+                                                  maxQuota:  500 * 1024 * 1024,
+                                                  ttl:       MONTH,
+                                              })
+
+        //startCacheMonitoring()
+
         __.ui.profiler = new Profiler(this)
         __.ui.editor = {
             journey: new JourneyEditor(),
         }
 
-        __.ui.wanderer = new Wanderer()
+        __.ui.flythroughRunner = new FlythroughRunner()
+        __.ui.flythrough = new FlythroughMode()
+        __.ui.flythroughVideoSync = new FlythroughVideoSync()
+        __.ui.journeyGroupManager = new JourneyGroupManager()
         __.ui.cameraManager = new CameraManager()
         __.ui.drawerManager = new PanelManager()
         __.ui.sceneManager = new SceneManager()
@@ -390,6 +403,11 @@ export class LGS1920Context {
         __.ui.poiManager = new POIManager()
         __.ui.geocoder = new Geocoder()
         __.ui.contextMenu = new ContextMenu()
+        __.ui.shortcutManager = new ShortcutManager()
+        __.ui.addShortcut = (...args) => __.ui.shortcutManager.addShortcut(...args)
+        __.ui.removeShortcut = (...args) => __.ui.shortcutManager.removeShortcut(...args)
+        __.addShortcut = __.ui.addShortcut
+        __.ui.appShortcuts = installAppShortcuts(__.ui.shortcutManager)
 
         __.tools = new AppToolsManager() // TODO use ui.tools instead of ui.ui
         __.device = new DeviceManager()

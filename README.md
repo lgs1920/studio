@@ -1,252 +1,169 @@
 # LGS1920 Studio
 
-## Introduction
+LGS1920 Studio is a web-based geospatial editor built to load, inspect, edit, and present journeys, tracks, and points
+of interest on top of a Cesium scene. The application is centered on local-first editing, rich camera workflows, and
+media capture for map storytelling.
 
-LGS1920 Studio is a powerful web-based geospatial application for creating, managing, and visualizing geographical
-journeys, tracks, and points of interest. Built with modern web technologies, it provides a feature-rich environment for
-working with geographical data including 3D visualization powered by Cesium.
+## Current Scope
 
-## Project Phases
+The repository already contains the main product surface used by the studio:
 
-### Phase 1: Core Platform (Current)
+- Journey, track, and POI management
+- Journey group management
+- GeoJSON, KML, and GPX import
+- Cesium-based 2D / 3D / Columbus scene navigation
+- Journey and POI focus workflows
+- Live orbit rotation and panorama controls
+- Camera interaction hints and an exportable shortcuts reference panel for app, map, and widget controls
+- Elevation-aware metrics and profile widgets
+- Widget rendering, placement, ordering, reduction, locking, and export-aware capture
+- Geocoding tools and coordinate utilities
+- Video recording and image snapshot workflows
+- IndexedDB persistence for editor state and loaded content
+- PWA support and offline-friendly caching
 
-The current implementation provides a robust foundation for geographical journey mapping and visualization, including:
+## Main Features
 
-- Interactive 3D visualization of geographical data
-- Journey and track management
-- POI (Points of Interest) system with customizable styling
-- Elevation data integration from multiple sources
-- Import/export capabilities for standard formats
-- Local data persistence
+### Journey Editing
 
-### Phase 2: Journey Video Creation (Upcoming)
+- Load and manage multiple journeys at once
+- Organize journeys into reusable groups from the Journey Groups drawer
+- Edit journey metadata, activity, track styling, visibility, and POI visibility
+- Handle start / stop flags and parented POIs
+- Tune journey statistics cleaning through activity-aware thresholds persisted with each journey
+- Style tracks with presets, underlay, dash patterns, bicolor dashes, far-distance fallback lines, and locator markers
+- Persist journey camera state and orbit settings
 
-The second phase will expand the platform's capabilities with video generation features:
+### Scene and Camera
 
-- Automated journey fly-through video creation
-- Customizable camera paths and angles
-- Track animation with configurable timing and speed
-- Video export in standard formats (MP4, WebM)
-- POI highlighting and focus points in videos
-- Narration and text overlay options
-- Custom transition effects between POIs and segments
+- Cesium-powered globe and map rendering
+- Focus on journeys, tracks, POIs, or arbitrary coordinates
+- Continuous orbit rotation with live speed and direction controls
+- Panorama mode with live height, pitch, speed, and direction controls
+- Camera movement feedback with lock-aware on-map display
+- Compass, scene mode switching, and camera targeting helpers
 
-## Key Features
+### Metrics and Visualization
 
-### Interactive Map Visualization
+- Distance, elevation, duration, speed, and slope metrics
+- Elevation profile and journey statistics widgets
+- Journey statistics can expose extrema on the map through temporary POI markers
+- Responsive date and time display for editors, POIs, and journey statistics
+- Text, credits, compass, and scene widget system with draggable, reducible, and lockable on-map controls
+- Export-aware widget rendering for recording and snapshots
 
-- 3D globe visualization powered by Cesium
-- Multiple base maps and terrain providers
-- Customizable viewing angles and camera positions
-- Automatic rotation for dynamic viewing
+### Media Workflows
 
-### Journey Management
+- Video crop area and recording UI
+- Snapshot capture
+- Media composition through canvas overlays
+- Recorder pipeline based on Mediabunny
 
-- Create, edit, and visualize complete journeys
-- Organize multiple tracks in a single journey
-- Apply global styling and visualization options
-- Toggle visibility of journey components
+### Journey Reports
 
-### Track Editing
+- Export journeys as GPX or GeoJSON, including associated POIs while excluding generated start / end system markers
+- Export journeys as PDF reports or HTML reports packaged as ZIP archives
+- Include journey metadata, description, statistics, dates, elevation profile, POI tables, coordinates, and altitude data
+- Generate 2D overview maps and 3D Cesium map captures for the four cardinal orientations
+- Add POI badges, start / end markers, walking direction markers
 
-- Draw and edit track paths with precise control
-- Style tracks with custom colors, widths, and patterns
-- Calculate and display track metrics (distance, elevation gain/loss)
-- Automated terrain height sampling
+### App Platform
 
-### Points of Interest (POIs)
-
-- Add, edit, and manage POIs with rich information
-- Customizable POI styling with colors and icons
-- Expanded or collapsed information display
-- Distance-based placement validation
-- Grouping and categorization options
-
-### Elevation Data
-
-- Support for multiple elevation data sources
-- Custom elevation servers integration
-- File-based elevation information
-- Simulated elevation when real data is unavailable
-- Elevation profile visualization
-
-### Import/Export
-
-- Support for GeoJSON, KML, and GPX formats
-- Export complete journeys or individual tracks
-- Custom export options with styling preservation
-- Clipboard integration for quick sharing
-
-### Widgets & Data Visualization
-
-- Customizable dashboard widgets for journey statistics
-- Real-time journey metrics (distance, elevation, duration)
-- Interactive charts and graphs for track analysis
-- Configurable widget layout and display options
-
-### Video Creation & Sharing
-
-- Generate animated journey videos with custom camera paths
-- Export videos with POI highlights and transitions
-- Share journeys directly to social networks
-- Collaborative journey sharing with other users
-- Public and private journey visibility options
+- Local browser persistence with IndexedDB
+- Settings and widget configuration from YAML files in `public/`
+- Shared shortcut catalog displayed in the information drawer, with PDF export
+- PWA service worker and version-aware caching
 
 ## Technology Stack
 
-- **Frontend Language**: JavaScript
-- **Frontend Framework**: [React 19.1.0](https://react.dev/) - A JavaScript library for building user interfaces
-- **State Management**: [Valtio](https://valtio.pmnd.rs) - A proxy-based state management tool for React
-- **3D Visualization**: [Cesium.js](https://cesium.com/) - The WebGL-based globe and map engine
-- **Canvas Rendering**: [Konva](https://konvajs.org/) - HTML5 Canvas JavaScript framework for drawings and animations
-- **UI Components**: [Shoelace](https://shoelace.style/) - A collection of web components used for the UI
-- **Geospatial Processing**: [Turf.js](https://turfjs.org/) - Advanced geospatial analysis for browsers and Node.js
-- **Data Storage**: IndexedDB for local storage with structured schema
-- **Build Tool**: [Vite](https://vitejs.dev/) - Next generation frontend tooling
-- **Icons**: [FontAwesome](https://fontawesome.com/) - The iconic SVG, font, and CSS toolkit
-- **Charts Library**: [ECharts](https://echarts.apache.org/en/index.html) - A powerful, interactive charting library
-- **JavaScript Runtime**: [Bun](https://bun.sh/) - A fast all-in-one JavaScript runtime
+This README only highlights the main runtime pieces. The complete dependency inventory lives in
+[README_DEPENDENCIES.md](README_DEPENDENCIES.md).
 
-## Architecture
+- **Runtime**: Bun
+- **Frontend**: React
+- **State management**: Valtio
+- **Map / 3D engine**: Cesium
+- **UI libraries**: Web Awesome, Shoelace
+- **Charts**: ECharts
+- **Geospatial processing**: Turf, Mapbox GeoJSON helpers, `@tmcw/togeojson`
+- **Recording / export**: Mediabunny, html2canvas, canvg, jsPDF, SnapDOM
+- **Build tooling**: Vite, `@vitejs/plugin-react`, `vite-plugin-cesium`, `vite-plugin-pwa`
+- **Tests**: Vitest, Testing Library React
 
-The application follows a modular architecture with several key components:
+## Project Layout
 
-### Core Components
-
-- **Journey**: The main container for geographical data, containing tracks and POIs
-- **Track**: Represents a path or route with styling and metadata
-- **POI (Point of Interest)**: Markers on the map with additional information
-- **Widgets**: Customizable dashboard components (
-- **Event Management**: Custom event system for handling mouse and touch interactions
-- **Store Management**: Reactive state management using Valtio
-
-### Utility Modules
-
-- **CesiumUtils**: Helper functions for Cesium integration
-- **TrackUtils**: Operations on tracks such as drawing, focusing, and calculating metrics
-- **POIUtils**: Functions for POI visualization and management
-- **SceneUtils**: Scene management including camera control and visualization options
-- **ElevationServer**: Services for fetching and processing elevation data
-
-## User Interface
-
-- **Editor Panels**: Specialized panels for editing journeys, tracks, and POIs
-- **Settings Controls**: User interface for configuring application behavior
-- **Component Library**: Reusable UI components like toggles, buttons, and dialogs
-- **Visualization Tools**: Components for data visualization like elevation profiles
-
-## Usage Guide
-
-### Creating a Journey
-
-1. Import geographical data or create a new journey
-2. Add and customize tracks with styling options
-3. Place POIs at key locations along the journey
-4. Configure elevation data source if needed
-5. Save the journey to local storage or export
-
-### Editing Tracks
-
-Tracks can be edited using:
-
-- Style settings for color and thickness
-- Visibility toggles for showing/hiding
-- Start and stop flags for marking key points
-- Point-by-point editing for precise control
-
-### Managing POIs
-
-POIs can be:
-
-- Added at specific coordinates
-- Styled with custom colors and icons
-- Expanded to show detailed information
-- Associated with parent tracks or journeys
-- Toggled for visibility
+- `src/core/`: application core, stores, camera / scene managers, DB layer, widget manager, media recorder
+- `src/components/`: React UI components for editing, map controls, widgets, video tools, and panels
+- `src/Utils/`: Cesium and app utilities
+- `public/`: static configuration, widgets catalog, service worker, images, changelog, and runtime assets
+- `deployment/`: deployment-related documentation and helpers
 
 ## Development
 
 ### Prerequisites
 
-- Node.js 16+
-- npm or bun package manager
-- Modern web browser with WebGL support
+- Bun installed locally
+- A modern browser with WebGL support
 
-### Setup
+### Install
 
-1. Clone the repository
-2. Install dependencies with `bun install`
-3. Configure environment variables in `.env`
-4. Run the development server with `bun run dev`
+```bash
+bun install
+```
 
-## Later in Phase 2: Journey Video Creation
+### Run the Development Server
 
-The upcoming video creation module will allow users to transform their journeys into engaging videos:
+```bash
+bun run dev
+```
 
-### Video Generation Features
+Important: the Vite dev server is currently configured to run on `dev.lgs1920.fr:5173` in `vite.config.ts`. If your
+machine does not resolve that host locally, either:
 
-- **Camera Path Creation**: Design custom camera paths for journey fly-throughs
-- **POI Focus Points**: Automatically focus on POIs with configurable dwell times
-- **Speed Control**: Variable speed settings for different journey segments
-- **Transition Effects**: Smooth transitions between key points and segments
-- **Video Quality Settings**: Configure resolution, framerate, and quality
-- **Export Options**: Generate videos in standard formats for sharing
+1. add an entry in your hosts file for `dev.lgs1920.fr`
+2. or adapt the Vite server configuration for your environment
 
-### Video Customization
+### Other Scripts
 
-- **Text Overlays**: Add titles, captions, and descriptions
-- **Custom Styling**: Apply visual themes and effects to videos
-- **Narration**: Add audio narration or background music
-- **Highlight Points**: Emphasize important locations or features
-- **Timeline Editor**: Visual timeline for editing video segments
+```bash
+bun run build
+bun run preview
+bun run test
+bun run test:watch
+bun run lint
+bun run deploy
+```
 
-### Integration with Core Platform
+## Configuration Notes
 
-- Seamless transition from journey editing to video creation
-- Reuse of styling and visualization settings
-- Integrated preview of video segments
-- Direct export to common video platforms
+- Application settings are primarily defined in `public/settings.yaml`
+- Map, overlay, and terrain providers are documented in [README_PROVIDERS.md](README_PROVIDERS.md)
+- Widget registration is defined in `public/widgets.yaml`
+- PWA behavior is configured through `vite.config.ts` and `public/service-worker-pwa.js`
+- Static version metadata is stored in `public/version.json` and `public/build.json`
+
+## Dependencies
+
+The root dependency documentation has been synchronized with the current `package.json`:
+
+- Full package inventory: [README_DEPENDENCIES.md](README_DEPENDENCIES.md)
+- Build and runtime commands: [package.json](package.json)
 
 ## Contributing
 
-We welcome contributions to LGS1920 Studio! However, before contributing, please note:
+Contributions are welcome, but contributors must accept the Contributor License Agreement (CLA) before their changes can
+be merged.
 
-**All contributors must accept and sign the Contributor License Agreement (CLA)** before their contributions can be
-merged into the project. This agreement ensures that:
+- CLA text: [CONTRIBUTOR_LICENSE_AGREEMENT.md](CONTRIBUTOR_LICENSE_AGREEMENT.md)
 
-- You grant LGS1920 the necessary rights to use and distribute your contributions
-- You confirm that you have the right to submit the contribution
-- Your contributions remain available under the project's license terms
-
-To contribute:
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Submit a pull request
-5. Sign the CLA when prompted
-
-For questions about contributing or the CLA, please contact: contact@lgs1920.fr
+For contribution or CLA questions: `contact@lgs1920.fr`
 
 ## License
 
 This project is licensed under the **PolyForm Noncommercial License 1.0.0**.
 
-### Permitted Uses
+- Commercial use is not permitted without a separate agreement from LGS1920
+- See [LICENSE.md](LICENSE.md) for the full license text
+- See [LICENSES.md](LICENSES.md) for the repository licensing model summary
 
-- Personal research, experimentation, and testing
-- Non-commercial projects and hobby development
-- Educational and charitable purposes
-- Use by government and public safety organizations
-
-### Restrictions
-
-**Commercial use is not permitted** without obtaining a separate commercial license from LGS1920.
-
-For the complete license terms, see [LICENSE.md](LICENSE.md) or visit:
-https://polyformproject.org/licenses/noncommercial/1.0.0
-
----
-
-**Required Notice:**
-Copyright © 2025 LGS1920 (contact@lgs1920.fr)
+Copyright © 2026 LGS1920

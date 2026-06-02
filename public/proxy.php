@@ -1,396 +1,700 @@
 <?php
+declare(strict_types=1);
+
 /**
- * AJAX Cross Domain (PHP) Proxy 0.8
- *    by Iacovos Constantinou (http://www.iacons.net)
+ * LGS1920 backend proxy.
  *
- * Released under CC-GNU GPL
- *
- * ------------------------------------------------------------
- * ✨ Modified by Christian Denat (christian.denat@orange.fr)
- * ✨ Further modified to fix Server-Sent Events (SSE) response issues
- *
- * ➕ Enhancements:
- *   - Added support for file uploads via multipart/form-data
- *   - Uploaded files are moved to /tmp and passed to backend via `file` field
- *   - Added support for Server-Sent Events (SSE) for real-time event streaming
- *   - Detect SSE requests via `?sse=true` in addition to `Accept: text/event-stream`
- *   - Explicitly disable PHP output buffering for SSE with ob_implicit_flush
- *   - Configured cURL timeouts and connection reuse for SSE
- *   - Added initial SSE comment to keep connection alive
- *   - Added Transfer-Encoding: chunked for SSE
- *   - Enabled debug logging temporarily to diagnose issues
- *   - Removed heartbeat to keep proxy agnostic
+ * This proxy is intentionally narrow: it only forwards requests to the backend
+ * declared in servers.json and explicit external services required by the app.
+ * It is not a generic cross-domain proxy.
  */
 
-// Load allowed backend domains from config
-$config = json_decode(file_get_contents('./servers.json'), true);
-$ALLOWED_HOSTS = array(
-    $config['backend']['domain'],
-    '127.0.0.1',
-);
+const PROXY_DEBUG_ENV = 'LGS1920_PROXY_DEBUG';
+const CLOUD_SESSION_COOKIE = 'lgs_cloud_session';
 
-// Proxy settings
-define('CSAJAX_FILTERS', true);           // Enable domain filtering
-define('CSAJAX_FILTER_DOMAIN', true);     // Filter by domain only
-define('CSAJAX_DEBUG', true);             // Enable debug messages temporarily
+const REQUEST_HEADER_ALLOWLIST = [
+    'Accept',
+    'Accept-Language',
+    'Content-Type',
+    'X-Conversion-Id',
+    'X-Request-Progress',
+    'X-Progress-Interval',
+    'X-Requested-With',
+];
 
-$valid_requests = $ALLOWED_HOSTS;
+const RESPONSE_HEADER_ALLOWLIST = [
+    'Cache-Control',
+    'Content-Disposition',
+    'Content-Length',
+    'Content-Type',
+    'ETag',
+    'Expires',
+    'Last-Modified',
+    'Location',
+    'X-Accel-Buffering',
+    'X-Conversion-Id',
+];
 
-// Collect request headers
-$request_headers = array();
-$setContentType = true;
-$isMultiPart = false;
-$isEventStream = false;
-$originalContentType = null;
+const HOP_BY_HOP_HEADERS = [
+    'Connection',
+    'Keep-Alive',
+    'Proxy-Authenticate',
+    'Proxy-Authorization',
+    'TE',
+    'Trailer',
+    'Transfer-Encoding',
+    'Upgrade',
+];
 
-foreach ($_SERVER as $key => $value) {
-    if (preg_match('/Content.Type/i', $key)) {
-        $setContentType = false;
-        $originalContentType = $value; // Garder le Content-Type complet avec boundary
-        $content_type = explode(";", $value)[0];
-        $isMultiPart = preg_match('/multipart/i', $content_type);
+const EXTERNAL_PROXY_TARGETS = [
+    [
+        'host' => 'nominatim.openstreetmap.org',
+        'scheme' => 'https',
+        'port' => 443,
+    ],
+];
 
-        // Pour multipart, transmettre le Content-Type COMPLET avec la boundary
-        if ($isMultiPart) {
-            $request_headers[] = "Content-Type: " . $originalContentType;
-        } else {
-            $request_headers[] = "Content-Type: " . $content_type;
-        }
-        continue;
-    }
-    if (preg_match('/Accept/i', $key) && strpos($value, 'text/event-stream') !== false) {
-        $isEventStream = true;
-        $request_headers[] = "Accept: text/event-stream";
-        continue;
-    }
-    if (substr($key, 0, 5) == 'HTTP_') {
-        $headername = str_replace('_', ' ', substr($key, 5));
-        $headername = str_replace(' ', '-', ucwords(strtolower($headername)));
-        if (!in_array($headername, array('Host', 'X-Proxy-Url'))) {
-            $request_headers[] = "$headername: $value";
-        }
-    }
-}
+$config = load_config();
+apply_security_headers();
+apply_cors_headers($config);
 
-// Check for ?sse=true in csurl to enable SSE mode  
-if (isset($_REQUEST['csurl'])) {
-    $parsed_csurl = parse_url($_REQUEST['csurl']);
-    if (isset($parsed_csurl['query'])) {
-        parse_str($parsed_csurl['query'], $query_params);
-        if (isset($query_params['sse']) && $query_params['sse'] === 'true') {
-            $isEventStream = true;
-            $request_headers[] = "Accept: text/event-stream";
-        }
-    }
-    // Fallback pour la détection simple
-    if (!$isEventStream && strpos($_REQUEST['csurl'], 'sse=true') !== false) {
-        $isEventStream = true;
-        $request_headers[] = "Accept: text/event-stream";
-    }
-}
-
-if ($setContentType && !$isEventStream) {
-    $request_headers[] = "Content-Type: application/json";
-}
-
-// Determine request method and parameters
-$request_method = $_SERVER['REQUEST_METHOD'];
-if ($request_method == 'GET') {
-    $request_params = $_GET;
-} elseif ($request_method == 'POST') {
-    $request_params = $_POST;
-    if (empty($request_params)) {
-        $data = file_get_contents('php://input');
-        if (!empty($data)) {
-            $request_params = $data;
-        }
-    }
-} elseif ($request_method == 'PUT' || $request_method == 'DELETE') {
-    $request_params = file_get_contents('php://input');
-} else {
-    $request_params = null;
-}
-
-// Get target URL from `csurl` or `X-Proxy-URL`
-if (isset($_REQUEST['csurl'])) {
-    $request_url = urldecode($_REQUEST['csurl']);
-} elseif (isset($_SERVER['HTTP_X_PROXY_URL'])) {
-    $request_url = urldecode($_SERVER['HTTP_X_PROXY_URL']);
-} else {
-    header($_SERVER['SERVER_PROTOCOL'] . ' 404 Not Found');
-    header('Status: 404 Not Found');
-    $_SERVER['REDIRECT_STATUS'] = 404;
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    http_response_code(204);
+    header('Allow: GET, POST, PUT, PATCH, DELETE, OPTIONS');
     exit;
 }
 
-$p_request_url = parse_url($request_url);
-
-// Remove csurl from parameters
-if (is_array($request_params) && array_key_exists('csurl', $request_params)) {
-    unset($request_params['csurl']);
-}
-
-// Prevent proxying itself
-if (preg_match('!' . $_SERVER['SCRIPT_NAME'] . '!', $request_url) || empty($request_url) || count($p_request_url) == 1) {
-    csajax_debug_message('Invalid request - make sure that csurl variable is not empty');
-    exit;
-}
-
-// Validate domain
-if (CSAJAX_FILTERS) {
-    $parsed = $p_request_url;
-    if (CSAJAX_FILTER_DOMAIN) {
-        if (!in_array($parsed['host'], $valid_requests)) {
-            csajax_debug_message('Invalid domain - ' . $parsed['host'] . ' is not included in valid request domains');
-            exit;
-        }
-    } else {
-        $check_url = (isset($parsed['scheme']) ? $parsed['scheme'] . '://' : '') .
-                     (isset($parsed['user']) ? $parsed['user'] . ($parsed['pass'] ? ':' . $parsed['pass'] : '') . '@' : '') .
-                     (isset($parsed['host']) ? $parsed['host'] : '') .
-                     (isset($parsed['port']) ? ':' . $parsed['port'] : '') .
-                     (isset($parsed['path']) ? $parsed['path'] : '');
-        if (!in_array($check_url, $valid_requests)) {
-            csajax_debug_message('Invalid domain - ' . $request_url . ' is not included in valid request domain');
-            exit;
-        }
-    }
-}
-
-// Append query string for GET requests
-if ($request_method == 'GET' && count($request_params) > 0 && (!array_key_exists('query', $p_request_url) || empty($p_request_url['query']))) {
-    $request_url .= '?' . http_build_query($request_params);
-}
-
-// Handle Server-Sent Events (SSE) BEFORE cURL setup
-if ($isEventStream) {
-    // Disable ALL output buffering immediately
-    while (ob_get_level()) {
-        ob_end_clean();
+try {
+    $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
+    if (!in_array($method, ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'], true)) {
+        send_error(405, 'Method not allowed.');
     }
 
-    // Set SSE headers immediately
-    header('Content-Type: text/event-stream');
-    header('Cache-Control: no-cache');
-    header('Connection: keep-alive');
-    header('X-Accel-Buffering: no'); // Disable Nginx buffering
-    header('Access-Control-Allow-Origin: *');
-    header('Access-Control-Allow-Credentials: true');
+    $targetUrl = resolve_target_url();
+    validate_target_url($targetUrl, $config);
+    ensure_curl_available();
 
-    // Headers anti-buffering serveur web
-    header('X-Proxy-Buffering: off');
-    header('Proxy-Buffering: off');
-    
-    // Pour Apache
-    if (function_exists('apache_setenv')) {
-        apache_setenv('no-gzip', '1');
-        apache_setenv('dont-vary', '1');
-    }
-    
-    // Forcer la taille de buffer à 0
-    if (ini_get('output_buffering')) {
-        ini_set('output_buffering', 'off');
+    $isEventStream = is_event_stream_request($targetUrl);
+    $requestHeaders = build_request_headers($isEventStream);
+
+    if ($method === 'GET') {
+        $targetUrl = append_passthrough_query($targetUrl);
     }
 
-    // Force immediate output
-    if (function_exists('fastcgi_finish_request')) {
-        fastcgi_finish_request();
-    }
-
-    // Send initial SSE comment
-    echo ": SSE proxy initialized\n\n";
-    flush();
-
-    // Configure for streaming
-    set_time_limit(0); // No time limit for SSE
-    ignore_user_abort(false); // Stop if client disconnects
-}
-
-// Initialize cURL
-$ch = curl_init($request_url);
-curl_setopt($ch, CURLOPT_HTTPHEADER, $request_headers);
-
-// Configuration différente selon le type de requête
-if ($isEventStream) {
-    // Pour SSE : pas de buffer, streaming direct
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, false); // Pas de buffer
-    curl_setopt($ch, CURLOPT_HEADER, false); // Pas de headers dans le body
-    curl_setopt($ch, CURLOPT_TIMEOUT, 0); // Pas de timeout
-    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 30);
-    curl_setopt($ch, CURLOPT_FORBID_REUSE, false);
-    curl_setopt($ch, CURLOPT_FRESH_CONNECT, false);
-    curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-
-    // Stream directement vers la sortie avec forçage du flush
-    curl_setopt($ch, CURLOPT_WRITEFUNCTION, function ($curl, $data) {
-        echo $data;
-        
-        // FORCER le flush immédiat - CRITIQUE
-        if (ob_get_level()) {
-            ob_flush();
-        }
-        flush();
-        
-        // Pour certains serveurs web
-        if (function_exists('fastcgi_finish_request')) {
-            fastcgi_finish_request();
-        }
-        
-        // Vérifier déconnexion client
-        if (connection_aborted()) {
-            return 0;
-        }
-        
-        return strlen($data);
-    });
-} else {
-    // Pour requêtes normales (GET, POST) : comportement standard
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true); // Retourner le résultat
-    curl_setopt($ch, CURLOPT_HEADER, false); // NE PAS inclure les headers dans le body
-    curl_setopt($ch, CURLOPT_TIMEOUT, 30);
-    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
-}
-
-// Enable verbose logging for debugging
-if (CSAJAX_DEBUG) {
-    curl_setopt($ch, CURLOPT_VERBOSE, true);
-    $verbose_log = fopen('php://temp', 'w+');
-    curl_setopt($ch, CURLOPT_STDERR, $verbose_log);
-}
-
-// Handle non-SSE requests
-if (!$isEventStream) {
-    // Handle POST, PUT, DELETE
-    if ($request_method == 'POST') {
-        $has_files = false;
-        $post_data = null;
-
-        // Pour multipart/form-data, utiliser les données brutes
-        if ($isMultiPart) {
-            // Lire les données brutes du body pour préserver la structure multipart
-            $post_data = file_get_contents('php://input');
-
-            // Vérifier s'il y a des fichiers uploadés via PHP
-            foreach ($_FILES as $f => $file) {
-                if ($file['size'] > 0) {
-                    $has_files = true;
-                    break;
-                }
-            }
-
-            // Si pas de fichiers PHP mais des données multipart, utiliser les données brutes
-            if (!$has_files && !empty($post_data)) {
-                curl_setopt($ch, CURLOPT_POST, true);
-                curl_setopt($ch, CURLOPT_POSTFIELDS, $post_data);
-            } else if ($has_files) {
-                // Reconstruire le multipart avec les fichiers déplacés
-                $file_params = array();
-
-                // Traiter les fichiers uploadés
-                foreach ($_FILES as $f => $file) {
-                    if ($file['size'] > 0) {
-                        $tmp_name = $file['tmp_name'];
-                        $original_name = basename($file['name']);
-                        $target_path = sys_get_temp_dir() . '/' . uniqid('upload_', true) . '_' . $original_name;
-
-                        if (move_uploaded_file($tmp_name, $target_path)) {
-                            $file_params['file'] = new CURLFile($target_path, $file['type'], $original_name);
-                        }
-                    }
-                }
-
-                // Ajouter les autres champs POST
-                foreach ($_POST as $key => $value) {
-                    if ($key !== 'csurl') {
-                        $file_params[$key] = $value;
-                    }
-                }
-
-                curl_setopt($ch, CURLOPT_POST, true);
-                curl_setopt($ch, CURLOPT_POSTFIELDS, $file_params);
-
-                // Laisser cURL générer le Content-Type avec boundary
-                $request_headers = array_filter($request_headers, function($header) {
-                    return !preg_match('/^Content-Type:/i', $header);
-                });
-                curl_setopt($ch, CURLOPT_HTTPHEADER, $request_headers);
-            }
-        } else {
-            // Traitement normal pour les données non-multipart
-            $post_data = $_POST;
-            if (empty($post_data)) {
-                $post_data = file_get_contents('php://input');
-            }
-
-            if (is_array($post_data)) {
-                $post_data = http_build_query($post_data);
-            }
-
-            curl_setopt($ch, CURLOPT_POST, true);
-            curl_setopt($ch, CURLOPT_POSTFIELDS, $post_data);
-        }
-    } elseif ($request_method == 'PUT' || $request_method == 'DELETE') {
-        curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $request_method);
-        if (!empty($request_params)) {
-            curl_setopt($ch, CURLOPT_POSTFIELDS, $request_params);
-        }
-    }
-
-    // Execute the request
-    $response = curl_exec($ch);
-    $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    $content_type = curl_getinfo($ch, CURLINFO_CONTENT_TYPE);
-
-    // Log cURL verbose output if debugging
-    if (CSAJAX_DEBUG && isset($verbose_log)) {
-        rewind($verbose_log);
-        $verbose_output = stream_get_contents($verbose_log);
-        fclose($verbose_log);
-        error_log("cURL verbose: " . $verbose_output);
-    }
-
-    curl_close($ch);
-
-    // Handle cURL errors
-    if ($response === false) {
-        $error = curl_error($ch);
-        csajax_debug_message("cURL Error: $error");
-        header($_SERVER['SERVER_PROTOCOL'] . ' 500 Internal Server Error');
+    if ($isEventStream) {
+        stream_event_response($targetUrl, $requestHeaders);
         exit;
     }
 
-    // Set response headers and output
-    header("HTTP/1.1 $http_code");
-    if ($content_type) {
-        header("Content-Type: $content_type");
+    proxy_standard_response($targetUrl, $method, $requestHeaders);
+}
+catch (Throwable $error) {
+    $status = (int)($error->getCode() ?: 500);
+    if ($status < 400 || $status > 599) {
+        $status = 500;
     }
-    echo $response;
-} else {
-    // Execute SSE request
-    $result = curl_exec($ch);
-
-    // Log any cURL errors for SSE
-    if ($result === false) {
-        $error = curl_error($ch);
-        error_log("SSE cURL Error: $error");
-        echo "event: error\n";
-        echo "data: {\"error\": \"Connection failed: $error\"}\n\n";
-        flush();
-    }
-
-    curl_close($ch);
+    send_error($status, $error->getMessage());
 }
 
-/**
- * Debug message helper
- */
-function csajax_debug_message($message) {
-    if (CSAJAX_DEBUG) {
-        error_log("CSAJAX Debug: $message");
-        if (!headers_sent()) {
-            header('X-CSAJAX-Debug: ' . $message);
+function load_config(): array
+{
+    $content = false;
+    foreach ([__DIR__ . '/servers.json', dirname(__DIR__) . '/servers.json'] as $configPath) {
+        $content = @file_get_contents($configPath);
+        if ($content !== false) {
+            break;
         }
     }
+
+    if ($content === false) {
+        send_error(500, 'Proxy configuration not found.');
+    }
+
+    $config = json_decode($content, true);
+    if (!is_array($config) || !isset($config['backend'], $config['studio'])) {
+        send_error(500, 'Proxy configuration is invalid.');
+    }
+
+    foreach (['domain', 'protocol', 'port'] as $key) {
+        if (!isset($config['backend'][$key]) || $config['backend'][$key] === '') {
+            send_error(500, 'Backend proxy configuration is incomplete.');
+        }
+    }
+
+    return $config;
 }
-?>
+
+function resolve_target_url(): string
+{
+    $raw = $_GET['csurl'] ?? $_POST['csurl'] ?? $_SERVER['HTTP_X_PROXY_URL'] ?? '';
+    if (!is_string($raw) || trim($raw) === '') {
+        send_error(404, 'Missing target URL.');
+    }
+
+    if (preg_match('/[\r\n]/', $raw)) {
+        send_error(400, 'Invalid target URL.');
+    }
+
+    return trim($raw);
+}
+
+function validate_target_url(string $url, array $config): void
+{
+    $parts = parse_url($url);
+    if (!is_array($parts) || empty($parts['scheme']) || empty($parts['host'])) {
+        send_error(400, 'Invalid target URL.');
+    }
+
+    if (isset($parts['user']) || isset($parts['pass'])) {
+        send_error(400, 'Target URL credentials are not allowed.');
+    }
+
+    $scheme = strtolower((string)$parts['scheme']);
+    if (!in_array($scheme, ['http', 'https'], true)) {
+        send_error(400, 'Target URL protocol is not allowed.');
+    }
+
+    $host = normalize_host((string)$parts['host']);
+    $port = isset($parts['port']) ? (int)$parts['port'] : default_port($scheme);
+
+    foreach (allowed_targets($config) as $allowed) {
+        if (
+            $host === $allowed['host']
+            && $scheme === $allowed['scheme']
+            && $port === $allowed['port']
+        ) {
+            return;
+        }
+    }
+
+    send_error(403, 'Target backend is not allowed.');
+}
+
+function allowed_targets(array $config): array
+{
+    $scheme = strtolower((string)$config['backend']['protocol']);
+    $port = (int)$config['backend']['port'];
+    $targets = [[
+        'host' => normalize_host((string)$config['backend']['domain']),
+        'scheme' => $scheme,
+        'port' => $port,
+    ]];
+
+    if (($config['platform'] ?? '') === 'development') {
+        $targets[] = ['host' => '127.0.0.1', 'scheme' => $scheme, 'port' => $port];
+        $targets[] = ['host' => 'localhost', 'scheme' => $scheme, 'port' => $port];
+    }
+
+    return array_merge($targets, EXTERNAL_PROXY_TARGETS);
+}
+
+function default_port(string $scheme): int
+{
+    return $scheme === 'https' ? 443 : 80;
+}
+
+function normalize_host(string $host): string
+{
+    return rtrim(strtolower($host), '.');
+}
+
+function append_passthrough_query(string $targetUrl): string
+{
+    $params = $_GET;
+    unset($params['csurl']);
+
+    if (count($params) === 0) {
+        return $targetUrl;
+    }
+
+    $separator = str_contains($targetUrl, '?') ? '&' : '?';
+    return $targetUrl . $separator . http_build_query($params);
+}
+
+function is_event_stream_request(string $targetUrl): bool
+{
+    $accept = $_SERVER['HTTP_ACCEPT'] ?? '';
+    if (is_string($accept) && str_contains(strtolower($accept), 'text/event-stream')) {
+        return true;
+    }
+
+    $parts = parse_url($targetUrl);
+    if (!is_array($parts) || empty($parts['query'])) {
+        return false;
+    }
+
+    parse_str((string)$parts['query'], $query);
+    return ($query['sse'] ?? '') === 'true';
+}
+
+function build_request_headers(bool $isEventStream): array
+{
+    $headers = [];
+    $allowlist = array_flip(REQUEST_HEADER_ALLOWLIST);
+    $hopByHop = array_flip(HOP_BY_HOP_HEADERS);
+
+    foreach ($_SERVER as $key => $value) {
+        if (!is_string($value)) {
+            continue;
+        }
+
+        if ($key === 'CONTENT_TYPE') {
+            add_request_header($headers, 'Content-Type', $value, $allowlist, $hopByHop);
+            continue;
+        }
+
+        if (!str_starts_with($key, 'HTTP_')) {
+            continue;
+        }
+
+        $name = canonical_header_name(substr($key, 5));
+        add_request_header($headers, $name, $value, $allowlist, $hopByHop);
+    }
+
+    $cookie = filtered_cookie_header();
+    if ($cookie !== '') {
+        $headers[] = 'Cookie: ' . $cookie;
+    }
+
+    if ($isEventStream) {
+        replace_header($headers, 'Accept', 'text/event-stream');
+    }
+
+    return array_values(array_unique($headers));
+}
+
+function add_request_header(array &$headers, string $name, string $value, array $allowlist, array $hopByHop): void
+{
+    if (!isset($allowlist[$name]) || isset($hopByHop[$name])) {
+        return;
+    }
+
+    if (!is_safe_header_value($value)) {
+        send_error(400, 'Invalid request header.');
+    }
+
+    $headers[] = $name . ': ' . $value;
+}
+
+function replace_header(array &$headers, string $name, string $value): void
+{
+    $prefix = strtolower($name) . ':';
+    $headers = array_values(array_filter($headers, static function (string $header) use ($prefix): bool {
+        return !str_starts_with(strtolower($header), $prefix);
+    }));
+    $headers[] = $name . ': ' . $value;
+}
+
+function canonical_header_name(string $serverKey): string
+{
+    return implode('-', array_map(
+        static fn(string $part): string => ucfirst(strtolower($part)),
+        explode('_', $serverKey)
+    ));
+}
+
+function is_safe_header_value(string $value): bool
+{
+    return !preg_match('/[\r\n]/', $value);
+}
+
+function filtered_cookie_header(): string
+{
+    $raw = $_SERVER['HTTP_COOKIE'] ?? '';
+    if (!is_string($raw) || $raw === '' || !is_safe_header_value($raw)) {
+        return '';
+    }
+
+    $cookies = [];
+    foreach (explode(';', $raw) as $cookie) {
+        $cookie = trim($cookie);
+        if (str_starts_with($cookie, CLOUD_SESSION_COOKIE . '=')) {
+            $cookies[] = $cookie;
+        }
+    }
+
+    return implode('; ', $cookies);
+}
+
+function proxy_standard_response(string $targetUrl, string $method, array $requestHeaders): void
+{
+    $responseHeaders = [];
+    $ch = create_curl_handle($targetUrl, $requestHeaders, $responseHeaders);
+    configure_request_body($ch, $method, $requestHeaders);
+
+    $response = curl_exec($ch);
+    $httpCode = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $curlError = curl_error($ch);
+    curl_close($ch);
+
+    if ($response === false) {
+        log_debug('cURL error: ' . $curlError);
+        send_error(502, 'Backend request failed.');
+    }
+
+    http_response_code($httpCode >= 100 ? $httpCode : 502);
+    emit_response_headers($responseHeaders);
+    echo $response;
+}
+
+function create_curl_handle(string $targetUrl, array $requestHeaders, array &$responseHeaders)
+{
+    $ch = curl_init($targetUrl);
+    if ($ch === false) {
+        send_error(500, 'Unable to initialize backend request.');
+    }
+
+    curl_setopt_array($ch, [
+        CURLOPT_CONNECTTIMEOUT => 5,
+        CURLOPT_FAILONERROR => false,
+        CURLOPT_FOLLOWLOCATION => false,
+        CURLOPT_HEADER => false,
+        CURLOPT_HTTPHEADER => $requestHeaders,
+        CURLOPT_NOSIGNAL => true,
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_TIMEOUT => 30,
+        CURLOPT_USERAGENT => 'LGS1920 Studio (contact@lgs1920.fr)',
+    ]);
+
+    set_curl_protocols($ch);
+
+    curl_setopt($ch, CURLOPT_HEADERFUNCTION, static function ($curl, string $headerLine) use (&$responseHeaders): int {
+        $length = strlen($headerLine);
+        $headerLine = trim($headerLine);
+
+        if ($headerLine === '' || !str_contains($headerLine, ':')) {
+            return $length;
+        }
+
+        [$name, $value] = array_map('trim', explode(':', $headerLine, 2));
+        $name = canonical_response_header_name($name);
+
+        if (is_allowed_response_header($name, $value)) {
+            $responseHeaders[$name] = $value;
+        }
+
+        return $length;
+    });
+
+    return $ch;
+}
+
+function configure_request_body($ch, string $method, array $requestHeaders): void
+{
+    if ($method === 'GET') {
+        return;
+    }
+
+    if ($method === 'POST') {
+        curl_setopt($ch, CURLOPT_POST, true);
+    }
+    else {
+        curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $method);
+    }
+
+    if (is_multipart_request() && has_uploaded_files()) {
+        $fields = build_multipart_fields();
+        remove_content_type_header($requestHeaders);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, $requestHeaders);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $fields);
+        return;
+    }
+
+    $body = file_get_contents('php://input');
+    if ($body !== false && $body !== '') {
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $body);
+    }
+}
+
+function is_multipart_request(): bool
+{
+    $contentType = $_SERVER['CONTENT_TYPE'] ?? '';
+    return is_string($contentType) && str_contains(strtolower($contentType), 'multipart/form-data');
+}
+
+function has_uploaded_files(): bool
+{
+    foreach ($_FILES as $file) {
+        if (is_uploaded_file_entry($file)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+function is_uploaded_file_entry(array $file): bool
+{
+    if (isset($file['tmp_name']) && is_string($file['tmp_name'])) {
+        return ($file['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_OK
+            && is_uploaded_file($file['tmp_name']);
+    }
+
+    if (isset($file['tmp_name']) && is_array($file['tmp_name'])) {
+        foreach ($file['tmp_name'] as $index => $tmpName) {
+            if (
+                is_string($tmpName)
+                && (($file['error'][$index] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_OK)
+                && is_uploaded_file($tmpName)
+            ) {
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
+function build_multipart_fields(): array
+{
+    $fields = [];
+
+    foreach ($_POST as $key => $value) {
+        if ($key !== 'csurl') {
+            $fields[$key] = $value;
+        }
+    }
+
+    foreach ($_FILES as $field => $file) {
+        add_uploaded_file_field($fields, (string)$field, $file);
+    }
+
+    return $fields;
+}
+
+function add_uploaded_file_field(array &$fields, string $field, array $file): void
+{
+    if (isset($file['tmp_name']) && is_string($file['tmp_name'])) {
+        if (($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK || !is_uploaded_file($file['tmp_name'])) {
+            return;
+        }
+
+        $fields[$field] = new CURLFile(
+            $file['tmp_name'],
+            safe_mime_type($file['type'] ?? ''),
+            basename((string)($file['name'] ?? 'upload'))
+        );
+        return;
+    }
+
+    if (!isset($file['tmp_name']) || !is_array($file['tmp_name'])) {
+        return;
+    }
+
+    foreach ($file['tmp_name'] as $index => $tmpName) {
+        if (
+            !is_string($tmpName)
+            || (($file['error'][$index] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK)
+            || !is_uploaded_file($tmpName)
+        ) {
+            continue;
+        }
+
+        $name = basename((string)($file['name'][$index] ?? 'upload'));
+        $type = safe_mime_type((string)($file['type'][$index] ?? ''));
+        $fields[$field . '[' . $index . ']'] = new CURLFile($tmpName, $type, $name);
+    }
+}
+
+function safe_mime_type(string $type): string
+{
+    return preg_match('/^[A-Za-z0-9][A-Za-z0-9.+-]*\/[A-Za-z0-9][A-Za-z0-9.+-]*$/', $type)
+        ? $type
+        : 'application/octet-stream';
+}
+
+function remove_content_type_header(array &$headers): void
+{
+    $headers = array_values(array_filter($headers, static function (string $header): bool {
+        return !str_starts_with(strtolower($header), 'content-type:');
+    }));
+}
+
+function stream_event_response(string $targetUrl, array $requestHeaders): void
+{
+    while (ob_get_level() > 0) {
+        @ob_end_flush();
+    }
+
+    @ini_set('zlib.output_compression', '0');
+    @ini_set('output_buffering', 'off');
+    @set_time_limit(0);
+    ignore_user_abort(false);
+
+    header('Content-Type: text/event-stream');
+    header('Cache-Control: no-cache, no-transform');
+    header('Connection: keep-alive');
+    header('X-Accel-Buffering: no');
+
+    echo ": SSE proxy initialized\n\n";
+    flush();
+
+    $responseHeaders = [];
+    $ch = create_curl_handle($targetUrl, $requestHeaders, $responseHeaders);
+    curl_setopt_array($ch, [
+        CURLOPT_CONNECTTIMEOUT => 10,
+        CURLOPT_CUSTOMREQUEST => 'GET',
+        CURLOPT_HEADER => false,
+        CURLOPT_RETURNTRANSFER => false,
+        CURLOPT_TIMEOUT => 0,
+        CURLOPT_WRITEFUNCTION => static function ($curl, string $data): int {
+            echo $data;
+            flush();
+
+            return connection_aborted() ? 0 : strlen($data);
+        },
+    ]);
+
+    if (defined('CURLOPT_TCP_KEEPALIVE')) {
+        curl_setopt($ch, CURLOPT_TCP_KEEPALIVE, 1);
+    }
+
+    $result = curl_exec($ch);
+    $curlError = curl_error($ch);
+    curl_close($ch);
+
+    if ($result === false && !connection_aborted()) {
+        log_debug('SSE cURL error: ' . $curlError);
+        echo "event: error\n";
+        echo 'data: {"error":"Backend stream failed."}' . "\n\n";
+        flush();
+    }
+}
+
+function set_curl_protocols($ch): void
+{
+    $protocols = CURLPROTO_HTTP | CURLPROTO_HTTPS;
+
+    if (defined('CURLOPT_PROTOCOLS')) {
+        curl_setopt($ch, CURLOPT_PROTOCOLS, $protocols);
+    }
+
+    if (defined('CURLOPT_REDIR_PROTOCOLS')) {
+        curl_setopt($ch, CURLOPT_REDIR_PROTOCOLS, $protocols);
+    }
+}
+
+function ensure_curl_available(): void
+{
+    if (!function_exists('curl_init')) {
+        send_error(500, 'The PHP cURL extension is required by the proxy.');
+    }
+}
+
+function emit_response_headers(array $headers): void
+{
+    foreach ($headers as $name => $value) {
+        if ($name === 'Set-Cookie') {
+            header($name . ': ' . $value, false);
+            continue;
+        }
+
+        header($name . ': ' . $value);
+    }
+}
+
+function canonical_response_header_name(string $name): string
+{
+    return implode('-', array_map(
+        static fn(string $part): string => ucfirst(strtolower($part)),
+        explode('-', $name)
+    ));
+}
+
+function is_allowed_response_header(string $name, string $value): bool
+{
+    if (!is_safe_header_value($value)) {
+        return false;
+    }
+
+    if ($name === 'Set-Cookie') {
+        return str_starts_with($value, CLOUD_SESSION_COOKIE . '=');
+    }
+
+    return in_array($name, RESPONSE_HEADER_ALLOWLIST, true)
+        && !in_array($name, HOP_BY_HOP_HEADERS, true);
+}
+
+function apply_security_headers(): void
+{
+    header('X-Content-Type-Options: nosniff');
+    header('Referrer-Policy: same-origin');
+}
+
+function apply_cors_headers(array $config): void
+{
+    $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
+    if (!is_string($origin) || $origin === '' || !is_allowed_origin($origin, $config)) {
+        return;
+    }
+
+    header('Access-Control-Allow-Origin: ' . $origin);
+    header('Access-Control-Allow-Credentials: true');
+    header('Access-Control-Allow-Methods: GET, POST, PUT, PATCH, DELETE, OPTIONS');
+    header('Access-Control-Allow-Headers: Content-Type, Accept, X-Conversion-Id, X-Request-Progress, X-Progress-Interval, X-Requested-With');
+    header('Access-Control-Expose-Headers: Content-Disposition, X-Conversion-Id');
+    header('Vary: Origin', false);
+}
+
+function is_allowed_origin(string $origin, array $config): bool
+{
+    $allowed = [
+        origin_from_config($config['studio'] ?? []),
+    ];
+
+    if (($config['platform'] ?? '') === 'development') {
+        $allowed[] = 'http://localhost:5173';
+        $allowed[] = 'http://dev.lgs1920.fr:5173';
+        $allowed[] = 'https://dev.lgs1920.fr';
+    }
+
+    return in_array(rtrim($origin, '/'), array_filter($allowed), true);
+}
+
+function origin_from_config(array $server): string
+{
+    if (empty($server['protocol']) || empty($server['domain'])) {
+        return '';
+    }
+
+    $port = isset($server['port']) && $server['port'] !== ''
+        ? ':' . (int)$server['port']
+        : '';
+
+    return strtolower((string)$server['protocol']) . '://' . normalize_host((string)$server['domain']) . $port;
+}
+
+function send_error(int $status, string $message): void
+{
+    http_response_code($status);
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode([
+        'success' => false,
+        'error' => proxy_debug_enabled() ? $message : public_error_message($status),
+    ], JSON_UNESCAPED_SLASHES);
+    exit;
+}
+
+function public_error_message(int $status): string
+{
+    return match (true) {
+        $status === 400 => 'Bad proxy request.',
+        $status === 403 => 'Proxy target is not allowed.',
+        $status === 404 => 'Proxy target is missing.',
+        $status === 405 => 'Proxy method is not allowed.',
+        $status >= 500 => 'Proxy request failed.',
+        default => 'Proxy error.',
+    };
+}
+
+function proxy_debug_enabled(): bool
+{
+    return getenv(PROXY_DEBUG_ENV) === 'true';
+}
+
+function log_debug(string $message): void
+{
+    if (proxy_debug_enabled()) {
+        error_log('[LGS1920 proxy] ' . $message);
+    }
+}

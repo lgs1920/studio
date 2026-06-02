@@ -7,16 +7,17 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-22
- * Last modified: 2026-02-22
+ * Created on: 2026-05-10
+ * Last modified: 2026-05-10
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { SlColorPicker, SlRange } from '@shoelace-style/shoelace/dist/react'
-import { colord }         from 'colord'
-import React, { useMemo, useCallback } from 'react'
+import { WaColorPicker, WaSlider }                        from '@web.awesome.me/webawesome-pro/dist/react'
+import { colord }                                         from 'colord'
+import { useCallback, useEffect, useMemo, useRef } from 'react'
+import { formatSliderPercent, sanitizeNumericControlValue } from './sliderUtils'
 
 /**
  * Standardized color and opacity control element.
@@ -29,6 +30,8 @@ export const ColorElement = ({
                                  getColor,
                                  updateValue,
                              }) => {
+    const sliderRef = useRef(null)
+    const opacityValue = part?.opacity
 
     /**
      * Resolves the color via parent logic.
@@ -45,11 +48,11 @@ export const ColorElement = ({
      * Extracts current opacity for the slider and for color updates.
      */
     const currentOpacity = useMemo(() => {
-        if (part?.opacity !== undefined && part?.opacity !== null) {
-            return part.opacity
+        if (opacityValue !== undefined && opacityValue !== null) {
+            return sanitizeNumericControlValue(opacityValue, colorObj.alpha(), {min: 0, max: 1})
         }
-        return colorObj.alpha()
-    }, [part?.opacity, colorObj])
+        return sanitizeNumericControlValue(colorObj.alpha(), 1, {min: 0, max: 1})
+    }, [opacityValue, colorObj])
 
     /**
      * Color for the picker (forced to alpha 1 for display consistency).
@@ -69,33 +72,52 @@ export const ColorElement = ({
         updateValue(`${path}.opacity`, currentOpacity)
     }, [path, updateValue, currentOpacity])
 
+    useEffect(() => {
+        if (sliderRef.current) {
+            sliderRef.current.value = currentOpacity
+        }
+
+        if (opacityValue !== undefined && opacityValue !== null && opacityValue !== currentOpacity) {
+            updateValue(`${path}.opacity`, currentOpacity)
+        }
+    }, [currentOpacity, opacityValue, path, updateValue])
+
     return (
-        <React.Fragment>
-            <div className="drawer-horizontal-line"><span>{label}</span></div>
+        <>
+            <div className="drawer-horizontal-line">
+                <span>{label}</span>
+            </div>
+
             <div className="drawer-horizontal-line three-columns">
                 <div className="drawer-horizontal-element">
-                    <SlColorPicker
-                        size="small"
+                    <WaColorPicker
+                        size="s"
                         swatches={swatches}
                         value={colorForPicker}
-                        onSlInput={handleColorInput}
+                        onInput={handleColorInput}
                     />
                 </div>
                 <div className="drawer-horizontal-element xlarge-element"></div>
                 <div className="drawer-horizontal-element xlarge-element">
-                    <SlRange
+                    <WaSlider
+                        ref={sliderRef}
+                        size="s"
                         label="Opacity"
                         min="0"
                         max="1"
                         step="0.05"
-                        align-right
-                        tooltip="top"
-                        tooltipFormatter={v => `${Math.floor(v * 100)}%`}
-                        value={currentOpacity}
-                        onSlInput={(e) => updateValue(`${path}.opacity`, parseFloat(e.target.value))}
+                        label-at-start
+                        placement="top"
+                        withTooltip
+                        valueFormatter={formatSliderPercent}
+                        defaultValue={currentOpacity}
+                        onInput={(e) => updateValue(
+                            `${path}.opacity`,
+                            sanitizeNumericControlValue(e.target.value, currentOpacity, {min: 0, max: 1}),
+                        )}
                     />
                 </div>
             </div>
-        </React.Fragment>
+        </>
     )
 }

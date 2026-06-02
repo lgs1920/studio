@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-05-10
+ * Last modified: 2026-05-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -18,20 +18,18 @@
 
 import {
     APP_STUDIO, BANNER_HIDE_DELAY, BANNER_HIDE_DELAY_INSTALL, BANNER_SHOW_DELAY, NAVIGATOR, OS_ICONS, SECOND,
-}                                                               from '@Core/constants'
-import { faHourglassHalf, faMobileArrowDown, faXmark, faCheck } from '@fortawesome/pro-regular-svg-icons'
-import androidInstructions                                      from '@Locales/en/pwa-instructions/android.md?raw'
-import chromeEdgeInstructions                                   from '@Locales/en/pwa-instructions/chrome-edge.md?raw'
-import firefoxInstructions                                      from '@Locales/en/pwa-instructions/firefox.md?raw'
-import iosInstructions                                          from '@Locales/en/pwa-instructions/ios.md?raw'
-import otherInstructions                                        from '@Locales/en/pwa-instructions/other.md?raw'
-import safariMacOSInstructions                                  from '@Locales/en/pwa-instructions/safari-macos.md?raw'
-import { SlButton, SlDialog, SlIcon, SlSpinner } from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                                                from '@Utils/FA2SL'
-import classNames                                               from 'classnames'
-import { useEffect, useState }                                  from 'react'
-import ReactMarkdown          from 'react-markdown'
-import { proxy, useSnapshot } from 'valtio'
+}                              from '@Core/constants'
+import androidInstructions     from '@Locales/en/pwa-instructions/android.md?raw'
+import chromeEdgeInstructions  from '@Locales/en/pwa-instructions/chrome-edge.md?raw'
+import firefoxInstructions     from '@Locales/en/pwa-instructions/firefox.md?raw'
+import iosInstructions         from '@Locales/en/pwa-instructions/ios.md?raw'
+import otherInstructions       from '@Locales/en/pwa-instructions/other.md?raw'
+import safariMacOSInstructions from '@Locales/en/pwa-instructions/safari-macos.md?raw'
+import { WaButton, WaDialog, WaIcon, WaSpinner } from '@web.awesome.me/webawesome-pro/dist/react'
+import classNames                                from 'classnames'
+import { useEffect, useState } from 'react'
+import ReactMarkdown           from 'react-markdown'
+import { proxy, useSnapshot }  from 'valtio'
 
 // Define the custom event name for consistency
 const CUSTOM_UPDATE_EVENT = 'lgs-update-available'
@@ -139,15 +137,14 @@ export const AppUpdate = ({mode = 'banner'}) => {
     }
 
     /**
-     * Applies the available PWA update and reloads the page.
+     * Applies the available PWA update.
      * @async
      */
     const handleApplyUpdate = async () => {
         setUpdateError(null)
         try {
-            // Trigger service worker update and force a page reload
+            // Trigger service worker update; AppUpdateManager reloads on controllerchange.
             await $updaterStore.applyUpdate()
-            window.location.reload()
         }
         catch (error) {
             // Display error if update fails
@@ -256,51 +253,47 @@ export const AppUpdate = ({mode = 'banner'}) => {
         return (
             <div className={classNames('lgs-install-banner',
                                        // Apply card styles only for standard banner mode
-                                       {'lgs-card on-map lgs-slide-in-from-top': isStandardBannerFlow},
+                                       {'lgs-card wa-theme-lgs1920-on-map lgs-slide-in-from-top': isStandardBannerFlow},
             )}>
                 <div className="lgs-install-banner-content">
-                    <div>
-                        <SlIcon library="fa" name={FA2SL.set(faMobileArrowDown)}/>
-                        <span>{contentText}</span>
-                    </div>
+                    <WaIcon name="mobile-arrow-down" variant="regular"/>
+                    <span>{contentText}</span>
                     <div className="buttons-bar">
                         {/* Dismiss Button (Install only, in standard banner flow) */}
                         {!isUpdate && isStandardBannerFlow && (
-                            <SlButton
-                                size="small"
+                            <WaButton
+                                size="s"
                                 variant="default"
                                 outline
                                 onClick={handleDismiss} // Permanent dismissal for install
                             >
-                                <SlIcon slot="prefix" size="small" library="fa" name={FA2SL.set(faXmark)}/>
+                                <WaIcon slot="start" name="xmark" variant="regular"/>
                                 {'Dismiss'}
-                            </SlButton>
+                            </WaButton>
                         )}
 
                         {/* Later/Close Button (only in standard banner flow) */}
                         {isStandardBannerFlow && (
-                            <SlButton
-                                size="small"
+                            <WaButton
+                                size="s"
                                 variant="default"
-                                outline
                                 onClick={() => setShowUnifiedBanner(false)}
                             >
-                                <SlIcon slot="prefix" size="small" library="fa"
-                                        name={FA2SL.set(isUpdate ? faXmark : faHourglassHalf)}/>
+                                <WaIcon slot="start" name={isUpdate ? 'xmark' : 'hourglass-half'} variant="regular"/>
                                 {updateError ? 'Close' : 'Later'}
-                            </SlButton>
+                            </WaButton>
                         )}
 
                         {/* Primary Action Button (Install or Update) */}
                         {!(isUpdate && updateError) && ( // Don't show update button if there's an update error
-                            <SlButton
-                                size="small"
+                            <WaButton
+                                size="s"
                                 onClick={handlePrimaryAction}
-                                variant="primary"
+                                variant="brand"
                             >
-                                <SlIcon slot="prefix" size="small" library="fa" name={FA2SL.set(faMobileArrowDown)}/>
+                                <WaIcon slot="start" name="mobile-arrow-down" variant="regular"/>
                                 {primaryActionText}
-                            </SlButton>
+                            </WaButton>
                         )}
                     </div>
                 </div>
@@ -312,18 +305,17 @@ export const AppUpdate = ({mode = 'banner'}) => {
      * Renders the Installing/Error Dialog.
      */
     const renderInstallingDialog = () => (
-        <SlDialog
+        <WaDialog
             open={showInstallingDialog}
             label="Installing LGS1920 Studio"
             noHeader className="app-installing-dialog"
-            // Prevents closing on overlay click
-            onSlRequestClose={(event) => event.detail.source === 'overlay' && event.preventDefault()}
         >
             <div className="installing-dialog signage-style" style={{textAlign: 'center'}}>
                 {installError ? (
                     // Display error or success state
                     <>
-                        <SlIcon library="fa" name={FA2SL.set(installError.includes('successful') ? faCheck : faXmark)}
+                        <WaIcon name={installError.includes('successful') ? 'check' : 'xmark'}
+                                variant="regular"
                                 style={{
                                     color:    installError.includes('successful') ? 'green' : 'red',
                                     fontSize: '2em',
@@ -336,38 +328,35 @@ export const AppUpdate = ({mode = 'banner'}) => {
                 ) : (
                      // Display spinner during installation
                      <>
-                         <SlSpinner style={{fontSize: '2em', '--track-width': '5px'}}/>
+                         <WaSpinner style={{fontSize: '2em', '--track-width': '5px'}}/>
                          <span>{`Installing ${APP_STUDIO} version ${lgs?.versions?.studio}... Please wait`}</span>
                      </>
                  )}
             </div>
-        </SlDialog>
+        </WaDialog>
     )
 
     /**
      * Renders the Instructions Dialog.
      */
     const renderInstructionsDialog = () => (
-        <SlDialog
+        <WaDialog
             open={showInstructionsDialog}
             onSlAfterHide={() => setShowInstructionsDialog(false)}
         >
             <div slot="label">
-                <SlIcon size="small" library="fa" name={FA2SL.set(OS_ICONS[__.device.os])}/>
-                &nbsp;
+                <WaIcon name={OS_ICONS[__.device.os][0]} family={OS_ICONS[__.device.os][1]} variant="regular"/>
                 <span>{`How to Install ${APP_STUDIO}`}</span>
             </div>
-            {/* Render browser-specific instructions from Markdown */}
             <ReactMarkdown>{browserInstructions}</ReactMarkdown>
-            <SlButton
+            <WaButton
                 slot="footer"
-                variant="primary"
+                variant="brand"
                 onClick={() => setShowInstructionsDialog(false)}
             >
-                <SlIcon slot="prefix" size="small" library="fa" name={FA2SL.set(faXmark)}/>
-                Close
-            </SlButton>
-        </SlDialog>
+                <WaIcon slot="start" name="xmark" variant="regular"/>{'Close'}
+            </WaButton>
+        </WaDialog>
     )
 
     // Render the unified action banner and dialogs

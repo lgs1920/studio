@@ -7,217 +7,449 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-22
- * Last modified: 2026-02-22
+ * Created on: 2026-05-10
+ * Last modified: 2026-05-10
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-/*******************************************************************************
- *
- * This file is part of the LGS1920/studio project.
- *
- * File: ProfileWidgetEditor.jsx
- *
- ******************************************************************************/
-
 import { LGSScrollbars }               from '@Components/MainUI/LGSScrollbars'
-import { BackgroundElement } from '@Components/MainUI/widgets/editor/elements/BackgroundElement'
-import { BorderElement }               from '@Components/MainUI/widgets/editor/elements/BorderElement'
-import { SlColorPicker, SlDivider, SlRange, SlSwitch, SlIconButton } from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                       from '@Utils/FA2SL'
-import { faArrowRotateLeft }           from '@fortawesome/pro-regular-svg-icons'
+import {
+    BackgroundElement,
+}                                                         from '@Components/MainUI/widgets/editor/elements/BackgroundElement'
+import {
+    BorderElement,
+}                                                         from '@Components/MainUI/widgets/editor/elements/BorderElement'
+import {
+    PaddingElement,
+} from '@Components/MainUI/widgets/editor/elements/PaddingElement'
+import {
+    ScaleSwitchElement,
+} from '@Components/MainUI/widgets/editor/elements/ScaleSwitchElement'
+import { formatSliderPercent }    from '@Components/MainUI/widgets/editor/elements/sliderUtils'
+import {
+    ensureFlythroughSettings,
+    normalizeFlythroughProfileInfo,
+}                                                         from '@Core/ui/flythrough/FlythroughProgressionStyle'
+import {
+    WaButton, WaCard, WaColorPicker, WaDivider, WaIcon, WaSlider, WaSwitch,
+}                                                         from '@web.awesome.me/webawesome-pro/dist/react'
 import { colord }                      from 'colord'
-import React, { useCallback, useMemo } from 'react'
+import { useCallback, useEffect, useMemo, useRef } from 'react'
 import { useSnapshot }                 from 'valtio'
 
+const PROFILE_WIDGET_SLIDERS = {
+    'mainAxis.thickness':   {
+        fallback: 1,
+        getValue: element => element.mainAxis?.thickness,
+        max:      10,
+        min:      0.5,
+        step:     0.5,
+    },
+    'mainAxis.opacity':     {
+        fallback: 0.8,
+        getValue: element => element.mainAxis?.opacity,
+        max:      1,
+        min:      0.1,
+        step:     0.05,
+    },
+    'secondAxis.thickness': {
+        fallback: 0.5,
+        getValue: element => element.secondAxis?.thickness,
+        max:      10,
+        min:      0,
+        step:     0.5,
+    },
+    'secondAxis.opacity':   {
+        fallback: 0.5,
+        getValue: element => element.secondAxis?.opacity,
+        max:      1,
+        min:      0.1,
+        step:     0.05,
+    },
+}
+
+/**
+ * Editor component for profile widget configuration.
+ * Manages axis visibility, grid styling, and visual elements.
+ * * @param {Object} props
+ * @param {string} props.entity - The entity key to edit in configuration.
+ */
 export const ProfileWidgetEditor = ({entity}) => {
     const $configuration = lgs.settings.widgets['profile-widget'].configuration
     const configuration = useSnapshot($configuration)
+    ensureFlythroughSettings()
+    const flythroughSettings = useSnapshot(lgs.settings.ui.flythrough)
+    const sliderRefs = useRef({})
 
+    const sanitizeSliderValue = useCallback((rawValue, fallback, options = {}) => {
+        const value = Array.isArray(rawValue) ? rawValue[0] : rawValue
+        const numericValue = Number(value)
+
+        if (!Number.isFinite(numericValue)) {
+            return fallback
+        }
+
+        const min = Number(options.min)
+        const max = Number(options.max)
+        let finalValue = numericValue
+
+        if (Number.isFinite(min)) {
+            finalValue = Math.max(min, finalValue)
+        }
+
+        if (Number.isFinite(max)) {
+            finalValue = Math.min(max, finalValue)
+        }
+
+        return finalValue
+    }, [])
+
+    /**
+     * Retrieves the current element configuration based on priority:
+     * Specific entity > User override > Default settings.
+     */
     const element = useMemo(() => {
         return configuration.elements?.[entity] ?? configuration.user ?? configuration.default
     }, [configuration, entity])
 
     const swatches = useMemo(() => lgs.settings.getSwatches.list.join(';'), [])
+    const flythroughProfileInfo = useMemo(
+        () => normalizeFlythroughProfileInfo(flythroughSettings.profileInfo),
+        [flythroughSettings.profileInfo],
+    )
+    const gradientFallbackColor = useMemo(() => {
+        const fallbackColor = __.ui.profiler?.prepareData()?.options?.[0]?.color ?? '#3b82f6'
+        return colord(fallbackColor).alpha(1).toRgbString()
+    }, [])
 
-    const getColor = useCallback((item, alpha = false) => {
+    /**
+     * Resolves color values, supporting CSS variables and opacity.
+     * @param {Object} item - Object containing color and opacity properties.
+     * @param {boolean} [alpha=false] - If true, returns RGBA with opacity.
+     * @returns {string}
+     */
+    const getColor = (item, alpha = false) => {
         if (!item) {
             return 'transparent'
         }
         let colorStr = item?.color ?? '#ffffff'
+
+        // Resolve custom CSS variables via global UI helper
         if (colorStr.startsWith('--')) {
             colorStr = __.ui.css.getCSSVariable(colorStr)
         }
+
         const c = colord(colorStr)
         return (alpha ? c.alpha(item.opacity ?? 1) : c).toRgbString()
-    }, [])
+    }
 
+    /**
+     * Updates a nested property in the Valtio proxy.
+     * Ensures path exists and sanitizes numeric inputs.
+     * * @param {string} path - Dot-separated path to the property.
+     * @param {*} value - New value to assign.
+     */
     const updateValue = useCallback((path, value) => {
+        if (typeof value === 'number' && Number.isNaN(value)) {
+            return
+        }
+
         if (!$configuration.elements) {
             $configuration.elements = {}
         }
 
+        // Initialize entity configuration if missing by cloning the current element
         if (!$configuration.elements[entity]) {
             $configuration.elements[entity] = JSON.parse(JSON.stringify(element))
         }
 
         const keys = path.split('.')
         let curr = $configuration.elements[entity]
+
+        // Traverse the object tree to find the target property
         for (let i = 0; i < keys.length - 1; i++) {
             if (!curr[keys[i]]) {
                 curr[keys[i]] = {}
             }
             curr = curr[keys[i]]
         }
+
         curr[keys[keys.length - 1]] = value
     }, [$configuration, element, entity])
+
+    const updateFlythroughProfileInfo = useCallback((updates) => {
+        const nextProfileInfo = normalizeFlythroughProfileInfo({
+                                                                   ...lgs.settings.ui.flythrough.profileInfo,
+                                                                   ...updates,
+                                                               })
+        lgs.settings.ui.flythrough.profileInfo = nextProfileInfo
+        if (lgs.stores.flythrough) {
+            lgs.stores.flythrough.profileInfo = nextProfileInfo
+        }
+        __.ui.profiler?.draw?.()
+    }, [])
+
+    const setSliderRef = useCallback((path) => {
+        return (node) => {
+            sliderRefs.current[path] = node
+        }
+    }, [])
+
+    const getProfileSliderValue = useCallback((path) => {
+        const config = PROFILE_WIDGET_SLIDERS[path]
+
+        if (!config) {
+            return 0
+        }
+
+        return sanitizeSliderValue(config.getValue(element), config.fallback, config)
+    }, [element, sanitizeSliderValue])
+
+    const handleProfileSliderInput = useCallback((path, rawValue) => {
+        const config = PROFILE_WIDGET_SLIDERS[path]
+
+        if (!config) {
+            return
+        }
+
+        updateValue(path, sanitizeSliderValue(rawValue, config.fallback, config))
+    }, [sanitizeSliderValue, updateValue])
+
+    useEffect(() => {
+        Object.entries(PROFILE_WIDGET_SLIDERS).forEach(([path, config]) => {
+            const rawValue = config.getValue(element)
+            const sanitizedValue = sanitizeSliderValue(rawValue, config.fallback, config)
+            const slider = sliderRefs.current[path]
+
+            if (slider) {
+                slider.value = sanitizedValue
+            }
+
+        })
+    }, [element, sanitizeSliderValue])
 
     if (!element) {
         return null
     }
 
     return (
-        <div className="lgs-widget-editor-controls-wrapper lgs-card">
-            <LGSScrollbars>
-                <div>
-                    {/* General elements */}
-                    <BackgroundElement element={element} swatches={swatches} getColor={getColor}
-                                       updateValue={updateValue}/>
-                    <SlDivider/>
-                    <BorderElement element={element} swatches={swatches} getColor={getColor} updateValue={updateValue}
-                                   showRadius={false}/>
-                    <SlDivider/>
+        <LGSScrollbars>
+            <WaCard className="lgs-widget-editor-controls-wrapper lgs-widget-editor-card" appearance="plain"
+                    orientation="vertical">
+                {/* Visual Base Elements */}
+                <BackgroundElement element={element} swatches={swatches} getColor={getColor}
+                                   updateValue={updateValue} sanitizeSliderValue={sanitizeSliderValue}/>
+                <WaDivider/>
+                <BorderElement element={element} swatches={swatches} getColor={getColor} updateValue={updateValue}
+                               showRadius={false} sanitizeSliderValue={sanitizeSliderValue}/>
+                <WaDivider/>
+                <PaddingElement element={element} updateValue={updateValue} fallback={8} moveableId={entity}/>
+                <WaDivider/>
 
-                    {/* Distance Section */}
-                    <div className="drawer-horizontal-line">
-                        <div className="drawer-horizontal-element xlarge-element">{'Distance:'}</div>
-                        <div className="drawer-horizontal-line three-columns">
-                            <div className="drawer-horizontal-element">
-                                {'Axis'}&nbsp;
-                                <SlSwitch size="x-small" checked={element.xAxis.main}
-                                          onSlInput={(e) => updateValue('xAxis.main', e.target.checked)}/>
-                            </div>
-                            <div className="drawer-horizontal-element">
-                                {'Grid'}&nbsp;
-                                <SlSwitch size="x-small" checked={element.xAxis.second}
-                                          onSlInput={(e) => updateValue('xAxis.second', e.target.checked)}/>
-                            </div>
-                            <div className="drawer-horizontal-element">
-                                {'Labels'}&nbsp;
-                                <SlSwitch size="x-small" checked={element.xAxis.labels}
-                                          onSlInput={(e) => updateValue('xAxis.labels', e.target.checked)}/>
-                            </div>
-                            <div className="drawer-horizontal-element">
-                                {'Units'}&nbsp;
-                                <SlSwitch size="x-small" checked={element.xAxis.units} disabled={!element.xAxis.labels}
-                                          onSlInput={(e) => updateValue('xAxis.units', e.target.checked)}/>
-                            </div>
-                        </div>
-                    </div>
+                {/* X-Axis (Distance) Settings */}
+                <div className="drawer-horizontal-element">{'Distance Axis'}</div>
+                <div className="profile-chart-switches">
+                    <WaSwitch size="xs"
+                              checked={element.xAxis?.main ?? false}
+                              label-at-start width-auto
+                              onInput={(e) => updateValue('xAxis.main', e.target.checked)}>
+                        {'Axis'}
+                    </WaSwitch>
 
-                    {/* Elevation Section */}
-                    <div className="drawer-horizontal-line">
-                        <div className="drawer-horizontal-element xlarge-element">{'Elevation:'}</div>
-                        <div className="drawer-horizontal-line three-columns">
-                            <div className="drawer-horizontal-element">
-                                {'Axis'}&nbsp;
-                                <SlSwitch size="x-small" checked={element.yAxis.main}
-                                          onSlInput={(e) => updateValue('yAxis.main', e.target.checked)}/>
-                            </div>
-                            <div className="drawer-horizontal-element">
-                                {'Grid'}&nbsp;
-                                <SlSwitch size="x-small" checked={element.yAxis.second}
-                                          onSlInput={(e) => updateValue('yAxis.second', e.target.checked)}/>
-                            </div>
-                            <div className="drawer-horizontal-element">
-                                {'Labels'}&nbsp;
-                                <SlSwitch size="x-small" checked={element.yAxis.labels}
-                                          onSlInput={(e) => updateValue('yAxis.labels', e.target.checked)}/>
-                            </div>
-                            <div className="drawer-horizontal-element">
-                                {'Units'}&nbsp;
-                                <SlSwitch size="x-small" checked={element.yAxis.units} disabled={!element.yAxis.labels}
-                                          onSlInput={(e) => updateValue('yAxis.units', e.target.checked)}/>
-                            </div>
-                        </div>
-                    </div>
+                    <WaSwitch size="xs"
+                              checked={element.xAxis?.second ?? false}
+                              label-at-start width-auto
+                              onInput={(e) => updateValue('xAxis.second', e.target.checked)}>
+                        {'Grid'}
+                    </WaSwitch>
 
-                    <SlDivider/>
+                    <WaSwitch
+                        size="xs"
+                        checked={element.xAxis?.labels ?? false}
+                        label-at-start width-auto
+                        onInput={(e) => updateValue('xAxis.labels', e.target.checked)}>
+                        {'Labels'}
+                    </WaSwitch>
 
-                    {/* Gradient Section */}
-                    <SlSwitch align-right size="x-small" checked={element.gradient?.show ?? false}
-                              onSlInput={(e) => updateValue('gradient.show', e.target.checked)}>
-                        <span>{'Gradient'}</span>
-                    </SlSwitch>
-
-                    {element.gradient?.show && (
-                        <div className="drawer-horizontal-line three-columns">
-                            <div className="drawer-horizontal-element">
-                                <div style={{display: 'flex', alignItems: 'center', gap: 'var(--sl-spacing-x-small)'}}>
-                                    <SlColorPicker size="small" swatches={swatches}
-                                                   value={element.gradient?.color ? getColor(element.gradient) : '#3b82f6'}
-                                                   onSlInput={(e) => updateValue('gradient.color', e.target.value)}/>
-                                    {element.gradient?.color && (
-                                        <SlIconButton className="reset-profile-widget-color" library="fa"
-                                                      name={FA2SL.set(faArrowRotateLeft)}
-                                                      onClick={() => updateValue('gradient.color', null)}/>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Main Axis Style */}
-                    {(element.xAxis.main || element.yAxis.main || element.xAxis.labels || element.yAxis.labels) && (
-                        <>
-                            <SlDivider/>
-                            <div>{'Main'}</div>
-                            <div className="drawer-horizontal-line three-columns">
-                                <div className="drawer-horizontal-element">
-                                    <SlColorPicker size="small" swatches={swatches} value={getColor(element.mainAxis)}
-                                                   onSlInput={(e) => updateValue('mainAxis.color', e.target.value)}/>
-                                </div>
-                                <div className="drawer-horizontal-element xlarge-element">
-                                    <SlRange label="Width" min="0.5" max="10" step="0.5" align-right
-                                             value={element.mainAxis.thickness ?? 1}
-                                             onSlInput={(e) => updateValue('mainAxis.thickness', parseFloat(e.target.value))}/>
-                                </div>
-                                <div className="drawer-horizontal-element xlarge-element">
-                                    <SlRange label="Opacity" min="0.1" max="1" step="0.05" align-right
-                                             value={element.mainAxis.opacity ?? 0.8}
-                                             onSlInput={(e) => updateValue('mainAxis.opacity', parseFloat(e.target.value))}/>
-                                </div>
-                            </div>
-                        </>
-                    )}
-
-                    {/* Grid Style */}
-                    {(element.xAxis.second || element.yAxis.second) && (
-                        <>
-                            <SlDivider/>
-                            <div>{'Grid'}</div>
-                            <div className="drawer-horizontal-line three-columns">
-                                <div className="drawer-horizontal-element">
-                                    <SlColorPicker size="small" swatches={swatches} value={getColor(element.secondAxis)}
-                                                   onSlInput={(e) => updateValue('secondAxis.color', e.target.value)}/>
-                                </div>
-                                <div className="drawer-horizontal-element xlarge-element">
-                                    <SlRange label="Width" min="0.5" max="10" step="0.5" align-right
-                                             value={element.secondAxis.thickness ?? 0.5}
-                                             onSlInput={(e) => updateValue('secondAxis.thickness', parseFloat(e.target.value))}/>
-                                </div>
-                                <div className="drawer-horizontal-element xlarge-element">
-                                    <SlRange label="Opacity" min="0.1" max="1" step="0.05" align-right
-                                             value={element.secondAxis.opacity ?? 0.5}
-                                             onSlInput={(e) => updateValue('secondAxis.opacity', parseFloat(e.target.value))}/>
-                                </div>
-                            </div>
-                        </>
-                    )}
+                    <WaSwitch size="xs"
+                              checked={element.xAxis?.units ?? false}
+                              disabled={!element.xAxis?.labels}
+                              label-at-start width-auto
+                              onInput={(e) => updateValue('xAxis.units', e.target.checked)}>
+                        {'Units'}
+                    </WaSwitch>
                 </div>
-            </LGSScrollbars>
-        </div>
+
+                <WaDivider/>
+
+                {/* Y-Axis (Elevation) Settings */}
+                <div className="drawer-horizontal-element">{'Elevation Axis'}</div>
+                <div className="profile-chart-switches">
+                    <WaSwitch size="xs" checked={element.yAxis?.main ?? false}
+                              label-at-start width-auto
+                              onInput={(e) => updateValue('yAxis.main', e.target.checked)}>
+                        {'Axis'}
+                    </WaSwitch>
+
+                    <WaSwitch size="xs" checked={element.yAxis?.second ?? false}
+                              label-at-start width-auto
+                              onInput={(e) => updateValue('yAxis.second', e.target.checked)}>
+                        {'Grid'}
+                    </WaSwitch>
+
+                    <WaSwitch size="xs" checked={element.yAxis?.labels ?? false}
+                              label-at-start width-auto
+                              onInput={(e) => updateValue('yAxis.labels', e.target.checked)}>
+                        {'Labels'}
+                    </WaSwitch>
+
+                    <WaSwitch size="xs" checked={element.yAxis?.units ?? false}
+                              disabled={!element.yAxis?.labels}
+                              label-at-start width-auto
+                              onInput={(e) => updateValue('yAxis.units', e.target.checked)}>
+                        {'Units'}
+                    </WaSwitch>
+                </div>
+
+                <WaDivider/>
+
+                {/* Chart Area Gradient */}
+                <WaSwitch size="xs" label-at-start checked={element.gradient?.show ?? false}
+                          onInput={(e) => updateValue('gradient.show', e.target.checked)}>
+                    <span>{'Gradient'}</span>
+                </WaSwitch>
+
+                {element.gradient?.show && (
+                    <div className="drawer-horizontal-line three-columns">
+                        <div className="drawer-horizontal-element">
+                            <div style={{display: 'flex', alignItems: 'center', gap: 'var(--sl-spacing-x-small)'}}>
+                                <WaColorPicker size="s" swatches={swatches}
+                                               value={element.gradient?.color ? getColor(element.gradient) : gradientFallbackColor}
+                                               onInput={(e) => updateValue('gradient.color', e.target.value)}/>
+                                {element.gradient?.color && (
+                                    <WaButton onClick={() => updateValue('gradient.color', null)}
+                                              className="reset-profile-widget-color"
+                                              variant="brand" appearance="plain">
+                                        <WaIcon name="arrow-rotate-left" variant="regular" size="s"/>
+                                    </WaButton>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                <WaDivider/>
+                <div className="drawer-horizontal-line">
+                    <div className="drawer-horizontal-element">{'Flythrough'}</div>
+                </div>
+                <WaSwitch
+                    className="profile-widget-flythrough-track-style-switch"
+                    size="xs"
+                    label-at-start
+                    checked={flythroughProfileInfo.useTrackStyle}
+                    onChange={(e) => updateFlythroughProfileInfo({useTrackStyle: e.target.checked})}
+                >
+                    {'Use track style'}
+                </WaSwitch>
+
+                {/* Stylization for Main Axes and Labels */}
+                {(element.xAxis?.main || element.yAxis?.main || element.xAxis?.labels || element.yAxis?.labels) && (
+                    <>
+                        <WaDivider/>
+                        <div className="drawer-horizontal-line">
+                            <div className="drawer-horizontal-element">{'Main'}</div>
+                        </div>
+                        <div className="lgs-widget-color-control-grid">
+                            <div className="lgs-widget-color-control-color">
+                                <WaColorPicker size="s" swatches={swatches} value={getColor(element.mainAxis)}
+                                               onInput={(e) => updateValue('mainAxis.color', e.target.value)}/>
+                            </div>
+                            <div className="lgs-widget-border-control-row">
+                                <div className="drawer-horizontal-element lgs-widget-border-control">
+                                    <WaSlider ref={setSliderRef('mainAxis.thickness')}
+                                              size="s"
+                                              label="Width"
+                                              min={PROFILE_WIDGET_SLIDERS['mainAxis.thickness'].min}
+                                              max={PROFILE_WIDGET_SLIDERS['mainAxis.thickness'].max}
+                                              step={PROFILE_WIDGET_SLIDERS['mainAxis.thickness'].step}
+                                              label-at-start
+                                              withTooltip
+                                              defaultValue={getProfileSliderValue('mainAxis.thickness')}
+                                              onInput={(e) => handleProfileSliderInput('mainAxis.thickness', e.target.value)}/>
+                                </div>
+                                <div className="drawer-horizontal-element lgs-widget-border-control">
+                                    <WaSlider ref={setSliderRef('mainAxis.opacity')}
+                                              size="s"
+                                              label="Opacity"
+                                              min={PROFILE_WIDGET_SLIDERS['mainAxis.opacity'].min}
+                                              max={PROFILE_WIDGET_SLIDERS['mainAxis.opacity'].max}
+                                              step={PROFILE_WIDGET_SLIDERS['mainAxis.opacity'].step}
+                                              label-at-start
+                                              withTooltip
+                                              valueFormatter={formatSliderPercent}
+                                              defaultValue={getProfileSliderValue('mainAxis.opacity')}
+                                              onInput={(e) => handleProfileSliderInput('mainAxis.opacity', e.target.value)}/>
+                                </div>
+                            </div>
+                            <div className="lgs-widget-color-control-spacer" aria-hidden="true"/>
+                            <ScaleSwitchElement
+                                checked={element.mainAxis?.scaled ?? false}
+                                onChange={(checked) => updateValue('mainAxis.scaled', checked)}
+                                className="lgs-widget-profile-axis-scaled-line"
+                            />
+                        </div>
+                    </>
+                )}
+
+                {/* Stylization for Grid Lines */}
+                {(element.xAxis?.second || element.yAxis?.second) && (
+                    <>
+                        <WaDivider/>
+                        <div className="drawer-horizontal-line">
+                            <div className="drawer-horizontal-element">{'Grid'}</div>
+                        </div>
+                        <div className="lgs-widget-color-control-grid">
+                            <div className="lgs-widget-color-control-color">
+                                <WaColorPicker size="s" swatches={swatches} value={getColor(element.secondAxis)}
+                                               onInput={(e) => updateValue('secondAxis.color', e.target.value)}/>
+                            </div>
+                            <div className="lgs-widget-border-control-row">
+                                <div className="drawer-horizontal-element lgs-widget-border-control">
+                                    <WaSlider ref={setSliderRef('secondAxis.thickness')}
+                                              size="s"
+                                              label="Width"
+                                              min={PROFILE_WIDGET_SLIDERS['secondAxis.thickness'].min}
+                                              max={PROFILE_WIDGET_SLIDERS['secondAxis.thickness'].max}
+                                              step={PROFILE_WIDGET_SLIDERS['secondAxis.thickness'].step}
+                                              label-at-start withTooltip withLabel
+                                              defaultValue={getProfileSliderValue('secondAxis.thickness')}
+                                              onInput={(e) => handleProfileSliderInput('secondAxis.thickness', e.target.value)}/>
+                                </div>
+                                <div className="drawer-horizontal-element lgs-widget-border-control">
+                                    <WaSlider ref={setSliderRef('secondAxis.opacity')}
+                                              size="s"
+                                              label="Opacity"
+                                              min={PROFILE_WIDGET_SLIDERS['secondAxis.opacity'].min}
+                                              max={PROFILE_WIDGET_SLIDERS['secondAxis.opacity'].max}
+                                              step={PROFILE_WIDGET_SLIDERS['secondAxis.opacity'].step}
+                                              label-at-start withTooltip
+                                              valueFormatter={formatSliderPercent}
+                                              defaultValue={getProfileSliderValue('secondAxis.opacity')}
+                                              onInput={(e) => handleProfileSliderInput('secondAxis.opacity', e.target.value)}/>
+                                </div>
+                            </div>
+                            <div className="lgs-widget-color-control-spacer" aria-hidden="true"/>
+                            <ScaleSwitchElement
+                                checked={element.secondAxis?.scaled ?? false}
+                                onChange={(checked) => updateValue('secondAxis.scaled', checked)}
+                                className="lgs-widget-profile-axis-scaled-line"
+                            />
+                        </div>
+                    </>
+                )}
+            </WaCard>
+        </LGSScrollbars>
     )
 }

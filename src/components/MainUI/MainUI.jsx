@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-20
- * Last modified: 2026-02-20
+ * Created on: 2026-05-10
+ * Last modified: 2026-05-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,22 +16,30 @@
 import { Compass }          from '@Components/MainUI/compass/Compass'
 import { FullScreenButton } from '@Components/FullScreenButton/FullScreenButton'
 import { ContextMenuRenderer } from '@Components/MainUI/context-menu/ContextMenuRenderer'
+import { MapPointContextMenuTrigger } from '@Components/MainUI/context-menu/MapPointContextMenuTrigger'
 
 import { GeocodingButton }   from '@Components/MainUI/geocoding/GeocodingButton'
-import { GeocodingUI }                          from '@Components/MainUI/geocoding/GeocodingUI'
+import { GeocodingWidget } from '@Components/MainUI/geocoding/GeocodingWidget'
 import { MapPOIMonitor }     from '@Components/MainUI/MapPOI/MapPOIMonitor'
+import { PanoramaWidget } from '@Components/MainUI/PanoramaWidget'
+import { RotationWidget } from '@Components/MainUI/RotationWidget'
 import { RotateButton }      from '@Components/MainUI/RotateButton'
-import { TrackEditorButton } from '@Components/MainUI/TrackEditorButton'
-import { VideoButton }                 from '@Components/MainUI/video/VideoButton'
+import { EditorPanelButton } from '@Editor/EditorPanelButton'
+import { VideoButton }       from '@Components/MainUI/video/VideoButton'
 import { VideoDownloadAndShareDialog } from '@Components/MainUI/video/VideoDownloadAndShareDialog'
-import { ProfileButton }                        from '@Components/Profile/ProfileButton'
+import { SyncLinkBadge }     from '@Components/MainUI/SyncLinkBadge'
 import { TextButton }        from '@Components/Text/TextButton'
 import { TracksEditor }                         from '@Components/TracksEditor/TracksEditor'
+import { JourneyGroupsDrawer }                  from '@Editor/groups/JourneyGroupsDrawer'
+import { FlythroughButton }         from '@Components/Flythrough/FlythroughButton'
+import { FlythroughControlsWidget } from '@Components/Flythrough/FlythroughControlsWidget'
+import { FlythroughDrawer }         from '@Components/Flythrough/FlythroughDrawer'
 import {
     BOTTOM, END, EVENTS, MENU_BOTTOM_END, MENU_BOTTOM_START, MENU_END_END, MENU_END_START, MENU_START_END,
     MENU_START_START, SCENE_MODE_2D, SECOND, START, TOP,
 }                            from '@Core/constants'
 import { memo, useCallback, useEffect, useRef } from 'react'
+import { sprintf }        from 'sprintf-js'
 import { subscribe, useSnapshot }               from 'valtio'
 import { JourneyLoaderUI }                      from '../FileLoader/JourneyLoaderUI'
 import { Panel as InformationPanel }            from '../InformationPanel/Panel'
@@ -57,10 +65,13 @@ const PRIMARY_ENTRANCE = 'lgs-slide-in-from-left'
 const SECONDARY_ENTRANCE = 'lgs-slide-in-from-right'
 
 export const MainUI = memo(() => {
-    const {hidden} = useSnapshot(lgs.stores.ui.welcome)
     const formerDevice = useRef(__.device.isMobile)
+    const {readyForTheShow, theJourney} = useSnapshot(lgs.stores.main)
+    const geocoderDialog = useSnapshot(lgs.stores.main.components.geocoder.dialog)
+    const mainUI = useSnapshot(lgs.stores.ui.mainUI)
     const {drawers, toolBar} = useSnapshot(lgs.settings.ui.menu)
-    const {device, video} = useSnapshot(lgs.stores.ui)
+    const {video} = useSnapshot(lgs.stores.ui)
+    const flythrough = useSnapshot(lgs.stores.flythrough)
 
 
     const windowResized = useCallback(__.tools.debounce(() => {
@@ -88,8 +99,6 @@ export const MainUI = memo(() => {
         )
 
         const isDrawerOpen = lgs.stores.ui.drawers.open !== null
-        const verticalOffsetLeft = isDrawerOpen ? __.ui.css.getCSSVariable('--lgs-vertical-panel-offset-left') : '0.1px'
-        const verticalOffsetRight = isDrawerOpen ? __.ui.css.getCSSVariable('--lgs-vertical-panel-offset-right') : '0.1px'
         const horizontalOffsetLeft = isDrawerOpen ? __.ui.css.getCSSVariable('--lgs-horizontal-panel-offset-left') : '0.1px'
         const width = isDrawerOpen
                       ? `calc(${__.ui.css.getCSSVariable('--lgs-vertical-panel-width')} + ${__.ui.css.getCSSVariable('--right')})`
@@ -192,11 +201,33 @@ export const MainUI = memo(() => {
         }
     }, [arrangeDrawers, closeDrawer, windowResized])
 
+    useEffect(() => {
+        if (mainUI.callForActions.initialized || !readyForTheShow) {
+            return
+        }
+
+        lgs.stores.ui.mainUI.callForActions.active = !theJourney
+        lgs.stores.ui.mainUI.callForActions.initialized = true
+    }, [readyForTheShow, theJourney, mainUI.callForActions.initialized])
+
+    useEffect(() => {
+        if (!mainUI.callForActions.active) {
+            return
+        }
+
+        if (theJourney || video.editing || video.recording || video.preRecording || video.snapshot || video.finalizing) {
+            lgs.stores.ui.mainUI.callForActions.active = false
+        }
+    }, [theJourney, mainUI.callForActions.active, video.editing, video.recording, video.preRecording, video.snapshot, video.finalizing])
+
     const tooltipDir = toolBar.fromStart ? 'right' : 'left'
     const {primaryEntrance, secondaryEntrance} = arrangeDrawers()
+    const videoCaptureActive = video.preRecording || video.recording || video.snapshot || video.finalizing
+    const syncWithVideo = flythrough.recordingSync === true
 
     return (
         <>
+            <MapPointContextMenuTrigger/>
             <div id="lgs-main-ui" onKeyDown={handleKeyDown}>
                 {!video.editing && (
                     <>
@@ -204,8 +235,8 @@ export const MainUI = memo(() => {
                             <SettingsButton tooltip={tooltipDir}/>
                             <LayersButton tooltip={tooltipDir}/>
                             <POIEditButton tooltip={tooltipDir}/>
-                            <TrackEditorButton tooltip="top"/>
-                            <ProfileButton tooltip={tooltipDir}/>
+                            <EditorPanelButton tooltip={tooltipDir}/>
+                            {/* <ProfileButton tooltip={tooltipDir}/> */}
                             <TextButton tooltip={tooltipDir}/>
                             <InformationButton tooltip={tooltipDir}/>
                             <SupportUIButton tooltip={tooltipDir}/>
@@ -216,12 +247,18 @@ export const MainUI = memo(() => {
                                 <SceneModeSelector tooltip={toolBar.fromStart ? 'left' : 'right'}/>
                                 <GeocodingButton tooltip={toolBar.fromStart ? 'left' : 'right'}/>
                                 <RotateButton tooltip={toolBar.fromStart ? 'left' : 'right'}/>
-                                <FullScreenButton/>
-                                <VideoButton tooltip={toolBar.fromStart ? 'left' : 'right'}/>
-                                <GeocodingUI/>
+                                {!videoCaptureActive && <FullScreenButton tooltip={toolBar.fromStart ? 'left' : 'right'}/>}
+                                <div className="sync-linked-actions">
+                                    <VideoButton tooltip={toolBar.fromStart ? 'left' : 'right'}/>
+                                    <FlythroughButton tooltip={toolBar.fromStart ? 'left' : 'right'}/>
+                                    <SyncLinkBadge visible={syncWithVideo} className="sync-linked-actions-badge"/>
+                                </div>
                             </div>
                         </div>
-                        <CallForActions/>
+                        {geocoderDialog.mounted && <GeocodingWidget/>}
+                        <RotationWidget/>
+                        <PanoramaWidget/>
+                        <FlythroughControlsWidget/>
                     </>
                 )}
 
@@ -246,9 +283,10 @@ export const MainUI = memo(() => {
                 <SettingsPanel/>
                 <LayersPanel/>
                 <TracksEditor/>
+                <JourneyGroupsDrawer/>
+                <FlythroughDrawer/>
                 <MapPOIEditPanel/>
                 <WidgetEditorPanel/>
-
             </div>
             <SupportUI/>
             <JourneyLoaderUI multiple/>
@@ -257,6 +295,7 @@ export const MainUI = memo(() => {
             <MapPOIMonitor/>
             <VideoDownloadAndShareDialog/>
 
+            {mainUI.callForActions.active && <CallForActions/>}
 
         </>
     )

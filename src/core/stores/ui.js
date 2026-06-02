@@ -7,13 +7,14 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-15
- * Last modified: 2026-01-15
+ * Created on: 2026-05-01
+ * Last modified: 2026-05-01
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
+import { DEFAULT_PANORAMA_HEIGHT_OFFSET, DEFAULT_PANORAMA_PITCH } from '@Core/OrbitSettings'
 import { proxyMap } from 'valtio/utils'
 
 /**
@@ -29,10 +30,11 @@ export const ui = {
         desktop:   false,
     },
     drawers: {
-        open:   null,
-        over:   false,
-        action: null,
-        entity: null,
+        open:                null,
+        over:                false,
+        action:              null,
+        entity:              null,
+        suppressFocusOnOpen: false,
     },
 
     modals: {
@@ -46,13 +48,29 @@ export const ui = {
         show:                false,
         journeyLoader:       {visible: false},
         support:             {visible: false},
+        callForActions: {
+            active:      false,
+            initialized: false,
+        },
         journeyMenu:         {timeout: 0, active: false},
         removeJourneyDialog: {active: proxyMap()},
         rotate:              {
-            clockwise: false,
             running:   false,
             target:    false,
-            rpm:       4,
+            rpm:       1,
+            direction: 1,
+        },
+        cameraFlight:        {
+            running: false,
+        },
+        panorama:            {
+            active:       false,
+            target:       false,
+            heightOffset: DEFAULT_PANORAMA_HEIGHT_OFFSET,
+            pitch:        DEFAULT_PANORAMA_PITCH,
+            heading:      0,
+            rpm:          1,
+            direction:    1,
         },
     },
 
@@ -119,6 +137,12 @@ export const ui = {
         list:    new proxyMap(),
         cache: new proxyMap(),
         restrictions: new proxyMap(),
+    },
+
+    journeyGroups: {
+        list: {},
+        ready: false,
+        version: 0,
     },
 
     appUpdate: {

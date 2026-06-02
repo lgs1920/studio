@@ -7,17 +7,15 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-04-19
+ * Last modified: 2026-04-19
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { BOTTOM, START }              from '@Core/constants'
-import { faCircleCheck }              from '@fortawesome/duotone-light-svg-icons'
-import { FontAwesomeIcon }            from '@fortawesome/react-fontawesome'
-import { SlTooltip }                  from '@shoelace-style/shoelace/dist/react'
+import { WaIcon, WaTooltip } from '@web.awesome.me/webawesome-pro/dist/react'
 import React, { useEffect, useState } from 'react'
 import { useSnapshot }                from 'valtio'
 
@@ -49,23 +47,18 @@ export const MenuSample = (props) => {
     }, [menu])
 
     return (
-        <SlTooltip placement="top" content={props.tooltip}>
-            <div className="menu-sample"
+        <div className="lgs--main-menu-sample"
                  onClick={(event) => props.onSelect(event, props.align)}
             >
                 <div className={classes.join(' ') + ' ' + (check ? 'selected' : '')}>
-                    <div className={'sample-drawer lgs-card'}/>
-                    <div className={'sample-toolbar'}>
+                    <div className="lgs--main-menu-sample-drawer lgs-card"/>
+                    <div className="lgs--main-menu-sample-toolbar">
                         <div className="lgs-card"></div>
                         <div className="lgs-card"></div>
                         <div className="lgs-card"></div>
                     </div>
-                    {check &&
-                        <div className={'sample-checkbox'}>
-                            <FontAwesomeIcon icon={faCircleCheck}/>
-                        </div>}
+                    {check && <WaIcon className="lgs--max-menu-sample-checkbox" name="circle-check" variant="solid"/>}
                 </div>
             </div>
-        </SlTooltip>
     )
 }

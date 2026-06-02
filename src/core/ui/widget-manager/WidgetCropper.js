@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-29
- * Last modified: 2026-01-29
+ * Created on: 2026-04-24
+ * Last modified: 2026-04-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -87,7 +87,7 @@ export class WidgetCropper {
         }
         let {left, top, width, height} = config.cropDimensions
         const overlayRect = config.outsideOverlay.getBoundingClientRect()
-        if (config.element) {
+        if (config.element?.isConnected) {
             const cropRect = config.element.getBoundingClientRect()
             left = cropRect.left - overlayRect.left
             top = cropRect.top - overlayRect.top
@@ -96,13 +96,81 @@ export class WidgetCropper {
         }
         else if (config.container) {
             const containerRect = config.container.getBoundingClientRect()
-            left = left - containerRect.left
-            top = top - containerRect.top
+            left = left + containerRect.left - overlayRect.left
+            top = top + containerRect.top - overlayRect.top
         }
         // Ensure dimensions are valid before applying clip-path
         if (Number.isFinite(left) && Number.isFinite(top) && Number.isFinite(width) && Number.isFinite(height) && width > 0 && height > 0) {
             config.outsideOverlay.style.clipPath = this.openWindowInOverlay({left, top, width, height})
         }
+    }
+
+    /**
+     * Synchronizes crop dimensions from the actual DOM element currently rendered on screen.
+     * Useful when a cropper is about to unmount or when Firefox keeps a stale transform
+     * until the final layout pass.
+     *
+     * @param {string} cropzoneId - Crop zone identifier
+     * @param {boolean} persist - Whether to persist the synced crop after update
+     * @param {string} phase - Crop update phase label
+     * @returns {Promise<Object|null>} Updated crop dimensions or null when unavailable
+     */
+    syncCropDimensionsFromElement = async (cropzoneId, persist = false, phase = 'sync') => {
+        const config = this.#widgetManager.getWidgetConfig(cropzoneId)
+        if (!config?.isCropper) {
+            return null
+        }
+
+        const element = config.element?.isConnected
+                        ? config.element
+                        : this.#widgetManager.getElementById(cropzoneId)
+        const container = config.container ?? lgs.canvas
+
+        const readPx = value => {
+            const px = __.app.parsePx(value || '')
+            return Number.isFinite(px) ? px : null
+        }
+
+        const elementRect = element?.getBoundingClientRect?.()
+        const containerRect = container?.getBoundingClientRect?.()
+        const persistedCrop = config.cropDimensions ?? {}
+        const crop = {
+            left:   Math.round(elementRect?.left ?? readPx(element?.style?.left) ?? config.position?.left ?? persistedCrop.left),
+            top:    Math.round(elementRect?.top ?? readPx(element?.style?.top) ?? config.position?.top ?? persistedCrop.top),
+            width:  Math.round(elementRect?.width ?? readPx(element?.style?.width) ?? persistedCrop.width ?? 0),
+            height: Math.round(elementRect?.height ?? readPx(element?.style?.height) ?? persistedCrop.height ?? 0),
+        }
+
+        if (!Number.isFinite(crop.left) ||
+            !Number.isFinite(crop.top) ||
+            !Number.isFinite(crop.width) ||
+            !Number.isFinite(crop.height) ||
+            crop.width <= 0 ||
+            crop.height <= 0) {
+            return config.cropDimensions ?? null
+        }
+
+        config.element = element ?? null
+        config.container = container
+        config.position = {left: crop.left, top: crop.top}
+        config.cropDimensions = crop
+
+        if (config.resizeFromCenter && containerRect?.width > 0 && containerRect?.height > 0) {
+            config.centerRatio = {
+                x: (crop.left - containerRect.left + crop.width / 2) / containerRect.width,
+                y: (crop.top - containerRect.top + crop.height / 2) / containerRect.height,
+            }
+        }
+
+        this.applyCropToOverlay(config)
+        this.dispatchCropUpdate(config, phase)
+        this.#widgetManager.setConfig(cropzoneId, config)
+
+        if (persist && config.persist) {
+            await this.#widgetManager.saveWidgetPosition(cropzoneId, config)
+        }
+
+        return crop
     }
 
     /**

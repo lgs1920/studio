@@ -7,74 +7,56 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-05-10
+ * Last modified: 2026-05-10
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-/**
- * VideoFPSSelector renders a draggable toolbar for selecting video FPS
- * @component
- * @param {Object} props - Component props
- * @param {Object} props.store - Valtio store with crop state (fpsEditor, etc.)
- * @returns {JSX.Element} Draggable video FPS selector UI
- */
-import { ScreenMediaRecorder } from '@Core/ui/screen-media-recorder/recorder/ScreenMediaRecorder'
-import { faGripDots }          from '@fortawesome/pro-solid-svg-icons'
-import { SlIcon, SlTooltip } from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }             from '@Utils/FA2SL'
-import classNames            from 'classnames'
-import { memo, useCallback, useEffect } from 'react'
-import { useSnapshot }       from 'valtio'
-import '../style.css'
+/*******************************************************************************
+ * File: VideoFPSToolbar.jsx
+ ******************************************************************************/
 
-export const VideoFPSToolbar = memo(() => {
-    // Access reactive cropper and video states
+import { ScreenMediaRecorder } from '@Core/ui/screen-media-recorder/recorder/ScreenMediaRecorder'
+import classNames         from 'classnames'
+import { WaButton }                           from '@web.awesome.me/webawesome-pro/dist/react'
+import { Fragment, memo } from 'react'
+import { useSnapshot }                        from 'valtio'
+
+export const VideoFPSToolbar = memo(({choicesOnMap = false}) => {
     const $video = lgs.stores.ui.video
     const video = useSnapshot($video)
 
     /**
-     * Initialize default FPS from settings
+     * Updates FPS index in store and settings
+     * @param {number} index
      */
-    useEffect(() => {
-        $video.fps = lgs.settings.ui.video.fps ?? ScreenMediaRecorder.FPS[0]
-    }, [])
-
-
-    /**
-     * Handles selection of a FPS value
-     * Updates the selected FPS and stores it in settings
-     * @param {number} index - Index of the selected FPS
-     * @param {Event} event - Click event from icon
-     */
-    const handleChangeFPS = useCallback(index => {
-        lgs.stores.ui.video.fps = index
+    const handleChangeFPS = (index) => {
+        $video.fps = index
         lgs.settings.ui.video.fps = index
-    }, [])
+    }
 
-    // Render draggable toolbar with FPS options
     return (
         <div className="video-fps-widget">
             <span>{'FPS'}</span>
-            <div className="buttons-bar-on-map">
+            <div className={classNames('buttons-bar-on-map', {
+                'video-choice-buttons video-choice-buttons-on-map': choicesOnMap,
+            })}>
                 {ScreenMediaRecorder.FPS.map((fps, index) => (
-                    <SlTooltip
-                        key={index}
-                        content={`FPS: ${fps}`}
-                        placement="top"
-                    >
-                        <div
-                            className={classNames('lgs-one-line-card on-map', {'selected': index === video.fps})}
-                            onClick={event => handleChangeFPS(index, event)}
+                    <Fragment key={index}>
+                        <WaButton
+                            className={classNames('video-choice-button', {'is-selected': index === video.fps})}
+                            size="s"
+                            variant="neutral"
+                            appearance={index === video.fps ? 'outlined' : 'plain'}
+                            onClick={() => handleChangeFPS(index)}
                         >
                             {fps}
-                        </div>
-                    </SlTooltip>
+                        </WaButton>
+                    </Fragment>
                 ))}
             </div>
         </div>
-
     )
 })

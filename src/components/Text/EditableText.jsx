@@ -7,17 +7,19 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-24
- * Last modified: 2026-02-24
+ * Created on: 2026-04-30
+ * Last modified: 2026-04-30
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { WIDGETS_EDITOR_DRAWER } from '@Core/constants'
+import { hasActiveAppShortcutBlocker } from '@Core/events/shortcutBlockers'
+import { useWidgetScaleCorrection } from '@Components/MainUI/widgets/useWidgetScaleCorrection'
 import { TextWidgetManager }     from '@Core/ui/text-metrics/TextWidgetManager'
 import classNames      from 'classnames'
-import React, {
+import {
     useState, useRef, useEffect, useMemo, useCallback,
 }                      from 'react'
 import { useSnapshot } from 'valtio'
@@ -26,7 +28,7 @@ import { useSnapshot } from 'valtio'
  * Inline text editor with dynamic font loading.
  * Handles the new text object structure: { content, color, opacity, ... }
  */
-export const EditableText = ({id, scale = 1}) => {
+export const EditableText = ({id}) => {
     const $configuration = lgs.settings.widgets['text-widget']?.configuration
     const configuration = useSnapshot($configuration)
     const _moveable = __.ui.widgetManager.getMoveable(id)
@@ -65,7 +67,7 @@ export const EditableText = ({id, scale = 1}) => {
                 if (node.isContentEditable) {
                     return true
                 }
-                if (node.closest && node.closest('sl-textarea, sl-input, input, textarea')) {
+                if (node.closest && node.closest('wa-textarea, wa-input, input, textarea')) {
                     return true
                 }
             }
@@ -73,6 +75,10 @@ export const EditableText = ({id, scale = 1}) => {
         }
 
         const handleGlobalKeyDown = (e) => {
+            if (hasActiveAppShortcutBlocker()) {
+                return
+            }
+
             const isCurrent = drawers.entity === id
             if (drawers.open === WIDGETS_EDITOR_DRAWER && isCurrent) {
                 return
@@ -92,7 +98,7 @@ export const EditableText = ({id, scale = 1}) => {
 
         window.addEventListener('keydown', handleGlobalKeyDown, true)
         return () => window.removeEventListener('keydown', handleGlobalKeyDown, true)
-    }, [id, isEditing, drawers.entity, removeTextWidget])
+    }, [id, isEditing, drawers.entity, drawers.open, removeTextWidget])
 
     /**
      * Loads Google Fonts and updates moveable UI
@@ -126,7 +132,7 @@ export const EditableText = ({id, scale = 1}) => {
         if (_moveable?.current) {
             _moveable.current.updateRect()
         }
-    }, [element?.fontFamily])
+    }, [_moveable, element?.fontFamily])
 
     useEffect(() => {
         if (isEditing && _input.current) {
@@ -177,7 +183,7 @@ export const EditableText = ({id, scale = 1}) => {
                 }
             }
         }
-        catch (err) {
+        catch {
             clickIndex = content.length
         }
 
@@ -196,6 +202,16 @@ export const EditableText = ({id, scale = 1}) => {
     }
 
     const widgetManager = useMemo(() => TextWidgetManager.instance, [])
+    const scaleCorrection = useWidgetScaleCorrection(id)
+
+    useEffect(() => {
+        if (_moveable?.current) {
+            const frame = requestAnimationFrame(() => {
+                _moveable.current.updateRect()
+            })
+            return () => cancelAnimationFrame(frame)
+        }
+    }, [editingText, isEditing, element?.text?.content, scaleCorrection, _moveable])
 
     if (!element) {
         return null
@@ -205,11 +221,9 @@ export const EditableText = ({id, scale = 1}) => {
                          ? (editingText.replace(/\n$/, '\n '))
                          : (element.text?.content ?? (typeof element.text === 'string' ? element.text : ''))
 
-    const cssVars = widgetManager.generateCSSVariables(element)
-
-    const fontSize = element?.size ?? 16
-    const lineHeight = parseFloat(element.lineHeight ?? 1)
-    const lineHeightPx = fontSize * lineHeight
+    const cssVars = widgetManager.generateCSSVariables(element, null, undefined, {
+        correction: scaleCorrection,
+    })
 
     const commonStyles = {
         font:       'inherit',
@@ -218,7 +232,7 @@ export const EditableText = ({id, scale = 1}) => {
         fontWeight: 'var(--lgs-tx-weight)',
         fontStyle:  'var(--lgs-tx-style)',
         textAlign:  'var(--lgs-tx-align)',
-        lineHeight: `calc(${fontSize}px * var(--lgs-tx-lh))`,
+        lineHeight: 'var(--lgs-tx-line-height)',
         whiteSpace: 'pre',
         margin:     '0',
         padding: `var(--lgs-tx-padding-top) var(--lgs-tx-padding-right) var(--lgs-tx-padding-bottom) var(--lgs-tx-padding-left)`,
@@ -234,15 +248,6 @@ export const EditableText = ({id, scale = 1}) => {
             paintOrder:       'var(--lgs-tx-paint-order,"fill stroke")',
         }),
     }
-
-    useEffect(() => {
-        if (_moveable?.current) {
-            const frame = requestAnimationFrame(() => {
-                _moveable.current.updateRect()
-            })
-            return () => cancelAnimationFrame(frame)
-        }
-    }, [editingText, isEditing, element.text?.content, _moveable])
 
     return (
         <div

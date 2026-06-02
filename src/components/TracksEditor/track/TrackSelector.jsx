@@ -7,27 +7,24 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-28
- * Last modified: 2026-02-28
+ * Created on: 2026-05-10
+ * Last modified: 2026-05-10
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { faChevronDown, faEye, faEyeSlash } from '@fortawesome/pro-regular-svg-icons'
-import { faRoute, faSquare, faMask }             from '@fortawesome/pro-solid-svg-icons'
-import { SlIcon, SlOption, SlSelect }            from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                                 from '@Utils/FA2SL'
-import { useSnapshot }                           from 'valtio'
 import { useEffect, useMemo, useCallback, memo } from 'react'
+import { useSnapshot }                            from 'valtio'
+import { WaOption, WaSelect }                     from '@web.awesome.me/webawesome-pro/dist/react'
+import { TrackStylePreview }                      from './TrackStylePreview'
 
 export const TrackSelector = memo(({label, onChange}) => {
     const $journeyEditor = lgs.stores.main.components.journeyEditor
-    const journeyEditorSnapshot = useSnapshot($journeyEditor)
-    const $editor = lgs.theJourneyEditorProxy
+    const journeyEditor = useSnapshot($journeyEditor)
+    const $editor = lgs.stores.journeyEditor
     const editor = useSnapshot($editor)
-    const {tracks} = $editor.journey
-
+    const {tracks} = lgs.theJourney
     useEffect(() => {
         if (!$editor.track && tracks.size > 0) {
             $editor.track = Array.from(tracks.values())[0]
@@ -36,7 +33,6 @@ export const TrackSelector = memo(({label, onChange}) => {
 
     const trackList = useMemo(() => Array.from(tracks.values()), [tracks])
     const memoizedOnChange = useCallback((event) => onChange(event), [onChange])
-    const trackIconStyle = useMemo(() => ({color: editor.track?.color}), [editor.track?.color])
 
     if (tracks.size <= 1 || !editor.track) {
         return null
@@ -47,32 +43,26 @@ export const TrackSelector = memo(({label, onChange}) => {
     }
 
     return (
-        <SlSelect
-            hoist
+        <WaSelect
+            size="s"
             label={label}
             value={editor.track.slug}
-            onSlChange={memoizedOnChange}
-            key={`track-selector-${journeyEditorSnapshot.keys.track.list}`}
-            onSlRequestClose={handleRequestClose}
+            onChange={memoizedOnChange}
+            key={`track-selector-${journeyEditor.keys.track.list}`}
+            onWaRequestClose={handleRequestClose}
         >
-            <SlIcon
-                library="fa"
-                name={FA2SL.set(editor.track.visible ? faSquare : faMask)}
-                slot="prefix"
-                style={trackIconStyle}
-            />
-            <SlIcon library="fa" name={FA2SL.set(faChevronDown)} slot="expand-icon"/>
+            <div slot="start" className="lgs--track-colors-in-settings">
+                <TrackStylePreview track={editor.track} compact/>
+            </div>
+
             {trackList.map(track => (
-                <SlOption key={track.slug} value={track.slug}>
-                    <SlIcon
-                        library="fa"
-                        name={FA2SL.set(track.visible ? faSquare : faMask)}
-                        slot="prefix"
-                        style={{color: track.color}}
-                    />
+                <WaOption key={track.slug} value={track.slug}>
+                    <div slot="start" className="lgs--track-colors-in-settings">
+                        <TrackStylePreview track={track} compact/>
+                    </div>
                     {track.title}
-                </SlOption>
+                </WaOption>
             ))}
-        </SlSelect>
+        </WaSelect>
     )
 });

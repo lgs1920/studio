@@ -1,129 +1,254 @@
-# WidgetManager
+# Widget Boards and Persistence
 
-**File**: `WidgetManager.js`  
-**Project**: `LGS1920/studio`  
-**Author**: LGS1920 Team – contact@lgs1920.fr  
-**Created on**: 2025-10-28  
-**Last modified**: 2025-10-28
+This document explains how widgets are mounted, bounded, resized, and persisted in the current widget system.
 
----
+## Overview
 
-## Description
+The widget stack is split into two concerns:
 
-`WidgetManager` is a **singleton class** acting as the central interface for managing **draggable**, **resizable**, *
-*scalable**, and **croppable** widgets.  
-It delegates each responsibility to specialized classes to ensure clear separation of concerns:
+- `Widget` React components render the visible widget content and attach a `Moveable` controller.
+- `WidgetManager` and its helpers own geometry, board resolution, persistence, and interaction lifecycle.
 
-- `WidgetCore`: widget lifecycle and configuration management
-- `WidgetDraggable`: drag handling
-- `WidgetResizable`: resize handling
-- `WidgetScalable`: scale handling
-- `WidgetCropper`: cropping and overlay management
-- `WidgetTransform`: CSS transform manipulation
-- `WidgetPosition`: quick positioning (center, top-left, etc.)
-- `WidgetDBManager`: IndexedDB persistence
+The system is intentionally board-driven:
 
----
+- every widget belongs to a `widgetsBoard`
+- positions are restored relative to that board
+- bounds, resize adaptation, and out-of-bounds correction are also resolved from that board
 
-## Instantiation
+This is what allows the same widget engine to support:
 
-```js
-import { WidgetManager } from '@/Core/ui/widget-manager/WidgetManager'
+- scene widgets
+- crop-zone tools
+- video widgets rendered inside `defined crop-zone`
 
-const manager = new WidgetManager() // Always returns the same instance
-```
+## Terminology
 
----
+### Board
 
-## Public Methods
+A board is the logical area that owns a widget.
 
-| Method                   | Inputs (type)                                                                                                                                  | Output (type)                                                                                       | Description                                                                          |
-|--------------------------|------------------------------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------|
-| `retrieveElementId`      | `element` (`HTMLElement`)                                                                                                                      | `string \| null`                                                                                    | Retrieves the widget ID via `data-widget-id`.                                        |
-| `setupElement`           | `element` (`HTMLElement`), `initialConfig` (`Object`), `setBounds` (`Function`), `setPosition` (`Function`), `moveable` (`Object`)             | `Promise<boolean>`                                                                                  | Initializes a DOM element as a widget (creates `moveable`, sets up listeners, etc.). |
-| `applyPosition`          | `element` (`HTMLElement`), `position` (`Object \| string`), `moveable` (`Object`), `isDragging` (`boolean`), `setControlBoxProps` (`Function`) | `void`                                                                                              | Applies position/transform and updates the control box.                              |
-| `manageControlBox`       | `moveable` (`Object`), `setControlBoxProps` (`Function`), `_controlBoxTimer` (`Object`), `show` (`boolean`), `isMouseOver` (`boolean`)         | `void`                                                                                              | Manages control box visibility based on interactions.                                |
-| `getRatio`               | `ratio` (`string`)                                                                                                                             | `Object`                                                                                            | Returns ratio configuration (e.g., `'16x9'`).                                        |
-| `computeInitialPosition` | `config` (`Object`), `element` (`HTMLElement`), `isResize` (`boolean = false`)                                                                 | `Object { left: number, top: number }`                                                              | Computes initial widget position.                                                    |
-| `refreshBounds`          | `config` (`Object`), `moveable` (`Object`)                                                                                                     | `Object`                                                                                            | Recalculates container bounds.                                                       |
-| `setBoundStatus`         | `element` (`HTMLElement`), `config` (`Object`)                                                                                                 | `Object`                                                                                            | Indicates if the widget touches container edges.                                     |
-| `getWidgetConfig`        | `elementId` (`string`)                                                                                                                         | `Object \| undefined`                                                                               | Returns widget configuration.                                                        |
-| `getElementById`         | `id` (`string`)                                                                                                                                | `HTMLElement \| null`                                                                               | Returns the widget DOM element.                                                      |
-| `getIdFromElement`       | `element` (`HTMLElement`)                                                                                                                      | `string \| null`                                                                                    | Returns the widget ID from the element.                                              |
-| `getInnerOverlay`        | `element` (`HTMLElement`)                                                                                                                      | `HTMLElement \| undefined`                                                                          | Returns the inner overlay element.                                                   |
-| `setConfig`              | `elementId` (`string`), `config` (`Object`)                                                                                                    | `void`                                                                                              | Updates widget configuration.                                                        |
-| `getWidgetConfigByGroup` | `groupId` (`string`)                                                                                                                           | `Object[]`                                                                                          | Returns configurations for all widgets in a group.                                   |
-| `disposeElement`         | `element` (`HTMLElement`)                                                                                                                      | `void`                                                                                              | Cleans up resources for a single widget.                                             |
-| `disposeByGroup`         | `groupId` (`string`), `usePersist` (`boolean = false`)                                                                                         | `void`                                                                                              | Cleans up all widgets in a group (respects `persist` flag).                          |
-| `monitorContainerResize` | `config` (`Object`), `setBounds` (`Function`), `moveable` (`Object`), `element` (`HTMLElement`), `setPosition` (`Function`)                    | `void`                                                                                              | Monitors container resize and updates widgets.                                       |
-| `onDrag`                 | `event` (`Object`)                                                                                                                             | `void`                                                                                              | Handles drag (updates crop overlay in real-time).                                    |
-| `onDragStart`            | `event` (`Object`)                                                                                                                             | `void`                                                                                              | Drag start handler.                                                                  |
-| `onDragEnd`              | `event` (`Object`)                                                                                                                             | `void`                                                                                              | Drag end handler.                                                                    |
-| `onResizeStart`          | `event` (`Object`)                                                                                                                             | `void`                                                                                              | Resize start handler.                                                                |
-| `onResize`               | `event` (`Object`), `refs` (`Object`), `setPosition` (`Function`)                                                                              | `void`                                                                                              | Handles resize (updates dimensions/position).                                        |
-| `onResizeEnd`            | `event` (`Object`)                                                                                                                             | `void`                                                                                              | Resize end handler.                                                                  |
-| `onScaleStart`           | `event` (`Object`)                                                                                                                             | `Promise<void>`                                                                                     | Scale start handler.                                                                 |
-| `onScale`                | `event` (`Object`), `refs` (`Object`), `setPosition` (`Function`)                                                                              | `void`                                                                                              | Handles scale.                                                                       |
-| `onScaleEnd`             | `event` (`Object`)                                                                                                                             | `Promise<void>`                                                                                     | Scale end handler.                                                                   |
-| `updateCropRatio`        | `cropzoneId` (`string`), `aspectRatio` (`number`), `lockRatio` (`boolean`)                                                                     | `void`                                                                                              | Updates crop ratio and lock state.                                                   |
-| `cropDimensions`         | `config` (`Object`), `maximize` (`boolean = false`)                                                                                            | `Object`                                                                                            | Computes crop dimensions.                                                            |
-| `openWindowInOverlay`    | `crop` (`Object`)                                                                                                                              | `string`                                                                                            | Generates CSS `clip-path`.                                                           |
-| `applyCropToOverlay`     | `config` (`Object`)                                                                                                                            | `void`                                                                                              | Applies crop to the overlay.                                                         |
-| `retrieveConfig`         | `element` (`HTMLElement`), `initialConfig` (`Object`)                                                                                          | `Promise<Object>`                                                                                   | Retrieves or creates config (from IndexedDB).                                        |
-| `saveWidgetPosition`     | `widgetId` (`string`), `config` (`Object`)                                                                                                     | `Promise<void>`                                                                                     | Saves position/dimensions to IndexedDB.                                              |
-| `getWidgetPosition`      | `widgetId` (`string`)                                                                                                                          | `Promise<Object \| null>`                                                                           | Reads position from IndexedDB (if not expired).                                      |
-| `getWidgetsByGroup`      | `groupId` (`string`)                                                                                                                           | `Promise<Object[]>`                                                                                 | Reads all widgets in a group.                                                        |
-| `deleteWidgetsByGroup`   | `groupId` (`string`)                                                                                                                           | `Promise<void>`                                                                                     | Deletes an entire group.                                                             |
-| `deleteWidgetPosition`   | `widgetId` (`string`)                                                                                                                          | `Promise<void>`                                                                                     | Deletes a single widget position.                                                    |
-| `getMoveable`            | `elementId` (`string`)                                                                                                                         | `Object \| undefined`                                                                               | Returns the associated Moveable instance.                                            |
-| `setMoveable`            | `elementId` (`string`), `moveable` (`Object`)                                                                                                  | `void`                                                                                              | Registers a Moveable instance.                                                       |
-| `removeMoveable`         | `elementId` (`string`)                                                                                                                         | `void`                                                                                              | Removes a Moveable instance.                                                         |
-| `buildTransform`         | `transforms` (`Object { translateX: number, translateY: number, scaleX: number, scaleY: number, rotate: number }`)                             | `string`                                                                                            | Builds CSS `transform` string.                                                       |
-| `getTransform`           | `element` (`HTMLElement`)                                                                                                                      | `Object { translateX: number, translateY: number, scaleX: number, scaleY: number, rotate: number }` | Extracts current transform values.                                                   |
-| `parseTransform`         | `transformString` (`string`)                                                                                                                   | `Object { translateX: number, translateY: number, scaleX: number, scaleY: number, rotate: number }` | Parses a CSS `transform` string.                                                     |
-| `setScale`               | `element` (`HTMLElement`), `x` (`number`), `y` (`number`)                                                                                      | `void`                                                                                              | Updates scale in the transform.                                                      |
-| `setTranslate`           | `element` (`HTMLElement`), `x` (`number`), `y` (`number`)                                                                                      | `void`                                                                                              | Updates translate in the transform.                                                  |
-| `toCenter`               | `element` (`HTMLElement`), `margin` (`number = 0`)                                                                                             | `Object { left: number, top: number }`                                                              | Positions widget at container center.                                                |
-| `toTopLeft`              | `element` (`HTMLElement`), `margin` (`number = 0`)                                                                                             | `Object { left: number, top: number }`                                                              | Positions at top-left.                                                               |
-| `toTop`                  | `element` (`HTMLElement`), `margin` (`number = 0`)                                                                                             | `Object { left: number, top: number }`                                                              | Positions at top.                                                                    |
-| `toLeft`                 | `element` (`HTMLElement`), `margin` (`number = 0`)                                                                                             | `Object { left: number, top: number }`                                                              | Positions at left.                                                                   |
-| `toRight`                | `element` (`HTMLElement`), `margin` (`number = 0`)                                                                                             | `Object { left: number, top: number }`                                                              | Positions at right.                                                                  |
-| `toBottom`               | `element` (`HTMLElement`), `margin` (`number = 0`)                                                                                             | `Object { left: number, top: number }`                                                              | Positions at bottom.                                                                 |
-| `toTopRight`             | `element` (`HTMLElement`), `margin` (`number = 0`)                                                                                             | `Object { left: number, top: number }`                                                              | Positions at top-right.                                                              |
-| `toBottomLeft`           | `element` (`HTMLElement`), `margin` (`number = 0`)                                                                                             | `Object { left: number, top: number }`                                                              | Positions at bottom-left.                                                            |
-| `toBottomRight`          | `element` (`HTMLElement`), `margin` (`number = 0`)                                                                                             | `Object { left: number, top: number }`                                                              | Positions at bottom-right.                                                           |
+Examples:
 
----
+- scene board -> `SCENE_WIDGETS_BOARD`
+- video board -> `VIDEO_WIDGETS_BOARD` (`video-crop-zone`)
 
-## Public Properties (getters/setters)
+Each board resolves to a DOM element at runtime.
 
-| Property                         | Type              | Description                                 |
-|----------------------------------|-------------------|---------------------------------------------|
-| `transform` (getter)             | `WidgetTransform` | Access to the transform helper instance.    |
-| `isResizing` (getter/setter)     | `boolean`         | Indicates if a resize is in progress.       |
-| `isDragging` (getter/setter)     | `boolean`         | Indicates if a drag is in progress.         |
-| `windowResizing` (getter/setter) | `boolean`         | Indicates if window resize affects widgets. |
-| `isScaling` (getter/setter)      | `boolean`         | Indicates if a scale is in progress.        |
+### Reference container
 
----
+The reference container is the DOM rect used to convert persisted ratios back into pixel coordinates.
 
-## Utility Methods (delegated)
+For the current implementation:
 
-| Method            | Inputs (type)                             | Output (type) | Description                                                              |
-|-------------------|-------------------------------------------|---------------|--------------------------------------------------------------------------|
-| `cloneContext`    | `source` (`Object`), `attrs` (`string[]`) | `Object`      | Clones an object, ensuring listed boolean attributes default to `false`. |
-| `hasCapabilities` | `source` (`Object`), `attrs` (`string[]`) | `boolean`     | Checks if at least one listed attribute is truthy.                       |
+- scene widgets use the scene canvas
+- board widgets use the resolved board element itself
 
----
+### Bounds container
 
-## Notes
+The bounds container is the DOM rect used to clamp widgets so they stay inside their board.
 
-- All async methods (`Promise`) interact with **IndexedDB** via `WidgetDBManager`.
-- Moveable event handlers (`onDrag`, `onResize`, etc.) are tied directly to **Moveable** library callbacks.
-- The singleton ensures a single instance application-wide: `new WidgetManager()` always returns the same reference.
+In practice, the reference container and the bounds container usually resolve to the same DOM node.
 
----
+## Core Files
 
-© 2025 LGS1920 – All rights reserved.
+- `WidgetManager.js`
+  Board resolution, public API, persistence entry points.
+- `WidgetCoreRegistry.js`
+  Runtime config store, DB load/save preparation, ratio conversion.
+- `WidgetCoreControls.js`
+  Initial placement, resize observation, board adaptation, setup lifecycle.
+- `WidgetDraggable.js`
+  Drag lifecycle and persisted position updates.
+- `WidgetResizable.js`
+  Resize lifecycle and persisted base dimensions updates.
+- `WidgetScalable.js`
+  Scale lifecycle and persisted scale updates.
+- `WidgetPosition.js`
+  Quick anchor positioning (`top`, `bottom-right`, `center`, etc.).
+- `WidgetCache.js`
+  Widget hydration metadata loaded from IndexedDB on startup.
 
-```
+## Widget Mount Lifecycle
+
+When a widget mounts:
+
+1. `Widget.jsx` resolves the actual board DOM node.
+2. The widget waits until the board exists and has a non-zero rect.
+3. `WidgetManager.retrieveConfig()` loads or rebuilds the runtime config.
+4. `WidgetManager.setupElement()` applies:
+   - base dimensions
+   - persisted position
+   - persisted scale
+   - persisted rotation
+5. Resize observers are attached:
+   - one for the board
+   - one for the widget element itself
+
+Important rule:
+
+- a runtime config is reused only if it is already ready and still targets the requested board
+- otherwise the persisted DB record is read again
+
+This prevents a widget from being restored with geometry captured from the wrong board.
+
+## Persistence Model
+
+Widget positions are stored in the browser DB (`WIDGETS_STORE`) through `WidgetDBManager`.
+
+Persisted geometry contains:
+
+- `leftRatio`
+- `topRatio`
+- `left`
+- `top`
+- `width`
+- `height`
+- `scale`
+- `rotate`
+- `attachTo`
+- `widgetsBoard`
+- `zIndex`
+
+### Why ratios are used
+
+The system stores the widget center as ratios of the board size:
+
+- `leftRatio`
+- `topRatio`
+
+This makes positions resilient to:
+
+- window resize
+- board resize
+- crop-zone resize
+
+### Why raw `left/top` still exist
+
+Raw `left/top` are kept as a fallback. They are useful when:
+
+- ratios are missing
+- a legacy record is being migrated
+- the board geometry is temporarily unavailable
+
+## Position Reconstruction
+
+On restore:
+
+1. the persisted ratios are read from DB
+2. the reference board rect is resolved
+3. the widget center is reconstructed in pixels
+4. the center is converted back to top-left coordinates using persisted `width/height`
+
+The restored widget then receives:
+
+- `config.position`
+- `config.dimensions`
+- `config.scale`
+- `config.rotate`
+- `config.savedRatios`
+
+## Base Dimensions vs Scale
+
+The system keeps two separate concepts:
+
+- `dimensions`
+  The unscaled logical size of the widget
+- `scale`
+  The visual scale applied through CSS transform
+
+This separation matters:
+
+- resize changes `dimensions`
+- scale changes `scale`
+- persistence must save both independently
+
+For dynamic widgets such as text or compass, the element resize observer updates `config.dimensions` when the underlying rendered size changes.
+
+## Board Resize Behavior
+
+When a board resizes:
+
+1. bounds are refreshed
+2. persisted center ratios are reapplied
+3. the widget is clamped inside the board
+4. scale is reduced only if the widget can no longer fit
+
+Two protections are important:
+
+- restored widgets skip destructive auto-adaptation on the very first resize pass
+- restored widgets also skip the first element-size resync tick
+
+Without those guards, a valid persisted size/scale can be overwritten immediately on mount.
+
+## Video-Specific Behavior
+
+Video widgets belong to `VIDEO_WIDGETS_BOARD`.
+
+They are visible only inside `defined crop-zone`.
+
+Key rules:
+
+- the video widget portal does not mount until `#video-crop-zone.defined` exists
+- the editable crop zone does not display the widgets themselves
+- persisted video widgets are restored against `defined crop-zone`, not the full scene
+
+This is critical for keeping:
+
+- correct position after restart
+- correct scale between `crop-zone` and `defined crop-zone`
+- correct bounds when the crop area changes
+
+## Runtime Cache vs DB
+
+There are two layers:
+
+- runtime config in `WidgetCoreRegistry`
+- persisted geometry in IndexedDB
+
+The runtime layer is faster, but it must not override valid persisted data when:
+
+- the board changed
+- the board was not ready during a previous mount
+- the widget is being restored after app startup
+
+That is why restore logic always validates whether the runtime config is still compatible with the current board.
+
+## Board-Scoped Widget Counting
+
+Singleton and max-instance rules are board-aware.
+
+This matters for video widgets because a widget already mounted on the scene must not block the same widget from being restored on the video board.
+
+The counting logic therefore scopes instances by:
+
+- widget group
+- widget base id
+- `widgetsBoard`
+
+## Practical Debug Rules
+
+If a widget restores with the wrong position, check these in order:
+
+1. Is the widget mounted on the correct `widgetsBoard`?
+2. Does the board DOM node exist before widget setup starts?
+3. Does the DB record contain valid `leftRatio/topRatio` and `width/height`?
+4. Is the first resize observer pass overwriting restored geometry?
+5. Is the widget content mutating its own intrinsic size after mount?
+
+If a widget keeps its position but loses its visual size, the issue is usually:
+
+- base dimensions being overwritten
+- first element resize sync running too early
+- a widget-specific content layout changing after restore
+
+## Current Guarantees
+
+With the current implementation, the widget system is designed to guarantee:
+
+- widgets stay inside their board
+- board resize repositions widgets from persisted ratios
+- widgets are reduced only when they no longer fit
+- video widgets restore inside `defined crop-zone`
+- runtime state does not override persisted state for the wrong board
+
+That is the contract the rest of the video and cropper UI should rely on.

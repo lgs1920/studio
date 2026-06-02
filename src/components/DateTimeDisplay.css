@@ -1,0 +1,102 @@
+.lgs-date-time-display {
+    position: relative;
+    display: inline-flex;
+    max-width: 100%;
+}
+
+.lgs-date-time-display[data-leading="true"] {
+    display: inline-grid;
+    align-items: start;
+    grid-template-columns: auto minmax(0, 1fr);
+    column-gap: var(--lgs-gutter-xs);
+}
+
+.lgs-date-time-display-content {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    max-width: 100%;
+    gap: 2rem;
+}
+
+.lgs-date-time-display-item {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 0;
+    gap: var(--lgs-gutter-xs);
+    white-space: nowrap;
+}
+
+.lgs-date-time-display-leading {
+    display: inline-flex;
+    align-items: center;
+    flex: 0 0 auto;
+}
+
+.lgs-date-time-display-icon-cell {
+    display: inline-flex;
+    align-items: center;
+    align-self: start;
+    justify-content: center;
+    height: 1lh;
+    min-width: 1em;
+    color: var(--wa-color-brand);
+    line-height: inherit;
+}
+
+.lgs-date-time-display-icon-cell wa-icon {
+    line-height: 1;
+}
+
+.lgs-date-time-display-time-range,
+.lgs-date-time-display-time-part {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 0;
+    gap: var(--lgs-gutter-xs);
+    white-space: nowrap;
+}
+
+.lgs-date-time-display[data-items-stacked="true"] .lgs-date-time-display-content {
+    align-items: center;
+    flex-direction: column;
+    gap: var(--lgs-gutter-xs);
+}
+
+.lgs-date-time-display[data-leading="true"] .lgs-date-time-display-content,
+.lgs-date-time-display[data-leading="true"] .lgs-date-time-display-item,
+.lgs-date-time-display[data-leading="true"] .lgs-date-time-display-range {
+    align-items: flex-start;
+    justify-content: flex-start;
+}
+
+.lgs-date-time-display[data-date-time-stacked="true"] .lgs-date-time-display-item {
+    flex-direction: column;
+    gap: 0;
+}
+
+.lgs-date-time-display[data-date-time-stacked="true"] .lgs-date-time-display-item > .lgs-date-time-display-leading {
+    margin-bottom: var(--lgs-gutter-xs);
+}
+
+.lgs-date-time-display[data-date-time-stacked="true"] .lgs-date-time-display-range {
+    gap: var(--lgs-gutter-xs);
+}
+
+.lgs-date-time-display-measure {
+    position: absolute;
+    visibility: hidden;
+    overflow: hidden;
+    width: max-content;
+    max-width: none;
+    height: 0;
+    white-space: nowrap;
+    pointer-events: none;
+}
+
+.journey-stats-widget-editor-readonly-value .lgs-date-time-display span {
+    overflow: visible;
+    text-overflow: clip;
+}

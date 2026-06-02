@@ -7,25 +7,23 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-24
- * Last modified: 2026-02-24
+ * Created on: 2026-05-10
+ * Last modified: 2026-05-10
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { WIDGET_FONT_FAMILIES, WIDGET_SYSTEM_FONT_STACK } from '@Core/constants'
+
 import {
-    faDistributeSpacingVertical, faText, faTextSize,
-}                                                         from '@fortawesome/pro-regular-svg-icons'
+    formatSliderPercent,
+    sanitizeNumericControlValue,
+}                                      from '@Components/MainUI/widgets/editor/elements/sliderUtils'
 import {
-    faAlignCenter, faAlignLeft, faAlignRight, faBold, faItalic,
-}                                                         from '@fortawesome/pro-solid-svg-icons'
-import {
-    SlButton, SlButtonGroup, SlColorPicker, SlIcon, SlInput, SlOption, SlRange, SlSelect,
-}                                                         from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                                          from '@Utils/FA2SL'
-import { colord }                                         from 'colord'
+    WaButton, WaButtonGroup, WaColorPicker, WaIcon, WaInput, WaOption, WaSelect, WaSlider,
+}                 from '@web.awesome.me/webawesome-pro/dist/react'
+import { colord } from 'colord'
 import { useCallback, useEffect, useMemo }                from 'react'
 import { useSnapshot }                                    from 'valtio'
 
@@ -98,7 +96,7 @@ export const TextEditorToolbar = ({id, fonts = false, color = true, align = true
 
     const handleSizeChange = useCallback((e) => {
         if ($element) {
-            $element.size = Number(e.target.value)
+            $element.size = sanitizeNumericControlValue(e.target.value, 16, {min: 8, max: 48})
             scheduleUpdate()
         }
     }, [$element, scheduleUpdate])
@@ -120,7 +118,7 @@ export const TextEditorToolbar = ({id, fonts = false, color = true, align = true
 
     const handleOpacityChange = useCallback((e) => {
         if ($element) {
-            $element.text.opacity = parseFloat(e.target.value)
+            $element.text.opacity = sanitizeNumericControlValue(e.target.value, 1, {min: 0, max: 1})
             syncCSS($element.text.color, $element.text.opacity)
         }
     }, [$element, syncCSS])
@@ -141,25 +139,45 @@ export const TextEditorToolbar = ({id, fonts = false, color = true, align = true
 
     const currentFont = element?.fontFamily ?? 'System'
     const appliedFontStack = currentFont === 'System' ? WIDGET_SYSTEM_FONT_STACK : currentFont
+    const textOpacity = useMemo(() => sanitizeNumericControlValue(element?.text?.opacity, 1, {min: 0, max: 1}), [
+        element?.text?.opacity,
+    ])
+    const fontSize = useMemo(() => sanitizeNumericControlValue(element?.size, 16, {min: 8, max: 48}), [
+        element?.size,
+    ])
+
+    useEffect(() => {
+        if ($element?.text && element?.text?.opacity !== undefined && element.text.opacity !== textOpacity) {
+            $element.text.opacity = textOpacity
+            syncCSS($element.text.color, textOpacity)
+        }
+    }, [$element, element?.text?.opacity, syncCSS, textOpacity])
+
+    useEffect(() => {
+        if ($element && element?.size !== undefined && element.size !== fontSize) {
+            $element.size = fontSize
+            scheduleUpdate()
+        }
+    }, [$element, element?.size, fontSize, scheduleUpdate])
 
     return (
-        <div className="drawer-horizontal-line three-columns">
+        <div className="drawer-horizontal-line">
 
             {color && (
                 <div className="drawer-horizontal-element">
-                    <SlColorPicker
+                    <WaColorPicker
                         value={element?.text?.color ?? 'white'}
-                        onSlInput={handleColorChange}
-                        size="small"
+                        onInput={handleColorChange}
+                        size="s"
                         swatches={swatches}
                     />
-                    <SlRange
+                    <WaSlider
                         min="0"
                         max="1"
                         step="0.05"
-                        value={element?.text?.opacity ?? 1}
-                        tooltipFormatter={v => `${Math.floor(v * 100)}%`}
-                        onSlInput={handleOpacityChange}
+                        value={textOpacity}
+                        valueFormatter={formatSliderPercent}
+                        onInput={handleOpacityChange}
                         style={{width: '100px'}}
                     />
                 </div>
@@ -167,45 +185,45 @@ export const TextEditorToolbar = ({id, fonts = false, color = true, align = true
 
             {style && (
                 <div className="drawer-horizontal-element">
-                    <SlButtonGroup size="small">
-                        <SlButton
-                            size="small"
-                            variant={element?.weight === 'bold' ? 'primary' : 'default'}
+                    <WaButtonGroup size="s">
+                        <WaButton
+                            size="s"
+                            variant={element?.weight === 'bold' ? 'brand' : 'default'}
                             onClick={toggleBold}
                         >
-                            <SlIcon library="fa" name={FA2SL.set(faBold)}/>
-                        </SlButton>
-                        <SlButton
-                            size="small"
-                            variant={element?.style === 'italic' ? 'primary' : 'default'}
+                            <WaIcon variant="regular" name="bold"/>
+                        </WaButton>
+                        <WaButton
+                            size="s"
+                            variant={element?.style === 'italic' ? 'brand' : 'default'}
                             onClick={toggleItalic}
                         >
-                            <SlIcon library="fa" name={FA2SL.set(faItalic)}/>
-                        </SlButton>
-                    </SlButtonGroup>
+                            <WaIcon variant="regular" name="italic"/>
+                        </WaButton>
+                    </WaButtonGroup>
                 </div>
             )}
 
             {align && (
                 <div className="drawer-horizontal-element">
-                    <SlButtonGroup size="small">
+                    <WaButtonGroup size="s">
                         {['left', 'center', 'right'].map((mode) => (
-                            <SlButton
+                            <WaButton
                                 key={mode}
-                                size="small"
+                                size="s"
                                 disabled={alignmentDisabled}
-                                variant={!alignmentDisabled && element?.align === mode ? 'primary' : 'default'}
+                                variant={!alignmentDisabled && element?.align === mode ? 'brand' : 'default'}
                                 onClick={() => {
                                     if ($element) {
                                         $element.align = mode
                                     }
                                 }}
                             >
-                                <SlIcon library="fa"
-                                        name={FA2SL.set(mode === 'left' ? faAlignLeft : mode === 'center' ? faAlignCenter : faAlignRight)}/>
-                            </SlButton>
+                                <WaIcon variant="regular"
+                                        name={mode === 'left' ? 'align-left' : mode === 'center' ? 'align-center' : 'align-right'}/>
+                            </WaButton>
                         ))}
-                    </SlButtonGroup>
+                    </WaButtonGroup>
                 </div>
             )}
 
@@ -213,55 +231,55 @@ export const TextEditorToolbar = ({id, fonts = false, color = true, align = true
                 <>
                     <div className="drawer-horizontal-element">
 
-                        <SlSelect
-                            size="small"
+                        <WaSelect
+                            size="s"
                             value={currentFont.replace(/\s/g, '_')}
-                            onSlChange={handleFontChange}
+                            onChange={handleFontChange}
                             style={{
                                 width:                    '130px',
                                 '--sl-input-font-family': appliedFontStack,
                             }}
                         >
-                            <SlIcon slot="prefix" library="fa" name={FA2SL.set(faText)}/>
+                            <WaIcon slot="start" variant="regular" name="text"/>
                             {WIDGET_FONT_FAMILIES.map(font => (
-                                <SlOption key={font} value={font.replace(/\s/g, '_')}>
+                                <WaOption key={font} value={font.replace(/\s/g, '_')}>
                                 <span
                                     style={{fontFamily: font === 'System' ? WIDGET_SYSTEM_FONT_STACK : font}}>Typeface</span>
-                                </SlOption>
+                                </WaOption>
                             ))}
-                        </SlSelect>
+                        </WaSelect>
                     </div>
                     <div className="drawer-horizontal-element">
-                        <SlSelect
+                        <WaSelect
                             hoist
-                            size="small"
+                            size="s"
                             value={element?.lineHeight ?? '1'}
-                            onSlChange={handleLineHeightChange}
+                            onChange={handleLineHeightChange}
                             style={{width: '8rem'}}
                         >
-                            <SlIcon slot="prefix" library="fa" name={FA2SL.set(faDistributeSpacingVertical)}/>
+                            <WaIcon slot="start" variant="regular" name="distribute-spacing-vertical"/>
                             {[
                                 {v: '0.8', t: 'Compact'},
                                 {v: '1', t: 'Normal'},
                                 {v: '1.2', t: 'Comfort'},
                                 {v: '1.6', t: 'Wide'},
                             ].map(opt => (
-                                <SlOption key={opt.v} value={opt.v}>{opt.t}</SlOption>
+                                <WaOption key={opt.v} value={opt.v}>{opt.t}</WaOption>
                             ))}
-                        </SlSelect>
+                        </WaSelect>
                     </div>
                     <div className="drawer-horizontal-element">
-                        <SlInput
-                            size="small"
+                        <WaInput
+                            size="s"
                             type="number"
                             min="8"
                             max="48"
-                            value={element?.size ?? 16}
-                            onSlInput={handleSizeChange}
+                            value={fontSize}
+                            onInput={handleSizeChange}
                             style={{width: '6rem'}}
                         >
-                            <SlIcon slot="prefix" library="fa" name={FA2SL.set(faTextSize)}/>
-                        </SlInput>
+                            <WaIcon slot="start" variant="regular" name="text-size"/>
+                        </WaInput>
                     </div>
                 </>
             )}

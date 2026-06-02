@@ -7,68 +7,112 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-05-10
+ * Last modified: 2026-05-10
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { SCENE_MODES }                 from '@Core/constants'
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { SlButton, SlIcon, SlTooltip } from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                       from '@Utils/FA2SL'
-import { useRef, useState }            from 'react'
-import { useSnapshot }                 from 'valtio/index'
+import { SCENE_MODES }                                             from '@Core/constants'
+import { LGSPopup }                                           from '@Components/LGSPopup'
+import { WaButton, WaIcon, WaTooltip }                        from '@web.awesome.me/webawesome-pro/dist/react'
+import { Fragment, useCallback, useEffect, useRef, useState } from 'react'
+import { useSnapshot }                                             from 'valtio/index'
 
+/**
+ * Component to select the scene mode via a Web Awesome popup.
+ * @param {Object} props - Component properties.
+ * @param {string} [props.tooltip='right'] - Tooltip placement.
+ * @returns {JSX.Element} The rendered scene mode selector.
+ */
 export const SceneModeSelector = (props) => {
-    const settings = useSnapshot(lgs.settings.scene)
+    // Valtio snapshots named after the store attribute
+    const scene = useSnapshot(lgs.settings.scene)
     const mainUI = useSnapshot(lgs.stores.ui.mainUI)
-    const buttonGroup = useRef(null)
-    const placement = props.tooltip ?? 'right'
-    const [waitingMode, setWaitingMode] = useState(false)
+    const [open, setOpen] = useState(false)
 
-    const selectSceneMode = (event) => {
-        if (waitingMode) {
-            __.ui.sceneManager.morph(parseInt(event.target.dataset.sceneMode), __.ui.sceneManager.afterMorphing)
-            handleOut(event)
+    // Ref using the underscore prefix
+    const _selector = useRef(null)
+    const placement = props.tooltip ?? 'right'
+    const popupPlacement = placement === 'right' ? 'right-start' : 'left-start'
+    const disabled = mainUI.rotate.running || mainUI.panorama.active
+
+    /**
+     * Handles the selection of a new scene mode.
+     * @param {number} selectedMode - The selected scene mode.
+     */
+    const handleSelect = useCallback((selectedMode) => {
+        setOpen(false)
+        if (selectedMode !== scene.mode.value) {
+            __.ui.sceneManager.morph(selectedMode, __.ui.sceneManager.afterMorphing)
         }
-        else {
-            handleHover(event)
+    }, [scene.mode.value])
+
+    const togglePopup = useCallback(() => {
+        setOpen(current => !current)
+    }, [])
+
+    useEffect(() => {
+        if (!disabled || !open) {
+            return
         }
-    }
-    const handleOut = (event) => {
-        setWaitingMode(false)
-    }
-    const handleHover = (event) => {
-        setWaitingMode(true)
-        event.preventDefault()
-    }
+
+        const animationFrame = window.requestAnimationFrame(() => setOpen(false))
+        return () => window.cancelAnimationFrame(animationFrame)
+    }, [disabled, open])
+
+    const currentModeInfo = SCENE_MODES.get(scene.mode.value)
+    const alternateModes = scene.mode.available.filter(mode => Number(mode) !== Number(scene.mode.value))
 
     return (
-        <div ref={buttonGroup} className={'scene-mode-selector'} onMouseLeave={handleOut}
-             waiting-mode={waitingMode ? 'true' : 'false'}>
+        <div className={'scene-mode-selector toolbar-action-popup-host'} ref={_selector}>
+            <WaTooltip for="scene-mode-trigger" placement={placement}>{currentModeInfo.title}</WaTooltip>
+            <WaButton size={'small'}
+                      className={'square-button'}
+                      disabled={disabled}
+                      id="scene-mode-trigger"
+                      variant={'brand'}
+                      appearance="Filled"
+                      onClick={togglePopup}
+                      aria-haspopup="menu"
+                      aria-expanded={open && !disabled ? 'true' : 'false'}
+            >
+                <WaIcon name={currentModeInfo.icon} variant="regular"/>
+            </WaButton>
 
-            {
-                settings.mode.available.map(mode => (
-                    <SlTooltip key={`scene-mode-${SCENE_MODES.get(mode).value}`}
-                               placement={placement} hoist content={SCENE_MODES.get(mode).title}>
-                        <SlButton size={'small'}
-                                  visible={settings.mode.value === SCENE_MODES.get(mode).value}
-                                  className={'square-button'} onclick={selectSceneMode}
-                                  data-scene-mode={SCENE_MODES.get(mode).value}
-                                  disabled={mainUI.rotate.running}>
-                            <FontAwesomeIcon slot="prefix" icon={SCENE_MODES.get(mode).icon}
-                                             style={{
-                                                 '--fa-secondary-color':   lgs.colors.ocean,
-                                                 '--fa-secondary-opacity': 1,
-                                                 '--fa-primary-color':     lgs.colors.ground,
-                                                 '--fa-primary-opacity':   1,
-                                             }}/>
-                        </SlButton>
-                    </SlTooltip>
-                ))
-            }
+            <LGSPopup active={open && !disabled && alternateModes.length > 0}
+                     anchor="scene-mode-trigger"
+                      onRequestClose={() => setOpen(false)}
+                     placement={popupPlacement}
+                     distance={lgs.gutter.xs}
+                     flip
+                     shift>
+                <div className="toolbar-action-popup" role="menu">
+                    {
+                        alternateModes.map(mode => {
+                            const modeData = SCENE_MODES.get(mode)
+                            return (
+                                <Fragment key={`scene-mode-${modeData.value}`}>
+                                    <WaTooltip placement="top"
+                                               for={`scene-mode-${modeData.value}`}>{modeData.title}</WaTooltip>
+                                    <WaButton
+                                        id={`scene-mode-${modeData.value}`}
+                                        className="square-button"
+                                        size="s"
+                                        variant="brand"
+                                        appearance="Filled"
+                                        onClick={() => handleSelect(modeData.value)}
+                                        role="menuitem"
+                                    >
+                                        <WaIcon name={modeData.icon} variant="regular"/>
+                                    </WaButton>
+                                </Fragment>
+                            )
+                        })
+                    }
+                </div>
+            </LGSPopup>
         </div>
     )
 }

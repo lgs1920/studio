@@ -1,14 +1,14 @@
 /*******************************************************************************
  *
  * This file is part of the LGS1920/studio project.
- *
+ *  
  * File: style.css
  *
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-03-21
+ * Last modified: 2026-03-21
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,7 +16,7 @@
 
 :root {
     --entity-thumbnail-button-dimension: 20px;
-    --layer-list-itel-height: 40px
+    --layer-list-item-height: 40px
 }
 
 #layers-and-terrains-settings {
@@ -24,15 +24,11 @@
     height: 100%;
 }
 
-#layers-and-terrains-settings sl-tab-panel::part(base) {
+#layers-and-terrains-settings wa-tab-panel::part(base) {
     padding-top: var(--lgs-gutter-s);
 }
 
-#layers-and-terrains-settings [class^="toggle-state-icon-"] {
-    font-size: var(--lgs-font-size-m);
-}
-
-.layer-entities-wrapper {
+.layer-entities-wrapper::part(body) {
     display: grid;
     flex-wrap: wrap;
     width: 100%;
@@ -42,9 +38,10 @@
     grid-template-columns: repeat(4, 1fr);
 }
 
-.by-list.layer-entities-wrapper {
+.by-list.layer-entities-wrapper::part(body) {
     display: flex;
-    gap: var(--lgs-gutter-xs);
+    flex-direction: column;
+    gap: var(--lgs-gutter-s);
 }
 
 .layers-provider-header {
@@ -56,15 +53,13 @@
 .layer-entity {
     position: relative;
     display: flex;
-    aspect-ratio: 1;
     overflow: hidden;
-    padding: 0;
+    justify-content: flex-start;
     cursor: pointer;
+    border-width: 1px;
+    /*border-color: var(--wa-color-brand-on-normal);*/
+    aspect-ratio: 1;
     gap: var(--lgs-gutter-s);
-}
-
-.layer-entity > * {
-    pointer-events: none;
 }
 
 .layer-entity .selected-entity-menu {
@@ -77,14 +72,21 @@
 
 .by-list .layer-entity {
     align-items: center;
-    width: 100%;
-    height: var(--layer-list-itel-height);
-    padding: var(--lgs-gutter-xs);
+    height: var(--layer-list-item-height);
 }
 
-.by-list .layer-entity :nth-of-type(3) {
-    margin-left: auto;
+.by-list .layer-entity::part(body) {
+    align-items: center;
+    justify-content: flex-start;
+    width: 100%;
+    height: 100%;
+    padding: 2px;
+    gap: var(--lgs-gutter-s);
+}
+
+.by-list .layer-entity .ent {
     display: block;
+    margin-left: auto;
 }
 
 .thumbnail-background {
@@ -94,7 +96,6 @@
     left: 0;
     width: 100%;
     height: 100%;
-    z-index: -1;
     background-position: center;
     background-size: cover;
     transition: background-size 0.5s ease;
@@ -119,13 +120,6 @@
     filter: none;
 }
 
-.layer-entity:hover {
-    box-shadow: var(--sl-shadow-x-large);
-}
-
-.layer-entity.entity-selected {
-    border-color: var(--lgs-success-color);
-}
 
 .layer-entity > a {
     display: block;
@@ -134,39 +128,31 @@
     height: 100%;
 }
 
-.entity-checkbox, .entity-access, .entity-lock-status {
-    position: absolute;
-
-}
-
-.entity-checkbox {
-    position: absolute;
-    font-size: 1rem;
-    line-height: 1;
-    top: var(--lgs-gutter-xs);
-    right: calc(var(--lgs-gutter-xs) - 1.5px); /* Manual right adjust. */
-}
-
-.by-list .entity-checkbox {
-    position: relative;
-    top: 0;
-    right: 0;
+.entity-sub-menu {
+    display: flex;
+    align-items: center;
+    margin-left: auto;
+    gap: var(--lgs-gutter-xs);
 }
 
 .entity-access, .entity-lock-status {
-    position: absolute;
     font-size: 13px;
-    width: var(--entity-thumbnail-button-dimension);
-    height: var(--entity-thumbnail-button-dimension);
-    display: flex;
-    justify-content: center;
-    padding-left: 1.5px;
-    align-items: center;
-    border-radius: var(--lgs-border-radius-xs);
-    border: var(--lgs-border-s);
+    position: absolute;
     top: var(--lgs-gutter-xs);
     left: var(--lgs-gutter-xs);
-    background: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--entity-thumbnail-button-dimension);
+    height: var(--entity-thumbnail-button-dimension);
+    padding-left: 1.5px;
+    border: var(--lgs-border-s);
+    border-radius: var(--lgs-border-radius-xs);
+    background: var(--wa-color-surface-default);
+}
+
+.wa-light .entity-access, .entity-lock-status {
+    background: var(--wa-color-surface-lowered);
 }
 
 .by-list .entity-access {
@@ -206,6 +192,7 @@
 
 
 .entity-access.freemium, .entity-lock-status.freemium {
+    margin-left: auto;
     color: var(--lgs-freemium-color);
 }
 
@@ -217,15 +204,6 @@
     display: none;
 }
 
-.entity-selected .entity-checkbox svg g .fa-secondary {
-    color: var(--lgs-success-color);
-    opacity: 1;
-}
-
-.entity-selected .entity-checkbox svg g .fa-primary {
-    color: white;
-}
-
 .provider-name {
     font-weight: bold;
 }
@@ -233,26 +211,29 @@
 .by-thumbnail .entity-name {
     font-size: calc(0.9 * var(--lgs-font-size-s));
     line-height: 1.4;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    background-color: var(--lgs-card-ui-bg-color);
-    color: var(--lgs-text-on-color);
     position: absolute;
-    bottom: 0;
     right: 0;
+    bottom: 0;
     left: 0;
-    text-align: center;
+    overflow: hidden;
     width: 100%;
+    text-align: center;
+    text-overflow: ellipsis;
+    color: var(--wa-color-text-normal);
+    background-color: var(--wa-color-surface-default);
 }
 
+.wa-light .by-thumbnail .entity-name {
+    background-color: var(--wa-color-surface-lowered);
+}
 .by-list .entity-name {
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
 .by-thumbnail .entity-selected .entity-name {
-    background-color: var(--lgs-success-color);
-    color: var(--lgs-text-on-color);
+    color: var(--wa-color-text-normal);
+    background-color: var(--wa-color-brand);
 }
 
 .layer-entity:hover :not(.entity-selected) .entity-name {
@@ -260,30 +241,22 @@
     color: var(--lgs-text-on-color);
 }
 
-.authent-tasks-list {
-    list-style-type: none;
-    display: flex;
-    flex-direction: column;
-    gap: var(--lgs-gutter-s);
 
+#lgs--layers-manage-authent::part(trigger) {
+    --height: 24px;
+}
+
+#lgs--layers-manage-authent wa-icon::part(svg) {
+    height: var(--height);
+    color: var(--wa-color-brand-on-normal);
+}
+
+.wa-dark .by-thumbnail #lgs--layers-manage-authent wa-icon::part(svg) {
+    color: var(--wa-color-surface-default);
 }
 
 .selected-entity-menu {
-    margin-top: var(--lgs-gutter-xs);
-}
-
-.selected-entity-menu::part(base) {
-    padding: 2px 0;
-}
-
-.authent-tasks-list li {
-    display: flex;
-    align-content: flex-start;
-    gap: var(--lgs-gutter-s);
-}
-
-.authent-tasks-list sl-badge::part(base) {
-    font-weight: normal;
+    font-size: var(--lgs-font-size-l);
 }
 
 #layers-and-terrains-filter {
@@ -292,27 +265,9 @@
     margin-left: auto;
 }
 
-#filter-entities {
-    display: flex;
-    align-items: center;
-    flex-direction: column;
-    gap: var(--lgs-gutter-xs);
-}
-
-#filter-entities > div {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    width: 100%;
-    gap: var(--lgs-gutter-xs);
-}
 
 #filter-by-countries {
     width: 100%;
-}
-
-.layer-filter-active {
-    color: var(--lgs-success-color)
 }
 
 #info-layer-modal {
@@ -323,28 +278,21 @@
     height: 50vh;
 }
 
-#filter-alert-content {
-    display: flex;
-    align-content: center;
-    flex-direction: column;
-    gap: var(--lgs-gutter-s);
-}
-
-#filter-alert-content sl-button {
-    margin-left: auto;
-    margin-top: var(--lgs-gutter-s);
-}
 
 /*******************************************************************************
  * Imagery Settings
  */
 
-#layer-settings {
+#layer-settings::part(body) {
     display: flex;
     flex-direction: column;
     margin: var(--lgs-gutter-xs) 0;
     --lgs-animation-duration-on: 0.6s;
+    gap: var(--lgs-gutter-s);
+}
 
+#layer-settings .buttons-bar {
+    justify-content: space-between;
 }
 
 .alpha-to-color {
@@ -352,4 +300,8 @@
     align-items: center;
     justify-content: space-between;
     margin-right: 45%;
+}
+
+#lgs--layers-filter-by-countries {
+    width: 100%;
 }

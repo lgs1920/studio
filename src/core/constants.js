@@ -7,22 +7,14 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-24
- * Last modified: 2026-02-24
+ * Created on: 2026-05-10
+ * Last modified: 2026-05-10
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { CESIUM_EVENTS as $CESIUM_EVENTS }        from '@Core/events/cesiumEvents'
-import {
-    faBuildingColumns, faBuildings, faCampground, faCross, faCrown, faEarthEurope, faFlagPennant, faFlagSwallowtail,
-    faFort, faHouseBlank, faLock, faMap, faMountains, faPlaceOfWorship, faRoad, faSquareParking, faTablePicnic,
-    faTelescope, faUnlock, faUser,
-}                                                 from '@fortawesome/duotone-regular-svg-icons'
-import { faAndroid, faApple, faLinux, faWindows } from '@fortawesome/free-brands-svg-icons'
-import { faCompass, faDesktop, faRoute, faText }  from '@fortawesome/pro-regular-svg-icons'
-import { faChartFft, faGavel }                    from '@fortawesome/pro-solid-svg-icons'
+import { CESIUM_EVENTS as $CESIUM_EVENTS } from '@Core/events/cesiumEvents'
 
 
 export const SLOGAN = 'Replay the World Outdoors!'
@@ -55,6 +47,7 @@ export const DESKTOP_MIN = 992
 export const CONFIGURATION = 'config.yaml'
 export const SETTINGS = 'settings.yaml'
 export const LAYERS_TERRAINS_SETTINGS = 'layers-terrains.yaml'
+export const SHORTCUTS_CATALOG = 'shortcuts.yaml'
 export const COUNTRIES = 'countries.yaml'
 export const WIDGETS = 'widgets.yaml'
 export const WORLD = 'WORLD'
@@ -92,6 +85,7 @@ export const SETTINGS_STORE = 'settings'
 export const VAULT_STORE = 'vault'
 export const CURRENT_STORE = 'current'
 export const JOURNEYS_STORE = 'journeys'
+export const JOURNEY_GROUPS_STORE = 'journey-groups'
 export const WIDGETS_STORE = 'widgets'
 export const ORIGIN_STORE = 'origin'
 export const POIS_STORE = 'pois'
@@ -100,7 +94,9 @@ export const CURRENT_TRACK = 'track'
 export const CURRENT_CAMERA = 'camera'
 
 export const CURRENT_POI = 'poi'
+export const CURRENT_MAP_POINT = 'map-point'
 export const POI_THRESHOLD_DISTANCE = 50 // meters
+export const POI_JOURNEY_ASSOCIATION_DISTANCE = 10000 // meters
 
 export const POI_STARTER_TYPE = 'starter'
 export const FLAG_START_TYPE = 'start'
@@ -162,27 +158,27 @@ export const HIGH_TERRAIN_PRECISION = 2
 
 export const ACCESS_ICONS = {
     [FREEMIUM_ACCESS]:       {
-        icon: faCrown,
-        text: 'Freemium Access',
+        icon: 'crown',
+        text: 'Freemium Access - Click to unlock',
     },
     [PREMIUM_ACCESS]:        {
-        icon: faCrown,
-        text: 'Premium Access',
+        icon: 'crown',
+        text: 'Premium Access - Click to unlock',
     },
     [FREE_ANONYMOUS_ACCESS]: {
-        icon: faUnlock,
+        icon: 'unlock',
         text: '',
     },
     [FREE_ACCOUNT_ACCESS]:   {
-        icon: faUser,
-        text: 'Need account',
+        icon: 'user',
+        text: 'Need account - Click to Sign Up',
     },
     [UNLOCKED_ACCESS]:       {
-        icon: faUnlock,
+        icon: 'unlock',
         text: 'Unlocked',
     },
     [LOCKED_ACCESS]:         {
-        icon: faLock,
+        icon: 'lock',
         text: 'locked',
     },
 }
@@ -236,14 +232,15 @@ export const APP_EVENT = {
 /** Scene Mode **/
 
 export const SCENE_MODE_2D = {
-    value: 2, label: '2D', title: 'Map View', icon: faMap,
+    value: 2, label: '2D', title: 'Map View', icon: 'map',
 }
 export const SCENE_MODE_3D = {
-    value: 3, label: '3D', title: 'Globe View', icon: faEarthEurope,
+    value: 3, label: '3D', title: 'Globe View', icon: 'earth-europe',
 }
 export const SCENE_MODE_COLUMBUS = {
-    value: 2.5, label: '2.5D', title: 'Columbus View', icon: faRoad,
+    value: 2.5, label: '2.5D', title: 'Columbus View', icon: 'road',
 }
+export const DEFAULT_2D_FOCUS_PITCH = -45
 
 export const SCENE_MODES = new Map([
                                        [SCENE_MODE_2D.value, SCENE_MODE_2D],
@@ -254,11 +251,14 @@ export const SCENE_MODES = new Map([
 /** Drawers **/
 
 export const INFO_DRAWER = 'info-drawer'
+export const INFO_CHANGELOG_TAB = 'tab-whats-new'
 export const LAYERS_DRAWER = 'layers-drawer'
 export const JOURNEY_EDITOR_DRAWER = 'journey-editor-drawer'
+export const JOURNEY_GROUPS_DRAWER = 'journey-groups-drawer'
 export const SETTINGS_EDITOR_DRAWER = 'settings-editor-drawer'
 export const POIS_EDITOR_DRAWER = 'pois-editor-drawer'
 export const WIDGETS_EDITOR_DRAWER = 'widgets-editor-drawer'
+export const FLYTHROUGH_DRAWER = 'flythrough-drawer'
 
 /** Jaurney, Track, POI **/
 
@@ -326,25 +326,32 @@ export const FOCUS_CENTROID = 'center'
  * - FontAwesome Icons: Represented as `{faIconName}` objects.
  * - Custom SVGs: File paths for custom icons, represented as strings in arrays.
  */
+export const ICONS_PATH = '/assets/icons/'
 export const POI_CATEGORY_ICONS = new Map([
-                                              [POI_STANDARD_TYPE, {faFlagSwallowtail}],
-                                              [POI_FLAG_START, {faFlagPennant}],
-                                              [POI_FLAG_STOP, {faFlagPennant}],
-                                              ['shelter', {faHouseBlank}],
-                                              ['refuge', ['house-bed.svg']],
-                                              ['building', {faBuildings}],
-                                              ['viewpoint', {faTelescope}],
-                                              ['summit', {faMountains}],
-                                              ['cave', ['cave-in-mountains.svg']],
-                                              ['car-park', {faSquareParking}],
-                                              ['castle', {faFort}],
-                                              ['place-of-worship', {faPlaceOfWorship}],
-                                              ['cross', {faCross}],
-                                              ['monument', {faBuildingColumns}],
-                                              ['ruins', ['ruins.svg']],
-                                              ['campground', {faCampground}],
-                                              ['picnic-area', {faTablePicnic}],
+                                              [POI_STANDARD_TYPE, 'flag-swallowtail'],
+                                              [POI_FLAG_START, 'flag-pennant'],
+                                              [POI_FLAG_STOP, 'flag-pennant'],
+                                              ['shelter', 'house-blank'],
+                                              ['refuge', 'house-bed.svg'],
+                                              ['building', 'building'],
+                                              ['viewpoint', 'telescope'],
+                                              ['summit', 'mountains'],
+                                              ['cave', 'cave-in-mountains.svg'],
+                                              ['car-park', 'square-parking'],
+                                              ['castle', 'fort'],
+                                              ['place-of-worship', 'place-of-worship'],
+                                              ['cross', 'cross'],
+                                              ['monument', 'building-columns'],
+                                              ['ruins', 'ruins.svg'],
+                                              ['campground', 'campground'],
+                                              ['picnic-area', 'table-picnic'],
                                           ])
+
+export const ROTATION_ICON = 'arrows-rotate',
+             FOCUS_ICON    = 'crosshairs-simple',
+             CLOSE_ICON        = 'xmark',
+             EDIT_JOURNEY_ICON = 'paintbrush-pencil',
+             EDIT_WIDGET_ICON  = 'pen-ruler'
 
 
 /**
@@ -376,7 +383,8 @@ export const ADD_POI_EVENT    = 'poi/add',
 /** Compass **/
 export const NO_COMPASS = 0,
 COMPASS_FULL            = 1,
-COMPASS_LIGHT           = 2
+COMPASS_LIGHT     = 2,
+COMPASS_WIND_ROSE = 3
 
 /*******************************************************************************
  * Context Menu
@@ -400,12 +408,12 @@ export const OS = {
 }
 
 export const OS_ICONS = {
-    windows: faWindows,
-    linux:   faLinux,
-    macos: faApple,
-    android: faAndroid,
-    ios:   faApple,
-    unknown: faDesktop,
+    windows: ['windows', 'brands'],
+    linux:   ['linux', 'brands'],
+    macos:   ['apple', 'brands'],
+    android: ['android', 'brands'],
+    ios:     ['apple', 'brands'],
+    unknown: ['desktop', 'regular'],
 }
 
 export const ORIENTATION = {
@@ -421,12 +429,12 @@ export const DEVICE_TYPE = {
 }
 
 export const NAVIGATOR = {
-    chrome:  'Chrome',
-    firefox: 'Firefox',
-    safari:  'Safari',
-    edge:    'Edge',
-    opera:   'Opera',
-    unknown: 'unknown',
+    chrome:  ['Chrome', 'brands'],
+    firefox: ['Firefox', 'brands'],
+    safari:  ['Safari', 'brands'],
+    edge:    ['Edge', 'brands'],
+    opera:   ['Opera', 'brands'],
+    unknown: ['unknown', 'regular'],
 }
 
 /*******************************************************************************
@@ -450,7 +458,6 @@ export const LGS_WIDGET_SCALE_BASE = 4
 const LGS_WIDGET_DPR = (typeof window !== 'undefined' && window.devicePixelRatio) ? window.devicePixelRatio : 1
 export const LGS_WIDGET_SCALE_EFFECTIVE = Math.min(LGS_WIDGET_SCALE_BASE, LGS_WIDGET_SCALE_BASE / LGS_WIDGET_DPR)
 export const LGS_WIDGET_SCALE_FACTOR = LGS_WIDGET_SCALE_EFFECTIVE
-console.log()
 export const WIDGET_MOUNT_TIMEOUT = 15000
 
 export const VIDEO_CROP_ZONE = 'video-crop-zone'
@@ -462,6 +469,8 @@ export const VIDEO_TOOLS_WIDGETS   = 'video-tools-widgets',
 
 export const COMPASS_WIDGET       = 'compass-widget',
              CREDITS_WIDGET       = 'credits-widget',
+             CAMERA_INFORMATION_WIDGET = 'camera-information-widget',
+             JOURNEY_TOOLBAR_WIDGET = 'journey-toolbar-widget',
              PROFILE_WIDGET       = 'profile-widget',
              TEXT_WIDGET          = 'text-widget',
              JOURNEY_STATS_WIDGET = 'journey-stats-widget'
@@ -472,44 +481,40 @@ export const WIDGETS_CAPABILITIES   = [
            'canMaximize',
            'canPosition',
            'canEdit',
+           'canSnapshot',
        ],
              WIDGETS_CONFIGURATION  = new Map([
                                                   [
                                                       COMPASS_WIDGET, {
-                                                      icon:      faCompass,
                                                       component: 'CompassWidget',
                                                   },
                                                   ],
                                                   [
                                                       CREDITS_WIDGET, {
-                                                      icon:      faGavel,
                                                       component: 'CreditsWidget',
                                                   },
                                                   ],
 
                                                   [
                                                       PROFILE_WIDGET, {
-                                                      icon:      faChartFft,
                                                       component: 'ProfileWidget',
                                                   },
                                                   ],
                                                   [
-                                                      TEXT_WIDGET, {
-                                                      icon:      faText,
-                                                      component: 'TextWidget',
+                                                      JOURNEY_STATS_WIDGET, {
+                                                      component: 'JourneyStatsWidget',
                                                   },
                                                   ],
                                                   [
-                                                      JOURNEY_STATS_WIDGET, {
-                                                      icon:      faRoute,
-                                                      component: 'JourneyStatsWidget',
+                                                      TEXT_WIDGET, {
+                                                      component: 'TextWidget',
                                                   },
                                                   ],
                                               ]),
 
-             WIDGET_LAYER_START = 4000,
+             WIDGET_LAYER_START     = 4000,
              WIDGET_LAYER_STEP      = 1,
-             WIDGET_LAYER_TOP   = 5000,
+             WIDGET_LAYER_TOP       = 5000,
 
 
              DEFAULT_WIDGETS_LIST   = '@Components/MainUI/widgets/list',
@@ -580,3 +585,23 @@ export const WIDGET_FONT_FAMILIES = ['System', ...WIDGET_GOOGLE_FONTS]
 
 export const WIDGET_EDITOR_PRE_RENDER_EVENT  = 'widget-editor-pre-render',
              WIDGET_EDITOR_POST_RENDER_EVENT = 'widget-editor-post-render'
+
+
+/**
+ * Pattern for Latitude
+ * DD: -90 to 90 with 0 to 6 decimals
+ * DMS: 0-90° 0-59' 0-59" (N, S, or sign)
+ */
+export const LATITUDE_FORMAT = '^[-+]?([1-8]?\\d(\\.\\d{1,6})?|90(\\.0{1,6})?)$|^([1-8]?\\d|90)[\\u00B0\\s]\\s*([0-5]?\\d)[\'\\s]\\s*([0-5]?\\d(\\.\\d+)?)"?\\s*[NS]?$'
+/**
+ * Pattern for Longitude
+ * DD: -180 to 180 with 0 to 6 decimals
+ * DMS: 0-180° 0-59' 0-59" (E, W, or sign)
+ */
+export const LONGITUDE_FORMAT = '^[-+]?(180(\\.0{1,6})?|((1[0-7]\\d)|([1-9]?\\d))(\\.\\d{1,6})?)$|^([1-7]?\\d\\d?|180)[\\u00B0\\s]\\s*([0-5]?\\d)[\'\\s]\\s*([0-5]?\\d(\\.\\d+)?)"?\\s*[EW]?$'
+
+/**
+ * Coordinate input UX timings (milliseconds)
+ */
+export const COORDINATE_INPUT_ERROR_DURATION_MS = 1200
+export const COORDINATE_INPUT_NORMALIZE_DELAY_MS = 2000

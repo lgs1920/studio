@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-03-11
+ * Last modified: 2026-03-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -20,8 +20,11 @@ import {
     MENU_START_START, MOBILE_MAX, START,
 }                        from '@Core/constants'
 import { SlDivider }     from '@shoelace-style/shoelace/dist/react'
+import { WaDivider } from '@web.awesome.me/webawesome-pro/dist/react'
 
 export const MenuSettings = (props) => {
+
+    const {ref} = props
 
     const switchValue = (event) => {
         if (window.isOK(event)) {
@@ -42,14 +45,21 @@ export const MenuSettings = (props) => {
 
         lgs.settings.ui.menu.toolBar.fromStart = (positions[1] === START)
         lgs.editorSettingsProxy.menu.toolbar = positions[1]
+
+        ref.current = true
+        // Reset after event cycle
+        setTimeout(() => {
+            if (ref) {
+                ref.current = false
+            }
+        }, 50)
     }
 
 
     return (
         <>
             <span slot="summary">{'Menu Settings'}</span>
-            <SlDivider/>
-            // Render menu disposition chooser based on isMobile
+            <WaDivider/>
             <div id="menu-disposition-chooser" device={__.device.isMobile ? 'mobile' : undefined}>
                 {__.device.isMobile ? (
                     // Mobile menu options

@@ -7,410 +7,919 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-28
- * Last modified: 2026-02-28
+ * Created on: 2026-05-10
+ * Last modified: 2026-05-10
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
+import { JourneyFilesList }                                   from '@Components/FileLoader/JourneyFilesList'
+import {
+    ALREADY_IMPORTED, IMPORT_FAILED, IMPORT_NOT_SUPPORTED, IMPORT_SUCCESS, JOURNEY_EXISTS, JOURNEY_KO, JOURNEY_OK,
+    JOURNEY_WAITING, TrackUtils,
+}                                                             from '@Utils/cesium/TrackUtils'
+import { FileUtils }                                          from '@Utils/FileUtils'
+import { UIToast }                                            from '@Utils/UIToast'
+import { WaButton, WaDialog, WaDivider, WaIcon, WaInput, WaTooltip } from '@web.awesome.me/webawesome-pro/dist/react'
+import { useEffect, useId, useMemo, useRef, useState }    from 'react'
+import { v4 as uuid }                                         from 'uuid'
+import { useSnapshot }                                        from 'valtio'
 import './style.css'
-import { faArrowRotateRight, faFileCirclePlus, faXmark } from '@fortawesome/pro-regular-svg-icons'
-import {
-    faBan, faCaretRight, faDoNotEnter, faFileCircleCheck, faFileCircleExclamation, faLocationExclamation,
-    faLocationSmile, faLocationXmark, faWarning,
-}                                                        from '@fortawesome/pro-solid-svg-icons'
 
-import { SlButton, SlDialog, SlIcon } from '@shoelace-style/shoelace/dist/react'
-import {
-    JOURNEY_DENIED, JOURNEY_OK, JOURNEY_WAITING, SUPPORTED_EXTENSIONS, TrackUtils,
-}                                     from '@Utils/cesium/TrackUtils'
-import { FA2SL }                      from '@Utils/FA2SL'
-import {
-    DRAG_AND_DROP_FILE_ACCEPTED, DRAG_AND_DROP_FILE_PARTIALLY, DRAG_AND_DROP_FILE_REJECTED, DRAG_AND_DROP_FILE_WAITING,
-    FileUtils,
-}                                     from '@Utils/FileUtils'
-import parse                          from 'html-react-parser'
-import { useEffect, useRef }          from 'react'
-import { Scrollbars }                 from 'react-custom-scrollbars'
-import { sprintf }                    from 'sprintf-js'
-import { useSnapshot }                from 'valtio'
-import { DragNDropFile }              from './DragNDropFile'
+const SUPPORTED_EXTENSIONS = ['.geojson', '.json', '.kml', '.gpx']
+const ACCEPTED_FILES = 'GPX, KML, JSON, GeoJSON'
+const REMOTE_JOURNEY_DEFAULT_NAME = 'remote-journey'
+const REMOTE_JOURNEY_IMPORT_TIMEOUT_MS = 25000
+const CLOUD_PROVIDER_LABELS = {
+    dropbox:   'Dropbox',
+    google:    'Google Drive',
+    icloud:    'iCloud',
+    nextcloud: 'Nextcloud',
+    onedrive:  'OneDrive',
+    pcloud:    'pCloud',
+}
+const CLOUD_ERROR_CODES = {
+    ACCESS_DENIED:        'cloud_access_denied',
+    AUTH_REQUIRED:        'cloud_auth_required',
+    ICLOUD_NOT_SUPPORTED: 'icloud_not_supported',
+    NOT_CONFIGURED:       'cloud_not_configured',
+    PRIVATE_LINK:         'cloud_private_link',
+    READ_FAILED:          'cloud_read_failed',
+    REMOTE_TIMEOUT:       'remote_timeout',
+    REMOTE_TOO_LARGE:     'remote_file_too_large',
+    UNSUPPORTED_FORMAT:   'unsupported_format',
+}
+
+const getSupportedExtension = (fileName = '') => {
+    const extension = FileUtils.getExtension(fileName).toLowerCase()
+    return SUPPORTED_EXTENSIONS.includes(`.${extension}`) ? extension : ''
+}
+
+const getPathFilename = (url) => {
+    const segment = url.pathname.split('/').filter(Boolean).pop() ?? ''
+    try {
+        return decodeURIComponent(segment)
+    }
+    catch {
+        return segment
+    }
+}
+
+const matchesDomain = (hostname, domain) => {
+    const host = hostname.toLowerCase()
+    return host === domain || host.endsWith(`.${domain}`)
+}
+
+const detectRemoteCloudProvider = (url) => {
+    const host = url.hostname.toLowerCase()
+    if (matchesDomain(host, 'drive.google.com') || matchesDomain(host, 'docs.google.com')) {
+        return 'google'
+    }
+    if (matchesDomain(host, 'dropbox.com') || matchesDomain(host, 'dropboxusercontent.com')) {
+        return 'dropbox'
+    }
+    if (matchesDomain(host, '1drv.ms') || matchesDomain(host, 'onedrive.live.com') || matchesDomain(host, 'sharepoint.com')) {
+        return 'onedrive'
+    }
+    if (matchesDomain(host, 'pcloud.com') || matchesDomain(host, 'pcloud.link')) {
+        return 'pcloud'
+    }
+    if (matchesDomain(host, 'icloud.com') || matchesDomain(host, 'icloud.com.cn')) {
+        return 'icloud'
+    }
+    if (/\/(?:index\.php\/)?s\/[^/?#]+/.test(url.pathname)) {
+        return 'nextcloud'
+    }
+
+    return ''
+}
+
+const getCloudProviderLabel = (provider) => {
+    return CLOUD_PROVIDER_LABELS[provider] ?? 'Cloud'
+}
+
+const getRemoteDisplayName = (url) => {
+    const provider = detectRemoteCloudProvider(url)
+    if (provider) {
+        return `${getCloudProviderLabel(provider)} import`
+    }
+
+    return getPathFilename(url) || REMOTE_JOURNEY_DEFAULT_NAME
+}
+
+const setSampleLoadedState = (value) => {
+    lgs.stores.main.components.fileLoader.sampleLoaded = value
+}
+
+const closeJourneyLoader = () => {
+    lgs.stores.ui.mainUI.journeyLoader.visible = false
+}
+
+const remoteImportFeedback = (error, fallbackProvider = '') => {
+    const data = error.response?.data ?? {}
+    const provider = data.provider ?? fallbackProvider
+    const providerLabel = getCloudProviderLabel(provider)
+    const code = data.errorCode ?? (data.authRequired ? CLOUD_ERROR_CODES.AUTH_REQUIRED : '')
+
+    switch (code) {
+        case CLOUD_ERROR_CODES.AUTH_REQUIRED:
+        case CLOUD_ERROR_CODES.PRIVATE_LINK:
+        case CLOUD_ERROR_CODES.NOT_CONFIGURED:
+            return {
+                caption:  'Private cloud link unavailable',
+                itemName: `${providerLabel} private link`,
+                message:  'Private cloud links are not available yet. Use a public sharing link.',
+            }
+        case CLOUD_ERROR_CODES.ACCESS_DENIED:
+            return {
+                caption:  'Access denied',
+                itemName: `${providerLabel} access denied`,
+                message:  'The connected account cannot access this file, or the sharing permissions do not allow import.',
+            }
+        case CLOUD_ERROR_CODES.ICLOUD_NOT_SUPPORTED:
+            return {
+                caption:  'Private cloud link unavailable',
+                itemName: 'iCloud private link',
+                message:  'Private cloud links are not available yet. Use a public sharing link.',
+            }
+        case CLOUD_ERROR_CODES.UNSUPPORTED_FORMAT:
+            return {
+                caption:  'Unsupported file format',
+                itemName: provider ? `${providerLabel} import` : REMOTE_JOURNEY_DEFAULT_NAME,
+                message:  'The imported file must be GPX, KML, GeoJSON, or JSON.',
+            }
+        case CLOUD_ERROR_CODES.READ_FAILED:
+            return {
+                caption:  'File could not be read',
+                itemName: provider ? `${providerLabel} import` : REMOTE_JOURNEY_DEFAULT_NAME,
+                message:  provider
+                          ? `${providerLabel} did not return a readable file. Check the sharing settings or try again later.`
+                          : 'The remote service did not return a readable file. Check the sharing settings or try again later.',
+            }
+        case CLOUD_ERROR_CODES.REMOTE_TIMEOUT:
+            return {
+                caption:  'File request timed out',
+                itemName: provider ? `${providerLabel} import` : REMOTE_JOURNEY_DEFAULT_NAME,
+                message:  'The file request timed out. Please try again later.',
+            }
+        case CLOUD_ERROR_CODES.REMOTE_TOO_LARGE:
+            return {
+                caption:  'File too large',
+                itemName: provider ? `${providerLabel} import` : REMOTE_JOURNEY_DEFAULT_NAME,
+                message:  'The file is too large to import.',
+            }
+        default:
+            break
+    }
+
+    if (error.response?.data?.error) {
+        return {
+            caption:  IMPORT_FAILED.caption,
+            itemName: provider ? `${providerLabel} import` : REMOTE_JOURNEY_DEFAULT_NAME,
+            message:  error.response.data.error,
+        }
+    }
+    if (error.code === 'ECONNABORTED' || error.name === 'CanceledError') {
+        return {
+            caption:  'File request timed out',
+            itemName: provider ? `${providerLabel} import` : REMOTE_JOURNEY_DEFAULT_NAME,
+            message:  'The file request timed out. Please try again later.',
+        }
+    }
+
+    return {
+        caption:  IMPORT_FAILED.caption,
+        itemName: provider ? `${providerLabel} import` : REMOTE_JOURNEY_DEFAULT_NAME,
+        message:  error.message ?? 'Remote import failed.',
+    }
+}
 
 /**
- * https://react-dropzone.js.org/
+ * JourneyLoaderUI Component
  */
 export const JourneyLoaderUI = (props) => {
+    const $journeyLoader = lgs.stores.ui.mainUI.journeyLoader
+    const journeyLoader = useSnapshot($journeyLoader)
+    const [remoteUrl, setRemoteUrl] = useState('')
+    const [remoteLoading, setRemoteLoading] = useState(false)
+    const [sampleLoading, setSampleLoading] = useState(false)
 
-    const journeyLoaderStore = lgs.stores.ui.mainUI.journeyLoader
-    const journeyLoaderSnap= useSnapshot(journeyLoaderStore)
+    const {fileList, sampleLoaded} = useSnapshot(lgs.stores.main.components.fileLoader)
 
-    const setState = lgs.stores.main.components.fileLoader
-    const getState = useSnapshot(setState)
-    const fileList = setState.fileList
+    const _dialog = useRef(null)
+    const _filesDropper = useRef(null)
 
-    const fileLoaderRef = useRef(null)
+    const _attemptCounter = useRef(0)
 
     const GPX_SAMPLE_FILENAME = 'LGS1920.gpx'
-    const GPX_SAMPLE = [__.app.isDevelopment() ? '/public' : '/', 'assets', 'samples', GPX_SAMPLE_FILENAME].join('/')
+    const GPX_SAMPLE_URL = `${__.app.isDevelopment() ? '/public' : ''}/assets/samples/${GPX_SAMPLE_FILENAME}`
+    const sampleFileInfo = useMemo(() => FileUtils.getFileNameAndExtension(GPX_SAMPLE_FILENAME), [])
+    const sampleSlug = useMemo(() => __.app.setSlug({content: GPX_SAMPLE_FILENAME.split('.')}), [])
+    const fileInputId = useId()
 
     /**
-     * Callback after loading a file. We load the journey
-     *
-     * @param file
-     * @param content
-     * @param result
+     * Resynchronize sampleLoaded state whenever the dialog opens.
+     * This ensures the button reappears if the sample was deleted elsewhere.
      */
-    const loadJourney = async (file, content, result = true) => {
-        let status = JOURNEY_WAITING
-        if (result) {
-            const journey = FileUtils.getFileNameAndExtension(file.name)
-            journey.content = content
-            status = await TrackUtils.loadJourneyFromFile(journey)
-            // If reading is OK we set some readonly parameters
+    useEffect(() => {
+        if (journeyLoader.visible) {
+            const isPresent = lgs.journeys.has(sampleSlug)
+            if (lgs.stores.main.components.fileLoader.sampleLoaded !== isPresent) {
+                setSampleLoadedState(isPresent)
+            }
+        }
+    }, [journeyLoader.visible, sampleSlug])
+
+    /**
+     * Reactive visibility based on Valtio store state
+     */
+    const showSampleButton = !sampleLoaded
+
+    /**
+     * Updates file status in the Valtio store
+     * @param {string} id
+     * @param {number} status
+     * @param {string} error
+     */
+    const updateFileStatus = (id, status, error = '') => {
+        const item = lgs.stores.main.components.fileLoader.fileList.get(id)
+        if (item) {
+            lgs.stores.main.components.fileLoader.fileList.set(id, {
+                ...item,
+                journeyStatus: status,
+                error:         error || item.error,
+            })
+
+            // Update sampleLoaded flag if this file matches the sample slug
+            if (status === JOURNEY_OK && item.slug === sampleSlug) {
+                setSampleLoadedState(true)
+            }
+        }
+    }
+
+    const updateFileItem = (id, updates) => {
+        const item = lgs.stores.main.components.fileLoader.fileList.get(id)
+        if (!item) {
+            return
+        }
+
+        lgs.stores.main.components.fileLoader.fileList.set(id, {
+            ...item,
+            ...updates,
+            file: {
+                ...item.file,
+                ...(updates.file ?? {}),
+            },
+        })
+    }
+
+    /**
+     * Handles file processing logic
+     * @param {File} file
+     */
+    const processLocalFile = async (file) => {
+        const validation = validateFile(file)
+        const slug = __.app.slugify(file.name)
+        const currentId = `id_${_attemptCounter.current++}`
+
+        const item = createListItem(file, validation)
+        item.journeyStatus = JOURNEY_WAITING
+        item.internalId = currentId
+
+        lgs.stores.main.components.fileLoader.fileList.set(currentId, item)
+
+        if (lgs.journeys.has(slug)) {
+            updateFileStatus(currentId, JOURNEY_EXISTS, ALREADY_IMPORTED.text)
+            if (slug === sampleSlug) {
+                setSampleLoadedState(true)
+            }
+
+            UIToast.warning({
+                                caption: ALREADY_IMPORTED.caption,
+                                text:    `<strong>${file.name}</strong> ${ALREADY_IMPORTED.text}`,
+                            })
+            return
+        }
+
+        if (!validation.validated) {
+            updateFileStatus(currentId, JOURNEY_KO, 'Format not supported')
+            UIToast.error({
+                              caption: IMPORT_NOT_SUPPORTED.caption,
+                              text:    `<strong>${file.name}</strong> ${IMPORT_NOT_SUPPORTED.text}`,
+                          })
+            return
+        }
+
+        try {
+            const content = await FileUtils.readFileAsTextAsync(file)
+            const status = await TrackUtils.loadJourneyFromFile({
+                                                                    name:      validation.file.name,
+                                                                    extension: validation.file.extension,
+                                                                    content:   content,
+                                                                })
+
             if (status === JOURNEY_OK) {
                 lgs.theJourney.globalSettings()
+                updateFileStatus(currentId, JOURNEY_OK)
+                UIToast.success({
+                                    caption: IMPORT_SUCCESS.caption,
+                                    text:    `<strong>${file.name}</strong> ${IMPORT_SUCCESS.text}`,
+                                })
             }
             else {
-                // There's nothing left to do here
-                return
-            }
-        }
-        const item = fileList.get(__.app.slugify(file.name))
-        if (item) {
-            item.journeyStatus = status
-            fileList.set(__.app.slugify(file.name), item)
-        }
-    }
-
-    /**
-     * Display item for File List
-     *
-     * @param item
-     * @return {JSX.Element}
-     * @constructor
-     */
-    const FileItem = ({item}) => {
-
-        // JOURNEY_KO      = 0, JOURNEY_OK      = 1, JOURNEY_EXISTS  = 2, JOURNEY_WAITING = 3, JOURNEY_DENIED = 4
-        const classes = ['read-journey-failure', 'read-journey-success', 'read-journey-warning', 'read-journey-waiting fa-spin','read-journey-failure']
-        const icons = [faLocationXmark, faLocationSmile, faLocationExclamation,faArrowRotateRight,faDoNotEnter]
-
-        if(item.validated === false) {
-            item.journeyStatus = JOURNEY_DENIED
-        }
-
-        // We start with waiting
-        if(item.journeyStatus === undefined) {
-            item.journeyStatus = JOURNEY_WAITING
-        }
-        return (
-            <li>
-                {item.validated &&
-                <SlIcon className={'read-journey-success'} library="fa" name={FA2SL.set(faFileCircleCheck)}></SlIcon>
-                }
-                {!item.validated &&
-                    <SlIcon className={'read-journey-failure'} library="fa" name={FA2SL.set(faFileCircleExclamation)}></SlIcon>
-                }
-                <span>{item.file.fullName}</span>
-
-                {item.journeyStatus !== undefined &&
-                    <SlIcon className={classes[fileList.get(item.slug).journeyStatus]}
-                            library="fa" name={FA2SL.set(icons[fileList.get(item.slug).journeyStatus])}>
-                    </SlIcon>
+                const isDoublon = status === JOURNEY_EXISTS
+                updateFileStatus(currentId, isDoublon ? JOURNEY_EXISTS : JOURNEY_KO, isDoublon ? ALREADY_IMPORTED.text : IMPORT_FAILED.text)
+                if (isDoublon && slug === sampleSlug) {
+                    setSampleLoadedState(true)
                 }
 
-            </li>
-        )
-    }
-
-    /**
-     * File list component
-     *
-     * @return {JSX.Element}
-     * @constructor
-     */
-    const FileList = () => {
-        return (
-            <ul>
-                {Array.from(fileList.values()).map(
-                    (item, index) => <FileItem key={index} item={item}/>,
-                )}
-            </ul>
-        )
-    }
-
-    /**
-     * Button label Component
-     *
-     * If no files are elected, the label is "Close" else "Continue"
-     *
-     * @return {JSX.Element}
-     * @constructor
-     */
-    const ButtonLabel = () => {
-
-        // TODO que les fichiers OK
-        if (fileList.size === 0) {
-            return (
-                <>
-                    <SlIcon slot="prefix" library="fa" name={FA2SL.set(faXmark)}/>
-                    {'Close'}
-                </>
-            )
-        }
-        return (
-            <>
-                <SlIcon slot="prefix"  library="fa" name={FA2SL.set(faCaretRight)}/>
-                {'Continue'}
-            </>
-        )
-    }
-
-    /**
-     * This is the standard message
-     *
-     * @return {JSX.Element}
-     * @constructor
-     */
-    const Message = () => {
-        return (
-            <section className={sprintf('drag-and-drop%s', getState.dragging.active ? ' waiting-drop' : '')}>
-                <span>
-                     <SlIcon slot="prefix" library="fa" name={FA2SL.set(faFileCirclePlus)}></SlIcon>
-                    {'Drop your files here !'}
-                </span>
-                <span>
-                    {parse('Or click to browse <br/>and select files on your device!')}
-                </span>
-                <AllowedFormatsMessage/>
-            </section>
-        )
-    }
-
-    /**
-     * This will be displayed when all files are rejected
-     *
-     * @return {JSX.Element}
-     * @constructor
-     */
-    const Rejected = () => {
-        return (
-            <section className={'drag-and-drop drag-reject'}>
-                <span>
-                     <SlIcon library="fa" name={FA2SL.set(faBan)}></SlIcon>
-                    {getState.error}
-                </span>
-
-                {/* eslint-disable-next-line no-undef */}
-                <AllowedFormatsMessage/>
-            </section>
-        )
-    }
-
-    /**
-     * This will be displayed when some files, not all, are rejected
-     *
-     * @return {JSX.Element}
-     * @constructor
-     */
-    const SomeRejected = () => {
-        return (
-            <section className={'drag-and-drop drag-some-reject'}>
-                <span>
-                     <SlIcon library="fa" name={FA2SL.set(faWarning)}></SlIcon>
-                    {getState.error}
-                </span>
-
-                {/* eslint-disable-next-line no-undef */}
-                <AllowedFormatsMessage/>
-            </section>
-        )
-    }
-
-    /**
-     * This will be displayed when all are accepted
-     *
-     * @return {JSX.Element}
-     * @constructor
-     */
-    const Accepted = () => {
-        return (
-            <section className={'drag-and-drop drag-accept'}>
-                <span>
-                     <SlIcon library="fa" name={FA2SL.set(faLocationSmile)}></SlIcon>
-                    {'Enjoy !'}
-                </span>
-            </section>
-        )
-    }
-
-
-    /**
-     * The allowed format reminder message
-     *
-     * @return {JSX.Element}
-     * @constructor
-     */
-    const AllowedFormatsMessage = () => {
-        return (
-            <span className={'comment'}>
-                {sprintf('Accepted formats: %s', SUPPORTED_EXTENSIONS.join(', '))}
-            </span>
-        )
-    }
-
-    /**
-     * Close the modal
-     *
-     */
-    const close = () => {
-        fileList.clear()
-        journeyLoaderStore.visible = false
-    }
-
-    const loadFile = async ({file, name}) => {
-        try {
-            fileList.clear()
-            const content = await lgs.axios.get(`${[lgs.BACKEND_API, 'read'].join('/')}?file=${file}`)
-            if (content.data.success) {
-                const file = new File([content.data.content], name, {
-                    type: 'application/gpx+xml',
-                })
-                fileList.set(__.app.slugify(file.name), setListItem(file, validate(file)))
-                FileUtils.readFileAsText(file, loadJourney)
+                UIToast.warning({
+                                    caption: isDoublon ? ALREADY_IMPORTED.caption : IMPORT_FAILED.caption,
+                                    text:    `<strong>${file.name}</strong> ${isDoublon ? ALREADY_IMPORTED.text : IMPORT_FAILED.text}`,
+                                })
             }
         }
         catch (error) {
-            console.error(error)
+            updateFileStatus(currentId, JOURNEY_KO, 'Error during upload')
+            triggerFailureEvent(file.name, error)
         }
     }
 
-    const loadSample = async () => {
-        loadFile({file: GPX_SAMPLE, name: GPX_SAMPLE_FILENAME})
-        journeyLoaderStore.visible = false
+    const importRemoteJourney = async (url) => {
+        const response = await lgs.axios.post(
+            [lgs.BACKEND_API, 'journey', 'import-url'].join('/'),
+            {url},
+            {
+                headers:         {
+                    'content-type': 'application/json',
+                    Accept:         'application/json',
+                },
+                timeout:         REMOTE_JOURNEY_IMPORT_TIMEOUT_MS,
+                signal:          AbortSignal.timeout(REMOTE_JOURNEY_IMPORT_TIMEOUT_MS),
+                withCredentials: true,
+            },
+        )
+
+        if (!response.data?.success) {
+            const error = new Error(response.data?.error ?? 'Remote import failed.')
+            error.response = {data: response.data}
+            throw error
+        }
+
+        return response.data
     }
 
-    const urlToLoad = useRef(null)
-    const loadURL = async () => {
-        //TODO extract real download links from share links. Target : Onedrive, Dropbox, Google
-        loadFile({file: urlToLoad.current.value, name: GPX_SAMPLE_FILENAME})
+    const processRemoteUrl = async (event) => {
+        event?.preventDefault()
+        const rawUrl = remoteUrl.trim()
+        if (!rawUrl || remoteLoading) {
+            return
+        }
+
+        const currentId = `url_${_attemptCounter.current++}`
+        let sourceUrl
+        try {
+            sourceUrl = new URL(/^[a-z][a-z\d+.-]*:/i.test(rawUrl) ? rawUrl : `https://${rawUrl}`)
+        }
+        catch {
+            UIToast.error({caption: IMPORT_FAILED.caption, text: 'Invalid URL.'})
+            return
+        }
+
+        const sourceProvider = detectRemoteCloudProvider(sourceUrl)
+        const initialName = getRemoteDisplayName(sourceUrl)
+        const initialInfo = FileUtils.getFileNameAndExtension(initialName)
+        const item = createListItem(
+            {
+                name:         initialName,
+                lastModified: 0,
+                size:         0,
+                type:         'text/uri-list',
+            },
+            {
+                validated: true,
+                error:     '',
+                file:      {
+                    name:      initialInfo.name || REMOTE_JOURNEY_DEFAULT_NAME,
+                    extension: getSupportedExtension(initialName) || initialInfo.extension,
+                },
+            },
+        )
+
+        item.journeyStatus = JOURNEY_WAITING
+        item.internalId = currentId
+        lgs.stores.main.components.fileLoader.fileList.set(currentId, item)
+        setRemoteLoading(true)
+
+        try {
+            const remote = await importRemoteJourney(rawUrl)
+            const fileInfo = remote.file
+
+            if (!SUPPORTED_EXTENSIONS.includes(`.${fileInfo.extension}`)) {
+                updateFileStatus(currentId, JOURNEY_KO, 'Format not supported')
+                UIToast.error({
+                                  caption: IMPORT_NOT_SUPPORTED.caption,
+                                  text:    `<strong>${sourceUrl.hostname}</strong> ${IMPORT_NOT_SUPPORTED.text}`,
+                              })
+                return
+            }
+
+            const slug = __.app.setSlug({content: [fileInfo.name, fileInfo.extension]})
+            updateFileItem(currentId, {
+                slug,
+                file: {
+                    date:      0,
+                    fullName:  fileInfo.fullName,
+                    name:      fileInfo.name,
+                    extension: fileInfo.extension,
+                    type:      fileInfo.type,
+                    size:      fileInfo.size,
+                },
+            })
+
+            if (lgs.journeys.has(slug)) {
+                updateFileStatus(currentId, JOURNEY_EXISTS, ALREADY_IMPORTED.text)
+                UIToast.warning({
+                                    caption: ALREADY_IMPORTED.caption,
+                                    text:    `<strong>${fileInfo.fullName}</strong> ${ALREADY_IMPORTED.text}`,
+                                })
+                return
+            }
+
+            const status = await TrackUtils.loadJourneyFromFile({
+                                                                    name:      fileInfo.name,
+                                                                    extension: fileInfo.extension,
+                                                                    content:   remote.content,
+                                                                })
+
+            if (status === JOURNEY_OK) {
+                lgs.theJourney.globalSettings()
+                updateFileStatus(currentId, JOURNEY_OK)
+                setRemoteUrl('')
+                UIToast.success({
+                                    caption: IMPORT_SUCCESS.caption,
+                                    text:    `<strong>${fileInfo.fullName}</strong> ${IMPORT_SUCCESS.text}`,
+                                })
+                return
+            }
+
+            const isDoublon = status === JOURNEY_EXISTS
+            updateFileStatus(currentId, isDoublon ? JOURNEY_EXISTS : JOURNEY_KO, isDoublon ? ALREADY_IMPORTED.text : IMPORT_FAILED.text)
+            UIToast.warning({
+                                caption: isDoublon ? ALREADY_IMPORTED.caption : IMPORT_FAILED.caption,
+                                text:    `<strong>${fileInfo.fullName}</strong> ${isDoublon ? ALREADY_IMPORTED.text : IMPORT_FAILED.text}`,
+                            })
+        }
+        catch (error) {
+            const feedback = remoteImportFeedback(error, sourceProvider)
+            updateFileItem(currentId, {
+                file: {
+                    fullName:  feedback.itemName,
+                    name:      feedback.itemName,
+                    extension: '',
+                    size:      0,
+                },
+            })
+            updateFileStatus(currentId, JOURNEY_KO, feedback.message)
+            triggerFailureEvent(feedback.itemName, error, feedback.message, {
+                caption:     feedback.caption,
+                includeName: false,
+            })
+        }
+        finally {
+            setRemoteLoading(false)
+        }
     }
 
     /**
-     * Validate file
-     *
-     * The only test done here consists of testing the extendion.
-     * Other can be done in  props.validateCB function that returns {status:boolean,error:message}
-     *
-     * @param file
-     *
-     * @return {{error: string, validated: boolean}}
+     * Clears the native file input value.
      */
-    const validate = (file) => {
-        let check = {validated: true, message: ''}
-        const fileInfo = FileUtils.getFileNameAndExtension(file.name)
-
-        if (SUPPORTED_EXTENSIONS.includes(fileInfo.extension)) {
-            if (props.validateCB) {
-                check = props.validateCB(file)
-            }
+    const clearSelectedFiles = () => {
+        if (_filesDropper.current) {
+            _filesDropper.current.value = ''
         }
-        else {
-            check.validated = false
-            check.error = IMPROPER_FORMAT
-        }
-
-        check.file = fileInfo
-        return check
     }
 
-    const setListItem = (file, validate) => {
+    /**
+     * Handles a list of selected or dropped files.
+     * @param {File[]} files
+     */
+    const processFiles = (files) => {
+        files.forEach(file => processLocalFile(file))
+        clearSelectedFiles()
+    }
+
+    /**
+     * File input change handler
+     */
+    const handleFilesChange = (event) => {
+        const currentFiles = Array.from(event.target.files || [])
+        processFiles(currentFiles)
+    }
+
+    /**
+     * Reads all entries from a dropped directory.
+     * @param {FileSystemDirectoryReader} reader
+     * @returns {Promise<FileSystemEntry[]>}
+     */
+    const readDirectoryEntries = (reader) => {
+        return new Promise((resolve, reject) => {
+            reader.readEntries(resolve, reject)
+        })
+    }
+
+    /**
+     * Reads a dropped file entry as a File instance.
+     * @param {FileSystemFileEntry} entry
+     * @returns {Promise<File>}
+     */
+    const readFileEntry = (entry) => {
+        return new Promise((resolve, reject) => {
+            entry.file(resolve, reject)
+        })
+    }
+
+    /**
+     * Resolves the browser-specific dropped entry API.
+     * Chromium-based browsers can invalidate DataTransferItem access after the first await,
+     * so entries must be captured synchronously during the drop event.
+     * @param {DataTransferItem} item
+     * @returns {FileSystemEntry | null}
+     */
+    const getDroppedEntry = (item) => {
+        return item?.getAsEntry?.() ?? item?.webkitGetAsEntry?.() ?? null
+    }
+
+    /**
+     * Collects dropped files recursively, including directory contents when the browser exposes entries.
+     * @param {FileSystemEntry | null} entry
+     * @returns {Promise<File[]>}
+     */
+    const collectFilesFromEntry = async (entry) => {
+        if (!entry) {
+            return []
+        }
+
+        if (entry.isFile) {
+            const file = await readFileEntry(entry)
+            return file ? [file] : []
+        }
+
+        if (entry.isDirectory) {
+            const reader = entry.createReader()
+            const files = []
+
+            while (true) {
+                const entries = await readDirectoryEntries(reader)
+                if (entries.length === 0) {
+                    break
+                }
+
+                for (const childEntry of entries) {
+                    files.push(...await collectFilesFromEntry(childEntry))
+                }
+            }
+
+            return files
+        }
+
+        return []
+    }
+
+    /**
+     * Normalizes dropped files from the browser data transfer payload.
+     * @param {DragEvent} event
+     * @returns {Promise<File[]>}
+     */
+    const getDroppedFiles = async (event) => {
+        const dataTransfer = event.dataTransfer
+        const directFiles = Array.from(dataTransfer?.files || [])
+        const items = Array.from(dataTransfer?.items || [])
+
+        if (items.length === 0) {
+            return directFiles
+        }
+
+        const droppedItems = items
+            .filter(item => item.kind === 'file')
+            .map(item => ({
+                entry: getDroppedEntry(item),
+                file:  item.getAsFile?.() ?? null,
+            }))
+
+        const hasDirectoryDrop = droppedItems.some(({entry}) => entry?.isDirectory)
+        if (!hasDirectoryDrop && directFiles.length > 0) {
+            return directFiles
+        }
+
+        const files = []
+
+        for (const {entry, file} of droppedItems) {
+            if (entry) {
+                files.push(...await collectFilesFromEntry(entry))
+                continue
+            }
+
+            if (file) {
+                files.push(file)
+            }
+        }
+
+        return files.length > 0 ? files : directFiles
+    }
+
+    /**
+     * Opens the native file picker.
+     */
+    const openFilePicker = () => {
+        _filesDropper.current?.click()
+    }
+
+    /**
+     * Keyboard support for the custom dropzone.
+     * @param {React.KeyboardEvent<HTMLDivElement>} event
+     */
+    const handleDropZoneKeyDown = (event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault()
+            openFilePicker()
+        }
+    }
+
+    /**
+     * Keeps the browser from opening dragged files.
+     * @param {React.DragEvent<HTMLDivElement>} event
+     */
+    const handleDragEnter = (event) => {
+        event.preventDefault()
+        event.stopPropagation()
+    }
+
+    /**
+     * Keeps the browser from opening dropped files.
+     * @param {React.DragEvent<HTMLDivElement>} event
+     */
+    const handleDragOver = (event) => {
+        event.preventDefault()
+        event.stopPropagation()
+    }
+
+    /**
+     * Keeps the browser from opening dragged files when leaving the dropzone.
+     * @param {React.DragEvent<HTMLDivElement>} event
+     */
+    const handleDragLeave = (event) => {
+        event.preventDefault()
+        event.stopPropagation()
+    }
+
+    /**
+     * Handles files dropped onto the custom dropzone.
+     * @param {React.DragEvent<HTMLDivElement>} event
+     * @returns {Promise<void>}
+     */
+    const handleDrop = async (event) => {
+        event.preventDefault()
+        event.stopPropagation()
+
+        const droppedFiles = await getDroppedFiles(event.nativeEvent)
+
+        if (droppedFiles.length > 0) {
+            processFiles(droppedFiles)
+        }
+    }
+
+    /**
+     * Loads sample file and updates Valtio store state
+     */
+    const loadSample = async () => {
+        if (sampleLoading) {
+            return
+        }
+
+        setSampleLoading(true)
+        const currentId = `sample_${_attemptCounter.current++}`
+        const mockFile = {name: GPX_SAMPLE_FILENAME, lastModified: 0, size: 0, type: 'application/gpx+xml'}
+        const item = createListItem(mockFile, {validated: true, file: sampleFileInfo})
+
+        try {
+            if (lgs.journeys.has(sampleSlug)) {
+                setSampleLoadedState(true)
+                item.journeyStatus = JOURNEY_EXISTS
+                item.error = ALREADY_IMPORTED.text
+                lgs.stores.main.components.fileLoader.fileList.set(currentId, item)
+                UIToast.warning({
+                                    caption: ALREADY_IMPORTED.caption,
+                                    text:    `The sample <strong>${GPX_SAMPLE_FILENAME}</strong> ${ALREADY_IMPORTED.text}`,
+                                })
+                return
+            }
+
+            item.journeyStatus = JOURNEY_WAITING
+            lgs.stores.main.components.fileLoader.fileList.set(currentId, item)
+
+            const response = await lgs.axios.get(GPX_SAMPLE_URL)
+            const content = (typeof response.data === 'object') ? JSON.stringify(response.data) : response.data
+            const status = await TrackUtils.loadJourneyFromFile({
+                                                                    name:      sampleFileInfo.name,
+                                                                    extension: sampleFileInfo.extension,
+                                                                    content:   content,
+                                                                })
+
+            if (status === JOURNEY_OK) {
+                updateFileStatus(currentId, JOURNEY_OK)
+                setSampleLoadedState(true)
+            }
+            else {
+                updateFileStatus(currentId, JOURNEY_KO, 'Sample load failed')
+            }
+        }
+        catch (error) {
+            updateFileStatus(currentId, JOURNEY_KO, 'Sample network error')
+            triggerFailureEvent(GPX_SAMPLE_FILENAME, error)
+        }
+        finally {
+            setSampleLoading(false)
+        }
+    }
+
+    /**
+     * Error handling for failed operations
+     */
+    const triggerFailureEvent = (fileName, error = null, message = IMPORT_FAILED.text, options = {}) => {
+        const caption = options.caption ?? IMPORT_FAILED.caption
+        const includeName = options.includeName ?? true
+        const text = includeName && fileName ? `<strong>${fileName}</strong> ${message}` : message
+
+        console.error(`[JourneyLoader] Error: ${fileName}`, error)
+        UIToast.error({
+                          caption,
+                          text,
+                      })
+    }
+
+    /**
+     * File validation logic
+     */
+    const validateFile = (file) => {
+        let result = {validated: true, error: ''}
+        const info = FileUtils.getFileNameAndExtension(file.name)
+        const normalizedInfo = {...info, extension: info.extension.toLowerCase()}
+        if (!SUPPORTED_EXTENSIONS.includes(`.${normalizedInfo.extension}`)) {
+            result.validated = false
+            result.error = 'Format not supported'
+        }
+        else if (props.validateCB) {
+            result = props.validateCB(file)
+        }
+        result.file = normalizedInfo
+        return result
+    }
+
+    /**
+     * Factory for list item objects
+     */
+    const createListItem = (file, validation) => {
         return {
             slug:      __.app.slugify(file.name),
+            uuid:      uuid(),
             file:      {
                 date:      file.lastModified,
                 fullName:  file.name,
-                name:      validate.file.name,
-                extension: validate.file.extension,
+                name:      validation.file.name,
+                extension: validation.file.extension,
                 type:      file.type,
                 size:      file.size,
             },
-            validated: validate.validated,
-            error:     validate.error,
+            validated: validation.validated,
+            error:     validation.error,
         }
     }
 
-
-    useEffect(() => {
-        const dialogPanel = fileLoaderRef.current.shadowRoot.querySelector('[part="panel"]')
-        return () => {
-        }
-    }, [])
-
-    const manageHover = () => {
-
+    /**
+     * Resets component state and closes dialog
+     */
+    const close = () => {
+        _attemptCounter.current = 0
+        clearSelectedFiles()
+        lgs.stores.main.components.fileLoader.fileList.clear()
+        closeJourneyLoader()
     }
+
 
     return (
-
-        <SlDialog open={journeyLoaderSnap.visible}
-                  id={'file-loader-modal'}
-                  label={'Add Journeys'}
-                  onSlRequestClose={close}
-                  className={'lgs-theme'}
-                  ref={fileLoaderRef}
-
+        <WaDialog
+            open={journeyLoader.visible}
+            id={'file-loader-modal'}
+            label={'Import Journeys'}
+            onWaRequestClose={close}
+            className={'lgs-theme'}
+            ref={_dialog}
         >
             <div className="download-columns">
-                <div slot="header-actions"></div>
-                <DragNDropFile
-                    className={'drag-and-drop-container'}
-                    types={SUPPORTED_EXTENSIONS}
-                    manageContent={loadJourney}
-                    detectWindowDrag={true}
-                    multiple
-                    validate={validate}
-                    setList={setListItem}
+                <div
+                    className="drag-and-drop-container"
+                    role="button"
+                    tabIndex={0}
+                    onClick={openFilePicker}
+                    onKeyDown={handleDropZoneKeyDown}
+                    onDragEnter={handleDragEnter}
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
+                    aria-describedby={`${fileInputId}-hint`}
                 >
-                    {getState.accepted === DRAG_AND_DROP_FILE_WAITING && <Message/>}
-                    {getState.accepted === DRAG_AND_DROP_FILE_ACCEPTED && <Accepted/>}
-                    {getState.accepted === DRAG_AND_DROP_FILE_REJECTED && <Rejected/>}
-                    {getState.accepted === DRAG_AND_DROP_FILE_PARTIALLY && <SomeRejected/>}
+                    <input
+                        ref={_filesDropper}
+                        id={fileInputId}
+                        className="standard-file-input"
+                        type="file"
+                        multiple={props.multiple ?? true}
+                        accept={SUPPORTED_EXTENSIONS.join(',')}
+                        onChange={handleFilesChange}
+                    />
 
-                </DragNDropFile>
+                    <div className="drag-and-drop-trigger">
+                        <WaIcon className="dropzone-icon" name="route" variant="regular"/>
+                        <strong>Drop your files here</strong>
+                        <span>or click to browse</span>
+                    </div>
+
+                    <div id={`${fileInputId}-hint`} className="drag-and-drop-hint">
+                        {`Accepted formats: ${ACCEPTED_FILES}`}
+                    </div>
+                </div>
+
+                <div className="remote-import">
+                    <form className="add-url" onSubmit={processRemoteUrl}>
+                        <WaInput
+                            appearance="outlined"
+                            size="s"
+                            name="journey-url"
+                            value={remoteUrl}
+                            placeholder="Paste public file link"
+                            onInput={(event) => setRemoteUrl(event.target.value)}
+                            onChange={(event) => setRemoteUrl(event.target.value)}
+                            withClear
+                        >
+                            <WaIcon slot="start" name="cloud-arrow-down" variant="regular"/>
+                        </WaInput>
+
+                        <WaTooltip for="import-remote-journey" placement="top">{'Import journey'}</WaTooltip>
+                        <WaButton
+                            id="import-remote-journey"
+                            type="submit"
+                            variant="brand"
+                            size="s"
+                            loading={remoteLoading}
+                            disabled={remoteLoading || !remoteUrl.trim()}
+                            aria-label="Import journey"
+                        >
+                            <WaIcon slot="start" variant="regular" name="file-import"/>
+                            {'Import'}
+                        </WaButton>
+                    </form>
+                </div>
 
                 {fileList.size > 0 &&
-                    <div className={'drag-and-drop-list lgs-card'}>
-                        <Scrollbars>
-                            <FileList key={fileList.size}/>
-                        </Scrollbars>
-                    </div>
+                    <>
+                        <WaDivider/>
+                        <JourneyFilesList/>
+                    </>
                 }
 
-                {/* <div className={'add-url'}> */}
-                {/*     <SlInput type={'url'} ref={urlToLoad} size="small" placeholder={'A URL or sharing link ? Paste it here.'}></SlInput> */}
+                {showSampleButton &&
+                    <>
+                        {fileList.size === 0 && <WaDivider/>}
+                    <div className={'load-sample'}>
+                        {'Don\'t have any'}{lgs.journeys.size ? ' more ' : ' '}{'files handy?'}
+                        <br/>
+                        {'Play with a sample!'}
+                        <WaButton
+                            onClick={loadSample}
+                            variant="brand"
+                            size="s"
+                            loading={sampleLoading}
+                            disabled={sampleLoading}
+                        >
+                            <WaIcon slot="prefix" variant="regular" name="circle-plus"/>
+                            {'Load Sample'}
+                        </WaButton>
+                    </div>
+                    </>
+                }
 
-                {/*     <SlButton onClick={loadURL} size="small"> */}
-                {/*         <SlIcon slot="prefix" library="fa" name={FA2SL.set(faFileCirclePlus)}/>{'Download'} */}
-                {/*     </SlButton> */}
-                {/* </div> */}
-
-                <div className={'load-sample'}>
-                    {`Don't have any`}{lgs.journeys.size ? ' more ' : ' '}{`files handy?`}<br/>{'Play with a sample!'}
-                    <SlButton onClick={loadSample}>
-                        <SlIcon slot="prefix" library="fa" name={FA2SL.set(faFileCirclePlus)}/>{'Load Sample'}
-                    </SlButton>
-                </div>
-
-
+                <WaDivider/>
                 <div className="buttons-bar">
-                    <SlButton variant="primary" onClick={close}><ButtonLabel/></SlButton>
+
+                    <WaButton variant="brand" onClick={close}>
+                        <WaIcon slot="start" variant="regular"
+                                name={fileList.size === 0 ? 'xmark' : 'play'}/>
+                        {fileList.size === 0 ? 'Close' : 'Continue'}
+                    </WaButton>
                 </div>
             </div>
-        </SlDialog>
-
+        </WaDialog>
     )
-
 }
-

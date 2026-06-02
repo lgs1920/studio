@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-24
- * Last modified: 2026-02-24
+ * Created on: 2026-05-10
+ * Last modified: 2026-05-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -17,26 +17,35 @@
 import { Widget }                                                                 from '@Components/MainUI/widgets/Widget'
 import { JourneyStats }                                                           from '@Components/Stats/JourneyStats'
 import { JOURNEY_WIDGETS, LGS_VISUAL_WIDGET, SCENE_WIDGETS, SCENE_WIDGETS_BOARD } from '@Core/constants'
+import { useManagedStylesheet }                                                   from '@Utils/useManagedStylesheet'
+import { useOptionalSnapshot } from '@Utils/ValtioUtils'
 import { DISTANCE_UNITS, ELEVATION_UNITS, PACE_UNITS, SPEED_UNITS }               from '@Utils/UnitUtils'
-import { DateTime }                                                               from 'luxon'
-import React, { useEffect, useMemo, useState }                                    from 'react'
+import { useMemo } from 'react'
 import { useSnapshot }                                                            from 'valtio'
-import './style.css'
+import journeyStatsStylesheetHref                                                 from './style.css?url'
 
-export const JourneyStatsWidget = ({id, context, zIndex}) => {
-    const {widgetEditor, widgetsBoard} = context
+const JOURNEY_STATS_WIDGET_CONTEXT_FALLBACK = {widgetsBoard: ''}
+const JOURNEY_STATS_WIDGET_STYLESHEET_ID = 'journey-stats-widget'
 
-    const unitSystem = useSnapshot(lgs.settings.unitSystem).current
+export const JourneyStatsWidget = ({id, context, zIndex, widgetsBoard: persistedWidgetsBoard}) => {
+    useManagedStylesheet(JOURNEY_STATS_WIDGET_STYLESHEET_ID, journeyStatsStylesheetHref)
+
+    const contextState = useOptionalSnapshot(context, JOURNEY_STATS_WIDGET_CONTEXT_FALLBACK)
+    const widgetsBoard = contextState.widgetsBoard || persistedWidgetsBoard || ''
+    const main = useSnapshot(lgs.stores.main)
     const journey = lgs.theJourney
+    const journeySlug = main.theJourney?.slug ?? null
+
+    const $unitSystem = lgs.settings.unitSystem
+    const {current: unitSystem} = useSnapshot($unitSystem)
 
     const journeyMetrics = useMemo(() => {
-        if (!journey?.metrics) {
+        if (!journeySlug || !journey?.metrics) {
             return null
         }
-        return {...journey.getMetrics()}
-    }, [journey, unitSystem])
 
-    const video = useSnapshot(lgs.stores.ui.video)
+        return {...journey.getMetrics()}
+    }, [journey, journeySlug])
 
     const units = useMemo(() => ({
         elevation: ELEVATION_UNITS[unitSystem],
@@ -45,25 +54,11 @@ export const JourneyStatsWidget = ({id, context, zIndex}) => {
         speed: SPEED_UNITS[unitSystem],
     }), [unitSystem])
 
-    const [container, setContainer] = useState(lgs.canvas)
-
-    /**
-     * Updates the container element reference when the widget board changes.
-     */
-    useEffect(() => {
-        if (widgetsBoard && widgetsBoard !== SCENE_WIDGETS_BOARD) {
-            const element = document.querySelector(`#${widgetsBoard}.defined`)
-            if (element) {
-                setContainer(element)
-            }
-        }
-        else {
-            setContainer(lgs.canvas)
-        }
+    const container = useMemo(() => {
+        return __.ui.widgetManager.resolveWidgetsBoardContainer(widgetsBoard) ?? lgs.canvas
     }, [widgetsBoard])
 
-    const metrics = useMemo(() => journeyMetrics.metrics, [journeyMetrics])
-    const global = useMemo(() => journeyMetrics.global, [journeyMetrics])
+    const metrics = useMemo(() => journeyMetrics?.metrics ?? null, [journeyMetrics])
 
     const config = useMemo(() => {
         return {
@@ -73,6 +68,7 @@ export const JourneyStatsWidget = ({id, context, zIndex}) => {
                 canEdit: true,
                 canRemove:   true,
                 canPosition: true,
+                canSnapshot: true,
             },
             width:           400,
             top:             '0%',
@@ -84,8 +80,8 @@ export const JourneyStatsWidget = ({id, context, zIndex}) => {
             scalable:        true,
             rotatable:       true,
             id,
-            min:             {width: 250},
-            max:             {width: 900},
+            min: {width: 150},
+            max: {width: 1000},
             persist:         true,
             transient:       true,
             mandatory:       false,
@@ -94,9 +90,9 @@ export const JourneyStatsWidget = ({id, context, zIndex}) => {
             widgetsBoard:    widgetsBoard,
             zIndex: zIndex,
         }
-    }, [container, widgetsBoard, id, widgetEditor, zIndex])
+    }, [container, widgetsBoard, id, zIndex])
 
-    if (!widgetsBoard || Object.keys(config).length === 0) {
+    if (!journeySlug || !journey || !widgetsBoard || Object.keys(config).length === 0) {
         return null
     }
 
@@ -104,9 +100,9 @@ export const JourneyStatsWidget = ({id, context, zIndex}) => {
         <Widget
             isVisible={true}
             config={config}
-            key={lgs.theJourney.slug}
+            key={journeySlug}
         >
-            {journey && metrics && (
+            {metrics && (
                 <JourneyStats
                     id={id}
                     metrics={metrics}

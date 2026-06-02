@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-02
- * Last modified: 2026-03-02
+ * Created on: 2026-05-10
+ * Last modified: 2026-05-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -23,13 +23,9 @@
 
 import { MapPOIListItem }        from '@Components/MainUI/MapPOI/MapPOIListItem'
 import { JOURNEY_EDITOR_DRAWER } from '@Core/constants'
-import { faTriangleExclamation } from '@fortawesome/pro-regular-svg-icons'
-import { SlAlert, SlIcon }       from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                 from '@Utils/FA2SL'
-import { useEffect, useMemo }    from 'react'
+import { WaCallout, WaIcon } from '@web.awesome.me/webawesome-pro/dist/react'
+import { useEffect, useMemo }          from 'react'
 import { useSnapshot }           from 'valtio'
-
-const ICON_WARNING = FA2SL.set(faTriangleExclamation)
 
 /**
  * Filter and sort logic that preserves hidden POIs for UI management
@@ -48,10 +44,6 @@ const filterAndSortPois = (onlyJourney, filterSettings, list) => {
               alphabetic = true,
           } = filterSettings
     const {theJourney} = lgs
-
-    if (onlyJourney && theJourney?.poisLoaded !== true) {
-        return []
-    }
 
     const ids = new Set()
     const journeySlug = theJourney?.slug ?? null
@@ -74,7 +66,7 @@ const filterAndSortPois = (onlyJourney, filterSettings, list) => {
         }
     }
 
-    const lowerName = byName.toLowerCase()
+    const lowerName = byName.trim().toLowerCase()
     const sorted = []
 
     for (const id of ids) {
@@ -106,16 +98,20 @@ export const MapPOIFilteredList = () => {
     const pois = useSnapshot($pois)
     const settings = useSnapshot($settings)
     const drawers = useSnapshot($drawers)
+    const {theJourney} = useSnapshot(lgs.mainProxy)
 
     const onlyJourney = useMemo(() => drawers.open === JOURNEY_EDITOR_DRAWER, [drawers.open])
 
     const filteredPois = useMemo(
-        () => filterAndSortPois(onlyJourney, settings.filter, pois.list),
-        [onlyJourney, settings.filter, pois.list],
+        () => {
+            void theJourney?.slug
+            return filterAndSortPois(onlyJourney, settings.filter, pois.list)
+        },
+        [onlyJourney, theJourney?.slug, settings.filter, pois.list],
     )
 
     /**
-     * Synchronize the store's filtered maps with the current UI results
+     * ynchronize the store's filtered maps with the current UI results
      * This allows the bulk actions checkbox to know exactly which POIs are targeted
      */
     useEffect(() => {
@@ -126,37 +122,31 @@ export const MapPOIFilteredList = () => {
         filteredPois.forEach(id => {
             targetMap.set(id, true)
         })
-
-        // Production note: also clean the other map if needed or leave as is for persistence
-    }, [filteredPois, onlyJourney, $pois.filtered])
-
-    /**
-     * Automatic scroll to the currently selected POI
-     */
-    useEffect(() => {
-        if (pois.current) {
-            const element = document.getElementById(`edit-map-poi-${pois.current}`)
-            if (element) {
-                element.scrollIntoView({behavior: 'smooth', block: 'nearest'})
-            }
-        }
-    }, [pois.current])
+    }, [filteredPois, onlyJourney, $pois.filtered, pois.list])
 
     if (filteredPois.length > 0) {
         return (
-            <>
+            <div className="lgs--details-list">
                 {filteredPois.map((id) => (
-                    <MapPOIListItem key={id} id={id}/>
+                    <MapPOIListItem key={id} id={id} canSelect={filteredPois.length > 1}/>
                 ))}
-            </>
+            </div>
         )
     }
 
+    if (!settings.filter.active) {
+        return
+    }
+
     return (
-        <SlAlert variant="warning" open>
-            <SlIcon slot="icon" library="fa" name={ICON_WARNING}/>
-            {' '}{'There are no results matching your filter criteria.'}{' '}
-        </SlAlert>
+        <WaCallout
+            size="s"
+            variant="danger"
+            className="map-poi-filter-count-info"
+        >
+            <WaIcon slot="icon" size="s" name="warning"/>
+            <span>{'No POIs match the current filter criteria.'}</span>
+        </WaCallout>
     )
 }
 

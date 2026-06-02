@@ -53,6 +53,13 @@ starter:
   height: 1920
   simulatedHeight: 1924 # pseudo height for cesium
   title: La Grande Sure
+  location: La Sure en Chartreuse
+  country: France
+  countryCode: FR
+  countries:
+    - France
+  countryCodes:
+    - FR
   bgColor: "#7FFF00"  # chartreuse (127,255,0)
   color: "#ffffff"
   description: At 12 years old, the first time I reached the summit, it was my Everest!
@@ -115,20 +122,58 @@ swatches:
 ########################################
 journey:
   thickness: 2            # Initial track thickness (pixels)
+  renderSmoothing:
+    enabled: false        # Smooth track rendering without modifying source coordinates
+    step: 1               # Chaikin smoothing passes
+  activity:
+    default: trek
+    # Speeds are expressed in meters per second.
+    # Used to ignore impossible metric segments without modifying source coordinates.
+    types:
+      - id: trek
+        label: Trek
+        icon: person-hiking
+        maxSpeed: 3.0          # 10.8 km/h
+        maxClimbRate: 1.5      # m/s
+        maxDescentRate: 2.5    # m/s
+        stopDuration: 60
+        stopSpeedLimit: 0.2
+      - id: trail
+        label: Trail
+        icon: person-running
+        maxSpeed: 5.5          # 19.8 km/h
+        maxClimbRate: 2.0
+        maxDescentRate: 3.0
+        stopDuration: 45
+        stopSpeedLimit: 0.3
+      - id: bike
+        label: Bike
+        icon: bicycle
+        maxSpeed: 16.0         # 57.6 km/h
+        maxClimbRate: 2.5
+        maxDescentRate: 4.0
+        stopDuration: 45
+        stopSpeedLimit: 0.6
+      - id: ski-touring
+        label: Ski touring
+        icon: person-skiing-nordic
+        maxSpeed: 8.0          # 28.8 km/h
+        maxClimbRate: 1.6
+        maxDescentRate: 6.0
+        stopDuration: 60
+        stopSpeedLimit: 0.25
   ## POIs
   pois:
-    # Default POI
-    color: ''      # Color
-    bgColor: '#ffffff99'   # Border
-    ## Wanderer mode
-    wanderer:
+
+    ## FlythroughRunner mode
+    flythroughRunner:
       color: '#1689CCff'
       border: '#FFF'
-    ## Start POI
+    ## Start POI colors
     start:
       color: '#DC143C'
       bgColor: '#f2c55c'
-    ## Stop POI
+    ## Stop POI colors
     stop:
       color: '#228B22'
       bgColor: '#f2c55c'
@@ -137,6 +182,9 @@ journey:
 # Global pois
 ########################################
 poi:
+  association:
+    maxDistance: 10000 # meters - POI can be associated with a journey when one track point is within this distance
+
   filter:
     byName: ""
     alphabetic: true
@@ -228,6 +276,7 @@ ui:
     showPosition: false         # Display Camera position
     showTargetPosition: true    # Display Camera View point
     showHPR: false              # Display Camera HPR
+    showMovementWidget: true    # Display Camera movement widget
 
     targetIcon: # Camera Target Icon
       show: true
@@ -274,6 +323,7 @@ ui:
   ## Geocoder
   geocoder:
     url: https://nominatim.openstreetmap.org
+    proxy: /proxy.php?csurl=
     search: search
     reverse: reverse
     limit: 7 # results per query
@@ -285,6 +335,42 @@ ui:
     defaultOpacity: 0.9
     opacity: 0.9   # 0.3 - 1
 
+  ## Flythrough
+  flythrough:
+    duration: 60
+    direction: 1
+    loop: false
+    scope: all-tracks
+    progression:
+      fill:
+        color: '#ff6a00'
+        opacity: 1
+        width: 2
+        profileMarker: 8
+      border:
+        color: '#ffffff'
+        opacity: 1
+        width: 0.75
+        profileMarker: 2
+    profileInfo:
+      color: '#ffffff'
+    trace:
+      mode: progressive
+      remaining:
+        useDefinedTrackStyle: true
+        color: '#6f7d8c'
+        opacity: 0.35
+    marker:
+      mode: trace
+    camera:
+      altitudeMode: constant
+      altitude: 1200
+      pitch: -65
+      hysteresis:
+        marginRatio: 0.2
+        easing: 0.14
+        stopThreshold: 0.00001
+
   ## JourneyToolbar
   journeyToolbar:
     usage: true           # Can we use it
@@ -295,7 +381,7 @@ ui:
 
   ## Compass
   compass:
-    mode: 1                # 0: none, 1: full, 2:light
+    mode: 1                # 0: none, 1: full, 2: light, 3: wind rose
 
   ## Video
   video:
@@ -303,10 +389,47 @@ ui:
     image: png         # for Image
     maxDuration: 5     # minutes
     maxSize: 200       # MB
-    fps: 1             # 0:15, 1:30, 2:45, 3:60 => VideoRecorder.FPS
-    quality: 1         # 0: low, 1: medium, 2: high, 3: Ultra high => VideoRecorder.QUALITY
+    fps: 1             # 0:30, 1:45, 2:60 => VideoRecorder.FPS
+    quality: 1         # 0: medium, 1: high, 2: Ultra high => VideoRecorder.QUALITY
     ratio: null        # 16x9,9x16 ...
 
   ## PWA
   pwa:
     canInstall: true
+
+  ## Journey Settings
+  activities:
+    default: trek
+    list:
+      - id: trek
+        label: Trek
+        icon: person-hiking
+        maxSpeed: 3.0
+        maxClimbRate: 1.5
+        maxDescentRate: 2.5
+        stopDuration: 60
+        stopSpeedLimit: 0.2
+      - id: trail
+        label: Trail
+        icon: person-running
+        maxSpeed: 5.5
+        maxClimbRate: 2.0
+        maxDescentRate: 3.0
+        stopDuration: 45
+        stopSpeedLimit: 0.3
+      - id: bike
+        label: Bike
+        icon: bicycle
+        maxSpeed: 16.0
+        maxClimbRate: 2.5
+        maxDescentRate: 4.0
+        stopDuration: 45
+        stopSpeedLimit: 0.6
+      - id: ski-touring
+        label: Ski touring
+        icon: person-skiing-nordic
+        maxSpeed: 8.0
+        maxClimbRate: 1.6
+        maxDescentRate: 6.0
+        stopDuration: 60
+        stopSpeedLimit: 0.25

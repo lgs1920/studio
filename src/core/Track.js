@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-05-10
+ * Last modified: 2026-05-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,14 +16,47 @@
 
 import { CURRENT_TRACK, DRAWING_FROM_UI, FOCUS_ON_FEATURE }                   from '@Core/constants'
 import { MapElement }                                                         from '@Core/MapElement'
-import { ProfileTrackMarker }                                                 from '@Core/ProfileTrackMarker'
+import { normalizeTrackRenderSmoothing }                                      from '@Utils/cesium/trackRenderSmoothing'
+import { normalizeTrackRenderStyle }                                          from '@Utils/cesium/trackRenderStyle'
 import { FEATURE, FEATURE_LINE_STRING, FEATURE_MULTILINE_STRING, TrackUtils } from '@Utils/cesium/TrackUtils'
 import { Mobility }                                                           from '@Utils/Mobility'
-import { DateTime }                                                           from 'luxon'
+import { decodeHTMLEntities }                                                 from '@Utils/TextUtils'
 import { v4 as uuid }                                                         from 'uuid'
 
+const finiteNumber = value => {
+    if (value === null || value === undefined || value === '') {
+        return null
+    }
+
+    const number = Number(value)
+    return Number.isFinite(number) ? number : null
+}
+
+const coordinatePoint = coordinates => {
+    if (!Array.isArray(coordinates)) {
+        return null
+    }
+
+    const longitude = finiteNumber(coordinates[0])
+    const latitude = finiteNumber(coordinates[1])
+
+    if (longitude === null || latitude === null) {
+        return null
+    }
+
+    const point = {longitude, latitude}
+    const altitude = finiteNumber(coordinates[2])
+
+    if (altitude !== null) {
+        point.altitude = altitude
+    }
+
+    return point
+}
 
 export class Track extends MapElement {
+
+    static DEFAULT_ACTIVITY = 'trek'
 
     id
     /** @type {string} */
@@ -34,6 +67,10 @@ export class Track extends MapElement {
     thickness   // Line thickness
     /** @type {object} */
     metrics     // All the metrics associated to the track
+    activity
+    activitySettings
+    renderSmoothing
+    renderStyle
     /** @type {boolean} */
     hasTime
     /** @type {boolean} */
@@ -42,7 +79,7 @@ export class Track extends MapElement {
     content     // GEo JSON
     /** @type {{start:MapPOI|undefined,stop:MapPOI|undefined}} */
     flags = {start: undefined, stop: undefined}
-    /** @type {ProfileTrackMarker | null} */
+    /** @type {object | null} */
     marker = null
     /**
      * @type {string}
@@ -56,10 +93,22 @@ export class Track extends MapElement {
         this.parent = options.parent
         this.slug = options.slug
 
-        this.color = options.color ??__.ui.editor.journey.newColor()
-        this.thickness = options.thickness ?? lgs.settings.getJourney.thickness
+        const legacyColor = options.color ?? __.ui.editor.journey.newColor()
+        const legacyThickness = options.thickness ?? lgs.settings.getJourney.thickness
+
+        this.renderStyle = normalizeTrackRenderStyle(options.renderStyle, {
+            color:     legacyColor,
+            thickness: legacyThickness,
+        })
+        this.color = this.renderStyle.color
+        this.thickness = this.renderStyle.farPixelWidth
         this.visible = options.visible ?? true
-        this.description = options.description ?? undefined
+        this.description = options.description === undefined ? undefined : decodeHTMLEntities(options.description)
+        this.activity = options.activity ?? Track.defaultActivity()
+        this.activitySettings = options.activitySettings
+        this.renderSmoothing = options.renderSmoothing === undefined
+                               ? undefined
+                               : normalizeTrackRenderSmoothing(options.renderSmoothing)
 
 
         this.name = options.name
@@ -90,7 +139,7 @@ export class Track extends MapElement {
         return false
     }
 
-    static getBySlug(slug) {
+    static getBySlug() {
 
     }
 
@@ -105,6 +154,127 @@ export class Track extends MapElement {
     extractMetrics = () => {        // Maybe we have some changes to operate
         this.prepareContent()
         this.calculateMetrics()
+    }
+
+    static activityCatalogDefaults = () => {
+        return globalThis.lgs?.savedConfiguration?.journey?.activity
+            ?? globalThis.lgs?.configuration?.journey?.activity
+            ?? {}
+    }
+
+    static normalizeActivityCatalog = (activity = undefined) => {
+        const defaults = Track.activityCatalogDefaults()
+        const defaultProfiles = Array.isArray(defaults.types) ? defaults.types : []
+        const currentProfiles = Array.isArray(activity?.types) ? activity.types : []
+        const currentProfileMap = new Map(
+            currentProfiles
+                .filter(profile => profile?.id)
+                .map(profile => [profile.id, profile]),
+        )
+        const normalizedProfiles = defaultProfiles.map(profile => ({
+            ...profile,
+            ...(currentProfileMap.get(profile.id) ?? {}),
+        }))
+
+        currentProfiles.forEach((profile) => {
+            if (!profile?.id) {
+                return
+            }
+            if (!normalizedProfiles.some(item => item.id === profile.id)) {
+                normalizedProfiles.push({...profile})
+            }
+        })
+
+        const preferredDefault = activity?.default
+            ?? defaults.default
+            ?? normalizedProfiles[0]?.id
+            ?? Track.DEFAULT_ACTIVITY
+        const normalizedDefault = normalizedProfiles.some(profile => profile.id === preferredDefault)
+                                  ? preferredDefault
+                                  : defaults.default ?? normalizedProfiles[0]?.id ?? Track.DEFAULT_ACTIVITY
+
+        return {
+            default: normalizedDefault,
+            types:   normalizedProfiles,
+        }
+    }
+
+    static ensureActivityCatalogPersistence = () => {
+        const activitySettings = globalThis.lgs?.settings?.journey?.activity
+        const normalized = Track.normalizeActivityCatalog(activitySettings)
+
+        if (!activitySettings || typeof activitySettings !== 'object') {
+            return normalized
+        }
+
+        const current = {
+            default: activitySettings.default,
+            types:   Array.isArray(activitySettings.types) ? JSON.parse(JSON.stringify(activitySettings.types)) : [],
+        }
+
+        if (JSON.stringify(current) !== JSON.stringify(normalized)) {
+            activitySettings.default = normalized.default
+            activitySettings.types = normalized.types
+        }
+
+        return normalized
+    }
+
+    static defaultActivity = () => {
+        return Track.ensureActivityCatalogPersistence().default
+    }
+
+    static activityDefaultProfiles = () => {
+        return Track.normalizeActivityCatalog(Track.activityCatalogDefaults()).types
+    }
+
+    static activityProfiles = () => {
+        return Track.ensureActivityCatalogPersistence().types
+    }
+
+    static activityProfile = (activity = Track.defaultActivity(), overrides = undefined) => {
+        const defaultProfiles = Track.activityDefaultProfiles()
+        const profiles = Track.activityProfiles()
+        const fallback = {
+            ...(defaultProfiles.find(profile => profile.id === Track.defaultActivity())
+                ?? defaultProfiles.find(profile => profile.id === Track.DEFAULT_ACTIVITY)
+                ?? {}),
+            ...(globalThis.lgs?.settings?.getMetrics ?? {}),
+        }
+        const profile = profiles.find(item => item.id === activity)
+            ?? profiles.find(item => item.id === Track.defaultActivity())
+                        ?? fallback
+
+        return {
+            ...fallback,
+            ...profile,
+            ...(overrides ?? {}),
+            id: overrides?.id ?? profile.id ?? activity ?? Track.DEFAULT_ACTIVITY,
+        }
+    }
+
+    static isOutlierMetric = (pointData, activityProfile) => {
+        if (Number.isFinite(activityProfile.maxSpeed) &&
+            Number.isFinite(pointData.speed) &&
+            pointData.speed > activityProfile.maxSpeed) {
+            return 'speed'
+        }
+
+        if (Number.isFinite(pointData.duration) && pointData.duration > 0 && Number.isFinite(pointData.elevation)) {
+            const verticalRate = pointData.elevation / pointData.duration
+            if (verticalRate > 0 &&
+                Number.isFinite(activityProfile.maxClimbRate) &&
+                verticalRate > activityProfile.maxClimbRate) {
+                return 'climb-rate'
+            }
+            if (verticalRate < 0 &&
+                Number.isFinite(activityProfile.maxDescentRate) &&
+                Math.abs(verticalRate) > activityProfile.maxDescentRate) {
+                return 'descent-rate'
+            }
+        }
+
+        return false
     }
 
     /**
@@ -130,26 +300,134 @@ export class Track extends MapElement {
                              : this.content.geometry.coordinates
 
             // Same for times data if exists
-            const times = type === FEATURE_LINE_STRING
-                          ? [this.content.properties.coordinateProperties?.times]
-                          : this.content.properties.coordinateProperties?.times
+            const times = this.content.properties?.coordinateProperties?.times
 
+            let timeCursor = 0
             segments.forEach((segment, index) => {
+                if (!Array.isArray(segment)) {
+                    return
+                }
+
                 const segmentAggregate = []
+                let segmentTimes = []
+                if (this.hasTime && type === FEATURE_LINE_STRING) {
+                    segmentTimes = Array.isArray(times) ? times : []
+                }
+                else if (this.hasTime && Array.isArray(times?.[index])) {
+                    segmentTimes = times[index]
+                }
+                else if (this.hasTime && Array.isArray(times)) {
+                    segmentTimes = times.slice(timeCursor, timeCursor + segment.length)
+                }
+                timeCursor += segment.length
+
                 segment.forEach((coordinates, ptIndex) => {
-                    let point = {longitude: coordinates[0], latitude: coordinates[1]}
-                    if (this.hasAltitude) {
-                        point.altitude = coordinates[2]
+                    const point = coordinatePoint(coordinates)
+
+                    if (!point) {
+                        return
                     }
-                    if (this.hasTime) {
-                        point.time = times[index][ptIndex]
+
+                    if (this.hasTime && segmentTimes[ptIndex]) {
+                        point.time = segmentTimes[ptIndex]
                     }
                     segmentAggregate.push(point)
                 })
-                aggregateData.push(segmentAggregate)
+                if (segmentAggregate.length > 0) {
+                    aggregateData.push(segmentAggregate)
+                }
             })
         }
         return aggregateData
+    }
+
+    static calculateGlobalMetrics = ({
+                                         points = [],
+                                         rawPoints = points,
+                                         hasTime = false,
+                                         hasAltitude = false,
+                                         activityProfile = Track.activityProfile(),
+                                     } = {}) => {
+        const finiteValues = values => values.filter(value => Number.isFinite(value))
+        const sumValues = values => finiteValues(values).reduce((sum, value) => sum + value, 0)
+        const minValue = values => {
+            const finite = finiteValues(values)
+            return finite.length ? Math.min(...finite) : undefined
+        }
+        const maxValue = values => {
+            const finite = finiteValues(values)
+            return finite.length ? Math.max(...finite) : undefined
+        }
+        const createElevationBucket = () => ({elevation: 0, distance: 0, duration: 0, pace: 0, speed: 0, points: 0})
+        const addToElevationBucket = (bucket, point) => {
+            bucket.elevation += point.elevation ?? 0
+            bucket.distance += point.distance ?? 0
+            bucket.duration += point.duration ?? 0
+            bucket.points++
+        }
+        const finalizeElevationBucket = (bucket) => {
+            bucket.speed = bucket.duration > 0 ? bucket.distance / bucket.duration : 0
+            bucket.pace = bucket.distance > 0 ? bucket.duration / bucket.distance : 0
+        }
+
+        const global = {}
+        const distance = sumValues(points.map(point => point.distance))
+
+        global.distance = distance
+
+        if (hasTime) {
+            const duration = sumValues(points.map(point => point.duration))
+            const activePoints = points.filter(point => point.activity === true)
+            const idlePoints = points.filter(point => point.activity === false)
+            const movingDistance = sumValues(activePoints.map(point => point.distance))
+            const movingDuration = sumValues(activePoints.map(point => point.duration))
+            const speedValues = finiteValues(activePoints.map(point => point.speed)).filter(speed => speed > 0)
+            const paceValues = finiteValues(activePoints.map(point => point.pace)).filter(pace => pace > 0)
+
+            global.duration = duration
+            global.idleTime = sumValues(idlePoints.map(point => point.duration))
+            global.averageSpeed = duration > 0 ? distance / duration : 0
+            global.averagePace = distance > 0 ? duration / distance : 0
+            global.averageSpeedMoving = movingDuration > 0 ? movingDistance / movingDuration : 0
+            global.averagePaceMoving = movingDistance > 0 ? movingDuration / movingDistance : 0
+            global.minSpeed = minValue(speedValues) ?? 0
+            global.maxSpeed = maxValue(speedValues) ?? 0
+            global.minPace = minValue(paceValues) ?? 0
+            global.maxPace = maxValue(paceValues) ?? 0
+        }
+
+        if (hasAltitude) {
+            const altitudeValues = rawPoints.map(point => point.altitude)
+            const slopeValues = finiteValues(points.map(point => point.slope))
+            const minSlope = activityProfile.minSlope ?? globalThis.lgs?.settings?.getMetrics?.minSlope ?? 0
+
+            global.minHeight = minValue(altitudeValues)
+            global.maxHeight = maxValue(altitudeValues)
+            global.minSlope = minValue(slopeValues)
+            global.maxSlope = maxValue(slopeValues)
+            global.positive = createElevationBucket()
+            global.negative = createElevationBucket()
+            global.flat = createElevationBucket()
+
+            points.forEach((point) => {
+                const slope = point.slope ?? 0
+                if (slope > minSlope) {
+                    addToElevationBucket(global.positive, point)
+                }
+                else if (slope < -minSlope) {
+                    addToElevationBucket(global.negative, point)
+                }
+                else {
+                    addToElevationBucket(global.flat, point)
+                }
+            })
+
+            finalizeElevationBucket(global.positive)
+            finalizeElevationBucket(global.negative)
+            finalizeElevationBucket(global.flat)
+        }
+
+        return global
     }
 
     /**
@@ -160,6 +438,9 @@ export class Track extends MapElement {
     calculateMetrics = () => {
 
         let featureMetrics = []
+        const aggregates = this.aggregateDataForMetrics()
+        const rawPoints = []
+        const activityProfile = Track.activityProfile(this.activity, this.activitySettings)
 
         // 1st step : Metrics per points
         // we iterate on all points to compute
@@ -169,170 +450,46 @@ export class Track extends MapElement {
         // If we have time information, we can also compute
         //  - duration, speed, pace
 
-        this.aggregateDataForMetrics().forEach((aggregate) => {
+        aggregates.forEach((aggregate) => {
             const segmentData = []
-            let index = 1
-            for (const prev of aggregate) {
+            for (let index = 1; index < aggregate.length; index++) {
+                const prev = aggregate[index - 1]
                 const current = aggregate[index]
                 const pointData = {}
-                if (index <= aggregate.length) {
-                    pointData.distance = Mobility.distance(prev, current)
-                    if (this.hasTime && current?.time && prev?.time) {
-                        pointData.duration = Mobility.duration(DateTime.fromISO(prev.time), DateTime.fromISO(current.time))
-                        pointData.speed = Mobility.speed(pointData.distance, pointData.duration)
-                        pointData.pace = Mobility.pace(pointData.distance, pointData.duration)
-                        pointData.activity =
-                            pointData.speed > lgs.settings.getMetrics.stopSpeedLimit ||
-                            pointData.duration > lgs.settings.getMetrics.stopDuration
-                    }
-                    if (this.hasAltitude) {
-                        pointData.elevation = Mobility.elevation(prev, current)
-                        pointData.slope = pointData.elevation / pointData.distance * 100
-                    }
+
+                pointData.distance = Mobility.distance(prev, current)
+                if (this.hasTime && current?.time && prev?.time) {
+                    pointData.duration = Mobility.duration(prev.time, current.time)
+                    pointData.speed = Mobility.speed(pointData.distance, pointData.duration)
+                    pointData.pace = Mobility.pace(pointData.distance, pointData.duration)
+                    pointData.activity = !(
+                        pointData.duration >= (activityProfile.stopDuration ?? globalThis.lgs?.settings?.getMetrics?.stopDuration ?? 0) &&
+                        pointData.speed <= (activityProfile.stopSpeedLimit ?? globalThis.lgs?.settings?.getMetrics?.stopSpeedLimit ?? 0)
+                    )
                 }
-                index++
-                segmentData.push({...current, ...pointData})
+                if (this.hasAltitude) {
+                    pointData.elevation = Mobility.elevation(prev, current)
+                    pointData.slope = pointData.distance > 0 ? pointData.elevation / pointData.distance * 100 : 0
+                }
+                pointData.ignored = Track.isOutlierMetric(pointData, activityProfile)
+                if (!pointData.ignored) {
+                    rawPoints.push(prev, current)
+                    segmentData.push({...current, ...pointData})
+                }
             }
-            featureMetrics.push(segmentData.slice(0, -1))
+            featureMetrics.push(segmentData)
         })
 
         // Do not work with segment any more
         featureMetrics = featureMetrics.flat()
 
-        /**
-         * Step 2: Globals
-         *
-         * Now we can compute globals, ie some min max, average + total information(distance, time, D+/D- )
-         */
-        let global = {}, tmp = []
-
-        // Min Height
-        global.minHeight = this.hasAltitude ? Math.min(...featureMetrics.map(a => a?.altitude)) : undefined
-
-        // Max Height
-        global.maxHeight = this.hasAltitude ? Math.max(...featureMetrics.map(a => a?.altitude)) : undefined
-
-        // If the first have duration time, all the data set have time
-        if (this.hasTime) {
-            // Select all speeds
-            tmp = TrackUtils.filterArray(featureMetrics, {
-                speed: speed => speed !== 0 && speed !== undefined,
-            })
-
-            // Average speed
-            global.averageSpeed = tmp.reduce((s, o) => {
-                return s + o.speed
-            }, 0) / tmp.length
-
-            // Average pace (we exclude 0 and undefined values)
-            global.averagePace = tmp.reduce((s, o) => {
-                return s + o.pace
-            }, 0) / tmp.length
-
-            // Select all speeds where activity has been found
-            tmp = TrackUtils.filterArray(featureMetrics, {
-                speed: speed => speed !== 0 && speed !== undefined,
-                activity: activity => activity === true,
-            })
-
-            // Average speed in moving
-            global.averageSpeedMoving = tmp.reduce((s, o) => {
-                return s + o.speed
-            }, 0) / tmp.length
-
-            // Min speed
-            global.minSpeed = Math.min(...tmp.map(a => a?.speed))
-
-            // Max speed
-            global.maxSpeed = Math.max(...tmp.map(a => a?.speed))
-
-            // Min Pace (the fastest pace is the minimum)
-            global.minPace = Math.min(...tmp.map(a => a?.pace))
-
-            // Max Pace (the fastest pace is the minimum)
-            global.maxPace = Math.max(...tmp.map(a => a?.pace))
-
-            // Average pace in moving
-            tmp = TrackUtils.filterArray(featureMetrics, {
-                pace: pace => pace !== 0 && pace !== undefined,
-                activity: activity => activity === true,
-            })
-            global.averagePaceMoving = tmp.reduce((s, o) => {
-                return s + o.pace
-            }, 0) / tmp.length
-        }
-
-        if (this.hasAltitude) {
-
-            // Max Slope
-            global.maxSlope = this.hasAltitude ? Math.max(...featureMetrics.map(a => a?.slope)) : undefined
-
-            // Data relative to elevation
-            global.positive = {elevation: 0, distance: 0, duration: 0, pace: 0, speed: 0, points: 0}
-            global.negative = {elevation: 0, distance: 0, duration: 0, pace: 0, speed: 0, points: 0}
-            global.flat = {elevation: 0, distance: 0, duration: 0, pace: 0, speed: 0, points: 0}
-
-            featureMetrics.forEach((point) => {
-                if (point.slope > lgs.settings.getMetrics.minSlope) {
-                    // We sum all data when we get a positive slope
-                    global.positive.elevation += point.elevation
-                    global.positive.distance += point.distance
-                    global.positive.duration += point.duration
-                    global.positive.speed += point.speed
-                    global.positive.pace += point.pace
-                    global.positive.points++
-                }
-                else if (point.slope < -lgs.settings.getMetrics.minSlope) {
-                    // We sum all data when we get a negative slope
-                    global.negative.elevation += point.elevation
-                    global.negative.distance += point.distance
-                    global.negative.duration += point.duration
-                    global.negative.speed += point.speed
-                    global.negative.pace += point.pace
-                    global.negative.points++
-                } else {
-                    // And then when we consider it is flat
-                    global.flat.elevation += point.elevation
-                    global.flat.distance += point.distance
-                    global.flat.duration += point.duration
-                    global.flat.pace += point.pace
-                    global.flat.speed += point.speed
-                    global.flat.points++
-                }
-            })
-
-            // Some average
-            if (global.positive.points) {
-                global.positive.speed /= global.positive.points
-                global.positive.pace /= global.positive.points
-            }
-            if (global.negative.points) {
-                global.negative.speed /= global.negative.points
-                global.negative.pace /= global.negative.points
-            }
-            if (global.flat.points) {
-                global.flat.speed /= global.flat.points
-                global.flat.pace /= global.flat.points
-            }
-
-        }
-        if (this.hasTime) {
-            // Total duration
-            global.duration = featureMetrics.reduce((s, o) => {
-                return s + o.duration
-            }, 0)
-
-            // Total idleTime
-            global.idleTime = featureMetrics.reduce((s, o) => {
-                return s + !o.activity ? o.duration : 0
-            }, 0.0)
-
-        }
-
-        // Total Distance
-        global.distance = featureMetrics.reduce((s, o) => {
-            return s + o.distance
-        }, 0)
+        const global = Track.calculateGlobalMetrics({
+                                                        points:      featureMetrics,
+                                                        rawPoints:   rawPoints,
+                                                        hasTime:     this.hasTime,
+                                                        hasAltitude: this.hasAltitude,
+                                                        activityProfile,
+                                                    })
         this.metrics = {points: featureMetrics, global: global}
     }
 

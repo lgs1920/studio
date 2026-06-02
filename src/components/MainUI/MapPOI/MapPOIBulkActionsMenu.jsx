@@ -7,22 +7,19 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-28
- * Last modified: 2026-02-28
+ * Created on: 2026-05-10
+ * Last modified: 2026-05-10
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { JOURNEY_EDITOR_DRAWER } from '@Core/constants'
+import { JOURNEY_EDITOR_DRAWER, POI_FLAG_START, POI_FLAG_STOP, POI_STARTER_TYPE } from '@Core/constants'
 import {
-    faArrowsFromLine, faArrowsToLine, faLocationDot, faTrashCan,
-}                                                                         from '@fortawesome/pro-regular-svg-icons'
-import { faEye, faMask }                                               from '@fortawesome/pro-solid-svg-icons'
-import { SlButton, SlDropdown, SlIcon, SlIconButton, SlMenu, SlMenuItem } from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                                                          from '@Utils/FA2SL'
-import React, { useEffect, useState, useCallback }                        from 'react'
-import { useSnapshot }                                                    from 'valtio'
+    WaButton, WaDropdown, WaDropdownItem, WaIcon,
+}                                                                                 from '@web.awesome.me/webawesome-pro/dist/react'
+import React, { useCallback, useEffect, useState }                                from 'react'
+import { useSnapshot }                                                            from 'valtio'
 import './style.css'
 
 /**
@@ -50,28 +47,28 @@ export const MapPOIBulkActionsMenu = React.memo((globals) => {
     /**
      * Hides all Points of Interest currently selected for bulk action.
      */
-    const hide = useCallback(() => {
+    const hide = useCallback(async () => {
+        const actions = []
         $pois.bulkList.forEach((canHide, id) => {
             if (canHide) {
-                // Accessing the proxy directly to ensure reactive state mutation
-                const $poi = $pois.list.get(id)
-                $poi.hide()
+                actions.push(__.ui.poiManager.updatePOI(id, {visible: false}))
             }
         })
+        await Promise.all(actions)
         $pois.bulkList.clear()
     }, [])
 
     /**
      * Shows all Points of Interest currently selected for bulk action.
      */
-    const show = useCallback(() => {
+    const show = useCallback(async () => {
+        const actions = []
         $pois.bulkList.forEach((canShow, id) => {
             if (canShow) {
-                // Accessing the proxy directly to ensure reactive state mutation
-                const $poi = $pois.list.get(id)
-                $poi.show()
+                actions.push(__.ui.poiManager.updatePOI(id, {visible: true}))
             }
         })
+        await Promise.all(actions)
         $pois.bulkList.clear()
     }, [])
 
@@ -109,15 +106,22 @@ export const MapPOIBulkActionsMenu = React.memo((globals) => {
      */
     const remove = useCallback(async () => {
         if (__.ui.cameraManager.isRotating()) {
-            await __.ui.cameraManager.stopRotate()
+            await __.ui.poiManager.stopRotationAndSync()
         }
         // Check if current POI is in the bulk list
         const needToChangeCurrent = $pois.bulkList.has(pois.current)
+        console.log(pois.current)
         const actions = []
 
-        $pois.bulkList.forEach((canRemove, id) => {
-            if (canRemove) {
-                actions.push(__.ui.poiManager.remove({id: id}))
+        $pois.bulkList.forEach((removeCandidate, id) => {
+            if (removeCandidate) {
+                const poi = $pois.list.get(id)
+                const canRemove = poi?.type !== POI_STARTER_TYPE &&
+                    poi?.type !== POI_FLAG_START &&
+                    poi?.type !== POI_FLAG_STOP
+                if (canRemove) {
+                    actions.push(__.ui.poiManager.remove({id: id}))
+                }
             }
         })
 
@@ -173,41 +177,31 @@ export const MapPOIBulkActionsMenu = React.memo((globals) => {
     }
 
     return (
-        <SlDropdown disabled={disabled} onSlAfterHide={handleAfterHide}>
-            <SlButton slot="trigger" size="small" caret disabled={disabled}>
-                <SlIconButton size="small" slot="prefix"
-                              library="fa"
-                              name={FA2SL.set(faLocationDot)}
-                />{'Select an action'}
-            </SlButton>
+        <WaDropdown disabled={disabled} onSlAfterHide={handleAfterHide} size="s">
+            <WaButton slot="trigger" size="s" disabled={disabled} variant="brand" withCaret>
+                <WaIcon slot="start" name="location-dot" variant="regular"/>{'Select an action'}
+            </WaButton>
 
-            <SlMenu small>
-                <SlMenuItem onClick={remove}>
-                    <SlIcon slot="prefix" library="fa" name={FA2SL.set(faTrashCan)}></SlIcon>
-                    <span>Remove</span>
-                </SlMenuItem>
+            <WaDropdownItem onClick={remove}>
+                <WaIcon slot="icon" variant="regular" name="trash-can"></WaIcon>{'Remove'}
+            </WaDropdownItem>
 
-                <SlMenuItem onClick={shrink}>
-                    <SlIcon slot="prefix" library="fa" name={FA2SL.set(faArrowsToLine)}></SlIcon>
-                    <span>Reduce</span>
-                </SlMenuItem>
+            <WaDropdownItem onClick={shrink}>
+                <WaIcon slot="icon" variant="regular" name="arrows-to-line"></WaIcon>{'Reduce'}
+            </WaDropdownItem>
 
-                <SlMenuItem onClick={expand}>
-                    <SlIcon slot="prefix" library="fa" name={FA2SL.set(faArrowsFromLine)}></SlIcon>
-                    <span>Expand</span>
-                </SlMenuItem>
+            <WaDropdownItem onClick={expand}>
+                <WaIcon slot="icon" variant="regular" name="arrows-from-line"></WaIcon>{'Expand'}
+            </WaDropdownItem>
 
-                <SlMenuItem onClick={hide}>
-                    <SlIcon slot="prefix" library="fa" name={FA2SL.set(faMask)}></SlIcon>
-                    <span>Hide</span>
-                </SlMenuItem>
+            <WaDropdownItem onClick={hide}>
+                <WaIcon slot="icon" variant="regular" name="mask"></WaIcon>{'Hide'}
+            </WaDropdownItem>
 
-                <SlMenuItem onClick={show}>
-                    <SlIcon slot="prefix" library="fa" name={FA2SL.set(faEye)}></SlIcon>
-                    <span>Show</span>
-                </SlMenuItem>
+            <WaDropdownItem onClick={show}>
+                <WaIcon slot="icon" variant="regular" name="eye"></WaIcon>{'Show'}
+            </WaDropdownItem>
 
-            </SlMenu>
-        </SlDropdown>
+        </WaDropdown>
     )
 })

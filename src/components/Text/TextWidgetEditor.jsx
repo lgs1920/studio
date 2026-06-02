@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-24
- * Last modified: 2026-02-24
+ * Created on: 2026-05-01
+ * Last modified: 2026-05-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,11 +16,20 @@
 
 import { LGSScrollbars }                                    from '@Components/MainUI/LGSScrollbars'
 import {
+    AlignElement,
+} from '@Components/MainUI/widgets/editor/elements/AlignElement'
+import {
     BackgroundElement,
 }                                                           from '@Components/MainUI/widgets/editor/elements/BackgroundElement'
 import {
     BorderElement,
 }                                                           from '@Components/MainUI/widgets/editor/elements/BorderElement'
+import {
+    FontSizeElement,
+} from '@Components/MainUI/widgets/editor/elements/FontSizeElement'
+import {
+    LineHeightElement,
+} from '@Components/MainUI/widgets/editor/elements/LineHeightElement'
 import {
     RotationElement,
 }                                                           from '@Components/MainUI/widgets/editor/elements/RotationElement'
@@ -30,9 +39,21 @@ import {
 import {
     StrokeElement,
 } from '@Components/MainUI/widgets/editor/elements/StrokeElement'
-import { TextEditorToolbar }                                from '@Components/Text/TextEditorToolbar'
-import { SlDivider }                                        from '@shoelace-style/shoelace/dist/react'
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import {
+    StyleElement,
+} from '@Components/MainUI/widgets/editor/elements/StyleElement'
+import {
+    TextColorElement,
+} from '@Components/MainUI/widgets/editor/elements/TextColorElement'
+import {
+    PaddingElement,
+} from '@Components/MainUI/widgets/editor/elements/PaddingElement'
+import {
+    TypefaceElement,
+} from '@Components/MainUI/widgets/editor/elements/TypefaceElement'
+
+import { WaCard, WaDivider } from '@web.awesome.me/webawesome-pro/dist/react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useSnapshot }                                      from 'valtio'
 import './style.css'
 
@@ -88,16 +109,7 @@ export const TextWidgetEditor = ({entity}) => {
         return () => {
             isMounted = false
         }
-    }, [entity, isTextWidget])
-
-    /**
-     * sync local rotation with store changes
-     */
-    useEffect(() => {
-        if (widget.current?.rotate !== undefined) {
-            setLocalRotation(Math.ceil(widget.current.rotate))
-        }
-    }, [widget.current?.rotate])
+    }, [$widget, element?.rotate, entity, isTextWidget])
 
     const swatches = useMemo(() => lgs.settings.getSwatches.list.join(';'), [])
 
@@ -106,6 +118,9 @@ export const TextWidgetEditor = ({entity}) => {
      */
     const updateValue = useCallback((path, val) => {
         if (!normalizedId.startsWith('text-widget') || !$configuration) {
+            return
+        }
+        if (typeof val === 'number' && Number.isNaN(val)) {
             return
         }
         if (!$configuration.elements) {
@@ -131,30 +146,53 @@ export const TextWidgetEditor = ({entity}) => {
         _curr[_keys[_keys.length - 1]] = val
     }, [element, normalizedId, $configuration])
 
+
     /**
-     * applies rotation to manager, ui store, and configuration
+     * Applies rotation to the widget and updates persistent configuration
+     * @param {number|string} val - The rotation angle
      */
-    const applyRotation = async (val) => {
-        const angle = parseFloat(val) || 0
+    const applyRotation = useCallback(async (val) => {
+        const parsedAngle = parseFloat(val)
+        const angle = Number.isFinite(parsedAngle) ? parsedAngle : 0
         setLocalRotation(angle)
 
-        const _target = __.ui.widgetManager.getElementById(entity)
-        if (_target) {
-            const transform = await __.ui.widgetManager.getTransform(_target)
-            await __.ui.widgetManager.setTransform(_target, {
+        const target = __.ui.widgetManager.getElementById(entity)
+        if (target) {
+            const transform = await __.ui.widgetManager.getTransform(target)
+            await __.ui.widgetManager.setTransform(target, {
                 ...transform,
                 rotate: angle,
             })
+
+            const config = __.ui.widgetManager.getWidgetConfig(entity)
+            if (config?.persist) {
+                await __.ui.widgetManager.saveWidgetPosition(entity, config)
+            }
         }
-        if ($widget.current) {
-            $widget.current.rotate = angle
-        }
-        updateValue('rotate', angle)
 
         if (_moveable?.current) {
             _moveable.current.updateRect()
         }
-    }
+
+        // Update ephemeral store for UI sync
+        $widget.current = {
+            id:     entity,
+            rotate: angle,
+        }
+
+        // Persist the value to the configuration store
+        updateValue('rotate', angle)
+    }, [entity, _moveable, $widget, updateValue])
+
+
+    const resolvedRotation = useMemo(() => {
+        if (widget.current?.id !== entity || widget.current?.rotate === undefined) {
+            return localRotation
+        }
+
+        const angle = Number(widget.current.rotate)
+        return Math.ceil(Number.isFinite(angle) ? angle : 0)
+    }, [entity, localRotation, widget])
 
     const getColor = useCallback((item, alpha = false) => __.ui.ui.resolveItemColor(item, alpha), [])
 
@@ -163,54 +201,65 @@ export const TextWidgetEditor = ({entity}) => {
     }
 
     return (
-        <div className="lgs-card lgs-widget-editor">
-            <div className="text-widget-editor-scroll">
-                <LGSScrollbars>
-                    <div className="text-widget-editor-header">
-                        <TextEditorToolbar id={normalizedId} fonts={true} color={false} align={false} style={false}/>
-                        <TextEditorToolbar id={normalizedId} color={true} align={true} style={true}/>
+        <LGSScrollbars>
+            <WaCard appearance="plain" className="lgs-widget-editor lgs-widget-editor-card">
 
+                <div className="text-widget-editor-header">
+                    <div className="drawer-horizontal-line">
+                        <TypefaceElement id={normalizedId}/><LineHeightElement id={normalizedId}/>
                     </div>
-                    <div className="lgs-widget-editor-controls-wrapper">
-                        <SlDivider/>
-                        <RotationElement
-                            element={element}
-                            localRotation={localRotation}
-                            applyRotation={applyRotation}
-                            updateValue={updateValue}
-                        />
-                        <SlDivider/>
-                        <StrokeElement
-                            element={element}
-                            swatches={swatches}
-                            getColor={getColor}
-                            updateValue={updateValue}
-                        />
-                        <SlDivider/>
-                        <ShadowElement
-                            element={element}
-                            swatches={swatches}
-                            getColor={getColor}
-                            updateValue={updateValue}
-                        />
-                        <SlDivider/>
-                        <BorderElement
-                            element={element}
-                            swatches={swatches}
-                            getColor={getColor}
-                            updateValue={updateValue}
-                            showPill={true}
-                        />
-                        <SlDivider/>
-                        <BackgroundElement
-                            element={element}
-                            swatches={swatches}
-                            getColor={getColor}
-                            updateValue={updateValue}
-                        />
+                    <div className="drawer-horizontal-line text-widget-editor-size-format-line">
+                        <FontSizeElement id={normalizedId}/>
+                        <div className="text-widget-editor-format-row">
+                            <StyleElement id={normalizedId}/>
+                            <AlignElement id={normalizedId}/>
+                        </div>
                     </div>
-                </LGSScrollbars>
-            </div>
-        </div>
+
+                </div>
+
+                <div className="lgs-widget-editor-controls-wrapper">
+                    <RotationElement localRotation={resolvedRotation}
+                                     applyRotation={applyRotation}
+                    />
+
+                    <WaDivider/>
+                    <TextColorElement id={normalizedId}/>
+
+                    <WaDivider/>
+                    <PaddingElement element={element} updateValue={updateValue} moveableId={normalizedId}/>
+
+                    <WaDivider/>
+                    <StrokeElement
+                        element={element}
+                        swatches={swatches}
+                        getColor={getColor}
+                        updateValue={updateValue}
+                    />
+                    <WaDivider/>
+                    <ShadowElement
+                        element={element}
+                        swatches={swatches}
+                        getColor={getColor}
+                        updateValue={updateValue}
+                    />
+                    <WaDivider/>
+                    <BorderElement
+                        element={element}
+                        swatches={swatches}
+                        getColor={getColor}
+                        updateValue={updateValue}
+                        showPill={true}
+                    />
+                    <WaDivider/>
+                    <BackgroundElement
+                        element={element}
+                        swatches={swatches}
+                        getColor={getColor}
+                        updateValue={updateValue}
+                    />
+                </div>
+            </WaCard>
+        </LGSScrollbars>
     )
 }

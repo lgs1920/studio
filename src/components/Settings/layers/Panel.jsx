@@ -7,19 +7,22 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-04-08
+ * Last modified: 2026-04-08
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import DrawerFooter from '@Components/DrawerFooter'
+import PanelActions                              from '@Components/PanelsActions'
 import { LAYERS_DRAWER }          from '@Core/constants'
 import { faCircleInfo }           from '@fortawesome/pro-regular-svg-icons'
-import { SlDrawer, SlIconButton } from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                  from '@Utils/FA2SL'
-import React                      from 'react'
+import { SlIconButton }                          from '@shoelace-style/shoelace/dist/react'
+import WaDrawer                        from '@Components/WaDrawerNonModal'
+import { WaButton, WaIcon, WaTooltip } from '@web.awesome.me/webawesome-pro/dist/react'
+import React                                     from 'react'
+import { createPortal }                from 'react-dom'
 import { useSnapshot }            from 'valtio'
 import './style.css'
 import { InfoLayerModal }         from './InfoLayerModal'
@@ -28,7 +31,7 @@ import { LayersAndTerrains }      from './LayersAndTerrains'
 export const Panel = () => {
     const drawers = useSnapshot(lgs.stores.ui.drawers)
     const placement = useSnapshot(lgs.stores.editorSettings.menu).drawer
-    const openInfoModal = () => lgs.stores.editor.layer.infoDialog = true
+    const openInfoModal = () => lgs.stores.editorSettings.layer.infoDialog = true
 
     const closePanel = (event) => {
         if (window.isOK(event)) {
@@ -39,26 +42,32 @@ export const Panel = () => {
         }
     }
 
-    return (
+    const drawerRoot = __.ui.drawerManager.drawerRoot
+    const content = (
         <>
             {drawers.open === LAYERS_DRAWER &&
-            <div className={'drawer-wrapper'}>
-                <SlDrawer id={LAYERS_DRAWER}
+                <WaDrawer id={LAYERS_DRAWER}
                           open={true}
-                          onSlRequestClose={closePanel}
+                          onWaHide={closePanel}
                           placement={placement}
-                          contained
-                          className={'lgs-theme'}>
+                          className={'lgs-theme'}
+                >
                     <div slot={'label'}>{'Layers and Terrains'}</div>
-                    <SlIconButton onClick={openInfoModal} slot={'header-actions'} library="fa"
-                                  name={FA2SL.set(faCircleInfo)}/>
+                    <PanelActions>
+                        <WaTooltip for="lgs-disclaimer-button" placement={'top'}>{'Disclaimer'}</WaTooltip>
+                        <WaButton id="lgs-disclaimer-button" onClick={openInfoModal} appearance={'plain'}
+                                  variant="brand">
+                            <WaIcon name="bell-exclamation" variant="regular"/>
+                        </WaButton>
+                    </PanelActions>
                     <LayersAndTerrains/>
                     <DrawerFooter/>
                     <InfoLayerModal/>
-                </SlDrawer>
-            </div>
+                </WaDrawer>
             }
         </>
-
     )
+
+    return drawerRoot ? createPortal(content, drawerRoot) : content
+
 }

@@ -7,103 +7,104 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-28
- * Last modified: 2026-02-28
+ * Created on: 2026-05-10
+ * Last modified: 2026-05-10
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { memo, useCallback, useEffect, useMemo } from 'react'
-import { useSnapshot }                           from 'valtio'
-import { FontAwesomeIcon }                       from '@Components/FontAwesomeIcon'
-import { POI_CATEGORY_ICONS }                    from '@Core/constants'
-import { faTrashCan }                            from '@fortawesome/pro-regular-svg-icons'
-import { SlIconButton, SlOption, SlSelect, SlSwitch } from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                                 from '@Utils/FA2SL'
+import { WaIcon, WaOption, WaSelect, WaSwitch } from '@web.awesome.me/webawesome-pro/dist/react'
+import { memo, useEffect, useMemo }               from 'react'
+import { useSnapshot }                            from 'valtio'
+import { ICONS_PATH, POI_CATEGORY_ICONS }         from '@Core/constants'
+import { applyPOIDuotoneIconStyles }            from '@Components/MainUI/MapPOI/duotoneIconUtils'
 
 /**
  * A memoized React component for selecting and filtering POI categories.
- * @param {Object} props - Component props
- * @param {Function} props.onChange - Callback for filter changes
- * @param {Function} props.handleCategories - Handler for category selection changes
- * @param {Function} props.handleExclusion - Handler for exclusion toggle changes
- * @param {string} [props.size='small'] - Size of the select component
- * @returns {JSX.Element} The rendered category selector filter
  */
-export const MapPOICategorySelectorFilter = memo(({onChange, handleCategories, handleExclusion, size = 'small'}) => {
+export const MapPOICategorySelectorFilter = memo(({
+                                                      onChange,
+                                                      handleCategories,
+                                                      handleExclusion,
+                                                      exclude,
+                                                      size = 'small',
+                                                  }) => {
     const settings = useSnapshot(lgs.settings.poi)
     const $pois = lgs.stores.main.components.pois
     const pois = useSnapshot($pois)
 
-    // Memoized clear icon
-    const clearIcon = useMemo(() => (
-        <FontAwesomeIcon slot="clear-icon" icon={faTrashCan}/>
-    ), [])
-
-    // Memoized category options
     const categoryOptions = useMemo(() => {
-        return Array.from(pois.categories).map(([slug, category]) => (
-            <SlOption key={slug} value={slug}>
-                <FontAwesomeIcon
-                    slot="prefix"
-                    icon={Object.values(POI_CATEGORY_ICONS.get(slug))[0]}
-                    style={{
-                        '--fa-secondary-color':   'var(--lgs-light-color)',
-                        '--fa-secondary-opacity': 1,
-                        '--fa-primary-color':     'var(--lgs-dark-color)',
-                        '--fa-primary-opacity':   1,
-                    }}
-                />
-                {category.title}
-            </SlOption>
-        ))
+        return Array.from(pois.categories).map(([slug, category]) => {
+            const iconName = POI_CATEGORY_ICONS.get(slug)
+            const isSvg = iconName?.endsWith('.svg')
+
+            return (
+                <WaOption key={slug} value={slug}>
+                    <WaIcon
+                        slot="start"
+                        src={isSvg ? `${ICONS_PATH}/${iconName}` : ''}
+                        name={!isSvg ? iconName : ''}
+                        className="poi-duotone-icon"
+                        variant="regular"
+                        family="duotone"
+                        onWaLoad={applyPOIDuotoneIconStyles}
+                    />
+                    {category.title}
+                </WaOption>
+            )
+        })
     }, [pois.categories])
 
-    const handleBubbling = (event) => {
-        event.preventDefault()
-        event.stopPropagation()
-    }
+    const duotoneVars = useMemo(() => ({
+        '--primary-color':     'var(--poi-primary-default-color)',
+        '--secondary-color':   'var(--poi-secondary-default-color)',
+        '--primary-opacity':   'var(--poi-primary-default-opacity)',
+        '--secondary-opacity': 'var(--poi-secondary-default-opacity)',
+    }), [])
 
-    // Memoized label slot
     const labelSlot = useMemo(() => (
-        <div className="map-poi-category-filter" slot="label">
-            <span>By Categories</span>
+        <div
+            slot="label"
+            className="map-poi-category-filter"
+            style={{
+                display:        'flex',
+                justifyContent: 'space-between',
+                alignItems:     'center',
+                width:          '100%',
+            }}
+        >
+            <span>{'By Categories'}</span>
             {settings.filter.byCategories.length > 0 && (
-                <SlSwitch
-                    size="small"
-                    align-right
-                    checked={settings.filter.exclude}
-                    onSlChange={handleExclusion}
-                >
-                    {'Exclude'}&nbsp;
-                </SlSwitch>
+                <WaSwitch
+                    size="xs"
+                    checked={exclude}
+                    label-at-start
+                    onClick={(e) => e.stopPropagation()}
+                    onChange={handleExclusion}
+                > {'Exclude'}
+                </WaSwitch>
             )}
         </div>
-    ), [settings.filter.byCategories.length, settings.filter.exclude, handleExclusion])
+    ), [settings.filter.byCategories.length, exclude, handleExclusion])
 
-    // Optimize useEffect to avoid unnecessary onChange calls
     useEffect(() => {
-        if (!settings.filter.byCategories) {
-            lgs.settings.poi.filter.byCategories = []
-        }
         onChange()
-    }, [settings.filter.byCategories, settings.filter.exclude, onChange])
+    }, [settings.filter.byCategories, exclude, onChange])
 
     return (
-        <SlSelect
+        <WaSelect
             value={settings.filter.byCategories}
             size={size}
-            className="map-poi-category-selector-filter"
+            className="map-poi-category-selector"
+            style={duotoneVars}
             multiple
-            onSlChange={handleCategories}
+            onChange={handleCategories}
             placeholder="Select categories"
-            onSlAfterHide={handleBubbling}
-            clearable
+            with-clear
         >
-            {clearIcon}
-            {categoryOptions}
             {labelSlot}
-        </SlSelect>
+            {categoryOptions}
+        </WaSelect>
     )
 })

@@ -7,74 +7,84 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-04-30
+ * Last modified: 2026-04-30
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { SETTINGS_EDITOR_DRAWER }                                from '@Core/constants'
-import { faCircleUser, faScrewdriverWrench, faPaintbrushPencil } from '@fortawesome/pro-solid-svg-icons'
-import { SlDrawer, SlIcon, SlTab, SlTabGroup, SlTabPanel, SlTooltip } from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                                                      from '@Utils/FA2SL'
-import React                                                     from 'react'
-import { useSnapshot }                                           from 'valtio'
+import PanelActions from '@Components/PanelsActions'
+import { SETTINGS_EDITOR_DRAWER }                                     from '@Core/constants'
+import WaDrawer                                             from '@Components/WaDrawerNonModal'
+import { WaIcon, WaTab, WaTabGroup, WaTabPanel, WaTooltip } from '@web.awesome.me/webawesome-pro/dist/react'
+import { memo, useCallback, useEffect } from 'react'
+import { createPortal }                                     from 'react-dom'
+import { useSnapshot }                                                from 'valtio'
 import './style.css'
-import DrawerFooter                                              from '../DrawerFooter'
-import { GlobalSettings }                                        from './application/general/GlobalSettings'
-import { ProfileTools }                                          from './application/profile/ProfileTools'
-import { Style }                                                 from './application/style/Style'
+import DrawerFooter                                                   from '../DrawerFooter'
+import { GlobalSettings }                                             from './application/general/GlobalSettings'
+import { ProfileTools }                                               from './application/profile/ProfileTools'
+import { Style }                                                      from './application/style/Style'
 
-export const Panel = () => {
+export const Panel = memo(() => {
     const drawers = useSnapshot(lgs.stores.ui.drawers)
-    const openInfoModal = () => lgs.editorSettingsProxy.layer.infoDialog = true
     const placement = useSnapshot(lgs.stores.editorSettings.menu).drawer
 
-    const closePanel = (event) => {
-        window.dispatchEvent(new Event('resize'))
-        if (__.ui.drawerManager.isCurrent(SETTINGS_EDITOR_DRAWER)) {
-            __.ui.drawerManager.close()
+    useEffect(() => {
+        if (drawers.open !== SETTINGS_EDITOR_DRAWER) {
+            return
         }
-    }
 
-    return (
+        const frame = requestAnimationFrame(() => {
+            __.ui.drawerManager.openTab(__.ui.drawerManager.tab ?? 'tab-tools')
+        })
+
+        return () => cancelAnimationFrame(frame)
+    }, [drawers.action, drawers.open])
+
+    const closePanel = useCallback((event) => {
+        if (event.target.tagName === 'WA-DRAWER') {
+            window.dispatchEvent(new Event('resize'))
+            if (__.ui.drawerManager.isCurrent(SETTINGS_EDITOR_DRAWER)) {
+                __.ui.drawerManager.close()
+            }
+        }
+    }, [])
+
+    const drawerRoot = __.ui.drawerManager.drawerRoot
+    const content = (
         <>
             {drawers.open === SETTINGS_EDITOR_DRAWER &&
-                <div className={'drawer-wrapper'}>
-                    <SlDrawer id="settings-pane"
+                <WaDrawer id={SETTINGS_EDITOR_DRAWER}
                               placement={placement}
                               open={true}
-                              onSlRequestClose={closePanel}
-                              contained
-                              className={'lgs-theme'}>
-                        <SlTabGroup>
-                            <SlTab slot="nav" panel="tab-tools">
-                                <SlIcon library="fa" name={FA2SL.set(faScrewdriverWrench)}/> {'Global Settings'}
-                            </SlTab>
-                            <SlTab slot="nav" panel="tab-ui">
-                                <SlIcon library="fa" name={FA2SL.set(faPaintbrushPencil)}/>
-                                {
-                                    'User Interface'
-                                }
-                            </SlTab>
-
-
-                            <SlTab slot="nav" panel="tab-user" id={'manage-user-profile'}>
-                                <SlTooltip placement={'top'} hoist content={'Manage My Profile'}>
-                                    <SlIcon library="fa" name={FA2SL.set(faCircleUser)}/>
-                                </SlTooltip>
-                            </SlTab>
-
-                            <SlTabPanel name="tab-tools"><GlobalSettings/></SlTabPanel>
-                            <SlTabPanel name="tab-ui"><Style/></SlTabPanel>
-                            <SlTabPanel name="tab-user" open><ProfileTools/></SlTabPanel>
-                        </SlTabGroup>
+                              modal="false"
+                              onWaAfterHide={closePanel}>
+                        <PanelActions/>
+                        <WaTabGroup>
+                            <WaTab panel="tab-tools">
+                                <WaIcon name="screwdriver-wrench" variant="regular"/> {'Global Settings'}
+                            </WaTab>
+                            <WaTab panel="tab-ui">
+                                <WaIcon name="paintbrush-pencil" variant="regular"/>{'User Interface'}
+                            </WaTab>
+                            <WaTab panel="tab-user" id={'manage-user-profile'}>
+                                <WaTooltip for="user-profile-tab" placement={'top'}>{'Manage My Profile'}</WaTooltip>
+                                <WaIcon id="user-profile-tab" name="circle-user" variant={'solid'}/>
+                            </WaTab>
+                            <WaTabPanel name="tab-tools"><GlobalSettings/></WaTabPanel>
+                            <WaTabPanel name="tab-ui"><Style/></WaTabPanel>
+                            <WaTabPanel name="tab-user"><ProfileTools/></WaTabPanel>
+                        </WaTabGroup>
                         <DrawerFooter/>
-
-                    </SlDrawer>
-                </div>
+                    </WaDrawer>
             }
         </>
     )
-}
+
+    return drawerRoot ? createPortal(content, drawerRoot) : content
+
+})
+
+Panel.displayName = 'SettingsPanel'

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-07
- * Last modified: 2026-01-07
+ * Created on: 2026-03-09
+ * Last modified: 2026-03-09
  *
  *
  * Copyright © 2026 LGS1920
@@ -21,8 +21,9 @@ import {
 import { faText }                                                    from '@fortawesome/pro-regular-svg-icons'
 import { SlButton, SlIcon, SlTooltip }                               from '@shoelace-style/shoelace/dist/react'
 import './style.css'
-import { FA2SL }                                                     from '@Utils/FA2SL'
-import { useSnapshot }                                               from 'valtio'
+import { FA2SL }                       from '@Utils/FA2SL'
+import { WaButton, WaIcon, WaTooltip } from '@web.awesome.me/webawesome-pro/dist/react'
+import { useSnapshot }                 from 'valtio'
 
 export const TextButton = (props) => {
     const $main = lgs.stores.main
@@ -42,16 +43,16 @@ export const TextButton = (props) => {
         })
     }
 
-    return (
-        <SlTooltip hoist placement={props.tooltip} content="Add a label">
-            <SlButton
-                size="small"
+    return (<>
+            <WaTooltip for="add-a-label" placement={props.tooltip}>{'Add Text'}</WaTooltip>
+            <WaButton
                 className="square-button"
-                id="add-a-label"
                 onClick={addWidget}
+                variant={'brand'}
+                appearance="Filled"
             >
-                <SlIcon slot="prefix" library="fa" name={FA2SL.set(faText)}/>
-            </SlButton>
-        </SlTooltip>
+                <WaIcon name="text" variant="regular"/>
+            </WaButton>
+        </>
     )
 }

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-19
- * Last modified: 2026-02-19
+ * Created on: 2026-04-30
+ * Last modified: 2026-04-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -36,13 +36,16 @@
 .journey-stats-widget {
     display: flex;
     flex-direction: column;
+    box-sizing: border-box;
+    width: max-content;
+    max-width: 900px;
     padding: var(--lgs-gutter);
     color: var(--track-widget-text-color);
     border: var(--track-widget-border) solid var(--track-widget-border);
     gap: var(--lgs-gutter-s);
 }
 
-.journey-stats-widget sl-divider {
+.journey-stats-widget wa-divider {
     --color: var(--track-widget-separator-color);
 }
 
@@ -55,6 +58,14 @@
 
 .journey-stats-row-center {
     justify-content: center;
+}
+
+.journey-stats-summary-stack {
+    display: flex;
+    align-items: center;
+    flex-direction: column;
+    padding: 0 var(--lgs-gutter);
+    gap: var(--lgs-gutter-s);
 }
 
 .journey-stats-summary-item {
@@ -70,6 +81,11 @@
     flex: 0 0 calc((100% - var(--data)) / 3);
     justify-content: center;
     --data: calc(4 * var(--lgs-gutter));
+}
+
+.journey-stats-summary-stack .track-summary-column {
+    flex: 0 0 auto;
+    width: 100%;
 }
 
 .journey-stats-text,
@@ -91,6 +107,7 @@
 .journey-stats-label-bold,
 .journey-stats-unit-sub,
 .journey-stats-date,
+.journey-stats-location,
 .journey-stats-value .lgs-nvu-unit {
     font-size: 12px;
     font-weight: var(--weight-label);
@@ -114,7 +131,15 @@
     font-size: 12px;
 }
 
-.journey-stats-date {
+.journey-stats-meta {
+    display: flex;
+    align-items: center;
+    flex-direction: column;
+    gap: var(--lgs-gutter-xs);
+}
+
+.journey-stats-date,
+.journey-stats-location {
     font-family: var(--track-widget-font);
     font-size: 16px;
     display: flex;
@@ -123,9 +148,16 @@
     gap: 2rem;
 }
 
+.journey-stats-location {
+    max-width: 100%;
+    text-align: center;
+    overflow-wrap: anywhere;
+    gap: var(--lgs-gutter-xs);
+}
+
 .journey-stats-value {
     font-size: 16px;
-    --margin: 1.5rem
+    --margin: 1.5rem;
 }
 
 .journey-stats-value sl-icon {
@@ -201,8 +233,32 @@
     min-height: 0;
 }
 
-.journey-stats-widget-editor sl-input::part(input) {
+.journey-stats-widget-editor wa-input::part(input) {
     width: 2rem;
+}
+
+.journey-stats-widget-editor-data::part(body) {
+    display: flex;
+    flex-direction: column;
+    gap: var(--lgs-gutter-s);
+}
+
+.journey-stats-widget-editor-readonly-value {
+    font-size: var(--lgs-font-size-s);
+    line-height: var(--wa-form-control-label-line-height);
+    display: flex;
+    justify-content: center;
+    width: 100%;
+    min-width: 0;
+    color: var(--wa-form-control-label-color);
+    gap: var(--lgs-gutter-s);
+}
+
+.journey-stats-widget-editor-readonly-value span {
+    overflow: hidden;
+    min-width: 0;
+    white-space: nowrap;
+    text-overflow: ellipsis;
 }
 
 .journey-stats-widget-editor-data .drawer-horizontal-line {
@@ -218,24 +274,65 @@
     min-width: 0;
 }
 
-.journey-stats-widget-editor-data sl-input {
+.journey-stats-widget-editor-data wa-input {
     width: 100%;
 }
 
-.journey-stats-widget-editor-data sl-input::part(base) {
+.journey-stats-widget-editor-data wa-input::part(base) {
     width: 100%;
 }
 
-.journey-stats-widget-editor-data sl-input::part(input) {
+.journey-stats-widget-editor-data wa-input::part(input) {
     width: 100%;
 }
 
-.journey-stats-widget-editor-data .drawer-horizontal-element:first-child:not(:has(sl-input)) {
-    transform: translateY(-3px); / / Text aligned to center of inputs line
+.journey-stats-widget-editor-data .drawer-horizontal-element:first-child:not(:has(wa-input)) {
+    transform: translateY(-3px);
 }
 
 .journey-stats-widget-editor-performance {
     display: flex;
     flex-direction: column;
     gap: var(--lgs-gutter-xs);
+}
+
+.journey-stats-text-order-editor::part(body) {
+    display: flex;
+    flex-direction: column;
+    gap: var(--lgs-gutter-s);
+}
+
+.journey-stats-text-order-list {
+    display: flex;
+    flex-direction: column;
+    min-width: 10rem;
+    padding: var(--lgs-gutter-xs);
+    gap: var(--lgs-gutter-s);
+}
+
+.journey-stats-text-order-row {
+    cursor: grab;
+    user-select: none;
+}
+
+.journey-stats-text-order-row::part(body) {
+    display: flex;
+    align-items: center;
+    gap: var(--lgs-gutter-xs);
+}
+
+.journey-stats-text-order-row:active {
+    cursor: grabbing;
+}
+
+.journey-stats-text-order-lock-button {
+    inline-size: 1.75rem;
+    flex: 0 0 auto;
+    margin-left: auto;
+}
+
+.journey-stats-text-order-lock-button::part(base) {
+    inline-size: 1.75rem;
+    min-width: 1.75rem;
+    padding: 0;
 }

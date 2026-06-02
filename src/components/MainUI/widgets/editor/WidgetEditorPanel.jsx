@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-21
- * Last modified: 2026-02-21
+ * Created on: 2026-05-10
+ * Last modified: 2026-05-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -21,23 +21,53 @@ import {
 import {
     WidgetsOrderingPanelContent,
 }                                                                                             from '@Components/MainUI/widgets/ordering/WidgetsOrderingPanelContent'
-import { SCENE_WIDGETS_BOARD, VIDEO_CROP_ZONE, WIDGETS_CONFIGURATION, WIDGETS_EDITOR_DRAWER } from '@Core/constants'
+import PanelActions
+    from '@Components/PanelsActions'
+import {
+    CREDITS_WIDGET, SCENE_WIDGETS_BOARD, SETTINGS_EDITOR_DRAWER, WIDGET_LAYER_START, WIDGET_LAYER_STEP,
+    WIDGETS_EDITOR_DRAWER,
+}   from '@Core/constants'
 import {
     WidgetRegistry,
-}                                                                                             from '@Core/ui/widget-manager/registry/WidgetRegistry'
+}   from '@Core/ui/widget-manager/registry/WidgetRegistry'
+
+import WaDrawer from '@Components/WaDrawerNonModal'
 import {
-    faImage, faLayer,
-}                                                                                             from '@fortawesome/pro-regular-svg-icons'
-import {
-    FontAwesomeIcon,
-}                                                                                             from '@fortawesome/react-fontawesome'
-import {
-    SlDrawer, SlIcon, SlTab, SlTabGroup, SlTabPanel,
-}                                                                                             from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                                                                              from '@Utils/FA2SL'
-import { Suspense, useCallback, useEffect, useMemo, useState }                                from 'react'
-import { useSnapshot }                                                                        from 'valtio'
-import './style.css'
+    WaIcon,
+    WaTab,
+    WaTabGroup,
+    WaTabPanel,
+}                                                                     from '@web.awesome.me/webawesome-pro/dist/react'
+import { useManagedStylesheet }                                        from '@Utils/useManagedStylesheet'
+import classNames                                                     from 'classnames'
+import { Suspense, useCallback, useEffect, useMemo, useState } from 'react'
+import { createPortal }                                               from 'react-dom'
+import { useSnapshot }                                                from 'valtio'
+import widgetEditorStylesheetHref                                      from './style.css?url'
+
+const OPEN_COMPASS_SETTINGS_ACTION = 'open-compass-settings'
+const WIDGET_EDITOR_STYLESHEET_ID = 'widget-editor-panel'
+
+const buildCanvasPreviewBackground = () => {
+    try {
+        const source = lgs.canvas
+        if (!source?.width || !source?.height) {
+            return null
+        }
+
+        lgs.scene?.render?.()
+        const width = Math.min(source.width, 1024)
+        const height = Math.max(1, Math.round(width * source.height / source.width))
+        const canvas = document.createElement('canvas')
+        canvas.width = width
+        canvas.height = height
+        canvas.getContext('2d')?.drawImage(source, 0, 0, source.width, source.height, 0, 0, width, height)
+        return canvas.toDataURL('image/webp', 0.8)
+    }
+    catch {
+        return null
+    }
+}
 
 /**
  * Dynamic widget editor panel.
@@ -60,26 +90,56 @@ export const WidgetEditorPanel = () => {
     const [data, setData] = useState({name: '', description: '', icon: '', rawIcon: null, type: ''})
     const [EditorComponent, setEditorComponent] = useState(null)
     const [PreviewComponent, setPreviewComponent] = useState(null)
+    const [canvasPreviewBg, setCanvasPreviewBg] = useState({entity: null, image: null})
 
     const cached = ui.widget.cache.get(drawers.entity)
     const _widgetRegistry = useMemo(() => new WidgetRegistry(), [])
 
     const isVisible = drawers.open === WIDGETS_EDITOR_DRAWER && (video.editing || cached?.widgetsBoard === SCENE_WIDGETS_BOARD)
-    const drawerPlacement = menuSettings.drawer
-    const previewBg = widget.currentSnapshot?.image || null
+    useManagedStylesheet(WIDGET_EDITOR_STYLESHEET_ID, isVisible ? widgetEditorStylesheetHref : null)
 
-    const closeEditor = useCallback((event) => {
-        if (event && event.target.tagName !== 'SL-DRAWER') {
+    // Check stacked state via manager instead of snapshot property
+    const isStacked = __.ui.drawerManager.isStacked(WIDGETS_EDITOR_DRAWER)
+    const syncGlobalCompass = drawers.action === 'edit-global-compass'
+    const drawerPlacement = menuSettings.drawer
+    const currentSnapshotImage = widget.currentSnapshot?.entity === drawers.entity ? widget.currentSnapshot.image : null
+    const previewBg = currentSnapshotImage ||
+        (canvasPreviewBg.entity === drawers.entity ? canvasPreviewBg.image : null)
+
+    /**
+     * Closes the editor and handles the stack via the manager.
+     */
+    const closeEditorWithManager = useCallback(() => {
+        if (syncGlobalCompass) {
+            __.ui.drawerManager.open(SETTINGS_EDITOR_DRAWER, {
+                action: OPEN_COMPASS_SETTINGS_ACTION,
+                tab:    'tab-ui',
+            })
+            window.dispatchEvent(new Event('resize'))
             return
         }
 
         if (__.ui.drawerManager.isCurrent(WIDGETS_EDITOR_DRAWER)) {
             __.ui.drawerManager.close()
         }
-        $drawers.open = null
-        window.dispatchEvent(new Event('resize'))
-    }, [])
+        else if (!isStacked) {
+            $drawers.open = null
+        }
 
+        window.dispatchEvent(new Event('resize'))
+    }, [isStacked, $drawers, syncGlobalCompass])
+
+    const closeEditor = useCallback((event) => {
+        if (event && event.target.tagName !== 'WA-DRAWER') {
+            return
+        }
+
+        closeEditorWithManager()
+    }, [closeEditorWithManager])
+
+    /**
+     * Prevents default shoelace close behavior to let the manager handle it.
+     */
     const handleRequestClose = useCallback((event) => {
         const src = event.detail?.source
         if (src === 'close-button' || src === 'keyboard') {
@@ -94,14 +154,12 @@ export const WidgetEditorPanel = () => {
             if (drawers.entity && isVisible && cached) {
                 const type = drawers.entity.split('#')[0]
                 const theWidget = __.widgets.get(cached.group).widgets.get(type)
-                const configIcon = WIDGETS_CONFIGURATION.get(type)?.icon
-
                 setData({
                             type,
                             name:    theWidget.name,
                             description: theWidget.description,
-                            icon:    FA2SL.set(configIcon),
-                            rawIcon: configIcon,
+                            icon:    theWidget.icon,
+                            rawIcon: theWidget.icon,
                         })
 
                 const pos = await __.ui.widgetManager.getWidgetPosition(drawers.entity)
@@ -117,99 +175,166 @@ export const WidgetEditorPanel = () => {
             }
         }
         resolveContent()
-    }, [drawers.entity, isVisible, _widgetRegistry, ui.widget.cache])
+    }, [drawers.entity, isVisible, _widgetRegistry, ui.widget.cache, cached])
+
+    useEffect(() => {
+        if (!isVisible || currentSnapshotImage) {
+            return
+        }
+
+        const entity = drawers.entity
+        const frame = requestAnimationFrame(() => {
+            setCanvasPreviewBg({
+                                   entity,
+                                   image: buildCanvasPreviewBackground(),
+                               })
+        })
+
+        return () => cancelAnimationFrame(frame)
+    }, [drawers.entity, isVisible, currentSnapshotImage])
+
+    /**
+     * @description Retrieves and formats the list of active widgets for the current board
+     * @returns {Array} Sorted list of active widget objects
+     */
+    const activeWidgetsList = useCallback(() => {
+        // Safety check: if list or cached data is missing, return empty array
+        if (!widget.list || !cached) {
+            return []
+        }
+
+        return Array.from(widget.list.entries())
+            .filter(([id, entry]) => {
+                const _widgetType = id.split('#')[0]
+                // Safe comparison with the current board
+                return entry?.widgetsBoard === cached.widgetsBoard && _widgetType !== CREDITS_WIDGET
+            })
+            .map(([id, entry], index) => {
+                const _widgetType = id.split('#')[0]
+                const _instance = lgs.settings.widgets[_widgetType]
+                if (!_instance) {
+                    return null
+                }
+
+                const _cacheEntry = __.ui.widgetCache.get(id)
+                const _currentZ = Number(entry?.zIndex ?? _cacheEntry?.zIndex)
+                    || (WIDGET_LAYER_START + index * WIDGET_LAYER_STEP)
+
+                return {
+                    id,
+                    zIndex: parseInt(_currentZ, 10),
+                    type:   _widgetType,
+                    fixed:  _instance.fixedPosition ?? false,
+                }
+            })
+            .filter(Boolean)
+            .sort((a, b) => b.zIndex - a.zIndex)
+    }, [widget.list, cached]) // Use 'cached' as a dependency to react to any change
+
+    const activeWidgets = useMemo(() => activeWidgetsList(), [activeWidgetsList])
 
     if (!isVisible) {
         return null
     }
 
     /**
-     * Fallback UI for preview loading using FontAwesome native beat animation
+     * Fallback UI for preview loading
      */
     const PreviewLoadingFallback = (
         <div className="lgs-preview-loader-container">
             {data.rawIcon && (
-                <FontAwesomeIcon
-                    icon={data.rawIcon}
-                    beatFade
-                    className="lgs-loader-beating-white"
-                />
+                <WaIcon name={data.rawIcon} beatFade className="lgs-loader-beating-white"/>
             )}
         </div>
     )
 
-    return (
-        <div className="drawer-wrapper">
-            <SlDrawer
-                id={WIDGETS_EDITOR_DRAWER}
-                label={data.name}
-                open={isVisible}
-                className="lgs-theme"
-                placement={drawerPlacement}
-                onSlRequestClose={handleRequestClose}
-                onSlHide={closeEditor}
-                contained
-            >
+    const drawerRoot = __.ui.drawerManager.drawerRoot
+    const content = (
+        <WaDrawer
+            id={WIDGETS_EDITOR_DRAWER}
+            label={data.name}
+            open={isVisible}
+            modal={false}
+            className={classNames({'drawer-is-stacked': isStacked})}
+            placement={drawerPlacement}
+            onWaAfterHide={handleRequestClose}
+            onWaHide={closeEditor}
+        >
+            {lgs.stores.ui.widget.list.size > 1 &&
+
                 <div slot="label" className="drawer-header-title">
-                    <SlIcon library="fa" name={data.icon}/>
-                    <span>{data.name}</span>
+                <WaIcon name={data.icon}/>
+                <span>{data.name}</span>
+            </div>
+            }
+            <PanelActions stackedPanel={isStacked} onBack={isStacked ? closeEditorWithManager : null}/>
+
+            <div className="drawer-content lgs-editor-layout">
+                <div className="editor-header-zones">
+                    <WaTabGroup className="editor-tabs">
+                        <WaTab slot="nav" panel="preview">
+                            <WaIcon size="s" name="image"/> Preview
+                        </WaTab>
+
+                        {activeWidgets.length > 1 &&
+                        <WaTab slot="nav" panel="ordering">
+                            <WaIcon size="s" name="layer"/> Widgets stack
+                        </WaTab>
+                        }
+
+                        <WaTabPanel name="preview">
+                            <section
+                                className="editor-preview-zone lgs-widget-preview"
+                                data-widget-preview-entity={drawers.entity}
+                                style={{'--lgs-widget-preview-bg': previewBg ? `url(${previewBg})` : 'none'}}
+                            >
+                                <Suspense fallback={PreviewLoadingFallback}>
+                                    {PreviewComponent ? (
+                                        <PreviewComponent
+                                            entity={drawers.entity}
+                                            data={data}
+                                            syncGlobalCompass={syncGlobalCompass}
+                                        />
+                                    ) : (
+                                         <div className="default-preview">
+                                             <WaIcon library="fa" name={data.icon}/>
+                                         </div>
+                                     )}
+                                </Suspense>
+                            </section>
+                        </WaTabPanel>
+                        {activeWidgets.length > 1 &&
+                        <WaTabPanel name="ordering">
+                            <section className="editor-ordering-zone">
+                                <WidgetsOrderingPanelContent widgetsBoard={cached.widgetsBoard}/>
+                            </section>
+                        </WaTabPanel>
+                        }
+                    </WaTabGroup>
                 </div>
 
-                <div className="drawer-content lgs-editor-layout">
-                    <div className="editor-header-zones">
-                        <SlTabGroup className="editor-tabs">
-                            <SlTab slot="nav" panel="preview">
-                                <SlIcon size="small" library="fa" name={FA2SL.set(faImage)}/> Preview
-                            </SlTab>
-                            <SlTab slot="nav" panel="ordering">
-                                <SlIcon size="small" library="fa" name={FA2SL.set(faLayer)}/> Widgets stack
-                            </SlTab>
-
-                            <SlTabPanel name="preview">
-                                <section
-                                    className="editor-preview-zone lgs-widget-preview"
-                                    style={{'--lgs-widget-preview-bg': previewBg ? `url(${previewBg})` : 'none'}}
-                                >
-                                    <Suspense fallback={PreviewLoadingFallback}>
-                                        {PreviewComponent ? (
-                                            <PreviewComponent entity={drawers.entity} data={data}/>
-                                        ) : (
-                                             <div className="default-preview">
-                                                 <SlIcon library="fa" name={data.icon}/>
-                                             </div>
-                                         )}
-                                    </Suspense>
-                                </section>
-                            </SlTabPanel>
-
-                            <SlTabPanel name="ordering">
-                                <section className="editor-ordering-zone">
-                                    <WidgetsOrderingPanelContent widgetsBoard={VIDEO_CROP_ZONE}/>
-                                </section>
-                            </SlTabPanel>
-                        </SlTabGroup>
-                    </div>
-
-                    <div className="editor-body-zone">
-                        <div className="editor-form-content">
-                            <Suspense fallback={<EditorSkeleton type="preview"/>}>
-                                {EditorComponent ? (
-                                    <EditorComponent
-                                        entity={drawers.entity}
-                                        widgetData={data}
-                                        position={widgetPosition}
-                                    />
-                                ) : (
-                                     <div className="error-placeholder">
-                                         Component for "{data.type}" not found.
-                                     </div>
-                                 )}
-                            </Suspense>
-                        </div>
+                <div className="editor-body-zone">
+                    <div className="editor-form-content">
+                        <Suspense fallback={<EditorSkeleton type="preview"/>}>
+                            {EditorComponent ? (
+                                <EditorComponent
+                                    entity={drawers.entity}
+                                    widgetData={data}
+                                    position={widgetPosition}
+                                    syncGlobalCompass={syncGlobalCompass}
+                                />
+                            ) : (
+                                 <div className="error-placeholder">
+                                     Component for "{data.type}" not found.
+                                 </div>
+                             )}
+                        </Suspense>
                     </div>
                 </div>
-                <DrawerFooter slot="footer"/>
-            </SlDrawer>
-        </div>
+            </div>
+            <DrawerFooter slot="footer"/>
+        </WaDrawer>
     )
+    return drawerRoot ? createPortal(content, drawerRoot) : content
+
 }

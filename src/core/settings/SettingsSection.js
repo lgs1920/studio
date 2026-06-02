@@ -85,7 +85,7 @@ export class SettingsSection {
         const configFromJSON = JSON.parse(JSON.stringify(lgs.configuration[this.key]))
         const data = await this.read()
 
-        if (data === null) {
+        if (data === null || data === undefined) {
             if (lgs.configuration[this.key] !== undefined) {
                 this.#content = proxy(
                     lgs.configuration[this.key] instanceof Object
@@ -254,7 +254,7 @@ export class SettingsSection {
         for (const key in toUpdate) {
             if (Object.prototype.hasOwnProperty.call(toUpdate, key)) {
                 const fullKey = parentKey ? `${parentKey}.${key}` : key
-                if (excludeKeys.includes(fullKey)) {
+                if (this.#isExcludedPath(fullKey, excludeKeys)) {
                     continue
                 }
 
@@ -271,4 +271,7 @@ export class SettingsSection {
         }
         return target
     }
+
+    #isExcludedPath = (path, excludeKeys = []) =>
+        excludeKeys.some(excluded => path === excluded || path.startsWith(`${excluded}.`))
 }

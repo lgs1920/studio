@@ -7,22 +7,26 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-05-10
+ * Last modified: 2026-05-10
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { JourneyLoaderButton }   from '@Components/FileLoader/JourneyLoaderButton'
-import { JOURNEY_EDITOR_DRAWER } from '@Core/constants'
-import { SlDrawer, SlSwitch }    from '@shoelace-style/shoelace/dist/react'
+import DrawerFooter                 from '@Components/DrawerFooter'
+import { JourneyLoaderButton }      from '@Components/FileLoader/JourneyLoaderButton'
+import PanelActions                 from '@Components/PanelsActions'
+import { JOURNEY_EDITOR_DRAWER }    from '@Core/constants'
+import WaDrawer                     from '@Components/WaDrawerNonModal'
+
 import './style.css'
-import { memo, useCallback }     from 'react'
-import { useSnapshot }           from 'valtio'
+import { WaSwitch }                     from '@web.awesome.me/webawesome-pro/dist/react'
+import { memo, useCallback, useEffect } from 'react'
+import { createPortal }                 from 'react-dom'
+import { useSnapshot }              from 'valtio'
 import { JourneySelector }       from './journey/JourneySelector'
 import { JourneySettings }       from './journey/JourneySettings'
-import { TrackSettings }         from './track/TrackSettings'
 import { Utils }                 from './Utils'
 
 // Memoized sub-component for the toolbar header
@@ -31,35 +35,34 @@ const ToolbarHeader = memo(({show, usage, onToggle}) => {
         return null
     }
     return (
-        <div slot="header-actions">
-            <SlSwitch
-                align-right
-                size="x-small"
+        <WaSwitch
+            label-at-start width-auto
+            size="xs"
                 checked={show}
-                onSlChange={onToggle}
+            onChange={onToggle}
             >
                 Toolbar
-            </SlSwitch>
-        </div>
+        </WaSwitch>
     )
 })
 
 // Memoized sub-component for journey content
-const JourneyContent = memo(({journeyVisible}) => (
+const JourneyContent = memo(() => (
     <div className="journey-content-wrapper">
         <div className="selector-wrapper">
             <JourneySelector
                 onChange={Utils.initJourneyEdition}
                 single={true}
+                closeOnOutsidePointerDown
             />
             <JourneyLoaderButton
+                id="import-journey-in-editor"
                 tooltip="left"
-                mini="true"
-                className="editor-vertical-menu in-header"
+                iconOnly
+                className="journey-import-in-editor"
             />
         </div>
         <JourneySettings/>
-        <TrackSettings/>
     </div>
 ))
 
@@ -68,21 +71,17 @@ export const TracksEditor = memo(() => {
     const {canViewJourneyData} = useSnapshot(lgs.stores.main)
     const {drawers: {open: drawerOpen}} = useSnapshot(lgs.stores.ui)
 
-    const editor = useSnapshot(lgs.theJourneyEditorProxy)
     const {drawer: drawerPlacement} = useSnapshot(lgs.editorSettingsProxy.menu)
     const {show: toolbarShow, usage: toolbarUsage} = useSnapshot(lgs.settings.ui.journeyToolbar)
     const hasJourneys = lgs.journeys.size > 0
 
-    // Safely access journey.visible with a fallback
-    const journeyVisible = editor.journey?.visible ?? false
-
     // Memoized event handlers
     const toggleToolbar = useCallback(() => {
         lgs.settings.ui.journeyToolbar.show = !lgs.settings.ui.journeyToolbar.show
-    }, [lgs.settings.ui.journeyToolbar.show])
+    }, [])
 
     const handleRequestClose = useCallback((event) => {
-        if (event.detail.source === 'overlay') {
+        if (event.target.tagName !== 'WA-DRAWER') {
             event.preventDefault()
         }
         else {
@@ -102,30 +101,32 @@ export const TracksEditor = memo(() => {
         return null
     }
 
-    return (
+    const drawerRoot = __.ui.drawerManager.drawerRoot
+    const content = (
         <>
             {drawerOpen === JOURNEY_EDITOR_DRAWER &&
-                <div className="drawer-wrapper">
-                    <SlDrawer
+                    <WaDrawer
                         id={JOURNEY_EDITOR_DRAWER}
                         open={true}
-                        onSlRequestClose={handleRequestClose}
+                        onWaAfterHide={handleRequestClose}
                         onSlAfterHide={closeTracksEditor}
-                        contained
-                        className="lgs-theme"
                         placement={drawerPlacement}
                     >
+
                         <span slot="label">{'Edit the Journey'}</span>
-                        <ToolbarHeader
+                        <PanelActions>
+                            <ToolbarHeader
                             show={toolbarShow}
                             usage={toolbarUsage}
                             onToggle={toggleToolbar}
                         />
-                        {hasJourneys && <JourneyContent journeyVisible={journeyVisible}/>}
-                        <div id="journey-editor-footer" slot="footer"/>
-                    </SlDrawer>
-                </div>
+                        </PanelActions>
+                        {hasJourneys && <JourneyContent/>}
+                        <DrawerFooter/>
+                    </WaDrawer>
             }
         </>
     )
+    return drawerRoot ? createPortal(content, drawerRoot) : content
+
 })

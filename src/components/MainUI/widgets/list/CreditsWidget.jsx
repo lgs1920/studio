@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-14
- * Last modified: 2026-02-14
+ * Created on: 2026-04-29
+ * Last modified: 2026-04-29
  *
  *
  * Copyright © 2026 LGS1920
@@ -17,8 +17,10 @@
 import { CreditsBar }                          from '@Components/MainUI/credits/CreditsBar'
 import { Widget }                              from '@Components/MainUI/widgets/Widget'
 import { HOUR, LGS_VISUAL_WIDGET, MULTI_PURPOSE_WIDGETS } from '@Core/constants'
-import React, { useEffect, useMemo, useState } from 'react'
-import { useSnapshot } from 'valtio'
+import { useOptionalSnapshot } from '@Utils/ValtioUtils'
+import { useEffect, useMemo, useRef } from 'react'
+
+const CREDITS_WIDGET_CONTEXT_FALLBACK = {widgetEditor: false, widgetsBoard: ''}
 
 /**
  * CreditsWidget component to display a compass in the widget editor
@@ -27,21 +29,54 @@ import { useSnapshot } from 'valtio'
  * @param {Object} props.context - Valtio proxy context containing widgetsBoard and widgetEditor
  * @returns {JSX.Element|null} The credits widget or null if not in editor mode or container is not ready
  */
-export const CreditsWidget = ({id, context, zIndex}) => {
+export const CreditsWidget = ({id, context, zIndex, widgetsBoard: persistedWidgetsBoard}) => {
     // Get snapshot of context
-    const {widgetEditor, widgetsBoard} = useSnapshot(context ?? {widgetEditor: false, widgetsBoard: ''})
-    const [_container, setContainer] = useState(null)
+    const contextState = useOptionalSnapshot(context, CREDITS_WIDGET_CONTEXT_FALLBACK)
+    const widgetEditor = contextState.widgetEditor
+    const widgetsBoard = contextState.widgetsBoard || persistedWidgetsBoard || ''
+    const _content = useRef(null)
+    const container = useMemo(
+        () => __.ui.widgetManager.resolveWidgetsBoardContainer(widgetsBoard),
+        [widgetsBoard],
+    )
 
-    // Set container when widgetsBoard changes
     useEffect(() => {
-        const element = document.querySelector(`#${widgetsBoard}.defined`)
-        setContainer(element)
-    }, [widgetsBoard])
+        if (!widgetEditor || !container || !_content.current) {
+            return
+        }
+
+        const updateRect = () => {
+            requestAnimationFrame(() => {
+                __.ui.widgetManager.getMoveable(id)?.current?.updateRect()
+            })
+        }
+
+        const observer = new ResizeObserver(updateRect)
+        observer.observe(_content.current)
+
+        const images = Array.from(_content.current.querySelectorAll('img'))
+        images.forEach((image) => {
+            if (!image.complete) {
+                image.addEventListener('load', updateRect)
+                image.addEventListener('error', updateRect)
+            }
+        })
+
+        updateRect()
+
+        return () => {
+            observer.disconnect()
+            images.forEach((image) => {
+                image.removeEventListener('load', updateRect)
+                image.removeEventListener('error', updateRect)
+            })
+        }
+    }, [container, id, widgetEditor])
 
     // Memoize widget configuration
     const config = useMemo(() => {
         return {
-            container:       _container,
+            container,
             contextMenu:     {
                 canReset:    false,
                 canMaximize: false,
@@ -53,7 +88,9 @@ export const CreditsWidget = ({id, context, zIndex}) => {
             group:           MULTI_PURPOSE_WIDGETS,
             margin:          5,
             attachTo:        'bottom',
+            resizable:      false,
             scalable:        false,
+            showControlBox: false,
             id,
             persist:         true,
             transient:       true,
@@ -62,18 +99,18 @@ export const CreditsWidget = ({id, context, zIndex}) => {
             mandatory:       true,
             stopPropagation: true,
             widgetsBoard:    widgetsBoard,
-            zIndex: 10000,
+            zIndex: zIndex ?? 10000,
         }
-    }, [widgetEditor, _container, zIndex])
+    }, [container, id, widgetsBoard, zIndex])
 
     // Render only when widgetEditor is true and container is defined
-    if (!widgetEditor || !_container) {
+    if (!widgetEditor || !container) {
         return null
     }
 
     return (
         <Widget isVisible={true} config={config}>
-            <CreditsBar/>
+            <CreditsBar contentRef={_content}/>
         </Widget>
     )
 }

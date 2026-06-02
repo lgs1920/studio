@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-12
- * Last modified: 2026-02-12
+ * Created on: 2026-03-08
+ * Last modified: 2026-03-07
  *
  *
  * Copyright © 2026 LGS1920
@@ -97,9 +97,9 @@ export class AppToolsManager {
     initDetailsGroup = (detailsGroupElement) => {
 
         // Close all other details when one is shown
-        detailsGroupElement.addEventListener('sl-show', event => {
-            if (event.target.localName === 'sl-details') {
-                [...detailsGroupElement.querySelectorAll('sl-details')]
+        detailsGroupElement.addEventListener('wa-show', event => {
+            if (event.target.localName === 'wa-details') {
+                [...detailsGroupElement.querySelectorAll('wa-details')]
                     .map(details => (details.open = event.target === details))
             }
         })

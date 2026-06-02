@@ -16,6 +16,9 @@
 
 export class CSSUtils {
 
+    static #managedStylesheetAttribute = 'data-lgs-managed-stylesheet'
+    static #managedStylesheets = new Map()
+
 
     /**
      * Get the value of a CSS Variable
@@ -100,5 +103,110 @@ export class CSSUtils {
         const remValue = parseFloat(remString)
         const pixelValue = remValue * baseFontSize
         return stringify ? `${pixelValue}px` : pixelValue
+    }
+
+    /**
+     * Mounts a stylesheet link with reference counting.
+     *
+     * @param {string} id - Stable owner/key for this stylesheet
+     * @param {string} href - Stylesheet URL
+     * @param {Object} attributes - Optional link attributes
+     * @returns {Function} Idempotent cleanup function
+     */
+    static mountStylesheet = (id, href, attributes = {}) => {
+        if (typeof document === 'undefined' || !href) {
+            return () => {}
+        }
+
+        const key = CSSUtils.#managedStylesheetKey(id, href)
+        let entry = CSSUtils.#managedStylesheets.get(key)
+
+        if (entry) {
+            entry.count += 1
+            return CSSUtils.#createManagedStylesheetCleanup(key)
+        }
+
+        const existingLink = CSSUtils.#findManagedStylesheetLink(key)
+        const link = existingLink ?? document.createElement('link')
+
+        if (!existingLink) {
+            link.rel = 'stylesheet'
+            link.setAttribute('href', href)
+            link.setAttribute(CSSUtils.#managedStylesheetAttribute, key)
+            CSSUtils.#applyStylesheetAttributes(link, attributes)
+            document.head.appendChild(link)
+        }
+
+        entry = {
+            count: 1,
+            href,
+            link,
+        }
+        CSSUtils.#managedStylesheets.set(key, entry)
+
+        return CSSUtils.#createManagedStylesheetCleanup(key)
+    }
+
+    /**
+     * Releases one stylesheet reference.
+     *
+     * @param {string} id - Stable owner/key used when mounting
+     */
+    static unmountStylesheet = (id) => {
+        const entry = CSSUtils.#managedStylesheets.get(id)
+        if (!entry) {
+            return
+        }
+
+        entry.count = Math.max(0, entry.count - 1)
+        if (entry.count > 0) {
+            return
+        }
+
+        entry.link?.remove()
+        CSSUtils.#managedStylesheets.delete(id)
+    }
+
+    /**
+     * Clears all managed stylesheets. Mainly useful for tests and full teardown flows.
+     */
+    static clearManagedStylesheets = () => {
+        CSSUtils.#managedStylesheets.forEach(entry => entry.link?.remove())
+        CSSUtils.#managedStylesheets.clear()
+    }
+
+    static #managedStylesheetKey = (id, href) => id || href
+
+    static #createManagedStylesheetCleanup = key => {
+        let active = true
+
+        return () => {
+            if (!active) {
+                return
+            }
+
+            active = false
+            CSSUtils.unmountStylesheet(key)
+        }
+    }
+
+    static #findManagedStylesheetLink = key => {
+        const links = Array.from(document.head?.querySelectorAll(`link[${CSSUtils.#managedStylesheetAttribute}]`) ?? [])
+        return links.find(link => link.getAttribute(CSSUtils.#managedStylesheetAttribute) === key) ?? null
+    }
+
+    static #applyStylesheetAttributes = (link, attributes) => {
+        Object.entries(attributes).forEach(([name, value]) => {
+            if (value === false || value === null || value === undefined) {
+                return
+            }
+
+            if (value === true) {
+                link.setAttribute(name, '')
+                return
+            }
+
+            link.setAttribute(name, value)
+        })
     }
 }

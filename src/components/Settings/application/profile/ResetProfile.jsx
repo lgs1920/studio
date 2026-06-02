@@ -7,29 +7,33 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-05-10
+ * Last modified: 2026-05-10
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { WIDGETS_STORE }                        from '@Core/constants'
-import { faSquareCheck, faArrowsRotate, faBox } from '@fortawesome/duotone-regular-svg-icons'
-import {}                                       from '@fortawesome/pro-regular-svg-icons'
+import { WIDGETS_STORE } from '@Core/constants'
 
-import { FontAwesomeIcon }                       from '@fortawesome/react-fontawesome'
-import { SlButton, SlDetails, SlIcon, SlSwitch } from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                                 from '@Utils/FA2SL'
-import React                                     from 'react'
-import { useSnapshot }                           from 'valtio/index'
-import { useConfirm }                            from '../../../Modals/ConfirmUI'
+import { WaButton, WaDetails, WaDivider, WaIcon, WaSwitch } from '@web.awesome.me/webawesome-pro/dist/react'
+import React                                                from 'react'
+import { useSnapshot }                                      from 'valtio/index'
+import { useConfirm }                                       from '../../../Modals/ConfirmUI'
 import './style.css'
 
+/**
+ * Component to manage and reset user profile data.
+ * Handles different categories of data like settings, widgets, and vault.
+ */
 export const ResetProfile = () => {
     const $account = lgs.stores.editorSettings.account
     const account = useSnapshot($account)
 
+    /**
+     * Executes the reset logic for selected categories.
+     * Deletes databases and reloads the application.
+     */
     const reset = async () => {
         if (await confirmReset()) {
             if (account.reset.lgs1920) {
@@ -45,91 +49,128 @@ export const ResetProfile = () => {
             if (account.reset.widgets) {
                 await lgs.db.lgs1920.clear(WIDGETS_STORE)
             }
-            // Reload the app, the DB will be recreated with defaults
+
             location.reload()
         }
     }
-    const toggleProfileData = (type) => {
-        $account.reset[type] = !$account.reset[type]
-    }
 
-    const change = (event, type) => {
-        toggleProfileData(type)
-    }
-
-    const ConfirmationDialogMessage = (props) => {
-        return (<>
+    /**
+     * Component for the confirmation dialog content.
+     */
+    const ConfirmationDialogMessage = () => {
+        return (
             <div className="manage-profile-ui">
                 {'Are you sure you want to reset the data below?'}
                 <ul>
                     {account.reset.lgs1920 &&
                         <li key={'reset-profile-lgs1920-confirm'}>
-                            <FontAwesomeIcon icon={faSquareCheck}/> My journeys, POIs,...
+                            <WaIcon name="square-check" variant="regular"/> {'My journeys, POIs,...'}
                         </li>
                     }
                     {account.reset.widgets &&
                         <li key={'reset-profile-widgets-confirm'}>
-                            <FontAwesomeIcon icon={faBox}/> All my widgets
+                            <WaIcon name="box" variant="regular"/> {'All my widgets'}
                         </li>
                     }
                     {account.reset.settings &&
                         <li key={'reset-profile-settings-confirm'}>
-                            <FontAwesomeIcon icon={faSquareCheck}/> My settings
+                            <WaIcon name="square-check" variant="regular"/> {'My settings'}
                         </li>
                     }
                     {account.reset.vault &&
                         <li key={'reset-profile-vault-confirm'}>
-                            <FontAwesomeIcon icon={faSquareCheck}/> My Tokens
+                            <WaIcon name="square-check" variant="regular"/> {'My Tokens'}
                         </li>
                     }
                 </ul>
             </div>
-        </>)
+        )
     }
 
-
     const [ConfirmResetDialog, confirmReset] = useConfirm(`Reset My Profile`, ConfirmationDialogMessage,
-                                                          {icon: faArrowsRotate, text: 'Reset'})
+                                                          {
+                                                              icon:    'arrows-rotate',
+                                                              text:    'Reset Profile',
+                                                              variant: 'warning',
+                                                          })
 
+    /**
+     * Explicit check to determine if at least one reset option is selected.
+     * Prevents issues with Object.values on proxy snapshots.
+     */
+    const isResetDisabled = !account.reset.lgs1920 &&
+        !account.reset.widgets &&
+        !account.reset.settings &&
+        !account.reset.vault
 
     return (
-        <SlDetails small className={'lgs-theme'}>
+        <WaDetails small className={'lgs--details-hoverable'} name="profile-tools">
             <span slot="summary">
-                <SlIcon library="fa" name={FA2SL.set(faArrowsRotate)}/> {'Reset My Profile'}
+                <WaIcon name="arrows-rotate" variant="regular"/> {'Profile Reset'}
             </span>
             <div className="manage-profile-ui">
-                {'Please select the profile data to reset:'}
+                <WaDivider/>
+                {'Select the profile data to reset:'}
 
-                <SlSwitch align-right size="small" checked={account.reset.lgs1920}
-                          onSlChange={(event) => change(event, 'lgs1920')}>
-                    My journeys
-                    <span slot="help-text">{'Remove my journeys, pois..'}</span>
-                </SlSwitch>
+                <WaSwitch
+                    label-at-start
+                    size="xs"
+                    checked={account.reset.lgs1920}
+                    onChange={(event) => {
+                        $account.reset.lgs1920 = event.target.checked
+                    }}
+                >
+                    {'My journeys'}
+                    <span slot="hint">{'Remove my journeys, pois..'}</span>
+                </WaSwitch>
 
-                <SlSwitch align-right size="small" checked={account.reset.widgets}
-                          onSlChange={(event) => change(event, 'widgets')}>
-                    My widgets
-                    <span slot="help-text">{'Remove my widgets, pois..'}</span>
-                </SlSwitch>
-                <SlSwitch align-right size="small" checked={account.reset.settings}
-                          onSlChange={(event) => change(event, 'settings')}>
-                    My settings
-                    <span slot="help-text">{'Reset all my settings and default data.'}</span>
-                </SlSwitch>
+                <WaSwitch
+                    label-at-start
+                    size="xs"
+                    checked={account.reset.widgets}
+                    onChange={(event) => {
+                        $account.reset.widgets = event.target.checked
+                    }}
+                >
+                    {'My widgets'}
+                    <span slot="hint">{'Remove my widgets, pois..'}</span>
+                </WaSwitch>
 
-                <SlSwitch align-right size="small" checked={account.reset.vault}
-                          onSlChange={(event) => change(event, 'vault')}>
-                    My Tokens
-                    <span slot="help-text">{'Clear all my tokens for freemium/premium access.'}</span>
-                </SlSwitch>
+                <WaSwitch
+                    label-at-start
+                    size="xs"
+                    checked={account.reset.settings}
+                    onChange={(event) => {
+                        $account.reset.settings = event.target.checked
+                    }}
+                >
+                    {'My settings'}
+                    <span slot="hint">{'Reset all my settings and default data.'}</span>
+                </WaSwitch>
 
-                <SlButton variant="primary" onClick={reset}
-                          disabled={!(Object.values(account.reset).some(value => value === true))}>
-                    <SlIcon slot="prefix" library="fa"
-                            name={FA2SL.set(faArrowsRotate)}></SlIcon>{'Reset My Profile'}
-                </SlButton>
+                <WaSwitch
+                    label-at-start
+                    size="xs"
+                    checked={account.reset.vault}
+                    onChange={(event) => {
+                        $account.reset.vault = event.target.checked
+                    }}
+                >
+                    {'My Tokens'}
+                    <span slot="hint">{'Clear all my tokens for freemium/premium access.'}</span>
+                </WaSwitch>
+
+                <WaButton
+                    variant="warning"
+                    appearance="filled"
+                    onClick={reset}
+                    disabled={isResetDisabled}
+                >
+                    <WaIcon slot="start" name="arrows-rotate" variant="regular"/>
+                    {'Reset Profile'}
+                </WaButton>
             </div>
             <ConfirmResetDialog/>
-        </SlDetails>
+        </WaDetails>
     )
 }

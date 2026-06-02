@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-03-22
+ * Last modified: 2026-03-22
  *
  *
  * Copyright © 2026 LGS1920
@@ -17,6 +17,7 @@
 import { LGSScrollbars } from '@Components/MainUI/LGSScrollbars'
 import { faCheck }                    from '@fortawesome/pro-regular-svg-icons'
 import { SlButton, SlDialog, SlIcon } from '@shoelace-style/shoelace/dist/react'
+import { WaButton, WaDialog, WaIcon } from '@web.awesome.me/webawesome-pro/dist/react'
 import React                          from 'react'
 import { default as ReactMarkdown }   from 'react-markdown'
 import { useSnapshot }                from 'valtio'
@@ -30,21 +31,22 @@ export const InfoLayerModal = () => {
     const closeInfoModal = () => editor.layer.infoDialog = false
 
     return (
-        <SlDialog label={'Important Notice'}
-                  open={snap.layer.infoDialog}
-                  onSlRequestClose={closeInfoModal}
+        <WaDialog open={snap.layer.infoDialog}
+                  onAfterHide={closeInfoModal}
                   className={'lgs-theme'}
                   id={'info-layer-modal'}>
+            <span slot="label">
+                <WaIcon name="bell-exclamation" variant={'regular'}/>{'Disclaimer'}
+            </span>
             <LGSScrollbars>
                 <div>
             <ReactMarkdown children={infoText}/>
                 </div>
             </LGSScrollbars>
-            <SlButton slot="footer" variant="primary" onClick={closeInfoModal}>
-                <SlIcon slot="prefix" library="fa" name={FA2SL.set(faCheck)}/>
-                Close
-            </SlButton>
-        </SlDialog>
+            <WaButton slot="footer" variant="brand" onClick={closeInfoModal}>
+                <WaIcon slot="start" name="check" variant={'regular'}/>{'Close'}
+            </WaButton>
+        </WaDialog>
     )
 
 

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-03-27
+ * Last modified: 2026-03-27
  *
  *
  * Copyright © 2026 LGS1920
@@ -43,6 +43,16 @@ export class MapPOI extends MapElement {
      * @type {string}
      */
     color
+
+    /**
+     * @type {string}
+     */
+    country
+
+    /**
+     * @type {string}
+     */
+    countryCode
 
     /**
      * @type {string}
@@ -84,6 +94,11 @@ export class MapPOI extends MapElement {
      * @type {number}
      */
     longitude
+
+    /**
+     * @type {string}
+     */
+    location
 
     /**
      * @type {string[null]}
@@ -139,7 +154,7 @@ export class MapPOI extends MapElement {
         this.update(options)
     }
 
-    toggleExpand = async (event, poi) => {
+    toggleExpand = async () => {
         if (this.expanded) {
             await this.shrink()
         }
@@ -164,14 +179,14 @@ export class MapPOI extends MapElement {
         }
     }
 
-    static categoryIcon = (category) => Object.values(POI_CATEGORY_ICONS.get(category ?? POI_STANDARD_TYPE))[0]
+    static categoryIcon = (category) => POI_CATEGORY_ICONS.get(category ?? POI_STANDARD_TYPE)
 
     /**
      * Retrieves the icon associated with the current category or a standard type if no category is specified.
      *
      * @return {string} The icon corresponding to the category or the standard type.
      */
-    categoryIcon = (category = this.category) => Object.values(POI_CATEGORY_ICONS.get(category ?? POI_STANDARD_TYPE))[0]
+    categoryIcon = (category = this.category) => POI_CATEGORY_ICONS.get(category ?? POI_STANDARD_TYPE)
 
     static deserialize = (object, json = false) => MapElement.deserialize(object, json)
 
@@ -183,7 +198,7 @@ export class MapPOI extends MapElement {
         return JSON.parse(JSON.stringify(source))
     }
 
-    isView = (entity) => {
+    isView = () => {
         return this.utils.isEntityInView() //TODO
     }
 
@@ -209,7 +224,7 @@ export class MapPOI extends MapElement {
         // Define a set of keys that trigger a redraw when modified
         const keys = new Set(['bgcolor', 'category', 'color', 'expanded', 'type', 'image'])
         // Additional keys to check when the item is expanded
-        const keysWhenExpanded = new Set(['title', 'description', 'height'])
+        const keysWhenExpanded = new Set(['title', 'description', 'height', 'location'])
 
         let shouldRedraw = false
 
@@ -221,7 +236,7 @@ export class MapPOI extends MapElement {
         }
 
         // Iterate through the changes to determine if a redraw is necessary
-        for (const [key, value] of Object.entries(changes)) {
+        for (const key of Object.keys(changes)) {
             // If the changed key is in our predefined set, mark for redraw
             if (keys.has(key)) {
                 shouldRedraw = true
@@ -396,14 +411,13 @@ export class MapPOI extends MapElement {
      * @returns {Promise<void>}
      * @param dbSync
      */
-    remove = (dbSync = true) => {
+    remove = async (dbSync = true) => {
         try {
             this.clearEvents()
-            this.utils.remove(this).then(async () => {
-                if (dbSync) {
-                    await lgs.db.lgs1920.delete(this.id, POIS_STORE)
-                }
-            })
+            await this.utils.remove(this)
+            if (dbSync) {
+                await lgs.db.lgs1920.delete(this.id, POIS_STORE)
+            }
         }
         catch (error) {
             console.error(`Failed to remove POI from database: ${error.message}`)

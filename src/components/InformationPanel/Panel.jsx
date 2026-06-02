@@ -1,82 +1,141 @@
 /*******************************************************************************
  *
  * This file is part of the LGS1920/studio project.
- *
+ *  
  * File: Panel.jsx
  *
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-05-01
+ * Last modified: 2026-05-01
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import DrawerFooter from '@Components/DrawerFooter'
-import { INFO_DRAWER }                             from '@Core/constants'
-import { SlDrawer, SlTab, SlTabGroup, SlTabPanel } from '@shoelace-style/shoelace/dist/react'
-import React, { useEffect, useRef }                from 'react'
-import { useSnapshot }                             from 'valtio'
+import DrawerFooter                                  from '@Components/DrawerFooter'
+import PanelActions                        from '@Components/PanelsActions'
+import WaDrawer                                      from '@Components/WaDrawerNonModal'
+import { INFO_CHANGELOG_TAB, INFO_DRAWER } from '@Core/constants'
+import { WaScroller, WaTab, WaTabGroup, WaTabPanel } from '@web.awesome.me/webawesome-pro/dist/react'
+
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { createPortal }                from 'react-dom'
+import { useSnapshot }                 from 'valtio'
 import './style.css'
 
 import { CreditsPanel } from './CreditsPanel'
+import { ShortcutsPanel } from './ShortcutsPanel'
 import { WhatsNew }     from './WhatsNew'
+
+const INFO_SHORTCUTS_TAB = 'tab-shortcuts'
 
 export const Panel = () => {
     const snap = useSnapshot(lgs.stores.ui.drawers)
-    const drawerRef = useRef(null)
+    const _drawerRef = useRef(null)
+    const [activeTab, setActiveTab] = useState(INFO_CHANGELOG_TAB)
+    const isStacked = __.ui.drawerManager.isStacked(INFO_DRAWER)
+
+    const closePanelWithManager = useCallback(() => {
+        window.dispatchEvent(new Event('resize'))
+        if (__.ui.drawerManager.isCurrent(INFO_DRAWER)) {
+            __.ui.drawerManager.close()
+        }
+    }, [])
 
     const closePanel = (event) => {
         if (window.isOK(event)) {
-            window.dispatchEvent(new Event('resize'))
-            if (__.ui.drawerManager.isCurrent(INFO_DRAWER)) {
-                __.ui.drawerManager.close()
-            }
+            closePanelWithManager()
+        }
+    }
+
+    /**
+     * Handles external link injection in WaDrawer
+     * @param {Event} event - The slotchange event
+     */
+    const _handleSlotChange = (event) => {
+        const _slot = event.target
+        const _elements = _slot.assignedElements()
+
+        if (_elements.length > 0) {
+            _elements[0].querySelectorAll('a').forEach(link => {
+                link.setAttribute('target', '_blank')
+            })
         }
     }
 
     useEffect(() => {
-        //search the link and add external target (as it is not possible in markdown)
-        if (drawerRef.current) {
-            const slotBody = drawerRef.current.shadowRoot.querySelector('slot[part="body"]')
-            const assignedElements = slotBody.assignedElements()
-            assignedElements[0].querySelectorAll('a').forEach(link => {
-                link.target = '_blank'
-            })
+        const drawer = _drawerRef.current
+
+        if (drawer) {
+            // Find the slot element inside the Shadow DOM
+            const _slot = drawer.shadowRoot.querySelector('slot[name="body"]') ||
+                drawer.shadowRoot.querySelector('slot:not([name])')
+
+            if (_slot) {
+                _slot.addEventListener('slotchange', _handleSlotChange)
+            }
         }
 
+        /**
+         * Cleanup function to prevent memory leaks
+         */
+        return () => {
+            const _slot = drawer?.shadowRoot.querySelector('slot')
+            _slot?.removeEventListener('slotchange', _handleSlotChange)
+        }
     }, [])
 
+    const handleTabShow = (event) => {
+        setActiveTab(event.detail.name)
+    }
 
-    return <div className={'drawer-wrapper'}>
-        <SlDrawer id={INFO_DRAWER}
+    const visibleTab = snap.open === INFO_DRAWER
+                       ? __.ui.drawerManager.tab ?? activeTab
+                       : activeTab
+
+    const drawerRoot = __.ui.drawerManager.drawerRoot
+
+    const content = (
+        <WaDrawer id={INFO_DRAWER}
                   open={snap.open === INFO_DRAWER}
-                  onSlRequestClose={closePanel}
-                      ref={drawerRef}
-                      contained
-                      className={'lgs-theme'}
+                  onWaAfterHide={closePanel}
+                  ref={_drawerRef}
+                  className={isStacked ? 'drawer-is-stacked' : undefined}
+                  lightDismiss
                   placement={useSnapshot(lgs.editorSettingsProxy.menu).drawer}
-            >
-                <SlTabGroup>
-                    <SlTab slot="nav" panel="tab-whats-new">
-                        What's New ?
-                    </SlTab>
-                    <SlTab slot="nav" panel="tab-credits">
-                        Credits
-                    </SlTab>
-                    <SlTabPanel name="tab-credits">
+        >
+            <PanelActions stackedPanel={isStacked} onBack={isStacked ? closePanelWithManager : null}/>
+            <WaTabGroup onWaTabShow={handleTabShow}>
+                <WaTab slot="nav" panel={INFO_CHANGELOG_TAB}>
+                    What's New ?
+                </WaTab>
+                <WaTab slot="nav" panel={INFO_SHORTCUTS_TAB}>
+                    Shortcuts
+                </WaTab>
+                <WaTab slot="nav" panel="tab-credits">
+                    Credits
+                </WaTab>
+                <WaTabPanel name={INFO_SHORTCUTS_TAB}>
+                    <ShortcutsPanel/>
+                </WaTabPanel>
+                <WaTabPanel name="tab-credits">
+                    <WaScroller orientation="vertical">
                         <CreditsPanel/>
-                    </SlTabPanel>
-                    <SlTabPanel name="tab-whats-new">
-                        <WhatsNew/>
-                    </SlTabPanel>
-                </SlTabGroup>
+                    </WaScroller>
+                </WaTabPanel>
+                <WaTabPanel name={INFO_CHANGELOG_TAB}>
+                    <WhatsNew visible={snap.open === INFO_DRAWER && visibleTab === INFO_CHANGELOG_TAB}/>
+                </WaTabPanel>
+            </WaTabGroup>
 
-                <DrawerFooter/>
+            <DrawerFooter/>
 
-            </SlDrawer>
+        </WaDrawer>
+    )
 
-        </div>
+    return drawerRoot ? createPortal(content, drawerRoot) : content
+
+
 }

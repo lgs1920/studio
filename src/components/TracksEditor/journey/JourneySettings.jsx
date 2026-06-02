@@ -7,104 +7,82 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-05-10
+ * Last modified: 2026-05-10
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { Fragment, useEffect, useMemo, useRef } from 'react'
-import {
-    useSnapshot,
-}                                                      from 'valtio'
-import {
-    sprintf,
-}                                                      from 'sprintf-js'
-import classNames                                      from 'classnames'
-import parse                                           from 'html-react-parser'
-import {
-    FAButton,
-}                                                      from '@Components/FAButton'
 import {
     LGSScrollbars,
-}                                                      from '@Components/MainUI/LGSScrollbars'
+}                                     from '@Components/MainUI/LGSScrollbars'
 import {
-    MapPOIEditFilter,
-}                                                      from '@Components/MainUI/MapPOI/MapPOIEditFilter'
-import {
-    MapPOIEditSettings,
-}                                                      from '@Components/MainUI/MapPOI/MapPOIEditSettings'
-import {
-    MapPOIEditToggleFilter,
-}                                                      from '@Components/MainUI/MapPOI/MapPOIEditToggleFilter'
+    MapPOIEditListActions,
+}                                     from '@Components/MainUI/MapPOI/MapPOIEditListActions'
 import {
     MapPOIList,
-}                                                      from '@Components/MainUI/MapPOI/MapPOIList'
+}                                     from '@Components/MainUI/MapPOI/MapPOIList'
 import {
     useConfirm,
-}                                                      from '@Components/Modals/ConfirmUI'
+}                                     from '@Components/Modals/ConfirmUI'
+import { LGSPopup }                   from '@Components/LGSPopup'
 import {
     ToggleStateIcon,
-}                                                      from '@Components/ToggleStateIcon'
+}                                     from '@Components/ToggleStateIcon'
 import {
-    CURRENT_JOURNEY,
-    JOURNEY_EDITOR_DRAWER,
-    ORIGIN_STORE,
-    REFRESH_DRAWING,
-    REMOVE_JOURNEY_IN_EDIT,
+    CURRENT_JOURNEY, EDIT_JOURNEY_ICON, JOURNEY_EDITOR_DRAWER, ORIGIN_STORE, REMOVE_JOURNEY_IN_EDIT,
     SIMULATE_ALTITUDE,
     UPDATE_JOURNEY_SILENTLY,
 } from '@Core/constants'
 import {
     ElevationServer,
-}                                                      from '@Core/Elevation/ElevationServer'
-import {
-    Journey,
-}                                                      from '@Core/Journey'
+}                                     from '@Core/Elevation/ElevationServer'
+import { Journey }                    from '@Core/Journey'
+import { Export }                     from '@Core/ui/Export'
 import {
     RemoveJourney,
-}                                                      from '@Editor/journey/RemoveJourney'
+}                                     from '@Editor/journey/RemoveJourney'
+import { JourneyGroupsInfo }          from '@Editor/groups/JourneyGroupsInfo'
 import {
     TrackData,
-}                                                      from '@Editor/track/TrackData'
+}                                     from '@Editor/track/TrackData'
 import {
     TrackPoints,
-}                                                      from '@Editor/track/TrackPoints'
+}                                     from '@Editor/track/TrackPoints'
+import { TrackSettings }              from '@Editor/track/TrackSettings'
 import {
     TrackStyleSettings,
-}                                                      from '@Editor/track/TrackStyleSettings'
+}                                     from '@Editor/track/TrackStyleSettings'
+import { Utils }                      from '@Editor/Utils'
+import { TrackUtils }                 from '@Utils/cesium/TrackUtils'
 import {
-    Utils,
-}                                                      from '@Editor/Utils'
+    applyElevationCoordinatesToFeature, flattenFeatureGeometryCoordinates, prepareJourneyElevationCoordinates,
+}                                     from '@Utils/cesium/elevationCoordinateUtils'
 import {
-    faArrowRotateRight, faCrosshairsSimple, faDownload, faLocationDot, faLocationDotSlash, faPaintbrushPencil,
-    faRectangleList,
-}                                                      from '@fortawesome/pro-regular-svg-icons'
+    exportJourneyToGeoJSON, exportJourneyToGPX, getExportableJourneyPOIs, getJourneyExportBaseName,
+    JOURNEY_EXPORT_FORMAT_LABELS, JOURNEY_EXPORT_FORMATS, JOURNEY_EXPORT_MIME_TYPES,
+    normalizeJourneyExportBaseName, normalizeJourneyExportFileName,
+}                                     from '@Utils/JourneyGpxUtils'
 import {
-    SlIcon, SlIconButton, SlInput, SlProgressBar, SlTab, SlTabGroup, SlTabPanel, SlTooltip, SlTextarea,
-}                                                      from '@shoelace-style/shoelace/dist/react'
-import {
-    FEATURE_MULTILINE_STRING, FEATURE_POINT, TrackUtils,
-}                                                      from '@Utils/cesium/TrackUtils'
-import {
-    FA2SL,
-}                                                      from '@Utils/FA2SL'
+    exportJourneyToHTMLZip, exportJourneyToPDF,
+}                                     from '@Utils/ExportAsReport'
 import {
     UIToast,
-}                                                      from '@Utils/UIToast'
+}                                     from '@Utils/UIToast'
+import { decodeHTMLEntities }         from '@Utils/TextUtils'
 import {
-    SelectElevationSource,
-}                                                      from '../../MainUI/SelectElevationSource'
+    WaButton, WaCard, WaDetails, WaIcon, WaInput, WaOption, WaSelect, WaTab, WaTabGroup, WaTabPanel,
+    WaTextarea, WaTooltip,
+}                                     from '@web.awesome.me/webawesome-pro/dist/react'
+import { useEffect, useRef, useState } from 'react'
+import { sprintf }                    from 'sprintf-js'
+import { useSnapshot }                from 'valtio'
 import {
-    JourneyData,
-}                                                      from './JourneyData'
+    ElevationProfile,
+}                                     from '../../MainUI/ElevationProfile'
+import { JourneyData }                from './JourneyData'
 
-/**
- * Available panel tabs for the journey settings interface
- * @type {Object}
- * @readonly
- */
 const PANELS = {
     DATA: 'tab-data',
     EDIT: 'tab-edit',
@@ -113,126 +91,123 @@ const PANELS = {
 }
 
 const {DATA, EDIT, POINTS, POIS} = PANELS
+const EXPORT_DIALOG_FORMATS = {
+    FILE: [
+        {value: JOURNEY_EXPORT_FORMATS.GPX, label: 'gpx'},
+        {value: JOURNEY_EXPORT_FORMATS.GEOJSON, label: 'geojson'},
+    ],
+    REPORT: [
+        {value: JOURNEY_EXPORT_FORMATS.PDF, label: 'pdf'},
+        {value: JOURNEY_EXPORT_FORMATS.HTML, label: 'html'},
+    ],
+}
+const REPORT_EXPORT_STAGES = {
+    SNAPSHOTS: 'snapshots',
+    WRITING:   'writing',
+}
+const REPORT_EXPORT_FLASH_DURATION = 860
 
-/**
- * Data tab panel component for displaying journey data and elevation settings
- * @param {Object} props - Component properties
- * @param {Object} props.journey - Journey object containing tracks and settings
- * @param {boolean} props.isProcessing - Whether elevation processing is in progress
- * @param {Array} props.serverList - List of available elevation servers
- * @param {Function} props.onElevationChange - Callback for elevation server change
- * @returns {JSX.Element} Data tab panel component
- */
-const DataTabPanel = ({journey, isProcessing, serverList, onElevationChange}) => (
-    <SlTabPanel name={DATA}>
-        <div className="select-elevation-source">
-            <SelectElevationSource default={journey.elevationServer} label="Elevation:" onChange={onElevationChange}
-                                   servers={serverList}/>
-            {isProcessing && <SlProgressBar indeterminate/>}
+const REPORT_EXPORT_STAGE_ICONS = {
+    [REPORT_EXPORT_STAGES.SNAPSHOTS]: {
+        name:      'camera',
+        animation: 'fade',
+    },
+    [REPORT_EXPORT_STAGES.WRITING]: {
+        name:      'pencil',
+        animation: 'beat-fade',
+    },
+}
+
+const journeyEditorStore = () => lgs.stores.journeyEditor
+
+const setJourneyEditorElevationServer = (value) => {
+    journeyEditorStore().journey.elevationServer = value
+}
+
+const setJourneyEditorProcessing = (value) => {
+    journeyEditorStore().isProcessing = value
+}
+
+const setJourneyEditorActivity = (activity) => {
+    const editor = journeyEditorStore()
+    editor.journey.activity = activity
+    editor.journey.activitySettings = Journey.activityProfile(activity)
+}
+
+const setJourneyEditorJourneyVisible = (value) => {
+    journeyEditorStore().journey.visible = value
+}
+
+const setJourneyEditorPOIsVisible = (value) => {
+    journeyEditorStore().journey.POIsVisible = value
+}
+
+const setJourneyEditorTabState = (tabName, eventType = 'wa-tab-show') => {
+    const editor = journeyEditorStore()
+    editor.activeTab = tabName
+    editor.showPOIsFilter = tabName === POIS && eventType === 'wa-tab-show'
+}
+
+const initializeJourneyEditorTab = (tabName) => {
+    const editor = journeyEditorStore()
+    if (!editor.activeTab) {
+        editor.activeTab = tabName
+    }
+}
+
+const ReportExportAnimation = ({animation}) => {
+    const stage = typeof animation === 'string' ? animation : animation?.stage
+    const icon = REPORT_EXPORT_STAGE_ICONS[stage]
+    if (!icon) {
+        return null
+    }
+
+    return (
+        <div className={`journey-report-export-animation is-${stage}`} aria-hidden="true">
+            <WaIcon key={animation?.id ?? stage} name={icon.name} variant="light" animation={icon.animation}/>
         </div>
-        {journey.tracks.size === 1 ? <TrackData/> : <JourneyData/>}
-    </SlTabPanel>
-)
+    )
+}
 
 /**
- * Edit tab panel component for journey title and description editing
- * @param {Object} props - Component properties
- * @param {Object} props.journey - Journey object with title and description
- * @param {Function} props.onTitleChange - Callback for title changes
- * @param {Function} props.onDescriptionChange - Callback for description changes
- * @returns {JSX.Element} Edit tab panel component
- */
-const EditTabPanel = ({journey, onTitleChange, onDescriptionChange}) => (
-    <SlTabPanel name={EDIT}>
-        <div id="journey-text-description">
-            <SlTooltip content="Title">
-                <SlInput id="journey-title" aria-label="Journey Title" value={journey.title}
-                         onSlChange={onTitleChange}/>
-            </SlTooltip>
-            <SlTooltip hoist content="Description">
-                <SlTextarea
-                    row={2}
-                    size="small"
-                    id="journey-description"
-                    aria-label="Journey Description"
-                    value={parse(journey.description)}
-                    onSlChange={onDescriptionChange}
-                    placeholder="Journey description"
-                />
-            </SlTooltip>
-            {journey.tracks.size === 1 && <TrackStyleSettings/>}
-        </div>
-    </SlTabPanel>
-)
-
-/**
- * POIs tab panel component for managing Points of Interest
- * @returns {JSX.Element} POIs tab panel component
- */
-const PoisTabPanel = () => (
-    <SlTabPanel name={POIS}>
-        <div className="panel-wrapper">
-            <MapPOIEditFilter/>
-            <MapPOIEditSettings/>
-            <LGSScrollbars>
-                <MapPOIList/>
-            </LGSScrollbars>
-        </div>
-    </SlTabPanel>
-)
-
-/**
- * Points tab panel component for managing track points
- * @returns {JSX.Element} Points tab panel component
- */
-const PointsTabPanel = () => (
-    <SlTabPanel name={POINTS}>
-        <TrackPoints/>
-    </SlTabPanel>
-)
-
-/**
- * Main journey settings component providing comprehensive journey editing interface
- * Features include:
- * - Journey data management and elevation processing
- * - Title and description editing
- * - POI (Points of Interest) management
- * - Track points editing
- * - Journey visibility controls
- * - Camera rotation and focus controls
- * - Journey export functionality
- *
- * @component
- * @returns {JSX.Element} Journey settings interface
+ * Main journey settings component
  */
 export const JourneySettings = () => {
-    const journeyEditorStore = lgs.stores.journeyEditor
-    const {journey, isProcessing, activeTab} = useSnapshot(journeyEditorStore)
-    const {running, target} = useSnapshot(lgs.stores.ui.mainUI.rotate)
-    const {journey: autoRotateJourney} = useSnapshot(lgs.settings.ui.camera.start.rotate)
-    const {open} = useSnapshot(lgs.stores.ui.drawers)
+    // Proxies
+    const $journeyEditor = lgs.stores.journeyEditor
+    const $uiRotate = lgs.stores.ui.mainUI.rotate
+    const $cameraSettings = lgs.settings.ui.camera.start.rotate
+    const $drawers = lgs.stores.ui.drawers
 
-    /** @type {React.RefObject} Reference to tab group component */
-    const _tabGroup = useRef(null)
-    /** @type {React.RefObject} Reference to title input component */
+    // Snapshots
+    const {journey} = useSnapshot($journeyEditor)
+    const {running, target} = useSnapshot($uiRotate)
+    const {journey: autoRotateJourney} = useSnapshot($cameraSettings)
+    const {open} = useSnapshot($drawers)
+    const journeySlug = journey?.slug ?? null
+
     const _title = useRef(null)
-    /** @type {React.RefObject} Reference to description textarea component */
     const _description = useRef(null)
-    /** @type {React.RefObject} Reference to manual rotate button */
     const _manualRotate = useRef(null)
+    const _tabGroup = useRef(null)
+    const _elevationRequestId = useRef(0)
+    const _exportFormat = useRef(JOURNEY_EXPORT_FORMATS.GPX)
+    const _exportFileName = useRef('')
+    const _reportExportFlashTimeout = useRef(null)
 
-    let allowRotation = false
-    const previousElevationServer = journeyEditorStore.journey.elevationServer
+    const [exportFormat, setExportFormatState] = useState(JOURNEY_EXPORT_FORMATS.GPX)
+    const [exportFileName, setExportFileNameState] = useState('')
+    const [exportChoiceOpen, setExportChoiceOpen] = useState(false)
+    const [journeyLocationState, setJourneyLocationState] = useState({slug: null, value: ''})
+    const [reportExportAnimation, setReportExportAnimation] = useState(null)
 
-    /**
-     * Memoized list of available elevation servers based on journey state
-     * @returns {Array} List of elevation server objects
-     */
-    const serverList = useMemo(() => {
+    // Local state-like ref for rotation toggle
+    const _allowRotation = useRef(false)
+
+    const serverList = (() => {
         const list = []
-        const {hasElevation, elevationServer} = journey
-        if (!hasElevation) {
-            list.push(ElevationServer.FAKE_SERVERS.get(elevationServer === ElevationServer.NONE ? ElevationServer.NONE : ElevationServer.CLEAR))
+        if (journey?.hasElevation === false) {
+            list.push(ElevationServer.FAKE_SERVERS.get(journey?.elevationServer === ElevationServer.NONE ? ElevationServer.NONE : ElevationServer.CLEAR))
         }
         else {
             list.push(
@@ -241,136 +216,106 @@ export const JourneySettings = () => {
             )
         }
         return list.concat(Array.from(ElevationServer.SERVERS.values()))
-    }, [journey.hasElevation, journey.elevationServer])
+    })()
+
+    const activityList = Journey.activityProfiles()
 
     /**
-     * Handles errors during elevation processing
-     * @param {Error|Object} error - The error object or message
-     * @param {string} message - User-friendly error message
+     * Coordinates preparation logic
      */
-    const handleError = (error, message) => {
-        journeyEditorStore.isProcessing = false
-        journeyEditorStore.journey.elevationServer = previousElevationServer
-        console.error(error)
-        UIToast.error({
-                          caption: message,
-                          text:    'Changes aborted! Check logs to see error details.',
-                          errors:  error.errors ?? error,
-                      })
-    }
+    const prepareCoordinates = (journeyData, originData) => prepareJourneyElevationCoordinates(journeyData.geoJson, originData)
 
     /**
-     * Prepares coordinate data for elevation processing
-     * @param {Object} journeyData - Journey GeoJSON data
-     * @param {Object} originData - Original coordinate data
-     * @returns {Object} Object containing prepared coordinates and origins arrays
-     */
-    const prepareCoordinates = (journeyData, originData) => {
-        const coordinates = []
-        const origins = []
-        journeyData.geoJson.features.forEach((feature, index) => {
-            let coords = feature.geometry.coordinates
-            let orig = originData.features[index].geometry.coordinates
-            if (feature.geometry.type === FEATURE_POINT) {
-                coords = [coords]
-                orig = [orig]
-            }
-            else if (feature.geometry.type === FEATURE_MULTILINE_STRING) {
-                coords = coords.flat()
-                orig = orig.flat()
-            }
-            coordinates.push(...coords.map(([lon, lat]) => [lon, lat]))
-            origins.push(...orig)
-        })
-        return {coordinates, origins}
-    }
-
-    /**
-     * Updates journey with new elevation data
-     * @param {Array} coordinates - Array of coordinates with elevation data
-     * @param {Object} journeyData - Journey data to update
-     * @async
+     * Update Journey logic after elevation fetch
      */
     const updateJourneyWithElevation = async (coordinates, journeyData) => {
-        const updatedJourney = Journey.deserialize({object: Journey.unproxify(journeyData)})
+        const updated = Journey.deserialize({object: Journey.unproxify(journeyData)})
         let counter = 0
-        updatedJourney.geoJson.features.forEach((feature, index, features) => {
-            let length = feature.geometry.coordinates.flat().length
-            if (feature.geometry.type === FEATURE_POINT) {
-                length = 1
-            }
-            const chunk = coordinates.slice(counter, counter + length)
-            counter += length
-            if (feature.geometry.type === FEATURE_POINT) {
-                features[index].geometry.coordinates = chunk[0]
-            }
-            else if (feature.geometry.type === FEATURE_MULTILINE_STRING) {
-                const tmp = features[index].geometry.coordinates
-                let subCounter = 0
-                tmp.forEach((segment, subIndex) => {
-                    features[index].geometry.coordinates[subIndex] = chunk.slice(subCounter, subCounter + segment.length)
-                    subCounter += segment.length
-                })
-            }
-            else {
-                features[index].geometry.coordinates = chunk
-            }
+        updated.geoJson.features.forEach((feature, index, features) => {
+            const len = flattenFeatureGeometryCoordinates(feature.geometry).length
+            const chunk = coordinates.slice(counter, counter + len)
+            counter += len
+
+            applyElevationCoordinatesToFeature(features[index], chunk)
         })
-        updatedJourney.getTracksFromGeoJson(true)
-        await updatedJourney.getPOIsFromGeoJson()
-        await updatedJourney.extractMetrics()
-        updatedJourney.addToContext()
-        await updatedJourney.persistToDatabase()
+
+        updated.getTracksFromGeoJson(true)
+        await updated.getPOIsFromGeoJson()
+        await updated.extractMetrics()
+        updated.addToContext()
+        await updated.persistToDatabase()
         await Utils.updateJourney(SIMULATE_ALTITUDE)
-        Utils.updateJourneyEditor(updatedJourney.slug, {})
+        Utils.updateJourneyEditor(updated.slug, {})
         __.ui.profiler.draw()
     }
 
     /**
-     * Computes elevation data for journey using selected elevation server
-     * @param {Event} event - Change event from elevation server selector
-     * @async
+     * Elevation computation handler
      */
-    const computeElevation = async event => {
-        const newServer = event.target.value
-        journeyEditorStore.journey.elevationServer = newServer
-        journeyEditorStore.isProcessing = newServer !== ElevationServer.NONE
+    const computeElevation = async (event) => {
+        const newServer = event?.detail?.value ?? event?.target?.value
+        const previousServer = journey.elevationServer
+
+        if (!newServer || newServer === previousServer) {
+            return
+        }
+
+        const requestId = ++_elevationRequestId.current
+        setJourneyEditorElevationServer(newServer)
+        setJourneyEditorProcessing(newServer !== ElevationServer.NONE)
         const server = new ElevationServer(newServer)
-        const originData = JSON.parse(await lgs.db.lgs1920.get(journeyEditorStore.journey.slug, ORIGIN_STORE))
-        const {coordinates, origins} = prepareCoordinates(lgs.theJourney, originData)
+
         try {
+            const originData = JSON.parse(await lgs.db.lgs1920.get(journey.slug, ORIGIN_STORE))
+            const {coordinates, origins} = prepareCoordinates(lgs.theJourney, originData)
+
             const results = await server.getElevation(coordinates, origins)
-            journeyEditorStore.isProcessing = false
-            if (results.errors) {
-                handleError(results.errors, 'An error occurred when calculating elevations')
+            if (requestId !== _elevationRequestId.current) {
                 return
             }
+
+            if (results.errors) {
+                throw results.errors
+            }
+
+            await updateJourneyWithElevation(results.coordinates, lgs.theJourney)
+            if (requestId !== _elevationRequestId.current) {
+                return
+            }
+            setJourneyEditorElevationServer(newServer)
+
             UIToast.success({
-                                caption: 'Elevation data have been modified',
+                                caption: 'Elevation data modified',
                                 text:    `Source: ${ElevationServer.getServer(newServer).label}`,
                             })
-            await updateJourneyWithElevation(results.coordinates, lgs.theJourney)
         }
         catch (error) {
-            handleError(error, 'An error occurred when calculating elevations')
+            if (requestId === _elevationRequestId.current) {
+                setJourneyEditorElevationServer(previousServer)
+                UIToast.error({
+                                  caption: 'Calculation failed',
+                                  text:    'Changes aborted.',
+                                  errors:  error.errors ?? error,
+                              })
+            }
+        }
+        finally {
+            if (requestId === _elevationRequestId.current) {
+                setJourneyEditorProcessing(false)
+            }
         }
     }
 
-    /**
-     * Sets journey title with debouncing to prevent excessive updates
-     * @type {Function}
-     */
-    const setTitle = __.tools.debounce(async event => {
-        const title = event.target.value
-        if (!title) {
-            _title.current.value = journeyEditorStore.journey.title
+    const setTitle = __.tools.debounce(async (e) => {
+        const val = e.target.value
+        if (!val) {
             return
         }
-        journeyEditorStore.journey.title = journeyEditorStore.journey.singleTitle(title)
+        $journeyEditor.journey.title = $journeyEditor.journey.singleTitle(val)
         if (lgs.theJourney.hasOneTrack()) {
             const [slug, track] = lgs.theJourney.tracks.entries().next().value
-            track.title = journeyEditorStore.journey.title
-            journeyEditorStore.journey.tracks.set(slug, track)
+            track.title = $journeyEditor.journey.title
+            $journeyEditor.journey.tracks.set(slug, track)
             track.addToEditor()
             __.ui.profiler.updateTitle()
         }
@@ -378,228 +323,583 @@ export const JourneySettings = () => {
         Utils.renderJourneysList()
     }, 300)
 
-    /**
-     * Sets journey description with debouncing to prevent excessive updates
-     * @type {Function}
-     */
-    const setDescription = __.tools.debounce(async event => {
-        const description = event.target.value
-        if (!description) {
-            _description.current.value = journeyEditorStore.journey.description
+    const setDescription = __.tools.debounce(async (e) => {
+        const val = decodeHTMLEntities(e.target.value)
+        if (!val) {
             return
         }
-        journeyEditorStore.journey.description = description
+        $journeyEditor.journey.description = val
         await Utils.updateJourney(UPDATE_JOURNEY_SILENTLY)
     }, 300)
 
-    /**
-     * Sets journey visibility and updates UI accordingly
-     * @param {boolean} visibility - Whether journey should be visible
-     * @async
-     */
-    const setJourneyVisibility = async visibility => {
-        if (running) {
-            await __.ui.cameraManager.stopRotate()
-        }
-        journeyEditorStore.journey.visible = visibility
-        lgs.theJourney.updateVisibility(visibility)
-        await Utils.updateJourney(UPDATE_JOURNEY_SILENTLY)
-        Utils.renderJourneySettings()
-    }
-
-    /**
-     * Sets visibility for all POIs in the journey
-     * @param {boolean} visibility - Whether POIs should be visible
-     * @async
-     */
-    const setAllPOIsVisibility = async visibility => {
-        journeyEditorStore.journey.POIsVisible = visibility
-        TrackUtils.updatePOIsVisibility(lgs.theJourney, visibility)
-        await Utils.updateJourney(UPDATE_JOURNEY_SILENTLY)
-        Utils.renderJourneySettings()
-    }
-
-    /**
-     * Stops camera rotation if currently running
-     * @async
-     */
-    const stopRotate = async () => {
-        if (running) {
-            await __.ui.cameraManager.stopRotate()
-        }
-    }
-
-    /**
-     * Forces camera rotation toggle and focuses on journey
-     * @async
-     */
-    const forceRotate = async () => {
-        allowRotation = !allowRotation
-        await focusOnJourney()
-    }
-
-    /**
-     * Conditionally rotates camera based on settings and current state
-     * @async
-     */
-    const maybeRotate = async () => {
-        if (running) {
-            allowRotation = false
-            await stopRotate()
-            if (target.element && target.element === lgs.theJourney.element) {
-                return
-            }
-        }
-        allowRotation = autoRotateJourney
-        await focusOnJourney()
-    }
-
-    /**
-     * Focuses camera on the current journey with optional rotation
-     * @async
-     */
-    const focusOnJourney = async () => {
-        if (running && target.instanceOf(CURRENT_JOURNEY)) {
+    const setActivity = async (event) => {
+        const activity = event.target.value
+        if (!activity || activity === $journeyEditor.journey.activity) {
             return
+        }
+
+        setJourneyEditorActivity(activity)
+        const updated = await Utils.updateJourney(UPDATE_JOURNEY_SILENTLY)
+        updated.addToContext()
+        const track = updated.tracks.get($journeyEditor.track?.slug) ?? Array.from(updated.tracks.values())[0]
+        track?.addToContext()
+        track?.addToEditor()
+        Utils.renderJourneySettings()
+        __.ui.profiler.draw()
+    }
+
+    const setJourneyVisibility = async (v) => {
+        if (running) {
+            await __.ui.cameraManager.stopRotate()
+        }
+        setJourneyEditorJourneyVisible(v)
+        lgs.theJourney.updateVisibility(v)
+        await Utils.updateJourney(UPDATE_JOURNEY_SILENTLY, {focus: false})
+        Utils.renderJourneySettings()
+    }
+
+    const setAllPOIsVisibility = async (v) => {
+        setJourneyEditorPOIsVisible(v)
+        TrackUtils.updatePOIsVisibility(lgs.theJourney, v)
+        await Utils.updateJourney(UPDATE_JOURNEY_SILENTLY, {focus: false})
+        Utils.renderJourneySettings()
+    }
+
+    const focusOnJourney = async () => {
+        if (running) {
+            await __.ui.cameraManager.stopRotate()
         }
         await setJourneyVisibility(true)
         lgs.theJourney.focus({
                                  resetCamera: true,
-                                 action: REFRESH_DRAWING,
-                                 rotate: allowRotation || autoRotateJourney,
+                                 rotate: _allowRotation.current || autoRotateJourney,
                              })
     }
 
-    /**
-     * Placeholder message component for export functionality
-     * @returns {JSX.Element} Message component
-     */
-    const Message = () => <>{`'Not Yet. Sorry.'`}</>
+    const maybeRotate = async () => {
+        if (running) {
+            _allowRotation.current = false
+            await __.ui.cameraManager.stopRotate()
+            if (target?.element === lgs.theJourney.element) {
+                return
+            }
+        }
+        _allowRotation.current = autoRotateJourney
+        await focusOnJourney()
+    }
 
-    /** Confirmation dialog hook for journey export */
-    const [ConfirmExportJourneyDialog, confirmExportJourney] = useConfirm(`Export <strong>${journey.title}</strong> ?`, Message)
+    const forceRotate = async () => {
+        _allowRotation.current = !_allowRotation.current
+        await focusOnJourney()
+    }
 
-    /**
-     * Handles journey export functionality (currently placeholder)
-     * @async
-     */
-    const exportJourney = async () => {
-        const confirmed = await confirmExportJourney()
-        if (confirmed) {
-            // TODO: Implement export functionality
+    const initTab = (e) => {
+        const tabName = e.detail.name
+        __.ui.drawerManager.tab = tabName
+        setJourneyEditorTabState(tabName, e.type)
+    }
+
+    const setExportFormatValue = (format) => {
+        _exportFormat.current = format
+        setExportFormatState(format)
+    }
+
+    const setExportFileNameValue = (fileName) => {
+        _exportFileName.current = fileName
+        setExportFileNameState(fileName)
+    }
+
+    const resetExportDialog = (currentJourney, format = JOURNEY_EXPORT_FORMATS.GPX) => {
+        setExportFormatValue(format)
+        setExportFileNameValue(getJourneyExportBaseName(currentJourney))
+    }
+
+    const handleExportFileNameChange = (event) => {
+        event.stopPropagation()
+        setExportFileNameValue(event.target.value)
+    }
+
+    const handleExportFormatChange = (event) => {
+        event.stopPropagation()
+        const format = event.target.value || JOURNEY_EXPORT_FORMATS.GPX
+        setExportFormatValue(format)
+        setExportFileNameValue(normalizeJourneyExportBaseName(_exportFileName.current, lgs.theJourney))
+    }
+
+    const keepExportFormatPopoverInDialog = (event) => {
+        event.stopPropagation()
+    }
+
+    const ExportJourneyMessage = ({formats = EXPORT_DIALOG_FORMATS.FILE, kind = 'file'} = {}) => {
+        const poiCount = getExportableJourneyPOIs(lgs.theJourney).length
+        const formatLabel = JOURNEY_EXPORT_FORMAT_LABELS[exportFormat] ?? JOURNEY_EXPORT_FORMAT_LABELS.gpx
+        const itemLabel = kind === 'report' ? 'report' : 'file'
+        return (
+            <div className="journey-export-dialog-content">
+                <p>{`Export ${formatLabel} ${itemLabel} with ${journey?.tracks?.size ?? 0} track(s) and ${poiCount} associated POI(s).`}</p>
+                <div className="journey-export-controls">
+                    <WaInput
+                        aria-label="Export file name"
+                        className="journey-export-file-name"
+                        value={exportFileName}
+                        size="s"
+                        onInput={handleExportFileNameChange}
+                    />
+                    <WaSelect
+                        aria-label="Export format"
+                        className="journey-export-format"
+                        value={exportFormat}
+                        size="s"
+                        onChange={handleExportFormatChange}
+                        onWaShow={keepExportFormatPopoverInDialog}
+                        onWaAfterShow={keepExportFormatPopoverInDialog}
+                        onWaHide={keepExportFormatPopoverInDialog}
+                        onWaAfterHide={keepExportFormatPopoverInDialog}
+                    >
+                        {formats.map(format => (
+                            <WaOption key={format.value} value={format.value}>{format.label}</WaOption>
+                        ))}
+                    </WaSelect>
+                </div>
+            </div>
+        )
+    }
+
+    const ExportFileMessage = () => (
+        <ExportJourneyMessage formats={EXPORT_DIALOG_FORMATS.FILE} kind="file"/>
+    )
+
+    const ExportReportMessage = () => (
+        <ExportJourneyMessage formats={EXPORT_DIALOG_FORMATS.REPORT} kind="report"/>
+    )
+
+    const [ConfirmExportFileDialog, confirmExportFile] = useConfirm(
+        `${'Export File'}&nbsp;<strong>${journey?.title}</strong> ?`,
+        ExportFileMessage,
+        {
+            icon:            'route',
+            text:            `Export ${JOURNEY_EXPORT_FORMAT_LABELS[exportFormat] ?? JOURNEY_EXPORT_FORMAT_LABELS.gpx}`,
+            dialogClassName: 'journey-export-dialog',
+        },
+    )
+
+    const [ConfirmExportReportDialog, confirmExportReport] = useConfirm(
+        `${'Export Report'}&nbsp;<strong>${journey?.title}</strong> ?`,
+        ExportReportMessage,
+        {
+            icon:            'file-lines',
+            text:            `Export ${JOURNEY_EXPORT_FORMAT_LABELS[exportFormat] ?? JOURNEY_EXPORT_FORMAT_LABELS.pdf}`,
+            dialogClassName: 'journey-export-dialog',
+        },
+    )
+
+    const exportJourney = async (event) => {
+        event?.stopPropagation()
+        if (!lgs.theJourney) {
+            return
+        }
+        setExportChoiceOpen(open => !open)
+    }
+
+    const notifyExportInProgress = () => {
+        UIToast.notify({
+                           caption: 'Export in progress',
+                           text:    'It will take few seconds.',
+                       }, 5000)
+    }
+
+    const waitForExportToastPaint = () => new Promise(resolve => {
+        if (typeof requestAnimationFrame !== 'function') {
+            setTimeout(resolve, 0)
+            return
+        }
+
+        requestAnimationFrame(() => requestAnimationFrame(resolve))
+    })
+
+    const openExportFileDialog = async () => {
+        const currentJourney = lgs.theJourney
+        if (!currentJourney) {
+            return
+        }
+        resetExportDialog(currentJourney)
+        setExportChoiceOpen(false)
+
+        const confirmed = await confirmExportFile()
+        if (!confirmed) {
+            return
+        }
+
+        try {
+            notifyExportInProgress()
+            await waitForExportToastPaint()
+            const pois = getExportableJourneyPOIs(currentJourney)
+            const format = _exportFormat.current
+            const fileName = normalizeJourneyExportFileName(_exportFileName.current, format, currentJourney)
+            const content = format === JOURNEY_EXPORT_FORMATS.GEOJSON
+                            ? exportJourneyToGeoJSON(currentJourney, {pois})
+                            : exportJourneyToGPX(currentJourney, {pois})
+            await Export.toFile(content, fileName, JOURNEY_EXPORT_MIME_TYPES[format])
+
+            UIToast.success({
+                                caption: 'Export success',
+                                text:    `${fileName}<br/>${pois.length} POI(s) exported.`,
+                            })
+        }
+        catch (error) {
+            UIToast.error({
+                              caption: 'Export failed',
+                              text:    'The journey export could not be generated.',
+                              errors:  error,
+                          })
         }
     }
 
-    /**
-     * Initializes tab state when tab is changed
-     * @param {Event} event - Tab change event
-     */
-    const initTab = event => {
-        __.ui.drawerManager.tab = event.detail.name
-        journeyEditorStore.activeTab = event.detail.name
-        journeyEditorStore.showPOIsFilter = event.detail.name === POIS && event.type === 'sl-tab-show'
+    const openExportReportDialog = async () => {
+        const currentJourney = lgs.theJourney
+        if (!currentJourney) {
+            return
+        }
+        resetExportDialog(currentJourney, JOURNEY_EXPORT_FORMATS.PDF)
+        setExportChoiceOpen(false)
+
+        const confirmed = await confirmExportReport()
+        if (!confirmed) {
+            return
+        }
+
+        const format = _exportFormat.current
+        let reportExportActive = true
+        const clearReportExportFlashTimeout = () => {
+            clearTimeout(_reportExportFlashTimeout.current)
+            _reportExportFlashTimeout.current = null
+        }
+        const setCurrentReportExportStage = payload => {
+            if (!reportExportActive) {
+                return
+            }
+
+            clearReportExportFlashTimeout()
+            const stage = typeof payload === 'string' ? payload : payload?.stage
+            const animation = {
+                stage,
+                id: payload?.id ?? `${stage}-${Date.now()}`,
+            }
+
+            setReportExportAnimation(animation)
+            if (stage === REPORT_EXPORT_STAGES.SNAPSHOTS) {
+                _reportExportFlashTimeout.current = setTimeout(() => {
+                    if (reportExportActive) {
+                        setReportExportAnimation(current => current?.id === animation.id ? null : current)
+                    }
+                }, REPORT_EXPORT_FLASH_DURATION)
+            }
+        }
+
+        try {
+            notifyExportInProgress()
+            await waitForExportToastPaint()
+            const fileName = normalizeJourneyExportFileName(_exportFileName.current, format, currentJourney)
+            const reportOptions = {
+                fileName,
+                onReportStage: setCurrentReportExportStage,
+            }
+            const result = format === JOURNEY_EXPORT_FORMATS.HTML
+                           ? await exportJourneyToHTMLZip(currentJourney, reportOptions)
+                           : await exportJourneyToPDF(currentJourney, reportOptions)
+
+            UIToast.success({
+                                caption: 'Export success',
+                                text:    `${fileName}<br/>${result.poiCount} POI(s) exported.`,
+                            })
+        }
+        catch (error) {
+            UIToast.error({
+                              caption: 'Export failed',
+                              text:    'The report could not be generated.',
+                              errors:  error,
+                          })
+        }
+        finally {
+            reportExportActive = false
+            clearReportExportFlashTimeout()
+            setReportExportAnimation(null)
+        }
     }
 
-    /**
-     * Checks if a specific tab is currently active
-     * @param {string} tab - Tab identifier
-     * @returns {boolean} Whether the tab is active
-     */
-    const isTabActive = tab => __.ui.drawerManager.tabActive(tab)
-
-    // Dynamic text for visibility toggle buttons
-    const textVisibilityJourney = sprintf('%s Journey', journey.visible ? 'Hide' : 'Show')
-    const textVisibilityPOIs = sprintf('%s POIs', journey.allPOIs ? 'Hide' : 'Show')
-
-    // Component should only render when journey exists and drawer is open
-    const shouldRender = journey && open === JOURNEY_EDITOR_DRAWER
-
-    /**
-     * Component initialization and cleanup effect
-     */
     useEffect(() => {
-        if (!journeyEditorStore.activeTab) {
-            journeyEditorStore.activeTab = DATA
+        if (!journeyEditorStore().activeTab) {
+            initializeJourneyEditorTab(DATA)
             __.ui.drawerManager.tab = DATA
         }
         lgs.stores.ui.mainUI.removeJourneyDialog.active.set(REMOVE_JOURNEY_IN_EDIT, false)
         return () => lgs.stores.ui.mainUI.removeJourneyDialog.active.set(REMOVE_JOURNEY_IN_EDIT, false)
     }, [])
 
+    useEffect(() => {
+        let isMounted = true
+
+        if (!journeySlug || open !== JOURNEY_EDITOR_DRAWER || !__.ui.geocoder?.getJourneyLocation) {
+            return () => {
+                isMounted = false
+            }
+        }
+
+        const currentJourney = lgs.getJourneyBySlug(journeySlug) ?? lgs.theJourney
+
+        __.ui.geocoder.getJourneyLocation(currentJourney)
+            .then(location => {
+                if (isMounted) {
+                    setJourneyLocationState({slug: journeySlug, value: location})
+                }
+            })
+            .catch(error => {
+                console.error(error)
+                if (isMounted) {
+                    setJourneyLocationState({slug: journeySlug, value: ''})
+                }
+            })
+
+        return () => {
+            isMounted = false
+        }
+    }, [journeySlug, open])
+
+    const shouldRender = journey && open === JOURNEY_EDITOR_DRAWER
+    const textVisibilityJourney = sprintf('%s Journey', journey?.visible ? 'Hide' : 'Show')
+    const textVisibilityPOIs = sprintf('%s POIs', journey?.POIsVisible ? 'Hide' : 'Show')
+    const journeyLocation = journeyLocationState.slug === journeySlug ? journeyLocationState.value : ''
+
     return (
-        <Fragment>
+        <>
             {shouldRender && (
-                <div id="journey-settings" key={lgs.stores.main.components.journeyEditor.keys.journey.settings}>
-                    <div className="settings-panel" id="editor-journey-settings-panel">
-                        <SlTabGroup className="menu-panel" ref={_tabGroup} onSlTabShow={initTab} onSlTabHide={initTab}>
-                            <SlTab slot="nav" panel={DATA} active={isTabActive(DATA)}>
-                                <SlIcon library="fa" name={FA2SL.set(faRectangleList)}/> Data
-                            </SlTab>
-                            <SlTab slot="nav" panel={EDIT} active={isTabActive(EDIT)}>
-                                <SlIcon library="fa" name={FA2SL.set(faPaintbrushPencil)}/> Edit
-                            </SlTab>
-                            <SlTab slot="nav" panel={POIS} active={isTabActive(POIS)}>
-                                <SlIcon library="fa" name={FA2SL.set(faLocationDot)}/> POIs
-                            </SlTab>
-                            <MapPOIEditToggleFilter slot="nav"/>
-                            <DataTabPanel journey={journey} isProcessing={isProcessing} serverList={serverList}
-                                          onElevationChange={computeElevation}/>
-                            <EditTabPanel journey={journey} onTitleChange={setTitle}
-                                          onDescriptionChange={setDescription}/>
-                            <PoisTabPanel/>
-                            <PointsTabPanel/>
-                        </SlTabGroup>
-                        <div id="journey-visibility" className="editor-vertical-menu">
-                            <div>
+                <div id="journey-settings" key={lgs.theJourney.slug}>
+                    <div className="settings-panel">
+                        <WaTabGroup className="menu-panel" ref={_tabGroup} onWaTabShow={initTab} onWaTabHide={initTab}>
+                            <WaTab slot="nav" panel={DATA} active={__.ui.drawerManager.tabActive(DATA)}>
+                                <WaIcon name="rectangle-list" variant="regular"/> Data
+                            </WaTab>
+                            <WaTab slot="nav" panel={EDIT} active={__.ui.drawerManager.tabActive(EDIT)}>
+                                <WaIcon name={EDIT_JOURNEY_ICON} variant="regular"/> Edit
+                            </WaTab>
+                            <WaTab slot="nav" panel={POIS} active={__.ui.drawerManager.tabActive(POIS)}>
+                                <WaIcon name="location-dot" variant="regular"/> POIs
+                            </WaTab>
+
+                            {/* Data Panel */}
+                            <WaTabPanel name={DATA}>
+                                <LGSScrollbars>
+                                    <WaCard className="lgs--track-data" appearance="plain">
+                                        <ElevationProfile
+                                            default={journey.elevationServer}
+                                            label={'Elevation Source:'}
+                                            onChange={computeElevation}
+                                            servers={serverList}
+                                        />
+                                        {journey.tracks.size === 1 ? <TrackData/> : <JourneyData/>}
+                                        <TrackSettings/>
+                                    </WaCard>
+                                </LGSScrollbars>
+                            </WaTabPanel>
+
+                            {/* Edit Panel */}
+                            <WaTabPanel name={EDIT}>
+                                <LGSScrollbars>
+                                    <WaCard className="lgs--track-data lgs--journey-edit-card" appearance="plain">
+                                        <WaSelect
+                                            className="lgs--journey-activity-select"
+                                            label="Activity"
+                                            value={journey.activity ?? Journey.defaultActivity()}
+                                            onChange={setActivity}
+                                        >
+                                            {activityList.map(activity => (
+                                                <WaOption key={activity.id} value={activity.id}>
+                                                    {activity.icon && <WaIcon slot="start" name={activity.icon} variant="regular"/>}
+                                                    {activity.label}
+                                                </WaOption>
+                                            ))}
+                                        </WaSelect>
+
+                                        <div className="lgs--details-list lgs--journey-edit-details-list">
+                                            <WaDetails
+                                                small
+                                                open
+                                                className="lgs--details-hoverable lgs--journey-edit-details"
+                                            >
+                                                <span slot="summary">Journey details</span>
+                                                <WaInput
+                                                    label={journey.tracks.size === 1 ? 'Title' : 'Journey Title'}
+                                                    id={'journey-title-in-settings'}
+                                                    ref={_title}
+                                                    value={journey.title}
+                                                    onChange={setTitle}
+                                                />
+
+                                                {journeyLocation && (
+                                                    <div className="lgs--journey-location-in-settings">
+                                                        <WaIcon name="location-dot" variant="regular"/>
+                                                        <span>{journeyLocation}</span>
+                                                    </div>
+                                                )}
+
+                                                <JourneyGroupsInfo journey={journey}/>
+
+                                                <WaTextarea
+                                                    label={journey.tracks.size === 1 ? 'Description' : 'Journey Description'}
+                                                    ref={_description}
+                                                    rows={3}
+                                                    value={decodeHTMLEntities(journey.description)}
+                                                    onChange={setDescription}
+                                                />
+                                            </WaDetails>
+
+                                            <WaDetails
+                                                small
+                                                open
+                                                className="lgs--details-hoverable lgs--journey-edit-details"
+                                            >
+                                                <span slot="summary">Track style</span>
+                                                {journey.tracks.size === 1 && <TrackStyleSettings showTitle={false}/>}
+                                                <TrackSettings/>
+                                            </WaDetails>
+                                        </div>
+                                    </WaCard>
+                                </LGSScrollbars>
+                            </WaTabPanel>
+
+                            {/* POIs Panel */}
+                            <WaTabPanel name={POIS}>
+                                <div className="panel-wrapper">
+                                    <MapPOIEditListActions/>
+                                    <LGSScrollbars><MapPOIList/></LGSScrollbars>
+                                </div>
+                            </WaTabPanel>
+
+                            {/* Points Panel */}
+                            <WaTabPanel name={POINTS}>
+                                <TrackPoints/>
+                            </WaTabPanel>
+                            <div className="lgs--tabs-right-menu " slot="nav">
                                 {journey.visible && (
                                     <>
-                                        {!autoRotateJourney && (
-                                            <SlTooltip hoist
-                                                       content={running && target.instanceOf(CURRENT_JOURNEY) ? 'Stop rotation' : 'Start rotation'}
-                                                       placement="left">
-                                                <FAButton
+                                        {!autoRotateJourney && (<>
+                                                <WaTooltip
+                                                    placement="bottom"
+                                                    for="rotation-in-settings"
+                                                >
+                                                    {running && target?.instanceOf?.(CURRENT_JOURNEY) ? 'Stop rotation' : 'Start rotation'}
+                                                </WaTooltip>
+                                                <WaButton
+                                                    size="s"
                                                     onClick={forceRotate}
                                                     ref={_manualRotate}
-                                                    icon={faArrowRotateRight}
-                                                    className={classNames({'fa-spin': running && target.instanceOf(CURRENT_JOURNEY)})}
-                                                />
-                                            </SlTooltip>
+                                                    id="rotation-in-settings"
+                                                    variant="brand"
+                                                    appearance="plain">
+                                                    <WaIcon name="arrow-rotate-right"
+                                                            variant="regular"
+                                                            animation={running && target?.instanceOf?.(CURRENT_JOURNEY) ? 'spin' : ''}/>
+                                                </WaButton>
+                                            </>
                                         )}
-                                        <SlTooltip hoist
-                                                   content={running && target.instanceOf(CURRENT_JOURNEY) ? 'Stop rotation' : 'Focus on journey'}
-                                                   placement="left">
-                                            <FAButton
-                                                onClick={maybeRotate}
-                                                icon={running && autoRotateJourney && target.instanceOf(CURRENT_JOURNEY) ? faArrowRotateRight : faCrosshairsSimple}
-                                                className={classNames({'fa-spin': running && autoRotateJourney && target.instanceOf(CURRENT_JOURNEY)})}
+                                        <WaTooltip
+                                            for="auto-rotate-in-settings"
+                                            placement="bottom">
+                                            {running && target?.instanceOf?.(CURRENT_JOURNEY) ? 'Stop rotation' : 'Focus on Journey'}
+                                        </WaTooltip>
+                                        <WaButton id="auto-rotate-in-settings"
+                                                  size="s"
+                                                  onClick={maybeRotate}
+                                                  id="auto-rotate-in-settings"
+                                                  variant="brand"
+                                                  appearance="plain">
+                                            <WaIcon
+                                                variant="regular"
+                                                name={running && autoRotateJourney && target?.instanceOf?.(CURRENT_JOURNEY) ? 'arrow-rotate-right' : 'crosshairs-simple'}
+                                                animation={running && autoRotateJourney && target?.instanceOf?.(CURRENT_JOURNEY) ? 'spin' : ''}
                                             />
-                                        </SlTooltip>
+                                        </WaButton>
+
                                     </>
                                 )}
-                                <SlTooltip hoist content={textVisibilityJourney} placement="left">
-                                    <ToggleStateIcon onChange={setJourneyVisibility} initial={journey.visible}/>
-                                </SlTooltip>
-                            </div>
-                            {journey.pois.size > 1 && (
-                                <SlTooltip hoist content={textVisibilityPOIs} placement="left">
+                                <WaTooltip placement="bottom"
+                                           for="journey-visibility-in-settings">
+                                    {textVisibilityJourney}
+                                </WaTooltip>
+                                <ToggleStateIcon id="journey-visibility-in-settings" onChange={setJourneyVisibility}
+                                                 initial={journey.visible}/>
+
+                                {journey.pois.size > 1 && (<>
+
+                                        <WaTooltip for="pois-visibility-in-settings"
+                                                   placement="left">{textVisibilityPOIs}</WaTooltip>
                                     <ToggleStateIcon
                                         onChange={setAllPOIsVisibility}
                                         initial={journey.POIsVisible}
-                                        icons={{shown: faLocationDot, hidden: faLocationDotSlash}}
+                                        id="pois-visibility-in-settings"
+                                        icons={{shown: 'location-dot', hidden: 'location-dot-slash'}}
                                     />
-                                </SlTooltip>
+                                    </>
                             )}
                             <div>
-                                <SlTooltip hoist content="Export" placement="left">
-                                    <SlIconButton onClick={exportJourney} library="fa" name={FA2SL.set(faDownload)}/>
-                                </SlTooltip>
+                                <WaTooltip placement="bottom"
+                                           for="export-journey-in-settings">{'Export Journey'}</WaTooltip>
+                                <WaButton onClick={exportJourney}
+                                          id="export-journey-in-settings"
+                                          size="s"
+                                          appearance="plain"
+                                          variant="brand">
+                                    <WaIcon name="download" variant="regular"/>
+                                </WaButton>
+                                <LGSPopup
+                                    active={exportChoiceOpen}
+                                    anchor="export-journey-in-settings"
+                                    onRequestClose={() => setExportChoiceOpen(false)}
+                                    placement="bottom-end"
+                                    strategy="fixed"
+                                    distance={lgs.gutter?.xs ?? 4}
+                                    flip
+                                    shift
+                                >
+                                    <div className="journey-export-choice-content">
+                                        <WaTooltip placement="bottom"
+                                                   for="export-journey-file-choice">{'Export as File'}</WaTooltip>
+                                        <WaButton
+                                            id="export-journey-file-choice"
+                                            className="journey-export-choice-button"
+                                            variant="brand"
+                                            appearance="plain"
+                                            aria-label="Export as File"
+                                            onClick={openExportFileDialog}
+                                        >
+                                            <WaIcon slot="start" name="route" variant="regular"/>
+                                            <span>Export as File</span>
+                                        </WaButton>
+                                        <WaTooltip placement="bottom"
+                                                   for="export-journey-report-choice">{'Export a Report'}</WaTooltip>
+                                        <WaButton
+                                            id="export-journey-report-choice"
+                                            className="journey-export-choice-button"
+                                            variant="brand"
+                                            appearance="plain"
+                                            aria-label="Export a Report"
+                                            onClick={openExportReportDialog}
+                                        >
+                                            <WaIcon slot="start" name="file-lines" variant="regular"/>
+                                            <span>Export a Report</span>
+                                        </WaButton>
+                                    </div>
+                                </LGSPopup>
                                 <RemoveJourney tooltip="left-start" name={REMOVE_JOURNEY_IN_EDIT}/>
                             </div>
                         </div>
+                        </WaTabGroup>
                     </div>
-                    <ConfirmExportJourneyDialog/>
                 </div>
             )}
-        </Fragment>
+            <ConfirmExportFileDialog/>
+            <ConfirmExportReportDialog/>
+            <ReportExportAnimation animation={reportExportAnimation}/>
+        </>
     )
 }

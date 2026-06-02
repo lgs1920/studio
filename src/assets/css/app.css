@@ -7,14 +7,25 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-02
- * Last modified: 2026-03-02
+ * Created on: 2026-05-10
+ * Last modified: 2026-05-10
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-@import-normalize; /* bring in normalize.css styles */
+/*******************************************************************************
+ * App-level local variables
+ ******************************************************************************/
+
+:root {
+    /* Default toolbar direction for on-map button stacks; video toolbars override it locally. */
+    --buttons-bar-on-map-direction: column;
+}
+
+/*******************************************************************************
+ * App shell
+ ******************************************************************************/
 
 html {
     height: 100%;
@@ -24,7 +35,8 @@ body {
     font-family: var(--lgs-font-family), sans-serif;
     font-size: var(--lgs-font-size);
     overflow: hidden;
-    color: var(--lgs-dark-ui-fg-color);
+    height: 100%;
+    margin: 0;
 }
 
 .no-select {
@@ -56,12 +68,25 @@ body {
 #cesium-viewer {
     position: absolute;
     z-index: 1;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100dvh;
-    min-height: 100dvh;
-    max-height: 100dvh;
+    width: 100%;
+    height: 100%;
+    min-height: 100%;
+    max-height: 100%;
+    inset: 0;
+    background: var(--lgs-dark-color-95);
+}
+
+#cesium-viewer .cesium-widget,
+#cesium-viewer .cesium-widget canvas {
+    width: 100%;
+    height: 100%;
+    background: var(--lgs-dark-color-95);
+}
+
+body.lgs-app-booting #cesium-viewer {
+    visibility: hidden;
+    pointer-events: none;
+    opacity: 0;
 }
 
 /** Hide the main toolbar */
@@ -82,9 +107,33 @@ body {
     border-color: var(--lgs-signage-border-color);
     border-radius: var(--lgs-border-radius-s);
     background: var(--lgs-signage-bg-color);
-    box-shadow: var(--sl-shadow-medium);
+    box-shadow: var(--wa-shadow-m);
 }
 
+
+/*******************************************************************************
+ * App init
+ ******************************************************************************/
+
+.lgs--init-error-message {
+    display: flex;
+    flex-direction: column;
+    gap: var(--lgs-gutter);
+}
+
+.lgs--init-error-message [slot="summary"] {
+    display: inline-flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    gap: var(--lgs-gutter-s);
+}
+
+.lgs--init-error-message pre {
+    font-size: var(--lgs-font-size-s);
+    height: 100px;
+    padding: var(--lgs-gutter-xs);
+}
 .app-installing-dialog::part(body) {
     padding: 0;
 }
@@ -99,10 +148,13 @@ body {
     gap: var(--lgs-gutter);
 }
 
-.installing-dialog > sl-spinner {
+.installing-dialog > wa-spinner {
     font-size: var(--lgs-font-size-xl);
+    /* Installing spinner stroke width. */
     --track-width: var(--lgs-gutter-xs);
+    /* Installing spinner active stroke color. */
     --indicator-color: black;
+    /* Installing spinner inactive track color. */
     --track-color: var(--lgs-signage-disabled-color);
 }
 
@@ -112,25 +164,30 @@ body {
     align-items: center;
     justify-content: center;
     padding: var(--padding);
+    /* Base logo padding; size modifiers override this local token. */
     --padding: calc(6 * var(--lgs-gutter));
     aspect-ratio: 2.813;
 }
 
 .main-logo.xlarge {
+    /* Large splash variant keeps the base logo padding. */
     --padding: calc(6 * var(--lgs-gutter));
 }
 
 .main-logo.large {
+    /* Standard large logo padding used in dialogs and banners. */
     --padding: calc(4 * var(--lgs-gutter-s));
 }
 
 .main-logo.small {
     border-radius: var(--lgs-border-radius-xs);
+    /* Compact logo padding for panel-level usage. */
     --padding: calc(2 * var(--lgs-gutter-xs));
 }
 
-.main-logo.xsmall {
+.main-logo.xs {
     border-radius: var(--lgs-border-radius-xs);
+    /* Tightest logo padding for toolbar-level usage. */
     --padding: calc(var(--lgs-gutter-xs));
 }
 
@@ -185,12 +242,18 @@ body {
 
 .drawer-wrapper {
     position: fixed;
-    z-index: var(--sl-z-index-drawer);
+    z-index: 10000;
     top: var(--top);
     right: var(--right);
+    bottom: var(--bottom);
+    left: var(--left);
     width: calc(100vw - var(--right) - var(--left));
     height: calc(100dvh - var(--top) - var(--bottom));
-    pointer-events: none;;
+    pointer-events: none;
+}
+
+.drawer-wrapper > wa-drawer {
+    pointer-events: auto;
 }
 
 .drawer-wrapper.horizontal {
@@ -207,6 +270,10 @@ body {
     gap: calc(2 * var(--lgs-gutter-xs));
 }
 
+.drawer-horizontal-line.align-to-top {
+    align-items: start;
+}
+
 .drawer-align-right {
     margin-left: auto;
 }
@@ -217,6 +284,10 @@ body {
     flex: 1;
     flex-direction: row;
     gap: var(--lgs-gutter-xs);
+}
+
+.drawer-horizontal-element wa-slider {
+    padding-right: calc(2 * var(--lgs-gutter-xs));;
 }
 
 .drawer-horizontal-element.xlarge-element {
@@ -232,7 +303,6 @@ body {
 
 .three-columns .drawer-horizontal-element.xlarge-element {
     flex: 0 0 40%;
-    margin-left: auto;
 }
 
 .three-columns .drawer-horizontal-element {
@@ -283,16 +353,21 @@ body {
     border: 1px solid var(--lgs-dark-color) !important;
     border-radius: var(--lgs-border-radius-s) !important;
     background: var(--moveable-color);
+    /* Default Moveable control width. */
     --width: var(--lgs-gutter);
+    /* Default Moveable control height. */
     --height: var(--lgs-gutter);
+    /* Default Moveable control fill color. */
     --moveable-color: var(--lgs-light-color);
 }
 
 .lgs-widget-control-box .moveable-control.moveable-n, .lgs-widget-control-box .moveable-control.moveable-s {
+    /* Horizontal resize handles are wider than corner handles. */
     --width: calc(2 * var(--lgs-gutter)) !important;
 }
 
 .lgs-widget-control-box .moveable-control.moveable-w, .lgs-widget-control-box .moveable-control.moveable-e {
+    /* Vertical resize handles are taller than corner handles. */
     --height: calc(2 * var(--lgs-gutter)) !important;
 }
 
@@ -395,13 +470,12 @@ body {
     align-items: center;
     flex: 1;
     justify-content: space-between;
-    padding: var(--lgs-gutter);
+    gap: var(--lgs-gutter);
 
 }
 
-.lgs-install-banner-content > div > sl-icon {
+.lgs-install-banner-content > wa-icon {
     font-size: var(--lgs-font-size-l);
-    margin-right: var(--lgs-gutter);
 }
 
 .lgs-install-banner-content, .lgs-install-banner-content > * {
@@ -413,24 +487,36 @@ body {
  * Widgets and Cropper Menus
  ******************************************************************************/
 
-:root {
-    --buttons-bar-on-map-direction: column;
-}
-
 .widget-grid-position, .widget-grid-one-line {
     display: grid !important;
     margin-top: var(--lgs-gutter-xs) !important;
     padding: 0 !important;
     grid-template-columns: repeat(3, 1fr);
     grid-template-rows: repeat(3, 1fr);
-    gap: var(--lgs-gutter-s);
+    gap: var(--lgs-gutter-xs);
 }
 
 .widget-grid-one-line {
     grid-template-rows: none
 }
 
+.widget-context-menu .context-menu-icon-button {
+    --lgs-square-dimension: var(--lgs-dimension);
+}
+
+.widget-context-menu .context-menu-icon-button::part(base) {
+    box-sizing: border-box;
+    padding: var(--lgs-gutter-s) !important;
+    border-color: var(--lgs-card-on-map-border-color) !important;
+}
+
+.widget-context-menu .context-menu-icon-button wa-icon {
+    margin-right: 0;
+}
+
 .widget-no-hover:hover {
+    color: inherit !important;
+    border-color: transparent !important;
     background: transparent !important
 }
 
@@ -442,107 +528,178 @@ body {
     gap: var(--lgs-gutter-xs);
 }
 
-.buttons-bar-on-map sl-icon, .buttons-bar-on-map div {
+.buttons-bar-on-map > wa-icon, .buttons-bar-on-map > div {
     font-size: var(--lgs-font-size);
     line-height: 1;
-    width: calc(var(--lgs-font-size) + 4px);
-    height: calc(var(--lgs-font-size) + 2px);
-    margin: 0;
-    padding: var(--lgs-gutter-s);
+    /*width: calc(var(--lgs-font-size) + 4px);*/
+    /*height: calc(var(--lgs-font-size) + 2px);*/
+    /*margin: 0;*/
+    /*padding: 0;*/
     cursor: pointer;
     text-align: center;
+    transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
 }
 
-.buttons-bar-on-map div {
+.buttons-bar-on-map > div {
     justify-content: center;
     width: 100%;
     height: auto;
+    border: 1px solid transparent;
+    border-radius: var(--lgs-on-map-interactive-radius, var(--lgs-border-radius-xs));
 }
 
-.buttons-bar-on-map .selected {
+.buttons-bar-on-map > .selected {
+    color: var(--lgs-card-on-map-selected-color, inherit);
     border-color: var(--lgs-card-on-map-selected-border-color);
     background: var(--lgs-card-on-map-selected-bg-color);
 }
 
-.buttons-bar-on-map sl-icon:hover, .buttons-bar-on-map div:hover {
+.buttons-bar-on-map > wa-icon:hover, .buttons-bar-on-map > div:hover {
+    color: var(--lgs-card-on-map-hover-color);
     border-color: var(--lgs-card-on-map-hover-border-color);
     background: var(--lgs-card-on-map-hover-bg-color);
 }
 
-.buttons-bar-on-map sl-icon svg {
+.buttons-bar-on-map > wa-icon svg {
     width: unset;
     height: var(--lgs-font-size);
 }
 
 /** fix for 9x16, forcing same icon than 16x9 **/
-.buttons-bar-on-map sl-icon.icon-9x16::part(svg) {
+.buttons-bar-on-map wa-icon.icon-9x16::part(svg) {
     transform: rotate(90deg);
 }
 
 .widget-deck-panel {
+    overflow: hidden;
+    align-items: stretch;
     flex-direction: column;
-    width: auto;
+    box-sizing: border-box;
+    width: max-content;
+    min-width: max-content;
     padding: var(--lgs-gutter-xs);
-    gap: var(--lgs-gutter-xs);
+    box-shadow: var(--lgs-on-map-floating-shadow, var(--wa-shadow-l));
+    padding-block-end: calc(var(--lgs-gutter-s) + var(--lgs-gutter-xs));
+    gap: 0;
+}
+
+.widget-deck-panel.lgs-card.wa-theme-lgs1920-on-map {
+    box-shadow: var(--lgs-on-map-floating-shadow, var(--wa-shadow-l)) !important;
+    filter: drop-shadow(var(--lgs-on-map-floating-drop-shadow, 0 0.45rem 1rem rgb(0 0 0 / 0.22)));
 }
 
 .widget-deck-panel, .widget-deck-panel * {
-    font-size: var(--lgs-font-size) !important;
+    font-size: var(--lgs-font-size-s) !important;
 }
 
-.widget-deck-panel section {
+.widget-deck-panel ul {
     display: flex;
     flex-direction: column;
-    width: 100%;
-    gap: var(--lgs-gutter-xs);
+    width: max-content;
+    min-width: 100%;
+    margin: 0;
+    padding: 0 var(--lgs-gutter-xs);
+    list-style: none;
+    gap: 0;
+}
+
+.widget-group:not(:last-child) .widget-deck-item:last-child {
+    margin-bottom: 0;
+}
+
+.widget-group + .widget-group .widget-deck-item:first-child {
+    margin-top: 0;
 }
 
 .widget-deck-entry {
     display: flex;
     align-items: center;
-    /*border-bottom: 1 px solid var(--lgs-light-color-25);*/
-    background: transparent !important;
+    box-sizing: border-box;
+    margin: 2px;
+    padding: 2px;
+    transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
+    border: 1px solid transparent;
+    border-radius: var(--lgs-on-map-interactive-radius, var(--lgs-border-radius-xs));
+    background: transparent;
     gap: var(--lgs-gutter-xs);
 }
 
 .widget-deck-entry.small {
-    height: calc(2 * var(--lgs-font-size)) !important;
+    height: calc(2 * var(--lgs-font-size-s)) !important;
 }
 
-.widget-deck-entry:not(.widget-deck-title):hover {
+.widget-deck-item {
     cursor: pointer;
+    width: 100%;
+}
+
+.widget-deck-item:hover,
+.widget-deck-item.selected,
+.widget-deck-item.is-selected {
+    color: var(--lgs-card-on-map-hover-color);
     border-color: var(--lgs-card-on-map-hover-border-color);
     background: var(--lgs-card-on-map-hover-bg-color);
+}
+
+.widget-deck-item.selected,
+.widget-deck-item.is-selected {
+    color: var(--lgs-card-on-map-selected-color);
+    border-color: var(--lgs-card-on-map-selected-border-color);
+    background: var(--lgs-card-on-map-selected-bg-color);
 }
 
 .widget-deck-title {
     width: 100%;
     padding: 0 var(--lgs-gutter-xs);
+    margin: 0;
+    border: 0;
 }
 
-.widget-deck-entry sl-icon {
-    width: calc(var(--lgs-font-size-s) + 6px);
-    height: calc(var(--lgs-font-size-s) + 6px);
+.widget-deck-entry wa-icon {
+    width: calc(var(--lgs-font-size-s) + 4px);
+    height: calc(var(--lgs-font-size-s) + 4px);
 }
 
 .widget-deck-entry span {
     display: block;
-    width: 100%;
+    flex: 1 1 auto;
+    width: auto;
+    min-width: 0;
     white-space: nowrap;
+}
 
+.widget-deck-entry .widget-name {
+    text-align: left;
+}
+
+.widget-deck-entry .widget-remaining {
+    flex: 0 0 auto;
+    width: auto;
+    min-width: 2.25rem;
+    text-align: right;
+    color: inherit;
 }
 
 .widget-menu-disabled {
     cursor: not-allowed !important;
     color: var(--lgs-card-on-map-disabled-color) !important;
-    border-color: var(--lgs-card-on-map-disabled-border-color) !important;
+    border-color: transparent !important;
+    background: transparent !important;
+}
+
+.widget-deck-item.widget-menu-disabled:hover,
+.widget-deck-item.widget-menu-disabled.selected,
+.widget-deck-item.widget-menu-disabled.is-selected {
+    color: var(--lgs-card-on-map-disabled-color) !important;
+    border-color: transparent !important;
     background: transparent !important;
 }
 
 /*******************************************************************************
  * Widget Ordering
  ******************************************************************************/
-.widget-ordering-panel {
+.widget-ordering-panel::part(body) {
+    display: flex;
     flex-direction: column;
     height: 250px;
     gap: var(--lgs-gutter-xs);
@@ -562,14 +719,15 @@ body {
     touch-action: none;
 }
 
-.reorder:active {
-    cursor: grabbing;
-}
+/*.reorder:active {*/
+/*    cursor: grabbing;*/
+/*}*/
 
 /* Titre du Widget (Parent Drag) */
 .widget-deck-title {
     cursor: move;
 }
+
 
 .widget-sortable-list {
     display: flex;
@@ -577,11 +735,22 @@ body {
     min-width: 10rem;
     min-height: 100%;
     margin-right: calc(-1 * var(--lgs-gutter-s));
+    padding: var(--lgs-gutter-xs);
     text-wrap: nowrap;
-    gap: var(--lgs-gutter-xs);
+    gap: var(--lgs-gutter-s);
+
+
+    & > div {
+        user-select: none;
+    }
 }
 
 .widget-ordering-row {
+    cursor: grab;
+    user-select: none;
+}
+
+.widget-ordering-row::part(body) {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -589,99 +758,65 @@ body {
     gap: var(--lgs-gutter-xs);
 }
 
-.widget-ordering-row sl-icon {
+.widget-ordering-row wa-icon {
     width: 1.2rem;
 }
-
 
 .widget-ordering-row .sortable-widget-info {
     flex: 1;
 }
 
-.widget-ordering-row .sortable-widget-actions ::part(base) {
-    font-size: var(--lgs-font-size);
+.widget-ordering-row:hover {
+    color: var(--wa-color-brand-on-normal) !important;
 }
 
-.sortable-ghost {
-    opacity: 0.5;
-    border: var(--lgs-success-border-color) 1px solid !important;
-    background: var(--lgs-success-bg-color) !important;
+
+.drop-is-forbidden .widget-row-ghost {
+    color: var(--wa-color-success-border-loud) !important;
+    border-color: var(--wa-color-success-border-loud) !important;
+    background-color: var(--wa-color-success-border-quiet) !important;
 }
 
-/**
- * Draggable items in the ordering list
- */
-.widget-sortable-list > div {
-    cursor: grab !important; /* Force open hand on hover */
-    cursor: -webkit-grab !important;
-    user-select: none; /* Prevent text selection which breaks dragging */
+.widget-ordering-row:active {
+    cursor: grabbing;
 }
 
-/* While the mouse is pressed down on the item */
-.widget-sortable-list > div:active {
-    cursor: grabbing !important; /* Force closed hand */
-    cursor: -webkit-grabbing !important;
-}
-
-/* The item being dragged (the one following the mouse) */
-.sortable-fallback {
+.widget-row-chosen {
     cursor: grabbing !important;
+    color: var(--wa-color-brand-on-normal) !important;
+    border-color: var(--wa-color-brand-border-quiet) !important;
+    background-color: var(--wa-color-brand-fill-loud) !important;
 }
 
-/* The item currently selected in the list */
-.sortable-chosen {
-    cursor: grabbing !important;
-    background-color: var(--lgs-second-color-15); /* Optional: visual feedback */
+.widget-row-drag {
+    opacity: 1 !important;
+    color: var(--wa-color-brand-on-normal) !important;
+    border-color: var(--wa-color-brand-border-loud) !important;
+    background-color: var(--wa-color-brand-border-quiet) !important;
 }
 
-/* The ghost (the empty space left behind) */
-.sortable-ghost {
-    cursor: grabbing !important;
-    opacity: 0.4;
+.widget-row-ghost {
+    opacity: 0.7 !important;
+    color: var(--wa-color-success-on-normal) !important;
+    border-color: var(--wa-color-success-border-loud) !important;
+    background-color: var(--wa-color-success-border-quiet) !important;
 }
 
-.widget-sortable-list > div {
-    user-select: none;
+.widget-row-fixed {
+    cursor: not-allowed !important;
 }
-
-.drop-is-forbidden .sortable-ghost {
-    opacity: 0.5;
-    border: var(--lgs-error-border-color) 1px solid !important;
-    background: var(--lgs-error-bg-color) !important;
-}
-
-.drop-is-allowed .sortable-ghost {
-    opacity: 0.5;
-    border: var(--lgs-success-border-color) 1px solid !important;
-    background: var(--lgs-success-bg-color) !important;
-}
-
-.sortable-chosen {
-    opacity: 0.5;
-    color: var(--lgs-information-color) !important;
-    border: var(--lgs-information-border-color) 1px solid !important;
-    background: var(--lgs-information-bg-color) !important;
-}
-
-.widget-row-fixed:hover {
-    cursor: not-allowed;
-    opacity: 0.5;
-    color: var(--lgs-error-color) !important;
-    border: var(--lgs-error-border-color) 1px solid !important;
-    background: var(--lgs-error-bg-color) !important;
-}
-
 /*******************************************************************************
  * Widget Editor
  ******************************************************************************/
 .lgs-widget-editor {
-    height: 100%;
-    min-height: 0;
+    flex: 1;
 }
 
-.lgs-widget-editor, .lgs-widget-editor-controls-wrapper {
+.lgs-widget-editor::part(body), .lgs-widget-editor-controls-wrapper::part(body) {
     display: flex;
     flex-direction: column;
+    height: 100%;
+    min-height: 0;
     gap: var(--lgs-gutter-s);
 }
 
@@ -692,8 +827,8 @@ body {
 .lgs-widget-preview {
     height: 250px;
     padding: var(--lgs-gutter-xs);
-    border-radius: var(--sl-border-radius-medium);
-    background-color: var(--sl-panel-background-color);
+    border-radius: var(--wa-border-radius-m);
+    background-color: var(--wa-color-surface-raised);
 }
 
 .lgs-widget-preview > div {
@@ -712,9 +847,17 @@ sl-color-picker::part(format-button), sl-color-picker::part(input), sl-color-pic
  * Skeleton
  ******************************************************************************/
 
-sl-skeleton {
-    --border-radius: var(--lgs-border-radius-s);
-    --color: var(--lgs-dark-color-25);
+
+.lgs--skeleton-container::part(body) {
+    display: flex;
+    flex-direction: column;
+    gap: var(--lgs-gutter-s);
+}
+
+wa-skeleton::part(indicator) {
+    border-radius: var(--lgs-border-radius-s);
+    /* Skeleton shimmer color aligned with the current brand. */
+    --color: var(--wa-color-brand);
 }
 
 .lgs-preview-loader-container {

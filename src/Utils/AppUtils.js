@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-24
- * Last modified: 2026-02-24
+ * Created on: 2026-05-10
+ * Last modified: 2026-05-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -17,18 +17,37 @@
 import {
     BUILD, CONFIGURATION, COUNTRIES, FREE_ANONYMOUS_ACCESS, LAYERS_TERRAINS_SETTINGS, LGS_CONTEXT_MENU_HOOK, MILLIS,
     platforms, SERVERS, SETTINGS, SETTINGS_STORE, VAULT_STORE, WIDGET_LAYER_TOP, WIDGETS,
-}                           from '@Core/constants'
-import { ElevationServer }  from '@Core/Elevation/ElevationServer'
-import { Settings }         from '@Core/settings/Settings'
-import { SettingsSection }  from '@Core/settings/SettingsSection'
-import { ChangelogManager } from '@Core/ui/ChangelogManager'
-import axios                from 'axios'
-import * as Cesium          from 'cesium'
-import YAML                 from 'yaml'
-import { EventEmitter }     from '../assets/libs/EventEmitter/EventEmitter'
-import { FA2SL }            from './FA2SL'
+}                                   from '@Core/constants'
+import { ElevationServer }          from '@Core/Elevation/ElevationServer'
+import { Settings }                 from '@Core/settings/Settings'
+import { SettingsSection }          from '@Core/settings/SettingsSection'
+import { ensureFlythroughSettings } from '@Core/ui/flythrough/FlythroughProgressionStyle'
+import axios                        from 'axios'
+import * as Cesium                  from 'cesium'
+import YAML                         from 'yaml'
+import { EventEmitter }             from '../assets/libs/EventEmitter/EventEmitter'
+import { FA2SL }                    from './FA2SL'
 
 export class AppUtils {
+    static THEME_STORAGE_KEY = 'theme'
+    static BRAND_COLOR_STORAGE_KEY = 'brandColor'
+    static ROOT_THEME_CLASS = 'wa-theme-lgs1920'
+    static DEFAULT_BRAND_COLOR = 'yellow'
+    static BRAND_COLORS = ['yellow', 'orange', 'red', 'pink', 'purple', 'blue', 'green', 'gray']
+
+    static LEGACY_ROOT_THEME_PREFIXES = [
+        'sl-theme-',
+        'wa-brand-',
+        'wa-palette-',
+        'wa-neutral-',
+        'wa-success-',
+        'wa-warning-',
+        'wa-danger-',
+    ]
+
+    static LEGACY_ROOT_THEME_CLASSES = new Set([
+                                                   'wa-theme-premium',
+                                               ])
     static uiInit = false
     /**
      * Split a slug using '#'
@@ -99,11 +118,48 @@ export class AppUtils {
 
     static MapToObject = map => Object.fromEntries(map.entries())
 
-    static setTheme = (theme = null) => {
-        if (!theme) {
-            theme = lgs.settings.theme
+    static resolveBrandColor = (brandColor = null) => {
+        const fallbackColor = localStorage.getItem(AppUtils.BRAND_COLOR_STORAGE_KEY) || AppUtils.DEFAULT_BRAND_COLOR
+        const resolvedColor = brandColor || fallbackColor
+        return AppUtils.BRAND_COLORS.includes(resolvedColor) ? resolvedColor : AppUtils.DEFAULT_BRAND_COLOR
+    }
+
+    static normalizeDocumentThemeClasses = (root = document.documentElement) => {
+        if (!root) {
+            return
         }
-        document.documentElement.classList.add(`sl-theme-${theme}`)
+
+        const toRemove = Array.from(root.classList).filter((className) => {
+            if (AppUtils.LEGACY_ROOT_THEME_CLASSES.has(className)) {
+                return true
+            }
+
+            if (className.startsWith('wa-theme-') && className !== 'wa-theme-lgs1920') {
+                return true
+            }
+
+            return AppUtils.LEGACY_ROOT_THEME_PREFIXES.some(prefix => className.startsWith(prefix))
+        })
+
+        if (toRemove.length > 0) {
+            root.classList.remove(...toRemove)
+        }
+    }
+
+    static setTheme = (theme = null, brandColor = null) => {
+        if (!theme) {
+            theme = localStorage.getItem(AppUtils.THEME_STORAGE_KEY) || lgs.settings.theme || 'system'
+        }
+
+        const root = document.documentElement
+        const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
+        const isDark = theme === 'dark' || (theme === 'system' && mediaQuery.matches)
+        const resolvedBrandColor = AppUtils.resolveBrandColor(brandColor)
+
+        AppUtils.normalizeDocumentThemeClasses(root)
+        root.classList.add(AppUtils.ROOT_THEME_CLASS, `wa-brand-${resolvedBrandColor}`)
+        root.classList.toggle('wa-dark', isDark)
+        root.classList.toggle('wa-light', !isDark)
     }
 
     /**
@@ -192,6 +248,7 @@ export class AppUtils {
             .then(text => YAML.parse(text),
             )
 
+
         // add settings section
         settings.widgets = raw.widgets
 
@@ -251,7 +308,7 @@ export class AppUtils {
         lgs.setDefaultPOIConfiguration()
 
         // Register Font Awesome icons in ShoeLace
-        FA2SL.useFontAwesomeInShoelace('fa')
+        FA2SL.registerFontAwesomeInShoelace('fa')
 
         // Backend
         lgs.BACKEND_API = `${lgs.servers.studio.proxy}${lgs.servers.backend.protocol}://${lgs.servers.backend.domain}:${lgs.servers.backend.port}`
@@ -304,6 +361,7 @@ export class AppUtils {
         })
         await Promise.all(promises)
 
+        Object.assign(lgs.stores.flythrough, ensureFlythroughSettings())
 
         // Removed useless sections in DB  //TODO do not read and check if nothing changed
         const DBSections = await lgs.db.settings.keys(SETTINGS_STORE)
@@ -329,21 +387,23 @@ export class AppUtils {
             }
         }
 
-        //sanitize strings
-        Object.defineProperty(String.prototype, 'sanitize', {
-            value:        function () {
-                return this
-                    .normalize('NFKD')                  // Removes accents and special Unicode characters
-                    .replace(/[\u0300-\u036f]/g, '')    // Strips diacritics (accent marks)
-                    .trim()                             // Removes leading and trailing spaces
-                    .replace(/[\/\\:*?"<>|]/g, '_')     // Replaces forbidden filename characters
-                    .replace(/[\s]+/g, '_')             // Converts multiple spaces to a single underscore
-                    .replace(/_+/g, '_')                // Collapses consecutive underscores
-                    .replace(/^_+|_+$/g, '')           // Removes leading and trailing underscores
-            },
-            writable:     false,
-            configurable: false,
-        })
+        // sanitize strings once; HMR can rerun init in the same runtime
+        if (!Object.getOwnPropertyDescriptor(String.prototype, 'sanitize')) {
+            Object.defineProperty(String.prototype, 'sanitize', {
+                value:        function () {
+                    return this
+                        .normalize('NFKD')                  // Removes accents and special Unicode characters
+                        .replace(/[\u0300-\u036f]/g, '')    // Strips diacritics (accent marks)
+                        .trim()                             // Removes leading and trailing spaces
+                        .replace(/[/\\:*?"<>|]/g, '_')      // Replaces forbidden filename characters
+                        .replace(/[\s]+/g, '_')             // Converts multiple spaces to a single underscore
+                        .replace(/_+/g, '_')                // Collapses consecutive underscores
+                        .replace(/^_+|_+$/g, '')           // Removes leading and trailing underscores
+                },
+                writable:     false,
+                configurable: false,
+            })
+        }
 
 
         // Ping server
@@ -374,14 +434,11 @@ export class AppUtils {
                 // Update last visit
                 lgs.settings.app.lastVisit = Date.now()
 
-                // Read changelog
-                const changeLog = new ChangelogManager()
-                changeLog.list().then(files => {
-                    lgs.changelog = {
-                        files:  files,
-                        toRead: changeLog.whatsNew(files.list, lgs.settings.app.lastVisit),
-                    }
-                })
+                // Changelog metadata and content are loaded lazily when the drawer is displayed.
+                lgs.changelog = {
+                    files:  null,
+                    toRead: [],
+                }
 
                 // Set Elevation servers
                 lgs.elevationServers = ElevationServer.SERVERS
@@ -479,8 +536,12 @@ export class AppUtils {
     static startBackend = async () => {
         if (!__.app.isDevelopment()) {
             return lgs.axios({
-                                 method: 'get',
-                                 url:    `start-backend.php`,
+                                 method:  'post',
+                                 url:     `start-backend.php`,
+                                 headers: {
+                                     Accept:             'application/json',
+                                     'X-Requested-With': 'XMLHttpRequest',
+                                 },
                              })
                 .then(function (response) {
                     return response.data
@@ -522,7 +583,7 @@ export class AppUtils {
      */
     static setSlug = ({suffix = '', content = '', prefix = ''}) => {
 
-        // Array could be an array, let's join it into a single string
+        // content could be an array, let's join it into a single string
         // Slugify each term
         if (Array.isArray(content)) {
             content = content.map(text => __.app.slugify(text)).join('#')
@@ -686,7 +747,7 @@ export class AppUtils {
                 const testFile = new File(['test'], 'test.mp4', {type: 'video/mp4'})
                 return navigator.canShare({files: [testFile]})
             }
-            catch (e) {
+            catch {
                 return false
             }
         }

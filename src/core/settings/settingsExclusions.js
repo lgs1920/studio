@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-05-10
+ * Last modified: 2026-05-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -20,8 +20,9 @@ export const SETTING_EXCLUSIONS = [
         'layers.base', 'layers.terrain', 'layers.overlay',
         'layers.filter', 'layers.colorSettings',
         'app', 'scene', 'starter', 'coordinateSystem', 'unitSystem', 'poi.filter',
+        'journey.activity',
         'ui.camera', 'ui.welcome', 'swatches.current',
-        'ui.menu', 'ui.poi.rotate', 'ui.poi.focusOnEdit', 'ui.journeyToolbar',
+        'ui.flythrough', 'ui.menu', 'ui.poi.rotate', 'ui.poi.focusOnEdit', 'ui.journeyToolbar',
         'ui.compass.mode', 'ui.video.fps', 'ui.video.quality', 'ui.video.ratio', 'ui.pwa',
         'widgets',
     ].sort((a, b) => {

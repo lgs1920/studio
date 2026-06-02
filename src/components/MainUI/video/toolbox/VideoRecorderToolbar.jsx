@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-05-10
+ * Last modified: 2026-05-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -17,16 +17,11 @@
 /*******************************************************************************
  * VideoRecorderToolbar.jsx - Displays video recording controls and stats
  ******************************************************************************/
-import { FontAwesomeIcon }     from '@Components/FontAwesomeIcon'
 import { VIDEO_WIDGETS_BOARD } from '@Core/constants'
 import { ScreenMediaRecorder } from '@Core/ui/screen-media-recorder/recorder/ScreenMediaRecorder'
-import { faCircle }            from '@fortawesome/duotone-regular-svg-icons'
-import { faPause, faPlay, faStop, faXmark } from '@fortawesome/pro-regular-svg-icons'
-import { SlIconButton, SlTooltip }          from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                            from '@Utils/FA2SL'
 import { UIToast }                          from '@Utils/UIToast'
 import { UnitUtils }                        from '@Utils/UnitUtils'
-import classNames                           from 'classnames'
+import { WaButton, WaCard, WaIcon, WaTooltip } from '@web.awesome.me/webawesome-pro/dist/react'
 import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import { useSnapshot }                      from 'valtio'
 import '../style.css'
@@ -34,7 +29,7 @@ import '../style.css'
 /**
  * RecorderControls - Renders play/pause and stop buttons for the recorder
  */
-const RecorderControls = memo(({recording, paused, recorder, onFinalize}) => {
+const RecorderControls = memo(({recording, paused, recorder, starting, onFinalize}) => {
 
     const $video = lgs.stores.ui.video
 
@@ -48,26 +43,38 @@ const RecorderControls = memo(({recording, paused, recorder, onFinalize}) => {
         onFinalize(true)
         $video.finalizing = true
         recorder?.stopVideo()
-    }, [recorder, onFinalize])
+    }, [recorder, onFinalize, $video])
 
     return (
         <>
-            <SlTooltip content={paused ? 'Click to resume' : 'Click to pause'}>
-                <SlIconButton
-                    library="fa"
-                    name={FA2SL.set(paused ? faPlay : faPause)}
-                    onClick={handlePlayPause}
-                    disabled={!recorder}
-                />
-            </SlTooltip>
+            <WaTooltip for="video-recorder-play-pause">
+                {paused ? 'Click to resume' : 'Click to pause'}
+            </WaTooltip>
+            <WaButton
+                id="video-recorder-play-pause"
+                appearance="plain"
+                variant="brand"
+                size="s"
+                className="video-recorder-action"
+                onClick={handlePlayPause}
+                disabled={!recorder || starting || !recording}
+            >
+                <WaIcon name={paused ? 'play' : 'pause'} variant="regular"/>
+            </WaButton>
             {recording && !paused && (
-                <SlTooltip content="Click to stop">
-                    <SlIconButton
-                        library="fa"
-                        name={FA2SL.set(faStop)}
+                <>
+                    <WaTooltip for="video-recorder-stop">{'Click to stop'}</WaTooltip>
+                    <WaButton
+                        id="video-recorder-stop"
+                        appearance="plain"
+                        variant="brand"
+                        size="s"
+                        className="video-recorder-action"
                         onClick={handleStop}
-                    />
-                </SlTooltip>
+                    >
+                        <WaIcon name="stop" variant="regular"/>
+                    </WaButton>
+                </>
             )}
         </>
     )
@@ -83,6 +90,7 @@ export const VideoRecorderToolbar = ({toolbar}) => {
     const [state, setState] = useState({
                                            recordedDuration: 0,
                                            recordedSize: 0,
+                                           currentFps: 0,
                                            finalizing:   false,
                                        })
 
@@ -106,13 +114,20 @@ export const VideoRecorderToolbar = ({toolbar}) => {
         return UnitUtils.convert(bytes).toBytesUnit()
     }, [])
 
+    const formatCurrentFps = useCallback((fps) => {
+        if (!Number.isFinite(fps) || fps <= 0) {
+            return '-- fps'
+        }
+        return `${Math.round(fps)} fps`
+    }, [])
+
     /**
      * Updates video and local state
      */
     const updateState = useCallback((updates) => {
         Object.assign($video, updates)
         setState((prev) => ({...prev, ...updates}))
-    }, [])
+    }, [$video])
 
     /**
      * Shows toast notification
@@ -128,33 +143,13 @@ export const VideoRecorderToolbar = ({toolbar}) => {
             return
         }
 
-        const handleStart = () => {
-            if ($video.recording) {
-                return
-            }
-
-            // Widgets are already hidden by VideoRecordingSettingsToolbar
-            // No need to hide them again here
-
-            updateState({
-                            preRecording: false,
-                            recording: true,
-                            finalizing:   false,
-                            paused:       false,
-                            size:         0,
-                            recordedDuration: 0,
-                            recordedSize: 0,
-                        })
-            showToast('warning', 'ON AIR!')
-
-        }
-
         const handleInfo = (event) => {
             // Use the duration directly from the event
             setState((prev) => ({
                 ...prev,
                 recordedSize:     event.detail.size,
                 recordedDuration: event.detail.duration,
+                currentFps: event.detail.currentFps ?? 0,
             }))
         }
 
@@ -195,6 +190,7 @@ export const VideoRecorderToolbar = ({toolbar}) => {
         }
 
         const handleStop = (event) => {
+            __.ui.flythroughVideoSync?.stopFlythrough?.()
             if (__.recorder?.isRecording() || $video.paused) {
                 __.recorder.stopVideo()
             }
@@ -205,9 +201,11 @@ export const VideoRecorderToolbar = ({toolbar}) => {
                             preRecording: false,
                             recording:    false,
                             paused:       false,
+                            step:         null,
                             size:         0,
                             recordedDuration: 0,
                             recordedSize: 0,
+                            currentFps: 0,
                             finalizing:   false,
                         })
 
@@ -228,14 +226,19 @@ export const VideoRecorderToolbar = ({toolbar}) => {
             showToast('success', `Saved in ${event.detail.filename}`)
         }
 
+        const handleError = (event) => {
+            showToast('error', event.detail?.error?.message ?? 'Video recording failed.')
+        }
+
         const events = [
-            [ScreenMediaRecorder.events.START, handleStart],
             [ScreenMediaRecorder.events.INFO, handleInfo],
             [ScreenMediaRecorder.events.PAUSE, handlePause],
             [ScreenMediaRecorder.events.RESUME, handleResume],
             [ScreenMediaRecorder.events.MAX_SIZE, handleStop],
             [ScreenMediaRecorder.events.MAX_DURATION, handleStop],
             [ScreenMediaRecorder.events.STOP, handleStop],
+            [ScreenMediaRecorder.events.CANCEL, handleStop],
+            [ScreenMediaRecorder.events.ERROR, handleError],
             [ScreenMediaRecorder.events.DOWNLOAD, handleDownload],
             [ScreenMediaRecorder.events.FINALIZE, handleFinalize],
         ]
@@ -247,9 +250,10 @@ export const VideoRecorderToolbar = ({toolbar}) => {
                 events.forEach(([event, handler]) => __.recorder.removeEventListener(event, handler))
             }
         }
-    }, [__.recorder, updateState, showToast, video.maxSize, video.maxDuration])
+    }, [updateState, showToast, video.maxSize, video.maxDuration, $video])
 
     const handleCancel = useCallback(async () => {
+        __.ui.flythroughVideoSync?.stopFlythrough?.()
         if (__.recorder) {
             await __.recorder.cancelVideo()
         }
@@ -261,47 +265,53 @@ export const VideoRecorderToolbar = ({toolbar}) => {
                         editing:      true,
                         recordedDuration: 0,
                         recordedSize: 0,
+                        currentFps: 0,
                         finalizing:   false,
                     })
         showToast('warning', 'Recording has been canceled!')
-    }, [__.recorder, updateState, showToast])
+    }, [updateState, showToast])
 
     return (
-        <div
+        <WaCard
             ref={_toolbar}
-            className="video-recorder-widget lgs-toolbar-content lgs-toolbar lgs-toolbar-horizontal lgs-one-line-card on-map"
+            className="video-recorder-widget lgs-toolbar-content lgs-toolbar lgs-toolbar-horizontal wa-theme-lgs1920-on-map"
         >
-            <FontAwesomeIcon
-                icon={faCircle}
-                className={classNames(
-                    {
-                        'fa-beat':  video.paused || video.finalizing,
-                        finalizing: video.finalizing,
-                    },
-                    'video-recorder-indicator',
-                )}
+            <WaIcon
+                name="circle"
+                family="duotone"
+                variant="regular"
+                animation={video.paused || video.finalizing ? 'beat' : undefined}
+                className={video.finalizing ? 'video-recorder-indicator finalizing' : 'video-recorder-indicator'}
             />
             <span className="duration">{formatDuration(state.recordedDuration)}</span>
             <span className="size">{formatSize(state.recordedSize)}</span>
-            {state.finalizing ? (
+            <span className="current-fps">{formatCurrentFps(state.currentFps)}</span>
+            {video.preRecording ? (
+                <div className="blinking">Starting...</div>
+            ) : state.finalizing ? (
                 <div className="blinking">Finalisation...</div>
             ) : (
                  <RecorderControls
                      recording={video.recording}
                      paused={video.paused}
                      recorder={__.recorder}
+                     starting={video.preRecording}
                      onFinalize={(value) => setState((prev) => ({...prev, finalizing: value}))}
                  />
              )}
-            <span/>
-            <SlTooltip content="Cancel" placement="top">
-                <SlIconButton
-                    onPointerDown={handleCancel}
-                    className="lgs-cancel-recording"
-                    library="fa"
-                    name={FA2SL.set(faXmark)}
-                />
-            </SlTooltip>
-        </div>
+            <span className="video-recorder-spacer"/>
+            <WaTooltip for="video-recorder-cancel" placement="top">{'Cancel'}</WaTooltip>
+            <WaButton
+                id="video-recorder-cancel"
+                appearance="plain"
+                variant="brand"
+                size="s"
+                onPointerDown={handleCancel}
+                disabled={video.preRecording}
+                className="video-recorder-action lgs-cancel-recording"
+            >
+                <WaIcon name="xmark" variant="regular"/>
+            </WaButton>
+        </WaCard>
     )
 }

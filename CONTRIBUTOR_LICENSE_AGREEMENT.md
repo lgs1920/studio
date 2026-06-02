@@ -11,9 +11,9 @@ You certify that each contribution you submit is:
 
 You confirm that your contribution does not violate any third‑party rights.
 
-## 2. License Granted to the Author
+## 2. License Granted to LGS1920
 
-You grant the project’s copyright holder (“the Author”) a worldwide,
+You grant LGS1920, as the project’s copyright holder, a worldwide,
 perpetual, irrevocable, royalty‑free, transferable, and non‑exclusive license to:
 
 - use, reproduce, modify, adapt, publish, distribute, sublicense,
@@ -25,7 +25,7 @@ perpetual, irrevocable, royalty‑free, transferable, and non‑exclusive licens
 
 You acknowledge that:
 
-- the Author may relicense the project, in whole or in part,
+- LGS1920 may relicense the project, in whole or in part,
   under any license, now or in the future,
 - without requiring your approval or additional agreement.
 

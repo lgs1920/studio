@@ -7,167 +7,156 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-27
- * Last modified: 2026-02-27
+ * Created on: 2026-05-10
+ * Last modified: 2026-05-10
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { FontAwesomeIcon }                        from '@Components/FontAwesomeIcon'
-import { VideoFPSToolbar }                        from '@Components/MainUI/video/toolbox/VideoFPSToolbar'
-import { VideoQualityToolbar }                    from '@Components/MainUI/video/toolbox/VideoQualityToolbar'
-/**
- * VideoFPSSelector renders a draggable toolbar for selecting video FPS
- * @component
- * @param {Object} props - Component props
- * @param {Object} props.store - Valtio store with crop state (fpsEditor, etc.)
- * @returns {JSX.Element} Draggable video FPS selector UI
- */
-import { ScreenMediaRecorder }                    from '@Core/ui/screen-media-recorder/recorder/ScreenMediaRecorder'
-import { faGripDots, faCaretDown, faCaretRight }  from '@fortawesome/pro-solid-svg-icons'
-import { SlIcon, SlTooltip }                      from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                                  from '@Utils/FA2SL'
-import classNames                                 from 'classnames'
-import { memo, useCallback, useEffect, useState } from 'react'
-import { useSnapshot }                            from 'valtio'
+/*******************************************************************************
+ * File: VideoPresetToolbar.jsx
+ ******************************************************************************/
+
+import { VideoFPSToolbar }                                                 from '@Components/MainUI/video/toolbox/VideoFPSToolbar'
+import {
+    VideoQualityToolbar,
+}                                                                          from '@Components/MainUI/video/toolbox/VideoQualityToolbar'
+import {
+    ScreenMediaRecorder,
+}                                                                          from '@Core/ui/screen-media-recorder/recorder/ScreenMediaRecorder'
+import { LGSPopup }                                                        from '@Components/LGSPopup'
+import {
+    WaButton,
+}                                                                          from '@web.awesome.me/webawesome-pro/dist/react'
+import classNames                                                          from 'classnames'
+import { Fragment, memo, useCallback, useEffect, useRef, useState }        from 'react'
+import { useSnapshot }                                                     from 'valtio'
 import '../style.css'
 
 export const VideoPresetToolbar = memo(() => {
-    // Access reactive cropper and video states
     const $video = lgs.stores.ui.video
+    const $videoSettings = lgs.settings.ui.video
     const video = useSnapshot($video)
-    const videoSettings = useSnapshot(lgs.settings.ui.video || {})
+    const toolbars = useSnapshot(lgs.settings.ui.toolbars)
+
     const [preset, setPreset] = useState(null)
     const [open, setOpen] = useState(false)
+    const _toolbarRef = useRef(null)
 
-
-    const getPresets = (fps, quality) => {
-        // Iterate over the Map entries
-        for (const [key, preset] of ScreenMediaRecorder.VIDEO_PRESETS) {
+    /**
+     * Find the preset key matching the current store indexes
+     * @param {number} fpsIndex
+     * @param {number} qualityIndex
+     * @returns {string}
+     */
+    const getPresets = useCallback((fpsIndex, qualityIndex) => {
+        for (const [key, p] of ScreenMediaRecorder.VIDEO_PRESETS) {
             if (key === 'custom') {
                 continue
-            } // skip custom during matching
-            if (preset.fps === fps && preset.quality === quality) {
-                return {key, ...preset}
+            }
+            // Compare current store indexes with preset definition indexes
+            if (p.fps === fpsIndex && p.quality === qualityIndex) {
+                return {key, ...p}
             }
         }
-        // Default to custom if no match
-        const customPreset = ScreenMediaRecorder.VIDEO_PRESETS.get('custom')
-        return {key: 'custom', ...customPreset}
-    }
-    /**
-     * Initialize default FPS from settings
-     */
-    useEffect(() => {
-        $video.fps = lgs.settings.ui.video.fps ?? ScreenMediaRecorder.FPS[ScreenMediaRecorder.DEFAULT_FPS_INDEX]
-        $video.quality = lgs.settings.ui.video.quality ?? ScreenMediaRecorder.QUALITY[ScreenMediaRecorder.DEFAULT_QUALITY_INDEX]
+        return {key: 'custom', ...ScreenMediaRecorder.VIDEO_PRESETS.get('custom')}
+    }, [])
 
-        if (videoSettings?.adaptiveQuality?.enabled) {
-            setPreset('auto')
-            setOpen(false)
-            return
-        }
-        const current = getPresets($video.fps, $video.quality)
-        setPreset(current.key)
-        if (current.key !== 'custom') {
-            setOpen(false)
-        }
-    }, [$video.fps, $video.quality, videoSettings?.adaptiveQuality?.enabled])
-
-
-    /**
-     * Handles selection of a FPS value
-     * Updates the selected FPS and stores it in settings
-     * @param {number} index - Index of the selected FPS
-     * @param {Event} event - Click event from icon
-     */
-    const handleChangePreset = useCallback(key => {
-        if (key === 'auto') {
-            const current = lgs.settings.ui.video.adaptiveQuality || {}
-            lgs.settings.ui.video.adaptiveQuality = {...current, enabled: true}
-            const adaptiveFps = lgs.settings.ui.video.adaptiveFps || {}
-            lgs.settings.ui.video.adaptiveFps = {...adaptiveFps, enabled: true}
-            setPreset('auto')
-            setOpen(false)
-            return
-        }
-        const {fps, quality} = ScreenMediaRecorder.VIDEO_PRESETS.get(key)
-        setPreset(key)
-
-        if (key === 'custom') {
-            setOpen(prev => !prev)
-        }
-        else {
-            setOpen(false)
-            lgs.stores.ui.video.fps = fps
-            lgs.settings.ui.video.fps = fps
-            $video.fps = fps
-            lgs.stores.ui.video.quality = quality
-            lgs.settings.ui.video.quality = quality
-            $video.quality = quality
-        }
-        if (lgs.settings.ui.video.adaptiveQuality?.enabled) {
-            lgs.settings.ui.video.adaptiveQuality = {...lgs.settings.ui.video.adaptiveQuality, enabled: false}
-        }
+    const getSafeIndex = useCallback((value, list, fallback) => {
+        return Number.isInteger(value) && value >= 0 && value < list.length ? value : fallback
     }, [])
 
     useEffect(() => {
-        if (preset === 'custom') {
-            // Checks if it is an predefined preset
-            const current = getPresets($video.fps, $video.quality)
-            setPreset(current.key)
+        const safeFps = getSafeIndex($videoSettings?.fps, ScreenMediaRecorder.FPS, ScreenMediaRecorder.DEFAULT_FPS_INDEX)
+        const safeQuality = getSafeIndex($videoSettings?.quality, ScreenMediaRecorder.QUALITY, ScreenMediaRecorder.DEFAULT_QUALITY_INDEX)
+
+        if ($video.fps !== safeFps) {
+            $video.fps = safeFps
+        }
+        if ($video.quality !== safeQuality) {
+            $video.quality = safeQuality
+        }
+        if ($videoSettings.fps !== safeFps) {
+            $videoSettings.fps = safeFps
+        }
+        if ($videoSettings.quality !== safeQuality) {
+            $videoSettings.quality = safeQuality
+        }
+    }, [$video, $videoSettings, getSafeIndex])
+
+    /**
+     * Sync local preset state when store indexes change
+     */
+    useEffect(() => {
+        const current = getPresets(video.fps, video.quality)
+        setPreset(current.key)
+
+        if (current.key !== 'custom') {
+            setOpen(false)
+        }
+    }, [video.fps, video.quality, getPresets])
+
+    /**
+     * Update store indexes based on preset selection
+     */
+    const handleChangePreset = useCallback((key, event) => {
+        if (key === 'custom') {
+            event?.stopPropagation()
+            setOpen(prev => !prev)
+            return
         }
 
-    }, [open])
+        const config = ScreenMediaRecorder.VIDEO_PRESETS.get(key)
+        if (config) {
+            // Update proxy indexes
+            $video.fps = config.fps
+            $video.quality = config.quality
 
-    const handleOpen = useCallback(event => {
-        setOpen(!open)
-    }, [open])
+            // Sync settings
+            $videoSettings.fps = config.fps
+            $videoSettings.quality = config.quality
+        }
+    }, [$video, $videoSettings])
 
-    // Render draggable toolbar with FPS options
     return (
-        <div className="video-preset-widget-wrapper  lgs-card on-map">
-            <div
-                className={classNames('video-preset-widget', 'video-preset-grid', {'video-preset-grid-open': preset === 'custom'})}>
-                <SlTooltip content="Drag me">
-                    <SlIcon library="fa" className="grabber" name={FA2SL.set(faGripDots)}/>
-                </SlTooltip>
-                <div className="buttons-bar-on-map">
+        <div ref={_toolbarRef} className="video-preset-widget-wrapper lgs-card wa-theme-lgs1920-on-map">
+            <div className="video-preset-widget">
+                <div className="buttons-bar-on-map video-choice-buttons video-choice-buttons-on-map">
                     {Array.from(ScreenMediaRecorder.VIDEO_PRESETS).map(([key, value]) => (
-                        <SlTooltip
-                            key={key}
-                            content={value.description ?? value.name}
-                            placement="top"
-                        >
-                            <div
-                                className={classNames('lgs-one-line-card on-map', {'selected': key === preset})}
+                        <Fragment key={key}>
+                            <WaButton
+                                className={classNames('video-choice-button', {'is-selected': key === preset})}
+                                size="s"
+                                variant="neutral"
+                                appearance={key === preset ? 'outlined' : 'plain'}
+                                id={`video-preset-${key}`}
                                 onClick={event => handleChangePreset(key, event)}
+                                withCaret={value.submenu}
                             >
                                 {value.name}
-                            </div>
-                        </SlTooltip>
+                            </WaButton>
+
+                            {value.submenu && (
+                                <LGSPopup
+                                    anchor={`video-preset-${key}`}
+                                    active={open}
+                                    onRequestClose={() => setOpen(false)}
+                                    placement="bottom-end"
+                                    strategy="fixed"
+                                    distance={4}
+                                >
+                                    <div className="video-preset-custom lgs-card wa-theme-lgs1920-on-map"
+                                         style={{opacity: toolbars.opacity}}>
+                                        <VideoFPSToolbar choicesOnMap/>
+                                        <VideoQualityToolbar choicesOnMap/>
+                                    </div>
+                                </LGSPopup>
+                            )}
+                        </Fragment>
                     ))}
-                    <SlTooltip content="Adaptive quality" placement="top">
-                        <div
-                            className={classNames('lgs-one-line-card on-map', {'selected': preset === 'auto'})}
-                            onClick={event => handleChangePreset('auto', event)}
-                        >
-                            {'Auto'}
-                        </div>
-                    </SlTooltip>
                 </div>
-
             </div>
-            {open &&
-                <div className="video-preset-custom">
-                    <hr/>
-                    <div className="video-preset-grid"><span/><VideoFPSToolbar/></div>
-                    <div className="video-preset-grid"><span/><VideoQualityToolbar/></div>
-
-
-                </div>
-            }
         </div>
     )
 })

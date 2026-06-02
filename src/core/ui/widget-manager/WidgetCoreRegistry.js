@@ -7,14 +7,14 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-14
- * Last modified: 2026-02-14
+ * Created on: 2026-04-23
+ * Last modified: 2026-04-23
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { LGS_VISUAL_WIDGET, SECOND, WIDGETS_CAPABILITIES } from '@Core/constants'
+import { LGS_VISUAL_WIDGET, LGS_WIDGET, SCENE_WIDGETS_BOARD, SECOND, WIDGETS_CAPABILITIES } from '@Core/constants'
 import { v4 as uuid }                                      from 'uuid'
 
 /**
@@ -36,6 +36,28 @@ export class WidgetCoreRegistry {
     #ttl = null
 
     constructor() {
+    }
+
+    #resolvePersistedRatios = (savedWidget, referenceRect, boundsRect) => {
+        let leftRatio = savedWidget.leftRatio
+        let topRatio = savedWidget.topRatio
+
+        const shouldMigrateToBoardReference = savedWidget.positionReference === 'scene' &&
+            savedWidget.widgetsBoard &&
+            savedWidget.widgetsBoard !== SCENE_WIDGETS_BOARD
+        if (shouldMigrateToBoardReference &&
+            boundsRect?.width > 0 &&
+            boundsRect?.height > 0 &&
+            referenceRect?.width > 0 &&
+            referenceRect?.height > 0) {
+            const absoluteCenterX = boundsRect.left + ((leftRatio / 100) * boundsRect.width)
+            const absoluteCenterY = boundsRect.top + ((topRatio / 100) * boundsRect.height)
+
+            leftRatio = ((absoluteCenterX - referenceRect.left) / referenceRect.width) * 100
+            topRatio = ((absoluteCenterY - referenceRect.top) / referenceRect.height) * 100
+        }
+
+        return {leftRatio, topRatio}
     }
 
     /**
@@ -174,13 +196,23 @@ export class WidgetCoreRegistry {
             return
         }
         if (config.observer) {
+            const observedTargets = config.observedTargets ?? [config.boundsContainer ?? config.container]
             try {
-                config.observer.unobserve(config.container)
+                observedTargets.filter(Boolean).forEach(target => config.observer.unobserve(target))
             }
-            catch (_) {
+            catch {
+                void 0
             }
             config.observer.disconnect()
             config.observer = null
+        }
+        if (config.elementObserver) {
+            config.elementObserver.disconnect()
+            config.elementObserver = null
+        }
+        if (config.windowResizeHandler) {
+            window.removeEventListener('resize', config.windowResizeHandler)
+            config.windowResizeHandler = null
         }
         this.#widgets.delete(elementId)
         this.#moveables.delete(elementId)
@@ -225,6 +257,57 @@ export class WidgetCoreRegistry {
     }
 
     /**
+     * Invalidates the runtime state of all widgets attached to a board without touching persistence.
+     * This is used when a board is temporarily unmounted and needs to be reloaded from DB on the next mount.
+     *
+     * @param {string} widgetsBoard
+     * @returns {number}
+     */
+    invalidateRuntimeByBoard = (widgetsBoard) => {
+        if (!widgetsBoard) {
+            return 0
+        }
+
+        let invalidated = 0
+        for (const [elementId, config] of this.#widgets) {
+            if (config.widgetsBoard !== widgetsBoard) {
+                continue
+            }
+
+            if (config.observer) {
+                const observedTargets = config.observedTargets ?? [config.boundsContainer ?? config.container]
+                try {
+                    observedTargets.filter(Boolean).forEach(target => config.observer.unobserve(target))
+                }
+                catch {
+                    void 0
+                }
+                config.observer.disconnect()
+                config.observer = null
+            }
+            if (config.elementObserver) {
+                config.elementObserver.disconnect()
+                config.elementObserver = null
+            }
+            if (config.windowResizeHandler) {
+                window.removeEventListener('resize', config.windowResizeHandler)
+                config.windowResizeHandler = null
+            }
+            config.element = null
+            config.observedTargets = []
+            config.fromDB = false
+            config.fromRuntime = false
+            config.runtimeReady = false
+            config.skipInitialElementResizeSync = false
+            __.ui.widgetCache?.unmount?.(elementId)
+            this.#moveables.delete(elementId)
+            invalidated += 1
+        }
+
+        return invalidated
+    }
+
+    /**
      * Retrieves the widget element by ID.
      * @param {string} id - The widget ID
      * @returns {HTMLElement|null} The DOM element or null if not found
@@ -255,8 +338,6 @@ export class WidgetCoreRegistry {
      */
     getWidgetIDKey = () => this.#idKey
 
-    retrieveElementId = element => element.getAttribute(this.#idKey)
-
     /**
      * Retrieves video format ratio configuration.
      * @param {string} ratio - Ratio identifier (e.g., '16x9')
@@ -277,8 +358,9 @@ export class WidgetCoreRegistry {
                           : this.retrieveElementId(element) || uuid()
 
         let config
+        const hasRuntimeConfig = this.#widgets.has(elementId)
 
-        if (!this.#widgets.has(elementId)) {
+        if (!hasRuntimeConfig) {
             const anchor = initialConfig.isCropper
                            ? (initialConfig.attachTo && this.#validPositions.includes(initialConfig.attachTo) ? initialConfig.attachTo : 'center')
                            : (initialConfig.attachTo && this.#validPositions.includes(initialConfig.attachTo)
@@ -298,18 +380,27 @@ export class WidgetCoreRegistry {
                 attachTo:               anchor,
                 boundStatus:            {left: false, top: false, right: false, bottom: false},
                 bounds:                 {left: 0, top: 0, right: 0, bottom: 0},
+                canLock:                initialConfig.canLock ?? true,
+                canReduce:              initialConfig.canReduce ?? true,
                 centerRatio:            {x: 0.5, y: 0.5},
+                collapsed:              initialConfig.collapsed ?? false,
                 container:              initialConfig.container,
                 contextMenu:            this.cloneContext(initialConfig?.contextMenu ?? {}, WIDGETS_CAPABILITIES),
+                boundsContainer:        initialConfig.boundsContainer ?? initialConfig.container,
                 cropDimensions:         initialConfig.cropDimensions,
                 dimensions:             {width: 0, height: 0},
                 dynamic:                initialConfig.dynamic ?? false,
                 element:                initialConfig.element,
+                elementObserver:        null,
+                expandedDimensions:     initialConfig.expandedDimensions ?? null,
+                expandedInlineDimensions: initialConfig.expandedInlineDimensions ?? null,
                 group:                  initialConfig.group ?? null,
+                icon:                   initialConfig.icon ?? null,
                 id:                     elementId,
                 isCropper:              initialConfig.isCropper,
                 isMobile:               initialConfig.isMobile,
                 left:                   initialConfig.left,
+                locked:                 initialConfig.locked ?? false,
                 mandatory:              initialConfig.mandatory ?? false,
                 margin:                 initialConfig.margin,
                 max:                    initialConfig.max ?? {width: 500, height: 500},
@@ -323,6 +414,7 @@ export class WidgetCoreRegistry {
                 ratio:                  this.getRatio(ratio),
                 resizeFromCenter:       initialConfig.resizeFromCenter ?? false,
                 rotate:                 initialConfig.rotate ?? 0,
+                runtimeReady:           false,
                 scale:                  initialConfig.scale ?? {x: 1, y: 1},
                 setPosition:            initialConfig.setPosition,
                 showControlBox:         initialConfig.showControlBox,
@@ -347,39 +439,67 @@ export class WidgetCoreRegistry {
             if (initialConfig.container) {
                 config.container = initialConfig.container
             }
+            if (initialConfig.canLock !== undefined) {
+                config.canLock = initialConfig.canLock
+            }
+            if (initialConfig.canReduce !== undefined) {
+                config.canReduce = initialConfig.canReduce
+            }
+            if (initialConfig.boundsContainer) {
+                config.boundsContainer = initialConfig.boundsContainer
+            }
             if (initialConfig.group !== undefined) {
                 config.group = initialConfig.group
+            }
+            if (initialConfig.icon !== undefined) {
+                config.icon = initialConfig.icon
+            }
+            if (initialConfig.widgetsBoard !== undefined) {
+                config.widgetsBoard = initialConfig.widgetsBoard
             }
         }
 
         config.fromDB = false
+        const requestedWidgetsBoard = initialConfig.widgetsBoard ?? config.widgetsBoard ?? null
+        const canReuseRuntimeConfig = hasRuntimeConfig &&
+            config.runtimeReady === true &&
+            (config.widgetsBoard ?? null) === requestedWidgetsBoard
+        config.fromRuntime = canReuseRuntimeConfig
 
-        if (config.persist) {
+        if (config.persist && !canReuseRuntimeConfig) {
             const savedWidget = await __.ui.widgetManager.getWidgetPosition(elementId)
 
             if (savedWidget && savedWidget.leftRatio !== undefined) {
                 config.fromDB = true
-                const containerRect = config.container?.getBoundingClientRect()
+                const referenceRect = config.container?.getBoundingClientRect()
+                const boundsRect = config.boundsContainer?.getBoundingClientRect?.() ?? referenceRect
 
-                if (containerRect) {
-                    // Ratios represent the center point of the widget
-                    const leftRatio = savedWidget.leftRatio
-                    const topRatio = savedWidget.topRatio
+                if (referenceRect) {
+                    const {leftRatio, topRatio} = this.#resolvePersistedRatios(savedWidget, referenceRect, boundsRect)
+                    const hasFiniteRatios = Number.isFinite(leftRatio) && Number.isFinite(topRatio)
 
-                    // Calculate absolute center position in pixels
-                    const absoluteCenterX = (leftRatio / 100) * containerRect.width
-                    const absoluteCenterY = (topRatio / 100) * containerRect.height
+                    if (hasFiniteRatios) {
+                        // Calculate absolute center position in pixels
+                        const absoluteCenterX = (leftRatio / 100) * referenceRect.width
+                        const absoluteCenterY = (topRatio / 100) * referenceRect.height
 
-                    // Convert center to top-left layout position
-                    // origin 50% 50% means: top-left = center - (size / 2)
-                    const absoluteLeft = containerRect.left + absoluteCenterX - (savedWidget.width / 2)
-                    const absoluteTop = containerRect.top + absoluteCenterY - (savedWidget.height / 2)
+                        // Convert center to top-left layout position
+                        // origin 50% 50% means: top-left = center - (size / 2)
+                        const absoluteLeft = referenceRect.left + absoluteCenterX - (savedWidget.width / 2)
+                        const absoluteTop = referenceRect.top + absoluteCenterY - (savedWidget.height / 2)
 
-                    config.savedRatios = {leftRatio, topRatio}
+                        config.savedRatios = {leftRatio, topRatio}
 
-                    config.position = {
-                        left: absoluteLeft,
-                        top:  absoluteTop,
+                        config.position = {
+                            left: absoluteLeft,
+                            top:  absoluteTop,
+                        }
+                    }
+                    else if (Number.isFinite(savedWidget.left) && Number.isFinite(savedWidget.top)) {
+                        config.position = {
+                            left: savedWidget.left,
+                            top:  savedWidget.top,
+                        }
                     }
 
                     config.dimensions = {
@@ -388,17 +508,34 @@ export class WidgetCoreRegistry {
                     }
 
                     config.cropDimensions = {
-                        left:   absoluteLeft,
-                        top:    absoluteTop,
+                        left:   config.position.left,
+                        top:    config.position.top,
                         width:  savedWidget.width,
                         height: savedWidget.height,
                     }
                 }
 
                 config.group = savedWidget.group || config.group
+                config.collapsed = Boolean(savedWidget.collapsed)
+                config.locked = Boolean(savedWidget.locked)
+                config.expandedDimensions = savedWidget.expandedDimensions ?? config.expandedDimensions
+                config.expandedInlineDimensions = savedWidget.expandedInlineDimensions ?? config.expandedInlineDimensions
+                if (config.canReduce === false && config.collapsed) {
+                    const width = config.expandedDimensions?.width
+                    const height = config.expandedDimensions?.height
+                    config.collapsed = false
+                    if (Number.isFinite(width) && Number.isFinite(height) && width > 0 && height > 0) {
+                        config.dimensions = {width, height}
+                    }
+                }
+                config.icon = initialConfig.icon ?? savedWidget.icon ?? config.icon
                 config.scale = savedWidget.scale || {x: 1, y: 1}
                 config.rotate = savedWidget.rotate || 0
-                config.ratio = savedWidget.ratio
+                const savedRatioValue = savedWidget.ratio?.value ?? savedWidget.ratio
+                const resolvedSavedRatio = this.getRatio(savedRatioValue)
+                if (resolvedSavedRatio) {
+                    config.ratio = resolvedSavedRatio
+                }
                 config.attachTo = savedWidget.attachTo || config.attachTo || 'center'
                 // Prefer initialConfig.zIndex if explicitly provided (for newly added widgets)
                 if (initialConfig.zIndex !== undefined) {
@@ -407,6 +544,7 @@ export class WidgetCoreRegistry {
                 else if (savedWidget.zIndex !== undefined) {
                     config.zIndex = savedWidget.zIndex
                 }
+
             }
         }
 
@@ -424,6 +562,20 @@ export class WidgetCoreRegistry {
      */
     preparePositionDataForStorage = (widgetId, config) => {
         const element = this.getElementById(widgetId)
+        const resolvedReferenceContainer = config.widgetsBoard
+                                           ? __.ui.widgetManager.resolveWidgetsBoardReferenceContainer(config.widgetsBoard)
+                                           : config.container
+        const resolvedBoundsContainer = config.widgetsBoard
+                                        ? __.ui.widgetManager.resolveWidgetsBoardBoundsContainer(config.widgetsBoard)
+                                        : config.boundsContainer
+
+        if (resolvedReferenceContainer) {
+            config.container = resolvedReferenceContainer
+        }
+        if (resolvedBoundsContainer) {
+            config.boundsContainer = resolvedBoundsContainer
+        }
+
         if (!element || !config.container) {
             return null
         }
@@ -431,23 +583,78 @@ export class WidgetCoreRegistry {
         const containerRect = config.container.getBoundingClientRect()
 
         const useCropDimensions = config.isCropper && Number.isFinite(config.cropDimensions?.width) && Number.isFinite(config.cropDimensions?.height)
-        const width = useCropDimensions ? config.cropDimensions.width : config.dimensions.width
-        const height = useCropDimensions ? config.cropDimensions.height : config.dimensions.height
+        const liveLeft = parseFloat(element.style.left || '')
+        const liveTop = parseFloat(element.style.top || '')
+        if (Number.isFinite(liveLeft) && Number.isFinite(liveTop)) {
+            config.position = {left: liveLeft, top: liveTop}
+        }
 
-        const centerX = config.position.left + (width / 2)
-        const centerY = config.position.top + (height / 2)
+        const rect = element.getBoundingClientRect()
+
+        let width
+        let height
+        if (useCropDimensions) {
+            width = config.cropDimensions.width
+            height = config.cropDimensions.height
+        }
+        else {
+            const computedStyle = window.getComputedStyle(element)
+            const styledWidth = parseFloat(computedStyle.width || '')
+            const styledHeight = parseFloat(computedStyle.height || '')
+            const scaleX = config.scale?.x ?? 1
+            const scaleY = config.scale?.y ?? 1
+
+            width = Number.isFinite(styledWidth) && styledWidth > 0
+                    ? styledWidth
+                    : (Number.isFinite(rect.width) && rect.width > 0 && scaleX > 0
+                       ? rect.width / scaleX
+                       : config.dimensions.width)
+            height = Number.isFinite(styledHeight) && styledHeight > 0
+                     ? styledHeight
+                     : (Number.isFinite(rect.height) && rect.height > 0 && scaleY > 0
+                        ? rect.height / scaleY
+                        : config.dimensions.height)
+
+            config.dimensions = {width, height}
+        }
+
+        const rectCenterX = Number.isFinite(rect.left) && Number.isFinite(rect.width)
+                            ? rect.left + (rect.width / 2)
+                            : NaN
+        const rectCenterY = Number.isFinite(rect.top) && Number.isFinite(rect.height)
+                            ? rect.top + (rect.height / 2)
+                            : NaN
+        const positionCenterX = Number.isFinite(config.position?.left) ? config.position.left + (width / 2) : NaN
+        const positionCenterY = Number.isFinite(config.position?.top) ? config.position.top + (height / 2) : NaN
+
+        const centerX = Number.isFinite(rectCenterX) ? rectCenterX : positionCenterX
+        const centerY = Number.isFinite(rectCenterY) ? rectCenterY : positionCenterY
+
+        if (Number.isFinite(centerX) && Number.isFinite(centerY)) {
+            config.position = {
+                left: centerX - (width / 2),
+                top:  centerY - (height / 2),
+            }
+        }
 
         const relativeCenterX = centerX - containerRect.left
         const relativeCenterY = centerY - containerRect.top
 
-        const leftRatio = containerRect.width > 0 ? (relativeCenterX / containerRect.width) * 100 : 0
-        const topRatio = containerRect.height > 0 ? (relativeCenterY / containerRect.height) * 100 : 0
+        const computedLeftRatio = containerRect.width > 0 ? (relativeCenterX / containerRect.width) * 100 : NaN
+        const computedTopRatio = containerRect.height > 0 ? (relativeCenterY / containerRect.height) * 100 : NaN
+        const fallbackLeftRatio = config.savedRatios?.leftRatio
+        const fallbackTopRatio = config.savedRatios?.topRatio
+        const leftRatio = Number.isFinite(computedLeftRatio) ? computedLeftRatio : (Number.isFinite(fallbackLeftRatio) ? fallbackLeftRatio : 0)
+        const topRatio = Number.isFinite(computedTopRatio) ? computedTopRatio : (Number.isFinite(fallbackTopRatio) ? fallbackTopRatio : 0)
         const $scale = config.scale || {x: 1, y: 1}
+        config.savedRatios = {leftRatio, topRatio}
 
         return {
             id:           widgetId,
             group:        config.group || null,
             widgetsBoard: config.widgetsBoard,
+            left: config.position?.left,
+            top:  config.position?.top,
             leftRatio: leftRatio,
             topRatio:  topRatio,
             width:  width,
@@ -457,6 +664,12 @@ export class WidgetCoreRegistry {
             ratio:        config.ratio,
             attachTo:  config.attachTo || 'center',
             zIndex: config.zIndex || 0,
+            positionReference: config.widgetsBoard && config.widgetsBoard !== SCENE_WIDGETS_BOARD ? 'board' : 'scene',
+            collapsed:          Boolean(config.collapsed),
+            locked:             Boolean(config.locked),
+            expandedDimensions: config.expandedDimensions ?? null,
+            expandedInlineDimensions: config.expandedInlineDimensions ?? null,
+            icon:               config.icon ?? null,
         }
     }
 
@@ -506,7 +719,7 @@ export class WidgetCoreRegistry {
      */
     cloneContext = (source, attrs) =>
         Object.fromEntries(
-            attrs.map(attr => [attr, source.hasOwnProperty(attr) ? source[attr] : false]),
+            attrs.map(attr => [attr, Object.prototype.hasOwnProperty.call(source, attr) ? source[attr] : false]),
         )
 
     /**
@@ -519,7 +732,7 @@ export class WidgetCoreRegistry {
     hasCapabilities = (source, attrs) =>
         attrs.some(attr => Boolean(source?.[attr]))
 
-    #widgetsStats = (groupId, widgetId) => {
+    #widgetsStats = (groupId, widgetId, widgetsBoard = undefined) => {
         const $widget = lgs.stores.ui.widget
         const group = __.widgets.get(groupId)
         const base = widgetId.split('#')[0]
@@ -528,6 +741,9 @@ export class WidgetCoreRegistry {
         // we scan the cache to count widgets
         const count = [...$widget.cache.entries()].reduce((acc, [id, w]) => {
             if (id && w.group === groupId) {
+                if (widgetsBoard !== undefined && w.widgetsBoard !== widgetsBoard) {
+                    return acc
+                }
                 const baseId = id.split('#')[0]
                 if (baseId === base) {
                     acc++
@@ -547,8 +763,8 @@ export class WidgetCoreRegistry {
      * @returns {number} number of instances
      *
      */
-    countWidgets = (group, widget) => {
-        const {count} = this.#widgetsStats(group, widget)
+    countWidgets = (group, widget, widgetsBoard = undefined) => {
+        const {count} = this.#widgetsStats(group, widget, widgetsBoard)
         return count
     }
 
@@ -559,8 +775,8 @@ export class WidgetCoreRegistry {
      * @param {string} widget - Widget ID (can include ID prefixed, e.g., 'myWidget#uuid').
      * @returns {boolean} True if the max is reached, false otherwise.
      */
-    isMaxWidgetsReached = (group, widget) => {
-        const {maxReached} = this.#widgetsStats(group, widget)
+    isMaxWidgetsReached = (group, widget, widgetsBoard = undefined) => {
+        const {maxReached} = this.#widgetsStats(group, widget, widgetsBoard)
         return maxReached
     }
 
@@ -571,8 +787,8 @@ export class WidgetCoreRegistry {
      * @param {string} widget - Widget ID (can include ID prefixed, e.g., 'myWidget#uuid').
      * @returns {number} the maximum  allowed instances
      */
-    maxWidgets = (group, widget) => {
-        const {max} = this.#widgetsStats(group, widget)
+    maxWidgets = (group, widget, widgetsBoard = undefined) => {
+        const {max} = this.#widgetsStats(group, widget, widgetsBoard)
         return max
     }
 
@@ -583,8 +799,8 @@ export class WidgetCoreRegistry {
      * @param {string} widget - Widget ID (can include ID prefixed, e.g., 'myWidget#uuid').
      * @returns {number} The remaining number of instances.
      */
-    remainingWidgets = (group, widget) => {
-        const {max, count} = this.#widgetsStats(group, widget)
+    remainingWidgets = (group, widget, widgetsBoard = undefined) => {
+        const {max, count} = this.#widgetsStats(group, widget, widgetsBoard)
         return max - count
     }
 }

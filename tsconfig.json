@@ -13,6 +13,27 @@
     "allowImportingTsExtensions": true,
     "verbatimModuleSyntax": true,
     "noEmit": true,
+    "baseUrl": ".",
+    "paths": {
+      "@Utils/*": [
+        "src/Utils/*"
+      ],
+      "@Editor/*": [
+        "src/components/TracksEditor/*"
+      ],
+      "@Components/*": [
+        "src/components/*"
+      ],
+      "@Stores/*": [
+        "src/core/stores/*"
+      ],
+      "@Core/*": [
+        "src/core/*"
+      ],
+      "@Locales/*": [
+        "src/locales/*"
+      ]
+    },
 
     // Best practices
     "strict": true,

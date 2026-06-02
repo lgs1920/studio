@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-02
- * Last modified: 2026-03-02
+ * Created on: 2026-04-25
+ * Last modified: 2026-04-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -26,14 +26,8 @@ import { proxyMap } from 'valtio/utils'
 export const main = {
     components: {
         fileLoader: {
-            accepted: 0,
-            error:    '',
-            dragging: {
-                active: null,
-                files: [],
-            },
             fileList: new proxyMap(),
-            empty:    true,
+            loadSample: false,
         },
 
         camera: {
@@ -99,9 +93,16 @@ export const main = {
         },
 
         profile: {
+            key:           0,
+            elevationData: 0,
             width:  '500px',
             height: '200px',
+            show:          false,
             zoom:  false,
+        },
+
+        journeyStats: {
+            show: false,
         },
 
         settings: {
@@ -113,7 +114,7 @@ export const main = {
             overlay: null,
         },
 
-        wanderer: {
+        flythroughRunner: {
             run:   false,
             pause: false,
             forward: true,
@@ -124,10 +125,12 @@ export const main = {
         geocoder: {
             list:   proxyMap(),
             dialog: {
+                mounted: false,
                 visible:   false,
                 loading:   false,
                 noResults: false,
                 moreResults: false,
+                error:   false,
                 submitDisabled: true,
                 showMore:  false,
             },

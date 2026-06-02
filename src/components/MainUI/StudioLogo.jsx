@@ -7,15 +7,15 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-05-10
+ * Last modified: 2026-05-10
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { SLOGAN }   from '@Core/constants'
-import { DateTime } from 'luxon'
+import { SLOGAN }          from '@Core/constants'
+import { formatBuildInfo } from '@Utils/BuildInfoUtils'
 
 export const StudioLogo = (props) => {
     let style = {}
@@ -26,20 +26,19 @@ export const StudioLogo = (props) => {
         style = {height: props.height}
     }
     const sizes = {
-        xsmall: '-xs', small: '-s', 'normal': '', 'large': '-l', 'xlarge': '-xl',
+        xs: '-xs', small: '-s', 'normal': '', 'large': '-l', 'xlarge': '-xl',
     }
 
     const addClass = props.addClassName ? props.addClassName : ''
 
     const size = (props.small) ? 'small'
-                               : (props.xsmall) ? 'xsmall'
+                               : (props.xs) ? 'xs'
                                                 : (props.large) ? 'large'
                                                                 : (props.large) ? 'xlarge'
                                                                                 : 'normal'
     const src = `/assets/images/logo-lgs1920-studio${sizes[size]}.png`
 
-    const date = `${DateTime.fromMillis(lgs.build.date ?? Date.now()).toLocaleString(DateTime.DATE_MED)} \
-    ${DateTime.fromMillis(lgs.build.date ?? Date.now()).toLocaleString(DateTime.TIME_SIMPLE)}`
+    const date = formatBuildInfo(lgs.build)
 
     return (
         <div className={`main-logo signage-style ${size} ${addClass}`} style={style}>

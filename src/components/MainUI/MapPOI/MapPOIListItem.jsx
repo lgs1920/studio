@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-02
- * Last modified: 2026-03-02
+ * Created on: 2026-05-09
+ * Last modified: 2026-05-09
  *
  *
  * Copyright © 2026 LGS1920
@@ -21,15 +21,15 @@
  * File: MapPOIListItem.jsx
  ******************************************************************************/
 
-import { MapPOIContent }           from '@Components/MainUI/MapPOI/MapPOIContent'
-import { MapPOIEditContent }       from '@Components/MainUI/MapPOI/MapPOIEditContent'
-import { POI_STARTER_TYPE, POI_TMP_TYPE, POIS_EDITOR_DRAWER } from '@Core/constants'
-import { SlDetails }               from '@shoelace-style/shoelace/dist/react'
-import { FontAwesomeIcon }         from '@fortawesome/react-fontawesome'
-import { faSquareCheck, faSquare } from '@fortawesome/pro-duotone-svg-icons'
-import classNames                  from 'classnames'
-import { memo, useCallback, useMemo } from 'react'
-import { useSnapshot }             from 'valtio'
+import { MapPOIEditContent }                               from '@Components/MainUI/MapPOI/MapPOIEditContent'
+import { MapPOISummary }                                   from '@Components/MainUI/MapPOI/MapPOISummary'
+import { POI_FLAG_START, POI_FLAG_STOP, POI_STARTER_TYPE } from '@Core/constants'
+import { WaDetails, WaIcon }                               from '@web.awesome.me/webawesome-pro/dist/react'
+import classNames                                          from 'classnames'
+import { memo, useCallback, useRef } from 'react'
+import { proxy, useSnapshot } from 'valtio'
+
+const EMPTY_POI_PROXY = proxy({})
 
 const POIBulkToggle = memo(({id}) => {
     const $pois = lgs.stores.main.components.pois
@@ -48,9 +48,9 @@ const POIBulkToggle = memo(({id}) => {
 
     return (
         <div className="map-poi-item-checkbox" onClick={toggle}>
-            <FontAwesomeIcon
-                icon={isSelected ? faSquareCheck : faSquare}
-                className={classNames({'is-active': isSelected})}
+            <WaIcon name={isSelected ? 'square-check' : 'square'}
+                    variant="regular"
+                    className={classNames({'is-active': isSelected})}
             />
         </div>
     )
@@ -58,55 +58,64 @@ const POIBulkToggle = memo(({id}) => {
 
 POIBulkToggle.displayName = 'POIBulkToggle'
 
-export const MapPOIListItem = memo(({id}) => {
+export const MapPOIListItem = memo(({id, canSelect}) => {
     const $pois = lgs.stores.main.components.pois
     const $poi = $pois.list.get(id)
     const {current, bulkList} = useSnapshot($pois)
-    const {open: drawerOpen} = useSnapshot(lgs.stores.ui.drawers)
-    const poi = useSnapshot($poi || {})
+    const poi = useSnapshot($poi ?? EMPTY_POI_PROXY)
+    const itemRef = useRef(null)
 
     const isCurrent = current === id
     const isSelected = bulkList.has(id)
 
-    const handleSummaryClick = useCallback((e) => {
-        e.preventDefault()
-        e.stopPropagation()
-        $pois.current = isCurrent ? false : id
-        // engine focus logic omitted for brevity, keep your existing selectPOI here
-    }, [isCurrent, id, $pois])
+    const scrollIntoView = useCallback(() => {
+        itemRef.current?.scrollIntoView({behavior: 'smooth', block: 'nearest'})
+    }, [])
 
-    const styles = useMemo(() => {
-        if (!poi.id) {
-            return {}
+    const handleDetailsShow = useCallback((event) => {
+        if (event?.target !== event?.currentTarget) {
+            return
         }
-        const bg = poi.bgColor ?? lgs.colors.poiDefaultBackground
-        return {
-            '--map-poi-bg-header':  __.ui.ui.hexToRGBA(bg, 'rgba', 0.2),
-            '--fa-primary-color':   poi.color,
-            '--fa-secondary-color': bg,
+        if ($pois.current !== id) {
+            $pois.current = id
         }
-    }, [poi.id, poi.bgColor, poi.color])
+        scrollIntoView()
+    }, [$pois, id, scrollIntoView])
+
+    const handleDetailsHide = useCallback((event) => {
+        if (event?.target !== event?.currentTarget) {
+            return
+        }
+        queueMicrotask(() => {
+            if ($pois.current === id) {
+                $pois.current = false
+            }
+        })
+    }, [$pois, id])
 
     if (!poi.id) {
         return null
     }
 
     return (
-        <div className={classNames('edit-map-poi-item-wrapper', {'is-selected': isSelected})}>
-            <POIBulkToggle id={id}/>
-            <SlDetails
-                className={classNames('edit-map-poi-item', {'map-poi-hidden': !poi.visible})}
-                style={styles}
+        <div
+            id={`edit-map-poi-${id}`}
+            ref={itemRef}
+            className={classNames('edit-map-poi-item-wrapper', {'is-selected': isSelected})}
+        >
+            {canSelect && <POIBulkToggle id={id}/>}
+            <WaDetails
+                className={classNames('edit-map-poi-item', {'map-poi-hidden': !poi.visible}, 'lgs--details-hoverable')}
                 open={isCurrent}
+                onWaShow={handleDetailsShow}
+                onWaAfterShow={scrollIntoView}
+                onWaHide={handleDetailsHide}
             >
-                <div slot="summary" onClick={handleSummaryClick}>
-                    <div className="map-poi-summary-content">
-                        <MapPOIContent poi={id} useInMenu={true}/>
-                        <span>{' '}{poi.title}{' '}</span>
-                    </div>
+                <div slot="summary">
+                    <MapPOISummary poi={id} useInMenu={true}/>
                 </div>
                 {isCurrent && <MapPOIEditContent poi={id}/>}
-            </SlDetails>
+            </WaDetails>
         </div>
     )
 })

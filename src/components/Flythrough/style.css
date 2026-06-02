@@ -1,0 +1,330 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: style.css
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2026-05-31
+ * Last modified: 2026-05-31
+ *
+ *
+ * Copyright © 2026 LGS1920
+ ******************************************************************************/
+
+.flythrough-drawer-content {
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: var(--wa-space-m, 1rem);
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+    padding: var(--wa-space-m, 1rem);
+}
+
+.flythrough-drawer-title {
+    align-items: center;
+    display: inline-flex;
+    gap: var(--wa-space-xs, 0.5rem);
+}
+
+.flythrough-tabs::part(base) {
+    height: 100%;
+    width: 100%;
+}
+
+.flythrough-tabs {
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+.flythrough-tab-panel {
+    display: flex;
+    flex-direction: column;
+    gap: var(--wa-space-m, 1rem);
+    padding-block: var(--wa-space-m, 1rem);
+}
+
+.flythrough-fieldset {
+    display: grid;
+    gap: var(--wa-space-s, 0.75rem);
+}
+
+.flythrough-sync-row {
+    align-items: center;
+    display: flex;
+    gap: var(--wa-space-s, 0.75rem);
+    min-width: 0;
+}
+
+.flythrough-sync-switch {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.flythrough-sync-video-button {
+    flex: 0 0 auto;
+}
+
+
+.flythrough-empty-state {
+    margin: 0;
+    opacity: 0.72;
+}
+
+.flythrough-progression-section {
+    display: grid;
+    gap: var(--wa-space-s, 0.75rem);
+}
+
+.flythrough-progression-section h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 0;
+}
+
+.flythrough-style-subsection {
+    box-sizing: border-box;
+    display: grid;
+    gap: var(--wa-space-s, 0.75rem);
+    padding-left: 0;
+    width: 100%;
+}
+
+.flythrough-style-subtitle {
+    color: var(--wa-form-control-label-color);
+    font-size: var(--wa-form-control-label-font-size);
+    font-weight: 600;
+    line-height: 1.2;
+    margin: 0;
+}
+
+.flythrough-style-control-group {
+    align-items: flex-start;
+    display: flex;
+    flex-direction: column;
+    gap: var(--wa-space-s, 0.75rem);
+    min-width: 0;
+    width: 100%;
+}
+
+.flythrough-style-field {
+    align-items: flex-start;
+    display: flex;
+    flex-direction: column;
+    gap: calc(var(--wa-space-xs, 0.5rem) / 2);
+    min-width: 0;
+    width: 100%;
+}
+
+.flythrough-style-label {
+    color: var(--wa-form-control-label-color);
+    font-size: var(--wa-form-control-label-font-size);
+    line-height: var(--wa-form-control-label-line-height);
+}
+
+.flythrough-color-control {
+    align-items: center;
+    display: flex;
+    gap: var(--wa-space-s, 0.75rem);
+    justify-content: space-between;
+    min-width: 0;
+    width: 100%;
+}
+
+.flythrough-color-picker {
+    min-width: 0;
+}
+
+.flythrough-track-style-switch {
+    flex: 1 1 auto;
+    margin-left: auto;
+    min-width: 0;
+}
+
+.flythrough-track-style-switch::part(base) {
+    width: 100%;
+}
+
+.flythrough-opacity-slider {
+    justify-self: end;
+    margin-left: auto;
+}
+
+.flythrough-opacity-slider[label-at-start][width-auto] {
+    display: grid;
+    flex: 0 1 auto;
+    gap: var(--wa-space-s, 0.75rem);
+    grid-template-columns: auto minmax(8rem, 10rem);
+    max-width: calc(100% - 2.25rem - var(--wa-space-s, 0.75rem));
+    width: auto;
+}
+
+.flythrough-style-field-grid {
+    align-self: stretch;
+    display: grid;
+    gap: var(--wa-space-s, 0.75rem);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    max-width: none;
+    min-width: 0;
+    width: 100%;
+}
+
+.flythrough-style-field-grid.is-single {
+    grid-template-columns: 1fr;
+}
+
+.flythrough-style-field-grid.is-single .flythrough-style-field {
+    grid-column: 1;
+}
+
+.flythrough-style-field-grid.is-single.flythrough-progression-width-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, calc(50% - var(--wa-space-s, 0.75rem) / 2));
+}
+
+.flythrough-style-field-grid.is-single.flythrough-progression-width-grid .flythrough-style-field {
+    grid-column: 2;
+}
+
+.flythrough-width-input {
+    box-sizing: border-box;
+    margin-right: 2px;
+    min-width: 0;
+    width: calc(100% - 2px);
+}
+
+.flythrough-width-input::part(input) {
+    text-align: center;
+}
+
+.flythrough-opacity-slider {
+    min-width: 0;
+}
+
+@media (max-width: 640px) {
+    .flythrough-color-control,
+    .flythrough-style-field-grid,
+    .flythrough-style-field-grid.is-single {
+        grid-template-columns: 1fr;
+    }
+
+    .flythrough-style-field-grid.is-single .flythrough-style-field {
+        grid-column: 1;
+    }
+
+    .flythrough-color-control {
+        align-items: stretch;
+        display: grid;
+    }
+}
+
+.flythrough-controls {
+    align-items: center;
+    box-sizing: border-box;
+    display: flex;
+    font-size: var(--lgs-font-size-s);
+    justify-content: center;
+    max-width: calc(100vw - var(--lgs-gutter-s, 0.75rem) - var(--lgs-gutter-s, 0.75rem));
+    position: relative;
+}
+
+.flythrough-controls::part(body) {
+    align-items: center;
+    display: flex;
+    flex-direction: row;
+    gap: 0;
+    justify-content: center;
+    min-width: 0;
+}
+
+.flythrough-progress-bar {
+    align-items: center;
+    display: inline-flex;
+    flex: 0 0 auto;
+    flex-wrap: nowrap;
+    font-size: var(--lgs-font-size-s);
+    gap: 0;
+    max-width: 100%;
+    min-height: calc(var(--lgs-dimension-s) - 2 * var(--lgs-gutter-xxs));
+}
+
+.flythrough-progress-segment,
+.flythrough-progress-settings {
+    align-items: center;
+    display: inline-flex;
+    flex: 0 0 auto;
+    min-height: calc(var(--lgs-dimension-s) - 2 * var(--lgs-gutter-xxs));
+    white-space: nowrap;
+}
+
+.flythrough-progress-segment {
+    border-right: 1px solid var(--lgs-card-on-map-border-color);
+    font-variant-numeric: tabular-nums;
+    margin-right: var(--lgs-gutter-s);
+    padding-inline-end: var(--lgs-gutter-s);
+}
+
+.flythrough-progress-segment:last-child {
+    border-right: none;
+    margin-right: 0;
+    padding-inline-end: 0;
+}
+
+.flythrough-progress-actions {
+    gap: 0;
+}
+
+.flythrough-progress-settings {
+    margin-left: 0;
+}
+
+.flythrough-progress-action::part(base) {
+    min-height: calc(var(--lgs-dimension-s) - 2 * var(--lgs-gutter-xxs));
+    min-width: calc(var(--lgs-dimension-s) - 2 * var(--lgs-gutter-xxs));
+    padding: 0;
+}
+
+.flythrough-progress-action wa-icon {
+    font-size: var(--lgs-font-size);
+}
+
+.flythrough-progress-card-in-drawer {
+    align-self: center;
+    max-width: 100%;
+    width: 100%;
+}
+
+.flythrough-progress-card-in-drawer::part(body) {
+    align-items: center;
+    display: flex;
+    justify-content: center;
+    min-width: 0;
+    width: 100%;
+}
+
+.flythrough-progress-bar-in-drawer {
+    align-self: center;
+    flex-wrap: wrap;
+    justify-content: center;
+    row-gap: var(--lgs-gutter-xs, 0.25rem);
+    width: 100%;
+}
+
+@media (max-width: 640px) {
+    .flythrough-controls .flythrough-progress-segment {
+        margin-right: var(--lgs-gutter-xs, 0.25rem);
+        padding-inline-end: var(--lgs-gutter-xs, 0.25rem);
+    }
+
+    .flythrough-controls .flythrough-progress-time {
+        display: none;
+    }
+
+    .flythrough-progress-bar-in-drawer {
+        flex-wrap: wrap;
+        row-gap: var(--lgs-gutter-xs, 0.25rem);
+    }
+}

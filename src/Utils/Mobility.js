@@ -32,10 +32,15 @@ export class Mobility {
      *
      */
     static distance = (start, end) => {
-        if (start && end) {
+        const startLongitude = Number(start?.longitude)
+        const startLatitude = Number(start?.latitude)
+        const endLongitude = Number(end?.longitude)
+        const endLatitude = Number(end?.latitude)
+
+        if ([startLongitude, startLatitude, endLongitude, endLatitude].every(Number.isFinite)) {
             return turfDistance.default(
-                turfPoint.default([start.longitude, start.latitude]),
-                turfPoint.default([end.longitude, end.latitude]),
+                turfPoint.default([startLongitude, startLatitude]),
+                turfPoint.default([endLongitude, endLatitude]),
             ) * 1000
         }
         return 0
@@ -49,7 +54,7 @@ export class Mobility {
      * @return {undefined|number}
      */
     static elevation = (start, end) => {
-        if (start && end && start.altitude && end.altitude) {
+        if (Number.isFinite(start?.altitude) && Number.isFinite(end?.altitude)) {
             return end.altitude - start.altitude
         }
         return 0
@@ -64,7 +69,7 @@ export class Mobility {
      * @return {number} speed in meters/second
      */
     static speed = (distance, duration) => {
-        if (duration === 0) {
+        if (!Number.isFinite(distance) || !Number.isFinite(duration) || duration <= 0) {
             return 0
         }
         return distance / duration
@@ -79,7 +84,7 @@ export class Mobility {
      * @return {number} pace in second/meter
      */
     static pace = (distance, duration) => {
-        if (distance === 0) {
+        if (!Number.isFinite(distance) || !Number.isFinite(duration) || distance <= 0) {
             return 0
         }
         return duration / distance
@@ -93,7 +98,12 @@ export class Mobility {
      */
     static duration(start, stop) {
         if (start && stop) {
-            return Math.abs(DateTime.fromISO(stop).diff(DateTime.fromISO(start)).toMillis()) / MILLIS
+            const startDate = DateTime.isDateTime(start) ? start : DateTime.fromISO(start)
+            const stopDate = DateTime.isDateTime(stop) ? stop : DateTime.fromISO(stop)
+
+            if (startDate.isValid && stopDate.isValid) {
+                return Math.abs(stopDate.diff(startDate).toMillis()) / MILLIS
+            }
         }
         return 0
     }

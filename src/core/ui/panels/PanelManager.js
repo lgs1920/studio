@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-13
- * Last modified: 2026-01-13
+ * Created on: 2026-05-09
+ * Last modified: 2026-05-09
  *
  *
  * Copyright © 2026 LGS1920
@@ -37,6 +37,13 @@ export class PanelManager {
     #tabs = new Map()
 
     /**
+     * Stack history to manage stacked drawers.
+     * @private
+     * @type {Array<Object>}
+     */
+    #stack = []
+
+    /**
      * Creates a new instance of PanelManager or returns the existing instance.
      * Implements the singleton pattern.
      *
@@ -48,6 +55,10 @@ export class PanelManager {
         }
 
         PanelManager.instance = this
+    }
+
+    get drawerRoot() {
+        return typeof document !== 'undefined' ? document.getElementById('drawer-root') : null
     }
 
     /**
@@ -92,6 +103,17 @@ export class PanelManager {
     }
 
     /**
+     * Checks if the specified drawer is currently in a stacked state.
+     * A drawer is stacked if it's currently open and there's history in the stack.
+     *
+     * @param {string} id
+     * @returns {boolean}
+     */
+    isStacked = (id) => {
+        return this.drawers.open === id && this.#stack.length > 0
+    }
+
+    /**
      * Validates if a drawer can be opened or updated.
      * Returns true if:
      * - The requested ID is not the current one (handles null initial state).
@@ -102,12 +124,10 @@ export class PanelManager {
      * @returns {boolean}
      */
     canOpen = (id, entity = null) => {
-        // If drawer is not open or a different one is requested
         if (!this.isCurrent(id)) {
             return true
         }
 
-        // If it's the same drawer, only allow re-opening if the entity is different
         return entity !== null && ui.drawers.entity !== entity
     }
 
@@ -129,13 +149,30 @@ export class PanelManager {
 
     /**
      * Configures and displays the specified drawer.
+     * Pushes current state to the stack if stacked option is true.
      * @param {string} id
      * @param {Object} [options]
      */
     open = (id, options = {}) => {
+        if (options.stacked && ui.drawers.open && ui.drawers.open !== id) {
+            this.#stack.push({
+                                 id:                  ui.drawers.open,
+                                 action:              ui.drawers.action,
+                                 entity:              ui.drawers.entity,
+                                 suppressFocusOnOpen: ui.drawers.suppressFocusOnOpen,
+                             })
+        }
+        else if (!options.stacked) {
+            this.#stack = []
+        }
+
         ui.drawers.open = id
         ui.drawers.action = options.action ?? ''
+        ui.drawers.options = options
         ui.drawers.entity = options.entity ?? null
+        ui.drawers.suppressFocusOnOpen = Array.isArray(options.suppressFocusOnOpen) && options.suppressFocusOnOpen.length === 0
+                                         ? false
+                                         : options.suppressFocusOnOpen ?? false
 
         let tabToActivate = null
 
@@ -152,13 +189,70 @@ export class PanelManager {
         }
     }
 
+    consumeSuppressFocusOnOpen = (target) => {
+        const suppressedTarget = ui.drawers.suppressFocusOnOpen
+
+        if (Array.isArray(suppressedTarget)) {
+            const targetIndex = suppressedTarget.indexOf(target)
+            const wildcardIndex = suppressedTarget.indexOf(true)
+            const matchIndex = targetIndex >= 0 ? targetIndex : wildcardIndex
+
+            if (matchIndex === -1) {
+                return false
+            }
+
+            const nextTargets = suppressedTarget.filter((_, index) => index !== matchIndex)
+            ui.drawers.suppressFocusOnOpen = nextTargets.length ? nextTargets : false
+            return true
+        }
+
+        const shouldSuppress = suppressedTarget === true || suppressedTarget === target
+
+        if (shouldSuppress) {
+            ui.drawers.suppressFocusOnOpen = false
+        }
+
+        return shouldSuppress
+    }
+
     /**
-     * Closes the drawer and resets store state.
+     * Closes the current drawer.
+     * Restores the previous drawer from the stack if available.
      */
     close = () => {
+        if (this.#stack.length > 0) {
+            const previous = this.#stack.pop()
+
+            ui.drawers.open = previous.id
+            ui.drawers.action = previous.action
+            ui.drawers.entity = previous.entity
+            ui.drawers.suppressFocusOnOpen = previous.suppressFocusOnOpen ?? false
+
+            const tabToActivate = this.#tabs.get(previous.id)
+            if (tabToActivate) {
+                this.openTab(tabToActivate)
+            }
+        }
+        else {
+            document.activeElement?.blur()
+            ui.drawers.open = null
+            ui.drawers.entity = null
+            ui.drawers.action = null
+            ui.drawers.suppressFocusOnOpen = false
+        }
+    }
+
+    /**
+     * Closes every drawer immediately and clears the stacked history.
+     * Useful for floating tools/widgets that must not reserve drawer space.
+     */
+    forceClose = () => {
         document.activeElement?.blur()
+        this.#stack = []
         ui.drawers.open = null
         ui.drawers.entity = null
+        ui.drawers.action = null
+        ui.drawers.suppressFocusOnOpen = false
     }
 
     /**
@@ -167,7 +261,7 @@ export class PanelManager {
      * @returns {boolean}
      */
     check = (event) => {
-        if (event.target.nodeName !== 'SL-DRAWER') {
+        if (event.target.nodeName !== 'WA-DRAWER') {
             event.preventDefault()
             return false
         }
@@ -189,11 +283,11 @@ export class PanelManager {
      * Initializes event listeners for drawers and their nested tab groups.
      */
     attachEvents = () => {
-        document.querySelectorAll('sl-drawer').forEach((drawer) => {
+        document.querySelectorAll('wa-drawer').forEach((drawer) => {
             drawer.addEventListener('mouseleave', this.mouseLeave)
             drawer.addEventListener('mouseenter', this.mouseEnter)
 
-            drawer.addEventListener('sl-after-show', () => {
+            drawer.addEventListener('wa-after-show', () => {
                 const event = new CustomEvent('drawer-open', {
                     detail: {drawerId: drawer.id},
                     bubbles: true,
@@ -202,9 +296,9 @@ export class PanelManager {
                 drawer.dispatchEvent(event)
             })
 
-            const tabgroups = drawer.querySelectorAll('sl-tab-group')
+            const tabgroups = drawer.querySelectorAll('wa-tab-group')
             tabgroups.forEach(tabgroup => {
-                tabgroup.addEventListener('sl-tab-show', (event) => {
+                tabgroup.addEventListener('wa-tab-show', (event) => {
                     this.tab = event.detail.name
                 })
             })
@@ -230,11 +324,11 @@ export class PanelManager {
         }
 
         const tabGroups = Array.from(
-            document.querySelectorAll(`sl-drawer[id="${this.drawers.open}"] sl-tab-group`),
+            document.querySelectorAll(`wa-drawer[id="${this.drawers.open}"] wa-tab-group`),
         )
 
         for (const tabGroup of tabGroups) {
-            const tab = tabGroup.querySelector(`sl-tab[panel="${activeTab}"]`)
+            const tab = tabGroup.querySelector(`wa-tab[panel="${activeTab}"]`)
             if (tab) {
                 tabGroup.show(activeTab)
             }

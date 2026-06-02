@@ -7,24 +7,23 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-28
- * Last modified: 2026-02-28
+ * Created on: 2026-05-10
+ * Last modified: 2026-05-10
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { ToggleStateIcon }                from '@Components/ToggleStateIcon'
-import { JUST_SAVE }                      from '@Core/constants'
-import { TrackSelector }                  from '@Editor/track/TrackSelector'
-import { SlInput, SlTextarea, SlTooltip } from '@shoelace-style/shoelace/dist/react'
-import { TrackUtils }                     from '@Utils/cesium/TrackUtils'
-import parse                              from 'html-react-parser'
-import { useSnapshot }                    from 'valtio'
-import { Utils }                          from '../Utils'
-import { TrackData }                      from './TrackData'
-import { TrackPoints }                    from './TrackPoints'
-import { TrackStyleSettings }             from './TrackStyleSettings'
+import { ToggleStateIcon }                           from '@Components/ToggleStateIcon'
+import { JUST_SAVE }                                 from '@Core/constants'
+import { TrackSelector }                             from '@Editor/track/TrackSelector'
+import { TrackUtils }                                from '@Utils/cesium/TrackUtils'
+import { decodeHTMLEntities }                        from '@Utils/TextUtils'
+import { WaDivider, WaInput, WaTextarea, WaTooltip } from '@web.awesome.me/webawesome-pro/dist/react'
+import { useSnapshot }                               from 'valtio'
+import { Utils }                                     from '../Utils'
+import { TrackData }                                 from './TrackData'
+import { TrackStyleSettings }                        from './TrackStyleSettings'
 
 /** @constant {string} DATA_PANEL - Identifier for the data panel tab */
 const DATA_PANEL = 'tab-data'
@@ -51,7 +50,7 @@ export const TrackSettings = () => {
      * @returns {Promise<void>}
      */
     const setDescription = async event => {
-        $journeyEditor.track.description = event.target.value
+        $journeyEditor.track.description = decodeHTMLEntities(event.target.value)
         await Utils.updateTrack(JUST_SAVE)
     }
 
@@ -117,58 +116,57 @@ export const TrackSettings = () => {
         <>
             {journeyEditor.track && journeyEditor.journey.tracks.size > 1 &&
                 <>
-                    {(journeyEditor.activeTab === DATA_PANEL || journeyEditor.activeTab === EDIT_PANEL) &&
-                        <>
-                            <div className="selector-wrapper">
-                                {/* Track selector for choosing a track */}
-                                <TrackSelector onChange={Utils.initTrackEdition} label={'Select one of the tracks:'}/>
-                                <div className="editor-vertical-menu">
-                                    <SlTooltip hoist content={textVisibilityTrack}>
-                                        <ToggleStateIcon onChange={setTrackVisibility}
-                                                         initial={journeyEditor.track.visible}/>
-                                    </SlTooltip>
-                                </div>
-                            </div>
+                    <WaDivider/>
 
-                            <div className={'settings-panel'} id={'editor-track-settings-panel'}
-                                 key={lgs.stores.main.components.journeyEditor.keys.journey.track}>
-                                {journeyEditor.track.visible &&
-                                    <>
-                                        {journeyEditor.activeTab === DATA_PANEL && <TrackData/>}
-                                        {journeyEditor.activeTab === EDIT_PANEL &&
-                                            <div id={'track-text-description'}>
-                                                {journeyEditor.journey.tracks.size > 1 &&
-                                                    <>
-                                                        {/* Input for track title */}
-                                                        <SlTooltip hoist content={'Title'}>
-                                                            <SlInput id="track-title" value={journeyEditor.track.title}
-                                                                     onSlChange={setTitle}/>
-                                                        </SlTooltip>
-                                                        {/* Textarea for track description */}
-                                                        <SlTooltip hoist content={'Description'}>
-                                                            <SlTextarea
-                                                                row={2}
-                                                                size={'small'}
-                                                                id="track-description"
-                                                                value={parse(journeyEditor.track.description)}
-                                                                onSlChange={setDescription}
-                                                                placeholder={'Track description'}
-                                                            />
-                                                        </SlTooltip>
-                                                    </>
-                                                }
-                                                {/* Track style settings */}
-                                                <TrackStyleSettings/>
-                                            </div>
+                    <div className="selector-wrapper">
+                        {/* Track selector for choosing a track */}
+
+
+                        <TrackSelector onChange={Utils.initTrackEdition} label={'Select one track'}/>
+                        <div className="editor-vertical-menu">
+                            <WaTooltip placement="bottom"
+                                       for="track-visibility-in-settings">{textVisibilityTrack}</WaTooltip>
+                            <ToggleStateIcon onChange={setTrackVisibility}
+                                             initial={journeyEditor.track.visible}
+                                             id="track-visibility-in-settings"
+                            />
+
+                        </div>
+                    </div>
+
+                    <div key={lgs.stores.main.components.journeyEditor.keys.journey.track}>
+                        {journeyEditor.track.visible &&
+                            <>
+                                {journeyEditor.activeTab === DATA_PANEL && <TrackData/>}
+                                {journeyEditor.activeTab === EDIT_PANEL &&
+                                    <div id={'track-text-description'}>
+                                        {journeyEditor.journey.tracks.size > 1 &&
+                                            <>
+                                                <WaInput
+                                                    label={'Track Title'}
+                                                    id="track-title"
+                                                    value={journeyEditor.track.title}
+                                                    onChange={setTitle}
+                                                />
+                                                <WaTextarea
+                                                    label={'Track Description'}
+                                                    row={2}
+                                                    id="track-description"
+                                                    value={decodeHTMLEntities(journeyEditor.track.description)}
+                                                    onChange={setDescription}
+                                                    placeholder={'Track description'}
+                                                />
+
+                                            </>
                                         }
-                                        {journeyEditor.activeTab === POINTS_PANEL && <TrackPoints/>}
-                                    </>
+                                        <TrackStyleSettings/>
+                                    </div>
                                 }
-                                <div id="track-visibility" className={'editor-vertical-menu'}>
-                                </div>
-                            </div>
-                        </>
-                    }
+                            </>
+                        }
+                        <div id="track-visibility" className={'editor-vertical-menu'}>
+                        </div>
+                    </div>
                 </>
             }
         </>

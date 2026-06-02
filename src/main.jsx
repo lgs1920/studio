@@ -7,20 +7,22 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-24
- * Last modified: 2026-02-24
+ * Created on: 2026-04-29
+ * Last modified: 2026-04-29
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import './assets/css/theme.css'
-import './assets/css/light.css'
 import { createRoot } from 'react-dom/client'
-import { LGS1920 }    from './LGS1920.jsx'
+import { LGS1920 } from '@Components/LGS1920.jsx'
+import { LGS1920Context } from '@Core/LGS1920Context'
 import './assets/css/app.css?v=1.0.5'
+import './assets/css/themes/wa-lgs1920.css'
 import './assets/css/animations.css'
 import { UIUtils } from '@Utils/UIUtils'
+import { AppUtils } from '@Utils/AppUtils'
+
 
 /**
  * Patch pour Shoelace ResizeObserver bug
@@ -37,6 +39,12 @@ ResizeObserver.prototype.unobserve = function (target) {
  * Load Google Fonts once at startup
  */
 UIUtils.importFonts()
+AppUtils.setTheme(localStorage.getItem('theme') || 'system')
+document.body.classList.add('lgs-app-booting')
+
+if (!window.lgs) {
+    window.lgs = new LGS1920Context()
+}
 
 /**
  * Let's go

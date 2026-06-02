@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-04-19
+ * Last modified: 2026-04-19
  *
  *
  * Copyright © 2026 LGS1920
@@ -71,6 +71,22 @@ export class FileUtils {
 
         reader.readAsText(file)
 
+    }
+
+    /**
+     * Read a file as text returning a Promise for async/await usage
+     * @param {File} file
+     * @returns {Promise<string>}
+     */
+    static readFileAsTextAsync = (file) => {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader()
+
+            reader.onload = () => resolve(reader.result)
+            reader.onerror = () => reject(reader.error)
+
+            reader.readAsText(file)
+        })
     }
 
 }

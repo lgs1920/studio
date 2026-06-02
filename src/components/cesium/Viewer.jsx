@@ -7,40 +7,55 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-04-29
+ * Last modified: 2026-04-29
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import '@shoelace-style/shoelace/dist/themes/light.css'
+/* eslint-disable react-refresh/only-export-components */
 import { CanvasEventManager } from '@Core/events/CanvasEventManager'
 import { LayersUtils }        from '@Utils/cesium/LayersUtils'
 import { SceneUtils }                                                                                  from '@Utils/cesium/SceneUtils'
-import { ImageryLayerCollection, ScreenSpaceEventType, Viewer as CesiumViewer, WebMercatorProjection } from 'cesium'
+import { Color, ImageryLayerCollection, ScreenSpaceEventType, Viewer as CesiumViewer, WebMercatorProjection } from 'cesium'
 import { useEffect }                                                                                   from 'react'
 
-export function Viewer() {
+let layersInitialized = false
+let cameraUpdateHandlerAttached = false
+let canvasEventsInitialized = false
+let cameraUpdateInProgress = false
 
-    const coordinates = {
-        position: {
-            longitude: lgs.settings.starter.longitude,
-            latitude:  lgs.settings.starter.latitude,
-            height:    lgs.settings.starter.height,
-            heading:   lgs.settings.starter.camera.heading,
-            pitch:     lgs.settings.starter.camera.pitch,
-            roll:      lgs.settings.starter.camera.roll,
-        },
-    }
+const VIEWER_BASE_COLOR = Color.fromCssColorString('hsla(125, 87%, 18%, 0.95)')
+
+export const ensureViewer = () => {
 
     /**
      * We manage our own camera update event
      *
      * @return {Promise<void>}
      */
+    const flushCameraUpdate = async (options = {}) => {
+        if (cameraUpdateInProgress) {
+            return
+        }
+
+        cameraUpdateInProgress = true
+        try {
+            await __.ui.cameraManager.raiseUpdateEvent(options)
+        }
+        finally {
+            cameraUpdateInProgress = false
+        }
+    }
+
     const raiseCameraUpdateEvent = async () => {
-        await __.ui.cameraManager.raiseUpdateEvent({})
+        if (__.ui.cameraManager?.isRotating?.() || __.ui.cameraManager?.isFlying?.() || lgs.stores.ui.mainUI.panorama.active) {
+            return
+        }
+
+        await flushCameraUpdate()
     }
     // If initialisation phase was OK, we have somme additional tasks to do.
 
@@ -74,6 +89,8 @@ export function Viewer() {
     // Add some globe parameters
     lgs.scene.globe.enableLighting = false
     lgs.scene.globe.depthTestAgainstTerrain = true
+    lgs.scene.globe.baseColor = VIEWER_BASE_COLOR.clone()
+    lgs.scene.backgroundColor = VIEWER_BASE_COLOR.clone()
 
     //lgs.scene.maximumRenderTimeChange = 0.2
     //lgs.scene.debugShowFramesPerSecond=true
@@ -85,16 +102,30 @@ export function Viewer() {
 
 
     //Layers
-    const layerCollection = new ImageryLayerCollection()
-    layerCollection.layerAdded = LayersUtils.layerOrder
+    if (!layersInitialized) {
+        const layerCollection = new ImageryLayerCollection()
+        layerCollection.layerAdded = LayersUtils.layerOrder
+        layersInitialized = true
+    }
 
     // Manage Camera
-    lgs.camera.changed.addEventListener(raiseCameraUpdateEvent)
+    if (!cameraUpdateHandlerAttached) {
+        lgs.camera.changed.addEventListener(raiseCameraUpdateEvent)
+        cameraUpdateHandlerAttached = true
+    }
 
     // Manage events
-    __.canvasEvents = new CanvasEventManager(lgs.viewer)
+    if (!canvasEventsInitialized) {
+        __.canvasEvents = new CanvasEventManager(lgs.viewer)
+        canvasEventsInitialized = true
+    }
+}
 
+export function Viewer() {
+    useEffect(() => {
+        ensureViewer()
+        __.ui.flythrough?.bindCesiumCameraBridge?.()
+    }, [])
 
     return (<></>)
 }
-

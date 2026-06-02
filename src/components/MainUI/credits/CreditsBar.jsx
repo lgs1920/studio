@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-04-27
+ * Last modified: 2026-04-27
  *
  *
  * Copyright © 2026 LGS1920
@@ -33,42 +33,26 @@ const $providers = proxy({
 /** List of available layer types */
 const LAYERS_TYPE = [BASE_ENTITY, OVERLAY_ENTITY, TERRAIN_ENTITY]
 
+const CreditLink = memo(({provider}) => {
+    return (
+        <a href={provider.url} target="_blank" rel="noreferrer">
+            {provider.logo
+             ? <img src={provider.logo} alt={provider.name}/>
+             : <span className={'credits'}>{provider.name}</span>
+            }
+        </a>
+    )
+})
+
 /**
  * Component displaying credits for different map providers.
  * Uses Valtio state management to track and update providers dynamically.
  *
  * @returns {JSX.Element} The CreditsBar component.
  */
-export const CreditsBar = () => {
+export const CreditsBar = ({contentRef = null}) => {
 
     const providers = useSnapshot($providers)
-    const video = useSnapshot(lgs.stores.ui.video)
-
-    /**
-     * Component displaying provider credits.
-     * Wrapped in `memo` to prevent unnecessary re-renders.
-     *
-     * @param {Object} props Component props.
-     * @param {string} props.type Entity type (BASE_ENTITY, OVERLAY_ENTITY, TERRAIN_ENTITY).
-     * @param {Object} props.provider Provider information.
-     * @returns {JSX.Element} The Credit component.
-     */
-    const Credit = memo(({type, provider}) => {
-
-        const credits = () => {
-            const layer = __.layersAndTerrainManager.getEntityProxy(lgs.settings.layers[type])
-            return `${layer?.credits ?? provider.credits ?? `credits ${provider.name}`}`
-        }
-
-        return (
-            <a href={provider.url} target="_blank">
-                {provider.logo
-                 ? <img src={provider.logo} alt={provider.name}/>
-                 : <span className={'credits'}>{provider.name}</span>
-                }
-            </a>
-        )
-    })
 
     /**
      * Retrieves and updates provider data dynamically.
@@ -117,19 +101,17 @@ export const CreditsBar = () => {
     }, [])
 
     return (
-        <div className="credits-bar">
-            <div className="main-logo signage-style">
+        <div id="lgs-credits-bar" ref={contentRef} className="credits-bar">
+            <div className="main-logo">
                 <img src="/assets/images/logo-lgs1920.png" alt="LGS1920 Logo"/>
             </div>
-            <div className="provider-credits lgs-credits lgs-one-line-card on-map">
-                {providers.terrain && <Credit id="terrain-credits" type={TERRAIN_ENTITY}
-                                              provider={providers.terrain}/>}
-                {providers.overlay && <Credit id="overlay-credits" type={OVERLAY_ENTITY}
-                                              provider={providers.overlay}/>}
-                {providers.base && <Credit id="layer-credits" type={BASE_ENTITY} provider={providers.base}/>}
+            <div className="provider-credits lgs-credits lgs-one-line-card wa-theme-lgs1920-on-map">
+                {providers.terrain && <CreditLink provider={providers.terrain}/>}
+                {providers.overlay && <CreditLink provider={providers.overlay}/>}
+                {providers.base && <CreditLink provider={providers.base}/>}
             </div>
-            <div className="cesium-credits lgs-credits lgs-one-line-card on-map">
-                <a href="https://www.cesium.com/" target="_blank">
+            <div className="cesium-credits lgs-credits lgs-one-line-card wa-theme-lgs1920-on-map">
+                <a href="https://www.cesium.com/" target="_blank" rel="noreferrer">
                     <img src="/assets/images/Cesium_light_color.svg" alt="Cesium"/>
                 </a>
             </div>

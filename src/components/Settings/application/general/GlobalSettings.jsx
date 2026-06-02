@@ -7,44 +7,52 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-04-29
+ * Last modified: 2026-04-29
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { CameraSettings }      from '@Components/Settings/application/general/CameraSettings'
+import { JourneyStatisticsSettings } from '@Components/Settings/application/general/JourneyStatisticsSettings'
 import { UnitsSystemSettings } from '@Components/Settings/application/general/UnitsSystemSettings'
-import { SlDetails }           from '@shoelace-style/shoelace/dist/react'
-import { useEffect, useRef }   from 'react'
+import { WaDetails } from '@web.awesome.me/webawesome-pro/dist/react'
+import { memo, useRef } from 'react'
 
-export const GlobalSettings = () => {
+export const GlobalSettings = memo(() => {
     const generalTools = useRef(null)
-
-    useEffect(() => {
-        __.ui.ui.initDetailsGroup(generalTools.current)
-    }, [])
-
 
     return (
 
-        <div ref={generalTools} id={'global-style-settings'}>
-            <SlDetails id={'tools-unit-system'}
-                       small open={false}
-                       className={'lgs-theme'}
+        <div ref={generalTools} id={'global-style-settings'} className={'lgs--details-list'}>
+            <WaDetails id={'tools-unit-system'}
+                       small
+                       name="global-settings"
+                       className="lgs--details-hoverable"
             >
                 <UnitsSystemSettings/>
-            </SlDetails>
+            </WaDetails>
 
-            <SlDetails id={'ui-camera-settings'}
-                       small open={false}
-                       className={'lgs-theme'}
+            <WaDetails id={'ui-camera-settings'}
+                       small
+                       name="global-settings"
+                       className="lgs--details-hoverable"
             >
                 <CameraSettings/>
-            </SlDetails>
+            </WaDetails>
+
+            <WaDetails id={'journey-statistics-settings-details'}
+                       small
+                       name="global-settings"
+                       className="lgs--details-hoverable"
+            >
+                <JourneyStatisticsSettings/>
+            </WaDetails>
 
         </div>
 
     )
-}
+})
+
+GlobalSettings.displayName = 'GlobalSettings'

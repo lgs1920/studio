@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-05-01
+ * Last modified: 2026-05-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -17,24 +17,37 @@
 import { VideoRecorderToolbar } from '@Components/MainUI/video/toolbox/VideoRecorderToolbar'
 import { Widget } from '@Components/MainUI/widgets/Widget'
 import { LGS_TOOLBAR, VIDEO_TOOLS_WIDGETS } from '@Core/constants'
-import React, { useEffect, useMemo, useRef, useState } from 'react'
-import { useSnapshot }                                 from 'valtio'
+import { useMemo }     from 'react'
+import { useSnapshot } from 'valtio'
+
+const VIDEO_RECORDER_TOOLBAR_ZINDEX = 'var(--lgs-video-recorder-toolbar-zindex)'
 
 export const VideoRecorderWidget = ({id}) => {
     const $video = lgs.stores.ui.video
-    const _toolbar = useRef(null)
+    const video = useSnapshot($video)
+    const position = video.toolbarPosition ?? video.position ?? {}
+    const left = Number.isFinite(position.left) ? position.left : window.innerWidth / 2
+    const top = Number.isFinite(position.top) ? position.top : window.innerHeight / 2
+    const attachTo = position.attachTo ?? 'bottom'
 
     const config = useMemo(() => {
         return {
-            left:           `${$video.position.left}px`,
-            top:            `${$video.position.top}px`,
-            attachTo:       'center',
+            left:           `${left}px`,
+            top:            `${top}px`,
+            attachTo,
+            canLock:        false,
+            canReduce:      false,
+            margin:         lgs.gutter?.s ?? 8,
             opacity:        lgs.settings.ui.toolbars.opacity,
             type:           LGS_TOOLBAR,
             id:             id,
-            group: VIDEO_TOOLS_WIDGETS,
+            group:          VIDEO_TOOLS_WIDGETS,
+            persist:        false,
+            showControlBox: false,
+            transient:      true,
+            zIndex:         VIDEO_RECORDER_TOOLBAR_ZINDEX,
         }
-    }, [$video.position])
+    }, [attachTo, id, left, top])
 
     return (
         <>

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-11
- * Last modified: 2026-02-11
+ * Created on: 2026-05-08
+ * Last modified: 2026-05-08
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,20 +16,27 @@
 
 import {
     CURRENT_JOURNEY, DRAWING_FROM_DB, DRAWING_FROM_UI, FOCUS_ON_FEATURE, GEOJSON, GPX, JOURNEYS_STORE, JSON_, KML, KMZ,
-    NO_FOCUS, ORIGIN_STORE, POI_FLAG_START, POI_FLAG_STOP, POI_STANDARD_TYPE, REFRESH_DRAWING, SIMULATE_ALTITUDE,
-    TRACK_SLUG, UPDATE_JOURNEY_SILENTLY,
-}                   from '@Core/constants'
-import { MapPOI }   from '@Core/MapPOI'
-import { gpx, kml } from '@tmcw/togeojson'
-import { getGeom }  from '@turf/invariant'
+    NO_FOCUS, ORIGIN_STORE, POI_FLAG_START, POI_FLAG_STOP, POI_STANDARD_TYPE, SIMULATE_ALTITUDE, TRACK_SLUG,
+    UPDATE_JOURNEY_SILENTLY,
+}                                        from '@Core/constants'
+import { MapPOI }                        from '@Core/MapPOI'
+import { gpx, kml }                      from '@tmcw/togeojson'
+import { getGeom }                       from '@turf/invariant'
+import { normalizeTrackRenderSmoothing } from '@Utils/cesium/trackRenderSmoothing'
 
 import {
-    FEATURE_COLLECTION, FEATURE_LINE_STRING, FEATURE_MULTILINE_STRING, FEATURE_POINT, TrackUtils,
-}                          from '@Utils/cesium/TrackUtils'
-import { UIToast }         from '@Utils/UIToast'
-import { ElevationServer } from './Elevation/ElevationServer'
-import { MapElement }      from './MapElement'
-import { Track }           from './Track'
+    FEATURE_COLLECTION, FEATURE_LINE_STRING, FEATURE_MULTILINE_STRING, FEATURE_POINT, IMPORT_LOADING_ERROR, TrackUtils,
+}                             from '@Utils/cesium/TrackUtils'
+import {
+    extractJourneyMetadataFromGeoJson, extractJourneyMetadataFromGpxDocument, extractLgsPoiProperties,
+    extractLgsTrackProperties,
+}                             from '@Utils/JourneyGpxUtils'
+import { decodeHTMLEntities } from '@Utils/TextUtils'
+import { UIToast }            from '@Utils/UIToast'
+import { ElevationServer }    from './Elevation/ElevationServer'
+import { MapElement }         from './MapElement'
+import { getOrbitSettings }   from './OrbitSettings'
+import { Track }              from './Track'
 
 
 export class Journey extends MapElement {
@@ -40,21 +47,31 @@ export class Journey extends MapElement {
     type                                       // File type  GPX,KML,GEOJSON  //TODO KMZ
 
     title = ''                          // Journey Title
+    location = ''
+    country = ''
+    countryCode = ''
+    countries = []
+    countryCodes = []
+    activity
+    activitySettings
+    renderSmoothing
 
     origin                                     // initial geoJson
     POIsVisible = true
 
-    metrics = {global: {}, user: {}, eternal: {}, points: {}}
+    metrics = {global: {}, user: {}, external: {}, points: []}
     camera = {}
     cameraOrigin = {}
+    rotation = {}
+    panorama = {}
+    flythrough = {}
 
     hasElevation = false
     hasTime = false
 
     tracksLoaded = false
-    poisLoaded = false
 
-    constructor(title, type, options) {
+    constructor(title, type, options = {}) {
         super(CURRENT_JOURNEY)
 
 
@@ -69,11 +86,21 @@ export class Journey extends MapElement {
             this.visible = options.visible ?? true
             this.POIsVisible = options.POIsVisible ?? true
 
-            this.description = options.description ?? ''
+            this.description = decodeHTMLEntities(options.description ?? '')
+            this.location = options.location ?? ''
+            this.country = options.country ?? ''
+            this.countryCode = options.countryCode ?? ''
+            this.countries = options.countries ?? []
+            this.countryCodes = options.countryCodes ?? []
+            this.activity = options.activity ?? Journey.defaultActivity()
+            this.activitySettings = Journey.activityProfile(this.activity, options.activitySettings)
+            this.renderSmoothing = options.renderSmoothing === undefined
+                                   ? undefined
+                                   : normalizeTrackRenderSmoothing(options.renderSmoothing)
 
             this.camera = options.camera ?? null
-
-
+            this.rotation = options.rotation ?? {}
+            this.panorama = options.panorama ?? {}
         }
 
     }
@@ -91,6 +118,12 @@ export class Journey extends MapElement {
         await journey.initializeJourney(options)
         return journey
     }
+
+    static defaultActivity = () => Track.defaultActivity()
+
+    static activityProfiles = () => Track.activityProfiles()
+
+    static activityProfile = (activity = Journey.defaultActivity(), overrides = undefined) => Track.activityProfile(activity, overrides)
 
     /**
      * Asynchronously initializes the journey by executing a series of tasks in sequence.
@@ -119,7 +152,13 @@ export class Journey extends MapElement {
             this.globalSettings()
 
             // Get Metrics
-            this.metrics = options.metrics ?? {}
+            this.metrics = {
+                global:   {},
+                user:     {},
+                external: {},
+                points:   [],
+                ...(options.metrics ?? {}),
+            }
 
             this.prepareDrawing().then(async () => {
                 await this.getPOIsFromGeoJson()
@@ -137,10 +176,11 @@ export class Journey extends MapElement {
      * @return {{global: NodeJS.Global|{}, user: *|{}, union: *}}
      */
     getMetrics = () => {
-        const global = this.metrics.global
-        const user = this.metrics.user ?? {}
-        const external = this.metrics.external ?? {}
-        const points = this.metrics.points
+        const metrics = this.metrics ?? {}
+        const global = metrics.global ?? {}
+        const user = metrics.user ?? {}
+        const external = metrics.external ?? {}
+        const points = Array.isArray(metrics.points) ? metrics.points : []
 
         // Deep merge to properly handle nested objects like positive.elevation
         const deepMerge = (target, ...sources) => {
@@ -183,6 +223,14 @@ export class Journey extends MapElement {
 
     getDate = () => {
         const {points} = this.getMetrics()
+
+        if (points.length === 0) {
+            return {
+                start: undefined,
+                stop:  undefined,
+            }
+        }
+
         return {
             start: points[0]?.time,
             stop:  points[points.length - 1]?.time,
@@ -197,19 +245,31 @@ export class Journey extends MapElement {
      *
      * @return {Promise<Awaited<unknown>[]|*[]>}
      */
-    static readAllFromDB = async () => {
+    static readFromDB = async slug => {
+        if (!slug) {
+            return null
+        }
+
+        const data = await lgs.db.lgs1920.get(slug, JOURNEYS_STORE)
+        if (!data) {
+            return null
+        }
+
+        return Journey.deserialize({
+                                       object: data,
+                                       reset:  true,
+                                   })
+    }
+
+    static readAllFromDB = async ({excludeSlugs = []} = {}) => {
         try {
+            const excluded = new Set(excludeSlugs)
             // get all slugs
             const slugs = await lgs.db.lgs1920.keys(JOURNEYS_STORE)
             // Get each journey content
-            const journeyPromises = slugs.map(async (slug) => {
-                return Journey.deserialize(
-                    {
-                        object: await lgs.db.lgs1920.get(slug, JOURNEYS_STORE),
-                        reset:  true,
-                    },
-                )
-            })
+            const journeyPromises = slugs
+                .filter(slug => !excluded.has(slug))
+                .map(slug => Journey.readFromDB(slug))
             return await Promise.all(journeyPromises)
         }
         catch (error) {
@@ -222,9 +282,16 @@ export class Journey extends MapElement {
     static deserialize = (props) => {
         props.instance = new Journey()
         let instance = super.deserialize(props)
+        instance.activity ??= Journey.defaultActivity()
+        instance.activitySettings = Journey.activityProfile(instance.activity, instance.activitySettings)
+        instance.renderSmoothing = instance.renderSmoothing === undefined
+                                   ? undefined
+                                   : normalizeTrackRenderSmoothing(instance.renderSmoothing)
 
         // Transform Tracks from object to class
         instance.tracks.forEach((track, slug) => {
+            track.activity ??= instance.activity
+            track.activitySettings ??= instance.activitySettings
             const object = new Track(track.title, track)
             instance.tracks.set(slug, new Track(track.title, object))
         })
@@ -290,9 +357,12 @@ export class Journey extends MapElement {
         // instead of XML
         try {
             switch (this.type) {
-                case GPX:
-                    this.geoJson = gpx(new DOMParser().parseFromString(content, 'text/xml'))
+                case GPX: {
+                    const gpxDocument = new DOMParser().parseFromString(content, 'text/xml')
+                    this.geoJson = gpx(gpxDocument)
+                    this.#applyJourneyMetadata(extractJourneyMetadataFromGpxDocument(gpxDocument))
                     break
+                }
                 case KMZ :
                     // TODO unzip to get kml. but what to do with the assets files that are sometimes embedded
                     break
@@ -302,16 +372,54 @@ export class Journey extends MapElement {
                 case JSON_:
                 case GEOJSON :
                     this.geoJson = JSON.parse(content)
+                    this.#applyJourneyMetadata(extractJourneyMetadataFromGeoJson(this.geoJson))
             }
 
         }
         catch (error) {
             console.error(error)
-            // Error => we notify
+            const filename = `<strong>${this.title}<strong>`
             UIToast.error({
-                              caption: `An error occurs during loading <strong>${this.title}<strong>!`, text: error,
+                              caption: IMPORT_LOADING_ERROR.caption,
+                              text:    `${IMPORT_LOADING_ERROR.text} ${filename}<br/>${error.message}`,
                           })
             this.geoJson = undefined
+        }
+    }
+
+    #applyJourneyMetadata = (metadata = {}) => {
+        if (metadata.title) {
+            this.title = decodeHTMLEntities(metadata.title)
+        }
+        if (metadata.description !== undefined) {
+            this.description = decodeHTMLEntities(metadata.description)
+        }
+        if (metadata.activity) {
+            this.activity = metadata.activity
+        }
+        if (metadata.activitySettings) {
+            this.activitySettings = Journey.activityProfile(this.activity, metadata.activitySettings)
+        }
+        if (metadata.renderSmoothing) {
+            this.renderSmoothing = normalizeTrackRenderSmoothing(metadata.renderSmoothing)
+        }
+        if (metadata.visible !== undefined) {
+            this.visible = metadata.visible
+        }
+        if (metadata.POIsVisible !== undefined) {
+            this.POIsVisible = metadata.POIsVisible
+        }
+        if (metadata.elevationServer) {
+            this.elevationServer = metadata.elevationServer
+        }
+        if (metadata.camera) {
+            this.camera = metadata.camera
+        }
+        if (metadata.rotation) {
+            this.rotation = metadata.rotation
+        }
+        if (metadata.panorama) {
+            this.panorama = metadata.panorama
         }
     }
 
@@ -329,6 +437,7 @@ export class Journey extends MapElement {
             this.geoJson.features.forEach((feature) => {
                 const geometry = getGeom(feature)
                 const title = feature.properties.name
+                const lgsTrack = extractLgsTrackProperties(feature.properties)
 
                 const slug = this.#setTrackSlug({
                                                     content: [
@@ -341,18 +450,23 @@ export class Journey extends MapElement {
                 if ([FEATURE_LINE_STRING, FEATURE_MULTILINE_STRING].includes(geometry.type)) {
                     // Let's define some tracks parameters
                     const parameters = {
-                        parent:      this.slug,
-                        name:        keepContext ? track.name : slug,
-                        slug:        slug,
-                        hasTime:     this.#hasTime(feature.properties),
-                        hasAltitude: this.#hasAltitude(geometry),
-                        description: keepContext ? track.description : feature.properties.desc ?? '',
-                        segments:    geometry.coordinates.length,
-                        visible:     keepContext ? track.visible : true,
-                        color:       keepContext ? track.color : __.ui.editor.journey.newColor(),
-                        thickness:   keepContext ? track.thickness : lgs.settings.getJourney.thickness,
-                        flags:       keepContext ? track.flags : {start: undefined, stop: undefined},
-                        content:     feature,
+                        parent:          this.slug,
+                        id:              keepContext ? track.id : lgsTrack.id,
+                        name:            keepContext ? track.name : slug,
+                        slug:            slug,
+                        hasTime:         this.#hasTime(feature.properties),
+                        hasAltitude:     this.#hasAltitude(geometry),
+                        description:     keepContext ? track.description : decodeHTMLEntities(feature.properties.desc ?? ''),
+                        activity:        this.activity,
+                        activitySettings: this.activitySettings,
+                        renderSmoothing: keepContext ? track.renderSmoothing : lgsTrack.renderSmoothing,
+                        renderStyle:     keepContext ? track.renderStyle : lgsTrack.renderStyle,
+                        segments:        geometry.coordinates.length,
+                        visible:         keepContext ? track.visible : (lgsTrack.visible ?? true),
+                        color:           keepContext ? track.color : (lgsTrack.color ?? __.ui.editor.journey.newColor()),
+                        thickness:       keepContext ? track.thickness : (lgsTrack.thickness ?? lgs.settings.getJourney.thickness),
+                        flags:           keepContext ? track.flags : {start: undefined, stop: undefined},
+                        content:         feature,
                     }
                     this.tracks.set(slug, new Track(title, parameters))
                 }
@@ -379,7 +493,8 @@ export class Journey extends MapElement {
      * @return {boolean}
      */
     #hasTime = (properties) => {
-        return properties?.coordinateProperties?.times !== undefined
+        const times = properties?.coordinateProperties?.times
+        return Array.isArray(times) && times.length > 0
     }
 
     /**
@@ -389,192 +504,231 @@ export class Journey extends MapElement {
      * @return {boolean}
      */
     #hasAltitude = (geometry) => {
+        const hasAltitude = coordinate => Array.isArray(coordinate) && Number.isFinite(Number(coordinate[2]))
+
         switch (geometry.type) {
             // We check the length of the points coordinates
             case FEATURE_LINE_STRING:
-                return geometry.coordinates[0].length === 3
+                return Array.isArray(geometry.coordinates) && geometry.coordinates.some(hasAltitude)
             case FEATURE_MULTILINE_STRING:
-                return geometry.coordinates[0][0].length === 3
+                return Array.isArray(geometry.coordinates)
+                    && geometry.coordinates.some(segment => Array.isArray(segment) && segment.some(hasAltitude))
+            default:
+                return false
         }
     }
 
     /**
-     * Extract pois from GeoJson
-     *
+     * Extract POIs from GeoJson with coordinate-based synchronization.
+     * Updates existing POIs if they match the same location to preserve identity.
+     * Manages Start/Stop flag visibility based on journey limits.
+     * * @async
+     * @function getPOIsFromGeoJson
+     * @returns {Promise<void>}
      */
     getPOIsFromGeoJson = async () => {
-        if (this.geoJson.type === FEATURE_COLLECTION) {
-            // Extracts all POIs from FEATURE_POINT data and adds
-            // POI on track limits
+        if (this.geoJson.type !== FEATURE_COLLECTION) {
+            return
+        }
 
-            for (const feature of this.geoJson.features) {
-                const index = this.geoJson.features.indexOf(feature)
-                const geometry = getGeom(feature)
+        // Precision helper for coordinate comparison (approx. 1cm)
+        const getCoordKey = (lon, lat) => `${Number(lon).toFixed(7)}_${Number(lat).toFixed(7)}`
 
-                const common = {
-                    description: feature.properties.desc, visible: true,
+        // Build spatial index for existing POIs linked to this journey or its tracks
+        const trackSlugs = Array.from(this.tracks.keys())
+        const existingPOIs = Array.from(__.ui.poiManager.list.values())
+        const existingById = new Map(existingPOIs.filter(p => p?.id).map(p => [p.id, p]))
+        const existingLookup = new Map(
+            existingPOIs
+                .filter(p => p.parent === this.slug || trackSlugs.includes(p.parent))
+                .map(p => [getCoordKey(p.longitude, p.latitude), p]),
+        )
+        const rememberImportedPOI = poi => {
+            if (!poi?.id) {
+                return
+            }
+
+            existingById.set(poi.id, poi)
+            existingLookup.set(getCoordKey(poi.longitude, poi.latitude), poi)
+        }
+
+        const resolveImportedPoiParent = (poiMetadata) => {
+            if (poiMetadata.parentKind !== 'track') {
+                return this.slug
+            }
+
+            if (this.tracks.has(poiMetadata.parent)) {
+                return poiMetadata.parent
+            }
+
+            const matchingTrack = Array.from(this.tracks.values())
+                .find(track => track.title === poiMetadata.parentTrackTitle)
+
+            return matchingTrack?.slug ?? this.slug
+        }
+
+        for (const feature of this.geoJson.features) {
+            const geometry = getGeom(feature)
+            const properties = feature.properties ?? {}
+            const common = {
+                description: decodeHTMLEntities(properties.desc ?? properties.description ?? ''),
+                visible:     true,
+            }
+
+            switch (geometry.type) {
+                case FEATURE_POINT: {
+                    const [lon, lat, z] = geometry.coordinates
+                    const lgsPoi = extractLgsPoiProperties(properties)
+                    if ([POI_FLAG_START, POI_FLAG_STOP].includes(lgsPoi.type)) {
+                        break
+                    }
+
+                    const key = getCoordKey(lon, lat)
+                    const existingPoi = (lgsPoi.id ? existingById.get(lgsPoi.id) : null) ?? existingLookup.get(key)
+                    const importedHeight = lgsPoi.height ?? (lgsPoi.simulatedHeight !== undefined ? undefined : z ?? undefined)
+                    const importedParent = resolveImportedPoiParent(lgsPoi)
+                    const importedType = lgsPoi.type ?? POI_STANDARD_TYPE
+                    const importedCategory = lgsPoi.category ?? POI_STANDARD_TYPE
+                    const importedTitle = properties.name ?? 'POI'
+
+                    const clampedHeight = lgsPoi.simulatedHeight ?? await __.ui.poiManager.getHeightFromTerrain({
+                                                                                                                     coordinates: {
+                                                                                                                         longitude: lon,
+                                                                                                                         latitude:  lat,
+                                                                                                                         height:    importedHeight ?? 0,
+                                                                                                                     },
+                                                                                                                 })
+
+                    const poiData = {
+                        ...common,
+                        parent:          importedParent,
+                        type:            importedType,
+                        category:        importedCategory,
+                        location:        lgsPoi.location,
+                        country:         lgsPoi.country,
+                        countryCode:     lgsPoi.countryCode,
+                        title:           importedTitle,
+                        longitude:       lon,
+                        latitude:        lat,
+                        height:          importedHeight,
+                        simulatedHeight: clampedHeight,
+                        color:   lgsPoi.color ?? lgs.colors.dark,
+                        bgColor: lgsPoi.bgColor ?? lgs.colors.light,
+                        visible:         lgsPoi.visible ?? true,
+                        expanded:        lgsPoi.expanded ?? false,
+                        animated:        lgsPoi.animated ?? false,
+                        time:            lgsPoi.time ?? properties.time,
+                        distance:        lgsPoi.distance,
+                        cameraDistance:  lgsPoi.cameraDistance,
+                        camera:          lgsPoi.camera,
+                    }
+
+                    if (existingPoi) {
+                        const updatedPOI = await __.ui.poiManager.updatePOI(existingPoi.id, poiData, {
+                            immediate:          true,
+                            skipLocationUpdate: Boolean(poiData.location && poiData.country && poiData.countryCode),
+                        })
+                        rememberImportedPOI(updatedPOI)
+                    }
+                    else {
+                        if (lgsPoi.id && !__.ui.poiManager.list.has(lgsPoi.id)) {
+                            poiData.id = lgsPoi.id
+                        }
+
+                        // We need colors
+                        poiData.color = lgsPoi.color ?? lgs.colors.dark
+                        poiData.bgColor = lgsPoi.bgColor ?? lgs.colors.light
+
+                        const poi = new MapPOI({
+                                                   ...poiData,
+                                               })
+                        const addedPOI = await __.ui.poiManager.add(poi, false)
+                        rememberImportedPOI(addedPOI)
+                    }
+                    break
                 }
 
-                // We need to change coordinates array if it is a line string
-                let coordinates = []
-                let times = []
-                switch (geometry.type) {
-                    case FEATURE_LINE_STRING :
-                        coordinates = [geometry.coordinates]
-                        times = [feature?.properties?.coordinateProperties?.times]
-                        break
-                    case FEATURE_MULTILINE_STRING :
-                        coordinates = geometry.coordinates
-                        times = feature?.properties?.coordinateProperties?.times
-                        break
-                }
+                case FEATURE_LINE_STRING:
+                case FEATURE_MULTILINE_STRING: {
+                    const trackSlug = this.#setTrackSlug({
+                                                             content: [this.slug, feature.properties.name],
+                                                         })
+                    const track = this.tracks.get(trackSlug)
+                    if (!track) {
+                        continue
+                    }
 
-                // We build the POI
-                switch (geometry.type) {
-                    case FEATURE_POINT: {
-                        // Create a POI
-                        const point = geometry.coordinates
+                    const coords = geometry.type === FEATURE_LINE_STRING ? [geometry.coordinates] : geometry.coordinates
+
+                    const processFlag = async (isStart) => {
+                        const segment = isStart ? coords[0] : coords[coords.length - 1]
+                        const point = isStart ? segment[0] : segment[segment.length - 1]
+                        const [lon, lat, z] = point
+
+                        const key = getCoordKey(lon, lat)
+                        const type = isStart ? POI_FLAG_START : POI_FLAG_STOP
+
+                        // Priority to lookup key, then fallback to existing track flag ID
+                        const existingPoi = existingLookup.get(key) || __.ui.poiManager.list.get(isStart ? track.flags.start : track.flags.stop)
+
                         const clampedHeight = await __.ui.poiManager.getHeightFromTerrain({
                                                                                               coordinates: {
-                                                                                                  longitude: point[0],
-                                                                                                  latitude:  point[1],
-                                                                                                  height:    point[2] ?? 0,
+                                                                                                  longitude: lon,
+                                                                                                  latitude:  lat,
+                                                                                                  height:    z ?? 0,
                                                                                               },
                                                                                           })
-                        const parameters = {
-                            parent:      this.slug,
-                            type:            POI_STANDARD_TYPE,
-                            title:           feature.properties.name,
-                            description: feature.properties.description ?? '',
-                            longitude:       point[0],
-                            latitude:        point[1],
-                            height:          point[2] ?? undefined,
-                            simulatedHeight: clampedHeight,
 
-                            time:     feature.properties?.time ?? undefined,
-                            expanded: false,
-                            visible:  true,
+                        if (existingPoi) {
+                            existingPoi.longitude = lon
+                            existingPoi.latitude = lat
+                            existingPoi.height = z ?? undefined
+                            existingPoi.simulatedHeight = clampedHeight
                         }
-                        const poi = new MapPOI({...common, ...parameters})
-                        await __.ui.poiManager.add(poi, false)
-                        break
+                        else {
+                            const newPoi = new MapPOI({
+                                                          ...common,
+                                                          parent:          trackSlug,
+                                                          type:            type,
+                                                          title:           isStart ? 'Start' : 'End',
+                                                          longitude:       lon,
+                                                          latitude:        lat,
+                                                          height:          z ?? undefined,
+                                                          simulatedHeight: clampedHeight,
+                                                          color:           isStart ? lgs.settings.journey.pois.start.color : lgs.settings.journey.pois.stop.color,
+                                                      })
+                            await __.ui.poiManager.add(newPoi, false)
+
+                            if (isStart) {
+                                track.flags.start = newPoi.id
+                            }
+                            else {
+                                track.flags.stop = newPoi.id
+                            }
+                        }
                     }
-                    case FEATURE_LINE_STRING :
-                    case FEATURE_MULTILINE_STRING: {
-                        const parentSlug = this.#setTrackSlug({
-                                                                  content: [
-                                                                      this.slug,
-                                                                      feature.properties.name,
-                                                                  ],
-                                                              })
-                        // Create Track Start Flag
-                        const start = coordinates[0][0]
-                        const timeStart = this.#hasTime(feature.properties) ? times[0][0] : undefined
-                        const clampedStart = await __.ui.poiManager.getHeightFromTerrain({
-                                                                                             coordinates: {
-                                                                                                 longitude: start[0],
-                                                                                                 latitude:  start[1],
-                                                                                                 height:    start[2] ?? 0,
-                                                                                             },
-                                                                                         })
-                        const startParameters = {
-                            parent: parentSlug,
-                            type:        POI_FLAG_START,
-                            title:       'Start',
-                            description: 'Track start',
 
-                            longitude:       start[0],
-                            latitude:        start[1],
-                            height:          start[2] ?? undefined,
-                            simulatedHeight: clampedStart,
-
-                            time:     timeStart,
-                            distance: 0,
-
-                            color:   lgs.settings.journey.pois.start.color,
-                            bgColor: lgs.settings.journey.pois.start.bgColor,
-                            expanded: false,
-                            visible: true,
-                        }
-                        const startFlag = new MapPOI({...common, ...startParameters})
-                        await __.ui.poiManager.add(startFlag, false)
-                        this.tracks.get(parentSlug).flags.start = startFlag.id
-
-                        // Create Track Stop Flag
-                        const length = coordinates.length - 1
-                        const last = coordinates[length].length - 1
-                        const stop = coordinates[length][last]
-
-                        const timeStop = this.#hasTime(feature.properties) ? times[length][last] : undefined
-                        const clampedStop = await __.ui.poiManager.getHeightFromTerrain({
-                                                                                            coordinates: {
-                                                                                                longitude: stop[0],
-                                                                                                latitude:  stop[1],
-                                                                                                height:    stop[2] ?? 0,
-                                                                                            },
-                                                                                        })
-                        const stopParameters = {
-                            parent: parentSlug,
-                            type:        POI_FLAG_STOP,
-                            title:       'End',
-                            description: 'Track end',
-
-                            longitude:       stop[0],
-                            latitude:        stop[1],
-                            height:          stop[2] ?? undefined,
-                            simulatedHeight: clampedStop,
-
-                            time: timeStop,
-                            distance: 0,
-
-                            icon:     POI_FLAG_STOP,
-                            color:    lgs.settings.journey.pois.stop.color,
-                            bgColor:  lgs.settings.journey.pois.stop.bgColor,
-                            expanded: false,
-                            visible:  true,
-                        }
-
-                        const stopFlag = new MapPOI({...common, ...stopParameters})
-                        await __.ui.poiManager.add(stopFlag, false)
-                        this.tracks.get(parentSlug).flags.stop = stopFlag.id
-                    }
-                        break
+                    await processFlag(true)  // Start
+                    await processFlag(false) // Stop
+                    break
                 }
             }
-            this.poisLoaded = true
-
-            // If we need to have Flags  on limits only (ie first on first track, last of last track)
-            // we adapt the visibility for the flagged POIs
-            if (this.poisOnLimits) {
-                Array.from(this.tracks.values()).forEach((track, index) => {
-                    Object.assign(__.ui.poiManager.list.get(track.flags.start), {
-                        visible: index === 0,
-                    })
-                    Object.assign(__.ui.poiManager.list.get(track.flags.stop), {
-                        visible: index === this.tracks.size - 1,
-                    })
-
-                })
-            }
-
-
         }
-    }
 
-    /**
-     * Define the slug of a POI
-     *
-     * @param suffix {string|number}
-     * @param content {string|number}
-     * @param prefix  {string|number} optional (default = poi)
-     *
-     * @return {string}
-     */
-    #setPOISlug = ({suffix = '', content = '', prefix = POI_STD}) => {
-        if (typeof content === 'number') {
-            content = content.toString()
+        // Adjust visibility for flagged POIs if limited to journey boundaries
+        if (this.poisOnLimits) {
+            Array.from(this.tracks.values()).forEach((track, index) => {
+                const startPoi = __.ui.poiManager.list.get(track.flags.start)
+                const stopPoi = __.ui.poiManager.list.get(track.flags.stop)
+
+                if (startPoi) {
+                    startPoi.visible = index === 0
+                }
+                if (stopPoi) {
+                    stopPoi.visible = index === this.tracks.size - 1
+                }
+            })
         }
-        return __.app.setSlug({suffix: suffix, content: content, prefix: prefix})
     }
 
     /**
@@ -656,16 +810,16 @@ export class Journey extends MapElement {
 
         await Promise.all(promises)
 
-        //Ready
-        const texts = new Map([
-                                  [DRAWING_FROM_UI, 'Loaded succesfully!'],
-                                  [DRAWING_FROM_DB, 'Loaded succesfully!'],
-                                  [SIMULATE_ALTITUDE, 'Updated succesfully!'],
-                                  [REFRESH_DRAWING, 'Updated succesfully!'],
-                              ])
-        UIToast.success({
-                            caption: `${this.title}`, text: texts.get(action),
-                        })
+        // //Ready
+        // const texts = new Map([
+        //                           [DRAWING_FROM_UI, 'File loaded succesfully!'],
+        //                           [DRAWING_FROM_DB, 'File loaded succesfully!'],
+        //                           [SIMULATE_ALTITUDE, 'File updated succesfully!'],
+        //                           [REFRESH_DRAWING, 'File updated succesfully!'],
+        //                       ])
+        // UIToast.success({
+        //                     caption: `${this.title}`, text: texts.get(action),
+        //                 })
 
         if (mode === FOCUS_ON_FEATURE && action !== DRAWING_FROM_DB && action !== UPDATE_JOURNEY_SILENTLY) {
             this.focus({action: action, rotate: lgs.settings.ui.camera.start.rotate.journey})
@@ -675,6 +829,11 @@ export class Journey extends MapElement {
     }
 
     focus = (props = {}) => {
+        if (props.rotate) {
+            const rotationSettings = getOrbitSettings(this, 'rotation')
+            props.rpm ??= rotationSettings.rpm
+            props.direction ??= rotationSettings.direction
+        }
         props.journey = this
         props.target = this
         __.ui.sceneManager.focusOnJourney(props)
@@ -689,73 +848,23 @@ export class Journey extends MapElement {
     }
 
     setGlobalMetrics = () => {
-
-        const allMetrics = []
-
-        this.tracks.forEach(track => allMetrics.push(track.metrics.global))
-
-        let global = {}, tmp = []
-
-        // Min Height
-        global.minHeight = this.hasAltitude ? Math.min(...allMetrics.map(a => a?.altitude)) : undefined
-
-        // Max Height
-        global.maxHeight = this.hasAltitude ? Math.max(...allMetrics.map(a => a?.altitude)) : undefined
-
-        // If the first have duration time, all the data set have time
-        if (this.hasTime) {
-            // Max speed
-            tmp = TrackUtils.filterArray(allMetrics, {
-                speed: speed => speed !== 0 && speed !== undefined,
-            })
-            global.maxSpeed = Math.max(...tmp.map(a => a?.speed))
-
-            // Average speed (we exclude 0 and undefined values)
-            global.averageSpeed = tmp.reduce((s, o) => {
-                return s + o.speed
-            }, 0) / tmp.length
-
-            // Todo  Add average speed in motion
-
-            // Max Pace
-            global.maxPace = Math.max(...tmp.map(a => a?.pace))
-
-            // Todo  Add average pace in motion
-        }
+        const tracks = Array.from(this.tracks.values())
+        const points = tracks.flatMap(track => Array.isArray(track.metrics?.points) ? track.metrics.points : [])
+        const global = Track.calculateGlobalMetrics({
+                                                        points:      points,
+                                                        rawPoints:   points,
+                                                        hasTime:     this.hasTime,
+                                                        hasAltitude: this.hasAltitude,
+                                                        activityProfile: Journey.activityProfile(this.activity, this.activitySettings),
+                                                    })
 
         if (this.hasAltitude) {
-            // Max Slope
-            global.maxSlope = this.hasAltitude ? Math.max(...allMetrics.map(a => a?.slope)) : undefined
+            const minHeights = tracks.map(track => track.metrics?.global?.minHeight).filter(value => Number.isFinite(value))
+            const maxHeights = tracks.map(track => track.metrics?.global?.maxHeight).filter(value => Number.isFinite(value))
 
-            // Positive elevation and distance
-            global.positiveElevation = 0
-            global.positiveDistance = 0
-            allMetrics.forEach((point) => {
-                if (point.elevation > 0) {
-                    global.positiveElevation += point.elevation
-                    global.positiveDistance += point.distance
-                }
-            })
-
-            // Negative elevation
-            global.negativeElevation = 0
-            global.negativeDistance = 0
-            allMetrics.forEach((point) => {
-                if (point.elevation < 0) {
-                    global.negativeElevation += point.elevation
-                    global.negativeDistance += point.distance
-                }
-            })
+            global.minHeight = minHeights.length ? Math.min(...minHeights) : undefined
+            global.maxHeight = maxHeights.length ? Math.max(...maxHeights) : undefined
         }
-        // Total duration
-        global.duration = allMetrics.reduce((s, o) => {
-            return s + o.duration
-        }, 0)
-
-        // Total Distance
-        global.distance = allMetrics.reduce((s, o) => {
-            return s + o.distance
-        }, 0)
 
         return global
     }
@@ -766,7 +875,12 @@ export class Journey extends MapElement {
      * We loop over tracks to compute tracks metrics
      */
     extractMetrics = () => {
+        this.activity ??= Journey.defaultActivity()
+        this.activitySettings = Journey.activityProfile(this.activity)
+
         this.tracks.forEach(track => {
+            track.activity = this.activity
+            track.activitySettings = this.activitySettings
             track.extractMetrics()
         })
 
@@ -776,6 +890,8 @@ export class Journey extends MapElement {
             return
         }
         // For a multi track journey, let's compute journey level metrics
+        this.metrics.points = Array.from(this.tracks.values())
+            .flatMap(track => Array.isArray(track.metrics?.points) ? track.metrics.points : [])
         this.metrics.global = this.setGlobalMetrics()
     }
 
@@ -786,6 +902,10 @@ export class Journey extends MapElement {
      */
     hasOneTrack = () => {
         return this.tracks.size === 1
+    }
+
+    hasSeveralTracks = () => {
+        return this.tracks.size > 1
     }
 
     remove = async () => {

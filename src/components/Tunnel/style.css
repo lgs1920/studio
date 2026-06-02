@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-04-29
+ * Last modified: 2026-04-29
  *
  *
  * Copyright © 2026 LGS1920
@@ -17,26 +17,33 @@
 :root {
     --lgs-tunnel-thickness: 2px;
     --lgs-tunnel-icon-border-thickness: 2px;
-    --lgs-tunnel-color: var(--lgs-light-color-75);
-    --lgs-tunnel-bg-color: var(--lgs-dark-color-75);
-    --lgs-tunnel-bg-blocked-color: var(--lgs-dark-color-50);
-    --lgs-tunnel-blocked-color: var(--lgs-light-color-50);
+    --lgs-tunnel-color: var(--lgs-light-color);
+    --lgs-tunnel-bg-color: var(--lgs-dark-color);
 
-    --lgs-tunnel-bg-active-color: var(--lgs-third-color);
-    --lgs-tunnel-active-color: var(--lgs-dark-color);
+    --lgs-tunnel-bg-blocked-color: var(--wa-color-red-40) !important;
+    --lgs-tunnel-blocked-color: var(--wa-color-red-10) !important;
+
+    --lgs-tunnel-bg-active-color: var(--wa-color-brand-70);
+    --lgs-tunnel-active-color: var(--wa-color-brand-40);
 
     --lgs-tunnel-bg-done-color: var(--lgs-dark-color);
     --lgs-tunnel-done-color: var(--lgs-light-color);
 
-    --lgs-tunnel-hover-bg-color: var(--lgs-dark-color);
-    --lgs-tunnel-hover-color: var(--lgs-light-color);
+    --lgs-tunnel-hover-bg-color: var(--wa-color-brand-70);
+    --lgs-tunnel-hover-color: var(--wa-color-brand-20);
 
     --lgs-tunnel-spacer-width: var(--lgs-gutter);
+    --lgs-tunnel-callout-max-width: 200px;
+    --lgs-tunnel-callout-border-color: var(--lgs-tunnel-done-color);
+    --lgs-tunnel-callout-gradient: linear-gradient(28deg, color-mix(in oklab, var(--wa-color-brand) 48%, transparent) 0%, transparent 42%),
+    linear-gradient(142deg, var(--lgs-light-color-25) 0%, transparent 38%),
+    linear-gradient(165deg, color-mix(in oklab, var(--wa-color-brand) 24%, var(--lgs-dark-color-95) 76%) 0%, var(--lgs-dark-color-95) 100%);
 }
 
 .lgs-tunnel-container {
     position: relative;
 }
+
 
 .lgs-tunnel-bar {
     position: relative;
@@ -50,20 +57,101 @@
     display: flex;
     gap: 0
 }
+
+.lgs-tunnel-tooltip-anchor {
+    display: inline-flex;
+}
+
+.lgs-tunnel-tooltip-popup {
+    z-index: calc(var(--lgs-context-menu-zindex) + 1);
+    --arrow-size: 8px;
+    --arrow-color: var(--lgs-tunnel-callout-border-color);
+    --popup-border-width: 1px;
+}
+
+.lgs-tunnel-tooltip-popup::part(popup) {
+    z-index: calc(var(--lgs-context-menu-zindex) + 1);
+    width: max-content;
+    max-width: min(var(--lgs-tunnel-callout-max-width), calc(100vw - var(--lgs-gutter) - var(--lgs-gutter)));
+}
+
+.lgs-tunnel-tooltip-popup::part(arrow) {
+    border: none;
+    background: var(--lgs-card-on-map-bg-color);
+    box-shadow: var(--lgs-on-map-floating-shadow, var(--lgs-overlay-floating-shadow));
+}
+
+.lgs-tunnel-tooltip {
+    font-size: var(--lgs-font-size-s);
+    line-height: var(--lgs-font-line-height);
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+    width: max-content;
+    max-width: min(var(--lgs-tunnel-callout-max-width), calc(100vw - var(--lgs-gutter) - var(--lgs-gutter)));
+    padding: var(--lgs-gutter-xs) var(--lgs-gutter-s);
+    white-space: normal;
+    color: var(--lgs-text-on-color);
+    border: 1px solid var(--lgs-tunnel-callout-border-color);
+    border-radius: var(--lgs-on-map-interactive-radius, var(--lgs-border-radius-s));
+    background-color: var(--lgs-dark-color-95);
+    background-image: var(--lgs-tunnel-callout-gradient);
+    box-shadow: var(--lgs-on-map-floating-shadow, var(--lgs-overlay-floating-shadow));
+    overflow-wrap: break-word;
+    background-blend-mode: screen, soft-light, normal;
+    filter: drop-shadow(var(--lgs-on-map-floating-drop-shadow, var(--lgs-overlay-floating-drop-shadow)));
+    gap: var(--lgs-gutter-xxs);
+}
+
+.lgs-tunnel-tooltip-heading {
+    font-weight: var(--lgs-font-weight-bold);
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-start;
+    width: 100%;
+    text-align: left;
+    gap: var(--lgs-gutter-xs);
+}
+
+.lgs-tunnel-tooltip-heading wa-icon {
+    flex: 0 0 auto;
+    color: var(--lgs-tunnel-callout-border-color);
+}
+
+.lgs-tunnel-tooltip-title {
+    min-width: 0;
+}
+
+.lgs-tunnel-tooltip-text {
+    opacity: 0.88;
+}
+
 .lgs-tunnel-element {
     position: relative;
     z-index: 2;
-    color: var(--lgs-tunnel-color);
     border: var(--lgs-tunnel-icon-border-thickness) solid var(--lgs-tunnel-color);
     border-radius: 50%;
     background-color: var(--lgs-tunnel-bg-color);
+
+    & wa-icon {
+        pointer-events: none;
+        color: var(--lgs-tunnel-color);
+    }
+
+    &:hover {
+        border-color: var(--lgs-tunnel-hover-color) !important;
+    }
+
+
+    &:hover wa-icon {
+        color: var(--lgs-tunnel-hover-color) !important;
+    }
+
+    &::part(base):hover {
+        background-color: var(--lgs-tunnel-hover-bg-color) !important;
+    }
 }
 
-.lgs-tunnel-element:hover {
-    color: var(--lgs-tunnel-hover-color);
-    border-color: var(--lgs-tunnel-hover-color);
-    background-color: var(--lgs-tunnel-hover-bg-color);
-}
 
 .lgs-tunnel-element-blocked {
     color: var(--lgs-tunnel-blocked-color);
@@ -74,7 +162,10 @@
     color: var(--lgs-tunnel-active-color) !important;
     border-color: var(--lgs-tunnel-active-color) !important;
     background-color: var(--lgs-tunnel-bg-active-color) !important;
+
+    & wa-icon {color: var(--lgs-tunnel-active-color) !important}
 }
+
 
 .lgs-tunnel-element-done {
     color: var(--lgs-tunnel-done-color);
@@ -98,4 +189,5 @@
 
 .lgs-tunnel-cancel {
     font-size: var(--lgs-font-size-s);
+    background-color: var(--lgs-dark-color-90);
 }

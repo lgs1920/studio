@@ -7,70 +7,79 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-28
- * Last modified: 2026-02-28
+ * Created on: 2026-04-23
+ * Last modified: 2026-04-23
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { faRegularRouteCirclePlus } from '@awesome.me/kit-eb5c406148/icons/kit/custom'
-import { faGlobePointer }           from '@fortawesome/pro-regular-svg-icons'
-import { SlButton, SlIcon }         from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                    from '@Utils/FA2SL'
-import { useEffect, useRef }        from 'react'
+import { WaButton, WaIcon, WaTooltip } from '@web.awesome.me/webawesome-pro/dist/react'
+import { useEffect, useRef } from 'react'
 
-export const CallForActions = (props) => {
-    const cfa = useRef(null)
-    const main = lgs.stores.main
+/**
+ * Component displaying initial actions with triggered animation
+ * @returns {JSX.Element}
+ */
+export const CallForActions = () => {
+    const _cfa = useRef(null)
+    const _mainUI = useRef(lgs.stores.ui.mainUI)
 
+    /**
+     * Hides the call to action for the current app session.
+     */
+    const hide = () => {
+        _mainUI.current.callForActions.active = false
+    }
+
+    /**
+     * Hides the call to action and triggers the journey loader
+     */
     const loadJourney = () => {
         hide()
-        lgs.stores.ui.mainUI.journeyLoader.visible = true
-
-    }
-    const hide = () => {
-        cfa.current.style.display = 'none'
+        _mainUI.current.journeyLoader.visible = true
     }
 
     useEffect(() => {
-        // We check if we click outside. If it is the case,
-        // We hide CFAs
+        /**
+         * Closes the panel if a click occurs outside the reference element
+         * @param {MouseEvent} event
+         */
         const handleClickOutside = (event) => {
-            if (cfa.current && !cfa.current.contains(event.target)) {
+            if (_cfa.current && !_cfa.current.contains(event.target)) {
                 hide()
                 document.removeEventListener('mousedown', handleClickOutside)
             }
         }
+
         document.addEventListener('mousedown', handleClickOutside)
+
         return () => {
             document.removeEventListener('mousedown', handleClickOutside)
         }
     }, [])
 
     return (
-        <>
-            {main.readyForTheShow && !main.theJourney &&
-                <div className="main-actions call-for-actions lgs-slide-in-from-bottom" ref={cfa}>
-                    <div className="buttons-bar">
-                        <SlButton onClick={hide} href={__.app.buildUrl(lgs.configuration.website)}
-                                  target="_blank"
-                                  outline>
-                            <SlIcon slot="prefix" library="fa"
-                                    name={FA2SL.set(faGlobePointer)}/>
-                            {'Visit Our Site'}
-                        </SlButton>
+        <div className="main-actions call-for-actions" ref={_cfa}>
+            <div className="buttons-bar">
+                <WaButton
+                    onClick={hide}
+                    id="cfa-visit-site"
+                    href={__.app.buildUrl(lgs.configuration.website)}
+                    target="_blank"
+                    appearance="outlined"
+                    variant="brand"
+                >
+                    <WaIcon slot="start" variant="regular" name="globe-pointer"/>
+                    {'Visit Our Site'}
+                </WaButton>
 
-
-                        <SlButton variant="primary" onClick={loadJourney}>
-                            <SlIcon slot="prefix" library="fa"
-                                    name={FA2SL.set(faRegularRouteCirclePlus)}/>
-                            <span>Load your first Journey</span>
-
-                        </SlButton>
-                    </div>
-                </div>
-            }
-        </>
+                <WaTooltip for="cfa-import-journey" placement="top">{'Import journey'}</WaTooltip>
+                <WaButton id="cfa-import-journey" variant="brand" onClick={loadJourney}>
+                    <WaIcon slot="start" variant="regular" name="file-import"/>
+                    <span>Import</span>
+                </WaButton>
+            </div>
+        </div>
     )
 }

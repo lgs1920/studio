@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-14
- * Last modified: 2026-02-14
+ * Created on: 2026-05-10
+ * Last modified: 2026-05-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -18,16 +18,23 @@
  * Singleton class acting as an interface for managing draggable and resizable widgets.
  * Delegates functionality to specialized classes.
  */
-import { WidgetDBManager }    from '@Core/ui/widget-manager/WidgetDBManager'
-import { WidgetRotatable }    from '@Core/ui/widget-manager/WidgetRotatable'
-import { WidgetCoreControls } from './WidgetCoreControls'
-import { WidgetCoreRegistry } from './WidgetCoreRegistry'
-import { WidgetCropper }      from './WidgetCropper'
-import { WidgetDraggable }    from './WidgetDraggable'
-import { WidgetPosition }     from './WidgetPosition'
-import { WidgetResizable }    from './WidgetResizable'
-import { WidgetScalable }     from './WidgetScalable'
-import { WidgetTransform }    from './WidgetTransform'
+import {
+    CAMERA_INFORMATION_WIDGET, JOURNEY_EDITOR_DRAWER, JOURNEY_TOOLBAR_WIDGET, PROFILE_WIDGET, SCENE_WIDGETS_BOARD,
+    VIDEO_WIDGETS_BOARD, WIDGET_EDITOR_POST_RENDER_EVENT, WIDGET_EDITOR_PRE_RENDER_EVENT, WIDGETS_EDITOR_DRAWER,
+}                                from '@Core/constants'
+import { Export }                from '@Core/ui/Export'
+import { WidgetDynamicRenderer } from '@Core/ui/widget-manager/dynamic-render/WidgetDynamicRender'
+import { WidgetDBManager }       from '@Core/ui/widget-manager/WidgetDBManager'
+import { WidgetRotatable }       from '@Core/ui/widget-manager/WidgetRotatable'
+import { UIToast }               from '@Utils/UIToast'
+import { WidgetCoreControls }    from './WidgetCoreControls'
+import { WidgetCoreRegistry }    from './WidgetCoreRegistry'
+import { WidgetCropper }         from './WidgetCropper'
+import { WidgetDraggable }       from './WidgetDraggable'
+import { WidgetPosition }        from './WidgetPosition'
+import { WidgetResizable }       from './WidgetResizable'
+import { WidgetScalable }        from './WidgetScalable'
+import { WidgetTransform }       from './WidgetTransform'
 
 export class WidgetManager {
     // Singleton instance
@@ -71,7 +78,7 @@ export class WidgetManager {
      * Creates or returns the singleton instance of WidgetManager.
      * @param {Object} store - Application store
      */
-    constructor(store) {
+    constructor() {
         if (WidgetManager.#instance) {
             return WidgetManager.#instance
         }
@@ -87,7 +94,6 @@ export class WidgetManager {
         this.#controls = new WidgetCoreControls(this.#registry)
         WidgetManager.#instance = this
     }
-
 
     /**
      * Gets the transform helper instance.
@@ -272,6 +278,51 @@ export class WidgetManager {
     getElementById = id => this.#registry.getElementById(id)
 
     /**
+     * Resolves the DOM element used as the positioning reference for a widgets board.
+     * Positions are stored relative to the board itself.
+     *
+     * @param {string|null|undefined} widgetsBoard
+     * @returns {HTMLElement|null}
+     */
+    resolveWidgetsBoardReferenceContainer = (widgetsBoard) => this.resolveWidgetsBoardBoundsContainer(widgetsBoard)
+
+    /**
+     * Resolves the DOM element used as bounds / clipping reference for a widgets board.
+     * Scene widgets are bounded by the scene canvas. Board widgets are bounded by their own `.defined` area.
+     *
+     * @param {string|null|undefined} widgetsBoard
+     * @returns {HTMLElement|null}
+     */
+    resolveWidgetsBoardBoundsContainer = (widgetsBoard) => {
+        if (!widgetsBoard || widgetsBoard === SCENE_WIDGETS_BOARD) {
+            return lgs.canvas ?? null
+        }
+
+        if (typeof document === 'undefined') {
+            return null
+        }
+
+        const definedBoard = document.querySelector(`#${widgetsBoard}.defined`)
+        if (definedBoard) {
+            return definedBoard
+        }
+
+        if (widgetsBoard === VIDEO_WIDGETS_BOARD) {
+            return null
+        }
+
+        return document.querySelector(`[data-widget-id="${widgetsBoard}"] .crop-zone`)
+    }
+
+    /**
+     * Backward-compatible alias for bounds resolution.
+     *
+     * @param {string|null|undefined} widgetsBoard
+     * @returns {HTMLElement|null}
+     */
+    resolveWidgetsBoardContainer = (widgetsBoard) => this.resolveWidgetsBoardBoundsContainer(widgetsBoard)
+
+    /**
      * Retrieves the widget ID from an element.
      * @param {HTMLElement} element - The DOM element
      * @returns {string|null} The widget ID or null if not found
@@ -311,6 +362,13 @@ export class WidgetManager {
      * @param {boolean} usePersist - Whether to respect persist flag
      */
     disposeByGroup = (groupId, usePersist = false) => this.#registry.disposeByGroup(groupId, usePersist)
+
+    /**
+     * Invalidates the runtime state of all widgets attached to a board without deleting persistence.
+     * @param {string} widgetsBoard
+     * @returns {number}
+     */
+    invalidateRuntimeByBoard = widgetsBoard => this.#registry.invalidateRuntimeByBoard(widgetsBoard)
 
     /**
      * Monitors container resize events and updates widget bounds and position.
@@ -420,7 +478,7 @@ export class WidgetManager {
      * @returns {number} number of instances
      *
      */
-    countWidgets = (group, widget) => this.#registry.countWidgets(group, widget)
+    countWidgets = (group, widget, widgetsBoard = undefined) => this.#registry.countWidgets(group, widget, widgetsBoard)
     /**
      * Checks if a widget has reached its maximum allowed instances.
      *
@@ -428,7 +486,7 @@ export class WidgetManager {
      * @param {string} widget - Widget ID (can include ID prefixed, e.g., 'myWidget#uuid').
      * @returns {boolean} True if the max is reached, false otherwise.
      */
-    isMaxWidgetsReached = (group, widget) => this.#registry.isMaxWidgetsReached(group, widget)
+    isMaxWidgetsReached = (group, widget, widgetsBoard = undefined) => this.#registry.isMaxWidgetsReached(group, widget, widgetsBoard)
     /**
      * Returns maximum allowed widget instances.
      *
@@ -436,7 +494,7 @@ export class WidgetManager {
      * @param {string} widget - Widget ID (can include ID prefixed, e.g., 'myWidget#uuid').
      * @returns {number} the maximum  allowed instances
      */
-    maxWidgets = (group, widget) => this.#registry.maxWidgets(group, widget)
+    maxWidgets = (group, widget, widgetsBoard = undefined) => this.#registry.maxWidgets(group, widget, widgetsBoard)
 
     /**
      * Applies crop dimensions to the overlay element.
@@ -450,9 +508,19 @@ export class WidgetManager {
      * @param {string} widget - Widget ID (can include ID prefixed, e.g., 'myWidget#uuid').
      * @returns {number} The remaining number of instances.
      */
-    remainingWidgets = (group, widget) => this.#registry.remainingWidgets(group, widget)
+    remainingWidgets = (group, widget, widgetsBoard = undefined) => this.#registry.remainingWidgets(group, widget, widgetsBoard)
 
     applyCropToOverlay = config => this.#cropper.applyCropToOverlay(config)
+
+    /**
+     * Synchronizes crop dimensions from the rendered DOM element.
+     * @param {string} cropzoneId - Crop zone identifier
+     * @param {boolean} persist - Whether to persist the synced crop after update
+     * @param {string} phase - Crop update phase label
+     * @returns {Promise<Object|null>}
+     */
+    syncCropDimensionsFromElement = async (cropzoneId, persist = false, phase = 'sync') =>
+        await this.#cropper.syncCropDimensionsFromElement(cropzoneId, persist, phase)
 
     /**
      * Saves widget position and dimensions to the widgets DB.
@@ -472,6 +540,197 @@ export class WidgetManager {
         }
         await this.#widgetDB.saveWidgetPosition(widgetId, positionData)
 
+    }
+
+    /**
+     * Refreshes the editor preview background when the edited widget moved.
+     * @param {string} widgetId - The widget ID
+     */
+    refreshEditorPreviewSnapshot = (widgetId) => {
+        if (!widgetId || typeof window === 'undefined') {
+            return
+        }
+
+        const isRelevantEditor = () => {
+            const drawers = lgs.stores?.ui?.drawers
+            const widgetType = widgetId.split('#')[0]
+
+            return (drawers?.open === WIDGETS_EDITOR_DRAWER && drawers.entity === widgetId) ||
+                (drawers?.open === JOURNEY_EDITOR_DRAWER && widgetType === PROFILE_WIDGET)
+        }
+
+        if (!isRelevantEditor()) {
+            return
+        }
+
+        const dispatch = () => {
+            if (!isRelevantEditor()) {
+                return
+            }
+
+            window.dispatchEvent(new CustomEvent(WIDGET_EDITOR_PRE_RENDER_EVENT, {
+                detail: {entity: widgetId},
+            }))
+        }
+
+        if (typeof requestAnimationFrame === 'function') {
+            requestAnimationFrame(dispatch)
+            return
+        }
+
+        dispatch()
+    }
+    /**
+     * Checks whether a widget can be snapped from the scene.
+     *
+     * @param {string|null|undefined} widgetId - The widget ID
+     * @returns {boolean} True if the widget can be snapped
+     */
+    canSnapshotWidget = (widgetId) => {
+        if (!widgetId) {
+            return false
+        }
+        const config = this.getWidgetConfig(widgetId)
+        return Boolean(config?.contextMenu?.canSnapshot && this.getElementById(widgetId))
+    }
+    /**
+     * Checks whether a widget can be removed from the scene.
+     *
+     * @param {string|null|undefined} widgetId - The widget ID
+     * @returns {boolean} True if the widget can be removed
+     */
+    canRemoveWidget = (widgetId) => {
+        if (!widgetId) {
+            return false
+        }
+        const config = this.getWidgetConfig(widgetId)
+        return Boolean(config?.contextMenu?.canRemove && this.getElementById(widgetId))
+    }
+
+    /**
+     * Checks whether a widget can be edited.
+     *
+     * @param {string|null|undefined} widgetId - The widget ID
+     * @returns {boolean} True if the widget editor can be opened
+     */
+    canEditWidget = (widgetId) => {
+        if (!widgetId) {
+            return false
+        }
+        const config = this.getWidgetConfig(widgetId)
+        return Boolean(config?.contextMenu?.canEdit && this.getElementById(widgetId))
+    }
+
+    /**
+     * Opens or toggles the editor drawer for a widget.
+     *
+     * @param {string|null|undefined} widgetId - The widget ID
+     * @param {Object} [options] - Editor options
+     * @param {boolean} [options.toggle=false] - Close the editor if it is already editing this widget
+     * @returns {boolean} True when the widget was editable
+     */
+    editWidget = (widgetId, options = {}) => {
+        if (!this.canEditWidget(widgetId)) {
+            return false
+        }
+
+        const {toggle = false} = options
+        const drawers = lgs.stores?.ui?.drawers
+        const isCurrentlyEditing = drawers?.open === WIDGETS_EDITOR_DRAWER && drawers.entity === widgetId
+
+        lgs.stores.ui.widget.current = {id: widgetId}
+
+        if (isCurrentlyEditing) {
+            if (toggle) {
+                __.ui.drawerManager?.close?.()
+            }
+            return true
+        }
+
+        window.dispatchEvent(new CustomEvent(WIDGET_EDITOR_PRE_RENDER_EVENT, {
+            detail: {entity: widgetId},
+        }))
+        __.ui.drawerManager.open(WIDGETS_EDITOR_DRAWER, {
+            action: 'edit-current',
+            entity: widgetId,
+        })
+        window.dispatchEvent(new CustomEvent(WIDGET_EDITOR_POST_RENDER_EVENT, {
+            detail: {entity: widgetId},
+        }))
+
+        return true
+    }
+
+    /**
+     * Opens or toggles the editor drawer for a widget.
+     *
+     * @param {string|null|undefined} widgetId - The widget ID
+     * @returns {boolean} True when the widget was snapped
+     */
+    snapWidget = (widgetId) => {
+        if (!widgetId || !this.canSnapshotWidget(widgetId)) {
+            return false
+        }
+        const cached = lgs.stores.ui.widget.cache.get(widgetId)
+        const theWidget = __.widgets.get(cached.group).widgets.get(widgetId.split('#')[0])
+
+        const _name = `${lgs.theJourney.title} - ${theWidget.name}`
+        Export.toPNG(document.querySelector(`[data-widget-id="${widgetId}"]`), _name, 2).then(() => {
+            UIToast.success({caption: 'Export success', text: `Exported to ${_name}.png`})
+        })
+        return true
+    }
+
+    /**
+     * Removes a widget and cleans up the related UI state.
+     *
+     * @param {string|null|undefined} widgetId - The widget ID
+     * @returns {Promise<boolean>} True when a widget was removed
+     */
+    removeWidget = async (widgetId) => {
+        if (!this.canRemoveWidget(widgetId)) {
+            return false
+        }
+
+        const element = this.getElementById(widgetId)
+        const type = widgetId.split('#')[0]
+
+        WidgetDynamicRenderer.instance.destroyWidget(widgetId)
+
+        const cameraSettings = lgs.settings?.ui?.camera
+        if (type === CAMERA_INFORMATION_WIDGET && cameraSettings) {
+            cameraSettings.showPosition = false
+            cameraSettings.showHPR = false
+            cameraSettings.showTargetPosition = false
+        }
+
+        if (type === JOURNEY_TOOLBAR_WIDGET && lgs.settings?.ui?.journeyToolbar) {
+            lgs.settings.ui.journeyToolbar.show = false
+        }
+
+        const elements = lgs.settings?.widgets?.[type]?.configuration?.elements
+        if (elements && Object.prototype.hasOwnProperty.call(elements, widgetId)) {
+            delete elements[widgetId]
+        }
+
+        if (element) {
+            await this.disposeElement(element)
+        }
+
+        const drawers = lgs.stores?.ui?.drawers
+        if (drawers?.open === WIDGETS_EDITOR_DRAWER && drawers.entity === widgetId) {
+            __.ui.drawerManager?.close?.()
+        }
+
+        if (lgs.stores?.ui?.widget?.current?.id === widgetId) {
+            lgs.stores.ui.widget.current = {id: null}
+        }
+
+        if (lgs.stores?.ui?.contextMenu?.targetId === widgetId) {
+            __.ui.contextMenu?.hide?.()
+        }
+
+        return true
     }
 
     /**
@@ -624,6 +883,103 @@ export class WidgetManager {
     getWidgetsByGroup = async groupId => this.#widgetDB.getWidgetsByGroup(groupId)
 
     /**
+     * Rehydrates all persisted widgets mounted on a specific board from IndexedDB.
+     * This is used when a board is reused between sessions and the in-memory runtime
+     * state has stale positions.
+     *
+     * @param {string} widgetsBoard
+     * @returns {Promise<number>} Number of refreshed widgets
+     */
+    rehydrateWidgetsByBoard = async (widgetsBoard) => {
+        if (!widgetsBoard) {
+            return 0
+        }
+
+        const referenceContainer = this.resolveWidgetsBoardReferenceContainer(widgetsBoard)
+        if (!referenceContainer) {
+            return 0
+        }
+
+        const referenceRect = referenceContainer.getBoundingClientRect?.()
+        if (!referenceRect || referenceRect.width <= 0 || referenceRect.height <= 0) {
+            return 0
+        }
+
+        const entries = [...lgs.stores.ui.widget.list.entries()]
+            .filter(([, entry]) => entry?.widgetsBoard === widgetsBoard)
+
+        let refreshed = 0
+        for (const [widgetId, entry] of entries) {
+            const config = this.getWidgetConfig(widgetId)
+            const element = this.getElementById(widgetId)
+            const saved = await this.getWidgetPosition(widgetId)
+            if (!config || !element || !saved) {
+                continue
+            }
+
+            const width = Number.isFinite(saved.width)
+                          ? saved.width
+                          : (Number.isFinite(config.dimensions?.width) ? config.dimensions.width : element.getBoundingClientRect().width)
+            const height = Number.isFinite(saved.height)
+                           ? saved.height
+                           : (Number.isFinite(config.dimensions?.height) ? config.dimensions.height : element.getBoundingClientRect().height)
+            if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
+                continue
+            }
+
+            const hasRatios = Number.isFinite(saved.leftRatio) && Number.isFinite(saved.topRatio)
+            const left = hasRatios
+                         ? referenceRect.left + ((saved.leftRatio / 100) * referenceRect.width) - (width / 2)
+                         : referenceRect.left + (Number.isFinite(saved.left) ? saved.left : 0)
+            const top = hasRatios
+                        ? referenceRect.top + ((saved.topRatio / 100) * referenceRect.height) - (height / 2)
+                        : referenceRect.top + (Number.isFinite(saved.top) ? saved.top : 0)
+
+            config.container = referenceContainer
+            config.boundsContainer = referenceContainer
+            config.fromDB = true
+            config.fromRuntime = false
+            config.runtimeReady = true
+            config.savedRatios = hasRatios
+                                 ? {leftRatio: saved.leftRatio, topRatio: saved.topRatio}
+                                 : config.savedRatios
+            config.position = {left, top}
+            if (config.isCropper) {
+                config.cropDimensions = {left, top, width, height}
+            }
+            else {
+                config.dimensions = {width, height}
+            }
+
+            element.style.left = `${left}px`
+            element.style.top = `${top}px`
+            element.style.width = `${width}px`
+            element.style.height = `${height}px`
+
+            const moveable = this.getMoveable(widgetId)
+            moveable?.current?.updateRect?.()
+            config.setPosition?.(config.position)
+            if (config.isCropper) {
+                this.#cropper.applyCropToOverlay(config)
+            }
+
+            lgs.stores.ui.widget.list.set(widgetId, {
+                ...entry,
+                ...saved,
+                widgetsBoard,
+                left,
+                top,
+                width,
+                height,
+            })
+
+            refreshed += 1
+        }
+
+        return refreshed
+    }
+
+    /**
      * Deletes all widget positions for a given group from IndexedDB.
      * @param {string} groupId - The group ID
      * @returns {Promise<void>}
@@ -725,6 +1081,13 @@ export class WidgetManager {
      * @param {number} y - Y scale value
      */
     setScale = (element, x, y) => this.#transform.setScale(element, x, y)
+
+    /**
+     * Publishes widget scale CSS variables and change events for inner renderers.
+     * @param {HTMLElement} element - The DOM element
+     * @param {Object} scale - Scale object {x, y}
+     */
+    applyScaleVariables = (element, scale) => this.#transform.applyScaleVariables(element, scale)
 
     /**
      * Updates the translate values in the widget's transform.

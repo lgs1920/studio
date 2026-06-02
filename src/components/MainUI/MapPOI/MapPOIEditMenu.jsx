@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-02
- * Last modified: 2026-03-02
+ * Created on: 2026-05-10
+ * Last modified: 2026-05-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -22,56 +22,45 @@
  ******************************************************************************/
 
 import {
-    POI_FLAG_START, POI_FLAG_STOP, POI_STANDARD_TYPE, POI_STARTER_TYPE, POI_TMP_TYPE,
+    CURRENT_POI, POI_FLAG_START, POI_FLAG_STOP, POI_STARTER_TYPE, SCENE_MODE_2D,
 }                                                      from '@Core/constants'
 import {
-    faArrowRotateRight, faArrowsFromLine, faArrowsToLine, faCopy, faCrosshairsSimple, faFlag, faLocationDot, faPanorama,
-    faTrashCan, faEye, faEyeSlash,
-}                                                      from '@fortawesome/pro-regular-svg-icons'
-import {
-    SlButton, SlDivider, SlDropdown, SlIcon, SlMenu, SlMenuItem,
-}                                                      from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                                       from '@Utils/FA2SL'
-import { UIToast }                                     from '@Utils/UIToast'
-import React, { memo, useMemo, useCallback, useState } from 'react'
-import { useSnapshot }                                 from 'valtio'
+    DEFAULT_PANORAMA_HEIGHT_OFFSET, DEFAULT_PANORAMA_PITCH, getOrbitSettings, setOrbitStoreSettings,
+}                                                       from '@Core/OrbitSettings'
 
-const ICON_FOCUS = FA2SL.set(faCrosshairsSimple)
-const ICON_FLAG = FA2SL.set(faFlag)
-const ICON_TRASH = FA2SL.set(faTrashCan)
-const ICON_EXPAND = FA2SL.set(faArrowsFromLine)
-const ICON_REDUCE = FA2SL.set(faArrowsToLine)
-const ICON_MASK = FA2SL.set(faEyeSlash)
-const ICON_ROTATE = FA2SL.set(faArrowRotateRight)
-const ICON_PANORAMA = FA2SL.set(faPanorama)
-const ICON_SHOW = FA2SL.set(faEye)
-const ICON_COPY = FA2SL.set(faCopy)
-const ICON_LOCATION = FA2SL.set(faLocationDot)
+import { UIToast }                                     from '@Utils/UIToast'
+import { WaButton, WaDivider, WaDropdown, WaDropdownItem, WaIcon } from '@web.awesome.me/webawesome-pro/dist/react'
+import { memo, useMemo, useCallback } from 'react'
+import { proxy, useSnapshot } from 'valtio'
+
+const EMPTY_POI_PROXY = proxy({})
 
 export const MapPOIEditMenu = memo(({poiId}) => {
     const $pois = lgs.stores.main.components.pois
-    const $camera = lgs.stores.main.components.camera
+    const rotateState = useSnapshot(lgs.stores.ui.mainUI.rotate)
+    const sceneMode = useSnapshot(lgs.settings.scene.mode)
+    const panoramaAllowed = Number(sceneMode.value) !== Number(SCENE_MODE_2D.value)
 
     /**
      * Subscribe to POI proxy directly so property changes (visible/animated/etc.)
      * trigger UI updates without relying on list-level epoch changes.
      */
-    const poisSnap = useSnapshot($pois, {sync: true})
     const $point = $pois.list.get(poiId)
-    const pointSnap = useSnapshot($point || {})
+    const pointSnap = useSnapshot($point ?? EMPTY_POI_PROXY)
+    const pointAvailable = Boolean(pointSnap && $point)
 
-    if (!pointSnap || !$point) {
-        return null
-    }
-
-    const [isVisible, setIsVisible] = useState(pointSnap.visible ?? true)
-    const isAnimated = pointSnap.animated
-    const isCurrent = poisSnap.current === pointSnap?.id
-
+    const isVisible = pointSnap.visible ?? true
+    const isPOIRotating = useMemo(
+        () => __.ui.poiManager.isPOIRotating(pointSnap.id),
+        [pointSnap.id, rotateState.running, rotateState.target?.element, rotateState.target?.slug, rotateState.target?.id],
+    )
+    const panoramaState = useSnapshot(lgs.stores.ui.mainUI.panorama)
+    const isPOIPanoramic = panoramaState.active
+        && panoramaState.target?.element === CURRENT_POI
+        && (panoramaState.target?.slug ?? panoramaState.target?.id) === pointSnap.id
     const stopRotation = useCallback(async () => {
-        await __.ui.cameraManager.stopRotate()
-        $point.animated = false
-    }, [$point])
+        await __.ui.poiManager.stopRotationAndSync()
+    }, [])
 
     /**
      * Toggles visibility and prevents event bubbling to avoid SlDetails toggling
@@ -81,52 +70,51 @@ export const MapPOIEditMenu = memo(({poiId}) => {
         e?.stopPropagation()
 
         const nextState = !isVisible
-
-        $point.visible = nextState
-        if (nextState) {
-            $point.show()
-        }
-        else {
-            $point.hide()
-        }
-
-        setIsVisible(nextState)
         await __.ui.poiManager.updatePOI(pointSnap.id, {visible: nextState})
-    }, [pointSnap.id, isVisible, $point])
+    }, [pointSnap.id, isVisible])
 
     const focus = useCallback(async (e) => {
         e?.stopPropagation()
         $pois.current = pointSnap.id
-        if (__.ui.cameraManager.isRotating()) {
-            await __.ui.cameraManager.stopRotate()
-        }
-        __.ui.sceneManager.focus($point, {
-            target:  $point,
-            heading: $camera.position.heading,
-            pitch:   $camera.position.pitch,
-            range:   $camera.position.range,
-            flyingTime: 2,
-        })
-    }, [pointSnap.id, $point, $camera.position, $pois])
+        await __.ui.poiManager.focusPOI(pointSnap.id, {flyingTime: 2})
+    }, [pointSnap.id, $pois])
 
     const rotationAround = useCallback(async (e) => {
         e?.stopPropagation()
         $pois.current = pointSnap.id
-        if (__.ui.cameraManager.isRotating()) {
-            await stopRotation()
+        await __.ui.poiManager.rotateAroundPOI(pointSnap.id)
+    }, [pointSnap.id, $pois])
+
+    const startPanoramic = useCallback(async (e) => {
+        e?.stopPropagation()
+        if (!panoramaAllowed) {
+            return
         }
-        __.ui.sceneManager.focus($point, {
-            target:  $point,
-            heading: $camera.position.heading,
-            pitch:   $camera.position.pitch,
-            range:   $camera.position.range,
-            infinite:   true,
-            rpm:        lgs.settings.ui.poi.rpm,
-            rotate:     true,
-            flyingTime: 0,
-        })
-        $point.animated = true
-    }, [pointSnap.id, $point, $camera.position, $pois, stopRotation])
+
+        if (__.ui.cameraManager.isRotating()) {
+            await __.ui.poiManager.stopRotationAndSync()
+        }
+        const storedPanorama = {
+            ...(pointSnap.panorama ?? {}),
+            ...getOrbitSettings(pointSnap, 'panorama'),
+        }
+        const panorama = lgs.stores.ui.mainUI.panorama
+        panorama.target = {
+            ...pointSnap,
+            element: CURRENT_POI,
+            slug:    pointSnap.slug ?? pointSnap.id,
+        }
+        panorama.heading = lgs.stores.main.components.camera.position.heading ?? 0
+        panorama.pitch = storedPanorama.pitch ?? DEFAULT_PANORAMA_PITCH
+        panorama.heightOffset = storedPanorama.heightOffset ?? DEFAULT_PANORAMA_HEIGHT_OFFSET
+        setOrbitStoreSettings(panorama, storedPanorama)
+        panorama.active = true
+    }, [panoramaAllowed, pointSnap])
+
+    const stopPanoramic = useCallback((e) => {
+        e?.stopPropagation()
+        void __.ui.poiManager.stopRotationAndSync()
+    }, [])
 
     const copyCoordinates = useCallback((e) => {
         e?.stopPropagation()
@@ -150,94 +138,95 @@ export const MapPOIEditMenu = memo(({poiId}) => {
     }, [pointSnap.id, $pois, stopRotation])
 
     const menuItems = useMemo(() => {
-        if (!isVisible) {
+        if (!pointAvailable || !isVisible) {
             return []
         }
         const items = []
 
         items.push(
-            <SlMenuItem key="focus" onClick={focus}>
-                <SlIcon slot="prefix" library="fa" name={ICON_FOCUS}/>
+            <WaDropdownItem key="focus" onClick={focus}>
+                <WaIcon slot="icon" name={'crosshairs-simple'}/>
                 <span>{'Focus'}</span>
-            </SlMenuItem>,
+            </WaDropdownItem>,
         )
 
         if (pointSnap.type !== POI_STARTER_TYPE && pointSnap.type !== POI_FLAG_START && pointSnap.type !== POI_FLAG_STOP) {
             items.push(
-                <SlMenuItem key="remove" onClick={remove}>
-                    <SlIcon slot="prefix" library="fa" name={ICON_TRASH}/>
+                <WaDropdownItem key="remove" onClick={remove}>
+                    <WaIcon slot="icon" name={'trash-can'}/>
                     <span>{'Remove'}</span>
-                </SlMenuItem>,
+                </WaDropdownItem>,
             )
         }
 
         items.push(
-            <SlMenuItem key="copy-coords" onClick={copyCoordinates}>
-                <SlIcon slot="prefix" library="fa" name={ICON_COPY}/>
+            <WaDropdownItem key="copy-coords" onClick={copyCoordinates}>
+                <WaIcon slot="icon" name={'copy'}/>
                 <span>{'Copy Coords'}</span>
-            </SlMenuItem>,
-            <SlMenuItem key="toggle-exp"
+            </WaDropdownItem>,
+            <WaDropdownItem key="toggle-exp"
                         onClick={() => __.ui.poiManager.updatePOI(pointSnap.id, {expanded: !pointSnap.expanded})}>
-                <SlIcon slot="prefix" library="fa" name={pointSnap.expanded ? ICON_REDUCE : ICON_EXPAND}/>
+                <WaIcon slot="icon" name={pointSnap.expanded ? 'arrows-to-line' : 'arrows-from-line'}/>
                 <span>{pointSnap.expanded ? 'Reduce' : 'Expand'}</span>
-            </SlMenuItem>,
-            <SlMenuItem key="hide" onClick={toggleVisibility}>
-                <SlIcon slot="prefix" library="fa" name={ICON_MASK}/>
+            </WaDropdownItem>,
+            <WaDropdownItem key="hide" onClick={toggleVisibility}>
+                <WaIcon slot="icon" name={'eye-slash'}/>
                 <span>{'Hide'}</span>
-            </SlMenuItem>,
-            <SlDivider key="div-1"/>,
+            </WaDropdownItem>,
+            <WaDivider key="div-1"/>,
         )
 
-        if (!isAnimated) {
+        if (isPOIRotating || isPOIPanoramic) {
             items.push(
-                <SlMenuItem key="rot-around" onClick={rotationAround}>
-                    <SlIcon slot="prefix" library="fa" name={ICON_ROTATE}/>
-                    <span>{'Rotate Around'}</span>
-                </SlMenuItem>,
-            )
-
-            items.push(
-                <SlMenuItem key="rot-panorama" onClick={stopRotation}>
-                    <SlIcon slot="prefix" library="fa" name={ICON_PANORAMA}/>
-                    <span>{'Panoramic'}</span>
-                </SlMenuItem>,
+                <WaDropdownItem key="stop-rot" onClick={isPOIPanoramic ? stopPanoramic : stopRotation}>
+                    <WaIcon slot="icon" name={'arrow-rotate-right'} animation="spin"/>
+                    <span>{isPOIPanoramic ? 'Stop Panorama' : 'Stop Rotation'}</span>
+                </WaDropdownItem>,
             )
         }
-        else if (isCurrent) {
+        else {
             items.push(
-                <SlMenuItem key="stop-rot" onClick={stopRotation}>
-                    <SlIcon slot="prefix" library="fa" name={ICON_ROTATE}/>
-                    <span>{'Stop Rotation'}</span>
-                </SlMenuItem>,
+                <WaDropdownItem key="rot-around" onClick={rotationAround}>
+                    <WaIcon slot="icon" name={'arrow-rotate-right'}/>
+                    <span>{'Rotate Around'}</span>
+                </WaDropdownItem>,
             )
 
+            if (panoramaAllowed) {
+                items.push(
+                    <WaDropdownItem key="rot-panorama" onClick={startPanoramic}>
+                        <WaIcon slot="icon" name={'panorama'}/>
+                        <span>{'Panoramic'}</span>
+                    </WaDropdownItem>,
+                )
+            }
         }
 
         return items
-    }, [pointSnap, isCurrent, isAnimated, isVisible, focus, remove, rotationAround, stopRotation, copyCoordinates, toggleVisibility])
+    }, [pointAvailable, pointSnap, isPOIRotating, isPOIPanoramic, isVisible, focus, remove, rotationAround, stopRotation, stopPanoramic, copyCoordinates, toggleVisibility, startPanoramic, panoramaAllowed])
 
     /**
      * UI BRANCHING:
      * If hidden -> Single Button
      * If visible -> Dropdown Menu
      */
+    if (!pointAvailable) {
+        return null
+    }
+
     return (
-        <div
-            key={`${pointSnap.id}-${isVisible ? 'visible' : 'hidden'}`}
-            className="poi-edit-menu-container"
-            onClick={(e) => e.stopPropagation()}
-        >
+        <div className="poi-edit-menu-container">
             {!isVisible ? (
-                <SlButton size="small" onClick={toggleVisibility}>
-                    <SlIcon slot="prefix" size={'small'} library="fa" name={ICON_SHOW}/>{'Show'}
-                </SlButton>
+                <WaButton size="s" onClick={toggleVisibility} variant="brand">
+                    <WaIcon slot="start" size={'small'} name={'eye'} variant="regular"/>{'Show'}
+                </WaButton>
             ) : (
-                 <SlDropdown className="edit-poi-menu">
-                     <SlButton slot="trigger" caret size="small">
-                         <SlIcon slot="prefix" size={'small'} library="fa" name={ICON_LOCATION}/>{'Select an action'}
-                     </SlButton>
-                     <SlMenu>{menuItems}</SlMenu>
-                 </SlDropdown>
+                 <WaDropdown className="edit-poi-menu" size="s" variant="brand">
+                     <WaButton slot="trigger" withCaret size="s" variant="brand">
+                         <WaIcon slot="start" variant="regular" name="location-dot"/>{'Select an action'}
+                     </WaButton>
+                     {menuItems}
+                 </WaDropdown>
              )}
         </div>
     )

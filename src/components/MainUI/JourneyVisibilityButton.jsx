@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-03-09
+ * Last modified: 2026-03-09
  *
  *
  * Copyright © 2026 LGS1920
@@ -37,7 +37,7 @@ export const JourneyVisibilityButton = (props) => {
     return (
         <>
             <SlTooltip hoist placement={placement} content={' Journey'}>
-                <SlButton size={'small'} className={'square-button'} id={'focus-on-current-journey'}
+                <SlButton size={'small'} className="square-button" id={'focus-on-current-journey'}
                           onClick={setJourneyVisibility}>
                     {!snap.journey.visible &&
                         <SlIcon slot="prefix" library="fa" name={FA2SL.set(faEye)}/>

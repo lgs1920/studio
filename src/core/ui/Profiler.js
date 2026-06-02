@@ -7,21 +7,23 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-02-28
- * Last modified: 2026-02-28
+ * Created on: 2026-04-01
+ * Last modified: 2026-04-01
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { faMountains }                                   from '@fortawesome/pro-regular-svg-icons'
-import { faArrowLeftLongToLine, faArrowRightLongToLine } from '@fortawesome/pro-solid-svg-icons'
-import { FA2SL }                                         from '@Utils/FA2SL'
+import {
+    buildFlythroughProfileMetricSummary,
+    appendFlythroughProfileMetadata,
+    extendFlythroughProfileDimensions,
+    flythroughSampleFromProfileRow,
+}                                                         from '@Core/ui/flythrough/FlythroughProfileProgress'
+import { normalizeTrackRenderStyle }                     from '@Utils/cesium/trackRenderStyle'
 import { DISTANCE_UNITS, ELEVATION_UNITS }               from '@Utils/UnitUtils'
 import * as echarts                                      from 'echarts/core'
 
-import { DateTime }           from 'luxon'
-import { sprintf }            from 'sprintf-js'
 import { ProfileTrackMarker } from '../ProfileTrackMarker'
 import { Track }              from '../Track'
 
@@ -63,40 +65,55 @@ export class Profiler {
             dataset:    [],
             options:    [],
             axisNames:  {},
-            dimensions: [DISTANCE, ELEVATION, TIME, POINT],
+            dimensions: extendFlythroughProfileDimensions([DISTANCE, ELEVATION, TIME, POINT, UNIT_SYSTEM]),
         }
 
         // Let's define missing values
         let distance = 0
-        lgs.theJourney.tracks.forEach((track) => {
+        lgs.theJourney.tracks.forEach((track, trackIndex) => {
             if (track.visible && track.metrics.points !== undefined) {
                 const trackDataset = {
                     id:     track.slug,
                     source: [],
                 }
-                track.metrics.points.forEach(point => {
-                    distance += point.distance
+                track.metrics.points.forEach((point, pointIndex) => {
+                    distance += point.distance ?? 0
+                    const elevation = Number(point.altitude)
+                    if (!Number.isFinite(elevation)) {
+                        return
+                    }
                     let coords = []
                     switch (type) {
                         case ELEVATION_VS_DISTANCE : {
-                            coords = [
+                            coords = appendFlythroughProfileMetadata([
                                 __.convert(distance).to(units.x[lgs.settings.unitSystem.current]),
-                                __.convert(point.altitude).to(units.y[lgs.settings.unitSystem.current]),
-                                null, //TODO Time
+                                __.convert(elevation).to(units.y[lgs.settings.unitSystem.current]),
+                                point.time ?? null,
                                 point,
                                 lgs.settings.unitSystem.current,  // unit system
-                            ]
+                            ], {
+                                distanceFromStart: distance,
+                                trackSlug:         track.slug,
+                                trackIndex,
+                                pointIndex,
+                            })
                         }
                     }
                     trackDataset.source.push(coords)
                 })
-                data.dataset.push(trackDataset)
-                data.options.push({
-                                      color: track.color,
-                                      name:  track.title,
-                                      //  marker:  track.marker.foregroundColor,
-                                      dataset: track.slug,
-                                  })
+                if (trackDataset.source.length > 0) {
+                    data.dataset.push(trackDataset)
+                    data.options.push({
+                                          color:       track.color,
+                                          name:        track.title,
+                                          //  marker:  track.marker.foregroundColor,
+                                          dataset:     track.slug,
+                                          renderStyle: normalizeTrackRenderStyle(track.renderStyle, {
+                                              color:     track.color,
+                                              thickness: track.thickness,
+                                          }),
+                                      })
+                }
 
             }
         })
@@ -118,72 +135,37 @@ export class Profiler {
      */
     tooltipElevationVsDistance = ([serie, index, distance, elevation, time, point, distances, colors]) => {
 
-        if (__.ui.wanderer.running) {
+        if (__.ui.flythrough?.running || __.ui.flythroughRunner.running) {
             return ''
         }
 
-        // Show on map
-        if (lgs.settings.getProfile.marker.track.show) {
-            this.showOnMap(serie, point.longitude, point.latitude, elevation)
+        const sample = flythroughSampleFromProfileRow(
+            [distance, elevation, time, point],
+            [DISTANCE, ELEVATION, TIME, POINT],
+        )
+        const summary = buildFlythroughProfileMetricSummary(sample, {
+            totalDistance:      distances?.[distances.length - 1]?.end ?? 0,
+            direction:          1,
+            unitSystem:         lgs.settings.unitSystem.current,
+            distancePrecision:  1,
+            elevationPrecision: 0,
+        })
+
+        if (!summary) {
+            return ''
         }
 
-        let date = {day: '', time: ''}
-        if (point.time) {
-            date = {
-                time: DateTime.fromISO(point.time).toLocaleString(DateTime.TIME_SIMPLE),
-            }
+        if (lgs.settings?.getProfile.marker.track.show || false) {
+            this.showOnMap(serie, point.longitude, point.latitude, point.altitude ?? point.height ?? elevation)
         }
-        const distance1 = distances[distances.length - 1].end
-        const start2 = distances[serie].start
-        const distance2 = distances[serie].end
 
-
-        // Build tooltip
-        const header = `
-            <div id="elevation-distance-tooltip">
-                <div class="point-distance">
-                    <span>[${point.latitude}, ${point.longitude}]</span>
-                    <span>${date.time}</span>
-            </div>`
-
-        const altitude = `<sl-icon library="fa" name="${FA2SL.set(faMountains)}"  style="color:${colors[serie]}"></sl-icon>&nbsp;
-${sprintf('%\' .1f', elevation ?? 0)} ${ELEVATION_UNITS[lgs.settings.unitSystem.current]}`
-        const global = distances.length > 1 ? `
-            <div class="point-distance line" style="--line-color=${colors[serie]}">
-            <span class="tooltip-icon"><sl-icon library="fa" name="${FA2SL.set(faArrowLeftLongToLine)}"></sl-icon></span>
-            <span class="tooltip-data">
-                ${sprintf('%\' .1f', distance ?? 0)}  ${DISTANCE_UNITS[lgs.settings.unitSystem.current]}
-            </span>
-            <span class="tooltip-data altitude">${altitude}</span>
-            <span class="tooltip-data">
-            ${sprintf('%\' .1f', distance1 ? distance1 - distance : 0)}  ${DISTANCE_UNITS[lgs.settings.unitSystem.current]}</span>
-            <span  class="tooltip-icon">
-            </span>
-        </div> 
-        ` : `<span class="tooltip-data altitude">${altitude}</span>`
-        const relative = `
-        <div class="point-distance line" style="--line-color:${colors[serie]}">
-           <span class="tooltip-icon">
-            <sl-icon library="fa" name="${FA2SL.set(faArrowLeftLongToLine)}"  style="color:${colors[serie]}"></sl-icon>
-            </span>
-            <span class="tooltip-data">
-            ${sprintf('%\' .1f', distance - start2 ?? 0)}  ${DISTANCE_UNITS[lgs.settings.unitSystem.current]}
-            </span>
-            <span  class="tooltip-icon">
-            <svg xmlns="http://www.w3.org/2000/svg" width="27px" height="17px">
-                <path stroke="${colors[serie]}" d="M0 7L25 7" stroke-width="2" stroke-linecap="butt" stroke-miterlimit="10"></path>
-                <path stroke="${colors[serie]}"  fill="${__.ui.css.getCSSVariable('--sl-panel-background-color')}" d="M18.1 7A5.6 5.6 0 1 1 18.1 6.9994" stroke-width="2" stroke-linecap="butt" stroke-miterlimit="10"></path>
-            </svg>
-            </span>
-
-            <span class="tooltip-data">
-            ${sprintf('%\' .1f', distance2 ? distance2 - distance : 0)}  ${DISTANCE_UNITS[lgs.settings.unitSystem.current]}
-            </span>
-            <span class="tooltip-icon">
-            <sl-icon library="fa" name="${FA2SL.set(faArrowRightLongToLine)}"  style="color:${colors[serie]}"></sl-icon>
-            </span>
-        </div>`
-        return header + global + relative
+        return `
+            <div id="elevation-distance-tooltip" class="profile-metric-tooltip">
+                <span class="tooltip-data">${summary.covered}</span>
+                <span class="tooltip-data altitude">${summary.altitudeLabel}</span>
+                <span class="tooltip-data">${summary.remaining}</span>
+            </div>
+        `
     }
 
     showOnMap = async (serie, longitude, latitude, elevation) => {
@@ -192,6 +174,33 @@ ${sprintf('%\' .1f', elevation ?? 0)} ${ELEVATION_UNITS[lgs.settings.unitSystem.
             await theTrack.marker.draw()
         }
         await theTrack.marker.move([longitude, latitude, elevation])
+    }
+
+    showSampleOnMap = async (sample) => {
+        if (!sample?.trackSlug || !lgs.theJourney?.tracks?.has?.(sample.trackSlug)) {
+            return
+        }
+        const longitude = Number(sample.longitude)
+        const latitude = Number(sample.latitude)
+        const altitude = Number(sample.altitude ?? sample.height ?? 0)
+        if (!Number.isFinite(longitude) || !Number.isFinite(latitude)) {
+            return
+        }
+
+        const track = lgs.theJourney.tracks.get(sample.trackSlug)
+        const theTrack = Track.deserialize({object: Track.unproxify(track)})
+        if (!theTrack.marker) {
+            theTrack.marker = new ProfileTrackMarker({
+                parent:  theTrack,
+                visible: false,
+                color:   theTrack.color,
+                border:  {color: 'transparent'},
+            })
+        }
+        if (!theTrack.marker.drawn) {
+            await theTrack.marker.draw()
+        }
+        await theTrack.marker.move([longitude, latitude, Number.isFinite(altitude) ? altitude : 0])
     }
 
     /**
@@ -321,7 +330,7 @@ ${sprintf('%\' .1f', elevation ?? 0)} ${ELEVATION_UNITS[lgs.settings.unitSystem.
                     border:  {color: borderColor ?? 'transparent'},
                 },
             )
-            __.ui.wanderer.marker = lgs.theTrack.marker
+            __.ui.flythroughRunner.marker = lgs.theTrack.marker
         }
     }
 
@@ -352,4 +361,5 @@ export const ELEVATION = 'Elevation'
 export const DISTANCE = 'Distance'
 export const TIME = 'Time'
 export const POINT = 'point'
+export const UNIT_SYSTEM = 'UnitSystem'
 export const CHART_ELEVATION_VS_DISTANCE = `${ELEVATION}-${DISTANCE}`
