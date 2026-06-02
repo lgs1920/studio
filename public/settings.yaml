@@ -363,10 +363,8 @@ ui:
     marker:
       mode: trace
     camera:
-      keepNorth: true
       altitudeMode: constant
       altitude: 1200
-      groundOffset: 800
       pitch: -65
       hysteresis:
         marginRatio: 0.2

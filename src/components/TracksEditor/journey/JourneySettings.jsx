@@ -366,8 +366,8 @@ export const JourneySettings = () => {
     }
 
     const focusOnJourney = async () => {
-        if (running && target?.instanceOf?.(CURRENT_JOURNEY)) {
-            return
+        if (running) {
+            await __.ui.cameraManager.stopRotate()
         }
         await setJourneyVisibility(true)
         lgs.theJourney.focus({

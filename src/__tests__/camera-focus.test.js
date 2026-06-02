@@ -160,6 +160,18 @@ describe('camera focus defaults', () => {
         expect(__.ui.cameraManager.rotateAround).not.toHaveBeenCalled()
     })
 
+    it('stops an active rotation before focusing the journey', async () => {
+        const journey = makeJourney()
+        installFocusGlobals(journey)
+        __.ui.cameraManager.isRotating = vi.fn(() => true)
+        __.ui.cameraManager.stopRotate = vi.fn(async () => undefined)
+
+        await SceneUtils.focusOnJourney({journey, resetCamera: true})
+
+        expect(__.ui.cameraManager.stopRotate).toHaveBeenCalledTimes(1)
+        expect(lgs.camera.flyToBoundingSphere).toHaveBeenCalledTimes(1)
+    })
+
     it('ends the camera flight marker when focus flyTo completes', async () => {
         const journey = makeJourney()
         installFocusGlobals(journey)

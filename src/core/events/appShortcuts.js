@@ -20,6 +20,7 @@ import {
 import { hasActiveAppShortcutBlocker }                  from '@Core/events/shortcutBlockers'
 import { MapTarget }                                    from '@Core/MapTarget'
 import { getOrbitSettings, setOrbitStoreSettings }      from '@Core/OrbitSettings'
+import { FLYTHROUGH_MARKER_MODE_TRACE, normalizeFlythroughMarker } from '@Core/ui/flythrough/FlythroughProgressionStyle'
 import { Cartesian2, Cartographic, Math as CesiumMath } from 'cesium'
 import YAML                                             from 'yaml'
 
@@ -199,10 +200,20 @@ const currentCameraOrbitOptions = () => {
 const isScene2D = () => Number(lgs.settings.scene.mode.value) === Number(SCENE_MODE_2D.value)
 
 const toggleJourneyToolbar = () => {
+    if (lgs.stores?.flythrough?.active || lgs.stores?.flythrough?.playing || lgs.stores?.flythrough?.paused) {
+        return false
+    }
+
     const toolbar = lgs.settings.ui.journeyToolbar
     toolbar.usage = true
     toolbar.show = true
     return true
+}
+
+const flythroughRotationIsAllowed = () => {
+    const flythrough = lgs.settings?.ui?.flythrough
+    const marker = normalizeFlythroughMarker(flythrough?.marker)
+    return marker.mode === FLYTHROUGH_MARKER_MODE_TRACE
 }
 
 const openJourneyImporter = () => {
@@ -283,6 +294,10 @@ const setPoiAnimated = async (target, animated) => {
 const toggleRotation = () => {
     const rotate = lgs.stores.ui.mainUI.rotate
     const panorama = lgs.stores.ui.mainUI.panorama
+
+    if (!rotate.running && !panorama.active && !flythroughRotationIsAllowed()) {
+        return false
+    }
 
     if (panorama.active || rotate.running) {
         return __.ui.poiManager.stopRotationAndSync().then(() => true)

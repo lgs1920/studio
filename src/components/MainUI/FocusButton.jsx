@@ -28,9 +28,12 @@ export const FocusButton = (props) => {
     const snap = useSnapshot(editorStore)
 
     const focusOnJourney = async () => {
+        if (lgs.stores?.ui?.mainUI?.rotate?.running) {
+            await __.ui.cameraManager.stopRotate()
+        }
         if (!snap.journey.visible) {
-            editorStore.journey.visible = visibility
-            lgs.theJourney.updateVisibility(visibility)
+            editorStore.journey.visible = true
+            lgs.theJourney.updateVisibility(true)
             await Utils.updateJourney(UPDATE_JOURNEY_SILENTLY)
         }
         lgs.theJourney.focus({
