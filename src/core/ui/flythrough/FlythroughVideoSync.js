@@ -74,6 +74,10 @@ export class FlythroughVideoSync {
         }
     }
 
+    #setVideoSafeMode = (enabled) => {
+        this.#resolveFlythrough()?.setVideoSafeMode?.(enabled)
+    }
+
     #bind = () => {
         if (this.#bound) {
             return
@@ -93,10 +97,12 @@ export class FlythroughVideoSync {
                 return
             }
 
+            this.#setVideoSafeMode(true)
             this.#cancelPendingStart()
             this.#pendingStartTimeout = setTimeout(() => {
                 this.#pendingStartTimeout = null
                 if (!this.#armed) {
+                    this.#setVideoSafeMode(false)
                     return
                 }
                 if (this.#resetToStart && this.#flythrough?.running) {
@@ -125,6 +131,7 @@ export class FlythroughVideoSync {
         }
 
         const handleRecorderStop = () => {
+            this.#setVideoSafeMode(false)
             this.stopFlythrough()
         }
 
@@ -133,6 +140,7 @@ export class FlythroughVideoSync {
                 return
             }
 
+            this.#setVideoSafeMode(false)
             if (recorder?.isRecording?.()) {
                 void recorder.stopVideo()
             }
@@ -180,6 +188,7 @@ export class FlythroughVideoSync {
     disarm = () => {
         this.#armed = false
         this.#cancelPendingStart()
+        this.#setVideoSafeMode(false)
         this.#syncStore()
         return this
     }

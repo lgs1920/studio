@@ -19,10 +19,11 @@
  *
  * Renders a call-to-action bar for the video cropper interface.
  ******************************************************************************/
-import { Tunnel }                                                       from '@Components/Tunnel/Tunnel'
-import { CROP_TOOLS_WIDGETS, VIDEO_CROP_ZONE, VIDEO_WIDGETS_BOARD } from '@Core/constants'
-import { memo, useCallback, useEffect, useMemo, useRef }                from 'react'
-import { useSnapshot }                                                  from 'valtio'
+import { Tunnel } from '@Components/Tunnel/Tunnel'
+import { VIDEO_CROP_ZONE, VIDEO_WIDGETS_BOARD } from '@Core/constants'
+import { cancelVideoEditing } from '@Components/MainUI/video/videoEditingCleanup'
+import { memo, useCallback, useEffect, useMemo, useRef } from 'react'
+import { useSnapshot } from 'valtio'
 
 const resolveRecorderToolbarPosition = (event) => {
     const nativeEvent = event?.nativeEvent ?? event
@@ -58,15 +59,8 @@ export const VideoRecordingSettingsToolbar = memo(() => {
 
     /** Cancels the video editing process and restores widgets immediately. */
     const handleCancel = useCallback(() => {
-        syncCropFrame('cancel-editing')
-        $video.editing = false
-        __.ui.widgetManager.disposeByGroup(CROP_TOOLS_WIDGETS, true)
-
-        __.ui.widgetCache.restoreAllHiddenWidgetsExcept(VIDEO_WIDGETS_BOARD)
-        // hide some elements that can be visible
-        __.ui.contextMenu.hide()
-        __.ui.drawerManager.close()
-    }, [$video, syncCropFrame])
+        cancelVideoEditing()
+    }, [])
 
     const handleSnapShot = useCallback(async () => {
         Object.assign($video, {

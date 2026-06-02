@@ -443,6 +443,64 @@ describe('flythrough phase 1 playback controller', () => {
         }
     })
 
+    it('reduces publication cadence while video-safe mode is enabled', () => {
+        const journey = makeJourney([
+            makeTrack({
+                slug:        'track#journey#gpx#main',
+                coordinates: [[0, 0, 0], [0.002, 0, 0]],
+                times:       ['2026-05-05T10:00:00.000Z', '2026-05-05T10:20:00.000Z'],
+            }),
+        ])
+        const sampler = new FlythroughPathSampler({journey})
+        const previousLgs = globalThis.lgs
+        const frames = []
+        let now = 0
+
+        globalThis.lgs = {
+            events: {emit: () => {}},
+            scene:  {requestRender: () => {}},
+            stores: {
+                flythrough: proxy({
+                                      active: false,
+                                      playing: false,
+                                      paused: false,
+                                      progress: 0,
+                                      elapsedMillis: null,
+                                      durationMillis: null,
+                                      sample: null,
+                                      totalDistance: 0,
+                                  }),
+            },
+        }
+
+        try {
+            const controller = new FlythroughPlaybackController({
+                requestFrame: callback => {
+                    frames.push(callback)
+                    return frames.length
+                },
+                cancelFrame: () => {},
+                now:         () => now,
+            })
+
+            controller.setVideoSafeMode(true)
+            controller.configure({sampler, duration: 10})
+            controller.start()
+
+            now = 100
+            frames.shift()()
+            expect(globalThis.lgs.stores.flythrough.progress).toBe(0)
+            expect(controller.progress).toBeGreaterThan(0)
+
+            now = 1100
+            frames.shift()()
+            expect(globalThis.lgs.stores.flythrough.progress).toBeGreaterThan(0)
+        }
+        finally {
+            globalThis.lgs = previousLgs
+        }
+    })
+
     it('syncs the live Cesium camera into runtime and persisted flythrough camera settings', () => {
         const journey = makeJourney([
                                         makeTrack({
@@ -985,6 +1043,7 @@ describe('flythrough phase 1 playback controller', () => {
                                             })
             mode.configure()
             mode.syncCameraFromCesiumControls()
+            mode.refreshCamera()
             mode.refreshCamera()
 
             expect(lookAtTransformCalls).toHaveLength(1)

@@ -57,6 +57,7 @@ const makeFlythrough = () => {
         pause: vi.fn(),
         resume: vi.fn(),
         stop: vi.fn(),
+        setVideoSafeMode: vi.fn(),
     }
 }
 
@@ -71,6 +72,7 @@ describe('FlythroughVideoSync', () => {
         recorder.dispatchEvent(new CustomEvent(ScreenMediaRecorder.events.START))
         return new Promise(resolve => setTimeout(resolve, 0)).then(() => {
             expect(store.recordingSync).toBe(true)
+            expect(flythrough.setVideoSafeMode).toHaveBeenCalledWith(true)
             expect(flythrough.start).toHaveBeenCalledWith({progress: 0})
         })
     })
@@ -98,6 +100,7 @@ describe('FlythroughVideoSync', () => {
         sync.arm()
         recorder.dispatchEvent(new CustomEvent(ScreenMediaRecorder.events.STOP))
 
+        expect(flythrough.setVideoSafeMode).toHaveBeenCalledWith(false)
         expect(flythrough.stop).toHaveBeenCalledWith({emit: false})
     })
 
@@ -113,6 +116,7 @@ describe('FlythroughVideoSync', () => {
         flythrough.controller.emit(FLYTHROUGH_EVENT_END)
 
         expect(store.recordingSync).toBe(false)
+        expect(flythrough.setVideoSafeMode).toHaveBeenCalledWith(false)
         expect(recorder.stopVideo).not.toHaveBeenCalled()
     })
 })

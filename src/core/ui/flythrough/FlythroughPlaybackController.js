@@ -33,6 +33,8 @@ const DEFAULT_DURATION = 60
 const MILLIS = 1000
 const STORE_SYNC_INTERVAL = 250
 const GLOBAL_UPDATE_EVENT_INTERVAL = 250
+const VIDEO_SAFE_STORE_SYNC_INTERVAL = 1000
+const VIDEO_SAFE_GLOBAL_UPDATE_EVENT_INTERVAL = 500
 
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value))
 
@@ -59,6 +61,8 @@ export class FlythroughPlaybackController {
     #now
     #lastStoreSync = 0
     #lastGlobalUpdate = 0
+    #storeSyncInterval = STORE_SYNC_INTERVAL
+    #globalUpdateInterval = GLOBAL_UPDATE_EVENT_INTERVAL
 
     constructor({
                     requestFrame = callback => globalThis.__?.requestAnimationFrame?.(callback)
@@ -92,6 +96,36 @@ export class FlythroughPlaybackController {
         this.#progress = clamp(Number(progress) || 0, 0, 1)
         this.#syncStore(this.currentSample(), {force: true})
         return this
+    }
+
+    setPublicationCadence = ({
+                                  storeSyncInterval = this.#storeSyncInterval,
+                                  globalUpdateInterval = this.#globalUpdateInterval,
+                              } = {}) => {
+        const nextStoreSyncInterval = Number(storeSyncInterval)
+        const nextGlobalUpdateInterval = Number(globalUpdateInterval)
+        this.#storeSyncInterval = Number.isFinite(nextStoreSyncInterval) && nextStoreSyncInterval > 0
+                                  ? nextStoreSyncInterval
+                                  : STORE_SYNC_INTERVAL
+        this.#globalUpdateInterval = Number.isFinite(nextGlobalUpdateInterval) && nextGlobalUpdateInterval > 0
+                                     ? nextGlobalUpdateInterval
+                                     : GLOBAL_UPDATE_EVENT_INTERVAL
+        return {
+            storeSyncInterval:   this.#storeSyncInterval,
+            globalUpdateInterval: this.#globalUpdateInterval,
+        }
+    }
+
+    setVideoSafeMode = (enabled = true) => {
+        return this.setPublicationCadence(enabled
+                                          ? {
+                                              storeSyncInterval:   VIDEO_SAFE_STORE_SYNC_INTERVAL,
+                                              globalUpdateInterval: VIDEO_SAFE_GLOBAL_UPDATE_EVENT_INTERVAL,
+                                          }
+                                          : {
+                                              storeSyncInterval:   STORE_SYNC_INTERVAL,
+                                              globalUpdateInterval: GLOBAL_UPDATE_EVENT_INTERVAL,
+                                          })
     }
 
     get sampler() {
@@ -338,7 +372,7 @@ export class FlythroughPlaybackController {
         }
 
         const now = this.#now()
-        if (now - this.#lastGlobalUpdate < GLOBAL_UPDATE_EVENT_INTERVAL) {
+        if (now - this.#lastGlobalUpdate < this.#globalUpdateInterval) {
             return false
         }
 
@@ -353,7 +387,7 @@ export class FlythroughPlaybackController {
         }
 
         const now = this.#now()
-        if (!force && now - this.#lastStoreSync < STORE_SYNC_INTERVAL) {
+        if (!force && now - this.#lastStoreSync < this.#storeSyncInterval) {
             return
         }
         this.#lastStoreSync = now

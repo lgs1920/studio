@@ -44,6 +44,8 @@ const CARTESIAN_EPSILON = 1e-7
 const CAMERA_HEADING_HYSTERESIS_RADIANS = CesiumMath.toRadians(12)
 const CAMERA_HEADING_LOOKAHEAD_PROGRESS = 0.16
 const CAMERA_HEADING_MIN_CHANGE_RADIANS = CesiumMath.toRadians(5)
+const CAMERA_VIEW_POSITION_EPSILON_METERS = 0.5
+const CAMERA_VIEW_ANGLE_EPSILON_RADIANS = CesiumMath.toRadians(0.25)
 const FLYTHROUGH_TOLERANCE_OUTER_INSET_RATIO = 0.05
 const FLYTHROUGH_TOLERANCE_INNER_INSET_RATIO = 0.2
 const FLYTHROUGH_TOLERANCE_RECENTER_REPLACE_DELAY_MS = 300
@@ -493,6 +495,7 @@ export class FlythroughMode {
     #savedCameraState = null
     #lastCameraHeading = null
     #lastCameraPitch = null
+    #lastAppliedCameraView = null
     #cameraUserAdjusting = false
     #cameraApplyingView = false
     #cameraPointerActive = false
@@ -624,6 +627,10 @@ export class FlythroughMode {
             store.loop = enabled
         }
         return enabled
+    }
+
+    setVideoSafeMode = (enabled = true) => {
+        return this.#controller.setVideoSafeMode?.(enabled) ?? null
     }
 
     toggle = () => {
@@ -834,6 +841,7 @@ export class FlythroughMode {
         }
         this.#lastCameraHeading = null
         this.#lastCameraPitch = null
+        this.#lastAppliedCameraView = null
         this.#cameraUserAdjusting = false
         this.#cameraApplyingView = false
         this.#cameraPointerActive = false
@@ -1348,6 +1356,12 @@ export class FlythroughMode {
 
     #applyCameraView = ({anchor, heading, pitch, cameraSettings}) => {
         const anchorHeight = finiteNumber(anchor?.altitude ?? anchor?.height) ?? 0
+        const safeHeading = sanitizeOrientationRadians(heading, 0)
+        const safePitch = sanitizeOrientationRadians(pitch, SAFE_TOP_DOWN_PITCH)
+        if (this.#cameraViewIsStable({anchor, heading: safeHeading, pitch: safePitch})) {
+            return
+        }
+
         const cameraHeight = this.#cameraAltitudeForSample(anchor, cameraSettings)
         const target = safeCartesianFromLonLat({
             ...anchor,
@@ -1357,8 +1371,6 @@ export class FlythroughMode {
             return
         }
 
-        const safeHeading = sanitizeOrientationRadians(heading, 0)
-        const safePitch = sanitizeOrientationRadians(pitch, SAFE_TOP_DOWN_PITCH)
         const viewer = globalThis.lgs?.viewer
         const camera = viewer?.camera
         const transform = Transforms.eastNorthUpToFixedFrame(target)
@@ -1399,6 +1411,7 @@ export class FlythroughMode {
                                      up: correctedUp,
                                  },
                              })
+            this.#rememberCameraView({anchor, heading: safeHeading, pitch: safePitch})
         }
         finally {
             this.#cameraApplyingView = false
@@ -1495,6 +1508,13 @@ export class FlythroughMode {
         }
 
         const rect = this.#viewportRectForCesiumSurface()
+        const cropRect = this.#videoCropRect()
+        const point = cropRect
+            ? {
+                x: windowPosition.x - cropRect.left,
+                y: windowPosition.y - cropRect.top,
+            }
+            : windowPosition
         const markerRadius = finiteNumber(globalThis.lgs?.stores?.flythrough?.markerRadius) ?? 35
         const overlayBounds = flythroughInsetBounds(
             flythroughToleranceZoneBounds(cameraSettings?.hysteresis?.zone),
@@ -1502,7 +1522,7 @@ export class FlythroughMode {
         )
         const safeBounds = flythroughInsetBounds(overlayBounds, FLYTHROUGH_TOLERANCE_INNER_INSET_RATIO)
         return flythroughWindowCollisionFromPoint({
-                                                      point:        windowPosition,
+                                                      point:        point,
                                                       width:        rect.width,
                                                       height:       rect.height,
                                                       outerBounds:  overlayBounds,
@@ -1616,6 +1636,59 @@ export class FlythroughMode {
         return prev + delta * clamp(factor, 0, 1)
     }
 
+    #cameraViewDelta = ({anchor, heading, pitch} = {}) => {
+        const last = this.#lastAppliedCameraView
+        if (!last) {
+            return null
+        }
+
+        const currentLongitude = finiteNumber(anchor?.longitude)
+        const currentLatitude = finiteNumber(anchor?.latitude)
+        const currentAltitude = finiteNumber(anchor?.altitude ?? anchor?.height) ?? 0
+        const lastLongitude = finiteNumber(last.anchor?.longitude)
+        const lastLatitude = finiteNumber(last.anchor?.latitude)
+        const lastAltitude = finiteNumber(last.anchor?.altitude ?? last.anchor?.height) ?? 0
+        if ([currentLongitude, currentLatitude, lastLongitude, lastLatitude].some(value => value === null)) {
+            return null
+        }
+
+        const anchorDelta = projectToLocalMeters(
+            {longitude: lastLongitude, latitude: lastLatitude},
+            {longitude: currentLongitude, latitude: currentLatitude},
+        )
+
+        return {
+            horizontalMeters: Math.hypot(anchorDelta?.x ?? Number.POSITIVE_INFINITY, anchorDelta?.y ?? Number.POSITIVE_INFINITY),
+            altitudeMeters:   Math.abs(currentAltitude - lastAltitude),
+            headingRadians:   Math.abs(flythroughAngularDelta(last.heading, heading) ?? Number.POSITIVE_INFINITY),
+            pitchRadians:     Math.abs(flythroughAngularDelta(last.pitch, pitch) ?? Number.POSITIVE_INFINITY),
+        }
+    }
+
+    #cameraViewIsStable = ({anchor, heading, pitch} = {}) => {
+        const delta = this.#cameraViewDelta({anchor, heading, pitch})
+        if (!delta) {
+            return false
+        }
+
+        return delta.horizontalMeters <= CAMERA_VIEW_POSITION_EPSILON_METERS
+            && delta.altitudeMeters <= CAMERA_VIEW_POSITION_EPSILON_METERS
+            && delta.headingRadians <= CAMERA_VIEW_ANGLE_EPSILON_RADIANS
+            && delta.pitchRadians <= CAMERA_VIEW_ANGLE_EPSILON_RADIANS
+    }
+
+    #rememberCameraView = ({anchor, heading, pitch} = {}) => {
+        this.#lastAppliedCameraView = {
+            anchor: {
+                longitude: finiteNumber(anchor?.longitude) ?? 0,
+                latitude:  finiteNumber(anchor?.latitude) ?? 0,
+                altitude:  finiteNumber(anchor?.altitude ?? anchor?.height) ?? 0,
+            },
+            heading: finiteNumber(heading) ?? 0,
+            pitch:   finiteNumber(pitch) ?? SAFE_TOP_DOWN_PITCH,
+        }
+    }
+
     #headingEasingFactor = (cameraSettings, targetHeading) => flythroughHeadingEasingFactor({
         previousHeading: this.#lastCameraHeading,
         nextHeading:     targetHeading,
@@ -1629,7 +1702,42 @@ export class FlythroughMode {
         this.#toleranceZoneOverlay = null
     }
 
+    #videoCropRect = () => {
+        const flythroughStore = globalThis.lgs?.stores?.flythrough
+        if (!flythroughStore?.recordingSync) {
+            return null
+        }
+
+        const cropRect = flythroughStore.videoCropRect
+        const left = finiteNumber(cropRect?.left)
+        const top = finiteNumber(cropRect?.top)
+        const width = finiteNumber(cropRect?.width)
+        const height = finiteNumber(cropRect?.height)
+        if (
+            left === null
+            || top === null
+            || width === null
+            || height === null
+            || width <= 0
+            || height <= 0
+        ) {
+            return null
+        }
+
+        return {
+            left,
+            top,
+            width,
+            height,
+        }
+    }
+
     #viewportRectForCesiumSurface = () => {
+        const cropRect = this.#videoCropRect()
+        if (cropRect) {
+            return cropRect
+        }
+
         const viewer = globalThis.lgs?.viewer
         const scene = this.#cesiumScene()
         const canvas = viewer?.canvas ?? scene?.canvas ?? globalThis.lgs?.canvas
@@ -1651,66 +1759,8 @@ export class FlythroughMode {
     }
 
     #updateToleranceZoneOverlay = hysteresis => {
-        const documentRef = globalThis.document
-        const rect = this.#viewportRectForCesiumSurface()
-        if (!documentRef?.body || rect.width <= 0 || rect.height <= 0) {
-            this.#removeToleranceZoneOverlay()
-            return
-        }
-
-        const overlayBounds = flythroughInsetBounds(
-            flythroughToleranceZoneBounds(hysteresis?.zone),
-            FLYTHROUGH_TOLERANCE_OUTER_INSET_RATIO,
-        )
-        const safeBounds = flythroughInsetBounds(overlayBounds, FLYTHROUGH_TOLERANCE_INNER_INSET_RATIO)
-        const visibleWidthRatio = overlayBounds.right - overlayBounds.left
-        const visibleHeightRatio = overlayBounds.bottom - overlayBounds.top
-        if (visibleWidthRatio <= 0 || visibleHeightRatio <= 0) {
-            this.#removeToleranceZoneOverlay()
-            return
-        }
-        const overlay = this.#toleranceZoneOverlay ?? documentRef.createElement('div')
-        overlay.className = 'flythrough-tolerance-zone-overlay'
-        overlay.setAttribute('aria-hidden', 'true')
-        const outer = overlay.firstElementChild ?? documentRef.createElement('div')
-        const inner = outer.firstElementSibling ?? documentRef.createElement('div')
-        overlay.replaceChildren(outer, inner)
-        Object.assign(overlay.style, {
-            position:      'fixed',
-            left:          `${rect.left + overlayBounds.left * rect.width}px`,
-            top:           `${rect.top + overlayBounds.top * rect.height}px`,
-            width:         `${visibleWidthRatio * rect.width}px`,
-            height:        `${visibleHeightRatio * rect.height}px`,
-            boxSizing:     'border-box',
-            pointerEvents: 'none',
-            zIndex:        '2147483647',
-            background:    'rgba(255, 0, 0, 0.06)',
-            mixBlendMode:  'screen',
-        })
-        outer.className = 'flythrough-tolerance-zone-overlay-outer'
-        inner.className = 'flythrough-tolerance-zone-overlay-inner'
-        Object.assign(outer.style, {
-            position:   'absolute',
-            inset:      0,
-            boxSizing:  'border-box',
-            border:     '4px solid rgba(255, 35, 35, 0.98)',
-            boxShadow:  '0 0 0 1px rgba(255, 35, 35, 0.65) inset, 0 0 0 1px rgba(255, 35, 35, 0.35)',
-        })
-        Object.assign(inner.style, {
-            position:   'absolute',
-            left:       `${((safeBounds.left - overlayBounds.left) / visibleWidthRatio) * 100}%`,
-            top:        `${((safeBounds.top - overlayBounds.top) / visibleHeightRatio) * 100}%`,
-            width:      `${((safeBounds.right - safeBounds.left) / visibleWidthRatio) * 100}%`,
-            height:     `${((safeBounds.bottom - safeBounds.top) / visibleHeightRatio) * 100}%`,
-            boxSizing:  'border-box',
-            border:     '3px dashed rgba(255, 35, 35, 0.95)',
-            boxShadow:  '0 0 0 1px rgba(255, 35, 35, 0.35) inset',
-            background: 'transparent',
-        })
-        if (!this.#toleranceZoneOverlay) {
-            documentRef.body.appendChild(overlay)
-            this.#toleranceZoneOverlay = overlay
-        }
+        void hysteresis
+        this.#removeToleranceZoneOverlay()
     }
 
     #recenterCameraToSample = ({
@@ -1784,6 +1834,7 @@ export class FlythroughMode {
 
         this.#cameraFlightActive = true
         this.#cameraAutoTrackingIgnoreUntil = this.#now() + Math.max(180, duration * 1000 + 180)
+        this.#rememberCameraView({anchor: sample, heading: safeHeading, pitch: safePitch})
         if (duration <= 0 || typeof viewer.camera.flyTo !== 'function') {
             viewer.camera.setView?.({
                                         destination,

@@ -201,6 +201,7 @@ export const VideoRecorderToolbar = ({toolbar}) => {
                             preRecording: false,
                             recording:    false,
                             paused:       false,
+                            step:         null,
                             size:         0,
                             recordedDuration: 0,
                             recordedSize: 0,

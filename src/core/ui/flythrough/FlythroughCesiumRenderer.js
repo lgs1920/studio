@@ -38,6 +38,7 @@ const PROGRESS_Z_INDEX_FILL = 41
 const REMAINING_KEY_PREFIX = 'remaining:'
 const PATH_GEOMETRY_UPDATE_INTERVAL = 120
 const DYNAMIC_POLYLINE_PROGRESS_STEP = 0.002
+const DYNAMIC_POLYLINE_PROGRESS_STEP_PLAYING = 0.004
 const LIVE_PROGRESS_MAX_POINTS = 512
 const cssColor = (value, fallback) => {
     if (value instanceof Color) {
@@ -98,8 +99,6 @@ export class FlythroughCesiumRenderer {
             return
         }
 
-        let geometryUpdated = false
-
         this.#sampler = sampler
         this.#sample = sample
         this.#ensureSource()
@@ -110,7 +109,6 @@ export class FlythroughCesiumRenderer {
             return
         }
         if (forceGeometry || this.#shouldUpdatePathGeometry(sample)) {
-            geometryUpdated = true
             this.#updateCompletedLines(sample)
             this.#updateRemainingLines(sample)
         }
@@ -868,7 +866,10 @@ export class FlythroughCesiumRenderer {
         }
         const dynamicPositions = new CallbackProperty(() => {
             const progress = Math.max(0, Math.min(1, Number(this.#sample?.progress) || 0))
-            const progressKey = Math.round(progress / DYNAMIC_POLYLINE_PROGRESS_STEP)
+            const progressStep = globalThis.lgs?.stores?.flythrough?.playing
+                                 ? DYNAMIC_POLYLINE_PROGRESS_STEP_PLAYING
+                                 : DYNAMIC_POLYLINE_PROGRESS_STEP
+            const progressKey = Math.round(progress / progressStep)
             if (dynamicRecord.lastProgressKey === progressKey) {
                 return dynamicRecord.lastPositions
             }
