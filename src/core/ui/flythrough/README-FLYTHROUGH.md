@@ -274,6 +274,9 @@ High-level orchestration for the flythrough feature.
 - bind the playback controller and renderer;
 - relay `start`, `pause`, `resume`, `stop`, and `seek`;
 - keep Cesium camera behavior in sync with the runtime;
+- detect tolerance-zone exits from the current marker projected in Cesium window coordinates;
+- treat non-projectable markers as outside the safe zone so the camera recenters instead of drifting away;
+- avoid thrashing by replacing an active recenter only after a short delay when the marker stays outside;
 - forward profile and debug state.
 
 ### Example

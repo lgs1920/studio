@@ -25,6 +25,12 @@ import {
 } from '@Editor/journey/JourneySelector'
 import { Utils }                                                     from '@Editor/Utils'
 import {
+    FLYTHROUGH_MARKER_MODE_TRACE, normalizeFlythroughMarker,
+}                                                                 from '@Core/ui/flythrough/FlythroughProgressionStyle'
+import {
+    FLYTHROUGH_JOURNEY_TOOLBAR_VISIBILITY_EVENT,
+}                                                                 from '@Core/ui/flythrough/FlythroughMode'
+import {
     WaButton, WaCard, WaIcon, WaSpinner, WaTooltip,
 } from '@web.awesome.me/webawesome-pro/dist/react'
 import { useEffect, useRef, useState } from 'react'
@@ -55,10 +61,28 @@ export const JourneyToolbar = (props) => {
     const editorStore = useSnapshot($editorStore)
 
     const autoRotate = useSnapshot(lgs.settings.ui.camera.start.rotate)
+    const flythroughSettings = useSnapshot(lgs.settings.ui.flythrough)
+    const rotationAllowedByFlythrough = normalizeFlythroughMarker(flythroughSettings.marker).mode === FLYTHROUGH_MARKER_MODE_TRACE
+    const flythroughRuntime = useSnapshot(lgs.stores.flythrough)
+    const [journeyToolbarTemporarilyHidden, setJourneyToolbarTemporarilyHidden] = useState(
+        __.ui.flythrough?.isJourneyToolbarTemporarilyHidden?.() === true,
+    )
     const rotationAllowed = useRef(false)
     const manualRotate = useRef(null)
 
     const [isDragging, setIsDragging] = useState(false)
+
+    useEffect(() => {
+        const syncVisibility = () => {
+            setJourneyToolbarTemporarilyHidden(__.ui.flythrough?.isJourneyToolbarTemporarilyHidden?.() === true)
+        }
+
+        syncVisibility()
+        globalThis.window?.addEventListener?.(FLYTHROUGH_JOURNEY_TOOLBAR_VISIBILITY_EVENT, syncVisibility)
+        return () => {
+            globalThis.window?.removeEventListener?.(FLYTHROUGH_JOURNEY_TOOLBAR_VISIBILITY_EVENT, syncVisibility)
+        }
+    }, [])
 
     /**
      * Opens the journey loader by setting its visibility to true.
@@ -101,6 +125,9 @@ export const JourneyToolbar = (props) => {
      * @param {Event} event - The click event
      */
     const forceRotate = async () => {
+        if (!rotationAllowedByFlythrough) {
+            return
+        }
         rotationAllowed.current = !rotationAllowed.current
         await focusOnJourney()
     }
@@ -114,9 +141,10 @@ export const JourneyToolbar = (props) => {
         if (rotate.running) {
             rotationAllowed.current = false
             await stopRotate()
-            if ($rotate.target?.element === lgs.theJourney.element) {
-                return
-            }
+        }
+        if (!rotationAllowedByFlythrough) {
+            await focusOnJourney({rotate: false})
+            return
         }
         rotationAllowed.current = autoRotate.journey
         await focusOnJourney()
@@ -125,19 +153,18 @@ export const JourneyToolbar = (props) => {
     /**
      * Focuses the camera on the current journey, optionally resetting the camera and enabling rotation.
      */
-    const focusOnJourney = async () => {
+    const focusOnJourney = async ({rotate: shouldRotate = rotationAllowed.current || autoRotate.journey} = {}) => {
         if ($rotate.running) {
             await __.ui.cameraManager.stopRotate()
-            if (rotate.target?.instanceOf?.(CURRENT_JOURNEY)) {
-                return
-            }
         }
         await setJourneyVisibility(true)
         lgs.theJourney.focus({
                                  resetCamera: true,
-                                 rotate: rotationAllowed.current || autoRotate.journey,
+                                 rotate: shouldRotate,
                              })
     }
+
+    useEffect(() => {}, [flythroughRuntime.active, flythroughRuntime.playing, flythroughRuntime.paused])
 
     useEffect(() => {
         if (toolbarRef) {
@@ -177,7 +204,7 @@ export const JourneyToolbar = (props) => {
 
     return (
         <>
-            {journeyEditor.list.length > 0 && journeyToolbar.show &&
+            {journeyEditor.list.length > 0 && journeyToolbar.show && !journeyToolbarTemporarilyHidden &&
                 <WaCard className="journey-toolbar lgs--toolbar wa-theme-lgs1920-on-map"
                         ref={_journeyToolbar}>
                     <JourneySelector onChange={newJourneySelection}
@@ -222,6 +249,7 @@ export const JourneyToolbar = (props) => {
                                             id="rotate-journey-toolbar"
                                             ref={manualRotate}
                                             onClick={forceRotate}
+                                            disabled={!rotationAllowedByFlythrough && !rotate.running}
                                             size="s"
                                         >
                                             {rotate.running && rotate.target?.instanceOf?.(CURRENT_JOURNEY)

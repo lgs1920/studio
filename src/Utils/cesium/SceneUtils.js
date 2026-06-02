@@ -673,6 +673,11 @@ export class SceneUtils {
                                        track = null,
                                        ...options
                                    }) => {
+        // A running orbit/rotation keeps mutating the camera while focus is being computed.
+        // Stop it first so every focus path sees a stable camera state.
+        if (__.ui.cameraManager?.isRotating?.()) {
+            await __.ui.cameraManager.stopRotate()
+        }
 
         const focusTrackOnly = track !== null
 

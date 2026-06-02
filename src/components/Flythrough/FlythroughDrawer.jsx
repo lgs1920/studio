@@ -30,6 +30,9 @@ import {
     FLYTHROUGH_PROFILE_MARKER_FILL_MIN_SIZE, FLYTHROUGH_PROGRESSION_BORDER_MAX_WIDTH,
     FLYTHROUGH_PROGRESSION_BORDER_MIN_WIDTH, FLYTHROUGH_PROGRESSION_FILL_MAX_WIDTH,
     FLYTHROUGH_PROGRESSION_FILL_MIN_WIDTH, FLYTHROUGH_TRACE_MODE_FULL, FLYTHROUGH_TRACE_MODE_PROGRESSIVE,
+    FLYTHROUGH_HYSTERESIS_EASING_MAX, FLYTHROUGH_HYSTERESIS_EASING_MIN,
+    FLYTHROUGH_HYSTERESIS_MARGIN_RATIO_MAX, FLYTHROUGH_HYSTERESIS_MARGIN_RATIO_MIN,
+    FLYTHROUGH_HYSTERESIS_STOP_THRESHOLD_MAX, FLYTHROUGH_HYSTERESIS_STOP_THRESHOLD_MIN,
     normalizeFlythroughCamera, normalizeFlythroughMarker, normalizeFlythroughProfileInfo,
     normalizeFlythroughProgressionStyle, normalizeFlythroughTrace,
 }                 from '@Core/ui/flythrough/FlythroughProgressionStyle'
@@ -38,6 +41,7 @@ import {
     WaTabPanel,
 }                 from '@web.awesome.me/webawesome-pro/dist/react'
 import { colord } from 'colord'
+import { Cartographic } from 'cesium'
 import { memo, useCallback, useEffect, useMemo, useRef } from 'react'
 import { createPortal }      from 'react-dom'
 import { useSnapshot }       from 'valtio'
@@ -46,6 +50,19 @@ import './style.css'
 const clampDuration = value => {
     const duration = Number(value)
     return Number.isFinite(duration) && duration > 0 ? duration : 60
+}
+
+const terrainHeightAt = ({longitude, latitude, radians = false}) => {
+    const lon = Number(longitude)
+    const lat = Number(latitude)
+    if (!Number.isFinite(lon) || !Number.isFinite(lat)) {
+        return null
+    }
+
+    const cartographic = radians ? Cartographic.fromRadians(lon, lat) : Cartographic.fromDegrees(lon, lat)
+    const height = lgs.scene?.globe?.getHeight?.(cartographic)
+    const numericHeight = Number(height)
+    return Number.isFinite(numericHeight) ? numericHeight : null
 }
 
 const toOpaqueColorValue = value => {
@@ -87,6 +104,10 @@ const mergeCamera = (current, updates) => normalizeFlythroughCamera({
                                                                         hysteresis: {
                                                                             ...(current?.hysteresis ?? {}),
                                                                             ...(updates?.hysteresis ?? {}),
+                                                                            zone: {
+                                                                                ...(current?.hysteresis?.zone ?? {}),
+                                                                                ...(updates?.hysteresis?.zone ?? {}),
+                                                                            },
                                                                         },
                                                                     })
 
@@ -268,39 +289,49 @@ export const FlythroughDrawer = memo(() => {
         }
     }, [drawerOpen, flythroughSettings.duration, hasJourney, journeySlug])
 
-    const refreshFlythrough = useCallback(() => {
-        __.ui.flythrough?.refresh?.()
-        __.ui.flythrough?.refreshCamera?.()
+    const refreshFlythrough = useCallback((camera = true) => {
+        __.ui.flythrough?.refresh?.({camera})
         lgs.scene?.requestRender?.()
+    }, [])
+
+    const stopRotateIfNeeded = useCallback(async (mode = null) => {
+        const flythroughMarker = normalizeFlythroughMarker(lgs.settings.ui.flythrough.marker)
+        const rotationRunning = lgs.stores.ui?.mainUI?.rotate?.running === true
+        const effectiveMode = mode ?? flythroughMarker.mode
+        if (rotationRunning && effectiveMode !== FLYTHROUGH_MARKER_MODE_TRACE) {
+            await __.ui.cameraManager?.stopRotate?.()
+        }
     }, [])
 
     const updateProgression = useCallback((updates) => {
         const nextProgression = mergeProgressionStyle(lgs.settings.ui.flythrough.progression, updates)
         lgs.settings.ui.flythrough.progression = nextProgression
         lgs.stores.flythrough.progression = nextProgression
-        refreshFlythrough()
+        refreshFlythrough(false)
     }, [refreshFlythrough])
 
     const updateTrace = useCallback((updates) => {
         const nextTrace = mergeTrace(lgs.settings.ui.flythrough.trace, updates)
         lgs.settings.ui.flythrough.trace = nextTrace
         lgs.stores.flythrough.trace = nextTrace
-        refreshFlythrough()
+        refreshFlythrough(false)
     }, [refreshFlythrough])
 
-    const updateMarker = useCallback((event) => {
+    const updateMarker = useCallback(async (event) => {
+        await stopRotateIfNeeded(event.target.value)
         const nextMarker = mergeMarker(lgs.settings.ui.flythrough.marker, {mode: event.target.value})
         lgs.settings.ui.flythrough.marker = nextMarker
         lgs.stores.flythrough.marker = nextMarker
-        refreshFlythrough()
-    }, [refreshFlythrough])
+        refreshFlythrough(true)
+    }, [refreshFlythrough, stopRotateIfNeeded])
 
-    const updateCamera = useCallback((updates) => {
+    const updateCamera = useCallback(async (updates) => {
+        await stopRotateIfNeeded()
         const nextCamera = mergeCamera(lgs.settings.ui.flythrough.camera, updates)
         lgs.settings.ui.flythrough.camera = nextCamera
         lgs.stores.flythrough.camera = nextCamera
-        refreshFlythrough()
-    }, [refreshFlythrough])
+        refreshFlythrough(true)
+    }, [refreshFlythrough, stopRotateIfNeeded])
 
     const updateDuration = useCallback((event) => {
         if (durationLocked) {
@@ -396,20 +427,46 @@ export const FlythroughDrawer = memo(() => {
     }, [updateTrace])
 
     const updateAltitudeMode = useCallback((event) => {
-        updateCamera({altitudeMode: event.target.value})
-    }, [updateCamera])
+        const nextMode = event.target.value
+        if (nextMode === camera.altitudeMode) {
+            updateCamera({altitudeMode: nextMode})
+            return
+        }
+        // Keep the same visual camera height by converting the single altitude value
+        // between absolute altitude and terrain offset when the mode changes.
+        const currentCameraHeight = Number(lgs.viewer?.camera?.positionCartographic?.height)
+        const fallbackAbsoluteHeight = Number.isFinite(currentCameraHeight) ? currentCameraHeight : camera.altitude
+        const currentTerrainHeight = flythroughState.sample
+                                     ? terrainHeightAt(flythroughState.sample)
+                                     : terrainHeightAt({
+                                           ...(lgs.viewer?.camera?.positionCartographic ?? {}),
+                                           radians: true,
+                                       })
+        const nextAltitude = nextMode === FLYTHROUGH_CAMERA_ALTITUDE_GROUND_OFFSET
+                             ? currentTerrainHeight === null
+                               ? fallbackAbsoluteHeight
+                               : clampFlythroughNumber(fallbackAbsoluteHeight - currentTerrainHeight, fallbackAbsoluteHeight, 10, 100000)
+                             : currentTerrainHeight === null
+                               ? fallbackAbsoluteHeight
+                               : clampFlythroughNumber(fallbackAbsoluteHeight + currentTerrainHeight, fallbackAbsoluteHeight, 10, 100000)
+
+        updateCamera({
+            altitudeMode: nextMode,
+            altitude:     nextAltitude,
+        })
+    }, [camera.altitude, camera.altitudeMode, flythroughState.sample, updateCamera])
 
     const updateCameraPositionMode = useCallback((event) => {
         updateCamera({positionMode: event.target.value})
     }, [updateCamera])
 
     const updateCameraAltitude = useCallback((event) => {
-        updateCamera({altitude: clampFlythroughNumber(event.target.value, camera.altitude, 50, 100000)})
+        updateCamera({altitude: clampFlythroughNumber(event.target.value, camera.altitude, 10, 100000)})
     }, [camera.altitude, updateCamera])
 
-    const updateCameraGroundOffset = useCallback((event) => {
-        updateCamera({groundOffset: clampFlythroughNumber(event.target.value, camera.groundOffset, 10, 100000)})
-    }, [camera.groundOffset, updateCamera])
+    const updateCameraHeading = useCallback((event) => {
+        updateCamera({heading: clampFlythroughNumber(event.target.value, camera.heading ?? 0, -180, 180)})
+    }, [camera.heading, updateCamera])
 
     const updateHysteresisMarginRatio = useCallback((event) => {
         updateCamera({
@@ -455,11 +512,13 @@ export const FlythroughDrawer = memo(() => {
             event.preventDefault()
             return
         }
+        __.ui.flythrough?.restoreJourneyToolbarVisibility?.()
         __.ui.drawerManager.close()
     }, [])
 
     const closeDrawer = useCallback((event) => {
         if (window.isOK(event) && __.ui.drawerManager.isCurrent(FLYTHROUGH_DRAWER)) {
+            __.ui.flythrough?.restoreJourneyToolbarVisibility?.()
             __.ui.drawerManager.close()
         }
     }, [])
@@ -578,27 +637,15 @@ export const FlythroughDrawer = memo(() => {
                                                                  value={FLYTHROUGH_CAMERA_ALTITUDE_GROUND_OFFSET}>{'Ground offset'}</WaOption>
                                                          </WaSelect>
                                                          <div className="flythrough-style-field-grid is-single">
-                                                             {camera.altitudeMode === FLYTHROUGH_CAMERA_ALTITUDE_CONSTANT ? (
-                                                                 <WaNumberInput
-                                                                     label="Altitude (m)"
-                                                                     size="s"
-                                                                     appearance="filled"
-                                                                     min="50"
-                                                                     step="50"
-                                                                     value={camera.altitude}
-                                                                     onInput={updateCameraAltitude}
-                                                                     label-at-start className="half-width"/>
-                                                             ) : (
-                                                                  <WaNumberInput
-                                                                      label="Ground offset (m)"
-                                                                      size="s"
-                                                                      appearance="filled"
-                                                                      min="10"
-                                                                      step="25"
-                                                                      value={camera.groundOffset}
-                                                                      onInput={updateCameraGroundOffset}
-                                                                      label-at-start className="half-width"/>
-                                                              )}
+                                                             <WaNumberInput
+                                                                 label="Altitude (m)"
+                                                                 size="s"
+                                                                 appearance="filled"
+                                                                 min="10"
+                                                                 step="50"
+                                                                 value={camera.altitude}
+                                                                 onInput={updateCameraAltitude}
+                                                                 label-at-start className="half-width"/>
                                                              <WaNumberInput
                                                                  label="Pitch (deg)"
                                                                  size="s"
@@ -611,17 +658,29 @@ export const FlythroughDrawer = memo(() => {
                                                                                                     pitch: clampFlythroughNumber(event.target.value, camera.pitch, -89, -5),
                                                                                                 })}
                                                                  label-at-start className="half-width"/>
+                                                             {camera.positionMode === FLYTHROUGH_CAMERA_POSITION_SYSTEM && (
+                                                                 <WaNumberInput
+                                                                     label="Heading (deg)"
+                                                                     size="s"
+                                                                     appearance="filled"
+                                                                     min="-180"
+                                                                     max="180"
+                                                                     step="1"
+                                                                     value={camera.heading ?? 0}
+                                                                     onInput={updateCameraHeading}
+                                                                     label-at-start className="half-width"/>
+                                                             )}
                                                          </div>
                                                      </div>
                                                  )}
-                                                 {marker.mode === FLYTHROUGH_MARKER_MODE_HYSTERESIS && (
+                                                {marker.mode === FLYTHROUGH_MARKER_MODE_HYSTERESIS && (
                                                      <div className="flythrough-fieldset">
                                                          <WaNumberInput
                                                              label="Dynamic"
                                                              size="s"
                                                              appearance="filled"
-                                                             min="0.05"
-                                                             max="0.45"
+                                                             min={FLYTHROUGH_HYSTERESIS_MARGIN_RATIO_MIN}
+                                                             max={FLYTHROUGH_HYSTERESIS_MARGIN_RATIO_MAX}
                                                              step="0.01"
                                                              value={camera.hysteresis.marginRatio}
                                                              onInput={updateHysteresisMarginRatio}
@@ -630,8 +689,8 @@ export const FlythroughDrawer = memo(() => {
                                                              label="Recenter easing"
                                                              size="s"
                                                              appearance="filled"
-                                                             min="0.02"
-                                                             max="0.5"
+                                                             min={FLYTHROUGH_HYSTERESIS_EASING_MIN}
+                                                             max={FLYTHROUGH_HYSTERESIS_EASING_MAX}
                                                              step="0.01"
                                                              value={camera.hysteresis.easing}
                                                              onInput={updateHysteresisEasing}
@@ -640,8 +699,8 @@ export const FlythroughDrawer = memo(() => {
                                                              label="Stop threshold"
                                                              size="s"
                                                              appearance="filled"
-                                                             min="0.000001"
-                                                             max="0.001"
+                                                             min={FLYTHROUGH_HYSTERESIS_STOP_THRESHOLD_MIN}
+                                                             max={FLYTHROUGH_HYSTERESIS_STOP_THRESHOLD_MAX}
                                                              step="0.000001"
                                                              value={camera.hysteresis.stopThreshold}
                                                              onInput={updateHysteresisStopThreshold}

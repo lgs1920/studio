@@ -17,8 +17,11 @@
 
 import { Widget } from '@Components/MainUI/widgets/Widget'
 import { JOURNEY_TOOLBAR_WIDGET, LGS_TOOLBAR } from '@Core/constants'
+import {
+    FLYTHROUGH_JOURNEY_TOOLBAR_VISIBILITY_EVENT,
+} from '@Core/ui/flythrough/FlythroughMode'
 import { JourneyToolbar }    from '@Editor/JourneyToolbar'
-import { useMemo }           from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useSnapshot }       from 'valtio'
 
 /**
@@ -33,6 +36,9 @@ export const JourneyToolbarWidget = ({id}) => {
 
     const $journeyToolbar = lgs.settings.ui.journeyToolbar
     const journeyToolbar = useSnapshot($journeyToolbar)
+    const [journeyToolbarTemporarilyHidden, setJourneyToolbarTemporarilyHidden] = useState(
+        __.ui.flythrough?.isJourneyToolbarTemporarilyHidden?.() === true,
+    )
 
     // Stabilize config with useMemo
     const config = useMemo(() => {
@@ -50,8 +56,20 @@ export const JourneyToolbarWidget = ({id}) => {
         }
     }, [id])
 
+    useEffect(() => {
+        const syncVisibility = () => {
+            setJourneyToolbarTemporarilyHidden(__.ui.flythrough?.isJourneyToolbarTemporarilyHidden?.() === true)
+        }
+
+        syncVisibility()
+        globalThis.window?.addEventListener?.(FLYTHROUGH_JOURNEY_TOOLBAR_VISIBILITY_EVENT, syncVisibility)
+        return () => {
+            globalThis.window?.removeEventListener?.(FLYTHROUGH_JOURNEY_TOOLBAR_VISIBILITY_EVENT, syncVisibility)
+        }
+    }, [])
+
     return (
-        <Widget isVisible={journeyEditor.list.length > 0 && journeyToolbar.show}
+        <Widget isVisible={journeyEditor.list.length > 0 && journeyToolbar.show && !journeyToolbarTemporarilyHidden}
                 config={config}>
             <JourneyToolbar/>
         </Widget>

@@ -16,6 +16,7 @@
 
 import { CURRENT_POI }                             from '@Core/constants'
 import { getOrbitSettings, setOrbitStoreSettings } from '@Core/OrbitSettings'
+import { FLYTHROUGH_MARKER_MODE_TRACE, normalizeFlythroughMarker } from '@Core/ui/flythrough/FlythroughProgressionStyle'
 import { WaButton, WaIcon, WaTooltip } from '@web.awesome.me/webawesome-pro/dist/react'
 import { memo, useCallback }                       from 'react'
 import { useSnapshot } from 'valtio'
@@ -73,9 +74,13 @@ const normalizedFocusPoint = point => {
 export const RotateButton = memo(({tooltip = 'top'}) => {
     // Targeted snapshots to minimize re-renders
     const {rotate, panorama} = useSnapshot(lgs.stores.ui.mainUI)
+    const flythroughSettings = useSnapshot(lgs.settings.ui.flythrough)
     const {target, position} = useSnapshot(lgs.stores.main.components.camera)
     const rotateTarget = rotate.target
     const sceneTarget = __.ui.sceneManager.target
+    const flythroughMarker = normalizeFlythroughMarker(flythroughSettings.marker)
+    const rotationAllowedByFlythrough = flythroughMarker.mode === FLYTHROUGH_MARKER_MODE_TRACE
+    const disableRotationStart = !rotationAllowedByFlythrough && !rotate.running && !panorama.active
 
     /**
      * Toggles map rotation and updates POI animation state if applicable.
@@ -142,6 +147,7 @@ export const RotateButton = memo(({tooltip = 'top'}) => {
                 className="square-button rotation-button"
                 id="launch-rotation"
                 onClick={handleRotation}
+                disabled={disableRotationStart}
                 variant={'brand'}
                 appearance="Filled"
             >

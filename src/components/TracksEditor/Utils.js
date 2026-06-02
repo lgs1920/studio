@@ -63,6 +63,12 @@ export class Utils {
     }) => {
         const editorStore = lgs.theJourneyEditorProxy
         const shouldFocus = focus && !__.ui.drawerManager.consumeSuppressFocusOnOpen?.(journeySlug)
+        if (__.ui.cameraManager.isRotating()) {
+            await __.ui.cameraManager.stopRotate()
+            // Drop the previous rotation target before switching journeys so the next focus
+            // path does not inherit a stale orbit anchor from the journey that was just left.
+            lgs.stores.ui.mainUI.rotate.target = null
+        }
         editorStore.journey = lgs.getJourneyBySlug(journeySlug)
 
         lgs.saveJourneyInContext(editorStore.journey)
@@ -93,9 +99,6 @@ export class Utils {
         // Save information
         await TrackUtils.saveCurrentJourneyToDB(lgs.theJourney)
         if (editorStore.journey.visible && shouldFocus) {
-            if (__.ui.cameraManager.isRotating()) {
-                await __.ui.cameraManager.stopRotate()
-            }
             lgs.theJourney.focus({action, rotate, resetCamera: true})
         }
         await TrackUtils.saveCurrentTrackToDB(null)

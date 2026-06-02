@@ -129,6 +129,13 @@ const AppSurface = ({onReady}) => {
         }
     }, [onReady])
 
+    useEffect(() => {
+        return () => {
+            __.ui.flythrough?.stop?.({emit: false})
+            __.ui.flythrough?.restoreJourneyToolbarVisibility?.()
+        }
+    }, [])
+
     return (
         <>
             <div id="drawer-root" className="drawer-wrapper"/>
