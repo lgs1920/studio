@@ -124,6 +124,7 @@ const FLYTHROUGH_PROFILE_LOCKED_HORIZONTAL_GUIDE_GRAPHIC = 'flythrough-profile-l
 const FLYTHROUGH_PROFILE_LOCKED_VERTICAL_GUIDE_GRAPHIC = 'flythrough-profile-locked-vertical-guide-graphic'
 const FLYTHROUGH_PROFILE_OVERLAY_GRAPHIC = 'flythrough-profile-overlay-graphic'
 const FLYTHROUGH_PROFILE_UPDATE_INTERVAL = 33
+const FLYTHROUGH_PROFILE_VIDEO_UPDATE_INTERVAL = 120
 const PROFILE_LINE_WIDTH = 2
 
 const isFlythroughSeries = seriesId => String(seriesId ?? '').startsWith('flythrough-')
@@ -275,6 +276,7 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
     const $unitStore = lgs.settings.unitSystem
     const unitStore = useSnapshot($unitStore)
     const unitSystem = unitStore.current
+    const video = useSnapshot(lgs.stores.ui.video)
     const flythroughSettings = useSnapshot(lgs.settings.ui.flythrough)
     const flythroughProfileInfo = useMemo(
         () => normalizeFlythroughProfileInfo(flythroughSettings.profileInfo),
@@ -299,6 +301,8 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
                                                   key:        null,
                                                   renderedKey: null,
                                                   geometries: [],
+                                                  completedChildren: [],
+                                                  remainingChildren: [],
                                               })
     const [lockedProfileSample, setLockedProfileSample] = useState(null)
     const configKey = configId ?? id
@@ -575,7 +579,9 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
             ...styles,
             toolbox:  {show: false},
             title:    {show: false},
-            animation: preview ? false : undefined,
+            animation: false,
+            animationDuration: 0,
+            animationDurationUpdate: 0,
             tooltip: {show: false},
             xAxis:    [
                 {
@@ -729,9 +735,11 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
 
     const clearFlythroughProfileGraphicsCache = useCallback(() => {
         _flythroughProfileGraphics.current = {
-            key:        null,
-            renderedKey: null,
-            geometries: [],
+            key:               null,
+            renderedKey:       null,
+            geometries:        [],
+            completedChildren: [],
+            remainingChildren: [],
         }
     }, [])
 
@@ -838,11 +846,6 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
                     }
                 })
                 .filter(Boolean)
-            _flythroughProfileGraphics.current = {
-                key:         cacheKey,
-                renderedKey: null,
-                geometries,
-            }
         }
 
         const samplePixel = chartPixelFromSample(sample, chart)
@@ -854,8 +857,71 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
                                      && flythroughTrace.mode === 'full'
         const remainingColor = profileColor(flythroughTrace.remaining.color, flythroughProgression.fill.color)
         const doneColor = profileColor(flythroughProgression.fill.color, flythroughProgression.fill.color)
+        const overlayCacheKey = [
+            cacheKey,
+            doneColor,
+            remainingColor,
+            showRemainingOverlay ? '1' : '0',
+        ].join(':')
 
-        const shouldReplaceChildren = _flythroughProfileGraphics.current.renderedKey !== cacheKey
+        const shouldReplaceChildren = _flythroughProfileGraphics.current.renderedKey !== overlayCacheKey
+        if (_flythroughProfileGraphics.current.key !== overlayCacheKey) {
+            const completedChildren = geometries.flatMap(geometry => [
+                {
+                    id:      `${FLYTHROUGH_PROFILE_COMPLETED_GRAPHIC}:${geometry.id}:area`,
+                    type:    'polygon',
+                    silent:  true,
+                    z:       8,
+                    shape:   {points: geometry.areaPoints},
+                    style:   {
+                        fill:    geometry.fill,
+                        opacity: 1,
+                    },
+                },
+                ...geometry.lineModels.map(lineModel => ({
+                    id:      `${FLYTHROUGH_PROFILE_COMPLETED_GRAPHIC}:${geometry.id}:line:${lineModel.key}`,
+                    type:    'polyline',
+                    silent:  true,
+                    z:       9,
+                    shape:   {
+                        points: geometry.linePoints,
+                        smooth:  0.35,
+                    },
+                    style:   {
+                        ...profileGraphicLineStyle(lineModel),
+                        stroke: doneColor,
+                        opacity: 1,
+                    },
+                })),
+            ])
+
+            const remainingChildren = showRemainingOverlay
+                                      ? geometries.flatMap(geometry => geometry.lineModels.map(lineModel => ({
+                                          id:      `${FLYTHROUGH_PROFILE_COMPLETED_GRAPHIC}:${geometry.id}:line:${lineModel.key}:remaining`,
+                                          type:    'polyline',
+                                          silent:  true,
+                                          z:       7,
+                                          shape:   {
+                                              points: geometry.linePoints,
+                                              smooth:  0.35,
+                                          },
+                                          style:   {
+                                              ...profileGraphicLineStyle(lineModel),
+                                              stroke:  remainingColor,
+                                              opacity: 1,
+                                          },
+                                      })))
+                                      : []
+
+            _flythroughProfileGraphics.current = {
+                key:               overlayCacheKey,
+                renderedKey:       null,
+                geometries,
+                completedChildren,
+                remainingChildren,
+            }
+        }
+
         const graphic = {
             id:       FLYTHROUGH_PROFILE_COMPLETED_GRAPHIC,
             type:     'group',
@@ -873,37 +939,10 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
             },
         }
 
-        graphic.children = geometries.flatMap(geometry => [
-            {
-                id:      `${FLYTHROUGH_PROFILE_COMPLETED_GRAPHIC}:${geometry.id}:area`,
-                type:    'polygon',
-                silent:  true,
-                z:       8,
-                shape:   {points: geometry.areaPoints},
-                style:   {
-                    fill:    geometry.fill,
-                    opacity: 1,
-                },
-            },
-            ...geometry.lineModels.map(lineModel => ({
-                id:      `${FLYTHROUGH_PROFILE_COMPLETED_GRAPHIC}:${geometry.id}:line:${lineModel.key}`,
-                type:    'polyline',
-                silent:  true,
-                z:       9,
-                shape:   {
-                    points: geometry.linePoints,
-                    smooth: 0.35,
-                },
-                style:   {
-                    ...profileGraphicLineStyle(lineModel),
-                    stroke: doneColor,
-                    opacity: 1,
-                },
-            })),
-        ])
+        graphic.children = _flythroughProfileGraphics.current.completedChildren
 
         if (shouldReplaceChildren) {
-            _flythroughProfileGraphics.current.renderedKey = cacheKey
+            _flythroughProfileGraphics.current.renderedKey = overlayCacheKey
         }
 
         const remainingGraphic = showRemainingOverlay
@@ -922,23 +961,7 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
                                              height: gridRect.height,
                                          },
                                      },
-                                     children: geometries.flatMap(geometry => [
-                                         ...geometry.lineModels.map(lineModel => ({
-                                             id:      `${FLYTHROUGH_PROFILE_COMPLETED_GRAPHIC}:${geometry.id}:line:${lineModel.key}:remaining`,
-                                             type:    'polyline',
-                                             silent:  true,
-                                             z:       7,
-                                             shape:   {
-                                                 points: geometry.linePoints,
-                                                 smooth:  0.35,
-                                             },
-                                             style:   {
-                                                 ...profileGraphicLineStyle(lineModel),
-                                                 stroke:  remainingColor,
-                                                 opacity: 1,
-                                             },
-                                         })),
-                                     ]),
+                                     children: _flythroughProfileGraphics.current.remainingChildren,
                                  }
                                  : null
 
@@ -1389,7 +1412,7 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
 
         chart.setOption(option, {
             replaceMerge: ['graphic'],
-            lazyUpdate:   false,
+            lazyUpdate:   true,
             silent:       true,
         })
     }, [flythroughProfileOption, locked, lockedProfileSample, preview])
@@ -1430,6 +1453,10 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
         let timeout = null
         let lastUpdate = 0
         const flythroughStore = lgs.stores.flythrough
+        const videoCaptureActive = video.preRecording || video.recording || video.finalizing || video.snapshot
+        const updateInterval = videoCaptureActive
+                               ? FLYTHROUGH_PROFILE_VIDEO_UPDATE_INTERVAL
+                               : FLYTHROUGH_PROFILE_UPDATE_INTERVAL
         const renderFlythroughProgress = () => {
             timeout = null
             if (frame !== null) {
@@ -1446,7 +1473,7 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
                 lastUpdate = performance.now()
                 chart.setOption(option, {
                     replaceMerge: ['graphic'],
-                    lazyUpdate:   false,
+                    lazyUpdate:   true,
                     silent:       true,
                 })
             })
@@ -1454,7 +1481,7 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
         const applyFlythroughProgress = () => {
             const now = performance.now()
             const elapsed = now - lastUpdate
-            const shouldRenderNow = !flythroughStore.playing || lastUpdate === 0 || elapsed >= FLYTHROUGH_PROFILE_UPDATE_INTERVAL
+            const shouldRenderNow = !flythroughStore.playing || lastUpdate === 0 || elapsed >= updateInterval
 
             if (shouldRenderNow) {
                 if (timeout !== null) {
@@ -1466,7 +1493,7 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
             }
 
             if (timeout === null) {
-                timeout = setTimeout(renderFlythroughProgress, FLYTHROUGH_PROFILE_UPDATE_INTERVAL - elapsed)
+                timeout = setTimeout(renderFlythroughProgress, updateInterval - elapsed)
             }
         }
 
@@ -1497,7 +1524,7 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
             unsubscribeController.forEach(unsubscribeEvent => unsubscribeEvent?.())
             unsubscribe()
         }
-    }, [flythroughProfileOption, preview])
+    }, [flythroughProfileOption, preview, video.preRecording, video.recording, video.finalizing, video.snapshot])
 
     usePreviewChartResize(_instance, preview, [width, height, padding, borderWidth])
 

@@ -17,6 +17,7 @@
 import DrawerFooter from '@Components/DrawerFooter'
 import { FlythroughProgressBar } from '@Components/Flythrough/FlythroughProgressBar'
 import { LGSScrollbars } from '@Components/MainUI/LGSScrollbars'
+import { VideoButton } from '@Components/MainUI/video/VideoButton'
 import { formatSliderPercent } from '@Components/MainUI/widgets/editor/elements/sliderUtils'
 import PanelActions from '@Components/PanelsActions'
 import WaDrawer     from '@Components/WaDrawerNonModal'
@@ -238,6 +239,7 @@ export const FlythroughDrawer = memo(() => {
     const camera = normalizeFlythroughCamera(flythroughSettings.camera)
     const marker = normalizeFlythroughMarker(flythroughSettings.marker)
     const durationLocked = flythroughState.active || flythroughState.playing || flythroughState.paused
+    const syncWithVideo = flythroughState.recordingSync === true
 
     useEffect(() => {
         const flythroughRuntime = lgs.stores.flythrough
@@ -341,6 +343,19 @@ export const FlythroughDrawer = memo(() => {
         lgs.settings.ui.flythrough.duration = duration
         lgs.stores.flythrough.duration = duration
     }, [durationLocked])
+
+    const updateSyncWithVideo = useCallback((event) => {
+        const enabled = Boolean(event?.target?.checked)
+        if (enabled) {
+            __.ui.flythroughVideoSync?.arm({
+                autoStopRecording: true,
+                resetToStart:      true,
+            })
+        }
+        else {
+            __.ui.flythroughVideoSync?.disarm()
+        }
+    }, [])
 
     const updateFillColor = useCallback((event) => {
         updateProgression({fill: {color: toOpaqueColorValue(event.target.value)}})
@@ -549,12 +564,26 @@ export const FlythroughDrawer = memo(() => {
                                  <WaCard appearance="outlined" className="flythrough-progress-card-in-drawer">
                                      <FlythroughProgressBar className="flythrough-progress-bar-in-drawer"/>
                                  </WaCard>
-                                 <WaSwitch label-at-start size="xs" className="half-width">
-                                     {'Export to video'}
-                                     <span slot="hint">
-                                        {'You can configure your video before viewing it, and then save/share it.'}
-                                    </span>
-                                 </WaSwitch>
+                                 <div className="flythrough-sync-row">
+                                     <WaSwitch
+                                         label-at-start
+                                         size="xs"
+                                         className="flythrough-sync-switch half-width"
+                                         checked={syncWithVideo}
+                                         onChange={updateSyncWithVideo}
+                                     >
+                                         {'Sync with Video'}
+                                     </WaSwitch>
+                                     {syncWithVideo &&
+                                         <VideoButton
+                                             id="launch-the-video-editor-flythrough"
+                                             tooltip="left"
+                                             className="flythrough-sync-video-button square-button"
+                                             variant="brand"
+                                             appearance="Filled"
+                                         />
+                                     }
+                                 </div>
                                  <WaSelect
                                      className="flythrough-progression-select half-width"
                                      label="Show"

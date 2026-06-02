@@ -88,6 +88,32 @@ export const flythroughAngularDelta = (from, to) => {
     return delta === -Math.PI ? Math.PI : delta
 }
 
+export const flythroughHeadingEasingFactor = ({
+                                                  previousHeading = null,
+                                                  nextHeading = 0,
+                                                  easing = 0.14,
+                                                  minFactor = 0.04,
+                                                  maxFactor = 0.22,
+                                              } = {}) => {
+    const delta = flythroughAngularDelta(previousHeading, nextHeading)
+    const safeEasing = clamp(finiteNumber(easing) ?? 0.14, 0.02, 0.5)
+    const normalizedEasing = safeEasing / 0.5
+    const smallTurnFactor = lerp(0.22, 0.12, normalizedEasing)
+    const largeTurnFactor = lerp(0.08, 0.04, normalizedEasing)
+
+    if (delta === null) {
+        return clamp(smallTurnFactor, minFactor, maxFactor)
+    }
+
+    const normalizedDelta = clamp(Math.abs(delta) / Math.PI, 0, 1)
+    const turnEase = 1 - Math.pow(1 - normalizedDelta, 3)
+    return clamp(
+        lerp(smallTurnFactor, largeTurnFactor, turnEase),
+        minFactor,
+        maxFactor,
+    )
+}
+
 export const flythroughCameraRangeFromPitch = (altitude, pitchRadians) => {
     const height = Math.max(0, finiteNumber(altitude) ?? 0)
     const pitch = finiteNumber(pitchRadians)
@@ -1590,6 +1616,14 @@ export class FlythroughMode {
         return prev + delta * clamp(factor, 0, 1)
     }
 
+    #headingEasingFactor = (cameraSettings, targetHeading) => flythroughHeadingEasingFactor({
+        previousHeading: this.#lastCameraHeading,
+        nextHeading:     targetHeading,
+        easing:          cameraSettings?.hysteresis?.easing,
+        minFactor:       cameraSettings?.positionMode === FLYTHROUGH_CAMERA_POSITION_SYSTEM ? 0.04 : 0.05,
+        maxFactor:       cameraSettings?.positionMode === FLYTHROUGH_CAMERA_POSITION_SYSTEM ? 0.18 : 0.22,
+    })
+
     #removeToleranceZoneOverlay = () => {
         this.#toleranceZoneOverlay?.remove?.()
         this.#toleranceZoneOverlay = null
@@ -2024,9 +2058,11 @@ export class FlythroughMode {
                               ? CAMERA_HEADING_HYSTERESIS_RADIANS
                               : CAMERA_HEADING_MIN_CHANGE_RADIANS,
         })
-        const smoothHeading = cameraSettings.positionMode === FLYTHROUGH_CAMERA_POSITION_SYSTEM
-            ? this.#smoothRadians(this.#lastCameraHeading, heading, 0.35)
-            : this.#smoothRadians(this.#lastCameraHeading, heading, 0.55)
+        const smoothHeading = this.#smoothRadians(
+            this.#lastCameraHeading,
+            heading,
+            this.#headingEasingFactor(cameraSettings, heading),
+        )
         const smoothPitch = this.#smoothRadians(this.#lastCameraPitch, pitch, 0.1)
         const anchorSample = this.#markerPositionForSample(sample, markerSettings)
 

@@ -22,7 +22,14 @@ import { useSnapshot } from 'valtio'
 
 export const FlythroughButton = (props) => {
     const $video = lgs.stores.ui.video
+    const flythrough = useSnapshot(lgs.stores.flythrough)
     const video = useSnapshot($video)
+    const {
+        tooltip = 'right',
+        className = 'square-button',
+        variant = flythrough.recordingSync === true ? 'warning' : 'brand',
+        appearance = 'Filled',
+    } = props ?? {}
 
     const handleClick = useCallback(() => {
         __.ui.drawerManager.open(FLYTHROUGH_DRAWER)
@@ -32,13 +39,13 @@ export const FlythroughButton = (props) => {
         <>
             {!video.recording && !video.preRecording && !video.snapshot &&
                 <>
-                    <WaTooltip for="launch-the-flythrough-editor" placement={props.tooltip}>{FLYTHROUGH_LABEL}</WaTooltip>
+                    <WaTooltip for="launch-the-flythrough-editor" placement={tooltip}>{FLYTHROUGH_LABEL}</WaTooltip>
                     <WaButton
-                        className="square-button"
+                        className={className}
                         id="launch-the-flythrough-editor"
                         onClick={handleClick}
-                        variant="brand"
-                        appearance="Filled"
+                        variant={variant}
+                        appearance={appearance}
                     >
                         <WaIcon name="video-arrow-up-right" variant="regular"/>
                     </WaButton>

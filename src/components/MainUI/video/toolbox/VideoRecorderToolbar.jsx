@@ -190,6 +190,7 @@ export const VideoRecorderToolbar = ({toolbar}) => {
         }
 
         const handleStop = (event) => {
+            __.ui.flythroughVideoSync?.stopFlythrough?.()
             if (__.recorder?.isRecording() || $video.paused) {
                 __.recorder.stopVideo()
             }
@@ -251,6 +252,7 @@ export const VideoRecorderToolbar = ({toolbar}) => {
     }, [updateState, showToast, video.maxSize, video.maxDuration, $video])
 
     const handleCancel = useCallback(async () => {
+        __.ui.flythroughVideoSync?.stopFlythrough?.()
         if (__.recorder) {
             await __.recorder.cancelVideo()
         }

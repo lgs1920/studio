@@ -53,6 +53,22 @@
     gap: var(--wa-space-s, 0.75rem);
 }
 
+.flythrough-sync-row {
+    align-items: center;
+    display: flex;
+    gap: var(--wa-space-s, 0.75rem);
+    min-width: 0;
+}
+
+.flythrough-sync-switch {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.flythrough-sync-video-button {
+    flex: 0 0 auto;
+}
+
 
 .flythrough-empty-state {
     margin: 0;

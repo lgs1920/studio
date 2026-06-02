@@ -8,6 +8,7 @@ The implementation is split into a small set of focused modules:
 - `FlythroughPlaybackController`: drives play, pause, resume, stop, and progress.
 - `FlythroughCesiumRenderer`: draws the cursor, trace, guides, and Cesium overlays.
 - `FlythroughMode`: orchestrates sampler, playback, renderer, and camera behavior.
+- `FlythroughVideoSync`: bridges recorder events with flythrough playback for video capture.
 - `FlythroughDebug`: exposes debug snapshots and diagnostic logging.
 
 ## Configuration model
@@ -199,6 +200,18 @@ controller.on(FLYTHROUGH_EVENT_UPDATE, sample => {
 
 controller.start()
 ```
+
+## `FlythroughVideoSync.js`
+
+Bridges the video recorder lifecycle with flythrough playback when the user enables sync mode from the drawer.
+
+### Responsibilities
+
+- arm/disarm sync from the UI toggle;
+- start the flythrough on `ScreenMediaRecorder.events.START`;
+- mirror recorder pause/resume;
+- stop the flythrough when the recorder stops or cancels;
+- stop the recorder when the flythrough reaches the end and auto-stop is enabled.
 
 ## `FlythroughPathSampler.js`
 

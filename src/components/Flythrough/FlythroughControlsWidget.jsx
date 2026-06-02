@@ -24,6 +24,7 @@ import './style.css'
 
 export const FlythroughControlsWidget = memo(() => {
     const flythrough = useSnapshot(lgs.stores.flythrough)
+    const video = useSnapshot(lgs.stores.ui.video)
 
     const config = useMemo(() => ({
         id:             'flythrough-controls-widget',
@@ -38,7 +39,8 @@ export const FlythroughControlsWidget = memo(() => {
         zIndex:         11800,
     }), [])
 
-    if (!flythrough.toolbarVisible && !flythrough.active && !flythrough.paused) {
+    if ((video.preRecording || video.recording || video.snapshot || video.finalizing)
+        || (!flythrough.toolbarVisible && !flythrough.active && !flythrough.paused)) {
         return null
     }
 

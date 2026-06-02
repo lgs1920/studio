@@ -17,7 +17,8 @@
 import {
     flythroughAngularDelta, flythroughCameraHeadingForPositionMode, flythroughCameraHeadingWithHysteresis,
     flythroughCameraRangeFromPitch, flythroughCameraRecenterHeight, flythroughCameraRecenterHorizontalDistance,
-    flythroughHeadingFromLocalAxisAngle, flythroughIsWindowPointOutsideToleranceZone, FlythroughMode,
+    flythroughHeadingEasingFactor, flythroughHeadingFromLocalAxisAngle, flythroughIsWindowPointOutsideToleranceZone,
+    FlythroughMode,
     flythroughToleranceZoneBounds,
 }                                          from '@Core/ui/flythrough/FlythroughMode'
 import {
@@ -2876,5 +2877,37 @@ describe('flythrough settings normalization', () => {
             nextHeading:     0.2,
             threshold:       0.1,
         })).toBeCloseTo(0.2, 6)
+    })
+
+    it('eases large heading changes more than small ones', () => {
+        const smallTurn = flythroughHeadingEasingFactor({
+            previousHeading: 0,
+            nextHeading:     0.08,
+            easing:          0.14,
+        })
+        const largeTurn = flythroughHeadingEasingFactor({
+            previousHeading: 0,
+            nextHeading:     Math.PI * 0.75,
+            easing:          0.14,
+        })
+
+        expect(smallTurn).toBeGreaterThan(largeTurn)
+        expect(largeTurn).toBeGreaterThanOrEqual(0.04)
+        expect(smallTurn).toBeLessThanOrEqual(0.22)
+    })
+
+    it('reduces the heading response when easing increases', () => {
+        const lowEasing = flythroughHeadingEasingFactor({
+            previousHeading: 0,
+            nextHeading:     Math.PI / 2,
+            easing:          0.05,
+        })
+        const highEasing = flythroughHeadingEasingFactor({
+            previousHeading: 0,
+            nextHeading:     Math.PI / 2,
+            easing:          0.45,
+        })
+
+        expect(highEasing).toBeLessThan(lowEasing)
     })
 })

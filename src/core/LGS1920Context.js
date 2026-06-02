@@ -51,6 +51,7 @@ import { Profiler }            from './ui/Profiler'
 import { SceneManager }        from './ui/SceneManager'
 import { FlythroughRunner }    from './ui/FlythroughRunner'
 import { FlythroughMode }      from './ui/flythrough/FlythroughMode'
+import { FlythroughVideoSync } from './ui/flythrough/FlythroughVideoSync'
 
 export class LGS1920Context {
     /** @type {Proxy} */
@@ -59,10 +60,6 @@ export class LGS1920Context {
     #theJourneyEditorProxy
     /** @type {Proxy} */
     #editorSettingsProxy
-    /** @type {Proxy} */
-    #cameraProxy
-    /** @type {Proxy} */
-    #ui
     eventHandler = new MouseEventHandler()
     #viewer
     #lang
@@ -384,13 +381,6 @@ export class LGS1920Context {
                                                   maxQuota:  500 * 1024 * 1024,
                                                   ttl:       MONTH,
                                               })
-        const startCacheMonitoring = () => {
-            setInterval(async () => {
-                const bytes = await __.app.cesiumCache.getUsage()
-                const mo = (bytes / (1024 * 1024)).toFixed(2)
-                console.log(`Cache Cesium : ${mo} Mo`)
-            }, 5000)
-        }
 
         //startCacheMonitoring()
 
@@ -401,6 +391,7 @@ export class LGS1920Context {
 
         __.ui.flythroughRunner = new FlythroughRunner()
         __.ui.flythrough = new FlythroughMode()
+        __.ui.flythroughVideoSync = new FlythroughVideoSync()
         __.ui.journeyGroupManager = new JourneyGroupManager()
         __.ui.cameraManager = new CameraManager()
         __.ui.drawerManager = new PanelManager()

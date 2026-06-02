@@ -27,6 +27,7 @@ import { RotateButton }      from '@Components/MainUI/RotateButton'
 import { EditorPanelButton } from '@Editor/EditorPanelButton'
 import { VideoButton }       from '@Components/MainUI/video/VideoButton'
 import { VideoDownloadAndShareDialog } from '@Components/MainUI/video/VideoDownloadAndShareDialog'
+import { SyncLinkBadge }     from '@Components/MainUI/SyncLinkBadge'
 import { TextButton }        from '@Components/Text/TextButton'
 import { TracksEditor }                         from '@Components/TracksEditor/TracksEditor'
 import { JourneyGroupsDrawer }                  from '@Editor/groups/JourneyGroupsDrawer'
@@ -70,6 +71,7 @@ export const MainUI = memo(() => {
     const mainUI = useSnapshot(lgs.stores.ui.mainUI)
     const {drawers, toolBar} = useSnapshot(lgs.settings.ui.menu)
     const {video} = useSnapshot(lgs.stores.ui)
+    const flythrough = useSnapshot(lgs.stores.flythrough)
 
 
     const windowResized = useCallback(__.tools.debounce(() => {
@@ -221,6 +223,7 @@ export const MainUI = memo(() => {
     const tooltipDir = toolBar.fromStart ? 'right' : 'left'
     const {primaryEntrance, secondaryEntrance} = arrangeDrawers()
     const videoCaptureActive = video.preRecording || video.recording || video.snapshot || video.finalizing
+    const syncWithVideo = flythrough.recordingSync === true
 
     return (
         <>
@@ -245,8 +248,11 @@ export const MainUI = memo(() => {
                                 <GeocodingButton tooltip={toolBar.fromStart ? 'left' : 'right'}/>
                                 <RotateButton tooltip={toolBar.fromStart ? 'left' : 'right'}/>
                                 {!videoCaptureActive && <FullScreenButton tooltip={toolBar.fromStart ? 'left' : 'right'}/>}
-                                <VideoButton tooltip={toolBar.fromStart ? 'left' : 'right'}/>
-                                <FlythroughButton tooltip={toolBar.fromStart ? 'left' : 'right'}/>
+                                <div className="sync-linked-actions">
+                                    <VideoButton tooltip={toolBar.fromStart ? 'left' : 'right'}/>
+                                    <FlythroughButton tooltip={toolBar.fromStart ? 'left' : 'right'}/>
+                                    <SyncLinkBadge visible={syncWithVideo} className="sync-linked-actions-badge"/>
+                                </div>
                             </div>
                         </div>
                         {geocoderDialog.mounted && <GeocodingWidget/>}

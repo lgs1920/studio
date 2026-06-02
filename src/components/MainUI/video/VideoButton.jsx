@@ -20,7 +20,17 @@ import { useSnapshot }                 from 'valtio'
 
 export const VideoButton = (props) => {
     const $video = lgs.stores.ui.video
+    const flythrough = useSnapshot(lgs.stores.flythrough)
     const video = useSnapshot($video)
+    const syncWithFlythrough = flythrough.recordingSync === true
+    const {
+        id = 'launch-the-video-editor',
+        className = 'square-button',
+        tooltip = 'right',
+        tooltipText = 'Record a new video',
+        variant = syncWithFlythrough ? 'warning' : 'brand',
+        appearance = 'Filled',
+    } = props ?? {}
 
     const handleClick = () => {
         $video.editing = !$video.editing
@@ -29,13 +39,13 @@ export const VideoButton = (props) => {
         <>
             {!video.recording && !video.preRecording && !video.snapshot &&
                 <>
-                    <WaTooltip for={'launch-the-video-editor'}
-                               placement={props.tooltip}>{'Record a new video'}</WaTooltip>
-                    <WaButton className="square-button"
-                              id={'launch-the-video-editor'}
+                    <WaTooltip for={id}
+                               placement={tooltip}>{tooltipText}</WaTooltip>
+                    <WaButton className={className}
+                              id={id}
                               onClick={handleClick}
-                              variant={'brand'}
-                              appearance="Filled">
+                              variant={variant}
+                              appearance={appearance}>
                         <WaIcon name="clapperboard-play" variant="regular"/>
                     </WaButton>
                 </>
