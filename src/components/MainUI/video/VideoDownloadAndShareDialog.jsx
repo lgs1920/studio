@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-05-10
- * Last modified: 2026-05-10
+ * Created on: 2026-06-02
+ * Last modified: 2026-06-02
  *
  *
  * Copyright © 2026 LGS1920
@@ -24,6 +24,7 @@
 import { RecordingInfo } from '@Components/MainUI/video/RecordingInfo'
 import { LGSPopup }      from '@Components/LGSPopup'
 import { ScreenMediaRecorder } from '@Core/ui/screen-media-recorder/recorder/ScreenMediaRecorder'
+import { cancelVideoEditing } from '@Components/MainUI/video/videoEditingCleanup'
 import {
     WaButton, WaDialog, WaIcon, WaInput, WaTooltip,
 }                        from '@web.awesome.me/webawesome-pro/dist/react'
@@ -373,21 +374,43 @@ export const VideoDownloadAndShareDialog = () => {
     const handleCancel = useCallback(() => {
         setDialogOpen(false)
         setIsRecordingInfoOpen(false)
+        cancelVideoEditing()
         releaseMediaUrl()
         _mediaBlob.current = {blob: null, url: null, filename: ''}
         setMediaUrl(null)
-        lgs.stores.ui.video.editing = false
+        Object.assign(lgs.stores.ui.video, {
+            preRecording:     false,
+            recording:        false,
+            paused:           false,
+            size:             0,
+            recordedDuration: 0,
+            recordedSize:     0,
+            currentFps:       0,
+            finalizing:       false,
+        })
         setCanDownloadAndShare(false)
         setFilename('')
         void __.recorder?.releaseMedia?.()
     }, [releaseMediaUrl])
 
     /**
-     * Keep dialog close explicit through footer actions.
+     * Keep the cleanup aligned with the native dialog close flow.
      */
-    const handleDialogClose = useCallback((event) => {
-        event.preventDefault()
-    }, [])
+    const handleDialogRequestClose = useCallback((event) => {
+        const source = event?.detail?.source
+        const isCloseButton = source === 'close-button'
+            || source === 'keyboard'
+            || source?.getAttribute?.('part')?.includes('close-button')
+            || source?.closest?.('[data-dialog="close"]')
+            || source?.tagName === 'WA-BUTTON'
+
+        if (!isCloseButton) {
+            event?.preventDefault?.()
+            return
+        }
+
+        handleCancel()
+    }, [handleCancel])
 
     return (
         <>
@@ -395,7 +418,8 @@ export const VideoDownloadAndShareDialog = () => {
             <WaDialog
                 id="video-preview-dialog"
                 open={dialogOpen}
-                onWaRequestClose={handleDialogClose}
+                onWaRequestClose={handleDialogRequestClose}
+                lightDismiss={false}
                 className="lgs-theme"
             >
             <div slot="label" className="video-preview-dialog-title">

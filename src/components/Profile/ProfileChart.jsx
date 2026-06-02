@@ -1360,7 +1360,8 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
             return
         }
 
-        const chart = echarts.getInstanceByDom(dom) ?? echarts.init(dom, null, {renderer: 'svg'})
+        const renderer = preview ? 'svg' : 'canvas'
+        const chart = echarts.getInstanceByDom(dom) ?? echarts.init(dom, null, {renderer})
         _chart.current = chart
 
         let onDataZoom = null

@@ -257,6 +257,57 @@ export class WidgetCoreRegistry {
     }
 
     /**
+     * Invalidates the runtime state of all widgets attached to a board without touching persistence.
+     * This is used when a board is temporarily unmounted and needs to be reloaded from DB on the next mount.
+     *
+     * @param {string} widgetsBoard
+     * @returns {number}
+     */
+    invalidateRuntimeByBoard = (widgetsBoard) => {
+        if (!widgetsBoard) {
+            return 0
+        }
+
+        let invalidated = 0
+        for (const [elementId, config] of this.#widgets) {
+            if (config.widgetsBoard !== widgetsBoard) {
+                continue
+            }
+
+            if (config.observer) {
+                const observedTargets = config.observedTargets ?? [config.boundsContainer ?? config.container]
+                try {
+                    observedTargets.filter(Boolean).forEach(target => config.observer.unobserve(target))
+                }
+                catch {
+                    void 0
+                }
+                config.observer.disconnect()
+                config.observer = null
+            }
+            if (config.elementObserver) {
+                config.elementObserver.disconnect()
+                config.elementObserver = null
+            }
+            if (config.windowResizeHandler) {
+                window.removeEventListener('resize', config.windowResizeHandler)
+                config.windowResizeHandler = null
+            }
+            config.element = null
+            config.observedTargets = []
+            config.fromDB = false
+            config.fromRuntime = false
+            config.runtimeReady = false
+            config.skipInitialElementResizeSync = false
+            __.ui.widgetCache?.unmount?.(elementId)
+            this.#moveables.delete(elementId)
+            invalidated += 1
+        }
+
+        return invalidated
+    }
+
+    /**
      * Retrieves the widget element by ID.
      * @param {string} id - The widget ID
      * @returns {HTMLElement|null} The DOM element or null if not found

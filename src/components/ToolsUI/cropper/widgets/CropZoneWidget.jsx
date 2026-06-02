@@ -16,7 +16,7 @@
 
 import { Widget } from '@Components/MainUI/widgets/Widget'
 import { CROP_TOOLS_WIDGETS, HOUR, LGS_VISUAL_WIDGET } from '@Core/constants'
-import { memo, useMemo, useRef } from 'react'
+import { memo, useEffect, useMemo, useRef } from 'react'
 import { useSnapshot }           from 'valtio'
 import { CropZone }              from './CropZone'
 
@@ -46,6 +46,8 @@ export const CropZoneWidget = memo(({
 
     // Snapshot of the Valtio context
     const $context = useSnapshot(context)
+    const video = useSnapshot(lgs.stores.ui.video)
+    const lockToCenter = Boolean(video.editing && video.step === 0)
 
     // Memoized configuration for the Widget component
     const config = useMemo(() => {
@@ -63,7 +65,7 @@ export const CropZoneWidget = memo(({
             type:             LGS_VISUAL_WIDGET,
             isCropper:        true,
             resizable:        true,
-            draggable:        true,
+            draggable:        !lockToCenter,
             outsideOverlay:   overlay,
             margin:           lgs?.gutter?.xs ?? 8,
             resizeFromCenter: true,
@@ -76,7 +78,29 @@ export const CropZoneWidget = memo(({
             group:            CROP_TOOLS_WIDGETS,
             ratio:            initialRatio,
         }
-    }, [$context.id, $context.forceEven, overlay])
+    }, [$context.id, $context.forceEven, lockToCenter, overlay])
+
+    useEffect(() => {
+        if (!lockToCenter || typeof document === 'undefined') {
+            return
+        }
+
+        const centerCropZone = () => {
+            const element = __.ui.widgetManager.getElementById($context.id)
+            if (!element) {
+                return false
+            }
+            __.ui.widgetManager.toCenter(element, 0)
+            return true
+        }
+
+        if (centerCropZone()) {
+            return
+        }
+
+        const raf = requestAnimationFrame(centerCropZone)
+        return () => cancelAnimationFrame(raf)
+    }, [$context.id, lockToCenter])
 
     // Render the widget with the CropZone component
     return (

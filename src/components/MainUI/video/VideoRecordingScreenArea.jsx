@@ -231,6 +231,23 @@ export const VideoRecordingScreenArea = memo(() => {
     const [mountTimeoutError] = useState({missing: [], timeoutMs: WIDGET_MOUNT_TIMEOUT})
     const [mountTimeoutAction] = useState('record')
 
+    const updateFlythroughVideoCropRect = useCallback((cropRect = null) => {
+        const flythroughStore = lgs.stores?.flythrough
+        if (!flythroughStore) {
+            return
+        }
+
+        flythroughStore.videoCropRect = cropRect
+            && Number.isFinite(cropRect.left)
+            && Number.isFinite(cropRect.top)
+            && Number.isFinite(cropRect.width)
+            && Number.isFinite(cropRect.height)
+            && cropRect.width > 0
+            && cropRect.height > 0
+            ? {...cropRect}
+            : null
+    }, [])
+
     const readCrop = useCallback(() => {
         const config = __.ui.widgetManager.getWidgetConfig(VIDEO_CROP_ZONE)
         return config?.cropDimensions
@@ -244,14 +261,17 @@ export const VideoRecordingScreenArea = memo(() => {
         await __.ui.widgetManager.syncCropDimensionsFromElement(VIDEO_CROP_ZONE, persist, phase)
         const config = __.ui.widgetManager.getWidgetConfig(VIDEO_CROP_ZONE)
         if (!config?.cropDimensions) {
+            updateFlythroughVideoCropRect(null)
             return null
         }
+        updateFlythroughVideoCropRect(config.cropDimensions)
         return config
-    }, [])
+    }, [updateFlythroughVideoCropRect])
 
     useEffect(() => {
         const syncCrop = () => {
             const next = readCrop()
+            updateFlythroughVideoCropRect(next)
             setCrop(current => (
                                    current.left === next.left &&
                                    current.top === next.top &&
@@ -270,7 +290,7 @@ export const VideoRecordingScreenArea = memo(() => {
 
         document.addEventListener('onCropUpdate', handleCropUpdate)
         return () => document.removeEventListener('onCropUpdate', handleCropUpdate)
-    }, [readCrop])
+    }, [readCrop, updateFlythroughVideoCropRect])
 
     const isValidCrop = Number.isFinite(crop.left) && crop.width > 0
 
@@ -334,6 +354,20 @@ export const VideoRecordingScreenArea = memo(() => {
         }
 
         composer.endUpdate()
+    }, [])
+
+    const isWidgetReadyForRecording = useCallback((widgetId) => {
+        const element = __.ui.widgetManager.getElementById(widgetId)
+        if (!element || !__.ui.widgetCache.isMounted(widgetId)) {
+            return false
+        }
+
+        const baseId = widgetId.split('#')[0]
+        if (baseId === 'text-widget') {
+            return true
+        }
+
+        return Boolean(element.querySelector('.lgs-widget-canvas'))
     }, [])
 
     // rAF-based refresh loop to avoid setInterval bursts.
@@ -534,20 +568,20 @@ export const VideoRecordingScreenArea = memo(() => {
         }
     }, [$video, maxSize, maxDuration, buildComposerOverlays, syncVideoCropFrame])
 
-    const waitingForAllWidgets = (widgets, onReady) => {
+    const waitingForAllWidgets = useCallback((widgets, onReady) => {
         if (!widgets?.length) {
             return () => {
             }
         }
         const observer = new MutationObserver(() => {
-            if (widgets.every(k => __.ui.widgetManager.getElementById(k)?.querySelector('.lgs-widget-canvas'))) {
+            if (widgets.every(isWidgetReadyForRecording)) {
                 observer.disconnect()
                 onReady?.(widgets)
             }
         })
         observer.observe(document.body, {childList: true, subtree: true})
         return () => observer.disconnect()
-    }
+    }, [isWidgetReadyForRecording])
 
     useEffect(() => {
         if (!$video.preRecording && !$video.snapshot) {
@@ -581,7 +615,7 @@ export const VideoRecordingScreenArea = memo(() => {
             if (done) {
                 return
             }
-            const missing = keys.filter(k => !__.ui.widgetManager.getElementById(k)?.querySelector('.lgs-widget-canvas'))
+            const missing = keys.filter(k => !isWidgetReadyForRecording(k))
             _pendingFinish.current = finish
             window.dispatchEvent(new CustomEvent('widget-mount-timeout', {
                 detail: {
@@ -597,13 +631,14 @@ export const VideoRecordingScreenArea = memo(() => {
                 _pendingFinish.current = null
             }
         }
-    }, [handleVideoRecording, handlePhotoSnapshot, $video.preRecording, $video.snapshot])
+    }, [handleVideoRecording, handlePhotoSnapshot, $video.preRecording, $video.snapshot, isWidgetReadyForRecording, waitingForAllWidgets])
 
     useEffect(() => {
         const hStopped = () => {
             disposeComposer()
             stopOverlaysRefresh()
             releaseWakeLock()
+            updateFlythroughVideoCropRect(null)
         }
         const hPaused = () => {
             stopOverlaysRefresh()
@@ -639,8 +674,9 @@ export const VideoRecordingScreenArea = memo(() => {
             __.recorder.removeEventListener(ScreenMediaRecorder.events.RESUME, hResumed)
             __.recorder.removeEventListener(ScreenMediaRecorder.events.START, hStarted)
             document.removeEventListener('visibilitychange', handleVisibility)
+            updateFlythroughVideoCropRect(null)
         }
-    }, [disposeComposer, stopOverlaysRefresh, startOverlaysRefresh, requestWakeLock, releaseWakeLock, markRecordingStarted])
+    }, [disposeComposer, stopOverlaysRefresh, startOverlaysRefresh, requestWakeLock, releaseWakeLock, markRecordingStarted, updateFlythroughVideoCropRect])
 
     useEffect(() => {
         __.ui.widgetManager.windowResizing = false

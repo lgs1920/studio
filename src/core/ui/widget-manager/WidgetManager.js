@@ -364,6 +364,13 @@ export class WidgetManager {
     disposeByGroup = (groupId, usePersist = false) => this.#registry.disposeByGroup(groupId, usePersist)
 
     /**
+     * Invalidates the runtime state of all widgets attached to a board without deleting persistence.
+     * @param {string} widgetsBoard
+     * @returns {number}
+     */
+    invalidateRuntimeByBoard = widgetsBoard => this.#registry.invalidateRuntimeByBoard(widgetsBoard)
+
+    /**
      * Monitors container resize events and updates widget bounds and position.
      * @param {Object} config - Widget configuration
      * @param {Function} setBounds - Function to update bounds
@@ -874,6 +881,103 @@ export class WidgetManager {
      * @returns {Promise<Object[]>} Array of position data for the group
      */
     getWidgetsByGroup = async groupId => this.#widgetDB.getWidgetsByGroup(groupId)
+
+    /**
+     * Rehydrates all persisted widgets mounted on a specific board from IndexedDB.
+     * This is used when a board is reused between sessions and the in-memory runtime
+     * state has stale positions.
+     *
+     * @param {string} widgetsBoard
+     * @returns {Promise<number>} Number of refreshed widgets
+     */
+    rehydrateWidgetsByBoard = async (widgetsBoard) => {
+        if (!widgetsBoard) {
+            return 0
+        }
+
+        const referenceContainer = this.resolveWidgetsBoardReferenceContainer(widgetsBoard)
+        if (!referenceContainer) {
+            return 0
+        }
+
+        const referenceRect = referenceContainer.getBoundingClientRect?.()
+        if (!referenceRect || referenceRect.width <= 0 || referenceRect.height <= 0) {
+            return 0
+        }
+
+        const entries = [...lgs.stores.ui.widget.list.entries()]
+            .filter(([, entry]) => entry?.widgetsBoard === widgetsBoard)
+
+        let refreshed = 0
+        for (const [widgetId, entry] of entries) {
+            const config = this.getWidgetConfig(widgetId)
+            const element = this.getElementById(widgetId)
+            const saved = await this.getWidgetPosition(widgetId)
+            if (!config || !element || !saved) {
+                continue
+            }
+
+            const width = Number.isFinite(saved.width)
+                          ? saved.width
+                          : (Number.isFinite(config.dimensions?.width) ? config.dimensions.width : element.getBoundingClientRect().width)
+            const height = Number.isFinite(saved.height)
+                           ? saved.height
+                           : (Number.isFinite(config.dimensions?.height) ? config.dimensions.height : element.getBoundingClientRect().height)
+            if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
+                continue
+            }
+
+            const hasRatios = Number.isFinite(saved.leftRatio) && Number.isFinite(saved.topRatio)
+            const left = hasRatios
+                         ? referenceRect.left + ((saved.leftRatio / 100) * referenceRect.width) - (width / 2)
+                         : referenceRect.left + (Number.isFinite(saved.left) ? saved.left : 0)
+            const top = hasRatios
+                        ? referenceRect.top + ((saved.topRatio / 100) * referenceRect.height) - (height / 2)
+                        : referenceRect.top + (Number.isFinite(saved.top) ? saved.top : 0)
+
+            config.container = referenceContainer
+            config.boundsContainer = referenceContainer
+            config.fromDB = true
+            config.fromRuntime = false
+            config.runtimeReady = true
+            config.savedRatios = hasRatios
+                                 ? {leftRatio: saved.leftRatio, topRatio: saved.topRatio}
+                                 : config.savedRatios
+            config.position = {left, top}
+            if (config.isCropper) {
+                config.cropDimensions = {left, top, width, height}
+            }
+            else {
+                config.dimensions = {width, height}
+            }
+
+            element.style.left = `${left}px`
+            element.style.top = `${top}px`
+            element.style.width = `${width}px`
+            element.style.height = `${height}px`
+
+            const moveable = this.getMoveable(widgetId)
+            moveable?.current?.updateRect?.()
+            config.setPosition?.(config.position)
+            if (config.isCropper) {
+                this.#cropper.applyCropToOverlay(config)
+            }
+
+            lgs.stores.ui.widget.list.set(widgetId, {
+                ...entry,
+                ...saved,
+                widgetsBoard,
+                left,
+                top,
+                width,
+                height,
+            })
+
+            refreshed += 1
+        }
+
+        return refreshed
+    }
 
     /**
      * Deletes all widget positions for a given group from IndexedDB.
