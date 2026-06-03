@@ -18,6 +18,7 @@ import { cleanup, fireEvent, render, waitFor }             from '@testing-librar
 import { FLYTHROUGH_DRAWER }                               from '@Core/constants'
 import { defaultFlythroughSettings, FLYTHROUGH_MARKER_MODE_NAVIGATION } from '@Core/ui/flythrough/FlythroughProgressionStyle'
 import { FlythroughDrawer }                                from '@Components/Flythrough/FlythroughDrawer'
+import { ELEVATION_UNITS, UnitUtils }                      from '@Utils/UnitUtils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { proxy }                                           from 'valtio'
 
@@ -84,6 +85,7 @@ describe('FlythroughDrawer', () => {
                 ui: {
                     flythrough: proxy(flythrough),
                 },
+                unitSystem: proxy({current: 0}),
                 getSwatches: {
                     list: ['#ffffff', '#000000'],
                 },
@@ -174,6 +176,24 @@ describe('FlythroughDrawer', () => {
             expect(globalThis.lgs.stores.flythrough.camera.altitude).toBe(900)
             expect(globalThis.lgs.settings.ui.flythrough.camera.groundOffset).toBeUndefined()
             expect(globalThis.lgs.stores.flythrough.camera.groundOffset).toBeUndefined()
+        })
+    })
+
+    it('displays camera altitude in imperial units and stores it in meters', async () => {
+        globalThis.lgs.settings.unitSystem.current = 1
+        globalThis.lgs.stores.flythrough.camera.altitude = 1000
+        globalThis.lgs.settings.ui.flythrough.camera.altitude = 1000
+
+        const view = render(<FlythroughDrawer/>)
+        const altitudeInput = view.getByLabelText('Altitude (ft)')
+
+        expect(Number(altitudeInput.value)).toBe(Math.round(UnitUtils.convert(1000).to(ELEVATION_UNITS[1])))
+
+        fireEvent.input(altitudeInput, {target: {value: '3280.84'}})
+
+        await waitFor(() => {
+            expect(globalThis.lgs.settings.ui.flythrough.camera.altitude).toBeCloseTo(1000, 1)
+            expect(globalThis.lgs.stores.flythrough.camera.altitude).toBeCloseTo(1000, 1)
         })
     })
 })

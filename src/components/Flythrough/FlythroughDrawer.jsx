@@ -37,6 +37,7 @@ import {
     normalizeFlythroughCamera, normalizeFlythroughMarker, normalizeFlythroughProfileInfo,
     normalizeFlythroughProgressionStyle, normalizeFlythroughTrace,
 }                 from '@Core/ui/flythrough/FlythroughProgressionStyle'
+import { ELEVATION_UNITS, UnitUtils } from '@Utils/UnitUtils'
 import {
     WaCard, WaColorPicker, WaDivider, WaIcon, WaNumberInput, WaOption, WaSelect, WaSlider, WaSwitch, WaTab, WaTabGroup,
     WaTabPanel,
@@ -219,8 +220,10 @@ export const FlythroughDrawer = memo(() => {
     const flythroughState = useSnapshot(lgs.stores.flythrough)
     ensureFlythroughSettings()
     const flythroughSettings = useSnapshot(lgs.settings.ui.flythrough)
+    const {current: unitSystem} = useSnapshot(lgs.settings.unitSystem)
     const {drawer: drawerPlacement} = useSnapshot(lgs.editorSettingsProxy.menu)
     const swatches = useMemo(() => lgs.settings.getSwatches.list.join(';'), [])
+    const altitudeUnit = ELEVATION_UNITS[unitSystem] ?? ELEVATION_UNITS[0]
     const journeySlug = currentJourney?.slug
     const hasJourney = Boolean(journeySlug)
     const previousJourneySlug = useRef(journeySlug)
@@ -476,8 +479,9 @@ export const FlythroughDrawer = memo(() => {
     }, [updateCamera])
 
     const updateCameraAltitude = useCallback((event) => {
-        updateCamera({altitude: clampFlythroughNumber(event.target.value, camera.altitude, 10, 100000)})
-    }, [camera.altitude, updateCamera])
+        const altitude = UnitUtils.revert(event.target.value, altitudeUnit)
+        updateCamera({altitude: clampFlythroughNumber(altitude, camera.altitude, 10, 100000)})
+    }, [altitudeUnit, camera.altitude, updateCamera])
 
     const updateCameraHeading = useCallback((event) => {
         updateCamera({heading: clampFlythroughNumber(event.target.value, camera.heading ?? 0, -180, 180)})
@@ -666,13 +670,13 @@ export const FlythroughDrawer = memo(() => {
                                                                  value={FLYTHROUGH_CAMERA_ALTITUDE_GROUND_OFFSET}>{'Ground offset'}</WaOption>
                                                          </WaSelect>
                                                          <div className="flythrough-style-field-grid is-single">
-                                                             <WaNumberInput
-                                                                 label="Altitude (m)"
+                                                            <WaNumberInput
+                                                                 label={`Altitude (${altitudeUnit})`}
                                                                  size="s"
                                                                  appearance="filled"
-                                                                 min="10"
-                                                                 step="50"
-                                                                 value={camera.altitude}
+                                                                 min={Math.round(UnitUtils.convert(10).to(altitudeUnit))}
+                                                                 step={Math.max(1, Math.round(UnitUtils.convert(50).to(altitudeUnit)))}
+                                                                 value={Math.round(UnitUtils.convert(camera.altitude).to(altitudeUnit))}
                                                                  onInput={updateCameraAltitude}
                                                                  label-at-start className="half-width"/>
                                                              <WaNumberInput

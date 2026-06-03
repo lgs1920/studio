@@ -22,13 +22,12 @@ import {
 }                                 from '@Components/MainUI/MapPOI/usePOIJourneyAssociation'
 import { JourneySelector }        from '@Editor/journey/JourneySelector'
 import {
-    COORDINATE_INPUT_ERROR_DURATION_MS, COORDINATE_INPUT_NORMALIZE_DELAY_MS, LATITUDE_FORMAT, LONGITUDE_FORMAT,
-    POI_STANDARD_TYPE, POI_TMP_TYPE,
+    COORDINATE_INPUT_ERROR_DURATION_MS, COORDINATE_INPUT_NORMALIZE_DELAY_MS, POI_STANDARD_TYPE, POI_TMP_TYPE,
 }                                 from '@Core/constants'
 
 import { UIToast } from '@Utils/UIToast'
 import {
-    ELEVATION_UNITS, IMPERIAL, UnitUtils,
+    ELEVATION_UNITS, UnitUtils,
 }                  from '@Utils/UnitUtils'
 import {
     WaButton, WaCallout, WaColorPicker, WaCopyButton, WaDivider, WaIcon, WaInput, WaTextarea, WaTooltip,
@@ -54,11 +53,11 @@ const EMPTY_POI_PROXY = proxy({})
  * @returns {JSX.Element|null}
  */
 export const MapPOIEditContent = memo(({poi}) => {
-                                          const $pois = lgs.stores.main.components.pois
                                           const coordinateSystemSettings = useSnapshot(lgs.settings.coordinateSystem)
-                                          const unitSystem = lgs.settings.unitSystem.current
+                                          const {current: unitSystem} = useSnapshot(lgs.settings.unitSystem)
                                           const coordinateSystem = coordinateSystemSettings.current
                                           const swatchesList = lgs.settings.getSwatches.list
+                                          const elevationUnit = ELEVATION_UNITS[unitSystem] ?? ELEVATION_UNITS[0]
 
                                           /** @type {Object} Fresh proxy reference for direct mutations */
                                           const $point = lgs.stores.main.components.pois.list.get(poi)
@@ -147,12 +146,12 @@ export const MapPOIEditContent = memo(({poi}) => {
                                                   return
                                               }
 
-                                              const meters = unitSystem === IMPERIAL ? UnitUtils.convertFeetToMeters(parsedValue) : parsedValue
+                                              const meters = UnitUtils.revert(parsedValue, elevationUnit)
 
                                               setSimulated(meters === point.simulatedHeight)
 
                                               await __.ui.poiManager.updatePOI(poi, {height: meters}, {immediate: true})
-                                          }, [poi, unitSystem, point.simulatedHeight])
+                                          }, [poi, elevationUnit, point.simulatedHeight])
 
                                           /**
                                            * Handles color updates while preventing event bubbling
@@ -345,11 +344,11 @@ export const MapPOIEditContent = memo(({poi}) => {
                                                       size="s"
                                                       withoutSpinButtons
                                                       inputMode="numeric"
-                                                      value={Math.round(height ?? simulatedHeight ?? 0)}
+                                                      value={Math.round(UnitUtils.convert(height ?? simulatedHeight ?? 0).to(elevationUnit))}
                                                       onInput={handleChangeAltitude}
                                                       disabled={!visible}
                                                   >
-                                                      <span slot="end">{parse(ELEVATION_UNITS[unitSystem])}</span>
+                                                      <span slot="end">{parse(elevationUnit)}</span>
                                                   </WaInput>
                                                   {visible && (simulated ? (
                                                       <>
@@ -375,7 +374,7 @@ export const MapPOIEditContent = memo(({poi}) => {
                                                                    </>
                                                                ))}
                                               </div>
-                                          ), [simulated, height, visible, simulatedHeight, unitSystem, handleChangeAltitude, handleResetAltitude, id])
+                                          ), [simulated, height, visible, simulatedHeight, elevationUnit, handleChangeAltitude, handleResetAltitude, id])
 
                                           return (
                                               <>
