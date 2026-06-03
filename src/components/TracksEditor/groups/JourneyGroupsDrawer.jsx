@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-05-26
- * Last modified: 2026-05-26
+ * Created on: 2026-06-03
+ * Last modified: 2026-06-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -45,7 +45,6 @@ const emptyGroupForm = () => ({
 
 const CREATE_GROUP_POPUP_ANCHOR = 'journey-group-create-popup-anchor'
 const EDIT_GROUP_POPUP_ANCHOR = 'journey-group-edit-popup-anchor'
-const EDIT_GROUP_AVAILABLE_POPUP_ANCHOR = 'journey-group-edit-available-popup-anchor'
 const GROUP_COLOR_SWATCHES = [
     '#f2b705',
     '#f97316',
@@ -306,6 +305,7 @@ const JourneyGroupEditorPanel = ({
     const contentIcon = childGroups.length > 1 ? 'folders' : 'folder'
     const addJourneyButtonId = groupTabId(group.id, 'add-journey')
     const addGroupButtonId = groupTabId(group.id, 'add-group')
+    const actionsPopupAnchorId = groupTabId(group.id, 'actions-popup-anchor')
 
     return (
         <section className="journey-group-editor">
@@ -327,7 +327,7 @@ const JourneyGroupEditorPanel = ({
                         size="s"
                         aria-label="Add journey"
                         disabled={availableJourneys.length === 0}
-                        onClick={() => openAvailablePopup?.()}
+                        onClick={() => openAvailablePopup?.(actionsPopupAnchorId)}
                     >
                         <WaIcon name="route" variant="regular"/>
                     </WaButton>
@@ -338,25 +338,30 @@ const JourneyGroupEditorPanel = ({
                         variant="neutral"
                         size="s"
                         aria-label="Add group"
-                        onClick={() => onCreateChildGroup?.(group.id)}
+                        onClick={() => onCreateChildGroup?.(group.id, actionsPopupAnchorId)}
                     >
                         <WaIcon name="folder" variant="regular"/>
                     </WaButton>
                 </div>
 
+                <PopupAnchor id={actionsPopupAnchorId}/>
+
                 <WaTabPanel name={contentPanelId}>
-                    <PopupAnchor id={availablePopupAnchorId}/>
                     <LGSPopup
                         active={availablePopupOpen}
                         anchor={availablePopupAnchorId}
                         onRequestClose={closeAvailablePopup}
                         placement="bottom"
                     >
-                        <WaCard className="lgs--popup-in-drawer lgs-slide-down" appearance="plain">
+                        {availableJourneys.length &&
+                            <WaCard className="lgs--popup-in-drawer lgs-slide-down" appearance="filled">
                             <WaButton appearance="plain" slot="header-actions" onClick={closeAvailablePopup}>
                                 <WaIcon size="s" name="xmark" variant="regular"/>
                             </WaButton>
-                            <WaDivider/>
+                                <span slot="header" className="journey-group-create-popup-title">
+                                <WaIcon name="route" variant="regular"/>{'Add journeys'}
+                                    <WaDivider/>
+                            </span>
                             <div ref={availableListRef} className="details-sortable-list">
                                 {availableJourneys.map(journey => (
                                     <JourneySortableRow
@@ -369,6 +374,7 @@ const JourneyGroupEditorPanel = ({
                                 ))}
                             </div>
                         </WaCard>
+                        }
                     </LGSPopup>
 
                     {childGroups.length > 0 && (
@@ -475,9 +481,11 @@ export const JourneyGroupsDrawer = memo(() => {
     const [newForm, setNewForm] = useState(emptyGroupForm)
     const [editForm, setEditForm] = useState({id: null, ...emptyGroupForm()})
     const [createPopupOpen, setCreatePopupOpen] = useState(false)
+    const [createPopupAnchorId, setCreatePopupAnchorId] = useState(CREATE_GROUP_POPUP_ANCHOR)
     const [editPopupOpen, setEditPopupOpen] = useState(false)
     const [editPopupAnchorId, setEditPopupAnchorId] = useState(EDIT_GROUP_POPUP_ANCHOR)
     const [availablePopupOpen, setAvailablePopupOpen] = useState(false)
+    const [availablePopupAnchorId, setAvailablePopupAnchorId] = useState(CREATE_GROUP_POPUP_ANCHOR)
     const isStacked = __.ui.drawerManager.isStacked(JOURNEY_GROUPS_DRAWER)
     const groupColorSwatches = useMemo(
         () => lgs.settings.getSwatches?.list?.join(';') || GROUP_COLOR_SWATCHES,
@@ -604,7 +612,10 @@ export const JourneyGroupsDrawer = memo(() => {
         setSelectedGroupId(null)
         setEditForm({id: null, ...emptyGroupForm()})
         setCreatePopupOpen(false)
+        setCreatePopupAnchorId(CREATE_GROUP_POPUP_ANCHOR)
         setEditPopupOpen(false)
+        setAvailablePopupOpen(false)
+        setAvailablePopupAnchorId(CREATE_GROUP_POPUP_ANCHOR)
         if (__.ui.drawerManager.isCurrent(JOURNEY_GROUPS_DRAWER)) {
             __.ui.drawerManager.close()
         }
@@ -623,20 +634,27 @@ export const JourneyGroupsDrawer = memo(() => {
         setNewForm(current => ({...current, [key]: value}))
     }, [])
 
-    const openCreatePopup = useCallback((parentGroup = null) => {
+    const openCreatePopup = useCallback((parentGroup = null, anchorId = CREATE_GROUP_POPUP_ANCHOR) => {
         setNewForm({
                        ...emptyGroupForm(),
                        parentGroup,
                    })
+        setAvailablePopupOpen(false)
+        setAvailablePopupAnchorId(CREATE_GROUP_POPUP_ANCHOR)
+        setCreatePopupAnchorId(anchorId ?? CREATE_GROUP_POPUP_ANCHOR)
         setCreatePopupOpen(true)
     }, [])
 
-    const openAvailablePopup = useCallback(() => {
+    const openAvailablePopup = useCallback((anchorId = CREATE_GROUP_POPUP_ANCHOR) => {
+        setCreatePopupOpen(false)
+        setCreatePopupAnchorId(CREATE_GROUP_POPUP_ANCHOR)
+        setAvailablePopupAnchorId(anchorId ?? CREATE_GROUP_POPUP_ANCHOR)
         setAvailablePopupOpen(true)
     }, [])
 
     const closeAvailablePopup = useCallback(() => {
         setAvailablePopupOpen(false)
+        setAvailablePopupAnchorId(CREATE_GROUP_POPUP_ANCHOR)
     }, [])
 
     const closeEditPopup = useCallback((event) => {
@@ -648,6 +666,7 @@ export const JourneyGroupsDrawer = memo(() => {
     const closeCreatePopup = useCallback((event) => {
         event?.preventDefault?.()
         setCreatePopupOpen(false)
+        setCreatePopupAnchorId(CREATE_GROUP_POPUP_ANCHOR)
     }, [])
 
     const updateEditForm = useCallback((key, value) => {
@@ -717,6 +736,7 @@ export const JourneyGroupsDrawer = memo(() => {
                                                              })
         setSelectedGroupId(group.id)
         setCreatePopupOpen(false)
+        setCreatePopupAnchorId(CREATE_GROUP_POPUP_ANCHOR)
         setEditPopupAnchorId(groupPopupAnchorId(group.id))
         setEditPopupOpen(true)
         setEditForm({
@@ -900,7 +920,7 @@ export const JourneyGroupsDrawer = memo(() => {
                                     {rootGroups.length > 0 || ungroupedJourneys.length > 0
                                      ? (
                                          <WaCard
-                                             appearance="plain"
+                                             appearance="filled"
                                              className="journey-selector-tree-panel journey-selector-tree-card"
                                          >
                                              <WaTree selection="leaf" className="journey-group-tree">
@@ -951,7 +971,7 @@ export const JourneyGroupsDrawer = memo(() => {
                                                 parentGroupOptions={parentGroupOptions}
                                                 availableJourneys={availableJourneys}
                                                 availablePopupOpen={availablePopupOpen}
-                                                availablePopupAnchorId={EDIT_GROUP_AVAILABLE_POPUP_ANCHOR}
+                                                availablePopupAnchorId={availablePopupAnchorId}
                                                 closeAvailablePopup={closeAvailablePopup}
                                                 openAvailablePopup={openAvailablePopup}
                                                 addJourneyToGroup={addJourneyToGroup}
@@ -970,21 +990,20 @@ export const JourneyGroupsDrawer = memo(() => {
 
                                 <LGSPopup
                                     active={createPopupOpen}
-                                    anchor={CREATE_GROUP_POPUP_ANCHOR}
+                                    anchor={createPopupAnchorId}
                                     onRequestClose={closeCreatePopup}
                                     placement="bottom"
                                 >
-                                    <WaCard
+                                    <WaCard appearance="filled-outlined"
                                         className="lgs--popup-in-drawer lgs-slide-down journey-group-create-popup">
                                         <WaButton appearance="plain" slot="header-actions"
                                                   onClick={closeCreatePopup}>
                                             <WaIcon size="s" name="xmark" variant="regular"/>
                                         </WaButton>
 
-                                        <h3 slot="header" className="journey-group-create-popup-title">
-                                            <WaIcon name="folder-plus" variant="regular"/>
-                                            <span>{'Add a new group'}</span>
-                                        </h3>
+                                        <span slot="header" className="journey-group-create-popup-title">
+                                            <WaIcon name="folder-plus" variant="regular"/>{'Add a new group'}
+                                        </span>
 
                                         <div className="journey-group-create-title-row">
                                             <WaInput
