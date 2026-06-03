@@ -2552,6 +2552,7 @@ describe('flythrough phase 1 playback controller', () => {
             expect(journey.focus).toHaveBeenCalledTimes(1)
             expect(journey.focus).toHaveBeenCalledWith(expect.objectContaining({
                                                                                   resetCamera: true,
+                                                                                  rotate: false,
                                                                                   snapDistance: 50000,
                                                                               }))
         }
@@ -2746,7 +2747,7 @@ describe('flythrough phase 1 playback controller', () => {
             expect(focusCalls).toHaveLength(1)
             expect(focusCalls[0]).toEqual(expect.objectContaining({
                                                                        resetCamera: true,
-                                                                       rotate:      true,
+                                                                       rotate:      false,
                                                                        snapDistance: 50000,
                                                                    }))
         }

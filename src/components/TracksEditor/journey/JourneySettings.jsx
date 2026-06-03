@@ -787,7 +787,7 @@ export const JourneySettings = () => {
                                                     placement="bottom"
                                                     for="rotation-in-settings"
                                                 >
-                                                    {running && target?.instanceOf?.(CURRENT_JOURNEY) ? 'Stop rotation' : 'Start rotation'}
+                                                    {running && target?.instanceOf?.(CURRENT_JOURNEY) ? 'Stop orbit' : 'Start orbit'}
                                                 </WaTooltip>
                                                 <WaButton
                                                     size="s"
@@ -805,7 +805,7 @@ export const JourneySettings = () => {
                                         <WaTooltip
                                             for="auto-rotate-in-settings"
                                             placement="bottom">
-                                            {running && target?.instanceOf?.(CURRENT_JOURNEY) ? 'Stop rotation' : 'Focus on Journey'}
+                                            {running && target?.instanceOf?.(CURRENT_JOURNEY) ? 'Stop orbit' : 'Focus on Journey'}
                                         </WaTooltip>
                                         <WaButton id="auto-rotate-in-settings"
                                                   size="s"

@@ -146,9 +146,9 @@ export const CameraSettings = () => {
                 </div>
                 <WaDivider/>
                 <div className="drawer-horizontal-line two-columns">
-                    <WaSwitch size="xs" label-at-start checked={camera.start.rotate.app}
+                        <WaSwitch size="xs" label-at-start checked={camera.start.rotate.app}
                               onChange={(event) => updateCameraStartRotate('app', event.target.checked)}>
-                        {' Rotation after initial focus '}
+                        {' Orbit after initial focus '}
                     </WaSwitch>
                 </div>
 
@@ -156,12 +156,12 @@ export const CameraSettings = () => {
                 <div>
                     <WaSwitch size="xs" label-at-start checked={poi.rotate}
                               onChange={updatePoiRotate}>
-                        {' Rotation after focusing on a POI '}
+                        {' Orbit after focusing on a POI '}
                     </WaSwitch>
                     <br/>
                     <WaSwitch size="xs" label-at-start checked={camera.start.rotate.journey}
                               onChange={(event) => updateCameraStartRotate('journey', event.target.checked)}>
-                        {' Rotation after focusing on a journey '}
+                        {' Orbit after focusing on a journey '}
                     </WaSwitch>
                 </div>
             </>

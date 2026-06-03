@@ -238,8 +238,8 @@ export const JourneyToolbar = (props) => {
                                         <WaTooltip for="rotate-journey-toolbar">
                                             {
                                                 rotate.running && rotate.target?.instanceOf?.(CURRENT_JOURNEY)
-                                                ? 'Stop rotation'
-                                                : 'Start rotation'
+                                                ? 'Stop orbit'
+                                                : 'Start orbit'
                                             }
                                         </WaTooltip>
 
@@ -261,7 +261,7 @@ export const JourneyToolbar = (props) => {
                                 }
                                     <WaTooltip for="focus-journey-toolbar">{
                                         rotate.running && rotate.target?.instanceOf?.(CURRENT_JOURNEY)
-                                        ? 'Stop rotation'
+                                        ? 'Stop orbit'
                                         : 'Focus on journey'
                                     }
                                     </WaTooltip>

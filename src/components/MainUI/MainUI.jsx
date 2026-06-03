@@ -22,8 +22,8 @@ import { GeocodingButton }   from '@Components/MainUI/geocoding/GeocodingButton'
 import { GeocodingWidget } from '@Components/MainUI/geocoding/GeocodingWidget'
 import { MapPOIMonitor }     from '@Components/MainUI/MapPOI/MapPOIMonitor'
 import { PanoramaWidget } from '@Components/MainUI/PanoramaWidget'
-import { RotationWidget } from '@Components/MainUI/RotationWidget'
-import { RotateButton }      from '@Components/MainUI/RotateButton'
+import { OrbitWidget }       from '@Components/MainUI/OrbitWidget'
+import { OrbitButton }       from '@Components/MainUI/OrbitButton'
 import { EditorPanelButton } from '@Editor/EditorPanelButton'
 import { VideoButton }       from '@Components/MainUI/video/VideoButton'
 import { VideoDownloadAndShareDialog } from '@Components/MainUI/video/VideoDownloadAndShareDialog'
@@ -246,7 +246,7 @@ export const MainUI = memo(() => {
                             <div id="secondary-buttons-bar-content">
                                 <SceneModeSelector tooltip={toolBar.fromStart ? 'left' : 'right'}/>
                                 <GeocodingButton tooltip={toolBar.fromStart ? 'left' : 'right'}/>
-                                <RotateButton tooltip={toolBar.fromStart ? 'left' : 'right'}/>
+                                <OrbitButton tooltip={toolBar.fromStart ? 'left' : 'right'}/>
                                 {!videoCaptureActive && <FullScreenButton tooltip={toolBar.fromStart ? 'left' : 'right'}/>}
                                 <div className="sync-linked-actions">
                                     <VideoButton tooltip={toolBar.fromStart ? 'left' : 'right'}/>
@@ -256,7 +256,7 @@ export const MainUI = memo(() => {
                             </div>
                         </div>
                         {geocoderDialog.mounted && <GeocodingWidget/>}
-                        <RotationWidget/>
+                        <OrbitWidget/>
                         <PanoramaWidget/>
                         <FlythroughControlsWidget/>
                     </>

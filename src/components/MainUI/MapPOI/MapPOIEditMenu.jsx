@@ -58,7 +58,7 @@ export const MapPOIEditMenu = memo(({poiId}) => {
     const isPOIPanoramic = panoramaState.active
         && panoramaState.target?.element === CURRENT_POI
         && (panoramaState.target?.slug ?? panoramaState.target?.id) === pointSnap.id
-    const stopRotation = useCallback(async () => {
+    const stopOrbit = useCallback(async () => {
         await __.ui.poiManager.stopRotationAndSync()
     }, [])
 
@@ -79,7 +79,7 @@ export const MapPOIEditMenu = memo(({poiId}) => {
         await __.ui.poiManager.focusPOI(pointSnap.id, {flyingTime: 2})
     }, [pointSnap.id, $pois])
 
-    const rotationAround = useCallback(async (e) => {
+    const orbitAround = useCallback(async (e) => {
         e?.stopPropagation()
         $pois.current = pointSnap.id
         await __.ui.poiManager.rotateAroundPOI(pointSnap.id)
@@ -126,7 +126,7 @@ export const MapPOIEditMenu = memo(({poiId}) => {
     const remove = useCallback(async (e) => {
         e?.stopPropagation()
         if (__.ui.cameraManager.isRotating()) {
-            await stopRotation()
+            await stopOrbit()
         }
         __.ui.poiManager.remove({id: pointSnap.id}).then((result) => {
             if (result.success) {
@@ -135,7 +135,7 @@ export const MapPOIEditMenu = memo(({poiId}) => {
                 $pois.current = false
             }
         })
-    }, [pointSnap.id, $pois, stopRotation])
+    }, [pointSnap.id, $pois, stopOrbit])
 
     const menuItems = useMemo(() => {
         if (!pointAvailable || !isVisible) {
@@ -178,17 +178,17 @@ export const MapPOIEditMenu = memo(({poiId}) => {
 
         if (isPOIRotating || isPOIPanoramic) {
             items.push(
-                <WaDropdownItem key="stop-rot" onClick={isPOIPanoramic ? stopPanoramic : stopRotation}>
+                <WaDropdownItem key="stop-rot" onClick={isPOIPanoramic ? stopPanoramic : stopOrbit}>
                     <WaIcon slot="icon" name={'arrow-rotate-right'} animation="spin"/>
-                    <span>{isPOIPanoramic ? 'Stop Panorama' : 'Stop Rotation'}</span>
+                    <span>{isPOIPanoramic ? 'Stop Panorama' : 'Stop Orbit'}</span>
                 </WaDropdownItem>,
             )
         }
         else {
             items.push(
-                <WaDropdownItem key="rot-around" onClick={rotationAround}>
+                <WaDropdownItem key="rot-around" onClick={orbitAround}>
                     <WaIcon slot="icon" name={'arrow-rotate-right'}/>
-                    <span>{'Rotate Around'}</span>
+                    <span>{'Orbit'}</span>
                 </WaDropdownItem>,
             )
 
@@ -203,7 +203,7 @@ export const MapPOIEditMenu = memo(({poiId}) => {
         }
 
         return items
-    }, [pointAvailable, pointSnap, isPOIRotating, isPOIPanoramic, isVisible, focus, remove, rotationAround, stopRotation, stopPanoramic, copyCoordinates, toggleVisibility, startPanoramic, panoramaAllowed])
+    }, [pointAvailable, pointSnap, isPOIRotating, isPOIPanoramic, isVisible, focus, remove, orbitAround, stopOrbit, stopPanoramic, copyCoordinates, toggleVisibility, startPanoramic, panoramaAllowed])
 
     /**
      * UI BRANCHING:

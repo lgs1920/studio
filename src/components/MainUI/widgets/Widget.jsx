@@ -40,7 +40,7 @@ const DRAG_THRESHOLD = {touch: 30, mouse: 5}
 const LOCKED_FLASH_TIMEOUT = 650
 const LOCKED_HINT_ICON = 'thumbtack'
 const LOCKED_HINT_TIMEOUT = 2000
-const ROTATION_CAMERA_ADJUSTMENT_WIDGET = 'rotation-camera-adjustment-widget'
+const ORBIT_CAMERA_ADJUSTMENT_WIDGET = 'orbit-camera-adjustment-widget'
 const SUPPRESS_DOUBLE_CLICK_MS = 350
 const SNAPSHOT_MAX_SIZE = 1024
 const SNAPSHOT_MIN_SIZE = 240
@@ -334,7 +334,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
     const canReduce = !isVisualWidget && (config.canReduce ?? true)
     const effectiveCollapsed = canReduce && collapsed
     const effectiveLocked = canLock && locked
-    const suppressLockedOverlay = widgetId === ROTATION_CAMERA_ADJUSTMENT_WIDGET
+    const suppressLockedOverlay = widgetId === ORBIT_CAMERA_ADJUSTMENT_WIDGET
     const isCollapsedToolbar = effectiveCollapsed && config.type === LGS_TOOLBAR
     const isOnMapWidget = !isTargetingBoard
     const showLockedOverlay = effectiveLocked && showLockedHint && !suppressLockedOverlay

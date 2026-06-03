@@ -116,11 +116,11 @@ export const MapPointContextMenu = ({target, menuRef}) => {
             return
         }
 
-        const rotationSettings = getOrbitSettings(target, 'rotation')
-        setOrbitStoreSettings(lgs.stores.ui.mainUI.rotate, rotationSettings)
+        const orbitSettings = getOrbitSettings(target, 'rotation')
+        setOrbitStoreSettings(lgs.stores.ui.mainUI.rotate, orbitSettings)
 
         await __.ui.sceneManager.focus(target, {
-            direction:  rotationSettings.direction,
+            direction:  orbitSettings.direction,
             flyingTime: 0,
             heading:    lgs.stores.main.components.camera.position.heading,
             infinite:   true,
@@ -128,7 +128,7 @@ export const MapPointContextMenu = ({target, menuRef}) => {
             range:      lgs.stores.main.components.camera.position.range,
             roll:       lgs.stores.main.components.camera.position.roll,
             rotate:     true,
-            rpm:        rotationSettings.rpm,
+            rpm:        orbitSettings.rpm,
             target,
         })
         hideMenu()
@@ -154,7 +154,7 @@ export const MapPointContextMenu = ({target, menuRef}) => {
         hideMenu()
     }, [hideMenu, panoramaAllowed, target])
 
-    const stopRotation = useCallback(async () => {
+    const stopOrbit = useCallback(async () => {
         await __.ui.poiManager.stopRotationAndSync()
         hideMenu()
     }, [hideMenu])
@@ -223,14 +223,14 @@ export const MapPointContextMenu = ({target, menuRef}) => {
                     <WaIcon name="location-dot" variant="regular"/>{'Create POI'}
                 </li>
                 {isPointRotating || isPointPanoramic ? (
-                    <li onClick={stopRotation}>
+                    <li onClick={stopOrbit}>
                         <WaIcon name={ROTATION_ICON} animation="spin" variant="regular"/>
-                        {isPointPanoramic ? 'Stop Panorama' : 'Stop Rotation'}
+                        {isPointPanoramic ? 'Stop Panorama' : 'Stop Orbit'}
                     </li>
                 ) : (
                      <>
                          <li onClick={rotateAroundPoint}>
-                             <WaIcon name={ROTATION_ICON} variant="regular"/>{'Rotate Around'}
+                             <WaIcon name={ROTATION_ICON} variant="regular"/>{'Orbit'}
                          </li>
                          {panoramaAllowed && (
                              <li onClick={startPanoramic}>

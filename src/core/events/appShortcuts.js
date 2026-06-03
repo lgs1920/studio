@@ -640,7 +640,7 @@ const SHORTCUT_ACTIONS = {
     'journey-toolbar-show': toggleJourneyToolbar,
     'flythrough-management-show': openFlythroughManagement,
     'video-recording':      launchVideoRecording,
-    'rotation-toggle':      toggleRotation,
+    'orbit-toggle':         toggleRotation,
     'panorama-toggle':      togglePanorama,
     'widget-edit':          editSelectedWidget,
     'widget-remove':        removeSelectedWidget,

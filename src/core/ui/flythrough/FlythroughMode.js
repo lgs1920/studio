@@ -797,11 +797,10 @@ export class FlythroughMode {
 
         this.#cameraFlightActive = false
         globalThis.lgs?.viewer?.camera?.cancelFlight?.()
-        const rotate = globalThis.lgs?.settings?.ui?.camera?.start?.rotate?.journey ?? false
         if (typeof journey.focus === 'function') {
             journey.focus({
                               resetCamera: true,
-                              rotate,
+                              rotate: false,
                               snapDistance,
                           })
             return
@@ -811,7 +810,7 @@ export class FlythroughMode {
                                                               journey,
                                                               target:      journey,
                                                               resetCamera: true,
-                                                              rotate,
+                                                              rotate: false,
                                                               snapDistance,
                                                           })
     }

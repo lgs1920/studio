@@ -2,7 +2,7 @@
  *
  * This file is part of the LGS1920/studio project.
  *
- * File: RotateButton.jsx
+ * File: OrbitButton.jsx
  *
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
@@ -23,10 +23,10 @@ import { useSnapshot } from 'valtio'
 
 /** @constant {string} FOCUS_TARGET - Target identifier for camera focus */
 const FOCUS_TARGET = 'target'
-/** @constant {string} TOOLTIP_STOP - Tooltip text when rotation is active */
-const TOOLTIP_STOP = 'Stop Map Rotation'
-/** @constant {string} TOOLTIP_START - Tooltip text when rotation is inactive */
-const TOOLTIP_START = 'Start Map Rotation'
+/** @constant {string} TOOLTIP_STOP - Tooltip text when orbit is active */
+const TOOLTIP_STOP = 'Stop Orbit'
+/** @constant {string} TOOLTIP_START - Tooltip text when orbit is inactive */
+const TOOLTIP_START = 'Start Orbit'
 
 const finiteNumber = value => {
     if (value === null || value === undefined || value === '') {
@@ -66,29 +66,29 @@ const normalizedFocusPoint = point => {
 }
 
 /**
- * A memoized React component for toggling map rotation around a target.
+ * A memoized React component for toggling map orbit around a target.
  * @param {Object} props - Component props
  * @param {string} [props.tooltip='top'] - Tooltip placement (e.g., 'top', 'bottom', 'left', 'right')
- * @returns {JSX.Element} The rendered RotateButton component
+ * @returns {JSX.Element} The rendered OrbitButton component
  */
-export const RotateButton = memo(({tooltip = 'top'}) => {
+export const OrbitButton = memo(({tooltip = 'top'}) => {
     // Targeted snapshots to minimize re-renders
     const {rotate, panorama} = useSnapshot(lgs.stores.ui.mainUI)
     const flythroughSettings = useSnapshot(lgs.settings.ui.flythrough)
     const {target, position} = useSnapshot(lgs.stores.main.components.camera)
-    const rotateTarget = rotate.target
+    const orbitTarget = rotate.target
     const sceneTarget = __.ui.sceneManager.target
     const flythroughMarker = normalizeFlythroughMarker(flythroughSettings.marker)
-    const rotationAllowedByFlythrough = flythroughMarker.mode === FLYTHROUGH_MARKER_MODE_TRACE
-    const disableRotationStart = !rotationAllowedByFlythrough && !rotate.running && !panorama.active
+    const orbitAllowedByFlythrough = flythroughMarker.mode === FLYTHROUGH_MARKER_MODE_TRACE
+    const disableOrbitStart = !orbitAllowedByFlythrough && !rotate.running && !panorama.active
 
     /**
-     * Toggles map rotation and updates POI animation state if applicable.
+     * Toggles map orbit and updates POI animation state if applicable.
      * @async
      * @function
      * @returns {Promise<void>}
      */
-    const handleRotation = useCallback(async () => {
+    const handleOrbit = useCallback(async () => {
         const focusTarget = sceneTarget?.element ? sceneTarget : null
         const poi = focusTarget?.element === CURRENT_POI
                     ? lgs.stores.main.components.pois.list.get(focusTarget.slug ?? focusTarget.id)
@@ -114,21 +114,21 @@ export const RotateButton = memo(({tooltip = 'top'}) => {
 
             const focusPoint = normalizedFocusPoint(target)
                 ?? normalizedFocusPoint(focusTarget)
-                ?? normalizedFocusPoint(rotateTarget)
+                ?? normalizedFocusPoint(orbitTarget)
             if (!focusPoint) {
-                console.warn('Cannot start map rotation without a valid target', {target, sceneTarget, rotateTarget})
+                console.warn('Cannot start map orbit without a valid target', {target, sceneTarget, orbitTarget})
                 return
             }
 
-            const rotationSettings = getOrbitSettings(focusTarget ?? focusPoint, 'rotation')
-            setOrbitStoreSettings(lgs.stores.ui.mainUI.rotate, rotationSettings)
+            const orbitSettings = getOrbitSettings(focusTarget ?? focusPoint, 'rotation')
+            setOrbitStoreSettings(lgs.stores.ui.mainUI.rotate, orbitSettings)
             await __.ui.sceneManager.focus(focusPoint, {
-                direction: rotationSettings.direction,
+                direction: orbitSettings.direction,
                 ...position,
                 infinite:   true,
                 rotate:     true,
                 flyingTime: 0,
-                rpm:       rotationSettings.rpm,
+                rpm:       orbitSettings.rpm,
                 target:    focusTarget ?? FOCUS_TARGET,
             })
             if (poi && !poi.animated) {
@@ -136,18 +136,18 @@ export const RotateButton = memo(({tooltip = 'top'}) => {
             }
         }
         catch (error) {
-            console.error('Failed to toggle map rotation:', {error, target, rotate: rotate.running})
+            console.error('Failed to toggle map orbit:', {error, target, rotate: rotate.running})
         }
-    }, [panorama.active, rotate.running, rotateTarget, target, position, sceneTarget])
+    }, [panorama.active, rotate.running, orbitTarget, target, position, sceneTarget])
 
     return (<>
-            <WaTooltip for="launch-rotation"
+            <WaTooltip for="launch-orbit"
                        placement={tooltip}>{rotate.running || panorama.active ? TOOLTIP_STOP : TOOLTIP_START}</WaTooltip>
             <WaButton
-                className="square-button rotation-button"
-                id="launch-rotation"
-                onClick={handleRotation}
-                disabled={disableRotationStart}
+                className="square-button orbit-button"
+                id="launch-orbit"
+                onClick={handleOrbit}
+                disabled={disableOrbitStart}
                 variant={'brand'}
                 appearance="Filled"
             >

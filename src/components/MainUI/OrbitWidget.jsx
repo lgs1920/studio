@@ -2,7 +2,7 @@
  *
  * This file is part of the LGS1920/studio project.
  *
- * File: RotationWidget.jsx
+ * File: OrbitWidget.jsx
  *
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
@@ -36,7 +36,7 @@ import { scheduleCameraAdjustmentWidgetCenter } from './cameraAdjustmentWidgetPo
 import { getOrbitWidgetConfig }       from './orbitWidgetConfig'
 import { getOrbitRPMGaugeIcon }        from './orbitWidgetPresentation'
 
-const CAMERA_ADJUSTMENT_WIDGET = 'rotation-camera-adjustment-widget'
+const CAMERA_ADJUSTMENT_WIDGET = 'orbit-camera-adjustment-widget'
 const CAMERA_MOVEMENT_OVERLAY_UPDATE_DELAY = 500
 const ADJUSTMENT_OVERLAY_DELAY = 2000
 const USER_CAMERA_ACTION_WINDOW = 1000
@@ -121,7 +121,7 @@ const orbitDirectionKeyboardSign = (event) => {
     return 0
 }
 
-const RotationCameraAdjustmentOverlay = memo(() => {
+const OrbitCameraAdjustmentOverlay = memo(() => {
     const rotate = useSnapshot(lgs.stores.ui.mainUI.rotate)
     const panorama = useSnapshot(lgs.stores.ui.mainUI.panorama)
     const cameraFlight = useSnapshot(lgs.stores.ui.mainUI.cameraFlight)
@@ -392,7 +392,7 @@ const RotationCameraAdjustmentOverlay = memo(() => {
             }
         }
 
-        const updateRotationCameraMovement = () => {
+        const updateOrbitCameraMovement = () => {
             const snapshot = currentCameraMovementSnapshot()
             if (!snapshot || snapshot.key === lastCameraKeyRef.current) {
                 return
@@ -415,7 +415,7 @@ const RotationCameraAdjustmentOverlay = memo(() => {
         }
 
         scheduleInitialOverlay()
-        const interval = window.setInterval(updateRotationCameraMovement, CAMERA_MOVEMENT_OVERLAY_UPDATE_DELAY)
+        const interval = window.setInterval(updateOrbitCameraMovement, CAMERA_MOVEMENT_OVERLAY_UPDATE_DELAY)
 
         return () => {
             window.clearInterval(interval)
@@ -515,12 +515,12 @@ const RotationCameraAdjustmentOverlay = memo(() => {
     )
 })
 
-export const RotationWidget = memo(() => {
+export const OrbitWidget = memo(() => {
     const $rotate = lgs.stores.ui.mainUI.rotate
     const rotate = useSnapshot($rotate)
     const panorama = useSnapshot(lgs.stores.ui.mainUI.panorama)
     const {toolBar} = useSnapshot(lgs.settings.ui.menu)
-    const config = useMemo(() => getOrbitWidgetConfig('rotation-widget', toolBar.fromStart), [toolBar.fromStart])
+    const config = useMemo(() => getOrbitWidgetConfig('orbit-widget', toolBar.fromStart), [toolBar.fromStart])
 
     const stopPropagation = useCallback((event) => {
         event.stopPropagation()
@@ -531,7 +531,7 @@ export const RotationWidget = memo(() => {
         event.nativeEvent?.stopImmediatePropagation?.()
     }, [])
 
-    const stopRotation = useCallback((event) => {
+    const stopOrbit = useCallback((event) => {
         event?.stopPropagation?.()
         void __.ui.poiManager.stopRotationAndSync()
     }, [])
@@ -541,7 +541,7 @@ export const RotationWidget = memo(() => {
         $rotate.rpm = value
     }, [$rotate])
 
-    const setRotationRPM = useCallback((value, persist = false) => {
+    const setOrbitRPM = useCallback((value, persist = false) => {
         const rpm = normalizeOrbitRPM(value, $rotate.rpm)
         if (rpm === $rotate.rpm) {
             return
@@ -554,7 +554,7 @@ export const RotationWidget = memo(() => {
         }
     }, [$rotate])
 
-    const setRotationDirectionSign = useCallback((sign, persist = false) => {
+    const setOrbitDirectionSign = useCallback((sign, persist = false) => {
         const currentMagnitude = Math.abs(Number($rotate.direction))
         const magnitude = Number.isFinite(currentMagnitude) && currentMagnitude > 0
                           ? currentMagnitude
@@ -599,7 +599,7 @@ export const RotationWidget = memo(() => {
                 event.stopPropagation()
                 event.stopImmediatePropagation?.()
                 if (!event.repeat) {
-                    setRotationDirectionSign(directionSign, true)
+                    setOrbitDirectionSign(directionSign, true)
                 }
                 return
             }
@@ -612,13 +612,13 @@ export const RotationWidget = memo(() => {
             event.preventDefault()
             event.stopPropagation()
             event.stopImmediatePropagation?.()
-            setRotationRPM($rotate.rpm + direction * ORBIT_RPM_STEP, true)
+            setOrbitRPM($rotate.rpm + direction * ORBIT_RPM_STEP, true)
         }
 
         window.addEventListener('keydown', handleKeyDown, {capture: true})
 
         return () => window.removeEventListener('keydown', handleKeyDown, {capture: true})
-    }, [$rotate, panorama.active, rotate.running, setRotationDirectionSign, setRotationRPM])
+    }, [$rotate, panorama.active, rotate.running, setOrbitDirectionSign, setOrbitRPM])
 
     const directionIsAntiClockwise = rotate.direction > 0
     const directionTooltip = directionIsAntiClockwise ? 'Anti-clockwise' : 'Clockwise'
@@ -630,7 +630,7 @@ export const RotationWidget = memo(() => {
     return (
         <div className="orbit-mode-widgets">
             <OrbitInteractionHintsWidget/>
-            <RotationCameraAdjustmentOverlay/>
+            <OrbitCameraAdjustmentOverlay/>
             <Widget
                 isVisible={rotate.running && !panorama.active}
                 config={config}
@@ -638,15 +638,15 @@ export const RotationWidget = memo(() => {
             >
                 <WaCard
                     appearance="plain"
-                    className="orbit-widget rotation-widget lgs-card wa-theme-lgs1920-on-map"
+                    className="orbit-widget lgs-card wa-theme-lgs1920-on-map"
                     onWheel={stopPropagation}
                 >
                     <div className="orbit-widget-header orbit-widget-header-end">
-                        <WaTooltip for="rotation-direction-toggle" placement="top">
+                        <WaTooltip for="orbit-direction-toggle" placement="top">
                             {directionTooltip}
                         </WaTooltip>
                         <WaButton
-                            id="rotation-direction-toggle"
+                            id="orbit-direction-toggle"
                             aria-label={directionTooltip}
                             appearance="outlined"
                             className="orbit-widget-header-button orbit-direction-button lgs-widget-no-drag"
@@ -664,7 +664,7 @@ export const RotationWidget = memo(() => {
                         </WaButton>
                     </div>
 
-                    <div className="panorama-widget-body rotation-widget-body">
+                    <div className="panorama-widget-body orbit-widget-body">
                         <div className="panorama-widget-slider">
                             <span className="panorama-widget-slider-label">
                                 <WaIcon name={rpmGaugeIcon} variant="regular" label="RPM"/>
@@ -687,12 +687,12 @@ export const RotationWidget = memo(() => {
 
                     <div className="orbit-widget-footer orbit-widget-footer-centered">
                         <WaButton
-                            aria-label="Stop rotation"
+                            aria-label="Stop orbit"
                             appearance="outlined"
                             className="orbit-widget-footer-button orbit-widget-stop-button lgs-widget-no-drag"
                             size="s"
                             variant="brand"
-                            onClick={stopRotation}
+                            onClick={stopOrbit}
                             onPointerDownCapture={blockWidgetDrag}
                         >
                             <WaIcon name="xmark" variant="regular"/>
