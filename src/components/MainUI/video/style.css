@@ -14,20 +14,6 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-.lgs-video-recording-trigger-actions {
-    display: flex;
-    align-items: center;
-    flex-direction: row;
-    justify-content: space-around;
-    gap: var(--lgs-gutter);
-}
-
-.lgs-video-recording-trigger:not(.lgs-tunnel-element-blocked) {
-    border-color: var(--lgs-video-recorder-border-color, var(--lgs-error-border-color));
-    background: var(--lgs-video-recorder-bg-color, var(--lgs-error-bg-color));
-}
-
-
 .video-recorder-widget {
     font-size: var(--lgs-font-size-s);
     position: relative;
@@ -40,6 +26,27 @@
         flex-direction: row;
         gap: 0;
     }
+}
+
+.video-recording-settings-toolbar {
+    font-size: var(--lgs-font-size-s);
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    flex: 0 0 auto;
+    width: max-content;
+    max-width: max-content;
+    z-index: var(--lgs-video-recording-settings-toolbar-zindex);
+}
+
+.video-recording-settings-toolbar.lgs-toolbar {
+    opacity: 1;
+}
+
+.video-recording-settings-toolbar .lgs-tunnel-container,
+.video-recording-settings-toolbar .lgs-tunnel-bar {
+    width: max-content;
+    max-width: max-content;
 }
 
 .video-recorder-widget .duration,

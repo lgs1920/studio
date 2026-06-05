@@ -88,7 +88,7 @@
     --lgs-toast-zindex: 2147483647;
     --lgs-drop-zone-zindex: 10;
     --lgs-context-menu-zindex: calc(var(--lgs-ui-layer-zindex) + 9000);
-    --lgs-video-recording-settings-toolbar-zindex: calc(var(--lgs-above-widgets) + 2);
+    --lgs-video-recording-settings-toolbar-zindex: calc(var(--lgs-context-menu-zindex) - 2);
     --lgs-video-recorder-toolbar-zindex: calc(var(--lgs-context-menu-zindex) + 1);
 
     /* Brand button tokens for filled, hover, outlined and plain states. */

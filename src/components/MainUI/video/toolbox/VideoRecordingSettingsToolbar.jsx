@@ -25,6 +25,7 @@ import { VIDEO_CROP_ZONE, VIDEO_WIDGETS_BOARD } from '@Core/constants'
 import { cancelVideoEditing } from '@Components/MainUI/video/videoEditingCleanup'
 import { memo, useCallback, useEffect, useMemo, useRef } from 'react'
 import { useSnapshot } from 'valtio'
+import '../style.css'
 
 const resolveRecorderToolbarPosition = (event) => {
     const nativeEvent = event?.nativeEvent ?? event
@@ -180,11 +181,10 @@ export const VideoRecordingSettingsToolbar = memo(() => {
                 text:       'Start Recording',
                 tooltip: {
                     title: 'Start recording',
-                    text:  'Record the selected zone.',
+                    text: 'Record the selected zone.',
                 },
                 done:       false,
                 mandatory:  false,
-                className:  'lgs-video-recording-trigger',
                 beforeStep: () => {
                     $video.step = 2
                     __.ui.widgetManager.windowResizing = false
