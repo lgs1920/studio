@@ -116,6 +116,37 @@ export const VideoRecordingSettingsToolbar = memo(() => {
     }, [])
 
     useEffect(() => {
+        if (!video.editing || flythrough.recordingSync !== true) {
+            return undefined
+        }
+
+        let cancelled = false
+        let raf = 0
+
+        const centerCropZone = () => {
+            if (cancelled) {
+                return
+            }
+
+            const element = __.ui.widgetManager.getElementById(VIDEO_CROP_ZONE)
+            if (!element) {
+                raf = requestAnimationFrame(centerCropZone)
+                return
+            }
+
+            __.ui.widgetManager.toCenter(element, 0)
+            syncCropFrame('flythrough-sync-center')
+        }
+
+        raf = requestAnimationFrame(centerCropZone)
+
+        return () => {
+            cancelled = true
+            cancelAnimationFrame(raf)
+        }
+    }, [flythrough.recordingSync, syncCropFrame, video.editing])
+
+    useEffect(() => {
         if (video.editing) {
             __.ui.widgetManager.windowResizing = true
         }

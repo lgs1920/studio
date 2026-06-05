@@ -14,10 +14,9 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { CROP_TOOLS_WIDGETS, VIDEO_CROP_ZONE, VIDEO_WIDGETS_BOARD } from '@Core/constants'
+import { CROP_TOOLS_WIDGETS, VIDEO_WIDGETS_BOARD } from '@Core/constants'
 
 export const cancelVideoEditing = () => {
-    void __.ui.widgetManager.syncCropDimensionsFromElement(VIDEO_CROP_ZONE, true, 'cancel-editing')
     lgs.stores.ui.video.editing = false
     __.ui.widgetManager.disposeByGroup(CROP_TOOLS_WIDGETS, true)
 
