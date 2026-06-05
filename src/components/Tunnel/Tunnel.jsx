@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-05-09
- * Last modified: 2026-05-09
+ * Created on: 2026-06-05
+ * Last modified: 2026-06-05
  *
  *
  * Copyright © 2026 LGS1920
@@ -68,7 +68,7 @@ const TunnelTooltipContent = memo(({tooltip, icon}) => {
 
 TunnelTooltipContent.displayName = 'TunnelTooltipContent'
 
-const TunnelTooltip = memo(({anchorId, tooltip, icon, placement = 'top', children}) => {
+export const TunnelTooltip = memo(({anchorId, tooltip, icon, placement = 'top', children}) => {
     const [active, setActive] = useState(false)
     const content = normalizeTooltip(tooltip)
 
@@ -153,6 +153,7 @@ export const Tunnel = memo(({
                                 onCancel,
                                 className = '',
                                 cancelTooltip = 'Exit',
+                                leadingAction = null,
                             }) => {
     // State for the current step index
     const [currentContainer, setCurrentStepIndex] = useState(defaultStepIndex)
@@ -272,7 +273,7 @@ export const Tunnel = memo(({
         <div className={classNames('lgs-tunnel-container', className)} ref={_tunnelContainer}>
             {/* Tunnel navigation bar */}
             <div className="lgs-tunnel-bar">
-                <div className="lgs-tunnel-bar-spacer"/>
+                {leadingAction}
                 {stepItems}
                 {/* Exit button */}
                 <TunnelTooltip

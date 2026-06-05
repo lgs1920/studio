@@ -20,6 +20,7 @@
  * Renders a call-to-action bar for the video cropper interface.
  ******************************************************************************/
 import { Tunnel } from '@Components/Tunnel/Tunnel'
+import { FlythroughButton } from '@Components/Flythrough/FlythroughButton'
 import { VIDEO_CROP_ZONE, VIDEO_WIDGETS_BOARD } from '@Core/constants'
 import { cancelVideoEditing } from '@Components/MainUI/video/videoEditingCleanup'
 import { memo, useCallback, useEffect, useMemo, useRef } from 'react'
@@ -47,6 +48,7 @@ const resolveRecorderToolbarPosition = (event) => {
  */
 export const VideoRecordingSettingsToolbar = memo(() => {
     const $video = lgs.stores.ui.video
+    const flythrough = useSnapshot(lgs.stores.flythrough)
     const video = useSnapshot($video)
 
     const _steps = useRef([])
@@ -61,6 +63,21 @@ export const VideoRecordingSettingsToolbar = memo(() => {
     const handleCancel = useCallback(() => {
         cancelVideoEditing()
     }, [])
+
+    const leadingAction = flythrough.recordingSync === true && Boolean(lgs.theJourney) ? (
+        <FlythroughButton
+            id="launch-the-flythrough-editor-from-video"
+            tooltip="top"
+            tooltipText="Open Flythrough drawer"
+            tooltipPlacement="top"
+            tooltipStyle="tunnel"
+            variant="neutral"
+            appearance="plain"
+            className=""
+            showOnlyWhenLinked
+            ariaLabel="Open Flythrough drawer"
+        />
+    ) : null
 
     const handleSnapShot = useCallback(async () => {
         Object.assign($video, {
@@ -218,14 +235,16 @@ export const VideoRecordingSettingsToolbar = memo(() => {
     }
 
     return (
-        <Tunnel
-            className="video-recording-settings-toolbar lgs-toolbar lgs-toolbar-horizontal"
-            steps={steps}
-            cancelTooltip={{
-                title: 'Cancel',
-                text:  'Leave video setup.',
-            }}
-            onCancel={handleCancel}
-        />
+        <div className="video-recording-settings-toolbar lgs-toolbar-content lgs-toolbar lgs-toolbar-horizontal wa-theme-lgs1920-on-map">
+            <Tunnel
+                leadingAction={leadingAction}
+                steps={steps}
+                cancelTooltip={{
+                    title: 'Cancel',
+                    text:  'Leave video setup.',
+                }}
+                onCancel={handleCancel}
+            />
+        </div>
     )
 })
