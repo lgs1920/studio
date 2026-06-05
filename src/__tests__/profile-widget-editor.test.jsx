@@ -92,7 +92,7 @@ describe('ProfileWidgetEditor', () => {
                                                                                 }),
                                                          }),
                                        profile:    proxy({
-                                                             noLiveData: false,
+                                                             liveData: false,
                                                          }),
                                    }),
                 widgets:     {
@@ -130,7 +130,7 @@ describe('ProfileWidgetEditor', () => {
 
         fireEvent.click(toggle)
 
-        expect(lgs.settings.ui.profile.noLiveData).toBe(true)
+        expect(lgs.settings.ui.profile.liveData).toBe(true)
         expect(__.ui.profiler.draw).toHaveBeenCalled()
     })
 })

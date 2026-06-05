@@ -27,7 +27,7 @@ describe('SettingsSection', () => {
             configuration: {
                 ui: {
                     profile: {
-                        noLiveData: false,
+                        liveData: false,
                     },
                 },
                 journey: {
@@ -48,7 +48,7 @@ describe('SettingsSection', () => {
             savedConfiguration: {
                 ui: {
                     profile: {
-                        noLiveData: false,
+                        liveData: false,
                     },
                 },
                 journey: {
@@ -187,14 +187,14 @@ describe('SettingsSection', () => {
         await section.init()
         lgs.db.settings.put.mockClear()
 
-        section.content.profile.noLiveData = true
+        section.content.profile.liveData = true
         await waitForSubscription()
 
         expect(lgs.db.settings.put).toHaveBeenCalledWith(
             'ui',
             expect.objectContaining({
                                         profile: expect.objectContaining({
-                                                                             noLiveData: true,
+                                                                             liveData: true,
                                                                          }),
                                     }),
             SETTINGS_STORE,

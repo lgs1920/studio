@@ -287,7 +287,7 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
         [flythroughSettings.progression],
     )
     const profileSettings = useSnapshot(lgs.settings.ui.profile)
-    const showFlythroughLiveData = profileSettings.noLiveData !== true
+    const showFlythroughLiveData = profileSettings.liveData === true
     const flythroughTrace = useMemo(
         () => normalizeFlythroughTrace(flythroughSettings.trace),
         [flythroughSettings.trace],

@@ -373,7 +373,7 @@ ui:
 
   ## Profile
   profile:
-    noLiveData: false
+    liveData: false
 
   ## JourneyToolbar
   journeyToolbar:

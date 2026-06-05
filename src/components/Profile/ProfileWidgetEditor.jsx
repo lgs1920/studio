@@ -192,8 +192,8 @@ export const ProfileWidgetEditor = ({entity}) => {
         __.ui.profiler?.draw?.()
     }, [])
 
-    const updateProfileNoLiveData = useCallback((checked) => {
-        lgs.settings.ui.profile.noLiveData = checked
+    const updateProfileLiveData = useCallback((checked) => {
+        lgs.settings.ui.profile.liveData = checked
         __.ui.profiler?.draw?.()
     }, [])
 
@@ -363,10 +363,10 @@ export const ProfileWidgetEditor = ({entity}) => {
                     className="profile-widget-no-live-data-switch"
                     size="xs"
                     label-at-start
-                    checked={profileSettings.noLiveData === true}
-                    onChange={(e) => updateProfileNoLiveData(e.target.checked)}
+                    checked={profileSettings.liveData === true}
+                    onChange={(e) => updateProfileLiveData(e.target.checked)}
                 >
-                    {'No live data'}
+                    {'Show live data'}
                 </WaSwitch>
 
                 {/* Stylization for Main Axes and Labels */}
