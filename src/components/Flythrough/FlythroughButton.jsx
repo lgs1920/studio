@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-05-05
- * Last modified: 2026-05-05
+ * Created on: 2026-06-05
+ * Last modified: 2026-06-05
  *
  *
  * Copyright © 2026 LGS1920
@@ -37,7 +37,7 @@ export const FlythroughButton = (props) => {
 
     return (
         <>
-            {!video.recording && !video.preRecording && !video.snapshot &&
+            {lgs.theJourney && !video.recording && !video.preRecording && !video.snapshot &&
                 <>
                     <WaTooltip for="launch-the-flythrough-editor" placement={tooltip}>{FLYTHROUGH_LABEL}</WaTooltip>
                     <WaButton
