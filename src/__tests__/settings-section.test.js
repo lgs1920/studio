@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-05-10
- * Last modified: 2026-05-10
+ * Created on: 2026-06-05
+ * Last modified: 2026-06-05
  *
  *
  * Copyright © 2026 LGS1920
@@ -25,6 +25,11 @@ describe('SettingsSection', () => {
     beforeEach(() => {
         vi.stubGlobal('lgs', {
             configuration: {
+                ui: {
+                    profile: {
+                        noLiveData: false,
+                    },
+                },
                 journey: {
                     activity: {
                         default: 'trek',
@@ -41,6 +46,11 @@ describe('SettingsSection', () => {
                 },
             },
             savedConfiguration: {
+                ui: {
+                    profile: {
+                        noLiveData: false,
+                    },
+                },
                 journey: {
                     activity: {
                         default: 'trek',
@@ -170,6 +180,25 @@ describe('SettingsSection', () => {
         expect(merged.flythrough.progression.border.profileMarker).toBe(2)
         expect(merged.flythrough.profileInfo.color).toBe('#ffffff')
         expect(merged.flythrough.profileInfo.useTrackStyle).toBe(false)
+    })
+
+    it('persists profile UI settings changes', async () => {
+        const section = new SettingsSection('ui')
+        await section.init()
+        lgs.db.settings.put.mockClear()
+
+        section.content.profile.noLiveData = true
+        await waitForSubscription()
+
+        expect(lgs.db.settings.put).toHaveBeenCalledWith(
+            'ui',
+            expect.objectContaining({
+                                        profile: expect.objectContaining({
+                                                                             noLiveData: true,
+                                                                         }),
+                                    }),
+            SETTINGS_STORE,
+        )
     })
 
     it('hydrates and persists the full activity catalog when only partial values exist', async () => {

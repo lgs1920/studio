@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-30
- * Last modified: 2026-04-30
+ * Created on: 2026-06-05
+ * Last modified: 2026-06-05
  *
  *
  * Copyright © 2026 LGS1920
@@ -286,6 +286,8 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
         () => normalizeFlythroughProgressionStyle(flythroughSettings.progression),
         [flythroughSettings.progression],
     )
+    const profileSettings = useSnapshot(lgs.settings.ui.profile)
+    const showFlythroughLiveData = profileSettings.noLiveData !== true
     const flythroughTrace = useMemo(
         () => normalizeFlythroughTrace(flythroughSettings.trace),
         [flythroughSettings.trace],
@@ -725,7 +727,7 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
                     }
                 }
                 catch {
-                    return
+
                 }
             })
         })
@@ -1135,6 +1137,11 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
     }, [])
 
     const flythroughMetricGraphic = useCallback((sample, flythroughState, chart) => {
+        if (!showFlythroughLiveData) {
+            hideProfileMetricBadge()
+            return []
+        }
+
         const label = flythroughMetricLabel(sample, flythroughState)
         const badge = _profileMetricBadge.current
         if (!label) {
@@ -1168,7 +1175,7 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
         }
 
         return []
-    }, [flythroughMetricLabel])
+    }, [flythroughMetricLabel, hideProfileMetricBadge, showFlythroughLiveData])
 
     const flythroughProfileOption = useCallback((flythroughState, chart) => {
         if (!data?.dataset || !data?.dimensions) {
@@ -1196,7 +1203,7 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
         if (!activeSample) {
             _flythroughProfileGraphics.current.renderedKey = null
         }
-        if (!displaySample) {
+        if (!displaySample || !showFlythroughLiveData) {
             hideProfileMetricBadge()
         }
         const graphics = activeSample
@@ -1252,6 +1259,7 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
         locked,
         lockedProfileSample,
         profileTooltipMeta.totalDistanceFromStart,
+                                                    showFlythroughLiveData,
     ])
 
     const handleFlythroughProfileHover = useCallback((params) => {
