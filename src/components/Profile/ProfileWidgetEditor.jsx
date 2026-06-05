@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-05-10
- * Last modified: 2026-05-10
+ * Created on: 2026-06-05
+ * Last modified: 2026-06-05
  *
  *
  * Copyright © 2026 LGS1920
@@ -81,6 +81,7 @@ export const ProfileWidgetEditor = ({entity}) => {
     const configuration = useSnapshot($configuration)
     ensureFlythroughSettings()
     const flythroughSettings = useSnapshot(lgs.settings.ui.flythrough)
+    const profileSettings = useSnapshot(lgs.settings.ui.profile)
     const sliderRefs = useRef({})
 
     const sanitizeSliderValue = useCallback((rawValue, fallback, options = {}) => {
@@ -188,6 +189,11 @@ export const ProfileWidgetEditor = ({entity}) => {
         if (lgs.stores.flythrough) {
             lgs.stores.flythrough.profileInfo = nextProfileInfo
         }
+        __.ui.profiler?.draw?.()
+    }, [])
+
+    const updateProfileNoLiveData = useCallback((checked) => {
+        lgs.settings.ui.profile.noLiveData = checked
         __.ui.profiler?.draw?.()
     }, [])
 
@@ -352,6 +358,15 @@ export const ProfileWidgetEditor = ({entity}) => {
                     onChange={(e) => updateFlythroughProfileInfo({useTrackStyle: e.target.checked})}
                 >
                     {'Use track style'}
+                </WaSwitch>
+                <WaSwitch
+                    className="profile-widget-no-live-data-switch"
+                    size="xs"
+                    label-at-start
+                    checked={profileSettings.noLiveData === true}
+                    onChange={(e) => updateProfileNoLiveData(e.target.checked)}
+                >
+                    {'No live data'}
                 </WaSwitch>
 
                 {/* Stylization for Main Axes and Labels */}

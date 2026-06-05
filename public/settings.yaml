@@ -371,6 +371,10 @@ ui:
         easing: 0.14
         stopThreshold: 0.00001
 
+  ## Profile
+  profile:
+    noLiveData: false
+
   ## JourneyToolbar
   journeyToolbar:
     usage: true           # Can we use it
