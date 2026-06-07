@@ -43,6 +43,7 @@ vi.mock('@Components/WaDrawerNonModal', () => ({
 }))
 
 vi.mock('@web.awesome.me/webawesome-pro/dist/react', () => ({
+    WaButton: ({children, ...props}) => <button {...props}>{children}</button>,
     WaCard: ({children, ...props}) => <div {...props}>{children}</div>,
     WaColorPicker: props => <input data-testid={props['aria-label'] ?? 'color'} {...props} />,
     WaDivider: () => <hr/>,
@@ -70,6 +71,13 @@ vi.mock('@web.awesome.me/webawesome-pro/dist/react', () => ({
     WaTab: ({children}) => <button type="button">{children}</button>,
     WaTabGroup: ({children}) => <div>{children}</div>,
     WaTabPanel: ({children}) => <div>{children}</div>,
+    WaTextarea: ({label, value, ...props}) => (
+        <label>
+            {label}
+            <textarea aria-label={label} value={value} readOnly {...props}/>
+        </label>
+    ),
+    WaTooltip: ({children}) => <span>{children}</span>,
 }))
 
 describe('FlythroughDrawer', () => {

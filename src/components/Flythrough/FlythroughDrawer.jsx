@@ -16,6 +16,7 @@
 
 import DrawerFooter from '@Components/DrawerFooter'
 import { FlythroughProgressBar } from '@Components/Flythrough/FlythroughProgressBar'
+import { FlythroughEffectsTab } from '@Components/Flythrough/FlythroughEffectsTab'
 import { LGSScrollbars } from '@Components/MainUI/LGSScrollbars'
 import { VideoButton } from '@Components/MainUI/video/VideoButton'
 import { formatSliderPercent } from '@Components/MainUI/widgets/editor/elements/sliderUtils'
@@ -37,6 +38,7 @@ import {
     normalizeFlythroughCamera, normalizeFlythroughMarker, normalizeFlythroughProfileInfo,
     normalizeFlythroughProgressionStyle, normalizeFlythroughTrace,
 }                 from '@Core/ui/flythrough/FlythroughProgressionStyle'
+import { normalizeFlythroughEffects } from '@Core/ui/flythrough/FlythroughEffects'
 import { ELEVATION_UNITS, UnitUtils } from '@Utils/UnitUtils'
 import {
     WaCard, WaColorPicker, WaDivider, WaIcon, WaNumberInput, WaOption, WaSelect, WaSlider, WaSwitch, WaTab, WaTabGroup,
@@ -237,6 +239,15 @@ export const FlythroughDrawer = memo(() => {
     const fillProfileMarker = progression.fill.profileMarker
     const borderProfileMarker = progression.border.profileMarker
     const trace = normalizeFlythroughTrace(flythroughSettings.trace)
+    const effects = normalizeFlythroughEffects({
+                                                   catalog: flythroughSettings.effects?.catalog ?? flythroughSettings.effects?.definitions ?? {},
+                                                   start:   Array.isArray(currentJourney?.flythrough?.start)
+                                                            ? currentJourney.flythrough.start
+                                                            : flythroughSettings.effects?.start ?? [],
+                                                   stop:    Array.isArray(currentJourney?.flythrough?.stop)
+                                                            ? currentJourney.flythrough.stop
+                                                            : flythroughSettings.effects?.stop ?? [],
+                                               })
     const remainingUseDefinedTrackStyle = trace.remaining.useDefinedTrackStyle !== false
     const remainingColor = toOpaqueColorValue(trace.remaining.color)
     const camera = normalizeFlythroughCamera(flythroughSettings.camera)
@@ -263,6 +274,7 @@ export const FlythroughDrawer = memo(() => {
         flythroughRuntime.trace = normalizeFlythroughTrace(flythroughSettings.trace)
         flythroughRuntime.marker = normalizeFlythroughMarker(flythroughSettings.marker)
         flythroughRuntime.camera = normalizeFlythroughCamera(flythroughSettings.camera)
+        flythroughRuntime.effects = effects
 
         if (journeyChanged) {
             flythroughRuntime.progress = 0
@@ -278,6 +290,10 @@ export const FlythroughDrawer = memo(() => {
         flythroughSettings.trace,
         flythroughSettings.marker,
         flythroughSettings.camera,
+        flythroughSettings.effects,
+        effects,
+        currentJourney?.flythrough?.start,
+        currentJourney?.flythrough?.stop,
         journeySlug,
     ])
 
@@ -622,6 +638,10 @@ export const FlythroughDrawer = memo(() => {
                                          <WaIcon name="paintbrush-pencil" variant="regular"/>
                                          {'Edit'}
                                      </WaTab>
+                                     <WaTab slot="nav" panel="effects">
+                                         <WaIcon name="sparkles" variant="regular"/>
+                                         {'Effects'}
+                                     </WaTab>
 
                                      <WaTabPanel name="runner">
                                          <LGSScrollbars>
@@ -828,6 +848,17 @@ export const FlythroughDrawer = memo(() => {
                                                              />
                                                      </div>
                                                  </section>
+                                             </div>
+                                         </LGSScrollbars>
+                                     </WaTabPanel>
+
+                                     <WaTabPanel name="effects">
+                                         <LGSScrollbars>
+                                             <div className="flythrough-tab-panel">
+                                                 <FlythroughEffectsTab
+                                                     settings={flythroughSettings}
+                                                     state={flythroughState}
+                                                 />
                                              </div>
                                          </LGSScrollbars>
                                      </WaTabPanel>

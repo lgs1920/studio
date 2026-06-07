@@ -22,7 +22,7 @@ export const SETTING_EXCLUSIONS = [
         'app', 'scene', 'starter', 'coordinateSystem', 'unitSystem', 'poi.filter',
         'journey.activity',
         'ui.camera', 'ui.welcome', 'swatches.current',
-        'ui.flythrough', 'ui.menu', 'ui.poi.rotate', 'ui.poi.focusOnEdit', 'ui.journeyToolbar',
+        'ui.menu', 'ui.poi.rotate', 'ui.poi.focusOnEdit', 'ui.journeyToolbar',
         'ui.compass.mode', 'ui.video.fps', 'ui.video.quality', 'ui.video.ratio', 'ui.pwa',
         'widgets',
     ].sort((a, b) => {

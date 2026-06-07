@@ -14,7 +14,9 @@ The implementation is split into a small set of focused modules:
 ## Configuration model
 
 Flythrough settings are loaded from `public/settings.yaml` and normalized at runtime.
-The JavaScript defaults in `FlythroughProgressionStyle.js` are fallbacks only.
+Flythrough effect definitions are loaded from `public/flythrough.yaml`, which is the only source for the effects catalog.
+The JavaScript defaults in `FlythroughProgressionStyle.js` are normalization defaults for non-catalog settings only.
+Effect instances are stored on the current journey as `journey.flythrough.start` and `journey.flythrough.stop`.
 
 Example:
 
@@ -372,6 +374,7 @@ Relevant settings path:
 - `ui.flythrough.trace`
 - `ui.flythrough.marker`
 - `ui.flythrough.camera`
+- `ui.flythrough.effects.catalog`
 
 ### Remaining trace behavior
 
@@ -386,4 +389,5 @@ When it is `false`:
 - the remaining trace uses `trace.remaining.color` and `trace.remaining.opacity`;
 - the profile overlay uses the same custom flythrough color during flythrough playback.
 
-The JS constants in `FlythroughProgressionStyle.js` are fallbacks. They are used when the YAML value is missing or invalid.
+The JS constants in `FlythroughProgressionStyle.js` are used as normalization defaults when the YAML value is missing or invalid for progression/profile/trace/marker/camera settings.
+The flythrough effects catalog itself comes from `public/flythrough.yaml`.

@@ -16,8 +16,10 @@
 
 import { defaultFlythroughSettings } from '@Core/ui/flythrough/FlythroughProgressionStyle'
 
+const defaults = defaultFlythroughSettings()
+
 export const flythrough = {
-    ...defaultFlythroughSettings(),
+    ...defaults,
     active:        false,
     playing:       false,
     paused:        false,

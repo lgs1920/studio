@@ -1402,7 +1402,7 @@ wa-input[label-at-start] label, wa-number-input[label-at-start] label {
     width: auto;
 }
 
-wa-input[label-at-start].half-width::part(base), wa-number-input[label-at-start].half-width::part(base) {
+wa-input[label-at-start].half-width::part(base), wa-number-input[label-at-start].half-width::part(base), wa-select[label-at-start].half-width::part(base) {
     width: 50% !important;
     margin-left: auto !important; }
 

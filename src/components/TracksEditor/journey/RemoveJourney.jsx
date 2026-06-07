@@ -179,7 +179,13 @@ export const RemoveJourney = (props) => {
                      placement={placement}
                      distance={lgs.gutter.xs}
             >
-                <WaCard className="lgs--popup-in-drawer lgs--popup-in-drawer-small lgs-slide-down">
+                <WaCard className="lgs--popup-in-drawer lgs--popup-in-drawer-small lgs-slide-down" appearance="filled">
+                    <WaButton appearance="plain" slot="header-actions" onClick={hideRemoveDialog}>
+                        <WaIcon size="s" name="xmark" variant="regular"/>
+                    </WaButton>
+
+                    <span slot="header">{'Remove journey'}</span>
+
                     {'Are you sure to remove this journey ?'}
                     <div slot="footer">
                         <div className="lgs--popup-in-drawer-footer">

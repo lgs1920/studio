@@ -46,6 +46,7 @@ export const DESKTOP_MIN = 992
  */
 export const CONFIGURATION = 'config.yaml'
 export const SETTINGS = 'settings.yaml'
+export const FLYTHROUGH_SETTINGS = 'flythrough.yaml'
 export const LAYERS_TERRAINS_SETTINGS = 'layers-terrains.yaml'
 export const SHORTCUTS_CATALOG = 'shortcuts.yaml'
 export const COUNTRIES = 'countries.yaml'

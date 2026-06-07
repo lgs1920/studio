@@ -946,6 +946,7 @@ export const JourneyGroupsDrawer = memo(() => {
                                 >
                                     <WaCard
                                         className="lgs--popup-in-drawer lgs-slide-down journey-group-edit-popup"
+                                        appearance="filled"
                                     >
                                         <WaButton appearance="plain" slot="header-actions" onClick={closeEditPopup}>
                                             <WaIcon size="s" name="xmark" variant="regular"/>
@@ -994,7 +995,7 @@ export const JourneyGroupsDrawer = memo(() => {
                                     onRequestClose={closeCreatePopup}
                                     placement="bottom"
                                 >
-                                    <WaCard appearance="filled-outlined"
+                                    <WaCard appearance="filled"
                                         className="lgs--popup-in-drawer lgs-slide-down journey-group-create-popup">
                                         <WaButton appearance="plain" slot="header-actions"
                                                   onClick={closeCreatePopup}>

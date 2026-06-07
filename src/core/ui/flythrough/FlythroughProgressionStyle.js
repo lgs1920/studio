@@ -14,6 +14,11 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
+import {
+    defaultFlythroughEffects,
+    normalizeFlythroughEffects,
+} from './FlythroughEffects'
+
 export const FLYTHROUGH_PROGRESSION_FILL_MIN_WIDTH = 1
 export const FLYTHROUGH_PROGRESSION_FILL_MAX_WIDTH = 10
 export const FLYTHROUGH_PROGRESSION_BORDER_MIN_WIDTH = 0
@@ -121,6 +126,12 @@ export const defaultFlythroughSettings = () => ({
     trace:       defaultFlythroughTraceStyle(),
     marker:      defaultFlythroughMarkerStyle(),
     camera:      defaultFlythroughCameraStyle(),
+    effects:     (() => {
+        const effects = defaultFlythroughEffects()
+        return {
+            ...effects,
+        }
+    })(),
 })
 
 const finiteNumber = value => {
@@ -314,17 +325,21 @@ export const normalizeFlythroughCamera = (camera = {}) => ({
 
 export const normalizeFlythroughSettings = (settings = {}) => {
     const duration = finiteNumber(settings?.duration) ?? DEFAULT_FLYTHROUGH_DURATION
+    const effects = normalizeFlythroughEffects(settings?.effects)
 
     return {
         duration:    Math.max(1, duration),
-        direction:   1,
+        direction:   Number(settings?.direction) < 0 ? -1 : 1,
         loop:        settings?.loop === true,
-        scope:       DEFAULT_FLYTHROUGH_SCOPE,
+        scope:       typeof settings?.scope === 'string' && settings.scope.trim() !== ''
+                     ? settings.scope
+                     : DEFAULT_FLYTHROUGH_SCOPE,
         progression: normalizeFlythroughProgressionStyle(settings?.progression),
         profileInfo: normalizeFlythroughProfileInfo(settings?.profileInfo),
         trace:       normalizeFlythroughTrace(settings?.trace),
         marker:      normalizeFlythroughMarker(settings?.marker),
         camera:      normalizeFlythroughCamera(settings?.camera),
+        effects:     effects,
     }
 }
 

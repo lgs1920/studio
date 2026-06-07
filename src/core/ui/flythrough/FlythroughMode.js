@@ -31,6 +31,11 @@ import {
     getFlythroughSettings, normalizeFlythroughCamera,
     normalizeFlythroughMarker, normalizeFlythroughTrace,
 }                                                             from './FlythroughProgressionStyle'
+import {
+    FLYTHROUGH_EFFECT_SLOT_START,
+    FLYTHROUGH_EFFECT_SLOT_STOP,
+    normalizeFlythroughEffects,
+}                                                             from './FlythroughEffects'
 
 const DEFAULT_DURATION = 60
 const PROFILE_HOVER_RENDER_INTERVAL = 120
@@ -508,6 +513,7 @@ export class FlythroughMode {
     #journeyToolbarHidden = false
     #cameraBridgeBound = false
     #cameraLiveSyncFrame = null
+    #effectSequenceToken = 0
 
     constructor({
                     controller = new FlythroughPlaybackController(),
@@ -554,6 +560,7 @@ export class FlythroughMode {
         const trace = options.trace ?? flythrough.trace
         const marker = options.marker ?? flythrough.marker
         const camera = options.camera ?? flythrough.camera
+        const effects = options.effects ?? flythrough.effects
 
         this.#sampler = new FlythroughPathSampler({
             journey,
@@ -573,6 +580,7 @@ export class FlythroughMode {
             store.trace = normalizeFlythroughTrace(trace)
             store.marker = normalizeFlythroughMarker(marker)
             store.camera = normalizeFlythroughCamera(camera)
+            store.effects = normalizeFlythroughEffects(effects)
         }
 
         this.#controller.configure({
@@ -607,10 +615,38 @@ export class FlythroughMode {
                 console.debug('[FlythroughMode] Failed to seed camera from Cesium on start.', error)
             }
         }
-
-        return this.#controller.start({
+        const token = ++this.#effectSequenceToken
+        const startResult = this.#controller.start({
             progress: options.progress ?? 0,
         })
+        const startList = this.#effectListForSlot(FLYTHROUGH_EFFECT_SLOT_START)
+        if (startList.length > 0) {
+            this.#controller.pause()
+            this.#setContinuousRender(true)
+            this.#hideJourneyToolbarVisibility()
+            void (async () => {
+                try {
+                    if (startSample) {
+                        await this.#playFlythroughEffects(FLYTHROUGH_EFFECT_SLOT_START, {
+                            sample: startSample,
+                            token,
+                        })
+                    }
+
+                    if (token !== this.#effectSequenceToken) {
+                        return
+                    }
+
+                    this.#controller.resume()
+                }
+                catch (error) {
+                    console.error('[FlythroughMode] Failed to run flythrough start effects.', error)
+                    this.stop({emit: false})
+                }
+            })()
+        }
+
+        return startResult ?? startSample
     }
 
     pause = () => {
@@ -756,6 +792,7 @@ export class FlythroughMode {
     }
 
     stop = (options = {}) => {
+        this.#effectSequenceToken++
         this.#cancelActiveCameraFlight()
         this.#stopCameraLiveSyncLoop()
         const sample = this.#controller.stop({
@@ -777,6 +814,141 @@ export class FlythroughMode {
             this.#restoreCameraState()
         }
         return sample
+    }
+
+    #effectSettings = () => normalizeFlythroughEffects(globalThis.lgs?.stores?.flythrough?.effects ?? getFlythroughSettings()?.effects ?? {})
+
+    #effectListForSlot = (slot) => {
+        const effects = this.#effectSettings()
+        return slot === FLYTHROUGH_EFFECT_SLOT_STOP ? effects.stop : effects.start
+    }
+
+    #runEffectDelay = (durationSeconds = 0) => new Promise(resolve => {
+        const duration = Math.max(0, Number(durationSeconds) || 0)
+        if (duration === 0) {
+            resolve()
+            return
+        }
+        setTimeout(resolve, duration * 1000)
+    })
+
+    #cameraSettingsForEffect = (effect = {}) => {
+        const current = normalizeFlythroughCamera(globalThis.lgs?.stores?.flythrough?.camera ?? getFlythroughSettings().camera)
+        const params = effect?.params ?? {}
+        return normalizeFlythroughCamera({
+            ...current,
+            altitude: params.altitude ?? current.altitude,
+            pitch:    params.pitch ?? current.pitch,
+            hysteresis: {
+                ...(current.hysteresis ?? {}),
+            },
+        })
+    }
+
+    #targetSampleForEffect = (sample, effectId) => {
+        if (!sample) {
+            return null
+        }
+
+        if (effectId === 'landing') {
+            const groundHeight = this.#markerRenderHeightForSample(sample)
+            return {
+                ...sample,
+                altitude: groundHeight,
+            }
+        }
+
+        return sample
+    }
+
+    #cameraEffectFlight = async ({sample, effect, token}) => {
+        const viewer = globalThis.lgs?.viewer
+        if (!viewer?.camera || !sample) {
+            return
+        }
+
+        const effectCamera = this.#cameraSettingsForEffect(effect)
+        const target = this.#targetSampleForEffect(sample, effect.effectId)
+        const duration = Math.max(0, Number(effect?.params?.duration ?? effectCamera?.duration ?? 0))
+        if (!target) {
+            return
+        }
+
+        if (effect.effectId === 'launch') {
+            viewer.camera.setView?.({
+                destination: safeCartesianFromLonLat({
+                    longitude: target.longitude,
+                    latitude:  target.latitude,
+                    altitude:  finiteNumber(effectCamera.altitude) ?? 300,
+                }),
+            })
+        }
+
+        if (token !== this.#effectSequenceToken) {
+            return
+        }
+
+        this.#recenterCameraToSample({
+            sample:    target,
+            heading:    degreesToRadians(effectCamera.heading) ?? finiteNumber(globalThis.lgs?.viewer?.camera?.heading) ?? 0,
+            pitch:     degreesToRadians(effectCamera.pitch) ?? SAFE_TOP_DOWN_PITCH,
+            cameraSettings: effectCamera,
+            duration,
+        })
+
+        await this.#runEffectDelay(duration)
+    }
+
+    #runFlythroughEffect = async (effect, {sample, token} = {}) => {
+        if (!effect || token !== this.#effectSequenceToken) {
+            return
+        }
+
+        switch (effect.effectId) {
+            case 'launch':
+            case 'zoom-in':
+            case 'zoom-out':
+            case 'landing':
+                await this.#cameraEffectFlight({sample, effect, token})
+                return
+            case 'focus': {
+                const journey = globalThis.lgs?.theJourney
+                const duration = Math.max(0, Number(effect?.params?.duration ?? 0))
+                this.#setContinuousRender(true)
+                this.#hideJourneyToolbarVisibility()
+                if (typeof journey?.focus === 'function') {
+                    await Promise.resolve(journey.focus({
+                        resetCamera: true,
+                        rotate:      false,
+                        snapDistance: 25000,
+                    }))
+                }
+                else {
+                    await Promise.resolve(globalThis.__?.ui?.sceneManager?.focusOnJourney?.({
+                        journey,
+                        target:      journey,
+                        resetCamera: true,
+                        rotate:      false,
+                        snapDistance: 25000,
+                    }))
+                }
+                await this.#runEffectDelay(duration)
+                return
+            }
+            default:
+                return
+        }
+    }
+
+    #playFlythroughEffects = async (slot, {sample = null, token = this.#effectSequenceToken} = {}) => {
+        const effects = this.#effectListForSlot(slot)
+        for (const effect of effects) {
+            if (token !== this.#effectSequenceToken) {
+                return false
+            }
+            await this.#runFlythroughEffect(effect, {sample, token})
+        }
+        return token === this.#effectSequenceToken
     }
 
     #cancelActiveCameraFlight = () => {
@@ -925,6 +1097,7 @@ export class FlythroughMode {
 
     #abortPlaybackAfterListenerError = (error) => {
         console.error('[FlythroughMode] Playback listener failed. Flythrough stopped.', error)
+        this.#effectSequenceToken++
         this.#controller.stop({emit: false, clearProgress: false})
         this.#setContinuousRender(false)
         this.#renderer.clear()
@@ -1758,8 +1931,51 @@ export class FlythroughMode {
     }
 
     #updateToleranceZoneOverlay = hysteresis => {
-        void hysteresis
         this.#removeToleranceZoneOverlay()
+        const viewer = globalThis.lgs?.viewer
+        const container = viewer?.container ?? globalThis.document?.body ?? null
+        if (!viewer || !container || !hysteresis) {
+            return
+        }
+
+        const outerBounds = flythroughInsetBounds(
+            flythroughToleranceZoneBounds(hysteresis?.zone),
+            FLYTHROUGH_TOLERANCE_OUTER_INSET_RATIO,
+        )
+        const innerBounds = flythroughInsetBounds(outerBounds, FLYTHROUGH_TOLERANCE_INNER_INSET_RATIO)
+        const rect = this.#viewportRectForCesiumSurface()
+        if (!rect.width || !rect.height) {
+            return
+        }
+
+        const overlay = globalThis.document.createElement('div')
+        overlay.className = 'flythrough-tolerance-zone-overlay'
+        overlay.style.position = 'absolute'
+        overlay.style.pointerEvents = 'none'
+        overlay.style.left = `${outerBounds.left * rect.width}px`
+        overlay.style.top = `${outerBounds.top * rect.height}px`
+        overlay.style.width = `${(outerBounds.right - outerBounds.left) * rect.width}px`
+        overlay.style.height = `${(outerBounds.bottom - outerBounds.top) * rect.height}px`
+        overlay.style.background = 'rgba(255, 0, 0, 0.08)'
+
+        const outer = globalThis.document.createElement('div')
+        outer.className = 'flythrough-tolerance-zone-overlay-outer'
+        outer.style.position = 'absolute'
+        outer.style.inset = '0'
+        outer.style.border = '1px solid rgba(255, 255, 255, 0.7)'
+
+        const inner = globalThis.document.createElement('div')
+        inner.className = 'flythrough-tolerance-zone-overlay-inner'
+        inner.style.position = 'absolute'
+        inner.style.left = `${((innerBounds.left - outerBounds.left) / (outerBounds.right - outerBounds.left)) * 100}%`
+        inner.style.top = `${((innerBounds.top - outerBounds.top) / (outerBounds.bottom - outerBounds.top)) * 100}%`
+        inner.style.width = `${((innerBounds.right - innerBounds.left) / (outerBounds.right - outerBounds.left)) * 100}%`
+        inner.style.height = `${((innerBounds.bottom - innerBounds.top) / (outerBounds.bottom - outerBounds.top)) * 100}%`
+        inner.style.border = '1px dashed rgba(255, 255, 255, 0.45)'
+
+        overlay.append(outer, inner)
+        container.appendChild(overlay)
+        this.#toleranceZoneOverlay = overlay
     }
 
     #recenterCameraToSample = ({
@@ -2251,17 +2467,61 @@ export class FlythroughMode {
                 }
             }),
             this.#controller.on(FLYTHROUGH_EVENT_STOP, () => {
+                this.#effectSequenceToken++
                 this.#setContinuousRender(false)
                 this.#renderer.clear()
                 this.#restoreJourneyToolbarVisibility()
                 resetRuntimeProgress(flythroughStore())
             }),
-            this.#controller.on(FLYTHROUGH_EVENT_END, () => {
-                this.#setContinuousRender(false)
-                this.#renderer.clear()
-                this.#restoreJourneyToolbarVisibility()
-                resetRuntimeProgress(flythroughStore())
-                this.#focusJourneyAfterPlayback()
+            this.#controller.on(FLYTHROUGH_EVENT_END, detail => {
+                const token = this.#effectSequenceToken
+                const sample = detail.sample ?? currentFlythroughSample(this.#controller)
+                const stopList = this.#effectListForSlot(FLYTHROUGH_EFFECT_SLOT_STOP)
+                const finalize = () => {
+                    if (token !== this.#effectSequenceToken) {
+                        return
+                    }
+
+                    this.#setContinuousRender(false)
+                    this.#renderer.clear()
+                    this.#restoreJourneyToolbarVisibility()
+                    resetRuntimeProgress(flythroughStore())
+                    this.#focusJourneyAfterPlayback()
+                }
+
+                try {
+                    this.#renderer.update({
+                        ...detail,
+                        sampler: this.#sampler,
+                        forceGeometry: true,
+                        freezeDynamic:  true,
+                    })
+
+                    if (token !== this.#effectSequenceToken) {
+                        return
+                    }
+
+                    if (stopList.length === 0) {
+                        finalize()
+                        return
+                    }
+
+                    void (async () => {
+                        try {
+                            await this.#playFlythroughEffects(FLYTHROUGH_EFFECT_SLOT_STOP, {
+                                sample,
+                                token,
+                            })
+                            finalize()
+                        }
+                        catch (error) {
+                            this.#abortPlaybackAfterListenerError(error)
+                        }
+                    })()
+                }
+                catch (error) {
+                    this.#abortPlaybackAfterListenerError(error)
+                }
             }),
         )
     }

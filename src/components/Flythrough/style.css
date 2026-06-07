@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-05-31
- * Last modified: 2026-05-31
+ * Created on: 2026-06-07
+ * Last modified: 2026-06-07
  *
  *
  * Copyright © 2026 LGS1920
@@ -204,6 +204,226 @@
     min-width: 0;
 }
 
+.flythrough-effects-tab {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    min-width: 0;
+    gap: var(--wa-space-l, 1.25rem);
+}
+
+.flythrough-effects-section {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    min-width: 0;
+    gap: var(--wa-space-s, 0.75rem);
+}
+
+.flythrough-effects-section-header {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+}
+
+.flythrough-effects-section-header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    gap: var(--wa-space-s, 0.75rem);
+}
+
+.flythrough-effects-section-title {
+    font-size: 1rem;
+    font-weight: 600;
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.flythrough-effects-list {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    min-width: 0;
+    padding-left: 4px;
+    gap: var(--wa-space-s, 0.75rem);
+}
+
+.flythrough-effect-row-shell {
+    width: 100%;
+    min-width: 0;
+}
+
+.flythrough-effect-row:body {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    cursor: grab;
+    gap: var(--wa-space-s, 0.75rem);
+}
+
+.flythrough-effect-drag-handle {
+    display: flex;
+    align-items: center;
+    min-width: 1.6rem;
+    cursor: grab;
+    justify-items: center;
+}
+
+.flythrough-effect-content {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-width: 0;
+    gap: 0.35rem;
+}
+
+.flythrough-effect-title-row {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 0.6rem;
+}
+
+.flythrough-effect-title-row strong {
+    font-size: 0.95rem;
+}
+
+.flythrough-effect-title-row span,
+.flythrough-effect-content p {
+    opacity: 0.72;
+}
+
+.flythrough-effect-content p {
+    margin: 0;
+}
+
+.flythrough-effect-actions {
+    display: flex;
+    align-items: center;
+    flex: 0 0 auto;
+    justify-content: flex-end;
+    cursor: default;
+    gap: 0.5rem;
+}
+
+.flythrough-effect-row.widget-row-drag,
+.flythrough-effect-row.widget-row-chosen {
+    cursor: grabbing;
+}
+
+.flythrough-effects-popup-card {
+    overflow: hidden;
+    width: min(40rem, calc(100vw - 2rem));
+    max-width: calc(100vw - 2rem);
+    border-color: var(--wa-color-surface-border);
+    background-color: var(--wa-color-surface-lowered);
+    background-image: none;
+    --wa-form-control-background-color: color-mix(in oklab, var(--wa-color-surface-raised) 84%, var(--wa-color-surface-lowered) 16%);
+    --wa-form-control-border-color: color-mix(in oklab, var(--wa-color-surface-border) 70%, var(--wa-color-neutral-border-loud) 30%);
+}
+
+.flythrough-effects-popup-title {
+    display: inline-flex;
+    align-items: center;
+    margin: 0;
+    gap: 0.5rem;
+}
+
+.flythrough-effects-add-list,
+.flythrough-effects-editor {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    min-width: 0;
+    gap: var(--wa-space-s, 0.75rem);
+}
+
+.flythrough-effects-add-item-shell {
+    width: 100%;
+    min-width: 0;
+}
+
+.flythrough-effects-add-item {
+    justify-content: flex-start;
+    box-sizing: border-box;
+    width: 100%;
+    text-align: left;
+}
+
+.flythrough-effects-add-item-content {
+    display: flex;
+    align-items: flex-start;
+    flex-direction: column;
+    width: 100%;
+    min-width: 0;
+    gap: 0.15rem;
+}
+
+.flythrough-effects-add-item-content strong {
+    font-size: 0.95rem;
+}
+
+.flythrough-effects-add-item-content span {
+    opacity: 0.72;
+}
+
+.flythrough-effects-editor-header {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.flythrough-effects-editor-header h4 {
+    font-size: 1.05rem;
+    margin: 0;
+}
+
+.flythrough-effects-editor-header p {
+    margin: 0;
+    opacity: 0.72;
+}
+
+.flythrough-effects-editor-fields {
+    display: flex;
+    align-items: stretch;
+    flex-direction: column;
+    width: 100%;
+    min-width: 0;
+    gap: var(--wa-space-s, 0.75rem);
+}
+
+.flythrough-effects-editor-field {
+    display: flex;
+    flex: 1 1 auto;
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+}
+
+.flythrough-effects-field-control {
+    flex: 1 1 auto;
+    width: auto;
+}
+
+wa-number-input.flythrough-effects-field-control::part(base),
+wa-select.flythrough-effects-field-control::part(base),
+wa-select[label-at-start].half-width::part(base) {
+    width: 100%;
+}
+
+.flythrough-effects-add-item[data-disabled] {
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.flythrough-effects-add-item[data-disabled]:hover {
+    transform: none;
+}
+
 @media (max-width: 640px) {
     .flythrough-color-control,
     .flythrough-style-field-grid,
@@ -218,6 +438,26 @@
     .flythrough-color-control {
         align-items: stretch;
         display: grid;
+    }
+
+    .flythrough-effects-section-header,
+    .flythrough-effect-title-row,
+    .flythrough-effect-actions {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .flythrough-effect-row {
+        align-items: stretch;
+        flex-wrap: wrap;
+    }
+
+    .flythrough-effect-actions {
+        justify-content: flex-start;
+    }
+
+    .flythrough-effects-editor-field {
+        flex-basis: auto;
     }
 }
 
