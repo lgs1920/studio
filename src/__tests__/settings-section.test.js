@@ -176,10 +176,58 @@ describe('SettingsSection', () => {
         expect(merged.flythrough.progression.fill.color).toBe('#123456')
         expect(merged.flythrough.progression.fill.opacity).toBe(0.4)
         expect(merged.flythrough.progression.fill.width).toBe(7)
-        expect(merged.flythrough.progression.fill.profileMarker).toBe(8)
-        expect(merged.flythrough.progression.border.profileMarker).toBe(2)
-        expect(merged.flythrough.profileInfo.color).toBe('#ffffff')
-        expect(merged.flythrough.profileInfo.useTrackStyle).toBe(false)
+        expect(merged.flythrough.progression.fill.profileMarker).toBeUndefined()
+        expect(merged.flythrough.progression.border?.profileMarker).toBeUndefined()
+        expect(merged.flythrough.profileInfo).toBeUndefined()
+    })
+
+    it('keeps flythrough excluded but still syncs its effects subtree', () => {
+        const section = new SettingsSection('ui')
+        const merged = section.update(
+            {
+                flythrough: {
+                    camera: {
+                        altitude: 900,
+                    },
+                    effects: {
+                        catalog: {
+                            launch: {
+                                label: 'Custom launch',
+                            },
+                        },
+                    },
+                },
+            },
+            {
+                flythrough: {
+                    camera: {
+                        altitude: 1200,
+                        pitch:    -65,
+                    },
+                    effects: {
+                        catalog: {
+                            launch: {
+                                label: 'Launch',
+                                slots: ['start'],
+                            },
+                            landing: {
+                                label: 'Landing',
+                                slots: ['stop'],
+                            },
+                        },
+                    },
+                },
+            },
+        )
+
+        expect(merged.flythrough.camera.altitude).toBe(900)
+        expect(merged.flythrough.camera.pitch).toBeUndefined()
+        expect(merged.flythrough.effects.catalog.launch.label).toBe('Launch')
+        expect(merged.flythrough.effects.catalog.launch.slots).toEqual(['start'])
+        expect(merged.flythrough.effects.catalog.landing).toEqual({
+            label: 'Landing',
+            slots: ['stop'],
+        })
     })
 
     it('persists profile UI settings changes', async () => {
