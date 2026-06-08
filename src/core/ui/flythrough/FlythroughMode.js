@@ -55,6 +55,7 @@ const FLYTHROUGH_TOLERANCE_OUTER_INSET_RATIO = 0.05
 const FLYTHROUGH_TOLERANCE_INNER_INSET_RATIO = 0.2
 const FLYTHROUGH_TOLERANCE_RECENTER_REPLACE_DELAY_MS = 300
 export const FLYTHROUGH_JOURNEY_TOOLBAR_VISIBILITY_EVENT = 'lgs:flythrough:journey-toolbar-visibility'
+export const FLYTHROUGH_EVENT_STOP_EFFECTS_COMPLETE = 'flythrough/stop-effects-complete'
 
 const finiteNumber = value => {
     const number = Number(value)
@@ -119,6 +120,45 @@ export const flythroughHeadingEasingFactor = ({
         minFactor,
         maxFactor,
     )
+}
+
+export const flythroughCameraRecenterDuration = (easing = 0.18) => {
+    const safeEasing = clamp(finiteNumber(easing) ?? 0.18, 0.02, 0.5)
+    return Math.max(0.5, 0.95 + (1.6 * safeEasing))
+}
+
+export const flythroughTargetSampleForEffect = async ({
+                                                          sample,
+                                                          effectId,
+                                                          journey = globalThis.lgs?.theJourney ?? null,
+                                                          sceneManager = globalThis.__?.ui?.sceneManager ?? null,
+                                                          markerHeightForSample = () => 0,
+                                                      } = {}) => {
+    if (!sample) {
+        return null
+    }
+
+    if (effectId === 'landing') {
+        const groundHeight = markerHeightForSample(sample)
+        return {
+            ...sample,
+            altitude: groundHeight,
+        }
+    }
+
+    if (effectId === 'zoom-in' || effectId === 'zoom-out') {
+        const centroid = await sceneManager?.getJourneyCentroid?.(journey)
+        if (centroid) {
+            return {
+                ...sample,
+                longitude: centroid.longitude,
+                latitude:  centroid.latitude,
+                altitude:  finiteNumber(centroid.height ?? centroid.altitude) ?? sample.altitude,
+            }
+        }
+    }
+
+    return sample
 }
 
 export const flythroughCameraRangeFromPitch = (altitude, pitchRadians) => {
@@ -511,6 +551,8 @@ export class FlythroughMode {
     #toleranceZoneOverlay = null
     #journeyToolbarWasVisible = null
     #journeyToolbarHidden = false
+    #hiddenJourneyVisibility = new Map()
+    #deferStartCameraRecenter = false
     #cameraBridgeBound = false
     #cameraLiveSyncFrame = null
     #effectSequenceToken = 0
@@ -606,7 +648,13 @@ export class FlythroughMode {
 
         void globalThis.__?.ui?.cameraManager?.stopRotate?.()
         this.#captureCameraState()
+        this.#restoreOtherJourneysVisibility()
+        if (getFlythroughSettings().hideOtherJourneys === true) {
+            this.#hideOtherJourneysVisibility()
+        }
         const startSample = sampler.atProgress?.(options.progress ?? 0)
+        const startList = this.#effectListForSlot(FLYTHROUGH_EFFECT_SLOT_START)
+        this.#deferStartCameraRecenter = startList.length > 0
         if (startSample) {
             try {
                 this.syncCameraFromCesiumControls({sample: startSample})
@@ -619,7 +667,6 @@ export class FlythroughMode {
         const startResult = this.#controller.start({
             progress: options.progress ?? 0,
         })
-        const startList = this.#effectListForSlot(FLYTHROUGH_EFFECT_SLOT_START)
         if (startList.length > 0) {
             this.#controller.pause()
             this.#setContinuousRender(true)
@@ -637,13 +684,18 @@ export class FlythroughMode {
                         return
                     }
 
+                    this.#deferStartCameraRecenter = false
                     this.#controller.resume()
                 }
                 catch (error) {
                     console.error('[FlythroughMode] Failed to run flythrough start effects.', error)
+                    this.#deferStartCameraRecenter = false
                     this.stop({emit: false})
                 }
             })()
+        }
+        else {
+            this.#deferStartCameraRecenter = false
         }
 
         return startResult ?? startSample
@@ -667,6 +719,72 @@ export class FlythroughMode {
 
     setVideoSafeMode = (enabled = true) => {
         return this.#controller.setVideoSafeMode?.(enabled) ?? null
+    }
+
+    #hideOtherJourneysVisibility = () => {
+        const currentJourneySlug = globalThis.lgs?.theJourney?.slug ?? null
+        const journeys = globalThis.lgs?.journeys
+        if (!journeys?.values) {
+            return
+        }
+
+        for (const journey of journeys.values()) {
+            if (!journey || journey.slug === currentJourneySlug) {
+                continue
+            }
+
+            if (!this.#hiddenJourneyVisibility.has(journey.slug)) {
+                this.#hiddenJourneyVisibility.set(journey.slug, journey.visible !== false)
+            }
+
+            journey.visible = false
+            journey.updateVisibility?.(false)
+        }
+
+        globalThis.lgs?.scene?.requestRender?.()
+    }
+
+    #restoreOtherJourneysVisibility = () => {
+        if (this.#hiddenJourneyVisibility.size === 0) {
+            return
+        }
+
+        for (const [slug, visible] of this.#hiddenJourneyVisibility.entries()) {
+            const journey = globalThis.lgs?.journeys?.get?.(slug)
+            if (!journey) {
+                continue
+            }
+
+            journey.visible = visible
+            journey.updateVisibility?.(visible)
+        }
+
+        this.#hiddenJourneyVisibility.clear()
+        globalThis.lgs?.scene?.requestRender?.()
+    }
+
+    setHideOtherJourneys = (enabled = true) => {
+        const nextEnabled = enabled === true
+        const flythroughSettings = globalThis.lgs?.settings?.ui?.flythrough
+        if (flythroughSettings) {
+            flythroughSettings.hideOtherJourneys = nextEnabled
+        }
+
+        const store = flythroughStore()
+        if (store) {
+            store.hideOtherJourneys = nextEnabled
+        }
+
+        if (nextEnabled) {
+            if (this.#controller.running || this.#controller.playing || this.#controller.paused) {
+                this.#hideOtherJourneysVisibility()
+            }
+        }
+        else {
+            this.#restoreOtherJourneysVisibility()
+        }
+
+        return nextEnabled
     }
 
     toggle = () => {
@@ -800,6 +918,7 @@ export class FlythroughMode {
             clearProgress: options.clearProgress ?? true,
         })
         this.#renderer.clear()
+        this.#restoreOtherJourneysVisibility()
         this.#setContinuousRender(false)
         this.#removeToleranceZoneOverlay()
         this.#resetCameraController({preserveSavedCameraState: true})
@@ -845,21 +964,13 @@ export class FlythroughMode {
         })
     }
 
-    #targetSampleForEffect = (sample, effectId) => {
-        if (!sample) {
-            return null
-        }
-
-        if (effectId === 'landing') {
-            const groundHeight = this.#markerRenderHeightForSample(sample)
-            return {
-                ...sample,
-                altitude: groundHeight,
-            }
-        }
-
-        return sample
-    }
+    #targetSampleForEffect = (sample, effectId) => flythroughTargetSampleForEffect({
+        sample,
+        effectId,
+        journey:               globalThis.lgs?.theJourney ?? null,
+        sceneManager:          globalThis.__?.ui?.sceneManager ?? null,
+        markerHeightForSample: this.#markerRenderHeightForSample,
+    })
 
     #cameraEffectFlight = async ({sample, effect, token}) => {
         const viewer = globalThis.lgs?.viewer
@@ -868,7 +979,7 @@ export class FlythroughMode {
         }
 
         const effectCamera = this.#cameraSettingsForEffect(effect)
-        const target = this.#targetSampleForEffect(sample, effect.effectId)
+        const target = await this.#targetSampleForEffect(sample, effect.effectId)
         const duration = Math.max(0, Number(effect?.params?.duration ?? effectCamera?.duration ?? 0))
         if (!target) {
             return
@@ -888,11 +999,26 @@ export class FlythroughMode {
             return
         }
 
+        const landingFlight = effect.effectId === 'landing'
+        const currentCamera = globalThis.lgs?.viewer?.camera
+        const landingHeading = finiteNumber(currentCamera?.heading) ?? degreesToRadians(effectCamera.heading) ?? 0
+        const landingPitch = finiteNumber(currentCamera?.pitch) ?? degreesToRadians(effectCamera.pitch) ?? SAFE_TOP_DOWN_PITCH
+        if (landingFlight) {
+            await globalThis.__?.ui?.cameraManager?.stopRotate?.()
+        }
         this.#recenterCameraToSample({
-            sample:    target,
-            heading:    degreesToRadians(effectCamera.heading) ?? finiteNumber(globalThis.lgs?.viewer?.camera?.heading) ?? 0,
-            pitch:     degreesToRadians(effectCamera.pitch) ?? SAFE_TOP_DOWN_PITCH,
+            sample:         target,
+            heading:        landingFlight
+                            ? landingHeading
+                            : degreesToRadians(effectCamera.heading) ?? finiteNumber(currentCamera?.heading) ?? 0,
+            pitch:          landingFlight
+                            ? landingPitch
+                            : degreesToRadians(effectCamera.pitch) ?? SAFE_TOP_DOWN_PITCH,
             cameraSettings: effectCamera,
+            cameraHeight:   landingFlight
+                            ? this.#markerRenderHeightForSample(target)
+                            : finiteNumber(effectCamera.altitude) ?? null,
+            instant:        landingFlight,
             duration,
         })
 
@@ -914,12 +1040,14 @@ export class FlythroughMode {
             case 'focus': {
                 const journey = globalThis.lgs?.theJourney
                 const duration = Math.max(0, Number(effect?.params?.duration ?? 0))
+                const rpm = Number.isFinite(Number(effect?.params?.rpm)) ? Number(effect.params.rpm) : undefined
                 this.#setContinuousRender(true)
                 this.#hideJourneyToolbarVisibility()
                 if (typeof journey?.focus === 'function') {
                     await Promise.resolve(journey.focus({
                         resetCamera: true,
-                        rotate:      false,
+                        rotate:      true,
+                        rpm,
                         snapDistance: 25000,
                     }))
                 }
@@ -928,7 +1056,8 @@ export class FlythroughMode {
                         journey,
                         target:      journey,
                         resetCamera: true,
-                        rotate:      false,
+                        rotate:      true,
+                        rpm,
                         snapDistance: 25000,
                     }))
                 }
@@ -1101,6 +1230,8 @@ export class FlythroughMode {
         this.#controller.stop({emit: false, clearProgress: false})
         this.#setContinuousRender(false)
         this.#renderer.clear()
+        this.#restoreOtherJourneysVisibility()
+        this.#deferStartCameraRecenter = false
         this.#resetCameraController({preserveSavedCameraState: true})
         this.#restoreJourneyToolbarVisibility()
         this.#restoreCameraState()
@@ -1865,8 +1996,8 @@ export class FlythroughMode {
         previousHeading: this.#lastCameraHeading,
         nextHeading:     targetHeading,
         easing:          cameraSettings?.hysteresis?.easing,
-        minFactor:       cameraSettings?.positionMode === FLYTHROUGH_CAMERA_POSITION_SYSTEM ? 0.04 : 0.05,
-        maxFactor:       cameraSettings?.positionMode === FLYTHROUGH_CAMERA_POSITION_SYSTEM ? 0.18 : 0.22,
+        minFactor:       0.04,
+        maxFactor:       0.18,
     })
 
     #removeToleranceZoneOverlay = () => {
@@ -1983,6 +2114,8 @@ export class FlythroughMode {
                                    heading,
                                    pitch,
                                    cameraSettings,
+                                   cameraHeight = null,
+                                   instant = false,
                                    duration = 1.0,
                                }) => {
         const viewer = globalThis.lgs?.viewer
@@ -2002,10 +2135,12 @@ export class FlythroughMode {
 
         const safeHeading = sanitizeOrientationRadians(heading, 0)
         const safePitch = sanitizeOrientationRadians(pitch, SAFE_TOP_DOWN_PITCH)
-        const currentHeight = flythroughCameraRecenterHeight(
-            viewer.camera?.positionCartographic?.height,
-            this.#cameraAltitudeForSample(sample, cameraSettings),
-        )
+        const currentHeight = cameraHeight !== null && cameraHeight !== undefined
+                              ? Math.max(targetHeight, finiteNumber(cameraHeight) ?? targetHeight)
+                              : flythroughCameraRecenterHeight(
+                viewer.camera?.positionCartographic?.height,
+                this.#cameraAltitudeForSample(sample, cameraSettings),
+            )
         const horizontalDistance = flythroughCameraRecenterHorizontalDistance({
                                                                                   cameraHeight: currentHeight,
                                                                                   targetHeight,
@@ -2050,7 +2185,7 @@ export class FlythroughMode {
         this.#cameraFlightActive = true
         this.#cameraAutoTrackingIgnoreUntil = this.#now() + Math.max(180, duration * 1000 + 180)
         this.#rememberCameraView({anchor: sample, heading: safeHeading, pitch: safePitch})
-        if (duration <= 0 || typeof viewer.camera.flyTo !== 'function') {
+        if (instant || duration <= 0 || typeof viewer.camera.flyTo !== 'function') {
             viewer.camera.setView?.({
                                         destination,
                                         orientation: {
@@ -2329,7 +2464,7 @@ export class FlythroughMode {
             heading,
             this.#headingEasingFactor(cameraSettings, heading),
         )
-        const smoothPitch = this.#smoothRadians(this.#lastCameraPitch, pitch, 0.1)
+        const smoothPitch = this.#smoothRadians(this.#lastCameraPitch, pitch, 0.08)
         const anchorSample = this.#markerPositionForSample(sample, markerSettings)
 
         if (this.#cameraMode !== marker.mode) {
@@ -2392,7 +2527,7 @@ export class FlythroughMode {
                     cameraSettings,
                     duration: immediateToleranceRecenter
                               ? 0
-                              : Math.max(0.25, 1.2 * (1 - cameraSettings.hysteresis.easing)),
+                              : flythroughCameraRecenterDuration(cameraSettings.hysteresis.easing),
                 })
                 this.#lastToleranceRecenterProgress = currentProgress
                 this.#lastToleranceRecenterAt = now
@@ -2425,11 +2560,13 @@ export class FlythroughMode {
                     }
 
                     this.#renderer.update({...detail, forceGeometry: true})
-                    this.#updateCamera({
-                                           ...detail,
-                                           forceToleranceRecenter:     true,
-                                           immediateToleranceRecenter: true,
-                                       })
+                    if (!this.#deferStartCameraRecenter) {
+                        this.#updateCamera({
+                                               ...detail,
+                                               forceToleranceRecenter:     true,
+                                               immediateToleranceRecenter: true,
+                                           })
+                    }
                 }
                 catch (error) {
                     this.#abortPlaybackAfterListenerError(error)
@@ -2470,13 +2607,25 @@ export class FlythroughMode {
                 this.#effectSequenceToken++
                 this.#setContinuousRender(false)
                 this.#renderer.clear()
+                this.#restoreOtherJourneysVisibility()
+                this.#deferStartCameraRecenter = false
                 this.#restoreJourneyToolbarVisibility()
                 resetRuntimeProgress(flythroughStore())
             }),
             this.#controller.on(FLYTHROUGH_EVENT_END, detail => {
                 const token = this.#effectSequenceToken
-                const sample = detail.sample ?? currentFlythroughSample(this.#controller)
+                const sample = detail.sampler?.atProgress?.(1)
+                              ?? detail.sample
+                              ?? currentFlythroughSample(this.#controller)
                 const stopList = this.#effectListForSlot(FLYTHROUGH_EFFECT_SLOT_STOP)
+                const notifyStopEffectsComplete = () => {
+                    globalThis.window?.dispatchEvent?.(new CustomEvent(FLYTHROUGH_EVENT_STOP_EFFECTS_COMPLETE, {
+                        detail: {
+                            sample,
+                            progress: detail.progress ?? null,
+                        },
+                    }))
+                }
                 const finalize = () => {
                     if (token !== this.#effectSequenceToken) {
                         return
@@ -2484,6 +2633,8 @@ export class FlythroughMode {
 
                     this.#setContinuousRender(false)
                     this.#renderer.clear()
+                    this.#restoreOtherJourneysVisibility()
+                    this.#deferStartCameraRecenter = false
                     this.#restoreJourneyToolbarVisibility()
                     resetRuntimeProgress(flythroughStore())
                     this.#focusJourneyAfterPlayback()
@@ -2502,6 +2653,7 @@ export class FlythroughMode {
                     }
 
                     if (stopList.length === 0) {
+                        notifyStopEffectsComplete()
                         finalize()
                         return
                     }
@@ -2512,6 +2664,7 @@ export class FlythroughMode {
                                 sample,
                                 token,
                             })
+                            notifyStopEffectsComplete()
                             finalize()
                         }
                         catch (error) {

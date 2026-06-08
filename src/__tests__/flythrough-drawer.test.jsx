@@ -16,7 +16,10 @@
 
 import { cleanup, fireEvent, render, waitFor }             from '@testing-library/react'
 import { FLYTHROUGH_DRAWER }                               from '@Core/constants'
-import { defaultFlythroughSettings, FLYTHROUGH_MARKER_MODE_NAVIGATION } from '@Core/ui/flythrough/FlythroughProgressionStyle'
+import {
+    defaultFlythroughSettings, FLYTHROUGH_CAMERA_PRESET_ULTRA_SMOOTH, FLYTHROUGH_MARKER_MODE_HYSTERESIS,
+    FLYTHROUGH_MARKER_MODE_NAVIGATION,
+} from '@Core/ui/flythrough/FlythroughProgressionStyle'
 import { FlythroughDrawer }                                from '@Components/Flythrough/FlythroughDrawer'
 import { ELEVATION_UNITS, UnitUtils }                      from '@Utils/UnitUtils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -67,7 +70,12 @@ vi.mock('@web.awesome.me/webawesome-pro/dist/react', () => ({
             <input aria-label={label} value={value} onInput={onInput} {...props}/>
         </label>
     ),
-    WaSwitch: ({children}) => <label>{children}</label>,
+    WaSwitch: ({children, checked, onChange, ...props}) => (
+        <label>
+            <input type="checkbox" checked={checked} onChange={onChange} {...props}/>
+            {children}
+        </label>
+    ),
     WaTab: ({children}) => <button type="button">{children}</button>,
     WaTabGroup: ({children}) => <div>{children}</div>,
     WaTabPanel: ({children}) => <div>{children}</div>,
@@ -141,6 +149,7 @@ describe('FlythroughDrawer', () => {
                     refresh:       vi.fn(),
                     refreshCamera: vi.fn(),
                     stop:          vi.fn(),
+                    setHideOtherJourneys: vi.fn(),
                 },
             },
         }
@@ -202,6 +211,38 @@ describe('FlythroughDrawer', () => {
         await waitFor(() => {
             expect(globalThis.lgs.settings.ui.flythrough.camera.altitude).toBeCloseTo(1000, 1)
             expect(globalThis.lgs.stores.flythrough.camera.altitude).toBeCloseTo(1000, 1)
+        })
+    })
+
+    it('applies the ultra smooth camera preset from the drawer', async () => {
+        globalThis.lgs.stores.flythrough.marker.mode = FLYTHROUGH_MARKER_MODE_HYSTERESIS
+        globalThis.lgs.settings.ui.flythrough.marker.mode = FLYTHROUGH_MARKER_MODE_HYSTERESIS
+
+        const view = render(<FlythroughDrawer/>)
+        const presetSelect = view.getByLabelText('Camera feel')
+
+        fireEvent.change(presetSelect, {target: {value: FLYTHROUGH_CAMERA_PRESET_ULTRA_SMOOTH}})
+
+        await waitFor(() => {
+            expect(globalThis.lgs.settings.ui.flythrough.camera.hysteresis.marginRatio).toBeCloseTo(0.2, 6)
+            expect(globalThis.lgs.settings.ui.flythrough.camera.hysteresis.easing).toBeCloseTo(0.3, 6)
+            expect(globalThis.lgs.stores.flythrough.camera.hysteresis.marginRatio).toBeCloseTo(0.2, 6)
+            expect(globalThis.lgs.stores.flythrough.camera.hysteresis.easing).toBeCloseTo(0.3, 6)
+        })
+    })
+
+    it('toggles hiding other journeys from the drawer', async () => {
+        const view = render(<FlythroughDrawer/>)
+        const hideOtherJourneysSwitch = view.getByLabelText('Hide other journeys')
+
+        expect(hideOtherJourneysSwitch.checked).toBe(false)
+
+        fireEvent.click(hideOtherJourneysSwitch)
+
+        await waitFor(() => {
+            expect(globalThis.lgs.settings.ui.flythrough.hideOtherJourneys).toBe(true)
+            expect(globalThis.lgs.stores.flythrough.hideOtherJourneys).toBe(true)
+            expect(__.ui.flythrough.setHideOtherJourneys).toHaveBeenCalledWith(true)
         })
     })
 })

@@ -40,6 +40,9 @@ export const FLYTHROUGH_CAMERA_ALTITUDE_GROUND_OFFSET = 'ground-offset'
 export const FLYTHROUGH_CAMERA_POSITION_BEHIND = 'behind'
 export const FLYTHROUGH_CAMERA_POSITION_AHEAD = 'ahead'
 export const FLYTHROUGH_CAMERA_POSITION_SYSTEM = 'system'
+export const FLYTHROUGH_CAMERA_PRESET_CUSTOM = 'custom'
+export const FLYTHROUGH_CAMERA_PRESET_DEFAULT = 'default'
+export const FLYTHROUGH_CAMERA_PRESET_ULTRA_SMOOTH = 'ultra-smooth'
 export const FLYTHROUGH_HYSTERESIS_MARGIN_RATIO_MIN = 0.05
 export const FLYTHROUGH_HYSTERESIS_MARGIN_RATIO_MAX = 0.45
 export const FLYTHROUGH_HYSTERESIS_EASING_MIN = 0.02
@@ -91,15 +94,28 @@ export const DEFAULT_FLYTHROUGH_CAMERA = {
     pitch:         -65,
     heading:       0,
     hysteresis:    {
-        marginRatio: 0.1,
+        marginRatio: 0.12,
         zone:        {
             top:    0,
             left:   0,
             width:  1,
             height: 1,
         },
-        easing:        0.14,
+        easing:        0.18,
         stopThreshold: 0.00001,
+    },
+}
+
+const FLYTHROUGH_CAMERA_PRESET_HYSTERESIS = {
+    [FLYTHROUGH_CAMERA_PRESET_DEFAULT]: {
+        marginRatio:   DEFAULT_FLYTHROUGH_CAMERA.hysteresis.marginRatio,
+        easing:        DEFAULT_FLYTHROUGH_CAMERA.hysteresis.easing,
+        stopThreshold: DEFAULT_FLYTHROUGH_CAMERA.hysteresis.stopThreshold,
+    },
+    [FLYTHROUGH_CAMERA_PRESET_ULTRA_SMOOTH]: {
+        marginRatio:   0.2,
+        easing:        0.3,
+        stopThreshold: 0.000005,
     },
 }
 
@@ -116,11 +132,29 @@ export const defaultFlythroughTraceStyle = () => ({
 export const defaultFlythroughMarkerStyle = () => ({...DEFAULT_FLYTHROUGH_MARKER})
 export const defaultFlythroughCameraStyle = () => ({...DEFAULT_FLYTHROUGH_CAMERA})
 
+export const FLYTHROUGH_CAMERA_PRESETS = Object.freeze([
+    {
+        key:    FLYTHROUGH_CAMERA_PRESET_DEFAULT,
+        label:  'Default',
+        camera: {
+            hysteresis: {...FLYTHROUGH_CAMERA_PRESET_HYSTERESIS[FLYTHROUGH_CAMERA_PRESET_DEFAULT]},
+        },
+    },
+    {
+        key:    FLYTHROUGH_CAMERA_PRESET_ULTRA_SMOOTH,
+        label:  'Ultra smooth',
+        camera: {
+            hysteresis: {...FLYTHROUGH_CAMERA_PRESET_HYSTERESIS[FLYTHROUGH_CAMERA_PRESET_ULTRA_SMOOTH]},
+        },
+    },
+])
+
 export const defaultFlythroughSettings = () => ({
     duration:    DEFAULT_FLYTHROUGH_DURATION,
     direction:   1,
     loop:        false,
     scope:       DEFAULT_FLYTHROUGH_SCOPE,
+    hideOtherJourneys: false,
     progression: defaultFlythroughProgressionStyle(),
     profileInfo: defaultFlythroughProfileInfoStyle(),
     trace:       defaultFlythroughTraceStyle(),
@@ -334,6 +368,7 @@ export const normalizeFlythroughSettings = (settings = {}) => {
         scope:       typeof settings?.scope === 'string' && settings.scope.trim() !== ''
                      ? settings.scope
                      : DEFAULT_FLYTHROUGH_SCOPE,
+        hideOtherJourneys: settings?.hideOtherJourneys === true,
         progression: normalizeFlythroughProgressionStyle(settings?.progression),
         profileInfo: normalizeFlythroughProfileInfo(settings?.profileInfo),
         trace:       normalizeFlythroughTrace(settings?.trace),
@@ -341,6 +376,27 @@ export const normalizeFlythroughSettings = (settings = {}) => {
         camera:      normalizeFlythroughCamera(settings?.camera),
         effects:     effects,
     }
+}
+
+const cameraPresetKeyFromHysteresis = hysteresis => FLYTHROUGH_CAMERA_PRESETS.find(preset => {
+    const presetHysteresis = preset.camera?.hysteresis ?? {}
+    return presetHysteresis.marginRatio === hysteresis?.marginRatio
+        && presetHysteresis.easing === hysteresis?.easing
+        && presetHysteresis.stopThreshold === hysteresis?.stopThreshold
+})?.key ?? FLYTHROUGH_CAMERA_PRESET_CUSTOM
+
+export const getFlythroughCameraPresetKey = (camera = {}) => {
+    const normalized = normalizeFlythroughCamera(camera)
+    return cameraPresetKeyFromHysteresis(normalized.hysteresis)
+}
+
+export const getFlythroughCameraPresetUpdates = presetKey => {
+    const preset = FLYTHROUGH_CAMERA_PRESETS.find(item => item.key === presetKey)
+    return preset ? {
+        hysteresis: {
+            ...preset.camera.hysteresis,
+        },
+    } : null
 }
 
 export const getFlythroughSettings = () => normalizeFlythroughSettings(

@@ -3,6 +3,7 @@ flythrough:
   direction: 1
   loop: false
   scope: all-tracks
+  hideOtherJourneys: false
   progression:
     fill:
       color: '#ff6a00'
@@ -33,8 +34,8 @@ flythrough:
     pitch: -65
     heading: 0
     hysteresis:
-      marginRatio: 0.2
-      easing: 0.14
+      marginRatio: 0.12
+      easing: 0.18
       stopThreshold: 0.00001
   effects:
     catalog:

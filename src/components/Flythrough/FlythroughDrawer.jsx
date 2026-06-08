@@ -32,10 +32,11 @@ import {
     FLYTHROUGH_PROFILE_MARKER_FILL_MIN_SIZE, FLYTHROUGH_PROGRESSION_BORDER_MAX_WIDTH,
     FLYTHROUGH_PROGRESSION_BORDER_MIN_WIDTH, FLYTHROUGH_PROGRESSION_FILL_MAX_WIDTH,
     FLYTHROUGH_PROGRESSION_FILL_MIN_WIDTH, FLYTHROUGH_TRACE_MODE_FULL, FLYTHROUGH_TRACE_MODE_PROGRESSIVE,
+    FLYTHROUGH_CAMERA_PRESET_CUSTOM, FLYTHROUGH_CAMERA_PRESETS,
     FLYTHROUGH_HYSTERESIS_EASING_MAX, FLYTHROUGH_HYSTERESIS_EASING_MIN,
     FLYTHROUGH_HYSTERESIS_MARGIN_RATIO_MAX, FLYTHROUGH_HYSTERESIS_MARGIN_RATIO_MIN,
     FLYTHROUGH_HYSTERESIS_STOP_THRESHOLD_MAX, FLYTHROUGH_HYSTERESIS_STOP_THRESHOLD_MIN,
-    normalizeFlythroughCamera, normalizeFlythroughMarker, normalizeFlythroughProfileInfo,
+    getFlythroughCameraPresetKey, getFlythroughCameraPresetUpdates, normalizeFlythroughCamera, normalizeFlythroughMarker, normalizeFlythroughProfileInfo,
     normalizeFlythroughProgressionStyle, normalizeFlythroughTrace,
 }                 from '@Core/ui/flythrough/FlythroughProgressionStyle'
 import { normalizeFlythroughEffects } from '@Core/ui/flythrough/FlythroughEffects'
@@ -251,7 +252,9 @@ export const FlythroughDrawer = memo(() => {
     const remainingUseDefinedTrackStyle = trace.remaining.useDefinedTrackStyle !== false
     const remainingColor = toOpaqueColorValue(trace.remaining.color)
     const camera = normalizeFlythroughCamera(flythroughSettings.camera)
+    const cameraPresetKey = getFlythroughCameraPresetKey(camera)
     const marker = normalizeFlythroughMarker(flythroughSettings.marker)
+    const hideOtherJourneys = flythroughSettings.hideOtherJourneys === true
     const durationLocked = flythroughState.active || flythroughState.playing || flythroughState.paused
     const syncWithVideo = flythroughState.recordingSync === true
 
@@ -275,6 +278,7 @@ export const FlythroughDrawer = memo(() => {
         flythroughRuntime.marker = normalizeFlythroughMarker(flythroughSettings.marker)
         flythroughRuntime.camera = normalizeFlythroughCamera(flythroughSettings.camera)
         flythroughRuntime.effects = effects
+        flythroughRuntime.hideOtherJourneys = flythroughSettings.hideOtherJourneys === true
 
         if (journeyChanged) {
             flythroughRuntime.progress = 0
@@ -291,6 +295,7 @@ export const FlythroughDrawer = memo(() => {
         flythroughSettings.marker,
         flythroughSettings.camera,
         flythroughSettings.effects,
+        flythroughSettings.hideOtherJourneys,
         effects,
         currentJourney?.flythrough?.start,
         currentJourney?.flythrough?.stop,
@@ -374,6 +379,13 @@ export const FlythroughDrawer = memo(() => {
         else {
             __.ui.flythroughVideoSync?.disarm()
         }
+    }, [])
+
+    const updateHideOtherJourneys = useCallback((event) => {
+        const enabled = Boolean(event?.target?.checked)
+        lgs.settings.ui.flythrough.hideOtherJourneys = enabled
+        lgs.stores.flythrough.hideOtherJourneys = enabled
+        __.ui.flythrough?.setHideOtherJourneys?.(enabled)
     }, [])
 
     const updateFillColor = useCallback((event) => {
@@ -503,6 +515,20 @@ export const FlythroughDrawer = memo(() => {
         updateCamera({heading: clampFlythroughNumber(event.target.value, camera.heading ?? 0, -180, 180)})
     }, [camera.heading, updateCamera])
 
+    const updateCameraPreset = useCallback((event) => {
+        const presetKey = event.target.value
+        if (presetKey === FLYTHROUGH_CAMERA_PRESET_CUSTOM) {
+            return
+        }
+
+        const presetUpdates = getFlythroughCameraPresetUpdates(presetKey)
+        if (!presetUpdates) {
+            return
+        }
+
+        updateCamera(presetUpdates)
+    }, [updateCamera])
+
     const updateHysteresisMarginRatio = useCallback((event) => {
         updateCamera({
                          hysteresis: {
@@ -604,6 +630,15 @@ export const FlythroughDrawer = memo(() => {
                                          />
                                      }
                                  </div>
+                                 <WaSwitch
+                                     label-at-start
+                                     size="xs"
+                                     className="flythrough-hide-other-journeys-switch half-width"
+                                     checked={hideOtherJourneys}
+                                     onChange={updateHideOtherJourneys}
+                                 >
+                                     {'Hide other journeys'}
+                                 </WaSwitch>
                                  <WaSelect
                                      className="flythrough-progression-select half-width"
                                      label="Show"
@@ -728,6 +763,20 @@ export const FlythroughDrawer = memo(() => {
                                                  )}
                                                 {marker.mode === FLYTHROUGH_MARKER_MODE_HYSTERESIS && (
                                                      <div className="flythrough-fieldset">
+                                                         <WaSelect
+                                                             label="Camera feel"
+                                                             label-at-start
+                                                             size="s"
+                                                             value={cameraPresetKey}
+                                                             onChange={updateCameraPreset}
+                                                             className="half-width">
+                                                             {FLYTHROUGH_CAMERA_PRESETS.map(preset => (
+                                                                 <WaOption key={preset.key} value={preset.key}>
+                                                                     {preset.label}
+                                                                 </WaOption>
+                                                             ))}
+                                                             <WaOption value={FLYTHROUGH_CAMERA_PRESET_CUSTOM}>{'Custom'}</WaOption>
+                                                         </WaSelect>
                                                          <WaNumberInput
                                                              label="Dynamic"
                                                              size="s"
