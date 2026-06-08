@@ -552,7 +552,6 @@ export class FlythroughMode {
     #journeyToolbarWasVisible = null
     #journeyToolbarHidden = false
     #hiddenJourneyVisibility = new Map()
-    #deferStartCameraRecenter = false
     #cameraBridgeBound = false
     #cameraLiveSyncFrame = null
     #effectSequenceToken = 0
@@ -654,7 +653,6 @@ export class FlythroughMode {
         }
         const startSample = sampler.atProgress?.(options.progress ?? 0)
         const startList = this.#effectListForSlot(FLYTHROUGH_EFFECT_SLOT_START)
-        this.#deferStartCameraRecenter = startList.length > 0
         if (startSample) {
             try {
                 this.syncCameraFromCesiumControls({sample: startSample})
@@ -664,11 +662,7 @@ export class FlythroughMode {
             }
         }
         const token = ++this.#effectSequenceToken
-        const startResult = this.#controller.start({
-            progress: options.progress ?? 0,
-        })
         if (startList.length > 0) {
-            this.#controller.pause()
             this.#setContinuousRender(true)
             this.#hideJourneyToolbarVisibility()
             void (async () => {
@@ -684,19 +678,21 @@ export class FlythroughMode {
                         return
                     }
 
-                    this.#deferStartCameraRecenter = false
-                    this.#controller.resume()
+                    this.#controller.start({
+                        progress: options.progress ?? 0,
+                    })
                 }
                 catch (error) {
                     console.error('[FlythroughMode] Failed to run flythrough start effects.', error)
-                    this.#deferStartCameraRecenter = false
                     this.stop({emit: false})
                 }
             })()
+            return startSample
         }
-        else {
-            this.#deferStartCameraRecenter = false
-        }
+
+        const startResult = this.#controller.start({
+            progress: options.progress ?? 0,
+        })
 
         return startResult ?? startSample
     }
@@ -1231,7 +1227,6 @@ export class FlythroughMode {
         this.#setContinuousRender(false)
         this.#renderer.clear()
         this.#restoreOtherJourneysVisibility()
-        this.#deferStartCameraRecenter = false
         this.#resetCameraController({preserveSavedCameraState: true})
         this.#restoreJourneyToolbarVisibility()
         this.#restoreCameraState()
@@ -2560,13 +2555,11 @@ export class FlythroughMode {
                     }
 
                     this.#renderer.update({...detail, forceGeometry: true})
-                    if (!this.#deferStartCameraRecenter) {
-                        this.#updateCamera({
-                                               ...detail,
-                                               forceToleranceRecenter:     true,
-                                               immediateToleranceRecenter: true,
-                                           })
-                    }
+                    this.#updateCamera({
+                                           ...detail,
+                                           forceToleranceRecenter:     true,
+                                           immediateToleranceRecenter: true,
+                                       })
                 }
                 catch (error) {
                     this.#abortPlaybackAfterListenerError(error)
@@ -2608,7 +2601,6 @@ export class FlythroughMode {
                 this.#setContinuousRender(false)
                 this.#renderer.clear()
                 this.#restoreOtherJourneysVisibility()
-                this.#deferStartCameraRecenter = false
                 this.#restoreJourneyToolbarVisibility()
                 resetRuntimeProgress(flythroughStore())
             }),
@@ -2634,7 +2626,6 @@ export class FlythroughMode {
                     this.#setContinuousRender(false)
                     this.#renderer.clear()
                     this.#restoreOtherJourneysVisibility()
-                    this.#deferStartCameraRecenter = false
                     this.#restoreJourneyToolbarVisibility()
                     resetRuntimeProgress(flythroughStore())
                     this.#focusJourneyAfterPlayback()
