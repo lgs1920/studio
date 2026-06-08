@@ -41,6 +41,8 @@ export const LGSPopup = forwardRef(function LGSPopup(props, ref) {
               closeOnOutsidePointerDown = true,
               closeOnEscape             = true,
               onRequestClose,
+              flip                      = true,
+              shift                     = true,
               ...restProps
           } = props
 
@@ -100,7 +102,7 @@ export const LGSPopup = forwardRef(function LGSPopup(props, ref) {
         }
     }, [active, anchor, closeOnEscape, closeOnOutsidePointerDown, onRequestClose, requestClose])
 
-    return <WaPopupBase ref={innerRef} active={active} anchor={anchor} {...restProps} />
+    return <WaPopupBase ref={innerRef} active={active} anchor={anchor} flip={flip} shift={shift} {...restProps} />
 })
 
 export default LGSPopup

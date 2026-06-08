@@ -69,6 +69,25 @@
     flex: 0 0 auto;
 }
 
+.flythrough-total-duration-row {
+    align-items: center;
+    color: var(--wa-form-control-label-color);
+    display: flex;
+    gap: var(--wa-space-s, 0.75rem);
+    justify-content: space-between;
+    min-width: 0;
+}
+
+.flythrough-total-duration-label {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.flythrough-total-duration-value {
+    flex: 0 0 auto;
+    font-variant-numeric: tabular-nums;
+}
+
 
 .flythrough-empty-state {
     margin: 0;

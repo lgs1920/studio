@@ -20,6 +20,7 @@ import {
     defaultFlythroughSettings, FLYTHROUGH_CAMERA_PRESET_ULTRA_SMOOTH, FLYTHROUGH_MARKER_MODE_HYSTERESIS,
     FLYTHROUGH_MARKER_MODE_NAVIGATION,
 } from '@Core/ui/flythrough/FlythroughProgressionStyle'
+import { createFlythroughEffectInstance }                          from '@Core/ui/flythrough/FlythroughEffects'
 import { FlythroughDrawer }                                from '@Components/Flythrough/FlythroughDrawer'
 import { ELEVATION_UNITS, UnitUtils }                      from '@Utils/UnitUtils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -244,5 +245,49 @@ describe('FlythroughDrawer', () => {
             expect(globalThis.lgs.stores.flythrough.hideOtherJourneys).toBe(true)
             expect(__.ui.flythrough.setHideOtherJourneys).toHaveBeenCalledWith(true)
         })
+    })
+
+    it('shows the total video duration above the tabs', () => {
+        const flythrough = globalThis.lgs.settings.ui.flythrough
+        flythrough.duration = 60
+        flythrough.effects = {
+            catalog: {
+                launch: {
+                    id:       'launch',
+                    label:    'Launch',
+                    slots:    ['start'],
+                    defaults: {duration: 2},
+                    fields:   [],
+                },
+                landing: {
+                    id:       'landing',
+                    label:    'Landing',
+                    slots:    ['stop'],
+                    defaults: {duration: 3},
+                    fields:   [],
+                },
+            },
+            start: [],
+            stop:  [],
+        }
+
+        const currentJourney = globalThis.lgs.stores.main.theJourney
+        currentJourney.flythrough = {
+            start: [
+                createFlythroughEffectInstance(flythrough.effects.catalog.launch, 'start', {
+                    params: {duration: 2},
+                }),
+            ],
+            stop: [
+                createFlythroughEffectInstance(flythrough.effects.catalog.landing, 'stop', {
+                    params: {duration: 3},
+                }),
+            ],
+        }
+
+        const view = render(<FlythroughDrawer/>)
+
+        expect(view.getByText('Total duration (s)')).toBeTruthy()
+        expect(view.getByText('65')).toBeTruthy()
     })
 })

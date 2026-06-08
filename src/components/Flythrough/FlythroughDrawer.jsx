@@ -75,6 +75,16 @@ const toOpaqueColorValue = value => {
     return color.isValid() ? color.alpha(1).toHex() : '#ffffff'
 }
 
+const finiteNumber = value => {
+    const number = Number(value)
+    return Number.isFinite(number) ? number : null
+}
+
+const formatSeconds = value => {
+    const seconds = Math.max(0, finiteNumber(value) ?? 0)
+    return `${Math.round(seconds)}`
+}
+
 const FlythroughStyleField = ({children}) => (
     <div className="flythrough-style-field">
         {children}
@@ -257,6 +267,12 @@ export const FlythroughDrawer = memo(() => {
     const hideOtherJourneys = flythroughSettings.hideOtherJourneys === true
     const durationLocked = flythroughState.active || flythroughState.playing || flythroughState.paused
     const syncWithVideo = flythroughState.recordingSync === true
+    const totalVideoDurationSeconds = useMemo(() => {
+        const effectDurationSeconds = [...(effects.start ?? []), ...(effects.stop ?? [])]
+            .reduce((total, effect) => total + Math.max(0, finiteNumber(effect?.params?.duration) ?? 0), 0)
+
+        return Math.max(0, finiteNumber(flythroughSettings.duration) ?? 0) + effectDurationSeconds
+    }, [effects.start, effects.stop, flythroughSettings.duration])
 
     useEffect(() => {
         const flythroughRuntime = lgs.stores.flythrough
@@ -639,6 +655,10 @@ export const FlythroughDrawer = memo(() => {
                                  >
                                      {'Hide other journeys'}
                                  </WaSwitch>
+                                 <div className="flythrough-total-duration-row" aria-live="polite">
+                                     <span className="flythrough-total-duration-label">{'Total duration (s)'}</span>
+                                     <strong className="flythrough-total-duration-value">{formatSeconds(totalVideoDurationSeconds)}</strong>
+                                 </div>
                                  <WaSelect
                                      className="flythrough-progression-select half-width"
                                      label="Show"

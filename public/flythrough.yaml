@@ -46,7 +46,7 @@ flythrough:
         maxInstances: 1
         description: Zoom from a camera point to the flythrough start.
         defaults:
-          duration: 1.5
+          duration: 2
           altitude: 1200
           pitch: -65
         fields:
@@ -55,7 +55,7 @@ flythrough:
             type: number
             min: 0
             max: 60
-            step: 0.1
+            step: 1
           - key: altitude
             label: Altitude
             type: number
@@ -77,7 +77,7 @@ flythrough:
         maxInstances: 1
         description: Zoom from the end of the journey to a camera point.
         defaults:
-          duration: 1.5
+          duration: 2
           altitude: 1200
           pitch: -65
         fields:
@@ -86,7 +86,7 @@ flythrough:
             type: number
             min: 0
             max: 60
-            step: 0.1
+            step: 1
           - key: altitude
             label: Altitude
             type: number
@@ -108,7 +108,7 @@ flythrough:
         maxInstances: 1
         description: Focus on the journey centroid and keep the flythrough trace visible.
         defaults:
-          duration: 2.5
+          duration: 3
           rpm: 3
           altitude: 1200
           pitch: -45
@@ -118,7 +118,7 @@ flythrough:
             type: number
             min: 0
             max: 60
-            step: 0.1
+            step: 1
           - key: rpm
             label: RPM
             type: number
@@ -153,7 +153,7 @@ flythrough:
             type: number
             min: 0
             max: 60
-            step: 0.1
+            step: 1
       launch:
         id: launch
         label: Launch
@@ -170,7 +170,7 @@ flythrough:
             type: number
             min: 0
             max: 60
-            step: 0.1
+            step: 1
           - key: altitude
             label: Altitude
             type: number

@@ -145,6 +145,22 @@ describe('FlythroughEffectsTab', () => {
         expect(view.getByText(launch.label)).toBeTruthy()
     })
 
+    it('uses whole-second steps for duration fields', async () => {
+        const flythrough = globalThis.lgs.settings.ui.flythrough
+        const view = render(
+            <FlythroughEffectsTab
+                settings={flythrough}
+                state={globalThis.lgs.stores.flythrough}
+            />,
+        )
+
+        fireEvent.click(view.getAllByRole('button', {name: 'Add effect'})[0])
+        fireEvent.click(view.getByText(flythrough.effects.catalog.launch.label))
+
+        const durationInput = await view.findByLabelText('Duration (s)')
+        expect(durationInput.getAttribute('step')).toBe('1')
+    })
+
     it('edits an effect in place without duplicating it', async () => {
         const flythrough = globalThis.lgs.settings.ui.flythrough
         const launch = createFlythroughEffectInstance(flythrough.effects.catalog.launch, 'start', {
