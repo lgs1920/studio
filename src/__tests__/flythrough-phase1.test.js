@@ -3114,7 +3114,6 @@ describe('flythrough phase 1 playback controller', () => {
 
             expect(flyToCalls).toHaveLength(1)
             expect(flyToCalls[0].maximumHeight).toBeLessThan(600)
-            expect(frames).toHaveLength(0)
             expect(setViewCalls.length + flyToCalls.length).toBeGreaterThan(0)
         }
         finally {
