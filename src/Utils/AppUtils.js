@@ -253,8 +253,10 @@ export class AppUtils {
             .then(text => YAML.parse(text),
             )
 
+        const flythroughYamlSettings = flythrough?.flythrough ?? flythrough ?? {}
+
         settings.ui = settings.ui ?? {}
-        settings.ui.flythrough = flythrough.flythrough
+        settings.ui.flythrough = AppUtils.deepClone(flythroughYamlSettings)
 
         // add settings section
         settings.widgets = raw.widgets

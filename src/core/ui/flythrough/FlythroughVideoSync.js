@@ -14,9 +14,7 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import {
-    FLYTHROUGH_EVENT_END,
-} from './FlythroughPlaybackController'
+import { FLYTHROUGH_EVENT_STOP_EFFECTS_COMPLETE } from './FlythroughMode'
 import { ScreenMediaRecorder } from '@Core/ui/screen-media-recorder/recorder/ScreenMediaRecorder'
 
 const defaultFlythroughStore = () => globalThis.lgs?.stores?.flythrough ?? null
@@ -28,7 +26,7 @@ const defaultFlythroughStore = () => globalThis.lgs?.stores?.flythrough ?? null
  * - arm/disarm is driven by the UI toggle;
  * - recorder START starts the flythrough;
  * - recorder pause/resume mirrors playback;
- * - flythrough END stops the recorder and opens the normal export flow.
+ * - flythrough END waits for stop-effects completion, then stops the recorder and opens the normal export flow.
  */
 export class FlythroughVideoSync {
     #armed = false
@@ -76,6 +74,18 @@ export class FlythroughVideoSync {
 
     #setVideoSafeMode = (enabled) => {
         this.#resolveFlythrough()?.setVideoSafeMode?.(enabled)
+    }
+
+    #stopRecorderAfterStopEffects = () => {
+        if (!this.#armed || !this.#autoStopRecording) {
+            return
+        }
+
+        this.#setVideoSafeMode(false)
+        const recorder = this.#resolveRecorder()
+        if (recorder?.isRecording?.()) {
+            void recorder.stopVideo()
+        }
     }
 
     #bind = () => {
@@ -135,15 +145,8 @@ export class FlythroughVideoSync {
             this.stopFlythrough()
         }
 
-        const handleFlythroughEnd = () => {
-            if (!this.#armed || !this.#autoStopRecording) {
-                return
-            }
-
-            this.#setVideoSafeMode(false)
-            if (recorder?.isRecording?.()) {
-                void recorder.stopVideo()
-            }
+        const handleStopEffectsComplete = () => {
+            this.#stopRecorderAfterStopEffects()
         }
 
         recorder.addEventListener?.(ScreenMediaRecorder.events.START, handleRecorderStart)
@@ -155,7 +158,7 @@ export class FlythroughVideoSync {
         recorder.addEventListener?.(ScreenMediaRecorder.events.MAX_DURATION, handleRecorderStop)
         recorder.addEventListener?.(ScreenMediaRecorder.events.MAX_SIZE, handleRecorderStop)
 
-        flythrough.controller?.on?.(FLYTHROUGH_EVENT_END, handleFlythroughEnd)
+        globalThis.window?.addEventListener?.(FLYTHROUGH_EVENT_STOP_EFFECTS_COMPLETE, handleStopEffectsComplete)
 
         this.#bound = true
     }

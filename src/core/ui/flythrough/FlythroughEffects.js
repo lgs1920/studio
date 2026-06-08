@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-06-06
- * Last modified: 2026-06-06
+ * Created on: 2026-06-07
+ * Last modified: 2026-06-07
  *
  *
  * Copyright © 2026 LGS1920
@@ -23,13 +23,6 @@ export const FLYTHROUGH_EFFECT_SLOT_VALUES = [
     FLYTHROUGH_EFFECT_SLOT_STOP,
 ]
 
-const FLYTHROUGH_EFFECTS_DEBUG = true
-
-const logFlythroughEffects = (...args) => {
-    if (FLYTHROUGH_EFFECTS_DEBUG) {
-        console.debug('[FlythroughEffects]', ...args)
-    }
-}
 
 const finiteNumber = value => {
     const number = Number(value)
@@ -225,13 +218,6 @@ export const flythroughEffectInstanceCount = (effects = {}, effectId, slot = nul
                    ? normalized.start
                    : [...normalized.start, ...normalized.stop]
     const count = list.filter(instance => instance.effectId === effectId).length
-    logFlythroughEffects('instance-count', {
-        effectId,
-        slot,
-        count,
-        startIds: normalized.start.map(instance => instance.effectId),
-        stopIds:  normalized.stop.map(instance => instance.effectId),
-    })
     return count
 }
 
@@ -241,12 +227,6 @@ export const canAddFlythroughEffect = (effects = {}, effectDefinition, slot) => 
                        ? catalog[effectDefinition]
                        : normalizeDefinition(effectDefinition)
     if (!definition) {
-        logFlythroughEffects('can-add', {
-            slot,
-            effectId: effectDefinition?.id ?? effectDefinition ?? null,
-            result:   false,
-            reason:   'missing-definition',
-        })
         return false
     }
 
@@ -255,36 +235,14 @@ export const canAddFlythroughEffect = (effects = {}, effectDefinition, slot) => 
                          : definition.slots
     const maxInstances = definition.maxInstances
     if (!allowedSlots.includes(slot)) {
-        logFlythroughEffects('can-add', {
-            slot,
-            effectId: definition.id,
-            maxInstances,
-            result:   false,
-            reason:   'slot-not-allowed',
-        })
         return false
     }
 
     if (!Number.isFinite(Number(maxInstances)) || Number(maxInstances) <= 0) {
-        logFlythroughEffects('can-add', {
-            slot,
-            effectId: definition.id,
-            maxInstances,
-            result:   true,
-            reason:   'no-limit',
-        })
         return true
     }
 
     const count = flythroughEffectInstanceCount(effects, definition.id, slot)
     const result = count < Number(maxInstances)
-    logFlythroughEffects('can-add', {
-        slot,
-        effectId: definition.id,
-        count,
-        maxInstances: Number(maxInstances),
-        result,
-        reason: result ? 'below-limit' : 'at-limit',
-    })
     return result
 }
