@@ -146,7 +146,11 @@ export const flythroughTargetSampleForEffect = async ({
         }
     }
 
-    if (effectId === 'zoom-in' || effectId === 'zoom-out') {
+    if (effectId === 'zoom-in') {
+        return sample
+    }
+
+    if (effectId === 'zoom-out') {
         const centroid = await sceneManager?.getJourneyCentroid?.(journey)
         if (centroid) {
             return {
@@ -495,6 +499,22 @@ const cartographicToLonLat = (cartographic) => {
 
 const flythroughStore = () => globalThis.lgs?.stores?.flythrough
 
+const resolveFlythroughRuntimeEffects = ({effects = null, settingsEffects = {}, journey = null} = {}) => {
+    if (effects) {
+        return normalizeFlythroughEffects(effects)
+    }
+
+    return normalizeFlythroughEffects({
+        catalog: settingsEffects?.catalog ?? settingsEffects?.definitions ?? {},
+        start:   Array.isArray(journey?.flythrough?.start)
+                 ? journey.flythrough.start
+                 : settingsEffects?.start ?? [],
+        stop:    Array.isArray(journey?.flythrough?.stop)
+                 ? journey.flythrough.stop
+                 : settingsEffects?.stop ?? [],
+    })
+}
+
 const currentFlythroughSample = controller => controller?.currentSample?.() ?? flythroughStore()?.sample ?? null
 
 const resetRuntimeProgress = (store) => {
@@ -602,7 +622,11 @@ export class FlythroughMode {
         const trace = options.trace ?? flythrough.trace
         const marker = options.marker ?? flythrough.marker
         const camera = options.camera ?? flythrough.camera
-        const effects = options.effects ?? flythrough.effects
+        const effects = resolveFlythroughRuntimeEffects({
+            effects:         options.effects,
+            settingsEffects: flythrough.effects,
+            journey,
+        })
 
         this.#sampler = new FlythroughPathSampler({
             journey,
@@ -622,7 +646,7 @@ export class FlythroughMode {
             store.trace = normalizeFlythroughTrace(trace)
             store.marker = normalizeFlythroughMarker(marker)
             store.camera = normalizeFlythroughCamera(camera)
-            store.effects = normalizeFlythroughEffects(effects)
+            store.effects = effects
         }
 
         this.#controller.configure({
@@ -649,6 +673,7 @@ export class FlythroughMode {
         void globalThis.__?.ui?.cameraManager?.stopRotate?.()
         this.#captureCameraState()
         this.#restoreOtherJourneysVisibility()
+        this.#hideCurrentJourneyVisibility()
         if (getFlythroughSettings().hideOtherJourneys === true) {
             this.#hideOtherJourneysVisibility()
         }
@@ -664,12 +689,9 @@ export class FlythroughMode {
             }
         }
         const token = ++this.#effectSequenceToken
-        const startResult = this.#controller.start({
-            progress: options.progress ?? 0,
-        })
+        let startResult = startSample
 
         if (startList.length > 0) {
-            this.#controller.pause()
             this.#setContinuousRender(true)
             this.#hideJourneyToolbarVisibility()
             void (async () => {
@@ -685,8 +707,10 @@ export class FlythroughMode {
                         return
                     }
 
+                    startResult = this.#controller.start({
+                        progress: options.progress ?? 0,
+                    })
                     this.#deferStartCameraRecenter = false
-                    this.#controller.resume()
                 }
                 catch (error) {
                     console.error('[FlythroughMode] Failed to run flythrough start effects.', error)
@@ -697,6 +721,9 @@ export class FlythroughMode {
         }
         else {
             this.#deferStartCameraRecenter = false
+            startResult = this.#controller.start({
+                progress: options.progress ?? 0,
+            })
         }
 
         return startResult ?? startSample
@@ -742,6 +769,21 @@ export class FlythroughMode {
             journey.updateVisibility?.(false)
         }
 
+        globalThis.lgs?.scene?.requestRender?.()
+    }
+
+    #hideCurrentJourneyVisibility = () => {
+        const journey = globalThis.lgs?.theJourney
+        if (!journey) {
+            return
+        }
+
+        if (!this.#hiddenJourneyVisibility.has(journey.slug)) {
+            this.#hiddenJourneyVisibility.set(journey.slug, journey.visible !== false)
+        }
+
+        journey.visible = false
+        journey.updateVisibility?.(false)
         globalThis.lgs?.scene?.requestRender?.()
     }
 
@@ -983,6 +1025,46 @@ export class FlythroughMode {
         const target = await this.#targetSampleForEffect(sample, effect.effectId)
         const duration = Math.max(0, Number(effect?.params?.duration ?? effectCamera?.duration ?? 0))
         if (!target) {
+            return
+        }
+
+        if (effect.effectId === 'zoom-in') {
+            const flythroughCamera = normalizeFlythroughCamera(globalThis.lgs?.stores?.flythrough?.camera ?? getFlythroughSettings().camera)
+            const startAltitude = finiteNumber(effect?.params?.altitude ?? effectCamera.altitude) ?? effectCamera.altitude
+            const endAltitude = this.#cameraAltitudeForSample(target, flythroughCamera)
+            const startHeight = Math.max(startAltitude, endAltitude)
+            const endHeight = Math.min(startAltitude, endAltitude)
+            const startHeading = degreesToRadians(finiteNumber(effect?.params?.heading ?? effectCamera.heading) ?? effectCamera.heading)
+                               ?? finiteNumber(viewer.camera?.heading)
+                               ?? 0
+            const startPitch = degreesToRadians(finiteNumber(effect?.params?.pitch ?? effectCamera.pitch) ?? effectCamera.pitch)
+                              ?? SAFE_TOP_DOWN_PITCH
+            const endHeading = degreesToRadians(flythroughCamera.heading) ?? finiteNumber(viewer.camera?.heading) ?? 0
+            const endPitch = degreesToRadians(flythroughCamera.pitch) ?? SAFE_TOP_DOWN_PITCH
+
+            this.#recenterCameraToSample({
+                sample:         target,
+                heading:        startHeading,
+                pitch:          startPitch,
+                cameraSettings: effectCamera,
+                cameraHeight:   startHeight,
+                instant:        true,
+            })
+
+            if (token !== this.#effectSequenceToken) {
+                return
+            }
+
+            this.#recenterCameraToSample({
+                sample:         target,
+                heading:        endHeading,
+                pitch:          endPitch,
+                cameraSettings: flythroughCamera,
+                cameraHeight:   endHeight,
+                duration,
+            })
+
+            await this.#runEffectDelay(duration)
             return
         }
 
