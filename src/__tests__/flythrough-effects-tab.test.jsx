@@ -58,6 +58,26 @@ vi.mock('@web.awesome.me/webawesome-pro/dist/react', () => ({
     WaTooltip: ({children}) => <span>{children}</span>,
 }))
 
+vi.mock('sortablejs', () => ({
+    default: class SortableMock {
+        constructor(element, options) {
+            this.element = element
+            this.options = options
+            globalThis.__flythroughSortableInstances = globalThis.__flythroughSortableInstances ?? []
+            globalThis.__flythroughSortableInstances.push(this)
+        }
+
+        destroy() {
+        }
+
+        toArray() {
+            return Array.from(this.element.querySelectorAll('[data-id]'))
+                .map(node => node.getAttribute('data-id'))
+                .filter(Boolean)
+        }
+    },
+}))
+
 const loadFlythroughEffectsCatalog = () => YAML.parse(readFileSync('public/flythrough.yaml', 'utf8')).flythrough.effects.catalog
 
 describe('FlythroughEffectsTab', () => {
@@ -92,11 +112,13 @@ describe('FlythroughEffectsTab', () => {
             },
             theJourney: journey,
         }
+        globalThis.__flythroughSortableInstances = []
     })
 
     afterEach(() => {
         cleanup()
         globalThis.lgs = undefined
+        globalThis.__flythroughSortableInstances = []
         vi.unstubAllGlobals()
     })
 
@@ -239,6 +261,58 @@ describe('FlythroughEffectsTab', () => {
             />,
         )
 
-        expect(view.queryAllByRole('button', {name: 'Add effect'})).toHaveLength(0)
+        const addButtons = view.getAllByRole('button', {name: 'Add effect'})
+        expect(addButtons).toHaveLength(2)
+        expect(addButtons[0].disabled).toBe(true)
+        expect(addButtons[1].disabled).toBe(true)
+    })
+
+    it('refreshes the move arrows after a drag reorder', async () => {
+        const flythrough = globalThis.lgs.settings.ui.flythrough
+        const launch = createFlythroughEffectInstance(flythrough.effects.catalog.launch, 'start', {
+            params: {
+                duration: 2,
+                altitude: 300,
+                pitch:    -35,
+            },
+        })
+        const zoomIn = createFlythroughEffectInstance(flythrough.effects.catalog['zoom-in'], 'start', {
+            params: {
+                duration: 2,
+                altitude: 300,
+                pitch:    -35,
+            },
+        })
+
+        globalThis.lgs.theJourney.flythrough.start = [launch, zoomIn]
+        globalThis.lgs.stores.flythrough.effects.start = [launch, zoomIn]
+
+        const view = render(
+            <FlythroughEffectsTab
+                settings={flythrough}
+                state={globalThis.lgs.stores.flythrough}
+            />,
+        )
+
+        const startSection = view.getByText('Start').closest('section')
+        const list = startSection.querySelector('.flythrough-effects-list')
+        const sortable = globalThis.__flythroughSortableInstances[0]
+
+        expect(list.querySelectorAll('.flythrough-effect-row-shell')).toHaveLength(2)
+        expect(list.querySelectorAll('.flythrough-effect-row-shell')[0].textContent).toContain('Launch')
+        expect(list.querySelectorAll('.flythrough-effect-row-shell')[1].textContent).toContain('ZoomIn')
+
+        list.insertBefore(list.children[1], list.children[0])
+        sortable.options.onEnd()
+
+        await waitFor(() => {
+            const rows = list.querySelectorAll('.flythrough-effect-row-shell')
+            expect(rows[0].textContent).toContain('ZoomIn')
+            expect(rows[1].textContent).toContain('Launch')
+            expect(rows[0].querySelector('[aria-label="Move effect up"]').disabled).toBe(true)
+            expect(rows[0].querySelector('[aria-label="Move effect down"]').disabled).toBe(false)
+            expect(rows[1].querySelector('[aria-label="Move effect up"]').disabled).toBe(false)
+            expect(rows[1].querySelector('[aria-label="Move effect down"]').disabled).toBe(true)
+        })
     })
 })

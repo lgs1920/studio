@@ -483,7 +483,6 @@ const EffectRow = ({
         <WaCard
             appearance="outlined"
             className="lgs--card-hoverable flythrough-effect-row"
-            data-id={effect.id}
         >
             <div className="flythrough-effect-content">
                 <div className="flythrough-effect-title-row">
@@ -608,7 +607,7 @@ const EffectList = ({
                     const definition = effects?.catalog?.[effect.effectId]
                     const editAnchorId = `${editAnchorIdPrefix}-${effect.id}`
                     return (
-                        <div key={effect.id} className="flythrough-effect-row-shell">
+                        <div key={effect.id} className="flythrough-effect-row-shell" data-id={effect.id}>
                             <PopupAnchor id={editAnchorId}/>
                             <EffectRow
                                 effect={effect}
