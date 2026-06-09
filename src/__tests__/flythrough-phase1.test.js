@@ -2484,16 +2484,19 @@ describe('flythrough phase 1 playback controller', () => {
         const flythrough = defaultFlythroughSettings()
         journey.focus = vi.fn()
         journey.visible = false
+        const editorJourney = {visible: false}
         let cancelFlightCalls = 0
 
         globalThis.lgs = {
             theJourney: journey,
+            theJourneyEditorProxy: {journey: editorJourney},
             theTrack:   null,
             settings:   {ui: {flythrough, journeyToolbar: {show: true}}},
             stores:     {
                 flythrough: proxy({
                                       progress: 0,
                                       camera:   flythrough.camera,
+                                      orbitAllowed: true,
                                   }),
             },
             viewer:     {
@@ -2549,10 +2552,14 @@ describe('flythrough phase 1 playback controller', () => {
             expect(mode.isJourneyToolbarTemporarilyHidden()).toBe(true)
             expect(globalThis.lgs.settings.ui.journeyToolbar.show).toBe(true)
             expect(journey.visible).toBe(false)
+            expect(editorJourney.visible).toBe(false)
+            expect(globalThis.lgs.stores.flythrough.orbitAllowed).toBe(false)
             mode.stop()
             expect(mode.isJourneyToolbarTemporarilyHidden()).toBe(false)
             expect(globalThis.lgs.settings.ui.journeyToolbar.show).toBe(true)
             expect(journey.visible).toBe(true)
+            expect(editorJourney.visible).toBe(true)
+            expect(globalThis.lgs.stores.flythrough.orbitAllowed).toBe(true)
 
             expect(cancelFlightCalls).toBeGreaterThan(0)
             expect(journey.focus).toHaveBeenCalledTimes(1)

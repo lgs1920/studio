@@ -25,9 +25,6 @@ import {
 } from '@Editor/journey/JourneySelector'
 import { Utils }                                                     from '@Editor/Utils'
 import {
-    FLYTHROUGH_MARKER_MODE_TRACE, normalizeFlythroughMarker,
-}                                                                 from '@Core/ui/flythrough/FlythroughProgressionStyle'
-import {
     FLYTHROUGH_JOURNEY_TOOLBAR_VISIBILITY_EVENT,
 }                                                                 from '@Core/ui/flythrough/FlythroughMode'
 import {
@@ -61,9 +58,10 @@ export const JourneyToolbar = (props) => {
     const editorStore = useSnapshot($editorStore)
 
     const autoRotate = useSnapshot(lgs.settings.ui.camera.start.rotate)
-    const flythroughSettings = useSnapshot(lgs.settings.ui.flythrough)
-    const rotationAllowedByFlythrough = normalizeFlythroughMarker(flythroughSettings.marker).mode === FLYTHROUGH_MARKER_MODE_TRACE
-    const flythroughRuntime = useSnapshot(lgs.stores.flythrough)
+    const flythroughState = useSnapshot(lgs.stores.flythrough)
+    const flythroughActive = flythroughState.active || flythroughState.playing || flythroughState.paused
+    const rotationAllowedByFlythrough = !flythroughActive && flythroughState.orbitAllowed !== false
+    const flythroughRuntime = flythroughState
     const [journeyToolbarTemporarilyHidden, setJourneyToolbarTemporarilyHidden] = useState(
         __.ui.flythrough?.isJourneyToolbarTemporarilyHidden?.() === true,
     )

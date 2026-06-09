@@ -532,6 +532,7 @@ const resetRuntimeProgress = (store) => {
     store.sample = null
     store.totalDistance = 0
     store.toolbarVisible = false
+    store.orbitAllowed = true
     store.hoverSample = null
     store.metricOverlay = {
         ...store.metricOverlay,
@@ -676,6 +677,7 @@ export class FlythroughMode {
                                         ?? (getFlythroughSettings().hideOtherJourneys === true)
         void globalThis.__?.ui?.cameraManager?.stopRotate?.()
         this.#captureCameraState()
+        this.#setFlythroughOrbitAllowed(false)
         this.#restoreOtherJourneysVisibility()
         this.#hideCurrentJourneyVisibility()
         if (shouldHideOtherJourneys) {
@@ -793,13 +795,24 @@ export class FlythroughMode {
             return
         }
 
+        const editorJourney = globalThis.lgs?.theJourneyEditorProxy?.journey ?? null
         this.#hiddenJourneyVisibility.delete(journey.slug)
         journey.visible = true
+        if (editorJourney) {
+            editorJourney.visible = true
+        }
         journey.updateVisibility?.(true)
         if (globalThis.lgs?.viewer?.dataSources) {
             TrackUtils.updatePOIsVisibility(journey, true)
         }
         globalThis.lgs?.scene?.requestRender?.()
+    }
+
+    #setFlythroughOrbitAllowed = (allowed = true) => {
+        const store = flythroughStore()
+        if (store) {
+            store.orbitAllowed = allowed === true
+        }
     }
 
     #restoreOtherJourneysVisibility = () => {
@@ -986,6 +999,7 @@ export class FlythroughMode {
         this.#renderer.clear()
         this.#restoreOtherJourneysVisibility()
         this.#restoreCurrentJourneyVisibility()
+        this.#setFlythroughOrbitAllowed(true)
         this.#setContinuousRender(false)
         this.#removeToleranceZoneOverlay()
         this.#resetCameraController({preserveSavedCameraState: true})
@@ -1336,6 +1350,7 @@ export class FlythroughMode {
         this.#renderer.clear()
         this.#restoreOtherJourneysVisibility()
         this.#restoreCurrentJourneyVisibility()
+        this.#setFlythroughOrbitAllowed(true)
         this.#deferStartCameraRecenter = false
         this.#resetCameraController({preserveSavedCameraState: true})
         this.#restoreJourneyToolbarVisibility()
@@ -2722,6 +2737,7 @@ export class FlythroughMode {
                 this.#renderer.clear()
                 this.#restoreOtherJourneysVisibility()
                 this.#restoreCurrentJourneyVisibility()
+                this.#setFlythroughOrbitAllowed(true)
                 this.#deferStartCameraRecenter = false
                 this.#restoreJourneyToolbarVisibility()
                 resetRuntimeProgress(flythroughStore())
@@ -2749,6 +2765,7 @@ export class FlythroughMode {
                     this.#renderer.clear()
                     this.#restoreOtherJourneysVisibility()
                     this.#restoreCurrentJourneyVisibility()
+                    this.#setFlythroughOrbitAllowed(true)
                     this.#deferStartCameraRecenter = false
                     this.#restoreJourneyToolbarVisibility()
                     resetRuntimeProgress(flythroughStore())
