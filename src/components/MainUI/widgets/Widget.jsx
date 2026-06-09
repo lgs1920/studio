@@ -354,7 +354,10 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
     }, [activeZIndex])
 
     useEffect(() => {
-        setCollapsedIconFallback(false)
+        const frameId = requestAnimationFrame(() => {
+            setCollapsedIconFallback(false)
+        })
+        return () => cancelAnimationFrame(frameId)
     }, [collapsedIcon])
 
     useEffect(() => {
@@ -1038,6 +1041,31 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
 
         return () => cancelAnimationFrame(frameId)
     }, [isSelected])
+
+    useEffect(() => {
+        const element = _widget.current
+        if (!element || typeof ResizeObserver === 'undefined') {
+            return undefined
+        }
+
+        const updateRect = () => {
+            _moveable.current?.updateRect()
+        }
+
+        updateRect()
+        const frameId = requestAnimationFrame(updateRect)
+        const observer = new ResizeObserver(() => {
+            updateRect()
+            requestAnimationFrame(updateRect)
+        })
+
+        observer.observe(element)
+
+        return () => {
+            cancelAnimationFrame(frameId)
+            observer.disconnect()
+        }
+    }, [widgetId])
 
     useEffect(() => {
         if (!isSelected || keyboardUpdate === 0) {
