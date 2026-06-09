@@ -791,11 +791,6 @@ export class FlythroughMode {
     }
 
     #restoreOtherJourneysVisibility = () => {
-        const store = flythroughStore()
-        if (store) {
-            store.hideOtherJourneys = false
-        }
-
         if (this.#hiddenJourneyVisibility.size === 0) {
             return
         }
@@ -816,6 +811,11 @@ export class FlythroughMode {
 
     setHideOtherJourneys = (enabled = true) => {
         const nextEnabled = enabled === true
+        const flythroughSettings = globalThis.lgs?.settings?.ui?.flythrough
+        if (flythroughSettings) {
+            flythroughSettings.hideOtherJourneys = nextEnabled
+        }
+
         const store = flythroughStore()
         if (store) {
             store.hideOtherJourneys = nextEnabled

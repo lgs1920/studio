@@ -403,6 +403,7 @@ export const FlythroughDrawer = memo(() => {
 
     const updateHideOtherJourneys = useCallback((event) => {
         const enabled = Boolean(event?.target?.checked)
+        lgs.settings.ui.flythrough.hideOtherJourneys = enabled
         lgs.stores.flythrough.hideOtherJourneys = enabled
         __.ui.flythrough?.setHideOtherJourneys?.(enabled)
     }, [])

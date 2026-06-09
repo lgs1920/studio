@@ -246,7 +246,7 @@ describe('FlythroughDrawer', () => {
         await waitFor(() => {
             expect(globalThis.lgs.stores.flythrough.hideOtherJourneys).toBe(true)
             expect(__.ui.flythrough.setHideOtherJourneys).toHaveBeenCalledWith(true)
-            expect(globalThis.lgs.settings.ui.flythrough.hideOtherJourneys).toBe(false)
+            expect(globalThis.lgs.settings.ui.flythrough.hideOtherJourneys).toBe(true)
         })
     })
 
