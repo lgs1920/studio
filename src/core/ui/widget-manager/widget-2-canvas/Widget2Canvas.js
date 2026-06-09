@@ -221,6 +221,8 @@ export class Widget2Canvas {
         buffer.height = Math.ceil(logicalH * scale)
         const ctx = buffer.getContext('2d')
         const parentRect = this.#original.getBoundingClientRect()
+        const renderScaleX = parentRect.width > 0 ? (parentRect.width / logicalW) : 1
+        const renderScaleY = parentRect.height > 0 ? (parentRect.height / logicalH) : 1
 
         this.#paintLiveBackdrop(ctx, buffer.width, buffer.height)
 
@@ -232,10 +234,10 @@ export class Widget2Canvas {
 
             ctx.drawImage(
                 canvas,
-                (rect.left - parentRect.left) * scale,
-                (rect.top - parentRect.top) * scale,
-                rect.width * scale,
-                rect.height * scale,
+                ((rect.left - parentRect.left) / renderScaleX) * scale,
+                ((rect.top - parentRect.top) / renderScaleY) * scale,
+                (rect.width / renderScaleX) * scale,
+                (rect.height / renderScaleY) * scale,
             )
         })
 

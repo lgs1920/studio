@@ -116,4 +116,30 @@ describe('Widget2Canvas refresh modes', () => {
         expect(canvasContext.fillRect).toHaveBeenCalled()
         expect(canvasContext.drawImage).toHaveBeenCalled()
     })
+
+    it('normalizes live canvas drawing against rendered transform scale', async () => {
+        const chartCanvas = document.createElement('canvas')
+
+        chartCanvas.width = 200
+        chartCanvas.height = 100
+        chartCanvas.getBoundingClientRect = () => ({left: 20, top: 10, width: 160, height: 80})
+        target.appendChild(chartCanvas)
+        Object.defineProperties(target, {
+            offsetWidth:  {configurable: true, value: 100},
+            offsetHeight: {configurable: true, value: 50},
+        })
+        target.getBoundingClientRect = () => ({left: 0, top: 0, width: 200, height: 100})
+
+        mirror = new Widget2Canvas(target, {refreshMode: 'live', scale: 1})
+
+        await mirror.init()
+        await rafCallbacks.shift()?.(performance.now())
+        await flushMicrotasks()
+
+        const chartDrawCall = canvasContext.drawImage.mock.calls.find(call => call[0] === chartCanvas)
+        expect(chartDrawCall?.[1]).toBe(10)
+        expect(chartDrawCall?.[2]).toBe(5)
+        expect(chartDrawCall?.[3]).toBe(80)
+        expect(chartDrawCall?.[4]).toBe(40)
+    })
 })
