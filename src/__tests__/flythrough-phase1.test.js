@@ -2966,6 +2966,7 @@ describe('flythrough phase 1 playback controller', () => {
             expect(currentJourney.visible).toBe(true)
             expect(otherJourney.updateVisibility).toHaveBeenCalledWith(true)
             expect(otherJourney.visible).toBe(true)
+            expect(globalThis.lgs.stores.flythrough.hideOtherJourneys).toBe(false)
         }
         finally {
             globalThis.lgs = previousLgs

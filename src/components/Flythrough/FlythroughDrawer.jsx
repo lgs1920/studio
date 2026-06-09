@@ -264,7 +264,7 @@ export const FlythroughDrawer = memo(() => {
     const camera = normalizeFlythroughCamera(flythroughSettings.camera)
     const cameraPresetKey = getFlythroughCameraPresetKey(camera)
     const marker = normalizeFlythroughMarker(flythroughSettings.marker)
-    const hideOtherJourneys = flythroughSettings.hideOtherJourneys === true
+    const hideOtherJourneys = flythroughState.hideOtherJourneys === true
     const durationLocked = flythroughState.active || flythroughState.playing || flythroughState.paused
     const syncWithVideo = flythroughState.recordingSync === true
     const totalVideoDurationSeconds = useMemo(() => {
@@ -294,7 +294,7 @@ export const FlythroughDrawer = memo(() => {
         flythroughRuntime.marker = normalizeFlythroughMarker(flythroughSettings.marker)
         flythroughRuntime.camera = normalizeFlythroughCamera(flythroughSettings.camera)
         flythroughRuntime.clips = clips
-        flythroughRuntime.hideOtherJourneys = flythroughSettings.hideOtherJourneys === true
+        flythroughRuntime.hideOtherJourneys = flythroughState.hideOtherJourneys === true
 
         if (journeyChanged) {
             flythroughRuntime.progress = 0
@@ -311,7 +311,7 @@ export const FlythroughDrawer = memo(() => {
         flythroughSettings.marker,
         flythroughSettings.camera,
         flythroughSettings.clips,
-        flythroughSettings.hideOtherJourneys,
+        flythroughState.hideOtherJourneys,
         clips,
         currentJourney?.flythrough?.start,
         currentJourney?.flythrough?.stop,
@@ -403,7 +403,6 @@ export const FlythroughDrawer = memo(() => {
 
     const updateHideOtherJourneys = useCallback((event) => {
         const enabled = Boolean(event?.target?.checked)
-        lgs.settings.ui.flythrough.hideOtherJourneys = enabled
         lgs.stores.flythrough.hideOtherJourneys = enabled
         __.ui.flythrough?.setHideOtherJourneys?.(enabled)
     }, [])

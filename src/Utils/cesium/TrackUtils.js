@@ -1411,6 +1411,8 @@ export class TrackUtils {
                 dataSource.show = visibility ? track.visible : false
             }
         })
+
+        TrackUtils.setProfileVisibility(journey)
     }
 
     static getTrackFromEntityId = (journey, entityId) => {

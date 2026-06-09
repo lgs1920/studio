@@ -244,9 +244,9 @@ describe('FlythroughDrawer', () => {
         fireEvent.click(hideOtherJourneysSwitch)
 
         await waitFor(() => {
-            expect(globalThis.lgs.settings.ui.flythrough.hideOtherJourneys).toBe(true)
             expect(globalThis.lgs.stores.flythrough.hideOtherJourneys).toBe(true)
             expect(__.ui.flythrough.setHideOtherJourneys).toHaveBeenCalledWith(true)
+            expect(globalThis.lgs.settings.ui.flythrough.hideOtherJourneys).toBe(false)
         })
     })
 
