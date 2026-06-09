@@ -373,7 +373,11 @@ export const FlythroughDrawer = memo(() => {
         lgs.settings.ui.flythrough.camera = nextCamera
         lgs.stores.flythrough.camera = nextCamera
         refreshFlythrough(true)
-    }, [refreshFlythrough, stopRotateIfNeeded])
+        __.ui.flythrough?.refreshCamera?.({
+            sample:             flythroughState.sample ?? null,
+            suppressMoveEvents: false,
+        })
+    }, [flythroughState.sample, refreshFlythrough, stopRotateIfNeeded])
 
     const updateDuration = useCallback((event) => {
         if (durationLocked) {

@@ -183,12 +183,58 @@ describe('FlythroughEffectsTab', () => {
         )
 
         fireEvent.click(view.getByRole('button', {name: 'Edit effect'}))
-        fireEvent.click(view.getByRole('button', {name: 'Apply'}))
+        expect(view.queryByRole('button', {name: 'Apply'})).toBeNull()
+
+        const popup = within(view.getByTestId('popup-body'))
+        const durationInput = popup.getByLabelText('Duration (s)')
+        fireEvent.input(durationInput, {target: {value: '4'}})
 
         await waitFor(() => {
             expect(globalThis.lgs.theJourney.flythrough.start).toHaveLength(1)
             expect(globalThis.lgs.theJourney.flythrough.start[0].id).toBe(launch.id)
+            expect(globalThis.lgs.theJourney.flythrough.start[0].params.duration).toBe(4)
             expect(globalThis.lgs.stores.flythrough.effects.start).toHaveLength(1)
+            expect(globalThis.lgs.stores.flythrough.effects.start[0].params.duration).toBe(4)
+        })
+    })
+
+    it('can reset an edited effect to its pre-popup value', async () => {
+        const flythrough = globalThis.lgs.settings.ui.flythrough
+        const launch = createFlythroughEffectInstance(flythrough.effects.catalog.launch, 'start', {
+            params: {
+                duration: 2,
+                altitude: 300,
+                pitch: -35,
+            },
+        })
+
+        globalThis.lgs.theJourney.flythrough.start = [launch]
+        globalThis.lgs.theJourney.flythrough.stop = []
+        globalThis.lgs.stores.flythrough.effects.start = [launch]
+
+        const view = render(
+            <FlythroughEffectsTab
+                settings={flythrough}
+                state={globalThis.lgs.stores.flythrough}
+            />,
+        )
+
+        fireEvent.click(view.getByRole('button', {name: 'Edit effect'}))
+
+        const popup = within(view.getByTestId('popup-body'))
+        const durationInput = popup.getByLabelText('Duration (s)')
+        fireEvent.input(durationInput, {target: {value: '7'}})
+
+        await waitFor(() => {
+            expect(view.getByRole('button', {name: 'Reset'})).toBeTruthy()
+            expect(globalThis.lgs.theJourney.flythrough.start[0].params.duration).toBe(7)
+        })
+
+        fireEvent.click(view.getByRole('button', {name: 'Reset'}))
+
+        await waitFor(() => {
+            expect(globalThis.lgs.theJourney.flythrough.start[0].params.duration).toBe(2)
+            expect(globalThis.lgs.stores.flythrough.effects.start[0].params.duration).toBe(2)
         })
     })
 

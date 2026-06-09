@@ -171,7 +171,10 @@ describe('FlythroughDrawer', () => {
 
         await waitFor(() => {
             expect(__.ui.flythrough.refresh).toHaveBeenCalledWith({camera: true})
-            expect(__.ui.flythrough.refreshCamera).not.toHaveBeenCalled()
+            expect(__.ui.flythrough.refreshCamera).toHaveBeenCalledWith({
+                sample:             null,
+                suppressMoveEvents: false,
+            })
             expect(globalThis.lgs.settings.ui.flythrough.camera.pitch).toBe(-20)
             expect(globalThis.lgs.stores.flythrough.camera.pitch).toBe(-20)
         })

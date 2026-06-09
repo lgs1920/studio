@@ -866,7 +866,9 @@ export class FlythroughMode {
     }
 
     refreshCamera = (options = {}) => {
-        const sample = currentFlythroughSample(this.#controller)
+        const sample = options.sample
+            ?? currentFlythroughSample(this.#controller)
+            ?? globalThis.lgs?.stores?.flythrough?.sample
         if (!sample) {
             return null
         }

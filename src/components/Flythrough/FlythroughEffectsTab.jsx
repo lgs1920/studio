@@ -66,6 +66,7 @@ const emptyEditorState = () => ({
     index:      null,
     effectId:   null,
     params:     {},
+    initialParams: {},
     definition: null,
 })
 
@@ -208,6 +209,44 @@ const EffectEditorPopup = ({effects, editor, setEditor, onSave}) => {
     const normalized = useMemo(() => normalizeFlythroughEffects(effects), [effects])
     const definitions = useMemo(() => readDefinitions(effects, editor.slot) ?? [], [effects, editor.slot])
     const definition = editor.definition ?? (editor.effectId ? normalized.catalog[editor.effectId] : null)
+    const initialParams = useMemo(() => editor.initialParams ?? definition?.defaults ?? {}, [definition, editor.initialParams])
+    const isDirty = useMemo(() => JSON.stringify(editor.params ?? {}) !== JSON.stringify(initialParams ?? {}), [editor.params, initialParams])
+
+    const persistEdit = useCallback((params) => {
+        if (editor.mode !== 'edit' || editor.index === null || editor.index === undefined || !definition) {
+            return
+        }
+
+        const current = clone(effects ?? {})
+        const normalizedCurrent = normalizeFlythroughEffects(current)
+        const listKey = listNameForSlot(editor.slot)
+        const list = [...(normalizedCurrent[listKey] ?? [])]
+        if (!list[editor.index]) {
+            return
+        }
+
+        list[editor.index] = {
+            ...list[editor.index],
+            params: {
+                ...(list[editor.index]?.params ?? {}),
+                ...(params ?? {}),
+            },
+        }
+
+        onSave({
+                   ...normalizedCurrent,
+                   [listKey]:             list,
+                   [`${listKey}Effects`]: list,
+               })
+    }, [definition, editor.index, editor.mode, editor.slot, effects, onSave])
+
+    const updateParams = useCallback((nextParams) => {
+        setEditor(current => ({
+            ...current,
+            params: nextParams,
+        }))
+        persistEdit(nextParams)
+    }, [persistEdit, setEditor])
 
     useEffect(() => {
         if (!editor.open || editor.mode !== 'add' || editor.effectId) {
@@ -223,6 +262,7 @@ const EffectEditorPopup = ({effects, editor, setEditor, onSave}) => {
             ...current,
             effectId: current.effectId ?? nextDefinition.id,
             params:   current.effectId ? current.params : {...nextDefinition.defaults},
+            initialParams: current.effectId ? current.initialParams : {...nextDefinition.defaults},
         }))
     }, [definitions, editor.effectId, editor.mode, editor.open, setEditor])
 
@@ -280,6 +320,11 @@ const EffectEditorPopup = ({effects, editor, setEditor, onSave}) => {
 
         if (editor.mode === 'add') {
             list.push(instance)
+            onSave({
+                       ...normalizedCurrent,
+                       [listKey]:             list,
+                       [`${listKey}Effects`]: list,
+                   })
         }
         else if (editor.index !== null && editor.index !== undefined) {
             list[editor.index] = {
@@ -287,15 +332,23 @@ const EffectEditorPopup = ({effects, editor, setEditor, onSave}) => {
                 ...instance,
                 params: instance.params,
             }
+            onSave({
+                       ...normalizedCurrent,
+                       [listKey]:             list,
+                       [`${listKey}Effects`]: list,
+                   })
         }
-
-        onSave({
-                   ...normalizedCurrent,
-                   [listKey]:             list,
-                   [`${listKey}Effects`]: list,
-               })
         close()
     }, [close, definition, editor, effects, onSave])
+
+    const reset = useCallback(() => {
+        const nextParams = clone(initialParams ?? definition?.defaults ?? {})
+        setEditor(current => ({
+            ...current,
+            params: nextParams,
+        }))
+        persistEdit(nextParams)
+    }, [definition, initialParams, persistEdit, setEditor])
 
     if (!editor.open || !definition) {
         return null
@@ -322,12 +375,20 @@ const EffectEditorPopup = ({effects, editor, setEditor, onSave}) => {
                 <>
                     <WaButton size="s" variant="brand" appearance="outlined" onClick={close}>
                         <WaIcon slot="start" size="s" name="xmark" variant="regular"/>
-                        {'Cancel'}
+                        {editor.mode === 'add' ? 'Cancel' : 'Close'}
                     </WaButton>
-                    <WaButton size="s" variant="brand" appearance="filled" onClick={save}>
-                        <WaIcon slot="start" size="s" name="check" variant="regular"/>
-                        {editor.mode === 'add' ? 'Add' : 'Apply'}
-                    </WaButton>
+                    {editor.mode === 'edit' && isDirty && (
+                        <WaButton size="s" variant="brand" appearance="outlined" onClick={reset}>
+                            <WaIcon slot="start" size="s" name="arrow-rotate-left" variant="regular"/>
+                            {'Reset'}
+                        </WaButton>
+                    )}
+                    {editor.mode === 'add' && (
+                        <WaButton size="s" variant="brand" appearance="filled" onClick={save}>
+                            <WaIcon slot="start" size="s" name="check" variant="regular"/>
+                            {'Add'}
+                        </WaButton>
+                    )}
                 </>
             )}
             className="flythrough-effects-popup-card"
@@ -344,13 +405,10 @@ const EffectEditorPopup = ({effects, editor, setEditor, onSave}) => {
                             field={field}
                             value={editor.params?.[field.key] ?? definition.defaults?.[field.key] ?? ''}
                             unitSystem={unitSystem}
-                            onChange={value => setEditor(current => ({
-                                ...current,
-                                params: {
-                                    ...(current.params ?? {}),
-                                    [field.key]: value,
-                                },
-                            }))}
+                            onChange={value => updateParams({
+                                ...(editor.params ?? {}),
+                                [field.key]: value,
+                            })}
                         />
                     ))}
                 </div>
@@ -690,7 +748,8 @@ export const FlythroughEffectsTab = memo(({settings}) => {
                       index,
                       anchorId: anchorId ?? `${slot}-${EDIT_POPUP_SUFFIX}`,
                       effectId,
-                      params,
+                      params:         {...params},
+                      initialParams:  {...params},
                       definition,
                   })
     }, [])
