@@ -36,6 +36,7 @@ export const BorderElement = ({
                                   sanitizeSliderValue = sanitizeNumericControlValue,
                               }) => {
     const currentRadius = element.border?.radius ?? 'none'
+    const borderOpacity = sanitizeSliderValue(element.border?.opacity, 1, {min: 0, max: 1})
 
     /**
      * Handles radius selection and updates the pill flag.
@@ -101,10 +102,10 @@ export const BorderElement = ({
                                     label-at-start
                                     placement="top"
                                     valueFormatter={formatSliderPercent}
-                                    value={sanitizeSliderValue(element.border?.opacity, 1, {min: 0, max: 1})}
+                                    value={borderOpacity}
                                     onInput={(e) => updateValue(
                                         'border.opacity',
-                                        sanitizeSliderValue(e.target.value, 1, {min: 0, max: 1}),
+                                        sanitizeSliderValue(e.target.value, borderOpacity, {min: 0, max: 1}),
                                     )}
                                 />
                             </div>

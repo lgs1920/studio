@@ -271,6 +271,7 @@ export const EditableText = ({id}) => {
     const displayValue = isEditing
                          ? (editingText.replace(/\n$/, '\n '))
                          : (element.text?.content ?? (typeof element.text === 'string' ? element.text : ''))
+    const textScaled = element?.scaled ?? true
 
     const cssVars = widgetManager.generateCSSVariables(element, null, undefined, {
         correction: scaleCorrection,
@@ -306,14 +307,13 @@ export const EditableText = ({id}) => {
             className={classNames('lgs-editable-text-wrapper', {'text-editing-progress': isEditing})}
             style={{
                 ...cssVars,
-                display:         'inline-block',
+                display:         textScaled ? 'inline-block' : 'grid',
                 position: 'relative',
                 width: '100%',
                 height: '100%',
                 minWidth: '1ch',
                 boxSizing: 'border-box',
-                alignContent: (element?.scaled ?? true) ? undefined : 'center',
-                justifyItems:  (element?.scaled ?? true) ? undefined : 'center',
+                placeItems: textScaled ? undefined : 'center',
                 backgroundColor: 'var(--lgs-tx-bg-color)',
                 backdropFilter: 'blur(var(--lgs-tx-blur))',
                 border:          'var(--lgs-tx-border)',
@@ -327,8 +327,9 @@ export const EditableText = ({id}) => {
                 onClick={!isEditing ? handleStartEdit : undefined}
                 style={{
                     ...commonStyles,
-                    width: (element?.scaled ?? true) ? '100%' : 'max-content',
+                    width: textScaled ? '100%' : 'max-content',
                     minWidth: 'max-content',
+                    gridArea: textScaled ? undefined : '1 / 1',
                     cursor:     'text',
                     userSelect: 'none',
                     visibility: isEditing ? 'hidden' : 'visible',
@@ -344,16 +345,21 @@ export const EditableText = ({id}) => {
                     spellCheck={false}
                     style={{
                         ...commonStyles,
-                        position:   'absolute',
-                        top:    '0',
-                        left:   '0',
-                        width:  '100%',
-                        height: '100%',
+                        position:   textScaled ? 'absolute' : 'relative',
+                        top:    textScaled ? '0' : undefined,
+                        left:   textScaled ? '0' : undefined,
+                        width:  textScaled ? '100%' : 'max-content',
+                        height: textScaled ? '100%' : 'auto',
+                        minHeight: '1em',
+                        gridArea: textScaled ? undefined : '1 / 1',
                         background: 'transparent',
                         border:     'none',
                         resize:     'none',
                         overflow: 'hidden',
                         display:    'block',
+                        appearance:  'none',
+                        verticalAlign: 'top',
+                        fieldSizing: textScaled ? undefined : 'content',
                     }}
                     value={editingText}
                     onInput={(e) => {
