@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-25
- * Last modified: 2026-04-25
+ * Created on: 2026-06-09
+ * Last modified: 2026-06-09
  *
  *
  * Copyright © 2026 LGS1920
@@ -54,8 +54,13 @@ export const ProfileWidgetPreview = ({entity}) => {
             return
         }
 
+        let raf1 = 0
+        let raf2 = 0
         const updateSize = () => {
             const element = _preview.current
+            if (!element) {
+                return
+            }
             const rect = element.getBoundingClientRect()
             const styles = window.getComputedStyle(element)
             const horizontalPadding = (Number.parseFloat(styles.paddingLeft) || 0) + (Number.parseFloat(styles.paddingRight) || 0)
@@ -71,11 +76,24 @@ export const ProfileWidgetPreview = ({entity}) => {
         updateSize()
         const _observer = new ResizeObserver(updateSize)
         _observer.observe(_preview.current)
-        return () => _observer.disconnect()
+        raf1 = requestAnimationFrame(() => {
+            updateSize()
+            raf2 = requestAnimationFrame(updateSize)
+        })
+        return () => {
+            if (raf1) {
+                cancelAnimationFrame(raf1)
+            }
+            if (raf2) {
+                cancelAnimationFrame(raf2)
+            }
+            _observer.disconnect()
+        }
     }, [])
 
     const previewStyle = {
         width:                      '100%',
+        height: '100%',
         display:                    'flex',
         alignItems:                 'center',
         justifyContent:             'center',
