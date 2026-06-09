@@ -1060,7 +1060,7 @@ export class FlythroughMode {
                 return
             }
 
-            this.#recenterCameraToSample({
+            await this.#recenterCameraToSample({
                 sample:         target,
                 heading:        endHeading,
                 pitch:          endPitch,
@@ -1069,7 +1069,6 @@ export class FlythroughMode {
                 duration,
             })
 
-            await this.#runClipDelay(duration)
             return
         }
 
@@ -2282,24 +2281,32 @@ export class FlythroughMode {
                                         },
                                     })
             finishFlight()
-            return
+            return Promise.resolve()
         }
 
         if (typeof viewer.camera.flyTo === 'function') {
-            viewer.camera.flyTo({
-                                    destination,
-                                    orientation:       {
-                                        direction,
-                                        up: correctedUp,
-                                    },
-                                    duration,
-                                    maximumHeight:     currentHeight,
-                                    pitchAdjustHeight: Number.POSITIVE_INFINITY,
-                                    complete:          finishFlight,
-                                    cancel:            finishFlight,
-                                })
-
+            return new Promise(resolve => {
+                const finalizeFlight = () => {
+                    finishFlight()
+                    resolve()
+                }
+                viewer.camera.flyTo({
+                                        destination,
+                                        orientation:       {
+                                            direction,
+                                            up: correctedUp,
+                                        },
+                                        duration,
+                                        maximumHeight:     currentHeight,
+                                        pitchAdjustHeight: Number.POSITIVE_INFINITY,
+                                        complete:          finalizeFlight,
+                                        cancel:            finalizeFlight,
+                                    })
+            })
         }
+
+        finishFlight()
+        return Promise.resolve()
     }
 
     #bindMarkerInteractions = () => {

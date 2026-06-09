@@ -3135,6 +3135,157 @@ describe('flythrough phase 1 playback controller', () => {
         }
     })
 
+    it('starts the flythrough immediately after a zoom-in start clip finishes', async () => {
+        const journey = makeJourney([
+                                        makeTrack({
+                                                      slug:        'track#journey#gpx#main',
+                                                      coordinates: [[2, 48, 120], [2.001, 48.001, 130]],
+                                                  }),
+                                    ])
+        const previousLgs = globalThis.lgs
+        const flythrough = defaultFlythroughSettings()
+        const flyToCalls = []
+        const zoomInDefinition = {
+            id:           'zoom-in',
+            label:        'Zoom in',
+            slots:        ['start'],
+            maxInstances: 1,
+            defaults:     {
+                duration: 0.1,
+                altitude: 300,
+                pitch:    -35,
+            },
+            fields:       [],
+        }
+        const zoomIn = createFlythroughClipInstance(zoomInDefinition, 'start', {
+            params: {
+                duration: 0.1,
+                altitude: 300,
+                pitch:    -35,
+            },
+        })
+        journey.flythrough = {
+            start: [zoomIn],
+            stop:  [],
+        }
+
+        globalThis.lgs = {
+            theJourney: journey,
+            theTrack:   null,
+            canvas:     {
+                clientWidth:         1000,
+                clientHeight:        1000,
+                addEventListener:    () => {
+                },
+                removeEventListener: () => {
+                },
+            },
+            settings:   {
+                ui: {
+                    flythrough: {
+                        ...flythrough,
+                        clips: {
+                            catalog: {
+                                'zoom-in': zoomInDefinition,
+                            },
+                            start: [],
+                            stop:  [],
+                        },
+                    },
+                },
+            },
+            stores:     {
+                flythrough: proxy({
+                                      progress: 0,
+                                      camera:   flythrough.camera,
+                                      clips:    {
+                                          catalog: {
+                                              'zoom-in': zoomInDefinition,
+                                          },
+                                          start: [],
+                                          stop:  [],
+                                      },
+                                  }),
+            },
+            viewer:     {
+                trackedEntity: null,
+                canvas:        {
+                    clientWidth:         1000,
+                    clientHeight:        1000,
+                    addEventListener:    () => {
+                    },
+                    removeEventListener: () => {
+                    },
+                },
+                camera:        {
+                    heading:              0.8,
+                    pitch:                -Math.PI / 4,
+                    roll:                 0,
+                    positionCartographic: {
+                        longitude: 2,
+                        latitude:  48,
+                        height:    1800,
+                    },
+                    moveStart:            {
+                        addEventListener:       () => {
+                        }, removeEventListener: () => {
+                        },
+                    },
+                    moveEnd:              {
+                        addEventListener:       () => {
+                        }, removeEventListener: () => {
+                        },
+                    },
+                    cancelFlight:         () => {
+                    },
+                    flyTo:                options => flyToCalls.push(options),
+                    setView:              () => {
+                    },
+                    lookAtTransform:      () => {
+                    },
+                },
+            },
+            scene:      {
+                requestRender: () => {
+                },
+                globe:         {getHeight: () => 120},
+            },
+        }
+
+        try {
+            const mode = new FlythroughMode({
+                                                controller: new FlythroughPlaybackController({
+                                                                                                 requestFrame: () => 1,
+                                                                                                 cancelFrame:  () => {
+                                                                                                 },
+                                                                                                 now:          () => 0,
+                                                                                             }),
+                                                renderer:   {
+                                                    clear:  () => {
+                                                    },
+                                                    show:   () => {
+                                                    },
+                                                    update: () => {
+                                                    },
+                                                },
+                                            })
+            const controllerStartSpy = vi.spyOn(mode.controller, 'start')
+
+            mode.start({duration: 1})
+            await Promise.resolve()
+            expect(controllerStartSpy).not.toHaveBeenCalled()
+            expect(flyToCalls).toHaveLength(1)
+
+            flyToCalls[0].complete?.()
+            await new Promise(resolve => setTimeout(resolve, 0))
+
+            expect(controllerStartSpy).toHaveBeenCalledTimes(1)
+        }
+        finally {
+            globalThis.lgs = previousLgs
+        }
+    })
+
     it('resolves zoom-in on the journey start sample and zoom-out on the centroid', async () => {
         const journey = makeJourney([
                                         makeTrack({
