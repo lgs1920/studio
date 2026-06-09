@@ -15,6 +15,7 @@
  ******************************************************************************/
 
 import { CameraUtils }                                        from '@Utils/cesium/CameraUtils'
+import { TrackUtils }                                         from '@Utils/cesium/TrackUtils'
 import {
     Cartesian2, Cartesian3, Cartographic, CatmullRomSpline, ExtrapolationType, JulianDate, LinearApproximation,
     Math as CesiumMath, Matrix4, SampledPositionProperty, SceneTransforms, Transforms,
@@ -781,12 +782,23 @@ export class FlythroughMode {
             return
         }
 
-        if (!this.#hiddenJourneyVisibility.has(journey.slug)) {
-            this.#hiddenJourneyVisibility.set(journey.slug, journey.visible !== false)
-        }
-
         journey.visible = false
         journey.updateVisibility?.(false)
+        globalThis.lgs?.scene?.requestRender?.()
+    }
+
+    #restoreCurrentJourneyVisibility = () => {
+        const journey = globalThis.lgs?.theJourney
+        if (!journey) {
+            return
+        }
+
+        this.#hiddenJourneyVisibility.delete(journey.slug)
+        journey.visible = true
+        journey.updateVisibility?.(true)
+        if (globalThis.lgs?.viewer?.dataSources) {
+            TrackUtils.updatePOIsVisibility(journey, true)
+        }
         globalThis.lgs?.scene?.requestRender?.()
     }
 
@@ -795,7 +807,13 @@ export class FlythroughMode {
             return
         }
 
+        const currentJourneySlug = globalThis.lgs?.theJourney?.slug ?? null
         for (const [slug, visible] of this.#hiddenJourneyVisibility.entries()) {
+            if (slug === currentJourneySlug) {
+                this.#hiddenJourneyVisibility.delete(slug)
+                continue
+            }
+
             const journey = globalThis.lgs?.journeys?.get?.(slug)
             if (!journey) {
                 continue
@@ -967,6 +985,7 @@ export class FlythroughMode {
         })
         this.#renderer.clear()
         this.#restoreOtherJourneysVisibility()
+        this.#restoreCurrentJourneyVisibility()
         this.#setContinuousRender(false)
         this.#removeToleranceZoneOverlay()
         this.#resetCameraController({preserveSavedCameraState: true})
@@ -1316,6 +1335,7 @@ export class FlythroughMode {
         this.#setContinuousRender(false)
         this.#renderer.clear()
         this.#restoreOtherJourneysVisibility()
+        this.#restoreCurrentJourneyVisibility()
         this.#deferStartCameraRecenter = false
         this.#resetCameraController({preserveSavedCameraState: true})
         this.#restoreJourneyToolbarVisibility()
@@ -2701,6 +2721,7 @@ export class FlythroughMode {
                 this.#setContinuousRender(false)
                 this.#renderer.clear()
                 this.#restoreOtherJourneysVisibility()
+                this.#restoreCurrentJourneyVisibility()
                 this.#deferStartCameraRecenter = false
                 this.#restoreJourneyToolbarVisibility()
                 resetRuntimeProgress(flythroughStore())
@@ -2727,6 +2748,7 @@ export class FlythroughMode {
                     this.#setContinuousRender(false)
                     this.#renderer.clear()
                     this.#restoreOtherJourneysVisibility()
+                    this.#restoreCurrentJourneyVisibility()
                     this.#deferStartCameraRecenter = false
                     this.#restoreJourneyToolbarVisibility()
                     resetRuntimeProgress(flythroughStore())
