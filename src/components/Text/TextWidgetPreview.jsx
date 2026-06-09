@@ -103,36 +103,9 @@ export const TextWidgetPreview = memo(({entity}) => {
     }, [element, currentSnapshotImage, _textWidgetManager])
 
     const contentSize = useMemo(() => {
-        const content = element?.text?.content ?? ''
-        const fontSize = Number(element?.size ?? 16)
-        const lineHeight = Number.parseFloat(element?.lineHeight ?? 1) || 1
-        const lineHeightPx = fontSize * lineHeight
-        const padding = _textWidgetManager.resolvePadding(element, 1)
-        const borderThickness = element?.border?.show ? Number(element.border?.thickness ?? 0) : 0
-        const strokeWidth = element?.text?.stroke?.show ? Number(element.text.stroke?.width ?? 0) : 0
-
-        const lines = (content || ' ').split('\n')
-        const fontFamily = element?.fontFamily === 'System' ? WIDGET_SYSTEM_FONT_STACK : (element?.fontFamily || WIDGET_SYSTEM_FONT_STACK)
-        const fontWeight = element?.weight ?? 'normal'
-        const fontStyle = element?.style ?? 'normal'
-
-        let maxLineWidth = fontSize
-        if (typeof document !== 'undefined') {
-            const canvas = document.createElement('canvas')
-            const context = canvas.getContext('2d')
-            if (context) {
-                context.font = `${fontStyle} ${fontWeight} ${fontSize}px ${fontFamily}`
-                maxLineWidth = lines.reduce((maxWidth, line) => {
-                    const measuredWidth = context.measureText(line || ' ').width
-                    return Math.max(maxWidth, measuredWidth)
-                }, fontSize)
-            }
-        }
-
-        return {
-            width:  Math.ceil(maxLineWidth + padding.left + padding.right + (borderThickness * 2) + (strokeWidth * 2) + PREVIEW_MEASURE_BUFFER),
-            height: Math.ceil((lines.length * lineHeightPx) + padding.top + padding.bottom + (borderThickness * 2) + (strokeWidth * 2) + PREVIEW_MEASURE_BUFFER),
-        }
+        return _textWidgetManager.measureContent(element, WIDGET_SYSTEM_FONT_STACK, {
+            buffer: PREVIEW_MEASURE_BUFFER,
+        })
     }, [element, _textWidgetManager])
 
     useEffect(() => {

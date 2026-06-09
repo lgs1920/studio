@@ -213,6 +213,57 @@ export const EditableText = ({id}) => {
         }
     }, [editingText, isEditing, element?.text?.content, scaleCorrection, _moveable])
 
+    useEffect(() => {
+        const widgetElement = __.ui.widgetManager.getElementById(id)
+        const config = __.ui.widgetManager.getWidgetConfig(id)
+
+        if (!widgetElement || !config || !element) {
+            return undefined
+        }
+
+        if (__.ui.widgetManager.isScaling || __.ui.widgetManager.isResizing) {
+            _moveable?.current?.updateRect()
+            return undefined
+        }
+
+        const frame = requestAnimationFrame(() => {
+            const {width, height} = widgetManager.measureContent(element, undefined, {
+                correction: 1,
+            })
+
+            if (Number.isFinite(width) && width > 0 && Number.isFinite(height) && height > 0) {
+                widgetElement.style.width = `${width}px`
+                widgetElement.style.height = `${height}px`
+                config.dimensions = {width, height}
+            }
+
+            _moveable?.current?.updateRect()
+        })
+
+        return () => cancelAnimationFrame(frame)
+    }, [
+        _moveable,
+        widgetManager,
+        id,
+        element,
+        element?.text?.content,
+        element?.text?.stroke?.show,
+        element?.text?.stroke?.width,
+        element?.fontFamily,
+        element?.size,
+        element?.lineHeight,
+        element?.weight,
+        element?.style,
+        element?.border?.show,
+        element?.border?.thickness,
+        element?.padding?.top,
+        element?.padding?.right,
+        element?.padding?.bottom,
+        element?.padding?.left,
+        element?.scaled,
+        fontTick,
+    ])
+
     if (!element) {
         return null
     }
@@ -256,7 +307,13 @@ export const EditableText = ({id}) => {
             style={{
                 ...cssVars,
                 display:         'inline-block',
+                position: 'relative',
+                width: '100%',
+                height: '100%',
                 minWidth: '1ch',
+                boxSizing: 'border-box',
+                alignContent: (element?.scaled ?? true) ? undefined : 'center',
+                justifyItems:  (element?.scaled ?? true) ? undefined : 'center',
                 backgroundColor: 'var(--lgs-tx-bg-color)',
                 backdropFilter: 'blur(var(--lgs-tx-blur))',
                 border:          'var(--lgs-tx-border)',
@@ -270,6 +327,8 @@ export const EditableText = ({id}) => {
                 onClick={!isEditing ? handleStartEdit : undefined}
                 style={{
                     ...commonStyles,
+                    width: (element?.scaled ?? true) ? '100%' : 'max-content',
+                    minWidth: 'max-content',
                     cursor:     'text',
                     userSelect: 'none',
                     visibility: isEditing ? 'hidden' : 'visible',

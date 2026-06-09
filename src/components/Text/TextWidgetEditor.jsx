@@ -43,6 +43,9 @@ import {
     StyleElement,
 } from '@Components/MainUI/widgets/editor/elements/StyleElement'
 import {
+    ScaleSwitchElement,
+} from '@Components/MainUI/widgets/editor/elements/ScaleSwitchElement'
+import {
     TextColorElement,
 } from '@Components/MainUI/widgets/editor/elements/TextColorElement'
 import {
@@ -207,6 +210,11 @@ export const TextWidgetEditor = ({entity}) => {
                 <div className="text-widget-editor-header">
                     <div className="drawer-horizontal-line">
                         <TypefaceElement id={normalizedId}/><LineHeightElement id={normalizedId}/>
+                        <ScaleSwitchElement
+                            checked={element?.scaled ?? true}
+                            onChange={(checked) => updateValue('scaled', checked)}
+                            className="lgs-widget-scaled-line-right"
+                        />
                     </div>
                     <div className="drawer-horizontal-line text-widget-editor-size-format-line">
                         <FontSizeElement id={normalizedId}/>

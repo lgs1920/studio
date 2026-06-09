@@ -208,6 +208,7 @@ widgets:
           opacity: 1
 
         size: 16
+        scaled: true
         fontFamily: "Roboto Condensed"
         lineHeight: 1.2
         orientation: 0

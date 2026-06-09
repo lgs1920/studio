@@ -76,6 +76,47 @@ export class TextWidgetManager {
         }
     }
 
+    measureContent = (
+        element,
+        systemStack = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
+        options = {},
+    ) => {
+        const correction = Number.isFinite(Number(options.correction)) ? Number(options.correction) : 1
+        const buffer = Number.isFinite(Number(options.buffer)) ? Number(options.buffer) : 0
+        const content = element?.text?.content ?? ''
+        const baseFontSize = Number(element?.size ?? 16)
+        const textCorrection = (element?.scaled ?? true) ? 1 : correction
+        const fontSize = this.#scaleSize(baseFontSize, textCorrection)
+        const lineHeight = Number.parseFloat(element?.lineHeight ?? 1) || 1
+        const lineHeightPx = fontSize * lineHeight
+        const padding = this.resolvePadding(element, correction)
+        const borderScale = element?.border?.scaled === false ? correction : 1
+        const borderThickness = element?.border?.show ? this.#scaleSize(element.border?.thickness ?? 0, borderScale) : 0
+        const strokeWidth = element?.text?.stroke?.show ? this.#scaleSize(element.text.stroke?.width ?? 0, textCorrection) : 0
+        const lines = (content || ' ').split('\n')
+        const fontFamily = element?.fontFamily === 'System' ? systemStack : (element?.fontFamily || systemStack)
+        const fontWeight = element?.weight ?? 'normal'
+        const fontStyle = element?.style ?? 'normal'
+
+        let maxLineWidth = fontSize
+        if (typeof document !== 'undefined') {
+            const canvas = document.createElement('canvas')
+            const context = canvas.getContext('2d')
+            if (context) {
+                context.font = `${fontStyle} ${fontWeight} ${fontSize}px ${fontFamily}`
+                maxLineWidth = lines.reduce((maxWidth, line) => {
+                    const measuredWidth = context.measureText(line || ' ').width
+                    return Math.max(maxWidth, measuredWidth)
+                }, fontSize)
+            }
+        }
+
+        return {
+            width:  Math.ceil(maxLineWidth + padding.left + padding.right + (borderThickness * 2) + (strokeWidth * 2) + buffer),
+            height: Math.ceil((lines.length * lineHeightPx) + padding.top + padding.bottom + (borderThickness * 2) + (strokeWidth * 2) + buffer),
+        }
+    }
+
     generateCSSVariables(
         element,
         bgSnapshot  = null,
@@ -93,8 +134,10 @@ export class TextWidgetManager {
 
         const fontSize = element.size ?? 16
         const lineHeight = parseFloat(element.lineHeight ?? 1)
-        const lineHeightPx = fontSize * lineHeight
         const correction = scale.correction ?? 1
+        const textCorrection = (element?.scaled ?? true) ? 1 : correction
+        const textSize = this.#scaleSize(fontSize, textCorrection)
+        const lineHeightPx = textSize * lineHeight
         const borderScale = element.border?.scaled === false ? (scale.correction ?? 1) : 1
         const radiusScale = element.border?.radiusScaled === false ? (scale.correction ?? 1) : 1
         const padding = this.resolvePadding(element, correction)
@@ -111,7 +154,7 @@ export class TextWidgetManager {
             '--lgs-tx-color':  this.getColor(element.text, true),
             '--lgs-tx-font':     element.fontFamily === 'System' ? systemStack : element.fontFamily,
             '--lgs-tx-align':    element.align ?? 'left',
-            '--lgs-tx-size':     `${element.size ?? 16}px`,
+            '--lgs-tx-size':     `${textSize}px`,
             '--lgs-tx-weight':   element.weight ?? 'normal',
             '--lgs-tx-style':    element.style ?? 'normal',
             '--lgs-tx-lh':       element.lineHeight ?? '1',
@@ -129,10 +172,10 @@ export class TextWidgetManager {
                 `0 8px 16px ${bgShadowColor}`
             ) : 'none',
             '--lgs-tx-shadow':         element.text?.shadow?.show ? (
-                `${textShadowSize[0]}px ${textShadowSize[1]}px ${textShadowSize[2]}px ${txShadowColor}`
+                `${this.#scaleSize(textShadowSize[0], textCorrection)}px ${this.#scaleSize(textShadowSize[1], textCorrection)}px ${this.#scaleSize(textShadowSize[2], textCorrection)}px ${txShadowColor}`
             ) : 'none',
 
-            '--lgs-tx-stroke-width': `${element.text?.stroke?.show ? element.text.stroke.width : 0}px`,
+            '--lgs-tx-stroke-width': `${element.text?.stroke?.show ? this.#scaleSize(element.text.stroke.width, textCorrection) : 0}px`,
             '--lgs-tx-stroke-color': element.text?.stroke?.show ? this.getColor(element.text.stroke, true) : 'transparent',
             '--lgs-tx-paint-order':  'fill stroke',
 
