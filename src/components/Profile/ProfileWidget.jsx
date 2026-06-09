@@ -15,7 +15,9 @@
  ******************************************************************************/
 
 import { Widget }                                                                       from '@Components/MainUI/widgets/Widget'
-import { HOUR, JOURNEY_WIDGETS, LGS_VISUAL_WIDGET, SCENE_WIDGETS, SCENE_WIDGETS_BOARD } from '@Core/constants'
+import {
+    HOUR, JOURNEY_WIDGETS, LGS_VISUAL_WIDGET, SCENE_WIDGETS, SCENE_WIDGETS_BOARD,
+} from '@Core/constants'
 import { useOptionalSnapshot } from '@Utils/ValtioUtils'
 import { useEffect, useMemo }  from 'react'
 import { useSnapshot }                                                                  from 'valtio'
@@ -116,9 +118,9 @@ export const ProfileWidget = ({id, context, zIndex, widgetsBoard: persistedWidge
             {data &&
                 <ProfileChart data={data}
                               id={id}
-                              height={profile.height}
+                              height="100%"
                               locked={isLocked}
-                              width={profile.width}
+                              width="100%"
                 />
             }
         </Widget>

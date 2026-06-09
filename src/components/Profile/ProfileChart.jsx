@@ -123,8 +123,6 @@ const FLYTHROUGH_PROFILE_HOVER_MARKER_GRAPHIC = 'flythrough-profile-hover-marker
 const FLYTHROUGH_PROFILE_LOCKED_HORIZONTAL_GUIDE_GRAPHIC = 'flythrough-profile-locked-horizontal-guide-graphic'
 const FLYTHROUGH_PROFILE_LOCKED_VERTICAL_GUIDE_GRAPHIC = 'flythrough-profile-locked-vertical-guide-graphic'
 const FLYTHROUGH_PROFILE_OVERLAY_GRAPHIC = 'flythrough-profile-overlay-graphic'
-const FLYTHROUGH_PROFILE_UPDATE_INTERVAL = 33
-const FLYTHROUGH_PROFILE_VIDEO_UPDATE_INTERVAL = 120
 const PROFILE_LINE_WIDTH = 2
 
 const isFlythroughSeries = seriesId => String(seriesId ?? '').startsWith('flythrough-')
@@ -276,7 +274,6 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
     const $unitStore = lgs.settings.unitSystem
     const unitStore = useSnapshot($unitStore)
     const unitSystem = unitStore.current
-    const video = useSnapshot(lgs.stores.ui.video)
     const flythroughSettings = useSnapshot(lgs.settings.ui.flythrough)
     const flythroughProfileInfo = useMemo(
         () => normalizeFlythroughProfileInfo(flythroughSettings.profileInfo),
@@ -726,8 +723,8 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
                         }
                     }
                 }
-                catch {
-
+                catch (error) {
+                    void error
                 }
             })
         })
@@ -1177,7 +1174,7 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
         return []
     }, [flythroughMetricLabel, hideProfileMetricBadge, showFlythroughLiveData])
 
-    const flythroughProfileOption = useCallback((flythroughState, chart) => {
+    const flythroughProfileOption = useCallback((flythroughState, chart, controllerSampleOverride = null) => {
         if (!data?.dataset || !data?.dimensions) {
             return null
         }
@@ -1186,7 +1183,7 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
             || flythroughState?.paused
             || flythroughState?.playing
             || flythroughState?.toolbarVisible
-        const controllerSample = __.ui.flythrough?.controller?.currentSample?.()
+        const controllerSample = controllerSampleOverride ?? __.ui.flythrough?.controller?.currentSample?.()
         const activeSample = visible
                              ? (flythroughState?.playing ? (controllerSample ?? flythroughState?.sample) : (flythroughState?.sample ?? controllerSample))
                              : null
@@ -1394,7 +1391,7 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
             _chart.current = null
             chart.dispose()
         }
-    }, [clearFlythroughProfileGraphicsCache, handleResize, preview])
+    }, [clearFlythroughProfileGraphicsCache, configId, handleResize, id, preview])
 
     useEffect(() => {
         if (locked) {
@@ -1421,7 +1418,6 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
 
         chart.setOption(option, {
             replaceMerge: ['graphic'],
-            lazyUpdate:   true,
             silent:       true,
         })
     }, [flythroughProfileOption, locked, lockedProfileSample, preview])
@@ -1459,15 +1455,8 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
         }
 
         let frame = null
-        let timeout = null
-        let lastUpdate = 0
         const flythroughStore = lgs.stores.flythrough
-        const videoCaptureActive = video.preRecording || video.recording || video.finalizing || video.snapshot
-        const updateInterval = videoCaptureActive
-                               ? FLYTHROUGH_PROFILE_VIDEO_UPDATE_INTERVAL
-                               : FLYTHROUGH_PROFILE_UPDATE_INTERVAL
-        const renderFlythroughProgress = () => {
-            timeout = null
+        const renderFlythroughProgress = (controllerSampleOverride = null, nextFlythroughState = flythroughStore) => {
             if (frame !== null) {
                 return
             }
@@ -1475,65 +1464,63 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
             frame = requestAnimationFrame(() => {
                 frame = null
                 const chart = _instance.current?.getEchartsInstance?.()
-                const option = flythroughProfileOption(flythroughStore, chart)
+                const option = flythroughProfileOption(nextFlythroughState, chart, controllerSampleOverride)
                 if (!chart || !option) {
                     return
                 }
-                lastUpdate = performance.now()
                 chart.setOption(option, {
                     replaceMerge: ['graphic'],
-                    lazyUpdate:   true,
                     silent:       true,
                 })
             })
         }
         const applyFlythroughProgress = () => {
-            const now = performance.now()
-            const elapsed = now - lastUpdate
-            const shouldRenderNow = !flythroughStore.playing || lastUpdate === 0 || elapsed >= updateInterval
-
-            if (shouldRenderNow) {
-                if (timeout !== null) {
-                    clearTimeout(timeout)
-                    timeout = null
-                }
-                renderFlythroughProgress()
-                return
-            }
-
-            if (timeout === null) {
-                timeout = setTimeout(renderFlythroughProgress, updateInterval - elapsed)
-            }
+            renderFlythroughProgress()
         }
 
         applyFlythroughProgress()
         const unsubscribe = subscribe(flythroughStore, applyFlythroughProgress)
         const flythroughController = __.ui.flythrough?.controller
-        const controllerEvents = [
-            FLYTHROUGH_EVENT_START,
-            FLYTHROUGH_EVENT_UPDATE,
-            FLYTHROUGH_EVENT_PAUSE,
-            FLYTHROUGH_EVENT_RESUME,
-            FLYTHROUGH_EVENT_STOP,
-            FLYTHROUGH_EVENT_END,
-        ]
+        const handleControllerUpdate = (detail) => {
+            if (!detail) {
+                renderFlythroughProgress()
+                return
+            }
+
+            const nextFlythroughState = {
+                ...flythroughStore,
+                active:         detail.running || detail.paused,
+                paused:         detail.paused,
+                playing:        detail.running && !detail.paused,
+                sample:         detail.sample ?? flythroughStore.sample,
+                progress:       detail.progress ?? flythroughStore.progress,
+                duration:       detail.duration ?? flythroughStore.duration,
+                direction:      detail.direction ?? flythroughStore.direction,
+                loop:           detail.loop ?? flythroughStore.loop,
+                toolbarVisible:  flythroughStore.toolbarVisible,
+                hoverSample:    flythroughStore.hoverSample,
+            }
+            renderFlythroughProgress(detail.sample ?? null, nextFlythroughState)
+        }
         const unsubscribeController = flythroughController
-                                      ? controllerEvents.map(event =>
-                                          flythroughController.on(event, applyFlythroughProgress),
-                                      )
+                                      ? [
+                                          flythroughController.on(FLYTHROUGH_EVENT_START, handleControllerUpdate),
+                                          flythroughController.on(FLYTHROUGH_EVENT_UPDATE, handleControllerUpdate),
+                                          flythroughController.on(FLYTHROUGH_EVENT_PAUSE, handleControllerUpdate),
+                                          flythroughController.on(FLYTHROUGH_EVENT_RESUME, handleControllerUpdate),
+                                          flythroughController.on(FLYTHROUGH_EVENT_STOP, handleControllerUpdate),
+                                          flythroughController.on(FLYTHROUGH_EVENT_END, handleControllerUpdate),
+                                      ]
                                       : []
 
         return () => {
             if (frame !== null) {
                 cancelAnimationFrame(frame)
             }
-            if (timeout !== null) {
-                clearTimeout(timeout)
-            }
             unsubscribeController.forEach(unsubscribeEvent => unsubscribeEvent?.())
             unsubscribe()
         }
-    }, [flythroughProfileOption, preview, video.preRecording, video.recording, video.finalizing, video.snapshot])
+    }, [flythroughProfileOption, preview])
 
     usePreviewChartResize(_instance, preview, [width, height, padding, borderWidth])
 
@@ -1602,7 +1589,8 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
     }
 
     return (
-        <div id={id ?? `profile-${uuid()}`}
+        <div
+            id={id ?? `profile-${uuid()}`}
             className="profile-chart-container"
             style={{
                 width:           width,

@@ -1232,6 +1232,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                             type:            fullConfig.snap,
                             outerTransforms: true,
                             outerShadows:    true,
+                            refreshMode:     config.refreshMode ?? (interactionLocked ? 'live' : 'mutation'),
                         })
                         await _w2c.current.init()
                     }
