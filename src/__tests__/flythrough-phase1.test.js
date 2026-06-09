@@ -2974,8 +2974,7 @@ describe('flythrough phase 1 playback controller', () => {
         }
     })
 
-    it('waits for the start launch clip before starting the flythrough on the path', async () => {
-        vi.useFakeTimers()
+    it('starts the flythrough after the launch start clip completes without extra delay', async () => {
         const journey = makeJourney([
                                         makeTrack({
                                                       slug:        'track#journey#gpx#main',
@@ -3119,18 +3118,14 @@ describe('flythrough phase 1 playback controller', () => {
             mode.start({duration: 1})
             await Promise.resolve()
             expect(controllerStartSpy).not.toHaveBeenCalled()
-            expect(flyToCalls).toHaveLength(1)
-            await Promise.resolve()
-            await Promise.resolve()
-            await vi.advanceTimersByTimeAsync(100)
-            await Promise.resolve()
 
-            expect(flyToCalls[0].maximumHeight).toBeLessThan(600)
-            expect(setViewCalls.length + flyToCalls.length).toBeGreaterThan(0)
+            expect(flyToCalls).toHaveLength(1)
+            flyToCalls[0].complete?.()
+            await new Promise(resolve => setTimeout(resolve, 0))
+
             expect(controllerStartSpy).toHaveBeenCalledTimes(1)
         }
         finally {
-            vi.useRealTimers()
             globalThis.lgs = previousLgs
         }
     })

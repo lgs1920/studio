@@ -1093,7 +1093,7 @@ export class FlythroughMode {
         if (landingFlight) {
             await globalThis.__?.ui?.cameraManager?.stopRotate?.()
         }
-        this.#recenterCameraToSample({
+        await this.#recenterCameraToSample({
             sample:         target,
             heading:        landingFlight
                             ? landingHeading
@@ -1108,8 +1108,6 @@ export class FlythroughMode {
             instant:        landingFlight,
             duration,
         })
-
-        await this.#runClipDelay(duration)
     }
 
     #runFlythroughClip = async (clip, {sample, token} = {}) => {
