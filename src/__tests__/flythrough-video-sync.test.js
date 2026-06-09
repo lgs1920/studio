@@ -16,7 +16,7 @@
 
 import { FlythroughVideoSync } from '@Core/ui/flythrough/FlythroughVideoSync'
 import { FLYTHROUGH_EVENT_END } from '@Core/ui/flythrough/FlythroughPlaybackController'
-import { FLYTHROUGH_EVENT_STOP_EFFECTS_COMPLETE } from '@Core/ui/flythrough/FlythroughMode'
+import { FLYTHROUGH_EVENT_STOP_CLIPS_COMPLETE } from '@Core/ui/flythrough/FlythroughMode'
 import { ScreenMediaRecorder } from '@Core/ui/screen-media-recorder/recorder/ScreenMediaRecorder'
 import { describe, expect, it, vi } from 'vitest'
 
@@ -78,7 +78,7 @@ describe('FlythroughVideoSync', () => {
         })
     })
 
-    it('stops the recorder after stop effects complete', async () => {
+    it('stops the recorder after stop clips complete', async () => {
         const recorder = new FakeRecorder()
         recorder.recording = true
         const flythrough = makeFlythrough()
@@ -89,7 +89,7 @@ describe('FlythroughVideoSync', () => {
         flythrough.controller.emit(FLYTHROUGH_EVENT_END)
         expect(recorder.stopVideo).not.toHaveBeenCalled()
 
-        window.dispatchEvent(new CustomEvent(FLYTHROUGH_EVENT_STOP_EFFECTS_COMPLETE))
+        window.dispatchEvent(new CustomEvent(FLYTHROUGH_EVENT_STOP_CLIPS_COMPLETE))
 
         expect(recorder.stopVideo).toHaveBeenCalledTimes(1)
     })
@@ -108,7 +108,7 @@ describe('FlythroughVideoSync', () => {
         expect(flythrough.stop).toHaveBeenCalledWith({emit: false})
     })
 
-    it('disarm prevents stop-effects-complete events from stopping the recorder', () => {
+    it('disarm prevents stop-clips-complete events from stopping the recorder', () => {
         const recorder = new FakeRecorder()
         recorder.recording = true
         const flythrough = makeFlythrough()
@@ -118,7 +118,7 @@ describe('FlythroughVideoSync', () => {
         sync.arm({autoStopRecording: true})
         sync.disarm()
         flythrough.controller.emit(FLYTHROUGH_EVENT_END)
-        window.dispatchEvent(new CustomEvent(FLYTHROUGH_EVENT_STOP_EFFECTS_COMPLETE))
+        window.dispatchEvent(new CustomEvent(FLYTHROUGH_EVENT_STOP_CLIPS_COMPLETE))
 
         expect(store.recordingSync).toBe(false)
         expect(flythrough.setVideoSafeMode).toHaveBeenCalledWith(false)

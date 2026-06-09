@@ -16,7 +16,7 @@
 
 import DrawerFooter from '@Components/DrawerFooter'
 import { FlythroughProgressBar } from '@Components/Flythrough/FlythroughProgressBar'
-import { FlythroughEffectsTab } from '@Components/Flythrough/FlythroughEffectsTab'
+import { FlythroughClipsTab } from '@Components/Flythrough/FlythroughClipsTab'
 import { LGSScrollbars } from '@Components/MainUI/LGSScrollbars'
 import { VideoButton } from '@Components/MainUI/video/VideoButton'
 import { formatSliderPercent } from '@Components/MainUI/widgets/editor/elements/sliderUtils'
@@ -39,7 +39,7 @@ import {
     getFlythroughCameraPresetKey, getFlythroughCameraPresetUpdates, normalizeFlythroughCamera, normalizeFlythroughMarker, normalizeFlythroughProfileInfo,
     normalizeFlythroughProgressionStyle, normalizeFlythroughTrace,
 }                 from '@Core/ui/flythrough/FlythroughProgressionStyle'
-import { normalizeFlythroughEffects } from '@Core/ui/flythrough/FlythroughEffects'
+import { normalizeFlythroughClips } from '@Core/ui/flythrough/FlythroughClips'
 import { ELEVATION_UNITS, UnitUtils } from '@Utils/UnitUtils'
 import {
     WaCard, WaColorPicker, WaDivider, WaIcon, WaNumberInput, WaOption, WaSelect, WaSlider, WaSwitch, WaTab, WaTabGroup,
@@ -250,14 +250,14 @@ export const FlythroughDrawer = memo(() => {
     const fillProfileMarker = progression.fill.profileMarker
     const borderProfileMarker = progression.border.profileMarker
     const trace = normalizeFlythroughTrace(flythroughSettings.trace)
-    const effects = normalizeFlythroughEffects({
-                                                   catalog: flythroughSettings.effects?.catalog ?? flythroughSettings.effects?.definitions ?? {},
+    const clips = normalizeFlythroughClips({
+                                                   catalog: flythroughSettings.clips?.catalog ?? flythroughSettings.clips?.definitions ?? {},
                                                    start:   Array.isArray(currentJourney?.flythrough?.start)
                                                             ? currentJourney.flythrough.start
-                                                            : flythroughSettings.effects?.start ?? [],
+                                                            : flythroughSettings.clips?.start ?? [],
                                                    stop:    Array.isArray(currentJourney?.flythrough?.stop)
                                                             ? currentJourney.flythrough.stop
-                                                            : flythroughSettings.effects?.stop ?? [],
+                                                            : flythroughSettings.clips?.stop ?? [],
                                                })
     const remainingUseDefinedTrackStyle = trace.remaining.useDefinedTrackStyle !== false
     const remainingColor = toOpaqueColorValue(trace.remaining.color)
@@ -268,11 +268,11 @@ export const FlythroughDrawer = memo(() => {
     const durationLocked = flythroughState.active || flythroughState.playing || flythroughState.paused
     const syncWithVideo = flythroughState.recordingSync === true
     const totalVideoDurationSeconds = useMemo(() => {
-        const effectDurationSeconds = [...(effects.start ?? []), ...(effects.stop ?? [])]
-            .reduce((total, effect) => total + Math.max(0, finiteNumber(effect?.params?.duration) ?? 0), 0)
+        const clipDurationSeconds = [...(clips.start ?? []), ...(clips.stop ?? [])]
+            .reduce((total, clip) => total + Math.max(0, finiteNumber(clip?.params?.duration) ?? 0), 0)
 
-        return Math.max(0, finiteNumber(flythroughSettings.duration) ?? 0) + effectDurationSeconds
-    }, [effects.start, effects.stop, flythroughSettings.duration])
+        return Math.max(0, finiteNumber(flythroughSettings.duration) ?? 0) + clipDurationSeconds
+    }, [clips.start, clips.stop, flythroughSettings.duration])
 
     useEffect(() => {
         const flythroughRuntime = lgs.stores.flythrough
@@ -293,7 +293,7 @@ export const FlythroughDrawer = memo(() => {
         flythroughRuntime.trace = normalizeFlythroughTrace(flythroughSettings.trace)
         flythroughRuntime.marker = normalizeFlythroughMarker(flythroughSettings.marker)
         flythroughRuntime.camera = normalizeFlythroughCamera(flythroughSettings.camera)
-        flythroughRuntime.effects = effects
+        flythroughRuntime.clips = clips
         flythroughRuntime.hideOtherJourneys = flythroughSettings.hideOtherJourneys === true
 
         if (journeyChanged) {
@@ -310,9 +310,9 @@ export const FlythroughDrawer = memo(() => {
         flythroughSettings.trace,
         flythroughSettings.marker,
         flythroughSettings.camera,
-        flythroughSettings.effects,
+        flythroughSettings.clips,
         flythroughSettings.hideOtherJourneys,
-        effects,
+        clips,
         currentJourney?.flythrough?.start,
         currentJourney?.flythrough?.stop,
         journeySlug,
@@ -697,9 +697,9 @@ export const FlythroughDrawer = memo(() => {
                                          <WaIcon name="paintbrush-pencil" variant="regular"/>
                                          {'Edit'}
                                      </WaTab>
-                                     <WaTab slot="nav" panel="effects">
+                                     <WaTab slot="nav" panel="clips">
                                          <WaIcon name="sparkles" variant="regular"/>
-                                         {'Effects'}
+                                         {'Clips'}
                                      </WaTab>
 
                                      <WaTabPanel name="runner">
@@ -925,10 +925,10 @@ export const FlythroughDrawer = memo(() => {
                                          </LGSScrollbars>
                                      </WaTabPanel>
 
-                                     <WaTabPanel name="effects">
+                                     <WaTabPanel name="clips">
                                          <LGSScrollbars>
                                              <div className="flythrough-tab-panel">
-                                                 <FlythroughEffectsTab
+                                                 <FlythroughClipsTab
                                                      settings={flythroughSettings}
                                                      state={flythroughState}
                                                  />

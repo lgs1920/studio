@@ -2,7 +2,7 @@
  *
  * This file is part of the LGS1920/studio project.
  *
- * File: FlythroughEffectsTab.jsx
+ * File: FlythroughClipsTab.jsx
  *
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
@@ -17,13 +17,13 @@
 import { PopupAnchor }                                             from '@Components/PopupAnchor'
 import { PopupDrawer }                                             from '@Components/PopupDrawer'
 import {
-    createFlythroughEffectInstance,
-    FLYTHROUGH_EFFECT_SLOT_START,
-    FLYTHROUGH_EFFECT_SLOT_STOP,
-    availableFlythroughEffectsForSlot,
-    canAddFlythroughEffect,
-    normalizeFlythroughEffects,
-}                                                                  from '@Core/ui/flythrough/FlythroughEffects'
+    createFlythroughClipInstance,
+    FLYTHROUGH_CLIP_SLOT_START,
+    FLYTHROUGH_CLIP_SLOT_STOP,
+    availableFlythroughClipsForSlot,
+    canAddFlythroughClip,
+    normalizeFlythroughClips,
+}                                                                  from '@Core/ui/flythrough/FlythroughClips'
 import { ELEVATION_UNITS, UnitUtils }                              from '@Utils/UnitUtils'
 import {
     WaButton,
@@ -40,31 +40,31 @@ import { useSnapshot }                                             from 'valtio'
 
 const ADD_POPUP_SUFFIX = 'add-popup-anchor'
 const EDIT_POPUP_SUFFIX = 'edit-popup-anchor'
-const FLYTHROUGH_EFFECTS_DEBUG = true
+const FLYTHROUGH_CLIPS_DEBUG = true
 
-const logFlythroughEffectsTab = (...args) => {
-    if (FLYTHROUGH_EFFECTS_DEBUG) {
-        console.debug('[FlythroughEffectsTab]', ...args)
+const logFlythroughClipsTab = (...args) => {
+    if (FLYTHROUGH_CLIPS_DEBUG) {
+        console.debug('[FlythroughClipsTab]', ...args)
     }
 }
 
-const listNameForSlot = slot => (slot === FLYTHROUGH_EFFECT_SLOT_STOP ? 'stop' : 'start')
+const listNameForSlot = slot => (slot === FLYTHROUGH_CLIP_SLOT_STOP ? 'stop' : 'start')
 
 const clone = value => JSON.parse(JSON.stringify(value))
 
 const emptyAddState = () => ({
     open:     false,
     anchorId: null,
-    slot:     FLYTHROUGH_EFFECT_SLOT_START,
+    slot:     FLYTHROUGH_CLIP_SLOT_START,
 })
 
 const emptyEditorState = () => ({
     open:       false,
     anchorId:   null,
-    slot:       FLYTHROUGH_EFFECT_SLOT_START,
+    slot:       FLYTHROUGH_CLIP_SLOT_START,
     mode:       'add',
     index:      null,
-    effectId:   null,
+    clipId:   null,
     params:     {},
     initialParams: {},
     definition: null,
@@ -72,17 +72,17 @@ const emptyEditorState = () => ({
 
 const hasCatalogEntries = catalog => Boolean(catalog) && Object.keys(catalog).length > 0
 
-const resolveFlythroughEffectsCatalog = (settings = {}) => {
+const resolveFlythroughClipsCatalog = (settings = {}) => {
     const candidates = [
-        settings?.effects?.catalog,
-        settings?.effects?.definitions,
+        settings?.clips?.catalog,
+        settings?.clips?.definitions,
     ]
 
     return candidates.find(hasCatalogEntries) ?? {}
 }
 
-const syncEffects = (nextEffects) => {
-    const normalized = normalizeFlythroughEffects(nextEffects)
+const syncClips = (nextClips) => {
+    const normalized = normalizeFlythroughClips(nextClips)
     const journey = globalThis.lgs?.theJourney ?? globalThis.lgs?.stores?.main?.theJourney
     const runtime = globalThis.lgs?.stores?.flythrough
 
@@ -91,7 +91,7 @@ const syncEffects = (nextEffects) => {
             return
         }
 
-        target.effects = normalized
+        target.clips = normalized
     }
 
     if (journey) {
@@ -109,39 +109,39 @@ const syncEffects = (nextEffects) => {
     return normalized
 }
 
-const readDefinitions = (effects, slot) => availableFlythroughEffectsForSlot(effects, slot)
+const readClipDefinitions = (clips, slot) => availableFlythroughClipsForSlot(clips, slot)
 
-const readCurrentEffects = (settings, journey) => {
-    const settingsEffects = normalizeFlythroughEffects({
-                                                           catalog: resolveFlythroughEffectsCatalog(settings),
+const readCurrentClips = (settings, journey) => {
+    const settingsClips = normalizeFlythroughClips({
+                                                           catalog: resolveFlythroughClipsCatalog(settings),
                                                        })
     const journeyFlythrough = journey?.flythrough ?? {}
     const start = Array.isArray(journeyFlythrough.start) ? journeyFlythrough.start : []
     const stop = Array.isArray(journeyFlythrough.stop) ? journeyFlythrough.stop : []
-    const normalized = normalizeFlythroughEffects({
-                                                      catalog: settingsEffects.catalog,
+    const normalized = normalizeFlythroughClips({
+                                                      catalog: settingsClips.catalog,
                                                       start,
                                                       stop,
                                                   })
 
-    logFlythroughEffectsTab('readCurrentEffects', {
+    logFlythroughClipsTab('readCurrentClips', {
         journeySlug:       journey?.slug ?? null,
-        catalogSize:       Object.keys(settingsEffects.catalog ?? {}).length,
+        catalogSize:       Object.keys(settingsClips.catalog ?? {}).length,
         journeyStartCount: start.length,
         journeyStopCount:  stop.length,
-        normalizedStart:   normalized.start.map(effect => effect.effectId),
-        normalizedStop:    normalized.stop.map(effect => effect.effectId),
+        normalizedStart:   normalized.start.map(clip => clip.clipId),
+        normalizedStop:    normalized.stop.map(clip => clip.clipId),
     })
 
     return {
         ...normalized,
-        catalog: settingsEffects.catalog,
+        catalog: settingsClips.catalog,
         start,
         stop,
     }
 }
 
-const EffectField = ({field, value, onChange, unitSystem = 0}) => {
+const ClipField = ({field, value, onChange, unitSystem = 0}) => {
     const elevationUnit = ELEVATION_UNITS[unitSystem] ?? ELEVATION_UNITS[0]
     const usesElevationUnit = field.unit === 'm'
     const displayUnit = usesElevationUnit ? elevationUnit : field.unit
@@ -163,11 +163,11 @@ const EffectField = ({field, value, onChange, unitSystem = 0}) => {
         'label-at-start': true,
     }
 
-    const controlClassName = 'flythrough-effects-field-control'
+    const controlClassName = 'flythrough-clips-field-control'
 
     if (field.type === 'select') {
         return (
-            <div className="flythrough-effects-editor-field">
+            <div className="flythrough-clips-editor-field">
                 <WaSelect
                     {...commonProps}
                     appearance="filled"
@@ -186,7 +186,7 @@ const EffectField = ({field, value, onChange, unitSystem = 0}) => {
     }
 
     return (
-        <div className="flythrough-effects-editor-field">
+        <div className="flythrough-clips-editor-field">
             <WaNumberInput
                 {...commonProps}
                 appearance="filled"
@@ -204,11 +204,11 @@ const EffectField = ({field, value, onChange, unitSystem = 0}) => {
     )
 }
 
-const EffectEditorPopup = ({effects, editor, setEditor, onSave}) => {
+const ClipEditorPopup = ({clips, editor, setEditor, onSave}) => {
     const {current: unitSystem} = useSnapshot(lgs.settings.unitSystem)
-    const normalized = useMemo(() => normalizeFlythroughEffects(effects), [effects])
-    const definitions = useMemo(() => readDefinitions(effects, editor.slot) ?? [], [effects, editor.slot])
-    const definition = editor.definition ?? (editor.effectId ? normalized.catalog[editor.effectId] : null)
+    const normalized = useMemo(() => normalizeFlythroughClips(clips), [clips])
+    const definitions = useMemo(() => readClipDefinitions(clips, editor.slot) ?? [], [clips, editor.slot])
+    const definition = editor.definition ?? (editor.clipId ? normalized.catalog[editor.clipId] : null)
     const initialParams = useMemo(() => editor.initialParams ?? definition?.defaults ?? {}, [definition, editor.initialParams])
     const isDirty = useMemo(() => JSON.stringify(editor.params ?? {}) !== JSON.stringify(initialParams ?? {}), [editor.params, initialParams])
 
@@ -217,8 +217,8 @@ const EffectEditorPopup = ({effects, editor, setEditor, onSave}) => {
             return
         }
 
-        const current = clone(effects ?? {})
-        const normalizedCurrent = normalizeFlythroughEffects(current)
+        const current = clone(clips ?? {})
+        const normalizedCurrent = normalizeFlythroughClips(current)
         const listKey = listNameForSlot(editor.slot)
         const list = [...(normalizedCurrent[listKey] ?? [])]
         if (!list[editor.index]) {
@@ -236,9 +236,8 @@ const EffectEditorPopup = ({effects, editor, setEditor, onSave}) => {
         onSave({
                    ...normalizedCurrent,
                    [listKey]:             list,
-                   [`${listKey}Effects`]: list,
                })
-    }, [definition, editor.index, editor.mode, editor.slot, effects, onSave])
+    }, [definition, editor.index, editor.mode, editor.slot, clips, onSave])
 
     const updateParams = useCallback((nextParams) => {
         setEditor(current => ({
@@ -249,7 +248,7 @@ const EffectEditorPopup = ({effects, editor, setEditor, onSave}) => {
     }, [persistEdit, setEditor])
 
     useEffect(() => {
-        if (!editor.open || editor.mode !== 'add' || editor.effectId) {
+        if (!editor.open || editor.mode !== 'add' || editor.clipId) {
             return
         }
 
@@ -260,11 +259,11 @@ const EffectEditorPopup = ({effects, editor, setEditor, onSave}) => {
 
         setEditor(current => ({
             ...current,
-            effectId: current.effectId ?? nextDefinition.id,
-            params:   current.effectId ? current.params : {...nextDefinition.defaults},
-            initialParams: current.effectId ? current.initialParams : {...nextDefinition.defaults},
+            clipId: current.clipId ?? nextDefinition.id,
+            params:   current.clipId ? current.params : {...nextDefinition.defaults},
+            initialParams: current.clipId ? current.initialParams : {...nextDefinition.defaults},
         }))
-    }, [definitions, editor.effectId, editor.mode, editor.open, setEditor])
+    }, [definitions, editor.clipId, editor.mode, editor.open, setEditor])
 
     const close = useCallback(() => {
         setEditor(emptyEditorState())
@@ -272,21 +271,21 @@ const EffectEditorPopup = ({effects, editor, setEditor, onSave}) => {
 
     const save = useCallback(() => {
         if (!definition) {
-            logFlythroughEffectsTab('editor-save-abort-no-definition', {
+            logFlythroughClipsTab('editor-save-abort-no-definition', {
                 slot:     editor.slot,
                 mode:     editor.mode,
-                effectId: editor.effectId,
+                clipId: editor.clipId,
             })
             close()
             return
         }
 
-        const current = clone(effects ?? {})
-        const normalizedCurrent = normalizeFlythroughEffects(current)
+        const current = clone(clips ?? {})
+        const normalizedCurrent = normalizeFlythroughClips(current)
         const listKey = listNameForSlot(editor.slot)
         const list = [...(normalizedCurrent[listKey] ?? [])]
         const instance = editor.mode === 'add'
-                         ? createFlythroughEffectInstance(definition, editor.slot, {params: editor.params})
+                         ? createFlythroughClipInstance(definition, editor.slot, {params: editor.params})
                          : {
                 ...list[editor.index],
                 params: {
@@ -296,22 +295,22 @@ const EffectEditorPopup = ({effects, editor, setEditor, onSave}) => {
             }
 
         if (!instance) {
-            logFlythroughEffectsTab('editor-save-abort-no-instance', {
+            logFlythroughClipsTab('editor-save-abort-no-instance', {
                 slot:     editor.slot,
                 mode:     editor.mode,
-                effectId: editor.effectId,
+                clipId: editor.clipId,
             })
             close()
             return
         }
 
-        if (editor.mode === 'add' && !canAddFlythroughEffect(normalizedCurrent, definition, editor.slot)) {
-            logFlythroughEffectsTab('editor-save-blocked-by-maxInstances', {
+        if (editor.mode === 'add' && !canAddFlythroughClip(normalizedCurrent, definition, editor.slot)) {
+            logFlythroughClipsTab('editor-save-blocked-by-maxInstances', {
                 slot:             editor.slot,
-                effectId:         definition.id,
+                clipId:         definition.id,
                 maxInstances:     definition.maxInstances,
                 currentInstances: [...normalizedCurrent.start, ...normalizedCurrent.stop]
-                                      .filter(effect => effect.effectId === definition.id)
+                                      .filter(clip => clip.clipId === definition.id)
                                       .length,
             })
             close()
@@ -323,7 +322,6 @@ const EffectEditorPopup = ({effects, editor, setEditor, onSave}) => {
             onSave({
                        ...normalizedCurrent,
                        [listKey]:             list,
-                       [`${listKey}Effects`]: list,
                    })
         }
         else if (editor.index !== null && editor.index !== undefined) {
@@ -335,11 +333,10 @@ const EffectEditorPopup = ({effects, editor, setEditor, onSave}) => {
             onSave({
                        ...normalizedCurrent,
                        [listKey]:             list,
-                       [`${listKey}Effects`]: list,
                    })
         }
         close()
-    }, [close, definition, editor, effects, onSave])
+    }, [close, definition, editor, clips, onSave])
 
     const reset = useCallback(() => {
         const nextParams = clone(initialParams ?? definition?.defaults ?? {})
@@ -363,7 +360,7 @@ const EffectEditorPopup = ({effects, editor, setEditor, onSave}) => {
             header={
                 <>
                     <WaIcon name={editor.mode === 'add' ? 'sparkles' : 'pencil'} variant="regular"/>
-                    <span>{editor.mode === 'add' ? 'Add effect' : 'Edit'}</span>
+                    <span>{editor.mode === 'add' ? 'Add clip' : 'Edit'}</span>
                 </>
             }
             headerActions={(
@@ -391,16 +388,16 @@ const EffectEditorPopup = ({effects, editor, setEditor, onSave}) => {
                     )}
                 </>
             )}
-            className="flythrough-effects-popup-card"
+            className="flythrough-clips-popup-card"
         >
 
-            <div className="flythrough-effects-editor">
-                <div className="flythrough-effects-editor-header">
+            <div className="flythrough-clips-editor">
+                <div className="flythrough-clips-editor-header">
                     <strong>{definition.label}</strong>
                 </div>
-                <div className="flythrough-effects-editor-fields">
+                <div className="flythrough-clips-editor-fields">
                     {definition.fields.map(field => (
-                        <EffectField
+                        <ClipField
                             key={field.key}
                             field={field}
                             value={editor.params?.[field.key] ?? definition.defaults?.[field.key] ?? ''}
@@ -417,15 +414,15 @@ const EffectEditorPopup = ({effects, editor, setEditor, onSave}) => {
     )
 }
 
-const EffectAddPopup = ({effects, addState, setAddState, openEditor}) => {
-    const definitions = useMemo(() => readDefinitions(effects, addState.slot) ?? [], [effects, addState.slot])
+const ClipAddPopup = ({clips, addState, setAddState, openEditor}) => {
+    const definitions = useMemo(() => readClipDefinitions(clips, addState.slot) ?? [], [clips, addState.slot])
 
     useEffect(() => {
-        logFlythroughEffectsTab('add-popup-render', {
+        logFlythroughClipsTab('add-popup-render', {
             slot:    addState.slot,
             open:    addState.open,
             count:   definitions.length,
-            effects: definitions.map(definition => ({
+            clips: definitions.map(definition => ({
                 id:           definition.id,
                 maxInstances: definition.maxInstances,
             })),
@@ -449,7 +446,7 @@ const EffectAddPopup = ({effects, addState, setAddState, openEditor}) => {
             header={(
                 <>
                     <WaIcon name="sparkles" variant="regular"/>
-                    <span>{'Add effect'}</span>
+                    <span>{'Add clip'}</span>
                 </>
             )}
             headerActions={(
@@ -463,18 +460,18 @@ const EffectAddPopup = ({effects, addState, setAddState, openEditor}) => {
                     {'Close'}
                 </WaButton>
             )}
-            className="flythrough-effects-popup-card"
+            className="flythrough-clips-popup-card"
         >
-            <div className="flythrough-effects-add-list">
+            <div className="flythrough-clips-add-list">
                 {definitions.length === 0 ? (
-                    <p className="flythrough-empty-state">{'No effect available for this slot.'}</p>
+                    <p className="flythrough-empty-state">{'No clip available for this slot.'}</p>
                 ) : definitions.map(definition => {
-                    const itemId = `flythrough-effects-add-${addState.slot}-${definition.id}`
-                    const selectEffect = () => {
-                        const canAdd = canAddFlythroughEffect(effects, definition, addState.slot)
-                        logFlythroughEffectsTab('add-popup-select', {
+                    const itemId = `flythrough-clips-add-${addState.slot}-${definition.id}`
+                    const selectClip = () => {
+                        const canAdd = canAddFlythroughClip(clips, definition, addState.slot)
+                        logFlythroughClipsTab('add-popup-select', {
                             slot:     addState.slot,
-                            effectId: definition.id,
+                            clipId: definition.id,
                             canAdd,
                         })
                         if (!canAdd) {
@@ -484,7 +481,7 @@ const EffectAddPopup = ({effects, addState, setAddState, openEditor}) => {
                         openEditor({
                                        slot:     addState.slot,
                                        anchorId: addState.anchorId,
-                                       effectId: definition.id,
+                                       clipId: definition.id,
                                        params:   {...definition.defaults},
                                        definition,
                                        mode:     'add',
@@ -494,23 +491,23 @@ const EffectAddPopup = ({effects, addState, setAddState, openEditor}) => {
                     return (
                         <div
                             key={definition.id}
-                            className="flythrough-effects-add-item-shell"
+                            className="flythrough-clips-add-item-shell"
                             role="button"
                             tabIndex={0}
-                            onClick={selectEffect}
+                            onClick={selectClip}
                             onKeyDown={event => {
                                 if (event.key === 'Enter' || event.key === ' ') {
                                     event.preventDefault()
-                                    selectEffect()
+                                    selectClip()
                                 }
                             }}
                         >
                             <WaCard
                                 id={itemId}
                                 appearance="outlined"
-                                className="lgs--card-hoverable flythrough-effects-add-item"
+                                className="lgs--card-hoverable flythrough-clips-add-item"
                             >
-                                    <span className="flythrough-effects-add-item-content">
+                                    <span className="flythrough-clips-add-item-content">
                                         <strong>{definition.label}</strong>
                                     </span>
                             </WaCard>
@@ -525,8 +522,8 @@ const EffectAddPopup = ({effects, addState, setAddState, openEditor}) => {
     )
 }
 
-const EffectRow = ({
-                       effect,
+const ClipRow = ({
+                       clip,
                        definition,
                        index,
                        slot,
@@ -540,35 +537,35 @@ const EffectRow = ({
     return (
         <WaCard
             appearance="outlined"
-            className="lgs--card-hoverable flythrough-effect-row"
+            className="lgs--card-hoverable flythrough-clip-row"
         >
-            <div className="flythrough-effect-content">
-                <div className="flythrough-effect-title-row">
-                    <strong>{definition?.label ?? effect.effectId}</strong>
+            <div className="flythrough-clip-content">
+                <div className="flythrough-clip-title-row">
+                    <strong>{definition?.label ?? clip.clipId}</strong>
                 </div>
             </div>
-            <div className="flythrough-effect-actions">
+            <div className="flythrough-clip-actions">
                 <WaButton appearance="plain" size="s" onClick={() => onEdit({
                                                                                 slot,
                                                                                 index,
                                                                                 anchorId: editAnchorId,
-                                                                                effectId: effect.effectId,
-                                                                                params:   effect.params,
+                                                                                clipId: clip.clipId,
+                                                                                params:   clip.params,
                                                                                 definition,
                                                                                 mode:     'edit',
-                                                                            })} aria-label="Edit effect">
+                                                                            })} aria-label="Edit clip">
                     <WaIcon name="pencil" variant="regular"/>
                 </WaButton>
                 <WaButton appearance="plain" size="s" disabled={!canMoveUp} onClick={() => onMove(slot, index, -1)}
-                          aria-label="Move effect up">
+                          aria-label="Move clip up">
                     <WaIcon name="arrow-up" variant="regular"/>
                 </WaButton>
                 <WaButton appearance="plain" size="s" disabled={!canMoveDown} onClick={() => onMove(slot, index, 1)}
-                          aria-label="Move effect down">
+                          aria-label="Move clip down">
                     <WaIcon name="arrow-down" variant="regular"/>
                 </WaButton>
                 <WaButton appearance="plain" size="s" variant="danger" onClick={() => onRemove(slot, index)}
-                          aria-label="Remove effect">
+                          aria-label="Remove clip">
                     <WaIcon name="trash-can" variant="regular"/>
                 </WaButton>
             </div>
@@ -576,10 +573,10 @@ const EffectRow = ({
     )
 }
 
-const EffectList = ({
+const ClipList = ({
                         title,
                         slot,
-                        effects,
+                        clips,
                         list,
                         onAdd,
                         onEdit,
@@ -590,16 +587,16 @@ const EffectList = ({
                     }) => {
     const listRef = useRef(null)
     const sortableRef = useRef(null)
-    const availableDefinitions = useMemo(() => readDefinitions(effects, slot), [effects, slot])
+    const availableDefinitions = useMemo(() => readClipDefinitions(clips, slot), [clips, slot])
     const hasAvailableDefinitions = (availableDefinitions?.length ?? 0) > 0
 
     useEffect(() => {
-        logFlythroughEffectsTab('effect-list-render', {
+        logFlythroughClipsTab('clip-list-render', {
             slot,
             title,
             listCount:          list.length,
             availableCount:     availableDefinitions?.length ?? 0,
-            availableEffectIds: availableDefinitions?.map(definition => definition.id) ?? [],
+            availableClipIds: availableDefinitions?.map(definition => definition.id) ?? [],
             hasAvailableDefinitions,
         })
     }, [availableDefinitions, hasAvailableDefinitions, list.length, slot, title])
@@ -615,7 +612,7 @@ const EffectList = ({
             animation:     150,
             forceFallback: true,
             dataIdAttr:    'data-id',
-            filter:        '.flythrough-effect-actions',
+            filter:        '.flythrough-clip-actions',
             dragClass:     'widget-row-drag',
             ghostClass:    'widget-row-ghost',
             chosenClass:   'widget-row-chosen',
@@ -632,43 +629,43 @@ const EffectList = ({
     }, [list, onMove, slot])
 
     return (
-        <section className="flythrough-effects-section">
-            <div className="flythrough-effects-section-header">
-                <div className="flythrough-effects-section-header-row">
-                    <span className="flythrough-effects-section-title">{title}</span>
+        <section className="flythrough-clips-section">
+            <div className="flythrough-clips-section-header">
+                <div className="flythrough-clips-section-header-row">
+                    <span className="flythrough-clips-section-title">{title}</span>
                     <WaButton
                         disabled={!hasAvailableDefinitions}
                         appearance="outlined"
                         variant="brand"
                         size="s"
                         onClick={() => {
-                            logFlythroughEffectsTab('open-add-click', {
+                            logFlythroughClipsTab('open-add-click', {
                                 slot,
                                 title,
-                                availableEffectIds: availableDefinitions?.map(definition => definition.id) ?? [],
+                                availableClipIds: availableDefinitions?.map(definition => definition.id) ?? [],
                             })
                             onAdd({slot, anchorId: addAnchorIdPrefix})
                         }}
                     >
                         <WaIcon name="plus" variant="regular"/>
-                        {'Add effect'}
+                        {'Add clip'}
                     </WaButton>
                 </div>
                 <PopupAnchor id={addAnchorIdPrefix}/>
 
             </div>
 
-            <div ref={listRef} className="flythrough-effects-list">
+            <div ref={listRef} className="flythrough-clips-list">
                 {list.length === 0 ? (
-                    <p className="flythrough-empty-state">{`No ${title.toLowerCase()} effect configured.`}</p>
-                ) : list.map((effect, index) => {
-                    const definition = effects?.catalog?.[effect.effectId]
-                    const editAnchorId = `${editAnchorIdPrefix}-${effect.id}`
+                    <p className="flythrough-empty-state">{`No ${title.toLowerCase()} clip configured.`}</p>
+                ) : list.map((clip, index) => {
+                    const definition = clips?.catalog?.[clip.clipId]
+                    const editAnchorId = `${editAnchorIdPrefix}-${clip.id}`
                     return (
-                        <div key={effect.id} className="flythrough-effect-row-shell" data-id={effect.id}>
+                        <div key={clip.id} className="flythrough-clip-row-shell" data-id={clip.id}>
                             <PopupAnchor id={editAnchorId}/>
-                            <EffectRow
-                                effect={effect}
+                            <ClipRow
+                                clip={clip}
                                 definition={definition}
                                 index={index}
                                 slot={slot}
@@ -687,34 +684,34 @@ const EffectList = ({
     )
 }
 
-export const FlythroughEffectsTab = memo(({settings}) => {
+export const FlythroughClipsTab = memo(({settings}) => {
     const [addState, setAddState] = useState(emptyAddState())
     const [editor, setEditor] = useState(emptyEditorState())
     const mainStore = useSnapshot(lgs.stores.main)
     const currentJourney = mainStore?.theJourney ?? lgs.theJourney ?? lgs.stores.main?.theJourney
-    const currentEffects = readCurrentEffects(settings, currentJourney)
+    const currentClips = readCurrentClips(settings, currentJourney)
 
     useEffect(() => {
-        logFlythroughEffectsTab('tab-render', {
+        logFlythroughClipsTab('tab-render', {
             journeySlug: currentJourney?.slug ?? null,
-            catalogSize: Object.keys(currentEffects.catalog ?? {}).length,
-            startCount:  currentEffects.start.length,
-            stopCount:   currentEffects.stop.length,
-            startIds:    currentEffects.start.map(effect => effect.effectId),
-            stopIds:     currentEffects.stop.map(effect => effect.effectId),
+            catalogSize: Object.keys(currentClips.catalog ?? {}).length,
+            startCount:  currentClips.start.length,
+            stopCount:   currentClips.stop.length,
+            startIds:    currentClips.start.map(clip => clip.clipId),
+            stopIds:     currentClips.stop.map(clip => clip.clipId),
         })
-    }, [currentEffects, currentJourney?.slug])
+    }, [currentClips, currentJourney?.slug])
 
-    const saveEffects = useCallback((nextEffects) => {
-        syncEffects(nextEffects)
+    const saveClips = useCallback((nextClips) => {
+        syncClips(nextClips)
     }, [])
 
     const openAdd = useCallback(({slot, anchorId}) => {
-        logFlythroughEffectsTab('open-add', {
+        logFlythroughClipsTab('open-add', {
             slot,
             anchorId,
-            currentStart: currentEffects.start.map(effect => effect.effectId),
-            currentStop:  currentEffects.stop.map(effect => effect.effectId),
+            currentStart: currentClips.start.map(clip => clip.clipId),
+            currentStop:  currentClips.stop.map(clip => clip.clipId),
         })
         setEditor(emptyEditorState())
         setAddState({
@@ -722,22 +719,22 @@ export const FlythroughEffectsTab = memo(({settings}) => {
                         slot,
                         anchorId,
                     })
-    }, [currentEffects.start, currentEffects.stop])
+    }, [currentClips.start, currentClips.stop])
 
     const openEditor = useCallback(({
                                         slot,
                                         index = null,
                                         anchorId,
-                                        effectId,
+                                        clipId,
                                         params = {},
                                         definition = null,
                                         mode = 'add',
                                     }) => {
-        logFlythroughEffectsTab('open-editor', {
+        logFlythroughClipsTab('open-editor', {
             slot,
             index,
             anchorId,
-            effectId,
+            clipId,
             mode,
         })
         setAddState(emptyAddState())
@@ -747,43 +744,42 @@ export const FlythroughEffectsTab = memo(({settings}) => {
                       mode,
                       index,
                       anchorId: anchorId ?? `${slot}-${EDIT_POPUP_SUFFIX}`,
-                      effectId,
+                      clipId,
                       params:         {...params},
                       initialParams:  {...params},
                       definition,
                   })
     }, [])
 
-    const reorderEffects = useCallback((slot, _unusedIndex, _unusedDirection, orderedIds = null) => {
+    const reorderClips = useCallback((slot, _unusedIndex, _unusedDirection, orderedIds = null) => {
         if (!Array.isArray(orderedIds)) {
             return
         }
 
-        const current = readCurrentEffects(settings, currentJourney)
+        const current = readCurrentClips(settings, currentJourney)
         const listKey = listNameForSlot(slot)
         const sourceList = Array.isArray(current[listKey]) ? current[listKey] : []
         const ordered = orderedIds
-            .map(id => sourceList.find(effect => effect.id === id))
+            .map(id => sourceList.find(clip => clip.id === id))
             .filter(Boolean)
 
         if (orderedIds.length === 0 || ordered.length !== orderedIds.length) {
             return
         }
 
-        saveEffects({
+        saveClips({
                         ...current,
                         [listKey]:             ordered,
-                        [`${listKey}Effects`]: ordered,
                     })
-    }, [currentJourney, saveEffects, settings])
+    }, [currentJourney, saveClips, settings])
 
-    const moveEffect = useCallback((slot, index, direction, orderedIds = null) => {
+    const moveClip = useCallback((slot, index, direction, orderedIds = null) => {
         if (Array.isArray(orderedIds)) {
-            reorderEffects(slot, index, direction, orderedIds)
+            reorderClips(slot, index, direction, orderedIds)
             return
         }
 
-        const current = readCurrentEffects(settings, currentJourney)
+        const current = readCurrentClips(settings, currentJourney)
         const listKey = listNameForSlot(slot)
         const list = [...(current[listKey] ?? [])]
         const targetIndex = index + direction
@@ -793,64 +789,62 @@ export const FlythroughEffectsTab = memo(({settings}) => {
 
         const [item] = list.splice(index, 1)
         list.splice(targetIndex, 0, item)
-        saveEffects({
+        saveClips({
                         ...current,
                         [listKey]:             list,
-                        [`${listKey}Effects`]: list,
                     })
-    }, [currentJourney, reorderEffects, saveEffects, settings])
+    }, [currentJourney, reorderClips, saveClips, settings])
 
-    const removeEffect = useCallback((slot, index) => {
-        const current = readCurrentEffects(settings, currentJourney)
+    const removeClip = useCallback((slot, index) => {
+        const current = readCurrentClips(settings, currentJourney)
         const listKey = listNameForSlot(slot)
         const list = (current[listKey] ?? []).filter((_, currentIndex) => currentIndex !== index)
-        saveEffects({
+        saveClips({
                         ...current,
                         [listKey]:             list,
-                        [`${listKey}Effects`]: list,
                     })
-    }, [currentJourney, saveEffects, settings])
+    }, [currentJourney, saveClips, settings])
 
-    const startList = currentEffects.start
-    const stopList = currentEffects.stop
+    const startList = currentClips.start
+    const stopList = currentClips.stop
 
     return (
-        <div className="flythrough-effects-tab">
-            <EffectList
+        <div className="flythrough-clips-tab">
+            <ClipList
                 title="Start"
-                slot={FLYTHROUGH_EFFECT_SLOT_START}
-                effects={currentEffects}
+                slot={FLYTHROUGH_CLIP_SLOT_START}
+                clips={currentClips}
                 list={startList}
                 onAdd={openAdd}
                 onEdit={openEditor}
-                onRemove={removeEffect}
-                onMove={moveEffect}
-                addAnchorIdPrefix={`${FLYTHROUGH_EFFECT_SLOT_START}-${ADD_POPUP_SUFFIX}`}
-                editAnchorIdPrefix={`${FLYTHROUGH_EFFECT_SLOT_START}-${EDIT_POPUP_SUFFIX}`}
+                onRemove={removeClip}
+                onMove={moveClip}
+                addAnchorIdPrefix={`${FLYTHROUGH_CLIP_SLOT_START}-${ADD_POPUP_SUFFIX}`}
+                editAnchorIdPrefix={`${FLYTHROUGH_CLIP_SLOT_START}-${EDIT_POPUP_SUFFIX}`}
             />
-            <EffectList
+            <ClipList
                 title="Stop"
-                slot={FLYTHROUGH_EFFECT_SLOT_STOP}
-                effects={currentEffects}
+                slot={FLYTHROUGH_CLIP_SLOT_STOP}
+                clips={currentClips}
                 list={stopList}
                 onAdd={openAdd}
                 onEdit={openEditor}
-                onRemove={removeEffect}
-                onMove={moveEffect}
-                addAnchorIdPrefix={`${FLYTHROUGH_EFFECT_SLOT_STOP}-${ADD_POPUP_SUFFIX}`}
-                editAnchorIdPrefix={`${FLYTHROUGH_EFFECT_SLOT_STOP}-${EDIT_POPUP_SUFFIX}`}
+                onRemove={removeClip}
+                onMove={moveClip}
+                addAnchorIdPrefix={`${FLYTHROUGH_CLIP_SLOT_STOP}-${ADD_POPUP_SUFFIX}`}
+                editAnchorIdPrefix={`${FLYTHROUGH_CLIP_SLOT_STOP}-${EDIT_POPUP_SUFFIX}`}
             />
-            <EffectAddPopup
-                effects={currentEffects}
+            <ClipAddPopup
+                clips={currentClips}
                 addState={addState}
                 setAddState={setAddState}
                 openEditor={openEditor}
             />
-            <EffectEditorPopup
-                effects={currentEffects}
+            <ClipEditorPopup
+                clips={currentClips}
                 editor={editor}
                 setEditor={setEditor}
-                onSave={saveEffects}
+                onSave={saveClips}
             />
         </div>
     )

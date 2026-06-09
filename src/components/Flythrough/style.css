@@ -223,7 +223,7 @@
     min-width: 0;
 }
 
-.flythrough-effects-tab {
+.flythrough-clips-tab {
     display: flex;
     flex-direction: column;
     width: 100%;
@@ -231,7 +231,7 @@
     gap: var(--wa-space-l, 1.25rem);
 }
 
-.flythrough-effects-section {
+.flythrough-clips-section {
     display: flex;
     flex-direction: column;
     width: 100%;
@@ -239,13 +239,13 @@
     gap: var(--wa-space-s, 0.75rem);
 }
 
-.flythrough-effects-section-header {
+.flythrough-clips-section-header {
     display: flex;
     flex-direction: column;
     width: 100%;
 }
 
-.flythrough-effects-section-header-row {
+.flythrough-clips-section-header-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -253,14 +253,14 @@
     gap: var(--wa-space-s, 0.75rem);
 }
 
-.flythrough-effects-section-title {
+.flythrough-clips-section-title {
     font-size: 1rem;
     font-weight: 600;
     flex: 1 1 auto;
     min-width: 0;
 }
 
-.flythrough-effects-list {
+.flythrough-clips-list {
     display: flex;
     flex-direction: column;
     width: 100%;
@@ -269,12 +269,12 @@
     gap: var(--wa-space-s, 0.75rem);
 }
 
-.flythrough-effect-row-shell {
+.flythrough-clip-row-shell {
     width: 100%;
     min-width: 0;
 }
 
-.flythrough-effect-row:body {
+.flythrough-clip-row::part(body) {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -283,7 +283,7 @@
     gap: var(--wa-space-s, 0.75rem);
 }
 
-.flythrough-effect-drag-handle {
+.flythrough-clip-drag-handle {
     display: flex;
     align-items: center;
     min-width: 1.6rem;
@@ -291,7 +291,7 @@
     justify-items: center;
 }
 
-.flythrough-effect-content {
+.flythrough-clip-content {
     display: flex;
     flex: 1 1 auto;
     flex-direction: column;
@@ -299,7 +299,7 @@
     gap: 0.35rem;
 }
 
-.flythrough-effect-title-row {
+.flythrough-clip-title-row {
     display: flex;
     align-items: baseline;
     flex-wrap: wrap;
@@ -307,20 +307,20 @@
     gap: 0.6rem;
 }
 
-.flythrough-effect-title-row strong {
+.flythrough-clip-title-row strong {
     font-size: 0.95rem;
 }
 
-.flythrough-effect-title-row span,
-.flythrough-effect-content p {
+.flythrough-clip-title-row span,
+.flythrough-clip-content p {
     opacity: 0.72;
 }
 
-.flythrough-effect-content p {
+.flythrough-clip-content p {
     margin: 0;
 }
 
-.flythrough-effect-actions {
+.flythrough-clip-actions {
     display: flex;
     align-items: center;
     flex: 0 0 auto;
@@ -329,12 +329,12 @@
     gap: 0.5rem;
 }
 
-.flythrough-effect-row.widget-row-drag,
-.flythrough-effect-row.widget-row-chosen {
+.flythrough-clip-row.widget-row-drag,
+.flythrough-clip-row.widget-row-chosen {
     cursor: grabbing;
 }
 
-.flythrough-effects-popup-card {
+.flythrough-clips-popup-card {
     overflow: hidden;
     width: min(40rem, calc(100vw - 2rem));
     max-width: calc(100vw - 2rem);
@@ -345,15 +345,15 @@
     --wa-form-control-border-color: color-mix(in oklab, var(--wa-color-surface-border) 70%, var(--wa-color-neutral-border-loud) 30%);
 }
 
-.flythrough-effects-popup-title {
+.flythrough-clips-popup-title {
     display: inline-flex;
     align-items: center;
     margin: 0;
     gap: 0.5rem;
 }
 
-.flythrough-effects-add-list,
-.flythrough-effects-editor {
+.flythrough-clips-add-list,
+.flythrough-clips-editor {
     display: flex;
     flex-direction: column;
     width: 100%;
@@ -361,19 +361,19 @@
     gap: var(--wa-space-s, 0.75rem);
 }
 
-.flythrough-effects-add-item-shell {
+.flythrough-clips-add-item-shell {
     width: 100%;
     min-width: 0;
 }
 
-.flythrough-effects-add-item {
+.flythrough-clips-add-item {
     justify-content: flex-start;
     box-sizing: border-box;
     width: 100%;
     text-align: left;
 }
 
-.flythrough-effects-add-item-content {
+.flythrough-clips-add-item-content {
     display: flex;
     align-items: flex-start;
     flex-direction: column;
@@ -382,31 +382,31 @@
     gap: 0.15rem;
 }
 
-.flythrough-effects-add-item-content strong {
+.flythrough-clips-add-item-content strong {
     font-size: 0.95rem;
 }
 
-.flythrough-effects-add-item-content span {
+.flythrough-clips-add-item-content span {
     opacity: 0.72;
 }
 
-.flythrough-effects-editor-header {
+.flythrough-clips-editor-header {
     display: flex;
     flex-direction: column;
     gap: 0.35rem;
 }
 
-.flythrough-effects-editor-header h4 {
+.flythrough-clips-editor-header h4 {
     font-size: 1.05rem;
     margin: 0;
 }
 
-.flythrough-effects-editor-header p {
+.flythrough-clips-editor-header p {
     margin: 0;
     opacity: 0.72;
 }
 
-.flythrough-effects-editor-fields {
+.flythrough-clips-editor-fields {
     display: flex;
     align-items: stretch;
     flex-direction: column;
@@ -415,7 +415,7 @@
     gap: var(--wa-space-s, 0.75rem);
 }
 
-.flythrough-effects-editor-field {
+.flythrough-clips-editor-field {
     display: flex;
     flex: 1 1 auto;
     box-sizing: border-box;
@@ -423,23 +423,23 @@
     min-width: 0;
 }
 
-.flythrough-effects-field-control {
+.flythrough-clips-field-control {
     flex: 1 1 auto;
     width: auto;
 }
 
-wa-number-input.flythrough-effects-field-control::part(base),
-wa-select.flythrough-effects-field-control::part(base),
+wa-number-input.flythrough-clips-field-control::part(base),
+wa-select.flythrough-clips-field-control::part(base),
 wa-select[label-at-start].half-width::part(base) {
     width: 100%;
 }
 
-.flythrough-effects-add-item[data-disabled] {
+.flythrough-clips-add-item[data-disabled] {
     cursor: not-allowed;
     opacity: 0.6;
 }
 
-.flythrough-effects-add-item[data-disabled]:hover {
+.flythrough-clips-add-item[data-disabled]:hover {
     transform: none;
 }
 
@@ -459,23 +459,23 @@ wa-select[label-at-start].half-width::part(base) {
         display: grid;
     }
 
-    .flythrough-effects-section-header,
-    .flythrough-effect-title-row,
-    .flythrough-effect-actions {
+    .flythrough-clips-section-header,
+    .flythrough-clip-title-row,
+    .flythrough-clip-actions {
         align-items: stretch;
         flex-direction: column;
     }
 
-    .flythrough-effect-row {
+    .flythrough-clip-row {
         align-items: stretch;
         flex-wrap: wrap;
     }
 
-    .flythrough-effect-actions {
+    .flythrough-clip-actions {
         justify-content: flex-start;
     }
 
-    .flythrough-effects-editor-field {
+    .flythrough-clips-editor-field {
         flex-basis: auto;
     }
 }

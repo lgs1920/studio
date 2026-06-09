@@ -2,7 +2,7 @@
  *
  * This file is part of the LGS1920/studio project.
  *
- * File: FlythroughEffects.js
+ * File: FlythroughClips.js
  *
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
@@ -14,13 +14,13 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-export const FLYTHROUGH_EFFECT_SLOT_START = 'start'
-export const FLYTHROUGH_EFFECT_SLOT_STOP = 'stop'
-export const FLYTHROUGH_EFFECT_SLOT_BOTH = 'both'
+export const FLYTHROUGH_CLIP_SLOT_START = 'start'
+export const FLYTHROUGH_CLIP_SLOT_STOP = 'stop'
+export const FLYTHROUGH_CLIP_SLOT_BOTH = 'both'
 
-export const FLYTHROUGH_EFFECT_SLOT_VALUES = [
-    FLYTHROUGH_EFFECT_SLOT_START,
-    FLYTHROUGH_EFFECT_SLOT_STOP,
+export const FLYTHROUGH_CLIP_SLOT_VALUES = [
+    FLYTHROUGH_CLIP_SLOT_START,
+    FLYTHROUGH_CLIP_SLOT_STOP,
 ]
 
 
@@ -57,7 +57,7 @@ const normalizeSlots = (slots = []) => {
     const values = Array.isArray(slots) ? slots : [slots]
     const normalized = values
         .map(slot => `${slot ?? ''}`.toLowerCase())
-        .filter(slot => slot === FLYTHROUGH_EFFECT_SLOT_START || slot === FLYTHROUGH_EFFECT_SLOT_STOP)
+        .filter(slot => slot === FLYTHROUGH_CLIP_SLOT_START || slot === FLYTHROUGH_CLIP_SLOT_STOP)
     return Array.from(new Set(normalized))
 }
 
@@ -79,7 +79,7 @@ const normalizeField = (field = {}) => ({
 const normalizeDefinition = (definition = {}) => {
     const id = definition.id ?? null
     const label = definition.label ?? id ?? ''
-    const slots = normalizeSlots(definition.slots ?? [FLYTHROUGH_EFFECT_SLOT_BOTH])
+    const slots = normalizeSlots(definition.slots ?? [FLYTHROUGH_CLIP_SLOT_BOTH])
     const defaults = safeClone(definition.defaults ?? {})
     const fields = Array.isArray(definition.fields)
                     ? definition.fields.map(normalizeField)
@@ -126,19 +126,19 @@ const normalizeParams = (definition, params = {}) => {
 
 const normalizeInstance = (instance = {}, definition = null, slot = null) => {
     const targetDefinition = definition ?? null
-    const effectId = instance.effectId ?? instance.effect ?? targetDefinition?.id ?? null
-    const resolvedSlot = normalizeSlots([instance.slot ?? slot ?? targetDefinition?.slots?.[0] ?? FLYTHROUGH_EFFECT_SLOT_START])[0]
+    const clipId = instance.clipId ?? targetDefinition?.id ?? null
+    const resolvedSlot = normalizeSlots([instance.slot ?? slot ?? targetDefinition?.slots?.[0] ?? FLYTHROUGH_CLIP_SLOT_START])[0]
 
     return {
-        id: instance.id ?? uniqueId(effectId ?? 'effect'),
-        effectId,
+        id: instance.id ?? uniqueId(clipId ?? 'clip'),
+        clipId,
         slot: resolvedSlot,
         enabled: instance.enabled !== false,
         params: normalizeParams(targetDefinition, instance.params ?? instance.values ?? {}),
     }
 }
 
-export const defaultFlythroughEffects = () => {
+export const defaultFlythroughClips = () => {
     return {
         catalog: {},
         start: [],
@@ -146,8 +146,8 @@ export const defaultFlythroughEffects = () => {
     }
 }
 
-export const normalizeFlythroughEffects = (effects = {}) => {
-    const sourceCatalog = effects?.catalog ?? effects?.definitions ?? {}
+export const normalizeFlythroughClips = (clips = {}) => {
+    const sourceCatalog = clips?.catalog ?? clips?.definitions ?? {}
     const catalog = {}
     for (const [id, definition] of Object.entries(sourceCatalog ?? {})) {
         catalog[id] = normalizeDefinition({
@@ -155,26 +155,26 @@ export const normalizeFlythroughEffects = (effects = {}) => {
             id,
         })
     }
-    const startList = Array.isArray(effects?.start) ? effects.start : []
-    const stopList = Array.isArray(effects?.stop) ? effects.stop : []
+    const startList = Array.isArray(clips?.start) ? clips.start : []
+    const stopList = Array.isArray(clips?.stop) ? clips.stop : []
 
     const normalizeList = (list, slot) => {
         const normalized = []
         for (const item of Array.isArray(list) ? list : []) {
-            const definition = catalog[item?.effectId ?? item?.effect ?? item?.id ?? item?.effectKey ?? null]
+            const definition = catalog[item?.clipId ?? item?.id ?? null]
             if (!definition) {
                 continue
             }
             const instance = normalizeInstance(item, definition, slot)
-            if (definition.slots.includes(slot) || definition.slots.includes(FLYTHROUGH_EFFECT_SLOT_BOTH)) {
+            if (definition.slots.includes(slot) || definition.slots.includes(FLYTHROUGH_CLIP_SLOT_BOTH)) {
                 normalized.push(instance)
             }
         }
         return normalized
     }
 
-    const start = normalizeList(startList, FLYTHROUGH_EFFECT_SLOT_START)
-    const stop = normalizeList(stopList, FLYTHROUGH_EFFECT_SLOT_STOP)
+    const start = normalizeList(startList, FLYTHROUGH_CLIP_SLOT_START)
+    const stop = normalizeList(stopList, FLYTHROUGH_CLIP_SLOT_STOP)
 
     return {
         catalog,
@@ -183,10 +183,10 @@ export const normalizeFlythroughEffects = (effects = {}) => {
     }
 }
 
-export const createFlythroughEffectInstance = (effectDefinition, slot, overrides = {}) => {
-    const definition = typeof effectDefinition === 'string'
+export const createFlythroughClipInstance = (clipDefinition, slot, overrides = {}) => {
+    const definition = typeof clipDefinition === 'string'
                        ? null
-                       : normalizeDefinition(effectDefinition)
+                       : normalizeDefinition(clipDefinition)
 
     if (!definition) {
         return null
@@ -194,44 +194,44 @@ export const createFlythroughEffectInstance = (effectDefinition, slot, overrides
 
     return normalizeInstance({
         ...overrides,
-        effectId: definition.id,
+        clipId: definition.id,
         slot,
     }, definition, slot)
 }
 
-export const flythroughEffectsForSlot = (effects = {}, slot = FLYTHROUGH_EFFECT_SLOT_START) => {
-    const normalized = normalizeFlythroughEffects(effects)
-    return Object.values(normalized.catalog).filter(definition => definition.slots.includes(slot) || definition.slots.includes(FLYTHROUGH_EFFECT_SLOT_BOTH))
+export const flythroughClipsForSlot = (clips = {}, slot = FLYTHROUGH_CLIP_SLOT_START) => {
+    const normalized = normalizeFlythroughClips(clips)
+    return Object.values(normalized.catalog).filter(definition => definition.slots.includes(slot) || definition.slots.includes(FLYTHROUGH_CLIP_SLOT_BOTH))
 }
 
-export const availableFlythroughEffectsForSlot = (effects = {}, slot = FLYTHROUGH_EFFECT_SLOT_START) => {
-    const definitions = flythroughEffectsForSlot(effects, slot)
-    const available = definitions.filter(definition => canAddFlythroughEffect(effects, definition, slot))
+export const availableFlythroughClipsForSlot = (clips = {}, slot = FLYTHROUGH_CLIP_SLOT_START) => {
+    const definitions = flythroughClipsForSlot(clips, slot)
+    const available = definitions.filter(definition => canAddFlythroughClip(clips, definition, slot))
     return available.length > 0 ? available : null
 }
 
-export const flythroughEffectInstanceCount = (effects = {}, effectId, slot = null) => {
-    const normalized = normalizeFlythroughEffects(effects)
-    const list = slot === FLYTHROUGH_EFFECT_SLOT_STOP
+export const flythroughClipInstanceCount = (clips = {}, clipId, slot = null) => {
+    const normalized = normalizeFlythroughClips(clips)
+    const list = slot === FLYTHROUGH_CLIP_SLOT_STOP
                  ? normalized.stop
-                 : slot === FLYTHROUGH_EFFECT_SLOT_START
+                 : slot === FLYTHROUGH_CLIP_SLOT_START
                    ? normalized.start
                    : [...normalized.start, ...normalized.stop]
-    const count = list.filter(instance => instance.effectId === effectId).length
+    const count = list.filter(instance => instance.clipId === clipId).length
     return count
 }
 
-export const canAddFlythroughEffect = (effects = {}, effectDefinition, slot) => {
-    const catalog = normalizeFlythroughEffects(effects).catalog
-    const definition = typeof effectDefinition === 'string'
-                       ? catalog[effectDefinition]
-                       : normalizeDefinition(effectDefinition)
+export const canAddFlythroughClip = (clips = {}, clipDefinition, slot) => {
+    const catalog = normalizeFlythroughClips(clips).catalog
+    const definition = typeof clipDefinition === 'string'
+                       ? catalog[clipDefinition]
+                       : normalizeDefinition(clipDefinition)
     if (!definition) {
         return false
     }
 
-    const allowedSlots = definition.slots.includes(FLYTHROUGH_EFFECT_SLOT_BOTH)
-                         ? [FLYTHROUGH_EFFECT_SLOT_START, FLYTHROUGH_EFFECT_SLOT_STOP]
+    const allowedSlots = definition.slots.includes(FLYTHROUGH_CLIP_SLOT_BOTH)
+                         ? [FLYTHROUGH_CLIP_SLOT_START, FLYTHROUGH_CLIP_SLOT_STOP]
                          : definition.slots
     const maxInstances = definition.maxInstances
     if (!allowedSlots.includes(slot)) {
@@ -242,7 +242,7 @@ export const canAddFlythroughEffect = (effects = {}, effectDefinition, slot) => 
         return true
     }
 
-    const count = flythroughEffectInstanceCount(effects, definition.id, slot)
+    const count = flythroughClipInstanceCount(clips, definition.id, slot)
     const result = count < Number(maxInstances)
     return result
 }

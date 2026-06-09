@@ -18,7 +18,7 @@ import {
     flythroughAngularDelta, flythroughCameraHeadingForPositionMode, flythroughCameraHeadingWithHysteresis,
     flythroughCameraRangeFromPitch, flythroughCameraRecenterHeight, flythroughCameraRecenterHorizontalDistance,
     flythroughCameraRecenterDuration, flythroughHeadingEasingFactor, flythroughHeadingFromLocalAxisAngle,
-    flythroughIsWindowPointOutsideToleranceZone, FlythroughMode, flythroughTargetSampleForEffect,
+    flythroughIsWindowPointOutsideToleranceZone, FlythroughMode, flythroughTargetSampleForClip,
     flythroughToleranceZoneBounds,
 }                                          from '@Core/ui/flythrough/FlythroughMode'
 import {
@@ -34,7 +34,7 @@ import {
     getFlythroughCameraPresetKey, normalizeFlythroughCamera, normalizeFlythroughMarker,
     normalizeFlythroughSettings,
 }                                          from '@Core/ui/flythrough/FlythroughProgressionStyle'
-import { createFlythroughEffectInstance }  from '@Core/ui/flythrough/FlythroughEffects'
+import { createFlythroughClipInstance }  from '@Core/ui/flythrough/FlythroughClips'
 import { Cartesian3, Matrix4, Transforms } from 'cesium'
 import { proxy }                           from 'valtio'
 import { describe, expect, it, vi }        from 'vitest'
@@ -2564,7 +2564,7 @@ describe('flythrough phase 1 playback controller', () => {
         }
     })
 
-    it('clears the flythrough marker and trace when stop effects complete', () => {
+    it('clears the flythrough marker and trace when stop clips complete', () => {
         const journey = makeJourney([
                                         makeTrack({
                                                       slug:        'track#journey#gpx#main',
@@ -2599,7 +2599,7 @@ describe('flythrough phase 1 playback controller', () => {
                     flythrough: {
                         ...flythrough,
                         duration: 1,
-                        effects: {
+                        clips: {
                             catalog: {},
                             start:   [],
                             stop:    [],
@@ -2612,7 +2612,7 @@ describe('flythrough phase 1 playback controller', () => {
                 flythrough: proxy({
                                       progress: 0,
                                       camera:   flythrough.camera,
-                                      effects:  {
+                                      clips:  {
                                           catalog: {},
                                           start:   [],
                                           stop:    [],
@@ -2699,13 +2699,11 @@ describe('flythrough phase 1 playback controller', () => {
                 default: 0,
             }],
         }
-        const landing = createFlythroughEffectInstance(landingDefinition, 'stop', {
+        const landing = createFlythroughClipInstance(landingDefinition, 'stop', {
             params: {
                 duration: 0,
             },
         })
-        const listeners = new Map()
-        const setViewCalls = []
         const currentCameraSample = {
             longitude: 9,
             latitude:  9,
@@ -2750,7 +2748,7 @@ describe('flythrough phase 1 playback controller', () => {
                     ui: {
                         flythrough: {
                             ...flythrough,
-                            effects: {
+                            clips: {
                                 catalog: {
                                     landing: landingDefinition,
                                 },
@@ -2764,7 +2762,7 @@ describe('flythrough phase 1 playback controller', () => {
                     flythrough: proxy({
                                           progress: 0,
                                           camera:   flythrough.camera,
-                                          effects:  {
+                                          clips:  {
                                               catalog: {
                                                   landing: landingDefinition,
                                               },
@@ -2974,7 +2972,7 @@ describe('flythrough phase 1 playback controller', () => {
         }
     })
 
-    it('waits for the start launch effect before starting the flythrough on the path', async () => {
+    it('waits for the start launch clip before starting the flythrough on the path', async () => {
         vi.useFakeTimers()
         const journey = makeJourney([
                                         makeTrack({
@@ -3000,7 +2998,7 @@ describe('flythrough phase 1 playback controller', () => {
             },
             fields:       [],
         }
-        const launch = createFlythroughEffectInstance(launchDefinition, 'start', {
+        const launch = createFlythroughClipInstance(launchDefinition, 'start', {
             params: {
                 duration: 0.1,
                 altitude: 300,
@@ -3027,7 +3025,7 @@ describe('flythrough phase 1 playback controller', () => {
                 ui: {
                     flythrough: {
                         ...flythrough,
-                        effects: {
+                        clips: {
                             catalog: {
                                 launch: launchDefinition,
                             },
@@ -3041,7 +3039,7 @@ describe('flythrough phase 1 playback controller', () => {
                 flythrough: proxy({
                                       progress: 0,
                                       camera:   flythrough.camera,
-                                      effects:  {
+                                      clips:  {
                                           catalog: {
                                               launch: launchDefinition,
                                           },
@@ -3155,9 +3153,9 @@ describe('flythrough phase 1 playback controller', () => {
             })),
         }
 
-        const zoomInTarget = await flythroughTargetSampleForEffect({
+        const zoomInTarget = await flythroughTargetSampleForClip({
             sample,
-            effectId: 'zoom-in',
+            clipId: 'zoom-in',
             journey,
             sceneManager,
             markerHeightForSample: () => 120,
@@ -3173,9 +3171,9 @@ describe('flythrough phase 1 playback controller', () => {
             latitude:  48.75,
             height:    120,
         })
-        const zoomOutTarget = await flythroughTargetSampleForEffect({
+        const zoomOutTarget = await flythroughTargetSampleForClip({
             sample,
-            effectId: 'zoom-out',
+            clipId: 'zoom-out',
             journey,
             sceneManager,
             markerHeightForSample: () => 120,
@@ -3216,7 +3214,7 @@ describe('flythrough phase 1 playback controller', () => {
             },
             fields:       [],
         }
-        const zoomIn = createFlythroughEffectInstance(zoomInDefinition, 'start', {
+        const zoomIn = createFlythroughClipInstance(zoomInDefinition, 'start', {
             params: {
                 duration: 1,
                 altitude: 900,
@@ -3240,7 +3238,7 @@ describe('flythrough phase 1 playback controller', () => {
                 ui: {
                     flythrough: {
                         ...flythrough,
-                        effects: {
+                        clips: {
                             catalog: {
                                 'zoom-in': zoomInDefinition,
                             },
@@ -3254,7 +3252,7 @@ describe('flythrough phase 1 playback controller', () => {
                 flythrough: proxy({
                                       progress: 0,
                                       camera:   flythrough.camera,
-                                      effects:  {
+                                      clips:  {
                                           catalog: {
                                               'zoom-in': zoomInDefinition,
                                           },

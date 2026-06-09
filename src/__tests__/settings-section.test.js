@@ -181,7 +181,7 @@ describe('SettingsSection', () => {
         expect(merged.flythrough.profileInfo).toBeUndefined()
     })
 
-    it('keeps flythrough excluded but still syncs its effects subtree', () => {
+    it('keeps flythrough excluded but still syncs its clips subtree', () => {
         const section = new SettingsSection('ui')
         const merged = section.update(
             {
@@ -189,7 +189,7 @@ describe('SettingsSection', () => {
                     camera: {
                         altitude: 900,
                     },
-                    effects: {
+                    clips: {
                         catalog: {
                             launch: {
                                 label: 'Custom launch',
@@ -204,7 +204,7 @@ describe('SettingsSection', () => {
                         altitude: 1200,
                         pitch:    -65,
                     },
-                    effects: {
+                    clips: {
                         catalog: {
                             launch: {
                                 label: 'Launch',
@@ -222,9 +222,9 @@ describe('SettingsSection', () => {
 
         expect(merged.flythrough.camera.altitude).toBe(900)
         expect(merged.flythrough.camera.pitch).toBeUndefined()
-        expect(merged.flythrough.effects.catalog.launch.label).toBe('Launch')
-        expect(merged.flythrough.effects.catalog.launch.slots).toEqual(['start'])
-        expect(merged.flythrough.effects.catalog.landing).toEqual({
+        expect(merged.flythrough.clips.catalog.launch.label).toBe('Launch')
+        expect(merged.flythrough.clips.catalog.launch.slots).toEqual(['start'])
+        expect(merged.flythrough.clips.catalog.landing).toEqual({
             label: 'Landing',
             slots: ['stop'],
         })

@@ -15,9 +15,9 @@
  ******************************************************************************/
 
 import {
-    defaultFlythroughEffects,
-    normalizeFlythroughEffects,
-} from './FlythroughEffects'
+    defaultFlythroughClips,
+    normalizeFlythroughClips,
+} from './FlythroughClips'
 
 export const FLYTHROUGH_PROGRESSION_FILL_MIN_WIDTH = 1
 export const FLYTHROUGH_PROGRESSION_FILL_MAX_WIDTH = 10
@@ -160,10 +160,10 @@ export const defaultFlythroughSettings = () => ({
     trace:       defaultFlythroughTraceStyle(),
     marker:      defaultFlythroughMarkerStyle(),
     camera:      defaultFlythroughCameraStyle(),
-    effects:     (() => {
-        const effects = defaultFlythroughEffects()
+    clips:       (() => {
+        const clips = defaultFlythroughClips()
         return {
-            ...effects,
+            ...clips,
         }
     })(),
 })
@@ -359,7 +359,7 @@ export const normalizeFlythroughCamera = (camera = {}) => ({
 
 export const normalizeFlythroughSettings = (settings = {}) => {
     const duration = finiteNumber(settings?.duration) ?? DEFAULT_FLYTHROUGH_DURATION
-    const effects = normalizeFlythroughEffects(settings?.effects)
+    const clips = normalizeFlythroughClips(settings?.clips)
 
     return {
         duration:    Math.max(1, duration),
@@ -374,7 +374,7 @@ export const normalizeFlythroughSettings = (settings = {}) => {
         trace:       normalizeFlythroughTrace(settings?.trace),
         marker:      normalizeFlythroughMarker(settings?.marker),
         camera:      normalizeFlythroughCamera(settings?.camera),
-        effects:     effects,
+        clips:       clips,
     }
 }
 

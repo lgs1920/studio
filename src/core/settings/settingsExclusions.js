@@ -48,7 +48,7 @@ export const SETTING_EXCLUSIONS = [
     })
 
 export const SETTING_EXCLUSION_ALLOWLIST = [
-    'ui.flythrough.effects',
+    'ui.flythrough.clips',
 ]
 
 const isPathMatch = (path, rule) => path === rule || path.startsWith(`${rule}.`)

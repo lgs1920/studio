@@ -14,7 +14,7 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { FLYTHROUGH_EVENT_STOP_EFFECTS_COMPLETE } from './FlythroughMode'
+import { FLYTHROUGH_EVENT_STOP_CLIPS_COMPLETE } from './FlythroughMode'
 import { ScreenMediaRecorder } from '@Core/ui/screen-media-recorder/recorder/ScreenMediaRecorder'
 
 const defaultFlythroughStore = () => globalThis.lgs?.stores?.flythrough ?? null
@@ -26,7 +26,7 @@ const defaultFlythroughStore = () => globalThis.lgs?.stores?.flythrough ?? null
  * - arm/disarm is driven by the UI toggle;
  * - recorder START starts the flythrough;
  * - recorder pause/resume mirrors playback;
- * - flythrough END waits for stop-effects completion, then stops the recorder and opens the normal export flow.
+ * - flythrough END waits for stop-clips completion, then stops the recorder and opens the normal export flow.
  */
 export class FlythroughVideoSync {
     #armed = false
@@ -76,7 +76,7 @@ export class FlythroughVideoSync {
         this.#resolveFlythrough()?.setVideoSafeMode?.(enabled)
     }
 
-    #stopRecorderAfterStopEffects = () => {
+    #stopRecorderAfterStopClips = () => {
         if (!this.#armed || !this.#autoStopRecording) {
             return
         }
@@ -145,8 +145,8 @@ export class FlythroughVideoSync {
             this.stopFlythrough()
         }
 
-        const handleStopEffectsComplete = () => {
-            this.#stopRecorderAfterStopEffects()
+        const handleStopClipsComplete = () => {
+            this.#stopRecorderAfterStopClips()
         }
 
         recorder.addEventListener?.(ScreenMediaRecorder.events.START, handleRecorderStart)
@@ -158,7 +158,7 @@ export class FlythroughVideoSync {
         recorder.addEventListener?.(ScreenMediaRecorder.events.MAX_DURATION, handleRecorderStop)
         recorder.addEventListener?.(ScreenMediaRecorder.events.MAX_SIZE, handleRecorderStop)
 
-        globalThis.window?.addEventListener?.(FLYTHROUGH_EVENT_STOP_EFFECTS_COMPLETE, handleStopEffectsComplete)
+        globalThis.window?.addEventListener?.(FLYTHROUGH_EVENT_STOP_CLIPS_COMPLETE, handleStopClipsComplete)
 
         this.#bound = true
     }

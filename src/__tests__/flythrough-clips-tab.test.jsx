@@ -2,7 +2,7 @@
  *
  * This file is part of the LGS1920/studio project.
  *
- * File: flythrough-effects-tab.test.jsx
+ * File: flythrough-clips-tab.test.jsx
  *
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
@@ -15,9 +15,9 @@
  ******************************************************************************/
 
 import { cleanup, fireEvent, render, waitFor, within } from '@testing-library/react'
-import { FlythroughEffectsTab } from '@Components/Flythrough/FlythroughEffectsTab'
+import { FlythroughClipsTab } from '@Components/Flythrough/FlythroughClipsTab'
 import { defaultFlythroughSettings } from '@Core/ui/flythrough/FlythroughProgressionStyle'
-import { createFlythroughEffectInstance } from '@Core/ui/flythrough/FlythroughEffects'
+import { createFlythroughClipInstance } from '@Core/ui/flythrough/FlythroughClips'
 import { readFileSync } from 'node:fs'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { proxy } from 'valtio'
@@ -78,14 +78,14 @@ vi.mock('sortablejs', () => ({
     },
 }))
 
-const loadFlythroughEffectsCatalog = () => YAML.parse(readFileSync('public/flythrough.yaml', 'utf8')).flythrough.effects.catalog
+const loadFlythroughClipsCatalog = () => YAML.parse(readFileSync('public/flythrough.yaml', 'utf8')).flythrough.clips.catalog
 
-describe('FlythroughEffectsTab', () => {
+describe('FlythroughClipsTab', () => {
     beforeEach(() => {
         const flythrough = proxy(defaultFlythroughSettings())
-        flythrough.effects.catalog = loadFlythroughEffectsCatalog()
-        flythrough.effects.start = []
-        flythrough.effects.stop = []
+        flythrough.clips.catalog = loadFlythroughClipsCatalog()
+        flythrough.clips.start = []
+        flythrough.clips.stop = []
         const journey = proxy({
             slug:            'journey#test',
             flythrough:      {
@@ -122,24 +122,24 @@ describe('FlythroughEffectsTab', () => {
         vi.unstubAllGlobals()
     })
 
-    it('adds an effect from the add popup and updates the lists', async () => {
+    it('adds a clip from the add popup and updates the lists', async () => {
         const flythrough = globalThis.lgs.settings.ui.flythrough
-        const launch = flythrough.effects.catalog.launch
+        const launch = flythrough.clips.catalog.launch
         const journey = globalThis.lgs.theJourney
         const view = render(
-            <FlythroughEffectsTab
+            <FlythroughClipsTab
                 settings={flythrough}
                 state={globalThis.lgs.stores.flythrough}
             />,
         )
 
-        fireEvent.click(view.getAllByRole('button', {name: 'Add effect'})[0])
+        fireEvent.click(view.getAllByRole('button', {name: 'Add clip'})[0])
         fireEvent.click(view.getByText(launch.label))
         fireEvent.click(view.getByRole('button', {name: 'Add'}))
 
         await waitFor(() => {
             expect(journey.flythrough.start).toHaveLength(1)
-            expect(globalThis.lgs.stores.flythrough.effects.start).toHaveLength(1)
+            expect(globalThis.lgs.stores.flythrough.clips.start).toHaveLength(1)
         })
 
         expect(view.getByText(launch.label)).toBeTruthy()
@@ -148,22 +148,22 @@ describe('FlythroughEffectsTab', () => {
     it('uses whole-second steps for duration fields', async () => {
         const flythrough = globalThis.lgs.settings.ui.flythrough
         const view = render(
-            <FlythroughEffectsTab
+            <FlythroughClipsTab
                 settings={flythrough}
                 state={globalThis.lgs.stores.flythrough}
             />,
         )
 
-        fireEvent.click(view.getAllByRole('button', {name: 'Add effect'})[0])
-        fireEvent.click(view.getByText(flythrough.effects.catalog.launch.label))
+        fireEvent.click(view.getAllByRole('button', {name: 'Add clip'})[0])
+        fireEvent.click(view.getByText(flythrough.clips.catalog.launch.label))
 
         const durationInput = await view.findByLabelText('Duration (s)')
         expect(durationInput.getAttribute('step')).toBe('1')
     })
 
-    it('edits an effect in place without duplicating it', async () => {
+    it('edits a clip in place without duplicating it', async () => {
         const flythrough = globalThis.lgs.settings.ui.flythrough
-        const launch = createFlythroughEffectInstance(flythrough.effects.catalog.launch, 'start', {
+        const launch = createFlythroughClipInstance(flythrough.clips.catalog.launch, 'start', {
             params: {
                 duration: 2,
                 altitude: 300,
@@ -173,16 +173,16 @@ describe('FlythroughEffectsTab', () => {
 
         globalThis.lgs.theJourney.flythrough.start = [launch]
         globalThis.lgs.theJourney.flythrough.stop = []
-        globalThis.lgs.stores.flythrough.effects.start = [launch]
+        globalThis.lgs.stores.flythrough.clips.start = [launch]
 
         const view = render(
-            <FlythroughEffectsTab
+            <FlythroughClipsTab
                 settings={flythrough}
                 state={globalThis.lgs.stores.flythrough}
             />,
         )
 
-        fireEvent.click(view.getByRole('button', {name: 'Edit effect'}))
+        fireEvent.click(view.getByRole('button', {name: 'Edit clip'}))
         expect(view.queryByRole('button', {name: 'Apply'})).toBeNull()
 
         const popup = within(view.getByTestId('popup-body'))
@@ -193,14 +193,14 @@ describe('FlythroughEffectsTab', () => {
             expect(globalThis.lgs.theJourney.flythrough.start).toHaveLength(1)
             expect(globalThis.lgs.theJourney.flythrough.start[0].id).toBe(launch.id)
             expect(globalThis.lgs.theJourney.flythrough.start[0].params.duration).toBe(4)
-            expect(globalThis.lgs.stores.flythrough.effects.start).toHaveLength(1)
-            expect(globalThis.lgs.stores.flythrough.effects.start[0].params.duration).toBe(4)
+            expect(globalThis.lgs.stores.flythrough.clips.start).toHaveLength(1)
+            expect(globalThis.lgs.stores.flythrough.clips.start[0].params.duration).toBe(4)
         })
     })
 
-    it('can reset an edited effect to its pre-popup value', async () => {
+    it('can reset an edited clip to its pre-popup value', async () => {
         const flythrough = globalThis.lgs.settings.ui.flythrough
-        const launch = createFlythroughEffectInstance(flythrough.effects.catalog.launch, 'start', {
+        const launch = createFlythroughClipInstance(flythrough.clips.catalog.launch, 'start', {
             params: {
                 duration: 2,
                 altitude: 300,
@@ -210,16 +210,16 @@ describe('FlythroughEffectsTab', () => {
 
         globalThis.lgs.theJourney.flythrough.start = [launch]
         globalThis.lgs.theJourney.flythrough.stop = []
-        globalThis.lgs.stores.flythrough.effects.start = [launch]
+        globalThis.lgs.stores.flythrough.clips.start = [launch]
 
         const view = render(
-            <FlythroughEffectsTab
+            <FlythroughClipsTab
                 settings={flythrough}
                 state={globalThis.lgs.stores.flythrough}
             />,
         )
 
-        fireEvent.click(view.getByRole('button', {name: 'Edit effect'}))
+        fireEvent.click(view.getByRole('button', {name: 'Edit clip'}))
 
         const popup = within(view.getByTestId('popup-body'))
         const durationInput = popup.getByLabelText('Duration (s)')
@@ -234,13 +234,13 @@ describe('FlythroughEffectsTab', () => {
 
         await waitFor(() => {
             expect(globalThis.lgs.theJourney.flythrough.start[0].params.duration).toBe(2)
-            expect(globalThis.lgs.stores.flythrough.effects.start[0].params.duration).toBe(2)
+            expect(globalThis.lgs.stores.flythrough.clips.start[0].params.duration).toBe(2)
         })
     })
 
-    it('removes saturated effects from the add popup list', async () => {
+    it('removes saturated clips from the add popup list', async () => {
         const flythrough = globalThis.lgs.settings.ui.flythrough
-        const zoomOut = createFlythroughEffectInstance(flythrough.effects.catalog['zoom-out'], 'stop', {
+        const zoomOut = createFlythroughClipInstance(flythrough.clips.catalog['zoom-out'], 'stop', {
             params: {
                 duration: 2,
                 altitude: 300,
@@ -249,16 +249,16 @@ describe('FlythroughEffectsTab', () => {
         })
 
         globalThis.lgs.theJourney.flythrough.stop = [zoomOut]
-        globalThis.lgs.stores.flythrough.effects.stop = [zoomOut]
+        globalThis.lgs.stores.flythrough.clips.stop = [zoomOut]
 
         const view = render(
-            <FlythroughEffectsTab
+            <FlythroughClipsTab
                 settings={flythrough}
                 state={globalThis.lgs.stores.flythrough}
             />,
         )
 
-        fireEvent.click(view.getAllByRole('button', {name: 'Add effect'})[1])
+        fireEvent.click(view.getAllByRole('button', {name: 'Add clip'})[1])
 
         const popup = within(view.getByTestId('popup-body'))
 
@@ -267,9 +267,9 @@ describe('FlythroughEffectsTab', () => {
         expect(popup.getByText('Landing')).toBeTruthy()
     })
 
-    it('filters add options from the current runtime effects, not only from settings', async () => {
+    it('filters add options from the current runtime clips, not only from settings', async () => {
         const flythrough = globalThis.lgs.settings.ui.flythrough
-        const zoomIn = createFlythroughEffectInstance(flythrough.effects.catalog['zoom-in'], 'start', {
+        const zoomIn = createFlythroughClipInstance(flythrough.clips.catalog['zoom-in'], 'start', {
             params: {
                 duration: 2,
                 altitude: 300,
@@ -279,30 +279,30 @@ describe('FlythroughEffectsTab', () => {
 
         globalThis.lgs.theJourney.flythrough.start = [zoomIn]
         globalThis.lgs.theJourney.flythrough.stop = []
-        globalThis.lgs.stores.flythrough.effects.start = [zoomIn]
+        globalThis.lgs.stores.flythrough.clips.start = [zoomIn]
 
         const view = render(
-            <FlythroughEffectsTab
+            <FlythroughClipsTab
                 settings={flythrough}
                 state={globalThis.lgs.stores.flythrough}
             />,
         )
 
-        fireEvent.click(view.getAllByRole('button', {name: 'Add effect'})[0])
+        fireEvent.click(view.getAllByRole('button', {name: 'Add clip'})[0])
 
         const popup = within(view.getByTestId('popup-body'))
         expect(popup.queryByText('ZoomIn')).toBeNull()
         expect(popup.getByText('Launch')).toBeTruthy()
     })
 
-    it('removes the add effect button when no effect is available for the slot', () => {
+    it('removes the add clip button when no clip is available for the slot', () => {
         const flythrough = globalThis.lgs.settings.ui.flythrough
-        const zoomInDefinition = flythrough.effects.catalog['zoom-in']
-        const zoomIn = createFlythroughEffectInstance(zoomInDefinition, 'start')
+        const zoomInDefinition = flythrough.clips.catalog['zoom-in']
+        const zoomIn = createFlythroughClipInstance(zoomInDefinition, 'start')
         const limitedFlythrough = {
             ...flythrough,
-            effects: {
-                ...flythrough.effects,
+            clips: {
+                ...flythrough.clips,
                 catalog: {
                     'zoom-in': zoomInDefinition,
                 },
@@ -311,19 +311,19 @@ describe('FlythroughEffectsTab', () => {
 
         globalThis.lgs.theJourney.flythrough.start = [zoomIn]
         globalThis.lgs.theJourney.flythrough.stop = []
-        globalThis.lgs.stores.flythrough.effects.start = [zoomIn]
-        globalThis.lgs.stores.flythrough.effects.catalog = {
+        globalThis.lgs.stores.flythrough.clips.start = [zoomIn]
+        globalThis.lgs.stores.flythrough.clips.catalog = {
             'zoom-in': zoomInDefinition,
         }
 
         const view = render(
-            <FlythroughEffectsTab
+            <FlythroughClipsTab
                 settings={limitedFlythrough}
                 state={globalThis.lgs.stores.flythrough}
             />,
         )
 
-        const addButtons = view.getAllByRole('button', {name: 'Add effect'})
+        const addButtons = view.getAllByRole('button', {name: 'Add clip'})
         expect(addButtons).toHaveLength(2)
         expect(addButtons[0].disabled).toBe(true)
         expect(addButtons[1].disabled).toBe(true)
@@ -331,14 +331,14 @@ describe('FlythroughEffectsTab', () => {
 
     it('refreshes the move arrows after a drag reorder', async () => {
         const flythrough = globalThis.lgs.settings.ui.flythrough
-        const launch = createFlythroughEffectInstance(flythrough.effects.catalog.launch, 'start', {
+        const launch = createFlythroughClipInstance(flythrough.clips.catalog.launch, 'start', {
             params: {
                 duration: 2,
                 altitude: 300,
                 pitch:    -35,
             },
         })
-        const zoomIn = createFlythroughEffectInstance(flythrough.effects.catalog['zoom-in'], 'start', {
+        const zoomIn = createFlythroughClipInstance(flythrough.clips.catalog['zoom-in'], 'start', {
             params: {
                 duration: 2,
                 altitude: 300,
@@ -347,34 +347,34 @@ describe('FlythroughEffectsTab', () => {
         })
 
         globalThis.lgs.theJourney.flythrough.start = [launch, zoomIn]
-        globalThis.lgs.stores.flythrough.effects.start = [launch, zoomIn]
+        globalThis.lgs.stores.flythrough.clips.start = [launch, zoomIn]
 
         const view = render(
-            <FlythroughEffectsTab
+            <FlythroughClipsTab
                 settings={flythrough}
                 state={globalThis.lgs.stores.flythrough}
             />,
         )
 
         const startSection = view.getByText('Start').closest('section')
-        const list = startSection.querySelector('.flythrough-effects-list')
+        const list = startSection.querySelector('.flythrough-clips-list')
         const sortable = globalThis.__flythroughSortableInstances[0]
 
-        expect(list.querySelectorAll('.flythrough-effect-row-shell')).toHaveLength(2)
-        expect(list.querySelectorAll('.flythrough-effect-row-shell')[0].textContent).toContain('Launch')
-        expect(list.querySelectorAll('.flythrough-effect-row-shell')[1].textContent).toContain('ZoomIn')
+        expect(list.querySelectorAll('.flythrough-clip-row-shell')).toHaveLength(2)
+        expect(list.querySelectorAll('.flythrough-clip-row-shell')[0].textContent).toContain('Launch')
+        expect(list.querySelectorAll('.flythrough-clip-row-shell')[1].textContent).toContain('ZoomIn')
 
         list.insertBefore(list.children[1], list.children[0])
         sortable.options.onEnd()
 
         await waitFor(() => {
-            const rows = list.querySelectorAll('.flythrough-effect-row-shell')
+            const rows = list.querySelectorAll('.flythrough-clip-row-shell')
             expect(rows[0].textContent).toContain('ZoomIn')
             expect(rows[1].textContent).toContain('Launch')
-            expect(rows[0].querySelector('[aria-label="Move effect up"]').disabled).toBe(true)
-            expect(rows[0].querySelector('[aria-label="Move effect down"]').disabled).toBe(false)
-            expect(rows[1].querySelector('[aria-label="Move effect up"]').disabled).toBe(false)
-            expect(rows[1].querySelector('[aria-label="Move effect down"]').disabled).toBe(true)
+            expect(rows[0].querySelector('[aria-label="Move clip up"]').disabled).toBe(true)
+            expect(rows[0].querySelector('[aria-label="Move clip down"]').disabled).toBe(false)
+            expect(rows[1].querySelector('[aria-label="Move clip up"]').disabled).toBe(false)
+            expect(rows[1].querySelector('[aria-label="Move clip down"]').disabled).toBe(true)
         })
     })
 })
