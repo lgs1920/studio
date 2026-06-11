@@ -45,13 +45,13 @@ import { normalizeFlythroughPOISettings } from '@Core/ui/flythrough/FlythroughPO
 import { ELEVATION_UNITS, UnitUtils } from '@Utils/UnitUtils'
 import {
     WaButton, WaCard, WaColorPicker, WaDetails, WaDivider, WaIcon, WaNumberInput, WaOption, WaSelect, WaSlider,
-    WaSwitch, WaTab,
+    WaSwitch, WaTab, WaTooltip,
     WaTabGroup,
     WaTabPanel,
 }                 from '@web.awesome.me/webawesome-pro/dist/react'
 import { colord } from 'colord'
 import { Cartographic } from 'cesium'
-import { memo, useCallback, useEffect, useMemo, useRef } from 'react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal }      from 'react-dom'
 import { useSnapshot }       from 'valtio'
 import './style.css'
@@ -89,6 +89,8 @@ const formatSeconds = value => {
     const seconds = Math.max(0, finiteNumber(value) ?? 0)
     return `${Math.round(seconds)}`
 }
+
+const getChecked = event => Boolean(event?.target?.checked ?? event?.currentTarget?.checked)
 
 const FlythroughStyleField = ({children}) => (
     <div className="flythrough-style-field">
@@ -242,6 +244,7 @@ const FLYTHROUGH_POI_HIDDEN_FIELDS = [
 export const FlythroughDrawer = memo(() => {
     const {drawers: {open: drawerOpen}} = useSnapshot(lgs.stores.ui)
     const {theJourney: currentJourney} = useSnapshot(lgs.stores.main)
+    const poiList = useSnapshot(lgs.stores.main.components.pois.list)
     const flythroughState = useSnapshot(lgs.stores.flythrough)
     ensureFlythroughSettings()
     const flythroughSettings = useSnapshot(lgs.settings.ui.flythrough)
@@ -280,6 +283,7 @@ export const FlythroughDrawer = memo(() => {
     const hideOtherJourneys = flythroughState.hideOtherJourneys === true
     const durationLocked = flythroughState.active || flythroughState.playing || flythroughState.paused
     const syncWithVideo = flythroughState.recordingSync === true
+    const [poiVisibilityOverrides, setPoiVisibilityOverrides] = useState({})
     const totalVideoDurationSeconds = useMemo(() => {
         const clipDurationSeconds = [...(clips.start ?? []), ...(clips.stop ?? [])]
             .reduce((total, clip) => total + Math.max(0, finiteNumber(clip?.params?.duration) ?? 0), 0)
@@ -449,6 +453,36 @@ export const FlythroughDrawer = memo(() => {
             ) ?? []
         }
     }, [currentJourney, drawerOpen, flythroughSettings.poiDistance, hasJourney])
+
+    const updatePOIFlythroughVisibility = useCallback((poiId, event) => {
+        const visible = getChecked(event)
+        setPoiVisibilityOverrides(current => ({
+            ...current,
+            [poiId]: visible,
+        }))
+        void updatePOIFlythroughSettings(poiId, {visible})
+    }, [updatePOIFlythroughSettings])
+
+    useEffect(() => {
+        if (Object.keys(poiVisibilityOverrides).length === 0) {
+            return
+        }
+
+        setPoiVisibilityOverrides(current => {
+            let changed = false
+            const next = {...current}
+
+            Object.entries(current).forEach(([poiId, visible]) => {
+                const poi = poiList.get(poiId)
+                if (!poi?.id || normalizeFlythroughPOISettings(poi.flythrough).visible === visible) {
+                    delete next[poiId]
+                    changed = true
+                }
+            })
+
+            return changed ? next : current
+        })
+    }, [poiList, poiVisibilityOverrides])
 
     const editFlythroughPOI = useCallback(async (poiId) => {
         await openPOIEditor(poiId, {stacked: true})
@@ -1024,81 +1058,172 @@ export const FlythroughDrawer = memo(() => {
                                                  ) : (
                                                       <div className="lgs--details-list">
                                                           {nearbyPOIs.map(entry => {
-                                                              const poi = lgs.stores.main.components.pois.list.get(entry?.poi?.id) ?? entry?.poi
+                                                              const poi = poiList.get(entry?.poi?.id) ?? entry?.poi
                                                               if (!poi?.id) {
                                                                   return null
                                                               }
 
                                                               const settings = normalizeFlythroughPOISettings(poi.flythrough)
+                                                              const flythroughEnabled = poiVisibilityOverrides[poi.id] ?? settings.visible !== false
+                                                              const animated = settings.animated !== false
+                                                              const visibilityButtonId = `flythrough-poi-visibility-${poi.id}`
+                                                              const animationButtonId = `flythrough-poi-animation-${poi.id}`
+                                                              const toggleVisibility = event => {
+                                                                  event.preventDefault()
+                                                                  event.stopPropagation()
+                                                                  updatePOIFlythroughVisibility(poi.id, {
+                                                                      target: {
+                                                                          checked: !flythroughEnabled,
+                                                                      },
+                                                                  })
+                                                              }
+                                                              const toggleAnimation = event => {
+                                                                  event.preventDefault()
+                                                                  event.stopPropagation()
+                                                                  void updatePOIFlythroughSettings(poi.id, {
+                                                                      animated: !animated,
+                                                                  })
+                                                              }
 
                                                               return (
                                                                   <WaDetails key={poi.id}
                                                                              className="flythrough-poi-details lgs--details-hoverable">
                                                                       <div slot="summary"
-                                                                           className="">
-                                                                          <WaIcon variant="regular"
-                                                                                  className="poi-duotone-icon"
-                                                                                  name={entry?.source === 'journey-poi' ? 'route' : 'location-dot'}/>
-                                                                          <strong>&nbsp;{poi.title ?? poi.id}</strong>
+                                                                           className="flythrough-poi-summary">
+                                                                          <div className="flythrough-poi-summary-title">
+                                                                              <WaIcon variant="regular"
+                                                                                      className="poi-duotone-icon"
+                                                                                      name={entry?.source === 'journey-poi' ? 'route' : 'location-dot'}/>
+                                                                              <strong>&nbsp;{poi.title ?? poi.id}</strong>
+                                                                          </div>
+                                                                          <div
+                                                                              className="flythrough-poi-summary-actions">
+                                                                              <WaTooltip for={visibilityButtonId}
+                                                                                         placement="top">
+                                                                                  {flythroughEnabled ? 'Hide POI during flythrough' : 'Show POI during flythrough'}
+                                                                              </WaTooltip>
+                                                                              <WaButton
+                                                                                  id={visibilityButtonId}
+                                                                                  className="lythrough-poi-summary-button"
+                                                                                  appearance="plain"
+                                                                                  variant="neutral"
+                                                                                  size="s"
+                                                                                  aria-label={flythroughEnabled ? 'Hide POI during flythrough' : 'Show POI during flythrough'}
+                                                                                  aria-pressed={flythroughEnabled}
+                                                                                  onClick={toggleVisibility}
+                                                                              >
+                                                                                  <WaIcon
+                                                                                      name={flythroughEnabled ? 'eye-slash' : 'eye'}
+                                                                                      variant="regular"/>
+                                                                              </WaButton>
+                                                                              <WaTooltip for={animationButtonId}
+                                                                                         placement="top">
+                                                                                  {animated ? 'Disable POI animation during flythrough' : 'Enable POI animation during flythrough'}
+                                                                              </WaTooltip>
+                                                                              <WaButton
+                                                                                  id={animationButtonId}
+                                                                                  className="flythrough-poi-summary-button"
+                                                                                  appearance="plain"
+                                                                                  variant="neutral"
+                                                                                  size="s"
+                                                                                  aria-label={animated ? 'Disable POI animation during flythrough' : 'Enable POI animation during flythrough'}
+                                                                                  aria-pressed={animated}
+                                                                                  onClick={toggleAnimation}
+                                                                              >
+                                                                                  <WaIcon
+                                                                                      name={animated ? 'thumbtack-angle-slash' : 'thumbtack-angle'}
+                                                                                      variant="regular"/>
+                                                                              </WaButton>
+                                                                          </div>
                                                                       </div>
                                                                       <div className="flythrough-poi-details-body">
-                                                                          <div className="flythrough-fieldset">
-                                                                              <WaNumberInput
-                                                                                  className="half-width"
-                                                                                  label="Duration (s)"
-                                                                                  size="s"
-                                                                                  appearance="filled"
-                                                                                  min="0"
-                                                                                  max="60"
-                                                                                  step="0.5"
-                                                                                  value={settings.displayDurationSeconds}
-                                                                                  onInput={event => updatePOIFlythroughSettings(poi.id, {
-                                                                                      displayDurationSeconds: clampFlythroughNumber(
-                                                                                          event.target.value,
-                                                                                          settings.displayDurationSeconds,
-                                                                                          0,
-                                                                                          60,
-                                                                                      ),
-                                                                                  })}
+                                                                          <div className="flythrough-poi-switches">
+                                                                              <WaSwitch
+                                                                                  size="xs"
                                                                                   label-at-start
-                                                                              />
-                                                                              <WaNumberInput
-                                                                                  className="half-width"
-                                                                                  label="Real size (%)"
-                                                                                  size="s"
-                                                                                  appearance="filled"
-                                                                                  min="10"
-                                                                                  max="200"
-                                                                                  step="5"
-                                                                                  value={settings.scalePercent}
-                                                                                  onInput={event => updatePOIFlythroughSettings(poi.id, {
-                                                                                      scalePercent: clampFlythroughNumber(
-                                                                                          event.target.value,
-                                                                                          settings.scalePercent,
-                                                                                          10,
-                                                                                          200,
-                                                                                      ),
-                                                                                  })}
-                                                                                  label-at-start
-                                                                              />
+                                                                                  checked={flythroughEnabled}
+                                                                                  onInput={event => updatePOIFlythroughVisibility(poi.id, event)}
+                                                                              >
+                                                                                  {'Show during flythrough'}
+                                                                              </WaSwitch>
                                                                           </div>
-                                                                          <div className="flythrough-poi-hidden-fields">
-                                                                              {FLYTHROUGH_POI_HIDDEN_FIELDS.map(field => (
-                                                                                  <WaSwitch
-                                                                                      key={`${poi.id}-${field.key}`}
-                                                                                      size="xs"
-                                                                                      label-at-start
-                                                                                      checked={settings.hiddenFields[field.key] === true}
-                                                                                      onChange={event => updatePOIFlythroughSettings(poi.id, {
-                                                                                          hiddenFields: {
-                                                                                              [field.key]: Boolean(event?.target?.checked),
-                                                                                          },
-                                                                                      })}
-                                                                                  >
-                                                                                      {field.label}
-                                                                                  </WaSwitch>
-                                                                              ))}
-                                                                          </div>
+                                                                          {flythroughEnabled && (
+                                                                              <div
+                                                                                  key={`flythrough-poi-options-${poi.id}`}
+                                                                                  className="flythrough-poi-options">
+                                                                                  <div
+                                                                                      className="flythrough-poi-animated-switch">
+                                                                                      <WaSwitch
+                                                                                          size="xs"
+                                                                                          label-at-start
+                                                                                          checked={settings.animated !== false}
+                                                                                          onInput={event => updatePOIFlythroughSettings(poi.id, {
+                                                                                              animated: getChecked(event),
+                                                                                          })}
+                                                                                      >
+                                                                                          {'Animate during flythrough'}
+                                                                                      </WaSwitch>
+                                                                                  </div>
+                                                                                  <div className="flythrough-fieldset">
+                                                                                      <WaNumberInput
+                                                                                          className="half-width"
+                                                                                          label="Duration (s)"
+                                                                                          size="s"
+                                                                                          appearance="filled"
+                                                                                          min="0"
+                                                                                          max="60"
+                                                                                          step="1"
+                                                                                          value={settings.displayDurationSeconds}
+                                                                                          onInput={event => updatePOIFlythroughSettings(poi.id, {
+                                                                                              displayDurationSeconds: Math.round(clampFlythroughNumber(
+                                                                                                  event.target.value,
+                                                                                                  settings.displayDurationSeconds,
+                                                                                                  0,
+                                                                                                  60,
+                                                                                              )),
+                                                                                          })}
+                                                                                          label-at-start
+                                                                                      />
+                                                                                      <WaNumberInput
+                                                                                          className="half-width"
+                                                                                          label="Real size (%)"
+                                                                                          size="s"
+                                                                                          appearance="filled"
+                                                                                          min="10"
+                                                                                          max="200"
+                                                                                          step="5"
+                                                                                          value={settings.scalePercent}
+                                                                                          onInput={event => updatePOIFlythroughSettings(poi.id, {
+                                                                                              scalePercent: clampFlythroughNumber(
+                                                                                                  event.target.value,
+                                                                                                  settings.scalePercent,
+                                                                                                  10,
+                                                                                                  200,
+                                                                                              ),
+                                                                                          })}
+                                                                                          label-at-start
+                                                                                      />
+                                                                                  </div>
+                                                                                  <div
+                                                                                      className="flythrough-poi-hidden-fields">
+                                                                                      {FLYTHROUGH_POI_HIDDEN_FIELDS.map(field => (
+                                                                                          <WaSwitch
+                                                                                              key={`${poi.id}-${field.key}`}
+                                                                                              size="xs"
+                                                                                              label-at-start
+                                                                                              checked={settings.hiddenFields[field.key] === true}
+                                                                                              onInput={event => updatePOIFlythroughSettings(poi.id, {
+                                                                                                  hiddenFields: {
+                                                                                                      [field.key]: getChecked(event),
+                                                                                                  },
+                                                                                              })}
+                                                                                          >
+                                                                                              {field.label}
+                                                                                          </WaSwitch>
+                                                                                      ))}
+                                                                                  </div>
+                                                                              </div>
+                                                                          )}
                                                                           <div className="flythrough-poi-actions">
                                                                               <WaButton size="s" appearance="outlined"
                                                                                         onClick={() => editFlythroughPOI(poi.id)}>

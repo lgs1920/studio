@@ -53,6 +53,7 @@ vi.mock('@web.awesome.me/webawesome-pro/dist/react', () => ({
     WaColorPicker: props => <input data-testid={props['aria-label'] ?? 'color'} {...props} />,
     WaDivider: () => <hr/>,
     WaIcon: () => <span/>,
+    WaDetails: ({children, ...props}) => <div {...props}>{children}</div>,
     WaNumberInput: ({label, onInput, value, ...props}) => (
         <label>
             {label}
@@ -72,9 +73,9 @@ vi.mock('@web.awesome.me/webawesome-pro/dist/react', () => ({
             <input aria-label={label} value={value} onInput={onInput} {...props}/>
         </label>
     ),
-    WaSwitch: ({children, checked, onChange, ...props}) => (
+    WaSwitch: ({children, checked, onChange, onInput, ...props}) => (
         <label>
-            <input type="checkbox" checked={checked} onChange={onChange} {...props}/>
+            <input type="checkbox" checked={checked} onChange={onInput ?? onChange} {...props}/>
             {children}
         </label>
     ),
@@ -348,6 +349,31 @@ describe('FlythroughDrawer', () => {
         })
     })
 
+    it('exposes header shortcuts to toggle POI visibility and animation', async () => {
+        const view = render(<FlythroughDrawer/>)
+
+        await waitFor(() => {
+            expect(view.getByLabelText('Hide POI during flythrough')).toBeTruthy()
+            expect(view.getByLabelText('Disable POI animation during flythrough')).toBeTruthy()
+        })
+
+        fireEvent.click(view.getByLabelText('Disable POI animation during flythrough'))
+
+        await waitFor(() => {
+            const poi = globalThis.lgs.stores.main.components.pois.list.get('poi-1')
+            expect(poi.flythrough.animated).toBe(false)
+            expect(view.getByLabelText('Enable POI animation during flythrough')).toBeTruthy()
+        })
+
+        fireEvent.click(view.getByLabelText('Hide POI during flythrough'))
+
+        await waitFor(() => {
+            const poi = globalThis.lgs.stores.main.components.pois.list.get('poi-1')
+            expect(poi.flythrough.visible).toBe(false)
+            expect(view.getByLabelText('Show POI during flythrough')).toBeTruthy()
+        })
+    })
+
     it('persists flythrough poi settings from the POIs tab and opens POI editor stacked', async () => {
         const view = render(<FlythroughDrawer/>)
 
@@ -359,19 +385,40 @@ describe('FlythroughDrawer', () => {
 
         const durationInput = view.getAllByLabelText('Duration (s)').at(-1)
         const scaleInput = view.getByLabelText('Real size (%)')
+        const showDuringFlythrough = view.getByLabelText('Show during flythrough')
         const hideCategory = view.getByLabelText('Hide category')
         const editButton = view.getByText('Edit POI')
 
         fireEvent.input(durationInput, {target: {value: '6'}})
         fireEvent.input(scaleInput, {target: {value: '120'}})
         fireEvent.click(hideCategory)
-        fireEvent.click(editButton)
+        fireEvent.click(showDuringFlythrough)
 
         await waitFor(() => {
             const poi = globalThis.lgs.stores.main.components.pois.list.get('poi-1')
             expect(poi.flythrough.displayDurationSeconds).toBe(6)
             expect(poi.flythrough.scalePercent).toBe(120)
             expect(poi.flythrough.hiddenFields.category).toBe(true)
+            expect(poi.flythrough.visible).toBe(false)
+            expect(poi.flythrough.animated).toBe(true)
+            expect(view.queryByLabelText('Animate during flythrough')).toBeNull()
+            expect(view.queryByLabelText('Real size (%)')).toBeNull()
+            expect(view.queryByLabelText('Hide category')).toBeNull()
+        })
+
+        fireEvent.click(view.getByLabelText('Show during flythrough'))
+
+        await waitFor(() => {
+            const poi = globalThis.lgs.stores.main.components.pois.list.get('poi-1')
+            expect(poi.flythrough.visible).toBe(true)
+            expect(view.getByLabelText('Animate during flythrough')).toBeTruthy()
+            expect(view.getByLabelText('Real size (%)')).toBeTruthy()
+            expect(view.getByLabelText('Hide category')).toBeTruthy()
+        })
+
+        fireEvent.click(editButton)
+
+        await waitFor(() => {
             expect(__.ui.drawerManager.open).toHaveBeenCalledWith(
                 expect.any(String),
                 expect.objectContaining({
