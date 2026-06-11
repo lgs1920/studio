@@ -27,7 +27,7 @@ import {
     FLYTHROUGH_EVENT_STOP, FLYTHROUGH_EVENT_UPDATE, FlythroughPlaybackController,
 }                                                             from './FlythroughPlaybackController'
 import {
-    FLYTHROUGH_CAMERA_ALTITUDE_GROUND_OFFSET, FLYTHROUGH_CAMERA_POSITION_AHEAD, FLYTHROUGH_CAMERA_POSITION_SYSTEM,
+    FLYTHROUGH_CAMERA_ALTITUDE_CONSTANT, FLYTHROUGH_CAMERA_ALTITUDE_GROUND_OFFSET, FLYTHROUGH_CAMERA_POSITION_AHEAD, FLYTHROUGH_CAMERA_POSITION_SYSTEM,
     FLYTHROUGH_MARKER_MODE_HYSTERESIS, FLYTHROUGH_MARKER_MODE_NAVIGATION, FLYTHROUGH_MARKER_MODE_TRACE,
     getFlythroughSettings, normalizeFlythroughCamera,
     normalizeFlythroughMarker, normalizeFlythroughTrace,
@@ -45,6 +45,7 @@ import {
 const DEFAULT_DURATION = 60
 const PROFILE_HOVER_RENDER_INTERVAL = 120
 const METRIC_OVERLAY_TTL = 2000
+const FLYTHROUGH_HEADING_TRANSITION_DURATION_SECONDS = 2
 const SAFE_TOP_DOWN_PITCH = -(Math.PI / 2 - 0.0001)
 const CAMERA_GUIDE_MIN_STEPS = 512
 const CAMERA_GUIDE_MAX_STEPS = 4096
@@ -581,6 +582,7 @@ export class FlythroughMode {
     #hiddenJourneyVisibility = new Map()
     #hiddenCurrentJourneyPolylines = new Map()
     #deferStartCameraRecenter = false
+    #introHeadingTransition = null
     #cameraBridgeBound = false
     #cameraLiveSyncFrame = null
     #clipSequenceToken = 0
@@ -703,6 +705,22 @@ export class FlythroughMode {
             catch (error) {
                 console.debug('[FlythroughMode] Failed to seed camera from Cesium on start.', error)
             }
+        }
+        const introLeadSeconds = 1
+        const introStartAt = this.#now() + Math.max(
+            0,
+            (startList.reduce((total, clip) => total + Math.max(0, Number(clip?.params?.duration ?? this.#cameraSettingsForClip(clip)?.duration ?? 0)), 0) - introLeadSeconds) * 1000,
+        )
+        const camera = globalThis.lgs?.viewer?.camera
+        this.#introHeadingTransition = {
+            startAt:       introStartAt,
+            endAt:         introStartAt + (FLYTHROUGH_HEADING_TRANSITION_DURATION_SECONDS * 1000),
+            height:        finiteNumber(camera?.positionCartographic?.height)
+                           ?? finiteNumber(startSample?.altitude ?? startSample?.height)
+                           ?? 0,
+            fromPitch:     finiteNumber(camera?.pitch) ?? this.#lastCameraPitch ?? SAFE_TOP_DOWN_PITCH,
+            targetHeading: this.#introHeadingForProgress(options.progress ?? 0),
+            applied:       false,
         }
         const token = ++this.#clipSequenceToken
         let startResult = startSample
@@ -1273,6 +1291,7 @@ export class FlythroughMode {
         const clipCamera = this.#cameraSettingsForClip(clip)
         const target = await this.#targetSampleForClip(sample, clip.clipId)
         const duration = Math.max(0, Number(clip?.params?.duration ?? clipCamera?.duration ?? 0))
+        const northHeading = 0
         if (!target) {
             return
         }
@@ -1283,12 +1302,10 @@ export class FlythroughMode {
             const endAltitude = this.#cameraAltitudeForSample(target, flythroughCamera)
             const startHeight = Math.max(startAltitude, endAltitude)
             const endHeight = Math.min(startAltitude, endAltitude)
-            const startHeading = degreesToRadians(finiteNumber(clip?.params?.heading ?? clipCamera.heading) ?? clipCamera.heading)
-                               ?? finiteNumber(viewer.camera?.heading)
-                               ?? 0
+            const startHeading = northHeading
             const startPitch = degreesToRadians(finiteNumber(clip?.params?.pitch ?? clipCamera.pitch) ?? clipCamera.pitch)
                               ?? SAFE_TOP_DOWN_PITCH
-            const endHeading = degreesToRadians(flythroughCamera.heading) ?? finiteNumber(viewer.camera?.heading) ?? 0
+            const endHeading = northHeading
             const endPitch = degreesToRadians(flythroughCamera.pitch) ?? SAFE_TOP_DOWN_PITCH
 
             this.#recenterCameraToSample({
@@ -1341,6 +1358,8 @@ export class FlythroughMode {
             sample:         target,
             heading:        landingFlight
                             ? landingHeading
+                            : clip.clipId === 'zoom-out'
+                            ? northHeading
                             : degreesToRadians(clipCamera.heading) ?? finiteNumber(currentCamera?.heading) ?? 0,
             pitch:          landingFlight
                             ? landingPitch
@@ -1477,6 +1496,7 @@ export class FlythroughMode {
         this.#cameraAutoTrackingIgnoreUntil = 0
         this.#journeyToolbarHidden = false
         this.#journeyToolbarWasVisible = null
+        this.#introHeadingTransition = null
         this.#removeToleranceZoneOverlay()
         if (this.#cameraManualInteractionTimer !== null) {
             clearTimeout(this.#cameraManualInteractionTimer)
@@ -2805,6 +2825,33 @@ export class FlythroughMode {
         )
         const smoothPitch = this.#smoothRadians(this.#lastCameraPitch, pitch, 0.08)
         const anchorSample = this.#markerPositionForSample(sample, markerSettings)
+        const introTransition = this.#introHeadingTransition
+        if (introTransition) {
+            const now = this.#now()
+            if (now < introTransition.endAt) {
+                if (!introTransition.applied) {
+                    introTransition.applied = true
+                    const introCameraSettings = normalizeFlythroughCamera({
+                        ...cameraSettings,
+                        altitudeMode: FLYTHROUGH_CAMERA_ALTITUDE_CONSTANT,
+                        altitude:     Math.max(10, introTransition.height),
+                    })
+                    this.#recenterCameraToSample({
+                        sample:         anchorSample,
+                        heading:        heading,
+                        pitch:          introTransition.fromPitch,
+                        cameraSettings: introCameraSettings,
+                        cameraHeight:   Math.max(10, introTransition.height),
+                        duration:       FLYTHROUGH_HEADING_TRANSITION_DURATION_SECONDS,
+                    })
+                }
+                this.#lastCameraHeading = heading
+                this.#lastCameraPitch = smoothPitch
+                return
+            }
+
+            this.#introHeadingTransition = null
+        }
 
         if (this.#cameraMode !== marker.mode) {
             this.#cameraMode = marker.mode
