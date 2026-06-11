@@ -23,6 +23,7 @@ export const flythrough = {
     active:        false,
     playing:       false,
     paused:        false,
+    nearbyPois:    [],
     journeySlug:    null,
     trackSlug:      null,
     progress:       0,

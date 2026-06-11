@@ -30,6 +30,7 @@ export const FLYTHROUGH_PROFILE_MARKER_BORDER_MAX_WIDTH = 12
 export const FLYTHROUGH_LABEL = 'Flythrough'
 export const DEFAULT_FLYTHROUGH_SCOPE = 'all-tracks'
 export const DEFAULT_FLYTHROUGH_DURATION = 60
+export const DEFAULT_FLYTHROUGH_POI_DISTANCE = 10000
 export const FLYTHROUGH_TRACE_MODE_PROGRESSIVE = 'progressive'
 export const FLYTHROUGH_TRACE_MODE_FULL = 'full'
 export const FLYTHROUGH_MARKER_MODE_TRACE = 'trace'
@@ -151,6 +152,7 @@ export const FLYTHROUGH_CAMERA_PRESETS = Object.freeze([
 
 export const defaultFlythroughSettings = () => ({
     duration:    DEFAULT_FLYTHROUGH_DURATION,
+    poiDistance: DEFAULT_FLYTHROUGH_POI_DISTANCE,
     direction:   1,
     loop:        false,
     scope:       DEFAULT_FLYTHROUGH_SCOPE,
@@ -363,6 +365,13 @@ export const normalizeFlythroughSettings = (settings = {}) => {
 
     return {
         duration:    Math.max(1, duration),
+        poiDistance: clampFlythroughNumber(
+            settings?.poiDistance,
+            DEFAULT_FLYTHROUGH_POI_DISTANCE,
+            1,
+            100000,
+            true,
+        ),
         direction:   Number(settings?.direction) < 0 ? -1 : 1,
         loop:        settings?.loop === true,
         scope:       typeof settings?.scope === 'string' && settings.scope.trim() !== ''

@@ -311,6 +311,9 @@ export class LGS1920Context {
      * @returns {*} The journey object associated with the processed slug, or undefined if not found.
      */
     getJourneyByTrackSlug = (slug) => {
+        if (typeof slug !== 'string' || slug.trim() === '') {
+            return undefined
+        }
         if (slug === GLOBAL_PARENT) {
             return {slug: GLOBAL_PARENT}
         }

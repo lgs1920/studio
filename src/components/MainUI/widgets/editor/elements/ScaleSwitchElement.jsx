@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-05-10
- * Last modified: 2026-05-10
+ * Created on: 2026-06-09
+ * Last modified: 2026-06-09
  *
  *
  * Copyright © 2026 LGS1920
@@ -22,7 +22,7 @@ export const ScaleSwitchElement = ({
                                        alignAfterColor = false,
                                        className = '',
                                        switchStyle,
-                                       widthAuto = true,
+                                       widthAuto = false,
                                    }) => {
     const stopPropagation = event => event.stopPropagation()
 

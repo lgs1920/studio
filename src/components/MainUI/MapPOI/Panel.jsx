@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-05-09
- * Last modified: 2026-05-09
+ * Created on: 2026-06-11
+ * Last modified: 2026-06-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -19,7 +19,7 @@ import { MapPOIEditListActions }                        from '@Components/MainUI
 import { MapPOIList }                                   from '@Components/MainUI/MapPOI/MapPOIList'
 import PanelActions                                     from '@Components/PanelsActions'
 import WaDrawer                                         from '@Components/WaDrawerNonModal'
-import { POIS_EDITOR_DRAWER } from '@Core/constants'
+import { INFO_DRAWER, POIS_EDITOR_DRAWER } from '@Core/constants'
 import React, { memo, useCallback, useEffect, useMemo } from 'react'
 import { createPortal }                                 from 'react-dom'
 import { useSnapshot }                                  from 'valtio'
@@ -112,6 +112,13 @@ export const Panel = memo(() => {
               }
         , [categories, $pois])
 
+    const isStacked = __.ui.drawerManager.isStacked(POIS_EDITOR_DRAWER)
+    const closePanelWithManager = useCallback(() => {
+        window.dispatchEvent(new Event('resize'))
+        if (__.ui.drawerManager.isCurrent(POIS_EDITOR_DRAWER)) {
+            __.ui.drawerManager.close()
+        }
+    }, [])
 
     const drawerRoot = __.ui.drawerManager.drawerRoot
     const content = (
@@ -123,7 +130,7 @@ export const Panel = memo(() => {
                     onWaHide={closePanel}
                     placement={drawerPlacement}
                 >
-                    <PanelActions/>
+                    <PanelActions stackedPanel={isStacked} onBack={isStacked ? closePanelWithManager : null}/>
                     <span slot="label">{'Points Of Interest'}</span>
 
                     <MapPOIEditListActions/>

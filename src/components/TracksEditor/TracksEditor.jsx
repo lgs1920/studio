@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-05-10
- * Last modified: 2026-05-10
+ * Created on: 2026-06-11
+ * Last modified: 2026-06-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,14 +16,14 @@
 
 import DrawerFooter                 from '@Components/DrawerFooter'
 import { JourneyLoaderButton }      from '@Components/FileLoader/JourneyLoaderButton'
-import PanelActions                 from '@Components/PanelsActions'
-import { JOURNEY_EDITOR_DRAWER }    from '@Core/constants'
-import WaDrawer                     from '@Components/WaDrawerNonModal'
+import PanelActions                                  from '@Components/PanelsActions'
+import { JOURNEY_EDITOR_DRAWER, POIS_EDITOR_DRAWER } from '@Core/constants'
+import WaDrawer                                      from '@Components/WaDrawerNonModal'
 
 import './style.css'
-import { WaSwitch }                     from '@web.awesome.me/webawesome-pro/dist/react'
-import { memo, useCallback, useEffect } from 'react'
-import { createPortal }                 from 'react-dom'
+import { WaSwitch }                                  from '@web.awesome.me/webawesome-pro/dist/react'
+import React, { memo, useCallback, useEffect }       from 'react'
+import { createPortal }                              from 'react-dom'
 import { useSnapshot }              from 'valtio'
 import { JourneySelector }       from './journey/JourneySelector'
 import { JourneySettings }       from './journey/JourneySettings'
@@ -75,6 +75,14 @@ export const TracksEditor = memo(() => {
     const {show: toolbarShow, usage: toolbarUsage} = useSnapshot(lgs.settings.ui.journeyToolbar)
     const hasJourneys = lgs.journeys.size > 0
 
+    const isStacked = __.ui.drawerManager.isStacked(JOURNEY_EDITOR_DRAWER)
+    const closePanelWithManager = useCallback(() => {
+        window.dispatchEvent(new Event('resize'))
+        if (__.ui.drawerManager.isCurrent(JOURNEY_EDITOR_DRAWER)) {
+            __.ui.drawerManager.close()
+        }
+    }, [])
+
     // Memoized event handlers
     const toggleToolbar = useCallback(() => {
         lgs.settings.ui.journeyToolbar.show = !lgs.settings.ui.journeyToolbar.show
@@ -114,7 +122,7 @@ export const TracksEditor = memo(() => {
                     >
 
                         <span slot="label">{'Edit the Journey'}</span>
-                        <PanelActions>
+                        <PanelActions stackedPanel={isStacked} onBack={isStacked ? closePanelWithManager : null}>
                             <ToolbarHeader
                             show={toolbarShow}
                             usage={toolbarUsage}

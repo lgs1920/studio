@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-05-31
- * Last modified: 2026-05-31
+ * Created on: 2026-06-11
+ * Last modified: 2026-06-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -18,6 +18,7 @@ import DrawerFooter from '@Components/DrawerFooter'
 import { FlythroughProgressBar } from '@Components/Flythrough/FlythroughProgressBar'
 import { FlythroughClipsTab } from '@Components/Flythrough/FlythroughClipsTab'
 import { LGSScrollbars } from '@Components/MainUI/LGSScrollbars'
+import { openPOIEditor }                  from '@Components/MainUI/MapPOI/openPOIEditor'
 import { VideoButton } from '@Components/MainUI/video/VideoButton'
 import { formatSliderPercent } from '@Components/MainUI/widgets/editor/elements/sliderUtils'
 import PanelActions from '@Components/PanelsActions'
@@ -40,9 +41,12 @@ import {
     normalizeFlythroughProgressionStyle, normalizeFlythroughTrace,
 }                 from '@Core/ui/flythrough/FlythroughProgressionStyle'
 import { normalizeFlythroughClips } from '@Core/ui/flythrough/FlythroughClips'
+import { normalizeFlythroughPOISettings } from '@Core/ui/flythrough/FlythroughPOISettings'
 import { ELEVATION_UNITS, UnitUtils } from '@Utils/UnitUtils'
 import {
-    WaCard, WaColorPicker, WaDivider, WaIcon, WaNumberInput, WaOption, WaSelect, WaSlider, WaSwitch, WaTab, WaTabGroup,
+    WaButton, WaCard, WaColorPicker, WaDetails, WaDivider, WaIcon, WaNumberInput, WaOption, WaSelect, WaSlider,
+    WaSwitch, WaTab,
+    WaTabGroup,
     WaTabPanel,
 }                 from '@web.awesome.me/webawesome-pro/dist/react'
 import { colord } from 'colord'
@@ -51,6 +55,7 @@ import { memo, useCallback, useEffect, useMemo, useRef } from 'react'
 import { createPortal }      from 'react-dom'
 import { useSnapshot }       from 'valtio'
 import './style.css'
+
 
 const clampDuration = value => {
     const duration = Number(value)
@@ -227,6 +232,13 @@ const FlythroughProgressionGroup = ({
     </section>
 )
 
+const FLYTHROUGH_POI_HIDDEN_FIELDS = [
+    {key: 'location', label: 'Hide location'},
+    {key: 'category', label: 'Hide category'},
+    {key: 'altitude', label: 'Hide altitude'},
+    {key: 'coordinates', label: 'Hide coordinates'},
+]
+
 export const FlythroughDrawer = memo(() => {
     const {drawers: {open: drawerOpen}} = useSnapshot(lgs.stores.ui)
     const {theJourney: currentJourney} = useSnapshot(lgs.stores.main)
@@ -262,6 +274,7 @@ export const FlythroughDrawer = memo(() => {
     const remainingUseDefinedTrackStyle = trace.remaining.useDefinedTrackStyle !== false
     const remainingColor = toOpaqueColorValue(trace.remaining.color)
     const camera = normalizeFlythroughCamera(flythroughSettings.camera)
+    const nearbyPOIs = Array.isArray(flythroughState.nearbyPois) ? flythroughState.nearbyPois : []
     const cameraPresetKey = getFlythroughCameraPresetKey(camera)
     const marker = normalizeFlythroughMarker(flythroughSettings.marker)
     const hideOtherJourneys = flythroughState.hideOtherJourneys === true
@@ -285,6 +298,7 @@ export const FlythroughDrawer = memo(() => {
 
         flythroughRuntime.journeySlug = journeySlug
         flythroughRuntime.duration = flythroughSettings.duration
+        flythroughRuntime.poiDistance = flythroughSettings.poiDistance
         lgs.settings.ui.flythrough.direction = 1
         flythroughRuntime.direction = 1
         flythroughRuntime.scope = DEFAULT_FLYTHROUGH_SCOPE
@@ -302,9 +316,11 @@ export const FlythroughDrawer = memo(() => {
             flythroughRuntime.elapsedMillis = null
             flythroughRuntime.durationMillis = null
             flythroughRuntime.totalDistance = 0
+            flythroughRuntime.nearbyPois = []
         }
     }, [
         flythroughSettings.duration,
+                  flythroughSettings.poiDistance,
         flythroughSettings.profileInfo,
         flythroughSettings.progression,
         flythroughSettings.trace,
@@ -330,6 +346,22 @@ export const FlythroughDrawer = memo(() => {
             __.ui.flythrough?.configure?.({progress: flythroughRuntime.progress ?? 0})
         }
     }, [drawerOpen, flythroughSettings.duration, hasJourney, journeySlug])
+
+    useEffect(() => {
+        if (drawerOpen !== FLYTHROUGH_DRAWER) {
+            return
+        }
+
+        if (!hasJourney) {
+            lgs.stores.flythrough.nearbyPois = []
+            return
+        }
+
+        lgs.stores.flythrough.nearbyPois = __.ui.poiManager?.getFlythroughPOIsForJourney?.(
+            currentJourney,
+            flythroughSettings.poiDistance,
+        ) ?? []
+    }, [currentJourney, drawerOpen, flythroughSettings.poiDistance, hasJourney, journeySlug])
 
     const refreshFlythrough = useCallback((camera = true) => {
         __.ui.flythrough?.refresh?.({camera})
@@ -387,6 +419,40 @@ export const FlythroughDrawer = memo(() => {
         lgs.settings.ui.flythrough.duration = duration
         lgs.stores.flythrough.duration = duration
     }, [durationLocked])
+
+    const updatePOIDistance = useCallback((event) => {
+        const distance = clampFlythroughNumber(event.target.value, flythroughSettings.poiDistance, 1, 100000, true)
+        lgs.settings.ui.flythrough.poiDistance = distance
+        lgs.stores.flythrough.poiDistance = distance
+    }, [flythroughSettings.poiDistance])
+
+    const updatePOIFlythroughSettings = useCallback(async (poiId, updates) => {
+        const poi = lgs.stores.main.components.pois.list.get(poiId)
+        if (!poi?.id) {
+            return
+        }
+
+        const next = normalizeFlythroughPOISettings({
+                                                        ...poi.flythrough,
+                                                        ...updates,
+                                                        hiddenFields: {
+                                                            ...(poi.flythrough?.hiddenFields ?? {}),
+                                                            ...(updates?.hiddenFields ?? {}),
+                                                        },
+                                                    })
+
+        await __.ui.poiManager.updatePOI(poiId, {flythrough: next}, {immediate: true})
+        if (drawerOpen === FLYTHROUGH_DRAWER && hasJourney) {
+            lgs.stores.flythrough.nearbyPois = __.ui.poiManager?.getFlythroughPOIsForJourney?.(
+                currentJourney,
+                flythroughSettings.poiDistance,
+            ) ?? []
+        }
+    }, [currentJourney, drawerOpen, flythroughSettings.poiDistance, hasJourney])
+
+    const editFlythroughPOI = useCallback(async (poiId) => {
+        await openPOIEditor(poiId, {stacked: true})
+    }, [])
 
     const updateSyncWithVideo = useCallback((event) => {
         const enabled = Boolean(event?.target?.checked)
@@ -701,6 +767,10 @@ export const FlythroughDrawer = memo(() => {
                                          <WaIcon name="sparkles" variant="regular"/>
                                          {'Clips'}
                                      </WaTab>
+                                     <WaTab slot="nav" panel="pois">
+                                         <WaIcon name="location-dot" variant="regular"/>
+                                         {'POIs'}
+                                     </WaTab>
 
                                      <WaTabPanel name="runner">
                                          <LGSScrollbars>
@@ -716,6 +786,17 @@ export const FlythroughDrawer = memo(() => {
                                                          value={flythroughSettings.duration}
                                                          disabled={durationLocked}
                                                          onInput={updateDuration}
+                                                         label-at-start/>
+                                                     <WaNumberInput
+                                                         className="flythrough-poi-distance-input half-width"
+                                                         label="Nearby POIs (m)"
+                                                         size="s"
+                                                         appearance="filled"
+                                                         min="1"
+                                                         max="100000"
+                                                         step="100"
+                                                         value={flythroughSettings.poiDistance}
+                                                         onInput={updatePOIDistance}
                                                          label-at-start/>
                                                      {marker.mode !== FLYTHROUGH_MARKER_MODE_TRACE &&
                                                          <WaSelect
@@ -932,6 +1013,104 @@ export const FlythroughDrawer = memo(() => {
                                                      settings={flythroughSettings}
                                                      state={flythroughState}
                                                  />
+                                             </div>
+                                         </LGSScrollbars>
+                                     </WaTabPanel>
+                                     <WaTabPanel name="pois">
+                                         <LGSScrollbars>
+                                             <div className="flythrough-tab-panel">
+                                                 {nearbyPOIs.length === 0 ? (
+                                                     <p className="flythrough-empty-state">{'No flythrough POI matches for the current journey.'}</p>
+                                                 ) : (
+                                                      <div className="lgs--details-list">
+                                                          {nearbyPOIs.map(entry => {
+                                                              const poi = lgs.stores.main.components.pois.list.get(entry?.poi?.id) ?? entry?.poi
+                                                              if (!poi?.id) {
+                                                                  return null
+                                                              }
+
+                                                              const settings = normalizeFlythroughPOISettings(poi.flythrough)
+
+                                                              return (
+                                                                  <WaDetails key={poi.id}
+                                                                             className="flythrough-poi-details lgs--details-hoverable">
+                                                                      <div slot="summary"
+                                                                           className="">
+                                                                          <WaIcon variant="regular"
+                                                                                  className="poi-duotone-icon"
+                                                                                  name={entry?.source === 'journey-poi' ? 'route' : 'location-dot'}/>
+                                                                          <strong>&nbsp;{poi.title ?? poi.id}</strong>
+                                                                      </div>
+                                                                      <div className="flythrough-poi-details-body">
+                                                                          <div className="flythrough-fieldset">
+                                                                              <WaNumberInput
+                                                                                  className="half-width"
+                                                                                  label="Duration (s)"
+                                                                                  size="s"
+                                                                                  appearance="filled"
+                                                                                  min="0"
+                                                                                  max="60"
+                                                                                  step="0.5"
+                                                                                  value={settings.displayDurationSeconds}
+                                                                                  onInput={event => updatePOIFlythroughSettings(poi.id, {
+                                                                                      displayDurationSeconds: clampFlythroughNumber(
+                                                                                          event.target.value,
+                                                                                          settings.displayDurationSeconds,
+                                                                                          0,
+                                                                                          60,
+                                                                                      ),
+                                                                                  })}
+                                                                                  label-at-start
+                                                                              />
+                                                                              <WaNumberInput
+                                                                                  className="half-width"
+                                                                                  label="Real size (%)"
+                                                                                  size="s"
+                                                                                  appearance="filled"
+                                                                                  min="10"
+                                                                                  max="200"
+                                                                                  step="5"
+                                                                                  value={settings.scalePercent}
+                                                                                  onInput={event => updatePOIFlythroughSettings(poi.id, {
+                                                                                      scalePercent: clampFlythroughNumber(
+                                                                                          event.target.value,
+                                                                                          settings.scalePercent,
+                                                                                          10,
+                                                                                          200,
+                                                                                      ),
+                                                                                  })}
+                                                                                  label-at-start
+                                                                              />
+                                                                          </div>
+                                                                          <div className="flythrough-poi-hidden-fields">
+                                                                              {FLYTHROUGH_POI_HIDDEN_FIELDS.map(field => (
+                                                                                  <WaSwitch
+                                                                                      key={`${poi.id}-${field.key}`}
+                                                                                      size="xs"
+                                                                                      label-at-start
+                                                                                      checked={settings.hiddenFields[field.key] === true}
+                                                                                      onChange={event => updatePOIFlythroughSettings(poi.id, {
+                                                                                          hiddenFields: {
+                                                                                              [field.key]: Boolean(event?.target?.checked),
+                                                                                          },
+                                                                                      })}
+                                                                                  >
+                                                                                      {field.label}
+                                                                                  </WaSwitch>
+                                                                              ))}
+                                                                          </div>
+                                                                          <div className="flythrough-poi-actions">
+                                                                              <WaButton size="s" appearance="outlined"
+                                                                                        onClick={() => editFlythroughPOI(poi.id)}>
+                                                                                  {'Edit POI'}
+                                                                              </WaButton>
+                                                                          </div>
+                                                                      </div>
+                                                                  </WaDetails>
+                                                              )
+                                                          })}
+                                                      </div>
+                                                  )}
                                              </div>
                                          </LGSScrollbars>
                                      </WaTabPanel>

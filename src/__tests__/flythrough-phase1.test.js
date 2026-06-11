@@ -25,7 +25,7 @@ import {
     FLYTHROUGH_SCOPE_ALL_TRACKS, FLYTHROUGH_SCOPE_CURRENT_TRACK, FLYTHROUGH_SCOPE_VISIBLE_TRACKS, FlythroughPathSampler,
 }                                          from '@Core/ui/flythrough/FlythroughPathSampler'
 import {
-    FLYTHROUGH_EVENT_END, FLYTHROUGH_EVENT_START, FLYTHROUGH_EVENT_UPDATE, FlythroughPlaybackController,
+    FLYTHROUGH_EVENT_END, FLYTHROUGH_EVENT_START, FLYTHROUGH_EVENT_STOP, FLYTHROUGH_EVENT_UPDATE, FlythroughPlaybackController,
 }                                          from '@Core/ui/flythrough/FlythroughPlaybackController'
 import {
     defaultFlythroughSettings, FLYTHROUGH_CAMERA_POSITION_AHEAD, FLYTHROUGH_CAMERA_POSITION_BEHIND,
@@ -2984,6 +2984,319 @@ describe('flythrough phase 1 playback controller', () => {
         }
     })
 
+    it('keeps current journey poi datasources visible while hiding current journey polylines', () => {
+        const currentJourney = makeJourney([
+            makeTrack({
+                slug:        'track#journey#gpx#main',
+                coordinates: [[2, 48, 120], [2.001, 48.001, 130]],
+            }),
+        ])
+        currentJourney.slug = 'journey-current'
+        const previousLgs = globalThis.lgs
+        const flythrough = defaultFlythroughSettings()
+        const frames = []
+        let now = 0
+        const currentSource = {
+            name:     currentJourney.slug,
+            show:     true,
+            entities: {
+                values: [
+                    {
+                        id:       'track-polyline',
+                        polyline: {show: true},
+                    },
+                    {
+                        id:   'poi-journey',
+                        show: true,
+                    },
+                ],
+                getById(id) {
+                    return this.values.find(entity => entity.id === id)
+                },
+            },
+        }
+        const dataSources = {
+            items: [currentSource],
+            getByName(name) {
+                return this.items.filter(source => source.name === name)
+            },
+            get(index) {
+                return this.items[index]
+            },
+            get length() {
+                return this.items.length
+            },
+        }
+        const controller = new FlythroughPlaybackController({
+            requestFrame: callback => {
+                frames.push(callback)
+                return frames.length
+            },
+            cancelFrame:  () => {},
+            now:          () => now,
+        })
+
+        currentJourney.visible = true
+        currentJourney.updateVisibility = vi.fn(visible => {
+            currentJourney.visible = visible
+            currentSource.show = visible
+            currentSource.entities.values.forEach(entity => {
+                if (entity.polyline) {
+                    entity.polyline.show = visible
+                }
+            })
+        })
+
+        globalThis.lgs = {
+            theJourney: currentJourney,
+            theTrack:   null,
+            settings:   {
+                ui: {
+                    flythrough: {
+                        ...flythrough,
+                        duration: 1,
+                    },
+                    journeyToolbar: {show: true},
+                },
+            },
+            stores:     {
+                flythrough: proxy({
+                    progress: 0,
+                    camera:   flythrough.camera,
+                }),
+            },
+            viewer:     {
+                trackedEntity: null,
+                dataSources,
+                camera: {
+                    heading:              0.4,
+                    pitch:                -0.7,
+                    roll:                 0,
+                    positionCartographic: {longitude: 2, latitude: 48, height: 120},
+                    moveStart:            {addEventListener: () => {}, removeEventListener: () => {}},
+                    moveEnd:              {addEventListener: () => {}, removeEventListener: () => {}},
+                    cancelFlight:         () => {},
+                    flyTo:                () => {},
+                    setView:              () => {},
+                    lookAtTransform:      () => {},
+                },
+            },
+            scene:      {
+                requestRender: () => {},
+            },
+        }
+
+        try {
+            const mode = new FlythroughMode({
+                controller,
+                renderer: {
+                    clear:  vi.fn(),
+                    show:   vi.fn(),
+                    update: vi.fn(),
+                },
+            })
+
+            mode.start({duration: 1})
+
+            expect(currentJourney.updateVisibility).toHaveBeenCalledWith(false)
+            expect(currentSource.show).toBe(true)
+            expect(currentSource.entities.getById('track-polyline').polyline.show).toBe(false)
+
+            now = 1000
+            frames.shift()()
+
+            expect(currentJourney.updateVisibility).toHaveBeenCalledWith(true)
+            expect(currentSource.entities.getById('track-polyline').polyline.show).toBe(true)
+        }
+        finally {
+            globalThis.lgs = previousLgs
+        }
+    })
+
+    it('reduces nearby pois, opens them on passage for 3 seconds, then restores their previous state on stop', async () => {
+        vi.useFakeTimers()
+
+        const journey = makeJourney([
+            makeTrack({
+                slug:        'track#journey#gpx#main',
+                coordinates: [[2, 48, 120], [2.001, 48.001, 130]],
+            }),
+        ])
+        const previousLgs = globalThis.lgs
+        const previous__ = globalThis.__
+        const flythrough = defaultFlythroughSettings()
+        const listeners = new Map()
+        const poiA = {id: 'poi-a', expanded: true}
+        const poiB = {id: 'poi-b', expanded: false}
+        const poiList = new Map([
+            [poiA.id, poiA],
+            [poiB.id, poiB],
+        ])
+        const sampler = {
+            hasSamples: true,
+            totalDistance: 100,
+            atProgress: progress => ({
+                longitude: 2,
+                latitude:  48,
+                altitude:  120,
+                progress,
+                distanceFromStart: progress * 100,
+            }),
+        }
+        const controller = {
+            progress:   0,
+            running:    false,
+            playing:    false,
+            paused:     false,
+            configure:  vi.fn(() => controller),
+            currentSample: vi.fn(() => sampler.atProgress(controller.progress)),
+            on:         (event, callback) => {
+                listeners.set(event, callback)
+                return () => listeners.delete(event)
+            },
+            start:      vi.fn(({progress = 0} = {}) => {
+                controller.progress = progress
+                controller.running = true
+                controller.playing = true
+                const sample = sampler.atProgress(progress)
+                listeners.get(FLYTHROUGH_EVENT_START)?.({
+                    controller,
+                    sampler,
+                    sample,
+                    progress,
+                })
+                return sample
+            }),
+            pause:      vi.fn(),
+            resume:     vi.fn(),
+            stop:       vi.fn(),
+        }
+        const updatePOI = vi.fn(async (id, updates) => {
+            const poi = poiList.get(id)
+            Object.assign(poi, updates)
+            poiList.set(id, poi)
+            return poi
+        })
+
+        globalThis.__ = {
+            ui: {
+                poiManager: {
+                    updatePOI,
+                    getFlythroughPOIsForJourney: vi.fn(() => [
+                        {poi: {id: 'poi-a'}, projectedAbscissa: 10},
+                        {poi: {id: 'poi-b'}, projectedAbscissa: 60},
+                    ]),
+                },
+                cameraManager: {
+                    stopRotate: vi.fn(async () => undefined),
+                },
+            },
+        }
+
+        globalThis.lgs = {
+            theJourney: journey,
+            theTrack:   null,
+            settings:   {
+                ui: {
+                    flythrough: {
+                        ...flythrough,
+                        poiDistance: 1000,
+                    },
+                    journeyToolbar: {show: true},
+                },
+            },
+            stores:     {
+                main: {
+                    components: {
+                        pois: {
+                            list: poiList,
+                        },
+                    },
+                },
+                flythrough: proxy({
+                    progress:    0,
+                    duration:    60,
+                    poiDistance: 1000,
+                    camera:      flythrough.camera,
+                    nearbyPois:  [],
+                }),
+            },
+            viewer:     {
+                trackedEntity: null,
+                camera:        {
+                    heading:              0.4,
+                    pitch:                -0.7,
+                    roll:                 0,
+                    positionCartographic: {longitude: 2, latitude: 48, height: 120},
+                    moveStart:            {
+                        addEventListener:       () => {},
+                        removeEventListener:    () => {},
+                    },
+                    moveEnd:              {
+                        addEventListener:       () => {},
+                        removeEventListener:    () => {},
+                    },
+                    cancelFlight:         () => {},
+                    flyTo:                () => {},
+                    setView:              () => {},
+                    lookAtTransform:      () => {},
+                },
+            },
+            scene:      {
+                requestRender: () => {},
+            },
+        }
+
+        try {
+            const mode = new FlythroughMode({
+                controller,
+                renderer: {
+                    clear:  vi.fn(),
+                    show:   vi.fn(),
+                    update: vi.fn(),
+                },
+            })
+
+            mode.start()
+            await Promise.resolve()
+            await Promise.resolve()
+
+            expect(updatePOI).toHaveBeenCalledWith('poi-a', {expanded: false}, expect.any(Object))
+            expect(poiB.expanded).toBe(false)
+
+            listeners.get(FLYTHROUGH_EVENT_UPDATE)?.({
+                controller,
+                sampler,
+                sample:   sampler.atProgress(0.15),
+                progress: 0.15,
+            })
+            await Promise.resolve()
+
+            expect(poiA.expanded).toBe(true)
+            expect(poiB.expanded).toBe(false)
+
+            await vi.advanceTimersByTimeAsync(3000)
+            expect(poiA.expanded).toBe(false)
+
+            listeners.get(FLYTHROUGH_EVENT_STOP)?.({
+                controller,
+                sampler,
+                sample:   sampler.atProgress(0.15),
+                progress: 0.15,
+            })
+            await Promise.resolve()
+            await Promise.resolve()
+
+            expect(poiA.expanded).toBe(true)
+            expect(poiB.expanded).toBe(false)
+        }
+        finally {
+            vi.useRealTimers()
+            globalThis.lgs = previousLgs
+            globalThis.__ = previous__
+        }
+    })
+
     it('starts the flythrough after the launch start clip completes without extra delay', async () => {
         const journey = makeJourney([
                                         makeTrack({
@@ -3789,6 +4102,12 @@ describe('flythrough settings normalization', () => {
         expect(defaultFlythroughSettings().hideOtherJourneys).toBe(false)
         expect(normalizeFlythroughSettings({hideOtherJourneys: true}).hideOtherJourneys).toBe(true)
         expect(normalizeFlythroughSettings({hideOtherJourneys: 0}).hideOtherJourneys).toBe(false)
+    })
+
+    it('normalizes the nearby poi distance and keeps a sane default', () => {
+        expect(defaultFlythroughSettings().poiDistance).toBe(10000)
+        expect(normalizeFlythroughSettings({poiDistance: 2500}).poiDistance).toBe(2500)
+        expect(normalizeFlythroughSettings({poiDistance: 0}).poiDistance).toBe(1)
     })
 
     it('recognizes the ultra smooth camera preset and increases recenter duration with easing', () => {

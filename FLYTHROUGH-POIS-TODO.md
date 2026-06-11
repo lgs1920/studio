@@ -78,3 +78,26 @@ Le resultat final devrait etre trie par :
   `50%`.
 - Chaque POI retenu peut etre positionne sur la journey via son point projete `P`.
 - Aucun doublon n'apparait dans la liste finale.
+
+## 9 Pendant l'execution du flythrough.
+
+- on réduit tous les POI concernés
+- quand on arrive au POI, on ouvre le POI pendant n second (n parametrable par POI, défini à 3 second par défaut)
+- lePOI est ensuite réduit
+
+## 10 implémentation de l'UI'
+
+Rajouter un onglet "POIs", icon des POI dans le drawer Flythrough
+
+Les POIs concernés sont listé sous forme de détails hoverable
+
+Dans chaque details on peut jouer sur :
+
+- la durée d'affichage
+- le % de la taille réelle
+- masquage ou pas des lignes du POIS
+  o lieu, categorie, altitude,coordonées
+
+Ces données sont perdistés dans un objet flythrough du POI.
+
+IL y a aussi un bouton Edit POI qui ouvre le POI drawer en mode stacked 

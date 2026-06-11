@@ -1,5 +1,6 @@
 flythrough:
   duration: 60
+  poiDistance: 10000
   direction: 1
   loop: false
   scope: all-tracks

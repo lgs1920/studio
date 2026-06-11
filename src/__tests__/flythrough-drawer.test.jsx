@@ -25,6 +25,7 @@ import { FlythroughDrawer }                                from '@Components/Fly
 import { ELEVATION_UNITS, UnitUtils }                      from '@Utils/UnitUtils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { proxy }                                           from 'valtio'
+import { proxyMap }                                        from 'valtio/utils'
 
 vi.mock('@Components/DrawerFooter', () => ({
     default: () => <div data-testid="drawer-footer"/>,
@@ -93,6 +94,18 @@ describe('FlythroughDrawer', () => {
     beforeEach(() => {
         const flythrough = proxy(defaultFlythroughSettings())
         flythrough.marker.mode = FLYTHROUGH_MARKER_MODE_NAVIGATION
+        const poiList = proxyMap()
+        poiList.set('poi-1', {
+            id: 'poi-1',
+            title: 'POI One',
+            flythrough: {
+                displayDurationSeconds: 4,
+                scalePercent: 80,
+                hiddenFields: {
+                    location: true,
+                },
+            },
+        })
         globalThis.lgs = {
             colors: {
                 poiDefault:           '#fff',
@@ -113,6 +126,11 @@ describe('FlythroughDrawer', () => {
                 }),
                 main: proxy({
                     theJourney: {slug: 'journey-a'},
+                    components: {
+                        pois: {
+                            list: poiList,
+                        },
+                    },
                 }),
                 flythrough: proxy({
                     ...flythrough,
@@ -120,6 +138,7 @@ describe('FlythroughDrawer', () => {
                     trace: proxy({...flythrough.trace, remaining: {...flythrough.trace.remaining}}),
                     marker: proxy({...flythrough.marker}),
                     progression: proxy({...flythrough.progression, fill: {...flythrough.progression.fill}, border: {...flythrough.progression.border}}),
+                    nearbyPois: [],
                 }),
             },
             scene: {
@@ -144,6 +163,15 @@ describe('FlythroughDrawer', () => {
                     drawerRoot: document.body,
                     close:       vi.fn(),
                     isCurrent:   vi.fn(() => true),
+                    open:        vi.fn(),
+                },
+                poiManager: {
+                    updatePOI: vi.fn(async (id, updates) => {
+                        const current = poiList.get(id)
+                        poiList.set(id, {...current, ...updates})
+                        return poiList.get(id)
+                    }),
+                    getFlythroughPOIsForJourney: vi.fn(() => [{poi: {id: 'poi-1'}, source: 'global-near-journey'}]),
                 },
                 flythrough: {
                     configure:     vi.fn(),
@@ -292,5 +320,65 @@ describe('FlythroughDrawer', () => {
 
         expect(view.getByText('Total duration (s)')).toBeTruthy()
         expect(view.getByText('65')).toBeTruthy()
+    })
+
+    it('loads nearby poi candidates when the flythrough drawer opens', async () => {
+        render(<FlythroughDrawer/>)
+
+        await waitFor(() => {
+            expect(__.ui.poiManager.getFlythroughPOIsForJourney).toHaveBeenCalledWith(
+                globalThis.lgs.stores.main.theJourney,
+                globalThis.lgs.settings.ui.flythrough.poiDistance,
+            )
+            expect(globalThis.lgs.stores.flythrough.nearbyPois).toEqual([
+                {poi: {id: 'poi-1'}, source: 'global-near-journey'},
+            ])
+        })
+    })
+
+    it('updates the nearby poi distance from the drawer', async () => {
+        const view = render(<FlythroughDrawer/>)
+        const distanceInput = view.getByLabelText('Nearby POIs (m)')
+
+        fireEvent.input(distanceInput, {target: {value: '2500'}})
+
+        await waitFor(() => {
+            expect(globalThis.lgs.settings.ui.flythrough.poiDistance).toBe(2500)
+            expect(globalThis.lgs.stores.flythrough.poiDistance).toBe(2500)
+        })
+    })
+
+    it('persists flythrough poi settings from the POIs tab and opens POI editor stacked', async () => {
+        const view = render(<FlythroughDrawer/>)
+
+        expect(view.getByText('POIs')).toBeTruthy()
+
+        await waitFor(() => {
+            expect(view.getByText('POI One')).toBeTruthy()
+        })
+
+        const durationInput = view.getAllByLabelText('Duration (s)').at(-1)
+        const scaleInput = view.getByLabelText('Real size (%)')
+        const hideCategory = view.getByLabelText('Hide category')
+        const editButton = view.getByText('Edit POI')
+
+        fireEvent.input(durationInput, {target: {value: '6'}})
+        fireEvent.input(scaleInput, {target: {value: '120'}})
+        fireEvent.click(hideCategory)
+        fireEvent.click(editButton)
+
+        await waitFor(() => {
+            const poi = globalThis.lgs.stores.main.components.pois.list.get('poi-1')
+            expect(poi.flythrough.displayDurationSeconds).toBe(6)
+            expect(poi.flythrough.scalePercent).toBe(120)
+            expect(poi.flythrough.hiddenFields.category).toBe(true)
+            expect(__.ui.drawerManager.open).toHaveBeenCalledWith(
+                expect.any(String),
+                expect.objectContaining({
+                    entity: 'poi-1',
+                    stacked: true,
+                }),
+            )
+        })
     })
 })
