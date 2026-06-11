@@ -3796,14 +3796,27 @@ describe('flythrough phase 1 playback controller', () => {
 
             mode.start({duration: 1})
             await Promise.resolve()
-            await vi.advanceTimersByTimeAsync(1000)
+            await vi.advanceTimersByTimeAsync(3000)
             await Promise.resolve()
 
-            expect(setViewCalls).toHaveLength(1)
-            expect(flyToCalls).toHaveLength(1)
-            expect(Cartesian3.magnitude(setViewCalls[0].destination)).toBeGreaterThan(Cartesian3.magnitude(flyToCalls[0].destination))
-            expect(Math.abs(setViewCalls[0].orientation.direction.z)).toBeGreaterThan(0.03)
-            expect(Math.abs(flyToCalls[0].orientation.direction.z)).toBeGreaterThan(0.03)
+            const target = {
+                longitude: 2,
+                latitude:  48,
+                altitude:  120,
+            }
+            const targetCartesian = Cartesian3.fromDegrees(target.longitude, target.latitude, target.altitude)
+            const targetTransform = Transforms.eastNorthUpToFixedFrame(targetCartesian)
+            const east = Matrix4.getColumn(targetTransform, 0, new Cartesian3())
+            const north = Matrix4.getColumn(targetTransform, 1, new Cartesian3())
+            const startDelta = Cartesian3.subtract(setViewCalls[0].destination, targetCartesian, new Cartesian3())
+            const endDelta = Cartesian3.subtract(setViewCalls.at(-1).destination, targetCartesian, new Cartesian3())
+
+            expect(setViewCalls.length).toBeGreaterThan(1)
+            expect(flyToCalls).toHaveLength(0)
+            expect(Cartesian3.dot(startDelta, east)).toBeCloseTo(0, 6)
+            expect(Cartesian3.dot(endDelta, east)).toBeCloseTo(0, 6)
+            expect(Cartesian3.dot(startDelta, north)).toBeLessThan(0)
+            expect(Cartesian3.dot(endDelta, north)).toBeLessThan(0)
         }
         finally {
             vi.useRealTimers()

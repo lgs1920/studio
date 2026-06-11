@@ -565,6 +565,8 @@ export class FlythroughMode {
     #cameraGuidePositionPropertyKey = null
     #cameraMode = null
     #cameraFlightActive = false
+    #cameraBezierFrame = null
+    #cameraBezierResolve = null
     #savedCameraState = null
     #lastCameraHeading = null
     #lastCameraPitch = null
@@ -1069,7 +1071,12 @@ export class FlythroughMode {
         for (const entry of nearbyPois) {
             const poiId = entry?.poi?.id
             const poi = globalThis.lgs?.stores?.main?.components?.pois?.list?.get?.(poiId)
+            const settings = normalizeFlythroughPOISettings(poi?.flythrough)
             if (!poiId || !poi) {
+                continue
+            }
+
+            if (settings.visible === false) {
                 continue
             }
 
@@ -1099,6 +1106,9 @@ export class FlythroughMode {
 
         const poi = globalThis.lgs?.stores?.main?.components?.pois?.list?.get?.(poiId)
         const settings = normalizeFlythroughPOISettings(poi?.flythrough)
+        if (settings.visible === false || settings.animated === false) {
+            return
+        }
         const durationSeconds = finiteNumber(settings.displayDurationSeconds) ?? DEFAULT_FLYTHROUGH_POI_DISPLAY_DURATION_SECONDS
 
         await this.#updatePOIExpandedState(poiId, true)
@@ -1136,9 +1146,13 @@ export class FlythroughMode {
             .filter(entry => {
                 const poiId = entry?.poi?.id
                 const targetDistance = finiteNumber(entry?.projectedAbscissa)
+                const poi = globalThis.lgs?.stores?.main?.components?.pois?.list?.get?.(poiId)
+                const settings = normalizeFlythroughPOISettings(poi?.flythrough)
                 return Boolean(poiId)
                     && targetDistance !== null
                     && !this.#flythroughPoiTriggered.has(poiId)
+                    && settings.visible !== false
+                    && settings.animated !== false
                     && targetDistance > thresholdStart
                     && targetDistance <= currentDistance + FLYTHROUGH_POI_TRIGGER_EPSILON_METERS
             })
@@ -1271,6 +1285,18 @@ export class FlythroughMode {
             hysteresis: {
                 ...(current.hysteresis ?? {}),
             },
+        })
+    }
+
+    #introHeadingForProgress = (progress = 0) => {
+        const cameraSettings = normalizeFlythroughCamera(globalThis.lgs?.stores?.flythrough?.camera ?? getFlythroughSettings().camera)
+        if (cameraSettings.positionMode === FLYTHROUGH_CAMERA_POSITION_SYSTEM) {
+            return degreesToRadians(cameraSettings.heading) ?? finiteNumber(globalThis.lgs?.viewer?.camera?.heading) ?? 0
+        }
+
+        return flythroughCameraHeadingForPositionMode({
+            axisHeading: this.#headingFromPositionProperty(progress),
+            positionMode: cameraSettings.positionMode,
         })
     }
 
@@ -1431,6 +1457,7 @@ export class FlythroughMode {
     #cancelActiveCameraFlight = () => {
         const camera = globalThis.lgs?.viewer?.camera
         camera?.cancelFlight?.()
+        this.#cancelCameraBezierTransition(false)
         this.#cameraFlightActive = false
     }
 
@@ -1482,6 +1509,7 @@ export class FlythroughMode {
         this.#cameraGuidePositionPropertyKey = null
         this.#cameraMode = null
         this.#cameraFlightActive = false
+        this.#cancelCameraBezierTransition(false)
         this.#lastToleranceRecenterAt = null
         this.#lastToleranceRecenterProgress = null
         if (!preserveSavedCameraState) {
@@ -2290,6 +2318,133 @@ export class FlythroughMode {
         return prev + delta * clamp(factor, 0, 1)
     }
 
+    #lerpRadians = (start, end, ratio) => {
+        const safeRatio = clamp(finiteNumber(ratio) ?? 0, 0, 1)
+        const delta = flythroughAngularDelta(start, end)
+        if (delta === null) {
+            return finiteNumber(end) ?? finiteNumber(start) ?? 0
+        }
+
+        return (finiteNumber(start) ?? 0) + (delta * safeRatio)
+    }
+
+    #easeInOutCubic = value => {
+        const t = clamp(finiteNumber(value) ?? 0, 0, 1)
+        return t < 0.5
+               ? 4 * t * t * t
+               : 1 - Math.pow(-2 * t + 2, 3) / 2
+    }
+
+    #cubicBezierPoint = (p0, p1, p2, p3, t) => {
+        const u = 1 - t
+        const tt = t * t
+        const uu = u * u
+        const uuu = uu * u
+        const ttt = tt * t
+        return Cartesian3.add(
+            Cartesian3.add(
+                Cartesian3.add(
+                    Cartesian3.multiplyByScalar(p0, uuu, new Cartesian3()),
+                    Cartesian3.multiplyByScalar(p1, 3 * uu * t, new Cartesian3()),
+                    new Cartesian3(),
+                ),
+                Cartesian3.multiplyByScalar(p2, 3 * u * tt, new Cartesian3()),
+                new Cartesian3(),
+            ),
+            Cartesian3.multiplyByScalar(p3, ttt, new Cartesian3()),
+            new Cartesian3(),
+        )
+    }
+
+    #cancelCameraBezierTransition = (resolveValue = false) => {
+        if (this.#cameraBezierFrame !== null) {
+            globalThis.clearTimeout?.(this.#cameraBezierFrame)
+            this.#cameraBezierFrame = null
+        }
+        if (this.#cameraBezierResolve !== null) {
+            const resolve = this.#cameraBezierResolve
+            this.#cameraBezierResolve = null
+            resolve(resolveValue)
+        }
+        this.#cameraApplyingView = false
+        this.#cameraFlightActive = false
+    }
+
+    #cameraRecenterFrame = ({
+                                sample,
+                                heading,
+                                pitch,
+                                cameraSettings,
+                                cameraHeight = null,
+                            } = {}) => {
+        const viewer = globalThis.lgs?.viewer
+        const targetHeight = this.#markerRenderHeightForSample(sample)
+        const target = this.#markerRenderCartesianForSample(sample)
+        const cameraPosition = viewer?.camera?.positionWC ?? viewer?.camera?.position
+        const fallbackRange = cameraPosition && target
+                              ? Cartesian3.distance(cameraPosition, target)
+                              : flythroughCameraRangeFromPitch(this.#cameraAltitudeForSample(sample, cameraSettings), pitch)
+        if (!viewer || !target) {
+            return null
+        }
+
+        const safeHeading = sanitizeOrientationRadians(heading, 0)
+        const safePitch = sanitizeOrientationRadians(pitch, SAFE_TOP_DOWN_PITCH)
+        const currentHeight = cameraHeight !== null && cameraHeight !== undefined
+                              ? Math.max(targetHeight, finiteNumber(cameraHeight) ?? targetHeight)
+                              : flythroughCameraRecenterHeight(
+                viewer.camera?.positionCartographic?.height,
+                this.#cameraAltitudeForSample(sample, cameraSettings),
+            )
+        const horizontalDistance = flythroughCameraRecenterHorizontalDistance({
+                                                                                  cameraHeight: currentHeight,
+                                                                                  targetHeight,
+                                                                                  pitchRadians: safePitch,
+                                                                                  fallbackRange,
+                                                                              })
+        const heightDelta = currentHeight - targetHeight
+        const targetTransform = Transforms.eastNorthUpToFixedFrame(target)
+        const east = Matrix4.getColumn(targetTransform, 0, new Cartesian3())
+        const north = Matrix4.getColumn(targetTransform, 1, new Cartesian3())
+        const up = Matrix4.getColumn(targetTransform, 2, new Cartesian3())
+        const headingAxis = Cartesian3.add(
+            Cartesian3.multiplyByScalar(east, Math.sin(safeHeading), new Cartesian3()),
+            Cartesian3.multiplyByScalar(north, Math.cos(safeHeading), new Cartesian3()),
+            new Cartesian3(),
+        )
+        const destination = Cartesian3.add(
+            Cartesian3.add(
+                target,
+                Cartesian3.multiplyByScalar(headingAxis, -horizontalDistance, new Cartesian3()),
+                new Cartesian3(),
+            ),
+            Cartesian3.multiplyByScalar(up, heightDelta, new Cartesian3()),
+            new Cartesian3(),
+        )
+        const direction = Cartesian3.normalize(
+            Cartesian3.subtract(target, destination, new Cartesian3()),
+            new Cartesian3(),
+        )
+        const rightCandidate = Cartesian3.cross(direction, up, new Cartesian3())
+        const right = Cartesian3.magnitudeSquared(rightCandidate) > CARTESIAN_EPSILON
+                      ? Cartesian3.normalize(rightCandidate, rightCandidate)
+                      : Cartesian3.clone(east, new Cartesian3())
+        const correctedUp = Cartesian3.normalize(
+            Cartesian3.cross(right, direction, new Cartesian3()),
+            new Cartesian3(),
+        )
+        return {
+            target,
+            targetHeight,
+            destination,
+            direction,
+            correctedUp,
+            currentHeight,
+            safeHeading,
+            safePitch,
+        }
+    }
+
     #cameraViewDelta = ({anchor, heading, pitch} = {}) => {
         const last = this.#lastAppliedCameraView
         if (!last) {
@@ -2470,65 +2625,18 @@ export class FlythroughMode {
                                    duration = 1.0,
                                }) => {
         const viewer = globalThis.lgs?.viewer
-        const targetHeight = this.#markerRenderHeightForSample(sample)
-        const target = this.#markerRenderCartesianForSample(sample)
-        const cameraPosition = viewer?.camera?.positionWC ?? viewer?.camera?.position
-        const fallbackRange = cameraPosition && target
-                              ? Cartesian3.distance(cameraPosition, target)
-                              : flythroughCameraRangeFromPitch(this.#cameraAltitudeForSample(sample, cameraSettings), pitch)
-        if (!viewer || !target) {
+        const frame = this.#cameraRecenterFrame({
+            sample,
+            heading,
+            pitch,
+            cameraSettings,
+            cameraHeight,
+        })
+        if (!viewer || !frame) {
             return
         }
-        if (this.#cameraFlightActive) {
-            viewer.camera?.cancelFlight?.()
-            this.#cameraFlightActive = false
-        }
 
-        const safeHeading = sanitizeOrientationRadians(heading, 0)
-        const safePitch = sanitizeOrientationRadians(pitch, SAFE_TOP_DOWN_PITCH)
-        const currentHeight = cameraHeight !== null && cameraHeight !== undefined
-                              ? Math.max(targetHeight, finiteNumber(cameraHeight) ?? targetHeight)
-                              : flythroughCameraRecenterHeight(
-                viewer.camera?.positionCartographic?.height,
-                this.#cameraAltitudeForSample(sample, cameraSettings),
-            )
-        const horizontalDistance = flythroughCameraRecenterHorizontalDistance({
-                                                                                  cameraHeight: currentHeight,
-                                                                                  targetHeight,
-                                                                                  pitchRadians: safePitch,
-                                                                                  fallbackRange,
-                                                                              })
-        const heightDelta = currentHeight - targetHeight
-        const targetTransform = Transforms.eastNorthUpToFixedFrame(target)
-        const east = Matrix4.getColumn(targetTransform, 0, new Cartesian3())
-        const north = Matrix4.getColumn(targetTransform, 1, new Cartesian3())
-        const up = Matrix4.getColumn(targetTransform, 2, new Cartesian3())
-        const headingAxis = Cartesian3.add(
-            Cartesian3.multiplyByScalar(east, Math.sin(safeHeading), new Cartesian3()),
-            Cartesian3.multiplyByScalar(north, Math.cos(safeHeading), new Cartesian3()),
-            new Cartesian3(),
-        )
-        const destination = Cartesian3.add(
-            Cartesian3.add(
-                target,
-                Cartesian3.multiplyByScalar(headingAxis, -horizontalDistance, new Cartesian3()),
-                new Cartesian3(),
-            ),
-            Cartesian3.multiplyByScalar(up, heightDelta, new Cartesian3()),
-            new Cartesian3(),
-        )
-        const direction = Cartesian3.normalize(
-            Cartesian3.subtract(target, destination, new Cartesian3()),
-            new Cartesian3(),
-        )
-        const rightCandidate = Cartesian3.cross(direction, up, new Cartesian3())
-        const right = Cartesian3.magnitudeSquared(rightCandidate) > CARTESIAN_EPSILON
-                      ? Cartesian3.normalize(rightCandidate, rightCandidate)
-                      : Cartesian3.clone(east, new Cartesian3())
-        const correctedUp = Cartesian3.normalize(
-            Cartesian3.cross(right, direction, new Cartesian3()),
-            new Cartesian3(),
-        )
+        const {destination, direction, correctedUp, safeHeading, safePitch} = frame
         const finishFlight = () => {
             this.#cameraFlightActive = false
         }
@@ -2536,7 +2644,7 @@ export class FlythroughMode {
         this.#cameraFlightActive = true
         this.#cameraAutoTrackingIgnoreUntil = this.#now() + Math.max(180, duration * 1000 + 180)
         this.#rememberCameraView({anchor: sample, heading: safeHeading, pitch: safePitch})
-        if (instant || duration <= 0 || typeof viewer.camera.flyTo !== 'function') {
+        if (instant || duration <= 0) {
             viewer.camera.setView?.({
                                         destination,
                                         orientation: {
@@ -2547,30 +2655,163 @@ export class FlythroughMode {
             finishFlight()
             return Promise.resolve()
         }
+        return this.#startCameraBezierTransition({
+            sample,
+            heading:        safeHeading,
+            pitch:          safePitch,
+            cameraSettings,
+            cameraHeight:   frame.currentHeight,
+            duration,
+            endFrame:       frame,
+        })
+    }
 
-        if (typeof viewer.camera.flyTo === 'function') {
-            return new Promise(resolve => {
-                const finalizeFlight = () => {
-                    finishFlight()
-                    resolve()
-                }
-                viewer.camera.flyTo({
-                                        destination,
-                                        orientation:       {
-                                            direction,
-                                            up: correctedUp,
-                                        },
-                                        duration,
-                                        maximumHeight:     currentHeight,
-                                        pitchAdjustHeight: Number.POSITIVE_INFINITY,
-                                        complete:          finalizeFlight,
-                                        cancel:            finalizeFlight,
-                                    })
-            })
+    #startCameraBezierTransition = ({
+                                        sample,
+                                        heading,
+                                        pitch,
+                                        cameraSettings,
+                                        cameraHeight = null,
+                                        startDirection = null,
+                                        endFrame = null,
+                                        duration = FLYTHROUGH_HEADING_TRANSITION_DURATION_SECONDS,
+                                    }) => {
+        const viewer = globalThis.lgs?.viewer
+        if (!viewer?.camera) {
+            return Promise.resolve(false)
         }
 
-        finishFlight()
-        return Promise.resolve()
+        const frame = endFrame ?? this.#cameraRecenterFrame({
+            sample,
+            heading,
+            pitch,
+            cameraSettings,
+            cameraHeight,
+        })
+        if (!frame) {
+            return Promise.resolve(false)
+        }
+
+        const startCamera = viewer.camera
+        this.#cancelCameraBezierTransition(false)
+
+        const startHeading = finiteNumber(startCamera.heading) ?? this.#lastCameraHeading ?? 0
+        const startPitch = finiteNumber(startCamera.pitch) ?? this.#lastCameraPitch ?? SAFE_TOP_DOWN_PITCH
+        const startHeight = finiteNumber(startCamera.positionCartographic?.height)
+                            ?? cameraHeight
+                            ?? frame.currentHeight
+        const startFrame = this.#cameraRecenterFrame({
+            sample,
+            heading:        startHeading,
+            pitch:          startPitch,
+            cameraSettings,
+            cameraHeight:   startHeight,
+        })
+        const endHeading = frame.safeHeading
+        const endPitch = frame.safePitch
+        const startTime = this.#now()
+        const durationMillis = Math.max(1, Number(duration) * 1000)
+        const endPosition = frame.destination
+        const endDirection = frame.direction
+        const startPosition = Cartesian3.clone(startCamera.positionWC ?? startCamera.position, new Cartesian3())
+                              ?? startFrame?.destination
+        const startDirectionVector = startDirection
+                                     ?? Cartesian3.clone(
+                                         startCamera.directionWC ?? startCamera.direction ?? startFrame?.direction,
+                                         new Cartesian3(),
+                                     )
+        if (!startPosition) {
+            return Promise.resolve(false)
+        }
+
+        const safeStartDirection = Cartesian3.magnitudeSquared(startDirectionVector) > CARTESIAN_EPSILON
+                                   ? Cartesian3.normalize(startDirectionVector, startDirectionVector)
+                                   : Cartesian3.subtract(endPosition, startPosition, new Cartesian3())
+        const safeEndDirection = Cartesian3.magnitudeSquared(endDirection) > CARTESIAN_EPSILON
+                                 ? Cartesian3.normalize(endDirection, endDirection)
+                                 : Cartesian3.subtract(endPosition, startPosition, new Cartesian3())
+        const delta = Cartesian3.subtract(endPosition, startPosition, new Cartesian3())
+        const arcDistance = Math.max(
+            25,
+            Cartesian3.magnitude(delta) * 0.32,
+            Math.abs((finiteNumber(startCamera.positionCartographic?.height) ?? 0) - frame.currentHeight) * 0.35,
+        )
+        const startUp = Cartesian3.normalize(startPosition, new Cartesian3())
+        const endUp = Cartesian3.normalize(endPosition, new Cartesian3())
+        const liftDirection = Cartesian3.normalize(
+            Cartesian3.add(startUp, endUp, new Cartesian3()),
+            new Cartesian3(),
+        )
+        const safeLiftDirection = Cartesian3.magnitudeSquared(liftDirection) > CARTESIAN_EPSILON
+                                  ? liftDirection
+                                  : Cartesian3.clone(endUp, new Cartesian3())
+        const control1 = Cartesian3.add(
+            startPosition,
+            Cartesian3.add(
+                Cartesian3.multiplyByScalar(safeStartDirection, arcDistance, new Cartesian3()),
+                Cartesian3.multiplyByScalar(safeLiftDirection, arcDistance * 0.4, new Cartesian3()),
+                new Cartesian3(),
+            ),
+            new Cartesian3(),
+        )
+        const control2 = Cartesian3.add(
+            endPosition,
+            Cartesian3.add(
+                Cartesian3.multiplyByScalar(safeEndDirection, -arcDistance, new Cartesian3()),
+                Cartesian3.multiplyByScalar(safeLiftDirection, arcDistance * 0.4, new Cartesian3()),
+                new Cartesian3(),
+            ),
+            new Cartesian3(),
+        )
+
+        this.#cameraFlightActive = true
+        this.#cameraApplyingView = true
+        this.#cameraAutoTrackingIgnoreUntil = startTime + Math.max(180, durationMillis + 180)
+
+        return new Promise(resolve => {
+            this.#cameraBezierResolve = resolve
+
+            const tick = () => {
+                const now = this.#now()
+                const ratio = clamp((now - startTime) / durationMillis, 0, 1)
+                const t = this.#easeInOutCubic(ratio)
+                const destination = this.#cubicBezierPoint(startPosition, control1, control2, endPosition, t)
+                const headingNow = this.#lerpRadians(startHeading, endHeading, t)
+                const pitchNow = this.#lerpRadians(startPitch, endPitch, t)
+
+                try {
+                    viewer.camera.setView?.({
+                        destination,
+                        orientation: {
+                            heading: headingNow,
+                            pitch:   pitchNow,
+                            roll:    0,
+                        },
+                    })
+                    this.#lastCameraHeading = headingNow
+                    this.#lastCameraPitch = pitchNow
+                }
+                catch (error) {
+                    console.error('[FlythroughMode] Bezier camera transition failed.', error)
+                }
+
+                if (ratio >= 1) {
+                    this.#cameraBezierFrame = null
+                    this.#cameraApplyingView = false
+                    this.#cameraFlightActive = false
+                    this.#cameraBezierResolve = null
+                    this.#introHeadingTransition = null
+                    this.#lastCameraHeading = endHeading
+                    this.#lastCameraPitch = endPitch
+                    resolve(true)
+                    return
+                }
+
+                this.#cameraBezierFrame = globalThis.setTimeout?.(tick, 16) ?? null
+            }
+
+            tick()
+        })
     }
 
     #bindMarkerInteractions = () => {
@@ -2828,6 +3069,10 @@ export class FlythroughMode {
         const introTransition = this.#introHeadingTransition
         if (introTransition) {
             const now = this.#now()
+            if (now < introTransition.startAt) {
+                return
+            }
+
             if (now < introTransition.endAt) {
                 if (!introTransition.applied) {
                     introTransition.applied = true
@@ -2838,7 +3083,7 @@ export class FlythroughMode {
                     })
                     this.#recenterCameraToSample({
                         sample:         anchorSample,
-                        heading:        heading,
+                        heading:        introTransition.targetHeading ?? heading,
                         pitch:          introTransition.fromPitch,
                         cameraSettings: introCameraSettings,
                         cameraHeight:   Math.max(10, introTransition.height),
