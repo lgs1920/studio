@@ -68,10 +68,15 @@ const filterAndSortPois = (onlyJourney, filterSettings, list) => {
 
     const lowerName = byName.trim().toLowerCase()
     const sorted = []
+    let hasEmptyTitle = false
 
     for (const id of ids) {
         const poi = list.get(id)
-        if (!poi?.title || (lowerName && !poi.title.toLowerCase().includes(lowerName))) {
+        const displayTitle = `${poi?.title ?? poi?.name ?? poi?.id ?? ''}`.trim()
+        if (!`${poi?.title ?? ''}`.trim()) {
+            hasEmptyTitle = true
+        }
+        if (lowerName && !displayTitle.toLowerCase().includes(lowerName)) {
             continue
         }
         if (byCategories.length) {
@@ -80,10 +85,10 @@ const filterAndSortPois = (onlyJourney, filterSettings, list) => {
                 continue
             }
         }
-        sorted.push({id, title: poi.title})
+        sorted.push({id, title: displayTitle})
     }
 
-    if (sorted.length > 1) {
+    if (sorted.length > 1 && alphabetic && !hasEmptyTitle) {
         sorted.sort((a, b) => alphabetic ? a.title.localeCompare(b.title) : b.title.localeCompare(a.title))
     }
 

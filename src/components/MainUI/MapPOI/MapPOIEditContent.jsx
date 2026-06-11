@@ -238,6 +238,30 @@ export const MapPOIEditContent = memo(({poi}) => {
                                               }
                                           }, [poi])
 
+                                          const previousTitleRef = useRef(title)
+
+                                          const handleTitleFocus = useCallback(() => {
+                                              previousTitleRef.current = title
+                                          }, [title])
+
+                                          const handleTitleBlur = useCallback(async (event) => {
+                                              if (!window.isOK) {
+                                                  return
+                                              }
+
+                                              if (event.target.tagName.toLowerCase() !== 'wa-input') {
+                                                  return
+                                              }
+
+                                              const nextTitle = `${event.target.value ?? ''}`.trim()
+                                              if (nextTitle.length > 0) {
+                                                  return
+                                              }
+
+                                              const fallbackTitle = previousTitleRef.current ?? ''
+                                              await __.ui.poiManager.updatePOI(poi, {title: fallbackTitle})
+                                          }, [poi])
+
                                           const handleChangeDescription = useCallback(async (event) => {
                                               if (window.isOK) {
                                                   await __.ui.poiManager.updatePOI(poi, {description: event.target.value})
@@ -397,6 +421,8 @@ export const MapPOIEditContent = memo(({poi}) => {
                                                           size="s"
                                                           value={title}
                                                           onInput={handleChangeTitle}
+                                                          onFocus={handleTitleFocus}
+                                                          onBlur={handleTitleBlur}
                                                           className="edit-title-map-poi-input"
                                                           readOnly={!visible}
                                                       >
