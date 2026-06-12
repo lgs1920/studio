@@ -253,7 +253,6 @@
     align-items: center;
     display: flex;
     gap: var(--wa-space-s, 0.75rem);
-    justify-content: space-between;
     min-width: 0;
     width: 100%;
 }
@@ -262,11 +261,13 @@
     align-items: center;
     display: flex;
     flex: 1 1 auto;
-    gap: 0;
+    gap: var(--wa-space-xs, 0.5rem);
     min-width: 0;
 }
 
 .flythrough-poi-summary-title strong {
+    display: block;
+    flex: 1 1 auto;
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -288,9 +289,9 @@
 .flythrough-poi-details-body {
     display: flex;
     flex-direction: column;
-    padding: var(--wa-space-m, 1rem);
+    padding: var(--lgs-gutter-s);
     border-top: 1px solid var(--wa-color-neutral-border-normal, rgba(0, 0, 0, 0.08));
-    gap: var(--wa-space-s, 0.75rem);
+    gap: var(--lgs-gutter-s);
 }
 
 .flythrough-poi-switches {

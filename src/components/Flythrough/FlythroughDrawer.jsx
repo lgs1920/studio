@@ -408,12 +408,15 @@ export const FlythroughDrawer = memo(() => {
         const nextCamera = mergeCamera(lgs.settings.ui.flythrough.camera, updates)
         lgs.settings.ui.flythrough.camera = nextCamera
         lgs.stores.flythrough.camera = nextCamera
+        if (flythroughState.active || flythroughState.playing || flythroughState.paused) {
+            lgs.stores.flythrough.cameraUserAdjusted = true
+        }
         refreshFlythrough(true)
         __.ui.flythrough?.refreshCamera?.({
             sample:             flythroughState.sample ?? null,
             suppressMoveEvents: false,
         })
-    }, [flythroughState.sample, refreshFlythrough, stopRotateIfNeeded])
+    }, [flythroughState.active, flythroughState.paused, flythroughState.playing, flythroughState.sample, refreshFlythrough, stopRotateIfNeeded])
 
     const updateDuration = useCallback((event) => {
         if (durationLocked) {
@@ -463,25 +466,21 @@ export const FlythroughDrawer = memo(() => {
         void updatePOIFlythroughSettings(poiId, {visible})
     }, [updatePOIFlythroughSettings])
 
-    useEffect(() => {
-        if (Object.keys(poiVisibilityOverrides).length === 0) {
-            return
-        }
+    const activePoiVisibilityOverrides = useMemo(() => {
+        const next = {}
 
-        setPoiVisibilityOverrides(current => {
-            let changed = false
-            const next = {...current}
+        Object.entries(poiVisibilityOverrides).forEach(([poiId, visible]) => {
+            const poi = poiList.get(poiId)
+            if (!poi?.id) {
+                return
+            }
 
-            Object.entries(current).forEach(([poiId, visible]) => {
-                const poi = poiList.get(poiId)
-                if (!poi?.id || normalizeFlythroughPOISettings(poi.flythrough).visible === visible) {
-                    delete next[poiId]
-                    changed = true
-                }
-            })
-
-            return changed ? next : current
+            if (normalizeFlythroughPOISettings(poi.flythrough).visible !== visible) {
+                next[poiId] = visible
+            }
         })
+
+        return next
     }, [poiList, poiVisibilityOverrides])
 
     const editFlythroughPOI = useCallback(async (poiId) => {
@@ -1064,7 +1063,7 @@ export const FlythroughDrawer = memo(() => {
                                                               }
 
                                                               const settings = normalizeFlythroughPOISettings(poi.flythrough)
-                                                              const flythroughEnabled = poiVisibilityOverrides[poi.id] ?? settings.visible !== false
+                                                              const flythroughEnabled = activePoiVisibilityOverrides[poi.id] ?? settings.visible !== false
                                                               const animated = settings.animated !== false
                                                               const visibilityButtonId = `flythrough-poi-visibility-${poi.id}`
                                                               const animationButtonId = `flythrough-poi-animation-${poi.id}`
@@ -1088,15 +1087,15 @@ export const FlythroughDrawer = memo(() => {
                                                               return (
                                                                   <WaDetails key={poi.id}
                                                                              className="flythrough-poi-details lgs--details-hoverable">
-                                                                      <div slot="summary"
-                                                                           className="flythrough-poi-summary">
-                                                                          <div className="flythrough-poi-summary-title">
+                                                                      <span slot="summary"
+                                                                            className="flythrough-poi-summary">
+                                                                          <span className="flythrough-poi-summary-title">
                                                                               <WaIcon variant="regular"
                                                                                       className="poi-duotone-icon"
                                                                                       name={entry?.source === 'journey-poi' ? 'route' : 'location-dot'}/>
-                                                                              <strong>&nbsp;{poi.title ?? poi.id}</strong>
-                                                                          </div>
-                                                                          <div
+                                                                              <strong>{poi.title ?? poi.id}</strong>
+                                                                          </span>
+                                                                          <span
                                                                               className="flythrough-poi-summary-actions">
                                                                               <WaTooltip for={visibilityButtonId}
                                                                                          placement="top">
@@ -1104,9 +1103,9 @@ export const FlythroughDrawer = memo(() => {
                                                                               </WaTooltip>
                                                                               <WaButton
                                                                                   id={visibilityButtonId}
-                                                                                  className="lythrough-poi-summary-button"
+                                                                                  className="flythrough-poi-summary-button"
                                                                                   appearance="plain"
-                                                                                  variant="neutral"
+                                                                                  variant="brand"
                                                                                   size="s"
                                                                                   aria-label={flythroughEnabled ? 'Hide POI during flythrough' : 'Show POI during flythrough'}
                                                                                   aria-pressed={flythroughEnabled}
@@ -1124,18 +1123,18 @@ export const FlythroughDrawer = memo(() => {
                                                                                   id={animationButtonId}
                                                                                   className="flythrough-poi-summary-button"
                                                                                   appearance="plain"
-                                                                                  variant="neutral"
+                                                                                  variant="brand"
                                                                                   size="s"
                                                                                   aria-label={animated ? 'Disable POI animation during flythrough' : 'Enable POI animation during flythrough'}
                                                                                   aria-pressed={animated}
                                                                                   onClick={toggleAnimation}
                                                                               >
                                                                                   <WaIcon
-                                                                                      name={animated ? 'thumbtack-angle-slash' : 'thumbtack-angle'}
-                                                                                      variant="regular"/>
+                                                                                      name={animated ? 'expand' : 'compress'}
+                                                                                  variant="regular"/>
                                                                               </WaButton>
-                                                                          </div>
-                                                                      </div>
+                                                                          </span>
+                                                                      </span>
                                                                       <div className="flythrough-poi-details-body">
                                                                           <div className="flythrough-poi-switches">
                                                                               <WaSwitch
