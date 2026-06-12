@@ -34,7 +34,7 @@ const EMPTY_FLYTHROUGH_PROXY = proxy({nearbyPois: []})
 /**
  * Renders the content of a Point of Interest (POI) for the map canvas or UI lists.
  */
-export const MapPOIContent = ({poi, useInMenu = false, style}) => {
+export const MapPOIContent = ({poi, useInMenu = false, style, flythroughScale = 1}) => {
     const _poiContent = useRef(null)
     const _icon = useRef(null)
     const _renderRequestId = useRef(0)
@@ -62,6 +62,7 @@ export const MapPOIContent = ({poi, useInMenu = false, style}) => {
         : null
     const flythroughActive = Boolean(flythrough.active || flythrough.playing || flythrough.paused)
     const flythroughSettings = normalizeFlythroughPOISettings(point?.flythrough)
+    const flythroughMasked = flythroughActive && flythroughSettings.visible === false
     const hideFlythroughField = key => flythroughActive && flythroughEntry && flythroughSettings.hiddenFields[key] === true
 
     const iconName = point?.categoryIcon(point?.category)
@@ -134,7 +135,7 @@ export const MapPOIContent = ({poi, useInMenu = false, style}) => {
 
     /** Synchronizes DOM content to map canvas */
     const renderToCanvas = useCallback(() => {
-        if (useInMenu || !point?.visible || !pointId) {
+        if (useInMenu || !point?.visible || flythroughMasked || !pointId) {
             return
         }
 
@@ -147,6 +148,7 @@ export const MapPOIContent = ({poi, useInMenu = false, style}) => {
 
                 const scale = 2
                 const ratio = window.devicePixelRatio || 1
+                const poiScale = Number.isFinite(Number(flythroughScale)) ? Number(flythroughScale) : 1
 
                 snapdom(_poiContent.current, {scale}).then(snap =>
                                                                snap.toCanvas().then(canvas => {
@@ -158,6 +160,7 @@ export const MapPOIContent = ({poi, useInMenu = false, style}) => {
                                                                    }
 
                                                                    const mapPOI = new MapPOI(currentPoint)
+                                                                   mapPOI.scale = poiScale
                                                                    mapPOI.image = {
                                                                        src:    canvas.toDataURL(),
                                                                        width:  canvas.width / scale / ratio,
@@ -175,7 +178,24 @@ export const MapPOIContent = ({poi, useInMenu = false, style}) => {
                 console.error('Error rendering POI to canvas:', error)
             }
         })
-    }, [useInMenu, point?.visible, pointId, $pois.list])
+    }, [useInMenu, point?.visible, flythroughMasked, pointId, $pois.list, flythroughScale])
+
+    useEffect(() => {
+        if (useInMenu || !pointId || (point?.visible !== false && !flythroughMasked)) {
+            return
+        }
+
+        const currentPoint = $pois.list.get(pointId)
+        if (!currentPoint?.id) {
+            return
+        }
+
+        const mapPOI = new MapPOI({
+            ...currentPoint,
+            visible: false,
+        })
+        void mapPOI.utils.draw(mapPOI)
+    }, [useInMenu, pointId, point?.visible, flythroughMasked, $pois.list])
 
     const renderToCanvasAfterIconLoad = useCallback((event = null) => {
         const icon = event?.target ?? _icon.current
@@ -223,6 +243,16 @@ export const MapPOIContent = ({poi, useInMenu = false, style}) => {
                   point?.latitude,
                   point?.type,
                   point?.visible,
+                  flythroughActive,
+                  flythroughEntry?.poi?.id,
+                  flythroughSettings.scalePercent,
+                  flythroughSettings.visible,
+                  flythroughSettings.animated,
+                  flythroughSettings.hiddenFields.location,
+                  flythroughSettings.hiddenFields.category,
+                  flythroughSettings.hiddenFields.altitude,
+                  flythroughSettings.hiddenFields.coordinates,
+                  flythroughScale,
                   unitSystem,
                   coordinateSystem,
                   renderToCanvas,

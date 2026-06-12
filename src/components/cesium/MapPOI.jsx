@@ -15,7 +15,6 @@
  ******************************************************************************/
 
 import { MapPOIContent }                   from '@Components/MainUI/MapPOI/MapPOIContent'
-import { INFO_DRAWER, POIS_EDITOR_DRAWER } from '@Core/constants'
 import { normalizeFlythroughPOISettings }  from '@Core/ui/flythrough/FlythroughPOISettings'
 import { POIUtils }                                       from '@Utils/cesium/POIUtils'
 import { memo, useEffect, useRef, useState } from 'react'
@@ -42,8 +41,10 @@ export const MapPOI = memo(({point}) => {
                             ? flythrough.nearbyPois.find(entry => entry?.poi?.id === thePOI?.id)
                             : null
     const flythroughActive = Boolean(flythrough.active || flythrough.playing || flythrough.paused)
-    const flythroughScale = flythroughActive && flythroughEntry
-                            ? normalizeFlythroughPOISettings(thePOI?.flythrough).scalePercent / 100
+    const flythroughSettings = normalizeFlythroughPOISettings(thePOI?.flythrough)
+    const flythroughMasked = thePOI?.visible === false || (flythroughActive && flythroughSettings.visible === false)
+    const flythroughScale = flythroughActive && flythroughEntry && !flythroughMasked
+                            ? flythroughSettings.scalePercent / 100
                             : 1
     useEffect(() => {
         let cancelled = false
@@ -97,6 +98,10 @@ export const MapPOI = memo(({point}) => {
                   thePOI?.height,
                   thePOI?.simulatedHeight,
                   thePOI?.visible,
+                  flythroughActive,
+                  flythroughEntry?.poi?.id,
+                  flythroughSettings.scalePercent,
+                  flythroughSettings.visible,
                   list,
                   point,
               ])
@@ -127,6 +132,7 @@ export const MapPOI = memo(({point}) => {
                         '--lgs-poi-background-color': thePOI.bgColor ?? lgs.colors.poiDefaultBackground,
                         '--lgs-poi-border-color':     thePOI.color ?? lgs.colors.poiDefault,
                         '--lgs-poi-color':            thePOI.color ?? lgs.colors.poiDefault,
+                        display:                      flythroughMasked ? 'none' : undefined,
                         zIndex:                       viewable.get(thePOI.id),
                     }}
                     onPointerMove={__.ui.sceneManager.propagateEventToCanvas}
@@ -134,7 +140,11 @@ export const MapPOI = memo(({point}) => {
                 >
                     {thePOI.visible && !tooFar &&
                         <div className="lgs-slide-in-from-top-bounced">
-                            <MapPOIContent poi={thePOI.id} hide={hideMenu}/>
+                            <MapPOIContent
+                                poi={thePOI.id}
+                                flythroughScale={flythroughScale}
+                                hide={hideMenu}
+                            />
                         </div>
                     }
                 </div>

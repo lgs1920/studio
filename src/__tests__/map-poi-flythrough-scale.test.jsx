@@ -14,7 +14,12 @@ import { proxy }                     from 'valtio'
 import { proxyMap }                  from 'valtio/utils'
 
 vi.mock('@Components/MainUI/MapPOI/MapPOIContent', () => ({
-    MapPOIContent: ({poi}) => <div data-testid={`poi-content-${poi}`}/>,
+    MapPOIContent: ({poi, flythroughScale}) => (
+        <div
+            data-testid={`poi-content-${poi}`}
+            data-flythrough-scale={flythroughScale}
+        />
+    ),
 }))
 
 vi.mock('@Utils/cesium/POIUtils', () => ({
@@ -91,6 +96,53 @@ describe('MapPOI flythrough scale', () => {
             expect(wrapper).toBeTruthy()
             expect(wrapper.style.transform).toContain('scale(1.5)')
             expect(wrapper.querySelector('.lgs-slide-in-from-top-bounced')).toBeTruthy()
+            const content = view.getByTestId('poi-content-poi-1')
+            expect(content.getAttribute('data-flythrough-scale')).toBe('1.5')
+        })
+    })
+
+    it('updates the flythrough scale when the flythrough session becomes active', async () => {
+        globalThis.lgs.stores.flythrough.active = false
+        globalThis.lgs.stores.flythrough.playing = false
+        globalThis.lgs.stores.flythrough.nearbyPois = []
+
+        const view = render(<MapPOI point="poi-1"/>)
+
+        await waitFor(() => {
+            const wrapper = view.container.querySelector('.poi-screen-wrapper')
+            expect(wrapper).toBeTruthy()
+            expect(wrapper.style.transform).toContain('scale(1)')
+        })
+
+        globalThis.lgs.stores.flythrough.active = true
+        globalThis.lgs.stores.flythrough.playing = true
+        globalThis.lgs.stores.flythrough.nearbyPois = [{poi: {id: 'poi-1'}}]
+
+        await waitFor(() => {
+            const wrapper = view.container.querySelector('.poi-screen-wrapper')
+            expect(wrapper).toBeTruthy()
+            expect(wrapper.style.transform).toContain('scale(1.5)')
+        })
+    })
+
+    it('masks the poi content during flythrough when the flythrough flag is off', async () => {
+        const poiList = globalThis.lgs.stores.main.components.pois.list
+        poiList.set('poi-1', {
+            ...poiList.get('poi-1'),
+            flythrough: {
+                scalePercent: 150,
+                visible:      false,
+            },
+        })
+
+        const view = render(<MapPOI point="poi-1"/>)
+
+        await waitFor(() => {
+            const wrapper = view.container.querySelector('.poi-screen-wrapper')
+            expect(wrapper).toBeTruthy()
+            expect(wrapper.style.display).toBe('none')
+            const content = view.getByTestId('poi-content-poi-1')
+            expect(content.getAttribute('data-flythrough-scale')).toBe('1')
         })
     })
 })
