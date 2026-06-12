@@ -181,7 +181,7 @@
     height: var(--lgs-preview-content-height, auto);
     min-height: 1em;
     margin: 0;
-    padding: var(--lgs-tx-padding-top) var(--lgs-tx-padding-right) var(--lgs-tx-padding-bottom) var(--lgs-tx-padding-left);
+    padding: var(--lgs-tx-textarea-padding-top) var(--lgs-tx-padding-right) var(--lgs-tx-textarea-padding-bottom) var(--lgs-tx-padding-left);
     resize: none;
 
     transition: text-shadow 0.2s ease,

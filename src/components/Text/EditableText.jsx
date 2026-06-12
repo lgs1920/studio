@@ -20,9 +20,52 @@ import { useWidgetScaleCorrection } from '@Components/MainUI/widgets/useWidgetSc
 import { TextWidgetManager }     from '@Core/ui/text-metrics/TextWidgetManager'
 import classNames      from 'classnames'
 import {
-    useState, useRef, useEffect, useMemo, useCallback,
+    useState, useRef, useEffect, useLayoutEffect, useMemo, useCallback,
 }                      from 'react'
 import { useSnapshot } from 'valtio'
+
+const setTextSelection = (element, offset) => {
+    if (!element || typeof document === 'undefined') {
+        return
+    }
+
+    const selection = window.getSelection?.()
+    if (!selection) {
+        return
+    }
+
+    const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT)
+    let remaining = Math.max(0, Number(offset) || 0)
+    let textNode = walker.nextNode()
+    let targetNode = textNode
+    let targetOffset = 0
+
+    while (textNode) {
+        const length = textNode.textContent?.length ?? 0
+        if (remaining <= length) {
+            targetNode = textNode
+            targetOffset = remaining
+            break
+        }
+        remaining -= length
+        targetNode = textNode
+        targetOffset = length
+        textNode = walker.nextNode()
+    }
+
+    if (!targetNode) {
+        targetNode = element
+        targetOffset = element.childNodes.length
+    }
+
+    const range = document.createRange()
+    range.setStart(targetNode, targetOffset)
+    range.collapse(true)
+    selection.removeAllRanges()
+    selection.addRange(range)
+}
+
+const textFromEditable = element => (element?.innerText ?? element?.textContent ?? '').replace(/\u00a0/g, ' ')
 
 /**
  * Inline text editor with dynamic font loading.
@@ -42,6 +85,7 @@ export const EditableText = ({id}) => {
 
     const _input = useRef(null)
     const _cursor = useRef(0)
+    const _editingText = useRef('')
 
     const element = configuration?.elements?.[id] ?? configuration.user ?? configuration.default
 
@@ -134,10 +178,11 @@ export const EditableText = ({id}) => {
         }
     }, [_moveable, element?.fontFamily])
 
-    useEffect(() => {
+    useLayoutEffect(() => {
         if (isEditing && _input.current) {
+            _input.current.textContent = _editingText.current
             _input.current.focus()
-            _input.current.setSelectionRange(_cursor.current, _cursor.current)
+            setTextSelection(_input.current, _cursor.current)
         }
     }, [isEditing])
 
@@ -171,8 +216,6 @@ export const EditableText = ({id}) => {
         if (!element) {
             return
         }
-        ensureProxyElement()
-
         const content = element.text?.content ?? (typeof element.text === 'string' ? element.text : '')
         let clickIndex = content.length
         try {
@@ -188,13 +231,18 @@ export const EditableText = ({id}) => {
         }
 
         _cursor.current = clickIndex
+        _editingText.current = content
         setEditingText(content)
         setIsEditing(true)
     }
 
     const handleFinishEdit = () => {
+        const nextText = _input.current ? textFromEditable(_input.current) : _editingText.current
+        _editingText.current = nextText
+        setEditingText(nextText)
+
         const $target = ensureProxyElement()
-        $target.text.content = editingText
+        $target.text.content = nextText
         setIsEditing(false)
         if (_moveable?.current) {
             _moveable.current.updateRect()
@@ -307,13 +355,13 @@ export const EditableText = ({id}) => {
             className={classNames('lgs-editable-text-wrapper', {'text-editing-progress': isEditing})}
             style={{
                 ...cssVars,
-                display:         textScaled ? 'inline-block' : 'grid',
+                display:         'grid',
                 position: 'relative',
                 width: '100%',
                 height: '100%',
                 minWidth: '1ch',
                 boxSizing: 'border-box',
-                placeItems: textScaled ? undefined : 'center',
+                placeItems: 'center',
                 backgroundColor: 'var(--lgs-tx-bg-color)',
                 backdropFilter: 'blur(var(--lgs-tx-blur))',
                 border:          'var(--lgs-tx-border)',
@@ -324,62 +372,36 @@ export const EditableText = ({id}) => {
             }}
         >
             <div
+                ref={_input}
+                contentEditable={isEditing}
+                suppressContentEditableWarning
+                spellCheck={false}
                 onClick={!isEditing ? handleStartEdit : undefined}
+                onInput={isEditing ? (e) => {
+                    _editingText.current = textFromEditable(e.currentTarget)
+                } : undefined}
+                onBlur={isEditing ? handleFinishEdit : undefined}
+                onKeyDown={isEditing ? (e) => {
+                    if (e.key === 'Delete' || e.key === 'Backspace' || e.key === 'Escape') {
+                        e.stopPropagation()
+                    }
+                    if (e.key === 'Escape') {
+                        e.preventDefault()
+                        handleFinishEdit()
+                    }
+                } : undefined}
                 style={{
                     ...commonStyles,
                     width: textScaled ? '100%' : 'max-content',
                     minWidth: 'max-content',
-                    gridArea: textScaled ? undefined : '1 / 1',
+                    gridArea: '1 / 1',
                     cursor:     'text',
-                    userSelect: 'none',
-                    visibility: isEditing ? 'hidden' : 'visible',
+                    userSelect: isEditing ? 'text' : 'none',
                     minHeight: '1em',
                 }}
             >
-                {displayValue || '\u00A0'}
+                {isEditing ? null : (displayValue || '\u00A0')}
             </div>
-
-            {isEditing && (
-                <textarea
-                    ref={_input}
-                    spellCheck={false}
-                    style={{
-                        ...commonStyles,
-                        position:   textScaled ? 'absolute' : 'relative',
-                        top:    textScaled ? '0' : undefined,
-                        left:   textScaled ? '0' : undefined,
-                        width:  textScaled ? '100%' : 'max-content',
-                        height: textScaled ? '100%' : 'auto',
-                        minHeight: '1em',
-                        gridArea: textScaled ? undefined : '1 / 1',
-                        background: 'transparent',
-                        border:     'none',
-                        resize:     'none',
-                        overflow: 'hidden',
-                        display:    'block',
-                        appearance:  'none',
-                        verticalAlign: 'top',
-                        fieldSizing: textScaled ? undefined : 'content',
-                    }}
-                    value={editingText}
-                    onInput={(e) => {
-                        const val = e.target.value
-                        setEditingText(val)
-                        const $target = ensureProxyElement()
-                        $target.text.content = val
-                    }}
-                    onBlur={handleFinishEdit}
-                    onKeyDown={(e) => {
-                        if (e.key === 'Delete' || e.key === 'Backspace' || e.key === 'Escape') {
-                            e.stopPropagation()
-                        }
-                        if (e.key === 'Escape') {
-                            e.preventDefault()
-                            handleFinishEdit()
-                        }
-                    }}
-                />
-            )}
         </div>
     )
 }

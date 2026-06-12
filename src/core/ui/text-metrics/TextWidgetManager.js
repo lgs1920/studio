@@ -165,6 +165,9 @@ export class TextWidgetManager {
             '--lgs-tx-padding-right':  `${padding.right}px`,
             '--lgs-tx-padding-bottom': `${padding.bottom}px`,
             '--lgs-tx-padding-left':   `${padding.left}px`,
+            '--lgs-tx-textarea-line-trim':      'calc((var(--lgs-tx-line-height) - 1em) / 2)',
+            '--lgs-tx-textarea-padding-top':    'max(0px, calc(var(--lgs-tx-padding-top) - var(--lgs-tx-textarea-line-trim)))',
+            '--lgs-tx-textarea-padding-bottom': 'max(0px, calc(var(--lgs-tx-padding-bottom) - var(--lgs-tx-textarea-line-trim)))',
             '--lgs-tx-blur':   (element.background?.show && element.background?.blur) ? 'var(--lgs-blur-s)' : '0',
             '--lgs-bg-elevation': (element.background?.shadow?.show && hasVisibleContainer) ? (
                 element.background.shadow.value === 'small' ? `0 2px 8px ${bgShadowColor}` :
