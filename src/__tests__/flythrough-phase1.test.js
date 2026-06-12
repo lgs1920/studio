@@ -588,7 +588,7 @@ describe('flythrough phase 1 playback controller', () => {
         }
     })
 
-    it('seeds the flythrough camera from the live Cesium view before playback starts', () => {
+    it('does not rewrite flythrough camera settings from the live Cesium view when playback starts', () => {
         const journey = makeJourney([
                                         makeTrack({
                                                       slug:        'track#journey#gpx#main',
@@ -664,11 +664,558 @@ describe('flythrough phase 1 playback controller', () => {
             mode.start()
             expect(stopRotate).toHaveBeenCalledTimes(1)
 
-            expect(globalThis.lgs.settings.ui.flythrough.camera.altitude).toBe(2460)
-            expect(globalThis.lgs.settings.ui.flythrough.camera.pitch).toBeCloseTo(-30, 6)
-            expect(globalThis.lgs.settings.ui.flythrough.camera.heading).toBeCloseTo(52, 0)
+            expect(globalThis.lgs.settings.ui.flythrough.camera.altitude).toBe(flythrough.camera.altitude)
+            expect(globalThis.lgs.settings.ui.flythrough.camera.pitch).toBe(flythrough.camera.pitch)
+            expect(globalThis.lgs.settings.ui.flythrough.camera.heading).toBe(flythrough.camera.heading)
         }
         finally {
+            globalThis.__ = previousDoubleUnderscore
+            globalThis.lgs = previousLgs
+        }
+    })
+
+    it('restores the playback start camera settings after a flythrough without camera user action', () => {
+        const journey = makeJourney([
+                                        makeTrack({
+                                                      slug:        'track#journey#gpx#main',
+                                                      coordinates: [[2, 48, 120], [2.001, 48.001, 130]],
+                                                  }),
+                                    ])
+        const previousLgs = globalThis.lgs
+        const previousDoubleUnderscore = globalThis.__
+        const flythrough = defaultFlythroughSettings()
+        flythrough.camera = {
+            ...flythrough.camera,
+            altitude: 1350,
+            pitch:    -62,
+        }
+
+        globalThis.lgs = {
+            theJourney: journey,
+            theTrack:   null,
+            settings:   {ui: {flythrough, journeyToolbar: {show: true}}},
+            stores:     {
+                flythrough: proxy({
+                                      progress: 0,
+                                      camera:   flythrough.camera,
+                                  }),
+            },
+            viewer:     {
+                trackedEntity: null,
+                camera:        {
+                    heading:              0.4,
+                    pitch:                -0.7,
+                    roll:                 0,
+                    positionCartographic: {longitude: 0.1, latitude: 0.2, height: 2400},
+                    moveStart:            {
+                        addEventListener:       () => {},
+                        removeEventListener:    () => {},
+                    },
+                    moveEnd:              {
+                        addEventListener:       () => {},
+                        removeEventListener:    () => {},
+                    },
+                    cancelFlight:         () => {},
+                    setView:              () => {},
+                    lookAtTransform:      () => {},
+                },
+            },
+            scene:      {
+                requestRender: () => {},
+                globe:         {getHeight: () => 120},
+            },
+        }
+        globalThis.__ = {
+            ui: {
+                cameraManager: {
+                    stopRotate: vi.fn(async () => undefined),
+                },
+            },
+        }
+
+        try {
+            const mode = new FlythroughMode({
+                controller: new FlythroughPlaybackController({
+                    requestFrame: () => 1,
+                    cancelFrame:  () => {},
+                    now:          () => 0,
+                }),
+                renderer: {
+                    clear:  () => {},
+                    show:   () => {},
+                    update: () => {},
+                },
+            })
+
+            mode.start()
+            globalThis.lgs.settings.ui.flythrough.camera = {
+                ...globalThis.lgs.settings.ui.flythrough.camera,
+                altitude: 9800,
+                pitch:    -20,
+            }
+            globalThis.lgs.stores.flythrough.camera = globalThis.lgs.settings.ui.flythrough.camera
+
+            mode.stop({emit: false})
+
+            expect(globalThis.lgs.settings.ui.flythrough.camera.altitude).toBe(1350)
+            expect(globalThis.lgs.settings.ui.flythrough.camera.pitch).toBe(-62)
+            expect(globalThis.lgs.stores.flythrough.camera.altitude).toBe(1350)
+        }
+        finally {
+            globalThis.__ = previousDoubleUnderscore
+            globalThis.lgs = previousLgs
+        }
+    })
+
+    it('keeps camera settings changed by a user camera action during playback', () => {
+        const journey = makeJourney([
+                                        makeTrack({
+                                                      slug:        'track#journey#gpx#main',
+                                                      coordinates: [[2, 48, 120], [2.001, 48.001, 130]],
+                                                  }),
+                                    ])
+        const previousLgs = globalThis.lgs
+        const previousDoubleUnderscore = globalThis.__
+        const flythrough = defaultFlythroughSettings()
+        flythrough.camera = {
+            ...flythrough.camera,
+            altitude: 1350,
+        }
+
+        globalThis.lgs = {
+            theJourney: journey,
+            theTrack:   null,
+            settings:   {ui: {flythrough, journeyToolbar: {show: true}}},
+            stores:     {
+                flythrough: proxy({
+                                      progress: 0,
+                                      camera:   flythrough.camera,
+                                  }),
+            },
+            viewer:     {
+                trackedEntity: null,
+                camera:        {
+                    heading:              0.4,
+                    pitch:                -0.7,
+                    roll:                 0,
+                    positionCartographic: {longitude: 0.1, latitude: 0.2, height: 2400},
+                    moveStart:            {
+                        addEventListener:       () => {},
+                        removeEventListener:    () => {},
+                    },
+                    moveEnd:              {
+                        addEventListener:       () => {},
+                        removeEventListener:    () => {},
+                    },
+                    cancelFlight:         () => {},
+                    setView:              () => {},
+                    lookAtTransform:      () => {},
+                },
+            },
+            scene:      {
+                requestRender: () => {},
+                globe:         {getHeight: () => 120},
+            },
+        }
+        globalThis.__ = {
+            ui: {
+                cameraManager: {
+                    stopRotate: vi.fn(async () => undefined),
+                },
+            },
+        }
+
+        try {
+            const mode = new FlythroughMode({
+                controller: new FlythroughPlaybackController({
+                    requestFrame: () => 1,
+                    cancelFrame:  () => {},
+                    now:          () => 0,
+                }),
+                renderer: {
+                    clear:  () => {},
+                    show:   () => {},
+                    update: () => {},
+                },
+            })
+
+            mode.start()
+            globalThis.lgs.settings.ui.flythrough.camera = {
+                ...globalThis.lgs.settings.ui.flythrough.camera,
+                altitude: 9800,
+            }
+            globalThis.lgs.stores.flythrough.camera = globalThis.lgs.settings.ui.flythrough.camera
+            globalThis.lgs.stores.flythrough.cameraUserAdjusted = true
+
+            mode.stop({emit: false})
+
+            expect(globalThis.lgs.settings.ui.flythrough.camera.altitude).toBe(9800)
+            expect(globalThis.lgs.stores.flythrough.camera.altitude).toBe(9800)
+        }
+        finally {
+            globalThis.__ = previousDoubleUnderscore
+            globalThis.lgs = previousLgs
+        }
+    })
+
+    it('keeps flythrough-hidden POIs hidden when the current journey is hidden for playback', async () => {
+        const journey = makeJourney([
+                                        makeTrack({
+                                                      slug:        'track#journey#gpx#main',
+                                                      coordinates: [[2, 48, 120], [2.001, 48.001, 130]],
+                                                  }),
+                                    ])
+        const previousLgs = globalThis.lgs
+        const previousDoubleUnderscore = globalThis.__
+        const flythrough = defaultFlythroughSettings()
+        const poiVisible = {id: 'poi-visible', visible: true, flythrough: {visible: true}}
+        const poiHidden = {id: 'poi-hidden', visible: true, flythrough: {visible: false}}
+        const poiGlobalHidden = {id: 'poi-global-hidden', visible: false, flythrough: {visible: true}}
+        const poiGlobalFlythroughHidden = {id: 'poi-global-ft-hidden', visible: true, flythrough: {visible: false}}
+        const poiList = new Map([
+            [poiVisible.id, poiVisible],
+            [poiHidden.id, poiHidden],
+            [poiGlobalHidden.id, poiGlobalHidden],
+            [poiGlobalFlythroughHidden.id, poiGlobalFlythroughHidden],
+        ])
+        const poiVisibleEntity = {id: 'poi-visible', billboard: {}, show: true}
+        const poiHiddenEntity = {id: 'poi-hidden', billboard: {}, show: true}
+        const poiGlobalHiddenEntity = {id: 'poi-global-hidden', billboard: {}, show: true}
+        const poiGlobalFlythroughHiddenEntity = {id: 'poi-global-ft-hidden', billboard: {}, show: true}
+        const polylineEntity = {id: 'track-line', polyline: {show: true}}
+        const source = {
+            name:     journey.slug,
+            show:     true,
+            entities: {
+                values:  [poiVisibleEntity, poiHiddenEntity, polylineEntity],
+                getById: id => ({
+                    'poi-visible': poiVisibleEntity,
+                    'poi-hidden':  poiHiddenEntity,
+                    'track-line':   polylineEntity,
+                }[id] ?? null),
+            },
+        }
+        journey.updateVisibility = vi.fn(visible => {
+            source.show = visible
+            poiVisibleEntity.show = visible
+            poiHiddenEntity.show = visible
+            polylineEntity.polyline.show = visible
+        })
+
+        globalThis.lgs = {
+            theJourney: journey,
+            theTrack:   null,
+            settings:   {ui: {flythrough, journeyToolbar: {show: true}}},
+            stores:     {
+                main:       {
+                    components: {
+                        pois: {
+                            list: poiList,
+                        },
+                    },
+                },
+                flythrough: proxy({
+                                      progress: 0,
+                                      camera:   flythrough.camera,
+                                  }),
+            },
+            viewer:     {
+                trackedEntity: null,
+                entities:      {
+                    getById: id => ({
+                        'poi-global-hidden':    poiGlobalHiddenEntity,
+                        'poi-global-ft-hidden': poiGlobalFlythroughHiddenEntity,
+                    }[id] ?? null),
+                },
+                dataSources:   {
+                    length:    1,
+                    get:       () => source,
+                    getByName: name => name === journey.slug ? [source] : [],
+                },
+                camera:        {
+                    heading:              0,
+                    pitch:                -Math.PI / 4,
+                    positionCartographic: {longitude: 0.1, latitude: 0.2, height: 1500},
+                    moveStart:            {
+                        addEventListener:       () => {},
+                        removeEventListener:    () => {},
+                    },
+                    moveEnd:              {
+                        addEventListener:       () => {},
+                        removeEventListener:    () => {},
+                    },
+                    cancelFlight:         () => {},
+                    setView:              () => {},
+                    lookAtTransform:      () => {},
+                },
+            },
+            scene:      {
+                requestRender: () => {},
+                globe:         {getHeight: () => 120},
+            },
+        }
+        globalThis.__ = {
+            ui: {
+                cameraManager: {
+                    stopRotate: vi.fn(async () => undefined),
+                },
+                poiManager: {
+                    get: id => poiList.get(id),
+                    list: poiList,
+                    getFlythroughPOIsForJourney: () => [],
+                },
+            },
+        }
+
+        try {
+            const mode = new FlythroughMode({
+                controller: new FlythroughPlaybackController({
+                    requestFrame: () => 1,
+                    cancelFrame:  () => {},
+                    now:          () => 0,
+                }),
+                renderer: {
+                    clear:  () => {},
+                    show:   () => {},
+                    update: () => {},
+                },
+            })
+
+            mode.start()
+            await Promise.resolve()
+            await Promise.resolve()
+
+            expect(source.show).toBe(true)
+            expect(poiVisibleEntity.show).toBe(true)
+            expect(poiHiddenEntity.show).toBe(false)
+            expect(poiGlobalHiddenEntity.show).toBe(false)
+            expect(poiGlobalFlythroughHiddenEntity.show).toBe(false)
+            expect(polylineEntity.polyline.show).toBe(false)
+        }
+        finally {
+            globalThis.__ = previousDoubleUnderscore
+            globalThis.lgs = previousLgs
+        }
+    })
+
+    it('restores only initially visible flythrough-hidden POIs after stop clips complete', async () => {
+        vi.useFakeTimers()
+        const journey = makeJourney([
+                                        makeTrack({
+                                                      slug:        'track#journey#gpx#main',
+                                                      coordinates: [[2, 48, 120], [2.001, 48.001, 130]],
+                                                  }),
+                                    ])
+        const previousLgs = globalThis.lgs
+        const previousDoubleUnderscore = globalThis.__
+        const flythrough = defaultFlythroughSettings()
+        const focusDefinition = {
+            id:           'focus',
+            label:        'Focus',
+            slots:        ['stop'],
+            maxInstances: 1,
+            defaults:     {
+                duration: 2,
+            },
+            fields:       [{
+                key:     'duration',
+                label:   'Duration',
+                type:    'number',
+                min:     0,
+                max:     60,
+                step:    0.1,
+                default: 2,
+            }],
+        }
+        const focusClip = createFlythroughClipInstance(focusDefinition, 'stop', {
+            params: {
+                duration: 2,
+            },
+        })
+        const clips = {
+            catalog: {
+                focus: focusDefinition,
+            },
+            start: [],
+            stop:  [focusClip],
+        }
+        const poiRestored = {id: 'poi-restore', visible: true, flythrough: {visible: false}}
+        const poiStillHidden = {id: 'poi-still-hidden', visible: false, flythrough: {visible: false}}
+        const poiList = new Map([
+            [poiRestored.id, poiRestored],
+            [poiStillHidden.id, poiStillHidden],
+        ])
+        const poiRestoredEntity = {id: 'poi-restore', billboard: {}, show: true}
+        const poiStillHiddenEntity = {id: 'poi-still-hidden', billboard: {}, show: true}
+        const source = {
+            name:     journey.slug,
+            show:     true,
+            entities: {
+                values:  [poiRestoredEntity],
+                getById: id => id === 'poi-restore' ? poiRestoredEntity : null,
+            },
+        }
+        let resolveFocus = null
+        const focusPromise = new Promise(resolve => {
+            resolveFocus = resolve
+        })
+        journey.focus = vi.fn(() => {
+            source.show = true
+            poiRestoredEntity.show = true
+            poiRestoredEntity.billboard.show = true
+            poiStillHiddenEntity.show = true
+            poiStillHiddenEntity.billboard.show = true
+            return focusPromise
+        })
+        const listeners = new Map()
+        let sampler = null
+        const controller = {
+            progress:      0,
+            running:       false,
+            playing:       false,
+            paused:        false,
+            configure:     vi.fn(options => {
+                sampler = options.sampler
+                return controller
+            }),
+            on:            (event, callback) => {
+                listeners.set(event, callback)
+                return () => listeners.delete(event)
+            },
+            start:         vi.fn(({progress = 0} = {}) => {
+                controller.progress = progress
+                controller.running = true
+                controller.playing = true
+                const sample = sampler.atProgress(progress)
+                listeners.get(FLYTHROUGH_EVENT_START)?.({
+                    controller,
+                    sampler,
+                    sample,
+                    progress,
+                })
+                return sample
+            }),
+            stop:          vi.fn(() => sampler?.atProgress?.(controller.progress) ?? null),
+            currentSample: () => sampler?.atProgress?.(controller.progress) ?? null,
+        }
+
+        globalThis.lgs = {
+            theJourney: journey,
+            theTrack:   null,
+            settings:   {
+                ui: {
+                    flythrough: {
+                        ...flythrough,
+                        clips,
+                    },
+                    journeyToolbar: {show: true},
+                },
+            },
+            stores:     {
+                main:       {
+                    components: {
+                        pois: {
+                            list: poiList,
+                        },
+                    },
+                },
+                flythrough: proxy({
+                                      progress: 0,
+                                      camera:   flythrough.camera,
+                                      clips,
+                                  }),
+            },
+            viewer:     {
+                trackedEntity: null,
+                entities:      {
+                    getById: id => id === 'poi-still-hidden' ? poiStillHiddenEntity : null,
+                },
+                dataSources:   {
+                    length:    1,
+                    get:       () => source,
+                    getByName: name => name === journey.slug ? [source] : [],
+                },
+                camera:        {
+                    heading:              0.4,
+                    pitch:                -0.7,
+                    roll:                 0,
+                    positionCartographic: {longitude: 0.1, latitude: 0.2, height: 2400},
+                    moveStart:            {
+                        addEventListener:       () => {},
+                        removeEventListener:    () => {},
+                    },
+                    moveEnd:              {
+                        addEventListener:       () => {},
+                        removeEventListener:    () => {},
+                    },
+                    cancelFlight:         () => {},
+                    setView:              () => {},
+                    lookAtTransform:      () => {},
+                },
+            },
+            scene:      {
+                requestRender: () => {},
+                globe:         {getHeight: () => 120},
+            },
+        }
+        globalThis.__ = {
+            ui: {
+                cameraManager: {
+                    stopRotate: vi.fn(async () => undefined),
+                },
+                poiManager: {
+                    get: id => poiList.get(id),
+                    list: poiList,
+                    getFlythroughPOIsForJourney: () => [
+                        {poi: {id: 'poi-restore'}, projectedAbscissa: 10},
+                        {poi: {id: 'poi-still-hidden'}, projectedAbscissa: 20},
+                    ],
+                },
+            },
+        }
+
+        try {
+            const mode = new FlythroughMode({
+                controller,
+                renderer: {
+                    clear:  () => {},
+                    show:   () => {},
+                    update: () => {},
+                },
+            })
+
+            mode.start()
+            await Promise.resolve()
+            await Promise.resolve()
+
+            expect(poiRestoredEntity.show).toBe(false)
+            expect(poiRestoredEntity.billboard.show).toBe(false)
+            expect(poiStillHiddenEntity.show).toBe(false)
+            expect(poiStillHiddenEntity.billboard.show).toBe(false)
+
+            listeners.get(FLYTHROUGH_EVENT_END)?.({
+                controller,
+                sampler,
+                sample:   sampler.atProgress(1),
+                progress: 1,
+            })
+            await Promise.resolve()
+
+            expect(poiRestoredEntity.show).toBe(false)
+            expect(poiStillHiddenEntity.show).toBe(false)
+
+            resolveFocus()
+            await Promise.resolve()
+
+            await vi.advanceTimersByTimeAsync(2000)
+            await Promise.resolve()
+            await Promise.resolve()
+
+            expect(poiRestoredEntity.show).toBe(true)
+            expect(poiStillHiddenEntity.show).toBe(false)
+        }
+        finally {
+            vi.useRealTimers()
             globalThis.__ = previousDoubleUnderscore
             globalThis.lgs = previousLgs
         }
@@ -3923,6 +4470,102 @@ describe('flythrough phase 1 playback controller', () => {
         }
     })
 
+    it('restores the captured camera altitude even when the start camera height is missing', () => {
+        const journey = makeJourney([
+                                        makeTrack({
+                                                      slug:        'track#journey#gpx#main',
+                                                      coordinates: [[0.1, 0.2, 120], [0.2, 0.3, 140]],
+                                                  }),
+                                    ])
+        const previousLgs = globalThis.lgs
+        const previousDoubleUnderscore = globalThis.__
+        const flythrough = defaultFlythroughSettings()
+        const setViewCalls = []
+        const controller = new FlythroughPlaybackController({
+            requestFrame: () => 1,
+            cancelFrame:  () => {},
+            now:          () => 0,
+        })
+
+        globalThis.__ = {
+            ui: {
+                cameraManager: {
+                    stopRotate: vi.fn(async () => undefined),
+                },
+            },
+        }
+        globalThis.lgs = {
+            theJourney: journey,
+            theTrack:   null,
+            settings:   {
+                ui: {
+                    flythrough,
+                },
+            },
+            stores:     {
+                flythrough: proxy({
+                                      progress: 0,
+                                      camera:   flythrough.camera,
+                                  }),
+            },
+            viewer:     {
+                trackedEntity: null,
+                camera:        {
+                    heading:              0.4,
+                    pitch:                -0.7,
+                    roll:                 0,
+                    positionCartographic: {
+                        longitude: 0.1,
+                        latitude:  0.2,
+                        height:    undefined,
+                    },
+                    moveStart:            {
+                        addEventListener: () => {},
+                        removeEventListener: () => {},
+                    },
+                    moveEnd:              {
+                        addEventListener: () => {},
+                        removeEventListener: () => {},
+                    },
+                    cancelFlight:         () => {},
+                    flyTo:                () => {},
+                    setView:              options => setViewCalls.push(options),
+                    lookAtTransform:      () => {},
+                },
+            },
+            scene:      {
+                requestRender: () => {},
+                globe:         {getHeight: () => 120},
+            },
+        }
+
+        try {
+            const mode = new FlythroughMode({
+                controller,
+                renderer: {
+                    clear:  () => {},
+                    show:   () => {},
+                    update: () => {},
+                },
+            })
+
+            mode.start({duration: 1})
+            mode.stop({emit: false})
+
+            expect(setViewCalls).toHaveLength(1)
+            const restoredLongitude = (0.1 * 180) / Math.PI
+            const restoredLatitude = (0.2 * 180) / Math.PI
+            expect(Cartesian3.distance(
+                setViewCalls[0].destination,
+                Cartesian3.fromDegrees(restoredLongitude, restoredLatitude, 120),
+            )).toBeLessThan(1)
+        }
+        finally {
+            globalThis.lgs = previousLgs
+            globalThis.__ = previousDoubleUnderscore
+        }
+    })
+
     it('focuses the full journey when playback naturally ends', () => {
         const journey = makeJourney([
                                         makeTrack({
@@ -3936,6 +4579,10 @@ describe('flythrough phase 1 playback controller', () => {
         const frames = []
         let now = 0
         const flythrough = defaultFlythroughSettings()
+        journey.visible = false
+        journey.updateVisibility = vi.fn(visible => {
+            journey.visible = visible
+        })
         journey.focus = props => focusCalls.push(props)
 
         globalThis.__ = {ui: {}}
@@ -4008,6 +4655,8 @@ describe('flythrough phase 1 playback controller', () => {
             frames.shift()()
 
             expect(focusCalls).toHaveLength(1)
+            expect(journey.visible).toBe(true)
+            expect(journey.updateVisibility).toHaveBeenCalledWith(true)
             expect(focusCalls[0]).toEqual(expect.objectContaining({
                                                                        resetCamera: true,
                                                                        rotate:      false,

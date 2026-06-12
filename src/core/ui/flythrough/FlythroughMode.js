@@ -15,6 +15,7 @@
  ******************************************************************************/
 
 import { CameraUtils }                                        from '@Utils/cesium/CameraUtils'
+import { POIUtils }                                           from '@Utils/cesium/POIUtils'
 import { TrackUtils }                                         from '@Utils/cesium/TrackUtils'
 import {
     Cartesian2, Cartesian3, Cartographic, CatmullRomSpline, ExtrapolationType, JulianDate, LinearApproximation,
@@ -539,6 +540,7 @@ const resetRuntimeProgress = (store) => {
     store.totalDistance = 0
     store.toolbarVisible = false
     store.orbitAllowed = true
+    store.cameraUserAdjusted = false
     store.hoverSample = null
     store.metricOverlay = {
         ...store.metricOverlay,
@@ -568,6 +570,8 @@ export class FlythroughMode {
     #cameraBezierFrame = null
     #cameraBezierResolve = null
     #savedCameraState = null
+    #playbackStartCameraSettings = null
+    #playbackCameraUserAdjusted = false
     #lastCameraHeading = null
     #lastCameraPitch = null
     #lastAppliedCameraView = null
@@ -591,6 +595,8 @@ export class FlythroughMode {
     #flythroughPoiExpandedState = new Map()
     #flythroughPoiCollapseTimers = new Map()
     #flythroughPoiTriggered = new Set()
+    #flythroughPOIVisibilityState = new Map()
+    #stopClipPOIMaskFrame = null
     #lastFlythroughPoiDistance = null
 
     constructor({
@@ -690,7 +696,6 @@ export class FlythroughMode {
                                         ?? flythroughStore()?.hideOtherJourneys
                                         ?? (getFlythroughSettings().hideOtherJourneys === true)
         void globalThis.__?.ui?.cameraManager?.stopRotate?.()
-        this.#captureCameraState()
         this.#setFlythroughOrbitAllowed(false)
         this.#restoreOtherJourneysVisibility()
         this.#hideCurrentJourneyVisibility()
@@ -698,16 +703,10 @@ export class FlythroughMode {
             this.#hideOtherJourneysVisibility()
         }
         const startSample = sampler.atProgress?.(options.progress ?? 0)
+        this.#captureCameraState({sample: startSample})
+        this.#capturePlaybackCameraSettings()
         const startList = this.#clipListForSlot(FLYTHROUGH_CLIP_SLOT_START)
         this.#deferStartCameraRecenter = startList.length > 0
-        if (startSample) {
-            try {
-                this.syncCameraFromCesiumControls({sample: startSample})
-            }
-            catch (error) {
-                console.debug('[FlythroughMode] Failed to seed camera from Cesium on start.', error)
-            }
-        }
         const introLeadSeconds = 1
         const introStartAt = this.#now() + Math.max(
             0,
@@ -821,7 +820,7 @@ export class FlythroughMode {
         globalThis.lgs?.scene?.requestRender?.()
     }
 
-    #restoreCurrentJourneyVisibility = () => {
+    #restoreCurrentJourneyVisibility = ({restorePOIs = true} = {}) => {
         const journey = globalThis.lgs?.theJourney
         if (!journey) {
             return
@@ -835,10 +834,204 @@ export class FlythroughMode {
         }
         journey.updateVisibility?.(true)
         this.#restoreCurrentJourneyPolylineVisibility()
-        if (globalThis.lgs?.viewer?.dataSources) {
+        if (!restorePOIs) {
+            this.#applyFlythroughPOIVisibility()
+        }
+        if (restorePOIs) {
+            this.#restoreFlythroughPOIVisibility()
+        }
+        if (restorePOIs && globalThis.lgs?.viewer?.dataSources) {
             TrackUtils.updatePOIsVisibility(journey, true)
         }
         globalThis.lgs?.scene?.requestRender?.()
+    }
+
+    #poiEntities = poi => {
+        if (!poi?.id || !globalThis.lgs?.viewer) {
+            return []
+        }
+
+        const entities = []
+        const addEntity = entity => {
+            if (entity && !entities.includes(entity)) {
+                entities.push(entity)
+            }
+        }
+
+        addEntity(POIUtils.getEntityContainer(poi)?.getById?.(poi.id))
+        addEntity(globalThis.lgs.viewer.entities?.getById?.(poi.id))
+
+        const dataSources = globalThis.lgs.viewer.dataSources
+        const length = Number(dataSources?.length) || 0
+        for (let index = 0; index < length; index++) {
+            addEntity(dataSources.get(index)?.entities?.getById?.(poi.id))
+        }
+
+        return entities
+    }
+
+    #setPOIEntityVisibility = (poi, visible) => {
+        this.#poiEntities(poi).forEach(entity => {
+            entity.show = visible
+            if (entity.billboard) {
+                entity.billboard.show = visible
+            }
+        })
+    }
+
+    #resolveFlythroughPOI = entry => {
+        const poiId = entry?.poi?.id
+        if (!poiId) {
+            return null
+        }
+
+        return globalThis.lgs?.stores?.main?.components?.pois?.list?.get?.(poiId)
+            ?? globalThis.__?.ui?.poiManager?.get?.(poiId)
+            ?? entry.poi
+    }
+
+    #flythroughPOICandidates = (nearbyPois = null) => {
+        const candidates = new Map()
+        const addPOI = poi => {
+            if (poi?.id && !candidates.has(poi.id)) {
+                candidates.set(poi.id, poi)
+            }
+        }
+        const addList = list => {
+            if (!list?.values) {
+                return
+            }
+
+            for (const poi of list.values()) {
+                addPOI(poi)
+            }
+        }
+        const store = flythroughStore()
+        const runtimeNearbyPois = Array.isArray(nearbyPois)
+            ? nearbyPois
+            : Array.isArray(store?.nearbyPois)
+            ? store.nearbyPois
+            : []
+
+        runtimeNearbyPois.forEach(entry => addPOI(this.#resolveFlythroughPOI(entry)))
+        addList(globalThis.lgs?.stores?.main?.components?.pois?.list)
+        addList(globalThis.__?.ui?.poiManager?.list)
+        return Array.from(candidates.values())
+    }
+
+    #isVisibleProperty = value => {
+        if (typeof value?.getValue === 'function') {
+            return value.getValue(JulianDate.now()) !== false
+        }
+
+        return value !== false
+    }
+
+    #isPOIVisibleBeforePlayback = poi => {
+        if (poi?.visible === false) {
+            return false
+        }
+
+        const entities = this.#poiEntities(poi)
+        if (entities.length === 0) {
+            return true
+        }
+
+        return entities.some(entity => this.#isVisibleProperty(entity?.show)
+            && (!entity?.billboard || this.#isVisibleProperty(entity.billboard.show)))
+    }
+
+    #applyFlythroughPOIVisibility = (nearbyPois = null) => {
+        const store = flythroughStore()
+        const runtimeNearbyPois = Array.isArray(nearbyPois)
+            ? nearbyPois
+            : Array.isArray(store?.nearbyPois)
+            ? store.nearbyPois
+            : []
+        const nearbyPOIIds = new Set(
+            runtimeNearbyPois
+                .map(entry => this.#resolveFlythroughPOI(entry)?.id)
+                .filter(Boolean),
+        )
+
+        for (const poi of this.#flythroughPOICandidates(runtimeNearbyPois)) {
+            if (!poi?.id) {
+                continue
+            }
+
+            const settings = normalizeFlythroughPOISettings(poi.flythrough)
+            const shouldApplyVisibility = nearbyPOIIds.has(poi.id)
+                || settings.visible === false
+                || poi.visible === false
+            if (!shouldApplyVisibility) {
+                continue
+            }
+
+            const visibleBeforePlayback = this.#flythroughPOIVisibilityState.get(poi.id)?.visible
+                ?? this.#isPOIVisibleBeforePlayback(poi)
+            const visibleDuringPlayback = visibleBeforePlayback
+                && poi.visible !== false
+                && settings.visible !== false
+
+            if (settings.visible === false && !this.#flythroughPOIVisibilityState.has(poi.id)) {
+                this.#flythroughPOIVisibilityState.set(poi.id, {
+                    visible: visibleBeforePlayback,
+                })
+            }
+
+            this.#setPOIEntityVisibility(poi, visibleDuringPlayback)
+        }
+    }
+
+    #restoreFlythroughPOIVisibility = () => {
+        for (const [poiId, state] of this.#flythroughPOIVisibilityState.entries()) {
+            const poi = globalThis.lgs?.stores?.main?.components?.pois?.list?.get?.(poiId)
+                ?? globalThis.__?.ui?.poiManager?.get?.(poiId)
+            if (!poi?.id) {
+                continue
+            }
+
+            this.#setPOIEntityVisibility(poi, state?.visible === true && poi.visible !== false)
+        }
+
+        this.#flythroughPOIVisibilityState.clear()
+    }
+
+    #hideGloballyHiddenPOIs = () => {
+        for (const poi of this.#flythroughPOICandidates()) {
+            if (poi?.id && poi.visible === false) {
+                this.#setPOIEntityVisibility(poi, false)
+            }
+        }
+    }
+
+    #startStopClipPOIMaskLoop = () => {
+        if (this.#stopClipPOIMaskFrame !== null) {
+            return
+        }
+
+        this.#applyFlythroughPOIVisibility()
+        const tick = () => {
+            this.#stopClipPOIMaskFrame = null
+            this.#applyFlythroughPOIVisibility()
+            this.#stopClipPOIMaskFrame = globalThis.__?.requestAnimationFrame?.(tick)
+                ?? globalThis.requestAnimationFrame?.(tick)
+                ?? null
+        }
+
+        this.#stopClipPOIMaskFrame = globalThis.__?.requestAnimationFrame?.(tick)
+            ?? globalThis.requestAnimationFrame?.(tick)
+            ?? null
+    }
+
+    #stopStopClipPOIMaskLoop = () => {
+        if (this.#stopClipPOIMaskFrame === null) {
+            return
+        }
+
+        globalThis.__?.cancelAnimationFrame?.(this.#stopClipPOIMaskFrame)
+        globalThis.cancelAnimationFrame?.(this.#stopClipPOIMaskFrame)
+        this.#stopClipPOIMaskFrame = null
     }
 
     #preserveCurrentJourneyPOIVisibility = journey => {
@@ -861,7 +1054,17 @@ export class FlythroughMode {
             source.show = true
 
             for (const entity of source.entities?.values ?? []) {
-                if (!entity?.id || !entity.polyline) {
+                if (!entity?.id) {
+                    continue
+                }
+
+                const poi = globalThis.__?.ui?.poiManager?.get?.(entity.id)
+                if (poi?.id && entity.billboard) {
+                    entity.show = poi.visible !== false
+                    continue
+                }
+
+                if (!entity.polyline) {
                     continue
                 }
 
@@ -1068,6 +1271,8 @@ export class FlythroughMode {
             ? store.nearbyPois
             : this.#syncRuntimeNearbyPOIs(journey)
 
+        this.#applyFlythroughPOIVisibility(nearbyPois)
+
         for (const entry of nearbyPois) {
             const poiId = entry?.poi?.id
             const poi = globalThis.lgs?.stores?.main?.components?.pois?.list?.get?.(poiId)
@@ -1233,6 +1438,7 @@ export class FlythroughMode {
 
     stop = (options = {}) => {
         this.#clipSequenceToken++
+        this.#stopStopClipPOIMaskLoop()
         this.#cancelActiveCameraFlight()
         this.#stopCameraLiveSyncLoop()
         const sample = this.#controller.stop({
@@ -1241,13 +1447,15 @@ export class FlythroughMode {
         })
         this.#renderer.clear()
         this.#restoreOtherJourneysVisibility()
-        this.#restoreCurrentJourneyVisibility()
+        this.#restoreCurrentJourneyVisibility({restorePOIs: false})
         this.#setFlythroughOrbitAllowed(true)
         this.#setContinuousRender(false)
         this.#removeToleranceZoneOverlay()
+        this.#restorePlaybackCameraSettings()
+        resetRuntimeProgress(flythroughStore())
+        this.#restoreCurrentJourneyVisibility()
         this.#resetCameraController({preserveSavedCameraState: true})
         this.#restoreJourneyToolbarVisibility()
-        resetRuntimeProgress(flythroughStore())
         if (options.emit !== false) {
             this.#focusJourneyAfterPlayback({
                 snapDistance: 50000,
@@ -1417,24 +1625,23 @@ export class FlythroughMode {
                 const rpm = Number.isFinite(Number(clip?.params?.rpm)) ? Number(clip.params.rpm) : undefined
                 this.#setContinuousRender(true)
                 this.#hideJourneyToolbarVisibility()
-                if (typeof journey?.focus === 'function') {
-                    await Promise.resolve(journey.focus({
+                const focusResult = typeof journey?.focus === 'function'
+                    ? journey.focus({
                         resetCamera: true,
                         rotate:      true,
                         rpm,
                         snapDistance: 25000,
-                    }))
-                }
-                else {
-                    await Promise.resolve(globalThis.__?.ui?.sceneManager?.focusOnJourney?.({
+                    })
+                    : globalThis.__?.ui?.sceneManager?.focusOnJourney?.({
                         journey,
                         target:      journey,
                         resetCamera: true,
                         rotate:      true,
                         rpm,
                         snapDistance: 25000,
-                    }))
-                }
+                    })
+                this.#applyFlythroughPOIVisibility()
+                await Promise.resolve(focusResult)
                 await this.#runClipDelay(duration)
                 return
             }
@@ -1471,24 +1678,31 @@ export class FlythroughMode {
             return
         }
 
+        journey.visible = true
+        journey.updateVisibility?.(true)
+        if (globalThis.lgs?.viewer?.dataSources) {
+            TrackUtils.updatePOIsVisibility(journey, true)
+        }
         this.#cameraFlightActive = false
         globalThis.lgs?.viewer?.camera?.cancelFlight?.()
         if (typeof journey.focus === 'function') {
-            journey.focus({
+            const focusResult = journey.focus({
                               resetCamera: true,
                               rotate: false,
                               snapDistance,
                           })
+            Promise.resolve(focusResult).finally(() => this.#hideGloballyHiddenPOIs())
             return
         }
 
-        globalThis.__?.ui?.sceneManager?.focusOnJourney?.({
+        const focusResult = globalThis.__?.ui?.sceneManager?.focusOnJourney?.({
                                                               journey,
                                                               target:      journey,
                                                               resetCamera: true,
                                                               rotate: false,
                                                               snapDistance,
                                                           })
+        Promise.resolve(focusResult).finally(() => this.#hideGloballyHiddenPOIs())
     }
 
     dispose = () => {
@@ -1514,6 +1728,8 @@ export class FlythroughMode {
         this.#lastToleranceRecenterProgress = null
         if (!preserveSavedCameraState) {
             this.#savedCameraState = null
+            this.#playbackStartCameraSettings = null
+            this.#playbackCameraUserAdjusted = false
         }
         this.#lastCameraHeading = null
         this.#lastCameraPitch = null
@@ -1536,27 +1752,65 @@ export class FlythroughMode {
         }
     }
 
-    #captureCameraState = () => {
+    #captureCameraState = ({sample = null} = {}) => {
         const camera = globalThis.lgs?.viewer?.camera
         const position = camera?.positionCartographic
-        if (!camera || !position) {
+        const sampleHeight = finiteNumber(sample?.altitude ?? sample?.height)
+        if (!camera && sampleHeight === null) {
             this.#savedCameraState = null
             return null
         }
 
         this.#savedCameraState = {
             destination: {
-                longitude: CesiumMath.toDegrees(position.longitude),
-                latitude:  CesiumMath.toDegrees(position.latitude),
-                height:    position.height,
+                longitude: finiteNumber(position?.longitude) !== null ? CesiumMath.toDegrees(position.longitude) : finiteNumber(sample?.longitude) ?? 0,
+                latitude:  finiteNumber(position?.latitude) !== null ? CesiumMath.toDegrees(position.latitude) : finiteNumber(sample?.latitude) ?? 0,
+                height:    finiteNumber(position?.height) ?? sampleHeight ?? 0,
             },
             orientation: {
-                heading: camera.heading,
-                pitch:   camera.pitch,
-                roll:    camera.roll,
+                heading: finiteNumber(camera?.heading) ?? this.#lastCameraHeading ?? 0,
+                pitch:   finiteNumber(camera?.pitch) ?? this.#lastCameraPitch ?? SAFE_TOP_DOWN_PITCH,
+                roll:    finiteNumber(camera?.roll) ?? 0,
             },
+            altitude: finiteNumber(position?.height) ?? sampleHeight ?? 0,
         }
         return this.#savedCameraState
+    }
+
+    #capturePlaybackCameraSettings = () => {
+        this.#playbackStartCameraSettings = normalizeFlythroughCamera(
+            globalThis.lgs?.stores?.flythrough?.camera
+            ?? getFlythroughSettings().camera,
+        )
+        this.#playbackCameraUserAdjusted = false
+        if (globalThis.lgs?.stores?.flythrough) {
+            globalThis.lgs.stores.flythrough.cameraUserAdjusted = false
+        }
+    }
+
+    #markPlaybackCameraUserAdjusted = () => {
+        this.#playbackCameraUserAdjusted = true
+        if (globalThis.lgs?.stores?.flythrough) {
+            globalThis.lgs.stores.flythrough.cameraUserAdjusted = true
+        }
+    }
+
+    #restorePlaybackCameraSettings = () => {
+        const store = flythroughStore()
+        const initialCamera = this.#playbackStartCameraSettings
+        const cameraUserAdjusted = this.#playbackCameraUserAdjusted || store?.cameraUserAdjusted === true
+        this.#playbackStartCameraSettings = null
+        this.#playbackCameraUserAdjusted = false
+
+        if (store) {
+            store.cameraUserAdjusted = false
+        }
+
+        if (!initialCamera || cameraUserAdjusted) {
+            return null
+        }
+
+        return this.#persistCameraSettings(initialCamera)
     }
 
     #restoreCameraState = () => {
@@ -1573,7 +1827,7 @@ export class FlythroughMode {
             destination: Cartesian3.fromDegrees(
                 state.destination.longitude,
                 state.destination.latitude,
-                state.destination.height,
+                finiteNumber(state.destination.height) ?? finiteNumber(state.altitude) ?? 0,
             ),
             orientation: state.orientation,
         })
@@ -1604,15 +1858,19 @@ export class FlythroughMode {
     #abortPlaybackAfterListenerError = (error) => {
         console.error('[FlythroughMode] Playback listener failed. Flythrough stopped.', error)
         this.#clipSequenceToken++
+        this.#stopStopClipPOIMaskLoop()
         this.#controller.stop({emit: false, clearProgress: false})
         this.#setContinuousRender(false)
         this.#renderer.clear()
         this.#restoreOtherJourneysVisibility()
-        this.#restoreCurrentJourneyVisibility()
+        this.#restoreCurrentJourneyVisibility({restorePOIs: false})
         this.#setFlythroughOrbitAllowed(true)
         this.#deferStartCameraRecenter = false
         this.#resetCameraController({preserveSavedCameraState: true})
         this.#restoreJourneyToolbarVisibility()
+        this.#restorePlaybackCameraSettings()
+        resetRuntimeProgress(flythroughStore())
+        this.#restoreCurrentJourneyVisibility()
         this.#restoreCameraState()
     }
 
@@ -2283,6 +2541,7 @@ export class FlythroughMode {
     }
 
     #updateCameraFromCesiumControls = () => {
+        this.#markPlaybackCameraUserAdjusted()
         this.syncCameraFromCesiumControls()
     }
 
@@ -2979,7 +3238,7 @@ export class FlythroughMode {
             if (!this.#cameraUserAdjusting && !this.#cameraPointerActive) {
                 return
             }
-            this.syncCameraFromCesiumControls()
+            this.#updateCameraFromCesiumControls()
             this.#cameraLiveSyncFrame = globalThis.__?.requestAnimationFrame?.(tick)
                 ?? globalThis.requestAnimationFrame?.(tick)
                 ?? null
@@ -3013,6 +3272,10 @@ export class FlythroughMode {
         const settings = getFlythroughSettings()
         const marker = normalizeFlythroughMarker(globalThis.lgs?.stores?.flythrough?.marker ?? settings.marker)
         if (!sample) {
+            return
+        }
+
+        if (this.#cameraApplyingView) {
             return
         }
 
@@ -3181,14 +3444,6 @@ export class FlythroughMode {
                     const startSample = detail.sample
                                         ?? detail.sampler?.atProgress?.(detail.progress ?? 0)
                                         ?? currentFlythroughSample(this.#controller)
-                    // Sync live Cesium camera into settings so the flythrough starts with the current view
-                    try {
-                        this.syncCameraFromCesiumControls({sample: startSample})
-                    }
-                    catch (err) {
-                        // Non-fatal - fall back to existing behavior
-                        console.debug('[FlythroughMode] syncCameraFromCesiumControls failed on start', err)
-                    }
 
                     this.#renderer.update({...detail, forceGeometry: true})
                     void this.#syncNearbyPOIsForSample(startSample ?? detail.sample ?? null)
@@ -3238,15 +3493,18 @@ export class FlythroughMode {
             }),
             this.#controller.on(FLYTHROUGH_EVENT_STOP, () => {
                 this.#clipSequenceToken++
+                this.#stopStopClipPOIMaskLoop()
                 this.#setContinuousRender(false)
                 this.#renderer.clear()
                 this.#restoreOtherJourneysVisibility()
-                this.#restoreCurrentJourneyVisibility()
+                this.#restoreCurrentJourneyVisibility({restorePOIs: false})
                 this.#setFlythroughOrbitAllowed(true)
                 this.#deferStartCameraRecenter = false
                 this.#restoreJourneyToolbarVisibility()
                 void this.#restoreNearbyPOIsAfterPlayback()
+                this.#restorePlaybackCameraSettings()
                 resetRuntimeProgress(flythroughStore())
+                this.#restoreCurrentJourneyVisibility()
             }),
             this.#controller.on(FLYTHROUGH_EVENT_END, detail => {
                 const token = this.#clipSequenceToken
@@ -3267,15 +3525,18 @@ export class FlythroughMode {
                         return
                     }
 
+                    this.#stopStopClipPOIMaskLoop()
                     this.#setContinuousRender(false)
                     this.#renderer.clear()
                     this.#restoreOtherJourneysVisibility()
-                    this.#restoreCurrentJourneyVisibility()
+                    this.#restoreCurrentJourneyVisibility({restorePOIs: false})
                     this.#setFlythroughOrbitAllowed(true)
                     this.#deferStartCameraRecenter = false
                     this.#restoreJourneyToolbarVisibility()
                     void this.#restoreNearbyPOIsAfterPlayback()
+                    this.#restorePlaybackCameraSettings()
                     resetRuntimeProgress(flythroughStore())
+                    this.#restoreCurrentJourneyVisibility()
                     this.#focusJourneyAfterPlayback()
                 }
 
@@ -3286,6 +3547,7 @@ export class FlythroughMode {
                         forceGeometry: true,
                         freezeDynamic:  true,
                     })
+                    this.#startStopClipPOIMaskLoop()
 
                     if (token !== this.#clipSequenceToken) {
                         return
