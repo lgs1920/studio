@@ -17,6 +17,7 @@
 import { icon, library } from '@fortawesome/fontawesome-svg-core'
 import { faLocationDot } from '@fortawesome/pro-regular-svg-icons'
 import { faLocationPin } from '@fortawesome/pro-solid-svg-icons'
+import { normalizeFlythroughPOISettings } from '@Core/ui/flythrough/FlythroughPOISettings'
 
 import { Canvg, Property } from 'canvg'
 import {
@@ -38,6 +39,11 @@ export const POI_FLAG = 'flag'
 export const POI_STD = 'poi'
 export const POI_MARKER = 'marker'
 export const POI_PROFILER = 'profiler'
+
+const finiteNumber = value => {
+    const number = Number(value)
+    return Number.isFinite(number) ? number : null
+}
 
 
 export class POIUtils {
@@ -203,13 +209,14 @@ export class POIUtils {
         // Default dimensions if poi.image is undefined
         const width = poi.image?.width ?? 32
         const height = poi.image?.height ?? 32
+        const visible = POIUtils.setPOIVisibility(poi, parentVisibility)
 
         // Base entity options
         const options = {
             name:                     poi.name,
             id:                       poi.id,
             position:                 Cartesian3.fromDegrees(poi.longitude, poi.latitude, poi.simulatedHeight ?? poi.height),
-            show:                     poi.visible && parentVisibility,
+            show:                     visible,
             disableDepthTestDistance: __.ui.sceneManager.is2D ? 0 : 1.2742018E7,
             heightReference: __.ui.sceneManager.noRelief() ? HeightReference.NONE : HeightReference.CLAMP_TO_GROUND,
         };
@@ -219,12 +226,12 @@ export class POIUtils {
             image:           poi.image?.src ?? '',
             width:           width,
             height:          height,
-            scale:           1,
+            scale:           finiteNumber(poi.scale) ?? 1,
             scaleByDistance: new NearFarScalar(10000.0, 1.0, 50000.0, 0),
             pixelOffset:     poi.pixelOffset ? new Cartesian2(poi.pixelOffset.x, poi.pixelOffset.y) : new Cartesian2(0, 0),
             horizontalOrigin: HorizontalOrigin.CENTER,
             verticalOrigin:  VerticalOrigin.BOTTOM,
-            show:            true,
+            show:            visible,
         };
 
         // Get entity container
@@ -238,6 +245,10 @@ export class POIUtils {
         // Check for existing entity
         const entity = container.getById(poi.id)
         if (entity) {
+            entity.show = options.show
+            entity.position = options.position
+            entity.disableDepthTestDistance = options.disableDepthTestDistance
+            entity.heightReference = options.heightReference
             // Update billboard properties
             if (entity.billboard) {
                 entity.billboard.image = billboard.image
@@ -357,7 +368,13 @@ export class POIUtils {
      *
      */
     static setPOIVisibility = (poi, visibility) => {
-        return visibility ? poi?.visible : false
+        const flythrough = globalThis.lgs?.stores?.flythrough
+        const flythroughActive = Boolean(flythrough?.active || flythrough?.playing || flythrough?.paused)
+        if (flythroughActive && normalizeFlythroughPOISettings(poi?.flythrough).visible === false) {
+            return false
+        }
+
+        return visibility ? poi?.visible !== false : false
     }
 
     /**
