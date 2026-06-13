@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-06-07
- * Last modified: 2026-06-07
+ * Created on: 2026-06-12
+ * Last modified: 2026-06-09
  *
  *
  * Copyright © 2026 LGS1920
@@ -40,13 +40,6 @@ import { useSnapshot }                                             from 'valtio'
 
 const ADD_POPUP_SUFFIX = 'add-popup-anchor'
 const EDIT_POPUP_SUFFIX = 'edit-popup-anchor'
-const FLYTHROUGH_CLIPS_DEBUG = true
-
-const logFlythroughClipsTab = (...args) => {
-    if (FLYTHROUGH_CLIPS_DEBUG) {
-        console.debug('[FlythroughClipsTab]', ...args)
-    }
-}
 
 const listNameForSlot = slot => (slot === FLYTHROUGH_CLIP_SLOT_STOP ? 'stop' : 'start')
 
@@ -124,14 +117,6 @@ const readCurrentClips = (settings, journey) => {
                                                       stop,
                                                   })
 
-    logFlythroughClipsTab('readCurrentClips', {
-        journeySlug:       journey?.slug ?? null,
-        catalogSize:       Object.keys(settingsClips.catalog ?? {}).length,
-        journeyStartCount: start.length,
-        journeyStopCount:  stop.length,
-        normalizedStart:   normalized.start.map(clip => clip.clipId),
-        normalizedStop:    normalized.stop.map(clip => clip.clipId),
-    })
 
     return {
         ...normalized,
@@ -271,11 +256,6 @@ const ClipEditorPopup = ({clips, editor, setEditor, onSave}) => {
 
     const save = useCallback(() => {
         if (!definition) {
-            logFlythroughClipsTab('editor-save-abort-no-definition', {
-                slot:     editor.slot,
-                mode:     editor.mode,
-                clipId: editor.clipId,
-            })
             close()
             return
         }
@@ -295,24 +275,11 @@ const ClipEditorPopup = ({clips, editor, setEditor, onSave}) => {
             }
 
         if (!instance) {
-            logFlythroughClipsTab('editor-save-abort-no-instance', {
-                slot:     editor.slot,
-                mode:     editor.mode,
-                clipId: editor.clipId,
-            })
             close()
             return
         }
 
         if (editor.mode === 'add' && !canAddFlythroughClip(normalizedCurrent, definition, editor.slot)) {
-            logFlythroughClipsTab('editor-save-blocked-by-maxInstances', {
-                slot:             editor.slot,
-                clipId:         definition.id,
-                maxInstances:     definition.maxInstances,
-                currentInstances: [...normalizedCurrent.start, ...normalizedCurrent.stop]
-                                      .filter(clip => clip.clipId === definition.id)
-                                      .length,
-            })
             close()
             return
         }
@@ -418,15 +385,6 @@ const ClipAddPopup = ({clips, addState, setAddState, openEditor}) => {
     const definitions = useMemo(() => readClipDefinitions(clips, addState.slot) ?? [], [clips, addState.slot])
 
     useEffect(() => {
-        logFlythroughClipsTab('add-popup-render', {
-            slot:    addState.slot,
-            open:    addState.open,
-            count:   definitions.length,
-            clips: definitions.map(definition => ({
-                id:           definition.id,
-                maxInstances: definition.maxInstances,
-            })),
-        })
     }, [addState.open, addState.slot, definitions])
 
     const close = useCallback(() => {
@@ -469,11 +427,6 @@ const ClipAddPopup = ({clips, addState, setAddState, openEditor}) => {
                     const itemId = `flythrough-clips-add-${addState.slot}-${definition.id}`
                     const selectClip = () => {
                         const canAdd = canAddFlythroughClip(clips, definition, addState.slot)
-                        logFlythroughClipsTab('add-popup-select', {
-                            slot:     addState.slot,
-                            clipId: definition.id,
-                            canAdd,
-                        })
                         if (!canAdd) {
                             return
                         }
@@ -591,17 +544,6 @@ const ClipList = ({
     const hasAvailableDefinitions = (availableDefinitions?.length ?? 0) > 0
 
     useEffect(() => {
-        logFlythroughClipsTab('clip-list-render', {
-            slot,
-            title,
-            listCount:          list.length,
-            availableCount:     availableDefinitions?.length ?? 0,
-            availableClipIds: availableDefinitions?.map(definition => definition.id) ?? [],
-            hasAvailableDefinitions,
-        })
-    }, [availableDefinitions, hasAvailableDefinitions, list.length, slot, title])
-
-    useEffect(() => {
         const listElement = listRef.current
         if (!listElement || list.length === 0) {
             return undefined
@@ -639,11 +581,6 @@ const ClipList = ({
                         variant="brand"
                         size="s"
                         onClick={() => {
-                            logFlythroughClipsTab('open-add-click', {
-                                slot,
-                                title,
-                                availableClipIds: availableDefinitions?.map(definition => definition.id) ?? [],
-                            })
                             onAdd({slot, anchorId: addAnchorIdPrefix})
                         }}
                     >
@@ -691,28 +628,11 @@ export const FlythroughClipsTab = memo(({settings}) => {
     const currentJourney = mainStore?.theJourney ?? lgs.theJourney ?? lgs.stores.main?.theJourney
     const currentClips = readCurrentClips(settings, currentJourney)
 
-    useEffect(() => {
-        logFlythroughClipsTab('tab-render', {
-            journeySlug: currentJourney?.slug ?? null,
-            catalogSize: Object.keys(currentClips.catalog ?? {}).length,
-            startCount:  currentClips.start.length,
-            stopCount:   currentClips.stop.length,
-            startIds:    currentClips.start.map(clip => clip.clipId),
-            stopIds:     currentClips.stop.map(clip => clip.clipId),
-        })
-    }, [currentClips, currentJourney?.slug])
-
     const saveClips = useCallback((nextClips) => {
         syncClips(nextClips)
     }, [])
 
     const openAdd = useCallback(({slot, anchorId}) => {
-        logFlythroughClipsTab('open-add', {
-            slot,
-            anchorId,
-            currentStart: currentClips.start.map(clip => clip.clipId),
-            currentStop:  currentClips.stop.map(clip => clip.clipId),
-        })
         setEditor(emptyEditorState())
         setAddState({
                         open: true,
@@ -730,13 +650,6 @@ export const FlythroughClipsTab = memo(({settings}) => {
                                         definition = null,
                                         mode = 'add',
                                     }) => {
-        logFlythroughClipsTab('open-editor', {
-            slot,
-            index,
-            anchorId,
-            clipId,
-            mode,
-        })
         setAddState(emptyAddState())
         setEditor({
                       open:     true,
