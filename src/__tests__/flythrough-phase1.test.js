@@ -34,6 +34,7 @@ import {
     getFlythroughCameraPresetKey, normalizeFlythroughCamera, normalizeFlythroughMarker,
     normalizeFlythroughSettings,
 }                                          from '@Core/ui/flythrough/FlythroughProgressionStyle'
+import { FLYTHROUGH_DRAWER }               from '@Core/constants'
 import { createFlythroughClipInstance }  from '@Core/ui/flythrough/FlythroughClips'
 import { Cartesian3, Matrix4, Transforms } from 'cesium'
 import { proxy }                           from 'valtio'
@@ -851,6 +852,229 @@ describe('flythrough phase 1 playback controller', () => {
 
             expect(globalThis.lgs.settings.ui.flythrough.camera.altitude).toBe(9800)
             expect(globalThis.lgs.stores.flythrough.camera.altitude).toBe(9800)
+        }
+        finally {
+            globalThis.__ = previousDoubleUnderscore
+            globalThis.lgs = previousLgs
+        }
+    })
+
+    it('restores the playback camera baseline on stop when it was not user-adjusted', () => {
+        const journey = makeJourney([
+                                        makeTrack({
+                                                      slug:        'track#journey#gpx#main',
+                                                      coordinates: [[2, 48, 120], [2.001, 48.001, 130]],
+                                                  }),
+                                    ])
+        const previousLgs = globalThis.lgs
+        const previousDoubleUnderscore = globalThis.__
+        const flythrough = defaultFlythroughSettings()
+        flythrough.camera = {
+            ...flythrough.camera,
+            altitude: 2400,
+            heading:  40,
+            pitch:    -22,
+        }
+
+        globalThis.lgs = {
+            theJourney: journey,
+            theTrack:   null,
+            settings:   {ui: {flythrough, journeyToolbar: {show: true}}},
+            stores:     {
+                flythrough: proxy({
+                                      progress: 0,
+                                      camera:   flythrough.camera,
+                                  }),
+            },
+            viewer:     {
+                trackedEntity: null,
+                camera:        {
+                    heading:              0.4,
+                    pitch:                -0.7,
+                    roll:                 0,
+                    positionCartographic: {longitude: 0.1, latitude: 0.2, height: 2400},
+                    moveStart:            {
+                        addEventListener:       () => {},
+                        removeEventListener:    () => {},
+                    },
+                    moveEnd:              {
+                        addEventListener:       () => {},
+                        removeEventListener:    () => {},
+                    },
+                    cancelFlight:         () => {},
+                    setView:              () => {},
+                    lookAtTransform:      () => {},
+                },
+            },
+            scene:      {
+                requestRender: () => {},
+                globe:         {getHeight: () => 120},
+            },
+        }
+        globalThis.__ = {
+            ui: {
+                cameraManager: {
+                    stopRotate: vi.fn(async () => undefined),
+                },
+            },
+        }
+
+        try {
+            const mode = new FlythroughMode({
+                controller: new FlythroughPlaybackController({
+                    requestFrame: () => 1,
+                    cancelFrame:  () => {},
+                    now:          () => 0,
+                }),
+                renderer: {
+                    clear:  () => {},
+                    show:   () => {},
+                    update: () => {},
+                },
+            })
+
+            mode.start()
+            globalThis.lgs.settings.ui.flythrough.camera = {
+                ...globalThis.lgs.settings.ui.flythrough.camera,
+                altitude: 9800,
+                heading:  -75,
+                pitch:    -31,
+            }
+            globalThis.lgs.stores.flythrough.camera = globalThis.lgs.settings.ui.flythrough.camera
+
+            mode.stop({emit: false})
+
+            expect(globalThis.lgs.settings.ui.flythrough.camera.altitude).toBe(2400)
+            expect(globalThis.lgs.settings.ui.flythrough.camera.heading).toBe(40)
+            expect(globalThis.lgs.settings.ui.flythrough.camera.pitch).toBe(-22)
+            expect(globalThis.lgs.stores.flythrough.camera.altitude).toBe(2400)
+            expect(globalThis.lgs.stores.flythrough.camera.heading).toBe(40)
+            expect(globalThis.lgs.stores.flythrough.camera.pitch).toBe(-22)
+        }
+        finally {
+            globalThis.__ = previousDoubleUnderscore
+            globalThis.lgs = previousLgs
+        }
+    })
+
+    it('closes the flythrough drawer on start and reopens it after stop clips complete', () => {
+        const journey = makeJourney([
+                                        makeTrack({
+                                                      slug:        'track#journey#gpx#main',
+                                                      coordinates: [[2, 48, 120], [2.001, 48.001, 130]],
+                                                  }),
+                                    ])
+        const previousLgs = globalThis.lgs
+        const previousDoubleUnderscore = globalThis.__
+        const flythrough = defaultFlythroughSettings()
+        const drawerManager = {
+            isCurrent: vi.fn(() => true),
+            close:     vi.fn(() => {
+                globalThis.lgs.stores.ui.drawers.open = null
+            }),
+            open:      vi.fn((drawerId) => {
+                globalThis.lgs.stores.ui.drawers.open = drawerId
+            }),
+        }
+        const listeners = new Map()
+        let sampler = null
+        const controller = {
+            progress: 0,
+            running:  false,
+            playing:  false,
+            paused:   false,
+            configure: vi.fn(options => {
+                sampler = options.sampler
+                return controller
+            }),
+            on: (event, callback) => {
+                listeners.set(event, callback)
+                return () => listeners.delete(event)
+            },
+            start: vi.fn(({progress = 0} = {}) => {
+                controller.progress = progress
+                controller.running = true
+                controller.playing = true
+                const sample = sampler.atProgress(progress)
+                listeners.get(FLYTHROUGH_EVENT_START)?.({
+                    controller,
+                    sampler,
+                    sample,
+                    progress,
+                })
+                return sample
+            }),
+            stop: vi.fn(() => sampler?.atProgress?.(controller.progress) ?? null),
+            currentSample: () => sampler?.atProgress?.(controller.progress) ?? null,
+        }
+
+        globalThis.lgs = {
+            theJourney: journey,
+            theTrack:   null,
+            settings:   {ui: {flythrough, journeyToolbar: {show: true}}},
+            stores:     {
+                ui: proxy({drawers: proxy({open: FLYTHROUGH_DRAWER})}),
+                flythrough: proxy({
+                                      progress: 0,
+                                      camera:   flythrough.camera,
+                                  }),
+            },
+            viewer:     {
+                trackedEntity: null,
+                camera:        {
+                    heading:              0.4,
+                    pitch:                -0.7,
+                    roll:                 0,
+                    positionCartographic: {longitude: 0.1, latitude: 0.2, height: 2400},
+                    moveStart:            {
+                        addEventListener:       () => {},
+                        removeEventListener:    () => {},
+                    },
+                    moveEnd:              {
+                        addEventListener:       () => {},
+                        removeEventListener:    () => {},
+                    },
+                    cancelFlight:         () => {},
+                    setView:              () => {},
+                    lookAtTransform:      () => {},
+                },
+            },
+            scene:      {
+                requestRender: () => {},
+                globe:         {getHeight: () => 120},
+            },
+        }
+        globalThis.__ = {
+            ui: {
+                cameraManager: {
+                    stopRotate: vi.fn(async () => undefined),
+                },
+                drawerManager,
+            },
+        }
+
+        try {
+            const mode = new FlythroughMode({
+                controller,
+                renderer: {
+                    clear:  () => {},
+                    show:   () => {},
+                    update: () => {},
+                },
+            })
+
+            mode.start()
+            expect(drawerManager.close).toHaveBeenCalled()
+            expect(globalThis.lgs.stores.ui.drawers.open).toBe(null)
+
+            listeners.get(FLYTHROUGH_EVENT_END)?.({
+                controller,
+                sampler,
+                sample:   sampler.atProgress(1),
+                progress: 1,
+            })
+
+            expect(drawerManager.open).toHaveBeenCalledWith(FLYTHROUGH_DRAWER)
         }
         finally {
             globalThis.__ = previousDoubleUnderscore

@@ -18,7 +18,7 @@ import { cleanup, fireEvent, render, waitFor }             from '@testing-librar
 import { FLYTHROUGH_DRAWER }                               from '@Core/constants'
 import {
     defaultFlythroughSettings, FLYTHROUGH_CAMERA_PRESET_ULTRA_SMOOTH, FLYTHROUGH_MARKER_MODE_HYSTERESIS,
-    FLYTHROUGH_MARKER_MODE_NAVIGATION,
+    FLYTHROUGH_MARKER_MODE_NAVIGATION, FLYTHROUGH_MARKER_MODE_TRACE,
 } from '@Core/ui/flythrough/FlythroughProgressionStyle'
 import { createFlythroughClipInstance }                          from '@Core/ui/flythrough/FlythroughClips'
 import { FlythroughDrawer }                                from '@Components/Flythrough/FlythroughDrawer'
@@ -232,6 +232,18 @@ describe('FlythroughDrawer', () => {
             expect(globalThis.lgs.settings.ui.flythrough.camera.groundOffset).toBeUndefined()
             expect(globalThis.lgs.stores.flythrough.camera.groundOffset).toBeUndefined()
         })
+    })
+
+    it('shows altitude and pitch fields in passive mode', () => {
+        globalThis.lgs.stores.flythrough.marker.mode = FLYTHROUGH_MARKER_MODE_TRACE
+        globalThis.lgs.settings.ui.flythrough.marker.mode = FLYTHROUGH_MARKER_MODE_TRACE
+
+        const view = render(<FlythroughDrawer/>)
+
+        expect(view.getByLabelText('Camera altitude')).toBeTruthy()
+        expect(view.getByLabelText('Altitude (m)')).toBeTruthy()
+        expect(view.getByLabelText('Pitch (deg)')).toBeTruthy()
+        expect(view.queryByLabelText('Heading (deg)')).toBeNull()
     })
 
     it('restores altitude on blur when the draft is emptied', async () => {

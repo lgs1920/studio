@@ -17,6 +17,7 @@
 import { CameraUtils }                                        from '@Utils/cesium/CameraUtils'
 import { POIUtils }                                           from '@Utils/cesium/POIUtils'
 import { TrackUtils }                                         from '@Utils/cesium/TrackUtils'
+import { FLYTHROUGH_DRAWER }                                  from '@Core/constants'
 import {
     Cartesian2, Cartesian3, Cartographic, CatmullRomSpline, ExtrapolationType, JulianDate, LinearApproximation,
     Math as CesiumMath, Matrix4, SampledPositionProperty, SceneTransforms, Transforms,
@@ -573,6 +574,7 @@ export class FlythroughMode {
     #savedCameraState = null
     #playbackStartCameraSettings = null
     #playbackCameraUserAdjusted = false
+    #flythroughDrawerWasOpenBeforePlayback = false
     #lastCameraHeading = null
     #lastCameraPitch = null
     #lastAppliedCameraView = null
@@ -705,6 +707,7 @@ export class FlythroughMode {
         }
         const startSample = sampler.atProgress?.(options.progress ?? 0)
         this.#captureCameraState({sample: startSample})
+        this.#captureFlythroughDrawerStateBeforePlayback()
         this.#capturePlaybackCameraSettings()
         const startList = this.#clipListForSlot(FLYTHROUGH_CLIP_SLOT_START)
         this.#deferStartCameraRecenter = startList.length > 0
@@ -1789,6 +1792,15 @@ export class FlythroughMode {
         }
     }
 
+    #captureFlythroughDrawerStateBeforePlayback = () => {
+        const drawerManager = globalThis.__?.ui?.drawerManager ?? null
+        this.#flythroughDrawerWasOpenBeforePlayback = drawerManager?.isCurrent?.(FLYTHROUGH_DRAWER) === true
+                                                || globalThis.lgs?.stores?.ui?.drawers?.open === FLYTHROUGH_DRAWER
+        if (this.#flythroughDrawerWasOpenBeforePlayback) {
+            drawerManager?.close?.()
+        }
+    }
+
     #markPlaybackCameraUserAdjusted = () => {
         this.#playbackCameraUserAdjusted = true
         if (globalThis.lgs?.stores?.flythrough) {
@@ -1812,6 +1824,15 @@ export class FlythroughMode {
         }
 
         return this.#persistCameraSettings(initialCamera)
+    }
+
+    #restoreFlythroughDrawerAfterPlayback = () => {
+        if (!this.#flythroughDrawerWasOpenBeforePlayback) {
+            return
+        }
+
+        this.#flythroughDrawerWasOpenBeforePlayback = false
+        globalThis.__?.ui?.drawerManager?.open?.(FLYTHROUGH_DRAWER)
     }
 
     #restoreCameraState = () => {
@@ -3515,6 +3536,7 @@ export class FlythroughMode {
                 this.#setFlythroughOrbitAllowed(true)
                 this.#deferStartCameraRecenter = false
                 this.#restoreJourneyToolbarVisibility()
+                this.#restoreFlythroughDrawerAfterPlayback()
                 void this.#restoreNearbyPOIsAfterPlayback()
                 this.#restorePlaybackCameraSettings()
                 resetRuntimeProgress(flythroughStore())
@@ -3547,6 +3569,7 @@ export class FlythroughMode {
                     this.#setFlythroughOrbitAllowed(true)
                     this.#deferStartCameraRecenter = false
                     this.#restoreJourneyToolbarVisibility()
+                    this.#restoreFlythroughDrawerAfterPlayback()
                     void this.#restoreNearbyPOIsAfterPlayback()
                     this.#restorePlaybackCameraSettings()
                     resetRuntimeProgress(flythroughStore())

@@ -941,112 +941,110 @@ export const FlythroughDrawer = memo(() => {
                                                          </WaSelect>
                                                      }
                                                  </div>
-                                                 {marker.mode !== FLYTHROUGH_MARKER_MODE_TRACE && (
-                                                     <div className="flythrough-fieldset">
-                                                         <WaSelect
-                                                             label="Camera altitude"
-                                                             label-at-start
+                                                 <div className="flythrough-fieldset">
+                                                     <WaSelect
+                                                         label="Camera altitude"
+                                                         label-at-start
+                                                         size="s"
+                                                         value={camera.altitudeMode}
+                                                         onChange={updateAltitudeMode}
+                                                         className="half-width">
+                                                         <WaOption
+                                                             value={FLYTHROUGH_CAMERA_ALTITUDE_CONSTANT}>{'Fixed'}</WaOption>
+                                                         <WaOption
+                                                             value={FLYTHROUGH_CAMERA_ALTITUDE_GROUND_OFFSET}>{'Ground offset'}</WaOption>
+                                                     </WaSelect>
+                                                     <div className="flythrough-style-field-grid is-single">
+                                                         <WaNumberInput
+                                                             label={`Altitude (${altitudeUnit})`}
                                                              size="s"
-                                                             value={camera.altitudeMode}
-                                                             onChange={updateAltitudeMode}
-                                                             className="half-width">
-                                                             <WaOption
-                                                                 value={FLYTHROUGH_CAMERA_ALTITUDE_CONSTANT}>{'Fixed'}</WaOption>
-                                                             <WaOption
-                                                                 value={FLYTHROUGH_CAMERA_ALTITUDE_GROUND_OFFSET}>{'Ground offset'}</WaOption>
-                                                         </WaSelect>
-                                                         <div className="flythrough-style-field-grid is-single">
-                                                             <WaNumberInput
-                                                                 label={`Altitude (${altitudeUnit})`}
-                                                                 size="s"
-                                                                 appearance="filled"
-                                                                 min={Math.round(UnitUtils.convert(10).to(altitudeUnit))}
-                                                                 step={Math.max(1, Math.round(UnitUtils.convert(50).to(altitudeUnit)))}
-                                                                 value={altitudeDisplayValue}
-                                                                 onFocus={() => beginCameraDraft('altitude', altitudeDisplayValue)}
-                                                                 onInput={event => {
-                                                                     const nextValue = event.target.value
+                                                             appearance="filled"
+                                                             min={Math.round(UnitUtils.convert(10).to(altitudeUnit))}
+                                                             step={Math.max(1, Math.round(UnitUtils.convert(50).to(altitudeUnit)))}
+                                                             value={altitudeDisplayValue}
+                                                             onFocus={() => beginCameraDraft('altitude', altitudeDisplayValue)}
+                                                             onInput={event => {
+                                                                 const nextValue = event.target.value
+                                                                 setCameraDrafts(current => ({
+                                                                     ...current,
+                                                                     altitude: nextValue,
+                                                                 }))
+                                                                 commitCameraAltitude(nextValue)
+                                                             }}
+                                                             onBlur={() => {
+                                                                 const currentValue = cameraDrafts.altitude
+                                                                 const committed = commitCameraAltitude(currentValue)
+                                                                 if (!committed && cameraDraftBaseline.current?.field === 'altitude') {
                                                                      setCameraDrafts(current => ({
                                                                          ...current,
-                                                                         altitude: nextValue,
+                                                                         altitude: String(Math.round(UnitUtils.convert(cameraDraftBaseline.current.altitude).to(altitudeUnit))),
                                                                      }))
-                                                                     commitCameraAltitude(nextValue)
-                                                                 }}
-                                                                 onBlur={() => {
-                                                                     const currentValue = cameraDrafts.altitude
-                                                                     const committed = commitCameraAltitude(currentValue)
-                                                                     if (!committed && cameraDraftBaseline.current?.field === 'altitude') {
-                                                                         setCameraDrafts(current => ({
-                                                                             ...current,
-                                                                             altitude: String(Math.round(UnitUtils.convert(cameraDraftBaseline.current.altitude).to(altitudeUnit))),
-                                                                         }))
-                                                                     }
-                                                                     clearCameraDraft('altitude')
-                                                                 }}
-                                                                 label-at-start className="half-width"/>
+                                                                 }
+                                                                 clearCameraDraft('altitude')
+                                                             }}
+                                                             label-at-start className="half-width"/>
+                                                         <WaNumberInput
+                                                             label="Pitch (deg)"
+                                                             size="s"
+                                                             appearance="filled"
+                                                             min="-89"
+                                                             max="-5"
+                                                             step="1"
+                                                             value={pitchDisplayValue}
+                                                             onFocus={() => beginCameraDraft('pitch', pitchDisplayValue)}
+                                                             onInput={event => {
+                                                                 const nextValue = event.target.value
+                                                                 setCameraDrafts(current => ({
+                                                                     ...current,
+                                                                     pitch: nextValue,
+                                                                 }))
+                                                                 commitCameraPitch(nextValue)
+                                                             }}
+                                                             onBlur={() => {
+                                                                 const currentValue = cameraDrafts.pitch
+                                                                 const committed = commitCameraPitch(currentValue)
+                                                                 if (!committed && cameraDraftBaseline.current?.field === 'pitch') {
+                                                                     setCameraDrafts(current => ({
+                                                                         ...current,
+                                                                         pitch: String(cameraDraftBaseline.current.pitch),
+                                                                     }))
+                                                                 }
+                                                                 clearCameraDraft('pitch')
+                                                             }}
+                                                             label-at-start className="half-width"/>
+                                                         {marker.mode !== FLYTHROUGH_MARKER_MODE_TRACE && camera.positionMode === FLYTHROUGH_CAMERA_POSITION_SYSTEM && (
                                                              <WaNumberInput
-                                                                 label="Pitch (deg)"
+                                                                 label="Heading (deg)"
                                                                  size="s"
                                                                  appearance="filled"
-                                                                 min="-89"
-                                                                 max="-5"
+                                                                 min="-180"
+                                                                 max="180"
                                                                  step="1"
-                                                                 value={pitchDisplayValue}
-                                                                 onFocus={() => beginCameraDraft('pitch', pitchDisplayValue)}
+                                                                 value={headingDisplayValue}
+                                                                 onFocus={() => beginCameraDraft('heading', headingDisplayValue)}
                                                                  onInput={event => {
                                                                      const nextValue = event.target.value
                                                                      setCameraDrafts(current => ({
                                                                          ...current,
-                                                                         pitch: nextValue,
+                                                                         heading: nextValue,
                                                                      }))
-                                                                     commitCameraPitch(nextValue)
+                                                                     commitCameraHeading(nextValue)
                                                                  }}
                                                                  onBlur={() => {
-                                                                     const currentValue = cameraDrafts.pitch
-                                                                     const committed = commitCameraPitch(currentValue)
-                                                                     if (!committed && cameraDraftBaseline.current?.field === 'pitch') {
+                                                                     const currentValue = cameraDrafts.heading
+                                                                     const committed = commitCameraHeading(currentValue)
+                                                                     if (!committed && cameraDraftBaseline.current?.field === 'heading') {
                                                                          setCameraDrafts(current => ({
                                                                              ...current,
-                                                                             pitch: String(cameraDraftBaseline.current.pitch),
+                                                                             heading: String(cameraDraftBaseline.current.heading),
                                                                          }))
                                                                      }
-                                                                     clearCameraDraft('pitch')
+                                                                     clearCameraDraft('heading')
                                                                  }}
                                                                  label-at-start className="half-width"/>
-                                                             {camera.positionMode === FLYTHROUGH_CAMERA_POSITION_SYSTEM && (
-                                                                 <WaNumberInput
-                                                                     label="Heading (deg)"
-                                                                     size="s"
-                                                                     appearance="filled"
-                                                                     min="-180"
-                                                                     max="180"
-                                                                     step="1"
-                                                                     value={headingDisplayValue}
-                                                                     onFocus={() => beginCameraDraft('heading', headingDisplayValue)}
-                                                                     onInput={event => {
-                                                                         const nextValue = event.target.value
-                                                                         setCameraDrafts(current => ({
-                                                                             ...current,
-                                                                             heading: nextValue,
-                                                                         }))
-                                                                         commitCameraHeading(nextValue)
-                                                                     }}
-                                                                     onBlur={() => {
-                                                                         const currentValue = cameraDrafts.heading
-                                                                         const committed = commitCameraHeading(currentValue)
-                                                                         if (!committed && cameraDraftBaseline.current?.field === 'heading') {
-                                                                             setCameraDrafts(current => ({
-                                                                                 ...current,
-                                                                                 heading: String(cameraDraftBaseline.current.heading),
-                                                                             }))
-                                                                         }
-                                                                         clearCameraDraft('heading')
-                                                                     }}
-                                                                     label-at-start className="half-width"/>
-                                                             )}
-                                                         </div>
+                                                         )}
                                                      </div>
-                                                 )}
+                                                 </div>
                                                 {marker.mode === FLYTHROUGH_MARKER_MODE_HYSTERESIS && (
                                                      <div className="flythrough-fieldset">
                                                          <WaSelect
