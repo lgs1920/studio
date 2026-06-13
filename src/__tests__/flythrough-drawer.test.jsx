@@ -19,6 +19,7 @@ import { FLYTHROUGH_DRAWER }                               from '@Core/constants
 import {
     defaultFlythroughSettings, FLYTHROUGH_CAMERA_PRESET_ULTRA_SMOOTH, FLYTHROUGH_MARKER_MODE_HYSTERESIS,
     FLYTHROUGH_MARKER_MODE_NAVIGATION,
+    normalizeFlythroughCamera,
 } from '@Core/ui/flythrough/FlythroughProgressionStyle'
 import { createFlythroughClipInstance }                          from '@Core/ui/flythrough/FlythroughClips'
 import { FlythroughDrawer }                                from '@Components/Flythrough/FlythroughDrawer'
@@ -192,11 +193,25 @@ describe('FlythroughDrawer', () => {
         vi.unstubAllGlobals()
     })
 
-    it('applies camera edits to Cesium immediately', async () => {
+    it('commits pitch edits on blur and keeps the draft while focused', async () => {
         const view = render(<FlythroughDrawer/>)
         const pitchInput = view.getByLabelText('Pitch (deg)')
+        const initialPitch = globalThis.lgs.settings.ui.flythrough.camera.pitch
 
+        fireEvent.focus(pitchInput)
         fireEvent.input(pitchInput, {target: {value: '-20'}})
+
+        expect(globalThis.lgs.settings.ui.flythrough.camera.pitch).toBe(initialPitch)
+        expect(globalThis.lgs.stores.flythrough.camera.pitch).toBe(initialPitch)
+
+        globalThis.lgs.settings.ui.flythrough.camera.pitch = -30
+        globalThis.lgs.stores.flythrough.camera.pitch = -30
+
+        await waitFor(() => {
+            expect(pitchInput.value).toBe('-20')
+        })
+
+        fireEvent.blur(pitchInput, {target: {value: '-20'}})
 
         await waitFor(() => {
             expect(__.ui.flythrough.refresh).toHaveBeenCalledWith({camera: true})
@@ -229,21 +244,62 @@ describe('FlythroughDrawer', () => {
         })
     })
 
-    it('displays camera altitude in imperial units and stores it in meters', async () => {
+    it('commits altitude edits on blur and stores them in meters', async () => {
         globalThis.lgs.settings.unitSystem.current = 1
         globalThis.lgs.stores.flythrough.camera.altitude = 1000
         globalThis.lgs.settings.ui.flythrough.camera.altitude = 1000
 
         const view = render(<FlythroughDrawer/>)
         const altitudeInput = view.getByLabelText('Altitude (ft)')
+        const initialAltitude = globalThis.lgs.settings.ui.flythrough.camera.altitude
+        const expectedAltitude = normalizeFlythroughCamera({altitude: UnitUtils.revert('3280.84', ELEVATION_UNITS[1])}).altitude
 
         expect(Number(altitudeInput.value)).toBe(Math.round(UnitUtils.convert(1000).to(ELEVATION_UNITS[1])))
 
+        fireEvent.focus(altitudeInput)
         fireEvent.input(altitudeInput, {target: {value: '3280.84'}})
 
+        expect(globalThis.lgs.settings.ui.flythrough.camera.altitude).toBe(initialAltitude)
+        expect(globalThis.lgs.stores.flythrough.camera.altitude).toBe(initialAltitude)
+
+        globalThis.lgs.settings.ui.flythrough.camera.altitude = 900
+        globalThis.lgs.stores.flythrough.camera.altitude = 900
+
         await waitFor(() => {
-            expect(globalThis.lgs.settings.ui.flythrough.camera.altitude).toBeCloseTo(1000, 1)
-            expect(globalThis.lgs.stores.flythrough.camera.altitude).toBeCloseTo(1000, 1)
+            expect(altitudeInput.value).toBe('3280.84')
+        })
+
+        fireEvent.blur(altitudeInput, {target: {value: '3280.84'}})
+
+        await waitFor(() => {
+            expect(globalThis.lgs.settings.ui.flythrough.camera.altitude).toBeCloseTo(expectedAltitude, 6)
+            expect(globalThis.lgs.stores.flythrough.camera.altitude).toBeCloseTo(expectedAltitude, 6)
+        })
+    })
+
+    it('commits heading edits on blur and protects the draft from external updates', async () => {
+        const view = render(<FlythroughDrawer/>)
+        const headingInput = view.getByLabelText('Heading (deg)')
+        const initialHeading = globalThis.lgs.settings.ui.flythrough.camera.heading ?? 0
+
+        fireEvent.focus(headingInput)
+        fireEvent.input(headingInput, {target: {value: '15'}})
+
+        expect(globalThis.lgs.settings.ui.flythrough.camera.heading ?? 0).toBe(initialHeading)
+        expect(globalThis.lgs.stores.flythrough.camera.heading ?? 0).toBe(initialHeading)
+
+        globalThis.lgs.settings.ui.flythrough.camera.heading = -45
+        globalThis.lgs.stores.flythrough.camera.heading = -45
+
+        await waitFor(() => {
+            expect(headingInput.value).toBe('15')
+        })
+
+        fireEvent.blur(headingInput, {target: {value: '15'}})
+
+        await waitFor(() => {
+            expect(globalThis.lgs.settings.ui.flythrough.camera.heading).toBe(15)
+            expect(globalThis.lgs.stores.flythrough.camera.heading).toBe(15)
         })
     })
 
