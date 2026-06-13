@@ -4579,15 +4579,13 @@ describe('flythrough phase 1 playback controller', () => {
             const targetTransform = Transforms.eastNorthUpToFixedFrame(targetCartesian)
             const east = Matrix4.getColumn(targetTransform, 0, new Cartesian3())
             const north = Matrix4.getColumn(targetTransform, 1, new Cartesian3())
-            const startDelta = Cartesian3.subtract(setViewCalls[0].destination, targetCartesian, new Cartesian3())
-            const endDelta = Cartesian3.subtract(setViewCalls.at(-1).destination, targetCartesian, new Cartesian3())
+            const delta = Cartesian3.subtract(flyToCalls[0].destination, targetCartesian, new Cartesian3())
 
-            expect(setViewCalls.length).toBeGreaterThan(1)
-            expect(flyToCalls).toHaveLength(0)
-            expect(Cartesian3.dot(startDelta, east)).toBeCloseTo(0, 6)
-            expect(Cartesian3.dot(endDelta, east)).toBeCloseTo(0, 6)
-            expect(Cartesian3.dot(startDelta, north)).toBeLessThan(0)
-            expect(Cartesian3.dot(endDelta, north)).toBeLessThan(0)
+            expect(flyToCalls).toHaveLength(1)
+            expect(setViewCalls).toHaveLength(1)
+            expect(flyToCalls[0].maximumHeight).toBe(1800)
+            expect(Cartesian3.dot(delta, east)).toBeCloseTo(0, 6)
+            expect(Cartesian3.dot(delta, north)).toBeLessThan(0)
         }
         finally {
             vi.useRealTimers()

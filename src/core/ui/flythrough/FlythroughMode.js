@@ -2603,49 +2603,12 @@ export class FlythroughMode {
         return prev + delta * clamp(factor, 0, 1)
     }
 
-    #lerpRadians = (start, end, ratio) => {
-        const safeRatio = clamp(finiteNumber(ratio) ?? 0, 0, 1)
-        const delta = flythroughAngularDelta(start, end)
-        if (delta === null) {
-            return finiteNumber(end) ?? finiteNumber(start) ?? 0
-        }
-
-        return (finiteNumber(start) ?? 0) + (delta * safeRatio)
-    }
-
-    #easeInOutCubic = value => {
-        const t = clamp(finiteNumber(value) ?? 0, 0, 1)
-        return t < 0.5
-               ? 4 * t * t * t
-               : 1 - Math.pow(-2 * t + 2, 3) / 2
-    }
-
-    #cubicBezierPoint = (p0, p1, p2, p3, t) => {
-        const u = 1 - t
-        const tt = t * t
-        const uu = u * u
-        const uuu = uu * u
-        const ttt = tt * t
-        return Cartesian3.add(
-            Cartesian3.add(
-                Cartesian3.add(
-                    Cartesian3.multiplyByScalar(p0, uuu, new Cartesian3()),
-                    Cartesian3.multiplyByScalar(p1, 3 * uu * t, new Cartesian3()),
-                    new Cartesian3(),
-                ),
-                Cartesian3.multiplyByScalar(p2, 3 * u * tt, new Cartesian3()),
-                new Cartesian3(),
-            ),
-            Cartesian3.multiplyByScalar(p3, ttt, new Cartesian3()),
-            new Cartesian3(),
-        )
-    }
-
     #cancelCameraBezierTransition = (resolveValue = false) => {
         if (this.#cameraBezierFrame !== null) {
             globalThis.clearTimeout?.(this.#cameraBezierFrame)
             this.#cameraBezierFrame = null
         }
+        globalThis.lgs?.viewer?.camera?.cancelFlight?.()
         if (this.#cameraBezierResolve !== null) {
             const resolve = this.#cameraBezierResolve
             this.#cameraBezierResolve = null
@@ -2940,7 +2903,7 @@ export class FlythroughMode {
             finishFlight()
             return Promise.resolve()
         }
-        return this.#startCameraBezierTransition({
+        return this.#startCameraTransition({
             sample,
             heading:        safeHeading,
             pitch:          safePitch,
@@ -2951,13 +2914,12 @@ export class FlythroughMode {
         })
     }
 
-    #startCameraBezierTransition = ({
+    #startCameraTransition = ({
                                         sample,
                                         heading,
                                         pitch,
                                         cameraSettings,
                                         cameraHeight = null,
-                                        startDirection = null,
                                         endFrame = null,
                                         duration = FLYTHROUGH_HEADING_TRANSITION_DURATION_SECONDS,
                                     }) => {
@@ -2977,125 +2939,78 @@ export class FlythroughMode {
             return Promise.resolve(false)
         }
 
-        const startCamera = viewer.camera
         this.#cancelCameraBezierTransition(false)
 
-        const startHeading = finiteNumber(startCamera.heading) ?? this.#lastCameraHeading ?? 0
-        const startPitch = finiteNumber(startCamera.pitch) ?? this.#lastCameraPitch ?? SAFE_TOP_DOWN_PITCH
-        const startHeight = finiteNumber(startCamera.positionCartographic?.height)
-                            ?? cameraHeight
-                            ?? frame.currentHeight
-        const startFrame = this.#cameraRecenterFrame({
-            sample,
-            heading:        startHeading,
-            pitch:          startPitch,
-            cameraSettings,
-            cameraHeight:   startHeight,
-        })
         const endHeading = frame.safeHeading
         const endPitch = frame.safePitch
-        const startTime = this.#now()
-        const durationMillis = Math.max(1, Number(duration) * 1000)
         const endPosition = frame.destination
-        const endDirection = frame.direction
-        const startPosition = Cartesian3.clone(startCamera.positionWC ?? startCamera.position, new Cartesian3())
-                              ?? startFrame?.destination
-        const startDirectionVector = startDirection
-                                     ?? Cartesian3.clone(
-                                         startCamera.directionWC ?? startCamera.direction ?? startFrame?.direction,
-                                         new Cartesian3(),
-                                     )
-        if (!startPosition) {
-            return Promise.resolve(false)
-        }
-
-        const safeStartDirection = Cartesian3.magnitudeSquared(startDirectionVector) > CARTESIAN_EPSILON
-                                   ? Cartesian3.normalize(startDirectionVector, startDirectionVector)
-                                   : Cartesian3.subtract(endPosition, startPosition, new Cartesian3())
-        const safeEndDirection = Cartesian3.magnitudeSquared(endDirection) > CARTESIAN_EPSILON
-                                 ? Cartesian3.normalize(endDirection, endDirection)
-                                 : Cartesian3.subtract(endPosition, startPosition, new Cartesian3())
-        const delta = Cartesian3.subtract(endPosition, startPosition, new Cartesian3())
-        const arcDistance = Math.max(
-            25,
-            Cartesian3.magnitude(delta) * 0.32,
-            Math.abs((finiteNumber(startCamera.positionCartographic?.height) ?? 0) - frame.currentHeight) * 0.35,
-        )
-        const startUp = Cartesian3.normalize(startPosition, new Cartesian3())
-        const endUp = Cartesian3.normalize(endPosition, new Cartesian3())
-        const liftDirection = Cartesian3.normalize(
-            Cartesian3.add(startUp, endUp, new Cartesian3()),
-            new Cartesian3(),
-        )
-        const safeLiftDirection = Cartesian3.magnitudeSquared(liftDirection) > CARTESIAN_EPSILON
-                                  ? liftDirection
-                                  : Cartesian3.clone(endUp, new Cartesian3())
-        const control1 = Cartesian3.add(
-            startPosition,
-            Cartesian3.add(
-                Cartesian3.multiplyByScalar(safeStartDirection, arcDistance, new Cartesian3()),
-                Cartesian3.multiplyByScalar(safeLiftDirection, arcDistance * 0.4, new Cartesian3()),
-                new Cartesian3(),
-            ),
-            new Cartesian3(),
-        )
-        const control2 = Cartesian3.add(
-            endPosition,
-            Cartesian3.add(
-                Cartesian3.multiplyByScalar(safeEndDirection, -arcDistance, new Cartesian3()),
-                Cartesian3.multiplyByScalar(safeLiftDirection, arcDistance * 0.4, new Cartesian3()),
-                new Cartesian3(),
-            ),
-            new Cartesian3(),
+        const startHeight = finiteNumber(globalThis.lgs?.viewer?.camera?.positionCartographic?.height)
+                            ?? cameraHeight
+                            ?? frame.currentHeight
+        const maximumHeight = Math.max(
+            finiteNumber(startHeight) ?? 0,
+            finiteNumber(frame.currentHeight) ?? 0,
         )
 
         this.#cameraFlightActive = true
         this.#cameraApplyingView = true
-        this.#cameraAutoTrackingIgnoreUntil = startTime + Math.max(180, durationMillis + 180)
+        this.#cameraAutoTrackingIgnoreUntil = this.#now() + Math.max(180, Math.max(0, Number(duration) * 1000) + 180)
 
         return new Promise(resolve => {
             this.#cameraBezierResolve = resolve
-
-            const tick = () => {
-                const now = this.#now()
-                const ratio = clamp((now - startTime) / durationMillis, 0, 1)
-                const t = this.#easeInOutCubic(ratio)
-                const destination = this.#cubicBezierPoint(startPosition, control1, control2, endPosition, t)
-                const headingNow = this.#lerpRadians(startHeading, endHeading, t)
-                const pitchNow = this.#lerpRadians(startPitch, endPitch, t)
-
-                try {
-                    viewer.camera.setView?.({
-                        destination,
-                        orientation: {
-                            heading: headingNow,
-                            pitch:   pitchNow,
-                            roll:    0,
-                        },
-                    })
-                    this.#lastCameraHeading = headingNow
-                    this.#lastCameraPitch = pitchNow
-                }
-                catch (error) {
-                    console.error('[FlythroughMode] Bezier camera transition failed.', error)
-                }
-
-                if (ratio >= 1) {
-                    this.#cameraBezierFrame = null
-                    this.#cameraApplyingView = false
-                    this.#cameraFlightActive = false
-                    this.#cameraBezierResolve = null
-                    this.#introHeadingTransition = null
-                    this.#lastCameraHeading = endHeading
-                    this.#lastCameraPitch = endPitch
-                    resolve(true)
+            const settle = (result) => {
+                if (this.#cameraBezierResolve === null) {
                     return
                 }
-
-                this.#cameraBezierFrame = globalThis.setTimeout?.(tick, 16) ?? null
+                const done = this.#cameraBezierResolve
+                this.#cameraBezierResolve = null
+                this.#cameraBezierFrame = null
+                this.#cameraApplyingView = false
+                this.#cameraFlightActive = false
+                this.#introHeadingTransition = null
+                if (result) {
+                    this.#lastCameraHeading = endHeading
+                    this.#lastCameraPitch = endPitch
+                }
+                done(result)
             }
 
-            tick()
+            if (typeof viewer.camera.flyTo === 'function') {
+                try {
+                    viewer.camera.flyTo({
+                        destination: endPosition,
+                        orientation: {
+                            heading: endHeading,
+                            pitch:   endPitch,
+                            roll:    0,
+                        },
+                        duration: Math.max(0, Number(duration) || 0),
+                        maximumHeight,
+                        complete: () => settle(true),
+                        cancel:   () => settle(false),
+                    })
+                    return
+                }
+                catch (error) {
+                    console.error('[FlythroughMode] Camera flyTo transition failed.', error)
+                }
+            }
+
+            try {
+                viewer.camera.setView?.({
+                    destination: endPosition,
+                    orientation: {
+                        heading: endHeading,
+                        pitch:   endPitch,
+                        roll:    0,
+                    },
+                })
+                settle(true)
+            }
+            catch (error) {
+                console.error('[FlythroughMode] Camera transition failed.', error)
+                settle(false)
+            }
         })
     }
 
