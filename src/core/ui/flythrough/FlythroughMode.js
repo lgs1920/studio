@@ -541,6 +541,7 @@ const resetRuntimeProgress = (store) => {
     store.toolbarVisible = false
     store.orbitAllowed = true
     store.cameraUserAdjusted = false
+    store.cameraUpdateSource = null
     store.hoverSample = null
     store.metricOverlay = {
         ...store.metricOverlay,
@@ -2541,6 +2542,10 @@ export class FlythroughMode {
     }
 
     #updateCameraFromCesiumControls = () => {
+        const store = flythroughStore()
+        if (store?.cameraUpdateSource === 'drawer') {
+            return
+        }
         this.#markPlaybackCameraUserAdjusted()
         this.syncCameraFromCesiumControls()
     }
@@ -3268,6 +3273,7 @@ export class FlythroughMode {
                          progress,
                          forceToleranceRecenter = false,
                          immediateToleranceRecenter = false,
+                         source = null,
                      } = {}) => {
         const settings = getFlythroughSettings()
         const marker = normalizeFlythroughMarker(globalThis.lgs?.stores?.flythrough?.marker ?? settings.marker)
@@ -3297,9 +3303,11 @@ export class FlythroughMode {
         const cameraSettings = normalizeFlythroughCamera(globalThis.lgs?.stores?.flythrough?.camera ?? settings.camera)
         const markerSettings = normalizeFlythroughMarker(globalThis.lgs?.stores?.flythrough?.marker ?? settings.marker)
         const normalizedPitch = finiteNumber(cameraSettings?.pitch) ?? -65
-        const pitch = normalizedPitch <= -89
-                      ? SAFE_TOP_DOWN_PITCH
-                      : degreesToRadians(normalizedPitch)
+        const pitch = source === 'drawer'
+                      ? degreesToRadians(normalizedPitch)
+                      : normalizedPitch <= -89
+                        ? SAFE_TOP_DOWN_PITCH
+                        : degreesToRadians(normalizedPitch)
         let desiredHeading
         if (cameraSettings.positionMode === FLYTHROUGH_CAMERA_POSITION_SYSTEM) {
             if (Number.isFinite(cameraSettings?.heading)) {
@@ -3315,19 +3323,25 @@ export class FlythroughMode {
                 positionMode: cameraSettings.positionMode,
             })
         }
-        const heading = flythroughCameraHeadingWithHysteresis({
-            previousHeading: this.#lastCameraHeading,
-            nextHeading:     desiredHeading,
-            threshold:       cameraSettings.positionMode === FLYTHROUGH_CAMERA_POSITION_SYSTEM
-                              ? CAMERA_HEADING_HYSTERESIS_RADIANS
-                              : CAMERA_HEADING_MIN_CHANGE_RADIANS,
-        })
-        const smoothHeading = this.#smoothRadians(
-            this.#lastCameraHeading,
-            heading,
-            this.#headingEasingFactor(cameraSettings, heading),
-        )
-        const smoothPitch = this.#smoothRadians(this.#lastCameraPitch, pitch, 0.08)
+        const heading = source === 'drawer'
+                      ? desiredHeading
+                      : flythroughCameraHeadingWithHysteresis({
+                          previousHeading: this.#lastCameraHeading,
+                          nextHeading:     desiredHeading,
+                          threshold:       cameraSettings.positionMode === FLYTHROUGH_CAMERA_POSITION_SYSTEM
+                                            ? CAMERA_HEADING_HYSTERESIS_RADIANS
+                                            : CAMERA_HEADING_MIN_CHANGE_RADIANS,
+                      })
+        const smoothHeading = source === 'drawer'
+                              ? heading
+                              : this.#smoothRadians(
+                                  this.#lastCameraHeading,
+                                  heading,
+                                  this.#headingEasingFactor(cameraSettings, heading),
+                              )
+        const smoothPitch = source === 'drawer'
+                            ? pitch
+                            : this.#smoothRadians(this.#lastCameraPitch, pitch, 0.08)
         const anchorSample = this.#markerPositionForSample(sample, markerSettings)
         const introTransition = this.#introHeadingTransition
         if (introTransition) {
