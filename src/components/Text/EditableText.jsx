@@ -351,7 +351,6 @@ export const EditableText = ({id}) => {
 
     return (
         <div
-            key={`f-${fontTick}`}
             className={classNames('lgs-editable-text-wrapper', {'text-editing-progress': isEditing})}
             style={{
                 ...cssVars,
