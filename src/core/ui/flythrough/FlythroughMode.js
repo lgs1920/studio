@@ -540,6 +540,7 @@ const resetRuntimeProgress = (store) => {
     store.sample = null
     store.totalDistance = 0
     store.toolbarVisible = false
+    store.mainUiHidden = false
     store.orbitAllowed = true
     store.cameraUserAdjusted = false
     store.cameraUpdateSource = null
@@ -730,6 +731,12 @@ export class FlythroughMode {
         const token = ++this.#clipSequenceToken
         let startResult = startSample
         void this.#prepareNearbyPOIsForPlayback(startSample)
+        const runtimeStore = flythroughStore()
+        if (runtimeStore) {
+            runtimeStore.toolbarVisible = true
+            runtimeStore.mainUiHidden = true
+        }
+        this.#hideMainUI()
 
         if (startList.length > 0) {
             this.#setContinuousRender(true)
@@ -1457,6 +1464,7 @@ export class FlythroughMode {
         this.#removeToleranceZoneOverlay()
         this.#restorePlaybackCameraSettings()
         resetRuntimeProgress(flythroughStore())
+        this.#restoreMainUI()
         this.#restoreCurrentJourneyVisibility()
         this.#resetCameraController({preserveSavedCameraState: true})
         this.#restoreJourneyToolbarVisibility()
@@ -1891,6 +1899,7 @@ export class FlythroughMode {
         this.#deferStartCameraRecenter = false
         this.#resetCameraController({preserveSavedCameraState: true})
         this.#restoreJourneyToolbarVisibility()
+        this.#restoreMainUI()
         this.#restorePlaybackCameraSettings()
         resetRuntimeProgress(flythroughStore())
         this.#restoreCurrentJourneyVisibility()
@@ -1953,6 +1962,20 @@ export class FlythroughMode {
         globalThis.window?.dispatchEvent?.(new CustomEvent(FLYTHROUGH_JOURNEY_TOOLBAR_VISIBILITY_EVENT, {
             detail: {hidden: false},
         }))
+    }
+
+    #hideMainUI = () => {
+        const store = flythroughStore()
+        if (store) {
+            store.mainUiHidden = true
+        }
+    }
+
+    #restoreMainUI = () => {
+        const store = flythroughStore()
+        if (store) {
+            store.mainUiHidden = false
+        }
     }
 
     restoreJourneyToolbarVisibility = () => {
@@ -3453,6 +3476,7 @@ export class FlythroughMode {
                 this.#deferStartCameraRecenter = false
                 this.#restoreJourneyToolbarVisibility()
                 this.#restoreFlythroughDrawerAfterPlayback()
+                this.#restoreMainUI()
                 void this.#restoreNearbyPOIsAfterPlayback()
                 this.#restorePlaybackCameraSettings()
                 resetRuntimeProgress(flythroughStore())
@@ -3486,6 +3510,7 @@ export class FlythroughMode {
                     this.#deferStartCameraRecenter = false
                     this.#restoreJourneyToolbarVisibility()
                     this.#restoreFlythroughDrawerAfterPlayback()
+                    this.#restoreMainUI()
                     void this.#restoreNearbyPOIsAfterPlayback()
                     this.#restorePlaybackCameraSettings()
                     resetRuntimeProgress(flythroughStore())

@@ -149,6 +149,7 @@ export const FlythroughProgressBar = memo(({showSettings = false, className = ''
     const {current: unitSystem} = useSnapshot(lgs.settings.unitSystem)
     const {drawers: {open: openDrawer}} = useSnapshot(lgs.stores.ui)
     const idPrefix = useMemo(() => `flythrough-progress-${uuid()}`, [])
+    const isUiHidden = flythrough.mainUiHidden === true
     const hasPlaybackSample = Boolean((flythrough.active || flythrough.playing || flythrough.paused) && flythrough.sample)
     const progress = hasPlaybackSample ? clampProgress(flythrough.progress) : 0
     const direction = Number(flythrough.direction) < 0 ? -1 : 1
@@ -278,7 +279,7 @@ export const FlythroughProgressBar = memo(({showSettings = false, className = ''
                     <WaIcon name="stop" variant="regular"/>
                 </WaButton>
             </span>
-            {showSettings &&
+            {showSettings && !isUiHidden &&
                 <span className="flythrough-progress-settings">
                     <FlythroughTooltip targetId={`${idPrefix}-settings`}>{settingsLabel}</FlythroughTooltip>
                     <WaButton

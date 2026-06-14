@@ -224,78 +224,83 @@ export const MainUI = memo(() => {
     const {primaryEntrance, secondaryEntrance} = arrangeDrawers()
     const videoCaptureActive = video.preRecording || video.recording || video.snapshot || video.finalizing
     const syncWithVideo = flythrough.recordingSync === true
+    const isFlythroughUiHidden = flythrough.mainUiHidden === true
 
     return (
         <>
             <MapPointContextMenuTrigger/>
-            <div id="lgs-main-ui" onKeyDown={handleKeyDown}>
-                {!video.editing && (
-                    <>
-                        <div id="primary-buttons-bar" className={primaryEntrance}>
-                            <SettingsButton tooltip={tooltipDir}/>
-                            <LayersButton tooltip={tooltipDir}/>
-                            <POIEditButton tooltip={tooltipDir}/>
-                            <EditorPanelButton tooltip={tooltipDir}/>
-                            {/* <ProfileButton tooltip={tooltipDir}/> */}
-                            <TextButton tooltip={tooltipDir}/>
-                            <InformationButton tooltip={tooltipDir}/>
-                            <SupportUIButton tooltip={tooltipDir}/>
-                        </div>
-                        <div id="secondary-buttons-bar" className={secondaryEntrance}>
-                            {!video.recording && <Compass sensitivity={100}/>}
-                            <div id="secondary-buttons-bar-content">
-                                <SceneModeSelector tooltip={toolBar.fromStart ? 'left' : 'right'}/>
-                                <GeocodingButton tooltip={toolBar.fromStart ? 'left' : 'right'}/>
-                                <OrbitButton tooltip={toolBar.fromStart ? 'left' : 'right'}/>
-                                {!videoCaptureActive && <FullScreenButton tooltip={toolBar.fromStart ? 'left' : 'right'}/>}
-                                <div className="sync-linked-actions">
-                                    <VideoButton tooltip={toolBar.fromStart ? 'left' : 'right'}/>
-                                    <FlythroughButton tooltip={toolBar.fromStart ? 'left' : 'right'}/>
-                                    <SyncLinkBadge visible={syncWithVideo} className="sync-linked-actions-badge"/>
+            <FlythroughControlsWidget/>
+            {!isFlythroughUiHidden && (
+                <>
+                    <div id="lgs-main-ui" onKeyDown={handleKeyDown}>
+                        {!video.editing && (
+                            <>
+                                <div id="primary-buttons-bar" className={primaryEntrance}>
+                                    <SettingsButton tooltip={tooltipDir}/>
+                                    <LayersButton tooltip={tooltipDir}/>
+                                    <POIEditButton tooltip={tooltipDir}/>
+                                    <EditorPanelButton tooltip={tooltipDir}/>
+                                    {/* <ProfileButton tooltip={tooltipDir}/> */}
+                                    <TextButton tooltip={tooltipDir}/>
+                                    <InformationButton tooltip={tooltipDir}/>
+                                    <SupportUIButton tooltip={tooltipDir}/>
                                 </div>
+                                <div id="secondary-buttons-bar" className={secondaryEntrance}>
+                                    {!video.recording && <Compass sensitivity={100}/>}
+                                    <div id="secondary-buttons-bar-content">
+                                        <SceneModeSelector tooltip={toolBar.fromStart ? 'left' : 'right'}/>
+                                        <GeocodingButton tooltip={toolBar.fromStart ? 'left' : 'right'}/>
+                                        <OrbitButton tooltip={toolBar.fromStart ? 'left' : 'right'}/>
+                                        {!videoCaptureActive && <FullScreenButton tooltip={toolBar.fromStart ? 'left' : 'right'}/>}
+                                        <div className="sync-linked-actions">
+                                            <VideoButton tooltip={toolBar.fromStart ? 'left' : 'right'}/>
+                                            <FlythroughButton tooltip={toolBar.fromStart ? 'left' : 'right'}/>
+                                            <SyncLinkBadge visible={syncWithVideo} className="sync-linked-actions-badge"/>
+                                        </div>
+                                    </div>
+                                </div>
+                                {geocoderDialog.mounted && <GeocodingWidget/>}
+                                <OrbitWidget/>
+                                <PanoramaWidget/>
+                            </>
+                        )}
+
+                        {!video.editing && (
+                            <>
+                                <CameraTarget/>
+                                <div id="bottom-left-ui">
+
+                                </div>
+                                <div id="bottom-right-ui">
+                                    {!video.recording && <CreditsBar/>}
+                                </div>
+                            </>
+                        )}
+
+                        {lgs.platform !== 'production' && (
+                            <div id="used-platform">
+                                {lgs.platform}-{lgs.versions.studio}
                             </div>
-                        </div>
-                        {geocoderDialog.mounted && <GeocodingWidget/>}
-                        <OrbitWidget/>
-                        <PanoramaWidget/>
-                        <FlythroughControlsWidget/>
-                    </>
-                )}
-
-                {!video.editing && (
-                    <>
-                        <CameraTarget/>
-                        <div id="bottom-left-ui">
-
-                        </div>
-                        <div id="bottom-right-ui">
-                            {!video.recording && <CreditsBar/>}
-                        </div>
-                    </>
-                )}
-
-                {lgs.platform !== 'production' && (
-                    <div id="used-platform">
-                        {lgs.platform}-{lgs.versions.studio}
+                        )}
+                        <InformationPanel/>
+                        <SettingsPanel/>
+                        <LayersPanel/>
+                        <TracksEditor/>
+                        <JourneyGroupsDrawer/>
+                        <FlythroughDrawer/>
+                        <MapPOIEditPanel/>
+                        <WidgetEditorPanel/>
                     </div>
-                )}
-                <InformationPanel/>
-                <SettingsPanel/>
-                <LayersPanel/>
-                <TracksEditor/>
-                <JourneyGroupsDrawer/>
-                <FlythroughDrawer/>
-                <MapPOIEditPanel/>
-                <WidgetEditorPanel/>
-            </div>
-            <SupportUI/>
-            <JourneyLoaderUI multiple/>
-            <ContextMenuRenderer/>
+                    <SupportUI/>
+                    <JourneyLoaderUI multiple/>
+                    <ContextMenuRenderer/>
 
-            <MapPOIMonitor/>
-            <VideoDownloadAndShareDialog/>
+                    <MapPOIMonitor/>
+                    <VideoDownloadAndShareDialog/>
 
-            {mainUI.callForActions.active && <CallForActions/>}
+                    {mainUI.callForActions.active && <CallForActions/>}
+                </>
+            )}
 
         </>
     )

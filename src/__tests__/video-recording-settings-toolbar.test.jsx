@@ -122,4 +122,5 @@ describe('VideoRecordingSettingsToolbar', () => {
         expect(button.getAttribute('aria-pressed')).toBe('true')
         expect(button.className).toContain('is-selected')
     })
+
 })

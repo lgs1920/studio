@@ -42,7 +42,11 @@ export const FlythroughButton = (props) => {
     } = props ?? {}
     const isLinked = flythrough.recordingSync === true
     const isDrawerOpen = selected !== undefined ? selected : __.ui.drawerManager?.isCurrent?.(FLYTHROUGH_DRAWER) === true
-    const visible = lgs.theJourney && !video.recording && !video.preRecording && !video.snapshot && (!showOnlyWhenLinked || isLinked)
+    const visible = lgs.theJourney
+                  && !video.recording
+                  && !video.preRecording
+                  && !video.snapshot
+                  && (!showOnlyWhenLinked || isLinked)
     const buttonClassName = isDrawerOpen ? `${className} is-selected`.trim() : className
 
     const handleClick = useCallback(() => {

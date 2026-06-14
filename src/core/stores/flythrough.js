@@ -41,6 +41,7 @@ export const flythrough = {
     markerRadius:   35,
     totalDistance:  0,
     toolbarVisible: false,
+    mainUiHidden:   false,
     recordingSync:  false,
     videoCropRect:  null,
     orbitAllowed:   true,
