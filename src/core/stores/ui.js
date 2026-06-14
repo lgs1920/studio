@@ -59,6 +59,7 @@ export const ui = {
             target:    false,
             rpm:       1,
             direction: 1,
+            visible:   true,
         },
         cameraFlight:        {
             running: false,
@@ -71,6 +72,7 @@ export const ui = {
             heading:      0,
             rpm:          1,
             direction:    1,
+            visible:      true,
         },
     },
 

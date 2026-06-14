@@ -160,6 +160,7 @@ export class SceneManager {
 
     get startRotate() {
         lgs.stores.ui.mainUI.rotate.running = true
+        lgs.stores.ui.mainUI.rotate.visible = true
         return lgs.stores.ui.mainUI.rotate.running
     }
 
@@ -174,6 +175,10 @@ export class SceneManager {
 
     //
     focusPreProcessing = (point, options) => {
+        if (options?.rotate) {
+            lgs.stores.ui.mainUI.rotate.visible = true
+        }
+
         if (options?.rotate && !__.ui.cameraManager?.isRotating?.() && !__.ui.cameraManager?.isFlying?.()) {
             __.ui.cameraManager?.syncPositionInformation?.()
         }

@@ -632,7 +632,7 @@ export const OrbitWidget = memo(() => {
             <OrbitInteractionHintsWidget/>
             <OrbitCameraAdjustmentOverlay/>
             <Widget
-                isVisible={rotate.running && !panorama.active}
+                isVisible={rotate.running && rotate.visible !== false && !panorama.active}
                 config={config}
                 className="orbit-widget-shell"
             >

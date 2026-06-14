@@ -156,6 +156,7 @@ export const MapPOIContextMenu = ({menuRef, targetId}) => {
             element: CURRENT_POI,
             slug:    currentPoi.slug ?? currentPoi.id,
         }
+        panorama.visible = true
         panorama.heading = lgs.stores.main.components.camera.position.heading ?? 0
         panorama.pitch = storedPanorama.pitch ?? DEFAULT_PANORAMA_PITCH
         panorama.heightOffset = storedPanorama.heightOffset ?? DEFAULT_PANORAMA_HEIGHT_OFFSET

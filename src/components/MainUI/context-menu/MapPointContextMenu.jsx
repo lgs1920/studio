@@ -118,6 +118,7 @@ export const MapPointContextMenu = ({target, menuRef}) => {
 
         const orbitSettings = getOrbitSettings(target, 'rotation')
         setOrbitStoreSettings(lgs.stores.ui.mainUI.rotate, orbitSettings)
+        lgs.stores.ui.mainUI.rotate.visible = true
 
         await __.ui.sceneManager.focus(target, {
             direction:  orbitSettings.direction,
@@ -145,6 +146,7 @@ export const MapPointContextMenu = ({target, menuRef}) => {
 
         const panorama = lgs.stores.ui.mainUI.panorama
         const panoramaSettings = getOrbitSettings(target, 'panorama')
+        panorama.visible = true
         panorama.target = target
         panorama.heading = lgs.stores.main.components.camera.position.heading ?? 0
         panorama.pitch = Number.isFinite(panorama.pitch) ? panorama.pitch : -12

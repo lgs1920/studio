@@ -104,6 +104,7 @@ export const MapPOIEditMenu = memo(({poiId}) => {
             element: CURRENT_POI,
             slug:    pointSnap.slug ?? pointSnap.id,
         }
+        panorama.visible = true
         panorama.heading = lgs.stores.main.components.camera.position.heading ?? 0
         panorama.pitch = storedPanorama.pitch ?? DEFAULT_PANORAMA_PITCH
         panorama.heightOffset = storedPanorama.heightOffset ?? DEFAULT_PANORAMA_HEIGHT_OFFSET
