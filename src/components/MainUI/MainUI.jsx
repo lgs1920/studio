@@ -230,6 +230,7 @@ export const MainUI = memo(() => {
         <>
             <MapPointContextMenuTrigger/>
             <FlythroughControlsWidget/>
+            <MapPOIMonitor/>
             {!isFlythroughUiHidden && (
                 <>
                     <div id="lgs-main-ui" onKeyDown={handleKeyDown}>
@@ -294,8 +295,6 @@ export const MainUI = memo(() => {
                     <SupportUI/>
                     <JourneyLoaderUI multiple/>
                     <ContextMenuRenderer/>
-
-                    <MapPOIMonitor/>
                     <VideoDownloadAndShareDialog/>
 
                     {mainUI.callForActions.active && <CallForActions/>}

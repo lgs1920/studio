@@ -237,5 +237,6 @@ describe('MainUI flythrough mask', () => {
 
         expect(container.querySelector('#lgs-main-ui')).toBeNull()
         expect(screen.getByTestId('flythrough-controls')).not.toBeNull()
+        expect(screen.getByTestId('map-poi-monitor')).not.toBeNull()
     })
 })
