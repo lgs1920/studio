@@ -338,7 +338,6 @@
     flex-direction: column;
     width: 100%;
     min-width: 0;
-    padding-left: 4px;
     gap: var(--wa-space-s, 0.75rem);
 }
 
@@ -347,64 +346,74 @@
     min-width: 0;
 }
 
-.flythrough-clip-row::part(body) {
+.flythrough-clip-summary {
     display: flex;
     align-items: center;
     justify-content: space-between;
     width: 100%;
     cursor: grab;
     gap: var(--wa-space-s, 0.75rem);
+    min-width: 0;
 }
 
-.flythrough-clip-drag-handle {
-    display: flex;
-    align-items: center;
-    min-width: 1.6rem;
-    cursor: grab;
-    justify-items: center;
-}
-
-.flythrough-clip-content {
+.flythrough-clip-summary-title {
     display: flex;
     flex: 1 1 auto;
-    flex-direction: column;
+    align-items: center;
     min-width: 0;
-    gap: 0.35rem;
 }
 
-.flythrough-clip-title-row {
-    display: flex;
-    align-items: baseline;
-    flex-wrap: wrap;
-    justify-content: space-between;
-    gap: 0.6rem;
+.flythrough-clip-summary-title strong {
+    display: block;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
-.flythrough-clip-title-row strong {
-    font-size: 0.95rem;
-}
-
-.flythrough-clip-title-row span,
-.flythrough-clip-content p {
-    opacity: 0.72;
-}
-
-.flythrough-clip-content p {
-    margin: 0;
-}
-
-.flythrough-clip-actions {
+.flythrough-clip-summary-actions {
     display: flex;
     align-items: center;
     flex: 0 0 auto;
-    justify-content: flex-end;
-    cursor: default;
-    gap: 0.5rem;
+    gap: 0.25rem;
+    margin-left: auto;
 }
 
-.flythrough-clip-row.widget-row-drag,
-.flythrough-clip-row.widget-row-chosen {
-    cursor: grabbing;
+.flythrough-clip-body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--wa-space-s, 0.75rem);
+    padding: var(--lgs-gutter-s);
+}
+
+.flythrough-clip-body .flythrough-clips-editor-fields {
+    display: flex;
+    align-items: stretch;
+    flex-direction: column;
+    width: 100%;
+    min-width: 0;
+    gap: var(--wa-space-s, 0.75rem);
+}
+
+.flythrough-clip-body .flythrough-clips-editor-field {
+    display: flex;
+    flex: 1 1 auto;
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+}
+
+.flythrough-clip-body .flythrough-clips-field-control {
+    flex: 1 1 auto;
+    width: auto;
+}
+
+.flythrough-clip-body .flythrough-clips-field-control::part(base) {
+    width: 100%;
+}
+
+.flythrough-clip-body p {
+    opacity: 0.72;
 }
 
 .flythrough-clips-popup-card {
@@ -533,22 +542,22 @@ wa-select[label-at-start].half-width::part(base) {
     }
 
     .flythrough-clips-section-header,
-    .flythrough-clip-title-row,
-    .flythrough-clip-actions {
+    .flythrough-clip-summary,
+    .flythrough-clip-summary-actions {
         align-items: stretch;
         flex-direction: column;
     }
 
-    .flythrough-clip-row {
+    .flythrough-clip-summary {
         align-items: stretch;
         flex-wrap: wrap;
     }
 
-    .flythrough-clip-actions {
+    .flythrough-clip-summary-actions {
         justify-content: flex-start;
     }
 
-    .flythrough-clips-editor-field {
+    .flythrough-clip-body .flythrough-clips-editor-field {
         flex-basis: auto;
     }
 }

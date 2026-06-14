@@ -43,9 +43,6 @@ export const MapPOI = memo(({point}) => {
     const flythroughActive = Boolean(flythrough.active || flythrough.playing || flythrough.paused)
     const flythroughSettings = normalizeFlythroughPOISettings(thePOI?.flythrough)
     const flythroughMasked = thePOI?.visible === false || (flythroughActive && flythroughSettings.visible === false)
-    const flythroughScale = flythroughActive && flythroughEntry && !flythroughMasked
-                            ? flythroughSettings.scalePercent / 100
-                            : 1
     useEffect(() => {
         let cancelled = false
         let rafId = null
@@ -100,7 +97,6 @@ export const MapPOI = memo(({point}) => {
                   thePOI?.visible,
                   flythroughActive,
                   flythroughEntry?.poi?.id,
-                  flythroughSettings.scalePercent,
                   flythroughSettings.visible,
                   list,
                   point,
@@ -127,7 +123,7 @@ export const MapPOI = memo(({point}) => {
                     style={{
                         bottom:                       window.innerHeight - pixels.y,
                         left:                         pixels.x,
-                        transform: `translate( -50%,calc(-4 * var(--poi-border-width))) scale(${(scale ?? 1) * flythroughScale})`,
+                        transform: `translate( -50%,calc(-4 * var(--poi-border-width))) scale(${scale ?? 1})`,
                         transformOrigin:              'center bottom',
                         '--lgs-poi-background-color': thePOI.bgColor ?? lgs.colors.poiDefaultBackground,
                         '--lgs-poi-border-color':     thePOI.color ?? lgs.colors.poiDefault,
@@ -142,7 +138,6 @@ export const MapPOI = memo(({point}) => {
                         <div className="lgs-slide-in-from-top-bounced">
                             <MapPOIContent
                                 poi={thePOI.id}
-                                flythroughScale={flythroughScale}
                                 hide={hideMenu}
                             />
                         </div>

@@ -34,7 +34,7 @@ const EMPTY_FLYTHROUGH_PROXY = proxy({nearbyPois: []})
 /**
  * Renders the content of a Point of Interest (POI) for the map canvas or UI lists.
  */
-export const MapPOIContent = ({poi, useInMenu = false, style, flythroughScale = 1}) => {
+export const MapPOIContent = ({poi, useInMenu = false, style}) => {
     const _poiContent = useRef(null)
     const _icon = useRef(null)
     const _renderRequestId = useRef(0)
@@ -148,7 +148,6 @@ export const MapPOIContent = ({poi, useInMenu = false, style, flythroughScale = 
 
                 const scale = 2
                 const ratio = window.devicePixelRatio || 1
-                const poiScale = Number.isFinite(Number(flythroughScale)) ? Number(flythroughScale) : 1
 
                 snapdom(_poiContent.current, {scale}).then(snap =>
                                                                snap.toCanvas().then(canvas => {
@@ -160,7 +159,6 @@ export const MapPOIContent = ({poi, useInMenu = false, style, flythroughScale = 
                                                                    }
 
                                                                    const mapPOI = new MapPOI(currentPoint)
-                                                                   mapPOI.scale = poiScale
                                                                    mapPOI.image = {
                                                                        src:    canvas.toDataURL(),
                                                                        width:  canvas.width / scale / ratio,
@@ -178,7 +176,7 @@ export const MapPOIContent = ({poi, useInMenu = false, style, flythroughScale = 
                 console.error('Error rendering POI to canvas:', error)
             }
         })
-    }, [useInMenu, point?.visible, flythroughMasked, pointId, $pois.list, flythroughScale])
+    }, [useInMenu, point?.visible, flythroughMasked, pointId, $pois.list])
 
     useEffect(() => {
         if (useInMenu || !pointId || (point?.visible !== false && !flythroughMasked)) {
@@ -245,14 +243,12 @@ export const MapPOIContent = ({poi, useInMenu = false, style, flythroughScale = 
                   point?.visible,
                   flythroughActive,
                   flythroughEntry?.poi?.id,
-                  flythroughSettings.scalePercent,
                   flythroughSettings.visible,
                   flythroughSettings.animated,
                   flythroughSettings.hiddenFields.location,
                   flythroughSettings.hiddenFields.category,
                   flythroughSettings.hiddenFields.altitude,
                   flythroughSettings.hiddenFields.coordinates,
-                  flythroughScale,
                   unitSystem,
                   coordinateSystem,
                   renderToCanvas,

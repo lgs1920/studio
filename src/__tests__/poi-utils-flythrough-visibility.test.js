@@ -87,25 +87,6 @@ describe('POIUtils flythrough visibility', () => {
         }, true)).toBe(true)
     })
 
-    it('applies flythrough scale to the Cesium billboard', async () => {
-        const entity = await POIUtils.draw({
-            id:        'poi-1',
-            longitude: 2,
-            latitude:  48,
-            height:    100,
-            visible:   true,
-            scale:     1.5,
-            image:     {
-                src:    'data:image/png;base64,test',
-                width:  40,
-                height: 20,
-            },
-        })
-
-        expect(propertyValue(entity.billboard.scale)).toBe(1.5)
-        expect(entity.show).toBe(true)
-    })
-
     it('updates an existing billboard visibility when flythrough hides the poi', async () => {
         await POIUtils.draw({
             id:        'poi-1',

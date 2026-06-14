@@ -1329,25 +1329,6 @@ export const FlythroughDrawer = memo(() => {
                                                                                           })}
                                                                                           label-at-start
                                                                                       />
-                                                                                      <WaNumberInput
-                                                                                          className="half-width"
-                                                                                          label="Real size (%)"
-                                                                                          size="s"
-                                                                                          appearance="filled"
-                                                                                          min="10"
-                                                                                          max="200"
-                                                                                          step="5"
-                                                                                          value={settings.scalePercent}
-                                                                                          onInput={event => updatePOIFlythroughSettings(poi.id, {
-                                                                                              scalePercent: clampFlythroughNumber(
-                                                                                                  event.target.value,
-                                                                                                  settings.scalePercent,
-                                                                                                  10,
-                                                                                                  200,
-                                                                                              ),
-                                                                                          })}
-                                                                                          label-at-start
-                                                                                      />
                                                                                   </div>
                                                                                   <div
                                                                                       className="flythrough-poi-hidden-fields">

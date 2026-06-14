@@ -41,6 +41,7 @@ vi.mock('@Components/PopupDrawer', () => ({
 vi.mock('@web.awesome.me/webawesome-pro/dist/react', () => ({
     WaButton: ({children, ...props}) => <button {...props}>{children}</button>,
     WaCard: ({children, ...props}) => <div {...props}>{children}</div>,
+    WaDetails: ({children, ...props}) => <div {...props}>{children}</div>,
     WaIcon: () => <span/>,
     WaNumberInput: ({label, onInput, value, ...props}) => (
         <label>
@@ -135,7 +136,6 @@ describe('FlythroughClipsTab', () => {
 
         fireEvent.click(view.getAllByRole('button', {name: 'Add clip'})[0])
         fireEvent.click(view.getByText(launch.label))
-        fireEvent.click(view.getByRole('button', {name: 'Add'}))
 
         await waitFor(() => {
             expect(journey.flythrough.start).toHaveLength(1)
@@ -182,11 +182,7 @@ describe('FlythroughClipsTab', () => {
             />,
         )
 
-        fireEvent.click(view.getByRole('button', {name: 'Edit clip'}))
-        expect(view.queryByRole('button', {name: 'Apply'})).toBeNull()
-
-        const popup = within(view.getByTestId('popup-body'))
-        const durationInput = popup.getByLabelText('Duration (s)')
+        const durationInput = view.getByLabelText('Duration (s)')
         fireEvent.input(durationInput, {target: {value: '4'}})
 
         await waitFor(() => {
@@ -198,7 +194,7 @@ describe('FlythroughClipsTab', () => {
         })
     })
 
-    it('can reset an edited clip to its pre-popup value', async () => {
+    it('removes a clip from the list', async () => {
         const flythrough = globalThis.lgs.settings.ui.flythrough
         const launch = createFlythroughClipInstance(flythrough.clips.catalog.launch, 'start', {
             params: {
@@ -219,22 +215,11 @@ describe('FlythroughClipsTab', () => {
             />,
         )
 
-        fireEvent.click(view.getByRole('button', {name: 'Edit clip'}))
-
-        const popup = within(view.getByTestId('popup-body'))
-        const durationInput = popup.getByLabelText('Duration (s)')
-        fireEvent.input(durationInput, {target: {value: '7'}})
+        fireEvent.click(view.getByRole('button', {name: 'Remove clip'}))
 
         await waitFor(() => {
-            expect(view.getByRole('button', {name: 'Reset'})).toBeTruthy()
-            expect(globalThis.lgs.theJourney.flythrough.start[0].params.duration).toBe(7)
-        })
-
-        fireEvent.click(view.getByRole('button', {name: 'Reset'}))
-
-        await waitFor(() => {
-            expect(globalThis.lgs.theJourney.flythrough.start[0].params.duration).toBe(2)
-            expect(globalThis.lgs.stores.flythrough.clips.start[0].params.duration).toBe(2)
+            expect(globalThis.lgs.theJourney.flythrough.start).toHaveLength(0)
+            expect(globalThis.lgs.stores.flythrough.clips.start).toHaveLength(0)
         })
     })
 
@@ -360,15 +345,15 @@ describe('FlythroughClipsTab', () => {
         const list = startSection.querySelector('.flythrough-clips-list')
         const sortable = globalThis.__flythroughSortableInstances[0]
 
-        expect(list.querySelectorAll('.flythrough-clip-row-shell')).toHaveLength(2)
-        expect(list.querySelectorAll('.flythrough-clip-row-shell')[0].textContent).toContain('Launch')
-        expect(list.querySelectorAll('.flythrough-clip-row-shell')[1].textContent).toContain('ZoomIn')
+        expect(list.querySelectorAll('.flythrough-clip-details')).toHaveLength(2)
+        expect(list.querySelectorAll('.flythrough-clip-details')[0].textContent).toContain('Launch')
+        expect(list.querySelectorAll('.flythrough-clip-details')[1].textContent).toContain('ZoomIn')
 
         list.insertBefore(list.children[1], list.children[0])
         sortable.options.onEnd()
 
         await waitFor(() => {
-            const rows = list.querySelectorAll('.flythrough-clip-row-shell')
+            const rows = list.querySelectorAll('.flythrough-clip-details')
             expect(rows[0].textContent).toContain('ZoomIn')
             expect(rows[1].textContent).toContain('Launch')
             expect(rows[0].querySelector('[aria-label="Move clip up"]').disabled).toBe(true)

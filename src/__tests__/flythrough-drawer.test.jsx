@@ -101,7 +101,6 @@ describe('FlythroughDrawer', () => {
             title: 'POI One',
             flythrough: {
                 displayDurationSeconds: 4,
-                scalePercent: 80,
                 hiddenFields: {
                     location: true,
                 },
@@ -469,25 +468,21 @@ describe('FlythroughDrawer', () => {
         })
 
         const durationInput = view.getAllByLabelText('Duration (s)').at(-1)
-        const scaleInput = view.getByLabelText('Real size (%)')
         const showDuringFlythrough = view.getByLabelText('Show during flythrough')
         const hideCategory = view.getByLabelText('Hide category')
         const editButton = view.getByText('Edit POI')
 
         fireEvent.input(durationInput, {target: {value: '6'}})
-        fireEvent.input(scaleInput, {target: {value: '120'}})
         fireEvent.click(hideCategory)
         fireEvent.click(showDuringFlythrough)
 
         await waitFor(() => {
             const poi = globalThis.lgs.stores.main.components.pois.list.get('poi-1')
             expect(poi.flythrough.displayDurationSeconds).toBe(6)
-            expect(poi.flythrough.scalePercent).toBe(120)
             expect(poi.flythrough.hiddenFields.category).toBe(true)
             expect(poi.flythrough.visible).toBe(false)
             expect(poi.flythrough.animated).toBe(true)
             expect(view.queryByLabelText('Animate during flythrough')).toBeNull()
-            expect(view.queryByLabelText('Real size (%)')).toBeNull()
             expect(view.queryByLabelText('Hide category')).toBeNull()
         })
 
@@ -497,7 +492,6 @@ describe('FlythroughDrawer', () => {
             const poi = globalThis.lgs.stores.main.components.pois.list.get('poi-1')
             expect(poi.flythrough.visible).toBe(true)
             expect(view.getByLabelText('Animate during flythrough')).toBeTruthy()
-            expect(view.getByLabelText('Real size (%)')).toBeTruthy()
             expect(view.getByLabelText('Hide category')).toBeTruthy()
         })
 

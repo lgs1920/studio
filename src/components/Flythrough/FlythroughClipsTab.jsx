@@ -28,6 +28,7 @@ import { ELEVATION_UNITS, UnitUtils }                              from '@Utils/
 import {
     WaButton,
     WaCard,
+    WaDetails,
     WaIcon,
     WaNumberInput,
     WaOption,
@@ -39,28 +40,13 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSnapshot }                                             from 'valtio'
 
 const ADD_POPUP_SUFFIX = 'add-popup-anchor'
-const EDIT_POPUP_SUFFIX = 'edit-popup-anchor'
 
 const listNameForSlot = slot => (slot === FLYTHROUGH_CLIP_SLOT_STOP ? 'stop' : 'start')
-
-const clone = value => JSON.parse(JSON.stringify(value))
 
 const emptyAddState = () => ({
     open:     false,
     anchorId: null,
     slot:     FLYTHROUGH_CLIP_SLOT_START,
-})
-
-const emptyEditorState = () => ({
-    open:       false,
-    anchorId:   null,
-    slot:       FLYTHROUGH_CLIP_SLOT_START,
-    mode:       'add',
-    index:      null,
-    clipId:   null,
-    params:     {},
-    initialParams: {},
-    definition: null,
 })
 
 const hasCatalogEntries = catalog => Boolean(catalog) && Object.keys(catalog).length > 0
@@ -189,203 +175,8 @@ const ClipField = ({field, value, onChange, unitSystem = 0}) => {
     )
 }
 
-const ClipEditorPopup = ({clips, editor, setEditor, onSave}) => {
-    const {current: unitSystem} = useSnapshot(lgs.settings.unitSystem)
-    const normalized = useMemo(() => normalizeFlythroughClips(clips), [clips])
-    const definitions = useMemo(() => readClipDefinitions(clips, editor.slot) ?? [], [clips, editor.slot])
-    const definition = editor.definition ?? (editor.clipId ? normalized.catalog[editor.clipId] : null)
-    const initialParams = useMemo(() => editor.initialParams ?? definition?.defaults ?? {}, [definition, editor.initialParams])
-    const isDirty = useMemo(() => JSON.stringify(editor.params ?? {}) !== JSON.stringify(initialParams ?? {}), [editor.params, initialParams])
-
-    const persistEdit = useCallback((params) => {
-        if (editor.mode !== 'edit' || editor.index === null || editor.index === undefined || !definition) {
-            return
-        }
-
-        const current = clone(clips ?? {})
-        const normalizedCurrent = normalizeFlythroughClips(current)
-        const listKey = listNameForSlot(editor.slot)
-        const list = [...(normalizedCurrent[listKey] ?? [])]
-        if (!list[editor.index]) {
-            return
-        }
-
-        list[editor.index] = {
-            ...list[editor.index],
-            params: {
-                ...(list[editor.index]?.params ?? {}),
-                ...(params ?? {}),
-            },
-        }
-
-        onSave({
-                   ...normalizedCurrent,
-                   [listKey]:             list,
-               })
-    }, [definition, editor.index, editor.mode, editor.slot, clips, onSave])
-
-    const updateParams = useCallback((nextParams) => {
-        setEditor(current => ({
-            ...current,
-            params: nextParams,
-        }))
-        persistEdit(nextParams)
-    }, [persistEdit, setEditor])
-
-    useEffect(() => {
-        if (!editor.open || editor.mode !== 'add' || editor.clipId) {
-            return
-        }
-
-        const nextDefinition = definitions[0] ?? null
-        if (!nextDefinition) {
-            return
-        }
-
-        setEditor(current => ({
-            ...current,
-            clipId: current.clipId ?? nextDefinition.id,
-            params:   current.clipId ? current.params : {...nextDefinition.defaults},
-            initialParams: current.clipId ? current.initialParams : {...nextDefinition.defaults},
-        }))
-    }, [definitions, editor.clipId, editor.mode, editor.open, setEditor])
-
-    const close = useCallback(() => {
-        setEditor(emptyEditorState())
-    }, [setEditor])
-
-    const save = useCallback(() => {
-        if (!definition) {
-            close()
-            return
-        }
-
-        const current = clone(clips ?? {})
-        const normalizedCurrent = normalizeFlythroughClips(current)
-        const listKey = listNameForSlot(editor.slot)
-        const list = [...(normalizedCurrent[listKey] ?? [])]
-        const instance = editor.mode === 'add'
-                         ? createFlythroughClipInstance(definition, editor.slot, {params: editor.params})
-                         : {
-                ...list[editor.index],
-                params: {
-                    ...(list[editor.index]?.params ?? {}),
-                    ...(editor.params ?? {}),
-                },
-            }
-
-        if (!instance) {
-            close()
-            return
-        }
-
-        if (editor.mode === 'add' && !canAddFlythroughClip(normalizedCurrent, definition, editor.slot)) {
-            close()
-            return
-        }
-
-        if (editor.mode === 'add') {
-            list.push(instance)
-            onSave({
-                       ...normalizedCurrent,
-                       [listKey]:             list,
-                   })
-        }
-        else if (editor.index !== null && editor.index !== undefined) {
-            list[editor.index] = {
-                ...list[editor.index],
-                ...instance,
-                params: instance.params,
-            }
-            onSave({
-                       ...normalizedCurrent,
-                       [listKey]:             list,
-                   })
-        }
-        close()
-    }, [close, definition, editor, clips, onSave])
-
-    const reset = useCallback(() => {
-        const nextParams = clone(initialParams ?? definition?.defaults ?? {})
-        setEditor(current => ({
-            ...current,
-            params: nextParams,
-        }))
-        persistEdit(nextParams)
-    }, [definition, initialParams, persistEdit, setEditor])
-
-    if (!editor.open || !definition) {
-        return null
-    }
-
-    return (
-        <PopupDrawer
-            active={editor.open}
-            anchor={editor.anchorId}
-            onRequestClose={close}
-            popupProps={{placement: 'bottom', distance: 8}}
-            header={
-                <>
-                    <WaIcon name={editor.mode === 'add' ? 'sparkles' : 'pencil'} variant="regular"/>
-                    <span>{editor.mode === 'add' ? 'Add clip' : 'Edit'}</span>
-                </>
-            }
-            headerActions={(
-                <WaButton appearance="plain" slot="header-actions" onClick={close}>
-                    <WaIcon size="s" name="xmark" variant="regular"/>
-                </WaButton>
-            )}
-            footer={(
-                <>
-                    <WaButton size="s" variant="brand" appearance="outlined" onClick={close}>
-                        <WaIcon slot="start" size="s" name="xmark" variant="regular"/>
-                        {editor.mode === 'add' ? 'Cancel' : 'Close'}
-                    </WaButton>
-                    {editor.mode === 'edit' && isDirty && (
-                        <WaButton size="s" variant="brand" appearance="outlined" onClick={reset}>
-                            <WaIcon slot="start" size="s" name="arrow-rotate-left" variant="regular"/>
-                            {'Reset'}
-                        </WaButton>
-                    )}
-                    {editor.mode === 'add' && (
-                        <WaButton size="s" variant="brand" appearance="filled" onClick={save}>
-                            <WaIcon slot="start" size="s" name="check" variant="regular"/>
-                            {'Add'}
-                        </WaButton>
-                    )}
-                </>
-            )}
-            className="flythrough-clips-popup-card"
-        >
-
-            <div className="flythrough-clips-editor">
-                <div className="flythrough-clips-editor-header">
-                    <strong>{definition.label}</strong>
-                </div>
-                <div className="flythrough-clips-editor-fields">
-                    {definition.fields.map(field => (
-                        <ClipField
-                            key={field.key}
-                            field={field}
-                            value={editor.params?.[field.key] ?? definition.defaults?.[field.key] ?? ''}
-                            unitSystem={unitSystem}
-                            onChange={value => updateParams({
-                                ...(editor.params ?? {}),
-                                [field.key]: value,
-                            })}
-                        />
-                    ))}
-                </div>
-            </div>
-        </PopupDrawer>
-    )
-}
-
-const ClipAddPopup = ({clips, addState, setAddState, openEditor}) => {
+const ClipAddPopup = ({clips, addState, setAddState, onAddClip}) => {
     const definitions = useMemo(() => readClipDefinitions(clips, addState.slot) ?? [], [clips, addState.slot])
-
-    useEffect(() => {
-    }, [addState.open, addState.slot, definitions])
 
     const close = useCallback(() => {
         setAddState(emptyAddState())
@@ -431,14 +222,8 @@ const ClipAddPopup = ({clips, addState, setAddState, openEditor}) => {
                             return
                         }
 
-                        openEditor({
-                                       slot:     addState.slot,
-                                       anchorId: addState.anchorId,
-                                       clipId: definition.id,
-                                       params:   {...definition.defaults},
-                                       definition,
-                                       mode:     'add',
-                                   })
+                        onAddClip(addState.slot, definition)
+                        close()
                     }
 
                     return (
@@ -475,54 +260,78 @@ const ClipAddPopup = ({clips, addState, setAddState, openEditor}) => {
     )
 }
 
-const ClipRow = ({
-                       clip,
-                       definition,
-                       index,
-                       slot,
-                       onEdit,
-                       onRemove,
-                       onMove,
-                       editAnchorId,
-                       canMoveUp,
-                       canMoveDown,
-                   }) => {
+const ClipDetails = ({
+                         clip,
+                         definition,
+                         index,
+                         slot,
+                         onRemove,
+                         onMove,
+                         onUpdate,
+                         canMoveUp,
+                         canMoveDown,
+                         isOpen,
+                         onOpen,
+                         onClose,
+                     }) => {
+    const {current: unitSystem} = useSnapshot(lgs.settings.unitSystem)
+
     return (
-        <WaCard
-            appearance="outlined"
-            className="lgs--card-hoverable flythrough-clip-row"
+        <WaDetails
+            data-id={clip.id}
+            className="lgs--details-hoverable flythrough-clip-details"
+            open={isOpen}
+            onWaShow={onOpen}
+            onWaHide={onClose}
         >
-            <div className="flythrough-clip-content">
-                <div className="flythrough-clip-title-row">
+            <span slot="summary" className="flythrough-clip-summary">
+                <span className="flythrough-clip-summary-title">
                     <strong>{definition?.label ?? clip.clipId}</strong>
+                </span>
+                <span className="flythrough-clip-summary-actions">
+                    <WaButton appearance="plain" size="s" disabled={!canMoveUp} onClick={event => {
+                        event.stopPropagation()
+                        onMove(slot, index, -1)
+                    }}
+                              aria-label="Move clip up">
+                        <WaIcon name="arrow-up" variant="regular"/>
+                    </WaButton>
+                    <WaButton appearance="plain" size="s" disabled={!canMoveDown} onClick={event => {
+                        event.stopPropagation()
+                        onMove(slot, index, 1)
+                    }}
+                              aria-label="Move clip down">
+                        <WaIcon name="arrow-down" variant="regular"/>
+                    </WaButton>
+                    <WaButton appearance="plain" size="s" variant="danger" onClick={event => {
+                        event.stopPropagation()
+                        onRemove(slot, index)
+                    }}
+                              aria-label="Remove clip">
+                        <WaIcon name="trash-can" variant="regular"/>
+                    </WaButton>
+                </span>
+            </span>
+
+            <div className="flythrough-clip-body">
+                <div className="flythrough-clips-editor-fields">
+                    {definition?.fields?.map(field => (
+                        <ClipField
+                            key={field.key}
+                            field={field}
+                            value={clip.params?.[field.key] ?? definition.defaults?.[field.key] ?? ''}
+                            unitSystem={unitSystem}
+                            onChange={value => onUpdate(slot, index, {
+                                params: {
+                                    ...(clip.params ?? {}),
+                                    [field.key]: value,
+                                },
+                            })}
+                        />
+                    ))}
                 </div>
             </div>
-            <div className="flythrough-clip-actions">
-                <WaButton appearance="plain" size="s" onClick={() => onEdit({
-                                                                                slot,
-                                                                                index,
-                                                                                anchorId: editAnchorId,
-                                                                                clipId: clip.clipId,
-                                                                                params:   clip.params,
-                                                                                definition,
-                                                                                mode:     'edit',
-                                                                            })} aria-label="Edit clip">
-                    <WaIcon name="pencil" variant="regular"/>
-                </WaButton>
-                <WaButton appearance="plain" size="s" disabled={!canMoveUp} onClick={() => onMove(slot, index, -1)}
-                          aria-label="Move clip up">
-                    <WaIcon name="arrow-up" variant="regular"/>
-                </WaButton>
-                <WaButton appearance="plain" size="s" disabled={!canMoveDown} onClick={() => onMove(slot, index, 1)}
-                          aria-label="Move clip down">
-                    <WaIcon name="arrow-down" variant="regular"/>
-                </WaButton>
-                <WaButton appearance="plain" size="s" variant="danger" onClick={() => onRemove(slot, index)}
-                          aria-label="Remove clip">
-                    <WaIcon name="trash-can" variant="regular"/>
-                </WaButton>
-            </div>
-        </WaCard>
+        </WaDetails>
     )
 }
 
@@ -532,11 +341,12 @@ const ClipList = ({
                         clips,
                         list,
                         onAdd,
-                        onEdit,
                         onRemove,
                         onMove,
+                        onUpdate,
                         addAnchorIdPrefix,
-                        editAnchorIdPrefix,
+                        openClipIds,
+                        setOpenClipIds,
                     }) => {
     const listRef = useRef(null)
     const sortableRef = useRef(null)
@@ -554,7 +364,7 @@ const ClipList = ({
             animation:     150,
             forceFallback: true,
             dataIdAttr:    'data-id',
-            filter:        '.flythrough-clip-actions',
+            filter:        '.flythrough-clip-summary-actions, .flythrough-clips-field-control, wa-button, wa-number-input, wa-select',
             dragClass:     'widget-row-drag',
             ghostClass:    'widget-row-ghost',
             chosenClass:   'widget-row-chosen',
@@ -592,28 +402,31 @@ const ClipList = ({
 
             </div>
 
-            <div ref={listRef} className="flythrough-clips-list">
+            <div ref={listRef} className="lgs--details-list flythrough-clips-list">
                 {list.length === 0 ? (
                     <p className="flythrough-empty-state">{`No ${title.toLowerCase()} clip configured.`}</p>
                 ) : list.map((clip, index) => {
                     const definition = clips?.catalog?.[clip.clipId]
-                    const editAnchorId = `${editAnchorIdPrefix}-${clip.id}`
                     return (
-                        <div key={clip.id} className="flythrough-clip-row-shell" data-id={clip.id}>
-                            <PopupAnchor id={editAnchorId}/>
-                            <ClipRow
-                                clip={clip}
-                                definition={definition}
-                                index={index}
-                                slot={slot}
-                                onEdit={onEdit}
-                                onRemove={onRemove}
-                                onMove={onMove}
-                                editAnchorId={editAnchorId}
-                                canMoveUp={index > 0}
-                                canMoveDown={index < list.length - 1}
-                            />
-                        </div>
+                        <ClipDetails
+                            key={clip.id}
+                            clip={clip}
+                            definition={definition}
+                            index={index}
+                            slot={slot}
+                            onRemove={onRemove}
+                            onMove={onMove}
+                            onUpdate={onUpdate}
+                            canMoveUp={index > 0}
+                            canMoveDown={index < list.length - 1}
+                            isOpen={openClipIds.has(clip.id)}
+                            onOpen={() => setOpenClipIds(current => new Set(current).add(clip.id))}
+                            onClose={() => setOpenClipIds(current => {
+                                const next = new Set(current)
+                                next.delete(clip.id)
+                                return next
+                            })}
+                        />
                     )
                 })}
             </div>
@@ -623,7 +436,7 @@ const ClipList = ({
 
 export const FlythroughClipsTab = memo(({settings}) => {
     const [addState, setAddState] = useState(emptyAddState())
-    const [editor, setEditor] = useState(emptyEditorState())
+    const [openClipIds, setOpenClipIds] = useState(() => new Set())
     const mainStore = useSnapshot(lgs.stores.main)
     const currentJourney = mainStore?.theJourney ?? lgs.theJourney ?? lgs.stores.main?.theJourney
     const currentClips = readCurrentClips(settings, currentJourney)
@@ -633,36 +446,33 @@ export const FlythroughClipsTab = memo(({settings}) => {
     }, [])
 
     const openAdd = useCallback(({slot, anchorId}) => {
-        setEditor(emptyEditorState())
         setAddState({
                         open: true,
                         slot,
                         anchorId,
                     })
-    }, [currentClips.start, currentClips.stop])
-
-    const openEditor = useCallback(({
-                                        slot,
-                                        index = null,
-                                        anchorId,
-                                        clipId,
-                                        params = {},
-                                        definition = null,
-                                        mode = 'add',
-                                    }) => {
-        setAddState(emptyAddState())
-        setEditor({
-                      open:     true,
-                      slot,
-                      mode,
-                      index,
-                      anchorId: anchorId ?? `${slot}-${EDIT_POPUP_SUFFIX}`,
-                      clipId,
-                      params:         {...params},
-                      initialParams:  {...params},
-                      definition,
-                  })
     }, [])
+
+    const addClip = useCallback((slot, definition) => {
+        const current = readCurrentClips(settings, currentJourney)
+        const listKey = listNameForSlot(slot)
+        const list = [...(current[listKey] ?? [])]
+        if (!canAddFlythroughClip(current, definition, slot)) {
+            return
+        }
+
+        const instance = createFlythroughClipInstance(definition, slot, {params: {...definition.defaults}})
+        if (!instance) {
+            return
+        }
+
+        list.push(instance)
+        saveClips({
+                      ...current,
+                      [listKey]: list,
+                  })
+        setOpenClipIds(currentIds => new Set(currentIds).add(instance.id))
+    }, [currentJourney, saveClips, settings])
 
     const reorderClips = useCallback((slot, _unusedIndex, _unusedDirection, orderedIds = null) => {
         if (!Array.isArray(orderedIds)) {
@@ -684,6 +494,29 @@ export const FlythroughClipsTab = memo(({settings}) => {
                         ...current,
                         [listKey]:             ordered,
                     })
+    }, [currentJourney, saveClips, settings])
+
+    const updateClip = useCallback((slot, index, patch = {}) => {
+        const current = readCurrentClips(settings, currentJourney)
+        const listKey = listNameForSlot(slot)
+        const list = [...(current[listKey] ?? [])]
+        if (!list[index]) {
+            return
+        }
+
+        list[index] = {
+            ...list[index],
+            ...patch,
+            params: {
+                ...(list[index]?.params ?? {}),
+                ...(patch?.params ?? {}),
+            },
+        }
+
+        saveClips({
+                      ...current,
+                      [listKey]: list,
+                  })
     }, [currentJourney, saveClips, settings])
 
     const moveClip = useCallback((slot, index, direction, orderedIds = null) => {
@@ -711,11 +544,20 @@ export const FlythroughClipsTab = memo(({settings}) => {
     const removeClip = useCallback((slot, index) => {
         const current = readCurrentClips(settings, currentJourney)
         const listKey = listNameForSlot(slot)
-        const list = (current[listKey] ?? []).filter((_, currentIndex) => currentIndex !== index)
+        const existing = current[listKey] ?? []
+        const removed = existing[index]
+        const list = existing.filter((_, currentIndex) => currentIndex !== index)
         saveClips({
                         ...current,
                         [listKey]:             list,
                     })
+        if (removed?.id) {
+            setOpenClipIds(currentIds => {
+                const next = new Set(currentIds)
+                next.delete(removed.id)
+                return next
+            })
+        }
     }, [currentJourney, saveClips, settings])
 
     const startList = currentClips.start
@@ -729,11 +571,12 @@ export const FlythroughClipsTab = memo(({settings}) => {
                 clips={currentClips}
                 list={startList}
                 onAdd={openAdd}
-                onEdit={openEditor}
                 onRemove={removeClip}
                 onMove={moveClip}
+                onUpdate={updateClip}
                 addAnchorIdPrefix={`${FLYTHROUGH_CLIP_SLOT_START}-${ADD_POPUP_SUFFIX}`}
-                editAnchorIdPrefix={`${FLYTHROUGH_CLIP_SLOT_START}-${EDIT_POPUP_SUFFIX}`}
+                openClipIds={openClipIds}
+                setOpenClipIds={setOpenClipIds}
             />
             <ClipList
                 title="Stop"
@@ -741,23 +584,18 @@ export const FlythroughClipsTab = memo(({settings}) => {
                 clips={currentClips}
                 list={stopList}
                 onAdd={openAdd}
-                onEdit={openEditor}
                 onRemove={removeClip}
                 onMove={moveClip}
+                onUpdate={updateClip}
                 addAnchorIdPrefix={`${FLYTHROUGH_CLIP_SLOT_STOP}-${ADD_POPUP_SUFFIX}`}
-                editAnchorIdPrefix={`${FLYTHROUGH_CLIP_SLOT_STOP}-${EDIT_POPUP_SUFFIX}`}
+                openClipIds={openClipIds}
+                setOpenClipIds={setOpenClipIds}
             />
             <ClipAddPopup
                 clips={currentClips}
                 addState={addState}
                 setAddState={setAddState}
-                openEditor={openEditor}
-            />
-            <ClipEditorPopup
-                clips={currentClips}
-                editor={editor}
-                setEditor={setEditor}
-                onSave={saveClips}
+                onAddClip={addClip}
             />
         </div>
     )
