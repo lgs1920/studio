@@ -31,6 +31,7 @@ describe('FlythroughProgressBar', () => {
                     playing: false,
                     paused: false,
                     mainUiHidden: false,
+                    clipSequenceActive: false,
                     progress: 0,
                     sample: null,
                     totalDistance: 0,
@@ -65,5 +66,14 @@ describe('FlythroughProgressBar', () => {
         render(<FlythroughProgressBar showSettings/>)
 
         expect(screen.queryByRole('button', {name: 'Flythrough settings'})).toBeNull()
+    })
+
+    it('keeps the pause action visible until the clip sequence fully ends', () => {
+        globalThis.lgs.stores.flythrough.clipSequenceActive = true
+
+        render(<FlythroughProgressBar/>)
+
+        expect(screen.getByRole('button', {name: 'Pause Flythrough'})).not.toBeNull()
+        expect(screen.queryByRole('button', {name: 'Start Flythrough'})).toBeNull()
     })
 })

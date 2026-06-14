@@ -541,6 +541,7 @@ const resetRuntimeProgress = (store) => {
     store.totalDistance = 0
     store.toolbarVisible = false
     store.mainUiHidden = false
+    store.clipSequenceActive = false
     store.orbitAllowed = true
     store.cameraUserAdjusted = false
     store.cameraUpdateSource = null
@@ -735,6 +736,7 @@ export class FlythroughMode {
         if (runtimeStore) {
             runtimeStore.toolbarVisible = true
             runtimeStore.mainUiHidden = true
+            runtimeStore.clipSequenceActive = true
         }
         this.#hideMainUI()
 

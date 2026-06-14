@@ -150,6 +150,7 @@ export const FlythroughProgressBar = memo(({showSettings = false, className = ''
     const {drawers: {open: openDrawer}} = useSnapshot(lgs.stores.ui)
     const idPrefix = useMemo(() => `flythrough-progress-${uuid()}`, [])
     const isUiHidden = flythrough.mainUiHidden === true
+    const isClipSequenceActive = flythrough.clipSequenceActive === true
     const hasPlaybackSample = Boolean((flythrough.active || flythrough.playing || flythrough.paused) && flythrough.sample)
     const progress = hasPlaybackSample ? clampProgress(flythrough.progress) : 0
     const direction = Number(flythrough.direction) < 0 ? -1 : 1
@@ -193,6 +194,7 @@ export const FlythroughProgressBar = memo(({showSettings = false, className = ''
     const percentLabel = hasPlaybackSample ? `${(playbackProgress * 100).toFixed(0)}%` : `${PLACEHOLDER_VALUE}%`
     const playing = flythrough.playing
     const paused = flythrough.paused
+    const showPauseAction = playing || (isClipSequenceActive && !paused)
     const playLabel = paused ? `Resume ${FLYTHROUGH_LABEL}` : `Start ${FLYTHROUGH_LABEL}`
     const pauseLabel = `Pause ${FLYTHROUGH_LABEL}`
     const stopLabel = `Stop ${FLYTHROUGH_LABEL}`
@@ -232,7 +234,7 @@ export const FlythroughProgressBar = memo(({showSettings = false, className = ''
             <span className="flythrough-progress-segment flythrough-progress-distance">{distanceLabel}</span>
             <span className="flythrough-progress-segment flythrough-progress-percent">{percentLabel}</span>
             <span className="flythrough-progress-segment flythrough-progress-actions">
-                {playing ? (
+                {showPauseAction ? (
                     <>
                         <FlythroughTooltip targetId={`${idPrefix}-pause`}>{pauseLabel}</FlythroughTooltip>
                         <WaButton

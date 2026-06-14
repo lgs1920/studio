@@ -42,6 +42,7 @@ export const flythrough = {
     totalDistance:  0,
     toolbarVisible: false,
     mainUiHidden:   false,
+    clipSequenceActive: false,
     recordingSync:  false,
     videoCropRect:  null,
     orbitAllowed:   true,
