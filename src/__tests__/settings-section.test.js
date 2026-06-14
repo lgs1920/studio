@@ -191,8 +191,8 @@ describe('SettingsSection', () => {
                     },
                     clips: {
                         catalog: {
-                            launch: {
-                                label: 'Custom launch',
+                            'take-off': {
+                                label: 'Custom take-off',
                             },
                         },
                     },
@@ -206,8 +206,8 @@ describe('SettingsSection', () => {
                     },
                     clips: {
                         catalog: {
-                            launch: {
-                                label: 'Launch',
+                            'take-off': {
+                                label: 'TakeOff',
                                 slots: ['start'],
                             },
                             landing: {
@@ -222,8 +222,8 @@ describe('SettingsSection', () => {
 
         expect(merged.flythrough.camera.altitude).toBe(900)
         expect(merged.flythrough.camera.pitch).toBeUndefined()
-        expect(merged.flythrough.clips.catalog.launch.label).toBe('Launch')
-        expect(merged.flythrough.clips.catalog.launch.slots).toEqual(['start'])
+        expect(merged.flythrough.clips.catalog['take-off'].label).toBe('TakeOff')
+        expect(merged.flythrough.clips.catalog['take-off'].slots).toEqual(['start'])
         expect(merged.flythrough.clips.catalog.landing).toEqual({
             label: 'Landing',
             slots: ['stop'],

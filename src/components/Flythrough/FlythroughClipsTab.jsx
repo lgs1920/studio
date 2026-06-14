@@ -175,6 +175,21 @@ const ClipField = ({field, value, onChange, unitSystem = 0}) => {
     )
 }
 
+const ClipTitle = ({definition, fallback = '', className = ''}) => {
+    const label = definition?.label ?? fallback
+    const icon = definition?.icon ?? null
+
+    return (
+        <span className={`flythrough-clip-title ${className}`.trim()}>
+            <strong>
+                {icon && <WaIcon name={icon} variant="regular"/>}
+                {icon && '\u00A0'}
+                {label}
+            </strong>
+        </span>
+    )
+}
+
 const ClipAddPopup = ({clips, addState, setAddState, onAddClip}) => {
     const definitions = useMemo(() => readClipDefinitions(clips, addState.slot) ?? [], [clips, addState.slot])
 
@@ -245,9 +260,9 @@ const ClipAddPopup = ({clips, addState, setAddState, onAddClip}) => {
                                 appearance="outlined"
                                 className="lgs--card-hoverable flythrough-clips-add-item"
                             >
-                                    <span className="flythrough-clips-add-item-content">
-                                        <strong>{definition.label}</strong>
-                                    </span>
+                                <span className="flythrough-clips-add-item-content">
+                                    <ClipTitle definition={definition}/>
+                                </span>
                             </WaCard>
                             <WaTooltip for={itemId} placement="top">
                                 {definition.description}
@@ -285,9 +300,7 @@ const ClipDetails = ({
             onWaHide={onClose}
         >
             <span slot="summary" className="flythrough-clip-summary">
-                <span className="flythrough-clip-summary-title">
-                    <strong>{definition?.label ?? clip.clipId}</strong>
-                </span>
+                <ClipTitle className="flythrough-clip-summary-title" definition={definition} fallback={clip.clipId}/>
                 <span className="flythrough-clip-summary-actions">
                     <WaButton appearance="plain" size="s" disabled={!canMoveUp} onClick={event => {
                         event.stopPropagation()

@@ -43,6 +43,7 @@ flythrough:
       zoom-in:
         id: zoom-in
         label: ZoomIn
+        icon: magnifying-glass-plus
         slots: [ start ]
         maxInstances: 1
         description: Zoom from a camera point to the flythrough start.
@@ -74,6 +75,7 @@ flythrough:
       zoom-out:
         id: zoom-out
         label: ZoomOut
+        icon: magnifying-glass-minus
         slots: [ stop ]
         maxInstances: 1
         description: Zoom from the end of the journey to a camera point.
@@ -105,6 +107,7 @@ flythrough:
       focus:
         id: focus
         label: Focus
+        icon: crosshairs-simple
         slots: [ stop ]
         maxInstances: 1
         description: Focus on the journey centroid and keep the flythrough trace visible.
@@ -143,6 +146,7 @@ flythrough:
       landing:
         id: landing
         label: Landing
+        icon: plane-arrival
         slots: [ stop ]
         maxInstances: 1
         description: Lower the camera to the ground at the last point of the journey.
@@ -155,9 +159,10 @@ flythrough:
             min: 0
             max: 60
             step: 1
-      launch:
-        id: launch
-        label: Launch
+      take-off:
+        id: take-off
+        label: TakeOff
+        icon: plane-departure
         slots: [ start ]
         maxInstances: 1
         description: Move the camera from the ground to the flythrough start point.

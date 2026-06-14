@@ -1571,7 +1571,7 @@ export class FlythroughMode {
             return
         }
 
-        if (clip.clipId === 'launch') {
+        if (clip.clipId === 'take-off' || clip.clipId === 'launch') {
             viewer.camera.setView?.({
                 destination: safeCartesianFromLonLat({
                     longitude: target.longitude,
@@ -1617,6 +1617,7 @@ export class FlythroughMode {
         }
 
         switch (clip.clipId) {
+            case 'take-off':
             case 'launch':
             case 'zoom-in':
             case 'zoom-out':

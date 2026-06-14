@@ -368,9 +368,9 @@ describe('FlythroughDrawer', () => {
         flythrough.duration = 60
         flythrough.clips = {
             catalog: {
-                launch: {
-                    id:       'launch',
-                    label:    'Launch',
+                'take-off': {
+                    id:       'take-off',
+                    label:    'TakeOff',
                     slots:    ['start'],
                     defaults: {duration: 2},
                     fields:   [],
@@ -390,7 +390,7 @@ describe('FlythroughDrawer', () => {
         const currentJourney = globalThis.lgs.stores.main.theJourney
         currentJourney.flythrough = {
             start: [
-                createFlythroughClipInstance(flythrough.clips.catalog.launch, 'start', {
+                createFlythroughClipInstance(flythrough.clips.catalog['take-off'], 'start', {
                     params: {duration: 2},
                 }),
             ],

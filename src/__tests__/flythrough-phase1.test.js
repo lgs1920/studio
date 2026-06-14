@@ -4068,7 +4068,7 @@ describe('flythrough phase 1 playback controller', () => {
         }
     })
 
-    it('starts the flythrough after the launch start clip completes without extra delay', async () => {
+    it('starts the flythrough after the take-off start clip completes without extra delay', async () => {
         const journey = makeJourney([
                                         makeTrack({
                                                       slug:        'track#journey#gpx#main',
@@ -4081,9 +4081,9 @@ describe('flythrough phase 1 playback controller', () => {
         let now = 0
         const flyToCalls = []
         const setViewCalls = []
-        const launchDefinition = {
-            id:           'launch',
-            label:        'Launch',
+        const takeOffDefinition = {
+            id:           'take-off',
+            label:        'TakeOff',
             slots:        ['start'],
             maxInstances: 1,
             defaults:     {
@@ -4093,7 +4093,7 @@ describe('flythrough phase 1 playback controller', () => {
             },
             fields:       [],
         }
-        const launch = createFlythroughClipInstance(launchDefinition, 'start', {
+        const takeOff = createFlythroughClipInstance(takeOffDefinition, 'start', {
             params: {
                 duration: 0.1,
                 altitude: 300,
@@ -4101,7 +4101,7 @@ describe('flythrough phase 1 playback controller', () => {
             },
         })
         journey.flythrough = {
-            start: [launch],
+            start: [takeOff],
             stop:  [],
         }
 
@@ -4122,7 +4122,7 @@ describe('flythrough phase 1 playback controller', () => {
                         ...flythrough,
                         clips: {
                             catalog: {
-                                launch: launchDefinition,
+                                'take-off': takeOffDefinition,
                             },
                             start: [],
                             stop:  [],
@@ -4136,7 +4136,7 @@ describe('flythrough phase 1 playback controller', () => {
                                       camera:   flythrough.camera,
                                       clips:  {
                                           catalog: {
-                                              launch: launchDefinition,
+                                              'take-off': takeOffDefinition,
                                           },
                                           start: [],
                                           stop:  [],

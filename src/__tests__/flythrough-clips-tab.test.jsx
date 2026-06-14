@@ -125,7 +125,7 @@ describe('FlythroughClipsTab', () => {
 
     it('adds a clip from the add popup and updates the lists', async () => {
         const flythrough = globalThis.lgs.settings.ui.flythrough
-        const launch = flythrough.clips.catalog.launch
+        const takeOff = flythrough.clips.catalog['take-off']
         const journey = globalThis.lgs.theJourney
         const view = render(
             <FlythroughClipsTab
@@ -135,14 +135,14 @@ describe('FlythroughClipsTab', () => {
         )
 
         fireEvent.click(view.getAllByRole('button', {name: 'Add clip'})[0])
-        fireEvent.click(view.getByText(launch.label))
+        fireEvent.click(view.getByText(takeOff.label))
 
         await waitFor(() => {
             expect(journey.flythrough.start).toHaveLength(1)
             expect(globalThis.lgs.stores.flythrough.clips.start).toHaveLength(1)
         })
 
-        expect(view.getByText(launch.label)).toBeTruthy()
+        expect(view.getByText(takeOff.label)).toBeTruthy()
     })
 
     it('uses whole-second steps for duration fields', async () => {
@@ -155,7 +155,7 @@ describe('FlythroughClipsTab', () => {
         )
 
         fireEvent.click(view.getAllByRole('button', {name: 'Add clip'})[0])
-        fireEvent.click(view.getByText(flythrough.clips.catalog.launch.label))
+        fireEvent.click(view.getByText(flythrough.clips.catalog['take-off'].label))
 
         const durationInput = await view.findByLabelText('Duration (s)')
         expect(durationInput.getAttribute('step')).toBe('1')
@@ -163,7 +163,7 @@ describe('FlythroughClipsTab', () => {
 
     it('edits a clip in place without duplicating it', async () => {
         const flythrough = globalThis.lgs.settings.ui.flythrough
-        const launch = createFlythroughClipInstance(flythrough.clips.catalog.launch, 'start', {
+        const takeOff = createFlythroughClipInstance(flythrough.clips.catalog['take-off'], 'start', {
             params: {
                 duration: 2,
                 altitude: 300,
@@ -171,9 +171,9 @@ describe('FlythroughClipsTab', () => {
             },
         })
 
-        globalThis.lgs.theJourney.flythrough.start = [launch]
+        globalThis.lgs.theJourney.flythrough.start = [takeOff]
         globalThis.lgs.theJourney.flythrough.stop = []
-        globalThis.lgs.stores.flythrough.clips.start = [launch]
+        globalThis.lgs.stores.flythrough.clips.start = [takeOff]
 
         const view = render(
             <FlythroughClipsTab
@@ -187,7 +187,7 @@ describe('FlythroughClipsTab', () => {
 
         await waitFor(() => {
             expect(globalThis.lgs.theJourney.flythrough.start).toHaveLength(1)
-            expect(globalThis.lgs.theJourney.flythrough.start[0].id).toBe(launch.id)
+            expect(globalThis.lgs.theJourney.flythrough.start[0].id).toBe(takeOff.id)
             expect(globalThis.lgs.theJourney.flythrough.start[0].params.duration).toBe(4)
             expect(globalThis.lgs.stores.flythrough.clips.start).toHaveLength(1)
             expect(globalThis.lgs.stores.flythrough.clips.start[0].params.duration).toBe(4)
@@ -196,7 +196,7 @@ describe('FlythroughClipsTab', () => {
 
     it('removes a clip from the list', async () => {
         const flythrough = globalThis.lgs.settings.ui.flythrough
-        const launch = createFlythroughClipInstance(flythrough.clips.catalog.launch, 'start', {
+        const takeOff = createFlythroughClipInstance(flythrough.clips.catalog['take-off'], 'start', {
             params: {
                 duration: 2,
                 altitude: 300,
@@ -204,9 +204,9 @@ describe('FlythroughClipsTab', () => {
             },
         })
 
-        globalThis.lgs.theJourney.flythrough.start = [launch]
+        globalThis.lgs.theJourney.flythrough.start = [takeOff]
         globalThis.lgs.theJourney.flythrough.stop = []
-        globalThis.lgs.stores.flythrough.clips.start = [launch]
+        globalThis.lgs.stores.flythrough.clips.start = [takeOff]
 
         const view = render(
             <FlythroughClipsTab
@@ -277,7 +277,7 @@ describe('FlythroughClipsTab', () => {
 
         const popup = within(view.getByTestId('popup-body'))
         expect(popup.queryByText('ZoomIn')).toBeNull()
-        expect(popup.getByText('Launch')).toBeTruthy()
+        expect(popup.getByText('TakeOff')).toBeTruthy()
     })
 
     it('removes the add clip button when no clip is available for the slot', () => {
@@ -316,7 +316,7 @@ describe('FlythroughClipsTab', () => {
 
     it('refreshes the move arrows after a drag reorder', async () => {
         const flythrough = globalThis.lgs.settings.ui.flythrough
-        const launch = createFlythroughClipInstance(flythrough.clips.catalog.launch, 'start', {
+        const takeOff = createFlythroughClipInstance(flythrough.clips.catalog['take-off'], 'start', {
             params: {
                 duration: 2,
                 altitude: 300,
@@ -331,8 +331,8 @@ describe('FlythroughClipsTab', () => {
             },
         })
 
-        globalThis.lgs.theJourney.flythrough.start = [launch, zoomIn]
-        globalThis.lgs.stores.flythrough.clips.start = [launch, zoomIn]
+        globalThis.lgs.theJourney.flythrough.start = [takeOff, zoomIn]
+        globalThis.lgs.stores.flythrough.clips.start = [takeOff, zoomIn]
 
         const view = render(
             <FlythroughClipsTab
@@ -346,7 +346,7 @@ describe('FlythroughClipsTab', () => {
         const sortable = globalThis.__flythroughSortableInstances[0]
 
         expect(list.querySelectorAll('.flythrough-clip-details')).toHaveLength(2)
-        expect(list.querySelectorAll('.flythrough-clip-details')[0].textContent).toContain('Launch')
+        expect(list.querySelectorAll('.flythrough-clip-details')[0].textContent).toContain('TakeOff')
         expect(list.querySelectorAll('.flythrough-clip-details')[1].textContent).toContain('ZoomIn')
 
         list.insertBefore(list.children[1], list.children[0])
@@ -355,7 +355,7 @@ describe('FlythroughClipsTab', () => {
         await waitFor(() => {
             const rows = list.querySelectorAll('.flythrough-clip-details')
             expect(rows[0].textContent).toContain('ZoomIn')
-            expect(rows[1].textContent).toContain('Launch')
+            expect(rows[1].textContent).toContain('TakeOff')
             expect(rows[0].querySelector('[aria-label="Move clip up"]').disabled).toBe(true)
             expect(rows[0].querySelector('[aria-label="Move clip down"]').disabled).toBe(false)
             expect(rows[1].querySelector('[aria-label="Move clip up"]').disabled).toBe(false)

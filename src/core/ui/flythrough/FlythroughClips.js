@@ -88,6 +88,7 @@ const normalizeDefinition = (definition = {}) => {
     return {
         id,
         label,
+        icon: definition.icon ?? null,
         description: definition.description ?? '',
         slots,
         maxInstances: Number.isFinite(Number(definition.maxInstances))
@@ -161,7 +162,9 @@ export const normalizeFlythroughClips = (clips = {}) => {
     const normalizeList = (list, slot) => {
         const normalized = []
         for (const item of Array.isArray(list) ? list : []) {
-            const definition = catalog[item?.clipId ?? item?.id ?? null]
+            const sourceId = item?.clipId ?? item?.id ?? null
+            const clipId = sourceId === 'launch' && catalog['take-off'] ? 'take-off' : sourceId
+            const definition = catalog[clipId] ?? catalog[sourceId]
             if (!definition) {
                 continue
             }
