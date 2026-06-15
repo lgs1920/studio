@@ -57,6 +57,7 @@ export const ElevationProfile = (props) => {
     const [canShowProgress, setCanShowProgress] = useState(false)
     const [profileChartConfigId, setProfileChartConfigId] = useState(null)
     const [backgroundImage, setBackgroundImage] = useState(null)
+    const [lastValidData, setLastValidData] = useState({journeySlug: null, data: null})
 
     const renderer = WidgetDynamicRenderer.instance
 
@@ -139,7 +140,7 @@ export const ElevationProfile = (props) => {
      * Prepare data for the profile chart
      * Moved up to avoid ReferenceError in effects
      */
-    const data = useMemo(() => {
+    const currentData = useMemo(() => {
         const _raw = __.ui.profiler?.prepareData()
         return {
             dataset:      _raw,
@@ -152,6 +153,34 @@ export const ElevationProfile = (props) => {
                              journey?.elevationServer,
                              isProcessing,
                          ])
+    const journeySlug = journey?.slug ?? null
+    const data = currentData.hasElevation
+                 ? currentData
+                 : (lastValidData.journeySlug === journeySlug ? lastValidData.data : null)
+    const hasElevation = Boolean(data?.hasElevation)
+
+    useEffect(() => {
+        const schedule = typeof queueMicrotask === 'function'
+                         ? queueMicrotask
+                         : callback => Promise.resolve().then(callback)
+
+        if (currentData.hasElevation) {
+            if (lastValidData.journeySlug !== journeySlug || lastValidData.data !== currentData) {
+                schedule(() => setLastValidData({
+                    journeySlug,
+                    data:        currentData,
+                }))
+            }
+            return
+        }
+
+        if (lastValidData.journeySlug !== journeySlug) {
+            schedule(() => setLastValidData({
+                journeySlug,
+                data:        null,
+            }))
+        }
+    }, [currentData, journeySlug, lastValidData.data, lastValidData.journeySlug])
 
 
     /**
@@ -208,7 +237,7 @@ export const ElevationProfile = (props) => {
                 return
             }
 
-            if (profile.show && data.hasElevation && !isProcessing) {
+            if (profile.show && hasElevation && !isProcessing) {
                 const entity = await renderProfileWidget()
                 if (!cancelled && entity) {
                     setProfileWidgetVisible(true)
@@ -221,7 +250,7 @@ export const ElevationProfile = (props) => {
         return () => {
             cancelled = true
         }
-    }, [data.hasElevation, isProcessing, profile.show, renderProfileWidget, syncProfileChartConfigId])
+    }, [hasElevation, isProcessing, profile.show, renderProfileWidget, syncProfileChartConfigId])
 
     /**
      * Handles background image updates
@@ -236,20 +265,20 @@ export const ElevationProfile = (props) => {
             }
         }
 
-        if (!isProcessing && data.hasElevation) {
+        if (!isProcessing && hasElevation) {
             updateBg()
         }
 
         return () => {
             isMounted = false
         }
-    }, [isProcessing, data.hasElevation, getProfileBackground])
+    }, [isProcessing, hasElevation, getProfileBackground])
 
     /**
      * Auto-hide widget if no elevation data is available
      */
     useEffect(() => {
-        if (!isProcessing && !data.hasElevation && profile.show) {
+        if (!isProcessing && !hasElevation && profile.show) {
             const _id = renderer.findExistingInList(WIDGET_KEY, SCENE_WIDGETS_BOARD)
             if (_id) {
                 const _el = __.ui.widgetManager.getElementById(_id)
@@ -259,10 +288,10 @@ export const ElevationProfile = (props) => {
                 }
             }
         }
-    }, [data.hasElevation, isProcessing, profile.show, renderer])
+    }, [hasElevation, isProcessing, profile.show, renderer])
 
     useEffect(() => {
-        if (!profile.show || !data.hasElevation || isProcessing) {
+        if (!profile.show || !hasElevation || isProcessing) {
             return
         }
 
@@ -277,7 +306,7 @@ export const ElevationProfile = (props) => {
         return () => {
             cancelled = true
         }
-    }, [data.hasElevation, isProcessing, profile.show, renderProfileWidget])
+    }, [hasElevation, isProcessing, profile.show, renderProfileWidget])
 
     /**
      * Toggles the profile widget visibility
@@ -417,13 +446,13 @@ export const ElevationProfile = (props) => {
                          size="xs"
                          label-at-start
                          width-auto
-                         disabled={!data.hasElevation}
-                         checked={profile.show && data.hasElevation}
+                         disabled={!hasElevation}
+                         checked={profile.show && hasElevation}
                          onChange={toggleProfileButton}
                      >
                          {'Add Profile widget on scene'}
                      </WaSwitch>
-                     {data.hasElevation && (
+                     {hasElevation && (
                          <>
                              <WaTooltip for="edit-profile-widget-in-settings">{'Edit widget'}</WaTooltip>
                              <WaButton id="edit-profile-widget-in-settings" appearance="plain" variant="brand"
@@ -440,7 +469,7 @@ export const ElevationProfile = (props) => {
                  </div>
              )}
 
-            {!isProcessing && data.hasElevation && (
+            {hasElevation && (
                 <div
                     className="editor-preview-zone lgs-widget-preview"
                     data-widget-preview-entity={profileChartConfigId ?? undefined}
@@ -449,7 +478,7 @@ export const ElevationProfile = (props) => {
                     <ProfileChart
                         id="journey-profile-chart-in-settings"
                         configId={profileChartConfigId}
-                        data={data.dataset}
+                        data={data?.dataset}
                         height="180px"
                         width="100%"
                     />

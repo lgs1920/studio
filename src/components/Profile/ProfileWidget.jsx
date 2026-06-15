@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-05-10
- * Last modified: 2026-05-10
+ * Created on: 2026-06-14
+ * Last modified: 2026-06-14
  *
  *
  * Copyright © 2026 LGS1920
@@ -19,7 +19,7 @@ import {
     HOUR, JOURNEY_WIDGETS, LGS_VISUAL_WIDGET, SCENE_WIDGETS, SCENE_WIDGETS_BOARD,
 } from '@Core/constants'
 import { useOptionalSnapshot } from '@Utils/ValtioUtils'
-import { useEffect, useMemo }  from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useSnapshot }                                                                  from 'valtio'
 import { ProfileChart }                                                                 from './ProfileChart'
 import './style.css'
@@ -37,7 +37,9 @@ const PROFILE_WIDGET_CONTEXT_FALLBACK = {widgetEditor: false, widgetsBoard: ''}
 export const ProfileWidget = ({id, context, zIndex, widgetsBoard: persistedWidgetsBoard}) => {
     const contextState = useOptionalSnapshot(context, PROFILE_WIDGET_CONTEXT_FALLBACK)
     const journey = lgs.theJourney
+    const journeySlug = journey?.slug ?? null
     const widgetsBoard = contextState.widgetsBoard || persistedWidgetsBoard || ''
+    const [lastValidData, setLastValidData] = useState({journeySlug: null, data: null})
 
     /**
      * Proxy and Snapshot for the profile component state.
@@ -67,7 +69,44 @@ export const ProfileWidget = ({id, context, zIndex, widgetsBoard: persistedWidge
     /**
      * Prepares and memoizes the data required for the profile chart.
      */
-    const data = useMemo(() => journey ? __.ui.profiler?.prepareData() : null, [journey, profile.key, unitStore.current])
+    const currentData = useMemo(() => {
+        if (!journey) {
+            return null
+        }
+
+        const preparedData = __.ui.profiler?.prepareData()
+        return preparedData
+               ? {
+                ...preparedData,
+                hasElevation: preparedData.dataset?.length > 0,
+            }
+               : null
+    }, [journey, profile.key, unitStore.current])
+    const data = currentData?.hasElevation
+                 ? currentData
+                 : (lastValidData.journeySlug === journeySlug ? lastValidData.data : null)
+    useEffect(() => {
+        const schedule = typeof queueMicrotask === 'function'
+                         ? queueMicrotask
+                         : callback => Promise.resolve().then(callback)
+
+        if (currentData?.hasElevation) {
+            if (lastValidData.journeySlug !== journeySlug || lastValidData.data !== currentData) {
+                schedule(() => setLastValidData({
+                                                    journeySlug,
+                                                    data: currentData,
+                                                }))
+            }
+            return
+        }
+
+        if (lastValidData.journeySlug !== journeySlug) {
+            schedule(() => setLastValidData({
+                                                journeySlug,
+                                                data: null,
+                                            }))
+        }
+    }, [currentData, journeySlug, lastValidData.data, lastValidData.journeySlug])
     const hasAltitudeData = useMemo(() => {
         return data?.dataset?.some(dataset => Array.isArray(dataset.source) && dataset.source.length > 0) ?? false
     }, [data])
@@ -118,9 +157,9 @@ export const ProfileWidget = ({id, context, zIndex, widgetsBoard: persistedWidge
             {data &&
                 <ProfileChart data={data}
                               id={id}
-                              height="100%"
+                              height={profile.height}
                               locked={isLocked}
-                              width="100%"
+                              width={profile.width}
                 />
             }
         </Widget>

@@ -80,6 +80,20 @@ const readElementSize = (element) => {
     }
 }
 
+const readRenderableElementSize = (element) => {
+    const size = readElementSize(element)
+    if (size.width > 0 && size.height > 0) {
+        return size
+    }
+
+    const parentSize = readElementSize(element?.parentElement)
+    if (parentSize.width > 0 && parentSize.height > 0) {
+        return parentSize
+    }
+
+    return {width: 0, height: 0}
+}
+
 const readChartSize = (chart, fallbackElement = null) => {
     const chartDom = chart?.getDom?.() ?? fallbackElement
     const chartWidth = Number(chart?.getWidth?.())
@@ -1340,20 +1354,28 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
      */
     const handleResize = useCallback(() => {
         if (preview) {
-            return
+            return false
         }
         const chart = _instance.current?.getEchartsInstance?.()
-        if (chart) {
-            try {
-                clearFlythroughProfileGraphicsCache()
-                chart.resize()
-            }
-            catch {
-                return
-            }
-
-            syncProfileDimensions()
+        if (!chart) {
+            return false
         }
+
+        const size = readRenderableElementSize(_chartDom.current)
+        if (size.width <= 0 || size.height <= 0) {
+            return false
+        }
+
+        try {
+            clearFlythroughProfileGraphicsCache()
+            chart.resize({width: size.width, height: size.height})
+        }
+        catch {
+            return false
+        }
+
+        syncProfileDimensions()
+        return true
     }, [clearFlythroughProfileGraphicsCache, preview, syncProfileDimensions])
 
     /**
@@ -1525,11 +1547,12 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
     usePreviewChartResize(_instance, preview, [width, height, padding, borderWidth])
 
     useEffect(() => {
-        if (preview || !_chartDom.current || typeof ResizeObserver === 'undefined') {
+        if (preview || !_chartDom.current) {
             return
         }
 
         let frame = null
+        let secondFrame = null
         const scheduleResize = () => {
             if (frame !== null) {
                 return
@@ -1538,21 +1561,51 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
             frame = requestAnimationFrame(() => {
                 frame = null
                 handleResize()
+                secondFrame = requestAnimationFrame(() => {
+                    secondFrame = null
+                    handleResize()
+                })
             })
         }
 
-        const observer = new ResizeObserver(scheduleResize)
         const chartDom = _chartDom.current
         const chartContainer = getChartContainer()
         const layoutContainer = getLiveLayoutContainer()
+        const shouldReactToEvent = event => {
+            const path = typeof event.composedPath === 'function' ? event.composedPath() : []
+            if (path.includes(chartDom)) {
+                return true
+            }
 
-        observer.observe(chartDom)
-        if (chartContainer) {
+            return path.some(target => target instanceof Element && target.contains?.(chartDom))
+        }
+        const handleVisibilityChange = event => {
+            if (shouldReactToEvent(event)) {
+                scheduleResize()
+            }
+        }
+        const observer = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(scheduleResize) : null
+        const intersectionObserver = typeof IntersectionObserver !== 'undefined'
+                                     ? new IntersectionObserver(entries => {
+                                         if (entries.some(entry => entry.isIntersecting)) {
+                                             scheduleResize()
+                                         }
+                                     })
+                                     : null
+
+        observer?.observe(chartDom)
+        if (chartContainer && observer) {
             observer.observe(chartContainer)
         }
-        if (layoutContainer && layoutContainer !== chartContainer) {
+        if (layoutContainer && layoutContainer !== chartContainer && observer) {
             observer.observe(layoutContainer)
         }
+        intersectionObserver?.observe(chartDom)
+
+        document.addEventListener('drawer-open', handleVisibilityChange, true)
+        document.addEventListener('wa-after-show', handleVisibilityChange, true)
+        document.addEventListener('wa-tab-show', handleVisibilityChange, true)
+        document.addEventListener('transitionend', handleVisibilityChange, true)
 
         scheduleResize()
 
@@ -1560,7 +1613,15 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
             if (frame !== null) {
                 cancelAnimationFrame(frame)
             }
-            observer.disconnect()
+            if (secondFrame !== null) {
+                cancelAnimationFrame(secondFrame)
+            }
+            observer?.disconnect()
+            intersectionObserver?.disconnect()
+            document.removeEventListener('drawer-open', handleVisibilityChange, true)
+            document.removeEventListener('wa-after-show', handleVisibilityChange, true)
+            document.removeEventListener('wa-tab-show', handleVisibilityChange, true)
+            document.removeEventListener('transitionend', handleVisibilityChange, true)
         }
     }, [getChartContainer, getLiveLayoutContainer, handleResize, preview])
 

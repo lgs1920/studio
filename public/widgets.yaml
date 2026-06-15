@@ -96,6 +96,7 @@ widgets:
     component: "ProfileWidget"
     type: "lgs-visual-widget"
     path: "@Components/Profile"
+    ratio: "16x9"
     groups:
       - "journey-widgets"
       - "scene-widgets"
