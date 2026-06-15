@@ -347,6 +347,31 @@ export class WidgetCoreRegistry {
 
     #getRatioValue = ratio => ratio?.value ?? ratio ?? null
 
+    #resolveRatioConfig = ratio => {
+        if (!ratio) {
+            return null
+        }
+
+        if (typeof ratio === 'object') {
+            const aspectRatio = Number(ratio.aspectRatio)
+            if (Number.isFinite(aspectRatio) && aspectRatio > 0) {
+                return {
+                    ...ratio,
+                    aspectRatio,
+                }
+            }
+
+            const preset = this.getRatio(ratio.value ?? ratio)
+            if (preset) {
+                return preset
+            }
+
+            return null
+        }
+
+        return this.getRatio(ratio)
+    }
+
     #applyRatioToConfig = (config, ratio, resizeToRatio = false) => {
         if (!config || !ratio) {
             return
@@ -372,8 +397,8 @@ export class WidgetCoreRegistry {
         const centerX = config.position.left + (config.dimensions.width / 2)
         const centerY = config.position.top + (config.dimensions.height / 2)
         const nextDimensions = {
-            width:  config.dimensions.width,
-            height: config.dimensions.width / ratio.aspectRatio,
+            width:  config.dimensions.height * ratio.aspectRatio,
+            height: config.dimensions.height,
         }
 
         config.dimensions = nextDimensions
@@ -414,11 +439,10 @@ export class WidgetCoreRegistry {
                                 ? initialConfig.position
                                 : 'top-left')
 
-            const requestedRatioValue = this.#getRatioValue(initialConfig.ratio)
             const fallbackRatio = initialConfig.type === LGS_VISUAL_WIDGET
                                   ? lgs.configuration.widgetRatio
                                   : '1x1'
-            const ratio = requestedRatioValue ?? this.#getRatioValue(fallbackRatio)
+            const ratio = this.#resolveRatioConfig(initialConfig.ratio) ?? this.#resolveRatioConfig(fallbackRatio)
 
             config = {
                 animationWhenDragging:  initialConfig.animationWhenDragging ?? false,
@@ -457,7 +481,7 @@ export class WidgetCoreRegistry {
                 persist:                initialConfig.persist ?? null,
                 position:               {left: 0, top: 0},
                 previousCropDimensions: null,
-                ratio:                  this.getRatio(ratio),
+                ratio:                  ratio,
                 resizeFromCenter:       initialConfig.resizeFromCenter ?? false,
                 rotate:                 initialConfig.rotate ?? 0,
                 runtimeReady:           false,
@@ -519,7 +543,7 @@ export class WidgetCoreRegistry {
             const shouldUseRequestedRuntimeRatio = requestedRatioValue &&
                 requestedRatioValue !== currentRatioValue &&
                 (!currentRatioValue || currentRatioValue === defaultRatioValue)
-            const requestedRatio = shouldUseRequestedRuntimeRatio ? this.getRatio(requestedRatioValue) : null
+            const requestedRatio = shouldUseRequestedRuntimeRatio ? this.#resolveRatioConfig(initialConfig.ratio) : null
 
             if (requestedRatio) {
                 this.#applyRatioToConfig(config, requestedRatio, true)
@@ -597,9 +621,9 @@ export class WidgetCoreRegistry {
                 const shouldUseRequestedRatio = requestedRatioValue &&
                     requestedRatioValue !== savedRatioValue &&
                     (!savedRatioValue || savedRatioValue === defaultRatioValue)
-                const resolvedSavedRatio = this.getRatio(savedRatioValue)
+                const resolvedSavedRatio = this.#resolveRatioConfig(savedWidget.ratio)
                 const resolvedRatio = shouldUseRequestedRatio
-                                      ? this.getRatio(requestedRatioValue)
+                                      ? this.#resolveRatioConfig(initialConfig.ratio)
                                       : resolvedSavedRatio
                 if (resolvedRatio) {
                     this.#applyRatioToConfig(config, resolvedRatio, shouldUseRequestedRatio)

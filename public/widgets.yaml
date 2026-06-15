@@ -105,7 +105,6 @@ widgets:
     configuration:
       default:
         show: true
-
         background:
           show: true
           color: "#ffffff"

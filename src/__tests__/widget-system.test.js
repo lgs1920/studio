@@ -198,7 +198,7 @@ describe('Widget registry ratio resolution', () => {
 
     it('keeps an explicit visual widget ratio instead of the global widget ratio', async () => {
         const registry = new WidgetCoreRegistry()
-        const element = document.createElement('div')
+        const element = {}
 
         const config = await registry.retrieveConfig(element, {
             id:        `${PROFILE_WIDGET}#scene`,
@@ -212,17 +212,18 @@ describe('Widget registry ratio resolution', () => {
 
     it('migrates old persisted global ratios when an explicit widget ratio is requested', async () => {
         const registry = new WidgetCoreRegistry()
-        const element = document.createElement('div')
-        const container = document.createElement('div')
+        const element = {}
+        const container = {
+            getBoundingClientRect: vi.fn(() => ({
+                left:   0,
+                top:    0,
+                right:  1000,
+                bottom: 1000,
+                width:  1000,
+                height: 1000,
+            })),
+        }
 
-        container.getBoundingClientRect = vi.fn(() => ({
-            left:   0,
-            top:    0,
-            right:  1000,
-            bottom: 1000,
-            width:  1000,
-            height: 1000,
-        }))
         __.ui.widgetManager.getWidgetPosition = vi.fn(async () => ({
             leftRatio:    50,
             topRatio:     50,
@@ -233,31 +234,31 @@ describe('Widget registry ratio resolution', () => {
         }))
 
         const config = await registry.retrieveConfig(element, {
-            id:            `${PROFILE_WIDGET}#scene`,
-            type:          LGS_VISUAL_WIDGET,
-            ratio:         '16x9',
+            id:             `${PROFILE_WIDGET}#scene`,
+            type:           LGS_VISUAL_WIDGET,
+            ratio:          '16x9',
             container,
             boundsContainer: container,
-            persist:       true,
-            widgetsBoard:  SCENE_WIDGETS_BOARD,
+            persist:        true,
+            widgetsBoard:   SCENE_WIDGETS_BOARD,
         })
 
         expect(config.ratio.value).toBe('16x9')
-        expect(config.dimensions.width).toBe(200)
-        expect(config.dimensions.height).toBeCloseTo(112.5)
-        expect(config.position.left).toBe(400)
-        expect(config.position.top).toBeCloseTo(443.75)
+        expect(config.dimensions.width).toBeCloseTo(355.5555555556)
+        expect(config.dimensions.height).toBe(200)
+        expect(config.position.left).toBeCloseTo(322.2222222222)
+        expect(config.position.top).toBe(400)
     })
 
     it('migrates an active runtime config from the global ratio to the explicit widget ratio', async () => {
         const registry = new WidgetCoreRegistry()
-        const element = document.createElement('div')
+        const element = {}
 
         const initialConfig = await registry.retrieveConfig(element, {
             id:        `${PROFILE_WIDGET}#scene`,
             type:      LGS_VISUAL_WIDGET,
             ratio:     '1x1',
-            container: document.body,
+            container: {},
         })
         initialConfig.runtimeReady = true
         initialConfig.position = {left: 400, top: 400}
@@ -267,14 +268,38 @@ describe('Widget registry ratio resolution', () => {
             id:        `${PROFILE_WIDGET}#scene`,
             type:      LGS_VISUAL_WIDGET,
             ratio:     '16x9',
-            container: document.body,
+            container: {},
         })
 
         expect(migratedConfig.ratio.value).toBe('16x9')
-        expect(migratedConfig.dimensions.width).toBe(200)
-        expect(migratedConfig.dimensions.height).toBeCloseTo(112.5)
-        expect(migratedConfig.position.left).toBe(400)
-        expect(migratedConfig.position.top).toBeCloseTo(443.75)
+        expect(migratedConfig.dimensions.width).toBeCloseTo(355.5555555556)
+        expect(migratedConfig.dimensions.height).toBe(200)
+        expect(migratedConfig.position.left).toBeCloseTo(322.2222222222)
+        expect(migratedConfig.position.top).toBe(400)
+    })
+
+    it('preserves a custom ratio object that is not part of the preset list', async () => {
+        const registry = new WidgetCoreRegistry()
+        const element = {}
+
+        const config = await registry.retrieveConfig(element, {
+            id:        `${PROFILE_WIDGET}#scene`,
+            type:      LGS_VISUAL_WIDGET,
+            ratio:     {
+                value:       'custom',
+                aspectRatio: 3 / 2,
+                locked:      true,
+                width:       3,
+                height:      2,
+            },
+            container: {},
+        })
+
+        expect(config.ratio.value).toBe('custom')
+        expect(config.ratio.aspectRatio).toBeCloseTo(1.5)
+        expect(config.ratio.width).toBe(3)
+        expect(config.ratio.height).toBe(2)
+        expect(config.ratio.locked).toBe(true)
     })
 })
 

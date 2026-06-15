@@ -476,6 +476,7 @@ export const ElevationProfile = (props) => {
                     style={{'--lgs-widget-preview-bg': backgroundImage ? `url(${backgroundImage})` : 'none'}}
                 >
                     <ProfileChart
+                        key={profileChartConfigId ?? 'profile'}
                         id="journey-profile-chart-in-settings"
                         configId={profileChartConfigId}
                         data={data?.dataset}

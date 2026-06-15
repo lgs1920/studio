@@ -38,6 +38,7 @@ import {
     WaTabGroup,
     WaTabPanel,
 }                                                                     from '@web.awesome.me/webawesome-pro/dist/react'
+import { useOptionalSnapshot }                                        from '@Utils/ValtioUtils'
 import { useManagedStylesheet }                                        from '@Utils/useManagedStylesheet'
 import classNames                                                     from 'classnames'
 import { Suspense, useCallback, useEffect, useMemo, useState } from 'react'
@@ -47,6 +48,7 @@ import widgetEditorStylesheetHref                                      from './s
 
 const OPEN_COMPASS_SETTINGS_ACTION = 'open-compass-settings'
 const WIDGET_EDITOR_STYLESHEET_ID = 'widget-editor-panel'
+const WIDGET_CONFIGURATION_FALLBACK = {elements: {}, user: null, default: {}, fallbackPreset: null}
 
 const buildCanvasPreviewBackground = () => {
     try {
@@ -94,6 +96,11 @@ export const WidgetEditorPanel = () => {
 
     const cached = ui.widget.cache.get(drawers.entity)
     const _widgetRegistry = useMemo(() => new WidgetRegistry(), [])
+    const widgetType = drawers.entity?.split('#')[0] ?? null
+    const widgetConfiguration = useOptionalSnapshot(
+        lgs.settings.widgets?.[widgetType]?.configuration,
+        WIDGET_CONFIGURATION_FALLBACK,
+    )
 
     const isVisible = drawers.open === WIDGETS_EDITOR_DRAWER && (video.editing || cached?.widgetsBoard === SCENE_WIDGETS_BOARD)
     useManagedStylesheet(WIDGET_EDITOR_STYLESHEET_ID, isVisible ? widgetEditorStylesheetHref : null)
@@ -105,6 +112,17 @@ export const WidgetEditorPanel = () => {
     const currentSnapshotImage = widget.currentSnapshot?.entity === drawers.entity ? widget.currentSnapshot.image : null
     const previewBg = currentSnapshotImage ||
         (canvasPreviewBg.entity === drawers.entity ? canvasPreviewBg.image : null)
+    const widgetPresetKey = useMemo(() => {
+        const element = widgetConfiguration.elements?.[drawers.entity]
+        const preset = element
+                       ? (element.preset ?? '')
+                       : (widgetConfiguration.user?.preset
+                          ?? widgetConfiguration.default?.preset
+                          ?? widgetConfiguration.fallbackPreset
+                          ?? '')
+
+        return `${drawers.entity ?? 'widget'}:${preset}`
+    }, [drawers.entity, widgetConfiguration])
 
     /**
      * Closes the editor and handles the stack via the manager.
@@ -291,6 +309,7 @@ export const WidgetEditorPanel = () => {
                                 <Suspense fallback={PreviewLoadingFallback}>
                                     {PreviewComponent ? (
                                         <PreviewComponent
+                                            key={`preview:${widgetPresetKey}`}
                                             entity={drawers.entity}
                                             data={data}
                                             syncGlobalCompass={syncGlobalCompass}
@@ -318,6 +337,7 @@ export const WidgetEditorPanel = () => {
                         <Suspense fallback={<EditorSkeleton type="preview"/>}>
                             {EditorComponent ? (
                                 <EditorComponent
+                                    key={`editor:${widgetPresetKey}`}
                                     entity={drawers.entity}
                                     widgetData={data}
                                     position={widgetPosition}
