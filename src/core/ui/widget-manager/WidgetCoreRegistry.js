@@ -345,6 +345,51 @@ export class WidgetCoreRegistry {
      */
     getRatio = ratio => lgs.configuration.videoFormats.find(p => p.value === ratio)
 
+    #getRatioValue = ratio => ratio?.value ?? ratio ?? null
+
+    #applyRatioToConfig = (config, ratio, resizeToRatio = false) => {
+        if (!config || !ratio) {
+            return
+        }
+
+        config.ratio = ratio
+
+        if (
+            !resizeToRatio ||
+            !ratio.locked ||
+            !Number.isFinite(ratio.aspectRatio) ||
+            ratio.aspectRatio <= 0 ||
+            !Number.isFinite(config.dimensions?.width) ||
+            !Number.isFinite(config.dimensions?.height) ||
+            config.dimensions.width <= 0 ||
+            config.dimensions.height <= 0 ||
+            !Number.isFinite(config.position?.left) ||
+            !Number.isFinite(config.position?.top)
+        ) {
+            return
+        }
+
+        const centerX = config.position.left + (config.dimensions.width / 2)
+        const centerY = config.position.top + (config.dimensions.height / 2)
+        const nextDimensions = {
+            width:  config.dimensions.width,
+            height: config.dimensions.width / ratio.aspectRatio,
+        }
+
+        config.dimensions = nextDimensions
+        config.position = {
+            left: centerX - (nextDimensions.width / 2),
+            top:  centerY - (nextDimensions.height / 2),
+        }
+        config.cropDimensions = {
+            ...config.cropDimensions,
+            left:   config.position.left,
+            top:    config.position.top,
+            width:  nextDimensions.width,
+            height: nextDimensions.height,
+        }
+    }
+
     /**
      * Retrieves or creates widget configuration for an element, including saved positions from browser DB.
      * Calculates absolute positioning based on invariant center ratios to handle rotation/scale.
@@ -369,10 +414,11 @@ export class WidgetCoreRegistry {
                                 ? initialConfig.position
                                 : 'top-left')
 
-            let ratio = initialConfig.ratio ?? '1x1'
-            if (initialConfig.type === LGS_VISUAL_WIDGET) {
-                ratio = lgs.configuration.widgetRatio
-            }
+            const requestedRatioValue = this.#getRatioValue(initialConfig.ratio)
+            const fallbackRatio = initialConfig.type === LGS_VISUAL_WIDGET
+                                  ? lgs.configuration.widgetRatio
+                                  : '1x1'
+            const ratio = requestedRatioValue ?? this.#getRatioValue(fallbackRatio)
 
             config = {
                 animationWhenDragging:  initialConfig.animationWhenDragging ?? false,
@@ -466,6 +512,20 @@ export class WidgetCoreRegistry {
             (config.widgetsBoard ?? null) === requestedWidgetsBoard
         config.fromRuntime = canReuseRuntimeConfig
 
+        if (hasRuntimeConfig) {
+            const requestedRatioValue = this.#getRatioValue(initialConfig.ratio)
+            const defaultRatioValue = this.#getRatioValue(lgs.configuration.widgetRatio)
+            const currentRatioValue = this.#getRatioValue(config.ratio)
+            const shouldUseRequestedRuntimeRatio = requestedRatioValue &&
+                requestedRatioValue !== currentRatioValue &&
+                (!currentRatioValue || currentRatioValue === defaultRatioValue)
+            const requestedRatio = shouldUseRequestedRuntimeRatio ? this.getRatio(requestedRatioValue) : null
+
+            if (requestedRatio) {
+                this.#applyRatioToConfig(config, requestedRatio, true)
+            }
+        }
+
         if (config.persist && !canReuseRuntimeConfig) {
             const savedWidget = await __.ui.widgetManager.getWidgetPosition(elementId)
 
@@ -531,10 +591,18 @@ export class WidgetCoreRegistry {
                 config.icon = initialConfig.icon ?? savedWidget.icon ?? config.icon
                 config.scale = savedWidget.scale || {x: 1, y: 1}
                 config.rotate = savedWidget.rotate || 0
-                const savedRatioValue = savedWidget.ratio?.value ?? savedWidget.ratio
+                const requestedRatioValue = this.#getRatioValue(initialConfig.ratio)
+                const defaultRatioValue = this.#getRatioValue(lgs.configuration.widgetRatio)
+                const savedRatioValue = this.#getRatioValue(savedWidget.ratio)
+                const shouldUseRequestedRatio = requestedRatioValue &&
+                    requestedRatioValue !== savedRatioValue &&
+                    (!savedRatioValue || savedRatioValue === defaultRatioValue)
                 const resolvedSavedRatio = this.getRatio(savedRatioValue)
-                if (resolvedSavedRatio) {
-                    config.ratio = resolvedSavedRatio
+                const resolvedRatio = shouldUseRequestedRatio
+                                      ? this.getRatio(requestedRatioValue)
+                                      : resolvedSavedRatio
+                if (resolvedRatio) {
+                    this.#applyRatioToConfig(config, resolvedRatio, shouldUseRequestedRatio)
                 }
                 config.attachTo = savedWidget.attachTo || config.attachTo || 'center'
                 // Prefer initialConfig.zIndex if explicitly provided (for newly added widgets)
