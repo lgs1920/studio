@@ -131,31 +131,31 @@ widgets:
           scaled: false
 
         xAxis:
-          main: true
-          second: true
-          labels: true
-          units: true
+          main: false
+          second: false
+          labels: false
+          units: false
 
         yAxis:
-          main: true
-          second: true
-          labels: true
-          units: true
+          main: false
+          second: false
+          labels: false
+          units: false
 
         mainAxis:
-          color: "--lgs-dark-color" #CSS variable
+          color: "#ffffff" #CSS variable
           opacity: 0.8
           thickness: 1
           scaled: false
 
         secondAxis:
-          color: "--lgs-light-color" #CSS variable
+          color: "-#ffffff" #CSS variable
           opacity: 0.6
           thickness: 0.5
           scaled: false
 
         shadow:
-          show: true
+          show: false
           value: 'normal'
           color: "#000000"
           opacity: 0.5
