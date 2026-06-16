@@ -16,6 +16,7 @@
 
 import { WIDGET_SYSTEM_FONT_STACK }                                       from '@Core/constants'
 import { TextWidgetManager }                                              from '@Core/ui/text-metrics/TextWidgetManager'
+import { useWidgetScaleCorrection }                                       from '@Components/MainUI/widgets/useWidgetScaleCorrection'
 import {
     WaTextarea,
 }                                                            from '@web.awesome.me/webawesome-pro/dist/react'
@@ -41,6 +42,7 @@ export const TextWidgetPreview = memo(({entity}) => {
     const [isEditing, setIsEditing] = useState(false)
     const _timer = useRef(null)
     const _textWidgetManager = useMemo(() => TextWidgetManager.instance, [])
+    const scaleCorrection = useWidgetScaleCorrection(entity)
 
     const element = useMemo(() => {
         return configuration.elements?.[entity] ?? configuration.user ?? configuration.default
@@ -99,14 +101,17 @@ export const TextWidgetPreview = memo(({entity}) => {
         if (!element?.text) {
             return {}
         }
-        return _textWidgetManager.generateCSSVariables(element, currentSnapshotImage, WIDGET_SYSTEM_FONT_STACK)
-    }, [element, currentSnapshotImage, _textWidgetManager])
+        return _textWidgetManager.generateCSSVariables(element, currentSnapshotImage, WIDGET_SYSTEM_FONT_STACK, {
+            correction: scaleCorrection,
+        })
+    }, [currentSnapshotImage, element, scaleCorrection, _textWidgetManager])
 
     const contentSize = useMemo(() => {
         return _textWidgetManager.measureContent(element, WIDGET_SYSTEM_FONT_STACK, {
             buffer: PREVIEW_MEASURE_BUFFER,
+            correction: scaleCorrection,
         })
-    }, [element, _textWidgetManager])
+    }, [element, scaleCorrection, _textWidgetManager])
 
     useEffect(() => {
         if (_moveable?.current) {

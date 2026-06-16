@@ -276,7 +276,7 @@ export const EditableText = ({id}) => {
 
         const frame = requestAnimationFrame(() => {
             const {width, height} = widgetManager.measureContent(element, undefined, {
-                correction: 1,
+                correction: scaleCorrection,
             })
 
             if (Number.isFinite(width) && width > 0 && Number.isFinite(height) && height > 0) {
@@ -309,6 +309,7 @@ export const EditableText = ({id}) => {
         element?.padding?.bottom,
         element?.padding?.left,
         element?.scaled,
+        scaleCorrection,
         fontTick,
     ])
 
@@ -377,7 +378,12 @@ export const EditableText = ({id}) => {
                 spellCheck={false}
                 onClick={!isEditing ? handleStartEdit : undefined}
                 onInput={isEditing ? (e) => {
-                    _editingText.current = textFromEditable(e.currentTarget)
+                    const nextText = textFromEditable(e.currentTarget)
+                    _editingText.current = nextText
+                    setEditingText(nextText)
+
+                    const $target = ensureProxyElement()
+                    $target.text.content = nextText
                 } : undefined}
                 onBlur={isEditing ? handleFinishEdit : undefined}
                 onKeyDown={isEditing ? (e) => {

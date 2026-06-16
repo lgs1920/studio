@@ -59,6 +59,22 @@ const getMeasuredHeight = (element, fallback = 0) => {
     return Number.isFinite(size) && size > 0 ? Math.ceil(size) : fallback
 }
 
+const getWidgetCenter = (target, config) => {
+    const dimensions = config?.dimensions ?? {
+        width:  getMeasuredSize(target),
+        height: getMeasuredHeight(target),
+    }
+    const position = config?.position ?? {
+        left: parseFloat(target?.style?.left || '') || 0,
+        top:  parseFloat(target?.style?.top || '') || 0,
+    }
+
+    return {
+        x: position.left + (dimensions.width / 2),
+        y: position.top + (dimensions.height / 2),
+    }
+}
+
 export const PaddingElement = ({
                                    element,
                                    updateValue,
@@ -109,6 +125,7 @@ export const PaddingElement = ({
 
             if (target) {
                 const config = __.ui.widgetManager.getWidgetConfig(moveableId)
+                const center = getWidgetCenter(target, config)
                 const previousWidth = target.style.width
                 const previousHeight = target.style.height
 
@@ -120,11 +137,16 @@ export const PaddingElement = ({
                 const height = getMeasuredHeight(content, getMeasuredHeight(target))
 
                 if (width > 0 && height > 0) {
+                    const nextLeft = center.x - (width / 2)
+                    const nextTop = center.y - (height / 2)
                     target.style.width = `${width}px`
                     target.style.height = `${height}px`
+                    target.style.left = `${nextLeft}px`
+                    target.style.top = `${nextTop}px`
 
                     if (config) {
                         config.dimensions = {width, height}
+                        config.position = {left: nextLeft, top: nextTop}
                         if (config.persist && config.runtimeReady) {
                             void __.ui.widgetManager.saveWidgetPosition(moveableId, config)
                         }
