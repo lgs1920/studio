@@ -230,6 +230,7 @@ describe('FlythroughDrawer', () => {
             expect(globalThis.lgs.stores.flythrough.camera.altitude).toBe(900)
             expect(globalThis.lgs.settings.ui.flythrough.camera.groundOffset).toBeUndefined()
             expect(globalThis.lgs.stores.flythrough.camera.groundOffset).toBeUndefined()
+            expect(view.getByLabelText('Ground offset (m)')).toBeTruthy()
         })
     })
 
@@ -243,6 +244,16 @@ describe('FlythroughDrawer', () => {
         expect(view.getByLabelText('Altitude (m)')).toBeTruthy()
         expect(view.getByLabelText('Pitch (deg)')).toBeTruthy()
         expect(view.queryByLabelText('Heading (deg)')).toBeNull()
+    })
+
+    it('shows the ground offset label when the camera mode is ground offset', () => {
+        globalThis.lgs.stores.flythrough.camera.altitudeMode = 'ground-offset'
+        globalThis.lgs.settings.ui.flythrough.camera.altitudeMode = 'ground-offset'
+
+        const view = render(<FlythroughDrawer/>)
+
+        expect(view.getByLabelText('Camera altitude')).toBeTruthy()
+        expect(view.getByLabelText('Ground offset (m)')).toBeTruthy()
     })
 
     it('restores altitude on blur when the draft is emptied', async () => {
@@ -271,7 +282,7 @@ describe('FlythroughDrawer', () => {
         })
     })
 
-    it('commits altitude edits while typing when the value is valid', async () => {
+    it('commits altitude edits on blur when the value is valid', async () => {
         const view = render(<FlythroughDrawer/>)
         const altitudeInput = view.getByLabelText('Altitude (m)')
 
@@ -279,18 +290,111 @@ describe('FlythroughDrawer', () => {
         fireEvent.input(altitudeInput, {target: {value: '1500'}})
 
         expect(altitudeInput.value).toBe('1500')
+        expect(globalThis.lgs.settings.ui.flythrough.camera.altitude).toBe(1200)
+        expect(globalThis.lgs.stores.flythrough.camera.altitude).toBe(1200)
 
+        fireEvent.blur(altitudeInput)
         await waitFor(() => {
             expect(globalThis.lgs.settings.ui.flythrough.camera.altitude).toBe(1500)
             expect(globalThis.lgs.stores.flythrough.camera.altitude).toBe(1500)
+            expect(altitudeInput.value).toBe('1500')
         })
+    })
 
+    it('keeps the altitude draft stable while typing a multi-digit value', async () => {
+        const view = render(<FlythroughDrawer/>)
+        const altitudeInput = view.getByLabelText('Altitude (m)')
+
+        fireEvent.focus(altitudeInput)
+        fireEvent.input(altitudeInput, {target: {value: '1'}})
+        expect(altitudeInput.value).toBe('1')
+        expect(globalThis.lgs.settings.ui.flythrough.camera.altitude).toBe(1200)
+
+        fireEvent.input(altitudeInput, {target: {value: '10'}})
+        expect(altitudeInput.value).toBe('10')
+        expect(globalThis.lgs.settings.ui.flythrough.camera.altitude).toBe(1200)
+
+        fireEvent.input(altitudeInput, {target: {value: '100'}})
+        expect(altitudeInput.value).toBe('100')
+        expect(globalThis.lgs.settings.ui.flythrough.camera.altitude).toBe(1200)
+
+        fireEvent.input(altitudeInput, {target: {value: '1000'}})
+        expect(altitudeInput.value).toBe('1000')
+        expect(globalThis.lgs.settings.ui.flythrough.camera.altitude).toBe(1200)
+
+        fireEvent.blur(altitudeInput)
+
+        await waitFor(() => {
+            expect(globalThis.lgs.settings.ui.flythrough.camera.altitude).toBe(1000)
+            expect(globalThis.lgs.stores.flythrough.camera.altitude).toBe(1000)
+        })
+    })
+
+    it('updates altitude settings without moving the Cesium camera', async () => {
+        const view = render(<FlythroughDrawer/>)
+        const altitudeInput = view.getByLabelText('Altitude (m)')
+
+        fireEvent.focus(altitudeInput)
+        fireEvent.input(altitudeInput, {target: {value: '1500'}})
         fireEvent.blur(altitudeInput)
 
         await waitFor(() => {
             expect(globalThis.lgs.settings.ui.flythrough.camera.altitude).toBe(1500)
             expect(globalThis.lgs.stores.flythrough.camera.altitude).toBe(1500)
         })
+
+        expect(globalThis.__.ui.flythrough.refresh).toHaveBeenLastCalledWith({camera: false})
+        expect(globalThis.__.ui.flythrough.refreshCamera).not.toHaveBeenCalled()
+    })
+
+    it('keeps a ground offset change stable even when change fires before focus', async () => {
+        globalThis.lgs.stores.flythrough.camera.altitudeMode = 'ground-offset'
+        globalThis.lgs.settings.ui.flythrough.camera.altitudeMode = 'ground-offset'
+
+        const view = render(<FlythroughDrawer/>)
+        const altitudeInput = view.getByLabelText('Ground offset (m)')
+
+        fireEvent.change(altitudeInput, {target: {value: '1000'}})
+
+        expect(altitudeInput.value).toBe('1000')
+        expect(globalThis.lgs.stores.flythrough.cameraUpdateSource).toBe('drawer')
+
+        await waitFor(() => {
+            expect(globalThis.lgs.settings.ui.flythrough.camera.altitude).toBe(1000)
+            expect(globalThis.lgs.stores.flythrough.camera.altitude).toBe(1000)
+        })
+
+        expect(globalThis.__.ui.flythrough.refresh).toHaveBeenLastCalledWith({camera: false})
+        expect(globalThis.__.ui.flythrough.refreshCamera).not.toHaveBeenCalled()
+    })
+
+    it('keeps drawer camera updates locked while the altitude draft is active', async () => {
+        vi.useFakeTimers()
+        try {
+            const view = render(<FlythroughDrawer/>)
+            const altitudeInput = view.getByLabelText('Altitude (m)')
+
+            fireEvent.focus(altitudeInput)
+            fireEvent.input(altitudeInput, {target: {value: '2000'}})
+
+            await Promise.resolve()
+            await Promise.resolve()
+
+            expect(globalThis.lgs.stores.flythrough.cameraUpdateSource).toBe('drawer')
+
+            await vi.advanceTimersByTimeAsync(500)
+
+            expect(globalThis.lgs.stores.flythrough.cameraUpdateSource).toBe('drawer')
+
+            fireEvent.blur(altitudeInput)
+
+            await vi.advanceTimersByTimeAsync(200)
+
+            expect(globalThis.lgs.stores.flythrough.cameraUpdateSource).toBeNull()
+        }
+        finally {
+            vi.useRealTimers()
+        }
     })
 
     it('commits heading edits while typing', async () => {
@@ -322,6 +426,7 @@ describe('FlythroughDrawer', () => {
 
         expect(globalThis.lgs.settings.ui.flythrough.camera.altitude).toBe(1200)
         expect(globalThis.lgs.stores.flythrough.camera.altitude).toBe(1200)
+        expect(altitudeInput.value).toBe('9')
 
         fireEvent.blur(altitudeInput)
 

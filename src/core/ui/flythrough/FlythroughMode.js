@@ -575,7 +575,8 @@ export class FlythroughMode {
     #cameraBezierResolve = null
     #savedCameraState = null
     #playbackStartCameraSettings = null
-    #playbackCameraUserAdjusted = false
+    #deferPlaybackCameraRestore = false
+    #suppressPlaybackCameraSync = false
     #flythroughDrawerWasOpenBeforePlayback = false
     #lastCameraHeading = null
     #lastCameraPitch = null
@@ -692,6 +693,8 @@ export class FlythroughMode {
     start = (options = {}) => {
         this.#renderer.clear()
         this.bindCesiumCameraBridge()
+        this.#deferPlaybackCameraRestore = false
+        this.#suppressPlaybackCameraSync = false
         const sampler = this.configure(options)
         if (!sampler?.hasSamples) {
             return null
@@ -1454,6 +1457,7 @@ export class FlythroughMode {
         this.#stopStopClipPOIMaskLoop()
         this.#cancelActiveCameraFlight()
         this.#stopCameraLiveSyncLoop()
+        this.#deferPlaybackCameraRestore = options.emit !== false
         const sample = this.#controller.stop({
             ...options,
             clearProgress: options.clearProgress ?? true,
@@ -1464,15 +1468,21 @@ export class FlythroughMode {
         this.#setFlythroughOrbitAllowed(true)
         this.#setContinuousRender(false)
         this.#removeToleranceZoneOverlay()
-        this.#restorePlaybackCameraSettings()
+        if (options.emit === false) {
+            this.#restorePlaybackCameraSettings()
+        }
         resetRuntimeProgress(flythroughStore())
         this.#restoreMainUI()
         this.#restoreCurrentJourneyVisibility()
         this.#resetCameraController({preserveSavedCameraState: true})
         this.#restoreJourneyToolbarVisibility()
         if (options.emit !== false) {
-            this.#focusJourneyAfterPlayback({
+            this.#suppressPlaybackCameraSync = true
+            void this.#focusJourneyAfterPlayback({
                 snapDistance: 50000,
+            }).finally(() => {
+                this.#deferPlaybackCameraRestore = false
+                this.#restorePlaybackCameraSettings({force: true})
             })
         }
         else {
@@ -1690,7 +1700,7 @@ export class FlythroughMode {
     #focusJourneyAfterPlayback = ({snapDistance = 50000} = {}) => {
         const journey = globalThis.lgs?.theJourney
         if (!journey) {
-            return
+            return Promise.resolve()
         }
 
         journey.visible = true
@@ -1700,24 +1710,44 @@ export class FlythroughMode {
         }
         this.#cameraFlightActive = false
         globalThis.lgs?.viewer?.camera?.cancelFlight?.()
-        if (typeof journey.focus === 'function') {
-            const focusResult = journey.focus({
-                              resetCamera: true,
-                              rotate: false,
-                              snapDistance,
-                          })
-            Promise.resolve(focusResult).finally(() => this.#hideGloballyHiddenPOIs())
-            return
-        }
+        return new Promise(resolve => {
+            let settled = false
+            const finish = () => {
+                if (settled) {
+                    return
+                }
+                settled = true
+                this.#hideGloballyHiddenPOIs()
+                resolve()
+            }
 
-        const focusResult = globalThis.__?.ui?.sceneManager?.focusOnJourney?.({
-                                                              journey,
-                                                              target:      journey,
-                                                              resetCamera: true,
-                                                              rotate: false,
-                                                              snapDistance,
-                                                          })
-        Promise.resolve(focusResult).finally(() => this.#hideGloballyHiddenPOIs())
+            if (typeof journey.focus === 'function') {
+                const focusResult = journey.focus({
+                    resetCamera: true,
+                    rotate:       false,
+                    snapDistance,
+                    callback:     finish,
+                })
+                if (focusResult !== undefined) {
+                    void Promise.resolve(focusResult).finally(finish)
+                }
+                return
+            }
+
+            const focusResult = globalThis.__?.ui?.sceneManager?.focusOnJourney?.({
+                journey,
+                target:      journey,
+                resetCamera: true,
+                rotate:      false,
+                snapDistance,
+                callback:    finish,
+            })
+            if (focusResult !== undefined) {
+                void Promise.resolve(focusResult).finally(finish)
+                return
+            }
+            finish()
+        })
     }
 
     dispose = () => {
@@ -1744,7 +1774,6 @@ export class FlythroughMode {
         if (!preserveSavedCameraState) {
             this.#savedCameraState = null
             this.#playbackStartCameraSettings = null
-            this.#playbackCameraUserAdjusted = false
         }
         this.#lastCameraHeading = null
         this.#lastCameraPitch = null
@@ -1797,7 +1826,6 @@ export class FlythroughMode {
             globalThis.lgs?.stores?.flythrough?.camera
             ?? getFlythroughSettings().camera,
         )
-        this.#playbackCameraUserAdjusted = false
         if (globalThis.lgs?.stores?.flythrough) {
             globalThis.lgs.stores.flythrough.cameraUserAdjusted = false
         }
@@ -1813,28 +1841,38 @@ export class FlythroughMode {
     }
 
     #markPlaybackCameraUserAdjusted = () => {
-        this.#playbackCameraUserAdjusted = true
         if (globalThis.lgs?.stores?.flythrough) {
             globalThis.lgs.stores.flythrough.cameraUserAdjusted = true
         }
     }
 
-    #restorePlaybackCameraSettings = () => {
+    #restorePlaybackCameraSettings = ({force = false} = {}) => {
         const store = flythroughStore()
         const initialCamera = this.#playbackStartCameraSettings
-        const cameraUserAdjusted = this.#playbackCameraUserAdjusted || store?.cameraUserAdjusted === true
+        const cameraUserAdjusted = store?.cameraUserAdjusted === true
         this.#playbackStartCameraSettings = null
-        this.#playbackCameraUserAdjusted = false
 
         if (store) {
             store.cameraUserAdjusted = false
         }
 
-        if (!initialCamera || cameraUserAdjusted) {
+        if (!initialCamera) {
             return null
         }
 
-        return this.#persistCameraSettings(initialCamera)
+        if (initialCamera.altitudeMode === FLYTHROUGH_CAMERA_ALTITUDE_GROUND_OFFSET) {
+            return this.#persistCameraSettings(initialCamera)
+        }
+
+        if (force) {
+            return this.#persistCameraSettings(initialCamera)
+        }
+
+        if (!cameraUserAdjusted) {
+            return this.#persistCameraSettings(initialCamera)
+        }
+
+        return null
     }
 
     #restoreFlythroughDrawerAfterPlayback = () => {
@@ -1902,7 +1940,7 @@ export class FlythroughMode {
         this.#resetCameraController({preserveSavedCameraState: true})
         this.#restoreJourneyToolbarVisibility()
         this.#restoreMainUI()
-        this.#restorePlaybackCameraSettings()
+        this.#restorePlaybackCameraSettings({force: true})
         resetRuntimeProgress(flythroughStore())
         this.#restoreCurrentJourneyVisibility()
         this.#restoreCameraState()
@@ -2590,6 +2628,9 @@ export class FlythroughMode {
 
     #updateCameraFromCesiumControls = () => {
         const store = flythroughStore()
+        if (this.#suppressPlaybackCameraSync) {
+            return
+        }
         if (store?.cameraUpdateSource === 'drawer') {
             return
         }
@@ -3054,6 +3095,9 @@ export class FlythroughMode {
 
         const cameraChanged = () => {
             // Keep live Cesium edits visible in the drawer during FT; only suppress echoes from our own writes.
+            if (this.#suppressPlaybackCameraSync) {
+                return
+            }
             if (this.#cameraApplyingView || this.#now() < this.#cameraAutoTrackingIgnoreUntil) {
                 return
             }
@@ -3070,6 +3114,9 @@ export class FlythroughMode {
             }
         }
         const manualStart = ({pointer = false} = {}) => {
+            if (this.#suppressPlaybackCameraSync) {
+                this.#suppressPlaybackCameraSync = false
+            }
             if (this.#cameraFlightActive && !pointer) {
                 return
             }
@@ -3480,7 +3527,9 @@ export class FlythroughMode {
                 this.#restoreFlythroughDrawerAfterPlayback()
                 this.#restoreMainUI()
                 void this.#restoreNearbyPOIsAfterPlayback()
-                this.#restorePlaybackCameraSettings()
+                if (!this.#deferPlaybackCameraRestore) {
+                    this.#restorePlaybackCameraSettings({force: true})
+                }
                 resetRuntimeProgress(flythroughStore())
                 this.#restoreCurrentJourneyVisibility()
             }),
@@ -3514,10 +3563,13 @@ export class FlythroughMode {
                     this.#restoreFlythroughDrawerAfterPlayback()
                     this.#restoreMainUI()
                     void this.#restoreNearbyPOIsAfterPlayback()
-                    this.#restorePlaybackCameraSettings()
                     resetRuntimeProgress(flythroughStore())
                     this.#restoreCurrentJourneyVisibility()
-                    this.#focusJourneyAfterPlayback()
+                    this.#suppressPlaybackCameraSync = true
+                    void this.#focusJourneyAfterPlayback().finally(() => {
+                        this.#deferPlaybackCameraRestore = false
+                        this.#restorePlaybackCameraSettings({force: true})
+                    })
                 }
 
                 try {

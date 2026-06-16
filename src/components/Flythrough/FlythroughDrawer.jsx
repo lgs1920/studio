@@ -289,7 +289,13 @@ export const FlythroughDrawer = memo(() => {
         heading:  null,
         pitch:    null,
     })
+    const cameraDraftValues = useRef({
+        altitude: null,
+        heading:  null,
+        pitch:    null,
+    })
     const cameraDraftBaseline = useRef(null)
+    const cameraDraftField = useRef(null)
     const cameraUpdateSourceClearTimer = useRef(null)
     const totalVideoDurationSeconds = useMemo(() => {
         const clipDurationSeconds = [...(clips.start ?? []), ...(clips.stop ?? [])]
@@ -410,7 +416,7 @@ export const FlythroughDrawer = memo(() => {
         refreshFlythrough(true)
     }, [refreshFlythrough, stopRotateIfNeeded])
 
-    const updateCamera = useCallback(async (updates) => {
+    const updateCamera = useCallback(async (updates, {syncCamera = true} = {}) => {
         await stopRotateIfNeeded()
         const nextCamera = mergeCamera(lgs.settings.ui.flythrough.camera, updates)
         lgs.settings.ui.flythrough.camera = nextCamera
@@ -419,21 +425,25 @@ export const FlythroughDrawer = memo(() => {
         if (cameraUpdateSourceClearTimer.current !== null) {
             clearTimeout(cameraUpdateSourceClearTimer.current)
         }
-        cameraUpdateSourceClearTimer.current = setTimeout(() => {
-            if (lgs.stores.flythrough.cameraUpdateSource === 'drawer') {
-                lgs.stores.flythrough.cameraUpdateSource = null
-            }
-            cameraUpdateSourceClearTimer.current = null
-        }, 120)
+        if (cameraDraftField.current === null) {
+            cameraUpdateSourceClearTimer.current = setTimeout(() => {
+                if (lgs.stores.flythrough.cameraUpdateSource === 'drawer') {
+                    lgs.stores.flythrough.cameraUpdateSource = null
+                }
+                cameraUpdateSourceClearTimer.current = null
+            }, 120)
+        }
         if (flythroughState.active || flythroughState.playing || flythroughState.paused) {
             lgs.stores.flythrough.cameraUserAdjusted = true
         }
-        refreshFlythrough(true)
-        __.ui.flythrough?.refreshCamera?.({
-            sample:             flythroughState.sample ?? null,
-            suppressMoveEvents: false,
-            source:             'drawer',
-        })
+        refreshFlythrough(syncCamera)
+        if (syncCamera) {
+            __.ui.flythrough?.refreshCamera?.({
+                sample:             flythroughState.sample ?? null,
+                suppressMoveEvents: true,
+                source:             'drawer',
+            })
+        }
     }, [flythroughState.active, flythroughState.paused, flythroughState.playing, flythroughState.sample, refreshFlythrough, stopRotateIfNeeded])
 
     useEffect(() => () => {
@@ -444,6 +454,13 @@ export const FlythroughDrawer = memo(() => {
     }, [])
 
     const beginCameraDraft = useCallback((field, value) => {
+        cameraDraftField.current = field
+        lgs.stores.flythrough.cameraUpdateSource = 'drawer'
+        if (cameraUpdateSourceClearTimer.current !== null) {
+            clearTimeout(cameraUpdateSourceClearTimer.current)
+            cameraUpdateSourceClearTimer.current = null
+        }
+        cameraDraftValues.current[field] = String(value)
         cameraDraftBaseline.current = {
             field,
             altitude: camera.altitude,
@@ -456,14 +473,47 @@ export const FlythroughDrawer = memo(() => {
         }))
     }, [camera.altitude, camera.heading, camera.pitch])
 
+    const updateCameraDraft = useCallback((field, value) => {
+        if (cameraDraftField.current !== field) {
+            beginCameraDraft(field, value)
+            return
+        }
+
+        lgs.stores.flythrough.cameraUpdateSource = 'drawer'
+        if (cameraUpdateSourceClearTimer.current !== null) {
+            clearTimeout(cameraUpdateSourceClearTimer.current)
+            cameraUpdateSourceClearTimer.current = null
+        }
+        cameraDraftValues.current[field] = String(value)
+        setCameraDrafts(current => ({
+            ...current,
+            [field]: String(value),
+        }))
+    }, [beginCameraDraft])
+
     const clearCameraDraft = useCallback((field) => {
+        if (cameraDraftField.current === field) {
+            cameraDraftField.current = null
+            cameraDraftValues.current[field] = null
+            if (lgs.stores.flythrough.cameraUpdateSource === 'drawer') {
+                if (cameraUpdateSourceClearTimer.current !== null) {
+                    clearTimeout(cameraUpdateSourceClearTimer.current)
+                }
+                cameraUpdateSourceClearTimer.current = setTimeout(() => {
+                    if (lgs.stores.flythrough.cameraUpdateSource === 'drawer') {
+                        lgs.stores.flythrough.cameraUpdateSource = null
+                    }
+                    cameraUpdateSourceClearTimer.current = null
+                }, 120)
+            }
+        }
         setCameraDrafts(current => ({
             ...current,
             [field]: null,
         }))
     }, [])
 
-    const commitCameraAltitude = useCallback((rawValue) => {
+    const commitCameraAltitude = useCallback((rawValue, options) => {
         if (String(rawValue ?? '').trim() === '') {
             return false
         }
@@ -474,10 +524,10 @@ export const FlythroughDrawer = memo(() => {
 
         const nextAltitude = clampFlythroughNumber(altitude, camera.altitude, 10, 100000)
         if (nextAltitude === camera.altitude) {
-            return false
+            return true
         }
 
-        updateCamera({altitude: nextAltitude})
+        updateCamera({altitude: nextAltitude}, options)
         return true
     }, [altitudeUnit, camera.altitude, updateCamera])
 
@@ -741,6 +791,10 @@ export const FlythroughDrawer = memo(() => {
         updateCamera(presetUpdates)
     }, [updateCamera])
 
+    const altitudeFieldLabel = camera.altitudeMode === FLYTHROUGH_CAMERA_ALTITUDE_GROUND_OFFSET
+        ? `Ground offset (${altitudeUnit})`
+        : `Altitude (${altitudeUnit})`
+
     const updateHysteresisMarginRatio = useCallback((event) => {
         updateCamera({
                          hysteresis: {
@@ -956,7 +1010,7 @@ export const FlythroughDrawer = memo(() => {
                                                      </WaSelect>
                                                      <div className="flythrough-style-field-grid is-single">
                                                          <WaNumberInput
-                                                             label={`Altitude (${altitudeUnit})`}
+                                                             label={altitudeFieldLabel}
                                                              size="s"
                                                              appearance="filled"
                                                              min={Math.round(UnitUtils.convert(10).to(altitudeUnit))}
@@ -964,16 +1018,15 @@ export const FlythroughDrawer = memo(() => {
                                                              value={altitudeDisplayValue}
                                                              onFocus={() => beginCameraDraft('altitude', altitudeDisplayValue)}
                                                              onInput={event => {
-                                                                 const nextValue = event.target.value
-                                                                 setCameraDrafts(current => ({
-                                                                     ...current,
-                                                                     altitude: nextValue,
-                                                                 }))
-                                                                 commitCameraAltitude(nextValue)
+                                                                 updateCameraDraft('altitude', event.target.value)
                                                              }}
-                                                             onBlur={() => {
-                                                                 const currentValue = cameraDrafts.altitude
-                                                                 const committed = commitCameraAltitude(currentValue)
+                                                             onChange={event => {
+                                                                 updateCameraDraft('altitude', event.target.value)
+                                                                 commitCameraAltitude(event.target.value, {syncCamera: false})
+                                                             }}
+                                                             onBlur={event => {
+                                                                 const currentValue = cameraDraftValues.current.altitude ?? event.target.value
+                                                                 const committed = commitCameraAltitude(currentValue, {syncCamera: false})
                                                                  if (!committed && cameraDraftBaseline.current?.field === 'altitude') {
                                                                      setCameraDrafts(current => ({
                                                                          ...current,
@@ -994,14 +1047,15 @@ export const FlythroughDrawer = memo(() => {
                                                              onFocus={() => beginCameraDraft('pitch', pitchDisplayValue)}
                                                              onInput={event => {
                                                                  const nextValue = event.target.value
+                                                                 cameraDraftValues.current.pitch = nextValue
                                                                  setCameraDrafts(current => ({
                                                                      ...current,
                                                                      pitch: nextValue,
                                                                  }))
                                                                  commitCameraPitch(nextValue)
                                                              }}
-                                                             onBlur={() => {
-                                                                 const currentValue = cameraDrafts.pitch
+                                                             onBlur={event => {
+                                                                 const currentValue = cameraDraftValues.current.pitch ?? event.target.value
                                                                  const committed = commitCameraPitch(currentValue)
                                                                  if (!committed && cameraDraftBaseline.current?.field === 'pitch') {
                                                                      setCameraDrafts(current => ({
@@ -1024,14 +1078,15 @@ export const FlythroughDrawer = memo(() => {
                                                                  onFocus={() => beginCameraDraft('heading', headingDisplayValue)}
                                                                  onInput={event => {
                                                                      const nextValue = event.target.value
+                                                                     cameraDraftValues.current.heading = nextValue
                                                                      setCameraDrafts(current => ({
                                                                          ...current,
                                                                          heading: nextValue,
                                                                      }))
                                                                      commitCameraHeading(nextValue)
                                                                  }}
-                                                                 onBlur={() => {
-                                                                     const currentValue = cameraDrafts.heading
+                                                                 onBlur={event => {
+                                                                     const currentValue = cameraDraftValues.current.heading ?? event.target.value
                                                                      const committed = commitCameraHeading(currentValue)
                                                                      if (!committed && cameraDraftBaseline.current?.field === 'heading') {
                                                                          setCameraDrafts(current => ({
