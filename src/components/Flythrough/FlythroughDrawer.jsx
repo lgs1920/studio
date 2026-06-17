@@ -874,7 +874,10 @@ export const FlythroughDrawer = memo(() => {
                         ) : (
                              <>
                                  <WaCard appearance="outlined" className="flythrough-progress-card-in-drawer">
-                                     <FlythroughProgressBar className="flythrough-progress-bar-in-drawer"/>
+                                     <FlythroughProgressBar
+                                         className="flythrough-progress-bar-in-drawer"
+                                         disabled={syncWithVideo}
+                                     />
                                  </WaCard>
                                  <div className="flythrough-sync-row">
                                      <WaSwitch

@@ -59,10 +59,12 @@ const CAMERA_HEADING_LOOKAHEAD_PROGRESS = 0.16
 const CAMERA_HEADING_MIN_CHANGE_RADIANS = CesiumMath.toRadians(5)
 const CAMERA_VIEW_POSITION_EPSILON_METERS = 0.5
 const CAMERA_VIEW_ANGLE_EPSILON_RADIANS = CesiumMath.toRadians(0.25)
+const CAMERA_UPDATE_MIN_PROGRESS_DELTA = 0.0005
 const FLYTHROUGH_TOLERANCE_OUTER_INSET_RATIO = 0.05
 const FLYTHROUGH_TOLERANCE_INNER_INSET_RATIO = 0.2
 const FLYTHROUGH_TOLERANCE_RECENTER_REPLACE_DELAY_MS = 300
 const FLYTHROUGH_POI_TRIGGER_EPSILON_METERS = 0.001
+const FLYTHROUGH_POI_TRIGGER_SCAN_MARGIN_METERS = 5
 export const FLYTHROUGH_JOURNEY_TOOLBAR_VISIBILITY_EVENT = 'lgs:flythrough:journey-toolbar-visibility'
 export const FLYTHROUGH_EVENT_STOP_CLIPS_COMPLETE = 'flythrough/stop-clips-complete'
 
@@ -604,6 +606,9 @@ export class FlythroughMode {
     #flythroughPOIVisibilityState = new Map()
     #stopClipPOIMaskFrame = null
     #lastFlythroughPoiDistance = null
+    #lastFlythroughPoiCursor = 0
+    #lastPlaybackUpdateProgressKey = null
+    #sortedNearbyPois = []
 
     constructor({
                     controller = new FlythroughPlaybackController(),
@@ -1274,8 +1279,24 @@ export class FlythroughMode {
         this.#flythroughPoiExpandedState.clear()
         this.#flythroughPoiTriggered.clear()
         this.#lastFlythroughPoiDistance = null
+        this.#lastFlythroughPoiCursor = 0
+        this.#sortedNearbyPois = []
 
         await Promise.all(restoreEntries.map(([poiId, expanded]) => this.#updatePOIExpandedState(poiId, expanded === true)))
+    }
+
+    #closeFlythroughOpenedPOIsBeforeStopClips = () => {
+        for (const timerId of this.#flythroughPoiCollapseTimers.values()) {
+            globalThis.clearTimeout?.(timerId)
+        }
+        this.#flythroughPoiCollapseTimers.clear()
+
+        const openedPOIIds = Array.from(this.#flythroughPoiTriggered)
+        if (openedPOIIds.length === 0) {
+            return null
+        }
+
+        return Promise.all(openedPOIIds.map(poiId => this.#updatePOIExpandedState(poiId, false)))
     }
 
     #prepareNearbyPOIsForPlayback = async (sample = null) => {
@@ -1286,10 +1307,26 @@ export class FlythroughMode {
         const nearbyPois = Array.isArray(store?.nearbyPois) && store.nearbyPois.length > 0
             ? store.nearbyPois
             : this.#syncRuntimeNearbyPOIs(journey)
+        const sortedNearbyPois = [...nearbyPois].sort((left, right) => {
+            const leftDistance = finiteNumber(left?.projectedAbscissa)
+            const rightDistance = finiteNumber(right?.projectedAbscissa)
+            if (leftDistance === null && rightDistance === null) {
+                return 0
+            }
+            if (leftDistance === null) {
+                return 1
+            }
+            if (rightDistance === null) {
+                return -1
+            }
+            return leftDistance - rightDistance
+        })
 
-        this.#applyFlythroughPOIVisibility(nearbyPois)
+        this.#sortedNearbyPois = sortedNearbyPois
 
-        for (const entry of nearbyPois) {
+        this.#applyFlythroughPOIVisibility(sortedNearbyPois)
+
+        for (const entry of sortedNearbyPois) {
             const poiId = entry?.poi?.id
             const poi = globalThis.lgs?.stores?.main?.components?.pois?.list?.get?.(poiId)
             const settings = normalizeFlythroughPOISettings(poi?.flythrough)
@@ -1309,6 +1346,9 @@ export class FlythroughMode {
         this.#lastFlythroughPoiDistance = currentDistance === null
             ? null
             : Math.max(0, currentDistance - FLYTHROUGH_POI_TRIGGER_EPSILON_METERS)
+        this.#lastFlythroughPoiCursor = currentDistance === null
+            ? 0
+            : this.#flythroughPoiCursorForDistance(sortedNearbyPois, currentDistance)
 
         if (sample) {
             void this.#syncNearbyPOIsForSample(sample)
@@ -1350,37 +1390,86 @@ export class FlythroughMode {
             return
         }
 
-        const nearbyPois = flythroughStore()?.nearbyPois ?? []
+        const nearbyPois = this.#sortedNearbyPois.length > 0
+            ? this.#sortedNearbyPois
+            : flythroughStore()?.nearbyPois ?? []
         const previousDistance = this.#lastFlythroughPoiDistance
-        this.#lastFlythroughPoiDistance = currentDistance
 
         if (!Array.isArray(nearbyPois) || nearbyPois.length === 0) {
+            this.#lastFlythroughPoiDistance = currentDistance
             return
         }
 
         if (previousDistance !== null && currentDistance < previousDistance) {
+            this.#lastFlythroughPoiCursor = this.#flythroughPoiCursorForDistance(nearbyPois, currentDistance)
+            this.#lastFlythroughPoiDistance = currentDistance
             return
         }
 
-        const thresholdStart = previousDistance ?? Math.max(0, currentDistance - FLYTHROUGH_POI_TRIGGER_EPSILON_METERS)
-        const triggeredIds = nearbyPois
-            .filter(entry => {
-                const poiId = entry?.poi?.id
-                const targetDistance = finiteNumber(entry?.projectedAbscissa)
+        const thresholdStart = previousDistance ?? Math.max(
+            0,
+            currentDistance - Math.max(FLYTHROUGH_POI_TRIGGER_EPSILON_METERS, FLYTHROUGH_POI_TRIGGER_SCAN_MARGIN_METERS),
+        )
+        let cursor = Number.isInteger(this.#lastFlythroughPoiCursor)
+                    ? Math.max(0, this.#lastFlythroughPoiCursor)
+                    : this.#flythroughPoiCursorForDistance(nearbyPois, thresholdStart)
+        const triggeredIds = []
+
+        while (cursor < nearbyPois.length) {
+            const entry = nearbyPois[cursor]
+            const targetDistance = finiteNumber(entry?.projectedAbscissa)
+            if (targetDistance === null) {
+                cursor += 1
+                continue
+            }
+
+            if (targetDistance < thresholdStart) {
+                cursor += 1
+                continue
+            }
+
+            if (targetDistance > currentDistance + FLYTHROUGH_POI_TRIGGER_EPSILON_METERS) {
+                break
+            }
+
+            const poiId = entry?.poi?.id
+            if (poiId && !this.#flythroughPoiTriggered.has(poiId)) {
                 const poi = globalThis.lgs?.stores?.main?.components?.pois?.list?.get?.(poiId)
                 const settings = normalizeFlythroughPOISettings(poi?.flythrough)
-                return Boolean(poiId)
-                    && targetDistance !== null
-                    && !this.#flythroughPoiTriggered.has(poiId)
-                    && settings.visible !== false
-                    && settings.animated !== false
-                    && targetDistance > thresholdStart
-                    && targetDistance <= currentDistance + FLYTHROUGH_POI_TRIGGER_EPSILON_METERS
-            })
-            .map(entry => entry.poi.id)
+                if (settings.visible !== false && settings.animated !== false) {
+                    this.#flythroughPoiTriggered.add(poiId)
+                    triggeredIds.push(poiId)
+                }
+            }
 
-        triggeredIds.forEach(poiId => this.#flythroughPoiTriggered.add(poiId))
+            cursor += 1
+        }
+
+        this.#lastFlythroughPoiCursor = cursor
+        this.#lastFlythroughPoiDistance = currentDistance
         await Promise.all(triggeredIds.map(poiId => this.#openNearbyPOIForPlayback(poiId)))
+    }
+
+    #flythroughPoiCursorForDistance = (nearbyPois = [], distance = 0) => {
+        if (!Array.isArray(nearbyPois) || nearbyPois.length === 0) {
+            return 0
+        }
+
+        const targetDistance = finiteNumber(distance) ?? 0
+        let low = 0
+        let high = nearbyPois.length
+        while (low < high) {
+            const mid = Math.floor((low + high) / 2)
+            const midDistance = finiteNumber(nearbyPois[mid]?.projectedAbscissa)
+            if (midDistance === null || midDistance <= targetDistance) {
+                low = mid + 1
+            }
+            else {
+                high = mid
+            }
+        }
+
+        return low
     }
 
     /**
@@ -1771,6 +1860,7 @@ export class FlythroughMode {
         this.#cancelCameraBezierTransition(false)
         this.#lastToleranceRecenterAt = null
         this.#lastToleranceRecenterProgress = null
+        this.#lastPlaybackUpdateProgressKey = null
         if (!preserveSavedCameraState) {
             this.#savedCameraState = null
             this.#playbackStartCameraSettings = null
@@ -3458,6 +3548,7 @@ export class FlythroughMode {
         this.#unbind.push(
             this.#controller.on(FLYTHROUGH_EVENT_START, detail => {
                 try {
+                    this.#lastPlaybackUpdateProgressKey = null
                     this.#hideJourneyToolbarVisibility()
                     this.#setContinuousRender(true)
                     this.#renderer.show({
@@ -3484,18 +3575,29 @@ export class FlythroughMode {
             }),
             this.#controller.on(FLYTHROUGH_EVENT_UPDATE, detail => {
                 try {
+                    const playbackProgress = finiteNumber(detail?.progress ?? detail?.sample?.progress)
+                    const playbackProgressKey = Math.round((playbackProgress ?? 0) / CAMERA_UPDATE_MIN_PROGRESS_DELTA)
                     this.#renderer.update({
                         ...detail,
                         sampler: this.#sampler,
                     })
                     void this.#syncNearbyPOIsForSample(detail.sample ?? null)
-                    this.#updateCamera(detail)
+                    if (this.#lastPlaybackUpdateProgressKey === playbackProgressKey) {
+                        return
+                    }
+
+                    this.#lastPlaybackUpdateProgressKey = playbackProgressKey
+                    this.#updateCamera({
+                        ...detail,
+                        source: 'playback',
+                    })
                 }
                 catch (error) {
                     this.#abortPlaybackAfterListenerError(error)
                 }
             }),
             this.#controller.on(FLYTHROUGH_EVENT_PAUSE, detail => {
+                this.#lastPlaybackUpdateProgressKey = null
                 this.#setContinuousRender(false)
                 try {
                     this.#renderer.update({...detail, freezeDynamic: true})
@@ -3506,6 +3608,7 @@ export class FlythroughMode {
             }),
             this.#controller.on(FLYTHROUGH_EVENT_RESUME, detail => {
                 try {
+                    this.#lastPlaybackUpdateProgressKey = null
                     this.#setContinuousRender(true)
                     this.#renderer.update({...detail, forceGeometry: true})
                     this.#updateCamera(detail)
@@ -3515,6 +3618,7 @@ export class FlythroughMode {
                 }
             }),
             this.#controller.on(FLYTHROUGH_EVENT_STOP, () => {
+                this.#lastPlaybackUpdateProgressKey = null
                 this.#clipSequenceToken++
                 this.#stopStopClipPOIMaskLoop()
                 this.#setContinuousRender(false)
@@ -3534,6 +3638,7 @@ export class FlythroughMode {
                 this.#restoreCurrentJourneyVisibility()
             }),
             this.#controller.on(FLYTHROUGH_EVENT_END, detail => {
+                this.#lastPlaybackUpdateProgressKey = null
                 const token = this.#clipSequenceToken
                 const sample = detail.sampler?.atProgress?.(1)
                               ?? detail.sample
@@ -3581,11 +3686,8 @@ export class FlythroughMode {
                     })
                     this.#startStopClipPOIMaskLoop()
 
-                    if (token !== this.#clipSequenceToken) {
-                        return
-                    }
-
-                    if (stopList.length === 0) {
+                    const closeOpenedPOIs = this.#closeFlythroughOpenedPOIsBeforeStopClips()
+                    if (!closeOpenedPOIs && stopList.length === 0) {
                         notifyStopClipsComplete()
                         finalize()
                         return
@@ -3593,6 +3695,17 @@ export class FlythroughMode {
 
                     void (async () => {
                         try {
+                            await closeOpenedPOIs
+                            if (token !== this.#clipSequenceToken) {
+                                return
+                            }
+
+                            if (stopList.length === 0) {
+                                notifyStopClipsComplete()
+                                finalize()
+                                return
+                            }
+
                             await this.#playFlythroughClips(FLYTHROUGH_CLIP_SLOT_STOP, {
                                 sample,
                                 token,

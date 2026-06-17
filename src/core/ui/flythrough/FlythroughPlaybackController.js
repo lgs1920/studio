@@ -33,7 +33,6 @@ const DEFAULT_DURATION = 60
 const MILLIS = 1000
 const STORE_SYNC_INTERVAL = 250
 const GLOBAL_UPDATE_EVENT_INTERVAL = 250
-const VIDEO_SAFE_STORE_SYNC_INTERVAL = 1000
 const VIDEO_SAFE_GLOBAL_UPDATE_EVENT_INTERVAL = 500
 
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value))
@@ -119,7 +118,7 @@ export class FlythroughPlaybackController {
     setVideoSafeMode = (enabled = true) => {
         return this.setPublicationCadence(enabled
                                           ? {
-                                              storeSyncInterval:   VIDEO_SAFE_STORE_SYNC_INTERVAL,
+                                              storeSyncInterval:   STORE_SYNC_INTERVAL,
                                               globalUpdateInterval: VIDEO_SAFE_GLOBAL_UPDATE_EVENT_INTERVAL,
                                           }
                                           : {

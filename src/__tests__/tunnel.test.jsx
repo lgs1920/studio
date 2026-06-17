@@ -106,4 +106,23 @@ describe('Tunnel', () => {
         expect(handlePointerDown).toHaveBeenCalled()
         expect(handleKeyDown).toHaveBeenCalled()
     })
+
+    it('runs the current step action when clicking the selected default step', () => {
+        const handleRecord = vi.fn()
+
+        render(
+            <Tunnel
+                defaultStepIndex={1}
+                steps={[
+                    {icon: 'gear', text: 'Setup', done: true},
+                    {icon: 'camera', text: 'Record', onClick: handleRecord},
+                ]}
+                onCancel={vi.fn()}
+            />,
+        )
+
+        fireEvent.click(screen.getByRole('button', {name: 'Record'}))
+
+        expect(handleRecord).toHaveBeenCalledTimes(1)
+    })
 })

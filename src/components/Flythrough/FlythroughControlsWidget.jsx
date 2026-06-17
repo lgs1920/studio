@@ -39,7 +39,8 @@ export const FlythroughControlsWidget = memo(() => {
         zIndex:         11800,
     }), [])
 
-    if ((video.preRecording || video.recording || video.snapshot || video.finalizing)
+    if (flythrough.recordingSync === true
+        || (video.preRecording || video.recording || video.snapshot || video.finalizing)
         || (!flythrough.toolbarVisible && !flythrough.active && !flythrough.paused)) {
         return null
     }

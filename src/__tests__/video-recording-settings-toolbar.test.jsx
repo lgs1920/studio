@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-06-05
- * Last modified: 2026-06-05
+ * Created on: 2026-06-17
+ * Last modified: 2026-06-17
  *
  *
  * Copyright © 2026 LGS1920
@@ -18,14 +18,21 @@ import { cleanup, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { proxy } from 'valtio'
 
+let lastTunnelProps = null
+
 vi.mock('@Components/Tunnel/Tunnel', () => ({
-    Tunnel: ({leadingAction, steps = [], cancelTooltip}) => (
+    Tunnel: props => {
+        lastTunnelProps = props
+        const {leadingAction, steps = [], cancelTooltip, defaultStepIndex = 0} = props
+        return (
         <div data-testid="tunnel">
+            <div data-testid="default-step-index">{String(defaultStepIndex)}</div>
             <div data-testid="leading-action-slot">{leadingAction}</div>
             <div data-testid="steps">{steps.map(step => <button key={step.text} type="button" variant={step.variant ?? 'neutral'} appearance={step.appearance ?? 'plain'}>{step.text}</button>)}</div>
             <div data-testid="cancel-tooltip">{JSON.stringify(cancelTooltip)}</div>
         </div>
-    ),
+        )
+    },
     TunnelTooltip: ({children}) => <>{children}</>,
 }))
 
@@ -43,6 +50,7 @@ import { VideoRecordingSettingsToolbar } from '@Components/MainUI/video/toolbox/
 
 describe('VideoRecordingSettingsToolbar', () => {
     beforeEach(() => {
+        lastTunnelProps = null
         globalThis.__ = {
             ui: {
                 drawerManager: {
@@ -54,6 +62,8 @@ describe('VideoRecordingSettingsToolbar', () => {
                 },
                 widgetManager: {
                     windowResizing: false,
+                    getWidgetConfig:               vi.fn(() => null),
+                    syncCropDimensionsFromElement: vi.fn(async () => null),
                 },
             },
             recorder: {},
@@ -110,6 +120,7 @@ describe('VideoRecordingSettingsToolbar', () => {
         expect(toolbar.className).toContain('lgs-toolbar')
         expect(toolbar.className).toContain('lgs-toolbar-horizontal')
         expect(toolbar.className).toContain('wa-theme-lgs1920-on-map')
+        expect(__.ui.widgetManager.syncCropDimensionsFromElement).not.toHaveBeenCalled()
     })
 
     it('marks the Flythrough launcher as selected when the drawer is already open', () => {
@@ -121,6 +132,121 @@ describe('VideoRecordingSettingsToolbar', () => {
         const button = screen.getByRole('button', {name: 'Open Flythrough drawer'})
         expect(button.getAttribute('aria-pressed')).toBe('true')
         expect(button.className).toContain('is-selected')
+    })
+
+    it('starts the tunnel on step 2 when video dimensions are already defined', () => {
+        globalThis.__.ui.widgetManager.getWidgetConfig = vi.fn(() => ({
+            cropDimensions: {
+                left:   10,
+                top:    20,
+                width:  640,
+                height: 360,
+            },
+        }))
+
+        render(<VideoRecordingSettingsToolbar/>)
+
+        expect(screen.getByTestId('default-step-index').textContent).toBe('2')
+        expect(lastTunnelProps.steps[0].icon).toBe('camera-viewfinder')
+        expect(lastTunnelProps.steps[0].done).toBe(true)
+        expect(lastTunnelProps.steps[1].done).toBe(true)
+        expect(__.ui.widgetManager.syncCropDimensionsFromElement).not.toHaveBeenCalled()
+    })
+
+    it('closes crop editors when entering recording or snapshot steps directly', () => {
+        globalThis.__.ui.widgetManager.getWidgetConfig = vi.fn(() => ({
+            cropDimensions: {
+                left:   10,
+                top:    20,
+                width:  640,
+                height: 360,
+            },
+        }))
+        Object.assign(globalThis.lgs.stores.ui.video.cropper, {
+            ratioEditor:  true,
+            presetEditor: true,
+            widgetEditor: true,
+        })
+
+        render(<VideoRecordingSettingsToolbar/>)
+
+        expect(lastTunnelProps.steps[2].beforeStep()).toBe(true)
+        expect(globalThis.lgs.stores.ui.video.step).toBe(2)
+        expect(globalThis.lgs.stores.ui.video.cropper).toEqual(expect.objectContaining({
+                                                                                           ratioEditor:  false,
+                                                                                           presetEditor: false,
+                                                                                           widgetEditor: false,
+                                                                                       }))
+        expect(__.ui.widgetManager.windowResizing).toBe(false)
+
+        Object.assign(globalThis.lgs.stores.ui.video.cropper, {
+            ratioEditor:  true,
+            presetEditor: true,
+            widgetEditor: true,
+        })
+
+        expect(lastTunnelProps.steps[3].beforeStep()).toBe(true)
+        expect(globalThis.lgs.stores.ui.video.step).toBe(3)
+        expect(globalThis.lgs.stores.ui.video.cropper).toEqual(expect.objectContaining({
+                                                                                           ratioEditor:  false,
+                                                                                           presetEditor: false,
+                                                                                           widgetEditor: false,
+                                                                                       }))
+    })
+
+    it('opens only widget editing without crop auto-resize when returning to add widgets', () => {
+        globalThis.__.ui.widgetManager.getWidgetConfig = vi.fn(() => ({
+            cropDimensions: {
+                left:   10,
+                top:    20,
+                width:  640,
+                height: 360,
+            },
+        }))
+        globalThis.__.ui.widgetManager.windowResizing = true
+        Object.assign(globalThis.lgs.stores.ui.video, {
+            step: 2,
+        })
+        Object.assign(globalThis.lgs.stores.ui.video.cropper, {
+            ratioEditor:  true,
+            presetEditor: true,
+            widgetEditor: false,
+        })
+
+        render(<VideoRecordingSettingsToolbar/>)
+
+        expect(lastTunnelProps.steps[1].beforeStep()).toBe(true)
+        expect(globalThis.lgs.stores.ui.video.step).toBe(1)
+        expect(globalThis.lgs.stores.ui.video.cropper).toEqual(expect.objectContaining({
+                                                                                           ratioEditor:  false,
+                                                                                           presetEditor: false,
+                                                                                           widgetEditor: true,
+                                                                                       }))
+        expect(__.ui.widgetManager.windowResizing).toBe(false)
+    })
+
+    it('persists the current crop dimensions when leaving video parameters', () => {
+        render(<VideoRecordingSettingsToolbar/>)
+
+        expect(lastTunnelProps.steps[0].afterStep()).toBe(true)
+
+        expect(__.ui.widgetManager.syncCropDimensionsFromElement).toHaveBeenCalledWith(
+            expect.any(String),
+            true,
+            'ratio-editor-exit',
+        )
+    })
+
+    it('starts the tunnel on step 0 when no video dimensions are defined', () => {
+        globalThis.__.ui.widgetManager.getWidgetConfig = vi.fn(() => ({
+            cropDimensions: null,
+        }))
+
+        render(<VideoRecordingSettingsToolbar/>)
+
+        expect(screen.getByTestId('default-step-index').textContent).toBe('0')
+        expect(lastTunnelProps.steps[0].done).toBe(false)
+        expect(lastTunnelProps.steps[1].done).toBe(false)
     })
 
 })

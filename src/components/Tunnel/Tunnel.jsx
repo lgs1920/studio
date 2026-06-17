@@ -183,8 +183,11 @@ export const Tunnel = memo(({
      * @param {PointerEvent} event - Pointer event
      */
     const handleStepClick = useCallback((index, event) => {
-        // Early return if clicking the current step
+        const targetStep = steps[index]
+
+        // Clicking the current step should still trigger its action, if any.
         if (index === currentContainer) {
+            targetStep?.onClick?.(index, event)
             return
         }
         // Check if navigation is blocked by mandatory steps
@@ -199,7 +202,6 @@ export const Tunnel = memo(({
             steps[currentContainer].afterStep(currentContainer)
         }
         // Trigger onClick for the target step if defined
-        const targetStep = steps[index]
         if (targetStep.onClick?.(index, event) === false) {
             return
         }

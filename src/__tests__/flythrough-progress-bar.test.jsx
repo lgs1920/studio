@@ -76,4 +76,20 @@ describe('FlythroughProgressBar', () => {
         expect(screen.getByRole('button', {name: 'Pause Flythrough'})).not.toBeNull()
         expect(screen.queryByRole('button', {name: 'Start Flythrough'})).toBeNull()
     })
+
+    it('disables the flythrough actions when requested', () => {
+        globalThis.lgs.stores.flythrough.active = true
+        globalThis.lgs.stores.flythrough.playing = true
+        globalThis.lgs.stores.flythrough.sample = {
+            progress: 0.4,
+            distanceFromStart: 4,
+            remainingDistance: 6,
+        }
+
+        render(<FlythroughProgressBar disabled showSettings/>)
+
+        expect(screen.getByRole('button', {name: 'Pause Flythrough'}).disabled).toBe(true)
+        expect(screen.getByRole('button', {name: 'Stop Flythrough'}).disabled).toBe(true)
+        expect(screen.getByRole('button', {name: 'Flythrough settings'}).disabled).toBe(true)
+    })
 })

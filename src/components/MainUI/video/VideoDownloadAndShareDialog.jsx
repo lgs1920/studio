@@ -46,6 +46,7 @@ export const VideoDownloadAndShareDialog = () => {
     const _recordingInfoPopup = useRef(null)
     const _mediaBlob = useRef({blob: null, url: null, filename: ''})
     const _shareInFlight = useRef(false)
+    const _dialogCleanupDone = useRef(true)
     const releaseMediaUrl = useCallback(() => {
         const url = _mediaBlob.current.url
         if (url) {
@@ -131,6 +132,7 @@ export const VideoDownloadAndShareDialog = () => {
                 filename: safeFilename,
                 type:     ScreenMediaRecorder.VIDEO,
             }
+            _dialogCleanupDone.current = false
             setMediaUrl(url)
             setFilename(safeFilename)
             setCanDownloadAndShare(true)
@@ -154,6 +156,7 @@ export const VideoDownloadAndShareDialog = () => {
                     filename: safeFilename,
                     type:     ScreenMediaRecorder.IMAGE,
                 }
+                _dialogCleanupDone.current = false
                 setMediaUrl(imageUrl)
                 setFilename(safeFilename)
                 setCanDownloadAndShare(true)
@@ -372,6 +375,11 @@ export const VideoDownloadAndShareDialog = () => {
      * Handle cancel and cleanup.
      */
     const handleCancel = useCallback(() => {
+        if (_dialogCleanupDone.current) {
+            setDialogOpen(false)
+            return
+        }
+        _dialogCleanupDone.current = true
         setDialogOpen(false)
         setIsRecordingInfoOpen(false)
         cancelVideoEditing()
@@ -396,16 +404,8 @@ export const VideoDownloadAndShareDialog = () => {
     /**
      * Keep the cleanup aligned with the native dialog close flow.
      */
-    const handleDialogRequestClose = useCallback((event) => {
-        const source = event?.detail?.source
-        const isCloseButton = source === 'close-button'
-            || source === 'keyboard'
-            || source?.getAttribute?.('part')?.includes('close-button')
-            || source?.closest?.('[data-dialog="close"]')
-            || source?.tagName === 'WA-BUTTON'
-
-        if (!isCloseButton) {
-            event?.preventDefault?.()
+    const handleDialogHide = useCallback((event) => {
+        if (event?.target && event?.currentTarget && event.target !== event.currentTarget) {
             return
         }
 
@@ -418,7 +418,7 @@ export const VideoDownloadAndShareDialog = () => {
             <WaDialog
                 id="video-preview-dialog"
                 open={dialogOpen}
-                onWaRequestClose={handleDialogRequestClose}
+                onWaHide={handleDialogHide}
                 lightDismiss={false}
                 className="lgs-theme"
             >
