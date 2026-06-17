@@ -301,6 +301,79 @@ describe('Widget registry ratio resolution', () => {
         expect(config.ratio.height).toBe(2)
         expect(config.ratio.locked).toBe(true)
     })
+
+    it('serializes widget position data into a cloneable plain object', () => {
+        const registry = new WidgetCoreRegistry()
+        const container = {
+            getBoundingClientRect: vi.fn(() => ({
+                left:   10,
+                top:    20,
+                width:  1000,
+                height: 800,
+            })),
+        }
+        const element = {
+            style: {
+                left: '110px',
+                top:  '220px',
+            },
+            getBoundingClientRect: vi.fn(() => ({
+                left:   110,
+                top:    220,
+                width:  320,
+                height: 180,
+            })),
+        }
+        const getComputedStyleSpy = vi.spyOn(window, 'getComputedStyle').mockReturnValue({
+            width:  '320px',
+            height: '180px',
+        })
+        vi.spyOn(registry, 'getElementById').mockReturnValue(element)
+
+        const positionData = registry.preparePositionDataForStorage(`${PROFILE_WIDGET}#cloneable`, {
+            container,
+            dimensions: {
+                width:  320,
+                height: 180,
+            },
+            expandedDimensions: new Proxy({
+                width:  300,
+                height: 170,
+            }, {}),
+            expandedInlineDimensions: new Proxy({
+                width:  '',
+                height: '',
+            }, {}),
+            position: {
+                left: 110,
+                top:  220,
+            },
+            ratio: new Proxy({
+                value:       '16x9',
+                aspectRatio: 16 / 9,
+                locked:      true,
+            }, {}),
+            scale: new Proxy({
+                x: 1.25,
+                y: 1.25,
+            }, {}),
+            type: LGS_VISUAL_WIDGET,
+        })
+
+        getComputedStyleSpy.mockRestore()
+
+        expect(() => structuredClone(positionData)).not.toThrow()
+        expect(Array.isArray(positionData.ratio)).toBe(false)
+        expect(positionData.ratio).toEqual({
+            value:       '16x9',
+            aspectRatio: 16 / 9,
+            locked:      true,
+        })
+        expect(positionData.scale).toEqual({
+            x: 1.25,
+            y: 1.25,
+        })
+    })
 })
 
 describe('Widget dynamic renderer bootstrap', () => {

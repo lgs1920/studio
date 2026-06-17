@@ -1116,7 +1116,37 @@ export class WidgetCore {
      * @returns {Object} Position data formatted for storage avec leftRatio/topRatio au lieu de left/top
      */
     preparePositionDataForStorage = (widgetId, config) => {
-        const scale = config.scale || {x: 1, y: 1}
+        const scale = config.scale
+                      ? {
+                          x: Number.isFinite(Number(config.scale.x)) ? Number(config.scale.x) : 1,
+                          y: Number.isFinite(Number(config.scale.y)) ? Number(config.scale.y) : 1,
+                      }
+                      : {x: 1, y: 1}
+        const ratio = config.ratio
+                      ? {
+                          value: config.ratio.value ?? null,
+                          aspectRatio: Number.isFinite(Number(config.ratio.aspectRatio))
+                                       ? Number(config.ratio.aspectRatio)
+                                       : null,
+                          locked: Boolean(config.ratio.locked),
+                      }
+                      : null
+        const expandedDimensions = config.expandedDimensions
+                                   ? {
+                                       width: Number.isFinite(Number(config.expandedDimensions.width))
+                                              ? Number(config.expandedDimensions.width)
+                                              : config.expandedDimensions.width ?? null,
+                                       height: Number.isFinite(Number(config.expandedDimensions.height))
+                                               ? Number(config.expandedDimensions.height)
+                                               : config.expandedDimensions.height ?? null,
+                                   }
+                                   : null
+        const expandedInlineDimensions = config.expandedInlineDimensions
+                                         ? {
+                                             width: config.expandedInlineDimensions.width ?? null,
+                                             height: config.expandedInlineDimensions.height ?? null,
+                                         }
+                                         : null
 
         // Calculate position as ratios (%) relative to container
         let leftRatio = 0
@@ -1145,8 +1175,10 @@ export class WidgetCore {
             ttl:          config.ttl || null,
             scale:        scale,
             rotate:       config.rotate || 0,
-            ratio:        config.ratio,
+            ratio:        ratio,
             attachTo:     config.attachTo,
+            expandedDimensions,
+            expandedInlineDimensions,
         }
     }
 

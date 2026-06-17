@@ -738,7 +738,37 @@ export class WidgetCoreRegistry {
         const fallbackTopRatio = config.savedRatios?.topRatio
         const leftRatio = Number.isFinite(computedLeftRatio) ? computedLeftRatio : (Number.isFinite(fallbackLeftRatio) ? fallbackLeftRatio : 0)
         const topRatio = Number.isFinite(computedTopRatio) ? computedTopRatio : (Number.isFinite(fallbackTopRatio) ? fallbackTopRatio : 0)
-        const $scale = config.scale || {x: 1, y: 1}
+        const scale = config.scale
+                     ? {
+                         x: Number.isFinite(Number(config.scale.x)) ? Number(config.scale.x) : 1,
+                         y: Number.isFinite(Number(config.scale.y)) ? Number(config.scale.y) : 1,
+                     }
+                     : {x: 1, y: 1}
+        const ratio = config.ratio
+                      ? {
+                          value: config.ratio.value ?? null,
+                          aspectRatio: Number.isFinite(Number(config.ratio.aspectRatio))
+                                       ? Number(config.ratio.aspectRatio)
+                                       : null,
+                          locked: Boolean(config.ratio.locked),
+                      }
+                      : null
+        const expandedDimensions = config.expandedDimensions
+                                   ? {
+                                       width: Number.isFinite(Number(config.expandedDimensions.width))
+                                              ? Number(config.expandedDimensions.width)
+                                              : config.expandedDimensions.width ?? null,
+                                       height: Number.isFinite(Number(config.expandedDimensions.height))
+                                               ? Number(config.expandedDimensions.height)
+                                               : config.expandedDimensions.height ?? null,
+                                   }
+                                   : null
+        const expandedInlineDimensions = config.expandedInlineDimensions
+                                         ? {
+                                             width: config.expandedInlineDimensions.width ?? null,
+                                             height: config.expandedInlineDimensions.height ?? null,
+                                         }
+                                         : null
         config.savedRatios = {leftRatio, topRatio}
 
         return {
@@ -751,16 +781,16 @@ export class WidgetCoreRegistry {
             topRatio:  topRatio,
             width:  width,
             height: height,
-            scale:     $scale,
+            scale:     scale,
             rotate:       config.rotate || 0,
-            ratio:        config.ratio,
+            ratio:        ratio,
             attachTo:  config.attachTo || 'center',
             zIndex: config.zIndex || 0,
             positionReference: config.widgetsBoard && config.widgetsBoard !== SCENE_WIDGETS_BOARD ? 'board' : 'scene',
             collapsed:          Boolean(config.collapsed),
             locked:             Boolean(config.locked),
-            expandedDimensions: config.expandedDimensions ?? null,
-            expandedInlineDimensions: config.expandedInlineDimensions ?? null,
+            expandedDimensions: expandedDimensions,
+            expandedInlineDimensions: expandedInlineDimensions,
             icon:               config.icon ?? null,
         }
     }
