@@ -16,7 +16,7 @@
 
 /**
  * CompassLight UI
- * Needle rotates while center stays fixed.
+ * The full compass artwork rotates based on camera heading.
  */
 export const CompassLight = ({width = '100%', height = '100%', ref}) => {
     return (
@@ -33,12 +33,8 @@ export const CompassLight = ({width = '100%', height = '100%', ref}) => {
                 transformOrigin: '50% 50%',
             }}
         >
-            <g>
-                <g
-                    className="lgs-compass-needle"
-                    ref={ref}
-                    style={{transform: 'scale(1.2)', transformOrigin: '256px 256px'}}
-                >
+            <g ref={ref} style={{transform: 'scale(1.2)', transformOrigin: '256px 256px'}}>
+                <g className="lgs-compass-needle">
                     <path
                         className="lgs-compass-needle-north"
                         fill="var(--lgs-compass-needle-north)"
