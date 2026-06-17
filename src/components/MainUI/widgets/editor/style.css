@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-30
- * Last modified: 2026-04-30
+ * Created on: 2026-06-17
+ * Last modified: 2026-06-17
  *
  *
  * Copyright © 2026 LGS1920
@@ -118,7 +118,7 @@
 }
 
 .compass-widget-editor .compass-mode-select {
-    min-width: 10rem;
+    min-width: 20rem;
 }
 
 .compass-widget-editor .compass-select-thumbnail {
