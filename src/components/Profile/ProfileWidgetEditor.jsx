@@ -22,18 +22,17 @@ import {
     BorderElement,
 }                                                         from '@Components/MainUI/widgets/editor/elements/BorderElement'
 import {
+    LineElement,
+}                                                         from '@Components/MainUI/widgets/editor/elements/LineElement'
+import {
     PaddingElement,
 } from '@Components/MainUI/widgets/editor/elements/PaddingElement'
-import {
-    ScaleSwitchElement,
-} from '@Components/MainUI/widgets/editor/elements/ScaleSwitchElement'
-import { formatSliderPercent }    from '@Components/MainUI/widgets/editor/elements/sliderUtils'
 import {
     ensureFlythroughSettings,
     normalizeFlythroughProfileInfo,
 }                                                         from '@Core/ui/flythrough/FlythroughProgressionStyle'
 import {
-    WaButton, WaCard, WaColorPicker, WaDivider, WaIcon, WaNumberInput, WaOption, WaSelect, WaSlider,
+    WaButton, WaCard, WaColorPicker, WaDivider, WaIcon, WaNumberInput, WaOption, WaSelect,
     WaSwitch,
 }                                                         from '@web.awesome.me/webawesome-pro/dist/react'
 import { colord }                      from 'colord'
@@ -573,6 +572,42 @@ export const ProfileWidgetEditor = ({entity}) => {
         })
     }, [element, sanitizeSliderValue])
 
+    const renderAxisLineElement = (label, path) => {
+        const thicknessPath = `${path}.thickness`
+        const opacityPath = `${path}.opacity`
+        const thicknessConfig = PROFILE_WIDGET_SLIDERS[thicknessPath]
+        const opacityConfig = PROFILE_WIDGET_SLIDERS[opacityPath]
+
+        return (
+            <>
+                <WaDivider/>
+                <div className="drawer-horizontal-line">
+                    <div className="drawer-horizontal-element">{label}</div>
+                </div>
+                <LineElement
+                    swatches={swatches}
+                    colorValue={getColor(element[path])}
+                    onColorInput={(value) => updateValue(`${path}.color`, value)}
+                    widthRef={setSliderRef(thicknessPath)}
+                    widthMin={thicknessConfig.min}
+                    widthMax={thicknessConfig.max}
+                    widthStep={thicknessConfig.step}
+                    widthDefaultValue={getProfileSliderValue(thicknessPath)}
+                    onWidthInput={(value) => handleProfileSliderInput(thicknessPath, value)}
+                    opacityRef={setSliderRef(opacityPath)}
+                    opacityMin={opacityConfig.min}
+                    opacityMax={opacityConfig.max}
+                    opacityStep={opacityConfig.step}
+                    opacityDefaultValue={getProfileSliderValue(opacityPath)}
+                    onOpacityInput={(value) => handleProfileSliderInput(opacityPath, value)}
+                    showScale
+                    scaled={element[path]?.scaled ?? false}
+                    onScaleChange={(checked) => updateValue(`${path}.scaled`, checked)}
+                />
+            </>
+        )
+    }
+
     if (!element) {
         return null
     }
@@ -780,98 +815,12 @@ export const ProfileWidgetEditor = ({entity}) => {
 
                 {/* Stylization for Main Axes and Labels */}
                 {(element.xAxis?.main || element.yAxis?.main || element.xAxis?.labels || element.yAxis?.labels) && (
-                    <>
-                        <WaDivider/>
-                        <div className="drawer-horizontal-line">
-                            <div className="drawer-horizontal-element">{'Main'}</div>
-                        </div>
-                        <div className="lgs-widget-color-control-grid">
-                            <div className="lgs-widget-color-control-color">
-                                <WaColorPicker size="s" swatches={swatches} value={getColor(element.mainAxis)}
-                                               onInput={(e) => updateValue('mainAxis.color', e.target.value)}/>
-                            </div>
-                            <div className="lgs-widget-border-control-row">
-                                <div className="drawer-horizontal-element lgs-widget-border-control">
-                                    <WaSlider ref={setSliderRef('mainAxis.thickness')}
-                                              size="s"
-                                              label="Width"
-                                              min={PROFILE_WIDGET_SLIDERS['mainAxis.thickness'].min}
-                                              max={PROFILE_WIDGET_SLIDERS['mainAxis.thickness'].max}
-                                              step={PROFILE_WIDGET_SLIDERS['mainAxis.thickness'].step}
-                                              label-at-start
-                                              withTooltip
-                                              defaultValue={getProfileSliderValue('mainAxis.thickness')}
-                                              onInput={(e) => handleProfileSliderInput('mainAxis.thickness', e.target.value)}/>
-                                </div>
-                                <div className="drawer-horizontal-element lgs-widget-border-control">
-                                    <WaSlider ref={setSliderRef('mainAxis.opacity')}
-                                              size="s"
-                                              label="Opacity"
-                                              min={PROFILE_WIDGET_SLIDERS['mainAxis.opacity'].min}
-                                              max={PROFILE_WIDGET_SLIDERS['mainAxis.opacity'].max}
-                                              step={PROFILE_WIDGET_SLIDERS['mainAxis.opacity'].step}
-                                              label-at-start
-                                              withTooltip
-                                              valueFormatter={formatSliderPercent}
-                                              defaultValue={getProfileSliderValue('mainAxis.opacity')}
-                                              onInput={(e) => handleProfileSliderInput('mainAxis.opacity', e.target.value)}/>
-                                </div>
-                            </div>
-                            <div className="lgs-widget-color-control-spacer" aria-hidden="true"/>
-                            <ScaleSwitchElement
-                                checked={element.mainAxis?.scaled ?? false}
-                                onChange={(checked) => updateValue('mainAxis.scaled', checked)}
-                                className="lgs-widget-profile-axis-scaled-line"
-                            />
-                        </div>
-                    </>
+                    renderAxisLineElement('Main', 'mainAxis')
                 )}
 
                 {/* Stylization for Grid Lines */}
                 {(element.xAxis?.second || element.yAxis?.second) && (
-                    <>
-                        <WaDivider/>
-                        <div className="drawer-horizontal-line">
-                            <div className="drawer-horizontal-element">{'Grid'}</div>
-                        </div>
-                        <div className="lgs-widget-color-control-grid">
-                            <div className="lgs-widget-color-control-color">
-                                <WaColorPicker size="s" swatches={swatches} value={getColor(element.secondAxis)}
-                                               onInput={(e) => updateValue('secondAxis.color', e.target.value)}/>
-                            </div>
-                            <div className="lgs-widget-border-control-row">
-                                <div className="drawer-horizontal-element lgs-widget-border-control">
-                                    <WaSlider ref={setSliderRef('secondAxis.thickness')}
-                                              size="s"
-                                              label="Width"
-                                              min={PROFILE_WIDGET_SLIDERS['secondAxis.thickness'].min}
-                                              max={PROFILE_WIDGET_SLIDERS['secondAxis.thickness'].max}
-                                              step={PROFILE_WIDGET_SLIDERS['secondAxis.thickness'].step}
-                                              label-at-start withTooltip withLabel
-                                              defaultValue={getProfileSliderValue('secondAxis.thickness')}
-                                              onInput={(e) => handleProfileSliderInput('secondAxis.thickness', e.target.value)}/>
-                                </div>
-                                <div className="drawer-horizontal-element lgs-widget-border-control">
-                                    <WaSlider ref={setSliderRef('secondAxis.opacity')}
-                                              size="s"
-                                              label="Opacity"
-                                              min={PROFILE_WIDGET_SLIDERS['secondAxis.opacity'].min}
-                                              max={PROFILE_WIDGET_SLIDERS['secondAxis.opacity'].max}
-                                              step={PROFILE_WIDGET_SLIDERS['secondAxis.opacity'].step}
-                                              label-at-start withTooltip
-                                              valueFormatter={formatSliderPercent}
-                                              defaultValue={getProfileSliderValue('secondAxis.opacity')}
-                                              onInput={(e) => handleProfileSliderInput('secondAxis.opacity', e.target.value)}/>
-                                </div>
-                            </div>
-                            <div className="lgs-widget-color-control-spacer" aria-hidden="true"/>
-                            <ScaleSwitchElement
-                                checked={element.secondAxis?.scaled ?? false}
-                                onChange={(checked) => updateValue('secondAxis.scaled', checked)}
-                                className="lgs-widget-profile-axis-scaled-line"
-                            />
-                        </div>
-                    </>
+                    renderAxisLineElement('Grid', 'secondAxis')
                 )}
             </WaCard>
         </LGSScrollbars>

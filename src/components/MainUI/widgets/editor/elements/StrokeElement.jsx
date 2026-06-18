@@ -14,14 +14,15 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { WaColorPicker, WaSlider, WaSwitch } from '@web.awesome.me/webawesome-pro/dist/react'
-import { colord }                            from 'colord'
-import { useEffect, useMemo, useRef } from 'react'
-import { formatSliderPercent, sanitizeNumericControlValue } from './sliderUtils'
+import { WaSwitch }                    from '@web.awesome.me/webawesome-pro/dist/react'
+import { colord }                      from 'colord'
+import { useEffect, useMemo, useRef }  from 'react'
+import { LineElement }                 from './LineElement'
+import { sanitizeNumericControlValue } from './sliderUtils'
 
 /**
  * Text Stroke editor element.
- * Cloned from BorderElement logic with strict separation of color and opacity.
+ * Uses LineElement while keeping stroke-specific color normalization.
  */
 export const StrokeElement = ({
                                   element,
@@ -71,59 +72,25 @@ export const StrokeElement = ({
             </WaSwitch>
 
             {stroke.show && (
-                <>
-                    <div className="drawer-horizontal-line three-columns">
-                        <div className="drawer-horizontal-element">
-                            <WaColorPicker
-                                size="s"
-                                swatches={swatches}
-                                value={colorForPicker}
-                                onInput={(e) => {
-                                    // Update color without alpha channel
-                                    const newColor = colord(e.target.value).alpha(1).toHex()
-                                    updateValue('text.stroke.color', newColor)
-                                }}
-                            />
-                        </div>
-                        <div className="drawer-horizontal-element xlarge-element">
-                            <WaSlider
-                                size="s"
-                                ref={widthRef}
-                                label="Width"
-                                min="0"
-                                max="2"
-                                step="0.1"
-                                label-at-start
-                                placement="top"
-                                withTooltip
-                                defaultValue={strokeWidth}
-                                onInput={(e) => updateValue(
-                                    'text.stroke.width',
-                                    sanitizeNumericControlValue(e.target.value, 0, {min: 0, max: 2}),
-                                )}
-                            />
-                        </div>
-                        <div className="drawer-horizontal-element xlarge-element">
-                            <WaSlider
-                                size="s"
-                                ref={opacityRef}
-                                label="Opacity"
-                                min="0"
-                                max="1"
-                                step="0.05"
-                                label-at-start
-                                placement="top"
-                                withTooltip
-                                valueFormatter={formatSliderPercent}
-                                defaultValue={strokeOpacity}
-                                onInput={(e) => updateValue(
-                                    'text.stroke.opacity',
-                                    sanitizeNumericControlValue(e.target.value, 1, {min: 0, max: 1}),
-                                )}
-                            />
-                        </div>
-                    </div>
-                </>
+                <LineElement
+                    swatches={swatches}
+                    colorValue={colorForPicker}
+                    onColorInput={(value) => updateValue('text.stroke.color', colord(value).alpha(1).toHex())}
+                    widthRef={widthRef}
+                    widthMax={2}
+                    widthStep={0.1}
+                    widthDefaultValue={strokeWidth}
+                    onWidthInput={(value) => updateValue(
+                        'text.stroke.width',
+                        sanitizeNumericControlValue(value, 0, {min: 0, max: 2}),
+                    )}
+                    opacityRef={opacityRef}
+                    opacityDefaultValue={strokeOpacity}
+                    onOpacityInput={(value) => updateValue(
+                        'text.stroke.opacity',
+                        sanitizeNumericControlValue(value, 1, {min: 0, max: 1}),
+                    )}
+                />
             )}
         </>
     )

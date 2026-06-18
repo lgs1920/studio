@@ -7,16 +7,16 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-05-10
- * Last modified: 2026-05-10
+ * Created on: 2026-06-18
+ * Last modified: 2026-06-18
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { WaColorPicker, WaSlider, WaSwitch } from '@web.awesome.me/webawesome-pro/dist/react'
+import { useEffect, useRef } from 'react'
 import { formatSliderPercent, sanitizeNumericControlValue } from './sliderUtils'
-import { useEffect, useRef }    from 'react'
 
 export const BackgroundElement = ({
                                       element,
@@ -51,41 +51,54 @@ export const BackgroundElement = ({
     }, [element.background?.opacity, opacityValue, updateValue])
 
     return (
-        <>
-            <WaSwitch label-at-start size="xs" checked={element.background?.show ?? false}
-                      onInput={(e) => handleToggle(e.target.checked)}>
-                <label>{'Background'}</label>
+        <div className="lgs-widget-background-element">
+            <WaSwitch
+                label-at-start
+                size="xs"
+                checked={element.background?.show ?? false}
+                onInput={(e) => handleToggle(e.target.checked)}
+            >
+                <span>{'Background'}</span>
             </WaSwitch>
 
             {element.background?.show && (
-                <div className="drawer-horizontal-line three-columns">
-                    <div className="drawer-horizontal-element">
-                        <WaColorPicker size="s" swatches={swatches}
-                                       value={getColor(element.background)}
-                                       onInput={(e) => updateValue('background.color', e.target.value)}/>
-                    </div>
-                    <div className="drawer-horizontal-element">
-                        {'Blur'}&nbsp;
-                        <WaSwitch label-at-start size="xs" checked={element.background.blur ?? false}
-                                  onInput={(e) => updateValue('background.blur', e.target.checked)}/>
-                    </div>
-                    <div className="drawer-horizontal-element xlarge-element">
-                        <WaSlider ref={sliderRef}
-                                  label="Opacity"
-                                  min="0" max="1" step="0.05"
-                                  label-at-start
-                                  placement="top"
-                                  size="s"
-                                  withTooltip
-                                  valueFormatter={formatSliderPercent}
-                                  defaultValue={opacityValue}
-                                  onInput={(e) => updateValue(
-                                      'background.opacity',
-                                      sanitizeSliderValue(e.target.value, 0.5, {min: 0, max: 1}),
-                                  )}/>
+                <div>
+                    <WaColorPicker
+                        size="s"
+                        swatches={swatches}
+                        value={getColor(element.background)}
+                        onInput={(e) => updateValue('background.color', e.target.value)}
+                    />
+                    <div>
+                        <WaSlider
+                            ref={sliderRef}
+                            half-width
+                            label="Opacity"
+                            min="0"
+                            max="1"
+                            step="0.05"
+                            label-at-start
+                            placement="top"
+                            size="s"
+                            withTooltip
+                            valueFormatter={formatSliderPercent}
+                            defaultValue={opacityValue}
+                            onInput={(e) => updateValue(
+                                'background.opacity',
+                                sanitizeSliderValue(e.target.value, 0.5, {min: 0, max: 1}),
+                            )}
+                        />
+                        <WaSwitch
+                            label-at-start
+                            size="xs"
+                            checked={element.background.blur ?? false}
+                            onInput={(e) => updateValue('background.blur', e.target.checked)}
+                        >
+                            <span>{'Blur'}</span>
+                        </WaSwitch>
                     </div>
                 </div>
             )}
-        </>
+        </div>
     )
 }

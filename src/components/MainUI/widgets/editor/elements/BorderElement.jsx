@@ -14,10 +14,10 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { WaColorPicker, WaSlider, WaSwitch } from '@web.awesome.me/webawesome-pro/dist/react'
+import { WaSwitch }                          from '@web.awesome.me/webawesome-pro/dist/react'
+import { LineElement }                       from './LineElement'
 import { RadiusElement }                     from './RadiusElement'
-import { ScaleSwitchElement }                from './ScaleSwitchElement'
-import { formatSliderPercent, sanitizeNumericControlValue } from './sliderUtils'
+import { sanitizeNumericControlValue }       from './sliderUtils'
 
 /**
  * Common border & radius editor element
@@ -35,6 +35,7 @@ export const BorderElement = ({
                                   showRadiusScale = true,
                                   sanitizeSliderValue = sanitizeNumericControlValue,
                               }) => {
+    const borderWidth = sanitizeSliderValue(element.border?.thickness, 1, {min: 0, max: 10})
     const borderOpacity = sanitizeSliderValue(element.border?.opacity, 1, {min: 0, max: 1})
 
     return (
@@ -49,65 +50,33 @@ export const BorderElement = ({
             </WaSwitch>
 
             {element.border?.show && (
-                <div>
-                    <WaColorPicker
-                        size="s"
-                        swatches={swatches}
-                        value={getColor(element.border)}
-                        onInput={(e) => updateValue('border.color', e.target.value)}
-                    />
-                    <div>
-                        <WaSlider
-                            half-width
-                            withTooltip
-                            size="s"
-                            label="Width"
-                            min="0"
-                            max="10"
-                            step="0.5"
-                            label-at-start
-                            placement="top"
-                            value={sanitizeSliderValue(element.border?.thickness, 1, {min: 0, max: 10})}
-                            onInput={(e) => updateValue(
-                                'border.thickness',
-                                sanitizeSliderValue(e.target.value, 1, {min: 0, max: 10}),
-                            )}
+                <LineElement
+                    swatches={swatches}
+                    colorValue={getColor(element.border)}
+                    onColorInput={(value) => updateValue('border.color', value)}
+                    widthValue={borderWidth}
+                    onWidthInput={(value) => updateValue(
+                        'border.thickness',
+                        sanitizeSliderValue(value, 1, {min: 0, max: 10}),
+                    )}
+                    opacityValue={borderOpacity}
+                    onOpacityInput={(value) => updateValue(
+                        'border.opacity',
+                        sanitizeSliderValue(value, borderOpacity, {min: 0, max: 1}),
+                    )}
+                    showScale={showScale}
+                    scaled={element.border?.scaled ?? false}
+                    onScaleChange={(checked) => updateValue('border.scaled', checked)}
+                >
+                    {showRadius && (
+                        <RadiusElement
+                            element={element}
+                            updateValue={updateValue}
+                            showPill={showPill}
+                            showScale={showRadiusScale}
                         />
-                        <WaSlider
-                            half-width
-                            withTooltip
-                            size="s"
-                            label="Opacity"
-                            min="0"
-                            max="1"
-                            step="0.05"
-                            label-at-start
-                            placement="top"
-                            valueFormatter={formatSliderPercent}
-                            value={borderOpacity}
-                            onInput={(e) => updateValue(
-                                'border.opacity',
-                                sanitizeSliderValue(e.target.value, borderOpacity, {min: 0, max: 1}),
-                            )}
-                        />
-
-                        {showScale && (
-                            <ScaleSwitchElement
-                                checked={element.border?.scaled ?? false}
-                                onChange={(checked) => updateValue('border.scaled', checked)}
-                            />
-                        )}
-
-                        {showRadius && (
-                            <RadiusElement
-                                element={element}
-                                updateValue={updateValue}
-                                showPill={showPill}
-                                showScale={showRadiusScale}
-                            />
-                        )}
-                    </div>
-                </div>
+                    )}
+                </LineElement>
             )}
         </div>
     )

@@ -82,7 +82,6 @@ export const PaddingElement = ({
                                    label = 'Padding',
                                    fallback = 5,
                                    limits = DEFAULT_LIMITS,
-                                   alignScaleAfterColor = false,
                                    moveableId,
                                }) => {
     const sliderRef = useRef(null)
@@ -182,32 +181,29 @@ export const PaddingElement = ({
 
     return (
         <div className="lgs-widget-padding-element">
-            <div className="drawer-horizontal-line">
-                <div className="drawer-horizontal-element lgs-widget-padding-slider">
-                    <WaSlider
-                        ref={sliderRef}
-                        size="s"
-                        label={label}
-                        min={limits.min}
-                        max={limits.max}
-                        step="1"
-                        label-at-start
-                        placement="top"
-                        withTooltip
-                        defaultValue={paddingValue}
-                        onInput={(e) => updatePadding(e.target.value)}
-                    />
-                </div>
+            <div>
+                <WaSlider
+                    ref={sliderRef}
+                    half-width
+                    size="s"
+                    label={label}
+                    min={limits.min}
+                    max={limits.max}
+                    step="1"
+                    label-at-start
+                    placement="top"
+                    withTooltip
+                    defaultValue={paddingValue}
+                    onInput={(e) => updatePadding(e.target.value)}
+                />
+                <ScaleSwitchElement
+                    checked={padding.scaled ?? false}
+                    onChange={(checked) => {
+                        updateValue(buildPaddingPath(path, 'scaled'), checked)
+                        realignWidget()
+                    }}
+                />
             </div>
-            <ScaleSwitchElement
-                checked={padding.scaled ?? false}
-                onChange={(checked) => {
-                    updateValue(buildPaddingPath(path, 'scaled'), checked)
-                    realignWidget()
-                }}
-                alignAfterColor={alignScaleAfterColor}
-                className="lgs-widget-padding-scaled-line"
-            />
         </div>
     )
 }
