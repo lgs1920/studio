@@ -26,7 +26,7 @@ import { useSnapshot }                            from 'valtio'
 /**
  * Text color and opacity controls.
  */
-export const TextColorElement = ({id}) => {
+export const TextColorElement = ({id, title = '', children = null}) => {
     const $configuration = lgs.settings.widgets['text-widget'].configuration
     const configuration = useSnapshot($configuration)
     const $element = $configuration?.elements?.[id] ?? $configuration.user ?? $configuration.default
@@ -74,7 +74,7 @@ export const TextColorElement = ({id}) => {
 
     return (
         <div className="lgs-widget-text-color-element">
-            <span>{'Text color'}</span>
+            <span>{title}</span>
             <div>
                 <WaColorPicker
                     value={element?.text?.color ?? 'white'}
@@ -95,6 +95,7 @@ export const TextColorElement = ({id}) => {
                         valueFormatter={formatSliderPercent}
                         onInput={handleOpacityChange}
                     />
+                    {children}
                 </div>
             </div>
         </div>

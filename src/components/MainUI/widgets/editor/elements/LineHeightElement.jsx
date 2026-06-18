@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-05-10
- * Last modified: 2026-05-10
+ * Created on: 2026-06-18
+ * Last modified: 2026-06-18
  *
  *
  * Copyright © 2026 LGS1920
@@ -46,6 +46,7 @@ export const LineHeightElement = ({id}) => {
     return (
         <WaSelect className="lgs--text-widget-line-height-trigger"
                   size="s"
+                  half-width
                   value={element?.lineHeight ?? '1'}
                   onChange={handleLineHeightChange}
         >

@@ -7,15 +7,15 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-05-10
- * Last modified: 2026-05-10
+ * Created on: 2026-06-18
+ * Last modified: 2026-06-18
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { WaButton, WaIcon, WaInput, WaSlider } from '@web.awesome.me/webawesome-pro/dist/react'
-import { useCallback, useEffect, useMemo, useRef } from 'react'
+import { WaButton, WaIcon, WaNumberInput, WaSlider } from '@web.awesome.me/webawesome-pro/dist/react'
+import { useCallback, useEffect, useMemo, useRef }   from 'react'
 
 /**
  * Reusable rotation control element for widget editors.
@@ -64,44 +64,45 @@ export const RotationElement = ({
     }, [displayValue, sanitizeRotationValue])
 
     return (
-        <div className="drawer-horizontal-line">
-            <div className="drawer-horizontal-element">
-                <label>{'Rotation'}</label>
-                <WaInput
-                    size="s"
-                    type="number"
-                    value={displayValue}
-                    style={{marginLeft: 'auto', width: '5rem'}}
-                    step={step}
-                    min={min}
-                    max={max}
-                    onInput={(e) => handleRotationInput(e.target.value)}
-                />
-            </div>
+        <>
+            <WaNumberInput
+                appearance="filled"
+                label-at-start
+                className="half-width"
+                size="s"
+                type="number"
+                value={displayValue}
+                step={step}
+                min={min}
+                max={max}
+                onInput={(e) => handleRotationInput(e.target.value)}
+            >
+                    <span slot="label">
+                    {'Rotation (deg)'}
+                        {isRotated && (
+                            <WaButton size="s" appearance="plain" aria-label="Reset rotation"
+                                      onClick={() => applyRotation(0)}>
+                                <WaIcon size="s" name="arrow-rotate-left" variant="regular"/>
+                            </WaButton>
+                        )}
+                </span>
+            </WaNumberInput>
+            <WaSlider
+                label-at-start
+                half-width
+                ref={sliderRef}
+                size="s"
+                min={min}
+                max={max}
+                step={step}
+                defaultValue={displayValue}
+                placement="bottom"
+                withTooltip
+                style={{'--track-active-offset': '50%'}}
+                onInput={(e) => handleRotationInput(e.target.value)}
+            />
+        </>
 
-            <div className="drawer-horizontal-element">
-                <WaSlider
-                    ref={sliderRef}
-                    size="s"
-                    min={min}
-                    max={max}
-                    step={step}
-                    defaultValue={displayValue}
-                    placement="bottom"
-                    withTooltip
-                    style={{'--track-active-offset': '50%'}}
-                    onInput={(e) => handleRotationInput(e.target.value)}
-                />
-            </div>
 
-            <div className="drawer-horizontal-element widget-editor-rotation-reset">
-                {isRotated && (
-                    <WaButton size="s" appearance="plain" aria-label="Reset rotation"
-                              onClick={() => applyRotation(0)}>
-                        <WaIcon size="s" name="arrow-rotate-left" variant="regular"/>
-                    </WaButton>
-                )}
-            </div>
-        </div>
     )
 }

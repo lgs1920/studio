@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-05-10
- * Last modified: 2026-05-10
+ * Created on: 2026-06-18
+ * Last modified: 2026-06-18
  *
  *
  * Copyright © 2026 LGS1920
@@ -46,7 +46,7 @@ export const AlignElement = ({id}) => {
             {ALIGNMENT_MODES.map((mode) => (
                 <WaButton
                     key={mode}
-                    size="s"
+                    size="xs"
                     disabled={alignmentDisabled}
                     variant={!alignmentDisabled && element?.align === mode ? 'brand' : 'default'}
                     onClick={() => {
