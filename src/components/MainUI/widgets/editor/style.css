@@ -151,8 +151,11 @@
 
 .lgs-widget-line-element {
     display: flex;
-    margin: var(--lgs-gutter-s) 0;
     gap: var(--lgs-gutter-s);
+
+    & > .lgs-widget-line-element-spacer {
+        flex: 0 0 2.5rem;
+    }
 
     & > div {
         display: flex;
@@ -180,19 +183,52 @@
     }
 }
 
+.lgs-widget-text-color-element {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    gap: var(--lgs-gutter-s);
+
+    & > div {
+        display: flex;
+        gap: var(--lgs-gutter-s);
+    }
+
+    & > div > div {
+        display: flex;
+        flex-direction: column;
+        flex-grow: 1;
+        gap: var(--lgs-gutter-s);
+    }
+}
+
+.lgs-widget-text-elevation-element {
+    display: flex;
+    flex-direction: column;
+    gap: var(--lgs-gutter-s);
+
+    & > div {
+        display: flex;
+        gap: var(--lgs-gutter-s);
+    }
+
+    & > div > div {
+        display: flex;
+        flex-direction: column;
+        flex-grow: 1;
+        gap: var(--lgs-gutter-s);
+    }
+}
+
 .lgs-border-element {
     display: flex;
     flex-direction: column;
+    gap: var(--lgs-gutter-s);
 }
 
 .lgs-widget-padding-element {
     display: flex;
     flex-direction: column;
     width: 100%;
-
-    & > div {
-        display: flex;
-        flex-direction: column;
-        gap: var(--lgs-gutter-s);
-    }
+    gap: var(--lgs-gutter-s);
 }

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-05-01
- * Last modified: 2026-05-01
+ * Created on: 2026-06-18
+ * Last modified: 2026-06-18
  *
  *
  * Copyright © 2026 LGS1920
@@ -34,8 +34,8 @@ import {
     RotationElement,
 }                                                           from '@Components/MainUI/widgets/editor/elements/RotationElement'
 import {
-    ShadowElement,
-}                                                           from '@Components/MainUI/widgets/editor/elements/ShadowElement'
+    TextElevationElement,
+}                                                           from '@Components/MainUI/widgets/editor/elements/TextElevationElement'
 import {
     StrokeElement,
 } from '@Components/MainUI/widgets/editor/elements/StrokeElement'
@@ -226,7 +226,6 @@ export const TextWidgetEditor = ({entity}) => {
 
                 </div>
 
-                <div className="lgs-widget-editor-controls-wrapper">
                     <RotationElement localRotation={resolvedRotation}
                                      applyRotation={applyRotation}
                     />
@@ -245,10 +244,9 @@ export const TextWidgetEditor = ({entity}) => {
                         updateValue={updateValue}
                     />
                     <WaDivider/>
-                    <ShadowElement
+                    <TextElevationElement
                         element={element}
                         swatches={swatches}
-                        getColor={getColor}
                         updateValue={updateValue}
                     />
                     <WaDivider/>
@@ -266,7 +264,6 @@ export const TextWidgetEditor = ({entity}) => {
                         getColor={getColor}
                         updateValue={updateValue}
                     />
-                </div>
             </WaCard>
         </LGSScrollbars>
     )

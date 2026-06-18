@@ -34,6 +34,7 @@ export const LineElement = ({
                                 swatches,
                                 colorValue,
                                 onColorInput,
+                                reserveColorColumn = false,
                                 widthRef,
                                 widthLabel = 'Width',
                                 widthMin = 0,
@@ -42,6 +43,7 @@ export const LineElement = ({
                                 widthValue,
                                 widthDefaultValue,
                                 onWidthInput,
+                                showOpacity = true,
                                 opacityRef,
                                 opacityLabel = 'Opacity',
                                 opacityMin = 0,
@@ -53,16 +55,20 @@ export const LineElement = ({
                                 showScale = false,
                                 scaled = false,
                                 onScaleChange,
-                                children,
+                            children,
                             }) => {
     return (
         <div className="lgs-widget-line-element">
-            <WaColorPicker
-                size="s"
-                swatches={swatches}
-                value={colorValue}
-                onInput={(e) => onColorInput?.(e.target.value, e)}
-            />
+            {reserveColorColumn ? (
+                <div className="lgs-widget-line-element-spacer" aria-hidden="true"/>
+            ) : (
+                <WaColorPicker
+                    size="s"
+                    swatches={swatches}
+                    value={colorValue}
+                    onInput={(e) => onColorInput?.(e.target.value, e)}
+                />
+            )}
             <div>
                 <WaSlider
                     ref={widthRef}
@@ -78,21 +84,23 @@ export const LineElement = ({
                     {...getSliderValueProps(widthValue, widthDefaultValue)}
                     onInput={(e) => onWidthInput?.(e.target.value, e)}
                 />
-                <WaSlider
-                    ref={opacityRef}
-                    half-width
-                    withTooltip
-                    size="s"
-                    label={opacityLabel}
-                    min={opacityMin}
-                    max={opacityMax}
-                    step={opacityStep}
-                    label-at-start
-                    placement="top"
-                    valueFormatter={formatSliderPercent}
-                    {...getSliderValueProps(opacityValue, opacityDefaultValue)}
-                    onInput={(e) => onOpacityInput?.(e.target.value, e)}
-                />
+                {showOpacity && (
+                    <WaSlider
+                        ref={opacityRef}
+                        half-width
+                        withTooltip
+                        size="s"
+                        label={opacityLabel}
+                        min={opacityMin}
+                        max={opacityMax}
+                        step={opacityStep}
+                        label-at-start
+                        placement="top"
+                        valueFormatter={formatSliderPercent}
+                        {...getSliderValueProps(opacityValue, opacityDefaultValue)}
+                        onInput={(e) => onOpacityInput?.(e.target.value, e)}
+                    />
+                )}
                 {showScale && (
                     <ScaleSwitchElement
                         checked={scaled}

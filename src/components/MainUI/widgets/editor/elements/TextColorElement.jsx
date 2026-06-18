@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-05-10
- * Last modified: 2026-05-10
+ * Created on: 2026-06-18
+ * Last modified: 2026-06-18
  *
  *
  * Copyright © 2026 LGS1920
@@ -73,20 +73,18 @@ export const TextColorElement = ({id}) => {
     }, [$element, element?.text?.opacity, syncCSS, textOpacity])
 
     return (
-        <>
-            <div style={{width: '100%'}}>{'Text color'}</div>
-            <div className="lgs--text-widget-color-trigger drawer-horizontal-line three-columns">
-                <div className="drawer-horizontal-element">
-                    <WaColorPicker
-                        value={element?.text?.color ?? 'white'}
-                        onInput={handleColorChange}
-                        size="s"
-                        swatches={swatches}
-                    />
-                </div>
-                <div className="drawer-horizontal-element xlarge-element"></div>
-                <div className="drawer-horizontal-element xlarge-element">
+        <div className="lgs-widget-text-color-element">
+            <span>{'Text color'}</span>
+            <div>
+                <WaColorPicker
+                    value={element?.text?.color ?? 'white'}
+                    onInput={handleColorChange}
+                    size="s"
+                    swatches={swatches}
+                />
+                <div>
                     <WaSlider
+                        half-width
                         size="s"
                         label="Opacity"
                         label-at-start
@@ -99,6 +97,6 @@ export const TextColorElement = ({id}) => {
                     />
                 </div>
             </div>
-        </>
+        </div>
     )
 }
