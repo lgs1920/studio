@@ -212,12 +212,7 @@ export const TextWidgetEditor = ({entity}) => {
                          <div className="drawer-horizontal-line">
                              <StyleElement id={normalizedId}/><AlignElement id={normalizedId}/>
                          </div> : null}
-
-
                     </TextColorElement>
-                    <WaDivider/>
-
-
                 </div>
 
 
