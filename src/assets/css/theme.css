@@ -1433,6 +1433,19 @@ wa-slider[label-at-start] {
     gap: var(--lgs-gutter-s);
 }
 
+wa-slider[label-at-start].half-width,
+wa-slider[label-at-start][half-width] {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+
+wa-slider[label-at-start].half-width::part(label),
+wa-slider[label-at-start][half-width]::part(label),
+wa-slider[label-at-start].half-width::part(slider),
+wa-slider[label-at-start][half-width]::part(slider) {
+    min-width: 0;
+    width: 100%;
+}
+
 wa-slider[size="s"] {
     --thumb-width: calc(var(--lgs-gutter) * 1.2);
     --thumb-height: calc(var(--lgs-gutter) * 1.2);
