@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-06-16
- * Last modified on: 2026-06-16
+ * Created on: 2026-06-18
+ * Last modified: 2026-06-18
  *
  *
  * Copyright © 2026 LGS1920
@@ -58,6 +58,7 @@ describe('EditableText', () => {
     let originalRequestAnimationFrame
     let originalCancelAnimationFrame
     let updateRect
+    let widgetElement
 
     beforeEach(() => {
         originalRequestAnimationFrame = globalThis.requestAnimationFrame
@@ -122,9 +123,7 @@ describe('EditableText', () => {
                             updateRect,
                         },
                     })),
-                    getElementById: vi.fn(() => ({
-                        style: {},
-                    })),
+                    getElementById: vi.fn(() => widgetElement),
                     getWidgetConfig: vi.fn(() => ({
                         dimensions: {width: 120, height: 60},
                         position:   {left: 0, top: 0},
@@ -135,6 +134,9 @@ describe('EditableText', () => {
             },
         }
 
+        widgetElement = {
+            style: {},
+        }
         updateRect = vi.fn()
         mocks.generateCSSVariables.mockClear()
         mocks.measureContent.mockClear()
@@ -175,6 +177,22 @@ describe('EditableText', () => {
             undefined,
             expect.objectContaining({correction: 2}),
         )
+    })
+
+    it('keeps a manually enlarged text widget size when content is smaller', async () => {
+        globalThis.__.ui.widgetManager.getWidgetConfig = vi.fn(() => ({
+            dimensions:   {width: 240, height: 120},
+            position:     {left: 0, top: 0},
+            persist:      false,
+            runtimeReady: false,
+        }))
+
+        render(<EditableText id="text-widget#1"/>)
+
+        await waitFor(() => {
+            expect(widgetElement.style.width).toBe('240px')
+            expect(widgetElement.style.height).toBe('120px')
+        })
     })
 
     it('updates alignment controls and the moveable rect while editing multiline text', async () => {

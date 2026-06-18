@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-05-10
- * Last modified: 2026-05-10
+ * Created on: 2026-06-18
+ * Last modified: 2026-06-18
  *
  *
  * Copyright © 2026 LGS1920
@@ -20,10 +20,11 @@ import { useWidgetScaleCorrection }                                       from '
 import {
     WaTextarea,
 }                                                            from '@web.awesome.me/webawesome-pro/dist/react'
-import { memo, useEffect, useMemo, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSnapshot }                                                    from 'valtio'
 
 const PREVIEW_MEASURE_BUFFER = 4
+const PREVIEW_FIT_RATIO = 0.88
 
 /**
  * Normalized Text Widget Preview.
@@ -40,9 +41,15 @@ export const TextWidgetPreview = memo(({entity}) => {
 
     const [initialRotation, setInitialRotation] = useState(0)
     const [isEditing, setIsEditing] = useState(false)
+    const [previewScale, setPreviewScale] = useState(1)
     const _timer = useRef(null)
+    const _previewRef = useRef(null)
     const _textWidgetManager = useMemo(() => TextWidgetManager.instance, [])
     const scaleCorrection = useWidgetScaleCorrection(entity)
+    const widgetVisualScale = useMemo(() => {
+        const value = 1 / (scaleCorrection || 1)
+        return Number.isFinite(value) && value > 0 ? value : 1
+    }, [scaleCorrection])
 
     const element = useMemo(() => {
         return configuration.elements?.[entity] ?? configuration.user ?? configuration.default
@@ -102,9 +109,9 @@ export const TextWidgetPreview = memo(({entity}) => {
             return {}
         }
         return _textWidgetManager.generateCSSVariables(element, currentSnapshotImage, WIDGET_SYSTEM_FONT_STACK, {
-            correction: scaleCorrection,
+            correction: 1,
         })
-    }, [currentSnapshotImage, element, scaleCorrection, _textWidgetManager])
+    }, [currentSnapshotImage, element, _textWidgetManager])
 
     const contentSize = useMemo(() => {
         return _textWidgetManager.measureContent(element, WIDGET_SYSTEM_FONT_STACK, {
@@ -112,6 +119,33 @@ export const TextWidgetPreview = memo(({entity}) => {
             correction: scaleCorrection,
         })
     }, [element, scaleCorrection, _textWidgetManager])
+
+    const previewSize = useMemo(() => {
+        return _textWidgetManager.measureContent(element, WIDGET_SYSTEM_FONT_STACK, {
+            buffer:     PREVIEW_MEASURE_BUFFER,
+            correction: 1,
+        })
+    }, [element, _textWidgetManager])
+
+    const updatePreviewScale = useCallback(() => {
+        const previewContainer = _previewRef.current?.parentElement
+        if (!previewContainer) {
+            setPreviewScale(1)
+            return
+        }
+
+        const availableWidth = previewContainer.clientWidth || previewContainer.getBoundingClientRect().width || 0
+        const availableHeight = previewContainer.clientHeight || previewContainer.getBoundingClientRect().height || 0
+        if (availableWidth <= 0 || availableHeight <= 0 || !Number.isFinite(previewSize.width) || !Number.isFinite(previewSize.height)) {
+            setPreviewScale(1)
+            return
+        }
+
+        const fitWidth = availableWidth * PREVIEW_FIT_RATIO
+        const fitHeight = availableHeight * PREVIEW_FIT_RATIO
+        const nextScale = Math.min(1, fitWidth / previewSize.width, fitHeight / previewSize.height)
+        setPreviewScale(Number.isFinite(nextScale) && nextScale > 0 ? nextScale : 1)
+    }, [previewSize.height, previewSize.width])
 
     useEffect(() => {
         if (_moveable?.current) {
@@ -121,11 +155,37 @@ export const TextWidgetPreview = memo(({entity}) => {
         }
     }, [contentSize.height, contentSize.width, _moveable])
 
+    useEffect(() => {
+        updatePreviewScale()
+
+        const previewContainer = _previewRef.current?.parentElement
+        if (!previewContainer || typeof ResizeObserver === 'undefined') {
+            return undefined
+        }
+
+        let frame = null
+        const observer = new ResizeObserver(() => {
+            if (frame !== null) {
+                cancelAnimationFrame(frame)
+            }
+            frame = requestAnimationFrame(updatePreviewScale)
+        })
+
+        observer.observe(previewContainer)
+
+        return () => {
+            if (frame !== null) {
+                cancelAnimationFrame(frame)
+            }
+            observer.disconnect()
+        }
+    }, [updatePreviewScale])
+
     const previewVars = useMemo(() => ({
         ...dynamicVars,
-        '--lgs-preview-content-width':  `${contentSize.width || 1}px`,
-        '--lgs-preview-content-height': `${contentSize.height || 1}px`,
-    }), [dynamicVars, contentSize.height, contentSize.width])
+        '--lgs-preview-content-width':  `${previewSize.width || 1}px`,
+        '--lgs-preview-content-height': `${previewSize.height || 1}px`,
+    }), [dynamicVars, previewSize.height, previewSize.width])
 
     const handleKeyDown = (e) => {
         if (e.key === 'Enter' || e.key === 'Backspace') {
@@ -138,9 +198,10 @@ export const TextWidgetPreview = memo(({entity}) => {
     }
 
     return (
-        <div style={{
+        <div ref={_previewRef} style={{
             ...previewVars,
-            transform: isEditing ? 'none' : `rotate(${activeRotation}deg)`,
+            transform:       isEditing ? 'none' : `rotate(${activeRotation}deg) scale(${widgetVisualScale * previewScale})`,
+            transformOrigin: 'center center',
         }}>
             <WaTextarea className="text-widget-preview-area"
                         rows={1}

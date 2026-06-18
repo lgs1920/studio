@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-06-16
- * Last modified on: 2026-06-16
+ * Created on: 2026-06-18
+ * Last modified: 2026-06-18
  *
  *
  * Copyright © 2026 LGS1920
@@ -132,9 +132,10 @@ describe('TextWidgetPreview', () => {
             }),
             null,
             expect.any(String),
-            expect.objectContaining({correction: 2}),
+            expect.objectContaining({correction: 1}),
         )
-        expect(mocks.measureContent).toHaveBeenLastCalledWith(
+        expect(mocks.measureContent).toHaveBeenNthCalledWith(
+            1,
             expect.objectContaining({
                 text: expect.objectContaining({
                     content: 'Hello',
@@ -142,6 +143,16 @@ describe('TextWidgetPreview', () => {
             }),
             expect.any(String),
             expect.objectContaining({buffer: 4, correction: 2}),
+        )
+        expect(mocks.measureContent).toHaveBeenNthCalledWith(
+            2,
+            expect.objectContaining({
+                                        text: expect.objectContaining({
+                                                                          content: 'Hello',
+                                                                      }),
+                                    }),
+            expect.any(String),
+            expect.objectContaining({buffer: 4, correction: 1}),
         )
     })
 })

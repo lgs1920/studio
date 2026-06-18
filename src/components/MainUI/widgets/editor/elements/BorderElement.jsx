@@ -15,6 +15,7 @@
  ******************************************************************************/
 
 import { WaSwitch }                          from '@web.awesome.me/webawesome-pro/dist/react'
+import { useEffect, useRef } from 'react'
 import { LineElement }                       from './LineElement'
 import { RadiusElement }                     from './RadiusElement'
 import { sanitizeNumericControlValue }       from './sliderUtils'
@@ -35,8 +36,21 @@ export const BorderElement = ({
                                   showRadiusScale = true,
                                   sanitizeSliderValue = sanitizeNumericControlValue,
                               }) => {
+    const widthRef = useRef(null)
     const borderWidth = sanitizeSliderValue(element.border?.thickness, 1, {min: 0, max: 10})
     const borderOpacity = sanitizeSliderValue(element.border?.opacity, 1, {min: 0, max: 1})
+
+    useEffect(() => {
+        if (widthRef.current) {
+            widthRef.current.value = borderWidth
+        }
+
+        if (element.border?.thickness !== undefined &&
+            element.border?.thickness !== null &&
+            element.border?.thickness !== borderWidth) {
+            updateValue('border.thickness', borderWidth)
+        }
+    }, [borderWidth, element.border?.thickness, updateValue])
 
     return (
         <div className="lgs-border-element">
@@ -51,10 +65,11 @@ export const BorderElement = ({
 
             {element.border?.show && (
                 <LineElement
+                    widthRef={widthRef}
                     swatches={swatches}
                     colorValue={getColor(element.border)}
                     onColorInput={(value) => updateValue('border.color', value)}
-                    widthValue={borderWidth}
+                    widthDefaultValue={borderWidth}
                     onWidthInput={(value) => updateValue(
                         'border.thickness',
                         sanitizeSliderValue(value, 1, {min: 0, max: 10}),

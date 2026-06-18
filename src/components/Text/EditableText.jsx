@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-30
- * Last modified: 2026-04-30
+ * Created on: 2026-06-18
+ * Last modified: 2026-06-18
  *
  *
  * Copyright © 2026 LGS1920
@@ -275,9 +275,13 @@ export const EditableText = ({id}) => {
         }
 
         const frame = requestAnimationFrame(() => {
-            const {width, height} = widgetManager.measureContent(element, undefined, {
+            const measured = widgetManager.measureContent(element, undefined, {
                 correction: scaleCorrection,
             })
+            const currentWidth = Number(config.dimensions?.width) || 0
+            const currentHeight = Number(config.dimensions?.height) || 0
+            const width = Math.max(measured.width || 0, currentWidth)
+            const height = Math.max(measured.height || 0, currentHeight)
 
             if (Number.isFinite(width) && width > 0 && Number.isFinite(height) && height > 0) {
                 widgetElement.style.width = `${width}px`
