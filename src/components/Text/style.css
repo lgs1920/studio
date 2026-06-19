@@ -155,8 +155,8 @@
  */
 .text-widget-preview-area::part(form-control) {
     display: inline-block;
-    margin: 1rem;
-    padding: 30px; /* Safe zone for large shadows */
+    margin: 0;
+    padding: 0;
 }
 
 /* * The Input/Textarea element

@@ -724,7 +724,17 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
             }
         }
         else {
-            lgs.stores.ui.widget.current = {id: widgetId}
+            const currentRotation = lgs.stores.ui.widget.current?.id === widgetId
+                                    ? Number(lgs.stores.ui.widget.current?.rotate)
+                                    : Number.NaN
+            const configRotation = Number(__.ui.widgetManager.getWidgetConfig(widgetId)?.rotate)
+            lgs.stores.ui.widget.current = {
+                ...(lgs.stores.ui.widget.current ?? {}),
+                id: widgetId,
+                rotate: Number.isFinite(currentRotation)
+                        ? currentRotation
+                        : (Number.isFinite(configRotation) ? configRotation : 0),
+            }
         }
 
         persistInteractionState(widgetConfig, {locked: nextLocked})
@@ -1005,7 +1015,17 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
         if (drawers.open === WIDGETS_EDITOR_DRAWER && drawerBase && drawerBase === widgetBase && drawers.entity !== widgetId) {
             lgs.stores.ui.drawers.entity = widgetId
         }
-        lgs.stores.ui.widget.current = {id: widgetId}
+        const currentRotation = lgs.stores.ui.widget.current?.id === widgetId
+                                ? Number(lgs.stores.ui.widget.current?.rotate)
+                                : Number.NaN
+        const configRotation = Number(__.ui.widgetManager.getWidgetConfig(widgetId)?.rotate)
+        lgs.stores.ui.widget.current = {
+            ...(lgs.stores.ui.widget.current ?? {}),
+            id: widgetId,
+            rotate: Number.isFinite(currentRotation)
+                    ? currentRotation
+                    : (Number.isFinite(configRotation) ? configRotation : 0),
+        }
         __.ui.widgetManager.manageControlBox(_moveable, setControlBox, _controlBoxTimer, true, true)
     }, [widgetId, drawers.entity, drawers.open, canInteract])
 

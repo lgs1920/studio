@@ -14,7 +14,7 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { cleanup, render, waitFor } from '@testing-library/react'
+import { cleanup, fireEvent, render, waitFor } from '@testing-library/react'
 import { TextWidgetPreview } from '@Components/Text/TextWidgetPreview'
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest'
 import { proxy } from 'valtio'
@@ -40,10 +40,6 @@ vi.mock('@Core/ui/text-metrics/TextWidgetManager', () => ({
 
 vi.mock('@Components/MainUI/widgets/useWidgetScaleCorrection', () => ({
     useWidgetScaleCorrection: () => 2,
-}))
-
-vi.mock('@web.awesome.me/webawesome-pro/dist/react', () => ({
-    WaTextarea: ({value, ...props}) => <textarea aria-label="text-preview" value={value} readOnly {...props}/>,
 }))
 
 describe('TextWidgetPreview', () => {
@@ -72,6 +68,7 @@ describe('TextWidgetPreview', () => {
                             user: null,
                             elements: {
                                 'text-widget#1': proxy({
+                                    rotate: 45,
                                     text: {
                                         content: 'Hello',
                                     },
@@ -100,6 +97,12 @@ describe('TextWidgetPreview', () => {
                         },
                     })),
                     getWidgetPosition: vi.fn(async () => ({rotate: 0})),
+                    getWidgetConfig: vi.fn(() => ({
+                        dimensions: {
+                            width:  120,
+                            height: 60,
+                        },
+                    })),
                 },
             },
         }
@@ -132,7 +135,7 @@ describe('TextWidgetPreview', () => {
             }),
             null,
             expect.any(String),
-            expect.objectContaining({correction: 1}),
+            expect.objectContaining({correction: 2}),
         )
         expect(mocks.measureContent).toHaveBeenNthCalledWith(
             1,
@@ -152,7 +155,21 @@ describe('TextWidgetPreview', () => {
                                                                       }),
                                     }),
             expect.any(String),
-            expect.objectContaining({buffer: 4, correction: 1}),
+            expect.objectContaining({buffer: 4, correction: 2}),
         )
+    })
+
+    it('keeps rotation applied while the preview editor is focused', async () => {
+        const {container, getByRole} = render(<TextWidgetPreview entity="text-widget#1"/>)
+        const editor = getByRole('textbox')
+        const wrapper = container.querySelector('.lgs-editable-text-wrapper')
+
+        expect(wrapper.style.transform).toContain('rotate(45deg)')
+
+        fireEvent.focus(editor)
+
+        await waitFor(() => {
+            expect(wrapper.style.transform).toContain('rotate(45deg)')
+        })
     })
 })

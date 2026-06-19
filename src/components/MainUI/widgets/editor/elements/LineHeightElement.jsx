@@ -15,7 +15,7 @@
  ******************************************************************************/
 
 import { WaIcon, WaOption, WaSelect } from '@web.awesome.me/webawesome-pro/dist/react'
-import { useCallback, useMemo }       from 'react'
+import { useMemo }                    from 'react'
 import { useSnapshot }                from 'valtio'
 
 const LINE_HEIGHT_OPTIONS = [
@@ -36,18 +36,20 @@ export const LineHeightElement = ({id}) => {
     const $element = $configuration?.elements?.[id] ?? $configuration.user ?? $configuration.default
     const element = configuration?.elements?.[id] ?? configuration.user ?? configuration.default
 
-    const handleLineHeightChange = useCallback((e) => {
+    const handleLineHeightChange = (e) => {
         if ($element) {
             $element.lineHeight = e.target.value
             _moveable?.current?.updateRect()
         }
-    }, [$element])
+    }
 
     return (
         <WaSelect className="lgs--text-widget-line-height-trigger"
+                  hoist
+                  placement="bottom"
                   size="s"
                   half-width
-                  value={element?.lineHeight ?? '1'}
+                  value={String(element?.lineHeight ?? '1')}
                   onChange={handleLineHeightChange}
         >
             <WaIcon slot="start" variant="regular" name="distribute-spacing-vertical"/>

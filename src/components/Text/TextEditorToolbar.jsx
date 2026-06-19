@@ -252,8 +252,9 @@ export const TextEditorToolbar = ({id, fonts = false, color = true, align = true
                     <div className="drawer-horizontal-element">
                         <WaSelect
                             hoist
+                            placement="bottom"
                             size="s"
-                            value={element?.lineHeight ?? '1'}
+                            value={String(element?.lineHeight ?? '1')}
                             onChange={handleLineHeightChange}
                             style={{width: '8rem'}}
                         >

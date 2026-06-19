@@ -44,6 +44,8 @@ export const TextWidgetEditor = ({entity}) => {
 
     const $widget = lgs.stores.ui.widget
     const widget = useSnapshot($widget)
+    const currentWidgetId = widget.current?.id
+    const currentWidgetRotate = widget.current?.rotate
 
     const [localRotation, setLocalRotation] = useState(0)
 
@@ -72,12 +74,22 @@ export const TextWidgetEditor = ({entity}) => {
             const position = await __.ui.widgetManager.getWidgetPosition(entity)
 
             if (isMounted) {
-                const angle = position?.rotate !== undefined ? Number(position.rotate) : (element?.rotate ?? 0)
+                const liveRotation = currentWidgetId === entity && Number.isFinite(Number(currentWidgetRotate))
+                                    ? Number(currentWidgetRotate)
+                                    : null
+                const persistedRotation = Number(element?.rotate ?? 0)
+                const positionRotation = position?.rotate !== undefined && Number.isFinite(Number(position.rotate))
+                                         ? Number(position.rotate)
+                                         : null
+                const angle = liveRotation ?? positionRotation ?? persistedRotation
                 setLocalRotation(Math.ceil(angle))
 
-                $widget.current = {
-                    id:     entity,
-                    rotate: angle,
+                if (currentWidgetId !== entity || currentWidgetRotate === undefined) {
+                    $widget.current = {
+                        ...($widget.current ?? {}),
+                        id:     entity,
+                        rotate: angle,
+                    }
                 }
             }
         }
@@ -86,7 +98,7 @@ export const TextWidgetEditor = ({entity}) => {
         return () => {
             isMounted = false
         }
-    }, [$widget, element?.rotate, entity, isTextWidget])
+    }, [$widget, currentWidgetId, currentWidgetRotate, element?.rotate, entity, isTextWidget])
 
     const swatches = useMemo(() => lgs.settings.getSwatches.list.join(';'), [])
 
@@ -122,7 +134,6 @@ export const TextWidgetEditor = ({entity}) => {
 
         _curr[_keys[_keys.length - 1]] = val
     }, [element, normalizedId, $configuration])
-
 
     /**
      * Applies rotation to the widget and updates persistent configuration
@@ -187,7 +198,8 @@ export const TextWidgetEditor = ({entity}) => {
                                          applyRotation={applyRotation}
                         />
                         <WaDivider/>
-                        <PaddingElement element={element} updateValue={updateValue} moveableId={normalizedId}/>
+                        <PaddingElement element={element} updateValue={updateValue} moveableId={normalizedId}
+                                        autoRealign={true}/>
                         <WaDivider/>
 
                         <div className="drawer-horizontal-line">
@@ -235,6 +247,8 @@ export const TextWidgetEditor = ({entity}) => {
                     swatches={swatches}
                     getColor={getColor}
                     updateValue={updateValue}
+                    moveableId={normalizedId}
+                    autoRealign={true}
                     showPill={true}
                 />
                 <WaDivider/>

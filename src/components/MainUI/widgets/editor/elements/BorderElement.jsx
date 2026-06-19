@@ -15,7 +15,7 @@
  ******************************************************************************/
 
 import { WaSwitch }                          from '@web.awesome.me/webawesome-pro/dist/react'
-import { useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import { LineElement }                       from './LineElement'
 import { RadiusElement }                     from './RadiusElement'
 import { sanitizeNumericControlValue }       from './sliderUtils'
@@ -30,6 +30,8 @@ export const BorderElement = ({
                                   swatches,
                                   getColor,
                                   updateValue,
+                                  moveableId,
+                                  autoRealign = false,
                                   showPill = false,
                                   showRadius = true,
                                   showScale = true,
@@ -37,6 +39,8 @@ export const BorderElement = ({
                                   sanitizeSliderValue = sanitizeNumericControlValue,
                               }) => {
     const widthRef = useRef(null)
+    const realignFrameRef = useRef(null)
+    const trailingRealignFrameRef = useRef(null)
     const borderWidth = sanitizeSliderValue(element.border?.thickness, 1, {min: 0, max: 10})
     const borderOpacity = sanitizeSliderValue(element.border?.opacity, 1, {min: 0, max: 1})
 
@@ -51,6 +55,61 @@ export const BorderElement = ({
             updateValue('border.thickness', borderWidth)
         }
     }, [borderWidth, element.border?.thickness, updateValue])
+
+    useEffect(() => {
+        return () => {
+            if (realignFrameRef.current !== null) {
+                cancelAnimationFrame(realignFrameRef.current)
+            }
+            if (trailingRealignFrameRef.current !== null) {
+                cancelAnimationFrame(trailingRealignFrameRef.current)
+            }
+        }
+    }, [])
+
+    const realignWidget = useCallback(() => {
+        if (!moveableId) {
+            return
+        }
+        if (realignFrameRef.current !== null) {
+            return
+        }
+
+        realignFrameRef.current = requestAnimationFrame(() => {
+            realignFrameRef.current = null
+            const moveable = __.ui.widgetManager.getMoveable(moveableId)
+            moveable?.current?.updateRect()
+
+            if (trailingRealignFrameRef.current !== null) {
+                cancelAnimationFrame(trailingRealignFrameRef.current)
+            }
+            trailingRealignFrameRef.current = requestAnimationFrame(() => {
+                trailingRealignFrameRef.current = null
+                moveable?.current?.updateRect()
+            })
+        })
+    }, [moveableId])
+
+    useEffect(() => {
+        if (!autoRealign || !moveableId) {
+            return undefined
+        }
+
+        const frame = requestAnimationFrame(() => {
+            realignWidget()
+        })
+
+        return () => cancelAnimationFrame(frame)
+    }, [
+        autoRealign,
+        moveableId,
+        realignWidget,
+        element.border?.show,
+        element.border?.scaled,
+        element.border?.radiusScaled,
+        element.border?.thickness,
+        element.border?.radius,
+    ])
 
     return (
         <div className="lgs-border-element">

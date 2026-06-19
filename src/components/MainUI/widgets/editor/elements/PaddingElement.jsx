@@ -83,6 +83,7 @@ export const PaddingElement = ({
                                    fallback = 5,
                                    limits = DEFAULT_LIMITS,
                                    moveableId,
+                                   autoRealign = false,
                                }) => {
     const sliderRef = useRef(null)
     const realignFrameRef = useRef(null)
@@ -168,6 +169,18 @@ export const PaddingElement = ({
             })
         })
     }, [moveableId])
+
+    useEffect(() => {
+        if (!autoRealign || !moveableId) {
+            return undefined
+        }
+
+        const frame = requestAnimationFrame(() => {
+            realignWidget()
+        })
+
+        return () => cancelAnimationFrame(frame)
+    }, [autoRealign, moveableId, realignWidget])
 
     const updatePadding = (rawValue) => {
         const value = sanitizeNumericControlValue(rawValue, fallback, limits)
