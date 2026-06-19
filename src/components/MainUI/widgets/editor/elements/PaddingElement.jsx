@@ -18,62 +18,11 @@ import { WaSlider }                                from '@web.awesome.me/webawes
 import { useCallback, useEffect, useMemo, useRef } from 'react'
 import { ScaleSwitchElement }                      from './ScaleSwitchElement'
 import { sanitizeNumericControlValue }             from './sliderUtils'
+import { realignWidgetAroundContent }              from './widgetContentRealign'
 
 const DEFAULT_LIMITS = {min: 0, max: 80}
 
 const buildPaddingPath = (path, side) => `${path}.${side}`
-
-const getWidgetContentElement = target => {
-    if (!target) {
-        return null
-    }
-
-    return Array.from(target.children).find(child => !child.classList.contains('lgs-widget-inner-overlay')) ?? null
-}
-
-const getMeasuredSize = (element, fallback = 0) => {
-    if (!element) {
-        return fallback
-    }
-
-    const size = Math.max(
-        element.offsetWidth ?? 0,
-        element.scrollWidth ?? 0,
-        fallback,
-    )
-
-    return Number.isFinite(size) && size > 0 ? Math.ceil(size) : fallback
-}
-
-const getMeasuredHeight = (element, fallback = 0) => {
-    if (!element) {
-        return fallback
-    }
-
-    const size = Math.max(
-        element.offsetHeight ?? 0,
-        element.scrollHeight ?? 0,
-        fallback,
-    )
-
-    return Number.isFinite(size) && size > 0 ? Math.ceil(size) : fallback
-}
-
-const getWidgetCenter = (target, config) => {
-    const dimensions = config?.dimensions ?? {
-        width:  getMeasuredSize(target),
-        height: getMeasuredHeight(target),
-    }
-    const position = config?.position ?? {
-        left: parseFloat(target?.style?.left || '') || 0,
-        top:  parseFloat(target?.style?.top || '') || 0,
-    }
-
-    return {
-        x: position.left + (dimensions.width / 2),
-        y: position.top + (dimensions.height / 2),
-    }
-}
 
 export const PaddingElement = ({
                                    element,
@@ -120,52 +69,12 @@ export const PaddingElement = ({
 
         realignFrameRef.current = requestAnimationFrame(() => {
             realignFrameRef.current = null
-            const moveable = __.ui.widgetManager.getMoveable(moveableId)
-            const target = moveable?.current?.target
-
-            if (target) {
-                const config = __.ui.widgetManager.getWidgetConfig(moveableId)
-                const center = getWidgetCenter(target, config)
-                const previousWidth = target.style.width
-                const previousHeight = target.style.height
-
-                target.style.width = 'auto'
-                target.style.height = 'auto'
-
-                const content = getWidgetContentElement(target)
-                const width = getMeasuredSize(content, getMeasuredSize(target))
-                const height = getMeasuredHeight(content, getMeasuredHeight(target))
-
-                if (width > 0 && height > 0) {
-                    const nextLeft = center.x - (width / 2)
-                    const nextTop = center.y - (height / 2)
-                    target.style.width = `${width}px`
-                    target.style.height = `${height}px`
-                    target.style.left = `${nextLeft}px`
-                    target.style.top = `${nextTop}px`
-
-                    if (config) {
-                        config.dimensions = {width, height}
-                        config.position = {left: nextLeft, top: nextTop}
-                        if (config.persist && config.runtimeReady) {
-                            void __.ui.widgetManager.saveWidgetPosition(moveableId, config)
-                        }
-                    }
-                }
-                else {
-                    target.style.width = previousWidth
-                    target.style.height = previousHeight
-                }
-            }
-
-            moveable?.current?.updateRect()
-
-            if (trailingRealignFrameRef.current !== null) {
-                cancelAnimationFrame(trailingRealignFrameRef.current)
-            }
             trailingRealignFrameRef.current = requestAnimationFrame(() => {
-                trailingRealignFrameRef.current = null
-                moveable?.current?.updateRect()
+                trailingRealignFrameRef.current = requestAnimationFrame(() => {
+                    trailingRealignFrameRef.current = null
+                    realignWidgetAroundContent(moveableId)
+                    __.ui.widgetManager.getMoveable(moveableId)?.current?.updateRect()
+                })
             })
         })
     }, [moveableId])

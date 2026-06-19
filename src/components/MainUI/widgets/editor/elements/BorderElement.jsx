@@ -19,6 +19,7 @@ import { useCallback, useEffect, useRef } from 'react'
 import { LineElement }                       from './LineElement'
 import { RadiusElement }                     from './RadiusElement'
 import { sanitizeNumericControlValue }       from './sliderUtils'
+import { realignWidgetAroundContent }        from './widgetContentRealign'
 
 /**
  * Common border & radius editor element
@@ -77,15 +78,12 @@ export const BorderElement = ({
 
         realignFrameRef.current = requestAnimationFrame(() => {
             realignFrameRef.current = null
-            const moveable = __.ui.widgetManager.getMoveable(moveableId)
-            moveable?.current?.updateRect()
-
-            if (trailingRealignFrameRef.current !== null) {
-                cancelAnimationFrame(trailingRealignFrameRef.current)
-            }
             trailingRealignFrameRef.current = requestAnimationFrame(() => {
-                trailingRealignFrameRef.current = null
-                moveable?.current?.updateRect()
+                trailingRealignFrameRef.current = requestAnimationFrame(() => {
+                    trailingRealignFrameRef.current = null
+                    realignWidgetAroundContent(moveableId)
+                    __.ui.widgetManager.getMoveable(moveableId)?.current?.updateRect()
+                })
             })
         })
     }, [moveableId])
@@ -117,7 +115,10 @@ export const BorderElement = ({
                 label-at-start
                 size="xs"
                 checked={element.border?.show ?? false}
-                onInput={(e) => updateValue('border.show', e.target.checked)}
+                onInput={(e) => {
+                    updateValue('border.show', e.target.checked)
+                    realignWidget()
+                }}
             >
                 <span>{'Border'}</span>
             </WaSwitch>
@@ -129,10 +130,13 @@ export const BorderElement = ({
                     colorValue={getColor(element.border)}
                     onColorInput={(value) => updateValue('border.color', value)}
                     widthDefaultValue={borderWidth}
-                    onWidthInput={(value) => updateValue(
-                        'border.thickness',
-                        sanitizeSliderValue(value, 1, {min: 0, max: 10}),
-                    )}
+                    onWidthInput={(value) => {
+                        updateValue(
+                            'border.thickness',
+                            sanitizeSliderValue(value, 1, {min: 0, max: 10}),
+                        )
+                        realignWidget()
+                    }}
                     opacityValue={borderOpacity}
                     onOpacityInput={(value) => updateValue(
                         'border.opacity',
@@ -140,7 +144,10 @@ export const BorderElement = ({
                     )}
                     showScale={showScale}
                     scaled={element.border?.scaled ?? false}
-                    onScaleChange={(checked) => updateValue('border.scaled', checked)}
+                    onScaleChange={(checked) => {
+                        updateValue('border.scaled', checked)
+                        realignWidget()
+                    }}
                 >
                     {showRadius && (
                         <RadiusElement
