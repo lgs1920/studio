@@ -40,7 +40,15 @@ vi.mock('@Components/MainUI/LGSScrollbars', () => ({
 }))
 
 vi.mock('@Components/PanelsActions', () => ({
-    default: () => <div data-testid="panel-actions"/>,
+    default: ({stackedPanel, onBack, children}) => (
+        <div
+            data-testid="panel-actions"
+            data-stacked={String(Boolean(stackedPanel))}
+            data-has-back={String(Boolean(onBack))}
+        >
+            {children}
+        </div>
+    ),
 }))
 
 vi.mock('@Components/WaDrawerNonModal', () => ({
@@ -163,7 +171,9 @@ describe('FlythroughDrawer', () => {
                     drawerRoot: document.body,
                     close:       vi.fn(),
                     isCurrent:   vi.fn(() => true),
+                    isStacked:   vi.fn(() => false),
                     open:        vi.fn(),
+                    restoreDrawerUiState: vi.fn(),
                 },
                 poiManager: {
                     updatePOI: vi.fn(async (id, updates) => {
@@ -611,5 +621,17 @@ describe('FlythroughDrawer', () => {
                 }),
             )
         })
+    })
+
+    it('marks the flythrough drawer as stacked when a previous drawer is in history', () => {
+        __.ui.drawerManager.isStacked.mockReturnValue(true)
+
+        const view = render(<FlythroughDrawer/>)
+        const drawer = view.getByTestId('wa-drawer')
+        const panelActions = view.getByTestId('panel-actions')
+
+        expect(drawer.className).toContain('drawer-is-stacked')
+        expect(panelActions.dataset.stacked).toBe('true')
+        expect(panelActions.dataset.hasBack).toBe('true')
     })
 })

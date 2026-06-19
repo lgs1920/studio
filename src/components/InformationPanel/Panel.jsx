@@ -45,7 +45,7 @@ export const Panel = () => {
     }, [])
 
     const closePanel = (event) => {
-        if (window.isOK(event)) {
+        if (window.isOK(event) && __.ui.drawerManager.isCurrent(INFO_DRAWER)) {
             closePanelWithManager()
         }
     }

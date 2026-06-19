@@ -24,6 +24,7 @@ import { formatSliderPercent } from '@Components/MainUI/widgets/editor/elements/
 import PanelActions from '@Components/PanelsActions'
 import WaDrawer     from '@Components/WaDrawerNonModal'
 import { FLYTHROUGH_DRAWER } from '@Core/constants'
+import classNames from 'classnames'
 import {
     clampFlythroughNumber, DEFAULT_FLYTHROUGH_SCOPE, ensureFlythroughSettings, FLYTHROUGH_CAMERA_ALTITUDE_CONSTANT,
     FLYTHROUGH_CAMERA_ALTITUDE_GROUND_OFFSET, FLYTHROUGH_CAMERA_POSITION_AHEAD, FLYTHROUGH_CAMERA_POSITION_BEHIND,
@@ -255,6 +256,7 @@ export const FlythroughDrawer = memo(() => {
     const journeySlug = currentJourney?.slug
     const hasJourney = Boolean(journeySlug)
     const previousJourneySlug = useRef(journeySlug)
+    const drawerRef = useRef(null)
     const progression = normalizeFlythroughProgressionStyle(flythroughSettings.progression)
     const fillColor = toOpaqueColorValue(progression.fill.color)
     const borderColor = toOpaqueColorValue(progression.border.color)
@@ -363,6 +365,12 @@ export const FlythroughDrawer = memo(() => {
             __.ui.flythrough?.configure?.({progress: flythroughRuntime.progress ?? 0})
         }
     }, [drawerOpen, flythroughSettings.duration, hasJourney, journeySlug])
+
+    useEffect(() => {
+        if (drawerOpen === FLYTHROUGH_DRAWER) {
+            __.ui.drawerManager.restoreDrawerUiState?.(drawerRef.current)
+        }
+    }, [drawerOpen])
 
     useEffect(() => {
         if (drawerOpen !== FLYTHROUGH_DRAWER) {
@@ -635,6 +643,14 @@ export const FlythroughDrawer = memo(() => {
         await openPOIEditor(poiId, {stacked: true})
     }, [])
 
+    const isStacked = __.ui.drawerManager.isStacked(FLYTHROUGH_DRAWER)
+    const closeDrawerWithManager = useCallback(() => {
+        window.dispatchEvent(new Event('resize'))
+        if (__.ui.drawerManager.isCurrent(FLYTHROUGH_DRAWER)) {
+            __.ui.drawerManager.close()
+        }
+    }, [])
+
     const altitudeDisplayValue = cameraDrafts.altitude ?? String(Math.round(UnitUtils.convert(camera.altitude).to(altitudeUnit)))
     const pitchDisplayValue = cameraDrafts.pitch ?? String(camera.pitch)
     const headingDisplayValue = cameraDrafts.heading ?? String(camera.heading ?? 0)
@@ -839,6 +855,9 @@ export const FlythroughDrawer = memo(() => {
             event.preventDefault()
             return
         }
+        if (!__.ui.drawerManager.isCurrent(FLYTHROUGH_DRAWER)) {
+            return
+        }
         __.ui.flythrough?.restoreJourneyToolbarVisibility?.()
         __.ui.drawerManager.close()
     }, [])
@@ -855,18 +874,19 @@ export const FlythroughDrawer = memo(() => {
         <>
             {drawerOpen === FLYTHROUGH_DRAWER &&
                 <WaDrawer
+                    ref={drawerRef}
                     id={FLYTHROUGH_DRAWER}
                     open={true}
                     onWaAfterHide={handleRequestClose}
                     onSlAfterHide={closeDrawer}
                     placement={drawerPlacement}
-                    className="flythrough-drawer"
+                    className={classNames('flythrough-drawer', {'drawer-is-stacked': isStacked})}
                 >
                     <span slot="label" className="flythrough-drawer-title">
                         <WaIcon name="video-arrow-up-right" variant="regular"/>
                         {FLYTHROUGH_LABEL}
                     </span>
-                    <PanelActions/>
+                    <PanelActions stackedPanel={isStacked} onBack={isStacked ? closeDrawerWithManager : null}/>
 
                     <div className="flythrough-drawer-content">
                         {!hasJourney ? (

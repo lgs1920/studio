@@ -45,10 +45,11 @@ export const Panel = memo(() => {
 
     const closePanel = useCallback((event) => {
         if (event.target.tagName === 'WA-DRAWER') {
-            window.dispatchEvent(new Event('resize'))
-            if (__.ui.drawerManager.isCurrent(SETTINGS_EDITOR_DRAWER)) {
-                __.ui.drawerManager.close()
+            if (!__.ui.drawerManager.isCurrent(SETTINGS_EDITOR_DRAWER)) {
+                return
             }
+            window.dispatchEvent(new Event('resize'))
+            __.ui.drawerManager.close()
         }
     }, [])
 

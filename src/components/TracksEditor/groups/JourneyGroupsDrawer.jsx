@@ -626,6 +626,9 @@ export const JourneyGroupsDrawer = memo(() => {
             event.preventDefault()
             return
         }
+        if (!__.ui.drawerManager.isCurrent(JOURNEY_GROUPS_DRAWER)) {
+            return
+        }
 
         closeDrawerWithManager()
     }, [closeDrawerWithManager])

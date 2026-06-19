@@ -151,6 +151,9 @@ export const WidgetEditorPanel = () => {
         if (event && event.target.tagName !== 'WA-DRAWER') {
             return
         }
+        if (!__.ui.drawerManager.isCurrent(WIDGETS_EDITOR_DRAWER)) {
+            return
+        }
 
         closeEditorWithManager()
     }, [closeEditorWithManager])
