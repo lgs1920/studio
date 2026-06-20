@@ -53,6 +53,8 @@ describe('journey metrics', () => {
                     label:          'Trek',
                     minSegmentDuration: 2,
                     minSegmentDistance: 3,
+                    maxAltitudeJump: 10,
+                    altitudeSmoothingWindow: 3,
                     maxSpeed:       3.0,
                     maxClimbRate:   1.5,
                     maxDescentRate: 2.5,
@@ -66,6 +68,8 @@ describe('journey metrics', () => {
                     label:          'Bike',
                     minSegmentDuration: 2,
                     minSegmentDistance: 5,
+                    maxAltitudeJump: 20,
+                    altitudeSmoothingWindow: 3,
                     maxSpeed:       16.0,
                     maxClimbRate:   2.5,
                     maxDescentRate: 4.0,
@@ -156,9 +160,9 @@ describe('journey metrics', () => {
         expect(metrics.averageSpeed).toBeCloseTo(metrics.distance / metrics.duration, 8)
         expect(metrics.averagePace).toBeCloseTo(metrics.duration / metrics.distance, 8)
         expect(metrics.minHeight).toBe(100)
-        expect(metrics.maxHeight).toBe(110)
-        expect(metrics.positive.elevation).toBe(10)
-        expect(metrics.negative.elevation).toBe(-5)
+        expect(metrics.maxHeight).toBe(105)
+        expect(metrics.positive.elevation).toBe(5)
+        expect(metrics.negative.elevation).toBe(0)
         expect(metrics.maxSpeed).toBeGreaterThan(0)
         expect(metrics.minPace).toBeGreaterThan(0)
     })
@@ -264,9 +268,9 @@ describe('journey metrics', () => {
         expect(metrics.duration).toBe(expectedDuration)
         expect(metrics.averageSpeed).toBeCloseTo(expectedDistance / expectedDuration, 8)
         expect(metrics.minHeight).toBe(90)
-        expect(metrics.maxHeight).toBe(110)
-        expect(metrics.positive.elevation).toBe(15)
-        expect(metrics.negative.elevation).toBe(-5)
+        expect(metrics.maxHeight).toBe(105)
+        expect(metrics.positive.elevation).toBe(10)
+        expect(metrics.negative.elevation).toBe(0)
     })
 
     it('captures current activity thresholds on journey recalculation', () => {
@@ -323,6 +327,67 @@ describe('journey metrics', () => {
         expect(track.metrics.points[0].reliableMotion).toBe(false)
         expect(track.metrics.global.distance).toBeGreaterThan(100)
         expect(track.metrics.global.maxSpeed).toBeLessThan(5)
+    })
+
+    it('smooths noisy altitude before slope and profile metrics', () => {
+        globalThis.lgs.settings.getJourney.activity.types[0].altitudeSmoothingWindow = 3
+        globalThis.lgs.settings.getJourney.activity.types[0].minSegmentDuration = 1
+        globalThis.lgs.settings.getJourney.activity.types[0].minSegmentDistance = 1
+        globalThis.lgs.settings.getJourney.activity.types[0].maxSpeed = 20
+
+        const track = makeLineTrack({
+            coordinates: [
+                [0, 0, 100],
+                [0.001, 0, 150],
+                [0.002, 0, 101],
+                [0.003, 0, 102],
+            ],
+            times:       [
+                '2026-01-01T00:00:00Z',
+                '2026-01-01T00:01:00Z',
+                '2026-01-01T00:02:00Z',
+                '2026-01-01T00:03:00Z',
+            ],
+        })
+
+        track.extractMetrics()
+
+        expect(track.metrics.points).toHaveLength(3)
+        expect(track.metrics.points[0].altitude).toBe(101)
+        expect(track.metrics.points[0].elevation).toBe(1)
+        expect(track.metrics.points[0].rawAltitude).toBe(150)
+        expect(track.metrics.global.maxHeight).toBe(102)
+    })
+
+    it('clips altitude spikes before smoothing', () => {
+        globalThis.lgs.settings.getJourney.activity.types[0].maxAltitudeJump = 8
+        globalThis.lgs.settings.getJourney.activity.types[0].altitudeSmoothingWindow = 3
+        globalThis.lgs.settings.getJourney.activity.types[0].minSegmentDuration = 1
+        globalThis.lgs.settings.getJourney.activity.types[0].minSegmentDistance = 1
+        globalThis.lgs.settings.getJourney.activity.types[0].maxSpeed = 20
+
+        const track = makeLineTrack({
+            coordinates: [
+                [0, 0, 100],
+                [0.001, 0, 140],
+                [0.002, 0, 101],
+                [0.003, 0, 102],
+            ],
+            times:       [
+                '2026-01-01T00:00:00Z',
+                '2026-01-01T00:01:00Z',
+                '2026-01-01T00:02:00Z',
+                '2026-01-01T00:03:00Z',
+            ],
+        })
+
+        track.extractMetrics()
+
+        expect(track.metrics.points).toHaveLength(3)
+        expect(track.metrics.points[0].rawAltitude).toBe(140)
+        expect(track.metrics.points[0].altitude).toBe(101)
+        expect(track.metrics.points[0].elevation).toBe(1)
+        expect(track.metrics.global.maxHeight).toBe(102)
     })
 
     it('filters sudden speed spikes from speed and pace extrema', () => {

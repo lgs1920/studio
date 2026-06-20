@@ -54,6 +54,74 @@ const coordinatePoint = coordinates => {
     return point
 }
 
+const medianNumber = (values = []) => {
+    const filteredValues = values.filter(Number.isFinite).sort((a, b) => a - b)
+
+    if (filteredValues.length === 0) {
+        return null
+    }
+
+    const middle = Math.floor(filteredValues.length / 2)
+    if (filteredValues.length % 2 === 1) {
+        return filteredValues[middle]
+    }
+
+    return (filteredValues[middle - 1] + filteredValues[middle]) / 2
+}
+
+const smoothAltitudeSeries = (altitudes = [], windowSize = 1) => {
+    const normalizedWindow = Math.max(1, Math.round(Number(windowSize) || 1))
+    if (normalizedWindow <= 1 || altitudes.length < 2) {
+        return altitudes.map(value => finiteNumber(value))
+    }
+
+    const radius = Math.floor(normalizedWindow / 2)
+
+    return altitudes.map((value, index, values) => {
+        const start = Math.max(0, index - radius)
+        const end = Math.min(values.length - 1, index + radius)
+        const slice = values.slice(start, end + 1).filter(Number.isFinite)
+
+        if (slice.length < normalizedWindow) {
+            return finiteNumber(value)
+        }
+
+        return medianNumber(slice) ?? finiteNumber(value)
+    })
+}
+
+const clipAltitudeSeries = (altitudes = [], jumpThreshold = 0, windowSize = 1) => {
+    const normalizedThreshold = Math.max(0, Number(jumpThreshold) || 0)
+    const normalizedWindow = Math.max(1, Math.round(Number(windowSize) || 1))
+    const rawAltitudes = altitudes.map(value => finiteNumber(value))
+
+    if (normalizedThreshold <= 0 || rawAltitudes.length < 2) {
+        return rawAltitudes
+    }
+
+    const radius = Math.floor(normalizedWindow / 2)
+
+    return rawAltitudes.map((value, index, values) => {
+        if (value === null) {
+            return value
+        }
+
+        const start = Math.max(0, index - radius)
+        const end = Math.min(values.length - 1, index + radius)
+        const slice = values.slice(start, end + 1).filter(Number.isFinite)
+        if (slice.length < normalizedWindow) {
+            return value
+        }
+        const baseline = medianNumber(slice)
+
+        if (baseline !== null && Math.abs(value - baseline) > normalizedThreshold) {
+            return baseline
+        }
+
+        return value
+    })
+}
+
 export class Track extends MapElement {
 
     static DEFAULT_ACTIVITY = 'trek'
@@ -483,6 +551,8 @@ export class Track extends MapElement {
         let cumulativeDistance = 0
         const minSegmentDuration = Math.max(0, Number(activityProfile.minSegmentDuration) || 0)
         const minSegmentDistance = Math.max(0, Number(activityProfile.minSegmentDistance) || 0)
+        const maxAltitudeJump = Math.max(0, Number(activityProfile.maxAltitudeJump) || 0)
+        const altitudeSmoothingWindow = Math.max(1, Number(activityProfile.altitudeSmoothingWindow) || 1)
         const maxPaceThreshold = Math.max(0, Number(activityProfile.maxPace) || 0)
         const maxSpeedDeltaThreshold = Math.max(0, Number(activityProfile.maxSpeedDelta) || 0)
         let previousMovingSpeed
@@ -497,6 +567,19 @@ export class Track extends MapElement {
 
         aggregates.forEach((aggregate) => {
             const segmentData = []
+            const rawAltitudes = this.hasAltitude ? aggregate.map(point => finiteNumber(point?.altitude)) : []
+            const clippedAltitudes = this.hasAltitude ? clipAltitudeSeries(rawAltitudes, maxAltitudeJump, altitudeSmoothingWindow) : []
+            const smoothedAltitudes = this.hasAltitude ? smoothAltitudeSeries(clippedAltitudes, altitudeSmoothingWindow) : []
+
+            if (this.hasAltitude) {
+                smoothedAltitudes.forEach((altitude) => {
+                    if (Number.isFinite(altitude)) {
+                        minHeight = minHeight === undefined ? altitude : Math.min(minHeight, altitude)
+                        maxHeight = maxHeight === undefined ? altitude : Math.max(maxHeight, altitude)
+                    }
+                })
+            }
+
             for (let index = 1; index < aggregate.length; index++) {
                 const prev = aggregate[index - 1]
                 const current = aggregate[index]
@@ -533,23 +616,26 @@ export class Track extends MapElement {
                     }
                 }
                 if (this.hasAltitude) {
-                    pointData.elevation = Mobility.elevation(prev, current)
+                    const rawAltitude = finiteNumber(current.altitude)
+                    const currentAltitude = finiteNumber(smoothedAltitudes[index])
+                    const previousAltitude = finiteNumber(smoothedAltitudes[index - 1])
+
+                    if (rawAltitude !== null) {
+                        pointData.rawAltitude = rawAltitude
+                    }
+                    if (currentAltitude !== null) {
+                        pointData.altitude = currentAltitude
+                        pointData.height = currentAltitude
+                    }
+
+                    pointData.elevation =
+                        currentAltitude !== null && previousAltitude !== null
+                        ? currentAltitude - previousAltitude
+                        : 0
                     pointData.slope = pointData.distance > 0 ? pointData.elevation / pointData.distance * 100 : 0
                 }
                 pointData.ignored = Track.isOutlierMetric(pointData, activityProfile)
                 if (!pointData.ignored) {
-                    if (this.hasAltitude) {
-                        const prevAltitude = Number(prev.altitude)
-                        const currentAltitude = Number(current.altitude)
-                        if (Number.isFinite(prevAltitude)) {
-                            minHeight = minHeight === undefined ? prevAltitude : Math.min(minHeight, prevAltitude)
-                            maxHeight = maxHeight === undefined ? prevAltitude : Math.max(maxHeight, prevAltitude)
-                        }
-                        if (Number.isFinite(currentAltitude)) {
-                            minHeight = minHeight === undefined ? currentAltitude : Math.min(minHeight, currentAltitude)
-                            maxHeight = maxHeight === undefined ? currentAltitude : Math.max(maxHeight, currentAltitude)
-                        }
-                    }
                     cumulativeDistance += pointData.distance ?? 0
                     segmentData.push({
                         ...current,
