@@ -15,7 +15,7 @@
  ******************************************************************************/
 
 import { Mobility } from '@Utils/Mobility'
-import { getTrackRenderContent } from '@Utils/cesium/trackRenderSmoothing'
+import { getTrackRenderContent, trackRenderSmoothingKey } from '@Utils/cesium/trackRenderSmoothing'
 
 const LINE_STRING = 'LineString'
 const MULTI_LINE_STRING = 'MultiLineString'
@@ -44,6 +44,25 @@ const parseTimeMillis = value => {
 }
 
 const isoTime = millis => Number.isFinite(millis) ? new Date(millis).toISOString() : null
+
+const rawCoordinateSegmentsCache = new WeakMap()
+const renderedCoordinateSegmentsCache = new WeakMap()
+const timeSegmentsCache = new WeakMap()
+const metricBreakpointsCache = new WeakMap()
+
+const getWeakMapBucket = (cache, key) => {
+    if (!key || (typeof key !== 'object' && typeof key !== 'function')) {
+        return null
+    }
+
+    let bucket = cache.get(key)
+    if (!bucket) {
+        bucket = new Map()
+        cache.set(key, bucket)
+    }
+
+    return bucket
+}
 
 const pointFromCoordinate = (coordinate) => {
     if (!coordinate) {
@@ -545,15 +564,21 @@ export class FlythroughPathSampler {
             return []
         }
 
+        const cachedSegments = rawCoordinateSegmentsCache.get(track?.content)
+        if (cachedSegments) {
+            return cachedSegments
+        }
+
+        let segments = []
         if (geometry.type === LINE_STRING && Array.isArray(geometry.coordinates)) {
-            return [geometry.coordinates]
+            segments = [geometry.coordinates]
+        }
+        else if (geometry.type === MULTI_LINE_STRING && Array.isArray(geometry.coordinates)) {
+            segments = geometry.coordinates.filter(Array.isArray)
         }
 
-        if (geometry.type === MULTI_LINE_STRING && Array.isArray(geometry.coordinates)) {
-            return geometry.coordinates.filter(Array.isArray)
-        }
-
-        return []
+        rawCoordinateSegmentsCache.set(track.content, segments)
+        return segments
     }
 
     static coordinateSegmentsFromTrack = (track) => {
@@ -562,24 +587,39 @@ export class FlythroughPathSampler {
             return []
         }
 
+        const cacheKey = track?.content
+        const smoothingKey = trackRenderSmoothingKey(track)
+        const cacheBucket = getWeakMapBucket(renderedCoordinateSegmentsCache, cacheKey)
+        const cachedSegments = cacheBucket?.get(smoothingKey)
+        if (cachedSegments) {
+            return cachedSegments
+        }
+
+        let segments = []
         if (geometry.type === LINE_STRING && Array.isArray(geometry.coordinates)) {
-            return [geometry.coordinates]
+            segments = [geometry.coordinates]
+        }
+        else if (geometry.type === MULTI_LINE_STRING && Array.isArray(geometry.coordinates)) {
+            segments = geometry.coordinates.filter(Array.isArray)
         }
 
-        if (geometry.type === MULTI_LINE_STRING && Array.isArray(geometry.coordinates)) {
-            return geometry.coordinates.filter(Array.isArray)
-        }
-
-        return []
+        cacheBucket?.set(smoothingKey, segments)
+        return segments
     }
 
     static timeSegmentsFromTrack = (track) => {
+        const cacheKey = track?.content
+        const cachedSegments = timeSegmentsCache.get(cacheKey)
+        if (cachedSegments) {
+            return cachedSegments
+        }
+
         const rawSegments = FlythroughPathSampler.rawCoordinateSegmentsFromTrack(track)
         const geometryType = track?.content?.geometry?.type
         const times = track?.content?.properties?.coordinateProperties?.times
         let timeCursor = 0
 
-        return rawSegments.map((coordinates, index) => {
+        const segments = rawSegments.map((coordinates, index) => {
             let segmentTimes = []
 
             if (geometryType === LINE_STRING && Array.isArray(times)) {
@@ -599,6 +639,12 @@ export class FlythroughPathSampler {
                 times: segmentTimes,
             }
         })
+
+        if (cacheKey) {
+            timeSegmentsCache.set(cacheKey, segments)
+        }
+
+        return segments
     }
 
     static timeBreakpointsFromSegment = (segment) => {
@@ -684,7 +730,16 @@ export class FlythroughPathSampler {
     }
 
     static metricTimeBreakpointsFromTrack = (track, trackStartDistance, trackEndDistance) => {
-        const metricPoints = Array.isArray(track?.metrics?.points) ? track.metrics.points : []
+        const metrics = track?.metrics
+        const metricPoints = Array.isArray(metrics?.points) ? metrics.points : []
+        const cacheKey = metrics
+        const cacheBucket = getWeakMapBucket(metricBreakpointsCache, cacheKey)
+        const cacheEntryKey = `${trackStartDistance ?? 0}:${trackEndDistance ?? 0}`
+        const cachedBreakpoints = cacheBucket?.get(cacheEntryKey)
+        if (cachedBreakpoints) {
+            return cachedBreakpoints
+        }
+
         const timedPoints = []
         let metricDistance = 0
 
@@ -693,6 +748,7 @@ export class FlythroughPathSampler {
             const timeMillis = parseTimeMillis(point?.time)
 
             metricDistance += pointDistance
+
             if (Number.isFinite(timeMillis)) {
                 timedPoints.push({
                                      distance: metricDistance,
@@ -723,13 +779,16 @@ export class FlythroughPathSampler {
         const metricSpan = metricEndDistance - metricStartDistance
         const renderSpan = trackEndDistance - trackStartDistance
 
-        return timedPoints.map(point => {
+        const breakpoints = timedPoints.map(point => {
             const ratio = metricSpan > 0 ? clamp((point.distance - metricStartDistance) / metricSpan, 0, 1) : 0
             return {
                 distance:   trackStartDistance + (renderSpan * ratio),
                 timeMillis: point.timeMillis,
             }
         })
+
+        cacheBucket?.set(cacheEntryKey, breakpoints)
+        return breakpoints
     }
 
     static assignSegmentTimes = (points, timeSegment) => {
