@@ -860,21 +860,122 @@ export class Journey extends MapElement {
 
     setGlobalMetrics = () => {
         const tracks = Array.from(this.tracks.values())
-        const points = tracks.flatMap(track => Array.isArray(track.metrics?.points) ? track.metrics.points : [])
-        const global = Track.calculateGlobalMetrics({
-                                                        points:      points,
-                                                        rawPoints:   points,
-                                                        hasTime:     this.hasTime,
-                                                        hasAltitude: this.hasAltitude,
-                                                        activityProfile: Journey.activityProfile(this.activity, this.activitySettings),
-                                                    })
+        const global = {}
+        const points = []
+        let distance = 0
+        let duration = 0
+        let idleTime = 0
+        let movingDistance = 0
+        let movingDuration = 0
+        let minSpeed
+        let maxSpeed
+        let minPace
+        let maxPace
+        let minHeight
+        let maxHeight
+        let minSlope
+        let maxSlope
+
+        const createElevationBucket = () => ({elevation: 0, distance: 0, duration: 0, pace: 0, speed: 0, points: 0})
+        const addToElevationBucket = (bucket, source) => {
+            bucket.elevation += source.elevation ?? 0
+            bucket.distance += source.distance ?? 0
+            bucket.duration += source.duration ?? 0
+            bucket.points += source.points ?? 0
+        }
 
         if (this.hasAltitude) {
-            const minHeights = tracks.map(track => track.metrics?.global?.minHeight).filter(value => Number.isFinite(value))
-            const maxHeights = tracks.map(track => track.metrics?.global?.maxHeight).filter(value => Number.isFinite(value))
+            global.positive = createElevationBucket()
+            global.negative = createElevationBucket()
+            global.flat = createElevationBucket()
+        }
 
-            global.minHeight = minHeights.length ? Math.min(...minHeights) : undefined
-            global.maxHeight = maxHeights.length ? Math.max(...maxHeights) : undefined
+        tracks.forEach((track) => {
+            const trackPoints = Array.isArray(track.metrics?.points) ? track.metrics.points : []
+            if (trackPoints.length > 0) {
+                for (const point of trackPoints) {
+                    points.push(point)
+                }
+            }
+
+            const trackGlobal = track.metrics?.global ?? {}
+            distance += Number(trackGlobal.distance) || 0
+
+            if (this.hasTime) {
+                duration += Number(trackGlobal.duration) || 0
+                idleTime += Number(trackGlobal.idleTime) || 0
+                movingDistance += Number(trackGlobal.movingDistance) || 0
+                movingDuration += Number(trackGlobal.movingDuration) || 0
+                const trackMinSpeed = Number(trackGlobal.minSpeed)
+                const trackMaxSpeed = Number(trackGlobal.maxSpeed)
+                const trackMinPace = Number(trackGlobal.minPace)
+                const trackMaxPace = Number(trackGlobal.maxPace)
+                if (Number.isFinite(trackMinSpeed) && trackMinSpeed > 0) {
+                    minSpeed = minSpeed === undefined ? trackMinSpeed : Math.min(minSpeed, trackMinSpeed)
+                }
+                if (Number.isFinite(trackMaxSpeed) && trackMaxSpeed > 0) {
+                    maxSpeed = maxSpeed === undefined ? trackMaxSpeed : Math.max(maxSpeed, trackMaxSpeed)
+                }
+                if (Number.isFinite(trackMinPace) && trackMinPace > 0) {
+                    minPace = minPace === undefined ? trackMinPace : Math.min(minPace, trackMinPace)
+                }
+                if (Number.isFinite(trackMaxPace) && trackMaxPace > 0) {
+                    maxPace = maxPace === undefined ? trackMaxPace : Math.max(maxPace, trackMaxPace)
+                }
+            }
+
+            if (this.hasAltitude) {
+                const trackMinHeight = Number(trackGlobal.minHeight)
+                const trackMaxHeight = Number(trackGlobal.maxHeight)
+                const trackMinSlope = Number(trackGlobal.minSlope)
+                const trackMaxSlope = Number(trackGlobal.maxSlope)
+                if (Number.isFinite(trackMinHeight)) {
+                    minHeight = minHeight === undefined ? trackMinHeight : Math.min(minHeight, trackMinHeight)
+                }
+                if (Number.isFinite(trackMaxHeight)) {
+                    maxHeight = maxHeight === undefined ? trackMaxHeight : Math.max(maxHeight, trackMaxHeight)
+                }
+                if (Number.isFinite(trackMinSlope)) {
+                    minSlope = minSlope === undefined ? trackMinSlope : Math.min(minSlope, trackMinSlope)
+                }
+                if (Number.isFinite(trackMaxSlope)) {
+                    maxSlope = maxSlope === undefined ? trackMaxSlope : Math.max(maxSlope, trackMaxSlope)
+                }
+
+                addToElevationBucket(global.positive, trackGlobal.positive ?? {})
+                addToElevationBucket(global.negative, trackGlobal.negative ?? {})
+                addToElevationBucket(global.flat, trackGlobal.flat ?? {})
+            }
+        })
+
+        global.distance = distance
+        if (this.hasTime) {
+            global.duration = duration
+            global.idleTime = idleTime
+            global.movingDistance = movingDistance
+            global.movingDuration = movingDuration
+            global.averageSpeed = duration > 0 ? distance / duration : 0
+            global.averagePace = distance > 0 ? duration / distance : 0
+            global.averageSpeedMoving = movingDuration > 0 ? movingDistance / movingDuration : 0
+            global.averagePaceMoving = movingDistance > 0 ? movingDuration / movingDistance : 0
+            global.minSpeed = minSpeed ?? 0
+            global.maxSpeed = maxSpeed ?? 0
+            global.minPace = minPace ?? 0
+            global.maxPace = maxPace ?? 0
+        }
+
+        if (this.hasAltitude) {
+            global.minHeight = minHeight
+            global.maxHeight = maxHeight
+            global.minSlope = minSlope
+            global.maxSlope = maxSlope
+
+            global.positive.speed = global.positive.duration > 0 ? global.positive.distance / global.positive.duration : 0
+            global.positive.pace = global.positive.distance > 0 ? global.positive.duration / global.positive.distance : 0
+            global.negative.speed = global.negative.duration > 0 ? global.negative.distance / global.negative.duration : 0
+            global.negative.pace = global.negative.distance > 0 ? global.negative.duration / global.negative.distance : 0
+            global.flat.speed = global.flat.duration > 0 ? global.flat.distance / global.flat.duration : 0
+            global.flat.pace = global.flat.distance > 0 ? global.flat.duration / global.flat.distance : 0
         }
 
         return global
@@ -901,8 +1002,15 @@ export class Journey extends MapElement {
             return
         }
         // For a multi track journey, let's compute journey level metrics
-        this.metrics.points = Array.from(this.tracks.values())
-            .flatMap(track => Array.isArray(track.metrics?.points) ? track.metrics.points : [])
+        const metricsPoints = []
+        this.tracks.forEach(track => {
+            if (Array.isArray(track.metrics?.points) && track.metrics.points.length > 0) {
+                for (const point of track.metrics.points) {
+                    metricsPoints.push(point)
+                }
+            }
+        })
+        this.metrics.points = metricsPoints
         this.metrics.global = this.setGlobalMetrics()
     }
 

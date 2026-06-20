@@ -343,20 +343,15 @@ export class Track extends MapElement {
 
     static calculateGlobalMetrics = ({
                                          points = [],
-                                         rawPoints = points,
                                          hasTime = false,
                                          hasAltitude = false,
                                          activityProfile = Track.activityProfile(),
+                                         minHeight = undefined,
+                                         maxHeight = undefined,
                                      } = {}) => {
-        const finiteValues = values => values.filter(value => Number.isFinite(value))
-        const sumValues = values => finiteValues(values).reduce((sum, value) => sum + value, 0)
-        const minValue = values => {
-            const finite = finiteValues(values)
-            return finite.length ? Math.min(...finite) : undefined
-        }
-        const maxValue = values => {
-            const finite = finiteValues(values)
-            return finite.length ? Math.max(...finite) : undefined
+        const finiteNumber = value => {
+            const number = Number(value)
+            return Number.isFinite(number) ? number : null
         }
         const createElevationBucket = () => ({elevation: 0, distance: 0, duration: 0, pace: 0, speed: 0, points: 0})
         const addToElevationBucket = (bucket, point) => {
@@ -371,56 +366,98 @@ export class Track extends MapElement {
         }
 
         const global = {}
-        const distance = sumValues(points.map(point => point.distance))
+        let distance = 0
+        let duration = 0
+        let idleTime = 0
+        let movingDistance = 0
+        let movingDuration = 0
+        let minSpeed
+        let maxSpeed
+        let minPace
+        let maxPace
+        let minSlope
+        let maxSlope
+        const minSlopeThreshold = activityProfile.minSlope ?? globalThis.lgs?.settings?.getMetrics?.minSlope ?? 0
+        const altitudeBuckets = hasAltitude
+                               ? {
+                                   positive: createElevationBucket(),
+                                   negative: createElevationBucket(),
+                                   flat:     createElevationBucket(),
+                               }
+                               : null
+
+        points.forEach((point) => {
+            const pointDistance = finiteNumber(point.distance) ?? 0
+            distance += pointDistance
+
+            if (hasTime) {
+                const pointDuration = finiteNumber(point.duration) ?? 0
+                duration += pointDuration
+
+                if (point.activity === true) {
+                    movingDistance += pointDistance
+                    movingDuration += pointDuration
+
+                    const speed = finiteNumber(point.speed)
+                    const pace = finiteNumber(point.pace)
+
+                    if (speed !== null && speed > 0) {
+                        minSpeed = minSpeed === undefined ? speed : Math.min(minSpeed, speed)
+                        maxSpeed = maxSpeed === undefined ? speed : Math.max(maxSpeed, speed)
+                    }
+
+                    if (pace !== null && pace > 0) {
+                        minPace = minPace === undefined ? pace : Math.min(minPace, pace)
+                        maxPace = maxPace === undefined ? pace : Math.max(maxPace, pace)
+                    }
+                }
+                else if (point.activity === false) {
+                    idleTime += pointDuration
+                }
+            }
+
+            if (hasAltitude && altitudeBuckets) {
+                const slope = finiteNumber(point.slope) ?? 0
+                minSlope = minSlope === undefined ? slope : Math.min(minSlope, slope)
+                maxSlope = maxSlope === undefined ? slope : Math.max(maxSlope, slope)
+
+                if (slope > minSlopeThreshold) {
+                    addToElevationBucket(altitudeBuckets.positive, point)
+                }
+                else if (slope < -minSlopeThreshold) {
+                    addToElevationBucket(altitudeBuckets.negative, point)
+                }
+                else {
+                    addToElevationBucket(altitudeBuckets.flat, point)
+                }
+            }
+        })
 
         global.distance = distance
 
         if (hasTime) {
-            const duration = sumValues(points.map(point => point.duration))
-            const activePoints = points.filter(point => point.activity === true)
-            const idlePoints = points.filter(point => point.activity === false)
-            const movingDistance = sumValues(activePoints.map(point => point.distance))
-            const movingDuration = sumValues(activePoints.map(point => point.duration))
-            const speedValues = finiteValues(activePoints.map(point => point.speed)).filter(speed => speed > 0)
-            const paceValues = finiteValues(activePoints.map(point => point.pace)).filter(pace => pace > 0)
-
             global.duration = duration
-            global.idleTime = sumValues(idlePoints.map(point => point.duration))
+            global.idleTime = idleTime
+            global.movingDistance = movingDistance
+            global.movingDuration = movingDuration
             global.averageSpeed = duration > 0 ? distance / duration : 0
             global.averagePace = distance > 0 ? duration / distance : 0
             global.averageSpeedMoving = movingDuration > 0 ? movingDistance / movingDuration : 0
             global.averagePaceMoving = movingDistance > 0 ? movingDuration / movingDistance : 0
-            global.minSpeed = minValue(speedValues) ?? 0
-            global.maxSpeed = maxValue(speedValues) ?? 0
-            global.minPace = minValue(paceValues) ?? 0
-            global.maxPace = maxValue(paceValues) ?? 0
+            global.minSpeed = minSpeed ?? 0
+            global.maxSpeed = maxSpeed ?? 0
+            global.minPace = minPace ?? 0
+            global.maxPace = maxPace ?? 0
         }
 
         if (hasAltitude) {
-            const altitudeValues = rawPoints.map(point => point.altitude)
-            const slopeValues = finiteValues(points.map(point => point.slope))
-            const minSlope = activityProfile.minSlope ?? globalThis.lgs?.settings?.getMetrics?.minSlope ?? 0
-
-            global.minHeight = minValue(altitudeValues)
-            global.maxHeight = maxValue(altitudeValues)
-            global.minSlope = minValue(slopeValues)
-            global.maxSlope = maxValue(slopeValues)
-            global.positive = createElevationBucket()
-            global.negative = createElevationBucket()
-            global.flat = createElevationBucket()
-
-            points.forEach((point) => {
-                const slope = point.slope ?? 0
-                if (slope > minSlope) {
-                    addToElevationBucket(global.positive, point)
-                }
-                else if (slope < -minSlope) {
-                    addToElevationBucket(global.negative, point)
-                }
-                else {
-                    addToElevationBucket(global.flat, point)
-                }
-            })
+            global.minHeight = minHeight
+            global.maxHeight = maxHeight
+            global.minSlope = minSlope
+            global.maxSlope = maxSlope
+            global.positive = altitudeBuckets.positive
+            global.negative = altitudeBuckets.negative
+            global.flat = altitudeBuckets.flat
 
             finalizeElevationBucket(global.positive)
             finalizeElevationBucket(global.negative)
@@ -439,8 +476,9 @@ export class Track extends MapElement {
 
         let featureMetrics = []
         const aggregates = this.aggregateDataForMetrics()
-        const rawPoints = []
         const activityProfile = Track.activityProfile(this.activity, this.activitySettings)
+        let minHeight
+        let maxHeight
 
         // 1st step : Metrics per points
         // we iterate on all points to compute
@@ -473,7 +511,18 @@ export class Track extends MapElement {
                 }
                 pointData.ignored = Track.isOutlierMetric(pointData, activityProfile)
                 if (!pointData.ignored) {
-                    rawPoints.push(prev, current)
+                    if (this.hasAltitude) {
+                        const prevAltitude = Number(prev.altitude)
+                        const currentAltitude = Number(current.altitude)
+                        if (Number.isFinite(prevAltitude)) {
+                            minHeight = minHeight === undefined ? prevAltitude : Math.min(minHeight, prevAltitude)
+                            maxHeight = maxHeight === undefined ? prevAltitude : Math.max(maxHeight, prevAltitude)
+                        }
+                        if (Number.isFinite(currentAltitude)) {
+                            minHeight = minHeight === undefined ? currentAltitude : Math.min(minHeight, currentAltitude)
+                            maxHeight = maxHeight === undefined ? currentAltitude : Math.max(maxHeight, currentAltitude)
+                        }
+                    }
                     segmentData.push({...current, ...pointData})
                 }
             }
@@ -485,10 +534,11 @@ export class Track extends MapElement {
 
         const global = Track.calculateGlobalMetrics({
                                                         points:      featureMetrics,
-                                                        rawPoints:   rawPoints,
                                                         hasTime:     this.hasTime,
                                                         hasAltitude: this.hasAltitude,
                                                         activityProfile,
+                                                        minHeight,
+                                                        maxHeight,
                                                     })
         this.metrics = {points: featureMetrics, global: global}
     }

@@ -56,8 +56,13 @@ const pointFromCoordinate = coordinate => {
 }
 
 const trackProfilePoints = track => {
-    const geometry = getTrackRenderContent(track)?.geometry
     const metricsPoints = Array.isArray(track?.metrics?.points) ? track.metrics.points : []
+
+    if (metricsPoints.length > 0) {
+        return metricsPoints
+    }
+
+    const geometry = getTrackRenderContent(track)?.geometry
 
     if (geometry?.type === 'LineString' && Array.isArray(geometry.coordinates)) {
         return geometry.coordinates
@@ -77,7 +82,6 @@ const trackProfilePoints = track => {
             })
             .filter(Boolean)
     }
-
     if (geometry?.type === 'MultiLineString' && Array.isArray(geometry.coordinates)) {
         return geometry.coordinates.flatMap(segment => Array.isArray(segment)
             ? segment
@@ -99,14 +103,7 @@ const trackProfilePoints = track => {
             : [])
     }
 
-    return metricsPoints.map(point => ({
-        longitude: point.longitude,
-        latitude:  point.latitude,
-        altitude:  finiteNumber(point.altitude ?? point.height) ?? 0,
-        height:    finiteNumber(point.height ?? point.altitude) ?? finiteNumber(point.altitude) ?? 0,
-        distance:  finiteNumber(point.distance) ?? 0,
-        time:      point.time ?? null,
-    }))
+    return []
 }
 
 export class Profiler {
@@ -154,7 +151,8 @@ export class Profiler {
         // with flythrough samples even when some tracks are hidden or smoothed.
         let distance = 0
         lgs.theJourney.tracks.forEach((track, trackIndex) => {
-            if (track.metrics.points === undefined) {
+            const trackPoints = trackProfilePoints(track)
+            if (!Array.isArray(trackPoints) || trackPoints.length === 0) {
                 return
             }
 
@@ -163,7 +161,7 @@ export class Profiler {
                 source: [],
             }
 
-            trackProfilePoints(track).forEach((point, pointIndex) => {
+            trackPoints.forEach((point, pointIndex) => {
                 distance += point.distance ?? 0
                 const elevation = Number(point.altitude)
                 if (!Number.isFinite(elevation)) {
