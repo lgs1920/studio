@@ -57,6 +57,7 @@ import { PanelButton as POIEditButton } from './MapPOI/PanelButton'
 import { SceneModeSelector }            from './SceneModeSelector'
 import { SupportUI }                    from './SupportUI'
 import { SupportUIButton }   from './SupportUIButton'
+import { WidgetManagementDrawer } from './widgets/management/WidgetManagementDrawer'
 import { WidgetEditorPanel } from './widgets/editor/WidgetEditorPanel'
 
 import './style.css'
@@ -290,6 +291,7 @@ export const MainUI = memo(() => {
                         <JourneyGroupsDrawer/>
                         <FlythroughDrawer/>
                         <MapPOIEditPanel/>
+                        <WidgetManagementDrawer/>
                         <WidgetEditorPanel/>
                     </div>
                     <SupportUI/>

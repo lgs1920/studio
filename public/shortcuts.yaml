@@ -28,6 +28,12 @@
   keys:
     - Alt+Shift+W
   scope: Flythrough mode
+- action: Manage widgets
+  description: Opens the widget management drawer for the current board.
+  id: widget-management-show
+  keys:
+    - Alt+W
+  scope: App
 - action: Toggle orbit
   description: Starts or stops map orbit around the current target.
   id: orbit-toggle

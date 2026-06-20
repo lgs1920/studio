@@ -15,9 +15,13 @@
  ******************************************************************************/
 
 import {
-    CURRENT_MAP_POINT, POI_STANDARD_TYPE, POIS_EDITOR_DRAWER, ROTATION_ICON, SCENE_MODE_2D,
+    CURRENT_MAP_POINT, POI_STANDARD_TYPE, POIS_EDITOR_DRAWER, ROTATION_ICON, SCENE_MODE_2D, SCENE_WIDGETS_BOARD,
 } from '@Core/constants'
 import { openPOIEditor } from '@Components/MainUI/MapPOI/openPOIEditor'
+import {
+    getManageableWidgets,
+    openWidgetManagementDrawer,
+}                                                                                  from '@Components/MainUI/widgets/openWidgetManagementDrawer'
 import { MapPOI }                                                                  from '@Core/MapPOI'
 import { getOrbitSettings, setOrbitStoreSettings }                                 from '@Core/OrbitSettings'
 import { ELEVATION_UNITS, UnitUtils }                                              from '@Utils/UnitUtils'
@@ -32,10 +36,15 @@ export const MapPointContextMenu = ({target, menuRef}) => {
     const toolbars = useSnapshot(lgs.settings.ui.toolbars)
     const rotateState = useSnapshot(lgs.stores.ui.mainUI.rotate)
     const panoramaState = useSnapshot(lgs.stores.ui.mainUI.panorama)
+    const widget = useSnapshot(lgs.stores.ui.widget)
     const sceneMode = useSnapshot(lgs.settings.scene.mode)
     const coordinateSystem = lgs.settings.coordinateSystem.current
     const unitSystem = lgs.settings.unitSystem.current
     const panoramaAllowed = Number(sceneMode.value) !== Number(SCENE_MODE_2D.value)
+    const canManageSceneWidgets = useMemo(
+        () => getManageableWidgets(SCENE_WIDGETS_BOARD, widget.list).length > 0,
+        [widget.list],
+    )
 
     const hideMenu = useCallback(() => __.ui.contextMenu.hide(), [])
     const openEditDrawer = useCallback(async (poiId) => {
@@ -241,6 +250,20 @@ export const MapPointContextMenu = ({target, menuRef}) => {
                          )}
                      </>
                  )}
+                {canManageSceneWidgets && (
+                    <>
+                        <li className="widget-no-hover">
+                            <WaDivider/>
+                        </li>
+                        <li onClick={() => {
+                            openWidgetManagementDrawer()
+                            hideMenu()
+                        }}>
+                            <WaIcon name="layer" variant="regular"/>
+                            <span>{'Manage widgets'}</span>
+                        </li>
+                    </>
+                )}
             </ul>
         </div>
     )

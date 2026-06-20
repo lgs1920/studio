@@ -176,6 +176,11 @@ They are provided for convenience and to avoid confusion with the `addEventListe
 - **Browser Compatibility**: Some browsers may intercept `Alt` for menu activation. The library prevents this by calling
   `event.preventDefault()` for `Alt`-based events, but users should click the canvas to ensure focus.
 
+### App Shortcuts
+
+Application shortcuts are declared in `public/shortcuts.yaml`.
+For example, `Alt+W` opens the widget management drawer for the active board.
+
 ## Contributing
 
 Contributions are welcome! Please follow these steps:

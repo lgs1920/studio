@@ -21,6 +21,10 @@ import { hasActiveAppShortcutBlocker }                  from '@Core/events/short
 import { MapTarget }                                    from '@Core/MapTarget'
 import { getOrbitSettings, setOrbitStoreSettings }      from '@Core/OrbitSettings'
 import { FLYTHROUGH_MARKER_MODE_TRACE, normalizeFlythroughMarker } from '@Core/ui/flythrough/FlythroughProgressionStyle'
+import {
+    hasManageableWidgets,
+    openWidgetManagementDrawer,
+}                                                        from '@Components/MainUI/widgets/openWidgetManagementDrawer'
 import { Cartesian2, Cartographic, Math as CesiumMath } from 'cesium'
 import YAML                                             from 'yaml'
 
@@ -234,6 +238,15 @@ const openJourneyGroups = () => {
 const openFlythroughManagement = () => {
     lgs.stores.ui.mainUI.callForActions.active = false
     __.ui.drawerManager?.open?.(FLYTHROUGH_DRAWER)
+    return true
+}
+
+const openWidgetManagement = () => {
+    lgs.stores.ui.mainUI.callForActions.active = false
+    const board = openWidgetManagementDrawer()
+    if (!board || !hasManageableWidgets(board)) {
+        return false
+    }
     return true
 }
 
@@ -663,6 +676,7 @@ const SHORTCUT_ACTIONS = {
     'journey-groups-show':  openJourneyGroups,
     'journey-toolbar-show': toggleJourneyToolbar,
     'flythrough-management-show': openFlythroughManagement,
+    'widget-management-show': openWidgetManagement,
     'video-recording':      launchVideoRecording,
     'orbit-toggle':         toggleRotation,
     'orbit-widget-toggle':  toggleOrbitWidgetVisibility,

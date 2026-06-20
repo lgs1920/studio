@@ -17,19 +17,26 @@
 import { LGSScrollbars } from '@Components/MainUI/LGSScrollbars'
 import { CREDITS_WIDGET, WIDGET_LAYER_START, WIDGET_LAYER_STEP, WIDGET_LAYER_TOP } from '@Core/constants'
 import { WaCard, WaDivider }                        from '@web.awesome.me/webawesome-pro/dist/react'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import classNames from 'classnames'
+import { useCallback, useEffect, useMemo, useRef } from 'react'
 import Sortable              from 'sortablejs'
 import { useSnapshot }       from 'valtio'
 import { SortableWidgetRow } from './SortableWidgetRow'
 
-export const WidgetsOrderingPanelContent = ({widgetsBoard}) => {
+const NO_EXCLUDED_WIDGET_TYPES = []
+
+export const WidgetsOrderingPanelContent = ({
+    widgetsBoard,
+    excludedWidgetTypes = NO_EXCLUDED_WIDGET_TYPES,
+    fillHeight = false,
+}) => {
     const _scroll = useRef(null)
     const _sortable = useRef(null)
     const _list = useRef(null)
-    const [activeWidgets, setActiveWidgets] = useState([])
 
     const $widget = lgs.stores.ui.widget
     const widget = useSnapshot($widget)
+    const excludedWidgetTypeSet = useMemo(() => new Set(excludedWidgetTypes), [excludedWidgetTypes])
 
     /**
      * Direct DOM update for z-index to avoid re-render flicker
@@ -41,7 +48,7 @@ export const WidgetsOrderingPanelContent = ({widgetsBoard}) => {
         }
     }
 
-    const buildActiveWidgets = useCallback(() => {
+    const activeWidgets = useMemo(() => {
         if (!widget.list) {
             return []
         }
@@ -49,7 +56,9 @@ export const WidgetsOrderingPanelContent = ({widgetsBoard}) => {
         return Array.from(widget.list.entries())
             .filter(([id, entry]) => {
                 const _widgetType = id.split('#')[0]
-                return entry?.widgetsBoard === widgetsBoard && _widgetType !== CREDITS_WIDGET
+                return entry?.widgetsBoard === widgetsBoard &&
+                    _widgetType !== CREDITS_WIDGET &&
+                    !excludedWidgetTypeSet.has(_widgetType)
             })
             .map(([id, entry], index) => {
                 const _widgetType = id.split('#')[0]
@@ -71,15 +80,7 @@ export const WidgetsOrderingPanelContent = ({widgetsBoard}) => {
             })
             .filter(Boolean)
             .sort((a, b) => b.zIndex - a.zIndex)
-    }, [widget.list, widgetsBoard])
-
-    /**
-     * Keeps the sortable list aligned with the reactive store.
-     * The store is the source of truth for the current order; persistence follows asynchronously.
-     */
-    useEffect(() => {
-        setActiveWidgets(buildActiveWidgets())
-    }, [buildActiveWidgets])
+    }, [widget.list, widgetsBoard, excludedWidgetTypeSet])
 
     /**
      * Finalizes the new order by updating all layers (state, store, cache, disk)
@@ -98,10 +99,7 @@ export const WidgetsOrderingPanelContent = ({widgetsBoard}) => {
             return {..._item, zIndex: _newZ}
         }).filter(Boolean)
 
-        // 2. Update React State immediately
-        setActiveWidgets(_updatedItems)
-
-        // 3. Update reactive sources synchronously to avoid intermediate re-sorts
+        // 2. Update reactive sources synchronously to avoid intermediate re-sorts
         for (const _item of _updatedItems) {
             const $target = $widget.list.get(_item.id)
             if ($target) {
@@ -114,7 +112,7 @@ export const WidgetsOrderingPanelContent = ({widgetsBoard}) => {
             updateWidgetDOM(_item.id, _item.zIndex)
         }
 
-        // 4. Persist the final order after the UI/store state is already coherent
+        // 3. Persist the final order after the UI/store state is already coherent
         await Promise.all(_updatedItems.map(async (_item) => {
             const _pos = await __.ui.widgetManager.getWidgetPosition(_item.id)
             if (_pos) {
@@ -157,7 +155,7 @@ export const WidgetsOrderingPanelContent = ({widgetsBoard}) => {
     }, [activeWidgets, finalizeReorder]) // We re-init or keep alive based on the list
 
     return (
-        <WaCard appearance="plain" className="widget-ordering-panel">
+        <WaCard appearance="plain" className={classNames('widget-ordering-panel', {'widget-ordering-panel-fill': fillHeight})}>
             <div className="widget-list-container">
                 <LGSScrollbars ref={_scroll} autoHide>
                     <div ref={_list} className="widget-sortable-list">

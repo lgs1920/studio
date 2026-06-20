@@ -259,6 +259,7 @@ export const JOURNEY_GROUPS_DRAWER = 'journey-groups-drawer'
 export const SETTINGS_EDITOR_DRAWER = 'settings-editor-drawer'
 export const POIS_EDITOR_DRAWER = 'pois-editor-drawer'
 export const WIDGETS_EDITOR_DRAWER = 'widgets-editor-drawer'
+export const WIDGET_MANAGEMENT_DRAWER = 'widget-management-drawer'
 export const FLYTHROUGH_DRAWER = 'flythrough-drawer'
 
 /** Jaurney, Track, POI **/

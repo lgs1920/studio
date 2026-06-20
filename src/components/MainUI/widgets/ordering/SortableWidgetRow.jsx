@@ -7,15 +7,15 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-12
- * Last modified: 2026-04-12
+ * Created on: 2026-06-20
+ * Last modified: 2026-06-20
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { WaCard, WaIcon } from '@web.awesome.me/webawesome-pro/dist/react'
-import React, { useMemo } from 'react'
+import { WaButton, WaCard, WaIcon, WaTooltip } from '@web.awesome.me/webawesome-pro/dist/react'
+import { useMemo }                             from 'react'
 import { useSnapshot }    from 'valtio'
 
 /**
@@ -67,6 +67,24 @@ export const SortableWidgetRow = ({widget}) => {
         }, 0)
     }
 
+    const centerWidget = async (event) => {
+        event?.preventDefault?.()
+        event?.stopPropagation?.()
+
+        const element = __.ui.widgetManager.getElementById(widget.id)
+        if (!element) {
+            return
+        }
+
+        __.ui.widgetManager.toCenter(element, lgs.gutter.xs ?? 0)
+    }
+
+    const removeWidget = async (event) => {
+        event?.preventDefault?.()
+        event?.stopPropagation?.()
+        await __.ui.widgetManager.removeWidget(widget.id)
+    }
+
     return (
         <WaCard appearance="outlined"
                 onClick={() => selectWidget(widget.id)}
@@ -77,6 +95,34 @@ export const SortableWidgetRow = ({widget}) => {
             <WaIcon name={instance.icon} variant="regular" className="icon-widget"/>
             <div className="sortable-widget-info">
                 {displayName}
+            </div>
+            <div className="widget-ordering-actions">
+                <WaTooltip placement="top" for={`center-widget-${widget.id}`}>{'Recenter'}</WaTooltip>
+                <WaButton
+                    id={`center-widget-${widget.id}`}
+                    size="s"
+                    appearance="plain"
+                    variant="neutral"
+                    className="widget-ordering-action-button"
+                    aria-label="Recenter"
+                    disabled={!__.ui.widgetManager.getElementById(widget.id)}
+                    onClick={centerWidget}
+                >
+                    <WaIcon name="plus" variant="regular"/>
+                </WaButton>
+
+                <WaTooltip placement="top" for={`remove-widget-${widget.id}`}>{'Remove'}</WaTooltip>
+                <WaButton
+                    id={`remove-widget-${widget.id}`}
+                    appearance="plain"
+                    variant="danger"
+                    className="widget-ordering-action-button"
+                    aria-label="Remove"
+                    onClick={removeWidget}
+                    size="s"
+                >
+                    <WaIcon name="trash-can" variant="regular"/>
+                </WaButton>
             </div>
         </WaCard>
     )

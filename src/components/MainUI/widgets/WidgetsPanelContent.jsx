@@ -17,8 +17,12 @@
 import {
     VIDEO_WIDGETS_BOARD, LGS_VISUAL_WIDGET, WIDGET_LAYER_START, WIDGET_LAYER_STEP,
 }                                from '@Core/constants'
+import {
+    getManageableWidgets,
+    openWidgetManagementDrawer,
+} from '@Components/MainUI/widgets/openWidgetManagementDrawer'
 import { WidgetDynamicRenderer } from '@Core/ui/widget-manager/dynamic-render/WidgetDynamicRender'
-import { WaIcon }                from '@web.awesome.me/webawesome-pro/dist/react'
+import { WaDivider, WaIcon }                from '@web.awesome.me/webawesome-pro/dist/react'
 import classNames                from 'classnames'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSnapshot }           from 'valtio'
@@ -41,6 +45,10 @@ export const WidgetsPanelContent = ({groups}) => {
     // Counter to ensure new widgets are placed on top of the stack
     const _widgetIndex = useRef(WIDGET_LAYER_START)
     const availableGroups = useMemo(() => widgetDynamicRenderer.theGroups(groups), [groups, widgetDynamicRenderer])
+    const canManageVideoWidgets = useMemo(
+        () => getManageableWidgets(VIDEO_WIDGETS_BOARD, widget.list).length > 0,
+        [widget.list],
+    )
 
     /**
      * Synchronizes the global store map order with the zIndex values.
@@ -237,6 +245,26 @@ export const WidgetsPanelContent = ({groups}) => {
                     })}
                 </ul>
             ))}
+
+            {canManageVideoWidgets && (
+                <ul className="widget-group widget-group-management">
+                    <li className="widget-deck-entry widget-deck-divider widget-no-hover">
+                        <WaDivider/>
+                    </li>
+                    <li
+                        role="button"
+                        tabIndex={0}
+                        className={classNames('widget-deck-entry', 'widget-deck-item', 'small', 'widget-deck-management')}
+                        onClick={() => openWidgetManagementDrawer(VIDEO_WIDGETS_BOARD)}
+                        onKeyDown={(event) => handleKeyboardAction(event, () => openWidgetManagementDrawer(VIDEO_WIDGETS_BOARD))}
+                        onMouseDown={handleInteraction}
+                        onTouchStart={handleInteraction}
+                    >
+                        <WaIcon name="layer" variant="regular"/>
+                        <span className="widget-name">{'Manage widgets'}</span>
+                    </li>
+                </ul>
+            )}
         </div>
     )
 }

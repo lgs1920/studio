@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-06-18
- * Last modified: 2026-06-18
+ * Created on: 2026-06-20
+ * Last modified: 2026-06-20
  *
  *
  * Copyright © 2026 LGS1920
@@ -696,21 +696,72 @@ body.lgs-app-booting #cesium-viewer {
 }
 
 /*******************************************************************************
+ * Widget Management
+ ******************************************************************************/
+.widget-management-drawer-title {
+    display: flex;
+    align-items: center;
+    gap: var(--lgs-gutter-xs);
+}
+
+.widget-management-drawer-content {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    gap: var(--lgs-gutter-xs);
+}
+
+.widget-management-drawer-board {
+    display: flex;
+    align-items: center;
+    gap: var(--lgs-gutter-s);
+}
+
+.widget-group-management {
+    margin-top: auto;
+}
+
+/*******************************************************************************
  * Widget Ordering
  ******************************************************************************/
 .widget-ordering-panel::part(body) {
     display: flex;
     flex-direction: column;
     height: 250px;
+    min-height: 0;
     gap: var(--lgs-gutter-xs);
+}
+
+.widget-ordering-panel-fill {
+    display: flex;
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+.widget-ordering-panel-fill::part(base),
+.widget-ordering-panel-fill::part(body) {
+    height: 100%;
+    min-height: 0;
+}
+
+.widget-ordering-panel-fill::part(body) {
+    flex: 1 1 auto;
 }
 
 /* Container et Scroll */
 .widget-list-container {
     overflow: hidden;
     height: 250px;
+    min-height: 0;
     touch-action: pan-y;
     -webkit-overflow-scrolling: touch;
+}
+
+.widget-ordering-panel-fill .widget-list-container {
+    flex: 1 1 auto;
+    height: auto;
 }
 
 .reorder {
@@ -734,7 +785,6 @@ body.lgs-app-booting #cesium-viewer {
     flex-direction: column;
     min-width: 10rem;
     min-height: 100%;
-    margin-right: calc(-1 * var(--lgs-gutter-s));
     padding: var(--lgs-gutter-xs);
     text-wrap: nowrap;
     gap: var(--lgs-gutter-s);
@@ -764,6 +814,17 @@ body.lgs-app-booting #cesium-viewer {
 
 .widget-ordering-row .sortable-widget-info {
     flex: 1;
+}
+
+.widget-ordering-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    margin-left: auto;
+}
+
+.widget-ordering-action-button {
+    flex: 0 0 auto;
 }
 
 .widget-ordering-row:hover {
