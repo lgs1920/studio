@@ -361,7 +361,7 @@ export const MapPOIEditContent = memo(({poi}) => {
                                                   <div className="map-poi-edit-item label-on-left">
                                                       {simulated ? 'Simulated alt.' : 'Altitude'}
                                                   </div>
-                                                  <WaInput
+                                                  <WaInput appearance="filled"
                                                       className={classNames('map-poi-edit-item', 'map-poi', {
                                                           'map-poi-edit-warning-altitude': simulated,
                                                       })}
@@ -417,7 +417,7 @@ export const MapPOIEditContent = memo(({poi}) => {
                                                       </WaCallout>)}
 
                                                   <div className="edit-map-poi-wrapper" id={`edit-map-poi-content-${id}`}>
-                                                      <WaInput
+                                                      <WaInput appearance="filled"
                                                           size="s"
                                                           value={title}
                                                           onInput={handleChangeTitle}
@@ -476,7 +476,7 @@ export const MapPOIEditContent = memo(({poi}) => {
                                                               syncEditorSelection={false}
                                                           />
                                                       )}
-                                                      <WaTextarea
+                                                      <WaTextarea appearance="filled"
                                                           value={description}
                                                           onInput={handleChangeDescription}
                                                           className="edit-title-map-poi-input"
@@ -503,7 +503,7 @@ export const MapPOIEditContent = memo(({poi}) => {
                                                       )}
 
                                                       <div className="map-poi-edit-row-coordinates">
-                                                          <WaInput
+                                                          <WaInput appearance="filled"
                                                               className={classNames({'map-poi-edit-warning-coordinate': coordinateError.latitude})}
                                                               size="s"
                                                               inputMode="decimal"
@@ -513,7 +513,7 @@ export const MapPOIEditContent = memo(({poi}) => {
                                                               label="Latitude"
                                                               disabled={!visible}
                                                           />
-                                                          <WaInput
+                                                          <WaInput appearance="filled"
                                                               className={classNames({'map-poi-edit-warning-coordinate': coordinateError.longitude})}
                                                               size="s"
                                                               inputMode="decimal"

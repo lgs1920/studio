@@ -44,7 +44,7 @@ export const LineHeightElement = ({id}) => {
     }
 
     return (
-        <WaSelect className="lgs--text-widget-line-height-trigger"
+        <WaSelect appearance="filled" className="lgs--text-widget-line-height-trigger"
                   hoist
                   placement="bottom"
                   size="s"

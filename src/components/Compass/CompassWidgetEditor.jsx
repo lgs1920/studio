@@ -261,7 +261,7 @@ export const CompassWidgetEditor = ({entity, syncGlobalCompass = false}) => {
                     appearance="plain" orientation="vertical">
                 <div className="drawer-horizontal-line">
                     <div className="drawer-horizontal-element">
-                        <WaSelect
+                        <WaSelect appearance="filled"
                             className="compass-mode-select"
                             size="s"
                             value={compassMode}

@@ -43,7 +43,7 @@ export const TrackSelector = memo(({label, onChange}) => {
     }
 
     return (
-        <WaSelect
+        <WaSelect appearance="filled"
             size="s"
             label={label}
             value={editor.track.slug}

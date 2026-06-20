@@ -226,7 +226,7 @@ export const JourneyStatisticsSettings = () => {
                         </WaCallout>
 
                         <div className="journey-statistics-settings-row">
-                            <WaSelect
+                            <WaSelect appearance="filled"
                                 label="Activity profile"
                                 size="s"
                                 value={selectedProfileId}
@@ -254,7 +254,7 @@ export const JourneyStatisticsSettings = () => {
                             {THRESHOLDS.map(field => (
                                 <div className="journey-statistics-threshold-row" key={field.key}>
                                     <div className="journey-statistics-threshold-field">
-                                        <WaInput
+                                        <WaInput appearance="filled"
                                             className="journey-statistics-threshold-input"
                                             label={field.label}
                                             size="s"

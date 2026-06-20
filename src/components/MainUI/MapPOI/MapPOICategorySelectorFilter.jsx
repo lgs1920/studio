@@ -93,7 +93,7 @@ export const MapPOICategorySelectorFilter = memo(({
     }, [settings.filter.byCategories, exclude, onChange])
 
     return (
-        <WaSelect
+        <WaSelect appearance="filled"
             value={settings.filter.byCategories}
             size={size}
             className="map-poi-category-selector"

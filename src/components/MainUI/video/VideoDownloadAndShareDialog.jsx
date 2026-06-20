@@ -466,7 +466,7 @@ export const VideoDownloadAndShareDialog = () => {
 
             <div className="video-file-actions">
                 <WaInput
-                    appearance="outlined"
+                    appearance="filled"
                     size="s"
                     name="video-file-name"
                     onInput={handleFilenameChange}

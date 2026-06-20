@@ -104,7 +104,7 @@ export const TokenLayerModal = (props) => {
                 <div>
                     <p><WaBadge pill>1</WaBadge> {'Create an account on the provider site'} {parse(accountUrl)}.</p>
                     <p><WaBadge pill>2</WaBadge> {'Get Token/Api key and paste it below.'}</p>
-                    <p><WaInput placeholder={'Paste Token/API key'} type="password"
+                    <p><WaInput appearance="filled" placeholder={'Paste Token/API key'} type="password"
                                 ref={apikey} password-toggle
                                 clearable
                                 onInput={handleChange}

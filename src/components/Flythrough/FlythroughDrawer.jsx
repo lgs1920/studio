@@ -932,7 +932,7 @@ export const FlythroughDrawer = memo(() => {
                                      <span className="flythrough-total-duration-label">{'Total duration (s)'}</span>
                                      <strong className="flythrough-total-duration-value">{formatSeconds(totalVideoDurationSeconds)}</strong>
                                  </div>
-                                 <WaSelect
+                                 <WaSelect appearance="filled"
                                      className="flythrough-progression-select half-width"
                                      label="Show"
                                      label-at-start
@@ -943,7 +943,7 @@ export const FlythroughDrawer = memo(() => {
                                      <WaOption value={FLYTHROUGH_TRACE_MODE_PROGRESSIVE}>{'Progress'}</WaOption>
                                      <WaOption value={FLYTHROUGH_TRACE_MODE_FULL}>{'Progress - Remain'}</WaOption>
                                  </WaSelect>
-                                 <WaSelect
+                                 <WaSelect appearance="filled"
                                      label="Tracking"
                                      label-at-start
                                      size="s"
@@ -1002,7 +1002,7 @@ export const FlythroughDrawer = memo(() => {
                                                          onInput={updatePOIDistance}
                                                          label-at-start/>
                                                      {marker.mode !== FLYTHROUGH_MARKER_MODE_TRACE &&
-                                                         <WaSelect
+                                                         <WaSelect appearance="filled"
                                                              label="Camera position"
                                                              label-at-start
                                                              size="s"
@@ -1019,7 +1019,7 @@ export const FlythroughDrawer = memo(() => {
                                                      }
                                                  </div>
                                                  <div className="flythrough-fieldset">
-                                                     <WaSelect
+                                                     <WaSelect appearance="filled"
                                                          label="Camera altitude"
                                                          label-at-start
                                                          size="s"
@@ -1125,7 +1125,7 @@ export const FlythroughDrawer = memo(() => {
                                                  </div>
                                                 {marker.mode === FLYTHROUGH_MARKER_MODE_HYSTERESIS && (
                                                      <div className="flythrough-fieldset">
-                                                         <WaSelect
+                                                         <WaSelect appearance="filled"
                                                              label="Camera feel"
                                                              label-at-start
                                                              size="s"

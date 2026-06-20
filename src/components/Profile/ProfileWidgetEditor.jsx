@@ -628,7 +628,7 @@ export const ProfileWidgetEditor = ({entity}) => {
 
                 <div className="drawer-horizontal-element">{'Ratio'}</div>
                 <div className="profile-widget-ratio-section">
-                    <WaSelect
+                    <WaSelect appearance="filled"
                         size="s"
                         label="Ratio"
                         label-at-start
@@ -649,7 +649,7 @@ export const ProfileWidgetEditor = ({entity}) => {
                     {isCustomRatio && (
                         <div className="profile-widget-ratio-custom-fields">
                             <div className="profile-widget-ratio-row">
-                                <WaNumberInput
+                                <WaNumberInput appearance="filled"
                                     size="s"
                                     label="Width (px)"
                                     label-at-start
@@ -671,7 +671,7 @@ export const ProfileWidgetEditor = ({entity}) => {
                                 </WaNumberInput>
                             </div>
                             <div className="profile-widget-ratio-row">
-                                <WaNumberInput
+                                <WaNumberInput appearance="filled"
                                     size="s"
                                     label="Height (px)"
                                     label-at-start

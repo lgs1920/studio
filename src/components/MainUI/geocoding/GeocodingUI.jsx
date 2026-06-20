@@ -242,7 +242,7 @@ export const GeocodingUI = () => {
                 <form onSubmit={handlePrimarySubmit}>
                     <div className="geocoding-form">
                         <WaInput
-                            appearance="outlined"
+                            appearance="filled"
                             name="location"
                             ref={address}
                             id="geocoder-search-location"

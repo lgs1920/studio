@@ -471,7 +471,7 @@ export const TrackStyleSettings = ({showTitle = true}) => {
                     hint="Choose a starting style. Manual changes switch it to Custom."
                     className="lgs--track-style-preset-field"
                 >
-                    <WaSelect
+                    <WaSelect appearance="filled"
                         className="lgs--track-style-preset-select"
                         size="s"
                         value={selectedPresetKey}

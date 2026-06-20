@@ -52,7 +52,7 @@ export const TextElevationElement = ({element, swatches, updateValue}) => {
                         onInput={(e) => updateValue('text.shadow.color', e.target.value)}
                     />
                     <div>
-                        <WaSelect
+                        <WaSelect appearance="filled"
                             label = {'Elevation'}
                             className="half-width"
                             size="s"

@@ -77,7 +77,7 @@ export const RadiusElement = ({
 
             {isRadiusVisible && (
                 <>
-                    <WaSelect
+                    <WaSelect appearance="filled"
                         size="s"
                         label="Size"
                         label-at-start

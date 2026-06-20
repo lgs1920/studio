@@ -152,7 +152,7 @@ export const MapPOIEditFilterPopup = memo(() => {
             </h3>
 
             <div className="map-poi-filter-by-name">
-                <WaInput
+                <WaInput appearance="filled"
                     label="By Name"
                     type="text"
                     size="s"

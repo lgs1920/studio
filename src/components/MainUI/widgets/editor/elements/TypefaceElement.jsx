@@ -40,7 +40,7 @@ export const TypefaceElement = ({id}) => {
     }, [$element])
 
     return (
-        <WaSelect
+        <WaSelect appearance="filled"
             size="s"
             value={currentFont.replace(/\s/g, '_')}
             className="lgs--text-widget-typeface-trigger"

@@ -412,7 +412,7 @@ const JourneyGroupEditorPanel = ({
                 <WaTabPanel name={detailsPanelId}>
                     <div className="journey-group-form">
                         <div className="journey-group-create-title-row">
-                            <WaInput
+                            <WaInput appearance="filled"
                                 className="journey-group-create-title-input"
                                 required
                                 label="Name"
@@ -429,7 +429,7 @@ const JourneyGroupEditorPanel = ({
                                 />
                             </div>
                         </div>
-                        <WaSelect
+                        <WaSelect appearance="filled"
                             label="Parent group"
                             size="s"
                             value={selectedEditForm.parentGroup ?? ''}
@@ -442,7 +442,7 @@ const JourneyGroupEditorPanel = ({
                                 </WaOption>
                             ))}
                         </WaSelect>
-                        <WaTextarea
+                        <WaTextarea appearance="filled"
                             label="Description"
                             rows={3}
                             value={selectedEditForm.description}
@@ -1010,7 +1010,7 @@ export const JourneyGroupsDrawer = memo(() => {
                                         </span>
 
                                         <div className="journey-group-create-title-row">
-                                            <WaInput
+                                            <WaInput appearance="filled"
                                                 className="journey-group-create-title-input"
                                                 required
                                                 label="Name"
@@ -1028,7 +1028,7 @@ export const JourneyGroupsDrawer = memo(() => {
                                                 />
                                             </div>
                                         </div>
-                                        <WaSelect
+                                        <WaSelect appearance="filled"
                                             label="Parent group"
                                             size="s"
                                             value={newForm.parentGroup ?? ''}
@@ -1042,7 +1042,7 @@ export const JourneyGroupsDrawer = memo(() => {
                                             ))}
                                         </WaSelect>
 
-                                        <WaTextarea
+                                        <WaTextarea appearance="filled"
                                             label="Description"
                                             rows={3}
                                             value={newForm.description}
