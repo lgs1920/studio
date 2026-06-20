@@ -854,7 +854,7 @@ export const JourneyLoaderUI = (props) => {
                 <div className="remote-import">
                     <form className="add-url" onSubmit={processRemoteUrl}>
                         <WaInput
-                            appearance="outlined"
+                            appearance="filled"
                             size="s"
                             name="journey-url"
                             value={remoteUrl}

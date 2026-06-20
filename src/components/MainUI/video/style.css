@@ -14,20 +14,6 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-.lgs-video-recording-trigger-actions {
-    display: flex;
-    align-items: center;
-    flex-direction: row;
-    justify-content: space-around;
-    gap: var(--lgs-gutter);
-}
-
-.lgs-video-recording-trigger:not(.lgs-tunnel-element-blocked) {
-    border-color: var(--lgs-video-recorder-border-color, var(--lgs-error-border-color));
-    background: var(--lgs-video-recorder-bg-color, var(--lgs-error-bg-color));
-}
-
-
 .video-recorder-widget {
     font-size: var(--lgs-font-size-s);
     position: relative;
@@ -42,9 +28,29 @@
     }
 }
 
+.video-recording-settings-toolbar {
+    font-size: var(--lgs-font-size-s);
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    flex: 0 0 auto;
+    width: max-content;
+    max-width: max-content;
+    z-index: var(--lgs-video-recording-settings-toolbar-zindex);
+}
+
+.video-recording-settings-toolbar.lgs-toolbar {
+    opacity: 1;
+}
+
+.video-recording-settings-toolbar .lgs-tunnel-container,
+.video-recording-settings-toolbar .lgs-tunnel-bar {
+    width: max-content;
+    max-width: max-content;
+}
+
 .video-recorder-widget .duration,
 .video-recorder-widget .size,
-.video-recorder-widget .current-fps,
 .video-recorder-widget .video-recorder-spacer {
     display: inline-flex;
     width: max-content;
@@ -54,8 +60,21 @@
 }
 
 .video-recorder-widget .duration,
-.video-recorder-widget .size,
-.video-recorder-widget .current-fps {
+.video-recorder-widget .size {
+    white-space: nowrap;
+}
+
+.video-recorder-widget .video-recorder-flythrough-progress {
+    margin-right: var(--lgs-gutter-s);
+}
+
+.video-recorder-widget .video-recorder-flythrough-time,
+.video-recorder-widget .video-recorder-flythrough-distance {
+    display: inline-flex;
+    width: max-content;
+    margin-right: var(--lgs-gutter-s);
+    border-right: 1px solid var(--lgs-card-on-map-border-color);
+    padding-inline-end: var(--lgs-gutter-s);
     white-space: nowrap;
 }
 
@@ -458,4 +477,22 @@
     transform: translate(-50%, -50%);
     white-space: nowrap;
     gap: var(--lgs-gutter-s);
+}
+
+@media (max-width: 640px) {
+    .video-recorder-widget .video-recorder-flythrough-progress {
+        flex: 0 1 auto;
+        margin-right: 0;
+    }
+
+    .video-recorder-widget .video-recorder-flythrough-time,
+    .video-recorder-widget .video-recorder-flythrough-distance {
+        flex: 0 1 auto;
+        margin-right: var(--lgs-gutter-xs, 0.25rem);
+        padding-inline-end: var(--lgs-gutter-xs, 0.25rem);
+    }
+
+    .video-recorder-widget .video-recorder-spacer {
+        display: none;
+    }
 }

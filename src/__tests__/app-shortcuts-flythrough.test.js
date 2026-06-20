@@ -25,11 +25,11 @@ const SHORTCUTS_YAML = `
   keys:
     - Alt+Shift+J
   scope: App
-- action: Toggle rotation
-  description: Starts or stops map rotation around the current target.
-  id: rotation-toggle
+- action: Toggle orbit
+  description: Starts or stops map orbit around the current target.
+  id: orbit-toggle
   keys:
-    - Alt+Shift+R
+    - Alt+Shift+O
   scope: App
 `
 
@@ -41,6 +41,12 @@ describe('app flythrough shortcuts', () => {
         })))
         globalThis.lgs = {
             settings: proxy({
+                camera: {
+                    heading: 0,
+                    pitch:   0,
+                    roll:    0,
+                    range:   1000,
+                },
                 ui: {
                     flythrough: proxy({
                         ...defaultFlythroughSettings(),
@@ -149,7 +155,7 @@ describe('app flythrough shortcuts', () => {
         expect(event.preventDefault).toHaveBeenCalled()
     })
 
-    it('refuses to relaunch rotation outside Passive flythrough mode', async () => {
+    it('refuses to relaunch orbit outside Passive flythrough mode', async () => {
         const {installAppShortcuts} = await import('@Core/events/appShortcuts')
         const callbacks = new Map()
         const shortcutManager = {
@@ -161,7 +167,7 @@ describe('app flythrough shortcuts', () => {
 
         installAppShortcuts(shortcutManager)
 
-        const callback = callbacks.get('Alt+Shift+R')
+        const callback = callbacks.get('Alt+Shift+O')
         expect(callback).toBeTypeOf('function')
 
         const event = {

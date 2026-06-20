@@ -16,11 +16,12 @@
 
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
-    JOURNEY_STATS_WIDGET, JOURNEY_WIDGETS, PROFILE_WIDGET, SCENE_WIDGETS, SCENE_WIDGETS_BOARD, WIDGET_LAYER_START,
-    WIDGETS_STORE,
+    JOURNEY_STATS_WIDGET, JOURNEY_WIDGETS, LGS_VISUAL_WIDGET, PROFILE_WIDGET, SCENE_WIDGETS, SCENE_WIDGETS_BOARD,
+    WIDGET_LAYER_START, WIDGETS_STORE,
 }                                               from '../core/constants'
 import { WidgetDynamicRenderer }                from '../core/ui/widget-manager/dynamic-render/WidgetDynamicRender'
 import { WidgetCache }                          from '../core/ui/widget-manager/WidgetCache'
+import { WidgetCoreRegistry }                   from '../core/ui/widget-manager/WidgetCoreRegistry'
 
 const widgetCacheStore = new Map()
 const widgetListStore = new Map()
@@ -60,6 +61,13 @@ const installGlobals = () => {
                             ])
 
     globalThis.lgs = {
+        configuration: {
+            videoFormats: [
+                {value: '1x1', locked: true, aspectRatio: 1},
+                {value: '16x9', locked: true, aspectRatio: 16 / 9},
+            ],
+            widgetRatio: {value: '1x1', locked: true, aspectRatio: 1},
+        },
         stores: {
             ui: {
                 widget: {
@@ -98,6 +106,7 @@ const installGlobals = () => {
             },
             widgetManager: {
                 defineElementId:     vi.fn((group, id) => `${id}#generated`),
+                getWidgetPosition:   vi.fn(async () => null),
                 isMaxWidgetsReached: vi.fn(() => false),
                 maxWidgets:          vi.fn((group, id) => widgets.get(group)?.widgets?.get(id.split('#')[0])?.max ?? 1),
             },
@@ -179,6 +188,191 @@ describe('Widget persistence bootstrap', () => {
                                                                 widgetsBoard: 'video-crop-zone',
                                                                 zIndex:       WIDGET_LAYER_START,
                                                             })
+    })
+})
+
+describe('Widget registry ratio resolution', () => {
+    beforeEach(() => {
+        installGlobals()
+    })
+
+    it('keeps an explicit visual widget ratio instead of the global widget ratio', async () => {
+        const registry = new WidgetCoreRegistry()
+        const element = {}
+
+        const config = await registry.retrieveConfig(element, {
+            id:        `${PROFILE_WIDGET}#scene`,
+            type:      LGS_VISUAL_WIDGET,
+            ratio:     '16x9',
+            container: document.body,
+        })
+
+        expect(config.ratio.value).toBe('16x9')
+    })
+
+    it('migrates old persisted global ratios when an explicit widget ratio is requested', async () => {
+        const registry = new WidgetCoreRegistry()
+        const element = {}
+        const container = {
+            getBoundingClientRect: vi.fn(() => ({
+                left:   0,
+                top:    0,
+                right:  1000,
+                bottom: 1000,
+                width:  1000,
+                height: 1000,
+            })),
+        }
+
+        __.ui.widgetManager.getWidgetPosition = vi.fn(async () => ({
+            leftRatio:    50,
+            topRatio:     50,
+            width:        200,
+            height:       200,
+            ratio:        '1x1',
+            widgetsBoard: SCENE_WIDGETS_BOARD,
+        }))
+
+        const config = await registry.retrieveConfig(element, {
+            id:             `${PROFILE_WIDGET}#scene`,
+            type:           LGS_VISUAL_WIDGET,
+            ratio:          '16x9',
+            container,
+            boundsContainer: container,
+            persist:        true,
+            widgetsBoard:   SCENE_WIDGETS_BOARD,
+        })
+
+        expect(config.ratio.value).toBe('16x9')
+        expect(config.dimensions.width).toBeCloseTo(355.5555555556)
+        expect(config.dimensions.height).toBe(200)
+        expect(config.position.left).toBeCloseTo(322.2222222222)
+        expect(config.position.top).toBe(400)
+    })
+
+    it('migrates an active runtime config from the global ratio to the explicit widget ratio', async () => {
+        const registry = new WidgetCoreRegistry()
+        const element = {}
+
+        const initialConfig = await registry.retrieveConfig(element, {
+            id:        `${PROFILE_WIDGET}#scene`,
+            type:      LGS_VISUAL_WIDGET,
+            ratio:     '1x1',
+            container: {},
+        })
+        initialConfig.runtimeReady = true
+        initialConfig.position = {left: 400, top: 400}
+        initialConfig.dimensions = {width: 200, height: 200}
+
+        const migratedConfig = await registry.retrieveConfig(element, {
+            id:        `${PROFILE_WIDGET}#scene`,
+            type:      LGS_VISUAL_WIDGET,
+            ratio:     '16x9',
+            container: {},
+        })
+
+        expect(migratedConfig.ratio.value).toBe('16x9')
+        expect(migratedConfig.dimensions.width).toBeCloseTo(355.5555555556)
+        expect(migratedConfig.dimensions.height).toBe(200)
+        expect(migratedConfig.position.left).toBeCloseTo(322.2222222222)
+        expect(migratedConfig.position.top).toBe(400)
+    })
+
+    it('preserves a custom ratio object that is not part of the preset list', async () => {
+        const registry = new WidgetCoreRegistry()
+        const element = {}
+
+        const config = await registry.retrieveConfig(element, {
+            id:        `${PROFILE_WIDGET}#scene`,
+            type:      LGS_VISUAL_WIDGET,
+            ratio:     {
+                value:       'custom',
+                aspectRatio: 3 / 2,
+                locked:      true,
+                width:       3,
+                height:      2,
+            },
+            container: {},
+        })
+
+        expect(config.ratio.value).toBe('custom')
+        expect(config.ratio.aspectRatio).toBeCloseTo(1.5)
+        expect(config.ratio.width).toBe(3)
+        expect(config.ratio.height).toBe(2)
+        expect(config.ratio.locked).toBe(true)
+    })
+
+    it('serializes widget position data into a cloneable plain object', () => {
+        const registry = new WidgetCoreRegistry()
+        const container = {
+            getBoundingClientRect: vi.fn(() => ({
+                left:   10,
+                top:    20,
+                width:  1000,
+                height: 800,
+            })),
+        }
+        const element = {
+            style: {
+                left: '110px',
+                top:  '220px',
+            },
+            getBoundingClientRect: vi.fn(() => ({
+                left:   110,
+                top:    220,
+                width:  320,
+                height: 180,
+            })),
+        }
+        const getComputedStyleSpy = vi.spyOn(window, 'getComputedStyle').mockReturnValue({
+            width:  '320px',
+            height: '180px',
+        })
+        vi.spyOn(registry, 'getElementById').mockReturnValue(element)
+
+        const positionData = registry.preparePositionDataForStorage(`${PROFILE_WIDGET}#cloneable`, {
+            container,
+            dimensions: {
+                width:  320,
+                height: 180,
+            },
+            expandedDimensions: new Proxy({
+                width:  300,
+                height: 170,
+            }, {}),
+            expandedInlineDimensions: new Proxy({
+                width:  '',
+                height: '',
+            }, {}),
+            position: {
+                left: 110,
+                top:  220,
+            },
+            ratio: new Proxy({
+                value:       '16x9',
+                aspectRatio: 16 / 9,
+                locked:      true,
+            }, {}),
+            scale: new Proxy({
+                x: 1.25,
+                y: 1.25,
+            }, {}),
+            type: LGS_VISUAL_WIDGET,
+        })
+
+        getComputedStyleSpy.mockRestore()
+
+        expect(() => structuredClone(positionData)).not.toThrow()
+        expect(Array.isArray(positionData.ratio)).toBe(false)
+        expect(positionData.ratio).toEqual({
+            value:       '16x9',
+            aspectRatio: 16 / 9,
+            locked:      true,
+        })
+        expect(positionData.scale).toEqual({
+            x: 1.25,
+            y: 1.25,
+        })
     })
 })
 

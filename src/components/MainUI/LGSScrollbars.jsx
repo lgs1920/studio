@@ -108,11 +108,9 @@ export const LGSScrollbars = forwardRef(
                             className="view"
                             style={{
                                 ...style,
-                                // Maintain native scrollbar hiding via negative margins
-                                // while preventing horizontal overflow
                                 overflowX:    'hidden',
-                                marginBottom: style.marginBottom,
-                                marginRight:  style.marginRight,
+                                marginBottom:  0,
+                                marginRight:   0,
                             }}
                         />
                     )}

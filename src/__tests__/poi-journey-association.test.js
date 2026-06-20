@@ -16,7 +16,7 @@
 
 import { describe, expect, it } from 'vitest'
 import {
-    findNearestJourneyPointDistance, getJourneyReferencePoints,
+    findNearestJourneyPointDistance, findNearestJourneyProjection, getJourneyCoordinateSegments, getJourneyReferencePoints,
 }                                from '@Core/ui/POIManager'
 
 const makeJourney = (coordinates, type = 'LineString') => ({
@@ -72,5 +72,25 @@ describe('POI journey association distance', () => {
         expect(nearDistance).toBeGreaterThan(0)
         expect(nearDistance).toBeLessThan(10_000)
         expect(farDistance).toBeNull()
+    })
+
+    it('projects a poi on the nearest journey segment instead of only checking vertices', () => {
+        const journey = makeJourney([[6, 45], [6.01, 45]])
+        const poi = {longitude: 6.005, latitude: 45.0009}
+
+        const projection = findNearestJourneyProjection({
+            poi,
+            journey,
+            maxDistanceMeters: 200,
+            segments:          getJourneyCoordinateSegments(journey),
+        })
+
+        expect(projection).not.toBeNull()
+        expect(projection.projectedPoint.longitude).toBeCloseTo(6.005, 4)
+        expect(projection.projectedPoint.latitude).toBeCloseTo(45, 4)
+        expect(projection.distanceMeters).toBeGreaterThan(90)
+        expect(projection.distanceMeters).toBeLessThan(110)
+        expect(projection.projectedAbscissa).toBeGreaterThan(350)
+        expect(projection.projectedAbscissa).toBeLessThan(450)
     })
 })

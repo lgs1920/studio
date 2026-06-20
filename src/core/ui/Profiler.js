@@ -20,12 +20,94 @@ import {
     extendFlythroughProfileDimensions,
     flythroughSampleFromProfileRow,
 }                                                         from '@Core/ui/flythrough/FlythroughProfileProgress'
+import { getTrackRenderContent }                         from '@Utils/cesium/trackRenderSmoothing'
 import { normalizeTrackRenderStyle }                     from '@Utils/cesium/trackRenderStyle'
+import { Mobility }                                      from '@Utils/Mobility'
 import { DISTANCE_UNITS, ELEVATION_UNITS }               from '@Utils/UnitUtils'
 import * as echarts                                      from 'echarts/core'
 
 import { ProfileTrackMarker } from '../ProfileTrackMarker'
 import { Track }              from '../Track'
+
+const finiteNumber = value => {
+    const number = Number(value)
+    return Number.isFinite(number) ? number : null
+}
+
+const pointFromCoordinate = coordinate => {
+    if (!Array.isArray(coordinate)) {
+        return null
+    }
+
+    const longitude = finiteNumber(coordinate[0])
+    const latitude = finiteNumber(coordinate[1])
+
+    if (longitude === null || latitude === null) {
+        return null
+    }
+
+    const altitude = finiteNumber(coordinate[2]) ?? 0
+    return {
+        longitude,
+        latitude,
+        altitude,
+        height: altitude,
+    }
+}
+
+const trackProfilePoints = track => {
+    const geometry = getTrackRenderContent(track)?.geometry
+    const metricsPoints = Array.isArray(track?.metrics?.points) ? track.metrics.points : []
+
+    if (geometry?.type === 'LineString' && Array.isArray(geometry.coordinates)) {
+        return geometry.coordinates
+            .map((coordinate, index, coordinates) => {
+                const point = pointFromCoordinate(coordinate)
+                if (!point) {
+                    return null
+                }
+
+                return {
+                    ...point,
+                    distance: index > 0
+                              ? Mobility.distance(pointFromCoordinate(coordinates[index - 1]), point)
+                              : 0,
+                    time:     null,
+                }
+            })
+            .filter(Boolean)
+    }
+
+    if (geometry?.type === 'MultiLineString' && Array.isArray(geometry.coordinates)) {
+        return geometry.coordinates.flatMap(segment => Array.isArray(segment)
+            ? segment
+                .map((coordinate, index, coordinates) => {
+                    const point = pointFromCoordinate(coordinate)
+                    if (!point) {
+                        return null
+                    }
+
+                    return {
+                        ...point,
+                        distance: index > 0
+                                  ? Mobility.distance(pointFromCoordinate(coordinates[index - 1]), point)
+                                  : 0,
+                        time:     null,
+                    }
+                })
+                .filter(Boolean)
+            : [])
+    }
+
+    return metricsPoints.map(point => ({
+        longitude: point.longitude,
+        latitude:  point.latitude,
+        altitude:  finiteNumber(point.altitude ?? point.height) ?? 0,
+        height:    finiteNumber(point.height ?? point.altitude) ?? finiteNumber(point.altitude) ?? 0,
+        distance:  finiteNumber(point.distance) ?? 0,
+        time:      point.time ?? null,
+    }))
+}
 
 export class Profiler {
 
@@ -68,53 +150,60 @@ export class Profiler {
             dimensions: extendFlythroughProfileDimensions([DISTANCE, ELEVATION, TIME, POINT, UNIT_SYSTEM]),
         }
 
-        // Let's define missing values
+        // Keep a journey-wide cumulative distance so the profile axis stays aligned
+        // with flythrough samples even when some tracks are hidden or smoothed.
         let distance = 0
         lgs.theJourney.tracks.forEach((track, trackIndex) => {
-            if (track.visible && track.metrics.points !== undefined) {
-                const trackDataset = {
-                    id:     track.slug,
-                    source: [],
+            if (track.metrics.points === undefined) {
+                return
+            }
+
+            const trackDataset = {
+                id:     track.slug,
+                source: [],
+            }
+
+            trackProfilePoints(track).forEach((point, pointIndex) => {
+                distance += point.distance ?? 0
+                const elevation = Number(point.altitude)
+                if (!Number.isFinite(elevation)) {
+                    return
                 }
-                track.metrics.points.forEach((point, pointIndex) => {
-                    distance += point.distance ?? 0
-                    const elevation = Number(point.altitude)
-                    if (!Number.isFinite(elevation)) {
-                        return
-                    }
-                    let coords = []
-                    switch (type) {
-                        case ELEVATION_VS_DISTANCE : {
-                            coords = appendFlythroughProfileMetadata([
-                                __.convert(distance).to(units.x[lgs.settings.unitSystem.current]),
-                                __.convert(elevation).to(units.y[lgs.settings.unitSystem.current]),
-                                point.time ?? null,
-                                point,
-                                lgs.settings.unitSystem.current,  // unit system
-                            ], {
-                                distanceFromStart: distance,
-                                trackSlug:         track.slug,
-                                trackIndex,
-                                pointIndex,
-                            })
-                        }
-                    }
-                    trackDataset.source.push(coords)
-                })
-                if (trackDataset.source.length > 0) {
-                    data.dataset.push(trackDataset)
-                    data.options.push({
-                                          color:       track.color,
-                                          name:        track.title,
-                                          //  marker:  track.marker.foregroundColor,
-                                          dataset:     track.slug,
-                                          renderStyle: normalizeTrackRenderStyle(track.renderStyle, {
-                                              color:     track.color,
-                                              thickness: track.thickness,
-                                          }),
-                                      })
+                if (!track.visible) {
+                    return
                 }
 
+                let coords = []
+                switch (type) {
+                    case ELEVATION_VS_DISTANCE : {
+                        coords = appendFlythroughProfileMetadata([
+                            __.convert(distance).to(units.x[lgs.settings.unitSystem.current]),
+                            __.convert(elevation).to(units.y[lgs.settings.unitSystem.current]),
+                            point.time ?? null,
+                            point,
+                            lgs.settings.unitSystem.current,  // unit system
+                        ], {
+                            distanceFromStart: distance,
+                            trackSlug:         track.slug,
+                            trackIndex,
+                            pointIndex,
+                        })
+                    }
+                }
+                trackDataset.source.push(coords)
+            })
+            if (track.visible && trackDataset.source.length > 0) {
+                data.dataset.push(trackDataset)
+                data.options.push({
+                                      color:       track.color,
+                                      name:        track.title,
+                                      //  marker:  track.marker.foregroundColor,
+                                      dataset:     track.slug,
+                                      renderStyle: normalizeTrackRenderStyle(track.renderStyle, {
+                                          color:     track.color,
+                                          thickness: track.thickness,
+                                      }),
+                                  })
             }
         })
 

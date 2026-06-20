@@ -638,7 +638,17 @@ export class WidgetManager {
         const drawers = lgs.stores?.ui?.drawers
         const isCurrentlyEditing = drawers?.open === WIDGETS_EDITOR_DRAWER && drawers.entity === widgetId
 
-        lgs.stores.ui.widget.current = {id: widgetId}
+        const currentRotation = lgs.stores.ui.widget.current?.id === widgetId
+                                ? Number(lgs.stores.ui.widget.current?.rotate)
+                                : Number.NaN
+        const configRotation = Number(this.getWidgetConfig(widgetId)?.rotate)
+        lgs.stores.ui.widget.current = {
+            ...(lgs.stores.ui.widget.current ?? {}),
+            id: widgetId,
+            rotate: Number.isFinite(currentRotation)
+                    ? currentRotation
+                    : (Number.isFinite(configRotation) ? configRotation : 0),
+        }
 
         if (isCurrentlyEditing) {
             if (toggle) {

@@ -1403,9 +1403,16 @@ export class TrackUtils {
                 dataSource.show = visibility
             }
             else {
-                dataSource.show = visibility ? journey.tracks.get(dataSource.name).visible : false
+                const track = journey.tracks.get(dataSource.name)
+                if (!track) {
+                    return
+                }
+
+                dataSource.show = visibility ? track.visible : false
             }
         })
+
+        TrackUtils.setProfileVisibility(journey)
     }
 
     static getTrackFromEntityId = (journey, entityId) => {
@@ -1418,7 +1425,12 @@ export class TrackUtils {
 
     static updateTrackVisibility = (journey, track, visibility) => {
         TrackUtils.getDataSourcesByName(track.slug).forEach(dataSource => {
-            dataSource.show = visibility ? journey.tracks.get(dataSource.name).visible : false
+            const current = journey.tracks.get(dataSource.name)
+            if (!current) {
+                return
+            }
+
+            dataSource.show = visibility ? current.visible : false
         })
     }
 

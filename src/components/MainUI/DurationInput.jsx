@@ -152,7 +152,7 @@ export const DurationInput = ({label, path, minutes = false, dataSource}) => {
     const originClass = origin !== 'global' ? `lgs-journey-metrics-origine-${origin}` : ''
 
     return (
-        <WaInput
+        <WaInput appearance="filled"
             label={label}
             size="s"
             className={originClass}

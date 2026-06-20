@@ -70,7 +70,7 @@ const prepareJourneyPOIEditor = async (poi) => {
     return true
 }
 
-export const openPOIEditor = async (poiOrId) => {
+export const openPOIEditor = async (poiOrId, options = {}) => {
     const poiId = typeof poiOrId === 'string' ? poiOrId : poiOrId?.id
     if (!poiId) {
         return false
@@ -89,6 +89,7 @@ export const openPOIEditor = async (poiOrId) => {
     __.ui.drawerManager.open(drawer, {
         action: 'edit-current',
         entity: poi.id,
+        stacked: options.stacked === true,
         tab:    openJourneyEditor ? POIS_TAB : null,
     })
 

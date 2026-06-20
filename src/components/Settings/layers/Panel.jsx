@@ -17,11 +17,8 @@
 import DrawerFooter from '@Components/DrawerFooter'
 import PanelActions                              from '@Components/PanelsActions'
 import { LAYERS_DRAWER }          from '@Core/constants'
-import { faCircleInfo }           from '@fortawesome/pro-regular-svg-icons'
-import { SlIconButton }                          from '@shoelace-style/shoelace/dist/react'
 import WaDrawer                        from '@Components/WaDrawerNonModal'
 import { WaButton, WaIcon, WaTooltip } from '@web.awesome.me/webawesome-pro/dist/react'
-import React                                     from 'react'
 import { createPortal }                from 'react-dom'
 import { useSnapshot }            from 'valtio'
 import './style.css'
@@ -35,10 +32,11 @@ export const Panel = () => {
 
     const closePanel = (event) => {
         if (window.isOK(event)) {
-            window.dispatchEvent(new Event('resize'))
-            if (__.ui.drawerManager.isCurrent(LAYERS_DRAWER)) {
-                __.ui.drawerManager.close()
+            if (!__.ui.drawerManager.isCurrent(LAYERS_DRAWER)) {
+                return
             }
+            window.dispatchEvent(new Event('resize'))
+            __.ui.drawerManager.close()
         }
     }
 

@@ -62,6 +62,20 @@
     display: inline-flex;
 }
 
+.lgs-tunnel-button-disabled,
+.lgs-tunnel-button-disabled::part(base),
+.lgs-tunnel-button-disabled:hover::part(base),
+.wa-theme-lgs1920-on-map .lgs-tunnel-button-disabled:hover::part(base) {
+    cursor: not-allowed !important;
+    color: inherit !important;
+    border-color: transparent !important;
+    background: transparent !important;
+}
+
+.lgs-tunnel-button-disabled wa-icon {
+    color: var(--lgs-card-on-map-disabled-color, var(--lgs-disabled-color)) !important;
+}
+
 .lgs-tunnel-tooltip-popup {
     z-index: calc(var(--lgs-context-menu-zindex) + 1);
     --arrow-size: 8px;
@@ -126,53 +140,6 @@
     opacity: 0.88;
 }
 
-.lgs-tunnel-element {
-    position: relative;
-    z-index: 2;
-    border: var(--lgs-tunnel-icon-border-thickness) solid var(--lgs-tunnel-color);
-    border-radius: 50%;
-    background-color: var(--lgs-tunnel-bg-color);
-
-    & wa-icon {
-        pointer-events: none;
-        color: var(--lgs-tunnel-color);
-    }
-
-    &:hover {
-        border-color: var(--lgs-tunnel-hover-color) !important;
-    }
-
-
-    &:hover wa-icon {
-        color: var(--lgs-tunnel-hover-color) !important;
-    }
-
-    &::part(base):hover {
-        background-color: var(--lgs-tunnel-hover-bg-color) !important;
-    }
-}
-
-
-.lgs-tunnel-element-blocked {
-    color: var(--lgs-tunnel-blocked-color);
-    background-color: var(--lgs-tunnel-bg-blocked-color);
-}
-
-.lgs-tunnel-element-active {
-    color: var(--lgs-tunnel-active-color) !important;
-    border-color: var(--lgs-tunnel-active-color) !important;
-    background-color: var(--lgs-tunnel-bg-active-color) !important;
-
-    & wa-icon {color: var(--lgs-tunnel-active-color) !important}
-}
-
-
-.lgs-tunnel-element-done {
-    color: var(--lgs-tunnel-done-color);
-    border-color: var(--lgs-tunnel-done-color);
-    background-color: var(--lgs-tunnel-bg-done-color);
-}
-
 .lgs-tunnel-bar-spacer {
     width: var(--lgs-tunnel-spacer-width);
 }
@@ -185,9 +152,4 @@
     height: var(--lgs-tunnel-thickness);
     content: "";
     background-color: var(--lgs-tunnel-color);
-}
-
-.lgs-tunnel-cancel {
-    font-size: var(--lgs-font-size-s);
-    background-color: var(--lgs-dark-color-90);
 }

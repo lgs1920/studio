@@ -119,7 +119,7 @@ export const JourneyMetricsInput = ({label, path, unit, precision = 2, dataSourc
     }
 
     return (
-        <WaInput
+        <WaInput appearance="filled"
             label={label}
             size="s"
             type="number"

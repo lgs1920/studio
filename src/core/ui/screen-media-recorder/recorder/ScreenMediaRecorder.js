@@ -465,7 +465,6 @@ export class ScreenMediaRecorder extends EventTarget {
             void this.#failActiveRecording(error)
             return
         }
-        console.error('[ScreenMediaRecorder] Frame encoding failed', error)
         this.dispatchEvent(new CustomEvent(ScreenMediaRecorder.events.ERROR, {detail: {error}}))
     }
 
@@ -557,16 +556,6 @@ export class ScreenMediaRecorder extends EventTarget {
             this.#videoCodec = codec
             this.#mimeType = mimeType
             this.#extension = extension
-            console.info('[ScreenMediaRecorder] Starting video recording', {
-                browser:         __.device.browser,
-                codec,
-                fullCodecString: outputConfig.fullCodecString,
-                extension,
-                mimeType,
-                fps:             this.#fps,
-                quality:         this.#quality.name,
-                dimensions:      safe,
-            })
             this.#output = new Output({
                                           format,
                                           target: new BufferTarget(),
@@ -747,15 +736,7 @@ export class ScreenMediaRecorder extends EventTarget {
                 `Video codec probe timed out for ${candidate.label}.`,
             )
         }
-        catch (error) {
-            console.warn('[ScreenMediaRecorder] Video codec probe failed', {
-                browser:         __.device.browser,
-                codec:           candidate.codec,
-                fullCodecString: candidate.fullCodecString,
-                label:           candidate.label,
-                dimensions:      safe,
-                error,
-            })
+        catch {
             return false
         }
     }
@@ -778,13 +759,6 @@ export class ScreenMediaRecorder extends EventTarget {
                     continue
                 }
 
-                console.info('[ScreenMediaRecorder] Video codec selection', {
-                    browser:    __.device.browser,
-                    dimensions: safe,
-                    bitrate:    this.#quality.value,
-                    hardwareAcceleration,
-                    candidates: probeResults,
-                })
                 return {
                     codec:           candidate.codec,
                     fullCodecString: candidate.fullCodecString,
@@ -795,13 +769,6 @@ export class ScreenMediaRecorder extends EventTarget {
                 }
             }
 
-            console.info('[ScreenMediaRecorder] Video codec selection', {
-                browser:    __.device.browser,
-                dimensions: safe,
-                bitrate:    this.#quality.value,
-                hardwareAcceleration,
-                candidates: probeResults,
-            })
         }
 
         const codecCandidates = ['vp9']
@@ -818,16 +785,6 @@ export class ScreenMediaRecorder extends EventTarget {
             VIDEO_CODEC_PROBE_TIMEOUT_MS,
             `Video codec probe timed out for ${codecCandidates.join(', ')}.`,
         )
-        console.info('[ScreenMediaRecorder] Video codec probe', {
-            browser: __.device.browser,
-            dimensions: safe,
-            bitrate: this.#quality.value,
-            hardwareAcceleration,
-            candidates: codecCandidates.map(codec => ({
-                codec,
-                supported: encodableCodecs.includes(codec),
-            })),
-        })
         const codec = encodableCodecs[0] ?? null
         if (!codec) {
             return null
@@ -854,18 +811,7 @@ export class ScreenMediaRecorder extends EventTarget {
             height: safe.height,
         },
         sizeChangeBehavior: 'fill',
-        onEncoderConfig:    (config) => {
-            console.info('[ScreenMediaRecorder] Video encoder config', {
-                browser:              __.device.browser,
-                codec:                config.codec,
-                width:                config.width,
-                height:               config.height,
-                bitrate:              config.bitrate,
-                framerate:            config.framerate,
-                hardwareAcceleration: config.hardwareAcceleration,
-                latencyMode:          config.latencyMode,
-            })
-        },
+        onEncoderConfig:    () => {},
         onEncodedPacket:    () => {
             this.#encodedPackets += 1
         },
@@ -884,7 +830,6 @@ export class ScreenMediaRecorder extends EventTarget {
 
     #emitRecorderError = (error) => {
         const safeError = error instanceof Error ? error : new Error(String(error))
-        console.error('[ScreenMediaRecorder] Video recording failed', safeError)
         this.dispatchEvent(new CustomEvent(ScreenMediaRecorder.events.ERROR, {detail: {error: safeError}}))
         return safeError
     }
@@ -898,8 +843,7 @@ export class ScreenMediaRecorder extends EventTarget {
         try {
             await this.cancelVideo()
         }
-        catch (cancelError) {
-            console.warn('[ScreenMediaRecorder] Failed to cancel invalid video recording', cancelError)
+        catch {
             this.#reset()
             this.#clearRuntimeReferences()
             document.body.classList.remove(ScreenMediaRecorder.CLASSES.RECORDING, ScreenMediaRecorder.CLASSES.PAUSED)
@@ -929,16 +873,16 @@ export class ScreenMediaRecorder extends EventTarget {
                     'Video recording startup cleanup timed out.',
                 )
             }
-            catch (error) {
-                console.warn('[ScreenMediaRecorder] Failed to clean video startup', error)
+            catch {
+                return
             }
         }
         else if (this.#videoSource) {
             try {
                 this.#videoSource.close()
             }
-            catch (error) {
-                console.warn('[ScreenMediaRecorder] Failed to close video source after startup error', error)
+            catch {
+                return
             }
         }
 
@@ -985,15 +929,6 @@ export class ScreenMediaRecorder extends EventTarget {
         }
 
         this.#emitInfo()
-        console.info('[ScreenMediaRecorder] Finalized video recording', {
-            browser: __.device.browser,
-            codec: this.#videoCodec,
-            fps: this.#fps,
-            averageFps: this.#getAverageFps(),
-            dimensions: this.#dimensions,
-            durationMs: this.#recordedDuration * 1000,
-            sizeBytes: this.#sizeBytes,
-        })
         this.#clearRuntimeReferences()
         document.body.classList.remove(ScreenMediaRecorder.CLASSES.RECORDING, ScreenMediaRecorder.CLASSES.PAUSED)
         this.dispatchEvent(new CustomEvent(ScreenMediaRecorder.events.STOP, {

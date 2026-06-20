@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-05-10
- * Last modified: 2026-05-10
+ * Created on: 2026-06-05
+ * Last modified: 2026-06-05
  *
  *
  * Copyright © 2026 LGS1920
@@ -25,6 +25,11 @@ describe('SettingsSection', () => {
     beforeEach(() => {
         vi.stubGlobal('lgs', {
             configuration: {
+                ui: {
+                    profile: {
+                        liveData: false,
+                    },
+                },
                 journey: {
                     activity: {
                         default: 'trek',
@@ -41,6 +46,11 @@ describe('SettingsSection', () => {
                 },
             },
             savedConfiguration: {
+                ui: {
+                    profile: {
+                        liveData: false,
+                    },
+                },
                 journey: {
                     activity: {
                         default: 'trek',
@@ -166,10 +176,77 @@ describe('SettingsSection', () => {
         expect(merged.flythrough.progression.fill.color).toBe('#123456')
         expect(merged.flythrough.progression.fill.opacity).toBe(0.4)
         expect(merged.flythrough.progression.fill.width).toBe(7)
-        expect(merged.flythrough.progression.fill.profileMarker).toBe(8)
-        expect(merged.flythrough.progression.border.profileMarker).toBe(2)
-        expect(merged.flythrough.profileInfo.color).toBe('#ffffff')
-        expect(merged.flythrough.profileInfo.useTrackStyle).toBe(false)
+        expect(merged.flythrough.progression.fill.profileMarker).toBeUndefined()
+        expect(merged.flythrough.progression.border?.profileMarker).toBeUndefined()
+        expect(merged.flythrough.profileInfo).toBeUndefined()
+    })
+
+    it('keeps flythrough excluded but still syncs its clips subtree', () => {
+        const section = new SettingsSection('ui')
+        const merged = section.update(
+            {
+                flythrough: {
+                    camera: {
+                        altitude: 900,
+                    },
+                    clips: {
+                        catalog: {
+                            'take-off': {
+                                label: 'Custom take-off',
+                            },
+                        },
+                    },
+                },
+            },
+            {
+                flythrough: {
+                    camera: {
+                        altitude: 1200,
+                        pitch:    -65,
+                    },
+                    clips: {
+                        catalog: {
+                            'take-off': {
+                                label: 'TakeOff',
+                                slots: ['start'],
+                            },
+                            landing: {
+                                label: 'Landing',
+                                slots: ['stop'],
+                            },
+                        },
+                    },
+                },
+            },
+        )
+
+        expect(merged.flythrough.camera.altitude).toBe(900)
+        expect(merged.flythrough.camera.pitch).toBeUndefined()
+        expect(merged.flythrough.clips.catalog['take-off'].label).toBe('TakeOff')
+        expect(merged.flythrough.clips.catalog['take-off'].slots).toEqual(['start'])
+        expect(merged.flythrough.clips.catalog.landing).toEqual({
+            label: 'Landing',
+            slots: ['stop'],
+        })
+    })
+
+    it('persists profile UI settings changes', async () => {
+        const section = new SettingsSection('ui')
+        await section.init()
+        lgs.db.settings.put.mockClear()
+
+        section.content.profile.liveData = true
+        await waitForSubscription()
+
+        expect(lgs.db.settings.put).toHaveBeenCalledWith(
+            'ui',
+            expect.objectContaining({
+                                        profile: expect.objectContaining({
+                                                                             liveData: true,
+                                                                         }),
+                                    }),
+            SETTINGS_STORE,
+        )
     })
 
     it('hydrates and persists the full activity catalog when only partial values exist', async () => {

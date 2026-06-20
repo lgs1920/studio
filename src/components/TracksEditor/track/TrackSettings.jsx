@@ -142,13 +142,13 @@ export const TrackSettings = () => {
                                     <div id={'track-text-description'}>
                                         {journeyEditor.journey.tracks.size > 1 &&
                                             <>
-                                                <WaInput
+                                                <WaInput appearance="filled"
                                                     label={'Track Title'}
                                                     id="track-title"
                                                     value={journeyEditor.track.title}
                                                     onChange={setTitle}
                                                 />
-                                                <WaTextarea
+                                                <WaTextarea appearance="filled"
                                                     label={'Track Description'}
                                                     row={2}
                                                     id="track-description"

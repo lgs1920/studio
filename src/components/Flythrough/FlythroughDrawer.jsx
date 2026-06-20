@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-05-31
- * Last modified: 2026-05-31
+ * Created on: 2026-06-11
+ * Last modified: 2026-06-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,12 +16,15 @@
 
 import DrawerFooter from '@Components/DrawerFooter'
 import { FlythroughProgressBar } from '@Components/Flythrough/FlythroughProgressBar'
+import { FlythroughClipsTab } from '@Components/Flythrough/FlythroughClipsTab'
 import { LGSScrollbars } from '@Components/MainUI/LGSScrollbars'
+import { openPOIEditor }                  from '@Components/MainUI/MapPOI/openPOIEditor'
 import { VideoButton } from '@Components/MainUI/video/VideoButton'
 import { formatSliderPercent } from '@Components/MainUI/widgets/editor/elements/sliderUtils'
 import PanelActions from '@Components/PanelsActions'
 import WaDrawer     from '@Components/WaDrawerNonModal'
 import { FLYTHROUGH_DRAWER } from '@Core/constants'
+import classNames from 'classnames'
 import {
     clampFlythroughNumber, DEFAULT_FLYTHROUGH_SCOPE, ensureFlythroughSettings, FLYTHROUGH_CAMERA_ALTITUDE_CONSTANT,
     FLYTHROUGH_CAMERA_ALTITUDE_GROUND_OFFSET, FLYTHROUGH_CAMERA_POSITION_AHEAD, FLYTHROUGH_CAMERA_POSITION_BEHIND,
@@ -31,22 +34,29 @@ import {
     FLYTHROUGH_PROFILE_MARKER_FILL_MIN_SIZE, FLYTHROUGH_PROGRESSION_BORDER_MAX_WIDTH,
     FLYTHROUGH_PROGRESSION_BORDER_MIN_WIDTH, FLYTHROUGH_PROGRESSION_FILL_MAX_WIDTH,
     FLYTHROUGH_PROGRESSION_FILL_MIN_WIDTH, FLYTHROUGH_TRACE_MODE_FULL, FLYTHROUGH_TRACE_MODE_PROGRESSIVE,
+    FLYTHROUGH_CAMERA_PRESET_CUSTOM, FLYTHROUGH_CAMERA_PRESETS,
     FLYTHROUGH_HYSTERESIS_EASING_MAX, FLYTHROUGH_HYSTERESIS_EASING_MIN,
     FLYTHROUGH_HYSTERESIS_MARGIN_RATIO_MAX, FLYTHROUGH_HYSTERESIS_MARGIN_RATIO_MIN,
     FLYTHROUGH_HYSTERESIS_STOP_THRESHOLD_MAX, FLYTHROUGH_HYSTERESIS_STOP_THRESHOLD_MIN,
-    normalizeFlythroughCamera, normalizeFlythroughMarker, normalizeFlythroughProfileInfo,
+    getFlythroughCameraPresetKey, getFlythroughCameraPresetUpdates, normalizeFlythroughCamera, normalizeFlythroughMarker, normalizeFlythroughProfileInfo,
     normalizeFlythroughProgressionStyle, normalizeFlythroughTrace,
 }                 from '@Core/ui/flythrough/FlythroughProgressionStyle'
+import { normalizeFlythroughClips } from '@Core/ui/flythrough/FlythroughClips'
+import { normalizeFlythroughPOISettings } from '@Core/ui/flythrough/FlythroughPOISettings'
+import { ELEVATION_UNITS, UnitUtils } from '@Utils/UnitUtils'
 import {
-    WaCard, WaColorPicker, WaDivider, WaIcon, WaNumberInput, WaOption, WaSelect, WaSlider, WaSwitch, WaTab, WaTabGroup,
+    WaButton, WaCard, WaColorPicker, WaDetails, WaDivider, WaIcon, WaNumberInput, WaOption, WaSelect, WaSlider,
+    WaSwitch, WaTab, WaTooltip,
+    WaTabGroup,
     WaTabPanel,
 }                 from '@web.awesome.me/webawesome-pro/dist/react'
 import { colord } from 'colord'
 import { Cartographic } from 'cesium'
-import { memo, useCallback, useEffect, useMemo, useRef } from 'react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal }      from 'react-dom'
 import { useSnapshot }       from 'valtio'
 import './style.css'
+
 
 const clampDuration = value => {
     const duration = Number(value)
@@ -70,6 +80,18 @@ const toOpaqueColorValue = value => {
     const color = colord(value ?? '#ffffff')
     return color.isValid() ? color.alpha(1).toHex() : '#ffffff'
 }
+
+const finiteNumber = value => {
+    const number = Number(value)
+    return Number.isFinite(number) ? number : null
+}
+
+const formatSeconds = value => {
+    const seconds = Math.max(0, finiteNumber(value) ?? 0)
+    return `${Math.round(seconds)}`
+}
+
+const getChecked = event => Boolean(event?.target?.checked ?? event?.currentTarget?.checked)
 
 const FlythroughStyleField = ({children}) => (
     <div className="flythrough-style-field">
@@ -213,17 +235,28 @@ const FlythroughProgressionGroup = ({
     </section>
 )
 
+const FLYTHROUGH_POI_HIDDEN_FIELDS = [
+    {key: 'location', label: 'Hide location'},
+    {key: 'category', label: 'Hide category'},
+    {key: 'altitude', label: 'Hide altitude'},
+    {key: 'coordinates', label: 'Hide coordinates'},
+]
+
 export const FlythroughDrawer = memo(() => {
     const {drawers: {open: drawerOpen}} = useSnapshot(lgs.stores.ui)
     const {theJourney: currentJourney} = useSnapshot(lgs.stores.main)
+    const poiList = useSnapshot(lgs.stores.main.components.pois.list)
     const flythroughState = useSnapshot(lgs.stores.flythrough)
     ensureFlythroughSettings()
     const flythroughSettings = useSnapshot(lgs.settings.ui.flythrough)
+    const {current: unitSystem} = useSnapshot(lgs.settings.unitSystem)
     const {drawer: drawerPlacement} = useSnapshot(lgs.editorSettingsProxy.menu)
     const swatches = useMemo(() => lgs.settings.getSwatches.list.join(';'), [])
+    const altitudeUnit = ELEVATION_UNITS[unitSystem] ?? ELEVATION_UNITS[0]
     const journeySlug = currentJourney?.slug
     const hasJourney = Boolean(journeySlug)
     const previousJourneySlug = useRef(journeySlug)
+    const drawerRef = useRef(null)
     const progression = normalizeFlythroughProgressionStyle(flythroughSettings.progression)
     const fillColor = toOpaqueColorValue(progression.fill.color)
     const borderColor = toOpaqueColorValue(progression.border.color)
@@ -234,12 +267,44 @@ export const FlythroughDrawer = memo(() => {
     const fillProfileMarker = progression.fill.profileMarker
     const borderProfileMarker = progression.border.profileMarker
     const trace = normalizeFlythroughTrace(flythroughSettings.trace)
+    const clips = normalizeFlythroughClips({
+                                                   catalog: flythroughSettings.clips?.catalog ?? flythroughSettings.clips?.definitions ?? {},
+                                                   start:   Array.isArray(currentJourney?.flythrough?.start)
+                                                            ? currentJourney.flythrough.start
+                                                            : flythroughSettings.clips?.start ?? [],
+                                                   stop:    Array.isArray(currentJourney?.flythrough?.stop)
+                                                            ? currentJourney.flythrough.stop
+                                                            : flythroughSettings.clips?.stop ?? [],
+                                               })
     const remainingUseDefinedTrackStyle = trace.remaining.useDefinedTrackStyle !== false
     const remainingColor = toOpaqueColorValue(trace.remaining.color)
     const camera = normalizeFlythroughCamera(flythroughSettings.camera)
+    const nearbyPOIs = Array.isArray(flythroughState.nearbyPois) ? flythroughState.nearbyPois : []
+    const cameraPresetKey = getFlythroughCameraPresetKey(camera)
     const marker = normalizeFlythroughMarker(flythroughSettings.marker)
+    const hideOtherJourneys = flythroughState.hideOtherJourneys === true
     const durationLocked = flythroughState.active || flythroughState.playing || flythroughState.paused
     const syncWithVideo = flythroughState.recordingSync === true
+    const [poiVisibilityOverrides, setPoiVisibilityOverrides] = useState({})
+    const [cameraDrafts, setCameraDrafts] = useState({
+        altitude: null,
+        heading:  null,
+        pitch:    null,
+    })
+    const cameraDraftValues = useRef({
+        altitude: null,
+        heading:  null,
+        pitch:    null,
+    })
+    const cameraDraftBaseline = useRef(null)
+    const cameraDraftField = useRef(null)
+    const cameraUpdateSourceClearTimer = useRef(null)
+    const totalVideoDurationSeconds = useMemo(() => {
+        const clipDurationSeconds = [...(clips.start ?? []), ...(clips.stop ?? [])]
+            .reduce((total, clip) => total + Math.max(0, finiteNumber(clip?.params?.duration) ?? 0), 0)
+
+        return Math.max(0, finiteNumber(flythroughSettings.duration) ?? 0) + clipDurationSeconds
+    }, [clips.start, clips.stop, flythroughSettings.duration])
 
     useEffect(() => {
         const flythroughRuntime = lgs.stores.flythrough
@@ -252,6 +317,7 @@ export const FlythroughDrawer = memo(() => {
 
         flythroughRuntime.journeySlug = journeySlug
         flythroughRuntime.duration = flythroughSettings.duration
+        flythroughRuntime.poiDistance = flythroughSettings.poiDistance
         lgs.settings.ui.flythrough.direction = 1
         flythroughRuntime.direction = 1
         flythroughRuntime.scope = DEFAULT_FLYTHROUGH_SCOPE
@@ -260,6 +326,8 @@ export const FlythroughDrawer = memo(() => {
         flythroughRuntime.trace = normalizeFlythroughTrace(flythroughSettings.trace)
         flythroughRuntime.marker = normalizeFlythroughMarker(flythroughSettings.marker)
         flythroughRuntime.camera = normalizeFlythroughCamera(flythroughSettings.camera)
+        flythroughRuntime.clips = clips
+        flythroughRuntime.hideOtherJourneys = flythroughState.hideOtherJourneys === true
 
         if (journeyChanged) {
             flythroughRuntime.progress = 0
@@ -267,14 +335,21 @@ export const FlythroughDrawer = memo(() => {
             flythroughRuntime.elapsedMillis = null
             flythroughRuntime.durationMillis = null
             flythroughRuntime.totalDistance = 0
+            flythroughRuntime.nearbyPois = []
         }
     }, [
         flythroughSettings.duration,
+                  flythroughSettings.poiDistance,
         flythroughSettings.profileInfo,
         flythroughSettings.progression,
         flythroughSettings.trace,
         flythroughSettings.marker,
         flythroughSettings.camera,
+        flythroughSettings.clips,
+        flythroughState.hideOtherJourneys,
+        clips,
+        currentJourney?.flythrough?.start,
+        currentJourney?.flythrough?.stop,
         journeySlug,
     ])
 
@@ -290,6 +365,28 @@ export const FlythroughDrawer = memo(() => {
             __.ui.flythrough?.configure?.({progress: flythroughRuntime.progress ?? 0})
         }
     }, [drawerOpen, flythroughSettings.duration, hasJourney, journeySlug])
+
+    useEffect(() => {
+        if (drawerOpen === FLYTHROUGH_DRAWER) {
+            __.ui.drawerManager.restoreDrawerUiState?.(drawerRef.current)
+        }
+    }, [drawerOpen])
+
+    useEffect(() => {
+        if (drawerOpen !== FLYTHROUGH_DRAWER) {
+            return
+        }
+
+        if (!hasJourney) {
+            lgs.stores.flythrough.nearbyPois = []
+            return
+        }
+
+        lgs.stores.flythrough.nearbyPois = __.ui.poiManager?.getFlythroughPOIsForJourney?.(
+            currentJourney,
+            flythroughSettings.poiDistance,
+        ) ?? []
+    }, [currentJourney, drawerOpen, flythroughSettings.poiDistance, hasJourney, journeySlug])
 
     const refreshFlythrough = useCallback((camera = true) => {
         __.ui.flythrough?.refresh?.({camera})
@@ -327,13 +424,155 @@ export const FlythroughDrawer = memo(() => {
         refreshFlythrough(true)
     }, [refreshFlythrough, stopRotateIfNeeded])
 
-    const updateCamera = useCallback(async (updates) => {
+    const updateCamera = useCallback(async (updates, {syncCamera = true} = {}) => {
         await stopRotateIfNeeded()
         const nextCamera = mergeCamera(lgs.settings.ui.flythrough.camera, updates)
         lgs.settings.ui.flythrough.camera = nextCamera
         lgs.stores.flythrough.camera = nextCamera
-        refreshFlythrough(true)
-    }, [refreshFlythrough, stopRotateIfNeeded])
+        lgs.stores.flythrough.cameraUpdateSource = 'drawer'
+        if (cameraUpdateSourceClearTimer.current !== null) {
+            clearTimeout(cameraUpdateSourceClearTimer.current)
+        }
+        if (cameraDraftField.current === null) {
+            cameraUpdateSourceClearTimer.current = setTimeout(() => {
+                if (lgs.stores.flythrough.cameraUpdateSource === 'drawer') {
+                    lgs.stores.flythrough.cameraUpdateSource = null
+                }
+                cameraUpdateSourceClearTimer.current = null
+            }, 120)
+        }
+        if (flythroughState.active || flythroughState.playing || flythroughState.paused) {
+            lgs.stores.flythrough.cameraUserAdjusted = true
+        }
+        refreshFlythrough(syncCamera)
+        if (syncCamera) {
+            __.ui.flythrough?.refreshCamera?.({
+                sample:             flythroughState.sample ?? null,
+                suppressMoveEvents: true,
+                source:             'drawer',
+            })
+        }
+    }, [flythroughState.active, flythroughState.paused, flythroughState.playing, flythroughState.sample, refreshFlythrough, stopRotateIfNeeded])
+
+    useEffect(() => () => {
+        if (cameraUpdateSourceClearTimer.current !== null) {
+            clearTimeout(cameraUpdateSourceClearTimer.current)
+            cameraUpdateSourceClearTimer.current = null
+        }
+    }, [])
+
+    const beginCameraDraft = useCallback((field, value) => {
+        cameraDraftField.current = field
+        lgs.stores.flythrough.cameraUpdateSource = 'drawer'
+        if (cameraUpdateSourceClearTimer.current !== null) {
+            clearTimeout(cameraUpdateSourceClearTimer.current)
+            cameraUpdateSourceClearTimer.current = null
+        }
+        cameraDraftValues.current[field] = String(value)
+        cameraDraftBaseline.current = {
+            field,
+            altitude: camera.altitude,
+            heading:  camera.heading ?? 0,
+            pitch:    camera.pitch,
+        }
+        setCameraDrafts(current => ({
+            ...current,
+            [field]: String(value),
+        }))
+    }, [camera.altitude, camera.heading, camera.pitch])
+
+    const updateCameraDraft = useCallback((field, value) => {
+        if (cameraDraftField.current !== field) {
+            beginCameraDraft(field, value)
+            return
+        }
+
+        lgs.stores.flythrough.cameraUpdateSource = 'drawer'
+        if (cameraUpdateSourceClearTimer.current !== null) {
+            clearTimeout(cameraUpdateSourceClearTimer.current)
+            cameraUpdateSourceClearTimer.current = null
+        }
+        cameraDraftValues.current[field] = String(value)
+        setCameraDrafts(current => ({
+            ...current,
+            [field]: String(value),
+        }))
+    }, [beginCameraDraft])
+
+    const clearCameraDraft = useCallback((field) => {
+        if (cameraDraftField.current === field) {
+            cameraDraftField.current = null
+            cameraDraftValues.current[field] = null
+            if (lgs.stores.flythrough.cameraUpdateSource === 'drawer') {
+                if (cameraUpdateSourceClearTimer.current !== null) {
+                    clearTimeout(cameraUpdateSourceClearTimer.current)
+                }
+                cameraUpdateSourceClearTimer.current = setTimeout(() => {
+                    if (lgs.stores.flythrough.cameraUpdateSource === 'drawer') {
+                        lgs.stores.flythrough.cameraUpdateSource = null
+                    }
+                    cameraUpdateSourceClearTimer.current = null
+                }, 120)
+            }
+        }
+        setCameraDrafts(current => ({
+            ...current,
+            [field]: null,
+        }))
+    }, [])
+
+    const commitCameraAltitude = useCallback((rawValue, options) => {
+        if (String(rawValue ?? '').trim() === '') {
+            return false
+        }
+        const altitude = UnitUtils.revert(rawValue, altitudeUnit)
+        if (!Number.isFinite(altitude) || altitude < 10) {
+            return false
+        }
+
+        const nextAltitude = clampFlythroughNumber(altitude, camera.altitude, 10, 100000)
+        if (nextAltitude === camera.altitude) {
+            return true
+        }
+
+        updateCamera({altitude: nextAltitude}, options)
+        return true
+    }, [altitudeUnit, camera.altitude, updateCamera])
+
+    const commitCameraPitch = useCallback((rawValue) => {
+        if (String(rawValue ?? '').trim() === '') {
+            return false
+        }
+        const parsedPitch = Number(rawValue)
+        if (!Number.isFinite(parsedPitch) || parsedPitch < -89 || parsedPitch > -5) {
+            return false
+        }
+        const nextPitch = clampFlythroughNumber(parsedPitch, camera.pitch, -89, -5)
+        if (nextPitch === camera.pitch) {
+            return false
+        }
+
+        updateCamera({pitch: nextPitch})
+        return true
+    }, [camera.pitch, updateCamera])
+
+    const commitCameraHeading = useCallback((rawValue) => {
+        if (String(rawValue ?? '').trim() === '') {
+            return false
+        }
+        const currentHeading = camera.heading ?? 0
+        const parsedHeading = Number(rawValue)
+        if (!Number.isFinite(parsedHeading) || parsedHeading < -180 || parsedHeading > 180) {
+            return false
+        }
+        const nextHeading = clampFlythroughNumber(parsedHeading, currentHeading, -180, 180)
+        if (nextHeading === currentHeading) {
+            return false
+        }
+
+        updateCamera({heading: nextHeading})
+        return true
+    }, [camera.heading, updateCamera])
 
     const updateDuration = useCallback((event) => {
         if (durationLocked) {
@@ -343,6 +582,78 @@ export const FlythroughDrawer = memo(() => {
         lgs.settings.ui.flythrough.duration = duration
         lgs.stores.flythrough.duration = duration
     }, [durationLocked])
+
+    const updatePOIDistance = useCallback((event) => {
+        const distance = clampFlythroughNumber(event.target.value, flythroughSettings.poiDistance, 1, 100000, true)
+        lgs.settings.ui.flythrough.poiDistance = distance
+        lgs.stores.flythrough.poiDistance = distance
+    }, [flythroughSettings.poiDistance])
+
+    const updatePOIFlythroughSettings = useCallback(async (poiId, updates) => {
+        const poi = lgs.stores.main.components.pois.list.get(poiId)
+        if (!poi?.id) {
+            return
+        }
+
+        const next = normalizeFlythroughPOISettings({
+                                                        ...poi.flythrough,
+                                                        ...updates,
+                                                        hiddenFields: {
+                                                            ...(poi.flythrough?.hiddenFields ?? {}),
+                                                            ...(updates?.hiddenFields ?? {}),
+                                                        },
+                                                    })
+
+        await __.ui.poiManager.updatePOI(poiId, {flythrough: next}, {immediate: true})
+        if (drawerOpen === FLYTHROUGH_DRAWER && hasJourney) {
+            lgs.stores.flythrough.nearbyPois = __.ui.poiManager?.getFlythroughPOIsForJourney?.(
+                currentJourney,
+                flythroughSettings.poiDistance,
+            ) ?? []
+        }
+    }, [currentJourney, drawerOpen, flythroughSettings.poiDistance, hasJourney])
+
+    const updatePOIFlythroughVisibility = useCallback((poiId, event) => {
+        const visible = getChecked(event)
+        setPoiVisibilityOverrides(current => ({
+            ...current,
+            [poiId]: visible,
+        }))
+        void updatePOIFlythroughSettings(poiId, {visible})
+    }, [updatePOIFlythroughSettings])
+
+    const activePoiVisibilityOverrides = useMemo(() => {
+        const next = {}
+
+        Object.entries(poiVisibilityOverrides).forEach(([poiId, visible]) => {
+            const poi = poiList.get(poiId)
+            if (!poi?.id) {
+                return
+            }
+
+            if (normalizeFlythroughPOISettings(poi.flythrough).visible !== visible) {
+                next[poiId] = visible
+            }
+        })
+
+        return next
+    }, [poiList, poiVisibilityOverrides])
+
+    const editFlythroughPOI = useCallback(async (poiId) => {
+        await openPOIEditor(poiId, {stacked: true})
+    }, [])
+
+    const isStacked = __.ui.drawerManager.isStacked(FLYTHROUGH_DRAWER)
+    const closeDrawerWithManager = useCallback(() => {
+        window.dispatchEvent(new Event('resize'))
+        if (__.ui.drawerManager.isCurrent(FLYTHROUGH_DRAWER)) {
+            __.ui.drawerManager.close()
+        }
+    }, [])
+
+    const altitudeDisplayValue = cameraDrafts.altitude ?? String(Math.round(UnitUtils.convert(camera.altitude).to(altitudeUnit)))
+    const pitchDisplayValue = cameraDrafts.pitch ?? String(camera.pitch)
+    const headingDisplayValue = cameraDrafts.heading ?? String(camera.heading ?? 0)
 
     const updateSyncWithVideo = useCallback((event) => {
         const enabled = Boolean(event?.target?.checked)
@@ -355,6 +666,13 @@ export const FlythroughDrawer = memo(() => {
         else {
             __.ui.flythroughVideoSync?.disarm()
         }
+    }, [])
+
+    const updateHideOtherJourneys = useCallback((event) => {
+        const enabled = Boolean(event?.target?.checked)
+        lgs.settings.ui.flythrough.hideOtherJourneys = enabled
+        lgs.stores.flythrough.hideOtherJourneys = enabled
+        __.ui.flythrough?.setHideOtherJourneys?.(enabled)
     }, [])
 
     const updateFillColor = useCallback((event) => {
@@ -475,13 +793,23 @@ export const FlythroughDrawer = memo(() => {
         updateCamera({positionMode: event.target.value})
     }, [updateCamera])
 
-    const updateCameraAltitude = useCallback((event) => {
-        updateCamera({altitude: clampFlythroughNumber(event.target.value, camera.altitude, 10, 100000)})
-    }, [camera.altitude, updateCamera])
+    const updateCameraPreset = useCallback((event) => {
+        const presetKey = event.target.value
+        if (presetKey === FLYTHROUGH_CAMERA_PRESET_CUSTOM) {
+            return
+        }
 
-    const updateCameraHeading = useCallback((event) => {
-        updateCamera({heading: clampFlythroughNumber(event.target.value, camera.heading ?? 0, -180, 180)})
-    }, [camera.heading, updateCamera])
+        const presetUpdates = getFlythroughCameraPresetUpdates(presetKey)
+        if (!presetUpdates) {
+            return
+        }
+
+        updateCamera(presetUpdates)
+    }, [updateCamera])
+
+    const altitudeFieldLabel = camera.altitudeMode === FLYTHROUGH_CAMERA_ALTITUDE_GROUND_OFFSET
+        ? `Ground offset (${altitudeUnit})`
+        : `Altitude (${altitudeUnit})`
 
     const updateHysteresisMarginRatio = useCallback((event) => {
         updateCamera({
@@ -527,6 +855,9 @@ export const FlythroughDrawer = memo(() => {
             event.preventDefault()
             return
         }
+        if (!__.ui.drawerManager.isCurrent(FLYTHROUGH_DRAWER)) {
+            return
+        }
         __.ui.flythrough?.restoreJourneyToolbarVisibility?.()
         __.ui.drawerManager.close()
     }, [])
@@ -543,18 +874,19 @@ export const FlythroughDrawer = memo(() => {
         <>
             {drawerOpen === FLYTHROUGH_DRAWER &&
                 <WaDrawer
+                    ref={drawerRef}
                     id={FLYTHROUGH_DRAWER}
                     open={true}
                     onWaAfterHide={handleRequestClose}
                     onSlAfterHide={closeDrawer}
                     placement={drawerPlacement}
-                    className="flythrough-drawer"
+                    className={classNames('flythrough-drawer', {'drawer-is-stacked': isStacked})}
                 >
                     <span slot="label" className="flythrough-drawer-title">
                         <WaIcon name="video-arrow-up-right" variant="regular"/>
                         {FLYTHROUGH_LABEL}
                     </span>
-                    <PanelActions/>
+                    <PanelActions stackedPanel={isStacked} onBack={isStacked ? closeDrawerWithManager : null}/>
 
                     <div className="flythrough-drawer-content">
                         {!hasJourney ? (
@@ -562,7 +894,10 @@ export const FlythroughDrawer = memo(() => {
                         ) : (
                              <>
                                  <WaCard appearance="outlined" className="flythrough-progress-card-in-drawer">
-                                     <FlythroughProgressBar className="flythrough-progress-bar-in-drawer"/>
+                                     <FlythroughProgressBar
+                                         className="flythrough-progress-bar-in-drawer"
+                                         disabled={syncWithVideo}
+                                     />
                                  </WaCard>
                                  <div className="flythrough-sync-row">
                                      <WaSwitch
@@ -584,7 +919,20 @@ export const FlythroughDrawer = memo(() => {
                                          />
                                      }
                                  </div>
-                                 <WaSelect
+                                 <WaSwitch
+                                     label-at-start
+                                     size="xs"
+                                     className="flythrough-hide-other-journeys-switch half-width"
+                                     checked={hideOtherJourneys}
+                                     onChange={updateHideOtherJourneys}
+                                 >
+                                     {'Hide other journeys'}
+                                 </WaSwitch>
+                                 <div className="flythrough-total-duration-row" aria-live="polite">
+                                     <span className="flythrough-total-duration-label">{'Total duration (s)'}</span>
+                                     <strong className="flythrough-total-duration-value">{formatSeconds(totalVideoDurationSeconds)}</strong>
+                                 </div>
+                                 <WaSelect appearance="filled"
                                      className="flythrough-progression-select half-width"
                                      label="Show"
                                      label-at-start
@@ -595,7 +943,7 @@ export const FlythroughDrawer = memo(() => {
                                      <WaOption value={FLYTHROUGH_TRACE_MODE_PROGRESSIVE}>{'Progress'}</WaOption>
                                      <WaOption value={FLYTHROUGH_TRACE_MODE_FULL}>{'Progress - Remain'}</WaOption>
                                  </WaSelect>
-                                 <WaSelect
+                                 <WaSelect appearance="filled"
                                      label="Tracking"
                                      label-at-start
                                      size="s"
@@ -618,6 +966,14 @@ export const FlythroughDrawer = memo(() => {
                                          <WaIcon name="paintbrush-pencil" variant="regular"/>
                                          {'Edit'}
                                      </WaTab>
+                                     <WaTab slot="nav" panel="clips">
+                                         <WaIcon name="sparkles" variant="regular"/>
+                                         {'Clips'}
+                                     </WaTab>
+                                     <WaTab slot="nav" panel="pois">
+                                         <WaIcon name="location-dot" variant="regular"/>
+                                         {'POIs'}
+                                     </WaTab>
 
                                      <WaTabPanel name="runner">
                                          <LGSScrollbars>
@@ -634,8 +990,19 @@ export const FlythroughDrawer = memo(() => {
                                                          disabled={durationLocked}
                                                          onInput={updateDuration}
                                                          label-at-start/>
+                                                     <WaNumberInput
+                                                         className="flythrough-poi-distance-input half-width"
+                                                         label="Nearby POIs (m)"
+                                                         size="s"
+                                                         appearance="filled"
+                                                         min="1"
+                                                         max="100000"
+                                                         step="100"
+                                                         value={flythroughSettings.poiDistance}
+                                                         onInput={updatePOIDistance}
+                                                         label-at-start/>
                                                      {marker.mode !== FLYTHROUGH_MARKER_MODE_TRACE &&
-                                                         <WaSelect
+                                                         <WaSelect appearance="filled"
                                                              label="Camera position"
                                                              label-at-start
                                                              size="s"
@@ -651,59 +1018,127 @@ export const FlythroughDrawer = memo(() => {
                                                          </WaSelect>
                                                      }
                                                  </div>
-                                                 {marker.mode !== FLYTHROUGH_MARKER_MODE_TRACE && (
-                                                     <div className="flythrough-fieldset">
-                                                         <WaSelect
-                                                             label="Camera altitude"
-                                                             label-at-start
+                                                 <div className="flythrough-fieldset">
+                                                     <WaSelect appearance="filled"
+                                                         label="Camera altitude"
+                                                         label-at-start
+                                                         size="s"
+                                                         value={camera.altitudeMode}
+                                                         onChange={updateAltitudeMode}
+                                                         className="half-width">
+                                                         <WaOption
+                                                             value={FLYTHROUGH_CAMERA_ALTITUDE_CONSTANT}>{'Fixed'}</WaOption>
+                                                         <WaOption
+                                                             value={FLYTHROUGH_CAMERA_ALTITUDE_GROUND_OFFSET}>{'Ground offset'}</WaOption>
+                                                     </WaSelect>
+                                                     <div className="flythrough-style-field-grid is-single">
+                                                         <WaNumberInput
+                                                             label={altitudeFieldLabel}
                                                              size="s"
-                                                             value={camera.altitudeMode}
-                                                             onChange={updateAltitudeMode}
-                                                             className="half-width">
-                                                             <WaOption
-                                                                 value={FLYTHROUGH_CAMERA_ALTITUDE_CONSTANT}>{'Fixed'}</WaOption>
-                                                             <WaOption
-                                                                 value={FLYTHROUGH_CAMERA_ALTITUDE_GROUND_OFFSET}>{'Ground offset'}</WaOption>
-                                                         </WaSelect>
-                                                         <div className="flythrough-style-field-grid is-single">
+                                                             appearance="filled"
+                                                             min={Math.round(UnitUtils.convert(10).to(altitudeUnit))}
+                                                             step={Math.max(1, Math.round(UnitUtils.convert(50).to(altitudeUnit)))}
+                                                             value={altitudeDisplayValue}
+                                                             onFocus={() => beginCameraDraft('altitude', altitudeDisplayValue)}
+                                                             onInput={event => {
+                                                                 updateCameraDraft('altitude', event.target.value)
+                                                             }}
+                                                             onChange={event => {
+                                                                 updateCameraDraft('altitude', event.target.value)
+                                                                 commitCameraAltitude(event.target.value, {syncCamera: false})
+                                                             }}
+                                                             onBlur={event => {
+                                                                 const currentValue = cameraDraftValues.current.altitude ?? event.target.value
+                                                                 const committed = commitCameraAltitude(currentValue, {syncCamera: false})
+                                                                 if (!committed && cameraDraftBaseline.current?.field === 'altitude') {
+                                                                     setCameraDrafts(current => ({
+                                                                         ...current,
+                                                                         altitude: String(Math.round(UnitUtils.convert(cameraDraftBaseline.current.altitude).to(altitudeUnit))),
+                                                                     }))
+                                                                 }
+                                                                 clearCameraDraft('altitude')
+                                                             }}
+                                                             label-at-start className="half-width"/>
+                                                         <WaNumberInput
+                                                             label="Pitch (deg)"
+                                                             size="s"
+                                                             appearance="filled"
+                                                             min="-89"
+                                                             max="-5"
+                                                             step="1"
+                                                             value={pitchDisplayValue}
+                                                             onFocus={() => beginCameraDraft('pitch', pitchDisplayValue)}
+                                                             onInput={event => {
+                                                                 const nextValue = event.target.value
+                                                                 cameraDraftValues.current.pitch = nextValue
+                                                                 setCameraDrafts(current => ({
+                                                                     ...current,
+                                                                     pitch: nextValue,
+                                                                 }))
+                                                                 commitCameraPitch(nextValue)
+                                                             }}
+                                                             onBlur={event => {
+                                                                 const currentValue = cameraDraftValues.current.pitch ?? event.target.value
+                                                                 const committed = commitCameraPitch(currentValue)
+                                                                 if (!committed && cameraDraftBaseline.current?.field === 'pitch') {
+                                                                     setCameraDrafts(current => ({
+                                                                         ...current,
+                                                                         pitch: String(cameraDraftBaseline.current.pitch),
+                                                                     }))
+                                                                 }
+                                                                 clearCameraDraft('pitch')
+                                                             }}
+                                                             label-at-start className="half-width"/>
+                                                         {marker.mode !== FLYTHROUGH_MARKER_MODE_TRACE && camera.positionMode === FLYTHROUGH_CAMERA_POSITION_SYSTEM && (
                                                              <WaNumberInput
-                                                                 label="Altitude (m)"
+                                                                 label="Heading (deg)"
                                                                  size="s"
                                                                  appearance="filled"
-                                                                 min="10"
-                                                                 step="50"
-                                                                 value={camera.altitude}
-                                                                 onInput={updateCameraAltitude}
-                                                                 label-at-start className="half-width"/>
-                                                             <WaNumberInput
-                                                                 label="Pitch (deg)"
-                                                                 size="s"
-                                                                 appearance="filled"
-                                                                 min="-89"
-                                                                 max="-5"
+                                                                 min="-180"
+                                                                 max="180"
                                                                  step="1"
-                                                                 value={camera.pitch}
-                                                                 onInput={event => updateCamera({
-                                                                                                    pitch: clampFlythroughNumber(event.target.value, camera.pitch, -89, -5),
-                                                                                                })}
+                                                                 value={headingDisplayValue}
+                                                                 onFocus={() => beginCameraDraft('heading', headingDisplayValue)}
+                                                                 onInput={event => {
+                                                                     const nextValue = event.target.value
+                                                                     cameraDraftValues.current.heading = nextValue
+                                                                     setCameraDrafts(current => ({
+                                                                         ...current,
+                                                                         heading: nextValue,
+                                                                     }))
+                                                                     commitCameraHeading(nextValue)
+                                                                 }}
+                                                                 onBlur={event => {
+                                                                     const currentValue = cameraDraftValues.current.heading ?? event.target.value
+                                                                     const committed = commitCameraHeading(currentValue)
+                                                                     if (!committed && cameraDraftBaseline.current?.field === 'heading') {
+                                                                         setCameraDrafts(current => ({
+                                                                             ...current,
+                                                                             heading: String(cameraDraftBaseline.current.heading),
+                                                                         }))
+                                                                     }
+                                                                     clearCameraDraft('heading')
+                                                                 }}
                                                                  label-at-start className="half-width"/>
-                                                             {camera.positionMode === FLYTHROUGH_CAMERA_POSITION_SYSTEM && (
-                                                                 <WaNumberInput
-                                                                     label="Heading (deg)"
-                                                                     size="s"
-                                                                     appearance="filled"
-                                                                     min="-180"
-                                                                     max="180"
-                                                                     step="1"
-                                                                     value={camera.heading ?? 0}
-                                                                     onInput={updateCameraHeading}
-                                                                     label-at-start className="half-width"/>
-                                                             )}
-                                                         </div>
+                                                         )}
                                                      </div>
-                                                 )}
+                                                 </div>
                                                 {marker.mode === FLYTHROUGH_MARKER_MODE_HYSTERESIS && (
                                                      <div className="flythrough-fieldset">
+                                                         <WaSelect appearance="filled"
+                                                             label="Camera feel"
+                                                             label-at-start
+                                                             size="s"
+                                                             value={cameraPresetKey}
+                                                             onChange={updateCameraPreset}
+                                                             className="half-width">
+                                                             {FLYTHROUGH_CAMERA_PRESETS.map(preset => (
+                                                                 <WaOption key={preset.key} value={preset.key}>
+                                                                     {preset.label}
+                                                                 </WaOption>
+                                                             ))}
+                                                             <WaOption value={FLYTHROUGH_CAMERA_PRESET_CUSTOM}>{'Custom'}</WaOption>
+                                                         </WaSelect>
                                                          <WaNumberInput
                                                              label="Dynamic"
                                                              size="s"
@@ -824,6 +1259,187 @@ export const FlythroughDrawer = memo(() => {
                                                              />
                                                      </div>
                                                  </section>
+                                             </div>
+                                         </LGSScrollbars>
+                                     </WaTabPanel>
+
+                                     <WaTabPanel name="clips">
+                                         <LGSScrollbars>
+                                             <div className="flythrough-tab-panel">
+                                                 <FlythroughClipsTab
+                                                     settings={flythroughSettings}
+                                                     state={flythroughState}
+                                                 />
+                                             </div>
+                                         </LGSScrollbars>
+                                     </WaTabPanel>
+                                     <WaTabPanel name="pois">
+                                         <LGSScrollbars>
+                                             <div className="flythrough-tab-panel">
+                                                 {nearbyPOIs.length === 0 ? (
+                                                     <p className="flythrough-empty-state">{'No flythrough POI matches for the current journey.'}</p>
+                                                 ) : (
+                                                      <div className="lgs--details-list">
+                                                          {nearbyPOIs.map(entry => {
+                                                              const poi = poiList.get(entry?.poi?.id) ?? entry?.poi
+                                                              if (!poi?.id) {
+                                                                  return null
+                                                              }
+
+                                                              const settings = normalizeFlythroughPOISettings(poi.flythrough)
+                                                              const flythroughEnabled = activePoiVisibilityOverrides[poi.id] ?? settings.visible !== false
+                                                              const animated = settings.animated !== false
+                                                              const visibilityButtonId = `flythrough-poi-visibility-${poi.id}`
+                                                              const animationButtonId = `flythrough-poi-animation-${poi.id}`
+                                                              const toggleVisibility = event => {
+                                                                  event.preventDefault()
+                                                                  event.stopPropagation()
+                                                                  updatePOIFlythroughVisibility(poi.id, {
+                                                                      target: {
+                                                                          checked: !flythroughEnabled,
+                                                                      },
+                                                                  })
+                                                              }
+                                                              const toggleAnimation = event => {
+                                                                  event.preventDefault()
+                                                                  event.stopPropagation()
+                                                                  void updatePOIFlythroughSettings(poi.id, {
+                                                                      animated: !animated,
+                                                                  })
+                                                              }
+
+                                                              return (
+                                                                  <WaDetails key={poi.id}
+                                                                             className="flythrough-poi-details lgs--details-hoverable">
+                                                                      <span slot="summary"
+                                                                            className="flythrough-poi-summary">
+                                                                          <span className="flythrough-poi-summary-title">
+                                                                              <WaIcon variant="regular"
+                                                                                      className="poi-duotone-icon"
+                                                                                      name={entry?.source === 'journey-poi' ? 'route' : 'location-dot'}/>
+                                                                              <strong>{poi.title ?? poi.id}</strong>
+                                                                          </span>
+                                                                          <span
+                                                                              className="flythrough-poi-summary-actions">
+                                                                              <WaTooltip for={visibilityButtonId}
+                                                                                         placement="top">
+                                                                                  {flythroughEnabled ? 'Hide POI during flythrough' : 'Show POI during flythrough'}
+                                                                              </WaTooltip>
+                                                                              <WaButton
+                                                                                  id={visibilityButtonId}
+                                                                                  className="flythrough-poi-summary-button"
+                                                                                  appearance="plain"
+                                                                                  variant="brand"
+                                                                                  size="s"
+                                                                                  aria-label={flythroughEnabled ? 'Hide POI during flythrough' : 'Show POI during flythrough'}
+                                                                                  aria-pressed={flythroughEnabled}
+                                                                                  onClick={toggleVisibility}
+                                                                              >
+                                                                                  <WaIcon
+                                                                                      name={flythroughEnabled ? 'eye-slash' : 'eye'}
+                                                                                      variant="regular"/>
+                                                                              </WaButton>
+                                                                              <WaTooltip for={animationButtonId}
+                                                                                         placement="top">
+                                                                                  {animated ? 'Disable POI animation during flythrough' : 'Enable POI animation during flythrough'}
+                                                                              </WaTooltip>
+                                                                              <WaButton
+                                                                                  id={animationButtonId}
+                                                                                  className="flythrough-poi-summary-button"
+                                                                                  appearance="plain"
+                                                                                  variant="brand"
+                                                                                  size="s"
+                                                                                  aria-label={animated ? 'Disable POI animation during flythrough' : 'Enable POI animation during flythrough'}
+                                                                                  aria-pressed={animated}
+                                                                                  onClick={toggleAnimation}
+                                                                              >
+                                                                                  <WaIcon
+                                                                                      name={animated ? 'expand' : 'compress'}
+                                                                                  variant="regular"/>
+                                                                              </WaButton>
+                                                                          </span>
+                                                                      </span>
+                                                                      <div className="flythrough-poi-details-body">
+                                                                          <div className="flythrough-poi-switches">
+                                                                              <WaSwitch
+                                                                                  size="xs"
+                                                                                  label-at-start
+                                                                                  checked={flythroughEnabled}
+                                                                                  onInput={event => updatePOIFlythroughVisibility(poi.id, event)}
+                                                                              >
+                                                                                  {'Show during flythrough'}
+                                                                              </WaSwitch>
+                                                                          </div>
+                                                                          {flythroughEnabled && (
+                                                                              <div
+                                                                                  key={`flythrough-poi-options-${poi.id}`}
+                                                                                  className="flythrough-poi-options">
+                                                                                  <div
+                                                                                      className="flythrough-poi-animated-switch">
+                                                                                      <WaSwitch
+                                                                                          size="xs"
+                                                                                          label-at-start
+                                                                                          checked={settings.animated !== false}
+                                                                                          onInput={event => updatePOIFlythroughSettings(poi.id, {
+                                                                                              animated: getChecked(event),
+                                                                                          })}
+                                                                                      >
+                                                                                          {'Animate during flythrough'}
+                                                                                      </WaSwitch>
+                                                                                  </div>
+                                                                                  <div className="flythrough-fieldset">
+                                                                                      <WaNumberInput
+                                                                                          className="half-width"
+                                                                                          label="Duration (s)"
+                                                                                          size="s"
+                                                                                          appearance="filled"
+                                                                                          min="0"
+                                                                                          max="60"
+                                                                                          step="1"
+                                                                                          value={settings.displayDurationSeconds}
+                                                                                          onInput={event => updatePOIFlythroughSettings(poi.id, {
+                                                                                              displayDurationSeconds: Math.round(clampFlythroughNumber(
+                                                                                                  event.target.value,
+                                                                                                  settings.displayDurationSeconds,
+                                                                                                  0,
+                                                                                                  60,
+                                                                                              )),
+                                                                                          })}
+                                                                                          label-at-start
+                                                                                      />
+                                                                                  </div>
+                                                                                  <div
+                                                                                      className="flythrough-poi-hidden-fields">
+                                                                                      {FLYTHROUGH_POI_HIDDEN_FIELDS.map(field => (
+                                                                                          <WaSwitch
+                                                                                              key={`${poi.id}-${field.key}`}
+                                                                                              size="xs"
+                                                                                              label-at-start
+                                                                                              checked={settings.hiddenFields[field.key] === true}
+                                                                                              onInput={event => updatePOIFlythroughSettings(poi.id, {
+                                                                                                  hiddenFields: {
+                                                                                                      [field.key]: getChecked(event),
+                                                                                                  },
+                                                                                              })}
+                                                                                          >
+                                                                                              {field.label}
+                                                                                          </WaSwitch>
+                                                                                      ))}
+                                                                                  </div>
+                                                                              </div>
+                                                                          )}
+                                                                          <div className="flythrough-poi-actions">
+                                                                              <WaButton size="s" appearance="outlined"
+                                                                                        onClick={() => editFlythroughPOI(poi.id)}>
+                                                                                  {'Edit POI'}
+                                                                              </WaButton>
+                                                                          </div>
+                                                                      </div>
+                                                                  </WaDetails>
+                                                              )
+                                                          })}
+                                                      </div>
+                                                  )}
                                              </div>
                                          </LGSScrollbars>
                                      </WaTabPanel>

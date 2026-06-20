@@ -63,12 +63,10 @@ export class Utils {
     }) => {
         const editorStore = lgs.theJourneyEditorProxy
         const shouldFocus = focus && !__.ui.drawerManager.consumeSuppressFocusOnOpen?.(journeySlug)
-        if (__.ui.cameraManager.isRotating()) {
-            await __.ui.cameraManager.stopRotate()
-            // Drop the previous rotation target before switching journeys so the next focus
-            // path does not inherit a stale orbit anchor from the journey that was just left.
-            lgs.stores.ui.mainUI.rotate.target = null
-        }
+        // Switching journeys must clear any active orbit/panorama state first, otherwise the
+        // live camera updates keep reusing the previous journey anchor as a forced focus point.
+        await __.ui.poiManager.stopRotationAndSync()
+        lgs.stores.ui.mainUI.rotate.target = null
         editorStore.journey = lgs.getJourneyBySlug(journeySlug)
 
         lgs.saveJourneyInContext(editorStore.journey)

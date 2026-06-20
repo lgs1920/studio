@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-05-31
- * Last modified: 2026-05-31
+ * Created on: 2026-06-11
+ * Last modified: 2026-06-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -67,6 +67,25 @@
 
 .flythrough-sync-video-button {
     flex: 0 0 auto;
+}
+
+.flythrough-total-duration-row {
+    align-items: center;
+    color: var(--wa-form-control-label-color);
+    display: flex;
+    gap: var(--wa-space-s, 0.75rem);
+    justify-content: space-between;
+    min-width: 0;
+}
+
+.flythrough-total-duration-label {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.flythrough-total-duration-value {
+    flex: 0 0 auto;
+    font-variant-numeric: tabular-nums;
 }
 
 
@@ -204,6 +223,323 @@
     min-width: 0;
 }
 
+.flythrough-clips-tab {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    min-width: 0;
+    gap: var(--wa-space-l, 1.25rem);
+}
+
+.flythrough-clips-section {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    min-width: 0;
+    gap: var(--wa-space-s, 0.75rem);
+}
+
+.flythrough-clips-section-header {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+}
+
+.flythrough-poi-details::part(summary) {
+    color: var(--wa-color-brand-60);
+}
+
+.flythrough-poi-summary {
+    align-items: center;
+    display: flex;
+    gap: var(--wa-space-s, 0.75rem);
+    min-width: 0;
+    width: 100%;
+}
+
+.flythrough-poi-summary-title {
+    align-items: center;
+    display: flex;
+    flex: 1 1 auto;
+    gap: var(--wa-space-xs, 0.5rem);
+    min-width: 0;
+}
+
+.flythrough-poi-summary-title strong {
+    display: block;
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.flythrough-poi-summary-actions {
+    align-items: center;
+    display: flex;
+    flex: 0 0 auto;
+    gap: 0.25rem;
+    margin-left: auto;
+}
+
+.flythrough-poi-summary-button {
+    flex: 0 0 auto;
+}
+
+.flythrough-poi-details-body {
+    display: flex;
+    flex-direction: column;
+    padding: var(--lgs-gutter-s);
+    border-top: 1px solid var(--wa-color-neutral-border-normal, rgba(0, 0, 0, 0.08));
+    gap: var(--lgs-gutter-s);
+}
+
+.flythrough-poi-switches {
+    display: grid;
+    gap: var(--wa-space-xs, 0.5rem);
+}
+
+.flythrough-poi-options {
+    display: grid;
+    gap: var(--wa-space-s, 0.75rem);
+}
+
+.flythrough-poi-animated-switch {
+    display: flex;
+}
+
+.flythrough-poi-hidden-fields {
+    display: grid;
+    gap: var(--wa-space-xs, 0.5rem);
+}
+
+.flythrough-poi-actions {
+    display: flex;
+    justify-content: flex-start;
+}
+
+.flythrough-clips-section-header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    gap: var(--wa-space-s, 0.75rem);
+}
+
+.flythrough-clips-section-title {
+    font-size: 1rem;
+    font-weight: 600;
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.flythrough-clips-list {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    min-width: 0;
+    gap: var(--wa-space-s, 0.75rem);
+}
+
+.flythrough-clip-row-shell {
+    width: 100%;
+    min-width: 0;
+}
+
+.flythrough-clip-summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    cursor: grab;
+    gap: var(--wa-space-s, 0.75rem);
+    min-width: 0;
+}
+
+.flythrough-clip-title,
+.flythrough-clip-summary-title {
+    display: flex;
+    flex: 1 1 auto;
+    align-items: center;
+    min-width: 0;
+}
+
+.flythrough-clip-title strong,
+.flythrough-clip-summary-title strong {
+    display: inline-flex;
+    align-items: center;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.flythrough-clip-title wa-icon,
+.flythrough-clip-summary-title wa-icon {
+    color: inherit;
+    fill: currentColor;
+}
+
+.flythrough-clip-title wa-icon::part(svg),
+.flythrough-clip-summary-title wa-icon::part(svg) {
+    color: currentColor;
+    fill: currentColor;
+}
+
+.flythrough-clip-summary-actions {
+    display: flex;
+    align-items: center;
+    flex: 0 0 auto;
+    gap: 0.25rem;
+    margin-left: auto;
+}
+
+.flythrough-clip-body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--wa-space-s, 0.75rem);
+    padding: var(--lgs-gutter-s);
+}
+
+.flythrough-clip-body .flythrough-clips-editor-fields {
+    display: flex;
+    align-items: stretch;
+    flex-direction: column;
+    width: 100%;
+    min-width: 0;
+    gap: var(--wa-space-s, 0.75rem);
+}
+
+.flythrough-clip-body .flythrough-clips-editor-field {
+    display: flex;
+    flex: 1 1 auto;
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+}
+
+.flythrough-clip-body .flythrough-clips-field-control {
+    flex: 1 1 auto;
+    width: auto;
+}
+
+.flythrough-clip-body .flythrough-clips-field-control::part(base) {
+    width: 100%;
+}
+
+.flythrough-clip-body p {
+    opacity: 0.72;
+}
+
+.flythrough-clips-popup-card {
+    overflow: hidden;
+    width: min(40rem, calc(100vw - 2rem));
+    max-width: calc(100vw - 2rem);
+    border-color: var(--wa-color-surface-border);
+    background-color: var(--wa-color-surface-lowered);
+    background-image: none;
+    --wa-form-control-background-color: color-mix(in oklab, var(--wa-color-surface-raised) 84%, var(--wa-color-surface-lowered) 16%);
+    --wa-form-control-border-color: color-mix(in oklab, var(--wa-color-surface-border) 70%, var(--wa-color-neutral-border-loud) 30%);
+}
+
+.flythrough-clips-popup-title {
+    display: inline-flex;
+    align-items: center;
+    margin: 0;
+    gap: 0.5rem;
+}
+
+.flythrough-clips-add-list,
+.flythrough-clips-editor {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    min-width: 0;
+    gap: var(--wa-space-s, 0.75rem);
+}
+
+.flythrough-clips-add-item-shell {
+    width: 100%;
+    min-width: 0;
+}
+
+.flythrough-clips-add-item {
+    justify-content: flex-start;
+    box-sizing: border-box;
+    width: 100%;
+    text-align: left;
+}
+
+.flythrough-clips-add-item-content {
+    display: flex;
+    align-items: center;
+    flex-direction: row;
+    width: 100%;
+    min-width: 0;
+    gap: 0;
+}
+
+.flythrough-clips-add-item-content strong {
+    font-size: 0.95rem;
+}
+
+.flythrough-clips-add-item-content span {
+    opacity: 0.72;
+}
+
+.flythrough-clips-editor-header {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.flythrough-clips-editor-header h4 {
+    font-size: 1.05rem;
+    margin: 0;
+}
+
+.flythrough-clips-editor-header p {
+    margin: 0;
+    opacity: 0.72;
+}
+
+.flythrough-clips-editor-fields {
+    display: flex;
+    align-items: stretch;
+    flex-direction: column;
+    width: 100%;
+    min-width: 0;
+    gap: var(--wa-space-s, 0.75rem);
+}
+
+.flythrough-clips-editor-field {
+    display: flex;
+    flex: 1 1 auto;
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+}
+
+.flythrough-clips-field-control {
+    flex: 1 1 auto;
+    width: auto;
+}
+
+wa-number-input.flythrough-clips-field-control::part(base),
+wa-select.flythrough-clips-field-control::part(base),
+wa-select[label-at-start].half-width::part(base) {
+    width: 100%;
+}
+
+.flythrough-clips-add-item[data-disabled] {
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.flythrough-clips-add-item[data-disabled]:hover {
+    transform: none;
+}
+
 @media (max-width: 640px) {
     .flythrough-color-control,
     .flythrough-style-field-grid,
@@ -218,6 +554,26 @@
     .flythrough-color-control {
         align-items: stretch;
         display: grid;
+    }
+
+    .flythrough-clips-section-header,
+    .flythrough-clip-summary,
+    .flythrough-clip-summary-actions {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .flythrough-clip-summary {
+        align-items: stretch;
+        flex-wrap: wrap;
+    }
+
+    .flythrough-clip-summary-actions {
+        justify-content: flex-start;
+    }
+
+    .flythrough-clip-body .flythrough-clips-editor-field {
+        flex-basis: auto;
     }
 }
 

@@ -47,7 +47,8 @@ export const CropZoneWidget = memo(({
     // Snapshot of the Valtio context
     const $context = useSnapshot(context)
     const video = useSnapshot(lgs.stores.ui.video)
-    const lockToCenter = Boolean(video.editing && video.step === 0)
+    const flythrough = useSnapshot(lgs.stores.flythrough)
+    const lockToCenter = Boolean(video.editing && flythrough.recordingSync === true)
 
     // Memoized configuration for the Widget component
     const config = useMemo(() => {

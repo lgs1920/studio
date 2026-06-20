@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-05-10
- * Last modified: 2026-05-10
+ * Created on: 2026-06-18
+ * Last modified: 2026-06-18
  *
  *
  * Copyright © 2026 LGS1920
@@ -19,18 +19,15 @@ import { WaSwitch } from '@web.awesome.me/webawesome-pro/dist/react'
 export const ScaleSwitchElement = ({
                                        checked = false,
                                        onChange,
-                                       alignAfterColor = false,
                                        className = '',
                                        switchStyle,
-                                       widthAuto = true,
+                                       widthAuto = false,
                                    }) => {
     const stopPropagation = event => event.stopPropagation()
 
     return (
-        <div className={`drawer-horizontal-line lgs-widget-scaled-line ${className}`.trim()}>
-            {alignAfterColor && <div className="lgs-widget-scaled-color-spacer" aria-hidden="true"/>}
             <WaSwitch
-                className="lgs-widget-scaled-switch"
+                className={`lgs-widget-scaled-switch ${className}`.trim()}
                 style={switchStyle}
                 label-at-start
                 width-auto={widthAuto || undefined}
@@ -45,6 +42,5 @@ export const ScaleSwitchElement = ({
             >
                 <span>{'Scaled'}</span>
             </WaSwitch>
-        </div>
     )
 }

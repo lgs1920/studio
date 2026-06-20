@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-05-10
- * Last modified: 2026-05-10
+ * Created on: 2026-06-18
+ * Last modified: 2026-06-18
  *
  *
  * Copyright © 2026 LGS1920
@@ -46,14 +46,14 @@ export const StyleElement = ({id}) => {
     return (
         <WaButtonGroup size="s" className="lgs--text-widget-style-trigger">
             <WaButton
-                size="s"
+                size="xs"
                 variant={element?.weight === 'bold' ? 'brand' : 'default'}
                 onClick={toggleBold}
             >
                 <WaIcon variant="regular" name="bold"/>
             </WaButton>
             <WaButton
-                size="s"
+                size="xs"
                 variant={element?.style === 'italic' ? 'brand' : 'default'}
                 onClick={toggleItalic}
             >

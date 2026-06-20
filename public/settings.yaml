@@ -335,41 +335,9 @@ ui:
     defaultOpacity: 0.9
     opacity: 0.9   # 0.3 - 1
 
-  ## Flythrough
-  flythrough:
-    duration: 60
-    direction: 1
-    loop: false
-    scope: all-tracks
-    progression:
-      fill:
-        color: '#ff6a00'
-        opacity: 1
-        width: 2
-        profileMarker: 8
-      border:
-        color: '#ffffff'
-        opacity: 1
-        width: 0.75
-        profileMarker: 2
-    profileInfo:
-      color: '#ffffff'
-    trace:
-      mode: progressive
-      remaining:
-        useDefinedTrackStyle: true
-        color: '#6f7d8c'
-        opacity: 0.35
-    marker:
-      mode: trace
-    camera:
-      altitudeMode: constant
-      altitude: 1200
-      pitch: -65
-      hysteresis:
-        marginRatio: 0.2
-        easing: 0.14
-        stopThreshold: 0.00001
+  ## Profile
+  profile:
+    liveData: false
 
   ## JourneyToolbar
   journeyToolbar:

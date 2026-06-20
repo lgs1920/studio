@@ -18,15 +18,12 @@
 
 import { ToggleStateIcon }                                           from '@Components/ToggleStateIcon'
 import {
-    CURRENT_JOURNEY, FOCUS_ICON, ROTATION_ICON, UPDATE_JOURNEY_SILENTLY,
+    FOCUS_ICON, ROTATION_ICON, UPDATE_JOURNEY_SILENTLY,
 } from '@Core/constants'
 import {
     JourneySelector,
 } from '@Editor/journey/JourneySelector'
 import { Utils }                                                     from '@Editor/Utils'
-import {
-    FLYTHROUGH_MARKER_MODE_TRACE, normalizeFlythroughMarker,
-}                                                                 from '@Core/ui/flythrough/FlythroughProgressionStyle'
 import {
     FLYTHROUGH_JOURNEY_TOOLBAR_VISIBILITY_EVENT,
 }                                                                 from '@Core/ui/flythrough/FlythroughMode'
@@ -61,14 +58,16 @@ export const JourneyToolbar = (props) => {
     const editorStore = useSnapshot($editorStore)
 
     const autoRotate = useSnapshot(lgs.settings.ui.camera.start.rotate)
-    const flythroughSettings = useSnapshot(lgs.settings.ui.flythrough)
-    const rotationAllowedByFlythrough = normalizeFlythroughMarker(flythroughSettings.marker).mode === FLYTHROUGH_MARKER_MODE_TRACE
-    const flythroughRuntime = useSnapshot(lgs.stores.flythrough)
+    const flythroughState = useSnapshot(lgs.stores.flythrough)
+    const flythroughActive = flythroughState.active || flythroughState.playing || flythroughState.paused
+    const rotationAllowedByFlythrough = !flythroughActive && flythroughState.orbitAllowed !== false
+    const flythroughRuntime = flythroughState
     const [journeyToolbarTemporarilyHidden, setJourneyToolbarTemporarilyHidden] = useState(
         __.ui.flythrough?.isJourneyToolbarTemporarilyHidden?.() === true,
     )
     const rotationAllowed = useRef(false)
     const manualRotate = useRef(null)
+    const journeyOrbitActive = rotate.running
 
     const [isDragging, setIsDragging] = useState(false)
 
@@ -141,6 +140,7 @@ export const JourneyToolbar = (props) => {
         if (rotate.running) {
             rotationAllowed.current = false
             await stopRotate()
+            return
         }
         if (!rotationAllowedByFlythrough) {
             await focusOnJourney({rotate: false})
@@ -237,9 +237,9 @@ export const JourneyToolbar = (props) => {
                                     <>
                                         <WaTooltip for="rotate-journey-toolbar">
                                             {
-                                                rotate.running && rotate.target?.instanceOf?.(CURRENT_JOURNEY)
-                                                ? 'Stop rotation'
-                                                : 'Start rotation'
+                                                journeyOrbitActive
+                                                ? 'Stop orbit'
+                                                : 'Start orbit'
                                             }
                                         </WaTooltip>
 
@@ -252,7 +252,7 @@ export const JourneyToolbar = (props) => {
                                             disabled={!rotationAllowedByFlythrough && !rotate.running}
                                             size="s"
                                         >
-                                            {rotate.running && rotate.target?.instanceOf?.(CURRENT_JOURNEY)
+                                            {journeyOrbitActive
                                              ? (<WaSpinner size="s"/>)
                                              : (<WaIcon name={FOCUS_ICON} variant="regular"/>)
                                             }
@@ -260,8 +260,8 @@ export const JourneyToolbar = (props) => {
                                     </>
                                 }
                                     <WaTooltip for="focus-journey-toolbar">{
-                                        rotate.running && rotate.target?.instanceOf?.(CURRENT_JOURNEY)
-                                        ? 'Stop rotation'
+                                        journeyOrbitActive
+                                        ? 'Stop orbit'
                                         : 'Focus on journey'
                                     }
                                     </WaTooltip>
@@ -271,7 +271,7 @@ export const JourneyToolbar = (props) => {
                                         appearance="plain"
                                         onClick={maybeRotate}
                                     >
-                                        {rotate.running && rotate.target?.instanceOf?.(CURRENT_JOURNEY)
+                                        {journeyOrbitActive
                                         ? (<WaIcon name={ROTATION_ICON} variant="regular" animation="spin"/>)
                                         : (<WaIcon name={FOCUS_ICON} variant="regular"/>)
                                         }

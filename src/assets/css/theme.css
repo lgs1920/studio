@@ -88,7 +88,7 @@
     --lgs-toast-zindex: 2147483647;
     --lgs-drop-zone-zindex: 10;
     --lgs-context-menu-zindex: calc(var(--lgs-ui-layer-zindex) + 9000);
-    --lgs-video-recording-settings-toolbar-zindex: calc(var(--lgs-above-widgets) + 2);
+    --lgs-video-recording-settings-toolbar-zindex: calc(var(--lgs-context-menu-zindex) - 2);
     --lgs-video-recorder-toolbar-zindex: calc(var(--lgs-context-menu-zindex) + 1);
 
     /* Brand button tokens for filled, hover, outlined and plain states. */
@@ -1014,12 +1014,11 @@ wa-card.wa-theme-lgs1920-on-map::part(body) {
 }
 
 .lgs-scrollbars .view {
-    /* Ensures content doesn't touch the custom scrollbar thumb */
     overflow-x: hidden !important;
     overflow-y: scroll !important;
     box-sizing: content-box !important;
     /* Crucial: prevents ghost native bars on some browsers */
-    padding-right: 10px;
+    padding-right: 0;
     padding-bottom: var(--lgs-gutter-s);
 }
 
@@ -1079,6 +1078,12 @@ wa-card.wa-theme-lgs1920-on-map::part(body) {
     .lgs-scrollbars .view {
         scrollbar-width: none;
     }
+}
+
+.lgs-scrollbars .view::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+    display: none;
 }
 
 /* Specific context: when panel uses wa-theme-lgs1920-on-map */
@@ -1385,7 +1390,7 @@ wa-input.lgs--short-input[label-at-start], wa-number-input.lgs--short-input[labe
 
 :is([part~='form-control-label'], [part~='label']):has(:not(:empty)), :is([part~='form-control-label'], [part~='label']).has-label {
     font-size: var(--lgs-font-size) !important;
-    font-weight: normal !important;
+    font-weight: var(--wa-form-control-label-font-weight) !important;
     line-height: var(--wa-form-control-label-line-height);
     margin-block-end: 0 !important
 }
@@ -1402,7 +1407,7 @@ wa-input[label-at-start] label, wa-number-input[label-at-start] label {
     width: auto;
 }
 
-wa-input[label-at-start].half-width::part(base), wa-number-input[label-at-start].half-width::part(base) {
+wa-input[label-at-start].half-width::part(base), wa-number-input[label-at-start].half-width::part(base), wa-select[label-at-start].half-width::part(base) {
     width: 50% !important;
     margin-left: auto !important; }
 
@@ -1431,6 +1436,19 @@ wa-slider[label-at-start] {
     flex: 1;
     grid-template-columns: 50% 50%;
     gap: var(--lgs-gutter-s);
+}
+
+wa-slider[label-at-start].half-width,
+wa-slider[label-at-start][half-width] {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+
+wa-slider[label-at-start].half-width::part(label),
+wa-slider[label-at-start][half-width]::part(label),
+wa-slider[label-at-start].half-width::part(slider),
+wa-slider[label-at-start][half-width]::part(slider) {
+    min-width: 0;
+    width: 100%;
 }
 
 wa-slider[size="s"] {

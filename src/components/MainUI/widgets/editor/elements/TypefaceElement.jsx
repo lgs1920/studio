@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-05-10
- * Last modified: 2026-05-10
+ * Created on: 2026-06-18
+ * Last modified: 2026-06-18
  *
  *
  * Copyright © 2026 LGS1920
@@ -40,12 +40,11 @@ export const TypefaceElement = ({id}) => {
     }, [$element])
 
     return (
-        <WaSelect
+        <WaSelect appearance="filled"
             size="s"
             value={currentFont.replace(/\s/g, '_')}
             className="lgs--text-widget-typeface-trigger"
             onChange={handleFontChange}
-            style={{fontFamily: appliedFontStack, width: '10rem'}}
         >
             <WaIcon slot="start" variant="regular" name="text"/>
             {WIDGET_FONT_FAMILIES.map(font => (

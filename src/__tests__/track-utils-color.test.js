@@ -45,4 +45,30 @@ describe('TrackUtils css color normalization', () => {
         expect(image.src).toContain('data:image/svg+xml')
         expect(decodeURIComponent(image.src)).toContain('rgb(255,128,0)')
     })
+
+    it('skips unmatched data sources when restoring journey visibility', () => {
+        const journey = {
+            slug: 'journey#gpx',
+            tracks: new Map([
+                ['track#journey#gpx#main', {slug: 'track#journey#gpx#main', visible: true}],
+            ]),
+        }
+        const journeySource = {name: journey.slug, show: false}
+        const trackSource = {name: 'track#journey#gpx#main', show: false}
+        const straySource = {name: 'flythrough#journey#gpx#ghost', show: true}
+
+        globalThis.lgs = {
+            viewer: {
+                dataSources: {
+                    length: 3,
+                    get: index => [journeySource, trackSource, straySource][index] ?? null,
+                },
+            },
+        }
+
+        expect(() => TrackUtils.updateJourneyVisibility(journey, true)).not.toThrow()
+        expect(journeySource.show).toBe(true)
+        expect(trackSource.show).toBe(true)
+        expect(straySource.show).toBe(true)
+    })
 })

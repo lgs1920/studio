@@ -7,16 +7,16 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-05-10
- * Last modified: 2026-05-10
+ * Created on: 2026-06-07
+ * Last modified: 2026-06-07
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import {
-    BUILD, CONFIGURATION, COUNTRIES, FREE_ANONYMOUS_ACCESS, LAYERS_TERRAINS_SETTINGS, LGS_CONTEXT_MENU_HOOK, MILLIS,
-    platforms, SERVERS, SETTINGS, SETTINGS_STORE, VAULT_STORE, WIDGET_LAYER_TOP, WIDGETS,
+    BUILD, CONFIGURATION, COUNTRIES, FLYTHROUGH_SETTINGS, FREE_ANONYMOUS_ACCESS, LAYERS_TERRAINS_SETTINGS,
+    LGS_CONTEXT_MENU_HOOK, MILLIS, platforms, SERVERS, SETTINGS, SETTINGS_STORE, VAULT_STORE, WIDGET_LAYER_TOP, WIDGETS,
 }                                   from '@Core/constants'
 import { ElevationServer }          from '@Core/Elevation/ElevationServer'
 import { Settings }                 from '@Core/settings/Settings'
@@ -248,6 +248,15 @@ export class AppUtils {
             .then(text => YAML.parse(text),
             )
 
+        const flythrough = await fetch(FLYTHROUGH_SETTINGS, {cache: 'no-store'})
+            .then(res => res.text())
+            .then(text => YAML.parse(text),
+            )
+
+        const flythroughYamlSettings = flythrough?.flythrough ?? flythrough ?? {}
+
+        settings.ui = settings.ui ?? {}
+        settings.ui.flythrough = AppUtils.deepClone(flythroughYamlSettings)
 
         // add settings section
         settings.widgets = raw.widgets

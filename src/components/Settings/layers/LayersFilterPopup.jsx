@@ -187,7 +187,7 @@ export const LayersFilterPopup = () => {
                     </WaRadioGroup>
 
                     <WaTooltip for="lgs--layers-filter-by-countries">"By Countries"</WaTooltip>
-                    <WaSelect multiple with-clear
+                    <WaSelect appearance="filled" multiple with-clear
                               onChange={handleCountries} size="s"
                               id="lgs--layers-filter-by-countries"
                               value={layers.filter.byCountries ?? []}
@@ -210,7 +210,7 @@ export const LayersFilterPopup = () => {
                     </WaSelect>
 
                     <WaTooltip for="lgs--layers-filter-by-name">"By Layer Name"</WaTooltip>
-                    <WaInput placeholder="By name"
+                    <WaInput appearance="filled" placeholder="By name"
                              id="lgs--layers-filter-by-name"
                              onInput={handleName} size="s"
                              value={layers.filter.byName}

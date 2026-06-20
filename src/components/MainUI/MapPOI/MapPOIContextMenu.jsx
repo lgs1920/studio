@@ -131,8 +131,8 @@ export const MapPOIContextMenu = ({menuRef, targetId}) => {
         })
     }, [currentPoi, hideMenu])
 
-    /** Toggles camera rotation around the current POI. */
-    const toggleRotation = useCallback(async () => {
+    /** Toggles camera orbit around the current POI. */
+    const toggleOrbit = useCallback(async () => {
         await __.ui.poiManager.toggleRotationAroundPOI(thePOI)
         hideMenu()
     }, [hideMenu, thePOI])
@@ -156,6 +156,7 @@ export const MapPOIContextMenu = ({menuRef, targetId}) => {
             element: CURRENT_POI,
             slug:    currentPoi.slug ?? currentPoi.id,
         }
+        panorama.visible = true
         panorama.heading = lgs.stores.main.components.camera.position.heading ?? 0
         panorama.pitch = storedPanorama.pitch ?? DEFAULT_PANORAMA_PITCH
         panorama.heightOffset = storedPanorama.heightOffset ?? DEFAULT_PANORAMA_HEIGHT_OFFSET
@@ -217,7 +218,7 @@ export const MapPOIContextMenu = ({menuRef, targetId}) => {
         currentPoi?.type !== POI_FLAG_START &&
         currentPoi?.type !== POI_FLAG_STOP
     const canEdit = currentPoi?.type !== POI_TMP_TYPE
-    const showRotationItem = isPOIRotating || isPOIPanoramic
+    const showOrbitItem = isPOIRotating || isPOIPanoramic
     const latitudeLabel = useMemo(
         () => currentPoi?.latitude != null ? __.convert(currentPoi.latitude).to(coordinateSystem) : '',
         [coordinateSystem, currentPoi.latitude],
@@ -309,16 +310,16 @@ export const MapPOIContextMenu = ({menuRef, targetId}) => {
                     <WaIcon name="copy" variant="regular"/>{'Copy Coords'}
                 </li>
 
-                {/* Rotation / Panoramic Options */}
-                {showRotationItem ? (
-                    <li onClick={isPOIPanoramic ? stopPanoramic : toggleRotation}>
+                {/* Orbit / Panoramic Options */}
+                {showOrbitItem ? (
+                    <li onClick={isPOIPanoramic ? stopPanoramic : toggleOrbit}>
                         <WaIcon name={ROTATION_ICON} animation="spin" variant="regular"/>
-                        {isPOIPanoramic ? 'Stop Panorama' : 'Stop Rotation'}
+                        {isPOIPanoramic ? 'Stop Panorama' : 'Stop Orbit'}
                     </li>
                 ) : (
                      <>
-                         <li onClick={toggleRotation}>
-                             <WaIcon name={ROTATION_ICON} variant="regular"/>{'Rotate Around'}
+                         <li onClick={toggleOrbit}>
+                             <WaIcon name={ROTATION_ICON} variant="regular"/>{'Orbit'}
                          </li>
                          {panoramaAllowed && (
                              <li onClick={startPanoramic}>

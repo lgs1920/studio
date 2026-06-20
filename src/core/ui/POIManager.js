@@ -31,6 +31,8 @@ const METERS_PER_DEGREE_LATITUDE = 111_320
 const MIN_LONGITUDE_COSINE = 0.01
 const TRACK_LINE_STRING = 'LineString'
 const TRACK_MULTI_LINE_STRING = 'MultiLineString'
+const MIN_SEGMENT_RATIO = 0
+const MAX_SEGMENT_RATIO = 1
 
 const finiteNumber = value => {
     if (value === null || value === undefined || value === '') {
@@ -79,6 +81,34 @@ export const getJourneyReferencePoints = journey => Array.from(journey?.tracks?.
     .flatMap(segment => Array.isArray(segment) ? segment : [])
     .map(normalizeCoordinate)
     .filter(Boolean)
+
+export const getJourneyCoordinateSegments = journey => Array.from(journey?.tracks?.values?.() ?? [])
+    .flatMap(track => getTrackCoordinateSegments(track))
+    .map(segment => Array.isArray(segment) ? segment.map(normalizeCoordinate).filter(Boolean) : [])
+    .filter(segment => segment.length >= 2)
+
+const createExpandedBounds = (bounds, maxDistanceMeters) => {
+    if (!bounds) {
+        return null
+    }
+
+    const maxDistance = finiteNumber(maxDistanceMeters) ?? POI_JOURNEY_ASSOCIATION_DISTANCE
+    if (maxDistance <= 0) {
+        return bounds
+    }
+
+    const latitudeCenter = (bounds.north + bounds.south) / 2
+    const latitudeDelta = maxDistance / METERS_PER_DEGREE_LATITUDE
+    const longitudeCosine = Math.max(Math.abs(Math.cos(latitudeCenter * Math.PI / 180)), MIN_LONGITUDE_COSINE)
+    const longitudeDelta = maxDistance / (METERS_PER_DEGREE_LATITUDE * longitudeCosine)
+
+    return {
+        west:  bounds.west - longitudeDelta,
+        east:  bounds.east + longitudeDelta,
+        south: bounds.south - latitudeDelta,
+        north: bounds.north + latitudeDelta,
+    }
+}
 
 const getDistanceBoundingBox = (poi, maxDistanceMeters) => {
     const origin = normalizeCoordinate(poi)
@@ -174,6 +204,117 @@ export const findNearestJourneyPointDistance = ({
     return Number.isFinite(nearest) ? nearest : null
 }
 
+const segmentProjectionDistance = ({poi, start, end, cumulativeDistance = 0} = {}) => {
+    const origin = normalizeCoordinate(start)
+    const destination = normalizeCoordinate(end)
+    const point = normalizeCoordinate(poi)
+
+    if (!origin || !destination || !point) {
+        return null
+    }
+
+    const latitudeCosine = Math.max(
+        Math.abs(Math.cos(((origin.latitude + destination.latitude + point.latitude) / 3) * Math.PI / 180)),
+        MIN_LONGITUDE_COSINE,
+    )
+    const scaleX = METERS_PER_DEGREE_LATITUDE * latitudeCosine
+    const scaleY = METERS_PER_DEGREE_LATITUDE
+    const ax = 0
+    const ay = 0
+    const bx = (destination.longitude - origin.longitude) * scaleX
+    const by = (destination.latitude - origin.latitude) * scaleY
+    const px = (point.longitude - origin.longitude) * scaleX
+    const py = (point.latitude - origin.latitude) * scaleY
+    const segmentSquaredLength = bx * bx + by * by
+    const rawRatio = segmentSquaredLength > 0 ? ((px - ax) * (bx - ax) + (py - ay) * (by - ay)) / segmentSquaredLength : 0
+    const ratio = Math.min(MAX_SEGMENT_RATIO, Math.max(MIN_SEGMENT_RATIO, rawRatio))
+    const projectedX = ax + ratio * (bx - ax)
+    const projectedY = ay + ratio * (by - ay)
+    const dx = px - projectedX
+    const dy = py - projectedY
+    const distanceMeters = Math.hypot(dx, dy)
+    const projectedPoint = {
+        longitude: origin.longitude + ratio * (destination.longitude - origin.longitude),
+        latitude:  origin.latitude + ratio * (destination.latitude - origin.latitude),
+    }
+    const segmentLengthMeters = Cartesian3.distance(
+        Cartesian3.fromDegrees(origin.longitude, origin.latitude, 0),
+        Cartesian3.fromDegrees(destination.longitude, destination.latitude, 0),
+    )
+
+    return {
+        distanceMeters,
+        projectedPoint,
+        projectedAbscissa: cumulativeDistance + segmentLengthMeters * ratio,
+        segmentLengthMeters,
+        ratio,
+    }
+}
+
+export const findNearestJourneyProjection = ({
+                                                 poi,
+                                                 journey,
+                                                 maxDistanceMeters = POI_JOURNEY_ASSOCIATION_DISTANCE,
+                                                 segments = undefined,
+                                                 referenceBounds = undefined,
+                                             } = {}) => {
+    const point = normalizeCoordinate(poi)
+    const maxDistance = finiteNumber(maxDistanceMeters)
+    const hasDistanceThreshold = maxDistance !== null
+
+    if (!point) {
+        return null
+    }
+
+    const pointBox = hasDistanceThreshold ? getDistanceBoundingBox(point, maxDistance) : null
+    if (hasDistanceThreshold && !pointBox) {
+        return null
+    }
+
+    if (hasDistanceThreshold && referenceBounds && !boundingBoxesIntersect(referenceBounds, pointBox)) {
+        return null
+    }
+
+    const coordinateSegments = segments ?? getJourneyCoordinateSegments(journey)
+    let best = null
+    let cumulativeDistance = 0
+
+    for (const segment of coordinateSegments) {
+        if (!Array.isArray(segment) || segment.length < 2) {
+            continue
+        }
+
+        for (let index = 0; index < segment.length - 1; index += 1) {
+            const start = segment[index]
+            const end = segment[index + 1]
+            const projection = segmentProjectionDistance({
+                poi: point,
+                start,
+                end,
+                cumulativeDistance,
+            })
+
+            const segmentLengthMeters = projection?.segmentLengthMeters ?? 0
+
+            if (projection
+                && (!hasDistanceThreshold || projection.distanceMeters <= maxDistance)
+                && (!best || projection.distanceMeters < best.distanceMeters)) {
+                best = projection
+            }
+
+            cumulativeDistance += segmentLengthMeters
+        }
+    }
+
+    return best ? {
+        distance:           best.distanceMeters,
+        distanceMeters:     best.distanceMeters,
+        projectedPoint:     best.projectedPoint,
+        projectedAbscissa:  best.projectedAbscissa,
+        projectionRatio:    best.ratio,
+    } : null
+}
+
 export const focusablePOI = point => {
     const height = finiteNumber(point?.simulatedHeight) ?? finiteNumber(point?.height) ?? 0
 
@@ -195,6 +336,7 @@ export class POIManager {
 
     #journeyIndex = new Map()
     #journeyReferencePointCache = new Map()
+    #journeySegmentCache = new Map()
     #locationUpdatePromises = new Map()
 
     constructor() {
@@ -561,10 +703,31 @@ export class POIManager {
     clearJourneyReferencePointCache = (journeySlug = null) => {
         if (journeySlug) {
             this.#journeyReferencePointCache.delete(journeySlug)
+            this.#journeySegmentCache.delete(journeySlug)
             return
         }
 
         this.#journeyReferencePointCache.clear()
+        this.#journeySegmentCache.clear()
+    }
+
+    #getJourneySegmentData = journey => {
+        const tracks = Array.from(journey?.tracks?.values?.() ?? [])
+        const sources = tracks.map(track => track?.content?.geometry?.coordinates)
+        const cached = this.#journeySegmentCache.get(journey?.slug)
+
+        if (cached
+            && cached.sources.length === sources.length
+            && cached.sources.every((source, index) => source === sources[index])) {
+            return cached
+        }
+
+        const segments = getJourneyCoordinateSegments(journey)
+        const points = segments.flatMap(segment => segment)
+        const bounds = createExpandedBounds(boundsFromPoints(points), 0)
+        const data = {sources, segments, bounds}
+        this.#journeySegmentCache.set(journey?.slug, data)
+        return data
     }
 
     getNearbyJourneysForPOI = (poi, maxDistanceMeters = this.journeyAssociationDistance) => {
@@ -599,6 +762,104 @@ export class POIManager {
                 return matches
             }, [])
             .sort((a, b) => a.distance - b.distance || a.journey.title.localeCompare(b.journey.title))
+    }
+
+    isPOIAssociatedWithJourney = (poi, journey) => {
+        if (!poi || !journey?.slug) {
+            return false
+        }
+
+        if (!poi.parent) {
+            return false
+        }
+
+        if (poi.parent === journey.slug) {
+            return true
+        }
+
+        if (journey.tracks?.has?.(poi.parent)) {
+            return true
+        }
+
+        return lgs.getJourneyByTrackSlug?.(poi.parent)?.slug === journey.slug
+    }
+
+    getFlythroughPOIsForJourney = (journey, maxDistanceMeters = this.journeyAssociationDistance) => {
+        const maxDistance = finiteNumber(maxDistanceMeters) ?? POI_JOURNEY_ASSOCIATION_DISTANCE
+        if (!journey?.slug || maxDistance <= 0) {
+            return []
+        }
+
+        const segmentData = this.#getJourneySegmentData(journey)
+        if (!segmentData?.bounds) {
+            return []
+        }
+
+        const candidateBounds = createExpandedBounds(segmentData.bounds, maxDistance)
+        const allPois = Array.from(this.list.values())
+        const matches = new Map()
+
+        for (const poi of allPois) {
+            const normalizedPoi = normalizeCoordinate(poi)
+            if (!normalizedPoi || poi.visible === false) {
+                continue
+            }
+
+            const associated = this.isPOIAssociatedWithJourney(poi, journey)
+            const isGlobal = !poi.parent || poi.parent === GLOBAL_PARENT
+            if (!associated && !isGlobal) {
+                continue
+            }
+
+            if (!associated && !isPointInsideBoundingBox(normalizedPoi, candidateBounds)) {
+                continue
+            }
+
+            const projection = findNearestJourneyProjection({
+                poi,
+                journey,
+                maxDistanceMeters: maxDistance,
+                segments:          segmentData.segments,
+                referenceBounds:   candidateBounds,
+            })
+
+            const effectiveProjection = associated && !projection
+                ? findNearestJourneyProjection({
+                    poi,
+                    journey,
+                    maxDistanceMeters: null,
+                    segments:          segmentData.segments,
+                })
+                : projection
+
+            if (!associated && !effectiveProjection) {
+                continue
+            }
+
+            matches.set(poi.id, {
+                poi,
+                distanceToJourneyMeters: effectiveProjection?.distanceMeters ?? null,
+                projectedPoint:          effectiveProjection?.projectedPoint ?? null,
+                projectedAbscissa:       effectiveProjection?.projectedAbscissa ?? Number.POSITIVE_INFINITY,
+                source:                  associated ? 'journey-poi' : 'global-near-journey',
+            })
+        }
+
+        return Array.from(matches.values())
+            .sort((first, second) => {
+                const byAbscissa = (first.projectedAbscissa ?? Number.POSITIVE_INFINITY) - (second.projectedAbscissa ?? Number.POSITIVE_INFINITY)
+                if (byAbscissa !== 0) {
+                    return byAbscissa
+                }
+
+                const byDistance = (first.distanceToJourneyMeters ?? Number.POSITIVE_INFINITY)
+                                   - (second.distanceToJourneyMeters ?? Number.POSITIVE_INFINITY)
+                if (byDistance !== 0) {
+                    return byDistance
+                }
+
+                return String(first.poi?.title ?? '').localeCompare(String(second.poi?.title ?? ''))
+            })
     }
 
     getPointFromGeoJson = async (json, simulate = false) => {

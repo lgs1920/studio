@@ -64,7 +64,7 @@ export const MapPOICategorySelector = ({point: current, props}) => {
     return (
         <>
             {pois.current && current &&
-                <WaSelect label={'Category'} value={current.category} size={props?.size ?? 'small'}
+                <WaSelect appearance="filled" label={'Category'} value={current.category} size={props?.size ?? 'small'}
                           className="map-poi-category-selector"
                           style={duotoneVars}
                           onChange={handleCategory}>

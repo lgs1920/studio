@@ -144,11 +144,13 @@ const FlythroughTooltip = ({targetId, children}) => {
     )
 }
 
-export const FlythroughProgressBar = memo(({showSettings = false, className = ''}) => {
+export const FlythroughProgressBar = memo(({showSettings = false, showActions = true, disabled = false, className = ''}) => {
     const flythrough = useSnapshot(lgs.stores.flythrough)
     const {current: unitSystem} = useSnapshot(lgs.settings.unitSystem)
     const {drawers: {open: openDrawer}} = useSnapshot(lgs.stores.ui)
     const idPrefix = useMemo(() => `flythrough-progress-${uuid()}`, [])
+    const isUiHidden = flythrough.mainUiHidden === true
+    const isClipSequenceActive = flythrough.clipSequenceActive === true
     const hasPlaybackSample = Boolean((flythrough.active || flythrough.playing || flythrough.paused) && flythrough.sample)
     const progress = hasPlaybackSample ? clampProgress(flythrough.progress) : 0
     const direction = Number(flythrough.direction) < 0 ? -1 : 1
@@ -192,6 +194,7 @@ export const FlythroughProgressBar = memo(({showSettings = false, className = ''
     const percentLabel = hasPlaybackSample ? `${(playbackProgress * 100).toFixed(0)}%` : `${PLACEHOLDER_VALUE}%`
     const playing = flythrough.playing
     const paused = flythrough.paused
+    const showPauseAction = playing || (isClipSequenceActive && !paused)
     const playLabel = paused ? `Resume ${FLYTHROUGH_LABEL}` : `Start ${FLYTHROUGH_LABEL}`
     const pauseLabel = `Pause ${FLYTHROUGH_LABEL}`
     const stopLabel = `Stop ${FLYTHROUGH_LABEL}`
@@ -230,55 +233,59 @@ export const FlythroughProgressBar = memo(({showSettings = false, className = ''
                 <span className="flythrough-progress-segment flythrough-progress-time">{timeLabel}</span>}
             <span className="flythrough-progress-segment flythrough-progress-distance">{distanceLabel}</span>
             <span className="flythrough-progress-segment flythrough-progress-percent">{percentLabel}</span>
-            <span className="flythrough-progress-segment flythrough-progress-actions">
-                {playing ? (
-                    <>
-                        <FlythroughTooltip targetId={`${idPrefix}-pause`}>{pauseLabel}</FlythroughTooltip>
-                        <WaButton
-                            id={`${idPrefix}-pause`}
-                            className="flythrough-progress-action"
-                            appearance="plain"
-                            variant="brand"
-                            size="s"
-                            title={pauseLabel}
-                            aria-label={pauseLabel}
-                            onClick={pause}
-                        >
-                            <WaIcon name="pause" variant="regular"/>
-                        </WaButton>
-                    </>
-                ) : (
-                     <>
-                         <FlythroughTooltip targetId={`${idPrefix}-play`}>{playLabel}</FlythroughTooltip>
-                         <WaButton
-                             id={`${idPrefix}-play`}
-                             className="flythrough-progress-action"
-                             appearance="plain"
-                             variant="brand"
-                             size="s"
-                             title={playLabel}
-                             aria-label={playLabel}
-                             onClick={playOrResume}
-                         >
-                             <WaIcon name="play" variant="regular"/>
-                         </WaButton>
-                     </>
-                 )}
-                <FlythroughTooltip targetId={`${idPrefix}-stop`}>{stopLabel}</FlythroughTooltip>
-                <WaButton
-                    id={`${idPrefix}-stop`}
-                    className="flythrough-progress-action"
-                    appearance="plain"
-                    variant="brand"
-                    size="s"
-                    title={stopLabel}
-                    aria-label={stopLabel}
-                    onClick={stop}
-                >
-                    <WaIcon name="stop" variant="regular"/>
-                </WaButton>
-            </span>
-            {showSettings &&
+            {showActions &&
+                <span className="flythrough-progress-segment flythrough-progress-actions">
+                    {showPauseAction ? (
+                        <>
+                            <FlythroughTooltip targetId={`${idPrefix}-pause`}>{pauseLabel}</FlythroughTooltip>
+                            <WaButton
+                                id={`${idPrefix}-pause`}
+                                className="flythrough-progress-action"
+                                appearance="plain"
+                                variant="brand"
+                                size="s"
+                                title={pauseLabel}
+                                aria-label={pauseLabel}
+                                onClick={pause}
+                                disabled={disabled}
+                            >
+                                <WaIcon name="pause" variant="regular"/>
+                            </WaButton>
+                        </>
+                    ) : (
+                         <>
+                             <FlythroughTooltip targetId={`${idPrefix}-play`}>{playLabel}</FlythroughTooltip>
+                             <WaButton
+                                 id={`${idPrefix}-play`}
+                                 className="flythrough-progress-action"
+                                 appearance="plain"
+                                 variant="brand"
+                                 size="s"
+                                 title={playLabel}
+                                 aria-label={playLabel}
+                                 onClick={playOrResume}
+                                 disabled={disabled}
+                             >
+                                 <WaIcon name="play" variant="regular"/>
+                             </WaButton>
+                         </>
+                     )}
+                    <FlythroughTooltip targetId={`${idPrefix}-stop`}>{stopLabel}</FlythroughTooltip>
+                    <WaButton
+                        id={`${idPrefix}-stop`}
+                        className="flythrough-progress-action"
+                        appearance="plain"
+                        variant="brand"
+                        size="s"
+                        title={stopLabel}
+                        aria-label={stopLabel}
+                        onClick={stop}
+                        disabled={disabled}
+                    >
+                        <WaIcon name="stop" variant="regular"/>
+                    </WaButton>
+                </span>}
+            {showSettings && !isUiHidden &&
                 <span className="flythrough-progress-settings">
                     <FlythroughTooltip targetId={`${idPrefix}-settings`}>{settingsLabel}</FlythroughTooltip>
                     <WaButton
@@ -290,6 +297,7 @@ export const FlythroughProgressBar = memo(({showSettings = false, className = ''
                         title={settingsLabel}
                         aria-label={settingsLabel}
                         onClick={toggleSettings}
+                        disabled={disabled}
                     >
                         <WaIcon name="sliders" variant="regular"/>
                     </WaButton>

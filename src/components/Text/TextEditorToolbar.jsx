@@ -231,7 +231,7 @@ export const TextEditorToolbar = ({id, fonts = false, color = true, align = true
                 <>
                     <div className="drawer-horizontal-element">
 
-                        <WaSelect
+                        <WaSelect appearance="filled"
                             size="s"
                             value={currentFont.replace(/\s/g, '_')}
                             onChange={handleFontChange}
@@ -250,10 +250,11 @@ export const TextEditorToolbar = ({id, fonts = false, color = true, align = true
                         </WaSelect>
                     </div>
                     <div className="drawer-horizontal-element">
-                        <WaSelect
+                        <WaSelect appearance="filled"
                             hoist
+                            placement="bottom"
                             size="s"
-                            value={element?.lineHeight ?? '1'}
+                            value={String(element?.lineHeight ?? '1')}
                             onChange={handleLineHeightChange}
                             style={{width: '8rem'}}
                         >
@@ -269,7 +270,7 @@ export const TextEditorToolbar = ({id, fonts = false, color = true, align = true
                         </WaSelect>
                     </div>
                     <div className="drawer-horizontal-element">
-                        <WaInput
+                        <WaInput appearance="filled"
                             size="s"
                             type="number"
                             min="8"

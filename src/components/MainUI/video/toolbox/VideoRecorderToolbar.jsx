@@ -17,10 +17,11 @@
 /*******************************************************************************
  * VideoRecorderToolbar.jsx - Displays video recording controls and stats
  ******************************************************************************/
+import { FlythroughProgressBar } from '@Components/Flythrough/FlythroughProgressBar'
 import { VIDEO_WIDGETS_BOARD } from '@Core/constants'
 import { ScreenMediaRecorder } from '@Core/ui/screen-media-recorder/recorder/ScreenMediaRecorder'
 import { UIToast }                          from '@Utils/UIToast'
-import { UnitUtils }                        from '@Utils/UnitUtils'
+import { DISTANCE_UNITS, km, UnitUtils }    from '@Utils/UnitUtils'
 import { WaButton, WaCard, WaIcon, WaTooltip } from '@web.awesome.me/webawesome-pro/dist/react'
 import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import { useSnapshot }                      from 'valtio'
@@ -80,17 +81,90 @@ const RecorderControls = memo(({recording, paused, recorder, starting, onFinaliz
     )
 })
 
+const clampProgress = value => Math.max(0, Math.min(1, Number(value) || 0))
+const finiteNumber = value => {
+    const numeric = Number(value)
+    return Number.isFinite(numeric) ? numeric : null
+}
+
+const formatMinutes = minutes => {
+    const safeMinutes = Math.max(0, Number.isFinite(minutes) ? minutes : 0)
+    const hours = Math.floor(safeMinutes / 60)
+    const remainingMinutes = String(safeMinutes % 60).padStart(2, '0')
+    return `${String(hours).padStart(2, '0')}:${remainingMinutes}`
+}
+
+const formatElapsedHoursMinutes = (elapsedMillis, totalMillis) => {
+    const safeTotalMillis = Math.max(0, finiteNumber(totalMillis) ?? 0)
+    if (safeTotalMillis <= 0) {
+        return null
+    }
+
+    const totalMinutes = Math.max(1, Math.ceil(safeTotalMillis / 60000))
+    const elapsedMinutes = Math.min(
+        totalMinutes,
+        Math.max(0, Math.round(Math.max(0, finiteNumber(elapsedMillis) ?? 0) / 60000)),
+    )
+
+    return formatMinutes(elapsedMinutes)
+}
+
+const formatDistance = (value, unit) => (UnitUtils.convert(value ?? 0).to(unit) ?? 0).toFixed(1)
+
+const playbackProgressFromSample = ({sample, totalDistance, direction, fallback}) => {
+    const sampleProgress = finiteNumber(sample?.progress)
+    const total = finiteNumber(totalDistance)
+    const coveredDistance = direction < 0
+                            ? finiteNumber(sample?.remainingDistance)
+                            : finiteNumber(sample?.distanceFromStart)
+
+    if (total !== null && total > 0 && coveredDistance !== null) {
+        return clampProgress(coveredDistance / total)
+    }
+
+    if (sampleProgress !== null) {
+        return clampProgress(direction < 0 ? 1 - sampleProgress : sampleProgress)
+    }
+
+    return fallback
+}
+
 /**
  * VideoRecorderToolbar component
  */
 export const VideoRecorderToolbar = ({toolbar}) => {
     const $video = lgs.stores.ui.video
+    const flythrough = useSnapshot(lgs.stores.flythrough)
+    const {current: unitSystem} = useSnapshot(lgs.settings.unitSystem)
     const video = useSnapshot($video)
+    const syncWithFlythrough = flythrough.recordingSync === true
+    const isMobile = __.device?.isMobile === true
+    const hasPlaybackSample = Boolean((flythrough.active || flythrough.playing || flythrough.paused) && flythrough.sample)
+    const direction = Number(flythrough.direction) < 0 ? -1 : 1
+    const totalMillis = finiteNumber(flythrough.durationMillis)
+    const elapsedMillis = finiteNumber(flythrough.elapsedMillis)
+    const totalDistance = hasPlaybackSample ? flythrough.totalDistance ?? 0 : 0
+    const distanceUnit = DISTANCE_UNITS[unitSystem] ?? km
+    const progress = hasPlaybackSample ? clampProgress(flythrough.progress) : 0
+    const playbackProgress = playbackProgressFromSample({
+        sample: hasPlaybackSample ? flythrough.sample : null,
+        totalDistance,
+        direction,
+        fallback: direction < 0 ? 1 - progress : progress,
+    })
+    const timeLabel = hasPlaybackSample && totalMillis !== null && totalMillis > 0 && elapsedMillis !== null
+                      ? formatElapsedHoursMinutes(elapsedMillis, totalMillis)
+                      : null
+    const coveredDistance = hasPlaybackSample && flythrough.sample
+                            ? (direction < 0 ? flythrough.sample.remainingDistance : flythrough.sample.distanceFromStart)
+                            : totalDistance * playbackProgress
+    const distanceLabel = hasPlaybackSample
+                          ? `${formatDistance(coveredDistance, distanceUnit)} ${distanceUnit}`
+                          : null
 
     const [state, setState] = useState({
                                            recordedDuration: 0,
                                            recordedSize: 0,
-                                           currentFps: 0,
                                            finalizing:   false,
                                        })
 
@@ -112,13 +186,6 @@ export const VideoRecorderToolbar = ({toolbar}) => {
      */
     const formatSize = useCallback((bytes) => {
         return UnitUtils.convert(bytes).toBytesUnit()
-    }, [])
-
-    const formatCurrentFps = useCallback((fps) => {
-        if (!Number.isFinite(fps) || fps <= 0) {
-            return '-- fps'
-        }
-        return `${Math.round(fps)} fps`
     }, [])
 
     /**
@@ -149,7 +216,6 @@ export const VideoRecorderToolbar = ({toolbar}) => {
                 ...prev,
                 recordedSize:     event.detail.size,
                 recordedDuration: event.detail.duration,
-                currentFps: event.detail.currentFps ?? 0,
             }))
         }
 
@@ -190,7 +256,6 @@ export const VideoRecorderToolbar = ({toolbar}) => {
         }
 
         const handleStop = (event) => {
-            __.ui.flythroughVideoSync?.stopFlythrough?.()
             if (__.recorder?.isRecording() || $video.paused) {
                 __.recorder.stopVideo()
             }
@@ -205,7 +270,6 @@ export const VideoRecorderToolbar = ({toolbar}) => {
                             size:         0,
                             recordedDuration: 0,
                             recordedSize: 0,
-                            currentFps: 0,
                             finalizing:   false,
                         })
 
@@ -253,7 +317,6 @@ export const VideoRecorderToolbar = ({toolbar}) => {
     }, [updateState, showToast, video.maxSize, video.maxDuration, $video])
 
     const handleCancel = useCallback(async () => {
-        __.ui.flythroughVideoSync?.stopFlythrough?.()
         if (__.recorder) {
             await __.recorder.cancelVideo()
         }
@@ -265,7 +328,6 @@ export const VideoRecorderToolbar = ({toolbar}) => {
                         editing:      true,
                         recordedDuration: 0,
                         recordedSize: 0,
-                        currentFps: 0,
                         finalizing:   false,
                     })
         showToast('warning', 'Recording has been canceled!')
@@ -285,7 +347,21 @@ export const VideoRecorderToolbar = ({toolbar}) => {
             />
             <span className="duration">{formatDuration(state.recordedDuration)}</span>
             <span className="size">{formatSize(state.recordedSize)}</span>
-            <span className="current-fps">{formatCurrentFps(state.currentFps)}</span>
+            {syncWithFlythrough && (
+                isMobile ? (
+                    <>
+                        {timeLabel && <span className="video-recorder-flythrough-time">{timeLabel}</span>}
+                        {distanceLabel && <span className="video-recorder-flythrough-distance">{distanceLabel}</span>}
+                    </>
+                ) : (
+                    <FlythroughProgressBar
+                        className="video-recorder-flythrough-progress"
+                        showActions={false}
+                        showSettings={false}
+                        disabled={video.preRecording}
+                    />
+                )
+            )}
             {video.preRecording ? (
                 <div className="blinking">Starting...</div>
             ) : state.finalizing ? (

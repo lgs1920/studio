@@ -345,6 +345,76 @@ export class WidgetCoreRegistry {
      */
     getRatio = ratio => lgs.configuration.videoFormats.find(p => p.value === ratio)
 
+    #getRatioValue = ratio => ratio?.value ?? ratio ?? null
+
+    #resolveRatioConfig = ratio => {
+        if (!ratio) {
+            return null
+        }
+
+        if (typeof ratio === 'object') {
+            const aspectRatio = Number(ratio.aspectRatio)
+            if (Number.isFinite(aspectRatio) && aspectRatio > 0) {
+                return {
+                    ...ratio,
+                    aspectRatio,
+                }
+            }
+
+            const preset = this.getRatio(ratio.value ?? ratio)
+            if (preset) {
+                return preset
+            }
+
+            return null
+        }
+
+        return this.getRatio(ratio)
+    }
+
+    #applyRatioToConfig = (config, ratio, resizeToRatio = false) => {
+        if (!config || !ratio) {
+            return
+        }
+
+        config.ratio = ratio
+
+        if (
+            !resizeToRatio ||
+            !ratio.locked ||
+            !Number.isFinite(ratio.aspectRatio) ||
+            ratio.aspectRatio <= 0 ||
+            !Number.isFinite(config.dimensions?.width) ||
+            !Number.isFinite(config.dimensions?.height) ||
+            config.dimensions.width <= 0 ||
+            config.dimensions.height <= 0 ||
+            !Number.isFinite(config.position?.left) ||
+            !Number.isFinite(config.position?.top)
+        ) {
+            return
+        }
+
+        const centerX = config.position.left + (config.dimensions.width / 2)
+        const centerY = config.position.top + (config.dimensions.height / 2)
+        const nextDimensions = {
+            width:  config.dimensions.height * ratio.aspectRatio,
+            height: config.dimensions.height,
+        }
+
+        config.dimensions = nextDimensions
+        config.position = {
+            left: centerX - (nextDimensions.width / 2),
+            top:  centerY - (nextDimensions.height / 2),
+        }
+        config.cropDimensions = {
+            ...config.cropDimensions,
+            left:   config.position.left,
+            top:    config.position.top,
+            width:  nextDimensions.width,
+            height: nextDimensions.height,
+        }
+    }
+
     /**
      * Retrieves or creates widget configuration for an element, including saved positions from browser DB.
      * Calculates absolute positioning based on invariant center ratios to handle rotation/scale.
@@ -369,10 +439,10 @@ export class WidgetCoreRegistry {
                                 ? initialConfig.position
                                 : 'top-left')
 
-            let ratio = initialConfig.ratio ?? '1x1'
-            if (initialConfig.type === LGS_VISUAL_WIDGET) {
-                ratio = lgs.configuration.widgetRatio
-            }
+            const fallbackRatio = initialConfig.type === LGS_VISUAL_WIDGET
+                                  ? lgs.configuration.widgetRatio
+                                  : '1x1'
+            const ratio = this.#resolveRatioConfig(initialConfig.ratio) ?? this.#resolveRatioConfig(fallbackRatio)
 
             config = {
                 animationWhenDragging:  initialConfig.animationWhenDragging ?? false,
@@ -411,7 +481,7 @@ export class WidgetCoreRegistry {
                 persist:                initialConfig.persist ?? null,
                 position:               {left: 0, top: 0},
                 previousCropDimensions: null,
-                ratio:                  this.getRatio(ratio),
+                ratio:                  ratio,
                 resizeFromCenter:       initialConfig.resizeFromCenter ?? false,
                 rotate:                 initialConfig.rotate ?? 0,
                 runtimeReady:           false,
@@ -465,6 +535,20 @@ export class WidgetCoreRegistry {
             config.runtimeReady === true &&
             (config.widgetsBoard ?? null) === requestedWidgetsBoard
         config.fromRuntime = canReuseRuntimeConfig
+
+        if (hasRuntimeConfig) {
+            const requestedRatioValue = this.#getRatioValue(initialConfig.ratio)
+            const defaultRatioValue = this.#getRatioValue(lgs.configuration.widgetRatio)
+            const currentRatioValue = this.#getRatioValue(config.ratio)
+            const shouldUseRequestedRuntimeRatio = requestedRatioValue &&
+                requestedRatioValue !== currentRatioValue &&
+                (!currentRatioValue || currentRatioValue === defaultRatioValue)
+            const requestedRatio = shouldUseRequestedRuntimeRatio ? this.#resolveRatioConfig(initialConfig.ratio) : null
+
+            if (requestedRatio) {
+                this.#applyRatioToConfig(config, requestedRatio, true)
+            }
+        }
 
         if (config.persist && !canReuseRuntimeConfig) {
             const savedWidget = await __.ui.widgetManager.getWidgetPosition(elementId)
@@ -531,10 +615,18 @@ export class WidgetCoreRegistry {
                 config.icon = initialConfig.icon ?? savedWidget.icon ?? config.icon
                 config.scale = savedWidget.scale || {x: 1, y: 1}
                 config.rotate = savedWidget.rotate || 0
-                const savedRatioValue = savedWidget.ratio?.value ?? savedWidget.ratio
-                const resolvedSavedRatio = this.getRatio(savedRatioValue)
-                if (resolvedSavedRatio) {
-                    config.ratio = resolvedSavedRatio
+                const requestedRatioValue = this.#getRatioValue(initialConfig.ratio)
+                const defaultRatioValue = this.#getRatioValue(lgs.configuration.widgetRatio)
+                const savedRatioValue = this.#getRatioValue(savedWidget.ratio)
+                const shouldUseRequestedRatio = requestedRatioValue &&
+                    requestedRatioValue !== savedRatioValue &&
+                    (!savedRatioValue || savedRatioValue === defaultRatioValue)
+                const resolvedSavedRatio = this.#resolveRatioConfig(savedWidget.ratio)
+                const resolvedRatio = shouldUseRequestedRatio
+                                      ? this.#resolveRatioConfig(initialConfig.ratio)
+                                      : resolvedSavedRatio
+                if (resolvedRatio) {
+                    this.#applyRatioToConfig(config, resolvedRatio, shouldUseRequestedRatio)
                 }
                 config.attachTo = savedWidget.attachTo || config.attachTo || 'center'
                 // Prefer initialConfig.zIndex if explicitly provided (for newly added widgets)
@@ -646,7 +738,37 @@ export class WidgetCoreRegistry {
         const fallbackTopRatio = config.savedRatios?.topRatio
         const leftRatio = Number.isFinite(computedLeftRatio) ? computedLeftRatio : (Number.isFinite(fallbackLeftRatio) ? fallbackLeftRatio : 0)
         const topRatio = Number.isFinite(computedTopRatio) ? computedTopRatio : (Number.isFinite(fallbackTopRatio) ? fallbackTopRatio : 0)
-        const $scale = config.scale || {x: 1, y: 1}
+        const scale = config.scale
+                     ? {
+                         x: Number.isFinite(Number(config.scale.x)) ? Number(config.scale.x) : 1,
+                         y: Number.isFinite(Number(config.scale.y)) ? Number(config.scale.y) : 1,
+                     }
+                     : {x: 1, y: 1}
+        const ratio = config.ratio
+                      ? {
+                          value: config.ratio.value ?? null,
+                          aspectRatio: Number.isFinite(Number(config.ratio.aspectRatio))
+                                       ? Number(config.ratio.aspectRatio)
+                                       : null,
+                          locked: Boolean(config.ratio.locked),
+                      }
+                      : null
+        const expandedDimensions = config.expandedDimensions
+                                   ? {
+                                       width: Number.isFinite(Number(config.expandedDimensions.width))
+                                              ? Number(config.expandedDimensions.width)
+                                              : config.expandedDimensions.width ?? null,
+                                       height: Number.isFinite(Number(config.expandedDimensions.height))
+                                               ? Number(config.expandedDimensions.height)
+                                               : config.expandedDimensions.height ?? null,
+                                   }
+                                   : null
+        const expandedInlineDimensions = config.expandedInlineDimensions
+                                         ? {
+                                             width: config.expandedInlineDimensions.width ?? null,
+                                             height: config.expandedInlineDimensions.height ?? null,
+                                         }
+                                         : null
         config.savedRatios = {leftRatio, topRatio}
 
         return {
@@ -659,16 +781,16 @@ export class WidgetCoreRegistry {
             topRatio:  topRatio,
             width:  width,
             height: height,
-            scale:     $scale,
+            scale:     scale,
             rotate:       config.rotate || 0,
-            ratio:        config.ratio,
+            ratio:        ratio,
             attachTo:  config.attachTo || 'center',
             zIndex: config.zIndex || 0,
             positionReference: config.widgetsBoard && config.widgetsBoard !== SCENE_WIDGETS_BOARD ? 'board' : 'scene',
             collapsed:          Boolean(config.collapsed),
             locked:             Boolean(config.locked),
-            expandedDimensions: config.expandedDimensions ?? null,
-            expandedInlineDimensions: config.expandedInlineDimensions ?? null,
+            expandedDimensions: expandedDimensions,
+            expandedInlineDimensions: expandedInlineDimensions,
             icon:               config.icon ?? null,
         }
     }

@@ -7,16 +7,16 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-05-05
- * Last modified: 2026-05-05
+ * Created on: 2026-06-18
+ * Last modified: 2026-06-18
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { StoresManager }              from '@Core/stores/StoresManager'
 import { editorSettings }             from '@Core/stores/editorSettings'
 import { main }                       from '@Core/stores/main'
+import { StoresManager }              from '@Core/stores/StoresManager'
 import { theJourneyEditor }           from '@Core/stores/theJourneyEditor'
 import { ui }                         from '@Core/stores/ui'
 import fs                             from 'node:fs'
@@ -190,6 +190,8 @@ describe('Valtio static guardrails', () => {
             'src/Utils/ValtioUtils.js':                           2,
             'src/components/AppUpdate.jsx':                       1,
             'src/components/MainUI/CameraTarget.jsx':             1,
+            'src/components/MainUI/MapPOI/MapPOIContent.jsx': 1,
+            'src/components/cesium/MapPOI.jsx':               1,
             'src/components/MainUI/MapPOI/MapPOIContextMenu.jsx': 1,
             'src/components/MainUI/MapPOI/MapPOIEditContent.jsx': 1,
             'src/components/MainUI/MapPOI/MapPOIEditMenu.jsx':    1,

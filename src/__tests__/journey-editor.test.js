@@ -120,6 +120,9 @@ describe('journey editor switching', () => {
                     isRotating: vi.fn(() => true),
                     stopRotate,
                 },
+                poiManager: {
+                    stopRotationAndSync: vi.fn(async () => undefined),
+                },
                 drawerManager: {
                     consumeSuppressFocusOnOpen: vi.fn(() => false),
                 },
@@ -131,7 +134,8 @@ describe('journey editor switching', () => {
 
         await Utils.updateJourneyEditor('journey-new', {focus: true, rotate: false})
 
-        expect(callOrder).toEqual(['stop:journey-old'])
+        expect(globalThis.__.ui.poiManager.stopRotationAndSync).toHaveBeenCalledTimes(1)
+        expect(callOrder).toEqual([])
         expect(lgs.stores.ui.mainUI.rotate.target).toBeNull()
         expect(lgs.theJourney).toBe(newJourney)
         expect(newJourney.focus).toHaveBeenCalledTimes(1)

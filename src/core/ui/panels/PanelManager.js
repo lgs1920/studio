@@ -14,7 +14,7 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { ui } from '@Stores/ui'
+import { ui } from '../../stores/ui.js'
 
 /**
  * Manages the state and interactions of drawers within the application.
@@ -37,11 +37,22 @@ export class PanelManager {
     #tabs = new Map()
 
     /**
+     * Session state for drawers, keyed by drawer id and then by UI group key.
+     * @private
+     * @type {Map<string, {tabs: Map<string, string>, details: Map<string, boolean>}>}
+     */
+    #drawerUiState = new Map()
+
+    /**
      * Stack history to manage stacked drawers.
      * @private
      * @type {Array<Object>}
      */
     #stack = []
+
+    #drawerAfterShowAttached = new WeakSet()
+    #tabGroupAttached = new WeakSet()
+    #detailsAttached = new WeakSet()
 
     /**
      * Creates a new instance of PanelManager or returns the existing instance.
@@ -91,6 +102,231 @@ export class PanelManager {
      */
     set tab(tab) {
         this.#tabs.set(this.drawers.open, tab)
+    }
+
+    #getDrawerState = (drawerId) => {
+        if (!this.#drawerUiState.has(drawerId)) {
+            this.#drawerUiState.set(drawerId, {
+                tabs:    new Map(),
+                details: new Map(),
+            })
+        }
+
+        return this.#drawerUiState.get(drawerId)
+    }
+
+    #getDrawerElement = (drawerId) => {
+        if (!drawerId || typeof document === 'undefined') {
+            return null
+        }
+
+        return document.querySelector(`wa-drawer[id="${drawerId}"]`)
+    }
+
+    #getGroupKey = (element, selector, fallbackPrefix) => {
+        if (!element) {
+            return `${fallbackPrefix}:0`
+        }
+
+        const explicitKey = element.getAttribute?.('data-ui-state-key')
+                         ?? element.id
+                         ?? element.getAttribute?.('name')
+
+        if (explicitKey) {
+            return explicitKey
+        }
+
+        const drawer = element.closest?.('wa-drawer')
+        const siblings = drawer ? Array.from(drawer.querySelectorAll(selector)) : []
+        const index = siblings.indexOf(element)
+
+        return `${fallbackPrefix}:${index >= 0 ? index : 0}`
+    }
+
+    #snapshotDrawerUiState = (drawer) => {
+        if (!drawer?.id) {
+            return
+        }
+
+        const drawerId = drawer.id
+        const state = this.#getDrawerState(drawerId)
+        const tabGroups = Array.from(drawer.querySelectorAll('wa-tab-group'))
+        const detailsGroups = Array.from(drawer.querySelectorAll('wa-details'))
+
+        for (const [index, tabGroup] of tabGroups.entries()) {
+            const key = this.#getGroupKey(tabGroup, 'wa-tab-group', `tabgroup:${index}`)
+            const activeTab = tabGroup.active ?? tabGroup.getAttribute?.('active') ?? null
+
+            if (activeTab) {
+                state.tabs.set(key, activeTab)
+                if (!this.#tabs.has(drawerId)) {
+                    this.#tabs.set(drawerId, activeTab)
+                }
+            }
+        }
+
+        for (const [index, details] of detailsGroups.entries()) {
+            const key = this.#getGroupKey(details, 'wa-details', `details:${index}`)
+            state.details.set(key, Boolean(details.open))
+        }
+    }
+
+    #restoreDrawerTabs = (drawer) => {
+        if (!drawer?.id) {
+            return
+        }
+
+        const drawerId = drawer.id
+        const state = this.#drawerUiState.get(drawerId)
+
+        if (!state) {
+            return
+        }
+
+        const tabGroups = Array.from(drawer.querySelectorAll('wa-tab-group'))
+        for (const [index, tabGroup] of tabGroups.entries()) {
+            const key = this.#getGroupKey(tabGroup, 'wa-tab-group', `tabgroup:${index}`)
+            const activeTab = state.tabs.get(key)
+            if (!activeTab) {
+                continue
+            }
+
+            if (typeof tabGroup.show === 'function') {
+                tabGroup.show(activeTab)
+            }
+            else if (tabGroup.active !== activeTab) {
+                tabGroup.active = activeTab
+            }
+        }
+    }
+
+    #restoreDrawerDetails = (drawer) => {
+        if (!drawer?.id) {
+            return
+        }
+
+        const drawerId = drawer.id
+        const state = this.#drawerUiState.get(drawerId)
+
+        if (!state) {
+            return
+        }
+
+        const detailsGroups = Array.from(drawer.querySelectorAll('wa-details'))
+
+        for (const [index, details] of detailsGroups.entries()) {
+            const key = this.#getGroupKey(details, 'wa-details', `details:${index}`)
+            if (!state.details.has(key)) {
+                continue
+            }
+
+            const shouldOpen = state.details.get(key)
+            const currentOpen = Boolean(details.open)
+
+            if (shouldOpen && !currentOpen) {
+                if (typeof details.show === 'function') {
+                    details.show()
+                }
+                else {
+                    details.open = true
+                }
+            }
+            else if (!shouldOpen && currentOpen) {
+                if (typeof details.hide === 'function') {
+                    details.hide()
+                }
+                else {
+                    details.open = false
+                }
+            }
+        }
+    }
+
+    #attachDrawerUiStateListeners = (drawer) => {
+        if (!drawer) {
+            return
+        }
+
+        if (!this.#drawerAfterShowAttached.has(drawer)) {
+            drawer.addEventListener('wa-after-show', () => {
+                const event = new CustomEvent('drawer-open', {
+                    detail: {drawerId: drawer.id},
+                    bubbles: true,
+                    composed: true,
+                })
+                drawer.dispatchEvent(event)
+
+                requestAnimationFrame(() => {
+                    this.#attachDrawerUiStateListeners(drawer)
+                    this.#snapshotDrawerUiState(drawer)
+                })
+            })
+            this.#drawerAfterShowAttached.add(drawer)
+        }
+
+        Array.from(drawer.querySelectorAll('wa-tab-group')).forEach((tabGroup) => {
+            if (this.#tabGroupAttached.has(tabGroup)) {
+                return
+            }
+
+            tabGroup.addEventListener('wa-tab-show', (event) => {
+                const activeTab = event.detail?.name ?? tabGroup.active ?? null
+                if (!activeTab) {
+                    return
+                }
+
+                const drawerId = drawer.id
+                const state = this.#getDrawerState(drawerId)
+                const key = this.#getGroupKey(tabGroup, 'wa-tab-group', 'tabgroup')
+                state.tabs.set(key, activeTab)
+                this.#tabs.set(drawerId, activeTab)
+            })
+            tabGroup.addEventListener('wa-tab-hide', (event) => {
+                const activeTab = event.detail?.name ?? tabGroup.active ?? null
+                if (!activeTab) {
+                    return
+                }
+
+                const drawerId = drawer.id
+                const state = this.#getDrawerState(drawerId)
+                const key = this.#getGroupKey(tabGroup, 'wa-tab-group', 'tabgroup')
+                state.tabs.set(key, activeTab)
+                this.#tabs.set(drawerId, activeTab)
+            })
+            this.#tabGroupAttached.add(tabGroup)
+        })
+
+        Array.from(drawer.querySelectorAll('wa-details')).forEach((details) => {
+            if (this.#detailsAttached.has(details)) {
+                return
+            }
+
+            const updateDetailsState = () => {
+                const drawerId = drawer.id
+                const state = this.#getDrawerState(drawerId)
+                const key = this.#getGroupKey(details, 'wa-details', 'details')
+                state.details.set(key, Boolean(details.open))
+            }
+
+            details.addEventListener('wa-show', updateDetailsState)
+            details.addEventListener('wa-after-show', updateDetailsState)
+            details.addEventListener('wa-hide', updateDetailsState)
+            details.addEventListener('wa-after-hide', updateDetailsState)
+            this.#detailsAttached.add(details)
+        })
+    }
+
+    restoreDrawerUiState = (drawer) => {
+        if (!drawer) {
+            return
+        }
+
+        this.#attachDrawerUiStateListeners(drawer)
+        this.#restoreDrawerTabs(drawer)
+        requestAnimationFrame(() => {
+            this.#restoreDrawerDetails(drawer)
+            this.#snapshotDrawerUiState(drawer)
+        })
     }
 
     /**
@@ -187,6 +423,15 @@ export class PanelManager {
         if (tabToActivate) {
             this.openTab(tabToActivate)
         }
+
+        const drawer = this.#getDrawerElement(id)
+        if (drawer) {
+            const frame = requestAnimationFrame(() => {
+                this.restoreDrawerUiState(drawer)
+            })
+
+            drawer.__drawerStateOpenFrame = frame
+        }
     }
 
     consumeSuppressFocusOnOpen = (target) => {
@@ -228,9 +473,13 @@ export class PanelManager {
             ui.drawers.entity = previous.entity
             ui.drawers.suppressFocusOnOpen = previous.suppressFocusOnOpen ?? false
 
-            const tabToActivate = this.#tabs.get(previous.id)
-            if (tabToActivate) {
-                this.openTab(tabToActivate)
+            const drawer = this.#getDrawerElement(previous.id)
+            if (drawer) {
+                const frame = requestAnimationFrame(() => {
+                    this.restoreDrawerUiState(drawer)
+                })
+
+                drawer.__drawerStateRestoreFrame = frame
             }
         }
         else {
@@ -286,22 +535,7 @@ export class PanelManager {
         document.querySelectorAll('wa-drawer').forEach((drawer) => {
             drawer.addEventListener('mouseleave', this.mouseLeave)
             drawer.addEventListener('mouseenter', this.mouseEnter)
-
-            drawer.addEventListener('wa-after-show', () => {
-                const event = new CustomEvent('drawer-open', {
-                    detail: {drawerId: drawer.id},
-                    bubbles: true,
-                    composed: true,
-                })
-                drawer.dispatchEvent(event)
-            })
-
-            const tabgroups = drawer.querySelectorAll('wa-tab-group')
-            tabgroups.forEach(tabgroup => {
-                tabgroup.addEventListener('wa-tab-show', (event) => {
-                    this.tab = event.detail.name
-                })
-            })
+            this.#attachDrawerUiStateListeners(drawer)
         })
     }
 
@@ -332,6 +566,11 @@ export class PanelManager {
             if (tab) {
                 tabGroup.show(activeTab)
             }
+        }
+
+        const drawer = this.#getDrawerElement(this.drawers.open)
+        if (drawer) {
+            this.#snapshotDrawerUiState(drawer)
         }
     }
 

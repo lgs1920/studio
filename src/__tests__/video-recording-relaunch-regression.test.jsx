@@ -14,7 +14,7 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { cleanup, act, render, waitFor } from '@testing-library/react'
+import { cleanup, act, render, screen, waitFor } from '@testing-library/react'
 import { VideoRecorderToolbar }         from '@Components/MainUI/video/toolbox/VideoRecorderToolbar'
 import { VideoSceneWidgetsPortal }      from '@Components/MainUI/video/VideoSceneWidgetsPortal'
 import { VIDEO_WIDGETS_BOARD }          from '@Core/constants'
@@ -32,8 +32,11 @@ vi.mock('@Utils/UIToast', () => ({
 }))
 
 vi.mock('@Utils/UnitUtils', () => ({
+    DISTANCE_UNITS: ['km'],
+    km:             'km',
     UnitUtils: {
-        convert: vi.fn(() => ({
+        convert: vi.fn(value => ({
+            to:          () => Number(value) || 0,
             toTime:      () => '1s',
             toBytesUnit: () => '1 MB',
         })),
@@ -86,6 +89,9 @@ describe('video recording relaunch regression', () => {
         }
 
         globalThis.__ = {
+            device: {
+                isMobile: false,
+            },
             recorder,
             ui: {
                 flythroughVideoSync: flythroughSync,
@@ -95,8 +101,14 @@ describe('video recording relaunch regression', () => {
         }
 
         globalThis.lgs = {
+            settings: {
+                unitSystem: proxy({current: 0}),
+            },
             stores: {
                 ui: proxy({
+                    drawers: proxy({
+                        open: null,
+                    }),
                     video: proxy({
                         editing:      false,
                         recording:    true,
@@ -117,6 +129,20 @@ describe('video recording relaunch regression', () => {
                             ['video-widget-1', {widgetsBoard: VIDEO_WIDGETS_BOARD, zIndex: 1}],
                         ]),
                     }),
+                }),
+                flythrough: proxy({
+                    active: false,
+                    playing: false,
+                    paused: false,
+                    mainUiHidden: false,
+                    clipSequenceActive: false,
+                    progress: 0,
+                    sample: null,
+                    totalDistance: 0,
+                    direction: 1,
+                    elapsedMillis: null,
+                    durationMillis: null,
+                    recordingSync: false,
                 }),
             },
         }
@@ -174,5 +200,74 @@ describe('video recording relaunch regression', () => {
 
         portal.unmount()
         view.unmount()
+    })
+
+    it('shows flythrough progression in the recorder toolbar when the sync link is active', () => {
+        globalThis.lgs.stores.ui.video.recording = true
+        globalThis.lgs.stores.flythrough.recordingSync = true
+        globalThis.lgs.stores.flythrough.active = true
+        globalThis.lgs.stores.flythrough.playing = true
+        globalThis.lgs.stores.flythrough.sample = {
+            progress: 0.5,
+            distanceFromStart: 50,
+            remainingDistance: 50,
+        }
+        globalThis.lgs.stores.flythrough.totalDistance = 100
+        globalThis.lgs.stores.flythrough.elapsedMillis = 60000
+        globalThis.lgs.stores.flythrough.durationMillis = 120000
+
+        render(<VideoRecorderToolbar/>)
+
+        expect(screen.getByText('00:01 / 00:02')).not.toBeNull()
+        expect(screen.getByText('50.0 / 100.0 km')).not.toBeNull()
+        expect(screen.getByText('50%')).not.toBeNull()
+        expect(screen.queryByText(/fps/i)).toBeNull()
+    })
+
+    it('shows a compact mobile flythrough summary without totals', () => {
+        globalThis.__.device.isMobile = true
+        globalThis.lgs.stores.ui.video.recording = true
+        globalThis.lgs.stores.flythrough.recordingSync = true
+        globalThis.lgs.stores.flythrough.active = true
+        globalThis.lgs.stores.flythrough.playing = true
+        globalThis.lgs.stores.flythrough.sample = {
+            progress: 0.5,
+            distanceFromStart: 50,
+            remainingDistance: 50,
+        }
+        globalThis.lgs.stores.flythrough.totalDistance = 100
+        globalThis.lgs.stores.flythrough.elapsedMillis = 60000
+        globalThis.lgs.stores.flythrough.durationMillis = 120000
+
+        render(<VideoRecorderToolbar/>)
+
+        expect(screen.getByText('00:01')).not.toBeNull()
+        expect(screen.getByText('50.0 km')).not.toBeNull()
+        expect(screen.queryByText('00:01 / 00:02')).toBeNull()
+        expect(screen.queryByText('50.0 / 100.0 km')).toBeNull()
+        expect(screen.queryByText('50%')).toBeNull()
+    })
+
+    it('keeps the mobile flythrough summary rendered inline', () => {
+        globalThis.__.device.isMobile = true
+        globalThis.lgs.stores.ui.video.recording = true
+        globalThis.lgs.stores.flythrough.recordingSync = true
+        globalThis.lgs.stores.flythrough.active = true
+        globalThis.lgs.stores.flythrough.playing = true
+        globalThis.lgs.stores.flythrough.sample = {
+            progress: 0.5,
+            distanceFromStart: 50,
+            remainingDistance: 50,
+        }
+        globalThis.lgs.stores.flythrough.totalDistance = 100
+        globalThis.lgs.stores.flythrough.elapsedMillis = 60000
+        globalThis.lgs.stores.flythrough.durationMillis = 120000
+
+        render(<VideoRecorderToolbar/>)
+
+        const time = screen.getByText('00:01')
+        const distance = screen.getByText('50.0 km')
+        expect(time.parentElement).toBe(distance.parentElement)
+        expect(time.parentElement.className).toContain('video-recorder-widget')
     })
 })

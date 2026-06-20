@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-25
- * Last modified: 2026-04-25
+ * Created on: 2026-06-09
+ * Last modified: 2026-06-09
  *
  *
  * Copyright © 2026 LGS1920
@@ -23,7 +23,8 @@
  ******************************************************************************/
 
 import { ProfileChart }                               from './ProfileChart'
-import { useLayoutEffect, useRef, useState } from 'react'
+import { getPreviewChartSize }                        from '@Components/MainUI/widgets/editor/previewUtils'
+import { useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useSnapshot }                                from 'valtio'
 
 /**
@@ -35,6 +36,9 @@ export const ProfileWidgetPreview = ({entity}) => {
     const currentUnit = useSnapshot($unitSystem).current
     const profile = useSnapshot(lgs.stores.main.components.profile)
     const flythroughSettings = useSnapshot(lgs.settings.ui.flythrough)
+    const widgetListSnapshot = useSnapshot(lgs.stores.ui.widget.list)
+    const widgetConfig = __.ui.widgetManager.getWidgetConfig?.(entity)
+    const widgetDimensions = widgetListSnapshot.get(entity)?.dimensions ?? widgetConfig?.dimensions ?? null
 
     const _preview = useRef(null)
     const [previewSize, setPreviewSize] = useState({width: 0, height: 0})
@@ -49,13 +53,67 @@ export const ProfileWidgetPreview = ({entity}) => {
         flythroughSettings.profileInfo?.color ?? '',
     ].join(':')
 
+    const previewRatio = useMemo(() => {
+        const width = Number(widgetDimensions?.width)
+        const height = Number(widgetDimensions?.height)
+        if (Number.isFinite(width) && Number.isFinite(height) && width > 0 && height > 0) {
+            return width / height
+        }
+
+        const ratio = widgetListSnapshot.get(entity)?.ratio
+                     ?? widgetConfig?.ratio
+                     ?? lgs.configuration?.widgetRatio
+        if (!ratio) {
+            return 16 / 9
+        }
+
+        if (typeof ratio === 'object') {
+            const aspectRatio = Number(ratio.aspectRatio)
+            if (Number.isFinite(aspectRatio) && aspectRatio > 0) {
+                return aspectRatio
+            }
+
+            const width = Number(ratio.width)
+            const height = Number(ratio.height)
+            if (Number.isFinite(width) && Number.isFinite(height) && width > 0 && height > 0) {
+                return width / height
+            }
+        }
+
+        const preset = lgs.configuration?.videoFormats?.find?.(item => item.value === ratio || item.value === ratio?.value)
+        return Number.isFinite(Number(preset?.aspectRatio)) && Number(preset.aspectRatio) > 0
+               ? Number(preset.aspectRatio)
+               : 16 / 9
+    }, [entity, widgetConfig?.ratio, widgetDimensions?.width, widgetDimensions?.height, widgetListSnapshot])
+
+    const previewChartSize = useMemo(() => {
+        const chartSize = getPreviewChartSize({
+            containerWidth: previewSize.width,
+            containerHeight: previewSize.height,
+            ratio: previewRatio,
+            scale: 0.8,
+        })
+        if (!chartSize) {
+            return {width: 0, height: 0}
+        }
+        return {
+            width:  Math.max(1, Math.round(chartSize.width)),
+            height: Math.max(1, Math.round(chartSize.height)),
+        }
+    }, [previewRatio, previewSize.height, previewSize.width])
+
     useLayoutEffect(() => {
         if (!_preview.current) {
             return
         }
 
+        let raf1 = 0
+        let raf2 = 0
         const updateSize = () => {
             const element = _preview.current
+            if (!element) {
+                return
+            }
             const rect = element.getBoundingClientRect()
             const styles = window.getComputedStyle(element)
             const horizontalPadding = (Number.parseFloat(styles.paddingLeft) || 0) + (Number.parseFloat(styles.paddingRight) || 0)
@@ -71,11 +129,24 @@ export const ProfileWidgetPreview = ({entity}) => {
         updateSize()
         const _observer = new ResizeObserver(updateSize)
         _observer.observe(_preview.current)
-        return () => _observer.disconnect()
+        raf1 = requestAnimationFrame(() => {
+            updateSize()
+            raf2 = requestAnimationFrame(updateSize)
+        })
+        return () => {
+            if (raf1) {
+                cancelAnimationFrame(raf1)
+            }
+            if (raf2) {
+                cancelAnimationFrame(raf2)
+            }
+            _observer.disconnect()
+        }
     }, [])
 
     const previewStyle = {
         width:                      '100%',
+        height: '100%',
         display:                    'flex',
         alignItems:                 'center',
         justifyContent:             'center',
@@ -86,15 +157,22 @@ export const ProfileWidgetPreview = ({entity}) => {
     return (
         <div className="profile-widget-preview-surface" ref={_preview} style={previewStyle}
              data-unit-system={currentUnit}>
-            {previewSize.width > 0 && previewSize.height > 0 && realData && (
-                <div style={{width: `${previewSize.width}px`, height: `${previewSize.height}px`, position: 'relative'}}>
+            {previewChartSize.width > 0 && previewChartSize.height > 0 && realData && (
+                <div style={{
+                    width:            `${previewChartSize.width}px`,
+                    height:           `${previewChartSize.height}px`,
+                    position:         'relative',
+                    display:          'flex',
+                    alignItems:       'center',
+                    justifyContent:   'center',
+                }}>
                     <ProfileChart
                         key={previewChartKey}
                         preview
                         data={realData}
                         id={entity}
-                        height={previewSize.height}
-                        width={previewSize.width}
+                        height={previewChartSize.height}
+                        width={previewChartSize.width}
                     />
                 </div>
             )}

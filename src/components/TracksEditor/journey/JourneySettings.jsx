@@ -438,14 +438,14 @@ export const JourneySettings = () => {
             <div className="journey-export-dialog-content">
                 <p>{`Export ${formatLabel} ${itemLabel} with ${journey?.tracks?.size ?? 0} track(s) and ${poiCount} associated POI(s).`}</p>
                 <div className="journey-export-controls">
-                    <WaInput
+                    <WaInput appearance="filled"
                         aria-label="Export file name"
                         className="journey-export-file-name"
                         value={exportFileName}
                         size="s"
                         onInput={handleExportFileNameChange}
                     />
-                    <WaSelect
+                    <WaSelect appearance="filled"
                         aria-label="Export format"
                         className="journey-export-format"
                         value={exportFormat}
@@ -706,7 +706,7 @@ export const JourneySettings = () => {
                             <WaTabPanel name={EDIT}>
                                 <LGSScrollbars>
                                     <WaCard className="lgs--track-data lgs--journey-edit-card" appearance="plain">
-                                        <WaSelect
+                                        <WaSelect appearance="filled"
                                             className="lgs--journey-activity-select"
                                             label="Activity"
                                             value={journey.activity ?? Journey.defaultActivity()}
@@ -727,7 +727,7 @@ export const JourneySettings = () => {
                                                 className="lgs--details-hoverable lgs--journey-edit-details"
                                             >
                                                 <span slot="summary">Journey details</span>
-                                                <WaInput
+                                                <WaInput appearance="filled"
                                                     label={journey.tracks.size === 1 ? 'Title' : 'Journey Title'}
                                                     id={'journey-title-in-settings'}
                                                     ref={_title}
@@ -744,7 +744,7 @@ export const JourneySettings = () => {
 
                                                 <JourneyGroupsInfo journey={journey}/>
 
-                                                <WaTextarea
+                                                <WaTextarea appearance="filled"
                                                     label={journey.tracks.size === 1 ? 'Description' : 'Journey Description'}
                                                     ref={_description}
                                                     rows={3}
@@ -787,7 +787,7 @@ export const JourneySettings = () => {
                                                     placement="bottom"
                                                     for="rotation-in-settings"
                                                 >
-                                                    {running && target?.instanceOf?.(CURRENT_JOURNEY) ? 'Stop rotation' : 'Start rotation'}
+                                                    {running && target?.instanceOf?.(CURRENT_JOURNEY) ? 'Stop orbit' : 'Start orbit'}
                                                 </WaTooltip>
                                                 <WaButton
                                                     size="s"
@@ -805,7 +805,7 @@ export const JourneySettings = () => {
                                         <WaTooltip
                                             for="auto-rotate-in-settings"
                                             placement="bottom">
-                                            {running && target?.instanceOf?.(CURRENT_JOURNEY) ? 'Stop rotation' : 'Focus on Journey'}
+                                            {running && target?.instanceOf?.(CURRENT_JOURNEY) ? 'Stop orbit' : 'Focus on Journey'}
                                         </WaTooltip>
                                         <WaButton id="auto-rotate-in-settings"
                                                   size="s"

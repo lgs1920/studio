@@ -22,13 +22,12 @@ import {
 }                                 from '@Components/MainUI/MapPOI/usePOIJourneyAssociation'
 import { JourneySelector }        from '@Editor/journey/JourneySelector'
 import {
-    COORDINATE_INPUT_ERROR_DURATION_MS, COORDINATE_INPUT_NORMALIZE_DELAY_MS, LATITUDE_FORMAT, LONGITUDE_FORMAT,
-    POI_STANDARD_TYPE, POI_TMP_TYPE,
+    COORDINATE_INPUT_ERROR_DURATION_MS, COORDINATE_INPUT_NORMALIZE_DELAY_MS, POI_STANDARD_TYPE, POI_TMP_TYPE,
 }                                 from '@Core/constants'
 
 import { UIToast } from '@Utils/UIToast'
 import {
-    ELEVATION_UNITS, IMPERIAL, UnitUtils,
+    ELEVATION_UNITS, UnitUtils,
 }                  from '@Utils/UnitUtils'
 import {
     WaButton, WaCallout, WaColorPicker, WaCopyButton, WaDivider, WaIcon, WaInput, WaTextarea, WaTooltip,
@@ -54,11 +53,11 @@ const EMPTY_POI_PROXY = proxy({})
  * @returns {JSX.Element|null}
  */
 export const MapPOIEditContent = memo(({poi}) => {
-                                          const $pois = lgs.stores.main.components.pois
                                           const coordinateSystemSettings = useSnapshot(lgs.settings.coordinateSystem)
-                                          const unitSystem = lgs.settings.unitSystem.current
+                                          const {current: unitSystem} = useSnapshot(lgs.settings.unitSystem)
                                           const coordinateSystem = coordinateSystemSettings.current
                                           const swatchesList = lgs.settings.getSwatches.list
+                                          const elevationUnit = ELEVATION_UNITS[unitSystem] ?? ELEVATION_UNITS[0]
 
                                           /** @type {Object} Fresh proxy reference for direct mutations */
                                           const $point = lgs.stores.main.components.pois.list.get(poi)
@@ -147,12 +146,12 @@ export const MapPOIEditContent = memo(({poi}) => {
                                                   return
                                               }
 
-                                              const meters = unitSystem === IMPERIAL ? UnitUtils.convertFeetToMeters(parsedValue) : parsedValue
+                                              const meters = UnitUtils.revert(parsedValue, elevationUnit)
 
                                               setSimulated(meters === point.simulatedHeight)
 
                                               await __.ui.poiManager.updatePOI(poi, {height: meters}, {immediate: true})
-                                          }, [poi, unitSystem, point.simulatedHeight])
+                                          }, [poi, elevationUnit, point.simulatedHeight])
 
                                           /**
                                            * Handles color updates while preventing event bubbling
@@ -237,6 +236,30 @@ export const MapPOIEditContent = memo(({poi}) => {
                                               if (event.target.tagName.toLowerCase() === 'wa-input') {
                                                   await __.ui.poiManager.updatePOI(poi, {title: event.target.value})
                                               }
+                                          }, [poi])
+
+                                          const previousTitleRef = useRef(title)
+
+                                          const handleTitleFocus = useCallback(() => {
+                                              previousTitleRef.current = title
+                                          }, [title])
+
+                                          const handleTitleBlur = useCallback(async (event) => {
+                                              if (!window.isOK) {
+                                                  return
+                                              }
+
+                                              if (event.target.tagName.toLowerCase() !== 'wa-input') {
+                                                  return
+                                              }
+
+                                              const nextTitle = `${event.target.value ?? ''}`.trim()
+                                              if (nextTitle.length > 0) {
+                                                  return
+                                              }
+
+                                              const fallbackTitle = previousTitleRef.current ?? ''
+                                              await __.ui.poiManager.updatePOI(poi, {title: fallbackTitle})
                                           }, [poi])
 
                                           const handleChangeDescription = useCallback(async (event) => {
@@ -338,18 +361,18 @@ export const MapPOIEditContent = memo(({poi}) => {
                                                   <div className="map-poi-edit-item label-on-left">
                                                       {simulated ? 'Simulated alt.' : 'Altitude'}
                                                   </div>
-                                                  <WaInput
+                                                  <WaInput appearance="filled"
                                                       className={classNames('map-poi-edit-item', 'map-poi', {
                                                           'map-poi-edit-warning-altitude': simulated,
                                                       })}
                                                       size="s"
                                                       withoutSpinButtons
                                                       inputMode="numeric"
-                                                      value={Math.round(height ?? simulatedHeight ?? 0)}
+                                                      value={Math.round(UnitUtils.convert(height ?? simulatedHeight ?? 0).to(elevationUnit))}
                                                       onInput={handleChangeAltitude}
                                                       disabled={!visible}
                                                   >
-                                                      <span slot="end">{parse(ELEVATION_UNITS[unitSystem])}</span>
+                                                      <span slot="end">{parse(elevationUnit)}</span>
                                                   </WaInput>
                                                   {visible && (simulated ? (
                                                       <>
@@ -375,7 +398,7 @@ export const MapPOIEditContent = memo(({poi}) => {
                                                                    </>
                                                                ))}
                                               </div>
-                                          ), [simulated, height, visible, simulatedHeight, unitSystem, handleChangeAltitude, handleResetAltitude, id])
+                                          ), [simulated, height, visible, simulatedHeight, elevationUnit, handleChangeAltitude, handleResetAltitude, id])
 
                                           return (
                                               <>
@@ -394,10 +417,12 @@ export const MapPOIEditContent = memo(({poi}) => {
                                                       </WaCallout>)}
 
                                                   <div className="edit-map-poi-wrapper" id={`edit-map-poi-content-${id}`}>
-                                                      <WaInput
+                                                      <WaInput appearance="filled"
                                                           size="s"
                                                           value={title}
                                                           onInput={handleChangeTitle}
+                                                          onFocus={handleTitleFocus}
+                                                          onBlur={handleTitleBlur}
                                                           className="edit-title-map-poi-input"
                                                           readOnly={!visible}
                                                       >
@@ -451,7 +476,7 @@ export const MapPOIEditContent = memo(({poi}) => {
                                                               syncEditorSelection={false}
                                                           />
                                                       )}
-                                                      <WaTextarea
+                                                      <WaTextarea appearance="filled"
                                                           value={description}
                                                           onInput={handleChangeDescription}
                                                           className="edit-title-map-poi-input"
@@ -478,7 +503,7 @@ export const MapPOIEditContent = memo(({poi}) => {
                                                       )}
 
                                                       <div className="map-poi-edit-row-coordinates">
-                                                          <WaInput
+                                                          <WaInput appearance="filled"
                                                               className={classNames({'map-poi-edit-warning-coordinate': coordinateError.latitude})}
                                                               size="s"
                                                               inputMode="decimal"
@@ -488,7 +513,7 @@ export const MapPOIEditContent = memo(({poi}) => {
                                                               label="Latitude"
                                                               disabled={!visible}
                                                           />
-                                                          <WaInput
+                                                          <WaInput appearance="filled"
                                                               className={classNames({'map-poi-edit-warning-coordinate': coordinateError.longitude})}
                                                               size="s"
                                                               inputMode="decimal"

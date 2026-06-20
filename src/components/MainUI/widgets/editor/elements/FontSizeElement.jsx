@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-05-10
- * Last modified: 2026-05-10
+ * Created on: 2026-06-18
+ * Last modified: 2026-06-18
  *
  *
  * Copyright © 2026 LGS1920
@@ -54,13 +54,15 @@ export const FontSizeElement = ({id}) => {
 
     return (
         <WaNumberInput
+            className="half-width"
+            appearance="filled"
             size="s"
             type="number"
             min={sizeLimits.min}
             max={sizeLimits.max}
             value={fontSize}
             onInput={handleSizeChange}
-            className="lgs--short-input lgs--text-widget-font-size-trigger"
+            style={{width: '169px' /* TODO generic fix */}}
         >
             <WaIcon slot="start" variant="regular" name="text-size"/>
         </WaNumberInput>

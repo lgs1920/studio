@@ -15,7 +15,12 @@
  ******************************************************************************/
 
 import { SETTINGS_STORE }     from '@Core/constants'
-import { SETTING_EXCLUSIONS } from '@Core/settings/settingsExclusions'
+import {
+    SETTING_EXCLUSIONS,
+    SETTING_EXCLUSION_ALLOWLIST,
+    isSettingPathExcluded,
+    shouldTraverseSettingPath,
+} from '@Core/settings/settingsExclusions'
 import { detailedDiff }       from 'deep-object-diff'
 import { proxy, subscribe }   from 'valtio'
 
@@ -164,13 +169,13 @@ export class SettingsSection {
         }
 
         if (this.#data.added) {
-            this.#syncAddedValues(newConfig, diffs.added, SETTING_EXCLUSIONS, this.key)
+            this.#syncAddedValues(newConfig, diffs.added, SETTING_EXCLUSIONS, SETTING_EXCLUSION_ALLOWLIST, this.key)
         }
         if (this.#data.deleted) {
-            this.#syncDeletedValues(newConfig, diffs.deleted, SETTING_EXCLUSIONS, this.key)
+            this.#syncDeletedValues(newConfig, diffs.deleted, SETTING_EXCLUSIONS, SETTING_EXCLUSION_ALLOWLIST, this.key)
         }
-        if (this.#data.updated && !SETTING_EXCLUSIONS.includes(this.key)) {
-            this.#syncUpdatedValues(newConfig, diffs.updated, SETTING_EXCLUSIONS, this.key)
+        if (this.#data.updated) {
+            this.#syncUpdatedValues(newConfig, diffs.updated, SETTING_EXCLUSIONS, SETTING_EXCLUSION_ALLOWLIST, this.key)
         }
 
         return newConfig
@@ -189,21 +194,25 @@ export class SettingsSection {
      * Allows traversal into excluded paths to add new attributes without overwriting.
      * @private
      */
-    #syncAddedValues = (target, toAdd, excludeKeys = [], parentKey = '') => {
+    #syncAddedValues = (target, toAdd, excludeKeys = [], allowKeys = [], parentKey = '') => {
         for (const key in toAdd) {
             if (Object.hasOwnProperty.call(toAdd, key)) {
                 const fullKey = parentKey ? `${parentKey}.${key}` : key
 
                 if (typeof toAdd[key] === 'object' && toAdd[key] !== null) {
+                    if (!shouldTraverseSettingPath(fullKey, excludeKeys, allowKeys)) {
+                        continue
+                    }
+
                     // Create branch if missing to allow deep attribute insertion
                     if (!target[key]) {
                         target[key] = Array.isArray(toAdd[key]) ? [] : {}
                     }
-                    this.#syncAddedValues(target[key], toAdd[key], excludeKeys, fullKey)
+                    this.#syncAddedValues(target[key], toAdd[key], excludeKeys, allowKeys, fullKey)
                 }
                 else {
                     // Add primitive only if it doesn't exist and isn't explicitly excluded
-                    if (!(key in target) && !excludeKeys.includes(fullKey)) {
+                    if (!(key in target) && !isSettingPathExcluded(fullKey, excludeKeys, allowKeys)) {
                         target[key] = toAdd[key]
                     }
                 }
@@ -217,28 +226,27 @@ export class SettingsSection {
      * Strictly respects exclusions to prevent deletion of user-managed data.
      * @private
      */
-    #syncDeletedValues = (target, toRemove, excludeKeys = [], parentKey = '') => {
+    #syncDeletedValues = (target, toRemove, excludeKeys = [], allowKeys = [], parentKey = '') => {
         for (const key in toRemove) {
             if (Object.prototype.hasOwnProperty.call(toRemove, key)) {
                 const fullKey = parentKey ? `${parentKey}.${key}` : key
 
-                // Halt deletion if the path or parent branch is excluded
-                if (excludeKeys.includes(fullKey) || excludeKeys.includes(parentKey)) {
+                if (typeof toRemove[key] === 'object' && toRemove[key] !== null) {
+                    if (target[key] && typeof target[key] === 'object' && shouldTraverseSettingPath(fullKey, excludeKeys, allowKeys)) {
+                        this.#syncDeletedValues(target[key], toRemove[key], excludeKeys, allowKeys, fullKey)
+                    }
                     continue
                 }
 
-                if (typeof toRemove[key] === 'object' && toRemove[key] !== null) {
-                    if (target[key] && typeof target[key] === 'object') {
-                        this.#syncDeletedValues(target[key], toRemove[key], excludeKeys, fullKey)
-                    }
+                if (isSettingPathExcluded(fullKey, excludeKeys, allowKeys)) {
+                    continue
+                }
+
+                if (Array.isArray(target)) {
+                    target[key] = undefined
                 }
                 else {
-                    if (Array.isArray(target)) {
-                        target[key] = undefined
-                    }
-                    else {
-                        delete target[key]
-                    }
+                    delete target[key]
                 }
             }
         }
@@ -250,28 +258,29 @@ export class SettingsSection {
      * Respects exclusion list for the entire path.
      * @private
      */
-    #syncUpdatedValues = (target, toUpdate, excludeKeys = [], parentKey = '') => {
+    #syncUpdatedValues = (target, toUpdate, excludeKeys = [], allowKeys = [], parentKey = '') => {
         for (const key in toUpdate) {
             if (Object.prototype.hasOwnProperty.call(toUpdate, key)) {
                 const fullKey = parentKey ? `${parentKey}.${key}` : key
-                if (this.#isExcludedPath(fullKey, excludeKeys)) {
-                    continue
-                }
 
                 if (typeof toUpdate[key] === 'object' && toUpdate[key] !== null) {
+                    if (!shouldTraverseSettingPath(fullKey, excludeKeys, allowKeys)) {
+                        continue
+                    }
+
                     if (!target[key]) {
                         target[key] = Array.isArray(toUpdate[key]) ? [] : {}
                     }
-                    this.#syncUpdatedValues(target[key], toUpdate[key], excludeKeys, fullKey)
+                    this.#syncUpdatedValues(target[key], toUpdate[key], excludeKeys, allowKeys, fullKey)
                 }
                 else {
+                    if (isSettingPathExcluded(fullKey, excludeKeys, allowKeys)) {
+                        continue
+                    }
                     target[key] = toUpdate[key]
                 }
             }
         }
         return target
     }
-
-    #isExcludedPath = (path, excludeKeys = []) =>
-        excludeKeys.some(excluded => path === excluded || path.startsWith(`${excluded}.`))
 }

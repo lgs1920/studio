@@ -294,8 +294,11 @@ const setPoiAnimated = async (target, animated) => {
 const toggleRotation = () => {
     const rotate = lgs.stores.ui.mainUI.rotate
     const panorama = lgs.stores.ui.mainUI.panorama
+    const flythrough = lgs.stores.flythrough
 
-    if (!rotate.running && !panorama.active && !flythroughRotationIsAllowed()) {
+    if (!rotate.running && !panorama.active
+        && (flythrough?.active || flythrough?.playing || flythrough?.paused)
+        && !flythroughRotationIsAllowed()) {
         return false
     }
 
@@ -367,6 +370,7 @@ const togglePanorama = () => {
             ...getOrbitSettings(focusPoint, 'panorama'),
         }
 
+        panorama.visible = true
         panorama.target = focusPoint
         panorama.heading = lgs.stores.main.components.camera.position.heading ?? 0
         panorama.pitch = storedPanorama.pitch ?? panorama.pitch ?? -12
@@ -376,6 +380,26 @@ const togglePanorama = () => {
         await setPoiAnimated(focusPoint, true)
         return true
     })()
+}
+
+const toggleOrbitWidgetVisibility = () => {
+    const rotate = lgs.stores.ui.mainUI.rotate
+    if (!rotate.running) {
+        return false
+    }
+
+    rotate.visible = rotate.visible === false
+    return true
+}
+
+const togglePanoramaWidgetVisibility = () => {
+    const panorama = lgs.stores.ui.mainUI.panorama
+    if (!panorama.active) {
+        return false
+    }
+
+    panorama.visible = panorama.visible === false
+    return true
 }
 
 const removeSelectedWidget = () => {
@@ -640,8 +664,10 @@ const SHORTCUT_ACTIONS = {
     'journey-toolbar-show': toggleJourneyToolbar,
     'flythrough-management-show': openFlythroughManagement,
     'video-recording':      launchVideoRecording,
-    'rotation-toggle':      toggleRotation,
+    'orbit-toggle':         toggleRotation,
+    'orbit-widget-toggle':  toggleOrbitWidgetVisibility,
     'panorama-toggle':      togglePanorama,
+    'panorama-widget-toggle': togglePanoramaWidgetVisibility,
     'widget-edit':          editSelectedWidget,
     'widget-remove':        removeSelectedWidget,
     'widget-snapshot': takeWidgetSnapshot,

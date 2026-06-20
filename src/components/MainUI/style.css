@@ -370,7 +370,7 @@ body.mobile .panorama-widget-body {
     gap: var(--lgs-gutter-xxs);
 }
 
-body.mobile .rotation-widget-body {
+body.mobile .orbit-widget-body {
     justify-content: center;
 }
 
@@ -388,7 +388,7 @@ body.mobile .rotation-widget-body {
         gap: var(--lgs-gutter-xxs);
     }
 
-    .rotation-widget-body {
+    .orbit-widget-body {
         justify-content: center;
     }
 }

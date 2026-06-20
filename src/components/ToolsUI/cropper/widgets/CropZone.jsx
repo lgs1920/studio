@@ -14,18 +14,15 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { VIDEO_CROP_ZONE }                from '@Core/constants'
+import { VIDEO_CROP_ZONE } from '@Core/constants'
 import { useCallback, useEffect, useRef } from 'react'
-import { useSnapshot }                           from 'valtio'
-import { CropZoneInfo }                          from './CropZoneInfo'
+import { CropZoneInfo } from './CropZoneInfo'
 
 /**
  * CropZone component for rendering the crop zone content with imperative API.
  */
 export const CropZone = ({onDoubleClick, infoComponent, infoPosition, children, context}) => {
     const _cropZone = useRef(null)
-    const $video = lgs.stores.ui.video
-    const video = useSnapshot($video)
     const handleContextMenu = useCallback((e) => {
         e.preventDefault()
         e.stopPropagation()
@@ -33,6 +30,9 @@ export const CropZone = ({onDoubleClick, infoComponent, infoPosition, children, 
 
     useEffect(() => {
         return () => {
+            if (!lgs.stores.ui.video.editing) {
+                return
+            }
             void __.ui.widgetManager.syncCropDimensionsFromElement(context.id, true, 'unmount')
         }
     }, [context.id])

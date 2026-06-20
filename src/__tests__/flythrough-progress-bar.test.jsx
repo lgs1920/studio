@@ -1,0 +1,95 @@
+import { cleanup, render, screen } from '@testing-library/react'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { proxy } from 'valtio'
+
+vi.mock('@web.awesome.me/webawesome-pro/dist/react', () => ({
+    WaButton: ({children, ...props}) => <button type="button" {...props}>{children}</button>,
+    WaIcon: ({name}) => <span data-icon={name}/>,
+    WaTooltip: ({children}) => <span>{children}</span>,
+}))
+
+import { FlythroughProgressBar } from '@Components/Flythrough/FlythroughProgressBar'
+
+describe('FlythroughProgressBar', () => {
+    beforeEach(() => {
+        globalThis.__ = {
+            ui: {
+                drawerManager: {
+                    close: vi.fn(),
+                    open: vi.fn(),
+                },
+            },
+        }
+
+        globalThis.lgs = {
+            settings: {
+                unitSystem: proxy({current: 0}),
+            },
+            stores: {
+                flythrough: proxy({
+                    active: false,
+                    playing: false,
+                    paused: false,
+                    mainUiHidden: false,
+                    clipSequenceActive: false,
+                    progress: 0,
+                    sample: null,
+                    totalDistance: 0,
+                    direction: 1,
+                    elapsedMillis: null,
+                    durationMillis: null,
+                }),
+                ui: proxy({
+                    drawers: proxy({
+                        open: null,
+                    }),
+                }),
+            },
+        }
+    })
+
+    afterEach(() => {
+        cleanup()
+        globalThis.__ = undefined
+        globalThis.lgs = undefined
+    })
+
+    it('shows the settings button when the flythrough is idle', () => {
+        render(<FlythroughProgressBar showSettings/>)
+
+        expect(screen.getByRole('button', {name: 'Flythrough settings'})).not.toBeNull()
+    })
+
+    it('hides the settings button while the main UI is hidden for flythrough clips', () => {
+        globalThis.lgs.stores.flythrough.mainUiHidden = true
+
+        render(<FlythroughProgressBar showSettings/>)
+
+        expect(screen.queryByRole('button', {name: 'Flythrough settings'})).toBeNull()
+    })
+
+    it('keeps the pause action visible until the clip sequence fully ends', () => {
+        globalThis.lgs.stores.flythrough.clipSequenceActive = true
+
+        render(<FlythroughProgressBar/>)
+
+        expect(screen.getByRole('button', {name: 'Pause Flythrough'})).not.toBeNull()
+        expect(screen.queryByRole('button', {name: 'Start Flythrough'})).toBeNull()
+    })
+
+    it('disables the flythrough actions when requested', () => {
+        globalThis.lgs.stores.flythrough.active = true
+        globalThis.lgs.stores.flythrough.playing = true
+        globalThis.lgs.stores.flythrough.sample = {
+            progress: 0.4,
+            distanceFromStart: 4,
+            remainingDistance: 6,
+        }
+
+        render(<FlythroughProgressBar disabled showSettings/>)
+
+        expect(screen.getByRole('button', {name: 'Pause Flythrough'}).disabled).toBe(true)
+        expect(screen.getByRole('button', {name: 'Stop Flythrough'}).disabled).toBe(true)
+        expect(screen.getByRole('button', {name: 'Flythrough settings'}).disabled).toBe(true)
+    })
+})

@@ -40,7 +40,7 @@ const DRAG_THRESHOLD = {touch: 30, mouse: 5}
 const LOCKED_FLASH_TIMEOUT = 650
 const LOCKED_HINT_ICON = 'thumbtack'
 const LOCKED_HINT_TIMEOUT = 2000
-const ROTATION_CAMERA_ADJUSTMENT_WIDGET = 'rotation-camera-adjustment-widget'
+const ORBIT_CAMERA_ADJUSTMENT_WIDGET = 'orbit-camera-adjustment-widget'
 const SUPPRESS_DOUBLE_CLICK_MS = 350
 const SNAPSHOT_MAX_SIZE = 1024
 const SNAPSHOT_MIN_SIZE = 240
@@ -334,7 +334,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
     const canReduce = !isVisualWidget && (config.canReduce ?? true)
     const effectiveCollapsed = canReduce && collapsed
     const effectiveLocked = canLock && locked
-    const suppressLockedOverlay = widgetId === ROTATION_CAMERA_ADJUSTMENT_WIDGET
+    const suppressLockedOverlay = widgetId === ORBIT_CAMERA_ADJUSTMENT_WIDGET
     const isCollapsedToolbar = effectiveCollapsed && config.type === LGS_TOOLBAR
     const isOnMapWidget = !isTargetingBoard
     const showLockedOverlay = effectiveLocked && showLockedHint && !suppressLockedOverlay
@@ -354,7 +354,10 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
     }, [activeZIndex])
 
     useEffect(() => {
-        setCollapsedIconFallback(false)
+        const frameId = requestAnimationFrame(() => {
+            setCollapsedIconFallback(false)
+        })
+        return () => cancelAnimationFrame(frameId)
     }, [collapsedIcon])
 
     useEffect(() => {
@@ -721,7 +724,17 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
             }
         }
         else {
-            lgs.stores.ui.widget.current = {id: widgetId}
+            const currentRotation = lgs.stores.ui.widget.current?.id === widgetId
+                                    ? Number(lgs.stores.ui.widget.current?.rotate)
+                                    : Number.NaN
+            const configRotation = Number(__.ui.widgetManager.getWidgetConfig(widgetId)?.rotate)
+            lgs.stores.ui.widget.current = {
+                ...(lgs.stores.ui.widget.current ?? {}),
+                id: widgetId,
+                rotate: Number.isFinite(currentRotation)
+                        ? currentRotation
+                        : (Number.isFinite(configRotation) ? configRotation : 0),
+            }
         }
 
         persistInteractionState(widgetConfig, {locked: nextLocked})
@@ -1002,7 +1015,17 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
         if (drawers.open === WIDGETS_EDITOR_DRAWER && drawerBase && drawerBase === widgetBase && drawers.entity !== widgetId) {
             lgs.stores.ui.drawers.entity = widgetId
         }
-        lgs.stores.ui.widget.current = {id: widgetId}
+        const currentRotation = lgs.stores.ui.widget.current?.id === widgetId
+                                ? Number(lgs.stores.ui.widget.current?.rotate)
+                                : Number.NaN
+        const configRotation = Number(__.ui.widgetManager.getWidgetConfig(widgetId)?.rotate)
+        lgs.stores.ui.widget.current = {
+            ...(lgs.stores.ui.widget.current ?? {}),
+            id: widgetId,
+            rotate: Number.isFinite(currentRotation)
+                    ? currentRotation
+                    : (Number.isFinite(configRotation) ? configRotation : 0),
+        }
         __.ui.widgetManager.manageControlBox(_moveable, setControlBox, _controlBoxTimer, true, true)
     }, [widgetId, drawers.entity, drawers.open, canInteract])
 
@@ -1038,6 +1061,31 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
 
         return () => cancelAnimationFrame(frameId)
     }, [isSelected])
+
+    useEffect(() => {
+        const element = _widget.current
+        if (!element || typeof ResizeObserver === 'undefined') {
+            return undefined
+        }
+
+        const updateRect = () => {
+            _moveable.current?.updateRect()
+        }
+
+        updateRect()
+        const frameId = requestAnimationFrame(updateRect)
+        const observer = new ResizeObserver(() => {
+            updateRect()
+            requestAnimationFrame(updateRect)
+        })
+
+        observer.observe(element)
+
+        return () => {
+            cancelAnimationFrame(frameId)
+            observer.disconnect()
+        }
+    }, [widgetId])
 
     useEffect(() => {
         if (!isSelected || keyboardUpdate === 0) {
@@ -1204,6 +1252,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                             type:            fullConfig.snap,
                             outerTransforms: true,
                             outerShadows:    true,
+                            refreshMode:     config.refreshMode ?? (interactionLocked ? 'live' : 'mutation'),
                         })
                         await _w2c.current.init()
                     }

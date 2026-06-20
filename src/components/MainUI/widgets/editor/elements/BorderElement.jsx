@@ -7,17 +7,19 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-05-10
- * Last modified: 2026-05-10
+ * Created on: 2026-06-18
+ * Last modified: 2026-06-18
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { WIDGET_RADIUS }               from '@Core/constants'
-import { WaColorPicker, WaOption, WaSelect, WaSlider, WaSwitch } from '@web.awesome.me/webawesome-pro/dist/react'
-import { ScaleSwitchElement }          from './ScaleSwitchElement'
-import { formatSliderPercent, sanitizeNumericControlValue } from './sliderUtils'
+import { WaSwitch }                          from '@web.awesome.me/webawesome-pro/dist/react'
+import { useCallback, useEffect, useRef } from 'react'
+import { LineElement }                       from './LineElement'
+import { RadiusElement }                     from './RadiusElement'
+import { sanitizeNumericControlValue }       from './sliderUtils'
+import { realignWidgetAroundContent }        from './widgetContentRealign'
 
 /**
  * Common border & radius editor element
@@ -29,132 +31,133 @@ export const BorderElement = ({
                                   swatches,
                                   getColor,
                                   updateValue,
+                                  moveableId,
+                                  autoRealign = false,
                                   showPill = false,
                                   showRadius = true,
                                   showScale = true,
                                   showRadiusScale = true,
                                   sanitizeSliderValue = sanitizeNumericControlValue,
                               }) => {
-    const currentRadius = element.border?.radius ?? 'none'
+    const widthRef = useRef(null)
+    const realignFrameRef = useRef(null)
+    const trailingRealignFrameRef = useRef(null)
+    const borderWidth = sanitizeSliderValue(element.border?.thickness, 1, {min: 0, max: 10})
+    const borderOpacity = sanitizeSliderValue(element.border?.opacity, 1, {min: 0, max: 1})
 
-    /**
-     * Handles radius selection and updates the pill flag.
-     */
-    const handleRadiusChange = (e) => {
-        const val = Array.isArray(e.target.value) ? e.target.value[0] : e.target.value
+    useEffect(() => {
+        if (widthRef.current) {
+            widthRef.current.value = borderWidth
+        }
 
-        // Update the radius name (e.g., 'm', 'l', 'pill')
-        updateValue('border.radius', val)
+        if (element.border?.thickness !== undefined &&
+            element.border?.thickness !== null &&
+            element.border?.thickness !== borderWidth) {
+            updateValue('border.thickness', borderWidth)
+        }
+    }, [borderWidth, element.border?.thickness, updateValue])
 
-        // Update the pill boolean based on the selection
-        updateValue('border.pill', val === 'pill')
-    }
+    useEffect(() => {
+        return () => {
+            if (realignFrameRef.current !== null) {
+                cancelAnimationFrame(realignFrameRef.current)
+            }
+            if (trailingRealignFrameRef.current !== null) {
+                cancelAnimationFrame(trailingRealignFrameRef.current)
+            }
+        }
+    }, [])
+
+    const realignWidget = useCallback(() => {
+        if (!moveableId) {
+            return
+        }
+        if (realignFrameRef.current !== null) {
+            return
+        }
+
+        realignFrameRef.current = requestAnimationFrame(() => {
+            realignFrameRef.current = null
+            trailingRealignFrameRef.current = requestAnimationFrame(() => {
+                trailingRealignFrameRef.current = requestAnimationFrame(() => {
+                    trailingRealignFrameRef.current = null
+                    realignWidgetAroundContent(moveableId)
+                    __.ui.widgetManager.getMoveable(moveableId)?.current?.updateRect()
+                })
+            })
+        })
+    }, [moveableId])
+
+    useEffect(() => {
+        if (!autoRealign || !moveableId) {
+            return undefined
+        }
+
+        const frame = requestAnimationFrame(() => {
+            realignWidget()
+        })
+
+        return () => cancelAnimationFrame(frame)
+    }, [
+        autoRealign,
+        moveableId,
+        realignWidget,
+        element.border?.show,
+        element.border?.scaled,
+        element.border?.radiusScaled,
+        element.border?.thickness,
+        element.border?.radius,
+    ])
 
     return (
-        <div>
+        <div className="lgs-border-element">
             <WaSwitch
                 label-at-start
                 size="xs"
                 checked={element.border?.show ?? false}
-                onInput={(e) => updateValue('border.show', e.target.checked)}
+                onInput={(e) => {
+                    updateValue('border.show', e.target.checked)
+                    realignWidget()
+                }}
             >
                 <span>{'Border'}</span>
             </WaSwitch>
 
             {element.border?.show && (
-                <>
-                    <div className="lgs-widget-color-control-grid lgs-widget-border-control-grid">
-                        <div className="lgs-widget-color-control-color">
-                            <WaColorPicker
-                                size="s"
-                                swatches={swatches}
-                                value={getColor(element.border)}
-                                onInput={(e) => updateValue('border.color', e.target.value)}
-                            />
-                        </div>
-                        <div className="lgs-widget-border-control-row">
-                            <div className="drawer-horizontal-element lgs-widget-border-control">
-                                <WaSlider
-                                    withTooltip
-                                    size="s"
-                                    label="Width"
-                                    min="0"
-                                    max="10"
-                                    step="0.5"
-                                    label-at-start
-                                    placement="top"
-                                    value={sanitizeSliderValue(element.border?.thickness, 1, {min: 0, max: 10})}
-                                    onInput={(e) => updateValue(
-                                        'border.thickness',
-                                        sanitizeSliderValue(e.target.value, 1, {min: 0, max: 10}),
-                                    )}
-                                />
-                            </div>
-                            <div className="drawer-horizontal-element lgs-widget-border-control">
-                                <WaSlider
-                                    withTooltip
-                                    size="s"
-                                    label="Opacity"
-                                    min="0"
-                                    max="1"
-                                    step="0.05"
-                                    label-at-start
-                                    placement="top"
-                                    valueFormatter={formatSliderPercent}
-                                    value={sanitizeSliderValue(element.border?.opacity, 1, {min: 0, max: 1})}
-                                    onInput={(e) => updateValue(
-                                        'border.opacity',
-                                        sanitizeSliderValue(e.target.value, 1, {min: 0, max: 1}),
-                                    )}
-                                />
-                            </div>
-                        </div>
-                        {showScale && (
-                            <>
-                                <div className="lgs-widget-color-control-spacer" aria-hidden="true"/>
-                                <ScaleSwitchElement
-                                    checked={element.border?.scaled ?? false}
-                                    onChange={(checked) => updateValue('border.scaled', checked)}
-                                    className="lgs-widget-color-control-scaled-line lgs-widget-border-scaled-line"
-                                    widthAuto
-                                />
-                            </>
-                        )}
-                    </div>
-
-                    {showRadius && (
-                        <>
-                            <div className="drawer-horizontal-line lgs-widget-border-radius-line">
-                                <WaSelect
-                                    size="s"
-                                    label={'Radius'}
-                                    label-at-start
-                                    style={{marginLeft: 'auto', width: '10rem'}}
-                                    value={currentRadius}
-                                    onChange={handleRadiusChange}
-                                >
-                                    {[...WIDGET_RADIUS.entries()].map(([_key, _data]) => {
-                                        if (!showPill && _key === 'pill') {
-                                            return null
-                                        }
-                                        return (
-                                            <WaOption key={_key} value={_key}>
-                                                {_data.name}
-                                            </WaOption>
-                                        )
-                                    })}
-                                </WaSelect>
-                            </div>
-                            {showRadiusScale && (
-                                <ScaleSwitchElement
-                                    checked={element.border?.radiusScaled ?? false}
-                                    onChange={(checked) => updateValue('border.radiusScaled', checked)}
-                                    className="lgs-widget-radius-scaled-line lgs-widget-border-radius-scaled-line"
-                                />
-                            )}
-                        </>
+                <LineElement
+                    widthRef={widthRef}
+                    swatches={swatches}
+                    colorValue={getColor(element.border)}
+                    onColorInput={(value) => updateValue('border.color', value)}
+                    widthDefaultValue={borderWidth}
+                    onWidthInput={(value) => {
+                        updateValue(
+                            'border.thickness',
+                            sanitizeSliderValue(value, 1, {min: 0, max: 10}),
+                        )
+                        realignWidget()
+                    }}
+                    opacityValue={borderOpacity}
+                    onOpacityInput={(value) => updateValue(
+                        'border.opacity',
+                        sanitizeSliderValue(value, borderOpacity, {min: 0, max: 1}),
                     )}
-                </>
+                    showScale={showScale}
+                    scaled={element.border?.scaled ?? false}
+                    onScaleChange={(checked) => {
+                        updateValue('border.scaled', checked)
+                        realignWidget()
+                    }}
+                >
+                    {showRadius && (
+                        <RadiusElement
+                            element={element}
+                            updateValue={updateValue}
+                            showPill={showPill}
+                            showScale={showRadiusScale}
+                        />
+                    )}
+                </LineElement>
             )}
         </div>
     )

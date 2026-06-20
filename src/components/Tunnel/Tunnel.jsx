@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-05-09
- * Last modified: 2026-05-09
+ * Created on: 2026-06-05
+ * Last modified: 2026-06-05
  *
  *
  * Copyright © 2026 LGS1920
@@ -68,7 +68,7 @@ const TunnelTooltipContent = memo(({tooltip, icon}) => {
 
 TunnelTooltipContent.displayName = 'TunnelTooltipContent'
 
-const TunnelTooltip = memo(({anchorId, tooltip, icon, placement = 'top', children}) => {
+export const TunnelTooltip = memo(({anchorId, tooltip, icon, placement = 'top', children}) => {
     const [active, setActive] = useState(false)
     const content = normalizeTooltip(tooltip)
 
@@ -147,12 +147,12 @@ TunnelTooltip.displayName = 'TunnelTooltip'
  * @returns {JSX.Element} The rendered tunnel component
  */
 export const Tunnel = memo(({
-                                variant = '',
                                 steps,
                                 defaultStepIndex = 0,
                                 onCancel,
                                 className = '',
                                 cancelTooltip = 'Exit',
+                                leadingAction = null,
                             }) => {
     // State for the current step index
     const [currentContainer, setCurrentStepIndex] = useState(defaultStepIndex)
@@ -183,8 +183,11 @@ export const Tunnel = memo(({
      * @param {PointerEvent} event - Pointer event
      */
     const handleStepClick = useCallback((index, event) => {
-        // Early return if clicking the current step
+        const targetStep = steps[index]
+
+        // Clicking the current step should still trigger its action, if any.
         if (index === currentContainer) {
+            targetStep?.onClick?.(index, event)
             return
         }
         // Check if navigation is blocked by mandatory steps
@@ -199,7 +202,6 @@ export const Tunnel = memo(({
             steps[currentContainer].afterStep(currentContainer)
         }
         // Trigger onClick for the target step if defined
-        const targetStep = steps[index]
         if (targetStep.onClick?.(index, event) === false) {
             return
         }
@@ -227,8 +229,6 @@ export const Tunnel = memo(({
     // Memoize step items to prevent unnecessary re-renders
     const stepItems = useMemo(() =>
                                   steps.map((step, index) => {
-                                      const isDone = step.done || false
-                                      const isCurrent = index === currentContainer
                                       const isBlocked = steps
                                           .slice(0, index)
                                           .some(s => s.mandatory && !s.done)
@@ -237,7 +237,7 @@ export const Tunnel = memo(({
                                               key={index}
                                               className="lgs-tunnel-bar-item"
                                               style={{
-                                                  opacity: isCurrent || step.className ? 1 : 0.7,
+                                                  opacity: step.className ? 1 : 0.7,
                                               }}
                                           >
                                               <TunnelTooltip
@@ -247,32 +247,28 @@ export const Tunnel = memo(({
                                                   placement={step.tooltipPlacement ?? 'top'}
                                               >
                                                   <WaButton
-                                                      variant={variant}
-                                                      pill
-                                                      appearance="plain"
-                                                      aria-label={step.text}
-                                                      className={classNames('lgs-tunnel-element', step.className, {
-                                                          'lgs-tunnel-element-done':    isDone,
-                                                          'lgs-tunnel-element-active':  isCurrent,
-                                                          'lgs-tunnel-element-blocked': isBlocked,
-                                                      })}
-                                                      onClick={event => handleStepClick(index, event)}
-                                                      disabled={isBlocked}
-                                                  >
+                                                    variant="neutral"
+                                                    appearance="plain"
+                                                    aria-label={step.text}
+                                                    aria-disabled={isBlocked}
+                                                    className={classNames({
+                                                        'lgs-tunnel-button-disabled': isBlocked,
+                                                    }, step.className)}
+                                                    onClick={event => handleStepClick(index, event)}
+                                                >
                                                       <WaIcon name={step.icon} variant="regular"/>
                                                   </WaButton>
                                               </TunnelTooltip>
-                                              <div className="lgs-tunnel-bar-spacer"/>
                                           </div>
                                       )
                                   }),
-                              [steps, currentContainer, handleStepClick, tunnelId, variant])
+                              [steps, handleStepClick, tunnelId])
 
     return (
         <div className={classNames('lgs-tunnel-container', className)} ref={_tunnelContainer}>
             {/* Tunnel navigation bar */}
             <div className="lgs-tunnel-bar">
-                <div className="lgs-tunnel-bar-spacer"/>
+                {leadingAction}
                 {stepItems}
                 {/* Exit button */}
                 <TunnelTooltip
@@ -281,17 +277,14 @@ export const Tunnel = memo(({
                     icon="xmark"
                 >
                     <WaButton
-                        variant={variant}
-                        pill
+                        variant="neutral"
                         appearance="plain"
                         aria-label="Exit"
-                        className="lgs-tunnel-cancel lgs-tunnel-element"
                         onPointerDown={onCancel}>
                         <WaIcon name="xmark" variant="regular"/>
                     </WaButton>
                 </TunnelTooltip>
 
-                <div className="lgs-tunnel-bar-spacer"/>
             </div>
             {/* Current step content */}
             {steps[currentContainer]?.component && (

@@ -76,7 +76,7 @@ export const CompassSettings = () => {
             <WaDivider/>
             <div className="compass-settings">
                 <div className="compass-settings-row">
-                    <WaSelect id="compass-selector-settings"
+                    <WaSelect appearance="filled" id="compass-selector-settings"
                               size="s"
                               name="compassSelector"
                               label="Type"

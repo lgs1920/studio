@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-05-09
- * Last modified: 2026-05-09
+ * Created on: 2026-06-11
+ * Last modified: 2026-06-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -20,7 +20,8 @@ import { MapPOIList }                                   from '@Components/MainUI
 import PanelActions                                     from '@Components/PanelsActions'
 import WaDrawer                                         from '@Components/WaDrawerNonModal'
 import { POIS_EDITOR_DRAWER } from '@Core/constants'
-import React, { memo, useCallback, useEffect, useMemo } from 'react'
+import classNames                                       from 'classnames'
+import { memo, useCallback, useEffect, useMemo, useRef } from 'react'
 import { createPortal }                                 from 'react-dom'
 import { useSnapshot }                                  from 'valtio'
 import { proxyMap }                                     from 'valtio/utils'
@@ -50,6 +51,7 @@ export const Panel = memo(() => {
 
     const drawerOpen = drawers.open === POIS_EDITOR_DRAWER // Use 'drawers' here
     const drawerPlacement = menuSettings.drawer
+    const drawerRef = useRef(null)
 
     // --- HANDLERS ---
 
@@ -60,9 +62,10 @@ export const Panel = memo(() => {
      */
     const closePanel = useCallback((event) => {
                                        if (event.target.tagName === 'WA-DRAWER') {
-                                           if (__.ui.drawerManager.isCurrent(POIS_EDITOR_DRAWER)) {
-                                               __.ui.drawerManager.close()
+                                           if (!__.ui.drawerManager.isCurrent(POIS_EDITOR_DRAWER)) {
+                                               return
                                            }
+                                           __.ui.drawerManager.close()
                                            // Dispatch resize event (keep only if mandatory for scene/layout refresh)
                                            window.dispatchEvent(new Event('resize'))
                                        }
@@ -112,18 +115,33 @@ export const Panel = memo(() => {
               }
         , [categories, $pois])
 
+    const isStacked = __.ui.drawerManager.isStacked(POIS_EDITOR_DRAWER)
+    const closePanelWithManager = useCallback(() => {
+        window.dispatchEvent(new Event('resize'))
+        if (__.ui.drawerManager.isCurrent(POIS_EDITOR_DRAWER)) {
+            __.ui.drawerManager.close()
+        }
+    }, [])
+
+    useEffect(() => {
+        if (drawerOpen) {
+            __.ui.drawerManager.restoreDrawerUiState?.(drawerRef.current)
+        }
+    }, [drawerOpen])
 
     const drawerRoot = __.ui.drawerManager.drawerRoot
     const content = (
         <>
             {drawerOpen &&
                 <WaDrawer
+                    ref={drawerRef}
                     id={POIS_EDITOR_DRAWER}
                     open={true}
                     onWaHide={closePanel}
                     placement={drawerPlacement}
+                    className={classNames({'drawer-is-stacked': isStacked})}
                 >
-                    <PanelActions/>
+                    <PanelActions stackedPanel={isStacked} onBack={isStacked ? closePanelWithManager : null}/>
                     <span slot="label">{'Points Of Interest'}</span>
 
                     <MapPOIEditListActions/>

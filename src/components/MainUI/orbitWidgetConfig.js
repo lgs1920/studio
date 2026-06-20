@@ -50,7 +50,7 @@ export const getOrbitWidgetConfig = (id, fromStart) => {
         dynamic:         true,
         group:           SCENE_WIDGETS,
         id,
-        icon:            id === 'rotation-widget' ? 'arrows-rotate' : 'panorama',
+        icon:            id === 'orbit-widget' ? 'arrows-rotate' : 'panorama',
         left:            `${Math.round(horizontalAnchor)}px`,
         mandatory:       false,
         opacity:         1,

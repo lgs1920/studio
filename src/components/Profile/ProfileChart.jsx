@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-30
- * Last modified: 2026-04-30
+ * Created on: 2026-06-05
+ * Last modified: 2026-06-05
  *
  *
  * Copyright © 2026 LGS1920
@@ -80,6 +80,20 @@ const readElementSize = (element) => {
     }
 }
 
+const readRenderableElementSize = (element) => {
+    const size = readElementSize(element)
+    if (size.width > 0 && size.height > 0) {
+        return size
+    }
+
+    const parentSize = readElementSize(element?.parentElement)
+    if (parentSize.width > 0 && parentSize.height > 0) {
+        return parentSize
+    }
+
+    return {width: 0, height: 0}
+}
+
 const readChartSize = (chart, fallbackElement = null) => {
     const chartDom = chart?.getDom?.() ?? fallbackElement
     const chartWidth = Number(chart?.getWidth?.())
@@ -123,8 +137,6 @@ const FLYTHROUGH_PROFILE_HOVER_MARKER_GRAPHIC = 'flythrough-profile-hover-marker
 const FLYTHROUGH_PROFILE_LOCKED_HORIZONTAL_GUIDE_GRAPHIC = 'flythrough-profile-locked-horizontal-guide-graphic'
 const FLYTHROUGH_PROFILE_LOCKED_VERTICAL_GUIDE_GRAPHIC = 'flythrough-profile-locked-vertical-guide-graphic'
 const FLYTHROUGH_PROFILE_OVERLAY_GRAPHIC = 'flythrough-profile-overlay-graphic'
-const FLYTHROUGH_PROFILE_UPDATE_INTERVAL = 33
-const FLYTHROUGH_PROFILE_VIDEO_UPDATE_INTERVAL = 120
 const PROFILE_LINE_WIDTH = 2
 
 const isFlythroughSeries = seriesId => String(seriesId ?? '').startsWith('flythrough-')
@@ -276,7 +288,6 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
     const $unitStore = lgs.settings.unitSystem
     const unitStore = useSnapshot($unitStore)
     const unitSystem = unitStore.current
-    const video = useSnapshot(lgs.stores.ui.video)
     const flythroughSettings = useSnapshot(lgs.settings.ui.flythrough)
     const flythroughProfileInfo = useMemo(
         () => normalizeFlythroughProfileInfo(flythroughSettings.profileInfo),
@@ -286,6 +297,8 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
         () => normalizeFlythroughProgressionStyle(flythroughSettings.progression),
         [flythroughSettings.progression],
     )
+    const profileSettings = useSnapshot(lgs.settings.ui.profile)
+    const showFlythroughLiveData = profileSettings.liveData === true
     const flythroughTrace = useMemo(
         () => normalizeFlythroughTrace(flythroughSettings.trace),
         [flythroughSettings.trace],
@@ -724,8 +737,8 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
                         }
                     }
                 }
-                catch {
-                    return
+                catch (error) {
+                    void error
                 }
             })
         })
@@ -1135,6 +1148,11 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
     }, [])
 
     const flythroughMetricGraphic = useCallback((sample, flythroughState, chart) => {
+        if (!showFlythroughLiveData) {
+            hideProfileMetricBadge()
+            return []
+        }
+
         const label = flythroughMetricLabel(sample, flythroughState)
         const badge = _profileMetricBadge.current
         if (!label) {
@@ -1168,9 +1186,9 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
         }
 
         return []
-    }, [flythroughMetricLabel])
+    }, [flythroughMetricLabel, hideProfileMetricBadge, showFlythroughLiveData])
 
-    const flythroughProfileOption = useCallback((flythroughState, chart) => {
+    const flythroughProfileOption = useCallback((flythroughState, chart, controllerSampleOverride = null) => {
         if (!data?.dataset || !data?.dimensions) {
             return null
         }
@@ -1179,7 +1197,7 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
             || flythroughState?.paused
             || flythroughState?.playing
             || flythroughState?.toolbarVisible
-        const controllerSample = __.ui.flythrough?.controller?.currentSample?.()
+        const controllerSample = controllerSampleOverride ?? __.ui.flythrough?.controller?.currentSample?.()
         const activeSample = visible
                              ? (flythroughState?.playing ? (controllerSample ?? flythroughState?.sample) : (flythroughState?.sample ?? controllerSample))
                              : null
@@ -1196,7 +1214,7 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
         if (!activeSample) {
             _flythroughProfileGraphics.current.renderedKey = null
         }
-        if (!displaySample) {
+        if (!displaySample || !showFlythroughLiveData) {
             hideProfileMetricBadge()
         }
         const graphics = activeSample
@@ -1252,6 +1270,7 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
         locked,
         lockedProfileSample,
         profileTooltipMeta.totalDistanceFromStart,
+                                                    showFlythroughLiveData,
     ])
 
     const handleFlythroughProfileHover = useCallback((params) => {
@@ -1335,20 +1354,28 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
      */
     const handleResize = useCallback(() => {
         if (preview) {
-            return
+            return false
         }
         const chart = _instance.current?.getEchartsInstance?.()
-        if (chart) {
-            try {
-                clearFlythroughProfileGraphicsCache()
-                chart.resize()
-            }
-            catch {
-                return
-            }
-
-            syncProfileDimensions()
+        if (!chart) {
+            return false
         }
+
+        const size = readRenderableElementSize(_chartDom.current)
+        if (size.width <= 0 || size.height <= 0) {
+            return false
+        }
+
+        try {
+            clearFlythroughProfileGraphicsCache()
+            chart.resize({width: size.width, height: size.height})
+        }
+        catch {
+            return false
+        }
+
+        syncProfileDimensions()
+        return true
     }, [clearFlythroughProfileGraphicsCache, preview, syncProfileDimensions])
 
     /**
@@ -1386,7 +1413,7 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
             _chart.current = null
             chart.dispose()
         }
-    }, [clearFlythroughProfileGraphicsCache, handleResize, preview])
+    }, [clearFlythroughProfileGraphicsCache, configId, handleResize, id, preview])
 
     useEffect(() => {
         if (locked) {
@@ -1413,7 +1440,6 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
 
         chart.setOption(option, {
             replaceMerge: ['graphic'],
-            lazyUpdate:   true,
             silent:       true,
         })
     }, [flythroughProfileOption, locked, lockedProfileSample, preview])
@@ -1451,15 +1477,8 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
         }
 
         let frame = null
-        let timeout = null
-        let lastUpdate = 0
         const flythroughStore = lgs.stores.flythrough
-        const videoCaptureActive = video.preRecording || video.recording || video.finalizing || video.snapshot
-        const updateInterval = videoCaptureActive
-                               ? FLYTHROUGH_PROFILE_VIDEO_UPDATE_INTERVAL
-                               : FLYTHROUGH_PROFILE_UPDATE_INTERVAL
-        const renderFlythroughProgress = () => {
-            timeout = null
+        const renderFlythroughProgress = (controllerSampleOverride = null, nextFlythroughState = flythroughStore) => {
             if (frame !== null) {
                 return
             }
@@ -1467,74 +1486,73 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
             frame = requestAnimationFrame(() => {
                 frame = null
                 const chart = _instance.current?.getEchartsInstance?.()
-                const option = flythroughProfileOption(flythroughStore, chart)
+                const option = flythroughProfileOption(nextFlythroughState, chart, controllerSampleOverride)
                 if (!chart || !option) {
                     return
                 }
-                lastUpdate = performance.now()
                 chart.setOption(option, {
                     replaceMerge: ['graphic'],
-                    lazyUpdate:   true,
                     silent:       true,
                 })
             })
         }
         const applyFlythroughProgress = () => {
-            const now = performance.now()
-            const elapsed = now - lastUpdate
-            const shouldRenderNow = !flythroughStore.playing || lastUpdate === 0 || elapsed >= updateInterval
-
-            if (shouldRenderNow) {
-                if (timeout !== null) {
-                    clearTimeout(timeout)
-                    timeout = null
-                }
-                renderFlythroughProgress()
-                return
-            }
-
-            if (timeout === null) {
-                timeout = setTimeout(renderFlythroughProgress, updateInterval - elapsed)
-            }
+            renderFlythroughProgress()
         }
 
         applyFlythroughProgress()
         const unsubscribe = subscribe(flythroughStore, applyFlythroughProgress)
         const flythroughController = __.ui.flythrough?.controller
-        const controllerEvents = [
-            FLYTHROUGH_EVENT_START,
-            FLYTHROUGH_EVENT_UPDATE,
-            FLYTHROUGH_EVENT_PAUSE,
-            FLYTHROUGH_EVENT_RESUME,
-            FLYTHROUGH_EVENT_STOP,
-            FLYTHROUGH_EVENT_END,
-        ]
+        const handleControllerUpdate = (detail) => {
+            if (!detail) {
+                renderFlythroughProgress()
+                return
+            }
+
+            const nextFlythroughState = {
+                ...flythroughStore,
+                active:         detail.running || detail.paused,
+                paused:         detail.paused,
+                playing:        detail.running && !detail.paused,
+                sample:         detail.sample ?? flythroughStore.sample,
+                progress:       detail.progress ?? flythroughStore.progress,
+                duration:       detail.duration ?? flythroughStore.duration,
+                direction:      detail.direction ?? flythroughStore.direction,
+                loop:           detail.loop ?? flythroughStore.loop,
+                toolbarVisible:  flythroughStore.toolbarVisible,
+                hoverSample:    flythroughStore.hoverSample,
+            }
+            renderFlythroughProgress(detail.sample ?? null, nextFlythroughState)
+        }
         const unsubscribeController = flythroughController
-                                      ? controllerEvents.map(event =>
-                                          flythroughController.on(event, applyFlythroughProgress),
-                                      )
+                                      ? [
+                                          flythroughController.on(FLYTHROUGH_EVENT_START, handleControllerUpdate),
+                                          flythroughController.on(FLYTHROUGH_EVENT_UPDATE, handleControllerUpdate),
+                                          flythroughController.on(FLYTHROUGH_EVENT_PAUSE, handleControllerUpdate),
+                                          flythroughController.on(FLYTHROUGH_EVENT_RESUME, handleControllerUpdate),
+                                          flythroughController.on(FLYTHROUGH_EVENT_STOP, handleControllerUpdate),
+                                          flythroughController.on(FLYTHROUGH_EVENT_END, handleControllerUpdate),
+                                      ]
                                       : []
 
         return () => {
             if (frame !== null) {
                 cancelAnimationFrame(frame)
             }
-            if (timeout !== null) {
-                clearTimeout(timeout)
-            }
             unsubscribeController.forEach(unsubscribeEvent => unsubscribeEvent?.())
             unsubscribe()
         }
-    }, [flythroughProfileOption, preview, video.preRecording, video.recording, video.finalizing, video.snapshot])
+    }, [flythroughProfileOption, preview])
 
     usePreviewChartResize(_instance, preview, [width, height, padding, borderWidth])
 
     useEffect(() => {
-        if (preview || !_chartDom.current || typeof ResizeObserver === 'undefined') {
+        if (preview || !_chartDom.current) {
             return
         }
 
         let frame = null
+        let secondFrame = null
         const scheduleResize = () => {
             if (frame !== null) {
                 return
@@ -1543,21 +1561,51 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
             frame = requestAnimationFrame(() => {
                 frame = null
                 handleResize()
+                secondFrame = requestAnimationFrame(() => {
+                    secondFrame = null
+                    handleResize()
+                })
             })
         }
 
-        const observer = new ResizeObserver(scheduleResize)
         const chartDom = _chartDom.current
         const chartContainer = getChartContainer()
         const layoutContainer = getLiveLayoutContainer()
+        const shouldReactToEvent = event => {
+            const path = typeof event.composedPath === 'function' ? event.composedPath() : []
+            if (path.includes(chartDom)) {
+                return true
+            }
 
-        observer.observe(chartDom)
-        if (chartContainer) {
+            return path.some(target => target instanceof Element && target.contains?.(chartDom))
+        }
+        const handleVisibilityChange = event => {
+            if (shouldReactToEvent(event)) {
+                scheduleResize()
+            }
+        }
+        const observer = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(scheduleResize) : null
+        const intersectionObserver = typeof IntersectionObserver !== 'undefined'
+                                     ? new IntersectionObserver(entries => {
+                                         if (entries.some(entry => entry.isIntersecting)) {
+                                             scheduleResize()
+                                         }
+                                     })
+                                     : null
+
+        observer?.observe(chartDom)
+        if (chartContainer && observer) {
             observer.observe(chartContainer)
         }
-        if (layoutContainer && layoutContainer !== chartContainer) {
+        if (layoutContainer && layoutContainer !== chartContainer && observer) {
             observer.observe(layoutContainer)
         }
+        intersectionObserver?.observe(chartDom)
+
+        document.addEventListener('drawer-open', handleVisibilityChange, true)
+        document.addEventListener('wa-after-show', handleVisibilityChange, true)
+        document.addEventListener('wa-tab-show', handleVisibilityChange, true)
+        document.addEventListener('transitionend', handleVisibilityChange, true)
 
         scheduleResize()
 
@@ -1565,7 +1613,15 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
             if (frame !== null) {
                 cancelAnimationFrame(frame)
             }
-            observer.disconnect()
+            if (secondFrame !== null) {
+                cancelAnimationFrame(secondFrame)
+            }
+            observer?.disconnect()
+            intersectionObserver?.disconnect()
+            document.removeEventListener('drawer-open', handleVisibilityChange, true)
+            document.removeEventListener('wa-after-show', handleVisibilityChange, true)
+            document.removeEventListener('wa-tab-show', handleVisibilityChange, true)
+            document.removeEventListener('transitionend', handleVisibilityChange, true)
         }
     }, [getChartContainer, getLiveLayoutContainer, handleResize, preview])
 
@@ -1594,7 +1650,8 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
     }
 
     return (
-        <div id={id ?? `profile-${uuid()}`}
+        <div
+            id={id ?? `profile-${uuid()}`}
             className="profile-chart-container"
             style={{
                 width:           width,

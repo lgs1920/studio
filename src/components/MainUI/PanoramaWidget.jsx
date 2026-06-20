@@ -893,7 +893,7 @@ export const PanoramaWidget = memo(() => {
     return (
         <div className="orbit-mode-widgets">
             <Widget
-                isVisible={panorama.active}
+                isVisible={panorama.active && panorama.visible !== false}
                 config={config}
                 className="orbit-widget-shell"
             >

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-05-01
- * Last modified: 2026-05-01
+ * Created on: 2026-06-18
+ * Last modified: 2026-06-18
  *
  *
  * Copyright © 2026 LGS1920
@@ -75,14 +75,9 @@
     flex-wrap: nowrap;
 }
 
-.text-widget-editor-format-row {
-    display: flex;
-    align-items: center;
-    flex: 0 0 auto;
-    justify-content: flex-end;
-    min-width: max-content;
-    margin-left: auto;
-    gap: calc(2 * var(--lgs-gutter-xs));
+.text-widget-editor-format-row.two-columns > * {
+    flex: 1 1 0;
+    min-width: 0;
 }
 
 .text-widget-editor-format-row wa-button-group {
@@ -139,6 +134,8 @@
  */
 .text-widget-preview-area::part(base) {
     display: inline-flex;
+    align-items: center;
+    justify-content: center;
     overflow: visible !important;
     width: var(--lgs-preview-content-width, auto);
     max-width: none;
@@ -158,8 +155,8 @@
  */
 .text-widget-preview-area::part(form-control) {
     display: inline-block;
-    margin: 1rem;
-    padding: 30px; /* Safe zone for large shadows */
+    margin: 0;
+    padding: 0;
 }
 
 /* * The Input/Textarea element
@@ -178,10 +175,10 @@
     width: var(--lgs-preview-content-width, auto);
     min-width: 1ch;
     max-width: none;
-    height: var(--lgs-preview-content-height, auto);
+    height: auto;
     min-height: 1em;
     margin: 0;
-    padding: var(--lgs-tx-padding-top) var(--lgs-tx-padding-right) var(--lgs-tx-padding-bottom) var(--lgs-tx-padding-left);
+    padding: var(--lgs-tx-textarea-padding-top) var(--lgs-tx-padding-right) var(--lgs-tx-textarea-padding-bottom) var(--lgs-tx-padding-left);
     resize: none;
 
     transition: text-shadow 0.2s ease,
@@ -223,7 +220,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    height: auto;
+    height: 100%;
 }
 
 .text-widget-rotation {
@@ -231,16 +228,6 @@
     align-items: center;
     margin-left: auto;
     gap: var(--lgs-gutter-xs);
-}
-
-
-.lgs--text-widget-font-size-trigger, .lgs--text-widget-typeface-trigger,
-.lgs--text-widget-line-height-trigger {
-    width: 10rem;
-}
-
-body.mobile .text-widget-editor-size-format-line {
-    flex-wrap: wrap;
 }
 
 body.mobile .text-widget-editor-size-format-line .lgs--text-widget-font-size-trigger {

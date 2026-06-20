@@ -28,12 +28,13 @@ import { useMemo }                   from 'react'
 import { useSnapshot }               from 'valtio'
 import './style.css'
 
-export const MapPOISummary = ({poi, useInMenu = false, category = null, style, slot}) => {
+export const MapPOISummary = ({poi}) => {
     const $pois = lgs.stores.main.components.pois
     const pois = useSnapshot($pois)
     const point = useMemo(() => pois.list.get(poi), [pois.list, poi])
+    const displayTitle = `${point?.title ?? point?.name ?? point?.id ?? 'POI'}`.trim() || 'POI'
 
-    const iconName = point.categoryIcon(point.category)
+    const iconName = point?.categoryIcon?.(point.category)
     const isSvg = iconName?.endsWith('.svg')
 
     return (
@@ -45,7 +46,7 @@ export const MapPOISummary = ({poi, useInMenu = false, category = null, style, s
                         variant="regular" family="duotone"
                         onWaLoad={applyPOIDuotoneIconStyles}
                 />
-                <span>{point.title}</span>
+                <span>{displayTitle}</span>
             </span>
             {point?.visible &&
                 <span>

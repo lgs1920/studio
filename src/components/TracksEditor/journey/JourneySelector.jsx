@@ -424,7 +424,7 @@ export const JourneySelector = memo(({
             )}
 
             {shouldRenderSelect && (!hasGroups || allowEmptyOption) && (
-                <WaSelect
+                <WaSelect appearance="filled"
                     label={label}
                     size={size}
                     onChange={handleChange}

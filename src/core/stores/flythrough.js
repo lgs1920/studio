@@ -16,11 +16,14 @@
 
 import { defaultFlythroughSettings } from '@Core/ui/flythrough/FlythroughProgressionStyle'
 
+const defaults = defaultFlythroughSettings()
+
 export const flythrough = {
-    ...defaultFlythroughSettings(),
+    ...defaults,
     active:        false,
     playing:       false,
     paused:        false,
+    nearbyPois:    [],
     journeySlug:    null,
     trackSlug:      null,
     progress:       0,
@@ -38,6 +41,9 @@ export const flythrough = {
     markerRadius:   35,
     totalDistance:  0,
     toolbarVisible: false,
+    mainUiHidden:   false,
+    clipSequenceActive: false,
     recordingSync:  false,
     videoCropRect:  null,
+    orbitAllowed:   true,
 }
