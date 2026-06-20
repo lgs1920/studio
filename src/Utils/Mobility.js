@@ -15,10 +15,8 @@
  ******************************************************************************/
 
 import { MILLIS }        from '@Core/constants'
-import * as turfDistance from '@turf/distance'
-
-import { DateTime }   from 'luxon'
-import * as turfPoint from 'turf-point'
+import { Cartographic, EllipsoidGeodesic } from 'cesium'
+import { DateTime }                       from 'luxon'
 
 export class Mobility {
     /**
@@ -38,10 +36,27 @@ export class Mobility {
         const endLatitude = Number(end?.latitude)
 
         if ([startLongitude, startLatitude, endLongitude, endLatitude].every(Number.isFinite)) {
-            return turfDistance.default(
-                turfPoint.default([startLongitude, startLatitude]),
-                turfPoint.default([endLongitude, endLatitude]),
-            ) * 1000
+            if (startLongitude === endLongitude && startLatitude === endLatitude) {
+                return 0
+            }
+
+            try {
+                const geodesic = new EllipsoidGeodesic(
+                    Cartographic.fromDegrees(startLongitude, startLatitude),
+                    Cartographic.fromDegrees(endLongitude, endLatitude),
+                )
+                return geodesic.surfaceDistance
+            }
+            catch {
+                const toRadians = degrees => degrees * Math.PI / 180
+                const dLat = toRadians(endLatitude - startLatitude)
+                const dLon = toRadians(endLongitude - startLongitude)
+                const lat1 = toRadians(startLatitude)
+                const lat2 = toRadians(endLatitude)
+                const a = Math.sin(dLat / 2) ** 2 +
+                    Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) ** 2
+                return 6378137 * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)))
+            }
         }
         return 0
     }

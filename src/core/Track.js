@@ -394,7 +394,7 @@ export class Track extends MapElement {
                 const pointDuration = finiteNumber(point.duration) ?? 0
                 duration += pointDuration
 
-                if (point.activity === true) {
+                if (point.activity === true && point.reliableMotion !== false) {
                     movingDistance += pointDistance
                     movingDuration += pointDuration
 
@@ -433,7 +433,8 @@ export class Track extends MapElement {
             }
         })
 
-        global.distance = distance
+        const lastDistance = finiteNumber(points.at(-1)?.distanceFromStart)
+        global.distance = lastDistance ?? distance
 
         if (hasTime) {
             global.duration = duration
@@ -479,6 +480,12 @@ export class Track extends MapElement {
         const activityProfile = Track.activityProfile(this.activity, this.activitySettings)
         let minHeight
         let maxHeight
+        let cumulativeDistance = 0
+        const minSegmentDuration = Math.max(0, Number(activityProfile.minSegmentDuration) || 0)
+        const minSegmentDistance = Math.max(0, Number(activityProfile.minSegmentDistance) || 0)
+        const maxPaceThreshold = Math.max(0, Number(activityProfile.maxPace) || 0)
+        const maxSpeedDeltaThreshold = Math.max(0, Number(activityProfile.maxSpeedDelta) || 0)
+        let previousMovingSpeed
 
         // 1st step : Metrics per points
         // we iterate on all points to compute
@@ -494,16 +501,36 @@ export class Track extends MapElement {
                 const prev = aggregate[index - 1]
                 const current = aggregate[index]
                 const pointData = {}
+                const prevSpeed = Number(previousMovingSpeed)
 
                 pointData.distance = Mobility.distance(prev, current)
                 if (this.hasTime && current?.time && prev?.time) {
                     pointData.duration = Mobility.duration(prev.time, current.time)
                     pointData.speed = Mobility.speed(pointData.distance, pointData.duration)
                     pointData.pace = Mobility.pace(pointData.distance, pointData.duration)
+                    pointData.reliableMotion =
+                        pointData.duration >= minSegmentDuration &&
+                        pointData.distance >= minSegmentDistance
+
+                    if (pointData.reliableMotion && maxPaceThreshold > 0 && pointData.pace > maxPaceThreshold) {
+                        pointData.reliableMotion = false
+                    }
+
+                    if (pointData.reliableMotion && maxSpeedDeltaThreshold > 0 && Number.isFinite(prevSpeed)) {
+                        const speedDelta = Math.abs(pointData.speed - prevSpeed)
+                        if (speedDelta > maxSpeedDeltaThreshold) {
+                            pointData.reliableMotion = false
+                        }
+                    }
+
                     pointData.activity = !(
                         pointData.duration >= (activityProfile.stopDuration ?? globalThis.lgs?.settings?.getMetrics?.stopDuration ?? 0) &&
                         pointData.speed <= (activityProfile.stopSpeedLimit ?? globalThis.lgs?.settings?.getMetrics?.stopSpeedLimit ?? 0)
                     )
+
+                    if (pointData.reliableMotion && pointData.activity === true && Number.isFinite(pointData.speed) && pointData.speed > 0) {
+                        previousMovingSpeed = pointData.speed
+                    }
                 }
                 if (this.hasAltitude) {
                     pointData.elevation = Mobility.elevation(prev, current)
@@ -523,7 +550,12 @@ export class Track extends MapElement {
                             maxHeight = maxHeight === undefined ? currentAltitude : Math.max(maxHeight, currentAltitude)
                         }
                     }
-                    segmentData.push({...current, ...pointData})
+                    cumulativeDistance += pointData.distance ?? 0
+                    segmentData.push({
+                        ...current,
+                        ...pointData,
+                        distanceFromStart: cumulativeDistance,
+                    })
                 }
             }
             featureMetrics.push(segmentData)

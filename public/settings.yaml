@@ -133,33 +133,49 @@ journey:
       - id: trek
         label: Trek
         icon: person-hiking
+        minSegmentDuration: 2
+        minSegmentDistance: 3
         maxSpeed: 3.0          # 10.8 km/h
         maxClimbRate: 1.5      # m/s
         maxDescentRate: 2.5    # m/s
+        maxPace: 0
+        maxSpeedDelta: 0
         stopDuration: 60
         stopSpeedLimit: 0.2
       - id: trail
         label: Trail
         icon: person-running
+        minSegmentDuration: 2
+        minSegmentDistance: 3
         maxSpeed: 5.5          # 19.8 km/h
         maxClimbRate: 2.0
         maxDescentRate: 3.0
+        maxPace: 0
+        maxSpeedDelta: 0
         stopDuration: 45
         stopSpeedLimit: 0.3
       - id: bike
         label: Bike
         icon: bicycle
+        minSegmentDuration: 2
+        minSegmentDistance: 5
         maxSpeed: 16.0         # 57.6 km/h
         maxClimbRate: 2.5
         maxDescentRate: 4.0
+        maxPace: 0
+        maxSpeedDelta: 0
         stopDuration: 45
         stopSpeedLimit: 0.6
       - id: ski-touring
         label: Ski touring
         icon: person-skiing-nordic
+        minSegmentDuration: 2
+        minSegmentDistance: 4
         maxSpeed: 8.0          # 28.8 km/h
         maxClimbRate: 1.6
         maxDescentRate: 6.0
+        maxPace: 0
+        maxSpeedDelta: 0
         stopDuration: 60
         stopSpeedLimit: 0.25
   ## POIs
@@ -372,32 +388,48 @@ ui:
       - id: trek
         label: Trek
         icon: person-hiking
+        minSegmentDuration: 2
+        minSegmentDistance: 3
         maxSpeed: 3.0
         maxClimbRate: 1.5
         maxDescentRate: 2.5
+        maxPace: 0
+        maxSpeedDelta: 0
         stopDuration: 60
         stopSpeedLimit: 0.2
       - id: trail
         label: Trail
         icon: person-running
+        minSegmentDuration: 2
+        minSegmentDistance: 3
         maxSpeed: 5.5
         maxClimbRate: 2.0
         maxDescentRate: 3.0
+        maxPace: 0
+        maxSpeedDelta: 0
         stopDuration: 45
         stopSpeedLimit: 0.3
       - id: bike
         label: Bike
         icon: bicycle
+        minSegmentDuration: 2
+        minSegmentDistance: 5
         maxSpeed: 16.0
         maxClimbRate: 2.5
         maxDescentRate: 4.0
+        maxPace: 0
+        maxSpeedDelta: 0
         stopDuration: 45
         stopSpeedLimit: 0.6
       - id: ski-touring
         label: Ski touring
         icon: person-skiing-nordic
+        minSegmentDuration: 2
+        minSegmentDistance: 4
         maxSpeed: 8.0
         maxClimbRate: 1.6
         maxDescentRate: 6.0
+        maxPace: 0
+        maxSpeedDelta: 0
         stopDuration: 60
         stopSpeedLimit: 0.25

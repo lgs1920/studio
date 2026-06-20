@@ -160,9 +160,16 @@ export class Profiler {
                 id:     track.slug,
                 source: [],
             }
+            const trackDistanceOffset = distance
 
             trackPoints.forEach((point, pointIndex) => {
-                distance += point.distance ?? 0
+                const pointDistance = finiteNumber(point.distanceFromStart)
+                if (pointDistance !== null) {
+                    distance = trackDistanceOffset + pointDistance
+                }
+                else {
+                    distance += point.distance ?? 0
+                }
                 const elevation = Number(point.altitude)
                 if (!Number.isFinite(elevation)) {
                     return
@@ -190,6 +197,11 @@ export class Profiler {
                 }
                 trackDataset.source.push(coords)
             })
+
+            const lastPointDistance = finiteNumber(trackPoints.at(-1)?.distanceFromStart)
+            if (lastPointDistance !== null) {
+                distance = trackDistanceOffset + lastPointDistance
+            }
             if (track.visible && trackDataset.source.length > 0) {
                 data.dataset.push(trackDataset)
                 data.options.push({

@@ -51,18 +51,26 @@ describe('journey metrics', () => {
                 {
                     id:             'trek',
                     label:          'Trek',
+                    minSegmentDuration: 2,
+                    minSegmentDistance: 3,
                     maxSpeed:       3.0,
                     maxClimbRate:   1.5,
                     maxDescentRate: 2.5,
+                    maxPace:        0,
+                    maxSpeedDelta:  0,
                     stopDuration:   60,
                     stopSpeedLimit: 0.2,
                 },
                 {
                     id:             'bike',
                     label:          'Bike',
+                    minSegmentDuration: 2,
+                    minSegmentDistance: 5,
                     maxSpeed:       16.0,
                     maxClimbRate:   2.5,
                     maxDescentRate: 4.0,
+                    maxPace:        0,
+                    maxSpeedDelta:  0,
                     stopDuration:   45,
                     stopSpeedLimit: 0.6,
                 },
@@ -289,6 +297,61 @@ describe('journey metrics', () => {
 
         expect(journey.activitySettings.maxSpeed).toBe(2.25)
         expect(track.activitySettings.maxSpeed).toBe(2.25)
+    })
+
+    it('keeps short segments for distance while excluding them from speed extrema', () => {
+        globalThis.lgs.settings.getJourney.activity.types[0].minSegmentDuration = 2
+        globalThis.lgs.settings.getJourney.activity.types[0].minSegmentDistance = 3
+        globalThis.lgs.settings.getJourney.activity.types[0].maxSpeed = 20
+
+        const track = makeLineTrack({
+            coordinates: [
+                [0, 0, 100],
+                [0.00002, 0, 100],
+                [0.00102, 0, 100],
+            ],
+            times:       [
+                '2026-01-01T00:00:00Z',
+                '2026-01-01T00:00:01Z',
+                '2026-01-01T00:01:01Z',
+            ],
+        })
+
+        track.extractMetrics()
+
+        expect(track.metrics.points).toHaveLength(2)
+        expect(track.metrics.points[0].reliableMotion).toBe(false)
+        expect(track.metrics.global.distance).toBeGreaterThan(100)
+        expect(track.metrics.global.maxSpeed).toBeLessThan(5)
+    })
+
+    it('filters sudden speed spikes from speed and pace extrema', () => {
+        globalThis.lgs.settings.getJourney.activity.types[0].maxSpeed = 20
+        globalThis.lgs.settings.getJourney.activity.types[0].maxSpeedDelta = 2
+        globalThis.lgs.settings.getJourney.activity.types[0].minSegmentDuration = 1
+        globalThis.lgs.settings.getJourney.activity.types[0].minSegmentDistance = 1
+
+        const track = makeLineTrack({
+            coordinates: [
+                [0, 0, 100],
+                [0.0001, 0, 100],
+                [0.0011, 0, 100],
+                [0.0012, 0, 100],
+            ],
+            times:       [
+                '2026-01-01T00:00:00Z',
+                '2026-01-01T00:00:10Z',
+                '2026-01-01T00:00:20Z',
+                '2026-01-01T00:00:30Z',
+            ],
+        })
+
+        track.extractMetrics()
+
+        expect(track.metrics.points).toHaveLength(3)
+        expect(track.metrics.points[1].reliableMotion).toBe(false)
+        expect(track.metrics.global.maxSpeed).toBeLessThan(3)
+        expect(track.metrics.global.minPace).toBeGreaterThan(0)
     })
 
     it('skips malformed coordinates instead of failing metrics calculation', () => {
