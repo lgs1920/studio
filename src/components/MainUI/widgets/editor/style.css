@@ -90,8 +90,7 @@
     box-sizing: border-box;
     height: auto;
     min-height: calc(100% - var(--lgs-gutter-s));
-    margin-right: var(--lgs-gutter-s);
-    margin-bottom: var(--lgs-gutter-s);
+    margin: 0;
 }
 
 .lgs-scrollbars .view > .lgs-widget-editor-card::part(body) {
@@ -121,7 +120,7 @@
 .lgs-widget-editor-card wa-select[label-at-start]::part(form-control-label),
 .lgs-widget-editor-card wa-select[label-at-start]::part(label) {
     font-size: var(--lgs-font-size) !important;
-    font-weight: normal !important;
+    font-weight: var(--wa-form-control-label-font-weight) !important;
     line-height: var(--wa-form-control-label-line-height);
     color: var(--wa-form-control-label-color);
 }

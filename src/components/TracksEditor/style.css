@@ -177,7 +177,7 @@ wa-tab sl-icon {
 .lgs--track-style-label,
 #track-line-settings wa-switch::part(label) {
     font-size: var(--lgs-font-size) !important;
-    font-weight: normal;
+    font-weight: var(--wa-form-control-label-font-weight);
     line-height: var(--wa-form-control-label-line-height);
     color: var(--wa-form-control-label-color);
 }
@@ -291,7 +291,7 @@ wa-tab sl-icon {
 
 .lgs--track-style-opacity-slider::part(label) {
     font-size: var(--lgs-font-size) !important;
-    font-weight: normal;
+    font-weight: var(--wa-form-control-label-font-weight);
     line-height: var(--wa-form-control-label-line-height);
 }
 
@@ -477,7 +477,7 @@ wa-tab sl-icon {
 #journey-editor-drawer .lgs--elevation-source-select::part(form-control-label),
 #journey-editor-drawer .lgs--elevation-source-select::part(label) {
     font-size: var(--lgs-font-size);
-    font-weight: normal;
+    font-weight: var(--wa-form-control-label-font-weight);
     line-height: var(--wa-form-control-label-line-height);
     color: var(--wa-form-control-label-color);
 }
@@ -533,12 +533,12 @@ wa-tab::part(base) {
 
 .lgs--track-data {
     width: 100%;
-    --padding: var(--lgs-gutter-s);
 }
 
 .lgs--track-data::part(body) {
     flex-direction: column;
     gap: var(--lgs-gutter-s);
+    padding-inline-end: 0;
 }
 .element-row {
     width: 100%;
