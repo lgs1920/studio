@@ -110,8 +110,10 @@ export const WidgetEditorPanel = () => {
     const syncGlobalCompass = drawers.action === 'edit-global-compass'
     const drawerPlacement = menuSettings.drawer
     const currentSnapshotImage = widget.currentSnapshot?.entity === drawers.entity ? widget.currentSnapshot.image : null
-    const previewBg = currentSnapshotImage ||
-        (canvasPreviewBg.entity === drawers.entity ? canvasPreviewBg.image : null)
+    const previewBg = widgetType === 'profile'
+                      ? null
+                      : (currentSnapshotImage ||
+                         (canvasPreviewBg.entity === drawers.entity ? canvasPreviewBg.image : null))
     const widgetPresetKey = useMemo(() => {
         const element = widgetConfiguration.elements?.[drawers.entity]
         const preset = element

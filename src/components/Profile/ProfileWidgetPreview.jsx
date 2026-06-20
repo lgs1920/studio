@@ -23,6 +23,7 @@
  ******************************************************************************/
 
 import { ProfileChart }                               from './ProfileChart'
+import { getPreviewChartSize }                        from '@Components/MainUI/widgets/editor/previewUtils'
 import { useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useSnapshot }                                from 'valtio'
 
@@ -36,6 +37,8 @@ export const ProfileWidgetPreview = ({entity}) => {
     const profile = useSnapshot(lgs.stores.main.components.profile)
     const flythroughSettings = useSnapshot(lgs.settings.ui.flythrough)
     const widgetListSnapshot = useSnapshot(lgs.stores.ui.widget.list)
+    const widgetConfig = __.ui.widgetManager.getWidgetConfig?.(entity)
+    const widgetDimensions = widgetListSnapshot.get(entity)?.dimensions ?? widgetConfig?.dimensions ?? null
 
     const _preview = useRef(null)
     const [previewSize, setPreviewSize] = useState({width: 0, height: 0})
@@ -51,8 +54,14 @@ export const ProfileWidgetPreview = ({entity}) => {
     ].join(':')
 
     const previewRatio = useMemo(() => {
+        const width = Number(widgetDimensions?.width)
+        const height = Number(widgetDimensions?.height)
+        if (Number.isFinite(width) && Number.isFinite(height) && width > 0 && height > 0) {
+            return width / height
+        }
+
         const ratio = widgetListSnapshot.get(entity)?.ratio
-                     ?? __.ui.widgetManager.getWidgetConfig?.(entity)?.ratio
+                     ?? widgetConfig?.ratio
                      ?? lgs.configuration?.widgetRatio
         if (!ratio) {
             return 16 / 9
@@ -75,46 +84,21 @@ export const ProfileWidgetPreview = ({entity}) => {
         return Number.isFinite(Number(preset?.aspectRatio)) && Number(preset.aspectRatio) > 0
                ? Number(preset.aspectRatio)
                : 16 / 9
-    }, [entity, widgetListSnapshot])
+    }, [entity, widgetConfig?.ratio, widgetDimensions?.width, widgetDimensions?.height, widgetListSnapshot])
 
     const previewChartSize = useMemo(() => {
-        const width = Math.max(0, previewSize.width)
-        const height = Math.max(0, previewSize.height)
-
-        if (width <= 0 || height <= 0) {
+        const chartSize = getPreviewChartSize({
+            containerWidth: previewSize.width,
+            containerHeight: previewSize.height,
+            ratio: previewRatio,
+            scale: 0.8,
+        })
+        if (!chartSize) {
             return {width: 0, height: 0}
         }
-
-        if (!Number.isFinite(previewRatio) || previewRatio <= 0) {
-            return {width, height}
-        }
-
-        if (previewRatio > 1) {
-            let nextWidth = width
-            let nextHeight = nextWidth / previewRatio
-
-            if (nextHeight > height) {
-                nextHeight = height
-                nextWidth = nextHeight * previewRatio
-            }
-
-            return {
-                width:  Math.max(1, Math.round(nextWidth)),
-                height: Math.max(1, Math.round(nextHeight)),
-            }
-        }
-
-        let nextHeight = height
-        let nextWidth = nextHeight * previewRatio
-
-        if (nextWidth > width) {
-            nextWidth = width
-            nextHeight = nextWidth / previewRatio
-        }
-
         return {
-            width:  Math.max(1, Math.round(nextWidth)),
-            height: Math.max(1, Math.round(nextHeight)),
+            width:  Math.max(1, Math.round(chartSize.width)),
+            height: Math.max(1, Math.round(chartSize.height)),
         }
     }, [previewRatio, previewSize.height, previewSize.width])
 

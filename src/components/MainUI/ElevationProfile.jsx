@@ -32,7 +32,7 @@ import { UIToast }                                                  from '@Utils
 import {
     WaButton, WaIcon, WaOption, WaProgressBar, WaSelect, WaSwitch, WaTooltip,
 }                                                                   from '@web.awesome.me/webawesome-pro/dist/react'
-import { useCallback, useEffect, useMemo, useState }                 from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState }                 from 'react'
 import { useSnapshot }                                              from 'valtio'
 
 const setProfileWidgetVisible = visible => {
@@ -58,6 +58,8 @@ export const ElevationProfile = (props) => {
     const [profileChartConfigId, setProfileChartConfigId] = useState(null)
     const [backgroundImage, setBackgroundImage] = useState(null)
     const [lastValidData, setLastValidData] = useState({journeySlug: null, data: null})
+    const previewZoneRef = useRef(null)
+    const [previewZoneReady, setPreviewZoneReady] = useState(false)
 
     const renderer = WidgetDynamicRenderer.instance
 
@@ -274,6 +276,40 @@ export const ElevationProfile = (props) => {
         }
     }, [isProcessing, hasElevation, getProfileBackground])
 
+    useLayoutEffect(() => {
+        const element = previewZoneRef.current
+        if (!element) {
+            return
+        }
+
+        let raf1 = 0
+        let raf2 = 0
+        const updateReadyState = () => {
+            const rect = element.getBoundingClientRect()
+            if (rect.width > 0 && rect.height > 0) {
+                setPreviewZoneReady(true)
+            }
+        }
+
+        updateReadyState()
+        const observer = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(updateReadyState) : null
+        observer?.observe(element)
+        raf1 = requestAnimationFrame(() => {
+            updateReadyState()
+            raf2 = requestAnimationFrame(updateReadyState)
+        })
+
+        return () => {
+            if (raf1) {
+                cancelAnimationFrame(raf1)
+            }
+            if (raf2) {
+                cancelAnimationFrame(raf2)
+            }
+            observer?.disconnect()
+        }
+    }, [hasElevation, isProcessing, profile.show, profileChartConfigId])
+
     /**
      * Auto-hide widget if no elevation data is available
      */
@@ -424,7 +460,7 @@ export const ElevationProfile = (props) => {
 
     return (
         <>
-            <WaSelect className="lgs--elevation-source-select"
+            <WaSelect appearance="filled" className="lgs--elevation-source-select"
                       size="s"
                       label={props.label}
                       value={selectedServer}
@@ -471,18 +507,21 @@ export const ElevationProfile = (props) => {
 
             {hasElevation && (
                 <div
+                    ref={previewZoneRef}
                     className="editor-preview-zone lgs-widget-preview"
                     data-widget-preview-entity={profileChartConfigId ?? undefined}
                     style={{'--lgs-widget-preview-bg': backgroundImage ? `url(${backgroundImage})` : 'none'}}
                 >
-                    <ProfileChart
-                        key={profileChartConfigId ?? 'profile'}
-                        id="journey-profile-chart-in-settings"
-                        configId={profileChartConfigId}
-                        data={data?.dataset}
-                        height="180px"
-                        width="100%"
-                    />
+                    {previewZoneReady && (
+                        <ProfileChart
+                            key={profileChartConfigId ?? 'profile'}
+                            id="journey-profile-chart-in-settings"
+                            configId={profileChartConfigId}
+                            data={data?.dataset}
+                            height="180px"
+                            width="100%"
+                        />
+                    )}
                 </div>
             )}
         </>
