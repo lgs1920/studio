@@ -400,6 +400,11 @@ body[data-on-map-theme="fall"] .wa-theme-lgs1920-on-map {
     --lgs-on-map-dark-color: #b15600;
     --lgs-on-map-light-color: #f1bb6a;
     --lgs-on-map-text-color: #fff4e4;
+    --lgs-on-map-surface-gradient: linear-gradient(28deg, color-mix(in oklab, var(--wa-color-brand) 22%, var(--lgs-on-map-dark-color) 18%) 0%, color-mix(in oklab, var(--wa-color-brand-60, var(--wa-color-brand)) 14%, var(--lgs-on-map-light-color) 16%) 38%, transparent 78%),
+    linear-gradient(138deg, transparent 0%, color-mix(in oklab, var(--wa-color-brand) 16%, var(--lgs-on-map-light-color) 18%) 44%, color-mix(in oklab, var(--wa-color-brand-70, var(--wa-color-brand)) 8%, var(--lgs-on-map-dark-color) 12%) 66%, transparent 88%),
+    linear-gradient(168deg, color-mix(in oklab, var(--lgs-dark-color-80) 88%, var(--wa-color-brand) 12%) 0%, color-mix(in oklab, var(--lgs-dark-color-95) 84%, var(--wa-color-brand) 16%) 54%, var(--lgs-dark-color-95) 100%);
+    --lgs-card-on-map-bg-color: color-mix(in oklab, var(--lgs-dark-color-80) 76%, var(--wa-color-brand) 24%);
+    --lgs-card-on-map-bg-image: var(--lgs-on-map-surface-gradient);
 }
 
 body[data-on-map-theme="winter"] .wa-theme-lgs1920-on-map {
@@ -407,6 +412,11 @@ body[data-on-map-theme="winter"] .wa-theme-lgs1920-on-map {
     --lgs-on-map-dark-color: #eaf1fc;
     --lgs-on-map-light-color: #89a9cf;
     --lgs-on-map-text-color: #1f2f45;
+    --lgs-on-map-surface-gradient: linear-gradient(28deg, color-mix(in oklab, var(--wa-color-brand) 20%, var(--lgs-on-map-dark-color) 20%) 0%, color-mix(in oklab, var(--wa-color-brand-60, var(--wa-color-brand)) 12%, var(--lgs-on-map-light-color) 18%) 38%, transparent 78%),
+    linear-gradient(138deg, transparent 0%, color-mix(in oklab, var(--wa-color-brand) 14%, var(--lgs-on-map-light-color) 20%) 44%, color-mix(in oklab, var(--wa-color-brand-70, var(--wa-color-brand)) 6%, var(--lgs-on-map-dark-color) 14%) 66%, transparent 88%),
+    linear-gradient(168deg, color-mix(in oklab, var(--lgs-dark-color-80) 88%, var(--wa-color-brand) 12%) 0%, color-mix(in oklab, var(--lgs-dark-color-95) 84%, var(--wa-color-brand) 16%) 54%, var(--lgs-dark-color-95) 100%);
+    --lgs-card-on-map-bg-color: color-mix(in oklab, var(--lgs-dark-color-80) 76%, var(--wa-color-brand) 24%);
+    --lgs-card-on-map-bg-image: var(--lgs-on-map-surface-gradient);
 }
 
 body[data-on-map-theme="spring"] .wa-theme-lgs1920-on-map {
@@ -414,4 +424,9 @@ body[data-on-map-theme="spring"] .wa-theme-lgs1920-on-map {
     --lgs-on-map-dark-color: #34cc57;
     --lgs-on-map-light-color: #c8a36a;
     --lgs-on-map-text-color: #0a1800;
+    --lgs-on-map-surface-gradient: linear-gradient(28deg, color-mix(in oklab, var(--wa-color-brand) 22%, var(--lgs-on-map-dark-color) 18%) 0%, color-mix(in oklab, var(--wa-color-brand-60, var(--wa-color-brand)) 14%, var(--lgs-on-map-light-color) 16%) 38%, transparent 78%),
+    linear-gradient(138deg, transparent 0%, color-mix(in oklab, var(--wa-color-brand) 16%, var(--lgs-on-map-light-color) 18%) 44%, color-mix(in oklab, var(--wa-color-brand-70, var(--wa-color-brand)) 8%, var(--lgs-on-map-dark-color) 12%) 66%, transparent 88%),
+    linear-gradient(168deg, color-mix(in oklab, var(--lgs-dark-color-80) 88%, var(--wa-color-brand) 12%) 0%, color-mix(in oklab, var(--lgs-dark-color-95) 84%, var(--wa-color-brand) 16%) 54%, var(--lgs-dark-color-95) 100%);
+    --lgs-card-on-map-bg-color: color-mix(in oklab, var(--lgs-dark-color-80) 76%, var(--wa-color-brand) 24%);
+    --lgs-card-on-map-bg-image: var(--lgs-on-map-surface-gradient);
 }

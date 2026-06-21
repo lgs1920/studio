@@ -137,6 +137,12 @@
     backdrop-filter: blur(var(--lgs-blur));
 }
 
+.crop-overlay.wa-theme-lgs1920-on-map {
+    opacity: 0.82;
+    background-color: color-mix(in oklab, var(--lgs-dark-color-80) 52%, transparent);
+    background-image: var(--lgs-on-map-surface-gradient, var(--lgs-brand-overlay-gradient));
+}
+
 /*******************************************************************************
  * Cropper Editor
  ******************************************************************************/

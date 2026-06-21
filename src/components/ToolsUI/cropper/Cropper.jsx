@@ -75,7 +75,7 @@ export const Cropper = memo(({overlay = false, className = '', context, options 
                             context={context}
                         />
                 )}
-                {overlay && <div className="crop-overlay" ref={_overlay}/>}
+                {overlay && <div className="crop-overlay wa-theme-lgs1920-on-map" ref={_overlay}/>}
                 {children}
                 <WidgetsPanel id="widget-deck" context={context} groups={[MULTI_PURPOSE_WIDGETS, JOURNEY_WIDGETS]}/>
             </div>
