@@ -69,6 +69,7 @@ export const Cropper = memo(({overlay = false, className = '', context, options 
                 {overlayElement && cropper.ratioEditor && (
                         <CropZoneWidget
                             className={className}
+                            moveableClassName="wa-theme-lgs1920-on-map"
                             infoPosition={options.infoPosition}
                             infoComponent={options.infoComponent}
                             overlay={overlayElement}

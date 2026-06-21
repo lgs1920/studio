@@ -29,8 +29,10 @@
     --lgs-on-map-padding: var(--lgs-gutter-xs);
     --lgs-on-map-border-radius: var(--lgs-border-radius-s);
     --lgs-on-map-interactive-radius: var(--wa-border-radius-m);
-    --lgs-on-map-floating-shadow: var(--lgs-overlay-floating-shadow);
-    --lgs-on-map-floating-drop-shadow: var(--lgs-overlay-floating-drop-shadow);
+    --lgs-on-map-floating-shadow: 0 0.03rem 0.06rem color-mix(in oklab, var(--lgs-on-map-dark-color) 56%, transparent), 0 0.1rem 0.22rem color-mix(in oklab, var(--lgs-on-map-dark-color) 24%, transparent), 0 0.01rem 0.04rem color-mix(in oklab, var(--lgs-on-map-light-color) 12%, transparent);
+    --lgs-on-map-floating-drop-shadow: 0 0.08rem 0.18rem color-mix(in oklab, var(--lgs-on-map-dark-color) 24%, transparent);
+    --lgs-overlay-floating-shadow: var(--lgs-on-map-floating-shadow);
+    --lgs-overlay-floating-drop-shadow: var(--lgs-on-map-floating-drop-shadow);
     color-scheme: dark;
     gap: var(--lgs-gutter-s);
     backdrop-filter: blur(var(--lgs-blur));
