@@ -39,6 +39,7 @@ import { CSSUtils }            from '@Utils/CSSUtils'
 import { UIUtils }             from '@Utils/UIUtils'
 import { UnitUtils }           from '@Utils/UnitUtils'
 import { proxy }               from 'valtio'
+import { DatabaseSyncManager } from './db/DatabaseSyncManager'
 import { LocalDB }             from './db/LocalDB'
 import { MouseEventHandler }   from './MouseEventHandler'
 import { editorSettings }      from './stores/editorSettings'
@@ -67,6 +68,7 @@ export class LGS1920Context {
 
     floatingMenu = {}
     journeys = new Map()
+    databaseSyncManager = null
 
     constructor() {
         // Declare Stores and snapshots for states management by @valtio
@@ -235,6 +237,15 @@ export class LGS1920Context {
                                   }),
         }
 
+        if (!this.databaseSyncManager) {
+            this.databaseSyncManager = new DatabaseSyncManager(this.db)
+        }
+        else {
+            this.databaseSyncManager.setDatabases(this.db)
+        }
+
+        __.ui.databaseSyncManager = this.databaseSyncManager
+
         //   this.db.lgs1920.forceRebuildStore(WIDGETS_STORE)
     }
 
@@ -378,6 +389,8 @@ export class LGS1920Context {
     }
 
     initManagers = async () => {
+        this.databaseSyncManager?.setDatabases(this.db)
+        __.ui.databaseSyncManager = this.databaseSyncManager
 
         __.app.cesiumCache = new CacheManager({
                                                   cacheName: 'cesium-ion-assets',

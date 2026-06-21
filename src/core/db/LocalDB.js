@@ -74,6 +74,14 @@ export class LocalDB {
         return this.#stores.includes(this.#transients) ? this.#transients : null
     }
 
+    get storeNames() {
+        return [...this.#stores]
+    }
+
+    get dbName() {
+        return this.#name
+    }
+
     /**
      * Manual one-time rebuild (dev only if needed)
      *
@@ -452,7 +460,7 @@ export class LocalDB {
                 req.onerror = () => resolve(0)
                 req.onblocked = () => resolve(2)
             }
-            catch (e) {
+            catch {
                 resolve(0)
             }
         })
