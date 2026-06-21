@@ -363,6 +363,22 @@ body {
     background: var(--swatch-color);
 }
 
+.lgs-theme-color-swatch {
+    display: inline-block;
+    flex: 0 0 auto;
+    width: 0.8rem;
+    height: 0.8rem;
+    border: 1px solid color-mix(in oklab, var(--swatch-color) 65%, white 35%);
+    border-radius: 0.24rem;
+    background: var(--swatch-color);
+}
+
+.lgs--theme-trigger-swatches {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
 /*******************************************************************************
  * Canvas
  */

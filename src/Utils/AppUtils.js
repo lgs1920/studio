@@ -30,10 +30,12 @@ import { FA2SL }                    from './FA2SL'
 
 export class AppUtils {
     static THEME_STORAGE_KEY = 'theme'
+    static ON_MAP_THEME_STORAGE_KEY = 'onMapTheme'
     static BRAND_COLOR_STORAGE_KEY = 'brandColor'
     static ROOT_THEME_CLASS = 'wa-theme-lgs1920'
     static DEFAULT_BRAND_COLOR = 'yellow'
     static BRAND_COLORS = ['yellow', 'orange', 'red', 'pink', 'purple', 'blue', 'green', 'gray']
+    static ON_MAP_THEMES = ['default', 'spring', 'fall', 'winter']
 
     static LEGACY_ROOT_THEME_PREFIXES = [
         'sl-theme-',
@@ -124,6 +126,26 @@ export class AppUtils {
         return AppUtils.BRAND_COLORS.includes(resolvedColor) ? resolvedColor : AppUtils.DEFAULT_BRAND_COLOR
     }
 
+    static resolveOnMapTheme = (onMapTheme = null) => {
+        const fallbackTheme = localStorage.getItem(AppUtils.ON_MAP_THEME_STORAGE_KEY) || 'default'
+        const resolvedTheme = onMapTheme || fallbackTheme
+        const normalizedTheme = resolvedTheme === 'autumn' ? 'fall' : resolvedTheme
+        return AppUtils.ON_MAP_THEMES.includes(normalizedTheme) ? normalizedTheme : 'default'
+    }
+
+    static applyOnMapTheme = (onMapTheme = null) => {
+        if (typeof document === 'undefined') {
+            return 'default'
+        }
+
+        const resolvedTheme = AppUtils.resolveOnMapTheme(onMapTheme)
+        if (document.body) {
+            document.body.dataset.onMapTheme = resolvedTheme
+        }
+
+        return resolvedTheme
+    }
+
     static normalizeDocumentThemeClasses = (root = document.documentElement) => {
         if (!root) {
             return
@@ -146,7 +168,7 @@ export class AppUtils {
         }
     }
 
-    static setTheme = (theme = null, brandColor = null) => {
+    static setTheme = (theme = null, brandColor = null, onMapTheme = null) => {
         if (!theme) {
             theme = localStorage.getItem(AppUtils.THEME_STORAGE_KEY) || lgs.settings.theme || 'system'
         }
@@ -155,11 +177,14 @@ export class AppUtils {
         const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
         const isDark = theme === 'dark' || (theme === 'system' && mediaQuery.matches)
         const resolvedBrandColor = AppUtils.resolveBrandColor(brandColor)
+        const resolvedOnMapTheme = AppUtils.applyOnMapTheme(onMapTheme)
 
         AppUtils.normalizeDocumentThemeClasses(root)
         root.classList.add(AppUtils.ROOT_THEME_CLASS, `wa-brand-${resolvedBrandColor}`)
         root.classList.toggle('wa-dark', isDark)
         root.classList.toggle('wa-light', !isDark)
+
+        return resolvedOnMapTheme
     }
 
     /**

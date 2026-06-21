@@ -35,6 +35,13 @@
     gap: var(--lgs-gutter-s);
     backdrop-filter: blur(var(--lgs-blur));
 
+    --lgs-dark: var(--lgs-dark-color);
+    --lgs-light: var(--lgs-light-color);
+    --lgs-text-color: var(--lgs-text-on-color);
+    --lgs-text-color-active: var(--lgs-text-on-color);
+    --lgs-text-color-secondary: var(--lgs-light-color-75);
+    --lgs-text-color-muted: var(--lgs-light-color-50);
+
     --lgs-card-on-map-bg-color: color-mix(in oklab, var(--lgs-dark-color-80) 84%, var(--wa-color-brand) 16%);
     --lgs-card-on-map-bg-image: var(--lgs-on-map-surface-gradient);
     --lgs-card-on-map-bg-blend-mode: soft-light, soft-light, normal;
@@ -339,4 +346,72 @@
     background-image: var(--lgs-select-option-current-bg-image);
     background-blend-mode: var(--lgs-card-on-map-selected-bg-blend-mode);
     padding-inline: var(--wa-space-m, 0.75rem);
+}
+
+body[data-on-map-theme="spring"] .wa-theme-lgs1920-on-map,
+body[data-on-map-theme="fall"] .wa-theme-lgs1920-on-map,
+body[data-on-map-theme="winter"] .wa-theme-lgs1920-on-map {
+    --lgs-dark: var(--lgs-on-map-dark-color);
+    --lgs-dark-color: var(--lgs-on-map-dark-color);
+    --lgs-dark-color-05: color-mix(in oklab, var(--lgs-dark-color) 5%, transparent);
+    --lgs-dark-color-10: color-mix(in oklab, var(--lgs-dark-color) 10%, transparent);
+    --lgs-dark-color-15: color-mix(in oklab, var(--lgs-dark-color) 15%, transparent);
+    --lgs-dark-color-20: color-mix(in oklab, var(--lgs-dark-color) 20%, transparent);
+    --lgs-dark-color-25: color-mix(in oklab, var(--lgs-dark-color) 25%, transparent);
+    --lgs-dark-color-30: color-mix(in oklab, var(--lgs-dark-color) 30%, transparent);
+    --lgs-dark-color-40: color-mix(in oklab, var(--lgs-dark-color) 40%, transparent);
+    --lgs-dark-color-50: color-mix(in oklab, var(--lgs-dark-color) 50%, transparent);
+    --lgs-dark-color-60: color-mix(in oklab, var(--lgs-dark-color) 60%, transparent);
+    --lgs-dark-color-70: color-mix(in oklab, var(--lgs-dark-color) 70%, transparent);
+    --lgs-dark-color-75: color-mix(in oklab, var(--lgs-dark-color) 75%, transparent);
+    --lgs-dark-color-80: color-mix(in oklab, var(--lgs-dark-color) 80%, transparent);
+    --lgs-dark-color-90: color-mix(in oklab, var(--lgs-dark-color) 90%, transparent);
+    --lgs-dark-color-95: color-mix(in oklab, var(--lgs-dark-color) 95%, transparent);
+    --lgs-light: var(--lgs-on-map-light-color);
+    --lgs-light-color: var(--lgs-on-map-light-color);
+    --lgs-light-color-05: color-mix(in oklab, var(--lgs-light-color) 5%, transparent);
+    --lgs-light-color-10: color-mix(in oklab, var(--lgs-light-color) 10%, transparent);
+    --lgs-light-color-15: color-mix(in oklab, var(--lgs-light-color) 15%, transparent);
+    --lgs-light-color-20: color-mix(in oklab, var(--lgs-light-color) 20%, transparent);
+    --lgs-light-color-25: color-mix(in oklab, var(--lgs-light-color) 25%, transparent);
+    --lgs-light-color-30: color-mix(in oklab, var(--lgs-light-color) 30%, transparent);
+    --lgs-light-color-40: color-mix(in oklab, var(--lgs-light-color) 40%, transparent);
+    --lgs-light-color-50: color-mix(in oklab, var(--lgs-light-color) 50%, transparent);
+    --lgs-light-color-60: color-mix(in oklab, var(--lgs-light-color) 60%, transparent);
+    --lgs-light-color-70: color-mix(in oklab, var(--lgs-light-color) 70%, transparent);
+    --lgs-light-color-75: color-mix(in oklab, var(--lgs-light-color) 75%, transparent);
+    --lgs-light-color-80: color-mix(in oklab, var(--lgs-light-color) 80%, transparent);
+    --lgs-light-color-90: color-mix(in oklab, var(--lgs-light-color) 90%, transparent);
+    --lgs-light-color-95: color-mix(in oklab, var(--lgs-light-color) 95%, transparent);
+    --lgs-text-on-color: var(--lgs-on-map-text-color);
+    --lgs-text-color: var(--lgs-text-on-color);
+    --lgs-text-color-active: var(--lgs-text-on-color);
+    --lgs-text-color-secondary: color-mix(in oklab, var(--lgs-text-on-color) 72%, transparent);
+    --lgs-text-color-muted: color-mix(in oklab, var(--lgs-text-on-color) 52%, transparent);
+    --lgs-on-map-surface-gradient: linear-gradient(28deg, color-mix(in oklab, var(--wa-color-brand) 28%, transparent) 0%, color-mix(in oklab, var(--wa-color-brand-60, var(--wa-color-brand)) 16%, transparent) 38%, transparent 78%),
+    linear-gradient(138deg, transparent 0%, color-mix(in oklab, var(--wa-color-brand) 18%, transparent) 44%, color-mix(in oklab, var(--wa-color-brand-70, var(--wa-color-brand)) 8%, transparent) 66%, transparent 88%),
+    linear-gradient(168deg, color-mix(in oklab, var(--lgs-dark-color-80) 92%, var(--wa-color-brand) 8%) 0%, color-mix(in oklab, var(--lgs-dark-color-95) 88%, var(--wa-color-brand) 12%) 54%, var(--lgs-dark-color-95) 100%);
+    --lgs-card-on-map-bg-image: var(--lgs-on-map-surface-gradient);
+    --lgs-card-on-map-bg-color: color-mix(in oklab, var(--lgs-dark-color-80) 84%, var(--wa-color-brand) 16%);
+}
+
+body[data-on-map-theme="fall"] .wa-theme-lgs1920-on-map {
+    color-scheme: dark;
+    --lgs-on-map-dark-color: #c56e12;
+    --lgs-on-map-light-color: #f1bb6a;
+    --lgs-on-map-text-color: #fff4e4;
+}
+
+body[data-on-map-theme="winter"] .wa-theme-lgs1920-on-map {
+    color-scheme: light;
+    --lgs-on-map-dark-color: #eef7ff;
+    --lgs-on-map-light-color: #89a9cf;
+    --lgs-on-map-text-color: #1f2f45;
+}
+
+body[data-on-map-theme="spring"] .wa-theme-lgs1920-on-map {
+    color-scheme: dark;
+    --lgs-on-map-dark-color: #7bf1a8;
+    --lgs-on-map-light-color: #c8a36a;
+    --lgs-on-map-text-color: #0a1800;
 }
