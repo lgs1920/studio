@@ -397,21 +397,21 @@ body[data-on-map-theme="winter"] .wa-theme-lgs1920-on-map {
 
 body[data-on-map-theme="fall"] .wa-theme-lgs1920-on-map {
     color-scheme: dark;
-    --lgs-on-map-dark-color: #c56e12;
+    --lgs-on-map-dark-color: #b15600;
     --lgs-on-map-light-color: #f1bb6a;
     --lgs-on-map-text-color: #fff4e4;
 }
 
 body[data-on-map-theme="winter"] .wa-theme-lgs1920-on-map {
     color-scheme: light;
-    --lgs-on-map-dark-color: #eef7ff;
+    --lgs-on-map-dark-color: #eaf1fc;
     --lgs-on-map-light-color: #89a9cf;
     --lgs-on-map-text-color: #1f2f45;
 }
 
 body[data-on-map-theme="spring"] .wa-theme-lgs1920-on-map {
     color-scheme: dark;
-    --lgs-on-map-dark-color: #7bf1a8;
+    --lgs-on-map-dark-color: #34cc57;
     --lgs-on-map-light-color: #c8a36a;
     --lgs-on-map-text-color: #0a1800;
 }
