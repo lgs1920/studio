@@ -350,9 +350,9 @@
     padding-inline: var(--wa-space-m, 0.75rem);
 }
 
-body[data-on-map-theme="spring"] .wa-theme-lgs1920-on-map,
-body[data-on-map-theme="fall"] .wa-theme-lgs1920-on-map,
-body[data-on-map-theme="winter"] .wa-theme-lgs1920-on-map {
+body[data-on-map-theme="spring"] :is(.wa-theme-lgs1920-on-map, .lgs-on-map-theme-vars),
+body[data-on-map-theme="fall"] :is(.wa-theme-lgs1920-on-map, .lgs-on-map-theme-vars),
+body[data-on-map-theme="winter"] :is(.wa-theme-lgs1920-on-map, .lgs-on-map-theme-vars) {
     --lgs-dark: var(--lgs-on-map-dark-color);
     --lgs-dark-color: var(--lgs-on-map-dark-color);
     --lgs-dark-color-05: color-mix(in oklab, var(--lgs-dark-color) 5%, transparent);
@@ -390,6 +390,14 @@ body[data-on-map-theme="winter"] .wa-theme-lgs1920-on-map {
     --lgs-text-color-active: var(--lgs-text-on-color);
     --lgs-text-color-secondary: color-mix(in oklab, var(--lgs-text-on-color) 72%, transparent);
     --lgs-text-color-muted: color-mix(in oklab, var(--lgs-text-on-color) 52%, transparent);
+    --crop-border-color: var(--lgs-light-color);
+    --crop-handle-color: var(--lgs-light-color);
+    --crop-centered-color: var(--lgs-light-color);
+    --moveable-color: var(--lgs-light-color);
+    --lgs-on-map-floating-shadow: 0 0.03rem 0.06rem color-mix(in oklab, var(--lgs-on-map-dark-color) 56%, transparent), 0 0.1rem 0.22rem color-mix(in oklab, var(--lgs-on-map-dark-color) 24%, transparent), 0 0.01rem 0.04rem color-mix(in oklab, var(--lgs-on-map-light-color) 12%, transparent);
+    --lgs-on-map-floating-drop-shadow: 0 0.08rem 0.18rem color-mix(in oklab, var(--lgs-on-map-dark-color) 24%, transparent);
+    --lgs-overlay-floating-shadow: var(--lgs-on-map-floating-shadow);
+    --lgs-overlay-floating-drop-shadow: var(--lgs-on-map-floating-drop-shadow);
     --lgs-on-map-surface-gradient: linear-gradient(28deg, color-mix(in oklab, var(--wa-color-brand) 28%, transparent) 0%, color-mix(in oklab, var(--wa-color-brand-60, var(--wa-color-brand)) 16%, transparent) 38%, transparent 78%),
     linear-gradient(138deg, transparent 0%, color-mix(in oklab, var(--wa-color-brand) 18%, transparent) 44%, color-mix(in oklab, var(--wa-color-brand-70, var(--wa-color-brand)) 8%, transparent) 66%, transparent 88%),
     linear-gradient(168deg, color-mix(in oklab, var(--lgs-dark-color-80) 92%, var(--wa-color-brand) 8%) 0%, color-mix(in oklab, var(--lgs-dark-color-95) 88%, var(--wa-color-brand) 12%) 54%, var(--lgs-dark-color-95) 100%);
@@ -397,7 +405,7 @@ body[data-on-map-theme="winter"] .wa-theme-lgs1920-on-map {
     --lgs-card-on-map-bg-color: color-mix(in oklab, var(--lgs-dark-color-80) 84%, var(--wa-color-brand) 16%);
 }
 
-body[data-on-map-theme="fall"] .wa-theme-lgs1920-on-map {
+body[data-on-map-theme="fall"] :is(.wa-theme-lgs1920-on-map, .lgs-on-map-theme-vars) {
     color-scheme: dark;
     --lgs-on-map-dark-color: #b15600;
     --lgs-on-map-light-color: #f1bb6a;
@@ -409,7 +417,7 @@ body[data-on-map-theme="fall"] .wa-theme-lgs1920-on-map {
     --lgs-card-on-map-bg-image: var(--lgs-on-map-surface-gradient);
 }
 
-body[data-on-map-theme="winter"] .wa-theme-lgs1920-on-map {
+body[data-on-map-theme="winter"] :is(.wa-theme-lgs1920-on-map, .lgs-on-map-theme-vars) {
     color-scheme: light;
     --lgs-on-map-dark-color: #eaf1fc;
     --lgs-on-map-light-color: #89a9cf;
@@ -421,7 +429,7 @@ body[data-on-map-theme="winter"] .wa-theme-lgs1920-on-map {
     --lgs-card-on-map-bg-image: var(--lgs-on-map-surface-gradient);
 }
 
-body[data-on-map-theme="spring"] .wa-theme-lgs1920-on-map {
+body[data-on-map-theme="spring"] :is(.wa-theme-lgs1920-on-map, .lgs-on-map-theme-vars) {
     color-scheme: dark;
     --lgs-on-map-dark-color: #34cc57;
     --lgs-on-map-light-color: #c8a36a;

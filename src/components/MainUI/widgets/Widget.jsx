@@ -262,12 +262,13 @@ const createWidgetSnapshot = (sourceCanvas, canvasRect, widgetRect, previewerRec
  * @param {boolean} props.isVisible                 - Controls mounting of the widget
  * @param {string}  [props.className='']            - Additional CSS classes
  * @param {string}  [props.moveableClassName='']    - Additional CSS classes for the Moveable control box
+ * @param {string}  [props.containerClassName='']   - Additional CSS classes for the widget container
  * @param {React.ReactNode} props.children          - Widget visual content
  * @param {Object} props.config                     - Complete widget configuration object
  * @param {React.RefObject} [props.childRef]        - Optional forwarded ref to inner content
  * @returns {JSX.Element|null}
  */
-export const Widget = ({isVisible, className = '', moveableClassName = '', children, config, childRef}) => {
+export const Widget = ({isVisible, className = '', moveableClassName = '', containerClassName = '', children, config, childRef}) => {
     // Core DOM references
     const _widget = useRef(null)
     const _moveable = useRef(null)
@@ -1336,7 +1337,7 @@ export const Widget = ({isVisible, className = '', moveableClassName = '', child
     }
 
     return (
-        <div className="lgs-widget-container" data-widget={widgetId} style={{zIndex: activeZIndex}}>
+        <div className={classNames('lgs-widget-container', containerClassName)} data-widget={widgetId} style={{zIndex: activeZIndex}}>
             <div
                 className={classNames(LGS_WIDGET, {
                     [className]:    !!className && !effectiveCollapsed,

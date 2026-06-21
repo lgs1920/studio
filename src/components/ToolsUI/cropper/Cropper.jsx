@@ -56,7 +56,7 @@ export const Cropper = memo(({overlay = false, className = '', context, options 
                 <CropRatioEditorWidget context={context} id="crop-ratio-editor"/>
             }
 
-            <div ref={_cropperContainer} className="crop-container">
+            <div ref={_cropperContainer} className="crop-container lgs-on-map-theme-vars">
                 {overlayElement && (
                     <DefinedCropZone
                         className={[className, cropper.ratioEditor ? 'defined-crop-zone-hidden' : ''].filter(Boolean).join(' ')}
@@ -69,7 +69,8 @@ export const Cropper = memo(({overlay = false, className = '', context, options 
                 {overlayElement && cropper.ratioEditor && (
                         <CropZoneWidget
                             className={className}
-                            moveableClassName="wa-theme-lgs1920-on-map"
+                            containerClassName="crop-moveable-container-on-map"
+                            moveableClassName="lgs-on-map-theme-vars crop-moveable-on-map"
                             infoPosition={options.infoPosition}
                             infoComponent={options.infoComponent}
                             overlay={overlayElement}

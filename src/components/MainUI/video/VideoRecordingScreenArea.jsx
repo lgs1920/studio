@@ -712,7 +712,7 @@ export const VideoRecordingScreenArea = memo(() => {
                 $video.finalizing = false
                 $video.editing = true
             }}/>
-            <DefinedCropZone context={$video.cropper} infoComponent={<VideoSettingsInfo/>} ref={_cropZone}/>
+            <DefinedCropZone className="lgs-on-map-theme-vars" context={$video.cropper} infoComponent={<VideoSettingsInfo/>} ref={_cropZone}/>
             <VideoSceneWidgetsPortal context={lgs.stores.ui.video.cropper}/>
         </>
     )

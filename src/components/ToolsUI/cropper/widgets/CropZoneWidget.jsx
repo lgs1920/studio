@@ -36,6 +36,7 @@ import { CropZone }              from './CropZone'
 export const CropZoneWidget = memo(({
                                         className = '',
                                         moveableClassName = '',
+                                        containerClassName = '',
                                         onDoubleClick,
                                         infoComponent = null,
                                         infoPosition = true,
@@ -106,7 +107,13 @@ export const CropZoneWidget = memo(({
 
     // Render the widget with the CropZone component
     return (
-        <Widget isVisible={true} config={config} className={className} moveableClassName={moveableClassName}>
+        <Widget
+            isVisible={true}
+            config={config}
+            className={className}
+            moveableClassName={moveableClassName}
+            containerClassName={containerClassName}
+        >
             <CropZone
                 onDoubleClick={onDoubleClick}
                 infoComponent={infoComponent}
