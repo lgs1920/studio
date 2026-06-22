@@ -13,8 +13,22 @@ The application now has a first working layer for local database export/import:
 - bootstrap wiring so the sync manager is available from the global app context
 - persistent folder linking when the browser supports `window.showDirectoryPicker`
 - debounced background flushes to the linked folder after local database mutations
+- observable sync status: `idle`, `synced`, `pending`, `error`, `conflict`, `permission-denied`
+- startup warnings when linked profile data is not synchronized
+- a `.lgs-sync/manifest.json` file used to detect folder changes made outside the current browser
+- background flushes keep the visible status stable unless an error or a real conflict occurs
 
 The work is intentionally local-first. No remote backend is involved.
+
+## Source Of Truth Rules
+
+The sync flow follows two source-of-truth rules:
+
+- at normal startup, the linked folder wins and its content is imported into IndexedDB
+- when the user explicitly links a folder, the linked folder also wins and its content is imported into IndexedDB
+
+After importing the folder, the app writes a fresh manifest so the local browser state and linked folder are aligned.
+If another client writes to the folder while the app is already open, a later local flush reports a conflict instead of overwriting automatically.
 
 ## Where To Find It In The UI
 
@@ -35,6 +49,7 @@ There is now a `Local Database` block with:
 When the browser supports the File System Access API, the sync section shows the current folder state inline.
 The linked folder name is shown, but the absolute filesystem path is not exposed by the browser.
 The import/export block starts with an info callout: `Export or import your user profile.`
+The `Sync Profile` icon is green when the linked folder is synchronized and red when synchronization needs attention.
 
 ## How To Use It
 
@@ -88,9 +103,11 @@ What happens:
 - the browser opens a real folder picker
 - the selected folder handle is stored in a dedicated sync-state database
 - the folder content is imported into IndexedDB
+- the linked folder is then rewritten from the imported local state to align the manifest
 - future database mutations are written back to that folder after a debounce delay
 - the inline status switches to the linked state and shows the folder name
 - removed journeys are removed from the linked folder on the next sync flush
+- the sync manager writes `.lgs-sync/manifest.json` to remember the file state that was last synchronized
 
 ### Unlink A Sync Folder
 
@@ -99,9 +116,26 @@ Click `Unlink sync folder`.
 What happens:
 
 - the stored folder handle is removed from the sync-state database
+- the stored manifest signature is removed
 - the debounce timer is cleared
 - future writes stop targeting the linked folder
 - the inline status returns to the non-synced state
+
+### Startup Sync Warnings
+
+At startup, the sync manager restores the linked folder handle and checks whether local data can be synchronized.
+When access is granted, the linked folder is imported into IndexedDB first, then the folder manifest is aligned from that imported state.
+
+The app shows a warning toast when a linked profile exists but synchronization needs attention:
+
+- the browser no longer grants access to the linked folder
+- the previous or current flush failed
+- local changes are still pending
+- the linked folder manifest is overwritten by another client while this app instance is already open
+
+The same state is shown in `Sync Profile`.
+When synchronization fails, the section exposes a `Retry` action.
+When the linked folder changes externally during an active session, the section exposes a `Resolve` action that can overwrite the linked folder from the current local profile after confirmation.
 
 ## Technical Shape
 
@@ -134,17 +168,20 @@ It exposes:
 - `linkPersistentDirectory()`
 - `unlinkPersistentDirectory()`
 - `flushToPersistentDirectory()`
+- `overwritePersistentDirectory()`
+- `subscribeSyncStatus(listener)`
 
 It is also attached to the global app context so it can be reached from `lgs.databaseSyncManager` and `__.ui.databaseSyncManager`.
 
 The manager persists the folder handle in a small dedicated sync-state database so application settings cleanup does not wipe the linked folder state.
+The same database stores the current sync status, the local client id, and the last known manifest signature.
 
 ### Bootstrap Wiring
 
 The sync manager is created when the application database layer is initialized.
 
 That means the manager is available early in the app lifecycle, without waiting for the Settings drawer to open.
-If a persistent folder is already linked, the manager restores it during bootstrap before the rest of the UI starts and reconciles the linked folder from the current local databases.
+If a persistent folder is already linked, the manager restores it during bootstrap before the rest of the UI starts, imports the linked folder into IndexedDB, then aligns the manifest.
 
 ## Data Scope
 
@@ -169,6 +206,9 @@ What exists now:
 - bootstrap restore
 - mutation observation
 - debounce flush to a linked directory
+- startup warning when linked data needs synchronization
+- basic external-change detection through `.lgs-sync/manifest.json`
+- silent background flushes that do not flip the settings UI through a temporary pending state
 - separate `Sync My Profile` and `Import/Export` settings sections
 - a compact sync status row with link and unlink actions
 
@@ -176,7 +216,8 @@ What is still missing from the full roadmap:
 
 - a dedicated settings screen for the advanced sync path
 - a visible status/history UI for sync operations
-- finer-grained conflict handling if the linked files change outside the app
+- finer-grained conflict handling if the same journey is changed from multiple browsers
+- a write lock to prevent two browsers from writing at the same time
 - explicit tests around File System Access behavior in browsers
 - a native absolute filesystem path display, which browsers do not expose for linked folders
 
@@ -187,4 +228,4 @@ What is still missing from the full roadmap:
 - The sync manager is local only; it does not send data to any external service.
 - Folder sync only works when the browser exposes `window.showDirectoryPicker`.
 - The linked folder is meant for desktop Chromium browsers with File System Access API support.
-- Backups are structured as `database/<store>/...`, with `database/lgs1920/journeys/<journey-slug>.json` for journeys.
+- Backups are structured by local database scope, with `lgs1920/journeys/<journey-slug>.json` for journeys.

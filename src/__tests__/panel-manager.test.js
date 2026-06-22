@@ -16,7 +16,7 @@
 
 import { ui } from '../core/stores/ui.js'
 import { PanelManager } from '../core/ui/panels/PanelManager.js'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const createTabGroup = (id, active) => {
     const tabGroup = document.createElement('wa-tab-group')
@@ -24,7 +24,19 @@ const createTabGroup = (id, active) => {
         tabGroup.id = id
     }
     tabGroup.active = active
+    tabGroup.show = vi.fn((tabName) => {
+        tabGroup.active = tabName
+    })
     return tabGroup
+}
+
+const createTab = (panel, id = '') => {
+    const tab = document.createElement('wa-tab')
+    tab.setAttribute('panel', panel)
+    if (id) {
+        tab.id = id
+    }
+    return tab
 }
 
 const createDetails = (id, open = false) => {
@@ -34,6 +46,12 @@ const createDetails = (id, open = false) => {
     }
     details.open = open
     return details
+}
+
+const createTabPanel = name => {
+    const tabPanel = document.createElement('wa-tab-panel')
+    tabPanel.setAttribute('name', name)
+    return tabPanel
 }
 
 describe('PanelManager drawer UI state', () => {
@@ -133,5 +151,83 @@ describe('PanelManager drawer UI state', () => {
         expect(tabGroupB.active).toBe('tab-beta')
         expect(detailA.open).toBe(false)
         expect(detailB.open).toBe(true)
+    })
+
+    it('forces an explicitly requested tab over the restored drawer tab', () => {
+        const settingsDrawer = document.createElement('wa-drawer')
+        settingsDrawer.id = 'settings-drawer'
+
+        const tabGroup = createTabGroup('main-tabs', 'tab-ui')
+        tabGroup.append(createTab('tab-tools'), createTab('tab-ui'), createTab('tab-user', 'manage-user-profile'))
+        settingsDrawer.append(tabGroup)
+        document.body.append(settingsDrawer)
+
+        manager.attachEvents()
+
+        settingsDrawer.dispatchEvent(new CustomEvent('wa-after-show', {
+            bubbles:  true,
+            composed: true,
+        }))
+        tabGroup.dispatchEvent(new CustomEvent('wa-tab-show', {
+            detail:   {name: 'tab-ui'},
+            bubbles:  true,
+            composed: true,
+        }))
+
+        manager.open('settings-drawer', {tab: 'manage-user-profile'})
+
+        expect(tabGroup.show).toHaveBeenCalledWith('tab-user')
+        expect(tabGroup.active).toBe('tab-user')
+        expect(manager.tabActive('tab-user')).toBe(true)
+    })
+
+    it('restores the active tab before restoring details inside that tab when going back', () => {
+        const settingsDrawer = document.createElement('wa-drawer')
+        settingsDrawer.id = 'settings-drawer'
+
+        const tabGroup = createTabGroup('main-tabs', 'tab-tools')
+        tabGroup.append(createTab('tab-tools'), createTab('tab-user', 'manage-user-profile'))
+
+        const toolsPanel = createTabPanel('tab-tools')
+        const userPanel = createTabPanel('tab-user')
+        const profileDetails = createDetails('profile-details', false)
+        const toolsDetails = createDetails('tools-details', true)
+
+        userPanel.append(profileDetails)
+        toolsPanel.append(toolsDetails)
+        settingsDrawer.append(tabGroup, toolsPanel, userPanel)
+
+        const widgetsDrawer = document.createElement('wa-drawer')
+        widgetsDrawer.id = 'widgets-drawer'
+
+        document.body.append(settingsDrawer, widgetsDrawer)
+
+        manager.attachEvents()
+
+        manager.open('settings-drawer', {tab: 'manage-user-profile'})
+        profileDetails.open = true
+        profileDetails.dispatchEvent(new CustomEvent('wa-show', {
+            bubbles:  true,
+            composed: true,
+        }))
+        toolsDetails.open = false
+        toolsDetails.dispatchEvent(new CustomEvent('wa-hide', {
+            bubbles:  true,
+            composed: true,
+        }))
+
+        manager.open('widgets-drawer', {stacked: true})
+
+        tabGroup.active = 'tab-tools'
+        profileDetails.open = false
+        toolsDetails.open = true
+
+        manager.close()
+
+        expect(ui.drawers.open).toBe('settings-drawer')
+        expect(tabGroup.show).toHaveBeenCalledWith('tab-user')
+        expect(tabGroup.active).toBe('tab-user')
+        expect(profileDetails.open).toBe(true)
+        expect(toolsDetails.open).toBe(false)
     })
 })

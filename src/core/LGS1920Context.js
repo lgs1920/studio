@@ -36,6 +36,7 @@ import { WidgetManager }       from '@Core/ui/widget-manager/WidgetManager'
 import { AppUtils }            from '@Utils/AppUtils'
 import { MouseUtils }          from '@Utils/cesium/MouseUtils'
 import { CSSUtils }            from '@Utils/CSSUtils'
+import { UIToast }             from '@Utils/UIToast'
 import { UIUtils }             from '@Utils/UIUtils'
 import { UnitUtils }           from '@Utils/UnitUtils'
 import { proxy }               from 'valtio'
@@ -393,6 +394,10 @@ export class LGS1920Context {
         __.ui.databaseSyncManager = this.databaseSyncManager
 
         await this.databaseSyncManager?.bootstrap?.()
+        const syncStartupWarning = this.databaseSyncManager?.startupWarning
+        if (syncStartupWarning) {
+            window.setTimeout(() => UIToast.warning(syncStartupWarning), 0)
+        }
 
         __.app.cesiumCache = new CacheManager({
                                                   cacheName: 'cesium-ion-assets',

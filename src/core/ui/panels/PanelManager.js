@@ -143,6 +143,36 @@ export class PanelManager {
         return `${fallbackPrefix}:${index >= 0 ? index : 0}`
     }
 
+    #resolveTabPanelName = (tabGroup, tabName) => {
+        if (!tabGroup || !tabName) {
+            return null
+        }
+
+        const tabs = Array.from(tabGroup.querySelectorAll('wa-tab'))
+        const tab = tabs.find(item => item.getAttribute('panel') === tabName || item.id === tabName)
+
+        return tab?.getAttribute('panel') ?? null
+    }
+
+    #showTab = (tabGroup, tabName, options = {}) => {
+        const panelName = this.#resolveTabPanelName(tabGroup, tabName)
+                       ?? (options.fallbackToRequested ? tabName : null)
+
+        if (!panelName) {
+            return null
+        }
+
+        if (typeof tabGroup.show === 'function') {
+            tabGroup.show(panelName)
+        }
+        else {
+            tabGroup.active = panelName
+            tabGroup.setAttribute?.('active', panelName)
+        }
+
+        return panelName
+    }
+
     #snapshotDrawerUiState = (drawer) => {
         if (!drawer?.id) {
             return
@@ -191,11 +221,11 @@ export class PanelManager {
                 continue
             }
 
-            if (typeof tabGroup.show === 'function') {
-                tabGroup.show(activeTab)
-            }
-            else if (tabGroup.active !== activeTab) {
-                tabGroup.active = activeTab
+            const panelName = this.#showTab(tabGroup, activeTab, {
+                fallbackToRequested: true,
+            })
+            if (panelName && panelName !== activeTab) {
+                state.tabs.set(key, panelName)
             }
         }
     }
@@ -566,9 +596,13 @@ export class PanelManager {
         )
 
         for (const tabGroup of tabGroups) {
-            const tab = tabGroup.querySelector(`wa-tab[panel="${activeTab}"]`)
-            if (tab) {
-                tabGroup.show(activeTab)
+            const panelName = this.#showTab(tabGroup, activeTab)
+            if (panelName) {
+                const drawerId = this.drawers.open
+                const state = this.#getDrawerState(drawerId)
+                const key = this.#getGroupKey(tabGroup, 'wa-tab-group', 'tabgroup')
+                state.tabs.set(key, panelName)
+                this.#tabs.set(drawerId, panelName)
             }
         }
 

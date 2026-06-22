@@ -29,6 +29,14 @@
     gap: var(--lgs-gutter-xs);
 }
 
+.sync-profile-summary-icon[data-variant='success'] {
+    color: var(--wa-color-success-on-normal);
+}
+
+.sync-profile-summary-icon[data-variant='danger'] {
+    color: var(--wa-color-danger-on-normal);
+}
+
 
 .sync-folder-status::part(message) {
     display: flex;

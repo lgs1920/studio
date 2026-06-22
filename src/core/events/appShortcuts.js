@@ -254,7 +254,7 @@ const openWidgetManagement = () => {
 const openUserProfileSettings = () => {
     lgs.stores.ui.mainUI.callForActions.active = false
     __.ui.drawerManager?.open?.(SETTINGS_EDITOR_DRAWER, {
-        tab: 'tab-user',
+        tab: 'manage-user-profile',
     })
     return true
 }
