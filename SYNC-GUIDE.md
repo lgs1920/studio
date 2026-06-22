@@ -90,6 +90,7 @@ What happens:
 - the folder content is imported into IndexedDB
 - future database mutations are written back to that folder after a debounce delay
 - the inline status switches to the linked state and shows the folder name
+- removed journeys are removed from the linked folder on the next sync flush
 
 ### Unlink A Sync Folder
 
@@ -143,7 +144,7 @@ The manager persists the folder handle in a small dedicated sync-state database 
 The sync manager is created when the application database layer is initialized.
 
 That means the manager is available early in the app lifecycle, without waiting for the Settings drawer to open.
-If a persistent folder is already linked, the manager restores it during bootstrap before the rest of the UI starts.
+If a persistent folder is already linked, the manager restores it during bootstrap before the rest of the UI starts and reconciles the linked folder from the current local databases.
 
 ## Data Scope
 

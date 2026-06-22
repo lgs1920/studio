@@ -141,7 +141,7 @@ export class DatabaseSyncManager {
 
         if (await isHandlePermissionGranted(handle)) {
             await this.#withSuspendedSync(async () => {
-                await this.#importFromLinkedDirectory(handle)
+                await this.flushToPersistentDirectory()
             })
         }
     }
@@ -266,6 +266,7 @@ export class DatabaseSyncManager {
         }
 
         const files = await exportDatabaseBundleToFiles(this.#databases)
+        await this.#removeStaleFiles(this.#directoryHandle, files)
         await this.#writeFilesToDirectory(this.#directoryHandle, files)
     }
 
@@ -400,6 +401,36 @@ export class DatabaseSyncManager {
             await writable.write(new Blob([bytes], {type: 'application/json'}))
             await writable.close()
         }
+    }
+
+    /**
+     * Remove stale files from the linked directory before rewriting the export.
+     *
+     * @param {FileSystemDirectoryHandle} rootHandle - Root directory.
+     * @param {Object<string, Uint8Array>} files - Files that must remain present.
+     * @return {Promise<void>}
+     */
+    #removeStaleFiles = async (rootHandle, files) => {
+        const expectedPaths = new Set(Object.keys(files))
+
+        const walk = async (directoryHandle, prefix = '') => {
+            for await (const [name, entry] of directoryHandle.entries()) {
+                const path = prefix ? `${prefix}/${name}` : name
+
+                if (entry.kind === 'file') {
+                    if (!expectedPaths.has(path)) {
+                        await directoryHandle.removeEntry(name)
+                    }
+                    continue
+                }
+
+                if (entry.kind === 'directory') {
+                    await walk(entry, path)
+                }
+            }
+        }
+
+        await walk(rootHandle)
     }
 
     /**

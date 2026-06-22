@@ -94,10 +94,6 @@
     --fa-primary-opacity: 1;
 }
 
-.manage-profile-ui sl-panel {
-    font-size: var(--lgs-font-size-s);
-}
-
 .manage-profile-ui sl-button,
 .manage-profile-ui wa-button {
     width: 12rem;

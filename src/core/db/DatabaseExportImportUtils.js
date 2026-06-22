@@ -330,9 +330,8 @@ export const importDatabaseBundleFromZip = async (databases, archive, options = 
 
             const relative = path.slice(folder.length + 1)
             const json = strFromU8(content)
-            if (relative.startsWith('journeys/') && relative.endsWith('/journey.json')) {
-                const parts = relative.split('/')
-                const journeySlug = parts[1]
+            if (relative.startsWith('journeys/') && relative.endsWith('.json')) {
+                const journeySlug = relative.slice('journeys/'.length, -5)
                 const payload = parseStoreJson(json)
                 await importRecordsToStore(db, 'journeys', [{
                     key:   journeySlug,
