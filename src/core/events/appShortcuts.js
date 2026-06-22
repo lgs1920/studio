@@ -15,7 +15,8 @@
  ******************************************************************************/
 
 import {
-    CURRENT_MAP_POINT, CURRENT_POI, FLYTHROUGH_DRAWER, SCENE_MODE_2D, SHORTCUTS_CATALOG, VIDEO_CROP_ZONE,
+    CURRENT_MAP_POINT, CURRENT_POI, FLYTHROUGH_DRAWER, SCENE_MODE_2D, SETTINGS_EDITOR_DRAWER, SHORTCUTS_CATALOG,
+    VIDEO_CROP_ZONE,
 }                                                       from '@Core/constants'
 import { hasActiveAppShortcutBlocker }                  from '@Core/events/shortcutBlockers'
 import { MapTarget }                                    from '@Core/MapTarget'
@@ -247,6 +248,14 @@ const openWidgetManagement = () => {
     if (!board || !hasManageableWidgets(board)) {
         return false
     }
+    return true
+}
+
+const openUserProfileSettings = () => {
+    lgs.stores.ui.mainUI.callForActions.active = false
+    __.ui.drawerManager?.open?.(SETTINGS_EDITOR_DRAWER, {
+        tab: 'tab-user',
+    })
     return true
 }
 
@@ -675,6 +684,7 @@ const SHORTCUT_ACTIONS = {
     'journey-import':       openJourneyImporter,
     'journey-groups-show':  openJourneyGroups,
     'journey-toolbar-show': toggleJourneyToolbar,
+    'profile-settings-show': openUserProfileSettings,
     'flythrough-management-show': openFlythroughManagement,
     'widget-management-show': openWidgetManagement,
     'video-recording':      launchVideoRecording,

@@ -392,6 +392,8 @@ export class LGS1920Context {
         this.databaseSyncManager?.setDatabases(this.db)
         __.ui.databaseSyncManager = this.databaseSyncManager
 
+        await this.databaseSyncManager?.bootstrap?.()
+
         __.app.cesiumCache = new CacheManager({
                                                   cacheName: 'cesium-ion-assets',
                                                   maxQuota:  500 * 1024 * 1024,

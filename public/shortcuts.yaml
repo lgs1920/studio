@@ -10,6 +10,12 @@
   keys:
     - Alt+Shift+J
   scope: App
+- action: Open user profile settings
+  description: Opens the user profile settings section.
+  id: profile-settings-show
+  keys:
+    - Alt+Shift+U
+  scope: App
 - action: Show journey groups
   description: Opens the journey groups management drawer.
   id: journey-groups-show

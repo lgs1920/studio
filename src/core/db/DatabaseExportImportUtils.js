@@ -108,6 +108,26 @@ const buildStoreExport = async (db, store, {pretty = true} = {}) => {
     }, null, pretty ? DEFAULT_JSON_SPACE : 0)
 }
 
+const buildRecordExport = async (db, store, key, {pretty = true} = {}) => {
+    const entry = await db.get(key, store, true)
+    if (entry === null || entry === undefined) {
+        return null
+    }
+
+    return JSON.stringify({
+        store,
+        key,
+        exportedAt: new Date().toISOString(),
+        value: entry?.data ?? entry,
+        meta: {
+            createdAt: entry?._ct_ ?? null,
+            modifiedAt: entry?._mt_ ?? null,
+            ttlMillis: entry?._ttl_ ?? null,
+            expiresAt: entry?._exp_ ?? null,
+        },
+    }, null, pretty ? DEFAULT_JSON_SPACE : 0)
+}
+
 const extractImportedValue = record => {
     if (!isObjectLike(record)) {
         return {value: record, ttl: null}
@@ -134,6 +154,9 @@ const parseStoreJson = jsonString => {
     if (Array.isArray(parsed)) {
         return {records: parsed}
     }
+    if (isObjectLike(parsed) && typeof parsed.key === 'string' && Object.prototype.hasOwnProperty.call(parsed, 'value')) {
+        return {records: [parsed]}
+    }
     if (isObjectLike(parsed) && Array.isArray(parsed.records)) {
         return parsed
     }
@@ -146,6 +169,14 @@ const parseStoreJson = jsonString => {
     throw new Error('Unsupported store JSON payload.')
 }
 
+const extractRecordsFromPayload = payload => {
+    if (Array.isArray(payload.records)) {
+        return payload.records
+    }
+
+    return []
+}
+
 export const exportStoreToJson = async (db, store, options = {}) => {
     if (!isLocalDB(db)) {
         throw new Error('A valid LocalDB instance is required.')
@@ -156,7 +187,7 @@ export const exportStoreToJson = async (db, store, options = {}) => {
     return buildStoreExport(db, store, options)
 }
 
-export const importJsonToStore = async (db, store, jsonString) => {
+export const importJsonToStore = async (db, store, jsonString, {clear = true} = {}) => {
     if (!isLocalDB(db)) {
         throw new Error('A valid LocalDB instance is required.')
     }
@@ -165,9 +196,31 @@ export const importJsonToStore = async (db, store, jsonString) => {
     }
 
     const payload = parseStoreJson(jsonString)
-    await db.clear(store)
+    await importRecordsToStore(db, store, extractRecordsFromPayload(payload), {clear})
+}
 
-    for (const record of payload.records ?? []) {
+/**
+ * Import a list of records into one store.
+ *
+ * @param {LocalDB} db - Database instance.
+ * @param {string} store - Target store.
+ * @param {Array} records - Records to import.
+ * @param {Object} options - Import options.
+ * @return {Promise<void>}
+ */
+export const importRecordsToStore = async (db, store, records, {clear = true} = {}) => {
+    if (!isLocalDB(db)) {
+        throw new Error('A valid LocalDB instance is required.')
+    }
+    if (!store || typeof store !== 'string') {
+        throw new Error('A valid store name is required.')
+    }
+
+    if (clear) {
+        await db.clear(store)
+    }
+
+    for (const record of records ?? []) {
         if (!record || typeof record.key !== 'string') {
             continue
         }
@@ -182,6 +235,18 @@ export const exportLocalDBToFiles = async (db, {stores = null, folder = null, pr
     const files = {}
 
     for (const store of storeNames) {
+        if (store === 'journeys') {
+            const keys = await db.keys(store)
+            for (const key of keys) {
+                const json = await buildRecordExport(db, store, key, {pretty})
+                if (!json) {
+                    continue
+                }
+                files[`${baseFolder}/${store}/${key}.json`] = strToU8(json)
+            }
+            continue
+        }
+
         const json = await exportStoreToJson(db, store, {pretty})
         files[`${baseFolder}/${store}.json`] = strToU8(json)
     }
@@ -202,19 +267,39 @@ export const importLocalDBFromZip = async (db, archive, {folder = null} = {}) =>
     const bytes = await blobToUint8Array(archive)
     const baseFolder = normalizeFolderName(folder ?? db?.dbName ?? DEFAULT_EXPORT_FOLDER)
     const entries = unzipSync(bytes)
+    let journeysImported = false
 
     for (const [path, content] of Object.entries(entries)) {
         if (!path.startsWith(`${baseFolder}/`) || !path.endsWith('.json')) {
             continue
         }
 
-        const store = path.slice(baseFolder.length + 1, -5)
+        const relative = path.slice(baseFolder.length + 1)
         const json = strFromU8(content)
+        if (relative.startsWith('journeys/') && relative.endsWith('.json')) {
+            const journeySlug = relative.slice('journeys/'.length, -5)
+            const payload = parseStoreJson(json)
+            await importRecordsToStore(db, 'journeys', [{
+                key:   journeySlug,
+                value: payload.value ?? payload.records?.[0]?.value ?? null,
+                meta:  payload.meta ?? payload.records?.[0]?.meta ?? null,
+            }], {clear: !journeysImported})
+            journeysImported = true
+            continue
+        }
+
+        const store = relative.slice(0, -5)
         await importJsonToStore(db, store, json)
     }
+
 }
 
 export const exportDatabaseBundleToZip = async (databases, options = {}) => {
+    const files = await exportDatabaseBundleToFiles(databases, options)
+    return zipSync(files, ZIP_OPTIONS)
+}
+
+export const exportDatabaseBundleToFiles = async (databases, options = {}) => {
     const files = {}
 
     for (const [scopeName, db] of normalizeDBEntries(databases)) {
@@ -226,7 +311,7 @@ export const exportDatabaseBundleToZip = async (databases, options = {}) => {
         Object.assign(files, scopedFiles)
     }
 
-    return zipSync(files, ZIP_OPTIONS)
+    return files
 }
 
 export const importDatabaseBundleFromZip = async (databases, archive, options = {}) => {
@@ -236,15 +321,30 @@ export const importDatabaseBundleFromZip = async (databases, archive, options = 
 
     for (const [scopeName, db] of dbEntries) {
         const folder = normalizeFolderName(options.folder ?? scopeName)
+        let journeysImported = false
+
         for (const [path, content] of Object.entries(entries)) {
             if (!path.startsWith(`${folder}/`) || !path.endsWith('.json')) {
                 continue
             }
 
-            const store = path.slice(folder.length + 1, -5)
+            const relative = path.slice(folder.length + 1)
             const json = strFromU8(content)
+            if (relative.startsWith('journeys/') && relative.endsWith('/journey.json')) {
+                const parts = relative.split('/')
+                const journeySlug = parts[1]
+                const payload = parseStoreJson(json)
+                await importRecordsToStore(db, 'journeys', [{
+                    key:   journeySlug,
+                    value: payload.value ?? payload.records?.[0]?.value ?? null,
+                    meta:  payload.meta ?? payload.records?.[0]?.meta ?? null,
+                }], {clear: !journeysImported})
+                journeysImported = true
+                continue
+            }
+
+            const store = relative.slice(0, -5)
             await importJsonToStore(db, store, json)
         }
     }
 }
-

@@ -421,7 +421,11 @@ export class PanelManager {
         }
 
         if (tabToActivate) {
-            this.openTab(tabToActivate)
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    this.openTab(tabToActivate)
+                })
+            })
         }
 
         const drawer = this.#getDrawerElement(id)

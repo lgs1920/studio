@@ -16,8 +16,10 @@
 
 import { WaDetails, WaIcon } from '@web.awesome.me/webawesome-pro/dist/react'
 import { useEffect, useRef } from 'react'
-import { RemoveProfile }            from './RemoveProfile'
-import { ResetProfile }             from './ResetProfile'
+import { RemoveProfile } from './RemoveProfile'
+import { ResetProfile } from './ResetProfile'
+import { SyncMyProfile } from './SyncMyProfile'
+import { LocalDbSettings } from '../../LocalDbSettings'
 
 export const ProfileTools = () => {
 
@@ -33,6 +35,8 @@ export const ProfileTools = () => {
                 <span slot="summary">
                     <WaIcon name="user-gear" variant={'regular'}/> {'My Profile'}
                 </span>
+                <SyncMyProfile/>
+                <LocalDbSettings/>
                 <ResetProfile/>
                 <RemoveProfile/>
             </WaDetails>

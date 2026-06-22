@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-06-22
+ * Last modified: 2026-06-22
  *
  *
  * Copyright © 2026 LGS1920
@@ -19,6 +19,54 @@
     display: flex;
     flex-direction: column;
     gap: var(--lgs-gutter-s)
+}
+
+.manage-profile-ui-sync-unsupported {
+    font-size: var(--lgs-font-size-s);
+    display: inline-flex;
+    align-items: center;
+    color: var(--wa-color-neutral-700);
+    gap: var(--lgs-gutter-xs);
+}
+
+
+.sync-folder-status::part(message) {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--lgs-gutter-s);
+}
+
+.sync-folder-status-main {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-width: 0;
+    gap: 0.2rem;
+}
+
+.sync-folder-status-line {
+    display: inline-flex;
+    align-items: center;
+    min-width: 0;
+    gap: var(--lgs-gutter-xs);
+}
+
+.sync-folder-status-line-title {
+    font-size: var(--lgs-font-size);
+    color: var(--lgs-font-color);
+}
+
+.sync-folder-status-line-detail {
+    font-size: var(--lgs-font-size);
+    color: var(--wa-color-neutral-700);
+}
+
+.sync-folder-status-action {
+    align-self: center;
+    flex: 0 0 auto;
+    width: auto !important;
+    margin-left: auto;
 }
 
 .manage-profile-ui ul {
@@ -50,6 +98,19 @@
     font-size: var(--lgs-font-size-s);
 }
 
-.manage-profile-ui sl-button {
+.manage-profile-ui sl-button,
+.manage-profile-ui wa-button {
     width: 12rem;
+}
+
+.lgs-profile-import-export-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--lgs-gutter-s);
+}
+
+.lgs-profile-import-export-actions wa-button {
+    flex: 0 0 auto;
+    width: auto;
 }
