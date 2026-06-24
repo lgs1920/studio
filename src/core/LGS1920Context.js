@@ -47,6 +47,7 @@ import { editorSettings }      from './stores/editorSettings'
 import { main }                from './stores/main'
 import { theJourneyEditor }    from './stores/theJourneyEditor'
 import { CameraManager }       from './ui/CameraManager'
+import { ionTokenManager }     from './ui/IonTokenManager'
 import { JourneyEditor }       from './ui/JourneyEditor'
 import { PanelManager }        from './ui/panels/PanelManager'
 import { Profiler }            from './ui/Profiler'
@@ -422,6 +423,7 @@ export class LGS1920Context {
         __.ui.menuManager = new MenuManager()
         __.ui.widgetManager = new WidgetManager()
         __.ui.widgetCache = new WidgetCache()
+        __.ui.ionTokenManager = ionTokenManager
 
         __.ui.poiManager = new POIManager()
         __.ui.geocoder = new Geocoder()

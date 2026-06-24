@@ -36,6 +36,8 @@ export const ResetProfile = () => {
     const reset = async () => {
         if (await confirmReset()) {
             await lgs.databaseSyncManager?.unlinkPersistentDirectory?.()
+            await __.ui.ionTokenManager?.resetIntroSeen?.()
+            await __.ui.ionTokenManager?.clear?.()
 
             if (account.reset.lgs1920) {
                 await lgs.db.lgs1920.deleteDB()

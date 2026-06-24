@@ -13,11 +13,14 @@
 version: 1.0
 
 ########################################
-# Cesium Ion Token
-# Please do not use It outside LGS1920 app
+# Cesium Ion
+# Shared token: please do not use it outside LGS1920 app
 ########################################
 
-ionToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiI4ZmZkZjZkYS1iODgwLTQzYzUtOTM5ZS1iYTc2Nzk0OTM1ZjQiLCJpZCI6MTkwODA4LCJpYXQiOjE3MDU2ODQ3OTZ9.BV6yuYzhp8A_cgEs5MbqZWZaCtyOW-08aSORPflJ3dw
+ion:
+  sharedToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiI4ZmZkZjZkYS1iODgwLTQzYzUtOTM5ZS1iYTc2Nzk0OTM1ZjQiLCJpZCI6MTkwODA4LCJpYXQiOjE3MDU2ODQ3OTZ9.BV6yuYzhp8A_cgEs5MbqZWZaCtyOW-08aSORPflJ3dw
+  promptDelaySeconds: 480
+  promptWarningPercent: 80
 
 ########################################
 # Application settings

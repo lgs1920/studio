@@ -46,6 +46,7 @@ import {
 import {
     WelcomeModal,
 }                       from '@Components/MainUI/WelcomeModal'
+import { IonTokenPrompt } from '@Components/MainUI/IonTokenPrompt'
 import {
     APP_EVENT, BASE_ENTITY, CURRENT_JOURNEY, OVERLAY_ENTITY, POI_STARTER_TYPE,
 }                       from '@Core/constants'
@@ -136,6 +137,14 @@ const AppSurface = ({onReady}) => {
         }
     }, [])
 
+    useEffect(() => {
+        void __.ui.ionTokenManager?.startPromptTimer?.()
+
+        return () => {
+            void __.ui.ionTokenManager?.stopPromptTimer?.()
+        }
+    }, [])
+
     return (
         <>
             <div id="drawer-root" className="drawer-wrapper"/>
@@ -143,6 +152,7 @@ const AppSurface = ({onReady}) => {
             <MainUI/>
             <ResponsiveDevice/>
             <AppUpdate/>
+            <IonTokenPrompt/>
             <MapLayer type={BASE_ENTITY}/>
             <MapLayer type={OVERLAY_ENTITY}/>
             <Viewer/>

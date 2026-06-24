@@ -7,18 +7,32 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-06-22
- * Last modified: 2026-06-22
+ * Created on: 2026-06-24
+ * Last modified: 2026-06-24
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { DATABASE_SYNC_STATUS }                              from '@Core/db/DatabaseSyncManager'
-import { UIToast }                                           from '@Utils/UIToast'
-import { WaButton, WaCallout, WaDetails, WaDivider, WaIcon } from '@web.awesome.me/webawesome-pro/dist/react'
-import { useCallback, useSyncExternalStore }                 from 'react'
-import { useConfirm }                                        from '../../../Modals/ConfirmUI'
+import { DATABASE_SYNC_STATUS }                                           from '@Core/db/DatabaseSyncManager'
+import {
+    LGSScrollbars,
+}                                                                         from '@Components/MainUI/LGSScrollbars'
+import {
+    UIToast,
+}                                                                         from '@Utils/UIToast'
+import {
+    WaBadge, WaButton, WaCallout, WaDialog, WaDetails, WaDivider, WaIcon, WaInput, WaTooltip,
+}                                                                         from '@web.awesome.me/webawesome-pro/dist/react'
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
+import { useSnapshot }                                                    from 'valtio'
+import ReactMarkdown                                                      from 'react-markdown'
+import {
+    useConfirm,
+}                                                                         from '../../../Modals/ConfirmUI'
+import {
+    markdown as ionTokenHelp,
+}                                                                         from '../../../../assets/ion-token-help.md'
 
 const EMPTY_SYNC_STATE = {}
 const subscribeEmptySyncStatus = () => () => undefined
@@ -47,6 +61,232 @@ const ResolveSyncConflictMessage = () => (
         {'This will overwrite the linked profile folder with the current local profile data.'}
     </WaCallout>
 )
+
+const formatUsage = (seconds) => {
+    const total = Number(seconds)
+    if (!Number.isFinite(total) || total < 0) {
+        return '00:00'
+    }
+
+    const minutes = Math.floor(total / 60)
+    const rest = Math.floor(total % 60)
+    return `${String(minutes).padStart(2, '0')}:${String(rest).padStart(2, '0')}`
+}
+
+const getUsageVariant = (remainingSeconds, totalSeconds) => {
+    const total = Number(totalSeconds)
+    if (!Number.isFinite(total) || total <= 0) {
+        return 'warning'
+    }
+
+    const ratio = Number(remainingSeconds) / total
+    if (ratio > 0.6) {
+        return 'success'
+    }
+
+    if (ratio < 0.2) {
+        return 'danger'
+    }
+
+    return 'warning'
+}
+
+const useLiveTick = (enabled) => {
+    const [tick, setTick] = useState(0)
+
+    useEffect(() => {
+        if (!enabled) {
+            return undefined
+        }
+
+        const timer = window.setInterval(() => {
+            setTick(value => value + 1)
+        }, 1000)
+
+        return () => window.clearInterval(timer)
+    }, [enabled])
+
+    return tick
+}
+
+const IonTokenEditor = ({activeMode, initialToken, promptDelaySeconds, remainingSeconds}) => {
+    const inputRef = useRef(null)
+    const [canSave, setCanSave] = useState(() => initialToken.trim() !== '')
+    const [helpOpen, setHelpOpen] = useState(false)
+    const remainingLabel = formatUsage(remainingSeconds)
+
+    const handleSave = async () => {
+        try {
+            const nextToken = await __.ui.ionTokenManager.save(inputRef.current?.value ?? '')
+            if (inputRef.current) {
+                inputRef.current.value = nextToken
+            }
+            setCanSave(nextToken.trim() !== '')
+            UIToast.success({
+                                caption: 'Cesium Ion token',
+                                text:    'A personal Cesium Ion token has been saved.',
+                            })
+        }
+        catch (error) {
+            if (inputRef.current) {
+                inputRef.current.value = ''
+                inputRef.current.focus?.()
+            }
+            setCanSave(false)
+            UIToast.error({
+                              caption: 'Cesium Ion token',
+                              text:    error.message,
+                          })
+        }
+    }
+
+    const handleClear = async () => {
+        try {
+            await __.ui.ionTokenManager.clear()
+            setCanSave(false)
+            if (inputRef.current) {
+                inputRef.current.value = ''
+            }
+            UIToast.success({
+                                caption: 'Cesium Ion token',
+                                text:    'The personal Cesium Ion token has been removed.',
+                            })
+        }
+        catch (error) {
+            UIToast.error({
+                              caption: 'Cesium Ion token',
+                              text:    error.message,
+                          })
+        }
+    }
+
+    return (
+        <div className="manage-profile-ui ion-token-settings">
+            <WaCallout open variant={activeMode === 'personal' ? 'success' : 'warning'} appearance="filled-outlined">
+                <WaIcon slot="icon" name={activeMode === 'personal' ? 'circle-check' : 'warning'}
+                        variant="regular"/>
+                {activeMode === 'personal' ? (
+                    'Your personal Cesium Ion token is active.'
+                ) : (
+                    <>
+                        {'The shared Cesium Ion token is active.'}
+                        <br/>
+                        {`Remaining allowance: ${remainingLabel} / ${formatUsage(promptDelaySeconds)}.`}
+                    </>
+                )}
+            </WaCallout>
+
+            <div className="ion-token-settings-toolbar">
+                <WaButton
+                    appearance="filled"
+                    variant="brand"
+                    href="https://ion.cesium.com/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                >
+                    <WaIcon slot="start" name="arrow-up-right-from-square" variant="regular"/>
+                    {'Open Cesium Ion'}
+                </WaButton>
+                <WaButton
+                    id="ion-token-help-button"
+                    appearance="plain"
+                    variant="brand"
+                    aria-label="Cesium Ion help"
+                    onClick={() => setHelpOpen(true)}
+                >
+                    <WaIcon name="circle-info" variant="regular"/>
+                </WaButton>
+                <WaTooltip for="ion-token-help-button" placement="top">{'More information'}</WaTooltip>
+            </div>
+
+            <WaInput
+                ref={inputRef}
+                appearance="filled"
+                type="password"
+                password-toggle
+                autocomplete="off"
+                defaultValue={initialToken}
+                key={initialToken}
+                placeholder={'Paste a Cesium Ion token'}
+                onInput={() => {
+                    setCanSave((inputRef.current?.value ?? '').trim() !== '')
+                }}
+            />
+
+            <div className="ion-token-settings-actions">
+                <WaButton variant="brand" appearance="outlined" onClick={handleSave} disabled={!canSave}>
+                    <WaIcon slot="start" name="check" variant="regular"/>
+                    {'Save token'}
+                </WaButton>
+
+                <WaButton variant="neutral" appearance="outlined" onClick={handleClear}
+                          disabled={activeMode !== 'personal'}>
+                    <WaIcon slot="start" name="trash" variant="regular"/>
+                    {'Use default'}
+                </WaButton>
+            </div>
+
+            <WaDialog
+                open={helpOpen}
+                label="Cesium Ion help"
+                className="lgs-theme"
+                onWaAfterHide={() => setHelpOpen(false)}
+                onWaHide={() => setHelpOpen(false)}
+            >
+                <div className="ion-token-help-scroll">
+                    <LGSScrollbars>
+                        <div className="ion-token-help-content wa-prose">
+                            <ReactMarkdown>{ionTokenHelp}</ReactMarkdown>
+                        </div>
+                    </LGSScrollbars>
+                </div>
+                <WaButton slot="footer" appearance="outlined" variant="brand" onClick={() => setHelpOpen(false)}>
+                    <WaIcon slot="start" name="xmark" variant="regular"/>
+                    {'Close'}
+                </WaButton>
+            </WaDialog>
+        </div>
+    )
+}
+
+const IonTokenPanel = () => {
+    const ion = useSnapshot(lgs.stores.ion)
+    const liveTick = useLiveTick(ion.source !== 'user')
+    const promptDelaySeconds = Number.isFinite(Number(lgs.configuration?.ion?.promptDelaySeconds))
+                               ? Number(lgs.configuration.ion.promptDelaySeconds)
+                               : 480
+    const activeMode = ion.source === 'user' ? 'personal' : 'standard'
+    const remainingSeconds = Math.max(promptDelaySeconds - Number(ion.accumulatedSeconds ?? 0), 0)
+    const badgeVariant = getUsageVariant(remainingSeconds, promptDelaySeconds)
+    const remainingLabel = formatUsage(remainingSeconds)
+    const initialToken = ion.source === 'user' ? ion.token ?? '' : ''
+    const showUsageBadge = ion.source !== 'user'
+
+    return (
+        <WaDetails small className="lgs--details-hoverable" name="profile-tools" data-live-tick={liveTick}>
+            <span slot="summary" className="ion-token-summary">
+                <span className="ion-token-summary-title">
+                    <WaIcon name="cloud" variant="regular"/>
+                    {'Cesium Ion'}
+                </span>
+                <span className="ion-token-summary-meta">
+                    {showUsageBadge && (
+                        <WaBadge variant={badgeVariant} appearance="filled">
+                            {`${remainingLabel} left`}
+                        </WaBadge>
+                    )}
+                </span>
+            </span>
+            <IonTokenEditor
+                key={`${ion.source}:${initialToken}`}
+                activeMode={activeMode}
+                initialToken={initialToken}
+                promptDelaySeconds={promptDelaySeconds}
+                remainingSeconds={remainingSeconds}
+            />
+        </WaDetails>
+    )
+}
 
 /**
  * Renders the profile synchronization controls.
@@ -94,11 +334,6 @@ export const SyncMyProfile = () => {
         },
     )
 
-    /**
-     * Links a local folder and imports its current content.
-     *
-     * @return {Promise<void>}
-     */
     const handleLinkDirectory = useCallback(async () => {
         try {
             await lgs.databaseSyncManager.linkPersistentDirectory()
@@ -120,11 +355,6 @@ export const SyncMyProfile = () => {
         }
     }, [])
 
-    /**
-     * Unlinks the current folder synchronization target.
-     *
-     * @return {Promise<void>}
-     */
     const handleUnlinkDirectory = useCallback(async () => {
         try {
             await lgs.databaseSyncManager.unlinkPersistentDirectory()
@@ -142,11 +372,6 @@ export const SyncMyProfile = () => {
         }
     }, [])
 
-    /**
-     * Retries the current folder synchronization.
-     *
-     * @return {Promise<void>}
-     */
     const handleRetrySync = useCallback(async () => {
         try {
             const synchronized = await lgs.databaseSyncManager.flushToPersistentDirectory()
@@ -173,11 +398,6 @@ export const SyncMyProfile = () => {
         }
     }, [])
 
-    /**
-     * Resolves a folder conflict by rewriting it from local data.
-     *
-     * @return {Promise<void>}
-     */
     const handleResolveSync = useCallback(async () => {
         if (!await confirmResolveSync()) {
             return
@@ -217,61 +437,67 @@ export const SyncMyProfile = () => {
                              : handleLinkDirectory
 
     return (
-        <WaDetails small className="lgs--details-hoverable" name="profile-tools">
-            <span slot="summary">
-                <WaIcon
-                    className="sync-profile-summary-icon"
-                    name={persistentDirectoryLinked ? 'folder-bookmark' : 'folder'}
-                    variant="regular"
-                    data-variant={syncHealthy ? 'success' : 'danger'}
-                /> {' '}
-                {'Sync Profile'}
-            </span>
+        <>
+            <WaDetails small className="lgs--details-hoverable" name="profile-tools">
+                <span slot="summary">
+                    <WaIcon
+                        className="sync-profile-summary-icon"
+                        name={persistentDirectoryLinked ? 'folder-bookmark' : 'folder'}
+                        variant="regular"
+                        data-variant={syncHealthy ? 'success' : 'danger'}
+                    />
+                    {' '}
+                    {'Sync Profile'}
+                </span>
 
-            <div className="manage-profile-ui">
-                <WaDivider/>
+                <div className="manage-profile-ui">
+                    <WaDivider/>
 
-                {!advancedSyncSupported && (
-                    <WaCallout className="manage-profile-ui-sync-unsupported" variant="neutral">
-                        <WaIcon name="ban" variant="regular" slot="icon"/>
-                        {'This browser only supports the manual backup workflow.'}
-                    </WaCallout>
-                )}
+                    {!advancedSyncSupported && (
+                        <WaCallout className="manage-profile-ui-sync-unsupported" variant="neutral">
+                            <WaIcon name="ban" variant="regular" slot="icon"/>
+                            {'This browser only supports the manual backup workflow.'}
+                        </WaCallout>
+                    )}
 
-                {advancedSyncSupported &&
-                    <>
+                    {advancedSyncSupported && (
                         <WaCallout
                             className="sync-folder-status"
                             variant={syncNeedsAttention ? 'danger' : persistentDirectoryLinked ? 'success' : 'neutral'}
+                            appearance="filled-outlined"
                         >
-                            <WaIcon slot="icon" name={persistentDirectoryLinked ? 'folder-bookmark' : 'folder'}
-                                    variant="regular"/>
                             <div className="sync-folder-status-main">
-                                <span className="sync-folder-status-line-title">{syncStatusLabel}</span>
-
+                                <div className="sync-folder-status-line">
+                                    <WaIcon
+                                        name={persistentDirectoryLinked ? 'folder-bookmark' : 'folder'}
+                                        variant="regular"
+                                        className="sync-profile-summary-icon"
+                                        data-variant={syncHealthy ? 'success' : 'danger'}
+                                    />
+                                    <span className="sync-folder-status-line-title">
+                                        {persistentDirectoryLinked ? 'Linked folder' : 'No linked folder'}
+                                    </span>
+                                </div>
+                                <div className="sync-folder-status-line-detail">
+                                    {syncStatusLabel}
+                                </div>
                             </div>
 
                             <WaButton
+                                appearance="outlined"
+                                variant={syncHealthy ? 'neutral' : 'brand'}
                                 className="sync-folder-status-action"
-                                variant="brand"
-                                appearance="filled"
                                 onClick={handleSyncAction}
                             >
                                 <WaIcon slot="start" name={syncActionIcon} variant="regular"/>
                                 {syncActionLabel}
                             </WaButton>
                         </WaCallout>
-                {persistentDirectoryLinked && syncState?.directoryName &&
-                    <span className="sync-folder-status-line-detail">
-                {`Folder name: ${syncState.directoryName}`}
-                    </span>
-                }
-                    </>
-
-
-                }
-            </div>
-            <ConfirmResolveSyncDialog/>
-        </WaDetails>
+                    )}
+                </div>
+                <ConfirmResolveSyncDialog/>
+            </WaDetails>
+            <IonTokenPanel/>
+        </>
     )
 }

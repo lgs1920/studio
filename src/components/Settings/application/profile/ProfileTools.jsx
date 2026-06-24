@@ -33,7 +33,7 @@ export const ProfileTools = () => {
 
             <WaDetails small key={'tools-profile'} className={'lgs--details-hoverable'} ref={profileDetails} open>
                 <span slot="summary">
-                    <WaIcon name="user-gear" variant={'regular'}/> {'My Profile'}
+                <WaIcon name="user-gear" variant={'regular'}/> {'My Profile'}
                 </span>
                 <SyncMyProfile/>
                 <LocalDbSettings/>

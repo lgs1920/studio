@@ -96,6 +96,7 @@ describe('Valtio store contracts', () => {
         expect(sameStores.journeyEditor).toBe(stores.journeyEditor)
         expect(sameStores.editorSettings).toBe(stores.editorSettings)
         expect(sameStores.flythrough).toBe(stores.flythrough)
+        expect(sameStores.ion).toBe(stores.ion)
     })
 
     it('exposes every top-level store as a Valtio proxy', () => {
@@ -106,6 +107,7 @@ describe('Valtio store contracts', () => {
         expect(isValtioProxy(stores.journeyEditor)).toBe(true)
         expect(isValtioProxy(stores.editorSettings)).toBe(true)
         expect(isValtioProxy(stores.flythrough)).toBe(true)
+        expect(isValtioProxy(stores.ion)).toBe(true)
     })
 
     it('keeps historical direct proxies aligned with StoresManager identities', () => {
@@ -186,7 +188,7 @@ describe('Valtio static guardrails', () => {
         const allowedMaxByFile = {
             'src/core/LGS1920Context.js':                         4,
             'src/core/settings/SettingsSection.js':               3,
-            'src/core/stores/StoresManager.js':                   5,
+            'src/core/stores/StoresManager.js':                   6,
             'src/Utils/ValtioUtils.js':                           2,
             'src/components/AppUpdate.jsx':                       1,
             'src/components/MainUI/CameraTarget.jsx':             1,

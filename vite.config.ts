@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-05-02
- * Last modified: 2026-05-02
+ * Created on: 2026-06-23
+ * Last modified: 2026-06-23
  *
  *
  * Copyright © 2026 LGS1920
@@ -282,6 +282,10 @@ export default defineConfig({
             {
                 find: '@Locales',
                 replacement: path.resolve(__dirname, 'src/locales')
+            },
+            {
+                find: '@Assets',
+                replacement: path.resolve(__dirname, 'src/assets')
             }
         ]
     },

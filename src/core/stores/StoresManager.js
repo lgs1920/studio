@@ -16,6 +16,7 @@
 
 import { proxy }            from 'valtio'
 import { editorSettings }   from './editorSettings.js'
+import { ion }              from './ion.js'
 import { flythrough }       from './flythrough.js'
 import { main }             from './main.js'
 import { theJourneyEditor } from './theJourneyEditor.js'
@@ -49,6 +50,9 @@ export class StoresManager {
     /** @type {Object} Flythrough runtime store */
     #flythrough
 
+    /** @type {Object} Cesium Ion runtime store */
+    #ion
+
     /**
      * Creates or returns existing StoresManager instance
      * Initializes proxy stores if instance doesn't exist
@@ -66,6 +70,7 @@ export class StoresManager {
         this.#journeyEditor = proxy(theJourneyEditor)
         this.#editorSettings = proxy(editorSettings)
         this.#flythrough = proxy(flythrough)
+        this.#ion = proxy(ion)
 
         StoresManager.#instance = this
     }
@@ -108,5 +113,13 @@ export class StoresManager {
      */
     get flythrough() {
         return this.#flythrough
+    }
+
+    /**
+     * Gets the Cesium Ion runtime store
+     * @returns {Object} Proxied Cesium Ion store
+     */
+    get ion() {
+        return this.#ion
     }
 }

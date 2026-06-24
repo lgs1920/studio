@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-06-22
- * Last modified: 2026-06-22
+ * Created on: 2026-06-23
+ * Last modified: 2026-06-23
  *
  *
  * Copyright © 2026 LGS1920
@@ -117,4 +117,75 @@
 .lgs-profile-import-export-actions wa-button {
     flex: 0 0 auto;
     width: auto;
+}
+
+.ion-token-settings {
+    display: flex;
+    flex-direction: column;
+    gap: var(--lgs-gutter-s);
+}
+
+.ion-token-settings-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--lgs-gutter-s);
+}
+
+.ion-token-summary {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    gap: var(--lgs-gutter-s);
+}
+
+.ion-token-summary-title {
+    display: inline-flex;
+    align-items: center;
+    min-width: 0;
+    gap: var(--lgs-gutter-xs);
+}
+
+.ion-token-summary-meta {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    margin-left: auto;
+    gap: var(--lgs-gutter-xs);
+}
+
+.ion-token-settings-actions,
+.ion-token-prompt-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: var(--lgs-gutter-s);
+}
+
+.ion-token-settings-toolbar wa-button {
+    width: auto;
+}
+
+.ion-token-settings wa-input,
+.ion-token-prompt wa-input {
+    width: 100%;
+}
+
+.ion-token-settings wa-button,
+.ion-token-prompt wa-button {
+    width: auto;
+}
+
+.ion-token-help-scroll {
+    width: 100%;
+    height: min(60vh, 40rem);
+    min-height: min(18rem, 60vh);
+    overflow: hidden;
+}
+
+.ion-token-help-content {
+    display: flex;
+    flex-direction: column;
+    gap: var(--lgs-gutter-s);
+    padding-right: var(--lgs-gutter-s);
 }
