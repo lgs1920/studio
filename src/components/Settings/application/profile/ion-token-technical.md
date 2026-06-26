@@ -201,6 +201,9 @@ The profile settings section should:
 - The manager should guard against empty tokens and against saving the shared token as a personal token.
 - If the vault is slow or temporarily unavailable, the application should fail gracefully and keep the shared token path
   available.
+- The Ion prompt must not block application readiness. Startup loading is controlled by the main application surface and
+  initial camera focus. If Cesium does not call the startup focus callback, the app must still release the loading screen
+  through a bounded fallback.
 
 ## Validation Checklist
 

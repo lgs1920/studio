@@ -16,6 +16,7 @@
 
 import { SETTINGS_STORE, VAULT_STORE } from '@Core/constants'
 import { ION_DEFAULT_PROMPT_DELAY_SECONDS, ion } from '@Core/stores/ion'
+import { IonLayerUtils } from '@Utils/cesium/IonLayerUtils'
 import * as Cesium from 'cesium'
 
 const ION_TOKEN_KEY = 'cesium_ion_token'
@@ -414,6 +415,7 @@ export class IonTokenManager {
                                      token:  storedToken,
                                      source: 'user',
                                  })
+                await IonLayerUtils.syncCesiumCache(storedToken)
                 state.showPrompt = false
                 state.dismissedThisSession = false
                 state.timerActive = false
@@ -423,6 +425,7 @@ export class IonTokenManager {
                                      token:  defaultIonToken(),
                                      source: 'default',
                                  })
+                await IonLayerUtils.syncCesiumCache(defaultIonToken())
                 this.#syncPromptState()
             }
 
@@ -447,6 +450,7 @@ export class IonTokenManager {
                              token:  nextToken,
                              source,
                          })
+        await IonLayerUtils.syncCesiumCache(nextToken)
 
         if (source === 'user') {
             const state = getIonState()
@@ -505,6 +509,7 @@ export class IonTokenManager {
                              token:  defaultIonToken(),
                              source: 'default',
                          })
+        await IonLayerUtils.syncCesiumCache(defaultIonToken())
         this.#syncPromptState()
         await this.startPromptTimer()
         return state

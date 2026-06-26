@@ -41,12 +41,6 @@ export class LayersAndTerrainManager {
      */
     #overlay = null
     /**
-     * The current terrain configuration (not actively used in this implementation).
-     * @type {null}
-     * @private
-     */
-    #terrain = null
-    /**
      * The current provider ID derived from the base layer.
      * @type {string|null}
      * @private
@@ -179,6 +173,13 @@ export class LayersAndTerrainManager {
      * @returns {string|null} The provider ID or null if entityId is invalid
      */
     getProviderByEntity = (entityId) => {
+        if (!entityId) {
+            return null
+        }
+        const entity = this.#bases.get(entityId)
+        if (entity?.provider) {
+            return entity.provider
+        }
         return entityId?.split('-')[0] ?? null
     }
 
@@ -224,8 +225,7 @@ export class LayersAndTerrainManager {
         if (!entityId) {
             return null
         }
-        const provider = this.getProviderProxy(this.getProviderByEntity(entityId))
-        return provider?.layers.find(layer => layer.id === entityId) ?? null
+        return this.#bases.get(entityId) ?? null
     }
 
     /**

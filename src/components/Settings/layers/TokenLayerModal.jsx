@@ -14,123 +14,162 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { BASE_ENTITY, TERRAIN_ENTITY, VAULT_STORE } from '@Core/constants'
-import { UIToast }                                      from '@Utils/UIToast'
-import { WaBadge, WaButton, WaDialog, WaIcon, WaInput } from '@web.awesome.me/webawesome-pro/dist/react'
-import parse                                            from 'html-react-parser'
-import { useRef }                                   from 'react'
-import { useSnapshot }                              from 'valtio'
+import { BASE3D_ENTITY, BASE_ENTITY, PERSONAL_ACCESS, TERRAIN_ENTITY, TILES3D_ENTITY, VAULT_STORE } from '@Core/constants'
+import { UIToast }                                                                    from '@Utils/UIToast'
+import { WaBadge, WaButton, WaDialog, WaIcon, WaInput }                               from '@web.awesome.me/webawesome-pro/dist/react'
+import parse                                                                          from 'html-react-parser'
+import { useEffect, useState }                                                         from 'react'
+import { useSnapshot }                                                                 from 'valtio'
 
+const closeTokenModal = () => {
+    lgs.editorSettingsProxy.layer.tokenDialog = false
+}
 
-export const TokenLayerModal = (props) => {
+export const TokenLayerModal = () => {
+    const snap = useSnapshot(lgs.editorSettingsProxy)
+    const tmpEntity = snap.layer.tmpEntity
+    const [tokenValue, setTokenValue] = useState('')
+    const [canSave, setCanSave] = useState(false)
 
-    const editor = lgs.editorSettingsProxy
-    const snap = useSnapshot(editor)
+    useEffect(() => {
+        if (!tmpEntity) {
+            return
+        }
 
-    const layers = lgs.settings.layers
+        if (tmpEntity.usage.type === PERSONAL_ACCESS) {
+            window.queueMicrotask(() => {
+                setTokenValue('')
+                setCanSave(false)
+            })
+            return
+        }
 
-    const openTokenModal = () => editor.layer.tokenDialog = true
-    const closeTokenModal = () => editor.layer.tokenDialog = false
+        lgs.db.vault.get(tmpEntity.id, VAULT_STORE).then(value => {
+            const nextValue = value ?? ''
+            setTokenValue(nextValue)
+            setCanSave(nextValue.trim() !== '')
+        })
+    }, [tmpEntity])
 
-    const apikey = useRef('')
-    const validate = useRef(null)
-
-    if (!snap.layer.tmpEntity) {
-        return ('')
+    if (!tmpEntity) {
+        return null
     }
 
-    const accountUrl = sprintf('<a href="%s" target="_blank">%s</a>', snap.layer.tmpEntity.usage?.signin, 'here')
-    const docUrl = sprintf('<a href="%s" target="_blank">%s</a>', snap.layer.tmpEntity.usage?.doc, 'See documentation')
-    const provider = __.layersAndTerrainManager.getProviderProxy(__.layersAndTerrainManager.getProviderIdByLayerId(snap.layer.tmpEntity.id))
-    const providerUrl = sprintf('<a href="%s" target="_blank">%s</a>', provider.url, 'Visit Provider')
-
-    const handleChange = (event) => {
-        editor.layer.tmpEntity.usage.token = apikey.current.value
-        editor.canValidate = (apikey.current.value !== '')
-    }
+    const accountUrl = tmpEntity.usage?.signin
+                       ? `<a href="${tmpEntity.usage.signin}" target="_blank">here</a>`
+                       : null
+    const docUrl = tmpEntity.usage?.doc
+                   ? `<a href="${tmpEntity.usage.doc}" target="_blank">See documentation</a>`
+                   : null
+    const provider = __.layersAndTerrainManager.getProviderProxy(__.layersAndTerrainManager.getProviderIdByLayerId(tmpEntity.id))
+    const providerUrl = provider?.url ? `<a href="${provider.url}" target="_blank">Visit Provider</a>` : null
 
     const validateToken = async () => {
-        if (apikey.current.value) {
-            await lgs.db.vault.put(snap.layer.tmpEntity.id, apikey.current.value, VAULT_STORE)
-            const tmp = __.layersAndTerrainManager.getEntityProxy(snap.layer.tmpEntity.id)
+        const token = tokenValue.trim()
+        if (!token) {
+            return
+        }
 
-            tmp.usage.token = apikey.current.value
-            tmp.usage.unlocked = true
+        const proxy = __.layersAndTerrainManager.getEntityProxy(tmpEntity.id)
+        if (!proxy) {
+            return
+        }
 
-            if (tmp.type === BASE_ENTITY) {
-                lgs.stores.main.theLayer = tmp
+        try {
+            if (proxy.usage.type === PERSONAL_ACCESS) {
+                await __.ui.ionTokenManager.save(token)
             }
             else {
-                lgs.stores.main.theLayerOverlay = tmp
-
-                // Set by default
-                lgs.settings.layers[snap.layer.tmpEntity.type] = snap.layer.tmpEntity.id
-
-                // Terrain ? Replace the current one
-                if (snap.layer.tmpEntity.type === TERRAIN_ENTITY) {
-                    __.layersAndTerrainManager.changeTerrain(snap.layer.tmpEntity)
-                }
-
-                // Close Dialog
-                editor.layer.tokenDialog = false
-                editor.canValidate = false
-
-                // Add a notification
-                UIToast.success({
-                                    caption: sprintf('Access for %s is allowed!', snap.layer.tmpEntity?.name),
-                                    text:    'Enjoy!',
-                                })
+                await lgs.db.vault.put(proxy.id, token, VAULT_STORE)
+                proxy.usage.token = token
+                proxy.usage.unlocked = true
             }
-        }
 
+            if (proxy.type === BASE_ENTITY) {
+                lgs.stores.main.theLayer = proxy
+                lgs.settings.layers.base3d = ''
+                lgs.settings.layers.base = proxy.id
+            }
+            else if (proxy.type === BASE3D_ENTITY) {
+                lgs.stores.main.theBase3DLayer = proxy
+                lgs.settings.layers.base = ''
+                lgs.settings.layers.base3d = proxy.id
+            }
+            else if (proxy.type === TILES3D_ENTITY) {
+                lgs.stores.main.theTiles3DLayer = proxy
+                lgs.settings.layers.tiles3d = proxy.id
+            }
+            else {
+                lgs.stores.main.theLayerOverlay = proxy
+                lgs.settings.layers[proxy.type] = proxy.id
+            }
 
-        //Read Token in vault DB if it exists and put it in the right place
-        if (snap.layer.tmpEntity && apikey.current.value === undefined) {
-            lgs.db.vault.get(snap.layer.tmpEntity.id, VAULT_STORE).then(value => {
-                editor.layer.tmpEntity.usage.token = value ?? ''
-                apikey.current.value = snap.layer.tmpEntity.usage.token
-            })
+            if (proxy.type === TERRAIN_ENTITY) {
+                __.layersAndTerrainManager.changeTerrain(proxy)
+            }
+
+            lgs.editorSettingsProxy.layer.tokenDialog = false
+            setCanSave(false)
+
+            UIToast.success({
+                                caption: `Access for ${tmpEntity?.name} is allowed!`,
+                                text:    'Enjoy!',
+                            })
         }
-        editor.canValidate = (apikey.current.value !== '')
+        catch (error) {
+            UIToast.error({
+                              caption: 'Cesium Ion token',
+                              text:    error?.message ?? String(error),
+                          })
+        }
     }
 
     return (
-        <>
-            <WaDialog label={sprintf('Requesting access for %s', snap.layer.tmpEntity?.name)}
-                      open={snap.layer.tokenDialog}
-                      onWaAfterHide={closeTokenModal}
-                      className={'lgs-theme'}>
-
-                <div>
+        <WaDialog
+            label={`Requesting access for ${tmpEntity?.name}`}
+            open={snap.layer.tokenDialog}
+            onWaAfterHide={closeTokenModal}
+            className={'lgs-theme'}
+        >
+            <div>
+                {tmpEntity.usage.type !== PERSONAL_ACCESS && accountUrl &&
                     <p><WaBadge pill>1</WaBadge> {'Create an account on the provider site'} {parse(accountUrl)}.</p>
-                    <p><WaBadge pill>2</WaBadge> {'Get Token/Api key and paste it below.'}</p>
-                    <p><WaInput appearance="filled" placeholder={'Paste Token/API key'} type="password"
-                                ref={apikey} password-toggle
-                                clearable
-                                onInput={handleChange}
-                                passwordToggle
-                                autocomplete
-                                value={snap.layer.tmpEntity.usage.token ?? ''}>
-                    </WaInput>
-                    </p>
-                    <p><WaBadge pill>3</WaBadge> {`Validate.`}</p>
-                    <br/>
-                    {snap.layer.tmpEntity.usage.doc &&
-                        <>{parse(docUrl)} - </>
-                    }
-                    {parse(providerUrl)}
-                </div>
-                <div className="buttons-bar" slot="footer">
-                    <WaButton onClick={closeTokenModal} appearance="outlined">
-                        <WaIcon slot="start" name="xmark" variant="regular"/>
-                        {'Cancel'}
-                    </WaButton>
-                    <WaButton variant="brand" onClick={validateToken} ref={validate} disabled={!snap.canValidate}>
-                        <WaIcon slot="start" name="check" variant="regular"/>
-                        {'Validate'}
-                    </WaButton>
-                </div>
-            </WaDialog>
-        </>
+                }
+                <p><WaBadge pill>{tmpEntity.usage.type === PERSONAL_ACCESS ? '1' : '2'}</WaBadge> {'Get Token/Api key and paste it below.'}</p>
+                <p>
+                    <WaInput
+                        appearance="filled"
+                        placeholder={'Paste Token/API key'}
+                        type="password"
+                        password-toggle
+                        clearable
+                        onInput={(event) => {
+                            const nextValue = event?.target?.value ?? ''
+                            setTokenValue(nextValue)
+                            setCanSave(nextValue.trim() !== '')
+                        }}
+                        passwordToggle
+                        autocomplete
+                        value={tokenValue}
+                    />
+                </p>
+                <p><WaBadge pill>3</WaBadge> {'Validate.'}</p>
+                <br/>
+                {docUrl && <>{parse(docUrl)} - </>}
+                {providerUrl && parse(providerUrl)}
+            </div>
+            <div className="buttons-bar" slot="footer">
+                <WaButton onClick={() => {
+                    lgs.editorSettingsProxy.layer.tokenDialog = false
+                }} appearance="outlined">
+                    <WaIcon slot="start" name="xmark" variant="regular"/>
+                    {'Cancel'}
+                </WaButton>
+                <WaButton variant="brand" onClick={validateToken} disabled={!canSave}>
+                    <WaIcon slot="start" name="check" variant="regular"/>
+                    {'Validate'}
+                </WaButton>
+            </div>
+        </WaDialog>
     )
 }

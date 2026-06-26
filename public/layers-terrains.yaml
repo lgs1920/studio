@@ -3,6 +3,7 @@
 ########################################
 ## Current IDs
 base: arcgis-wayback-20191212         # ID of the current base
+base3d: null                          # ID of the current 3D base scene
 overlay: null                         # ID of the current overlay
 terrain: cesium-world                 # ID of the current terrain
 
@@ -30,6 +31,7 @@ providers:
       ## WorldTerrain
       - name: World Terrain
         id: cesium-world
+        assetId: 1
         image: cesium-world.png
         usage:
           type: free
@@ -49,6 +51,90 @@ providers:
         type: terrain
         terrainType: 'ellipsoid'
         noRelief: true
+
+      ## Google Photorealistic 3D Tiles
+      - name: Google Photorealistic 3D Tiles
+        id: google-photorealistic-3d
+        image: cesium-world.png
+        assetId: 2275207
+        usage:
+          type: personal
+          doc: ''
+
+        type: base3d
+        sceneKind: google-photorealistic
+        base3d:
+          flyToOnLoad: true
+          showGlobe: true
+          showTerrain: false
+
+      ## Cesium OSM Buildings
+      - name: Cesium OSM Buildings
+        id: cesium-osm-buildings
+        image: cesium-world.png
+        assetId: 96188
+        usage:
+          type: personal
+          doc: ''
+
+        type: tiles3d
+        tiles3d:
+          flyToOnLoad: false
+          maximumScreenSpaceError: 16
+
+      ## Azure Maps Aerial
+      - name: Azure Maps Aerial
+        id: azure-maps-aerial
+        image: cesium-world.png
+        assetId: 3891168
+        usage:
+          type: personal
+          doc: ''
+
+        type: base
+        tile: ion
+        imageryKind: ion
+
+      ## Google Maps 2D Satellite
+      - name: Google Maps 2D Satellite
+        id: google-maps-2d-satellite
+        image: cesium-world.png
+        assetId: 3830182
+        usage:
+          type: personal
+          doc: ''
+
+        type: base
+        tile: ion
+        imageryKind: google2d
+        mapType: satellite
+
+      ## Google Maps 2D Satellite with Labels
+      - name: Google Maps 2D Satellite with Labels
+        id: google-maps-2d-satellite-labels
+        image: cesium-world.png
+        assetId: 3830183
+        usage:
+          type: personal
+          doc: ''
+
+        type: base
+        tile: ion
+        imageryKind: google2d
+        mapType: satellite
+
+      ## Azure Maps With Label
+      - name: Azure Maps With Label
+        id: azure-maps-with-label
+        image: cesium-world.png
+        assetId: 3891168
+        usage:
+          type: personal
+          doc: ''
+
+        type: overlay
+        tile: ion
+        imageryKind: ion
 
   ## IGN Provider
   - id: ign                           # Provider ID

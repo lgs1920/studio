@@ -60,7 +60,6 @@ export class LayersUtils {
     `,
                                          })
     static getImageryLayer = (type) => {
-
         let index
         switch (type) {
             case TERRAIN_ENTITY:
@@ -71,9 +70,25 @@ export class LayersUtils {
             case OVERLAY_ENTITY:
                 index = OVERLAY_INDEX
                 break
+            default:
+                return false
         }
 
-        return lgs.viewer.imageryLayers.get(index)
+        if (index === undefined || !lgs.viewer?.imageryLayers) {
+            return false
+        }
+
+        const layers = lgs.viewer.imageryLayers
+        if (typeof layers.length === 'number' && index >= layers.length) {
+            return false
+        }
+
+        try {
+            return layers.get(index)
+        }
+        catch {
+            return false
+        }
     }
     static getImageryLayerSettings = (type) => {
 
@@ -110,11 +125,11 @@ export class LayersUtils {
             applySettings(layer, settings, DEFAULT_LAYERS_COLOR_SETTINGS)
         }
 
-        if (first) {
+        if (first && lgs.theDefaultColorSettings) {
             applySettings(lgs.theDefaultColorSettings, settings, DEFAULT_LAYERS_COLOR_SETTINGS)
         }
 
-        lgs.viewer.scene.requestRender()
+        lgs.viewer?.scene?.requestRender?.()
 
 
     }

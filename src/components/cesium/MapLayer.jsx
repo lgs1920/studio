@@ -15,13 +15,14 @@
  ******************************************************************************/
 
 import { BASE_ENTITY, OVERLAY_ENTITY, URL_AUTHENT_KEY } from '@Core/constants'
+import { IonLayerUtils }                                from '@Utils/cesium/IonLayerUtils'
 import {
     ImageryLayer, NeverTileDiscardPolicy, OpenStreetMapImageryProvider, UrlTemplateImageryProvider,
     WebMapTileServiceImageryProvider,
 }                                                       from 'cesium'
 import { useEffect, useMemo }     from 'react'
 import { subscribe, useSnapshot } from 'valtio'
-import { BASE_INDEX, DEFAULT_LAYERS_COLOR_SETTINGS, OVERLAY_INDEX } from '../../core/constants'
+import { DEFAULT_LAYERS_COLOR_SETTINGS, OVERLAY_INDEX } from '../../core/constants'
 
 export const SLIPPY = 'slippy'
 export const WMTS = 'wmts'
@@ -31,6 +32,7 @@ export const THUNDERFOREST = 'thunderforest'
 export const SWISSTOPO = 'swisstopo'
 export const WAYBACK = 'wayback'
 export const MAPTILER = 'maptiler'
+export const ION = 'ion'
 
 const stripTrailingSlash = url => (url?.endsWith('/') ? url.replace(/\/+$/, '') : url)
 
@@ -73,7 +75,52 @@ const applyLayerSettings = (layer, layerId) => {
     layer.alpha = settings?.alpha ?? DEFAULT_LAYERS_COLOR_SETTINGS.alpha
 }
 
-const MapLayerImagery = ({imageryProvider, isBase, layerId}) => {
+const getSafeImageryInsertIndex = (collection, isBase) => {
+    const length = collection?.length ?? 0
+    if (isBase) {
+        return 0
+    }
+    return Math.min(OVERLAY_INDEX, length)
+}
+
+const collectionContainsLayer = (collection, layer) => {
+    if (!collection || !layer || typeof collection.contains !== 'function') {
+        return false
+    }
+    try {
+        return collection.contains(layer)
+    }
+    catch {
+        return false
+    }
+}
+
+const removeLayerFromCollection = (collection, layer) => {
+    if (!collectionContainsLayer(collection, layer)) {
+        return
+    }
+    try {
+        collection.remove(layer, true)
+    }
+    catch {
+        // The collection can be destroyed while switching between base3d and globe imagery.
+    }
+}
+
+const addLayerToCollection = (collection, layer, index) => {
+    if (!collection || !layer || typeof collection.add !== 'function') {
+        return false
+    }
+    try {
+        collection.add(layer, index)
+        return true
+    }
+    catch {
+        return false
+    }
+}
+
+const MapLayerImagery = ({imageryProvider, isBase, layerId, collection}) => {
     useEffect(() => {
         if (!lgs.viewer || lgs.viewer.isDestroyed()) {
             return
@@ -84,33 +131,64 @@ const MapLayerImagery = ({imageryProvider, isBase, layerId}) => {
         }
 
         let layer
-        if (isBase) {
-            if (lgs.theLayer) {
-                lgs.viewer.imageryLayers.remove(lgs.theLayer, true)
+        let cancelled = false
+
+        const addLayer = async () => {
+            const nextLayer = typeof imageryProvider?.then === 'function'
+                              ? await ImageryLayer.fromProviderAsync(imageryProvider)
+                              : new ImageryLayer(imageryProvider)
+
+            if (cancelled) {
+                nextLayer.destroy?.()
+                return
             }
-            lgs.theLayer = new ImageryLayer(imageryProvider)
-            applyLayerSettings(lgs.theLayer, layerId)
-            lgs.viewer.imageryLayers.add(lgs.theLayer, BASE_INDEX)
-            layer = lgs.theLayer
-        }
-        else {
-            if (lgs.theLayerOverlay) {
-                lgs.viewer.imageryLayers.remove(lgs.theLayerOverlay, true)
+
+            if (isBase) {
+                if (lgs.theLayer) {
+                    removeLayerFromCollection(collection, lgs.theLayer)
+                }
+                lgs.theLayer = nextLayer
+                applyLayerSettings(lgs.theLayer, layerId)
+                addLayerToCollection(collection, lgs.theLayer, getSafeImageryInsertIndex(collection, true))
+                layer = lgs.theLayer
             }
-            lgs.theLayerOverlay = new ImageryLayer(imageryProvider)
-            applyLayerSettings(lgs.theLayerOverlay, layerId)
-            lgs.viewer.imageryLayers.add(lgs.theLayerOverlay, OVERLAY_INDEX)
-            layer = lgs.theLayerOverlay
+            else {
+                if (lgs.theLayerOverlay) {
+                    removeLayerFromCollection(collection, lgs.theLayerOverlay)
+                }
+                lgs.theLayerOverlay = nextLayer
+                applyLayerSettings(lgs.theLayerOverlay, layerId)
+                addLayerToCollection(collection, lgs.theLayerOverlay, getSafeImageryInsertIndex(collection, false))
+                layer = lgs.theLayerOverlay
+            }
+
+            lgs.viewer.scene.requestRender()
         }
 
-        lgs.viewer.scene.requestRender()
+        void addLayer()
 
         return () => {
-            if (layer && !lgs.viewer.isDestroyed() && lgs.viewer.imageryLayers.contains(layer)) {
-                lgs.viewer.imageryLayers.remove(layer, true)
+            cancelled = true
+            if (!layer) {
+                return
+            }
+
+            if (!lgs.viewer || lgs.viewer.isDestroyed()) {
+                return
+            }
+
+            if (collection && !(typeof collection.isDestroyed === 'function' && collection.isDestroyed())) {
+                removeLayerFromCollection(collection, layer)
+            }
+
+            if (isBase && lgs.theLayer === layer) {
+                lgs.theLayer = null
+            }
+            else if (!isBase && lgs.theLayerOverlay === layer) {
+                lgs.theLayerOverlay = null
             }
         }
-    }, [imageryProvider, isBase, layerId])
+    }, [collection, imageryProvider, isBase, layerId])
 
     return null
 }
@@ -118,6 +196,7 @@ const MapLayerImagery = ({imageryProvider, isBase, layerId}) => {
 export const MapLayer = (props) => {
 
     const layers = useSnapshot(lgs.settings.layers)
+    const ion = useSnapshot(lgs.stores.ion)
 
     const isBase = props.type === BASE_ENTITY
     const isLayerType = [BASE_ENTITY, OVERLAY_ENTITY].includes(props.type)
@@ -144,6 +223,10 @@ export const MapLayer = (props) => {
     const imageryProvider = useMemo(() => {
         if (!isLayerType || !layerType || !layerTile) {
             return null
+        }
+
+        if (layerTile === ION && layerType === props.type) {
+            return IonLayerUtils.imageryProviderFromLayer(theLayer)
         }
 
         let theURL = layerUrl
@@ -256,7 +339,26 @@ export const MapLayer = (props) => {
         layerOther,
         minLevel,
         maxLevel,
+        theLayer,
     ])
+
+    const ionImageryProvider = useMemo(() => {
+        if (!theLayer || layerTile || !theLayer?.ionAssetId) {
+            return null
+        }
+
+        if (IonLayerUtils.isPersonalLayer(theLayer) && ion.source !== 'user') {
+            return null
+        }
+
+        return IonLayerUtils.imageryProviderFromLayer(theLayer)
+    }, [ion.source, layerTile, theLayer])
+
+    const shouldDrapeOnBase3D = !isBase && layers.base3d && lgs.base3dTileset?.imageryLayers
+    const targetCollectionKey = shouldDrapeOnBase3D ? 'base3d' : 'globe'
+    const targetCollection = targetCollectionKey === 'base3d'
+                           ? lgs.base3dTileset.imageryLayers
+                           : lgs.viewer.imageryLayers
 
     /**
      * We need to update some information when layer settings
@@ -306,8 +408,11 @@ export const MapLayer = (props) => {
 
     return (
         <>
-            {imageryProvider && (
-                <MapLayerImagery key={`${layerUrl}-${layerType}`} isBase={isBase} layerId={layerId} imageryProvider={imageryProvider}/>
+            {(imageryProvider || ionImageryProvider) && (
+                <MapLayerImagery key={`${targetCollectionKey}-${layerUrl}-${layerType}-${layerId}`}
+                                 isBase={isBase} layerId={layerId}
+                                 imageryProvider={imageryProvider ?? ionImageryProvider}
+                                 collection={targetCollection}/>
             )}
         </>
     )

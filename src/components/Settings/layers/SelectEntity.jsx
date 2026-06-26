@@ -17,8 +17,9 @@
 import { LGSScrollbars } from '@Components/MainUI/LGSScrollbars'
 import { useConfirm }    from '@Components/Modals/ConfirmUI'
 import {
-    ACCESS_ICONS, FREE_ACCOUNT_ACCESS, FREE_ANONYMOUS_ACCESS, FREEMIUM_ACCESS, LAYERS_THUMBS_DIR, LOCKED_ACCESS,
-    OVERLAY_ENTITY, PREMIUM_ACCESS, TERRAIN_ENTITY, UNLOCKED_ACCESS, VAULT_STORE,
+    ACCESS_ICONS, BASE3D_ENTITY, BASE_ENTITY, FREE_ACCOUNT_ACCESS, FREE_ANONYMOUS_ACCESS, FREEMIUM_ACCESS, LAYERS_THUMBS_DIR,
+    LOCKED_ACCESS, OVERLAY_ENTITY, PERSONAL_ACCESS, PREMIUM_ACCESS, TERRAIN_ENTITY, TILES3D_ENTITY, UNLOCKED_ACCESS,
+    VAULT_STORE,
 }                        from '@Core/constants'
 
 import {
@@ -41,6 +42,7 @@ export const SelectEntity = (props) => {
 
     const $layers = lgs.settings.layers
     const layers = useSnapshot($layers)
+    const ion = useSnapshot(lgs.stores.ion)
     const $editor = lgs.editorSettingsProxy
     const editor = useSnapshot($editor)
 
@@ -75,8 +77,7 @@ export const SelectEntity = (props) => {
                                                                       {icon: 'lock', text: 'lock'})
 
     const ThumbnailMenu = (props) => {
-        const $entity = props.entity
-        const entity = useSnapshot($entity)
+        const entity = props.entity
 
         const handleSelect = async (event) => {
             event.preventDefault()
@@ -84,19 +85,24 @@ export const SelectEntity = (props) => {
                 case 'remove': {
                     const confirmation = await confirmRemoveToken()
                     if (confirmation) {
-                        $entity.usage.token = ''
-                        $entity.usage.unlocked = false
-                        await lgs.db.vault.put($entity.id, $entity.usage.token, VAULT_STORE)
+                        if (entity.usage.type === PERSONAL_ACCESS) {
+                            await __.ui.ionTokenManager.clear()
+                        }
+                        else {
+                            entity.usage.token = ''
+                            entity.usage.unlocked = false
+                            await lgs.db.vault.put(entity.id, entity.usage.token, VAULT_STORE)
+                        }
                     }
                     break
                 }
                 case 'update':
-                    $editor.layer.tmpEntity = $entity
+                    $editor.layer.tmpEntity = entity
                     $editor.layer.tokenDialog = true
                     break
                 case 'read':
-                    if ($entity.usage.doc) {
-                        window.open($entity.usage.doc, '_blank')
+                    if (entity.usage.doc) {
+                        window.open(entity.usage.doc, '_blank')
                     }
                     break
             }
@@ -121,7 +127,7 @@ export const SelectEntity = (props) => {
                     <WaDropdownItem value="update" key="update-entity">
                         <WaIcon slot="icon" name="arrow-down-up-lock" variant="regular"/> {'Update Token'}
                     </WaDropdownItem>
-                    {props.entity.id !== layers[props.entity.type] &&
+                    {entity.id !== layers[entity.type] &&
                         <>
                             <WaDivider/>
                             <WaDropdownItem value="remove" key="remove-entity" variant="danger">
@@ -136,8 +142,13 @@ export const SelectEntity = (props) => {
 
     const Thumbnail = (props) => {
         const $entity = __.layersAndTerrainManager.getEntityProxy(props.entity.id)
+        if (!$entity) {
+            return null
+        }
         const accountType = $entity.usage.type
-        const accountUnlocked = $entity.usage.type === FREE_ANONYMOUS_ACCESS || ($entity.usage.unlocked ?? false)
+        const accountUnlocked = $entity.usage.type === FREE_ANONYMOUS_ACCESS
+            || $entity.usage.type === PERSONAL_ACCESS && ion.source === 'user'
+            || ($entity.usage.unlocked ?? false)
         const type = accountUnlocked ? UNLOCKED_ACCESS : accountType
 
         let selected = false
@@ -159,7 +170,7 @@ export const SelectEntity = (props) => {
                            placement={layers.filter.thumbnail ? 'top' : 'left'}>
                     <div>
                         <strong>{parse($entityName)}</strong>{byProvider}<br/>
-                        {ACCESS_ICONS[type].text}
+                        {ACCESS_ICONS[type]?.text ?? ''}
                     </div>
                 </WaTooltip>
                 <WaCard appearance="outlined" id={$entity.id} className={classes.join(' ')} onClick={props.onClick}
@@ -177,12 +188,14 @@ export const SelectEntity = (props) => {
                     <div className="entity-sub-menu">
                         {($entity.usage.type === PREMIUM_ACCESS
                                 || $entity.usage.type === FREEMIUM_ACCESS
-                                || $entity.usage.type === FREE_ACCOUNT_ACCESS) && accountUnlocked &&
+                                || $entity.usage.type === FREE_ACCOUNT_ACCESS
+                                || $entity.usage.type === PERSONAL_ACCESS) && accountUnlocked &&
                             <ThumbnailMenu entity={$entity}/>
                         }
                         {($entity.usage.type === PREMIUM_ACCESS
                                 || $entity.usage.type === FREEMIUM_ACCESS
-                                || $entity.usage.type === FREE_ACCOUNT_ACCESS) &&
+                                || $entity.usage.type === FREE_ACCOUNT_ACCESS
+                                || $entity.usage.type === PERSONAL_ACCESS) &&
                             <div className={['entity-access', type, $entity.usage.type].join(' ')}>
                                 <WaIcon name={ACCESS_ICONS[$entity.usage.type].icon}/>
                             </div>
@@ -200,7 +213,7 @@ export const SelectEntity = (props) => {
 
     const list = props.list.map(entity => ({
         ...entity,
-        providerName: __.layersAndTerrainManager.providers.get(entity.provider).name,
+        providerName: __.layersAndTerrainManager.providers.get(entity.provider)?.name ?? '',
     }))
 
     const selectEntityHandler = (event) => {
@@ -222,13 +235,36 @@ export const SelectEntity = (props) => {
         }
 
         const isSelectedOverlay = type === OVERLAY_ENTITY && layers[type] === id
-        if ($entity.usage.type === FREE_ANONYMOUS_ACCESS) {
-            $layers[type] = isSelectedOverlay ? '' : id
+        const isSelectedBase3D = $entity.type === BASE3D_ENTITY && layers.base3d === id
+        const isSelectedTiles3D = $entity.type === TILES3D_ENTITY && layers.tiles3d === id
+        const requiresPersonalToken = $entity.usage.type === PERSONAL_ACCESS
+        const selectUnlockedEntity = () => {
+            if ($entity.type === BASE3D_ENTITY) {
+                $layers.base = ''
+                $layers.base3d = isSelectedBase3D ? '' : id
+            }
+            else if ($entity.type === BASE_ENTITY) {
+                $layers.base3d = ''
+                $layers.base = id
+            }
+            else if ($entity.type === TILES3D_ENTITY) {
+                $layers.tiles3d = isSelectedTiles3D ? '' : id
+            }
+            else {
+                $layers[type] = isSelectedOverlay ? '' : id
+            }
+        }
+
+        if ($entity.usage.type === FREE_ANONYMOUS_ACCESS || (requiresPersonalToken && ion.source === 'user')) {
+            selectUnlockedEntity()
+            if (requiresPersonalToken) {
+                $editor.layer.tokenDialog = false
+            }
         }
         else {
             const theProxy = __.layersAndTerrainManager.getEntityProxy(id)
-            if (theProxy.usage.unlocked) {
-                $layers[type] = isSelectedOverlay ? '' : id
+            if (theProxy.usage.unlocked || (requiresPersonalToken && ion.source === 'user')) {
+                selectUnlockedEntity()
                 $editor.layer.tokenDialog = false
             }
             else {
@@ -242,11 +278,14 @@ export const SelectEntity = (props) => {
             $layers.colorSettings[$entity.id] = {...DEFAULT_LAYERS_COLOR_SETTINGS}
         }
 
-        LayersUtils.applySettings($layers.colorSettings[$entity.id] ?? DEFAULT_LAYERS_COLOR_SETTINGS, type, true)
+        if ([BASE_ENTITY, OVERLAY_ENTITY].includes($entity.type)) {
+            LayersUtils.applySettings($layers.colorSettings[$entity.id] ?? DEFAULT_LAYERS_COLOR_SETTINGS, $entity.type, true)
+        }
 
-        if ($entity.type === TERRAIN_ENTITY && ($entity.usage.type === FREE_ANONYMOUS_ACCESS || $entity.usage.unlocked)) {
+        if ($entity.type === TERRAIN_ENTITY && ($entity.usage.type === FREE_ANONYMOUS_ACCESS || $entity.usage.unlocked || ($entity.usage.type === PERSONAL_ACCESS && ion.source === 'user'))) {
             __.layersAndTerrainManager.changeTerrain($entity)
         }
+
     }
 
     const fill = list.length > 0

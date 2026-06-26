@@ -17,7 +17,7 @@
     // List of settings exclusions (ie we keep the user choice)
     // This array is then sorted alphabetically by object depth.
 export const SETTING_EXCLUSIONS = [
-        'layers.base', 'layers.terrain', 'layers.overlay',
+        'layers.base', 'layers.base3d', 'layers.tiles3d', 'layers.terrain', 'layers.overlay',
         'layers.filter', 'layers.colorSettings',
         'app', 'scene', 'starter', 'coordinateSystem', 'unitSystem', 'poi.filter',
         'ion.usageSeconds', 'ion.introSeen',

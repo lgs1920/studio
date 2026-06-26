@@ -45,7 +45,16 @@ const formatUsage = (seconds) => {
 
 const openCesiumIon = () => window.open('https://ion.cesium.com/', '_blank', 'noopener,noreferrer')
 
-const PromptBody = ({mode, delayLabel, remainingLabel, warningPercent, inputRef, setCanSave, openHelp}) => {
+const restoreCesiumFocus = () => {
+    const canvas = lgs.viewer?.canvas
+    const focusTarget = canvas ?? document.body
+    requestAnimationFrame(() => {
+        document.activeElement?.blur?.()
+        focusTarget?.focus?.({preventScroll: true})
+    })
+}
+
+const PromptBody = ({mode, delayLabel, remainingLabel, inputRef, setCanSave, openHelp}) => {
     if (mode === 'intro') {
         return (
             <>
@@ -145,7 +154,6 @@ export const IonTokenPrompt = () => {
     const delayLabel = formatDelay(ion.promptDelaySeconds)
     const remainingSeconds = Math.max(Number(ion.promptDelaySeconds ?? 0) - Number(ion.accumulatedSeconds ?? 0), 0)
     const remainingLabel = formatUsage(remainingSeconds)
-    const warningPercent = Number.isFinite(Number(ion.promptWarningPercent)) ? Number(ion.promptWarningPercent) : 80
     const mode = ion.showPrompt ? (ion.promptMode ?? 'quota') : null
     const isBlocking = mode === 'blocked'
 
@@ -183,10 +191,12 @@ export const IonTokenPrompt = () => {
 
         if (mode === 'intro') {
             await __.ui.ionTokenManager.markIntroSeen?.()
+            restoreCesiumFocus()
             return
         }
 
         __.ui.ionTokenManager.dismissForSession()
+        restoreCesiumFocus()
     }
 
     const handleHide = (event) => {
@@ -267,6 +277,7 @@ export const IonTokenPrompt = () => {
                 if (!didSaveRef.current && mode !== 'intro' && !isBlocking) {
                     __.ui.ionTokenManager.dismissForSession()
                 }
+                restoreCesiumFocus()
                 didSaveRef.current = false
             }}
         >
@@ -284,7 +295,6 @@ export const IonTokenPrompt = () => {
                         mode={mode}
                         delayLabel={delayLabel}
                         remainingLabel={remainingLabel}
-                        warningPercent={warningPercent}
                         inputRef={inputRef}
                         setCanSave={setCanSave}
                         openHelp={openHelp}

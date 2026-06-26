@@ -24,6 +24,8 @@ import { AppUpdate }    from '@Components/AppUpdate'
 import {
     MapLayer,
 }                       from '@Components/cesium/MapLayer'
+import { Base3DLayer }  from '@Components/cesium/Base3DLayer'
+import { Tiles3DLayer } from '@Components/cesium/Tiles3DLayer'
 import {
     ensureViewer,
     Viewer,
@@ -72,6 +74,7 @@ import {
 }                       from 'react'
 
 const APP_SURFACE_READY_TIMEOUT = 1500
+const INITIAL_FOCUS_READY_TIMEOUT = 2500
 
 const nextFrame = () => new Promise(resolve => requestAnimationFrame(resolve))
 
@@ -156,6 +159,8 @@ const AppSurface = ({onReady}) => {
             <MapLayer type={BASE_ENTITY}/>
             <MapLayer type={OVERLAY_ENTITY}/>
             <Viewer/>
+            <Base3DLayer/>
+            <Tiles3DLayer/>
             <SelectionIndicator/>
             <Toast/>
         </>
@@ -285,24 +290,41 @@ export const LGS1920 = () => {
      * @param {Object} cameraStore - The camera settings
      */
     const setCameraFocus = (lgs, starter, focusTarget, cameraStore) => {
+        let focusReady = false
+        let focusReadyTimeout = null
+        const markInitialFocusReady = point => {
+            if (focusReady) {
+                return
+            }
+
+            focusReady = true
+            if (focusReadyTimeout !== null) {
+                window.clearTimeout(focusReadyTimeout)
+                focusReadyTimeout = null
+            }
+            const initEvent = new CustomEvent(APP_EVENT.INITIAL_FOCUS, {
+                detail: {
+                    point,
+                    timestamp: Date.now(),
+                },
+            })
+            window.dispatchEvent(initEvent)
+            setInitialFocusReady(true)
+        }
+
         const focusOptions = buildStartupCameraFocusOptions({
                                                                 cameraStore,
                                                                 focusTarget,
                                                                 noRelief: __.ui.sceneManager.noRelief(),
                                                                 rotate:   lgs.settings.ui.camera.start.rotate.app,
             rpm:      lgs.settings.starter.camera.rpm,
-            callback: point => {
-                const initEvent = new CustomEvent(APP_EVENT.INITIAL_FOCUS, {
-                    detail: {
-                        point,
-                        timestamp: Date.now(),
-                    },
-                })
-                window.dispatchEvent(initEvent)
-                setInitialFocusReady(true)
-            },
+            callback: markInitialFocusReady,
         })
         __.ui.sceneManager.focus(cameraStore.target, focusOptions)
+        focusReadyTimeout = window.setTimeout(
+            () => markInitialFocusReady(cameraStore.target),
+            INITIAL_FOCUS_READY_TIMEOUT,
+        )
         starter.animated = focusTarget === starter && lgs.settings.ui.camera.start.rotate.app
     }
 

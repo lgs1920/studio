@@ -111,7 +111,9 @@ export const main = {
 
         layers: {
             base: null,
+            base3d: null,
             overlay: null,
+            tiles3d: null,
         },
 
         flythroughRunner: {
@@ -143,5 +145,7 @@ export const main = {
     canViewJourneyData: false,
     canViewProfile: false,
     theLayer:       null,
+    theBase3DLayer: null,
     theLayerOverlay: null,
+    theTiles3DLayer: null,
 }
