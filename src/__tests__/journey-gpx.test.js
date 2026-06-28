@@ -17,7 +17,7 @@
 import { describe, expect, it } from 'vitest'
 import { gpx }                  from '@tmcw/togeojson'
 import {
-    exportJourneyToGeoJSON, exportJourneyToGPX, extractJourneyMetadataFromGeoJson, extractJourneyMetadataFromGpxDocument,
+    applyGpxStyleExtensionProperties, exportJourneyToGeoJSON, exportJourneyToGPX, extractJourneyMetadataFromGeoJson, extractJourneyMetadataFromGpxDocument,
     extractLgsPoiProperties, extractLgsTrackProperties, getExportableJourneyPOIs, getJourneyExportBaseName,
     getJourneyExportFileName, normalizeJourneyExportBaseName, normalizeJourneyExportFileName,
 }                               from '@Utils/JourneyGpxUtils'
@@ -192,6 +192,44 @@ describe('journey GPX export', () => {
         expect(poiMetadata.countryCode).toBe('FR')
         expect(poiMetadata.visible).toBe(false)
         expect(poiMetadata.height).toBe(112)
+    })
+
+    it('uses raw GPX line style width as pixel track width', () => {
+        const gpxContent = `<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="Visorando" xmlns="http://www.topografix.com/GPX/1/1">
+  <trk>
+    <name>Styled track</name>
+    <extensions>
+      <line xmlns="http://www.topografix.com/GPX/gpx_style/0/2">
+        <color>0000FF</color>
+        <width>4</width>
+      </line>
+    </extensions>
+    <trkseg>
+      <trkpt lat="45.1" lon="6.1"/>
+      <trkpt lat="45.2" lon="6.2"/>
+    </trkseg>
+  </trk>
+</gpx>`
+        const document = new DOMParser().parseFromString(gpxContent, 'text/xml')
+        const geoJson = gpx(document)
+        const track = geoJson.features.find(feature => feature.geometry.type === 'LineString')
+
+        expect(track.properties['stroke-width']).toBeCloseTo(15.118110236220474)
+
+        applyGpxStyleExtensionProperties(geoJson, document)
+        const trackMetadata = extractLgsTrackProperties(track.properties)
+
+        expect(track.properties.stroke).toBe('#0000FF')
+        expect(track.properties['stroke-width']).toBe(4)
+        expect(Object.keys(track.properties)).not.toContain('__lgsGpxStyleWidth')
+        expect(trackMetadata.color).toBe('#0000FF')
+        expect(trackMetadata.thickness).toBe(4)
+        expect(trackMetadata.renderStyle).toEqual({
+            widthUnit:     'pixels',
+            farPixelWidth: 4,
+            color:         '#0000FF',
+        })
     })
 })
 

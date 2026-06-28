@@ -20,6 +20,7 @@ import {
 import { decodeHTMLEntities } from '@Utils/TextUtils'
 
 export const LGS_GPX_NAMESPACE = 'https://www.lgs1920.fr/gpx/1'
+export const GPX_STYLE_NAMESPACE = 'http://www.topografix.com/GPX/gpx_style/0/2'
 export const GPX_MIME_TYPE = 'application/gpx+xml;charset=utf-8'
 export const GEOJSON_MIME_TYPE = 'application/geo+json;charset=utf-8'
 export const PDF_MIME_TYPE = 'application/pdf'
@@ -49,6 +50,9 @@ export const JOURNEY_EXPORT_MIME_TYPES = {
 const GPX_NAMESPACE = 'http://www.topografix.com/GPX/1/1'
 const GPX_SCHEMA = 'http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd'
 const LGS_PROPERTY_PREFIX = 'lgs_'
+const GPX_STYLE_WIDTH_PROPERTY = '__lgsGpxStyleWidth'
+const GPX_STYLE_COLOR_PROPERTY = '__lgsGpxStyleColor'
+const TRACK_RENDER_WIDTH_UNIT_PIXELS = 'pixels'
 const EXCLUDED_POI_TYPES = new Set([POI_FLAG_START, POI_FLAG_STOP, POI_STARTER_TYPE])
 const EXPORT_EXTENSION_PATTERN = /\.(gpx|geojson|json|pdf|zip)$/i
 
@@ -145,6 +149,57 @@ const directChild = (node, localName) => {
 }
 
 const directText = (node, localName) => directChild(node, localName)?.textContent?.trim()
+
+const directChildInNamespace = (node, localName, namespaceURI) => {
+    if (!node) {
+        return null
+    }
+
+    return Array.from(node.childNodes ?? []).find(child => (
+        child.nodeType === 1
+        && child.localName === localName
+        && child.namespaceURI === namespaceURI
+    )) ?? null
+}
+
+const directChildren = (node, localNames = []) => {
+    const names = new Set(Array.isArray(localNames) ? localNames : [localNames])
+    return Array.from(node?.childNodes ?? [])
+        .filter(child => child.nodeType === 1 && names.has(child.localName))
+}
+
+const normalizeGpxStyleColor = value => {
+    const color = `${value ?? ''}`.trim().replace(/^#/, '')
+    return /^[0-9a-f]{6}([0-9a-f]{2})?$/i.test(color) ? `#${color.slice(0, 6)}` : undefined
+}
+
+const readGpxLineStyle = trackNode => {
+    const extensions = directChild(trackNode, 'extensions')
+    const line = directChildInNamespace(extensions, 'line', GPX_STYLE_NAMESPACE)
+    if (!line) {
+        return null
+    }
+
+    const width = finiteNumber(directText(line, 'width'))
+    const color = normalizeGpxStyleColor(directText(line, 'color'))
+    if (width === undefined && color === undefined) {
+        return null
+    }
+
+    return {width, color}
+}
+
+const setHiddenProperty = (object, key, value) => {
+    if (value === undefined) {
+        return
+    }
+
+    Object.defineProperty(object, key, {
+        configurable: true,
+        enumerable:   false,
+        value,
+    })
+}
 
 const parseBoolean = value => {
     if (value === undefined || value === null || value === '') {
@@ -649,16 +704,75 @@ export const extractJourneyMetadataFromGeoJson = (geoJson = {}) => {
     }
 }
 
-export const extractLgsTrackProperties = (properties = {}) => ({
-    id:        lgsProperty(properties, 'id'),
-    slug:      lgsProperty(properties, 'slug'),
-    parent:    lgsProperty(properties, 'parent'),
-    color:     lgsProperty(properties, 'color') || properties.stroke,
-    thickness: finiteNumber(lgsProperty(properties, 'thickness') ?? properties['stroke-width']),
-    visible:   parseBoolean(lgsProperty(properties, 'visible')),
-    renderSmoothing: parseJson(lgsProperty(properties, 'renderSmoothing')),
-    renderStyle: parseJson(lgsProperty(properties, 'renderStyle')),
-})
+export const applyGpxStyleExtensionProperties = (geoJson = {}, document = null) => {
+    const root = document?.documentElement
+    if (!root || !Array.isArray(geoJson?.features)) {
+        return geoJson
+    }
+
+    const lineFeatures = geoJson.features.filter(feature => (
+        feature?.geometry?.type
+        && ['LineString', 'MultiLineString'].includes(feature.geometry.type)
+        && ['trk', 'rte'].includes(feature.properties?._gpxType)
+    ))
+    const featureIndexByType = {
+        rte: 0,
+        trk: 0,
+    }
+
+    directChildren(root, ['rte', 'trk']).forEach((node) => {
+        const type = node.localName
+        const matchingFeatures = lineFeatures.filter(feature => feature.properties?._gpxType === type)
+        const feature = matchingFeatures[featureIndexByType[type]]
+        featureIndexByType[type] += 1
+        const style = readGpxLineStyle(node)
+        if (!style) {
+            return
+        }
+        if (!feature?.properties) {
+            return
+        }
+
+        if (style.color) {
+            feature.properties.stroke = style.color
+            setHiddenProperty(feature.properties, GPX_STYLE_COLOR_PROPERTY, style.color)
+        }
+        if (style.width !== undefined) {
+            feature.properties['stroke-width'] = style.width
+            setHiddenProperty(feature.properties, GPX_STYLE_WIDTH_PROPERTY, style.width)
+        }
+    })
+
+    return geoJson
+}
+
+const getGpxStyleRenderStyle = (properties = {}) => {
+    const width = finiteNumber(properties[GPX_STYLE_WIDTH_PROPERTY])
+    if (width === undefined) {
+        return undefined
+    }
+
+    return compactObject({
+        widthUnit:     TRACK_RENDER_WIDTH_UNIT_PIXELS,
+        farPixelWidth: width,
+        color:         properties[GPX_STYLE_COLOR_PROPERTY] || properties.stroke,
+    })
+}
+
+export const extractLgsTrackProperties = (properties = {}) => {
+    const gpxStyleWidth = finiteNumber(properties[GPX_STYLE_WIDTH_PROPERTY])
+    const lgsRenderStyle = parseJson(lgsProperty(properties, 'renderStyle'))
+    return {
+        id:              lgsProperty(properties, 'id'),
+        slug:            lgsProperty(properties, 'slug'),
+        parent:          lgsProperty(properties, 'parent'),
+        color:           lgsProperty(properties, 'color') || properties[GPX_STYLE_COLOR_PROPERTY] || properties.stroke,
+        thickness:       finiteNumber(lgsProperty(properties, 'thickness') ?? gpxStyleWidth ?? properties['stroke-width']),
+        visible:         parseBoolean(lgsProperty(properties, 'visible')),
+        renderSmoothing: parseJson(lgsProperty(properties, 'renderSmoothing')),
+        renderStyle:     lgsRenderStyle ?? getGpxStyleRenderStyle(properties),
+    }
+}
 
 export const extractLgsPoiProperties = (properties = {}) => ({
     id:               lgsProperty(properties, 'id'),

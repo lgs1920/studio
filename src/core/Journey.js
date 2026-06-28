@@ -28,7 +28,7 @@ import {
     FEATURE_COLLECTION, FEATURE_LINE_STRING, FEATURE_MULTILINE_STRING, FEATURE_POINT, IMPORT_LOADING_ERROR, TrackUtils,
 }                             from '@Utils/cesium/TrackUtils'
 import {
-    extractJourneyMetadataFromGeoJson, extractJourneyMetadataFromGpxDocument, extractLgsPoiProperties,
+    applyGpxStyleExtensionProperties, extractJourneyMetadataFromGeoJson, extractJourneyMetadataFromGpxDocument, extractLgsPoiProperties,
     extractLgsTrackProperties,
 }                             from '@Utils/JourneyGpxUtils'
 import { decodeHTMLEntities } from '@Utils/TextUtils'
@@ -371,6 +371,7 @@ export class Journey extends MapElement {
                 case GPX: {
                     const gpxDocument = new DOMParser().parseFromString(content, 'text/xml')
                     this.geoJson = gpx(gpxDocument)
+                    applyGpxStyleExtensionProperties(this.geoJson, gpxDocument)
                     this.#applyJourneyMetadata(extractJourneyMetadataFromGpxDocument(gpxDocument))
                     break
                 }
