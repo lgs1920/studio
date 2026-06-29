@@ -242,6 +242,26 @@ describe('DatabaseSyncManager bootstrap sync', () => {
         expect(manager.startupWarning?.text).toBe('Folder permission is required to synchronize your profile.')
     })
 
+    it('unlinks a stale persisted directory handle on bootstrap', async () => {
+        const rootHandle = createDirectoryHandle('sync-root')
+        rootHandle.queryPermission = vi.fn(async () => {
+            const error = new Error('An operation that depends on state cached in an interface object was made but the state had changed since it was read from disk.')
+            error.name = 'InvalidStateError'
+            throw error
+        })
+
+        const stateDb = createStateDb({handle: rootHandle})
+        openDB.mockResolvedValue(stateDb)
+
+        const manager = new DatabaseSyncManager({})
+        await manager.bootstrap()
+
+        expect(stateDb.delete).toHaveBeenCalledWith('state', 'database-sync.directory-handle')
+        expect(stateDb.delete).toHaveBeenCalledWith('state', 'database-sync.manifest-signature')
+        expect(manager.syncState.status).toBe('idle')
+        expect(manager.startupWarning?.text).toBe('The linked profile folder is no longer available and was disconnected.')
+    })
+
     it('imports a newer linked folder from another client on bootstrap', async () => {
         const linkedManifest = {
             clientId: 'other-client',

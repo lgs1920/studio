@@ -592,6 +592,33 @@ describe('FlythroughDrawer', () => {
         })
     })
 
+    it('sorts POIs by flythrough distance in the POIs tab', async () => {
+        const view = render(<FlythroughDrawer/>)
+
+        globalThis.lgs.stores.main.components.pois.list.set('poi-2', {
+            id: 'poi-2',
+            title: 'POI Two',
+            flythrough: {},
+        })
+        globalThis.lgs.stores.main.components.pois.list.set('poi-3', {
+            id: 'poi-3',
+            title: 'POI Three',
+            flythrough: {},
+        })
+        globalThis.lgs.stores.flythrough.nearbyPois = [
+            {poi: {id: 'poi-3'}, projectedAbscissa: 1200},
+            {poi: {id: 'poi-1'}, projectedAbscissa: 200},
+            {poi: {id: 'poi-2'}, projectedAbscissa: 800},
+        ]
+
+        fireEvent.click(view.getByText('POIs'))
+
+        await waitFor(() => {
+            const titles = view.getAllByText(/^POI /).map(node => node.textContent)
+            expect(titles).toEqual(['POI One', 'POI Two', 'POI Three'])
+        })
+    })
+
     it('toggles global POI flythrough visibility and animation behavior', async () => {
         const view = render(<FlythroughDrawer/>)
 

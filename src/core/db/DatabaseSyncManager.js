@@ -135,6 +135,14 @@ const createClientId = () => {
     return `client-${Date.now()}-${Math.random().toString(16).slice(2)}`
 }
 
+const isStaleDirectoryHandleError = error => {
+    const message = String(error?.message ?? '')
+    return error?.name === 'InvalidStateError'
+        || /read from disk/i.test(message)
+        || /interface object/i.test(message)
+        || /state had changed/i.test(message)
+}
+
 export class DatabaseSyncManager {
     #databases = null
     #directoryHandle = null
@@ -241,33 +249,43 @@ export class DatabaseSyncManager {
         }
 
         this.#directoryHandle = handle
-        this.#setSyncState({
-                               directoryName: handle.name ?? null,
-                               lastSyncedAt:  this.#syncState.lastSyncedAt,
-                               message:       this.#syncState.status === DATABASE_SYNC_STATUS.SYNCED
-                                              ? this.#syncState.message
-                                              : 'Checking profile synchronization.',
-                               status:        this.#syncState.status === DATABASE_SYNC_STATUS.SYNCED
-                                              ? DATABASE_SYNC_STATUS.SYNCED
-                                              : DATABASE_SYNC_STATUS.PENDING,
-                           })
+        try {
+            this.#setSyncState({
+                                   directoryName: handle.name ?? null,
+                                   lastSyncedAt:  this.#syncState.lastSyncedAt,
+                                   message:       this.#syncState.status === DATABASE_SYNC_STATUS.SYNCED
+                                                  ? this.#syncState.message
+                                                  : 'Checking profile synchronization.',
+                                   status:        this.#syncState.status === DATABASE_SYNC_STATUS.SYNCED
+                                                  ? DATABASE_SYNC_STATUS.SYNCED
+                                                  : DATABASE_SYNC_STATUS.PENDING,
+                               })
 
-        if (await isHandlePermissionGranted(handle)) {
-            try {
+            if (await isHandlePermissionGranted(handle)) {
                 await this.#withSuspendedSync(async () => {
                     await this.#importFromLinkedDirectory(handle, {clearBeforeImport: true})
                     await this.flushToPersistentDirectory({force: true, showPending: false})
                 })
             }
-            catch (error) {
-                console.warn('[DatabaseSyncManager] Bootstrap sync failed:', error)
+            else {
+                this.#setSyncState({
+                                       message: 'Folder permission is required to synchronize your profile.',
+                                       status:  DATABASE_SYNC_STATUS.PERMISSION_DENIED,
+                                   })
             }
         }
-        else {
-            this.#setSyncState({
-                                   message: 'Folder permission is required to synchronize your profile.',
-                                   status:  DATABASE_SYNC_STATUS.PERMISSION_DENIED,
-                               })
+        catch (error) {
+            if (isStaleDirectoryHandleError(error)) {
+                console.warn('[DatabaseSyncManager] Linked directory handle is stale, unlinking it:', error)
+                await this.unlinkPersistentDirectory()
+                this.#startupWarning = {
+                    caption: 'Profile synchronization',
+                    text:    'The linked profile folder is no longer available and was disconnected.',
+                }
+                return
+            }
+
+            console.warn('[DatabaseSyncManager] Bootstrap sync failed:', error)
         }
 
         this.#startupWarning = this.#createStartupWarning()
@@ -461,6 +479,12 @@ export class DatabaseSyncManager {
             return true
         }
         catch (error) {
+            if (isStaleDirectoryHandleError(error)) {
+                console.warn('[DatabaseSyncManager] Linked directory handle is stale during flush, unlinking it:', error)
+                await this.unlinkPersistentDirectory()
+                return false
+            }
+
             this.#setSyncState({
                                    message: error?.message ?? 'Profile synchronization failed.',
                                    status:  DATABASE_SYNC_STATUS.ERROR,

@@ -279,7 +279,23 @@ export const FlythroughDrawer = memo(() => {
     const remainingUseDefinedTrackStyle = trace.remaining.useDefinedTrackStyle !== false
     const remainingColor = toOpaqueColorValue(trace.remaining.color)
     const camera = normalizeFlythroughCamera(flythroughSettings.camera)
-    const nearbyPOIs = Array.isArray(flythroughState.nearbyPois) ? flythroughState.nearbyPois : []
+    const nearbyPOIs = useMemo(() => {
+        const entries = Array.isArray(flythroughState.nearbyPois) ? [...flythroughState.nearbyPois] : []
+        return entries.sort((left, right) => {
+            const leftDistance = finiteNumber(left?.projectedAbscissa)
+            const rightDistance = finiteNumber(right?.projectedAbscissa)
+            if (leftDistance === null && rightDistance === null) {
+                return 0
+            }
+            if (leftDistance === null) {
+                return 1
+            }
+            if (rightDistance === null) {
+                return -1
+            }
+            return leftDistance - rightDistance
+        })
+    }, [flythroughState.nearbyPois])
     const cameraPresetKey = getFlythroughCameraPresetKey(camera)
     const marker = normalizeFlythroughMarker(flythroughSettings.marker)
     const hideOtherJourneys = flythroughState.hideOtherJourneys === true
