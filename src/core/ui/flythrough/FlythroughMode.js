@@ -678,6 +678,7 @@ export class FlythroughMode {
     #cameraBridgeBound = false
     #cameraLiveSyncFrame = null
     #clipSequenceToken = 0
+    #sceneRestoreDeferred = false
     #flythroughPoiExpandedState = new Map()
     #flythroughPoiCollapseTimers = new Map()
     #flythroughPoiTriggered = new Set()
@@ -1678,37 +1679,35 @@ export class FlythroughMode {
         this.#cancelActiveCameraFlight()
         this.#stopCameraLiveSyncLoop()
         this.#deferPlaybackCameraRestore = options.emit !== false
+        const shouldDeferSceneRestore = options.deferSceneRestore === true || this.#sceneRestoreDeferred === true
         const sample = this.#controller.stop({
             ...options,
             clearProgress: options.clearProgress ?? true,
         })
         this.#renderer.clear()
-        this.#restoreOtherJourneysVisibility()
-        this.#restoreCurrentJourneyVisibility({restorePOIs: false})
         this.#setFlythroughOrbitAllowed(true)
         this.#setContinuousRender(false)
         this.#removeToleranceZoneOverlay()
         if (options.emit === false) {
             this.#restorePlaybackCameraSettings()
         }
-        resetRuntimeProgress(flythroughStore())
-        this.#restoreMainUI()
-        this.#restoreCurrentJourneyVisibility()
-        this.#resetCameraController({preserveSavedCameraState: true})
-        this.#restoreJourneyToolbarVisibility()
-        if (options.emit !== false) {
-            this.#suppressPlaybackCameraSync = true
-            void this.#focusJourneyAfterPlayback({
-                snapDistance: 50000,
-            }).finally(() => {
-                this.#deferPlaybackCameraRestore = false
-                this.#restorePlaybackCameraSettings({force: true})
-            })
+        if (shouldDeferSceneRestore) {
+            this.#sceneRestoreDeferred = true
+            resetRuntimeProgress(flythroughStore())
+            return sample
         }
-        else {
-            this.#restoreCameraState()
-        }
+
+        this.#restorePlaybackScene()
         return sample
+    }
+
+    restorePlaybackScene = () => {
+        if (!this.#sceneRestoreDeferred) {
+            return false
+        }
+
+        this.#restorePlaybackScene()
+        return true
     }
 
     #clipSettings = () => normalizeFlythroughClips(globalThis.lgs?.stores?.flythrough?.clips ?? getFlythroughSettings()?.clips ?? {})
@@ -2103,6 +2102,28 @@ export class FlythroughMode {
 
         this.#flythroughDrawerWasOpenBeforePlayback = false
         globalThis.__?.ui?.drawerManager?.open?.(FLYTHROUGH_DRAWER)
+    }
+
+    #restorePlaybackScene = () => {
+        this.#sceneRestoreDeferred = false
+        this.#restoreOtherJourneysVisibility()
+        this.#restoreCurrentJourneyVisibility({restorePOIs: false})
+        this.#setFlythroughOrbitAllowed(true)
+        this.#deferStartCameraRecenter = false
+        this.#restoreJourneyToolbarVisibility()
+        this.#restoreFlythroughDrawerAfterPlayback()
+        this.#restoreMainUI()
+        void this.#restoreNearbyPOIsAfterPlayback()
+        resetRuntimeProgress(flythroughStore())
+        this.#restoreCurrentJourneyVisibility()
+        this.#resetCameraController({preserveSavedCameraState: true})
+        this.#suppressPlaybackCameraSync = true
+        void this.#focusJourneyAfterPlayback({
+            snapDistance: 50000,
+        }).finally(() => {
+            this.#deferPlaybackCameraRestore = false
+            this.#restorePlaybackCameraSettings({force: true})
+        })
     }
 
     #restoreCameraState = () => {
@@ -3807,21 +3828,14 @@ export class FlythroughMode {
                     this.#stopStopClipPOIMaskLoop()
                     this.#setContinuousRender(false)
                     this.#renderer.clear()
-                    this.#restoreOtherJourneysVisibility()
-                    this.#restoreCurrentJourneyVisibility({restorePOIs: false})
                     this.#setFlythroughOrbitAllowed(true)
-                    this.#deferStartCameraRecenter = false
-                    this.#restoreJourneyToolbarVisibility()
-                    this.#restoreFlythroughDrawerAfterPlayback()
-                    this.#restoreMainUI()
-                    void this.#restoreNearbyPOIsAfterPlayback()
                     resetRuntimeProgress(flythroughStore())
-                    this.#restoreCurrentJourneyVisibility()
-                    this.#suppressPlaybackCameraSync = true
-                    void this.#focusJourneyAfterPlayback().finally(() => {
-                        this.#deferPlaybackCameraRestore = false
-                        this.#restorePlaybackCameraSettings({force: true})
-                    })
+                    if (flythroughStore()?.recordingSync === true) {
+                        this.#sceneRestoreDeferred = true
+                        return
+                    }
+
+                    this.#restorePlaybackScene()
                 }
 
                 try {

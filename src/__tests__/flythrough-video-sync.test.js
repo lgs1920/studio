@@ -59,6 +59,7 @@ const makeFlythrough = () => {
         resume: vi.fn(),
         stop: vi.fn(),
         setVideoSafeMode: vi.fn(),
+        restorePlaybackScene: vi.fn(),
     }
 }
 
@@ -105,7 +106,10 @@ describe('FlythroughVideoSync', () => {
         recorder.dispatchEvent(new CustomEvent(ScreenMediaRecorder.events.STOP))
 
         expect(flythrough.setVideoSafeMode).toHaveBeenCalledWith(false)
-        expect(flythrough.stop).toHaveBeenCalledWith({emit: false})
+        expect(flythrough.stop).toHaveBeenCalledWith({
+            emit:              false,
+            deferSceneRestore: true,
+        })
     })
 
     it('disarm prevents stop-clips-complete events from stopping the recorder', () => {

@@ -60,7 +60,7 @@ export class FlythroughVideoSync {
         }
     }
 
-    stopFlythrough = () => {
+    stopFlythrough = ({deferSceneRestore = false} = {}) => {
         const flythrough = this.#resolveFlythrough()
         if (!flythrough) {
             return
@@ -68,7 +68,10 @@ export class FlythroughVideoSync {
 
         this.#cancelPendingStart()
         if (flythrough.running || flythrough.paused || flythrough.playing) {
-            flythrough.stop?.({emit: false})
+            flythrough.stop?.({
+                emit:              false,
+                deferSceneRestore: deferSceneRestore === true,
+            })
         }
     }
 
@@ -140,9 +143,11 @@ export class FlythroughVideoSync {
             this.#flythrough?.resume?.()
         }
 
-        const handleRecorderStop = () => {
+        const handleRecorderStop = (event) => {
             this.#setVideoSafeMode(false)
-            this.stopFlythrough()
+            this.stopFlythrough({
+                deferSceneRestore: event?.type === ScreenMediaRecorder.events.STOP,
+            })
         }
 
         const handleStopClipsComplete = () => {
