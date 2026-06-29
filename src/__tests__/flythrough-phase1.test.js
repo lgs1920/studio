@@ -7,40 +7,41 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-05-31
- * Last modified: 2026-05-31
+ * Created on: 2026-06-29
+ * Last modified: 2026-06-29
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
+import { FLYTHROUGH_DRAWER }                                           from '@Core/constants'
+import { createFlythroughClipInstance }                                from '@Core/ui/flythrough/FlythroughClips'
 import {
     flythroughAngularDelta, flythroughCameraHeadingForPositionMode, flythroughCameraHeadingWithHysteresis,
-    flythroughCameraRangeFromPitch, flythroughCameraRecenterHeight, flythroughCameraRecenterHorizontalDistance,
-    flythroughCameraRecenterDuration, flythroughHeadingEasingFactor, flythroughHeadingFromLocalAxisAngle,
+    flythroughCameraRangeFromPitch, flythroughCameraRecenterDuration, flythroughCameraRecenterHeight,
+    flythroughCameraRecenterHorizontalDistance, flythroughHeadingEasingFactor, flythroughHeadingFromLocalAxisAngle,
     flythroughIsWindowPointOutsideToleranceZone, FlythroughMode, flythroughTargetSampleForClip,
     flythroughToleranceZoneBounds,
-}                                          from '@Core/ui/flythrough/FlythroughMode'
+}                                                                      from '@Core/ui/flythrough/FlythroughMode'
 import {
     FLYTHROUGH_SCOPE_ALL_TRACKS, FLYTHROUGH_SCOPE_CURRENT_TRACK, FLYTHROUGH_SCOPE_VISIBLE_TRACKS, FlythroughPathSampler,
-}                                          from '@Core/ui/flythrough/FlythroughPathSampler'
+}                                                                      from '@Core/ui/flythrough/FlythroughPathSampler'
 import {
-    FLYTHROUGH_EVENT_END, FLYTHROUGH_EVENT_START, FLYTHROUGH_EVENT_STOP, FLYTHROUGH_EVENT_UPDATE, FlythroughPlaybackController,
-}                                          from '@Core/ui/flythrough/FlythroughPlaybackController'
+    FLYTHROUGH_EVENT_END, FLYTHROUGH_EVENT_START, FLYTHROUGH_EVENT_STOP, FLYTHROUGH_EVENT_UPDATE,
+    FlythroughPlaybackController,
+}                                                                      from '@Core/ui/flythrough/FlythroughPlaybackController'
 import {
-    defaultFlythroughSettings, FLYTHROUGH_CAMERA_POSITION_AHEAD, FLYTHROUGH_CAMERA_POSITION_BEHIND,
-    FLYTHROUGH_CAMERA_POSITION_SYSTEM, FLYTHROUGH_CAMERA_PRESET_DEFAULT, FLYTHROUGH_CAMERA_PRESET_ULTRA_SMOOTH,
-    FLYTHROUGH_CAMERA_ALTITUDE_CONSTANT, FLYTHROUGH_CAMERA_ALTITUDE_GROUND_OFFSET, FLYTHROUGH_MARKER_MODE_HYSTERESIS,
-    FLYTHROUGH_MARKER_MODE_NAVIGATION,
-    FLYTHROUGH_MARKER_MODE_TRACE,
-    getFlythroughCameraPresetKey, normalizeFlythroughCamera, normalizeFlythroughMarker,
-    normalizeFlythroughSettings,
-}                                          from '@Core/ui/flythrough/FlythroughProgressionStyle'
-import { FLYTHROUGH_DRAWER }               from '@Core/constants'
-import { createFlythroughClipInstance }  from '@Core/ui/flythrough/FlythroughClips'
-import { Cartesian3, Matrix4, Transforms } from 'cesium'
-import { proxy }                           from 'valtio'
-import { describe, expect, it, vi }        from 'vitest'
+    defaultFlythroughSettings, FLYTHROUGH_CAMERA_ALTITUDE_CONSTANT, FLYTHROUGH_CAMERA_ALTITUDE_GROUND_OFFSET,
+    FLYTHROUGH_CAMERA_POSITION_AHEAD, FLYTHROUGH_CAMERA_POSITION_BEHIND, FLYTHROUGH_CAMERA_POSITION_SYSTEM,
+    FLYTHROUGH_CAMERA_PRESET_DEFAULT, FLYTHROUGH_CAMERA_PRESET_ULTRA_SMOOTH, FLYTHROUGH_MARKER_MODE_HYSTERESIS,
+    FLYTHROUGH_MARKER_MODE_NAVIGATION, FLYTHROUGH_MARKER_MODE_TRACE, getFlythroughCameraPresetKey,
+    normalizeFlythroughCamera, normalizeFlythroughMarker, normalizeFlythroughSettings,
+} from '@Core/ui/flythrough/FlythroughProgressionStyle'
+import { gpx }                                                         from '@tmcw/togeojson'
+import { applyGpxStyleExtensionProperties, extractLgsTrackProperties } from '@Utils/JourneyGpxUtils'
+import { Cartesian3, Matrix4, Transforms }                             from 'cesium'
+import { proxy }                                                       from 'valtio'
+import { describe, expect, it, vi }                                    from 'vitest'
 
 const makeTrack = ({
                        slug,
@@ -67,11 +68,50 @@ const makeTrack = ({
 })
 
 const makeJourney = tracks => ({
-    slug: 'journey#gpx',
+    slug:   'journey#gpx',
     tracks: new Map(tracks.map(track => [track.slug, track])),
 })
 
 describe('flythrough phase 1 sampler', () => {
+    it('samples a GPX track that defines a line style width extension', () => {
+        const gpxContent = `<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="Visorando" xmlns="http://www.topografix.com/GPX/1/1">
+  <trk>
+    <name>Styled track</name>
+    <extensions>
+      <line xmlns="http://www.topografix.com/GPX/gpx_style/0/2">
+        <color>0000FF</color>
+        <width>4</width>
+      </line>
+    </extensions>
+    <trkseg>
+      <trkpt lat="45.1" lon="6.1"><ele>100</ele><time>2026-05-05T10:00:00.000Z</time></trkpt>
+      <trkpt lat="45.2" lon="6.2"><ele>120</ele><time>2026-05-05T10:10:00.000Z</time></trkpt>
+    </trkseg>
+  </trk>
+</gpx>`
+        const document = new DOMParser().parseFromString(gpxContent, 'text/xml')
+        const geoJson = gpx(document)
+        applyGpxStyleExtensionProperties(geoJson, document)
+        const feature = geoJson.features.find(item => item.geometry?.type === 'LineString')
+        const trackMetadata = extractLgsTrackProperties(feature.properties)
+        const track = {
+            slug:        'track#journey#gpx#styled',
+            visible:     true,
+            renderStyle: trackMetadata.renderStyle,
+            content:     feature,
+        }
+        const journey = makeJourney([track])
+
+        const sampler = new FlythroughPathSampler({journey})
+
+        expect(trackMetadata.renderStyle.widthUnit).toBe('pixels')
+        expect(sampler.hasSamples).toBe(true)
+        expect(sampler.samples).toHaveLength(2)
+        expect(sampler.totalDistance).toBeGreaterThan(0)
+        expect(sampler.durationMillis).toBe(10 * 60 * 1000)
+    })
+
     it('samples a line by cumulative distance and includes the real first point', () => {
         const journey = makeJourney([
             makeTrack({
@@ -445,6 +485,149 @@ describe('flythrough phase 1 playback controller', () => {
             expect(() => JSON.stringify(globalThis.lgs.stores.flythrough.sample)).not.toThrow()
         }
         finally {
+            globalThis.lgs = previousLgs
+        }
+    })
+
+    it('starts flythrough for styled GPX tracks with duplicate points', () => {
+        const gpxContent = `<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="Visorando" xmlns="http://www.topografix.com/GPX/1/1">
+  <trk>
+    <name>Duplicate point styled track</name>
+    <extensions>
+      <line xmlns="http://www.topografix.com/GPX/gpx_style/0/2">
+        <color>0000FF</color>
+        <width>4</width>
+      </line>
+    </extensions>
+    <trkseg>
+      <trkpt lat="45.1" lon="6.1"><ele>100</ele><time>2026-05-05T10:00:00.000Z</time></trkpt>
+      <trkpt lat="45.1" lon="6.1"><ele>100</ele><time>2026-05-05T10:01:00.000Z</time></trkpt>
+      <trkpt lat="45.2" lon="6.2"><ele>120</ele><time>2026-05-05T10:10:00.000Z</time></trkpt>
+      <trkpt lat="45.3" lon="6.3"><ele>140</ele><time>2026-05-05T10:20:00.000Z</time></trkpt>
+    </trkseg>
+  </trk>
+</gpx>`
+        const document = new DOMParser().parseFromString(gpxContent, 'text/xml')
+        const geoJson = gpx(document)
+        applyGpxStyleExtensionProperties(geoJson, document)
+        const feature = geoJson.features.find(item => item.geometry?.type === 'LineString')
+        const trackMetadata = extractLgsTrackProperties(feature.properties)
+        const track = {
+            slug:        'track#journey#gpx#duplicate-styled',
+            visible:     true,
+            renderStyle: trackMetadata.renderStyle,
+            content:     feature,
+        }
+        const journey = makeJourney([track])
+        const previousLgs = globalThis.lgs
+        const previousDoubleUnderscore = globalThis.__
+        const flythrough = defaultFlythroughSettings()
+        flythrough.camera = {
+            ...flythrough.camera,
+            positionMode: FLYTHROUGH_CAMERA_POSITION_AHEAD,
+        }
+        const renderer = {
+            clear:  vi.fn(),
+            show:   vi.fn(),
+            update: vi.fn(),
+        }
+
+        globalThis.__ = {
+            ui: {
+                cameraManager: {
+                    stopRotate: vi.fn(async () => undefined),
+                },
+            },
+        }
+        globalThis.lgs = {
+            theJourney: journey,
+            theTrack:   null,
+            settings:   {ui: {flythrough, journeyToolbar: {show: true}}},
+            stores:     {
+                flythrough: proxy({
+                                      progress: 0,
+                                      camera:   flythrough.camera,
+                                  }),
+            },
+            viewer:     {
+                trackedEntity: null,
+                camera:        {
+                    heading:              0,
+                    pitch:                -Math.PI / 4,
+                    roll:                 0,
+                    positionCartographic: {longitude: 0.1, latitude: 0.2, height: 1800},
+                    moveStart:            {
+                        addEventListener:    () => {
+                        },
+                        removeEventListener: () => {
+                        },
+                    },
+                    moveEnd:              {
+                        addEventListener:    () => {
+                        },
+                        removeEventListener: () => {
+                        },
+                    },
+                    changed:              {
+                        addEventListener:    () => {
+                        },
+                        removeEventListener: () => {
+                        },
+                    },
+                    cancelFlight:         () => {
+                    },
+                    flyTo:                () => {
+                    },
+                    setView:              () => {
+                    },
+                    lookAtTransform:      () => {
+                    },
+                },
+            },
+            scene:      {
+                canvas:                       {
+                    getBoundingClientRect: () => ({
+                        left:   0,
+                        top:    0,
+                        width:  1000,
+                        height: 800,
+                    }),
+                },
+                requestRender:                () => {
+                },
+                cartesianToCanvasCoordinates: () => ({x: 500, y: 400}),
+                globe:                        {getHeight: () => 120},
+            },
+        }
+
+        try {
+            const mode = new FlythroughMode({
+                                                controller: new FlythroughPlaybackController({
+                                                                                                 requestFrame: () => 1,
+                                                                                                 cancelFrame:  () => {
+                                                                                                 },
+                                                                                                 now:          () => 0,
+                                                                                             }),
+                                                renderer,
+                                            })
+            let result = null
+
+            expect(() => {
+                result = mode.start({duration: 1})
+            }).not.toThrow()
+
+            expect(trackMetadata.renderStyle.widthUnit).toBe('pixels')
+            expect(result).toEqual(expect.objectContaining({longitude: 6.1, latitude: 45.1}))
+            expect(globalThis.lgs.stores.flythrough.sample).toEqual(expect.objectContaining({
+                                                                                                longitude: 6.1,
+                                                                                                latitude:  45.1,
+                                                                                            }))
+            expect(globalThis.lgs.stores.flythrough.playing).toBe(true)
+            expect(renderer.show).toHaveBeenCalledTimes(1)
+        }
+        finally {
+            globalThis.__ = previousDoubleUnderscore
             globalThis.lgs = previousLgs
         }
     })
