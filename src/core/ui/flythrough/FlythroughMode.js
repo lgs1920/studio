@@ -597,6 +597,15 @@ const resolveFlythroughRuntimeClips = ({clips = null, settingsClips = {}, journe
 
 const currentFlythroughSample = controller => controller?.currentSample?.() ?? flythroughStore()?.sample ?? null
 
+const currentFlythroughPoiBehavior = () => {
+    const settings = getFlythroughSettings()
+    const store = flythroughStore()
+    return {
+        hideAllPoisDuringFlythrough: settings.hideAllPoisDuringFlythrough === true || store?.hideAllPoisDuringFlythrough === true,
+        animateAllPoisDuringFlythrough: settings.animateAllPoisDuringFlythrough === true || store?.animateAllPoisDuringFlythrough === true,
+    }
+}
+
 const resetRuntimeProgress = (store) => {
     if (!store) {
         return
@@ -1033,6 +1042,7 @@ export class FlythroughMode {
 
     #applyFlythroughPOIVisibility = (nearbyPois = null) => {
         const store = flythroughStore()
+        const {hideAllPoisDuringFlythrough} = currentFlythroughPoiBehavior()
         const runtimeNearbyPois = Array.isArray(nearbyPois)
             ? nearbyPois
             : Array.isArray(store?.nearbyPois)
@@ -1051,6 +1061,7 @@ export class FlythroughMode {
 
             const settings = normalizeFlythroughPOISettings(poi.flythrough)
             const shouldApplyVisibility = nearbyPOIIds.has(poi.id)
+                || hideAllPoisDuringFlythrough
                 || settings.visible === false
                 || poi.visible === false
             if (!shouldApplyVisibility) {
@@ -1061,9 +1072,10 @@ export class FlythroughMode {
                 ?? this.#isPOIVisibleBeforePlayback(poi)
             const visibleDuringPlayback = visibleBeforePlayback
                 && poi.visible !== false
+                && !hideAllPoisDuringFlythrough
                 && settings.visible !== false
 
-            if (settings.visible === false && !this.#flythroughPOIVisibilityState.has(poi.id)) {
+            if ((hideAllPoisDuringFlythrough || settings.visible === false) && !this.#flythroughPOIVisibilityState.has(poi.id)) {
                 this.#flythroughPOIVisibilityState.set(poi.id, {
                     visible: visibleBeforePlayback,
                 })
@@ -1253,6 +1265,46 @@ export class FlythroughMode {
         return nextEnabled
     }
 
+    setHideAllPoisDuringFlythrough = (enabled = true) => {
+        const nextEnabled = enabled === true
+        const flythroughSettings = globalThis.lgs?.settings?.ui?.flythrough
+        if (flythroughSettings) {
+            flythroughSettings.hideAllPoisDuringFlythrough = nextEnabled
+        }
+
+        const store = flythroughStore()
+        if (store) {
+            store.hideAllPoisDuringFlythrough = nextEnabled
+        }
+
+        if (this.#controller.running || this.#controller.playing || this.#controller.paused) {
+            if (nextEnabled) {
+                this.#applyFlythroughPOIVisibility()
+            }
+            else {
+                this.#restoreFlythroughPOIVisibility()
+                this.#applyFlythroughPOIVisibility()
+            }
+        }
+
+        return nextEnabled
+    }
+
+    setAnimateAllPoisDuringFlythrough = (enabled = true) => {
+        const nextEnabled = enabled === true
+        const flythroughSettings = globalThis.lgs?.settings?.ui?.flythrough
+        if (flythroughSettings) {
+            flythroughSettings.animateAllPoisDuringFlythrough = nextEnabled
+        }
+
+        const store = flythroughStore()
+        if (store) {
+            store.animateAllPoisDuringFlythrough = nextEnabled
+        }
+
+        return nextEnabled
+    }
+
     toggle = () => {
         if (this.#controller.playing) {
             return this.pause()
@@ -1373,6 +1425,7 @@ export class FlythroughMode {
 
         const store = flythroughStore()
         const journey = globalThis.lgs?.theJourney ?? null
+        const {hideAllPoisDuringFlythrough} = currentFlythroughPoiBehavior()
         const nearbyPois = Array.isArray(store?.nearbyPois) && store.nearbyPois.length > 0
             ? store.nearbyPois
             : this.#syncRuntimeNearbyPOIs(journey)
@@ -1403,7 +1456,7 @@ export class FlythroughMode {
                 continue
             }
 
-            if (settings.visible === false) {
+            if (!hideAllPoisDuringFlythrough && settings.visible === false) {
                 continue
             }
 
@@ -1436,7 +1489,8 @@ export class FlythroughMode {
 
         const poi = globalThis.lgs?.stores?.main?.components?.pois?.list?.get?.(poiId)
         const settings = normalizeFlythroughPOISettings(poi?.flythrough)
-        if (settings.visible === false || settings.animated === false) {
+        const {hideAllPoisDuringFlythrough, animateAllPoisDuringFlythrough} = currentFlythroughPoiBehavior()
+        if (hideAllPoisDuringFlythrough || (!animateAllPoisDuringFlythrough && settings.animated === false)) {
             return
         }
         const durationSeconds = finiteNumber(settings.displayDurationSeconds) ?? DEFAULT_FLYTHROUGH_POI_DISPLAY_DURATION_SECONDS
@@ -1466,6 +1520,13 @@ export class FlythroughMode {
 
         if (!Array.isArray(nearbyPois) || nearbyPois.length === 0) {
             this.#lastFlythroughPoiDistance = currentDistance
+            return
+        }
+
+        const {hideAllPoisDuringFlythrough, animateAllPoisDuringFlythrough} = currentFlythroughPoiBehavior()
+        if (hideAllPoisDuringFlythrough) {
+            this.#lastFlythroughPoiDistance = currentDistance
+            this.#lastFlythroughPoiCursor = this.#flythroughPoiCursorForDistance(nearbyPois, currentDistance)
             return
         }
 
@@ -1505,7 +1566,7 @@ export class FlythroughMode {
             if (poiId && !this.#flythroughPoiTriggered.has(poiId)) {
                 const poi = globalThis.lgs?.stores?.main?.components?.pois?.list?.get?.(poiId)
                 const settings = normalizeFlythroughPOISettings(poi?.flythrough)
-                if (settings.visible !== false && settings.animated !== false) {
+                if (settings.visible !== false && (animateAllPoisDuringFlythrough || settings.animated !== false)) {
                     this.#flythroughPoiTriggered.add(poiId)
                     triggeredIds.push(poiId)
                 }

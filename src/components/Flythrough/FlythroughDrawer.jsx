@@ -283,6 +283,8 @@ export const FlythroughDrawer = memo(() => {
     const cameraPresetKey = getFlythroughCameraPresetKey(camera)
     const marker = normalizeFlythroughMarker(flythroughSettings.marker)
     const hideOtherJourneys = flythroughState.hideOtherJourneys === true
+    const hideAllPoisDuringFlythrough = flythroughSettings.hideAllPoisDuringFlythrough === true
+    const animateAllPoisDuringFlythrough = flythroughSettings.animateAllPoisDuringFlythrough === true
     const durationLocked = flythroughState.active || flythroughState.playing || flythroughState.paused
     const syncWithVideo = flythroughState.recordingSync === true
     const [poiVisibilityOverrides, setPoiVisibilityOverrides] = useState({})
@@ -326,6 +328,8 @@ export const FlythroughDrawer = memo(() => {
         flythroughRuntime.trace = normalizeFlythroughTrace(flythroughSettings.trace)
         flythroughRuntime.marker = normalizeFlythroughMarker(flythroughSettings.marker)
         flythroughRuntime.camera = normalizeFlythroughCamera(flythroughSettings.camera)
+        flythroughRuntime.hideAllPoisDuringFlythrough = flythroughSettings.hideAllPoisDuringFlythrough === true
+        flythroughRuntime.animateAllPoisDuringFlythrough = flythroughSettings.animateAllPoisDuringFlythrough === true
         flythroughRuntime.clips = clips
         flythroughRuntime.hideOtherJourneys = flythroughState.hideOtherJourneys === true
 
@@ -345,6 +349,8 @@ export const FlythroughDrawer = memo(() => {
         flythroughSettings.trace,
         flythroughSettings.marker,
         flythroughSettings.camera,
+        flythroughSettings.hideAllPoisDuringFlythrough,
+        flythroughSettings.animateAllPoisDuringFlythrough,
         flythroughSettings.clips,
         flythroughState.hideOtherJourneys,
         clips,
@@ -673,6 +679,20 @@ export const FlythroughDrawer = memo(() => {
         lgs.settings.ui.flythrough.hideOtherJourneys = enabled
         lgs.stores.flythrough.hideOtherJourneys = enabled
         __.ui.flythrough?.setHideOtherJourneys?.(enabled)
+    }, [])
+
+    const updateHideAllPoisDuringFlythrough = useCallback((event) => {
+        const enabled = Boolean(event?.target?.checked)
+        lgs.settings.ui.flythrough.hideAllPoisDuringFlythrough = enabled
+        lgs.stores.flythrough.hideAllPoisDuringFlythrough = enabled
+        __.ui.flythrough?.setHideAllPoisDuringFlythrough?.(enabled)
+    }, [])
+
+    const updateAnimateAllPoisDuringFlythrough = useCallback((event) => {
+        const enabled = Boolean(event?.target?.checked)
+        lgs.settings.ui.flythrough.animateAllPoisDuringFlythrough = enabled
+        lgs.stores.flythrough.animateAllPoisDuringFlythrough = enabled
+        __.ui.flythrough?.setAnimateAllPoisDuringFlythrough?.(enabled)
     }, [])
 
     const updateFillColor = useCallback((event) => {
@@ -1275,10 +1295,30 @@ export const FlythroughDrawer = memo(() => {
                                      </WaTabPanel>
                                      <WaTabPanel name="pois">
                                          <LGSScrollbars>
-                                             <div className="flythrough-tab-panel">
-                                                 {nearbyPOIs.length === 0 ? (
-                                                     <p className="flythrough-empty-state">{'No flythrough POI matches for the current journey.'}</p>
-                                                 ) : (
+                                            <div className="flythrough-tab-panel">
+                                                <div className="flythrough-poi-switches">
+                                                    <WaSwitch
+                                                        size="xs"
+                                                        label-at-start
+                                                        checked={hideAllPoisDuringFlythrough}
+                                                        onInput={updateHideAllPoisDuringFlythrough}
+                                                    >
+                                                        {'Hide all POIs during flythrough'}
+                                                    </WaSwitch>
+                                                    {!hideAllPoisDuringFlythrough && (
+                                                        <WaSwitch
+                                                            size="xs"
+                                                            label-at-start
+                                                            checked={animateAllPoisDuringFlythrough}
+                                                            onInput={updateAnimateAllPoisDuringFlythrough}
+                                                        >
+                                                            {'Animate all POIs during flythrough'}
+                                                        </WaSwitch>
+                                                    )}
+                                                </div>
+                                                {nearbyPOIs.length === 0 ? (
+                                                    <p className="flythrough-empty-state">{'No flythrough POI matches for the current journey.'}</p>
+                                                ) : (
                                                       <div className="lgs--details-list">
                                                           {nearbyPOIs.map(entry => {
                                                               const poi = poiList.get(entry?.poi?.id) ?? entry?.poi
@@ -1287,8 +1327,12 @@ export const FlythroughDrawer = memo(() => {
                                                               }
 
                                                               const settings = normalizeFlythroughPOISettings(poi.flythrough)
-                                                              const flythroughEnabled = activePoiVisibilityOverrides[poi.id] ?? settings.visible !== false
-                                                              const animated = settings.animated !== false
+                                                              const flythroughEnabled = hideAllPoisDuringFlythrough
+                                                                  ? false
+                                                                  : activePoiVisibilityOverrides[poi.id] ?? settings.visible !== false
+                                                              const animated = hideAllPoisDuringFlythrough
+                                                                  ? false
+                                                                  : animateAllPoisDuringFlythrough || settings.animated !== false
                                                               const visibilityButtonId = `flythrough-poi-visibility-${poi.id}`
                                                               const animationButtonId = `flythrough-poi-animation-${poi.id}`
                                                               const toggleVisibility = event => {
@@ -1333,6 +1377,7 @@ export const FlythroughDrawer = memo(() => {
                                                                                   size="s"
                                                                                   aria-label={flythroughEnabled ? 'Hide POI during flythrough' : 'Show POI during flythrough'}
                                                                                   aria-pressed={flythroughEnabled}
+                                                                                  disabled={hideAllPoisDuringFlythrough}
                                                                                   onClick={toggleVisibility}
                                                                               >
                                                                                   <WaIcon
@@ -1351,6 +1396,7 @@ export const FlythroughDrawer = memo(() => {
                                                                                   size="s"
                                                                                   aria-label={animated ? 'Disable POI animation during flythrough' : 'Enable POI animation during flythrough'}
                                                                                   aria-pressed={animated}
+                                                                                  disabled={hideAllPoisDuringFlythrough || animateAllPoisDuringFlythrough}
                                                                                   onClick={toggleAnimation}
                                                                               >
                                                                                   <WaIcon
@@ -1361,13 +1407,14 @@ export const FlythroughDrawer = memo(() => {
                                                                       </span>
                                                                       <div className="flythrough-poi-details-body">
                                                                           <div className="flythrough-poi-switches">
-                                                                              <WaSwitch
-                                                                                  size="xs"
-                                                                                  label-at-start
-                                                                                  checked={flythroughEnabled}
-                                                                                  onInput={event => updatePOIFlythroughVisibility(poi.id, event)}
-                                                                              >
-                                                                                  {'Show during flythrough'}
+                                                                                <WaSwitch
+                                                                                    size="xs"
+                                                                                    label-at-start
+                                                                                    checked={flythroughEnabled}
+                                                                                    disabled={hideAllPoisDuringFlythrough}
+                                                                                    onInput={event => updatePOIFlythroughVisibility(poi.id, event)}
+                                                                                >
+                                                                                    {'Show during flythrough'}
                                                                               </WaSwitch>
                                                                           </div>
                                                                           {flythroughEnabled && (
@@ -1380,6 +1427,7 @@ export const FlythroughDrawer = memo(() => {
                                                                                           size="xs"
                                                                                           label-at-start
                                                                                           checked={settings.animated !== false}
+                                                                                          disabled={hideAllPoisDuringFlythrough || animateAllPoisDuringFlythrough}
                                                                                           onInput={event => updatePOIFlythroughSettings(poi.id, {
                                                                                               animated: getChecked(event),
                                                                                           })}

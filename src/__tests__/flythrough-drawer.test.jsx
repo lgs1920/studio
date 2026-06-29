@@ -15,6 +15,7 @@
  ******************************************************************************/
 
 import { cleanup, fireEvent, render, waitFor }             from '@testing-library/react'
+import { useState }                                        from 'react'
 import { FLYTHROUGH_DRAWER }                               from '@Core/constants'
 import {
     defaultFlythroughSettings, FLYTHROUGH_CAMERA_PRESET_ULTRA_SMOOTH, FLYTHROUGH_MARKER_MODE_HYSTERESIS,
@@ -55,49 +56,92 @@ vi.mock('@Components/WaDrawerNonModal', () => ({
     default: ({children, open, ...props}) => open ? <div data-testid="wa-drawer" {...props}>{children}</div> : null,
 }))
 
-vi.mock('@web.awesome.me/webawesome-pro/dist/react', () => ({
-    WaButton: ({children, ...props}) => <button {...props}>{children}</button>,
-    WaCard: ({children, ...props}) => <div {...props}>{children}</div>,
-    WaColorPicker: props => <input data-testid={props['aria-label'] ?? 'color'} {...props} />,
-    WaDivider: () => <hr/>,
-    WaIcon: () => <span/>,
-    WaDetails: ({children, ...props}) => <div {...props}>{children}</div>,
-    WaNumberInput: ({label, onInput, value, ...props}) => (
+vi.mock('@web.awesome.me/webawesome-pro/dist/react', () => {
+    const WaTab = ({children}) => <>{children}</>
+    const WaTabPanel = ({children}) => <>{children}</>
+    const WaButton = ({children, ...props}) => <button {...props}>{children}</button>
+    const WaCard = ({children, ...props}) => <div {...props}>{children}</div>
+    const WaColorPicker = props => <input data-testid={props['aria-label'] ?? 'color'} {...props} />
+    const WaDivider = () => <hr/>
+    const WaIcon = () => <span/>
+    const WaDetails = ({children, ...props}) => <div {...props}>{children}</div>
+    const WaNumberInput = ({label, onInput, value, ...props}) => (
         <label>
             {label}
             <input aria-label={label} value={value} onInput={onInput} {...props}/>
         </label>
-    ),
-    WaOption: ({children, value}) => <option value={value}>{children}</option>,
-    WaSelect: ({children, label, onChange, value, ...props}) => (
+    )
+    const WaOption = ({children, value}) => <option value={value}>{children}</option>
+    const WaSelect = ({children, label, onChange, value, ...props}) => (
         <label>
             {label}
             <select aria-label={label} value={value} onChange={onChange} {...props}>{children}</select>
         </label>
-    ),
-    WaSlider: ({label, onInput, value, ...props}) => (
+    )
+    const WaSlider = ({label, onInput, value, ...props}) => (
         <label>
             {label}
             <input aria-label={label} value={value} onInput={onInput} {...props}/>
         </label>
-    ),
-    WaSwitch: ({children, checked, onChange, onInput, ...props}) => (
+    )
+    const WaSwitch = ({children, checked, onChange, onInput, ...props}) => (
         <label>
             <input type="checkbox" checked={checked} onChange={onInput ?? onChange} {...props}/>
             {children}
         </label>
-    ),
-    WaTab: ({children}) => <button type="button">{children}</button>,
-    WaTabGroup: ({children}) => <div>{children}</div>,
-    WaTabPanel: ({children}) => <div>{children}</div>,
-    WaTextarea: ({label, value, ...props}) => (
+    )
+    const WaTabGroup = ({children}) => {
+        const childrenArray = Array.isArray(children) ? children : [children]
+        const tabs = childrenArray.filter(child => child?.type === WaTab)
+        const panels = childrenArray.filter(child => child?.type === WaTabPanel)
+        const [active, setActive] = useState(tabs[0]?.props?.panel)
+
+        return (
+            <div>
+                <div>
+                    {tabs.map(tab => (
+                        <button
+                            key={tab.props.panel}
+                            type="button"
+                            onClick={() => setActive(tab.props.panel)}
+                        >
+                            {tab.props.children}
+                        </button>
+                    ))}
+                </div>
+                {panels.map(panel => (
+                    panel.props.name === active ? <div key={panel.props.name}>{panel.props.children}</div> : null
+                ))}
+            </div>
+        )
+    }
+    const WaTextarea = ({label, value, ...props}) => (
         <label>
             {label}
             <textarea aria-label={label} value={value} readOnly {...props}/>
         </label>
-    ),
-    WaTooltip: ({children}) => <span>{children}</span>,
-}))
+    )
+    const WaTooltip = ({children}) => <span>{children}</span>
+
+    return {
+        WaButton,
+        WaCard,
+        WaColorPicker,
+        WaDetails,
+        WaDivider,
+        WaIcon,
+        WaNumberInput,
+        WaOption,
+        WaSelect,
+        WaSlider,
+        WaSwitch,
+        WaTab,
+        WaTabGroup,
+        WaTabPanel,
+        WaTextarea,
+        WaTooltip,
+    }
+})
 
 describe('FlythroughDrawer', () => {
     beforeEach(() => {
@@ -548,8 +592,47 @@ describe('FlythroughDrawer', () => {
         })
     })
 
+    it('toggles global POI flythrough visibility and animation behavior', async () => {
+        const view = render(<FlythroughDrawer/>)
+
+        fireEvent.click(view.getByText('POIs'))
+
+        await waitFor(() => {
+            expect(view.getByLabelText('Hide all POIs during flythrough')).toBeTruthy()
+            expect(view.getByLabelText('Animate all POIs during flythrough')).toBeTruthy()
+        })
+
+        fireEvent.click(view.getByLabelText('Hide all POIs during flythrough'))
+
+        await waitFor(() => {
+            expect(globalThis.lgs.settings.ui.flythrough.hideAllPoisDuringFlythrough).toBe(true)
+            expect(globalThis.lgs.stores.flythrough.hideAllPoisDuringFlythrough).toBe(true)
+            expect(view.queryByLabelText('Animate all POIs during flythrough')).toBeNull()
+            expect(view.getByLabelText('Show during flythrough').disabled).toBe(true)
+            expect(view.queryByLabelText('Animate during flythrough')).toBeNull()
+        })
+
+        fireEvent.click(view.getByLabelText('Hide all POIs during flythrough'))
+
+        await waitFor(() => {
+            expect(globalThis.lgs.settings.ui.flythrough.hideAllPoisDuringFlythrough).toBe(false)
+            expect(globalThis.lgs.stores.flythrough.hideAllPoisDuringFlythrough).toBe(false)
+            expect(view.getByLabelText('Animate all POIs during flythrough')).toBeTruthy()
+            expect(view.getByLabelText('Show during flythrough').disabled).toBe(false)
+        })
+
+        fireEvent.click(view.getByLabelText('Animate all POIs during flythrough'))
+
+        await waitFor(() => {
+            expect(globalThis.lgs.settings.ui.flythrough.animateAllPoisDuringFlythrough).toBe(true)
+            expect(globalThis.lgs.stores.flythrough.animateAllPoisDuringFlythrough).toBe(true)
+        })
+    })
+
     it('exposes header shortcuts to toggle POI visibility and animation', async () => {
         const view = render(<FlythroughDrawer/>)
+
+        fireEvent.click(view.getByText('POIs'))
 
         await waitFor(() => {
             expect(view.getByLabelText('Hide POI during flythrough')).toBeTruthy()
@@ -577,6 +660,7 @@ describe('FlythroughDrawer', () => {
         const view = render(<FlythroughDrawer/>)
 
         expect(view.getByText('POIs')).toBeTruthy()
+        fireEvent.click(view.getByText('POIs'))
 
         await waitFor(() => {
             expect(view.getByText('POI One')).toBeTruthy()

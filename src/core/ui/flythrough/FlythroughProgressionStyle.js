@@ -153,6 +153,8 @@ export const FLYTHROUGH_CAMERA_PRESETS = Object.freeze([
 export const defaultFlythroughSettings = () => ({
     duration:    DEFAULT_FLYTHROUGH_DURATION,
     poiDistance: DEFAULT_FLYTHROUGH_POI_DISTANCE,
+    hideAllPoisDuringFlythrough: false,
+    animateAllPoisDuringFlythrough: false,
     direction:   1,
     loop:        false,
     scope:       DEFAULT_FLYTHROUGH_SCOPE,
@@ -378,6 +380,8 @@ export const normalizeFlythroughSettings = (settings = {}) => {
                      ? settings.scope
                      : DEFAULT_FLYTHROUGH_SCOPE,
         hideOtherJourneys: settings?.hideOtherJourneys === true,
+        hideAllPoisDuringFlythrough: settings?.hideAllPoisDuringFlythrough === true,
+        animateAllPoisDuringFlythrough: settings?.animateAllPoisDuringFlythrough === true,
         progression: normalizeFlythroughProgressionStyle(settings?.progression),
         profileInfo: normalizeFlythroughProfileInfo(settings?.profileInfo),
         trace:       normalizeFlythroughTrace(settings?.trace),
