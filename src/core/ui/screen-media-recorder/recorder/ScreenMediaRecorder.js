@@ -30,6 +30,7 @@ const INFO_INTERVAL_MS = 250
 const VIDEO_CODEC_PROBE_TIMEOUT_MS = 2500
 const VIDEO_START_TIMEOUT_MS = 8000
 const VIDEO_FIRST_PACKET_TIMEOUT_MS = 3500
+const VIDEO_FIRST_PACKET_MAX_WAIT_MS = Math.max(VIDEO_START_TIMEOUT_MS, 10000)
 const VIDEO_START_CLEANUP_TIMEOUT_MS = 2000
 const VIDEO_EMPTY_OUTPUT_MAX_BYTES = 256
 
@@ -819,13 +820,22 @@ export class ScreenMediaRecorder extends EventTarget {
 
     #startFirstEncodedPacketMonitor = () => {
         const monitorId = ++this.#firstEncodedPacketMonitorId
-        setTimeout(() => {
+        const startedAt = performance.now()
+        const check = () => {
             if (monitorId !== this.#firstEncodedPacketMonitorId || !this.#isRecording || this.#encodedPackets > 0) {
                 return
             }
 
-            void this.#failActiveRecording(new Error('Video encoder did not produce any MP4 frame on this browser.'))
-        }, VIDEO_FIRST_PACKET_TIMEOUT_MS)
+            const elapsedMs = performance.now() - startedAt
+            if (elapsedMs >= VIDEO_FIRST_PACKET_MAX_WAIT_MS) {
+                void this.#failActiveRecording(new Error('Video encoder did not produce any MP4 frame on this browser.'))
+                return
+            }
+
+            setTimeout(check, VIDEO_FIRST_PACKET_TIMEOUT_MS)
+        }
+
+        setTimeout(check, VIDEO_FIRST_PACKET_TIMEOUT_MS)
     }
 
     #emitRecorderError = (error) => {
