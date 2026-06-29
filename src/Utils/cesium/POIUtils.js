@@ -370,6 +370,13 @@ export class POIUtils {
     static setPOIVisibility = (poi, visibility) => {
         const flythrough = globalThis.lgs?.stores?.flythrough
         const flythroughActive = Boolean(flythrough?.active || flythrough?.playing || flythrough?.paused)
+        const hideAllPoisDuringFlythrough = Boolean(
+            flythrough?.hideAllPoisDuringFlythrough
+            || globalThis.lgs?.settings?.ui?.flythrough?.hideAllPoisDuringFlythrough,
+        )
+        if (flythroughActive && hideAllPoisDuringFlythrough) {
+            return false
+        }
         if (flythroughActive && normalizeFlythroughPOISettings(poi?.flythrough).visible === false) {
             return false
         }

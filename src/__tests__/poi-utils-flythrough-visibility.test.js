@@ -87,6 +87,25 @@ describe('POIUtils flythrough visibility', () => {
         }, true)).toBe(true)
     })
 
+    it('forces all pois hidden when hide-all flythrough mode is enabled', () => {
+        globalThis.lgs.stores.flythrough.active = true
+        globalThis.lgs.stores.flythrough.hideAllPoisDuringFlythrough = true
+        globalThis.lgs.settings = {
+            ui: {
+                flythrough: {
+                    hideAllPoisDuringFlythrough: true,
+                },
+            },
+        }
+
+        expect(POIUtils.setPOIVisibility({
+            visible: true,
+            flythrough: {
+                visible: true,
+            },
+        }, true)).toBe(false)
+    })
+
     it('updates an existing billboard visibility when flythrough hides the poi', async () => {
         await POIUtils.draw({
             id:        'poi-1',

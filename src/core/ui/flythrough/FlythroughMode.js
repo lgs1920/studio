@@ -971,9 +971,10 @@ export class FlythroughMode {
 
     #setPOIEntityVisibility = (poi, visible) => {
         this.#poiEntities(poi).forEach(entity => {
-            entity.show = visible
+            const effectiveVisibility = POIUtils.setPOIVisibility(poi, visible)
+            entity.show = effectiveVisibility
             if (entity.billboard) {
-                entity.billboard.show = visible
+                entity.billboard.show = effectiveVisibility
             }
         })
     }

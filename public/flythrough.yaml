@@ -5,6 +5,8 @@ flythrough:
   loop: false
   scope: all-tracks
   hideOtherJourneys: false
+  hideAllPoisDuringFlythrough: false
+  animateAllPoisDuringFlythrough: false
   progression:
     fill:
       color: '#ff6a00'

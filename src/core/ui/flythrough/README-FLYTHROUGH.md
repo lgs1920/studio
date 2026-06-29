@@ -13,7 +13,8 @@ The implementation is split into a small set of focused modules:
 
 ## Configuration model
 
-Flythrough settings are loaded from `public/settings.yaml` and normalized at runtime.
+Flythrough settings are loaded from `public/flythrough.yaml` and normalized at runtime.
+`public/settings.yaml` contains the broader application defaults, but the flythrough block itself is sourced from `public/flythrough.yaml`.
 Flythrough clip definitions are loaded from `public/flythrough.yaml`, which is the only source for the clips catalog.
 The JavaScript defaults in `FlythroughProgressionStyle.js` are normalization defaults for non-catalog settings only.
 Clip instances are stored on the current journey as `journey.flythrough.start` and `journey.flythrough.stop`.
@@ -43,6 +44,9 @@ ui:
         useDefinedTrackStyle: true
         color: '#6f7d8c'
         opacity: 0.35
+    hideOtherJourneys: false
+    hideAllPoisDuringFlythrough: false
+    animateAllPoisDuringFlythrough: false
 ```
 
 ## `FlythroughProgressionStyle.js`
