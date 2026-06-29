@@ -7,47 +7,42 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-06-29
- * Last modified: 2026-06-29
+ * Created on: 2026-05-31
+ * Last modified: 2026-05-31
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { FLYTHROUGH_DRAWER }                                                               from '@Core/constants'
-import {
-    CameraUtils,
-}                                                                                          from '@Utils/cesium/CameraUtils'
-import {
-    POIUtils,
-}                                                                                          from '@Utils/cesium/POIUtils'
-import {
-    TrackUtils,
-}                                                                                          from '@Utils/cesium/TrackUtils'
+import { CameraUtils }                                        from '@Utils/cesium/CameraUtils'
+import { POIUtils }                                           from '@Utils/cesium/POIUtils'
+import { TrackUtils }                                         from '@Utils/cesium/TrackUtils'
+import { FLYTHROUGH_DRAWER }                                  from '@Core/constants'
 import {
     Cartesian2, Cartesian3, Cartographic, CatmullRomSpline, ExtrapolationType, JulianDate, LinearApproximation,
     Math as CesiumMath, Matrix4, SampledPositionProperty, SceneTransforms, Transforms,
-}                                                                                          from 'cesium'
-import {
-    FlythroughCesiumRenderer,
-}                                                                                          from './FlythroughCesiumRenderer'
-import { FLYTHROUGH_CLIP_SLOT_START, FLYTHROUGH_CLIP_SLOT_STOP, normalizeFlythroughClips } from './FlythroughClips'
-import {
-    FLYTHROUGH_SCOPE_ALL_TRACKS, FlythroughPathSampler,
-}                                                                                          from './FlythroughPathSampler'
+}                                                             from 'cesium'
+import { FlythroughCesiumRenderer }                           from './FlythroughCesiumRenderer'
+import { FLYTHROUGH_SCOPE_ALL_TRACKS, FlythroughPathSampler } from './FlythroughPathSampler'
 import {
     FLYTHROUGH_EVENT_END, FLYTHROUGH_EVENT_PAUSE, FLYTHROUGH_EVENT_RESUME, FLYTHROUGH_EVENT_START,
     FLYTHROUGH_EVENT_STOP, FLYTHROUGH_EVENT_UPDATE, FlythroughPlaybackController,
-}                                                                                          from './FlythroughPlaybackController'
+}                                                             from './FlythroughPlaybackController'
 import {
-    DEFAULT_FLYTHROUGH_POI_DISPLAY_DURATION_SECONDS, normalizeFlythroughPOISettings,
-}                                                                                          from './FlythroughPOISettings'
+    FLYTHROUGH_CAMERA_ALTITUDE_CONSTANT, FLYTHROUGH_CAMERA_ALTITUDE_GROUND_OFFSET, FLYTHROUGH_CAMERA_POSITION_AHEAD, FLYTHROUGH_CAMERA_POSITION_SYSTEM,
+    FLYTHROUGH_MARKER_MODE_HYSTERESIS, FLYTHROUGH_MARKER_MODE_NAVIGATION, FLYTHROUGH_MARKER_MODE_TRACE,
+    getFlythroughSettings, normalizeFlythroughCamera,
+    normalizeFlythroughMarker, normalizeFlythroughTrace,
+}                                                             from './FlythroughProgressionStyle'
 import {
-    FLYTHROUGH_CAMERA_ALTITUDE_CONSTANT, FLYTHROUGH_CAMERA_ALTITUDE_GROUND_OFFSET, FLYTHROUGH_CAMERA_POSITION_AHEAD,
-    FLYTHROUGH_CAMERA_POSITION_SYSTEM, FLYTHROUGH_MARKER_MODE_HYSTERESIS, FLYTHROUGH_MARKER_MODE_NAVIGATION,
-    FLYTHROUGH_MARKER_MODE_TRACE, getFlythroughSettings, normalizeFlythroughCamera, normalizeFlythroughMarker,
-    normalizeFlythroughTrace,
-}                                                                                          from './FlythroughProgressionStyle'
+    FLYTHROUGH_CLIP_SLOT_START,
+    FLYTHROUGH_CLIP_SLOT_STOP,
+    normalizeFlythroughClips,
+}                                                             from './FlythroughClips'
+import {
+    DEFAULT_FLYTHROUGH_POI_DISPLAY_DURATION_SECONDS,
+    normalizeFlythroughPOISettings,
+}                                                             from './FlythroughPOISettings'
 
 const DEFAULT_DURATION = 60
 const PROFILE_HOVER_RENDER_INTERVAL = 120
@@ -481,14 +476,8 @@ const safeCartesianFromLonLat = point => {
     return Cartesian3.fromDegrees(longitude, latitude, finiteNumber(point?.altitude ?? point?.height) ?? 0)
 }
 
-const hasFiniteCartesian = point => point
-    && finiteNumber(point.x) !== null
-    && finiteNumber(point.y) !== null
-    && finiteNumber(point.z) !== null
-    && Cartesian3.magnitude(point) > CARTESIAN_EPSILON
-
 const safeCartographicFromCartesian = point => {
-    if (!hasFiniteCartesian(point)) {
+    if (!point) {
         return null
     }
 
@@ -497,6 +486,62 @@ const safeCartographicFromCartesian = point => {
     }
     catch {
         return null
+    }
+}
+
+const cameraGuideSampleFromRawSamples = ({rawSamples, times, progress}) => {
+    if (!Array.isArray(rawSamples) || rawSamples.length === 0) {
+        return null
+    }
+
+    const safeProgress = clamp(Number(progress) || 0, 0, 1)
+    if (rawSamples.length === 1) {
+        const sample = rawSamples[0]
+        return {
+            progress: safeProgress,
+            longitude: sample.longitude,
+            latitude: sample.latitude,
+            altitude: sample.altitude ?? sample.height ?? 0,
+            distanceFromStart: finiteNumber(sample?.distanceFromStart) ?? 0,
+        }
+    }
+
+    let rightIndex = times.findIndex(time => (finiteNumber(time) ?? Number.POSITIVE_INFINITY) >= safeProgress)
+    if (rightIndex < 0) {
+        rightIndex = rawSamples.length - 1
+    }
+
+    if (rightIndex <= 0) {
+        const sample = rawSamples[0]
+        return {
+            progress: safeProgress,
+            longitude: sample.longitude,
+            latitude: sample.latitude,
+            altitude: sample.altitude ?? sample.height ?? 0,
+            distanceFromStart: finiteNumber(sample?.distanceFromStart) ?? 0,
+        }
+    }
+
+    const leftIndex = rightIndex - 1
+    const leftSample = rawSamples[leftIndex]
+    const rightSample = rawSamples[rightIndex] ?? rawSamples[rawSamples.length - 1]
+    const leftTime = finiteNumber(times[leftIndex]) ?? finiteNumber(leftSample?.progress) ?? 0
+    const rightTime = finiteNumber(times[rightIndex]) ?? finiteNumber(rightSample?.progress) ?? leftTime
+    const span = rightTime - leftTime
+    const ratio = span > 0 ? clamp((safeProgress - leftTime) / span, 0, 1) : 0
+
+    const leftAltitude = finiteNumber(leftSample?.altitude ?? leftSample?.height) ?? 0
+    const rightAltitude = finiteNumber(rightSample?.altitude ?? rightSample?.height) ?? leftAltitude
+    return {
+        progress: safeProgress,
+        longitude: lerp(leftSample.longitude, rightSample.longitude, ratio),
+        latitude: lerp(leftSample.latitude, rightSample.latitude, ratio),
+        altitude: lerp(leftAltitude, rightAltitude, ratio),
+        distanceFromStart: lerp(
+            finiteNumber(leftSample?.distanceFromStart) ?? 0,
+            finiteNumber(rightSample?.distanceFromStart) ?? finiteNumber(leftSample?.distanceFromStart) ?? 0,
+            ratio,
+        ),
     }
 }
 
@@ -551,31 +596,6 @@ const resolveFlythroughRuntimeClips = ({clips = null, settingsClips = {}, journe
 }
 
 const currentFlythroughSample = controller => controller?.currentSample?.() ?? flythroughStore()?.sample ?? null
-
-const cameraGuidePointFromSample = sample => ({
-    progress:          finiteNumber(sample?.progress) ?? 0,
-    longitude:         sample.longitude,
-    latitude:          sample.latitude,
-    altitude:          sample.altitude ?? sample.height ?? 0,
-    distanceFromStart: finiteNumber(sample?.distanceFromStart) ?? 0,
-})
-
-const summarizeFlythroughTrack = track => {
-    const geometry = track?.content?.geometry
-    const coordinates = geometry?.coordinates
-    const pointCount = geometry?.type === 'LineString'
-                       ? coordinates?.length ?? 0
-                       : geometry?.type === 'MultiLineString'
-                         ? (coordinates ?? []).reduce((total, segment) => total + (Array.isArray(segment) ? segment.length : 0), 0)
-                         : 0
-
-    return {
-        slug:     track?.slug,
-        visible:  track?.visible !== false,
-        geometry: geometry?.type ?? null,
-        points:   pointCount,
-    }
-}
 
 const resetRuntimeProgress = (store) => {
     if (!store) {
@@ -751,10 +771,6 @@ export class FlythroughMode {
         this.#suppressPlaybackCameraSync = false
         const sampler = this.configure(options)
         if (!sampler?.hasSamples) {
-            console.warn('[FlythroughMode] No playable samples found.', {
-                journey: globalThis.lgs?.theJourney?.slug ?? null,
-                tracks:  Array.from(globalThis.lgs?.theJourney?.tracks?.values?.() ?? []).map(summarizeFlythroughTrack),
-            })
             return null
         }
 
@@ -2275,19 +2291,17 @@ export class FlythroughMode {
     }
 
     #cameraGuideProgresses = ({times, points}) => {
-        const firstTime = finiteNumber(times[0]) ?? 0
-        const lastTime = finiteNumber(times[times.length - 1]) ?? firstTime
         if (times.length < 2 || points.length < 2) {
-            return [firstTime]
+            return [0]
         }
 
-        const progresses = [firstTime]
+        const progresses = [0]
 
         for (let index = 0; index < points.length - 1; index += 1) {
             const start = points[index]
             const end = points[index + 1]
-            const startTime = finiteNumber(times[index]) ?? firstTime
-            const endTime = finiteNumber(times[index + 1]) ?? startTime
+            const startTime = times[index]
+            const endTime = times[index + 1]
             const segmentTime = Math.max(0, endTime - startTime)
             const segmentDistance = Cartesian3.distance(start, end)
             const baseSubdivisions = Math.max(1, Math.ceil(segmentDistance / CAMERA_GUIDE_TARGET_SPACING_METERS))
@@ -2309,8 +2323,8 @@ export class FlythroughMode {
             }
         }
 
-        if (progresses[progresses.length - 1] !== lastTime) {
-            progresses[progresses.length - 1] = lastTime
+        if (progresses[progresses.length - 1] !== 1) {
+            progresses[progresses.length - 1] = 1
         }
 
         if (progresses.length <= CAMERA_GUIDE_MAX_STEPS + 1) {
@@ -2322,8 +2336,8 @@ export class FlythroughMode {
             const scaledIndex = (step / CAMERA_GUIDE_MAX_STEPS) * (progresses.length - 1)
             reduced.push(progresses[Math.round(scaledIndex)])
         }
-        reduced[0] = firstTime
-        reduced[reduced.length - 1] = lastTime
+        reduced[0] = 0
+        reduced[reduced.length - 1] = 1
         return reduced
     }
 
@@ -2335,47 +2349,43 @@ export class FlythroughMode {
 
         const rawSamples = (this.#sampler?.samples ?? []).filter(hasFiniteLonLat)
         if (rawSamples.length < 3) {
-            this.#cameraGuide = rawSamples.map(cameraGuidePointFromSample)
+            this.#cameraGuide = rawSamples.map(sample => ({
+                progress: sample.progress,
+                longitude: sample.longitude,
+                latitude: sample.latitude,
+                altitude: sample.altitude ?? sample.height ?? 0,
+                distanceFromStart: finiteNumber(sample?.distanceFromStart) ?? 0,
+            }))
             this.#cameraGuideSourceKey = key
             return this.#cameraGuide
         }
 
-        const splineSamples = []
-        rawSamples.forEach((sample, index) => {
-            const fallbackProgress = rawSamples.length > 1 ? index / (rawSamples.length - 1) : 0
-            const progress = clamp(finiteNumber(sample.progress) ?? fallbackProgress, 0, 1)
-            const position = safeCartesianFromLonLat(sample)
-            const previous = splineSamples[splineSamples.length - 1]
-            if (!hasFiniteCartesian(position) || progress <= (previous?.progress ?? -Infinity)) {
-                return
-            }
-            splineSamples.push({
-                                   sample,
-                                   position,
-                                   progress,
-                               })
-        })
-
-        const points = splineSamples.map(entry => entry.position)
+        const points = rawSamples.map(safeCartesianFromLonLat).filter(Boolean)
         if (points.length < 3) {
-            this.#cameraGuide = rawSamples.map(cameraGuidePointFromSample)
+            this.#cameraGuide = rawSamples.map(sample => ({
+                progress: sample.progress,
+                longitude: sample.longitude,
+                latitude: sample.latitude,
+                altitude: sample.altitude ?? sample.height ?? 0,
+            }))
             this.#cameraGuideSourceKey = key
             return this.#cameraGuide
         }
-        const times = splineSamples.map(entry => entry.progress)
-        let spline
-        try {
-            spline = new CatmullRomSpline({times, points})
-        }
-        catch {
-            this.#cameraGuide = rawSamples.map(cameraGuidePointFromSample)
-            this.#cameraGuideSourceKey = key
-            return this.#cameraGuide
-        }
+        const times = rawSamples.map((sample, index) => {
+            if (index === 0) {
+                return 0
+            }
+
+            const progress = finiteNumber(sample.progress)
+            if (progress === null) {
+                return index / (rawSamples.length - 1)
+            }
+
+            return clamp(progress, 0, 1)
+        })
+        const spline = new CatmullRomSpline({times, points})
         const guide = []
         const progresses = this.#cameraGuideProgresses({times, points})
-        const firstSplineProgress = finiteNumber(times[0]) ?? 0
-        const lastSplineProgress = finiteNumber(times[times.length - 1]) ?? firstSplineProgress
         const minimumSteps = Math.max(
             CAMERA_GUIDE_MIN_STEPS,
             rawSamples.length * 8,
@@ -2383,21 +2393,28 @@ export class FlythroughMode {
         )
         const sampledProgresses = progresses.length >= minimumSteps
             ? progresses
-            : Array.from(
-                {length: minimumSteps + 1},
-                (_, index) => lerp(firstSplineProgress, lastSplineProgress, index / minimumSteps),
-            )
+            : Array.from({length: minimumSteps + 1}, (_, index) => index / minimumSteps)
 
         sampledProgresses.forEach(progress => {
-            let point
+            let cartographic = null
             try {
-                point = spline.evaluate(progress)
+                cartographic = safeCartographicFromCartesian(spline.evaluate(progress))
             }
             catch {
-                return
+                cartographic = null
             }
-            const cartographic = safeCartographicFromCartesian(point)
-            const lonLat = cartographicToLonLat(cartographic)
+            const fallbackPoint = cartographic
+                                 ? null
+                                 : cameraGuideSampleFromRawSamples({rawSamples, times, progress})
+            const lonLat = cartographic
+                ? cartographicToLonLat(cartographic)
+                : fallbackPoint
+                  ? {
+                      longitude: fallbackPoint.longitude,
+                      latitude:  fallbackPoint.latitude,
+                      altitude:  fallbackPoint.altitude,
+                  }
+                  : null
             if (!lonLat) {
                 return
             }
@@ -2405,13 +2422,13 @@ export class FlythroughMode {
             guide.push({
                 progress,
                 ...lonLat,
-                distanceFromStart: (this.#sampler?.totalDistance ?? 0) * progress,
+                distanceFromStart: fallbackPoint?.distanceFromStart ?? (this.#sampler?.totalDistance ?? 0) * progress,
             })
         })
 
-        this.#cameraGuide = guide.length >= 2 ? guide : rawSamples.map(cameraGuidePointFromSample)
+        this.#cameraGuide = guide
         this.#cameraGuideSourceKey = key
-        return this.#cameraGuide
+        return guide
     }
 
     #smoothedGuide = () => (this.#buildCameraGuide() ?? []).map(point => ({
