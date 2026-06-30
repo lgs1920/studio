@@ -717,10 +717,39 @@ wa-tab::part(base) {
 
 .journey-report-export-animation.is-writing {
     opacity: 0.72;
+    animation: journey-report-writing-wave 1.45s ease-in-out infinite;
+    transform-origin: center;
+    will-change: transform;
 }
 
 .journey-report-export-animation.is-writing wa-icon {
     --animation-duration: 1.05s;
+}
+
+@keyframes journey-report-writing-wave {
+    0% {
+        transform: translate3d(0, 0, 0) rotate(0deg);
+    }
+
+    18% {
+        transform: translate3d(0.3rem, -0.18rem, 0) rotate(2deg);
+    }
+
+    36% {
+        transform: translate3d(0.55rem, 0, 0) rotate(0deg);
+    }
+
+    54% {
+        transform: translate3d(0.3rem, 0.18rem, 0) rotate(-2deg);
+    }
+
+    72% {
+        transform: translate3d(0.1rem, 0, 0) rotate(0deg);
+    }
+
+    100% {
+        transform: translate3d(0, 0, 0) rotate(0deg);
+    }
 }
 
 .journey-export-controls {
