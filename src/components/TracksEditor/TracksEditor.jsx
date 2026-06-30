@@ -19,6 +19,8 @@ import { JourneyLoaderButton }      from '@Components/FileLoader/JourneyLoaderBu
 import PanelActions                                  from '@Components/PanelsActions'
 import { JOURNEY_EDITOR_DRAWER } from '@Core/constants'
 import WaDrawer                                      from '@Components/WaDrawerNonModal'
+import { setGlobalHideOtherJourneys }                from '@Core/ui/JourneyVisibility'
+import { useOptionalSnapshot }                       from '@Utils/ValtioUtils'
 import classNames                                    from 'classnames'
 
 import './style.css'
@@ -48,7 +50,7 @@ const ToolbarHeader = memo(({show, usage, onToggle}) => {
 })
 
 // Memoized sub-component for journey content
-const JourneyContent = memo(() => (
+const JourneyContent = memo(({hideOtherJourneys, onToggleHideOtherJourneys}) => (
     <div className="journey-content-wrapper">
         <div className="selector-wrapper">
             <JourneySelector
@@ -63,6 +65,16 @@ const JourneyContent = memo(() => (
                 className="journey-import-in-editor"
             />
         </div>
+        <div className="journey-global-visibility-row">
+            <WaSwitch
+                label-at-start
+                size="xs"
+                checked={hideOtherJourneys === true}
+                onChange={onToggleHideOtherJourneys}
+            >
+                {'Hide other journeys'}
+            </WaSwitch>
+        </div>
         <JourneySettings/>
     </div>
 ))
@@ -71,6 +83,7 @@ export const TracksEditor = memo(() => {
     // Select necessary state properties with safe defaults
     const {canViewJourneyData} = useSnapshot(lgs.stores.main)
     const {drawers: {open: drawerOpen}} = useSnapshot(lgs.stores.ui)
+    const {hideOtherJourneys: globalHideOtherJourneys} = useOptionalSnapshot(lgs.settings.journey)
 
     const {drawer: drawerPlacement} = useSnapshot(lgs.editorSettingsProxy.menu)
     const {show: toolbarShow, usage: toolbarUsage} = useSnapshot(lgs.settings.ui.journeyToolbar)
@@ -88,6 +101,13 @@ export const TracksEditor = memo(() => {
     // Memoized event handlers
     const toggleToolbar = useCallback(() => {
         lgs.settings.ui.journeyToolbar.show = !lgs.settings.ui.journeyToolbar.show
+    }, [])
+
+    const setHideOtherJourneys = useCallback(async event => {
+        const enabled = Boolean(event?.target?.checked)
+        await setGlobalHideOtherJourneys(enabled, {
+            currentJourney: lgs.theJourney,
+        })
     }, [])
 
     const handleRequestClose = useCallback((event) => {
@@ -139,7 +159,12 @@ export const TracksEditor = memo(() => {
                             onToggle={toggleToolbar}
                         />
                         </PanelActions>
-                        {hasJourneys && <JourneyContent/>}
+                        {hasJourneys && (
+                            <JourneyContent
+                                hideOtherJourneys={globalHideOtherJourneys}
+                                onToggleHideOtherJourneys={setHideOtherJourneys}
+                            />
+                        )}
                         <DrawerFooter/>
                     </WaDrawer>
             }

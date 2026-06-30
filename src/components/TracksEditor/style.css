@@ -50,6 +50,15 @@
     text-overflow: ellipsis;
     white-space: nowrap;
 }
+
+#journey-editor-drawer .journey-global-visibility-row {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    min-height: 2rem;
+    margin-bottom: var(--lgs-gutter-s);
+}
+
 .journey-content-wrapper {
     display: flex;
     flex-direction: column;
