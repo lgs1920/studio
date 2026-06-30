@@ -70,14 +70,16 @@ import {
 import {
     UIToast,
 }                                     from '@Utils/UIToast'
+import { getGlobalHideOtherJourneys, refreshJourneyVisibility, setGlobalHideOtherJourneys } from '@Core/ui/JourneyVisibility'
 import { decodeHTMLEntities }         from '@Utils/TextUtils'
 import {
-    WaButton, WaCard, WaDetails, WaIcon, WaInput, WaOption, WaSelect, WaTab, WaTabGroup, WaTabPanel,
+    WaButton, WaCard, WaDetails, WaIcon, WaInput, WaOption, WaSelect, WaSwitch, WaTab, WaTabGroup, WaTabPanel,
     WaTextarea, WaTooltip,
 }                                     from '@web.awesome.me/webawesome-pro/dist/react'
 import { useEffect, useRef, useState } from 'react'
 import { sprintf }                    from 'sprintf-js'
 import { useSnapshot }                from 'valtio'
+import { useOptionalSnapshot }        from '@Utils/ValtioUtils'
 import {
     ElevationProfile,
 }                                     from '../../MainUI/ElevationProfile'
@@ -142,6 +144,13 @@ const setJourneyEditorPOIsVisible = (value) => {
     journeyEditorStore().journey.POIsVisible = value
 }
 
+const setHideOtherJourneys = async (event) => {
+    const enabled = Boolean(event?.target?.checked)
+    await setGlobalHideOtherJourneys(enabled, {
+        currentJourney: journeyEditorStore().journey,
+    })
+}
+
 const setJourneyEditorTabState = (tabName, eventType = 'wa-tab-show') => {
     const editor = journeyEditorStore()
     editor.activeTab = tabName
@@ -184,6 +193,7 @@ export const JourneySettings = () => {
     const {running, target} = useSnapshot($uiRotate)
     const {journey: autoRotateJourney} = useSnapshot($cameraSettings)
     const {open} = useSnapshot($drawers)
+    const {hideOtherJourneys: globalHideOtherJourneys} = useOptionalSnapshot(lgs.settings.journey)
     const journeySlug = journey?.slug ?? null
 
     const _title = useRef(null)
@@ -355,6 +365,12 @@ export const JourneySettings = () => {
         setJourneyEditorJourneyVisible(v)
         lgs.theJourney.updateVisibility(v)
         await Utils.updateJourney(UPDATE_JOURNEY_SILENTLY, {focus: false})
+        if (getGlobalHideOtherJourneys()) {
+            await refreshJourneyVisibility({
+                hideOtherJourneys: true,
+                currentJourney:    lgs.theJourney,
+            })
+        }
         Utils.renderJourneySettings()
     }
 
@@ -675,6 +691,16 @@ export const JourneySettings = () => {
             {shouldRender && (
                 <div id="journey-settings" key={lgs.theJourney.slug}>
                     <div className="settings-panel">
+                        <div className="journey-global-visibility-row">
+                            <WaSwitch
+                                label-at-start
+                                size="xs"
+                                checked={globalHideOtherJourneys === true}
+                                onChange={setHideOtherJourneys}
+                            >
+                                {'Hide other journeys'}
+                            </WaSwitch>
+                        </div>
                         <WaTabGroup className="menu-panel" ref={_tabGroup} onWaTabShow={initTab} onWaTabHide={initTab}>
                             <WaTab slot="nav" panel={DATA} active={__.ui.drawerManager.tabActive(DATA)}>
                                 <WaIcon name="rectangle-list" variant="regular"/> Data

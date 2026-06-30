@@ -808,19 +808,33 @@ export class Journey extends MapElement {
      * @param mode
      * @return {Promise<void>}
      */
-    draw = async ({action = DRAWING_FROM_UI, mode = FOCUS_ON_FEATURE}) => {
+    draw = async ({
+                      action = DRAWING_FROM_UI,
+                      mode = FOCUS_ON_FEATURE,
+                      hideOtherJourneys = false,
+                      currentJourneySlug = lgs.theJourney?.slug ?? null,
+                      forceCurrentVisible = false,
+                  } = {}) => {
         const promises = []
+        const isCurrentJourney = currentJourneySlug !== null && this.slug === currentJourneySlug
+        const isVisibleJourney = forceCurrentVisible && isCurrentJourney
+                                 ? true
+                                 : this.visible !== false
+        const forcedToHide = !isVisibleJourney || (hideOtherJourneys && !isCurrentJourney)
 
         // Draw Tracks and flags
         this.tracks.forEach(track => {
             // If journey is not visible, we force tracks to be hidden, whatever their visibility
             // else we use their status.
             promises.push(track.draw({
-                                         action: action, mode: NO_FOCUS, forcedToHide: !this.visible,
+                                         action:      action,
+                                         mode:        NO_FOCUS,
+                                         forcedToHide: forcedToHide,
                                      }))
         })
 
         await Promise.all(promises)
+        this.updateVisibility(isVisibleJourney && (!hideOtherJourneys || isCurrentJourney))
 
         // //Ready
         // const texts = new Map([

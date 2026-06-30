@@ -18,6 +18,7 @@ import { CameraUtils }                                        from '@Utils/cesiu
 import { POIUtils }                                           from '@Utils/cesium/POIUtils'
 import { TrackUtils }                                         from '@Utils/cesium/TrackUtils'
 import { FLYTHROUGH_DRAWER }                                  from '@Core/constants'
+import { getFlythroughHideOtherJourneys }                     from '@Core/ui/JourneyVisibility'
 import {
     Cartesian2, Cartesian3, Cartographic, CatmullRomSpline, ExtrapolationType, JulianDate, LinearApproximation,
     Math as CesiumMath, Matrix4, SampledPositionProperty, SceneTransforms, Transforms,
@@ -785,8 +786,7 @@ export class FlythroughMode {
         }
 
         const shouldHideOtherJourneys = options.hideOtherJourneys
-                                        ?? flythroughStore()?.hideOtherJourneys
-                                        ?? (getFlythroughSettings().hideOtherJourneys === true)
+                                        ?? getFlythroughHideOtherJourneys()
         void globalThis.__?.ui?.cameraManager?.stopRotate?.()
         this.#setFlythroughOrbitAllowed(false)
         this.#restoreOtherJourneysVisibility()
@@ -2479,13 +2479,14 @@ export class FlythroughMode {
             : Array.from({length: minimumSteps + 1}, (_, index) => index / minimumSteps)
 
         sampledProgresses.forEach(progress => {
-            let cartographic = null
-            try {
-                cartographic = safeCartographicFromCartesian(spline.evaluate(progress))
-            }
-            catch {
-                cartographic = null
-            }
+            const cartographic = (() => {
+                try {
+                    return safeCartographicFromCartesian(spline.evaluate(progress))
+                }
+                catch {
+                    return null
+                }
+            })()
             const fallbackPoint = cartographic
                                  ? null
                                  : cameraGuideSampleFromRawSamples({rawSamples, times, progress})

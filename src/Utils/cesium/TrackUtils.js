@@ -1412,6 +1412,7 @@ export class TrackUtils {
             }
         })
 
+        TrackUtils.updatePOIsVisibility(journey, visibility && journey?.POIsVisible !== false)
         TrackUtils.setProfileVisibility(journey)
     }
 

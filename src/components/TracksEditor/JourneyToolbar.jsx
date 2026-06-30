@@ -20,6 +20,7 @@ import { ToggleStateIcon }                                           from '@Comp
 import {
     FOCUS_ICON, ROTATION_ICON, UPDATE_JOURNEY_SILENTLY,
 } from '@Core/constants'
+import { getGlobalHideOtherJourneys, refreshJourneyVisibility } from '@Core/ui/JourneyVisibility'
 import {
     JourneySelector,
 } from '@Editor/journey/JourneySelector'
@@ -116,6 +117,12 @@ export const JourneyToolbar = (props) => {
         $editorStore.journey.visible = visibility
         lgs.theJourney.updateVisibility(visibility)
         await Utils.updateJourney(UPDATE_JOURNEY_SILENTLY, {focus: false})
+        if (getGlobalHideOtherJourneys()) {
+            await refreshJourneyVisibility({
+                hideOtherJourneys: true,
+                currentJourney:    lgs.theJourney,
+            })
+        }
         Utils.renderJourneySettings()
     }
 

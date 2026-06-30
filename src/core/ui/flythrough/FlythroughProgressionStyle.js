@@ -159,6 +159,7 @@ export const defaultFlythroughSettings = () => ({
     loop:        false,
     scope:       DEFAULT_FLYTHROUGH_SCOPE,
     hideOtherJourneys: false,
+    inheritHideOtherJourneys: true,
     progression: defaultFlythroughProgressionStyle(),
     profileInfo: defaultFlythroughProfileInfoStyle(),
     trace:       defaultFlythroughTraceStyle(),
@@ -380,6 +381,7 @@ export const normalizeFlythroughSettings = (settings = {}) => {
                      ? settings.scope
                      : DEFAULT_FLYTHROUGH_SCOPE,
         hideOtherJourneys: settings?.hideOtherJourneys === true,
+        inheritHideOtherJourneys: settings?.inheritHideOtherJourneys !== false,
         hideAllPoisDuringFlythrough: settings?.hideAllPoisDuringFlythrough === true,
         animateAllPoisDuringFlythrough: settings?.animateAllPoisDuringFlythrough === true,
         progression: normalizeFlythroughProgressionStyle(settings?.progression),

@@ -7,6 +7,7 @@
  ******************************************************************************/
 
 import { SceneUtils } from '@Utils/cesium/SceneUtils'
+import { getGlobalHideOtherJourneys, refreshJourneyVisibility } from '@Core/ui/JourneyVisibility'
 import { snapdom } from '@zumer/snapdom'
 import {
     Cartesian2,
@@ -537,6 +538,27 @@ export const currentViewerSnapshot = async () => {
     catch (error) {
         console.error(error)
         return null
+    }
+}
+
+export const withReportJourneyVisibility = async (journey, callback) => {
+    const currentJourney = journey ?? globalThis.lgs?.theJourney ?? null
+    const previousHideOtherJourneys = getGlobalHideOtherJourneys()
+
+    await refreshJourneyVisibility({
+        hideOtherJourneys: true,
+        currentJourney,
+        forceCurrentVisible: true,
+    })
+
+    try {
+        return await callback?.()
+    }
+    finally {
+        await refreshJourneyVisibility({
+            hideOtherJourneys: previousHideOtherJourneys,
+            currentJourney,
+        })
     }
 }
 

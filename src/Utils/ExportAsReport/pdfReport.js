@@ -72,6 +72,7 @@ import { captureJourneyProfileImage } from './profile'
 import {
     captureJourney3DMapSnapshots,
     currentViewerSnapshot,
+    withReportJourneyVisibility,
     yieldToUI,
 } from './snapshots'
 
@@ -734,31 +735,36 @@ export const exportJourneyToPDF = async (journey, {
     }
 
     const theme = getExportTheme()
-    const viewerSnapshot = await currentViewerSnapshot()
-    await yieldToUI()
     const brandColor = parseCssColor(theme.brand, PDF_COLORS.text)
     const studioLogoPromise = loadStudioLogo()
     const pdfIconsPromise = loadPDFIcons(theme, {trackColors: trackDrawings.map(({color}) => color)})
-    const profileImagePromise = captureJourneyProfileImage({
+    const {profileImage, mapSnapshots} = await withReportJourneyVisibility(journey, async () => {
+        const viewerSnapshot = await currentViewerSnapshot()
+        await yieldToUI()
+        const profileImagePromise = captureJourneyProfileImage({
                                                                                                                   journey,
                                                                                                                   trackDrawings,
                                                                                                                   backgroundSnapshot: viewerSnapshot,
                                                                                                                   theme,
                                                                                                               })
-    const mapSnapshotsPromise = captureJourney3DMapSnapshots(journey, {
-        trackDrawings,
-        onSnapshotFlash: ({index}) => setReportStage({
-            stage: 'snapshots',
-            id:    `snapshot-${index}-${Date.now()}`,
-        }),
+        const mapSnapshotsPromise = captureJourney3DMapSnapshots(journey, {
+            trackDrawings,
+            onSnapshotFlash: ({index}) => setReportStage({
+                stage: 'snapshots',
+                id:    `snapshot-${index}-${Date.now()}`,
+            }),
+        })
+            .finally(() => setReportStage('writing'))
+        const [profileImage, mapSnapshots] = await Promise.all([
+                                                                    profileImagePromise,
+                                                                    mapSnapshotsPromise,
+                                                                ])
+        return {profileImage, mapSnapshots}
     })
-        .finally(() => setReportStage('writing'))
-    const [studioLogo, pdfIcons, profileImage, mapSnapshots] = await Promise.all([
-                                                                                    studioLogoPromise,
-                                                                                    pdfIconsPromise,
-                                                                                    profileImagePromise,
-                                                                                    mapSnapshotsPromise,
-                                                                                ])
+    const [studioLogo, pdfIcons] = await Promise.all([
+        studioLogoPromise,
+        pdfIconsPromise,
+    ])
     const reportCredits = ReportCredits.getReportCredits()
     const [pdfProfileImage, pdfMapSnapshots] = await Promise.all([
                                                                      normalizeImageForPDF(profileImage, {maxWidth: 1400, maxHeight: 800}),

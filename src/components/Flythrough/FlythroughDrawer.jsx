@@ -25,6 +25,7 @@ import PanelActions from '@Components/PanelsActions'
 import WaDrawer     from '@Components/WaDrawerNonModal'
 import { FLYTHROUGH_DRAWER } from '@Core/constants'
 import classNames from 'classnames'
+import { getFlythroughHideOtherJourneys } from '@Core/ui/JourneyVisibility'
 import {
     clampFlythroughNumber, DEFAULT_FLYTHROUGH_SCOPE, ensureFlythroughSettings, FLYTHROUGH_CAMERA_ALTITUDE_CONSTANT,
     FLYTHROUGH_CAMERA_ALTITUDE_GROUND_OFFSET, FLYTHROUGH_CAMERA_POSITION_AHEAD, FLYTHROUGH_CAMERA_POSITION_BEHIND,
@@ -55,6 +56,7 @@ import { Cartographic } from 'cesium'
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal }      from 'react-dom'
 import { useSnapshot }       from 'valtio'
+import { useOptionalSnapshot } from '@Utils/ValtioUtils'
 import './style.css'
 
 
@@ -249,6 +251,7 @@ export const FlythroughDrawer = memo(() => {
     const flythroughState = useSnapshot(lgs.stores.flythrough)
     ensureFlythroughSettings()
     const flythroughSettings = useSnapshot(lgs.settings.ui.flythrough)
+    useOptionalSnapshot(lgs.settings.journey)
     const {current: unitSystem} = useSnapshot(lgs.settings.unitSystem)
     const {drawer: drawerPlacement} = useSnapshot(lgs.editorSettingsProxy.menu)
     const swatches = useMemo(() => lgs.settings.getSwatches.list.join(';'), [])
@@ -298,7 +301,7 @@ export const FlythroughDrawer = memo(() => {
     }, [flythroughState.nearbyPois])
     const cameraPresetKey = getFlythroughCameraPresetKey(camera)
     const marker = normalizeFlythroughMarker(flythroughSettings.marker)
-    const hideOtherJourneys = flythroughState.hideOtherJourneys === true
+    const hideOtherJourneys = getFlythroughHideOtherJourneys()
     const hideAllPoisDuringFlythrough = flythroughSettings.hideAllPoisDuringFlythrough === true
     const animateAllPoisDuringFlythrough = flythroughSettings.animateAllPoisDuringFlythrough === true
     const durationLocked = flythroughState.active || flythroughState.playing || flythroughState.paused
@@ -348,6 +351,7 @@ export const FlythroughDrawer = memo(() => {
         flythroughRuntime.animateAllPoisDuringFlythrough = flythroughSettings.animateAllPoisDuringFlythrough === true
         flythroughRuntime.clips = clips
         flythroughRuntime.hideOtherJourneys = flythroughState.hideOtherJourneys === true
+        flythroughRuntime.inheritHideOtherJourneys = flythroughState.inheritHideOtherJourneys !== false
 
         if (journeyChanged) {
             flythroughRuntime.progress = 0
@@ -369,6 +373,7 @@ export const FlythroughDrawer = memo(() => {
         flythroughSettings.animateAllPoisDuringFlythrough,
         flythroughSettings.clips,
         flythroughState.hideOtherJourneys,
+        flythroughState.inheritHideOtherJourneys,
         clips,
         currentJourney?.flythrough?.start,
         currentJourney?.flythrough?.stop,
@@ -693,7 +698,9 @@ export const FlythroughDrawer = memo(() => {
     const updateHideOtherJourneys = useCallback((event) => {
         const enabled = Boolean(event?.target?.checked)
         lgs.settings.ui.flythrough.hideOtherJourneys = enabled
+        lgs.settings.ui.flythrough.inheritHideOtherJourneys = false
         lgs.stores.flythrough.hideOtherJourneys = enabled
+        lgs.stores.flythrough.inheritHideOtherJourneys = false
         __.ui.flythrough?.setHideOtherJourneys?.(enabled)
     }, [])
 

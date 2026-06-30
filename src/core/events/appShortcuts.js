@@ -21,6 +21,7 @@ import {
 import { hasActiveAppShortcutBlocker }                  from '@Core/events/shortcutBlockers'
 import { MapTarget }                                    from '@Core/MapTarget'
 import { getOrbitSettings, setOrbitStoreSettings }      from '@Core/OrbitSettings'
+import { getGlobalHideOtherJourneys, setGlobalHideOtherJourneys } from '@Core/ui/JourneyVisibility'
 import { FLYTHROUGH_MARKER_MODE_TRACE, normalizeFlythroughMarker } from '@Core/ui/flythrough/FlythroughProgressionStyle'
 import {
     hasManageableWidgets,
@@ -212,6 +213,14 @@ const toggleJourneyToolbar = () => {
     const toolbar = lgs.settings.ui.journeyToolbar
     toolbar.usage = true
     toolbar.show = true
+    return true
+}
+
+const toggleHideOtherJourneys = async () => {
+    const nextEnabled = !getGlobalHideOtherJourneys()
+    await setGlobalHideOtherJourneys(nextEnabled, {
+        currentJourney: lgs.theJourney,
+    })
     return true
 }
 
@@ -684,6 +693,7 @@ const SHORTCUT_ACTIONS = {
     'journey-import':       openJourneyImporter,
     'journey-groups-show':  openJourneyGroups,
     'journey-toolbar-show': toggleJourneyToolbar,
+    'journey-hide-others-toggle': toggleHideOtherJourneys,
     'profile-settings-show': openUserProfileSettings,
     'flythrough-management-show': openFlythroughManagement,
     'widget-management-show': openWidgetManagement,

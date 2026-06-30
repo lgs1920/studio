@@ -19,6 +19,7 @@ import {
 }                     from '@Core/constants'
 import { Journey }    from '@Core/Journey'
 import { Track }      from '@Core/Track'
+import { getGlobalHideOtherJourneys, refreshJourneyVisibility } from '@Core/ui/JourneyVisibility'
 import { TrackUtils } from '@Utils/cesium/TrackUtils'
 
 export class Utils {
@@ -99,6 +100,12 @@ export class Utils {
         if (editorStore.journey.visible && shouldFocus) {
             lgs.theJourney.focus({action, rotate, resetCamera: true})
         }
+        if (getGlobalHideOtherJourneys()) {
+            await refreshJourneyVisibility({
+                hideOtherJourneys: true,
+                currentJourney:    editorStore.journey,
+            })
+        }
         await TrackUtils.saveCurrentTrackToDB(null)
         await TrackUtils.saveCurrentPOIToDB(null)
 
@@ -173,6 +180,12 @@ export class Utils {
 
         if (action !== UPDATE_JOURNEY_SILENTLY) {
             await journey.draw({action: action})
+            if (getGlobalHideOtherJourneys()) {
+                await refreshJourneyVisibility({
+                    hideOtherJourneys: true,
+                    currentJourney:    journey,
+                })
+            }
         }
         else if (focus) {
             journey.focus({action: action, rotate: lgs.settings.ui.camera.start.rotate.journey})

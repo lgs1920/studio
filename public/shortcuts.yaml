@@ -10,6 +10,13 @@
   keys:
     - Alt+Shift+J
   scope: App
+- action: Hide other journeys
+  description: Keeps only the current journey visible in the scenes.
+  id: journey-hide-others-toggle
+  keys:
+    - Mod+Shift+J
+  platform: macOS / Windows / Linux
+  scope: App
 - action: Open user profile settings
   description: Opens the user profile settings section.
   id: profile-settings-show
