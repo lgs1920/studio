@@ -65,16 +65,14 @@ const JourneyContent = memo(({hideOtherJourneys, onToggleHideOtherJourneys}) => 
                 className="journey-import-in-editor"
             />
         </div>
-        <div className="journey-global-visibility-row">
-            <WaSwitch
-                label-at-start
-                size="xs"
-                checked={hideOtherJourneys === true}
-                onChange={onToggleHideOtherJourneys}
-            >
-                {'Hide other journeys'}
-            </WaSwitch>
-        </div>
+        <WaSwitch
+            label-at-start
+            size="xs"
+            checked={hideOtherJourneys === true}
+            onChange={onToggleHideOtherJourneys}
+        >
+            {'Hide other journeys'}
+        </WaSwitch>
         <JourneySettings/>
     </div>
 ))
