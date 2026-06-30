@@ -711,6 +711,11 @@ wa-tab::part(base) {
     filter: drop-shadow(0 0 18px color-mix(in oklab, var(--wa-color-brand) 36%, transparent));
 }
 
+.journey-report-export-animation wa-icon[animation='report-fade'] {
+    animation-name: report-fade;
+    animation-fill-mode: forwards;
+}
+
 .journey-report-export-animation.is-snapshots wa-icon {
     --animation-duration: 0.72s;
     --animation-iteration-count: 1;
@@ -751,6 +756,16 @@ wa-tab::part(base) {
 
     100% {
         transform: translate3d(0, 0, 0) rotate(0deg);
+    }
+}
+
+@keyframes report-fade {
+    50% {
+        opacity: var(--fade-opacity, 0.12);
+    }
+
+    100% {
+        opacity: 0;
     }
 }
 

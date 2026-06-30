@@ -110,7 +110,7 @@ const REPORT_EXPORT_STAGES = {
 const REPORT_EXPORT_STAGE_ICONS = {
     [REPORT_EXPORT_STAGES.SNAPSHOTS]: {
         name:      'camera',
-        animation: 'fade',
+        animation: 'report-fade',
     },
     [REPORT_EXPORT_STAGES.WRITING]: {
         name:      'pencil',
