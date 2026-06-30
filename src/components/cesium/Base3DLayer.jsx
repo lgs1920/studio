@@ -17,7 +17,7 @@
 import { BASE3D_ENTITY } from '@Core/constants'
 import { IonLayerUtils } from '@Utils/cesium/IonLayerUtils'
 import { UIToast } from '@Utils/UIToast'
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { useSnapshot } from 'valtio'
 
 export const Base3DLayer = () => {
@@ -26,6 +26,39 @@ export const Base3DLayer = () => {
     const manager = __.layersAndTerrainManager
     const layerId = layers.base3d
     const layer = layerId ? manager.getEntityProxy(layerId) : null
+    const loadingTimer = useRef(null)
+    const loadingStartedAt = useRef(0)
+    const nextFrame = () => new Promise(resolve => window.requestAnimationFrame(() => resolve()))
+    const MIN_LOADING_VISIBILITY_MS = 500
+    const MAX_LOADING_VISIBILITY_MS = 3000
+
+    const setBase3DLoading = (loading) => {
+        const isLoading = lgs.stores.main.components.layers.base3dLoading === true
+        if (loading && isLoading) {
+            return
+        }
+
+        lgs.stores.main.components.layers.base3dLoading = loading
+        if (loadingTimer.current !== null) {
+            clearTimeout(loadingTimer.current)
+            loadingTimer.current = null
+        }
+
+        if (loading) {
+            loadingStartedAt.current = Date.now()
+            loadingTimer.current = window.setTimeout(() => {
+                lgs.stores.main.components.layers.base3dLoading = false
+                loadingTimer.current = null
+            }, MAX_LOADING_VISIBILITY_MS)
+        }
+    }
+
+    const clearLoadingTimer = () => {
+        if (loadingTimer.current !== null) {
+            clearTimeout(loadingTimer.current)
+            loadingTimer.current = null
+        }
+    }
 
     useEffect(() => {
         if (!lgs.viewer || lgs.viewer.isDestroyed() || !layer || layer.type !== BASE3D_ENTITY || (IonLayerUtils.isPersonalLayer(layer) && ion.source !== 'user')) {
@@ -34,16 +67,34 @@ export const Base3DLayer = () => {
             }
             lgs.base3dTileset = null
             lgs.stores.main.theBase3DLayer = null
+            setBase3DLoading(false)
             return undefined
         }
 
         let cancelled = false
         let tileset = null
+        let loadingFinished = false
         const previousGlobeShow = lgs.viewer.scene.globe.show
         const previousDepthTestAgainstTerrain = lgs.viewer.scene.globe.depthTestAgainstTerrain
 
+        const finishLoading = async () => {
+            if (cancelled || loadingFinished) {
+                return
+            }
+            loadingFinished = true
+
+            const elapsed = Date.now() - loadingStartedAt.current
+            if (elapsed < MIN_LOADING_VISIBILITY_MS) {
+                await new Promise(resolve => window.setTimeout(resolve, MIN_LOADING_VISIBILITY_MS - elapsed))
+            }
+            clearLoadingTimer()
+            lgs.stores.main.components.layers.base3dLoading = false
+        }
+
         const load = async () => {
             try {
+                setBase3DLoading(true)
+                await nextFrame()
                 const sceneKind = `${layer?.sceneKind ?? layer?.base3d?.kind ?? layer?.tiles3d?.kind ?? ''}`.toLowerCase()
                 tileset = await IonLayerUtils.createTileset({
                     ...layer,
@@ -67,6 +118,10 @@ export const Base3DLayer = () => {
                     lgs.viewer.scene.globe.depthTestAgainstTerrain = false
                 }
 
+                if (tileset.readyPromise) {
+                    await tileset.readyPromise.catch(() => null)
+                }
+
                 if (layer?.base3d?.flyToOnLoad ?? false) {
                     await lgs.viewer.flyTo(tileset)
                 }
@@ -79,12 +134,19 @@ export const Base3DLayer = () => {
                                   text:    error?.message ?? String(error),
                               })
             }
+            finally {
+                if (!cancelled) {
+                    await finishLoading()
+                }
+            }
         }
 
         void load()
 
         return () => {
             cancelled = true
+            clearLoadingTimer()
+            lgs.stores.main.components.layers.base3dLoading = false
             if (tileset && lgs.viewer?.scene?.primitives?.contains?.(tileset)) {
                 lgs.viewer.scene.primitives.remove(tileset, true)
             }

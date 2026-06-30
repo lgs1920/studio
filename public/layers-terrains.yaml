@@ -64,7 +64,7 @@ providers:
         type: base3d
         sceneKind: google-photorealistic
         base3d:
-          flyToOnLoad: true
+          flyToOnLoad: false
           showGlobe: true
           showTerrain: false
 

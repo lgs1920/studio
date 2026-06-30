@@ -112,6 +112,7 @@ export const main = {
         layers: {
             base: null,
             base3d: null,
+            base3dLoading: false,
             overlay: null,
             tiles3d: null,
         },
