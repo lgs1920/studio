@@ -541,10 +541,26 @@ export const currentViewerSnapshot = async () => {
     }
 }
 
+export const stopReportCameraMotion = async () => {
+    if (globalThis.__?.ui?.cameraManager?.isRotating?.()) {
+        await globalThis.__.ui.cameraManager.stopRotate?.()
+    }
+
+    const panorama = globalThis.lgs?.stores?.ui?.mainUI?.panorama
+    if (panorama?.active) {
+        panorama.active = false
+        panorama.target = false
+        globalThis.lgs?.scene?.requestRender?.()
+    }
+
+    await waitForAnimationFrames(2)
+}
+
 export const withReportJourneyVisibility = async (journey, callback) => {
     const currentJourney = journey ?? globalThis.lgs?.theJourney ?? null
     const previousHideOtherJourneys = getGlobalHideOtherJourneys()
 
+    await stopReportCameraMotion()
     await refreshJourneyVisibility({
         hideOtherJourneys: true,
         currentJourney,
