@@ -2432,3 +2432,40 @@ wa-option:state(current) {
     padding-inline-start: calc(0.25em + var(--lgs-select-option-current-expand));
     padding-inline-end: calc(1em + var(--lgs-select-option-current-expand));
 }
+
+/*******************************************************************************
+ * 3D Tilesets loading
+ ******************************************************************************/
+
+.base3d-loading-overlay {
+    position: fixed;
+    z-index: 2147483646;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 200px;
+    max-height: var(--lgs-line-dimension);
+    padding: var(--lgs-gutter-s);
+    pointer-events: none;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.base3d-loading-overlay::part(body) {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: fit-content;
+    min-width: 0;
+    height: fit-content;
+    min-height: 0;
+    padding: var(--lgs-gutter-s);
+    white-space: nowrap;
+    gap: var(--lgs-gutter-s);
+}
+
+.base3d-loading-overlay wa-spinner {
+    flex: 0 0 auto;
+    --track-width: 3px;
+}
