@@ -737,7 +737,12 @@ export const exportJourneyToPDF = async (journey, {
     const theme = getExportTheme()
     const brandColor = parseCssColor(theme.brand, PDF_COLORS.text)
     const studioLogoPromise = loadStudioLogo()
-    const pdfIconsPromise = loadPDFIcons(theme, {trackColors: trackDrawings.map(({color}) => color)})
+    const pdfIconsPromise = loadPDFIcons(theme, {
+        trackColors: [
+            ...trackDrawings.map(({color}) => color),
+            PDF_COLORS.trace,
+        ],
+    })
     const {profileImage, mapSnapshots} = await withReportJourneyVisibility(journey, async () => {
         const viewerSnapshot = await currentViewerSnapshot()
         await yieldToUI()
