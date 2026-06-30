@@ -59,6 +59,15 @@
     margin-bottom: var(--lgs-gutter-s);
 }
 
+#journey-editor-drawer .journey-global-visibility-row wa-switch {
+    display: flex;
+    width: 100%;
+}
+
+#journey-editor-drawer .journey-global-visibility-row wa-switch::part(base) {
+    width: 100%;
+}
+
 .journey-content-wrapper {
     display: flex;
     flex-direction: column;
