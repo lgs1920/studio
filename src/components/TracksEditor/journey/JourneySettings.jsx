@@ -590,13 +590,10 @@ export const JourneySettings = () => {
             }
 
             const stage = typeof payload === 'string' ? payload : payload?.stage
-            if (stage === REPORT_EXPORT_STAGES.SNAPSHOTS && reportExportAnimation?.stage === REPORT_EXPORT_STAGES.SNAPSHOTS) {
-                return
-            }
 
             const animation = {
                 stage,
-                id: stage === REPORT_EXPORT_STAGES.SNAPSHOTS ? REPORT_EXPORT_STAGES.SNAPSHOTS : `${stage}-${Date.now()}`,
+                id:   typeof payload === 'object' && payload?.id ? payload.id : `${stage}-${Date.now()}`,
             }
 
             setReportExportAnimation(animation)
