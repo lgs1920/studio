@@ -15,8 +15,43 @@
  ******************************************************************************/
 
 import { NO_FOCUS, REFRESH_DRAWING } from '@Core/constants'
+import { SceneUtils } from '@Utils/cesium/SceneUtils'
+import { Cartesian3 } from 'cesium'
 
 const getJourneys = () => Array.from(globalThis.lgs?.journeys?.values?.() ?? [])
+
+const toCartesian = point => {
+    const longitude = Number(point?.longitude)
+    const latitude = Number(point?.latitude)
+    const height = Number(point?.height ?? point?.altitude ?? 0)
+    if (!Number.isFinite(longitude) || !Number.isFinite(latitude) || !Number.isFinite(height)) {
+        return null
+    }
+
+    return Cartesian3.fromDegrees(longitude, latitude, height)
+}
+
+const centroidDistance = (first, second) => {
+    const a = toCartesian(first)
+    const b = toCartesian(second)
+    return a && b ? Cartesian3.distance(a, b) : Number.POSITIVE_INFINITY
+}
+
+export const sortJourneysByCentroidDistance = async (journeys = [], currentJourney = globalThis.lgs?.theJourney ?? null, resolveCentroid = async journey => SceneUtils.getJourneyCentroid(journey, null, {useStoredHeight: false})) => {
+    const currentCentroid = currentJourney ? await resolveCentroid(currentJourney) : null
+    const resolvedJourneys = await Promise.all((journeys ?? []).map(async journey => ({
+        journey,
+        centroid: await resolveCentroid(journey),
+    })))
+
+    return resolvedJourneys
+        .map(item => ({
+            ...item,
+            distance: centroidDistance(item.centroid, currentCentroid),
+        }))
+        .sort((first, second) => first.distance - second.distance)
+        .map(item => item.journey)
+}
 
 export const getGlobalHideOtherJourneys = () => globalThis.lgs?.settings?.journey?.hideOtherJourneys === true
 
@@ -41,23 +76,27 @@ export const refreshJourneyVisibility = async ({
                                                    mode = NO_FOCUS,
                                                } = {}) => {
     const currentJourneySlug = currentJourney?.slug ?? null
-    const items = []
+    const journeys = await sortJourneysByCentroidDistance(getJourneys(), currentJourney)
 
-    for (const journey of getJourneys()) {
+    for (let index = 0; index < journeys.length; index++) {
+        const journey = journeys[index]
         if (!journey) {
             continue
         }
 
-        items.push(journey.draw({
+        await journey.draw({
             action,
             mode,
             hideOtherJourneys,
             currentJourneySlug,
             forceCurrentVisible,
-        }))
+        })
+
+        if (index < journeys.length - 1) {
+            await new Promise(resolve => setTimeout(resolve, 0))
+        }
     }
 
-    await Promise.all(items)
     globalThis.lgs?.scene?.requestRender?.()
 }
 

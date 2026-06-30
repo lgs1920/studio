@@ -130,7 +130,7 @@ export const createReportZip = async (files, options = {}) => {
 
 export const renderHTMLRows = rows => rows
     .filter(row => row?.label && row.value !== undefined && row.value !== null && row.value !== '')
-    .map(row => `<tr><th>${renderHTMLIcon(row.icon)}${escapeHtml(row.label)}</th><td>${htmlText(row.value)}</td></tr>`)
+    .map(row => `<tr><th>${row.icon ? `<span class="table-icon-wrap">${renderHTMLIcon(row.icon)}</span>` : ''}${escapeHtml(row.label)}</th><td>${htmlText(row.value)}</td></tr>`)
     .join('')
 
 export const renderHTMLDataRows = rows => rows
@@ -485,11 +485,20 @@ export const buildJourneyHTML = ({journey, pois, twoDMapAssets, threeDMapAssets,
             width: auto;
         }
         .table-icon {
-            width: 1.05em;
-            height: 1.05em;
-            margin-right: 0.38em;
+            width: 100%;
+            height: 100%;
             fill: currentColor;
-            vertical-align: -0.18em;
+            vertical-align: middle;
+            overflow: visible;
+        }
+        .table-icon-wrap {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 1.18em;
+            height: 1.18em;
+            margin-right: 0.42em;
+            vertical-align: middle;
         }
         .poi-badge {
             display: inline-grid;

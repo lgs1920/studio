@@ -321,8 +321,9 @@ export const createTextWriter = (doc, studioLogo, icons = {}) => {
             doc.rect(PAGE_MARGIN, rowY, leftWidth, rowHeight)
 
             const iconX = PAGE_MARGIN + 2.1
-            const iconY = rowY + (rowHeight - 3.9) / 2
-            const labelX = drawPDFIcon(doc, icons, item.icon, iconX, iconY, 3.9) ? iconX + 5.8 : iconX
+            const iconSize = 4.5
+            const iconY = rowY + (rowHeight - iconSize) / 2
+            const labelX = drawPDFIcon(doc, icons, item.icon, iconX, iconY, iconSize) ? iconX + 6.2 : iconX
             doc.setFont('helvetica', 'bold')
             doc.setFontSize(9.6)
             setColor(doc, 'setTextColor', textColor)
