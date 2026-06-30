@@ -254,6 +254,8 @@ export const renderMapCards = (assets, theme) => assets.map(asset => {
                 </article>`
 }).join('')
 
+export const buildPOITableHeader = () => '<thead><tr><th>POI</th><th>Name</th><th>Coordinates (lat,long)</th><th>Altitude</th><th>Description</th></tr></thead>'
+
 export const buildJourneyHTML = ({journey, pois, twoDMapAssets, threeDMapAssets, logoPath, profileImagePath, theme, credits = []}) => {
     const title = plainText(journey?.title || 'Journey')
     const subtitle = reportSubtitle(journey)
@@ -586,7 +588,7 @@ export const buildJourneyHTML = ({journey, pois, twoDMapAssets, threeDMapAssets,
         ${pois.length > 0 ? `<section>
             <h2>POIs</h2>
             <table>
-                <thead><tr><th>POI</th><th>Name</th><th>Coordinates (lat,long)</th><th>${renderHTMLIcon('mountains')}Altitude</th><th>Description</th></tr></thead>
+                ${buildPOITableHeader()}
                 <tbody>${poiRows}</tbody>
             </table>
         </section>` : ''}
