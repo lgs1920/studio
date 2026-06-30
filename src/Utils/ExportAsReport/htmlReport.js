@@ -648,7 +648,7 @@ export const exportJourneyToHTMLZip = async (journey, {
 
     const theme = getExportTheme()
     const studioLogoPromise = loadStudioLogo()
-    const {profileImage, mapSnapshots} = await withReportJourneyVisibility(journey, async () => {
+    const {result: {profileImage, mapSnapshots}, restore} = await withReportJourneyVisibility(journey, async () => {
         const viewerSnapshot = await currentViewerSnapshot()
         await yieldToUI()
         const profileImagePromise = captureJourneyProfileImage({
@@ -671,68 +671,73 @@ export const exportJourneyToHTMLZip = async (journey, {
                                                                 ])
         return {profileImage, mapSnapshots}
     })
-    const studioLogo = await studioLogoPromise
-    const reportCredits = ReportCredits.getReportCredits()
-    await yieldToUI()
-    const files = {}
-    const twoDMapAssets = CARDINAL_VIEWS.map(view => {
-        const path = `images/map-2d-${slugPart(view.label)}.svg`
-        files[path] = strToU8(build2DMapSVG({
-                                                view,
-                                                trackDrawings,
-                                                pois: exportablePois,
-                                                endpointMarkers,
-                                                theme,
-                                                traceColor: '#000000',
-                                            }))
-        return {
-            path,
-            title: view.label,
+    try {
+        const studioLogo = await studioLogoPromise
+        const reportCredits = ReportCredits.getReportCredits()
+        await yieldToUI()
+        const files = {}
+        const twoDMapAssets = CARDINAL_VIEWS.map(view => {
+            const path = `images/map-2d-${slugPart(view.label)}.svg`
+            files[path] = strToU8(build2DMapSVG({
+                                                    view,
+                                                    trackDrawings,
+                                                    pois: exportablePois,
+                                                    endpointMarkers,
+                                                    theme,
+                                                    traceColor: '#000000',
+                                                }))
+            return {
+                path,
+                title: view.label,
+            }
+        })
+        const threeDMapAssets = mapSnapshots.map(snapshot => {
+            const path = `images/map-3d-${slugPart(snapshot.view?.label)}.png`
+            files[path] = dataUrlToBytes(snapshot.dataUrl)
+            return {
+                path,
+                title: snapshot.view?.label ?? '3D',
+                northRotation: snapshot.view?.heading ?? 0,
+                width: snapshot.width,
+                height: snapshot.height,
+                trackInfo: snapshot.trackInfo,
+                arrowColor: theme.brand,
+                progressColor: theme.text,
+            }
+        })
+        const logoPath = studioLogo?.dataUrl ? 'images/logo-lgs1920-studio.png' : ''
+        if (logoPath) {
+            files[logoPath] = dataUrlToBytes(studioLogo.dataUrl)
         }
-    })
-    const threeDMapAssets = mapSnapshots.map(snapshot => {
-        const path = `images/map-3d-${slugPart(snapshot.view?.label)}.png`
-        files[path] = dataUrlToBytes(snapshot.dataUrl)
-        return {
-            path,
-            title: snapshot.view?.label ?? '3D',
-            northRotation: snapshot.view?.heading ?? 0,
-            width: snapshot.width,
-            height: snapshot.height,
-            trackInfo: snapshot.trackInfo,
-            arrowColor: theme.brand,
-            progressColor: theme.text,
+        const profileImagePath = profileImage?.dataUrl ? 'images/elevation-profile.png' : ''
+        if (profileImagePath) {
+            files[profileImagePath] = dataUrlToBytes(profileImage.dataUrl)
         }
-    })
-    const logoPath = studioLogo?.dataUrl ? 'images/logo-lgs1920-studio.png' : ''
-    if (logoPath) {
-        files[logoPath] = dataUrlToBytes(studioLogo.dataUrl)
+
+        await yieldToUI()
+        files['index.html'] = strToU8(buildJourneyHTML({
+                                                           journey,
+                                                           pois: listedPois,
+                                                           twoDMapAssets,
+                                                           threeDMapAssets,
+                                                           logoPath,
+                                                           profileImagePath,
+                                                           theme,
+                                                           credits: reportCredits,
+                                                       }))
+
+        await yieldToUI()
+        const archive = await createReportZip(files, {level: 6})
+        downloadBlob(archive, fileName, 'application/zip')
+
+        return {
+            fileName,
+            poiCount:         listedPois.length,
+            imageCount:       twoDMapAssets.length + threeDMapAssets.length + (logoPath ? 1 : 0) + (profileImagePath ? 1 : 0),
+            mapSnapshotCount: threeDMapAssets.length,
+        }
     }
-    const profileImagePath = profileImage?.dataUrl ? 'images/elevation-profile.png' : ''
-    if (profileImagePath) {
-        files[profileImagePath] = dataUrlToBytes(profileImage.dataUrl)
-    }
-
-    await yieldToUI()
-    files['index.html'] = strToU8(buildJourneyHTML({
-                                                       journey,
-                                                       pois: listedPois,
-                                                       twoDMapAssets,
-                                                       threeDMapAssets,
-                                                       logoPath,
-                                                       profileImagePath,
-                                                       theme,
-                                                       credits: reportCredits,
-                                                   }))
-
-    await yieldToUI()
-    const archive = await createReportZip(files, {level: 6})
-    downloadBlob(archive, fileName, 'application/zip')
-
-    return {
-        fileName,
-        poiCount:         listedPois.length,
-        imageCount:       twoDMapAssets.length + threeDMapAssets.length + (logoPath ? 1 : 0) + (profileImagePath ? 1 : 0),
-        mapSnapshotCount: threeDMapAssets.length,
+    finally {
+        await restore?.()
     }
 }

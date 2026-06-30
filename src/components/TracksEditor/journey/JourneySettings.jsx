@@ -107,7 +107,6 @@ const REPORT_EXPORT_STAGES = {
     SNAPSHOTS: 'snapshots',
     WRITING:   'writing',
 }
-const REPORT_EXPORT_FLASH_DURATION = 860
 
 const REPORT_EXPORT_STAGE_ICONS = {
     [REPORT_EXPORT_STAGES.SNAPSHOTS]: {
@@ -203,7 +202,6 @@ export const JourneySettings = () => {
     const _elevationRequestId = useRef(0)
     const _exportFormat = useRef(JOURNEY_EXPORT_FORMATS.GPX)
     const _exportFileName = useRef('')
-    const _reportExportFlashTimeout = useRef(null)
 
     const [exportFormat, setExportFormatState] = useState(JOURNEY_EXPORT_FORMATS.GPX)
     const [exportFileName, setExportFileNameState] = useState('')
@@ -586,30 +584,22 @@ export const JourneySettings = () => {
 
         const format = _exportFormat.current
         let reportExportActive = true
-        const clearReportExportFlashTimeout = () => {
-            clearTimeout(_reportExportFlashTimeout.current)
-            _reportExportFlashTimeout.current = null
-        }
         const setCurrentReportExportStage = payload => {
             if (!reportExportActive) {
                 return
             }
 
-            clearReportExportFlashTimeout()
             const stage = typeof payload === 'string' ? payload : payload?.stage
+            if (stage === REPORT_EXPORT_STAGES.SNAPSHOTS && reportExportAnimation?.stage === REPORT_EXPORT_STAGES.SNAPSHOTS) {
+                return
+            }
+
             const animation = {
                 stage,
-                id: payload?.id ?? `${stage}-${Date.now()}`,
+                id: stage === REPORT_EXPORT_STAGES.SNAPSHOTS ? REPORT_EXPORT_STAGES.SNAPSHOTS : `${stage}-${Date.now()}`,
             }
 
             setReportExportAnimation(animation)
-            if (stage === REPORT_EXPORT_STAGES.SNAPSHOTS) {
-                _reportExportFlashTimeout.current = setTimeout(() => {
-                    if (reportExportActive) {
-                        setReportExportAnimation(current => current?.id === animation.id ? null : current)
-                    }
-                }, REPORT_EXPORT_FLASH_DURATION)
-            }
         }
 
         try {
@@ -638,7 +628,6 @@ export const JourneySettings = () => {
         }
         finally {
             reportExportActive = false
-            clearReportExportFlashTimeout()
             setReportExportAnimation(null)
         }
     }

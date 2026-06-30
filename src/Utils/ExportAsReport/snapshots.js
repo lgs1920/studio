@@ -559,6 +559,18 @@ export const stopReportCameraMotion = async () => {
 export const withReportJourneyVisibility = async (journey, callback) => {
     const currentJourney = journey ?? globalThis.lgs?.theJourney ?? null
     const previousHideOtherJourneys = getGlobalHideOtherJourneys()
+    let restored = false
+
+    const restore = async () => {
+        if (restored) {
+            return
+        }
+        restored = true
+        await refreshJourneyVisibility({
+            hideOtherJourneys: previousHideOtherJourneys,
+            currentJourney,
+        })
+    }
 
     await stopReportCameraMotion()
     await refreshJourneyVisibility({
@@ -568,13 +580,14 @@ export const withReportJourneyVisibility = async (journey, callback) => {
     })
 
     try {
-        return await callback?.()
+        return {
+            result:  await callback?.(),
+            restore,
+        }
     }
-    finally {
-        await refreshJourneyVisibility({
-            hideOtherJourneys: previousHideOtherJourneys,
-            currentJourney,
-        })
+    catch (error) {
+        await restore()
+        throw error
     }
 }
 
