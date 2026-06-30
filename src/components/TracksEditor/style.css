@@ -713,6 +713,11 @@ wa-tab::part(base) {
 
 .journey-report-export-animation wa-icon[animation='report-fade'] {
     animation-name: report-fade;
+    animation-delay: var(--animation-delay, 0s);
+    animation-direction: var(--animation-direction, normal);
+    animation-duration: var(--animation-duration, 1s);
+    animation-iteration-count: var(--animation-iteration-count, infinite);
+    animation-timing-function: var(--animation-timing, cubic-bezier(0.4, 0, 0.6, 1));
     animation-fill-mode: forwards;
 }
 
@@ -760,6 +765,10 @@ wa-tab::part(base) {
 }
 
 @keyframes report-fade {
+    0% {
+        opacity: 1;
+    }
+
     50% {
         opacity: var(--fade-opacity, 0.12);
     }
