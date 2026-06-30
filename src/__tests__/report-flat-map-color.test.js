@@ -18,6 +18,18 @@ describe('report flat map rendering', () => {
         expect(trackDrawings[0].color).toEqual([68, 68, 68])
     })
 
+    it('can normalize the HTML 2D trace to black', () => {
+        const trackDrawings = normalizeReportTraceTrackDrawings([{
+            color: '#ff0000',
+            segments: [[
+                {longitude: 5.0, latitude: 45.0},
+                {longitude: 5.1, latitude: 45.1},
+            ]],
+        }], '#000000')
+
+        expect(trackDrawings[0].color).toBe('#000000')
+    })
+
     it('keeps projected track info usable while forcing the report trace color', () => {
         const path = Object.assign([
             {x: 1, y: 2},

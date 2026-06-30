@@ -44,14 +44,14 @@ import { yieldToUI } from './snapshots'
 
 const PDF_MAP_YIELD_LINE_INTERVAL = 2500
 
-export const normalizeReportTraceTrackDrawings = trackDrawings => (trackDrawings ?? []).map(item => ({
+export const normalizeReportTraceTrackDrawings = (trackDrawings, traceColor = PDF_COLORS.trace) => (trackDrawings ?? []).map(item => ({
     ...item,
-    color: PDF_COLORS.trace,
+    color: traceColor,
 }))
 
-export const normalizeReportTraceTrackInfo = trackInfo => trackInfo ? {
+export const normalizeReportTraceTrackInfo = (trackInfo, traceColor = PDF_COLORS.trace) => trackInfo ? {
     ...trackInfo,
-    paths: trackInfo.paths.map(path => Object.assign(path.slice(), {color: PDF_COLORS.trace})),
+    paths: trackInfo.paths.map(path => Object.assign(path.slice(), {color: traceColor})),
 } : null
 
 export const drawBadge = (doc, {x, y, label, color, radius = POI_BADGE_RADIUS}) => {
@@ -273,7 +273,7 @@ export const buildSVGBadge = ({point, label, color, radius}) => `
             <text x="${svgNumber(point.x)}" y="${svgNumber(point.y)}" text-anchor="middle" dominant-baseline="central">${escapeHtml(label)}</text>
         </g>`
 
-export const build2DMapSVG = ({view, trackDrawings, pois, endpointMarkers, theme}) => {
+export const build2DMapSVG = ({view, trackDrawings, pois, endpointMarkers, theme, traceColor = '#000000'}) => {
     const width = 1200
     const height = 760
     const box = {
@@ -300,16 +300,16 @@ export const build2DMapSVG = ({view, trackDrawings, pois, endpointMarkers, theme
                                          box:    innerBox,
                                          rotation: view.rotation,
                                      })
-    const traceColor = cssColor(PDF_COLORS.trace)
-    const traceTrackDrawings = normalizeReportTraceTrackDrawings(trackDrawings)
-    const traceTrackInfo = normalizeReportTraceTrackInfo(getProjectedTrackInfo(trackDrawings, project))
+    const traceFillColor = cssColor(traceColor)
+    const traceTrackDrawings = normalizeReportTraceTrackDrawings(trackDrawings, traceColor)
+    const traceTrackInfo = normalizeReportTraceTrackInfo(getProjectedTrackInfo(trackDrawings, project), traceColor)
     const trackLines = traceTrackDrawings.flatMap(({segments}) => segments.map(segment => {
         const points = segment.map(point => {
             const projected = project(point)
             return `${svgNumber(projected.x)},${svgNumber(projected.y)}`
         }).join(' ')
 
-        return `<polyline points="${points}" stroke="${traceColor}"/>`
+        return `<polyline points="${points}" stroke="${traceFillColor}"/>`
     })).join('\n')
     const progressMarkers = buildSVGProgressMarkers({trackInfo: traceTrackInfo, container: innerBox})
     const poiBadges = pois.map(poi => {

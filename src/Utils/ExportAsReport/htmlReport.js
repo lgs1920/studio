@@ -681,6 +681,7 @@ export const exportJourneyToHTMLZip = async (journey, {
                                                 pois: exportablePois,
                                                 endpointMarkers,
                                                 theme,
+                                                traceColor: '#000000',
                                             }))
         return {
             path,

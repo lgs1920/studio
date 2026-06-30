@@ -417,8 +417,10 @@ export const createTextWriter = (doc, studioLogo, icons = {}) => {
                 doc.setFontSize(9.8)
                 setColor(doc, 'setTextColor', brandColor)
                 if (column.icon === 'mountains') {
-                    const iconDrawn = drawPDFIcon(doc, icons, 'mountains', x + padding, y + 2.25, 3.9)
-                    doc.text(column.label, x + padding + (iconDrawn ? 5.8 : 0), y + headerHeight / 2, {baseline: 'middle'})
+                    const iconSize = 3.2
+                    const iconY = y + (headerHeight - iconSize) / 2
+                    const iconDrawn = drawPDFIcon(doc, icons, 'mountains', x + padding, iconY, iconSize)
+                    doc.text(column.label, x + padding + (iconDrawn ? 5.0 : 0), y + headerHeight / 2, {baseline: 'middle'})
                 }
                 else {
                     doc.text(column.label, x + padding, y + headerHeight / 2, {baseline: 'middle'})
