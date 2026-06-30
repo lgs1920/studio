@@ -211,6 +211,18 @@ describe('IonTokenManager', () => {
         expect(stores.ion.source).toBe('default')
     })
 
+    it('falls back to the shared application token and opens the invalid prompt when requested', async () => {
+        const stores = globalThis.lgs.stores
+        const manager = new IonTokenManager()
+        await manager.fallbackToSharedToken('invalid')
+
+        expect(stores.ion.token).toBe('shared-token')
+        expect(stores.ion.source).toBe('default')
+        expect(stores.ion.showPrompt).toBe(true)
+        expect(stores.ion.promptMode).toBe('invalid')
+        expect(globalThis.lgs.db.vault.delete).toHaveBeenCalledWith('cesium_ion_token', 'vault')
+    })
+
     it('migrates legacy management data out of vault on load', async () => {
         const stores = globalThis.lgs.stores
         stores.ion.loaded = false

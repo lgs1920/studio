@@ -25,6 +25,7 @@ import {
     MapLayer,
 }                       from '@Components/cesium/MapLayer'
 import { Base3DLayer }  from '@Components/cesium/Base3DLayer'
+import { Base3DLoadingOverlay } from '@Components/cesium/Base3DLoadingOverlay'
 import { Tiles3DLayer } from '@Components/cesium/Tiles3DLayer'
 import {
     ensureViewer,
@@ -160,6 +161,7 @@ const AppSurface = ({onReady}) => {
             <MapLayer type={OVERLAY_ENTITY}/>
             <Viewer/>
             <Base3DLayer/>
+            <Base3DLoadingOverlay/>
             <Tiles3DLayer/>
             <SelectionIndicator/>
             <Toast/>
