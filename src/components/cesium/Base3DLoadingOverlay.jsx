@@ -14,17 +14,13 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { WaButton, WaCard, WaIcon, WaSpinner } from '@web.awesome.me/webawesome-pro/dist/react'
+import { WaCard, WaSpinner } from '@web.awesome.me/webawesome-pro/dist/react'
 import { memo }                                from 'react'
 import { useSnapshot } from 'valtio'
 
 export const Base3DLoadingOverlay = memo(() => {
     const {components} = useSnapshot(lgs.stores.main)
     const base3dLoading = components?.layers?.base3dLoading === true
-
-    const closeOverlay = () => {
-        lgs.stores.main.components.layers.base3dLoading = false
-    }
 
     if (!base3dLoading) {
         return null

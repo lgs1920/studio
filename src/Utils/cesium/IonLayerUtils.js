@@ -20,32 +20,33 @@ import {
 import { CacheManager } from '@Core/cache/CacheManager'
 import { Cesium3DTileset, Google2DImageryProvider, Ion, IonImageryProvider, IonResource, createGooglePhotorealistic3DTileset } from 'cesium'
 
-const CESIUM_CACHE_PREFIX = 'cesium-ion-assets'
+const CESIUM_CACHE_NAME = 'cesium-ion-assets'
 const DEFAULT_CACHE_QUOTA = 500 * 1024 * 1024
 
 const normalizeToken = value => typeof value === 'string' ? value.trim() : ''
 
-const fnv1a = (input) => {
-    const value = normalizeToken(input)
-    let hash = 0x811c9dc5
-
-    for (let i = 0; i < value.length; i++) {
-        hash ^= value.charCodeAt(i)
-        hash = Math.imul(hash, 0x01000193)
-    }
-
-    return `0x${(hash >>> 0).toString(16).padStart(8, '0')}`
-}
-
 const getActiveToken = () => normalizeToken(globalThis.lgs?.stores?.ion?.token ?? Ion.defaultAccessToken)
 
 export class IonLayerUtils {
-    static tokenCacheName = (token = getActiveToken()) => `${CESIUM_CACHE_PREFIX}-${fnv1a(token)}`
+    static lastSyncedToken = null
+    static tokenCacheName = () => CESIUM_CACHE_NAME
 
     static async syncCesiumCache(token = getActiveToken(), {purgePrevious = true} = {}) {
+        const normalizedToken = normalizeToken(token)
         const cacheName = IonLayerUtils.tokenCacheName(token)
         const currentCache = globalThis.__?.app?.cesiumCache
+
         if (currentCache?.cacheName === cacheName) {
+            if (purgePrevious && IonLayerUtils.lastSyncedToken !== null && IonLayerUtils.lastSyncedToken !== normalizedToken) {
+                try {
+                    currentCache.clear?.()
+                }
+                catch (error) {
+                    console.error('[IonLayerUtils] Failed to clear Cesium cache after token change:', error)
+                }
+            }
+
+            IonLayerUtils.lastSyncedToken = normalizedToken
             return cacheName
         }
 
@@ -61,6 +62,7 @@ export class IonLayerUtils {
         if (globalThis.__?.app) {
             globalThis.__.app.cesiumCache = new CacheManager(cacheName, DEFAULT_CACHE_QUOTA)
         }
+        IonLayerUtils.lastSyncedToken = normalizedToken
         return cacheName
     }
 
