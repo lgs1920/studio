@@ -18,7 +18,6 @@ import { LGSScrollbars } from '@Components/MainUI/LGSScrollbars'
 import {
     WaButton, WaCallout, WaCopyButton, WaDetails, WaDialog, WaIcon,
 }                        from '@web.awesome.me/webawesome-pro/dist/react'
-import parse             from 'html-react-parser'
 import { useState }      from 'react'
 
 /**
@@ -31,6 +30,9 @@ export const InitErrorMessage = ({error}) => {
     const [isOpen, setIsOpen] = useState(false)
     const text = 'We\'re sorry for the interruption.'
     const remark = 'Something didn\'t go quite as planned on our end.'
+    const errorType = error?.type ? `[${String(error.type)}]` : ''
+    const errorMessage = String(error?.message ?? error?.cause?.message ?? error ?? 'Unknown initialization error')
+    const errorStack = String(error?.stack ?? '')
 
     return (
         <WaDialog label={`${lgs.servers.studio.name} stopped!`}
@@ -42,7 +44,7 @@ export const InitErrorMessage = ({error}) => {
 
                 <WaCallout variant="danger" open>
                     <WaIcon slot="icon" name="triangle-exclamation" variant="regular"/>
-                    {error.type && `[${error?.type}]`} {parse(error.message)}<br/><br/>
+                    {errorType} {errorMessage}<br/><br/>
 
                     <div>
                         <span>{text}</span><br/>
@@ -69,7 +71,7 @@ export const InitErrorMessage = ({error}) => {
                     <WaIcon slot="collapse-icon" name="square-minus" variant="regular" rotate="90"/>
                     <pre id="lgs--init-error-stack">
                         <LGSScrollbars>
-                            {error.stack}
+                            {errorStack}
                         </LGSScrollbars>
                     </pre>
                 </WaDetails>

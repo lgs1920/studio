@@ -80,6 +80,32 @@ const PromptBody = ({mode, delayLabel, remainingLabel, inputRef, setCanSave, ope
         )
     }
 
+    if (mode === 'invalid') {
+        return (
+            <>
+                <WaCallout open variant="danger" appearance="filled-outlined">
+                    <WaIcon slot="icon" name="triangle-exclamation" variant="regular"/>
+                    {'The stored Cesium Ion token is invalid.'}
+                </WaCallout>
+                <br/>
+                {'Please enter another token to keep using Cesium assets in the app.'}<br/>
+                {'The shared token is active again for now, but you should replace the broken token.'}<br/>
+                <WaInput
+                    ref={inputRef}
+                    appearance="filled"
+                    type="password"
+                    password-toggle
+                    autocomplete="off"
+                    placeholder={'Paste your Cesium Ion token'}
+                    defaultValue=""
+                    onInput={() => {
+                        setCanSave((inputRef.current?.value ?? '').trim() !== '')
+                    }}
+                />
+            </>
+        )
+    }
+
     if (mode === 'blocked') {
         return (
             <>
@@ -265,6 +291,8 @@ export const IonTokenPrompt = () => {
                    ? 'Cesium Ion help'
                    : mode === 'intro'
                      ? 'Cesium Ion access'
+                     : mode === 'invalid'
+                       ? 'Cesium Ion token invalid'
                      : mode === 'blocked'
                        ? 'Cesium Ion allowance exhausted'
                        : 'Cesium Ion access'}

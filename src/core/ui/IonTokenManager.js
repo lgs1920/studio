@@ -417,6 +417,7 @@ export class IonTokenManager {
                                  })
                 await IonLayerUtils.syncCesiumCache(storedToken)
                 state.showPrompt = false
+                state.promptMode = null
                 state.dismissedThisSession = false
                 state.timerActive = false
             }
@@ -438,6 +439,23 @@ export class IonTokenManager {
         finally {
             this.#loadPromise = null
         }
+    }
+
+    fallbackToSharedToken = async (promptMode = 'invalid') => {
+        const state = getIonState()
+
+        await this.stopPromptTimer({persist: false})
+        await lgs.db?.vault?.delete?.(ION_TOKEN_KEY, VAULT_STORE)
+        this.#applyState({
+                             token:  defaultIonToken(),
+                             source: 'default',
+                         })
+        await IonLayerUtils.syncCesiumCache(defaultIonToken())
+        state.dismissedThisSession = false
+        state.promptMode = promptMode
+        state.showPrompt = true
+        state.timerActive = false
+        return state
     }
 
     applyToken = async (token, source = 'user') => {
@@ -489,7 +507,6 @@ export class IonTokenManager {
             throw new Error('Please enter a personal Cesium Ion token. The shared application token cannot be saved as your personal token.')
         }
 
-        await this.#validateToken(nextToken)
         await lgs.db.vault.put(ION_TOKEN_KEY, nextToken, VAULT_STORE)
         await this.applyToken(nextToken, 'user')
         const state = getIonState()

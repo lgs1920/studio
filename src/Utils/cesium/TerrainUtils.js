@@ -65,9 +65,31 @@ export class TerrainUtils {
     }
 
     static async changeTerrain(entity) {
-        const terrain = new Terrain(await TerrainUtils.setTerrain(entity))
-        if (terrain) {
-            await lgs.scene.setTerrain(terrain)
+        const theEntity = (typeof entity === 'string') ? __.layersAndTerrainManager.getEntityProxy(entity) : entity
+
+        try {
+            const terrain = new Terrain(await TerrainUtils.setTerrain(theEntity))
+            if (terrain) {
+                await lgs.scene.setTerrain(terrain)
+            }
+        }
+        catch (error) {
+            const errorMessage = `${error?.message ?? ''} ${error?.cause?.message ?? ''}`.toLowerCase()
+            const shouldFallback = lgs.stores?.ion?.source === 'user'
+                && /401|403|unauthorized|forbidden/.test(errorMessage)
+
+            if (shouldFallback) {
+                await __.ui.ionTokenManager.fallbackToSharedToken('invalid')
+                const terrain = new Terrain(await TerrainUtils.setTerrain(theEntity))
+                if (terrain) {
+                    await lgs.scene.setTerrain(terrain)
+                    return
+                }
+            }
+
+            const name = theEntity?.name ?? theEntity?.id ?? entity ?? 'terrain'
+            const cause = error?.message ? ` ${error.message}` : ''
+            throw new Error(`Cesium terrain "${name}" failed to load.${cause}`)
         }
     }
 }

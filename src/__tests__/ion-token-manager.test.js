@@ -130,22 +130,6 @@ describe('IonTokenManager', () => {
         expect(globalThis.lgs.stores.ion.timerActive).toBe(false)
     })
 
-    it('validates a personal token before saving it', async () => {
-        const manager = new IonTokenManager()
-
-        await manager.save('personal-token')
-
-        expect(globalThis.fetch).toHaveBeenCalledWith(
-            'https://api.cesium.com/v1/assets?limit=1',
-            expect.objectContaining({
-                                        headers: expect.objectContaining({
-                                                                         Authorization: 'Bearer personal-token',
-                                                                     }),
-                                    }),
-        )
-        expect(globalThis.lgs.db.vault.put).toHaveBeenCalledWith('cesium_ion_token', 'personal-token', 'vault')
-    })
-
     it('stores usage and intro management data in settings, not vault', async () => {
         const manager = new IonTokenManager()
 
@@ -183,21 +167,6 @@ describe('IonTokenManager', () => {
         expect(globalThis.lgs.stores.ion.promptMode).toBe('blocked')
     })
 
-    it('rejects an invalid personal token before writing it to the vault', async () => {
-        const manager = new IonTokenManager()
-        globalThis.fetch.mockResolvedValueOnce({
-            ok:     false,
-            status: 401,
-            json:   vi.fn(async () => ({message: 'Invalid access token'})),
-        })
-
-        await expect(manager.save('bad-token')).rejects.toThrow('could not be validated')
-
-        expect(globalThis.lgs.db.vault.put).not.toHaveBeenCalled()
-        expect(globalThis.lgs.stores.ion.token).toBe('shared-token')
-        expect(globalThis.lgs.stores.ion.source).toBe('default')
-    })
-
     it('loads the shared application token from the ion settings section', async () => {
         const stores = globalThis.lgs.stores
         stores.ion.loaded = false
@@ -209,6 +178,18 @@ describe('IonTokenManager', () => {
 
         expect(stores.ion.token).toBe('nested-shared-token')
         expect(stores.ion.source).toBe('default')
+    })
+
+    it('falls back to the shared application token and opens the invalid prompt when requested', async () => {
+        const stores = globalThis.lgs.stores
+        const manager = new IonTokenManager()
+        await manager.fallbackToSharedToken('invalid')
+
+        expect(stores.ion.token).toBe('shared-token')
+        expect(stores.ion.source).toBe('default')
+        expect(stores.ion.showPrompt).toBe(true)
+        expect(stores.ion.promptMode).toBe('invalid')
+        expect(globalThis.lgs.db.vault.delete).toHaveBeenCalledWith('cesium_ion_token', 'vault')
     })
 
     it('migrates legacy management data out of vault on load', async () => {
