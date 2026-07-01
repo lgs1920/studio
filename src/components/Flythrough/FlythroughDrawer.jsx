@@ -35,11 +35,9 @@ import {
     FLYTHROUGH_PROFILE_MARKER_FILL_MIN_SIZE, FLYTHROUGH_PROGRESSION_BORDER_MAX_WIDTH,
     FLYTHROUGH_PROGRESSION_BORDER_MIN_WIDTH, FLYTHROUGH_PROGRESSION_FILL_MAX_WIDTH,
     FLYTHROUGH_PROGRESSION_FILL_MIN_WIDTH, FLYTHROUGH_TRACE_MODE_FULL, FLYTHROUGH_TRACE_MODE_PROGRESSIVE,
-    FLYTHROUGH_CAMERA_PRESET_CUSTOM, FLYTHROUGH_CAMERA_PRESETS,
-    FLYTHROUGH_HYSTERESIS_EASING_MAX, FLYTHROUGH_HYSTERESIS_EASING_MIN,
-    FLYTHROUGH_HYSTERESIS_HEADING_RATIO_MAX, FLYTHROUGH_HYSTERESIS_HEADING_RATIO_MIN,
+    FLYTHROUGH_CAMERA_PRESET_CUSTOM, FLYTHROUGH_CAMERA_PRESETS, FLYTHROUGH_HYSTERESIS_EASING_MAX,
+    FLYTHROUGH_HYSTERESIS_EASING_MIN,
     FLYTHROUGH_HYSTERESIS_MARGIN_RATIO_MAX, FLYTHROUGH_HYSTERESIS_MARGIN_RATIO_MIN,
-    FLYTHROUGH_HYSTERESIS_STOP_THRESHOLD_MAX, FLYTHROUGH_HYSTERESIS_STOP_THRESHOLD_MIN,
     getFlythroughCameraPresetKey, getFlythroughCameraPresetUpdates, normalizeFlythroughCamera, normalizeFlythroughMarker, normalizeFlythroughProfileInfo,
     normalizeFlythroughProgressionStyle, normalizeFlythroughTrace,
 }                 from '@Core/ui/flythrough/FlythroughProgressionStyle'
@@ -881,37 +879,6 @@ export const FlythroughDrawer = memo(() => {
                      })
     }, [camera.hysteresis.easing, updateCamera])
 
-    const updateHysteresisStopThreshold = useCallback((event) => {
-        updateCamera({
-                         hysteresis: {
-                             stopThreshold: clampFlythroughNumber(
-                                 event.target.value,
-                                 camera.hysteresis.stopThreshold,
-                                 0.000001,
-                                 0.001,
-                             ),
-                         },
-                     })
-    }, [camera.hysteresis.stopThreshold, updateCamera])
-
-    const defaultHeadingHysteresisRatio = camera.positionMode === FLYTHROUGH_CAMERA_POSITION_SYSTEM
-        ? 12 / 180
-        : 5 / 180
-    const headingHysteresisRatio = camera.hysteresis.headingRatio ?? defaultHeadingHysteresisRatio
-
-    const updateHysteresisHeadingRatio = useCallback((event) => {
-        updateCamera({
-                         hysteresis: {
-                             headingRatio: clampFlythroughNumber(
-                                 event.target.value,
-                                 headingHysteresisRatio,
-                                 FLYTHROUGH_HYSTERESIS_HEADING_RATIO_MIN,
-                                 FLYTHROUGH_HYSTERESIS_HEADING_RATIO_MAX,
-                             ),
-                         },
-                     })
-    }, [headingHysteresisRatio, updateCamera])
-
     const handleRequestClose = useCallback((event) => {
         if (event.target.tagName !== 'WA-DRAWER') {
             event.preventDefault()
@@ -1078,111 +1045,111 @@ export const FlythroughDrawer = memo(() => {
                                                             value={FLYTHROUGH_CAMERA_POSITION_AHEAD}>{'Ahead'}</WaOption>
                                                     </WaSelect>
                                                 </div>
+                                                <div className="flythrough-fieldset">
+                                                    <WaSelect appearance="filled"
+                                                        label="Camera altitude"
+                                                        label-at-start
+                                                        size="s"
+                                                        value={camera.altitudeMode}
+                                                        onChange={updateAltitudeMode}
+                                                        className="half-width">
+                                                        <WaOption
+                                                            value={FLYTHROUGH_CAMERA_ALTITUDE_CONSTANT}>{'Fixed'}</WaOption>
+                                                        <WaOption
+                                                            value={FLYTHROUGH_CAMERA_ALTITUDE_GROUND_OFFSET}>{'Ground offset'}</WaOption>
+                                                    </WaSelect>
+                                                    <div className="flythrough-style-field-grid is-single">
+                                                        <WaNumberInput
+                                                            label={altitudeFieldLabel}
+                                                            size="s"
+                                                            appearance="filled"
+                                                            min={Math.round(UnitUtils.convert(10).to(altitudeUnit))}
+                                                            step={Math.max(1, Math.round(UnitUtils.convert(50).to(altitudeUnit)))}
+                                                            value={altitudeDisplayValue}
+                                                            onFocus={() => beginCameraDraft('altitude', altitudeDisplayValue)}
+                                                            onInput={event => {
+                                                                updateCameraDraft('altitude', event.target.value)
+                                                            }}
+                                                            onChange={event => {
+                                                                updateCameraDraft('altitude', event.target.value)
+                                                                commitCameraAltitude(event.target.value, {syncCamera: false})
+                                                            }}
+                                                            onBlur={event => {
+                                                                const currentValue = cameraDraftValues.current.altitude ?? event.target.value
+                                                                const committed = commitCameraAltitude(currentValue, {syncCamera: false})
+                                                                if (!committed && cameraDraftBaseline.current?.field === 'altitude') {
+                                                                    setCameraDrafts(current => ({
+                                                                        ...current,
+                                                                        altitude: String(Math.round(UnitUtils.convert(cameraDraftBaseline.current.altitude).to(altitudeUnit))),
+                                                                    }))
+                                                                }
+                                                                clearCameraDraft('altitude')
+                                                            }}
+                                                            label-at-start className="half-width"/>
+                                                        <WaNumberInput
+                                                            label="Pitch (deg)"
+                                                            size="s"
+                                                            appearance="filled"
+                                                            min="-89"
+                                                            max="-5"
+                                                            step="1"
+                                                            value={pitchDisplayValue}
+                                                            onFocus={() => beginCameraDraft('pitch', pitchDisplayValue)}
+                                                            onInput={event => {
+                                                                const nextValue = event.target.value
+                                                                cameraDraftValues.current.pitch = nextValue
+                                                                setCameraDrafts(current => ({
+                                                                    ...current,
+                                                                    pitch: nextValue,
+                                                                }))
+                                                                commitCameraPitch(nextValue)
+                                                            }}
+                                                            onBlur={event => {
+                                                                const currentValue = cameraDraftValues.current.pitch ?? event.target.value
+                                                                const committed = commitCameraPitch(currentValue)
+                                                                if (!committed && cameraDraftBaseline.current?.field === 'pitch') {
+                                                                    setCameraDrafts(current => ({
+                                                                        ...current,
+                                                                        pitch: String(cameraDraftBaseline.current.pitch),
+                                                                    }))
+                                                                }
+                                                                clearCameraDraft('pitch')
+                                                            }}
+                                                            label-at-start className="half-width"/>
+                                                        <WaNumberInput
+                                                            label="Heading (deg)"
+                                                            size="s"
+                                                            appearance="filled"
+                                                            min="-180"
+                                                            max="180"
+                                                            step="1"
+                                                            value={headingDisplayValue}
+                                                            onFocus={() => beginCameraDraft('heading', headingDisplayValue)}
+                                                            onInput={event => {
+                                                                const nextValue = event.target.value
+                                                                cameraDraftValues.current.heading = nextValue
+                                                                setCameraDrafts(current => ({
+                                                                    ...current,
+                                                                    heading: nextValue,
+                                                                }))
+                                                                commitCameraHeading(nextValue)
+                                                            }}
+                                                            onBlur={event => {
+                                                                const currentValue = cameraDraftValues.current.heading ?? event.target.value
+                                                                const committed = commitCameraHeading(currentValue)
+                                                                if (!committed && cameraDraftBaseline.current?.field === 'heading') {
+                                                                    setCameraDrafts(current => ({
+                                                                        ...current,
+                                                                        heading: String(cameraDraftBaseline.current.heading),
+                                                                    }))
+                                                                }
+                                                                clearCameraDraft('heading')
+                                                            }}
+                                                            label-at-start className="half-width"/>
+                                                    </div>
+                                                </div>
                                                 <WaDetails small open className="lgs--details-hoverable">
                                                     <span slot="summary">{'Advanced camera setup'}</span>
-                                                    <div className="flythrough-fieldset">
-                                                        <WaSelect appearance="filled"
-                                                            label="Camera altitude"
-                                                            label-at-start
-                                                            size="s"
-                                                            value={camera.altitudeMode}
-                                                            onChange={updateAltitudeMode}
-                                                            className="half-width">
-                                                            <WaOption
-                                                                value={FLYTHROUGH_CAMERA_ALTITUDE_CONSTANT}>{'Fixed'}</WaOption>
-                                                            <WaOption
-                                                                value={FLYTHROUGH_CAMERA_ALTITUDE_GROUND_OFFSET}>{'Ground offset'}</WaOption>
-                                                        </WaSelect>
-                                                        <div className="flythrough-style-field-grid is-single">
-                                                            <WaNumberInput
-                                                                label={altitudeFieldLabel}
-                                                                size="s"
-                                                                appearance="filled"
-                                                                min={Math.round(UnitUtils.convert(10).to(altitudeUnit))}
-                                                                step={Math.max(1, Math.round(UnitUtils.convert(50).to(altitudeUnit)))}
-                                                                value={altitudeDisplayValue}
-                                                                onFocus={() => beginCameraDraft('altitude', altitudeDisplayValue)}
-                                                                onInput={event => {
-                                                                    updateCameraDraft('altitude', event.target.value)
-                                                                }}
-                                                                onChange={event => {
-                                                                    updateCameraDraft('altitude', event.target.value)
-                                                                    commitCameraAltitude(event.target.value, {syncCamera: false})
-                                                                }}
-                                                                onBlur={event => {
-                                                                    const currentValue = cameraDraftValues.current.altitude ?? event.target.value
-                                                                    const committed = commitCameraAltitude(currentValue, {syncCamera: false})
-                                                                    if (!committed && cameraDraftBaseline.current?.field === 'altitude') {
-                                                                        setCameraDrafts(current => ({
-                                                                            ...current,
-                                                                            altitude: String(Math.round(UnitUtils.convert(cameraDraftBaseline.current.altitude).to(altitudeUnit))),
-                                                                        }))
-                                                                    }
-                                                                    clearCameraDraft('altitude')
-                                                                }}
-                                                                label-at-start className="half-width"/>
-                                                            <WaNumberInput
-                                                                label="Pitch (deg)"
-                                                                size="s"
-                                                                appearance="filled"
-                                                                min="-89"
-                                                                max="-5"
-                                                                step="1"
-                                                                value={pitchDisplayValue}
-                                                                onFocus={() => beginCameraDraft('pitch', pitchDisplayValue)}
-                                                                onInput={event => {
-                                                                    const nextValue = event.target.value
-                                                                    cameraDraftValues.current.pitch = nextValue
-                                                                    setCameraDrafts(current => ({
-                                                                        ...current,
-                                                                        pitch: nextValue,
-                                                                    }))
-                                                                    commitCameraPitch(nextValue)
-                                                                }}
-                                                                onBlur={event => {
-                                                                    const currentValue = cameraDraftValues.current.pitch ?? event.target.value
-                                                                    const committed = commitCameraPitch(currentValue)
-                                                                    if (!committed && cameraDraftBaseline.current?.field === 'pitch') {
-                                                                        setCameraDrafts(current => ({
-                                                                            ...current,
-                                                                            pitch: String(cameraDraftBaseline.current.pitch),
-                                                                        }))
-                                                                    }
-                                                                    clearCameraDraft('pitch')
-                                                                }}
-                                                                label-at-start className="half-width"/>
-                                                            <WaNumberInput
-                                                                label="Heading (deg)"
-                                                                size="s"
-                                                                appearance="filled"
-                                                                min="-180"
-                                                                max="180"
-                                                                step="1"
-                                                                value={headingDisplayValue}
-                                                                onFocus={() => beginCameraDraft('heading', headingDisplayValue)}
-                                                                onInput={event => {
-                                                                    const nextValue = event.target.value
-                                                                    cameraDraftValues.current.heading = nextValue
-                                                                    setCameraDrafts(current => ({
-                                                                        ...current,
-                                                                        heading: nextValue,
-                                                                    }))
-                                                                    commitCameraHeading(nextValue)
-                                                                }}
-                                                                onBlur={event => {
-                                                                    const currentValue = cameraDraftValues.current.heading ?? event.target.value
-                                                                    const committed = commitCameraHeading(currentValue)
-                                                                    if (!committed && cameraDraftBaseline.current?.field === 'heading') {
-                                                                        setCameraDrafts(current => ({
-                                                                            ...current,
-                                                                            heading: String(cameraDraftBaseline.current.heading),
-                                                                        }))
-                                                                    }
-                                                                    clearCameraDraft('heading')
-                                                                }}
-                                                                label-at-start className="half-width"/>
-                                                        </div>
-                                                    </div>
                                                     <div className="flythrough-fieldset">
                                                         <WaSelect appearance="filled"
                                                             label="Camera feel"
@@ -1198,46 +1165,32 @@ export const FlythroughDrawer = memo(() => {
                                                             ))}
                                                             <WaOption value={FLYTHROUGH_CAMERA_PRESET_CUSTOM}>{'Custom'}</WaOption>
                                                         </WaSelect>
-                                                        <WaNumberInput
-                                                            label="Dynamic"
-                                                            size="s"
-                                                            appearance="filled"
-                                                            min={FLYTHROUGH_HYSTERESIS_MARGIN_RATIO_MIN}
-                                                             max={FLYTHROUGH_HYSTERESIS_MARGIN_RATIO_MAX}
-                                                             step="0.01"
-                                                             value={camera.hysteresis.marginRatio}
-                                                            onInput={updateHysteresisMarginRatio}
-                                                            label-at-start className="half-width"/>
-                                                        <WaNumberInput
-                                                            label="Heading ratio"
-                                                            size="s"
-                                                            appearance="filled"
-                                                            min={FLYTHROUGH_HYSTERESIS_HEADING_RATIO_MIN}
-                                                            max={FLYTHROUGH_HYSTERESIS_HEADING_RATIO_MAX}
-                                                            step="0.01"
-                                                            value={headingHysteresisRatio}
-                                                            onInput={updateHysteresisHeadingRatio}
-                                                            label-at-start className="half-width"/>
-                                                        <WaNumberInput
-                                                            label="Recenter easing"
-                                                            size="s"
-                                                            appearance="filled"
-                                                            min={FLYTHROUGH_HYSTERESIS_EASING_MIN}
-                                                             max={FLYTHROUGH_HYSTERESIS_EASING_MAX}
-                                                             step="0.01"
-                                                             value={camera.hysteresis.easing}
-                                                             onInput={updateHysteresisEasing}
-                                                             label-at-start className="half-width"/>
-                                                         <WaNumberInput
-                                                             label="Stop threshold"
-                                                             size="s"
-                                                             appearance="filled"
-                                                             min={FLYTHROUGH_HYSTERESIS_STOP_THRESHOLD_MIN}
-                                                             max={FLYTHROUGH_HYSTERESIS_STOP_THRESHOLD_MAX}
-                                                             step="0.000001"
-                                                            value={camera.hysteresis.stopThreshold}
-                                                            onInput={updateHysteresisStopThreshold}
-                                                            label-at-start className="half-width"/>
+                                                        <FlythroughStyleField>
+                                                            <WaNumberInput
+                                                                label="Sensitivity"
+                                                                hint="Smaller values make the camera recenter less often."
+                                                                size="s"
+                                                                appearance="filled"
+                                                                min={FLYTHROUGH_HYSTERESIS_MARGIN_RATIO_MIN}
+                                                                max={FLYTHROUGH_HYSTERESIS_MARGIN_RATIO_MAX}
+                                                                step="0.01"
+                                                                value={camera.hysteresis.marginRatio}
+                                                                onInput={updateHysteresisMarginRatio}
+                                                                label-at-start className="half-width"/>
+                                                        </FlythroughStyleField>
+                                                        <FlythroughStyleField>
+                                                            <WaNumberInput
+                                                                label="Ease"
+                                                                hint="Higher values make the recenter move softer and longer."
+                                                                size="s"
+                                                                appearance="filled"
+                                                                min={FLYTHROUGH_HYSTERESIS_EASING_MIN}
+                                                                max={FLYTHROUGH_HYSTERESIS_EASING_MAX}
+                                                                step="0.01"
+                                                                value={camera.hysteresis.easing}
+                                                                onInput={updateHysteresisEasing}
+                                                                label-at-start className="half-width"/>
+                                                        </FlythroughStyleField>
                                                     </div>
                                                 </WaDetails>
                                              </div>

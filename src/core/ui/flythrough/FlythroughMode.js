@@ -50,7 +50,6 @@ import {
     FLYTHROUGH_CAMERA_POSITION_SYSTEM, FLYTHROUGH_MARKER_MODE_HYSTERESIS, FLYTHROUGH_MARKER_MODE_NAVIGATION,
     FLYTHROUGH_MARKER_MODE_TRACE, getFlythroughSettings, normalizeFlythroughCamera, normalizeFlythroughMarker,
     normalizeFlythroughTrace,
-    FLYTHROUGH_HYSTERESIS_HEADING_RATIO_MAX, FLYTHROUGH_HYSTERESIS_HEADING_RATIO_MIN,
 }                                                                                          from './FlythroughProgressionStyle'
 
 const DEFAULT_DURATION = 60
@@ -167,24 +166,6 @@ export const flythroughHeadingEasingFactor = ({
         minFactor,
         maxFactor,
     )
-}
-
-export const flythroughCameraHeadingHysteresisThreshold = ({
-                                                               cameraSettings = null,
-                                                               positionMode = FLYTHROUGH_CAMERA_POSITION_SYSTEM,
-                                                           } = {}) => {
-    const headingRatio = finiteNumber(cameraSettings?.hysteresis?.headingRatio)
-    if (headingRatio !== null) {
-        return clamp(
-            headingRatio,
-            FLYTHROUGH_HYSTERESIS_HEADING_RATIO_MIN,
-            FLYTHROUGH_HYSTERESIS_HEADING_RATIO_MAX,
-        ) * Math.PI
-    }
-
-    return positionMode === FLYTHROUGH_CAMERA_POSITION_SYSTEM
-           ? CAMERA_HEADING_HYSTERESIS_RADIANS
-           : CAMERA_HEADING_MIN_CHANGE_RADIANS
 }
 
 export const flythroughCameraRecenterDuration = (easing = 0.18) => {
@@ -2747,10 +2728,9 @@ export class FlythroughMode {
                         : flythroughCameraHeadingWithHysteresis({
                                                                     previousHeading,
                                                                     nextHeading: desiredHeading,
-                                                                    threshold:   flythroughCameraHeadingHysteresisThreshold({
-                                                                        cameraSettings,
-                                                                        positionMode: cameraSettings.positionMode,
-                                                                    }),
+                                                                    threshold:   cameraSettings.positionMode === FLYTHROUGH_CAMERA_POSITION_SYSTEM
+                                                                                 ? CAMERA_HEADING_HYSTERESIS_RADIANS
+                                                                                 : CAMERA_HEADING_MIN_CHANGE_RADIANS,
                                                                 })
         const smoothHeading = source === 'drawer'
                               ? heading
@@ -4097,8 +4077,9 @@ export class FlythroughMode {
             this.#cameraRedirectState = null
         }
 
+        this.#updateToleranceZoneOverlay(cameraSettings.hysteresis)
+
         if (marker.mode === FLYTHROUGH_MARKER_MODE_NAVIGATION) {
-            this.#removeToleranceZoneOverlay()
             this.#applyCameraView({
                 anchor: anchorSample,
                 heading: smoothHeading,
@@ -4111,7 +4092,6 @@ export class FlythroughMode {
         }
 
         if (marker.mode === FLYTHROUGH_MARKER_MODE_HYSTERESIS) {
-            this.#updateToleranceZoneOverlay(cameraSettings.hysteresis)
             const collision = this.#cameraCollisionForSample(anchorSample, cameraSettings)
             const outsideTolerance = collision?.shouldMove ?? false
             const nominalCurrentVisible = this.#cameraViewVisibilityForSample({

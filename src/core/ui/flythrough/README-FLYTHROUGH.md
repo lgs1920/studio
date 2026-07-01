@@ -325,6 +325,8 @@ flythrough.start()
 4. If the view is outside the dead zone, or if the marker/trace becomes hidden, it recenters the camera.
 
 The dead zone is driven by `camera.hysteresis.marginRatio`. The zone is centered in the viewport, so the camera can drift a little before the algorithm reacts. That prevents the visible "breathing" effect when the marker only moves slightly.
+The tolerance zone overlay stays visible during playback for the non-`Trace` tracking modes, so the recenter window is easy to read while the FT runs.
+Smaller `marginRatio` values make the hysteresis less sensitive and leave a larger stable zone in the middle of the viewport.
 
 ### Visibility model
 

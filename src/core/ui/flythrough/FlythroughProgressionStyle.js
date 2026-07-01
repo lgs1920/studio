@@ -43,12 +43,8 @@ export const FLYTHROUGH_CAMERA_PRESET_DEFAULT = 'default'
 export const FLYTHROUGH_CAMERA_PRESET_ULTRA_SMOOTH = 'ultra-smooth'
 export const FLYTHROUGH_HYSTERESIS_MARGIN_RATIO_MIN = 0.05
 export const FLYTHROUGH_HYSTERESIS_MARGIN_RATIO_MAX = 0.45
-export const FLYTHROUGH_HYSTERESIS_HEADING_RATIO_MIN = 0
-export const FLYTHROUGH_HYSTERESIS_HEADING_RATIO_MAX = 0.5
 export const FLYTHROUGH_HYSTERESIS_EASING_MIN = 0.02
 export const FLYTHROUGH_HYSTERESIS_EASING_MAX = 0.5
-export const FLYTHROUGH_HYSTERESIS_STOP_THRESHOLD_MIN = 0.000001
-export const FLYTHROUGH_HYSTERESIS_STOP_THRESHOLD_MAX = 0.001
 export const FLYTHROUGH_HYSTERESIS_LOOKAHEAD_PROGRESS = 0.025
 
 export const DEFAULT_FLYTHROUGH_PROGRESSION = {
@@ -102,7 +98,6 @@ export const DEFAULT_FLYTHROUGH_CAMERA = {
             height: 1,
         },
         easing:        0.08,
-        stopThreshold: 0.00005,
     },
 }
 
@@ -110,12 +105,10 @@ const FLYTHROUGH_CAMERA_PRESET_HYSTERESIS = {
     [FLYTHROUGH_CAMERA_PRESET_DEFAULT]: {
         marginRatio:   DEFAULT_FLYTHROUGH_CAMERA.hysteresis.marginRatio,
         easing:        DEFAULT_FLYTHROUGH_CAMERA.hysteresis.easing,
-        stopThreshold: DEFAULT_FLYTHROUGH_CAMERA.hysteresis.stopThreshold,
     },
     [FLYTHROUGH_CAMERA_PRESET_ULTRA_SMOOTH]: {
         marginRatio:   0.2,
         easing:        0.3,
-        stopThreshold: 0.000005,
     },
 }
 
@@ -215,20 +208,6 @@ const normalizeFlythroughHysteresisMarginRatio = (zone, value, fallback = DEFAUL
     return clampFlythroughNumber(edgeMargin, fallback, FLYTHROUGH_HYSTERESIS_MARGIN_RATIO_MIN, FLYTHROUGH_HYSTERESIS_MARGIN_RATIO_MAX)
 }
 
-const normalizeFlythroughHysteresisHeadingRatio = value => {
-    const explicit = finiteNumber(value)
-    if (explicit === null) {
-        return undefined
-    }
-
-    return clampFlythroughNumber(
-        explicit,
-        explicit,
-        FLYTHROUGH_HYSTERESIS_HEADING_RATIO_MIN,
-        FLYTHROUGH_HYSTERESIS_HEADING_RATIO_MAX,
-    )
-}
-
 export const normalizeFlythroughProgressionStyle = (progression = {}) => {
     const fill = progression?.fill ?? {}
     const border = progression?.border ?? {}
@@ -324,9 +303,7 @@ export const normalizeFlythroughMarker = (marker = {}) => ({
  * `hysteresis` drives the Dynamic mode:
  * - `marginRatio`: inner safe zone width/height margin on each side.
  * - `zone`: outer viewport crop rectangle, expressed as normalized top/left/width/height.
- * - `headingRatio`: optional angular dead zone ratio, expressed against half a turn.
  * - `easing`: smoothness of the recenter flight.
- * - `stopThreshold`: screen-space convergence threshold that prevents tiny oscillations.
  */
 export const normalizeFlythroughCamera = (camera = {}) => ({
     positionMode: camera?.positionMode === FLYTHROUGH_CAMERA_POSITION_AHEAD
@@ -348,7 +325,6 @@ export const normalizeFlythroughCamera = (camera = {}) => ({
     heading:      clampFlythroughNumber(camera?.heading, DEFAULT_FLYTHROUGH_CAMERA.heading, -180, 180),
     hysteresis:   (() => {
         const zone = normalizeFlythroughToleranceZone(camera?.hysteresis?.zone, DEFAULT_FLYTHROUGH_CAMERA.hysteresis.zone)
-        const headingRatio = normalizeFlythroughHysteresisHeadingRatio(camera?.hysteresis?.headingRatio)
         return {
             zone,
             marginRatio:   normalizeFlythroughHysteresisMarginRatio(
@@ -361,18 +337,11 @@ export const normalizeFlythroughCamera = (camera = {}) => ({
                     FLYTHROUGH_HYSTERESIS_MARGIN_RATIO_MAX,
                 ),
             ),
-            ...(headingRatio !== undefined ? {headingRatio} : {}),
             easing:        clampFlythroughNumber(
                 camera?.hysteresis?.easing,
                 DEFAULT_FLYTHROUGH_CAMERA.hysteresis.easing,
                 FLYTHROUGH_HYSTERESIS_EASING_MIN,
                 FLYTHROUGH_HYSTERESIS_EASING_MAX,
-            ),
-            stopThreshold: clampFlythroughNumber(
-                camera?.hysteresis?.stopThreshold,
-                DEFAULT_FLYTHROUGH_CAMERA.hysteresis.stopThreshold,
-                FLYTHROUGH_HYSTERESIS_STOP_THRESHOLD_MIN,
-                FLYTHROUGH_HYSTERESIS_STOP_THRESHOLD_MAX,
             ),
         }
     })(),
@@ -412,9 +381,7 @@ export const normalizeFlythroughSettings = (settings = {}) => {
 const cameraPresetKeyFromHysteresis = hysteresis => FLYTHROUGH_CAMERA_PRESETS.find(preset => {
     const presetHysteresis = preset.camera?.hysteresis ?? {}
     return presetHysteresis.marginRatio === hysteresis?.marginRatio
-        && presetHysteresis.headingRatio === hysteresis?.headingRatio
         && presetHysteresis.easing === hysteresis?.easing
-        && presetHysteresis.stopThreshold === hysteresis?.stopThreshold
 })?.key ?? FLYTHROUGH_CAMERA_PRESET_CUSTOM
 
 export const getFlythroughCameraPresetKey = (camera = {}) => {

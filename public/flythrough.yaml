@@ -39,7 +39,6 @@ flythrough:
     hysteresis:
       marginRatio: 0.12
       easing: 0.18
-      stopThreshold: 0.00001
   clips:
     catalog:
       zoom-in:

@@ -301,7 +301,6 @@ describe('FlythroughDrawer', () => {
         expect(view.getByLabelText('Pitch (deg)')).toBeTruthy()
         expect(view.getByLabelText('Heading (deg)')).toBeTruthy()
         expect(view.getByLabelText('Camera feel')).toBeTruthy()
-        expect(view.getByLabelText('Heading ratio')).toBeTruthy()
     })
 
     it('shows the ground offset label when the camera mode is ground offset', () => {
