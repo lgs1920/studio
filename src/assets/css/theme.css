@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-05-31
- * Last modified: 2026-05-31
+ * Created on: 2026-07-01
+ * Last modified: 2026-07-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -1416,6 +1416,14 @@ wa-input[label-at-start] label, wa-number-input[label-at-start] label {
     flex: none;
     width: auto;
     margin-block-end: 0 !important;
+}
+
+wa-number-input[label-at-start] {
+    flex-wrap: wrap;
+}
+
+wa-number-input[label-at-start]::part(hint) {
+    flex: 0 0 100%;
 }
 
 [label-at-start]::part(base) {
