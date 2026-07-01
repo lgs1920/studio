@@ -288,16 +288,20 @@ describe('FlythroughDrawer', () => {
         })
     })
 
-    it('shows altitude and pitch fields in passive mode', () => {
+    it('shows advanced camera setup fields in passive mode', () => {
         globalThis.lgs.stores.flythrough.marker.mode = FLYTHROUGH_MARKER_MODE_TRACE
         globalThis.lgs.settings.ui.flythrough.marker.mode = FLYTHROUGH_MARKER_MODE_TRACE
 
         const view = render(<FlythroughDrawer/>)
 
+        expect(view.getByText('Advanced camera setup')).toBeTruthy()
+        expect(view.getByLabelText('Camera position')).toBeTruthy()
         expect(view.getByLabelText('Camera altitude')).toBeTruthy()
         expect(view.getByLabelText('Altitude (m)')).toBeTruthy()
         expect(view.getByLabelText('Pitch (deg)')).toBeTruthy()
-        expect(view.queryByLabelText('Heading (deg)')).toBeNull()
+        expect(view.getByLabelText('Heading (deg)')).toBeTruthy()
+        expect(view.getByLabelText('Camera feel')).toBeTruthy()
+        expect(view.getByLabelText('Heading ratio')).toBeTruthy()
     })
 
     it('shows the ground offset label when the camera mode is ground offset', () => {

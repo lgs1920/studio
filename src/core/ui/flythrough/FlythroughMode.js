@@ -50,6 +50,7 @@ import {
     FLYTHROUGH_CAMERA_POSITION_SYSTEM, FLYTHROUGH_MARKER_MODE_HYSTERESIS, FLYTHROUGH_MARKER_MODE_NAVIGATION,
     FLYTHROUGH_MARKER_MODE_TRACE, getFlythroughSettings, normalizeFlythroughCamera, normalizeFlythroughMarker,
     normalizeFlythroughTrace,
+    FLYTHROUGH_HYSTERESIS_HEADING_RATIO_MAX, FLYTHROUGH_HYSTERESIS_HEADING_RATIO_MIN,
 }                                                                                          from './FlythroughProgressionStyle'
 
 const DEFAULT_DURATION = 60
@@ -70,7 +71,7 @@ const CAMERA_VIEW_ANGLE_EPSILON_RADIANS = CesiumMath.toRadians(0.25)
 const CAMERA_UPDATE_MIN_PROGRESS_DELTA = 0.0005
 const CAMERA_REDIRECT_MAX_TRANSITION_SECONDS = 1
 const CAMERA_REDIRECT_LOOKAHEAD_DISTANCE_METERS = 120
-const CAMERA_REDIRECT_TRACE_VISIBILITY_OFFSETS_METERS = Object.freeze([12, 24])
+const CAMERA_REDIRECT_TRACE_VISIBILITY_OFFSETS_METERS = Object.freeze([6, 12, 18, 24])
 const CAMERA_REDIRECT_REQUIRED_TRACE_OFFSET_METERS = 12
 const CAMERA_REDIRECT_TERRAIN_LINE_SEGMENTS = 11
 const CAMERA_REDIRECT_TERRAIN_CLEARANCE_METERS = 3
@@ -166,6 +167,24 @@ export const flythroughHeadingEasingFactor = ({
         minFactor,
         maxFactor,
     )
+}
+
+export const flythroughCameraHeadingHysteresisThreshold = ({
+                                                               cameraSettings = null,
+                                                               positionMode = FLYTHROUGH_CAMERA_POSITION_SYSTEM,
+                                                           } = {}) => {
+    const headingRatio = finiteNumber(cameraSettings?.hysteresis?.headingRatio)
+    if (headingRatio !== null) {
+        return clamp(
+            headingRatio,
+            FLYTHROUGH_HYSTERESIS_HEADING_RATIO_MIN,
+            FLYTHROUGH_HYSTERESIS_HEADING_RATIO_MAX,
+        ) * Math.PI
+    }
+
+    return positionMode === FLYTHROUGH_CAMERA_POSITION_SYSTEM
+           ? CAMERA_HEADING_HYSTERESIS_RADIANS
+           : CAMERA_HEADING_MIN_CHANGE_RADIANS
 }
 
 export const flythroughCameraRecenterDuration = (easing = 0.18) => {
@@ -2728,9 +2747,10 @@ export class FlythroughMode {
                         : flythroughCameraHeadingWithHysteresis({
                                                                     previousHeading,
                                                                     nextHeading: desiredHeading,
-                                                                    threshold:   cameraSettings.positionMode === FLYTHROUGH_CAMERA_POSITION_SYSTEM
-                                                                                 ? CAMERA_HEADING_HYSTERESIS_RADIANS
-                                                                                 : CAMERA_HEADING_MIN_CHANGE_RADIANS,
+                                                                    threshold:   flythroughCameraHeadingHysteresisThreshold({
+                                                                        cameraSettings,
+                                                                        positionMode: cameraSettings.positionMode,
+                                                                    }),
                                                                 })
         const smoothHeading = source === 'drawer'
                               ? heading
@@ -2933,8 +2953,6 @@ export class FlythroughMode {
             return null
         }
 
-        let optionalVisible = 0
-        let optionalTargets = 0
         let hasRenderedResult = false
         for (const target of targets) {
             const visible = this.#renderedTargetVisible(this.#sampleFromVisibilityTarget(target))
@@ -2942,21 +2960,15 @@ export class FlythroughMode {
                 continue
             }
             hasRenderedResult = true
-            if (target.required && !visible) {
+            if (!visible) {
                 return false
-            }
-            if (!target.required) {
-                optionalTargets += 1
-                if (visible) {
-                    optionalVisible += 1
-                }
             }
         }
 
         if (!hasRenderedResult) {
             return null
         }
-        return optionalTargets === 0 || optionalVisible > 0
+        return true
     }
 
     #cameraViewHasLineOfSight = (view, anchorSample = view?.sample) => {
@@ -2966,8 +2978,7 @@ export class FlythroughMode {
         }
 
         const targets = this.#cameraTraceVisibilityTargets(anchorSample)
-        let optionalVisible = 0
-        let optionalTargets = 0
+        let hasVisibleTarget = false
         for (const target of targets) {
             const sample = this.#sampleFromVisibilityTarget(target)
             const visible = this.#cameraLineOfSightVisibleForFrame({
@@ -2975,18 +2986,13 @@ export class FlythroughMode {
                                                                        sample,
                                                                        targetHeight: this.#markerRenderHeightForSample(sample),
                                                                    })
-            if (target.required && !visible) {
+            if (!visible) {
                 return false
             }
-            if (!target.required) {
-                optionalTargets += 1
-                if (visible) {
-                    optionalVisible += 1
-                }
-            }
+            hasVisibleTarget = true
         }
 
-        return optionalTargets === 0 || optionalVisible > 0
+        return hasVisibleTarget
     }
 
     #cameraViewVisibilityForSample = ({
@@ -3238,11 +3244,11 @@ export class FlythroughMode {
         const scene = this.#cesiumScene()
         const windowPosition = this.#windowPositionForSample(sample)
         if (!viewer || !scene || !windowPosition) {
-            const outerBounds = flythroughInsetBounds(
-                flythroughToleranceZoneBounds(cameraSettings?.hysteresis?.zone),
-                FLYTHROUGH_TOLERANCE_OUTER_INSET_RATIO,
+            const outerBounds = flythroughToleranceZoneBounds(cameraSettings?.hysteresis?.zone)
+            const safeBounds = flythroughInnerToleranceZoneBounds(
+                outerBounds,
+                finiteNumber(cameraSettings?.hysteresis?.marginRatio) ?? 0.12,
             )
-            const safeBounds = flythroughInsetBounds(outerBounds, FLYTHROUGH_TOLERANCE_INNER_INSET_RATIO)
             return {
                 side:       null,
                 outer:      outerBounds,
@@ -3263,11 +3269,11 @@ export class FlythroughMode {
             }
             : windowPosition
         const markerRadius = finiteNumber(globalThis.lgs?.stores?.flythrough?.markerRadius) ?? 35
-        const overlayBounds = flythroughInsetBounds(
-            flythroughToleranceZoneBounds(cameraSettings?.hysteresis?.zone),
-            FLYTHROUGH_TOLERANCE_OUTER_INSET_RATIO,
+        const overlayBounds = flythroughToleranceZoneBounds(cameraSettings?.hysteresis?.zone)
+        const safeBounds = flythroughInnerToleranceZoneBounds(
+            overlayBounds,
+            finiteNumber(cameraSettings?.hysteresis?.marginRatio) ?? 0.12,
         )
-        const safeBounds = flythroughInsetBounds(overlayBounds, FLYTHROUGH_TOLERANCE_INNER_INSET_RATIO)
         return flythroughWindowCollisionFromPoint({
                                                       point:        point,
                                                       width:        rect.width,

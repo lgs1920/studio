@@ -17,7 +17,8 @@
 import { FLYTHROUGH_DRAWER }                                           from '@Core/constants'
 import { createFlythroughClipInstance }                                from '@Core/ui/flythrough/FlythroughClips'
 import {
-    flythroughAngularDelta, flythroughCameraHeadingForPositionMode, flythroughCameraHeadingWithHysteresis,
+    flythroughAngularDelta, flythroughCameraHeadingForPositionMode, flythroughCameraHeadingHysteresisThreshold,
+    flythroughCameraHeadingWithHysteresis,
     flythroughCameraRangeFromPitch, flythroughCameraRecenterDuration, flythroughCameraRecenterHeight,
     flythroughCameraRecenterHorizontalDistance, flythroughHeadingEasingFactor, flythroughHeadingFromLocalAxisAngle,
     flythroughIsWindowPointOutsideToleranceZone, FlythroughMode, flythroughTargetSampleForClip,
@@ -33,9 +34,9 @@ import {
 import {
     defaultFlythroughSettings, FLYTHROUGH_CAMERA_ALTITUDE_CONSTANT, FLYTHROUGH_CAMERA_ALTITUDE_GROUND_OFFSET,
     FLYTHROUGH_CAMERA_POSITION_AHEAD, FLYTHROUGH_CAMERA_POSITION_BEHIND, FLYTHROUGH_CAMERA_POSITION_SYSTEM,
-    FLYTHROUGH_CAMERA_PRESET_DEFAULT, FLYTHROUGH_CAMERA_PRESET_ULTRA_SMOOTH, FLYTHROUGH_MARKER_MODE_HYSTERESIS,
-    FLYTHROUGH_MARKER_MODE_NAVIGATION, FLYTHROUGH_MARKER_MODE_TRACE, getFlythroughCameraPresetKey,
-    normalizeFlythroughCamera, normalizeFlythroughMarker, normalizeFlythroughSettings,
+    FLYTHROUGH_CAMERA_PRESET_CUSTOM, FLYTHROUGH_CAMERA_PRESET_DEFAULT, FLYTHROUGH_CAMERA_PRESET_ULTRA_SMOOTH,
+    FLYTHROUGH_MARKER_MODE_HYSTERESIS, FLYTHROUGH_MARKER_MODE_NAVIGATION, FLYTHROUGH_MARKER_MODE_TRACE,
+    getFlythroughCameraPresetKey, normalizeFlythroughCamera, normalizeFlythroughMarker, normalizeFlythroughSettings,
 }                                                                      from '@Core/ui/flythrough/FlythroughProgressionStyle'
 import { gpx }                                                         from '@tmcw/togeojson'
 import { applyGpxStyleExtensionProperties, extractLgsTrackProperties } from '@Utils/JourneyGpxUtils'
@@ -4089,8 +4090,8 @@ describe('flythrough phase 1 playback controller', () => {
 
     it('recenters for visibility even when the marker is still inside the tolerance zone', () => {
         const journey = makeJourney([
-                                        makeTrack({
-                                                      slug:        'track#journey#gpx#main',
+            makeTrack({
+                slug:        'track#journey#gpx#main',
                                                       coordinates: [[2, 48, 120], [2.001, 48.001, 130]],
                                                   }),
                                     ])
@@ -4225,8 +4226,8 @@ describe('flythrough phase 1 playback controller', () => {
 
     it('uses rendered terrain picking to correct a marker hidden behind visible relief', () => {
         const journey = makeJourney([
-                                        makeTrack({
-                                                      slug:        'track#journey#gpx#main',
+            makeTrack({
+                slug:        'track#journey#gpx#main',
                                                       coordinates: [[2, 48, 120], [2.001, 48.001, 130]],
                                                   }),
                                     ])
@@ -6380,6 +6381,21 @@ describe('flythrough settings normalization', () => {
         expect(camera.positionMode).toBe(FLYTHROUGH_CAMERA_POSITION_BEHIND)
     })
 
+    it('normalizes the optional heading hysteresis ratio and keeps preset matching stable otherwise', () => {
+        const camera = normalizeFlythroughCamera({
+            hysteresis: {
+                headingRatio: 0.12,
+            },
+        })
+
+        expect(camera.hysteresis.headingRatio).toBeCloseTo(0.12, 6)
+        expect(getFlythroughCameraPresetKey(camera)).toBe(FLYTHROUGH_CAMERA_PRESET_CUSTOM)
+        expect(flythroughCameraHeadingHysteresisThreshold({
+            cameraSettings: camera,
+            positionMode:   FLYTHROUGH_CAMERA_POSITION_BEHIND,
+        })).toBeCloseTo(Math.PI * 0.12, 6)
+    })
+
     it('normalizes pitch and altitude settings while preserving the camera mode', () => {
         const camera = normalizeFlythroughCamera({
             altitudeMode: 'constant',
@@ -6413,8 +6429,8 @@ describe('flythrough settings normalization', () => {
                                                    width:  1,
                                                    height: 1,
                                                })
-        expect(camera.hysteresis.marginRatio).toBeCloseTo(0.12, 6)
-        expect(camera.hysteresis.easing).toBeCloseTo(0.18, 6)
+        expect(camera.hysteresis.marginRatio).toBeCloseTo(0.4, 6)
+        expect(camera.hysteresis.easing).toBeCloseTo(0.08, 6)
         expect(getFlythroughCameraPresetKey(camera)).toBe(FLYTHROUGH_CAMERA_PRESET_DEFAULT)
 
         const bounds = flythroughToleranceZoneBounds({
