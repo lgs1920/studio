@@ -7,43 +7,50 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-05-31
- * Last modified: 2026-05-31
+ * Created on: 2026-07-01
+ * Last modified: 2026-07-01
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { CameraUtils }                                        from '@Utils/cesium/CameraUtils'
-import { POIUtils }                                           from '@Utils/cesium/POIUtils'
-import { TrackUtils }                                         from '@Utils/cesium/TrackUtils'
-import { FLYTHROUGH_DRAWER }                                  from '@Core/constants'
-import { getFlythroughHideOtherJourneys }                     from '@Core/ui/JourneyVisibility'
+import { FLYTHROUGH_DRAWER }                                                               from '@Core/constants'
+import {
+    getFlythroughHideOtherJourneys,
+}                                                                                          from '@Core/ui/JourneyVisibility'
+import {
+    CameraUtils,
+}                                                                                          from '@Utils/cesium/CameraUtils'
+import {
+    POIUtils,
+}                                                                                          from '@Utils/cesium/POIUtils'
+import {
+    TrackUtils,
+}                                                                                          from '@Utils/cesium/TrackUtils'
 import {
     Cartesian2, Cartesian3, Cartographic, CatmullRomSpline, ExtrapolationType, JulianDate, LinearApproximation,
     Math as CesiumMath, Matrix4, SampledPositionProperty, SceneTransforms, Transforms,
-}                                                             from 'cesium'
-import { FlythroughCesiumRenderer }                           from './FlythroughCesiumRenderer'
-import { FLYTHROUGH_SCOPE_ALL_TRACKS, FlythroughPathSampler } from './FlythroughPathSampler'
+}                                                                                          from 'cesium'
+import {
+    FlythroughCesiumRenderer,
+}                                                                                          from './FlythroughCesiumRenderer'
+import { FLYTHROUGH_CLIP_SLOT_START, FLYTHROUGH_CLIP_SLOT_STOP, normalizeFlythroughClips } from './FlythroughClips'
+import {
+    FLYTHROUGH_SCOPE_ALL_TRACKS, FlythroughPathSampler,
+}                                                                                          from './FlythroughPathSampler'
 import {
     FLYTHROUGH_EVENT_END, FLYTHROUGH_EVENT_PAUSE, FLYTHROUGH_EVENT_RESUME, FLYTHROUGH_EVENT_START,
     FLYTHROUGH_EVENT_STOP, FLYTHROUGH_EVENT_UPDATE, FlythroughPlaybackController,
-}                                                             from './FlythroughPlaybackController'
+}                                                                                          from './FlythroughPlaybackController'
 import {
-    FLYTHROUGH_CAMERA_ALTITUDE_CONSTANT, FLYTHROUGH_CAMERA_ALTITUDE_GROUND_OFFSET, FLYTHROUGH_CAMERA_POSITION_AHEAD, FLYTHROUGH_CAMERA_POSITION_SYSTEM,
-    FLYTHROUGH_MARKER_MODE_HYSTERESIS, FLYTHROUGH_MARKER_MODE_NAVIGATION, FLYTHROUGH_MARKER_MODE_TRACE,
-    getFlythroughSettings, normalizeFlythroughCamera,
-    normalizeFlythroughMarker, normalizeFlythroughTrace,
-}                                                             from './FlythroughProgressionStyle'
+    DEFAULT_FLYTHROUGH_POI_DISPLAY_DURATION_SECONDS, normalizeFlythroughPOISettings,
+}                                                                                          from './FlythroughPOISettings'
 import {
-    FLYTHROUGH_CLIP_SLOT_START,
-    FLYTHROUGH_CLIP_SLOT_STOP,
-    normalizeFlythroughClips,
-}                                                             from './FlythroughClips'
-import {
-    DEFAULT_FLYTHROUGH_POI_DISPLAY_DURATION_SECONDS,
-    normalizeFlythroughPOISettings,
-}                                                             from './FlythroughPOISettings'
+    FLYTHROUGH_CAMERA_ALTITUDE_CONSTANT, FLYTHROUGH_CAMERA_ALTITUDE_GROUND_OFFSET, FLYTHROUGH_CAMERA_POSITION_AHEAD,
+    FLYTHROUGH_CAMERA_POSITION_SYSTEM, FLYTHROUGH_MARKER_MODE_HYSTERESIS, FLYTHROUGH_MARKER_MODE_NAVIGATION,
+    FLYTHROUGH_MARKER_MODE_TRACE, getFlythroughSettings, normalizeFlythroughCamera, normalizeFlythroughMarker,
+    normalizeFlythroughTrace,
+}                                                                                          from './FlythroughProgressionStyle'
 
 const DEFAULT_DURATION = 60
 const PROFILE_HOVER_RENDER_INTERVAL = 120
@@ -61,6 +68,13 @@ const CAMERA_HEADING_MIN_CHANGE_RADIANS = CesiumMath.toRadians(5)
 const CAMERA_VIEW_POSITION_EPSILON_METERS = 0.5
 const CAMERA_VIEW_ANGLE_EPSILON_RADIANS = CesiumMath.toRadians(0.25)
 const CAMERA_UPDATE_MIN_PROGRESS_DELTA = 0.0005
+const CAMERA_REDIRECT_MAX_TRANSITION_SECONDS = 1
+const CAMERA_REDIRECT_LOOKAHEAD_DISTANCE_METERS = 120
+const CAMERA_REDIRECT_TRACE_VISIBILITY_OFFSETS_METERS = Object.freeze([12, 24])
+const CAMERA_REDIRECT_REQUIRED_TRACE_OFFSET_METERS = 12
+const CAMERA_REDIRECT_TERRAIN_LINE_SEGMENTS = 11
+const CAMERA_REDIRECT_TERRAIN_CLEARANCE_METERS = 3
+const CAMERA_REDIRECT_RENDERED_DEPTH_CLEARANCE_METERS = 8
 const FLYTHROUGH_TOLERANCE_OUTER_INSET_RATIO = 0.05
 const FLYTHROUGH_TOLERANCE_INNER_INSET_RATIO = 0.2
 const FLYTHROUGH_TOLERANCE_RECENTER_REPLACE_DELAY_MS = 300
@@ -68,6 +82,26 @@ const FLYTHROUGH_POI_TRIGGER_EPSILON_METERS = 0.001
 const FLYTHROUGH_POI_TRIGGER_SCAN_MARGIN_METERS = 5
 export const FLYTHROUGH_JOURNEY_TOOLBAR_VISIBILITY_EVENT = 'lgs:flythrough:journey-toolbar-visibility'
 export const FLYTHROUGH_EVENT_STOP_CLIPS_COMPLETE = 'flythrough/stop-clips-complete'
+
+const CAMERA_REDIRECT_CANDIDATES = Object.freeze([
+                                                     {headingOffsetDeg: 0, pitchOffsetDeg: -4},
+                                                     {headingOffsetDeg: 0, pitchOffsetDeg: -6},
+                                                     {headingOffsetDeg: 0, pitchOffsetDeg: -8},
+                                                     {headingOffsetDeg: 0, pitchOffsetDeg: -10},
+                                                     {headingOffsetDeg: 0, pitchOffsetDeg: -14},
+                                                     {headingOffsetDeg: 0, pitchOffsetDeg: -18},
+                                                     {headingOffsetDeg: 8, pitchOffsetDeg: 0},
+                                                     {headingOffsetDeg: -8, pitchOffsetDeg: 0},
+                                                     {headingOffsetDeg: 16, pitchOffsetDeg: 0},
+                                                     {headingOffsetDeg: -16, pitchOffsetDeg: 0},
+                                                     {headingOffsetDeg: 8, pitchOffsetDeg: -8},
+                                                     {headingOffsetDeg: -8, pitchOffsetDeg: -8},
+                                                     {headingOffsetDeg: 16, pitchOffsetDeg: -8},
+                                                     {headingOffsetDeg: -16, pitchOffsetDeg: -8},
+                                                     {headingOffsetDeg: 24, pitchOffsetDeg: -10},
+                                                     {headingOffsetDeg: -24, pitchOffsetDeg: -10},
+                                                     {headingOffsetDeg: 0, pitchOffsetDeg: -20},
+                                                 ])
 
 const finiteNumber = value => {
     const number = Number(value)
@@ -661,7 +695,10 @@ export class FlythroughMode {
     #flythroughDrawerWasOpenBeforePlayback = false
     #lastCameraHeading = null
     #lastCameraPitch = null
+    #lastNominalCameraHeading = null
+    #lastNominalCameraPitch = null
     #lastAppliedCameraView = null
+    #cameraRedirectState = null
     #cameraUserAdjusting = false
     #cameraApplyingView = false
     #cameraPointerActive = false
@@ -806,16 +843,18 @@ export class FlythroughMode {
             (startList.reduce((total, clip) => total + Math.max(0, Number(clip?.params?.duration ?? this.#cameraSettingsForClip(clip)?.duration ?? 0)), 0) - introLeadSeconds) * 1000,
         )
         const camera = globalThis.lgs?.viewer?.camera
-        this.#introHeadingTransition = {
-            startAt:       introStartAt,
-            endAt:         introStartAt + (FLYTHROUGH_HEADING_TRANSITION_DURATION_SECONDS * 1000),
-            height:        finiteNumber(camera?.positionCartographic?.height)
-                           ?? finiteNumber(startSample?.altitude ?? startSample?.height)
-                           ?? 0,
-            fromPitch:     finiteNumber(camera?.pitch) ?? this.#lastCameraPitch ?? SAFE_TOP_DOWN_PITCH,
-            targetHeading: this.#introHeadingForProgress(options.progress ?? 0),
-            applied:       false,
-        }
+        this.#introHeadingTransition = startList.length > 0
+                                       ? {
+                startAt:       introStartAt,
+                endAt:         introStartAt + (FLYTHROUGH_HEADING_TRANSITION_DURATION_SECONDS * 1000),
+                height:        finiteNumber(camera?.positionCartographic?.height)
+                                   ?? finiteNumber(startSample?.altitude ?? startSample?.height)
+                                   ?? 0,
+                fromPitch:     finiteNumber(camera?.pitch) ?? this.#lastCameraPitch ?? SAFE_TOP_DOWN_PITCH,
+                targetHeading: this.#introHeadingForProgress(options.progress ?? 0),
+                applied:       false,
+            }
+                                       : null
         const token = ++this.#clipSequenceToken
         let startResult = startSample
         void this.#prepareNearbyPOIsForPlayback(startSample)
@@ -1690,6 +1729,7 @@ export class FlythroughMode {
         this.#removeToleranceZoneOverlay()
         if (options.emit === false) {
             this.#restorePlaybackCameraSettings()
+            this.#restoreCameraState()
         }
         if (shouldDeferSceneRestore) {
             this.#sceneRestoreDeferred = true
@@ -1766,7 +1806,13 @@ export class FlythroughMode {
         }
 
         const clipCamera = this.#cameraSettingsForClip(clip)
-        const target = await this.#targetSampleForClip(sample, clip.clipId)
+        const landingFlight = clip.clipId === 'landing'
+        const target = landingFlight
+                       ? {
+                ...sample,
+                altitude: this.#markerRenderHeightForSample(sample),
+            }
+                       : await this.#targetSampleForClip(sample, clip.clipId)
         const duration = Math.max(0, Number(clip?.params?.duration ?? clipCamera?.duration ?? 0))
         const northHeading = 0
         if (!target) {
@@ -1824,7 +1870,6 @@ export class FlythroughMode {
             return
         }
 
-        const landingFlight = clip.clipId === 'landing'
         const currentCamera = globalThis.lgs?.viewer?.camera
         const landingHeading = finiteNumber(currentCamera?.heading) ?? degreesToRadians(clipCamera.heading) ?? 0
         const landingPitch = finiteNumber(currentCamera?.pitch) ?? degreesToRadians(clipCamera.pitch) ?? SAFE_TOP_DOWN_PITCH
@@ -1997,7 +2042,10 @@ export class FlythroughMode {
         }
         this.#lastCameraHeading = null
         this.#lastCameraPitch = null
+        this.#lastNominalCameraHeading = null
+        this.#lastNominalCameraPitch = null
         this.#lastAppliedCameraView = null
+        this.#cameraRedirectState = null
         this.#cameraUserAdjusting = false
         this.#cameraApplyingView = false
         this.#cameraPointerActive = false
@@ -2639,6 +2687,415 @@ export class FlythroughMode {
         return cameraSettings.altitude
     }
 
+    #cameraViewForSample = ({
+                                sample,
+                                progress = sample?.progress ?? 0,
+                                source = null,
+                                cameraSettings,
+                                markerSettings,
+                                previousHeading = this.#lastNominalCameraHeading ?? this.#lastCameraHeading,
+                                previousPitch = this.#lastNominalCameraPitch ?? this.#lastCameraPitch,
+                            } = {}) => {
+        if (!sample || !cameraSettings || !markerSettings) {
+            return null
+        }
+
+        const normalizedPitch = finiteNumber(cameraSettings?.pitch) ?? -65
+        const pitch = source === 'drawer'
+                      ? degreesToRadians(normalizedPitch)
+                      : normalizedPitch <= -89
+                        ? SAFE_TOP_DOWN_PITCH
+                        : degreesToRadians(normalizedPitch)
+        let desiredHeading
+        if (cameraSettings.positionMode === FLYTHROUGH_CAMERA_POSITION_SYSTEM) {
+            if (Number.isFinite(cameraSettings?.heading)) {
+                desiredHeading = degreesToRadians(cameraSettings.heading)
+            }
+            else {
+                desiredHeading = finiteNumber(previousHeading)
+                    ?? finiteNumber(globalThis.lgs?.viewer?.camera?.heading)
+                    ?? 0
+            }
+        }
+        else {
+            desiredHeading = flythroughCameraHeadingForPositionMode({
+                                                                        axisHeading:  this.#headingFromPositionProperty(progress),
+                                                                        positionMode: cameraSettings.positionMode,
+                                                                    })
+        }
+        const heading = source === 'drawer'
+                        ? desiredHeading
+                        : flythroughCameraHeadingWithHysteresis({
+                                                                    previousHeading,
+                                                                    nextHeading: desiredHeading,
+                                                                    threshold:   cameraSettings.positionMode === FLYTHROUGH_CAMERA_POSITION_SYSTEM
+                                                                                 ? CAMERA_HEADING_HYSTERESIS_RADIANS
+                                                                                 : CAMERA_HEADING_MIN_CHANGE_RADIANS,
+                                                                })
+        const smoothHeading = source === 'drawer'
+                              ? heading
+                              : this.#smoothRadians(
+                previousHeading,
+                heading,
+                this.#headingEasingFactor(cameraSettings, heading),
+            )
+        const smoothPitch = source === 'drawer'
+                            ? pitch
+                            : this.#smoothRadians(previousPitch, pitch, 0.08)
+        const anchorSample = this.#markerPositionForSample(sample, markerSettings)
+        return {
+            sample:       anchorSample,
+            progress:     clamp(Number(progress) || 0, 0, 1),
+            heading:      smoothHeading,
+            pitch:        smoothPitch,
+            cameraSettings,
+            markerSettings,
+            cameraHeight: this.#cameraAltitudeForSample(anchorSample, cameraSettings),
+        }
+    }
+
+    #rememberNominalCameraView = view => {
+        this.#lastNominalCameraHeading = finiteNumber(view?.heading) ?? this.#lastNominalCameraHeading
+        this.#lastNominalCameraPitch = finiteNumber(view?.pitch) ?? this.#lastNominalCameraPitch
+    }
+
+    #cameraRedirectPitchLimits = () => ({
+        min: SAFE_TOP_DOWN_PITCH,
+        max: degreesToRadians(-5) ?? -0.08726646259971647,
+    })
+
+    #cameraViewWithRedirectState = (view, redirectState = null) => {
+        if (!view) {
+            return null
+        }
+        if (!redirectState) {
+            return view
+        }
+
+        const {min, max} = this.#cameraRedirectPitchLimits()
+        return {
+            ...view,
+            heading: (finiteNumber(view.heading) ?? 0) + (finiteNumber(redirectState.headingOffset) ?? 0),
+            pitch:   clamp(
+                (finiteNumber(view.pitch) ?? SAFE_TOP_DOWN_PITCH) + (finiteNumber(redirectState.pitchOffset) ?? 0),
+                min,
+                max,
+            ),
+        }
+    }
+
+    #cameraLookaheadSample = sample => {
+        const currentDistance = finiteNumber(sample?.distanceFromStart)
+        if (currentDistance === null || !this.#sampler?.atDistance) {
+            return null
+        }
+
+        const lookaheadDistance = Math.max(
+            CAMERA_REDIRECT_LOOKAHEAD_DISTANCE_METERS,
+            (this.#sampler?.totalDistance ?? 0) * 0.01,
+        )
+        const next = this.#sampler.atDistance(currentDistance + lookaheadDistance)
+        if (!next || Math.abs((finiteNumber(next?.distanceFromStart) ?? 0) - currentDistance) <= 0.0001) {
+            return null
+        }
+        return next
+    }
+
+    #cameraLineOfSightVisibleForFrame = frame => {
+        const originCartographic = safeCartographicFromCartesian(frame?.destination)
+        const targetSample = frame?.sample
+        const targetHeight = finiteNumber(frame?.targetHeight) ?? finiteNumber(targetSample?.altitude ?? targetSample?.height) ?? 0
+        const origin = cartographicToLonLat(originCartographic)
+        const targetLongitude = finiteNumber(targetSample?.longitude)
+        const targetLatitude = finiteNumber(targetSample?.latitude)
+        if (!origin || targetLongitude === null || targetLatitude === null) {
+            return false
+        }
+
+        for (let index = 1; index <= CAMERA_REDIRECT_TERRAIN_LINE_SEGMENTS; index += 1) {
+            const ratio = index / (CAMERA_REDIRECT_TERRAIN_LINE_SEGMENTS + 1)
+            const longitude = lerp(origin.longitude, targetLongitude, ratio)
+            const latitude = lerp(origin.latitude, targetLatitude, ratio)
+            const lineHeight = lerp(origin.altitude, targetHeight, ratio)
+            const terrainHeight = this.#terrainHeightForLonLat(longitude, latitude)
+            if (
+                terrainHeight !== null
+                && terrainHeight + CAMERA_REDIRECT_TERRAIN_CLEARANCE_METERS >= lineHeight
+            ) {
+                return false
+            }
+        }
+
+        return true
+    }
+
+    #cameraViewFrame = view => this.#cameraRecenterFrame({
+                                                             sample:         view?.sample,
+                                                             heading:        view?.heading,
+                                                             pitch:          view?.pitch,
+                                                             cameraSettings: view?.cameraSettings,
+                                                             cameraHeight:   view?.cameraHeight,
+                                                         })
+
+    #cameraTraceVisibilityTargets = (anchorSample) => {
+        if (!anchorSample) {
+            return []
+        }
+
+        const targets = [{sample: anchorSample, required: true}]
+        const currentDistance = finiteNumber(anchorSample?.distanceFromStart)
+        if (currentDistance === null || !this.#sampler?.atDistance) {
+            return targets
+        }
+
+        const pushTarget = (sample, {required = false} = {}) => {
+            const longitude = finiteNumber(sample?.longitude)
+            const latitude = finiteNumber(sample?.latitude)
+            if (longitude === null || latitude === null) {
+                return
+            }
+            if (targets.some(entry =>
+                                 Math.abs((finiteNumber(entry.sample?.longitude) ?? Number.POSITIVE_INFINITY) - longitude) <= 1e-8
+                                 && Math.abs((finiteNumber(entry.sample?.latitude) ?? Number.POSITIVE_INFINITY) - latitude) <= 1e-8,
+            )) {
+                return
+            }
+            targets.push({sample, required})
+        }
+
+        CAMERA_REDIRECT_TRACE_VISIBILITY_OFFSETS_METERS.forEach(offset => {
+            const trailingSample = this.#sampler.atDistance(Math.max(0, currentDistance - offset))
+            if (trailingSample) {
+                pushTarget(trailingSample, {required: offset <= CAMERA_REDIRECT_REQUIRED_TRACE_OFFSET_METERS})
+            }
+        })
+
+        return targets
+    }
+
+    #sampleFromVisibilityTarget = target => ({
+        ...target.sample,
+        longitude: target.sample?.longitude,
+        latitude:  target.sample?.latitude,
+        altitude:  finiteNumber(target.sample?.altitude ?? target.sample?.height) ?? 0,
+        height:    finiteNumber(target.sample?.height ?? target.sample?.altitude) ?? 0,
+    })
+
+    #renderedTargetVisible = sample => {
+        const scene = this.#cesiumScene()
+        const camera = globalThis.lgs?.viewer?.camera ?? scene?.camera
+        const target = this.#markerRenderCartesianForSample(sample)
+        const windowPosition = this.#windowPositionForSample(sample)
+        if (!scene || !camera || !target || !windowPosition) {
+            return null
+        }
+
+        const rect = this.#viewportRectForCesiumSurface()
+        if (!rect.width || !rect.height) {
+            return null
+        }
+        if (
+            windowPosition.x < 0
+            || windowPosition.y < 0
+            || windowPosition.x > rect.width
+            || windowPosition.y > rect.height
+        ) {
+            return false
+        }
+
+        const canvasPosition = new Cartesian2(windowPosition.x, windowPosition.y)
+        let pickedPosition = null
+        if (scene.pickPositionSupported !== false && typeof scene.pickPosition === 'function') {
+            try {
+                pickedPosition = scene.pickPosition(canvasPosition)
+            }
+            catch {
+                pickedPosition = null
+            }
+        }
+        if (!pickedPosition) {
+            const pickRay = camera.getPickRay?.(canvasPosition)
+            pickedPosition = pickRay ? scene.globe?.pick?.(pickRay, scene) : null
+        }
+        const cameraPosition = camera.positionWC ?? camera.position
+        if (!pickedPosition || !cameraPosition) {
+            return null
+        }
+
+        const targetDistance = Cartesian3.distance(cameraPosition, target)
+        const pickedDistance = Cartesian3.distance(cameraPosition, pickedPosition)
+        return pickedDistance + CAMERA_REDIRECT_RENDERED_DEPTH_CLEARANCE_METERS >= targetDistance
+    }
+
+    #renderedTraceVisibleForSample = sample => {
+        const targets = this.#cameraTraceVisibilityTargets(sample)
+        if (!targets.length) {
+            return null
+        }
+
+        let optionalVisible = 0
+        let optionalTargets = 0
+        let hasRenderedResult = false
+        for (const target of targets) {
+            const visible = this.#renderedTargetVisible(this.#sampleFromVisibilityTarget(target))
+            if (visible === null) {
+                continue
+            }
+            hasRenderedResult = true
+            if (target.required && !visible) {
+                return false
+            }
+            if (!target.required) {
+                optionalTargets += 1
+                if (visible) {
+                    optionalVisible += 1
+                }
+            }
+        }
+
+        if (!hasRenderedResult) {
+            return null
+        }
+        return optionalTargets === 0 || optionalVisible > 0
+    }
+
+    #cameraViewHasLineOfSight = (view, anchorSample = view?.sample) => {
+        const frame = this.#cameraViewFrame(view)
+        if (!frame) {
+            return false
+        }
+
+        const targets = this.#cameraTraceVisibilityTargets(anchorSample)
+        let optionalVisible = 0
+        let optionalTargets = 0
+        for (const target of targets) {
+            const sample = this.#sampleFromVisibilityTarget(target)
+            const visible = this.#cameraLineOfSightVisibleForFrame({
+                                                                       ...frame,
+                                                                       sample,
+                                                                       targetHeight: this.#markerRenderHeightForSample(sample),
+                                                                   })
+            if (target.required && !visible) {
+                return false
+            }
+            if (!target.required) {
+                optionalTargets += 1
+                if (visible) {
+                    optionalVisible += 1
+                }
+            }
+        }
+
+        return optionalTargets === 0 || optionalVisible > 0
+    }
+
+    #cameraViewVisibilityForSample = ({
+                                          nominalView,
+                                          redirectState = null,
+                                          futureSample = null,
+                                          source = null,
+                                          cameraSettings,
+                                          markerSettings,
+                                      } = {}) => {
+        const currentView = this.#cameraViewWithRedirectState(nominalView, redirectState)
+        if (!this.#cameraViewHasLineOfSight(currentView)) {
+            return false
+        }
+
+        if (!futureSample) {
+            return true
+        }
+
+        const futureNominalView = this.#cameraViewForSample({
+                                                                sample:          futureSample,
+                                                                progress:        futureSample.progress ?? nominalView?.progress ?? 0,
+                                                                source,
+                                                                cameraSettings,
+                                                                markerSettings,
+                                                                previousHeading: nominalView?.heading,
+                                                                previousPitch:   nominalView?.pitch,
+                                                            })
+        const futureView = this.#cameraViewWithRedirectState(futureNominalView, redirectState)
+        return this.#cameraViewHasLineOfSight(futureView)
+    }
+
+    #cameraRedirectCandidateScore = candidate => {
+        const headingOffset = Math.abs(finiteNumber(candidate?.headingOffset) ?? 0)
+        const pitchOffset = Math.abs(finiteNumber(candidate?.pitchOffset) ?? 0)
+        return (pitchOffset * 2) + headingOffset
+    }
+
+    #findCameraRedirectState = ({
+                                    nominalView,
+                                    futureSample = null,
+                                    source = null,
+                                    cameraSettings,
+                                    markerSettings,
+                                    reuseCurrentIfVisible = true,
+                                } = {}) => {
+        if (reuseCurrentIfVisible && this.#cameraRedirectState) {
+            const currentVisible = this.#cameraViewVisibilityForSample({
+                                                                           nominalView,
+                                                                           redirectState: this.#cameraRedirectState,
+                                                                           futureSample:  null,
+                                                                           source,
+                                                                           cameraSettings,
+                                                                           markerSettings,
+                                                                       })
+            if (currentVisible) {
+                return this.#cameraRedirectState
+            }
+        }
+
+        const candidates = []
+        const pushCandidate = candidate => {
+            if (!candidate) {
+                return
+            }
+            const headingOffset = finiteNumber(candidate.headingOffset) ?? 0
+            const pitchOffset = finiteNumber(candidate.pitchOffset) ?? 0
+            if (candidates.some(entry =>
+                                    Math.abs((finiteNumber(entry.headingOffset) ?? 0) - headingOffset) <= 1e-8
+                                    && Math.abs((finiteNumber(entry.pitchOffset) ?? 0) - pitchOffset) <= 1e-8,
+            )) {
+                return
+            }
+            candidates.push({headingOffset, pitchOffset})
+        }
+
+        pushCandidate(this.#cameraRedirectState)
+        CAMERA_REDIRECT_CANDIDATES.forEach(candidate => {
+            pushCandidate({
+                              headingOffset: degreesToRadians(candidate.headingOffsetDeg) ?? 0,
+                              pitchOffset:   degreesToRadians(candidate.pitchOffsetDeg) ?? 0,
+                          })
+        })
+
+        let bestCandidate = null
+        let bestScore = Number.POSITIVE_INFINITY
+        for (const candidate of candidates) {
+            const visible = this.#cameraViewVisibilityForSample({
+                                                                    nominalView,
+                                                                    redirectState: candidate,
+                                                                    futureSample,
+                                                                    source,
+                                                                    cameraSettings,
+                                                                    markerSettings,
+                                                                })
+            if (!visible) {
+                continue
+            }
+
+            const score = this.#cameraRedirectCandidateScore(candidate)
+            if (score < bestScore) {
+                bestCandidate = candidate
+                bestScore = score
+            }
+        }
+
+        return bestCandidate
+    }
+
     #applyCameraView = ({anchor, heading, pitch, cameraSettings}) => {
         const anchorHeight = finiteNumber(anchor?.altitude ?? anchor?.height) ?? 0
         const safeHeading = sanitizeOrientationRadians(heading, 0)
@@ -2701,6 +3158,11 @@ export class FlythroughMode {
         finally {
             this.#cameraApplyingView = false
         }
+    }
+
+    #liveCameraPitch = fallback => {
+        const cameraPitch = finiteNumber(globalThis.lgs?.viewer?.camera?.pitch)
+        return cameraPitch ?? fallback
     }
 
     #markerPositionForSample = (sample, markerSettings) => {
@@ -2816,11 +3278,6 @@ export class FlythroughMode {
                                                   })
     }
 
-    #liveCameraPitch = fallback => {
-        const cameraPitch = finiteNumber(globalThis.lgs?.viewer?.camera?.pitch)
-        return cameraPitch ?? fallback
-    }
-
     #terrainHeightForLonLat = (longitude, latitude) => {
         if (finiteNumber(longitude) === null || finiteNumber(latitude) === null) {
             return null
@@ -2828,6 +3285,9 @@ export class FlythroughMode {
 
         const globe = this.#cesiumScene()?.globe
         const height = globe?.getHeight?.(Cartographic.fromDegrees(longitude, latitude))
+        if (height === null || height === undefined || height === '') {
+            return null
+        }
         return finiteNumber(height)
     }
 
@@ -2858,11 +3318,10 @@ export class FlythroughMode {
             return null
         }
 
-        const sampleHeight = finiteNumber(sample?.altitude ?? sample?.height) ?? 0
-        const terrainHeight = this.#terrainHeightForLonLat(sample?.longitude, sample?.latitude) ?? sampleHeight
+        const terrainHeight = this.#terrainHeightForLonLat(sample?.longitude, sample?.latitude)
         const cameraHeight = finiteNumber(camera.positionCartographic?.height)
-        const currentAltitude = normalizeFlythroughCamera(globalThis.lgs?.stores?.flythrough?.camera ?? getFlythroughSettings().camera).altitude
         const currentCameraSettings = normalizeFlythroughCamera(globalThis.lgs?.stores?.flythrough?.camera ?? getFlythroughSettings().camera)
+        const currentAltitude = currentCameraSettings.altitude
         const next = {
             pitch: clamp(Math.round(CesiumMath.toDegrees(camera.pitch)), -89, -5),
         }
@@ -2874,9 +3333,11 @@ export class FlythroughMode {
             next.heading = headingDeg
         }
 
-        const nextAltitudeMode = altitudeMode ?? getFlythroughSettings().camera.altitudeMode
+        const nextAltitudeMode = altitudeMode ?? currentCameraSettings.altitudeMode
         if (nextAltitudeMode === FLYTHROUGH_CAMERA_ALTITUDE_GROUND_OFFSET) {
-            next.altitude = clamp(Math.max(10, (cameraHeight ?? (currentAltitude + terrainHeight)) - terrainHeight), 10, 100000)
+            next.altitude = terrainHeight === null
+                            ? currentAltitude
+                            : clamp(Math.max(10, (cameraHeight ?? (currentAltitude + terrainHeight)) - terrainHeight), 10, 100000)
         }
         else {
             next.altitude = clamp(cameraHeight ?? currentAltitude, 10, 100000)
@@ -2930,11 +3391,16 @@ export class FlythroughMode {
     }
 
     #cancelCameraBezierTransition = (resolveValue = false) => {
+        const hadActiveTransition = this.#cameraBezierFrame !== null
+            || this.#cameraBezierResolve !== null
+            || this.#cameraFlightActive
         if (this.#cameraBezierFrame !== null) {
             globalThis.clearTimeout?.(this.#cameraBezierFrame)
             this.#cameraBezierFrame = null
         }
-        globalThis.lgs?.viewer?.camera?.cancelFlight?.()
+        if (hadActiveTransition) {
+            globalThis.lgs?.viewer?.camera?.cancelFlight?.()
+        }
         if (this.#cameraBezierResolve !== null) {
             const resolve = this.#cameraBezierResolve
             this.#cameraBezierResolve = null
@@ -3008,6 +3474,7 @@ export class FlythroughMode {
             new Cartesian3(),
         )
         return {
+            sample,
             target,
             targetHeight,
             destination,
@@ -3215,7 +3682,6 @@ export class FlythroughMode {
             this.#cameraFlightActive = false
         }
 
-        this.#cameraFlightActive = true
         this.#cameraAutoTrackingIgnoreUntil = this.#now() + Math.max(180, duration * 1000 + 180)
         this.#rememberCameraView({anchor: sample, heading: safeHeading, pitch: safePitch})
         if (instant || duration <= 0) {
@@ -3270,6 +3736,8 @@ export class FlythroughMode {
         const endHeading = frame.safeHeading
         const endPitch = frame.safePitch
         const endPosition = frame.destination
+        const endDirection = frame.direction
+        const endUp = frame.correctedUp
         const startHeight = finiteNumber(globalThis.lgs?.viewer?.camera?.positionCartographic?.height)
                             ?? cameraHeight
                             ?? frame.currentHeight
@@ -3306,9 +3774,8 @@ export class FlythroughMode {
                     viewer.camera.flyTo({
                         destination: endPosition,
                         orientation: {
-                            heading: endHeading,
-                            pitch:   endPitch,
-                            roll:    0,
+                            direction: endDirection,
+                            up:        endUp,
                         },
                         duration: Math.max(0, Number(duration) || 0),
                         maximumHeight,
@@ -3326,9 +3793,8 @@ export class FlythroughMode {
                 viewer.camera.setView?.({
                     destination: endPosition,
                     orientation: {
-                        heading: endHeading,
-                        pitch:   endPitch,
-                        roll:    0,
+                        direction: endDirection,
+                        up:        endUp,
                     },
                 })
                 settle(true)
@@ -3380,8 +3846,7 @@ export class FlythroughMode {
                 return
             }
             if (pointer && this.#cameraFlightActive) {
-                camera.cancelFlight?.()
-                this.#cameraFlightActive = false
+                this.#cancelCameraBezierTransition(false)
             }
             // Allow pointer interactions to start even if a programmatic camera view was just applied.
             if (!pointer && (this.#cameraApplyingView || this.#now() < this.#cameraAutoTrackingIgnoreUntil)) {
@@ -3564,53 +4029,28 @@ export class FlythroughMode {
         if (marker.mode === FLYTHROUGH_MARKER_MODE_TRACE) {
             this.#cameraMode = marker.mode
             this.#cameraFlightActive = false
+            this.#cameraRedirectState = null
             this.#removeToleranceZoneOverlay()
             return
         }
 
         const cameraSettings = normalizeFlythroughCamera(globalThis.lgs?.stores?.flythrough?.camera ?? settings.camera)
         const markerSettings = normalizeFlythroughMarker(globalThis.lgs?.stores?.flythrough?.marker ?? settings.marker)
-        const normalizedPitch = finiteNumber(cameraSettings?.pitch) ?? -65
-        const pitch = source === 'drawer'
-                      ? degreesToRadians(normalizedPitch)
-                      : normalizedPitch <= -89
-                        ? SAFE_TOP_DOWN_PITCH
-                        : degreesToRadians(normalizedPitch)
-        let desiredHeading
-        if (cameraSettings.positionMode === FLYTHROUGH_CAMERA_POSITION_SYSTEM) {
-            if (Number.isFinite(cameraSettings?.heading)) {
-                desiredHeading = degreesToRadians(cameraSettings.heading)
-            }
-            else {
-                desiredHeading = (finiteNumber(this.#lastCameraHeading) ?? finiteNumber(globalThis.lgs?.viewer?.camera?.heading) ?? 0)
-            }
+        const nominalView = this.#cameraViewForSample({
+                                                          sample,
+                                                          progress,
+                                                          source,
+                                                          cameraSettings,
+                                                          markerSettings,
+                                                      })
+        if (!nominalView) {
+            return
         }
-        else {
-            desiredHeading = flythroughCameraHeadingForPositionMode({
-                axisHeading: this.#headingFromPositionProperty(progress),
-                positionMode: cameraSettings.positionMode,
-            })
-        }
-        const heading = source === 'drawer'
-                      ? desiredHeading
-                      : flythroughCameraHeadingWithHysteresis({
-                          previousHeading: this.#lastCameraHeading,
-                          nextHeading:     desiredHeading,
-                          threshold:       cameraSettings.positionMode === FLYTHROUGH_CAMERA_POSITION_SYSTEM
-                                            ? CAMERA_HEADING_HYSTERESIS_RADIANS
-                                            : CAMERA_HEADING_MIN_CHANGE_RADIANS,
-                      })
-        const smoothHeading = source === 'drawer'
-                              ? heading
-                              : this.#smoothRadians(
-                                  this.#lastCameraHeading,
-                                  heading,
-                                  this.#headingEasingFactor(cameraSettings, heading),
-                              )
-        const smoothPitch = source === 'drawer'
-                            ? pitch
-                            : this.#smoothRadians(this.#lastCameraPitch, pitch, 0.08)
-        const anchorSample = this.#markerPositionForSample(sample, markerSettings)
+        this.#rememberNominalCameraView(nominalView)
+        const anchorSample = nominalView.sample
+        const smoothHeading = nominalView.heading
+        const smoothPitch = nominalView.pitch
+        const futureSample = this.#cameraLookaheadSample(anchorSample)
         const introTransition = this.#introHeadingTransition
         if (introTransition) {
             const now = this.#now()
@@ -3628,14 +4068,14 @@ export class FlythroughMode {
                     })
                     this.#recenterCameraToSample({
                         sample:         anchorSample,
-                        heading:        introTransition.targetHeading ?? heading,
+                                                     heading: introTransition.targetHeading ?? smoothHeading,
                         pitch:          introTransition.fromPitch,
                         cameraSettings: introCameraSettings,
                         cameraHeight:   Math.max(10, introTransition.height),
                         duration:       FLYTHROUGH_HEADING_TRANSITION_DURATION_SECONDS,
                     })
                 }
-                this.#lastCameraHeading = heading
+                this.#lastCameraHeading = smoothHeading
                 this.#lastCameraPitch = smoothPitch
                 return
             }
@@ -3648,6 +4088,7 @@ export class FlythroughMode {
             this.#cameraFlightActive = false
             this.#lastToleranceRecenterAt = null
             this.#lastToleranceRecenterProgress = null
+            this.#cameraRedirectState = null
         }
 
         if (marker.mode === FLYTHROUGH_MARKER_MODE_NAVIGATION) {
@@ -3667,13 +4108,47 @@ export class FlythroughMode {
             this.#updateToleranceZoneOverlay(cameraSettings.hysteresis)
             const collision = this.#cameraCollisionForSample(anchorSample, cameraSettings)
             const outsideTolerance = collision?.shouldMove ?? false
-            if (!outsideTolerance && !forceToleranceRecenter && !immediateToleranceRecenter) {
-                this.#lastToleranceRecenterProgress = null
-                this.#lastCameraHeading = smoothHeading
-                this.#lastCameraPitch = smoothPitch
-                return
-            }
-
+            const nominalCurrentVisible = this.#cameraViewVisibilityForSample({
+                                                                                  nominalView,
+                                                                                  futureSample: null,
+                                                                                  source,
+                                                                                  cameraSettings,
+                                                                                  markerSettings,
+                                                                              })
+            const nominalPredictedVisible = futureSample
+                                            ? this.#cameraViewVisibilityForSample({
+                                                                                      nominalView,
+                                                                                      futureSample,
+                                                                                      source,
+                                                                                      cameraSettings,
+                                                                                      markerSettings,
+                                                                                  })
+                                            : nominalCurrentVisible
+            const nominalVisible = nominalCurrentVisible && nominalPredictedVisible
+            const redirectedCurrentVisible = this.#cameraRedirectState
+                                             ? this.#cameraViewVisibilityForSample({
+                                                                                       nominalView,
+                                                                                       redirectState: this.#cameraRedirectState,
+                                                                                       futureSample:  null,
+                                                                                       source,
+                                                                                       cameraSettings,
+                                                                                       markerSettings,
+                                                                                   })
+                                             : false
+            const redirectedVisible = this.#cameraRedirectState
+                                      ? this.#cameraViewVisibilityForSample({
+                                                                                nominalView,
+                                                                                redirectState: this.#cameraRedirectState,
+                                                                                futureSample,
+                                                                                source,
+                                                                                cameraSettings,
+                                                                                markerSettings,
+                                                                            })
+                                      : false
+            const renderedVisible = this.#renderedTraceVisibleForSample(anchorSample)
+            const renderedOccluded = renderedVisible === false
+            const needsVisibilityCorrection = renderedOccluded
+                || (renderedVisible === null && !nominalCurrentVisible)
             const now = this.#now()
             const currentProgress = finiteNumber(progress)
             const sameProgressRecenter = currentProgress !== null
@@ -3681,9 +4156,83 @@ export class FlythroughMode {
                                          && this.#lastToleranceRecenterAt !== null
                                          && Math.abs(currentProgress - this.#lastToleranceRecenterProgress) <= 0.000001
                                          && now - this.#lastToleranceRecenterAt < 80
-            const activeRecenterStillFresh = this.#cameraFlightActive
-                                            && this.#lastToleranceRecenterAt !== null
+            const activeRecenterStillFresh = this.#lastToleranceRecenterAt !== null
                                             && now - this.#lastToleranceRecenterAt < FLYTHROUGH_TOLERANCE_RECENTER_REPLACE_DELAY_MS
+            if (
+                !forceToleranceRecenter
+                && !immediateToleranceRecenter
+                && (sameProgressRecenter || activeRecenterStillFresh)
+                && (outsideTolerance || needsVisibilityCorrection)
+            ) {
+                this.#lastCameraHeading = smoothHeading
+                this.#lastCameraPitch = smoothPitch
+                return
+            }
+            if (!outsideTolerance && !forceToleranceRecenter && !immediateToleranceRecenter) {
+                this.#lastToleranceRecenterProgress = null
+                if (!needsVisibilityCorrection) {
+                    if (this.#cameraRedirectState && nominalVisible) {
+                        this.#cameraRedirectState = null
+                        this.#recenterCameraToSample({
+                                                         sample:   anchorSample,
+                                                         heading:  nominalView.heading,
+                                                         pitch:    nominalView.pitch,
+                                                         cameraSettings,
+                                                         duration: CAMERA_REDIRECT_MAX_TRANSITION_SECONDS,
+                                                     })
+                    }
+                    this.#lastCameraHeading = smoothHeading
+                    this.#lastCameraPitch = smoothPitch
+                    return
+                }
+
+                let redirectView = redirectedVisible && this.#cameraRedirectState
+                                   ? this.#cameraViewWithRedirectState(nominalView, this.#cameraRedirectState)
+                                   : null
+                if (!redirectView) {
+                    this.#cameraRedirectState = this.#findCameraRedirectState({
+                                                                                  nominalView,
+                                                                                  futureSample,
+                                                                                  source,
+                                                                                  cameraSettings,
+                                                                                  markerSettings,
+                                                                                  reuseCurrentIfVisible: false,
+                                                                              }) ?? this.#findCameraRedirectState({
+                                                                                                                      nominalView,
+                                                                                                                      futureSample:          null,
+                                                                                                                      source,
+                                                                                                                      cameraSettings,
+                                                                                                                      markerSettings,
+                                                                                                                      reuseCurrentIfVisible: false,
+                                                                                                                  })
+                    redirectView = this.#cameraRedirectState
+                                   ? this.#cameraViewWithRedirectState(nominalView, this.#cameraRedirectState)
+                                   : null
+                }
+
+                if (redirectView) {
+                    if (redirectedCurrentVisible) {
+                        this.#applyCameraView({
+                                                  anchor:  redirectView.sample,
+                                                  heading: redirectView.heading,
+                                                  pitch:   redirectView.pitch,
+                                                  cameraSettings,
+                                              })
+                    }
+                    else {
+                        this.#recenterCameraToSample({
+                                                         sample:   redirectView.sample,
+                                                         heading:  redirectView.heading,
+                                                         pitch:    redirectView.pitch,
+                                                         cameraSettings,
+                                                         duration: CAMERA_REDIRECT_MAX_TRANSITION_SECONDS,
+                                                     })
+                    }
+                }
+                this.#lastCameraHeading = smoothHeading
+                this.#lastCameraPitch = smoothPitch
+                return
+            }
             if (
                 !forceToleranceRecenter
                 && !immediateToleranceRecenter
@@ -3695,15 +4244,58 @@ export class FlythroughMode {
                 return
             }
 
-            if (outsideTolerance || forceToleranceRecenter || immediateToleranceRecenter) {
+            if (outsideTolerance || needsVisibilityCorrection || forceToleranceRecenter || immediateToleranceRecenter) {
+                const canUseNominalView = !renderedOccluded && nominalCurrentVisible
+                let targetView = canUseNominalView ? nominalView : null
+                let nextRedirectState = canUseNominalView ? null : this.#cameraRedirectState
+
+                if (!targetView && redirectedVisible && this.#cameraRedirectState) {
+                    targetView = this.#cameraViewWithRedirectState(nominalView, this.#cameraRedirectState)
+                }
+
+                if (!targetView) {
+                    nextRedirectState = this.#findCameraRedirectState({
+                                                                          nominalView,
+                                                                          futureSample,
+                                                                          source,
+                                                                          cameraSettings,
+                                                                          markerSettings,
+                                                                          reuseCurrentIfVisible: false,
+                                                                      }) ?? this.#findCameraRedirectState({
+                                                                                                              nominalView,
+                                                                                                              futureSample:          null,
+                                                                                                              source,
+                                                                                                              cameraSettings,
+                                                                                                              markerSettings,
+                                                                                                              reuseCurrentIfVisible: false,
+                                                                                                          })
+                    if (nextRedirectState) {
+                        targetView = this.#cameraViewWithRedirectState(nominalView, nextRedirectState)
+                    }
+                }
+
+                if (!targetView) {
+                    targetView = nominalView
+                    nextRedirectState = null
+                }
+
+                const useRedirectTransition = nextRedirectState !== null
+                this.#cameraRedirectState = nextRedirectState
                 this.#recenterCameraToSample({
-                    sample: anchorSample,
-                    heading: smoothHeading,
-                    pitch:    this.#liveCameraPitch(smoothPitch),
+                                                 sample:  targetView.sample,
+                                                 heading: targetView.heading,
+                                                 pitch:   useRedirectTransition
+                                                          ? targetView.pitch
+                                                          : this.#liveCameraPitch(smoothPitch),
                     cameraSettings,
                     duration: immediateToleranceRecenter
                               ? 0
-                              : flythroughCameraRecenterDuration(cameraSettings.hysteresis.easing),
+                              : useRedirectTransition
+                                ? Math.min(
+                                CAMERA_REDIRECT_MAX_TRANSITION_SECONDS,
+                                flythroughCameraRecenterDuration(cameraSettings.hysteresis.easing),
+                            )
+                                : flythroughCameraRecenterDuration(cameraSettings.hysteresis.easing),
                 })
                 this.#lastToleranceRecenterProgress = currentProgress
                 this.#lastToleranceRecenterAt = now
@@ -3736,6 +4328,8 @@ export class FlythroughMode {
                                                forceToleranceRecenter:     true,
                                                immediateToleranceRecenter: true,
                                            })
+                        const startProgress = finiteNumber(detail?.progress ?? startSample?.progress)
+                        this.#lastPlaybackUpdateProgressKey = Math.round((startProgress ?? 0) / CAMERA_UPDATE_MIN_PROGRESS_DELTA)
                     }
                 }
                 catch (error) {

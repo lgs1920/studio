@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-06-29
- * Last modified: 2026-06-29
+ * Created on: 2026-07-01
+ * Last modified: 2026-07-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -36,7 +36,7 @@ import {
     FLYTHROUGH_CAMERA_PRESET_DEFAULT, FLYTHROUGH_CAMERA_PRESET_ULTRA_SMOOTH, FLYTHROUGH_MARKER_MODE_HYSTERESIS,
     FLYTHROUGH_MARKER_MODE_NAVIGATION, FLYTHROUGH_MARKER_MODE_TRACE, getFlythroughCameraPresetKey,
     normalizeFlythroughCamera, normalizeFlythroughMarker, normalizeFlythroughSettings,
-} from '@Core/ui/flythrough/FlythroughProgressionStyle'
+}                                                                      from '@Core/ui/flythrough/FlythroughProgressionStyle'
 import { gpx }                                                         from '@tmcw/togeojson'
 import { applyGpxStyleExtensionProperties, extractLgsTrackProperties } from '@Utils/JourneyGpxUtils'
 import { Cartesian3, Matrix4, Transforms }                             from 'cesium'
@@ -3728,7 +3728,7 @@ describe('flythrough phase 1 playback controller', () => {
         }
     })
 
-    it('replaces a stale tolerance recenter when the moving marker remains outside the zone', () => {
+    it('keeps an active tolerance recenter while the moving marker remains outside the zone', () => {
         vi.useFakeTimers()
         const journey = makeJourney([
                                         makeTrack({
@@ -3829,8 +3829,8 @@ describe('flythrough phase 1 playback controller', () => {
             vi.advanceTimersByTime(360)
             mode.refreshCamera()
 
-            expect(cancelFlightCalls).toBe(2)
-            expect(flyToCalls).toHaveLength(2)
+            expect(cancelFlightCalls).toBe(1)
+            expect(flyToCalls).toHaveLength(1)
         }
         finally {
             vi.useRealTimers()
@@ -3945,6 +3945,548 @@ describe('flythrough phase 1 playback controller', () => {
         }
         finally {
             vi.useRealTimers()
+            globalThis.lgs = previousLgs
+        }
+    })
+
+    it('recenters with a lateral redirect when the nominal camera view cannot see the marker', () => {
+        const journey = makeJourney([
+                                        makeTrack({
+                                                      slug:        'track#journey#gpx#main',
+                                                      coordinates: [[2, 48, 120], [2.001, 48.001, 130]],
+                                                  }),
+                                    ])
+        const previousLgs = globalThis.lgs
+        const baseFlythrough = defaultFlythroughSettings()
+        const cameraSettings = normalizeFlythroughCamera({
+                                                             ...baseFlythrough.camera,
+                                                             positionMode: FLYTHROUGH_CAMERA_POSITION_SYSTEM,
+                                                             heading:      0,
+                                                             pitch:        -45,
+                                                             altitude:     1800,
+                                                         })
+        const appCanvas = {
+            clientWidth:         1000,
+            clientHeight:        1000,
+            addEventListener:    () => {
+            },
+            removeEventListener: () => {
+            },
+        }
+        const flyToCalls = []
+        const camera = {
+            heading:              0,
+            pitch:                -Math.PI / 4,
+            roll:                 0,
+            positionCartographic: {longitude: 2, latitude: 47.99, height: 1800},
+            moveStart:            {
+                addEventListener:       () => {
+                }, removeEventListener: () => {
+                },
+            },
+            moveEnd:              {
+                addEventListener:       () => {
+                }, removeEventListener: () => {
+                },
+            },
+            cancelFlight:         () => {
+            },
+            flyTo:                options => flyToCalls.push(options),
+            setView:              () => {
+            },
+            lookAtTransform:      () => {
+            },
+        }
+        const sample = {
+            longitude:         2,
+            latitude:          48,
+            altitude:          120,
+            height:            120,
+            progress:          0,
+            distanceFromStart: 0,
+        }
+
+        globalThis.lgs = {
+            theJourney: journey,
+            theTrack:   null,
+            canvas:     appCanvas,
+            settings:   {
+                ui: {
+                    flythrough: {
+                        ...baseFlythrough,
+                        camera: cameraSettings,
+                        marker: {
+                            ...baseFlythrough.marker,
+                            mode: FLYTHROUGH_MARKER_MODE_HYSTERESIS,
+                        },
+                    },
+                },
+            },
+            stores:     {
+                flythrough: proxy({
+                                      progress: 0,
+                                      camera:   cameraSettings,
+                                  }),
+            },
+            viewer:     {
+                trackedEntity: null,
+                canvas:        appCanvas,
+                camera,
+            },
+            scene:      {
+                canvas:                       appCanvas,
+                cartesianToCanvasCoordinates: () => ({x: 990, y: 990}),
+                requestRender:                () => {
+                },
+                globe:                        {
+                    getHeight: cartographic => {
+                        const longitude = cartographic.longitude * 180 / Math.PI
+                        const latitude = cartographic.latitude * 180 / Math.PI
+                        if (latitude < 47.9997 && Math.abs(longitude - 2) < 0.0008) {
+                            return 10000
+                        }
+                        return 120
+                    },
+                },
+            },
+        }
+
+        try {
+            const mode = new FlythroughMode({
+                                                controller: new FlythroughPlaybackController({
+                                                                                                 requestFrame: () => 1,
+                                                                                                 cancelFrame:  () => {
+                                                                                                 },
+                                                                                                 now:          () => 0,
+                                                                                             }),
+                                                renderer:   {
+                                                    clear:  () => {
+                                                    },
+                                                    show:   () => {
+                                                    },
+                                                    update: () => {
+                                                    },
+                                                },
+                                            })
+            mode.configure()
+            mode.refreshCamera({sample})
+
+            const targetCartesian = Cartesian3.fromDegrees(2, 48, 120)
+            const targetTransform = Transforms.eastNorthUpToFixedFrame(targetCartesian)
+            const east = Matrix4.getColumn(targetTransform, 0, new Cartesian3())
+            const north = Matrix4.getColumn(targetTransform, 1, new Cartesian3())
+            const delta = Cartesian3.subtract(flyToCalls[0].destination, targetCartesian, new Cartesian3())
+
+            expect(flyToCalls).toHaveLength(1)
+            expect(Math.abs(Cartesian3.dot(delta, east))).toBeGreaterThan(200)
+            expect(Cartesian3.dot(delta, north)).toBeLessThan(0)
+            expect(flyToCalls[0].duration).toBeLessThanOrEqual(1)
+        }
+        finally {
+            globalThis.lgs = previousLgs
+        }
+    })
+
+    it('recenters for visibility even when the marker is still inside the tolerance zone', () => {
+        const journey = makeJourney([
+                                        makeTrack({
+                                                      slug:        'track#journey#gpx#main',
+                                                      coordinates: [[2, 48, 120], [2.001, 48.001, 130]],
+                                                  }),
+                                    ])
+        const previousLgs = globalThis.lgs
+        const baseFlythrough = defaultFlythroughSettings()
+        const cameraSettings = normalizeFlythroughCamera({
+                                                             ...baseFlythrough.camera,
+                                                             positionMode: FLYTHROUGH_CAMERA_POSITION_SYSTEM,
+                                                             heading:      0,
+                                                             pitch:        -45,
+                                                             altitude:     1800,
+                                                         })
+        const appCanvas = {
+            clientWidth:         1000,
+            clientHeight:        1000,
+            addEventListener:    () => {
+            },
+            removeEventListener: () => {
+            },
+        }
+        const flyToCalls = []
+        const camera = {
+            heading:              0,
+            pitch:                -Math.PI / 4,
+            roll:                 0,
+            positionCartographic: {longitude: 2, latitude: 47.99, height: 1800},
+            moveStart:            {
+                addEventListener:       () => {
+                }, removeEventListener: () => {
+                },
+            },
+            moveEnd:              {
+                addEventListener:       () => {
+                }, removeEventListener: () => {
+                },
+            },
+            cancelFlight:         () => {
+            },
+            flyTo:                options => flyToCalls.push(options),
+            setView:              () => {
+            },
+            lookAtTransform:      () => {
+            },
+        }
+        const sample = {
+            longitude:         2,
+            latitude:          48,
+            altitude:          120,
+            height:            120,
+            progress:          0,
+            distanceFromStart: 0,
+        }
+
+        globalThis.lgs = {
+            theJourney: journey,
+            theTrack:   null,
+            canvas:     appCanvas,
+            settings:   {
+                ui: {
+                    flythrough: {
+                        ...baseFlythrough,
+                        camera: cameraSettings,
+                        marker: {
+                            ...baseFlythrough.marker,
+                            mode: FLYTHROUGH_MARKER_MODE_HYSTERESIS,
+                        },
+                    },
+                },
+            },
+            stores:     {
+                flythrough: proxy({
+                                      progress: 0,
+                                      camera:   cameraSettings,
+                                  }),
+            },
+            viewer:     {
+                trackedEntity: null,
+                canvas:        appCanvas,
+                camera,
+            },
+            scene:      {
+                canvas:                       appCanvas,
+                cartesianToCanvasCoordinates: () => ({x: 500, y: 500}),
+                requestRender:                () => {
+                },
+                globe:                        {
+                    getHeight: cartographic => {
+                        const longitude = cartographic.longitude * 180 / Math.PI
+                        const latitude = cartographic.latitude * 180 / Math.PI
+                        if (latitude < 47.9997 && Math.abs(longitude - 2) < 0.0008) {
+                            return 10000
+                        }
+                        return 120
+                    },
+                },
+            },
+        }
+
+        try {
+            const mode = new FlythroughMode({
+                                                controller: new FlythroughPlaybackController({
+                                                                                                 requestFrame: () => 1,
+                                                                                                 cancelFrame:  () => {
+                                                                                                 },
+                                                                                                 now:          () => 0,
+                                                                                             }),
+                                                renderer:   {
+                                                    clear:  () => {
+                                                    },
+                                                    show:   () => {
+                                                    },
+                                                    update: () => {
+                                                    },
+                                                },
+                                            })
+            mode.configure()
+            mode.refreshCamera({sample})
+
+            const targetCartesian = Cartesian3.fromDegrees(2, 48, 120)
+            const targetTransform = Transforms.eastNorthUpToFixedFrame(targetCartesian)
+            const east = Matrix4.getColumn(targetTransform, 0, new Cartesian3())
+            const delta = Cartesian3.subtract(flyToCalls[0].destination, targetCartesian, new Cartesian3())
+
+            expect(flyToCalls).toHaveLength(1)
+            expect(Math.abs(Cartesian3.dot(delta, east))).toBeGreaterThan(200)
+            expect(flyToCalls[0].duration).toBeLessThanOrEqual(1)
+        }
+        finally {
+            globalThis.lgs = previousLgs
+        }
+    })
+
+    it('uses rendered terrain picking to correct a marker hidden behind visible relief', () => {
+        const journey = makeJourney([
+                                        makeTrack({
+                                                      slug:        'track#journey#gpx#main',
+                                                      coordinates: [[2, 48, 120], [2.001, 48.001, 130]],
+                                                  }),
+                                    ])
+        const previousLgs = globalThis.lgs
+        const baseFlythrough = defaultFlythroughSettings()
+        const cameraSettings = normalizeFlythroughCamera({
+                                                             ...baseFlythrough.camera,
+                                                             positionMode: FLYTHROUGH_CAMERA_POSITION_SYSTEM,
+                                                             heading:      0,
+                                                             pitch:        -45,
+                                                             altitude:     1800,
+                                                         })
+        const appCanvas = {
+            clientWidth:         1000,
+            clientHeight:        1000,
+            addEventListener:    () => {
+            },
+            removeEventListener: () => {
+            },
+        }
+        const flyToCalls = []
+        const cameraPosition = Cartesian3.fromDegrees(2, 47.99, 1800)
+        const camera = {
+            heading:              0,
+            pitch:                -Math.PI / 4,
+            roll:                 0,
+            position:             cameraPosition,
+            positionWC:           cameraPosition,
+            positionCartographic: {longitude: 2, latitude: 47.99, height: 1800},
+            getPickRay:           () => ({}),
+            moveStart:            {
+                addEventListener:       () => {
+                }, removeEventListener: () => {
+                },
+            },
+            moveEnd:              {
+                addEventListener:       () => {
+                }, removeEventListener: () => {
+                },
+            },
+            cancelFlight:         () => {
+            },
+            flyTo:                options => flyToCalls.push(options),
+            setView:              () => {
+            },
+            lookAtTransform:      () => {
+            },
+        }
+        const sample = {
+            longitude:         2,
+            latitude:          48,
+            altitude:          120,
+            height:            120,
+            progress:          0,
+            distanceFromStart: 0,
+        }
+
+        globalThis.lgs = {
+            theJourney: journey,
+            theTrack:   null,
+            canvas:     appCanvas,
+            settings:   {
+                ui: {
+                    flythrough: {
+                        ...baseFlythrough,
+                        camera: cameraSettings,
+                        marker: {
+                            ...baseFlythrough.marker,
+                            mode: FLYTHROUGH_MARKER_MODE_HYSTERESIS,
+                        },
+                    },
+                },
+            },
+            stores:     {
+                flythrough: proxy({
+                                      progress: 0,
+                                      camera:   cameraSettings,
+                                  }),
+            },
+            viewer:     {
+                trackedEntity: null,
+                canvas:        appCanvas,
+                camera,
+            },
+            scene:      {
+                canvas:                       appCanvas,
+                cartesianToCanvasCoordinates: () => ({x: 500, y: 500}),
+                requestRender:                () => {
+                },
+                globe:                        {
+                    getHeight: () => 120,
+                    pick:      () => Cartesian3.fromDegrees(2, 47.995, 120),
+                },
+            },
+        }
+
+        try {
+            const mode = new FlythroughMode({
+                                                controller: new FlythroughPlaybackController({
+                                                                                                 requestFrame: () => 1,
+                                                                                                 cancelFrame:  () => {
+                                                                                                 },
+                                                                                                 now:          () => 0,
+                                                                                             }),
+                                                renderer:   {
+                                                    clear:  () => {
+                                                    },
+                                                    show:   () => {
+                                                    },
+                                                    update: () => {
+                                                    },
+                                                },
+                                            })
+            mode.configure()
+            mode.refreshCamera({sample})
+
+            expect(flyToCalls).toHaveLength(1)
+            expect(flyToCalls[0].duration).toBeLessThanOrEqual(1)
+        }
+        finally {
+            globalThis.lgs = previousLgs
+        }
+    })
+
+    it('uses rendered depth picking to correct a marker hidden by 3D tiles', () => {
+        const journey = makeJourney([
+                                        makeTrack({
+                                                      slug:        'track#journey#gpx#main',
+                                                      coordinates: [[2, 48, 120], [2.001, 48.001, 130]],
+                                                  }),
+                                    ])
+        const previousLgs = globalThis.lgs
+        const baseFlythrough = defaultFlythroughSettings()
+        const cameraSettings = normalizeFlythroughCamera({
+                                                             ...baseFlythrough.camera,
+                                                             positionMode: FLYTHROUGH_CAMERA_POSITION_SYSTEM,
+                                                             heading:      0,
+                                                             pitch:        -45,
+                                                             altitude:     1800,
+                                                         })
+        const appCanvas = {
+            clientWidth:         1000,
+            clientHeight:        1000,
+            addEventListener:    () => {
+            },
+            removeEventListener: () => {
+            },
+        }
+        const flyToCalls = []
+        const cameraPosition = Cartesian3.fromDegrees(2, 47.99, 1800)
+        const camera = {
+            heading:              0,
+            pitch:                -Math.PI / 4,
+            roll:                 0,
+            position:             cameraPosition,
+            positionWC:           cameraPosition,
+            positionCartographic: {longitude: 2, latitude: 47.99, height: 1800},
+            getPickRay:           () => ({}),
+            moveStart:            {
+                addEventListener:       () => {
+                }, removeEventListener: () => {
+                },
+            },
+            moveEnd:              {
+                addEventListener:       () => {
+                }, removeEventListener: () => {
+                },
+            },
+            cancelFlight:         () => {
+            },
+            flyTo:                options => flyToCalls.push(options),
+            setView:              () => {
+            },
+            lookAtTransform:      () => {
+            },
+        }
+        const sample = {
+            longitude:         2,
+            latitude:          48,
+            altitude:          120,
+            height:            120,
+            progress:          0,
+            distanceFromStart: 0,
+        }
+        let pickPositionCalls = 0
+        let globePickCalls = 0
+
+        globalThis.lgs = {
+            theJourney: journey,
+            theTrack:   null,
+            canvas:     appCanvas,
+            settings:   {
+                ui: {
+                    flythrough: {
+                        ...baseFlythrough,
+                        camera: cameraSettings,
+                        marker: {
+                            ...baseFlythrough.marker,
+                            mode: FLYTHROUGH_MARKER_MODE_HYSTERESIS,
+                        },
+                    },
+                },
+            },
+            stores:     {
+                flythrough: proxy({
+                                      progress: 0,
+                                      camera:   cameraSettings,
+                                  }),
+            },
+            viewer:     {
+                trackedEntity: null,
+                canvas:        appCanvas,
+                camera,
+            },
+            scene:      {
+                canvas:                       appCanvas,
+                cartesianToCanvasCoordinates: () => ({x: 500, y: 500}),
+                pickPositionSupported:        true,
+                pickPosition:                 () => {
+                    pickPositionCalls += 1
+                    return Cartesian3.fromDegrees(2, 47.995, 120)
+                },
+                requestRender:                () => {
+                },
+                globe:                        {
+                    getHeight: () => 120,
+                    pick:      () => {
+                        globePickCalls += 1
+                        return Cartesian3.fromDegrees(2, 48, 120)
+                    },
+                },
+            },
+        }
+
+        try {
+            const mode = new FlythroughMode({
+                                                controller: new FlythroughPlaybackController({
+                                                                                                 requestFrame: () => 1,
+                                                                                                 cancelFrame:  () => {
+                                                                                                 },
+                                                                                                 now:          () => 0,
+                                                                                             }),
+                                                renderer:   {
+                                                    clear:  () => {
+                                                    },
+                                                    show:   () => {
+                                                    },
+                                                    update: () => {
+                                                    },
+                                                },
+                                            })
+            mode.configure()
+            mode.refreshCamera({sample})
+
+            expect(pickPositionCalls).toBeGreaterThan(0)
+            expect(globePickCalls).toBe(0)
+            expect(flyToCalls).toHaveLength(1)
+            expect(flyToCalls[0].duration).toBeLessThanOrEqual(1)
+        }
+        finally {
             globalThis.lgs = previousLgs
         }
     })
