@@ -139,6 +139,45 @@
     width: 100%;
 }
 
+.flythrough-camera-angle-preview {
+    box-sizing: border-box;
+    color: var(--flythrough-angle-fill, var(--wa-color-brand-fill-loud));
+    height: 4.5rem;
+    margin-bottom: calc(var(--wa-space-xs, 0.5rem) / 2);
+    opacity: 0.85;
+    pointer-events: none;
+    width: 100%;
+}
+
+.flythrough-camera-angle-preview svg {
+    display: block;
+    height: 100%;
+    overflow: visible;
+    width: 100%;
+}
+
+.flythrough-camera-angle-preview-axis,
+.flythrough-camera-angle-preview-angle {
+    fill: none;
+    stroke: currentColor;
+    stroke-linecap: round;
+    stroke-width: 2;
+}
+
+.flythrough-camera-angle-preview-axis {
+    stroke-dasharray: 6 6;
+    opacity: 0.45;
+}
+
+.flythrough-camera-angle-preview-angle {
+    stroke-dasharray: 0;
+}
+
+.flythrough-camera-angle-preview-origin {
+    fill: var(--flythrough-angle-border, currentColor);
+    opacity: 0.9;
+}
+
 .flythrough-style-label {
     color: var(--wa-form-control-label-color);
     font-size: var(--wa-form-control-label-font-size);

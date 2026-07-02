@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-06-11
- * Last modified: 2026-06-11
+ * Created on: 2026-07-02
+ * Last modified: 2026-07-02
  *
  *
  * Copyright © 2026 LGS1920
@@ -100,6 +100,60 @@ const FlythroughStyleField = ({children}) => (
         {children}
     </div>
 )
+
+const FlythroughCameraAnglePreview = ({active, headingOffset, positionMode, fillColor, borderColor}) => {
+    if (!active || positionMode === FLYTHROUGH_CAMERA_POSITION_SYSTEM) {
+        return null
+    }
+
+    const displayOffset = clampFlythroughNumber(
+        Number.isFinite(Number(headingOffset)) ? -Number(headingOffset) : 0,
+        0,
+        FLYTHROUGH_CAMERA_HEADING_OFFSET_MIN,
+        FLYTHROUGH_CAMERA_HEADING_OFFSET_MAX,
+    )
+    const direction = positionMode === FLYTHROUGH_CAMERA_POSITION_AHEAD ? 1 : -1
+    const lineX2 = direction > 0 ? 108 : 12
+    const lineRotation = displayOffset * (direction > 0 ? 1 : -1)
+
+    return (
+        <div
+            className="flythrough-camera-angle-preview"
+            data-testid="flythrough-angle-preview"
+            aria-hidden="true"
+            style={{
+                '--flythrough-angle-fill':   fillColor,
+                '--flythrough-angle-border': borderColor,
+            }}
+        >
+            <svg viewBox="0 0 120 72" preserveAspectRatio="none" focusable="false">
+                <line
+                    className="flythrough-camera-angle-preview-axis"
+                    x1="60"
+                    y1="36"
+                    x2={lineX2}
+                    y2="36"
+                    vectorEffect="non-scaling-stroke"
+                />
+                <line
+                    className="flythrough-camera-angle-preview-angle"
+                    x1="60"
+                    y1="36"
+                    x2={lineX2}
+                    y2="36"
+                    transform={`rotate(${lineRotation} 60 36)`}
+                    vectorEffect="non-scaling-stroke"
+                />
+                <circle
+                    className="flythrough-camera-angle-preview-origin"
+                    cx="60"
+                    cy="36"
+                    r="3"
+                />
+            </svg>
+        </div>
+    )
+}
 
 const mergeProgressionStyle = (current, updates) => normalizeFlythroughProgressionStyle({
                                                                                             ...current,
@@ -312,6 +366,7 @@ export const FlythroughDrawer = memo(() => {
         heading:  null,
         pitch:    null,
     })
+    const [cameraAnglePreviewActive, setCameraAnglePreviewActive] = useState(false)
     const cameraDraftValues = useRef({
         altitude: null,
         heading:  null,
@@ -865,6 +920,7 @@ export const FlythroughDrawer = memo(() => {
     const altitudeFieldLabel = camera.altitudeMode === FLYTHROUGH_CAMERA_ALTITUDE_GROUND_OFFSET
         ? `Ground offset (${altitudeUnit})`
         : `Altitude (${altitudeUnit})`
+    const cameraAngleDisplayOffset = -camera.headingOffset
 
     const updateHysteresisMarginRatio = useCallback((event) => {
         updateCamera({
@@ -1059,6 +1115,13 @@ export const FlythroughDrawer = memo(() => {
                                                     </WaSelect>
                                                     {camera.positionMode !== FLYTHROUGH_CAMERA_POSITION_SYSTEM &&
                                                         <FlythroughStyleField>
+                                                            <FlythroughCameraAnglePreview
+                                                                active={cameraAnglePreviewActive}
+                                                                headingOffset={camera.headingOffset}
+                                                                positionMode={camera.positionMode}
+                                                                fillColor={fillColor}
+                                                                borderColor={borderColor}
+                                                            />
                                                             <WaSlider
                                                                 label="Camera angle"
                                                                 hint="Offset from the trace heading in Behind or Ahead mode."
@@ -1066,10 +1129,16 @@ export const FlythroughDrawer = memo(() => {
                                                                 min={FLYTHROUGH_CAMERA_HEADING_OFFSET_MIN}
                                                                 max={FLYTHROUGH_CAMERA_HEADING_OFFSET_MAX}
                                                                 step="1"
-                                                                value={-camera.headingOffset}
+                                                                value={cameraAngleDisplayOffset}
                                                                 withTooltip
+                                                                label-at-start half-width
                                                                 valueFormatter={value => `${Math.round(Number(value) || 0)}°`}
-                                                                onInput={updateCameraHeadingOffset}
+                                                                onFocus={() => setCameraAnglePreviewActive(true)}
+                                                                onBlur={() => setCameraAnglePreviewActive(false)}
+                                                                onInput={event => {
+                                                                    setCameraAnglePreviewActive(true)
+                                                                    updateCameraHeadingOffset(event)
+                                                                }}
                                                             />
                                                         </FlythroughStyleField>
                                                     }

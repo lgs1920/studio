@@ -316,11 +316,19 @@ describe('FlythroughDrawer', () => {
         const view = render(<FlythroughDrawer/>)
         const angleInput = view.getByLabelText('Camera angle')
 
+        expect(view.queryByTestId('flythrough-angle-preview')).toBeNull()
+        fireEvent.focus(angleInput)
+        expect(view.getByTestId('flythrough-angle-preview')).toBeTruthy()
         fireEvent.input(angleInput, {target: {value: '20'}})
 
         await waitFor(() => {
             expect(globalThis.lgs.settings.ui.flythrough.camera.headingOffset).toBe(-20)
             expect(globalThis.lgs.stores.flythrough.camera.headingOffset).toBe(-20)
+        })
+
+        fireEvent.blur(angleInput)
+        await waitFor(() => {
+            expect(view.queryByTestId('flythrough-angle-preview')).toBeNull()
         })
     })
 
