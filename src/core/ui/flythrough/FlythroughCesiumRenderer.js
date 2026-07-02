@@ -94,7 +94,7 @@ export class FlythroughCesiumRenderer {
         return this
     }
 
-    update = ({sample, sampler = this.#sampler, forceGeometry = false, freezeDynamic = false} = {}) => {
+    update = ({sample, sampler = this.#sampler, forceGeometry = false, freezeDynamic = false, hideCursor = false} = {}) => {
         if (!sample || !sampler) {
             return
         }
@@ -103,6 +103,9 @@ export class FlythroughCesiumRenderer {
         this.#sample = sample
         this.#ensureSource()
         this.#updateCursor(sample)
+        if (hideCursor) {
+            this.#setCursorVisibility(false)
+        }
         if (freezeDynamic) {
             this.#freezeDynamicLines()
             globalThis.lgs?.scene?.requestRender?.()
@@ -141,6 +144,15 @@ export class FlythroughCesiumRenderer {
         this.#traceGuideKey = null
         this.#restoreOriginalTrackSources()
         globalThis.lgs?.scene?.requestRender?.()
+    }
+
+    #setCursorVisibility = (visible) => {
+        if (this.#cursor) {
+            this.#cursor.show = visible
+        }
+        if (this.#cursorBorder) {
+            this.#cursorBorder.show = visible && this.#cursorBorder.show !== false
+        }
     }
 
     #resetSourceEntities = () => {
@@ -664,6 +676,7 @@ export class FlythroughCesiumRenderer {
                     heightReference: HeightReference.CLAMP_TO_GROUND,
                 },
             })
+            this.#setCursorVisibility(true)
             return
         }
 
@@ -682,7 +695,7 @@ export class FlythroughCesiumRenderer {
         this.#cursor.point.outlineColor = style.cursorColor
         this.#cursor.point.outlineWidth = 0
         this.#cursor.point.heightReference = HeightReference.CLAMP_TO_GROUND
-        this.#cursor.show = true
+        this.#setCursorVisibility(true)
     }
 
     #metersToPixels = (meters, position, maxPixels = 24) => {

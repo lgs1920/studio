@@ -6282,6 +6282,10 @@ describe('flythrough phase 1 playback controller', () => {
         const previousLgs = globalThis.lgs
         const previousDoubleUnderscore = globalThis.__
         const flythrough = defaultFlythroughSettings()
+        journey.visible = false
+        journey.updateVisibility = vi.fn(visible => {
+            journey.visible = visible
+        })
         const setViewCalls = []
         const controller = new FlythroughPlaybackController({
             requestFrame: () => 1,
@@ -6361,6 +6365,8 @@ describe('flythrough phase 1 playback controller', () => {
                 setViewCalls[0].destination,
                 Cartesian3.fromDegrees(restoredLongitude, restoredLatitude, 120),
             )).toBeLessThan(1)
+            expect(journey.visible).toBe(true)
+            expect(journey.updateVisibility).toHaveBeenCalledWith(true)
         }
         finally {
             globalThis.lgs = previousLgs
@@ -6380,6 +6386,7 @@ describe('flythrough phase 1 playback controller', () => {
         const focusCalls = []
         const frames = []
         let now = 0
+        const rendererUpdate = vi.fn()
         const flythrough = defaultFlythroughSettings()
         journey.visible = false
         journey.updateVisibility = vi.fn(visible => {
@@ -6448,8 +6455,7 @@ describe('flythrough phase 1 playback controller', () => {
                                                     },
                                                     show:   () => {
                                                     },
-                                                    update: () => {
-                                                    },
+                                                    update: rendererUpdate,
                                                 },
                                             })
             mode.start({duration: 1})
@@ -6464,6 +6470,10 @@ describe('flythrough phase 1 playback controller', () => {
                                                                        rotate:      false,
                                                                        snapDistance: 50000,
                                                                    }))
+            expect(rendererUpdate).toHaveBeenCalledWith(expect.objectContaining({
+                freezeDynamic: true,
+                hideCursor:    true,
+            }))
         }
         finally {
             globalThis.lgs = previousLgs

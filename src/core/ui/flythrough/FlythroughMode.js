@@ -2019,12 +2019,13 @@ export class FlythroughMode {
         globalThis.lgs?.viewer?.camera?.cancelFlight?.()
         return new Promise(resolve => {
             let settled = false
-            const finish = () => {
+        const finish = () => {
                 if (settled) {
                     return
                 }
                 settled = true
                 this.#hideGloballyHiddenPOIs()
+                this.#restoreCurrentJourneyVisibility()
                 resolve()
             }
 
@@ -4620,7 +4621,9 @@ export class FlythroughMode {
                 this.#restoreJourneyToolbarVisibility()
                 this.#restoreFlythroughDrawerAfterPlayback()
                 this.#restoreMainUI()
-                void this.#restoreNearbyPOIsAfterPlayback()
+                void this.#restoreNearbyPOIsAfterPlayback().finally(() => {
+                    this.#restoreCurrentJourneyVisibility()
+                })
                 if (!this.#deferPlaybackCameraRestore) {
                     this.#restorePlaybackCameraSettings({force: true})
                 }
@@ -4666,6 +4669,7 @@ export class FlythroughMode {
                         sampler: this.#sampler,
                         forceGeometry: true,
                         freezeDynamic:  true,
+                        hideCursor:     true,
                     })
                     this.#startStopClipPOIMaskLoop()
 
