@@ -3265,6 +3265,7 @@ describe('flythrough phase 1 playback controller', () => {
         }
 
         try {
+            document.querySelectorAll('.flythrough-tolerance-zone-overlay').forEach(element => element.remove())
             const mode = new FlythroughMode({
                                                 controller: new FlythroughPlaybackController({
                                                                                                  requestFrame: () => 1,
@@ -3285,14 +3286,137 @@ describe('flythrough phase 1 playback controller', () => {
 
             const overlay = document.querySelector('.flythrough-tolerance-zone-overlay')
             expect(overlay).not.toBeNull()
-            expect(Number.parseFloat(overlay.style.left)).toBeCloseTo(50, 6)
-            expect(Number.parseFloat(overlay.style.top)).toBeCloseTo(50, 6)
+            expect(Number.parseFloat(overlay.style.left)).toBeCloseTo(60, 6)
+            expect(Number.parseFloat(overlay.style.top)).toBeCloseTo(60, 6)
             expect(Number.parseFloat(overlay.style.width)).toBeCloseTo(900, 6)
-            expect(Number.parseFloat(overlay.style.height)).toBeCloseTo(900, 6)
+            expect(Number.parseFloat(overlay.style.height)).toBeCloseTo(720, 6)
             expect(overlay.style.background).toContain('rgba(255, 0, 0')
             expect(overlay.firstElementChild?.className).toBe('flythrough-tolerance-zone-overlay-outer')
             expect(overlay.lastElementChild?.className).toBe('flythrough-tolerance-zone-overlay-inner')
             expect(overlay.lastElementChild?.style.border).toContain('dashed')
+
+            mode.stop({emit: false})
+        }
+        finally {
+            document.querySelector('.flythrough-tolerance-zone-overlay')?.remove()
+            globalThis.lgs = previousLgs
+        }
+    })
+
+    it('positions the tolerance zone overlay inside the video crop rect when recording sync is active', () => {
+        const journey = makeJourney([
+                                        makeTrack({
+                                                      slug:        'track#journey#gpx#main',
+                                                      coordinates: [[2, 48, 120], [2.001, 48.001, 130]],
+                                                  }),
+                                    ])
+        const previousLgs = globalThis.lgs
+        const flythrough = defaultFlythroughSettings()
+        const canvas = {
+            clientWidth:           1000,
+            clientHeight:          800,
+            addEventListener:      () => {
+            },
+            removeEventListener:   () => {
+            },
+            getBoundingClientRect: () => ({
+                left:   10,
+                top:    20,
+                width:  1000,
+                height: 800,
+            }),
+        }
+
+        globalThis.lgs = {
+            theJourney: journey,
+            theTrack:   null,
+            canvas,
+            settings:   {
+                ui: {
+                    flythrough: {
+                        ...flythrough,
+                        marker: {
+                            ...flythrough.marker,
+                            mode: FLYTHROUGH_MARKER_MODE_HYSTERESIS,
+                        },
+                    },
+                },
+            },
+            stores:     {
+                flythrough: proxy({
+                                      progress:      0,
+                                      camera:        flythrough.camera,
+                                      recordingSync: true,
+                                      videoCropRect: {
+                                          left:   120,
+                                          top:    60,
+                                          width:  1000,
+                                          height: 800,
+                                      },
+                                  }),
+            },
+            viewer:     {
+                trackedEntity: null,
+                canvas,
+                camera:        {
+                    heading:              0.8,
+                    pitch:                -Math.PI / 4,
+                    positionCartographic: {longitude: 0.1, latitude: 0.2, height: 1800},
+                    moveStart:            {
+                        addEventListener:       () => {
+                        }, removeEventListener: () => {
+                        },
+                    },
+                    moveEnd:              {
+                        addEventListener:       () => {
+                        }, removeEventListener: () => {
+                        },
+                    },
+                    cancelFlight:         () => {
+                    },
+                    flyTo:                () => {
+                    },
+                    setView:              () => {
+                    },
+                    lookAtTransform:      () => {
+                    },
+                },
+            },
+            scene:      {
+                canvas,
+                cartesianToCanvasCoordinates: () => ({x: 500, y: 400}),
+                requestRender:                () => {
+                },
+                globe:                        {getHeight: () => 120},
+            },
+        }
+
+        try {
+            document.querySelectorAll('.flythrough-tolerance-zone-overlay').forEach(element => element.remove())
+            const mode = new FlythroughMode({
+                                                controller: new FlythroughPlaybackController({
+                                                                                                 requestFrame: () => 1,
+                                                                                                 cancelFrame:  () => {
+                                                                                                 },
+                                                                                                 now:          () => 0,
+                                                                                             }),
+                                                renderer:   {
+                                                    clear:  () => {
+                                                    },
+                                                    show:   () => {
+                                                    },
+                                                    update: () => {
+                                                    },
+                                                },
+                                            })
+            mode.start()
+
+            const overlay = document.querySelector('.flythrough-tolerance-zone-overlay')
+            expect(overlay).not.toBeNull()
+            expect(Number.parseFloat(overlay.style.left)).toBeCloseTo(170, 6)
+            expect(Number.parseFloat(overlay.style.top)).toBeCloseTo(100, 6)
+            expect(Number.parseFloat(overlay.style.width)).toBeCloseTo(900, 6)
+            expect(Number.parseFloat(overlay.style.height)).toBeCloseTo(720, 6)
 
             mode.stop({emit: false})
         }

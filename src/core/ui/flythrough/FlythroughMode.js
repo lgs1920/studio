@@ -3785,10 +3785,6 @@ export class FlythroughMode {
 
     #videoCropRect = () => {
         const flythroughStore = globalThis.lgs?.stores?.flythrough
-        if (!flythroughStore?.recordingSync) {
-            return null
-        }
-
         const cropRect = flythroughStore.videoCropRect
         const left = finiteNumber(cropRect?.left)
         const top = finiteNumber(cropRect?.top)
@@ -3861,8 +3857,8 @@ export class FlythroughMode {
         overlay.className = 'flythrough-tolerance-zone-overlay'
         overlay.style.position = 'absolute'
         overlay.style.pointerEvents = 'none'
-        overlay.style.left = `${outerBounds.left * rect.width}px`
-        overlay.style.top = `${outerBounds.top * rect.height}px`
+        overlay.style.left = `${rect.left + (outerBounds.left * rect.width)}px`
+        overlay.style.top = `${rect.top + (outerBounds.top * rect.height)}px`
         overlay.style.width = `${(outerBounds.right - outerBounds.left) * rect.width}px`
         overlay.style.height = `${(outerBounds.bottom - outerBounds.top) * rect.height}px`
         overlay.style.background = 'rgba(255, 0, 0, 0.08)'
