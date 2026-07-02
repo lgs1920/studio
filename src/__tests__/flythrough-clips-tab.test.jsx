@@ -183,7 +183,9 @@ describe('FlythroughClipsTab', () => {
         )
 
         const durationInput = view.getByLabelText('Duration (s)')
+        fireEvent.focus(durationInput)
         fireEvent.input(durationInput, {target: {value: '4'}})
+        fireEvent.blur(durationInput)
 
         await waitFor(() => {
             expect(globalThis.lgs.theJourney.flythrough.start).toHaveLength(1)

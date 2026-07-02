@@ -126,8 +126,26 @@ const ClipField = ({field, value, onChange, unitSystem = 0}) => {
                        ? Math.round(UnitUtils.convert(field.max).to(displayUnit))
                        : field.max
     const displayStep = usesElevationUnit && field.step !== null && field.step !== undefined
-                        ? Math.max(1, Math.round(UnitUtils.convert(field.step).to(displayUnit)))
-                        : field.step ?? 1
+                         ? Math.max(1, Math.round(UnitUtils.convert(field.step).to(displayUnit)))
+                         : field.step ?? 1
+    const [tempValue, setTempValue] = useState(() => `${displayValue ?? ''}`)
+    const isFocusedRef = useRef(false)
+
+    useEffect(() => {
+        if (!isFocusedRef.current) {
+            setTempValue(`${displayValue ?? ''}`)
+        }
+    }, [displayValue])
+
+    const commitValue = useCallback((rawValue) => {
+        const parsedValue = usesElevationUnit
+                            ? UnitUtils.revert(rawValue, displayUnit)
+                            : Number(rawValue)
+
+        if (Number.isFinite(parsedValue)) {
+            onChange(parsedValue)
+        }
+    }, [displayUnit, onChange, usesElevationUnit])
     const commonProps = {
         label:            `${field.label}${displayUnit ? ` (${displayUnit})` : ''}`,
         size:             's',
@@ -164,10 +182,30 @@ const ClipField = ({field, value, onChange, unitSystem = 0}) => {
                 min={displayMin}
                 max={displayMax}
                 step={displayStep}
-                value={displayValue}
+                value={tempValue}
+                onFocus={() => {
+                    isFocusedRef.current = true
+                    setTempValue(`${displayValue ?? ''}`)
+                }}
                 onInput={event => {
-                    const rawValue = event.target.value
-                    onChange(usesElevationUnit ? UnitUtils.revert(rawValue, displayUnit) : rawValue)
+                    const rawValue = `${event.target.value ?? ''}`
+                    setTempValue(rawValue)
+                    commitValue(rawValue)
+                }}
+                onBlur={event => {
+                    isFocusedRef.current = false
+                    const rawValue = `${event.target.value ?? ''}`
+                    const parsedValue = usesElevationUnit
+                                       ? UnitUtils.revert(rawValue, displayUnit)
+                                       : Number(rawValue)
+                    if (Number.isFinite(parsedValue)) {
+                        setTempValue(`${usesElevationUnit
+                                      ? Math.round(UnitUtils.convert(parsedValue).to(displayUnit))
+                                      : parsedValue}`)
+                    }
+                    else {
+                        setTempValue(`${displayValue ?? ''}`)
+                    }
                 }}
                 className={`${controlClassName} half-width`}
             />
@@ -188,6 +226,10 @@ const ClipTitle = ({definition, fallback = '', className = ''}) => {
             </strong>
         </span>
     )
+}
+
+const stopEventPropagation = event => {
+    event.stopPropagation()
 }
 
 const ClipAddPopup = ({clips, addState, setAddState, onAddClip}) => {
@@ -327,7 +369,13 @@ const ClipDetails = ({
             </span>
 
             <div className="flythrough-clip-body">
-                <div className="flythrough-clips-editor-fields">
+                <div
+                    className="flythrough-clips-editor-fields"
+                    onClickCapture={stopEventPropagation}
+                    onFocusCapture={stopEventPropagation}
+                    onMouseDownCapture={stopEventPropagation}
+                    onPointerDownCapture={stopEventPropagation}
+                >
                     {definition?.fields?.map(field => (
                         <ClipField
                             key={field.key}
@@ -376,6 +424,7 @@ const ClipList = ({
         sortableRef.current = new Sortable(listElement, {
             animation:     150,
             forceFallback: true,
+            handle:        '.flythrough-clip-summary',
             dataIdAttr:    'data-id',
             filter:        '.flythrough-clip-summary-actions, .flythrough-clips-field-control, wa-button, wa-number-input, wa-select',
             dragClass:     'widget-row-drag',
