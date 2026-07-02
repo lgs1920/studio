@@ -837,9 +837,10 @@ export const FlythroughDrawer = memo(() => {
     }, [updateCamera])
 
     const updateCameraHeadingOffset = useCallback((event) => {
+        const sliderValue = Number(event.target.value)
         updateCamera({
                          headingOffset: clampFlythroughNumber(
-                             event.target.value,
+                             Number.isFinite(sliderValue) ? -sliderValue : camera.headingOffset,
                              camera.headingOffset,
                              FLYTHROUGH_CAMERA_HEADING_OFFSET_MIN,
                              FLYTHROUGH_CAMERA_HEADING_OFFSET_MAX,
@@ -1065,7 +1066,7 @@ export const FlythroughDrawer = memo(() => {
                                                                 min={FLYTHROUGH_CAMERA_HEADING_OFFSET_MIN}
                                                                 max={FLYTHROUGH_CAMERA_HEADING_OFFSET_MAX}
                                                                 step="1"
-                                                                value={camera.headingOffset}
+                                                                value={-camera.headingOffset}
                                                                 withTooltip
                                                                 valueFormatter={value => `${Math.round(Number(value) || 0)}°`}
                                                                 onInput={updateCameraHeadingOffset}
