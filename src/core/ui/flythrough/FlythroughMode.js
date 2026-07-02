@@ -27,10 +27,14 @@ import {
 import {
     TrackUtils,
 }                                                                                          from '@Utils/cesium/TrackUtils'
+import { Journey }                                                                         from '@Core/Journey'
 import {
-    Cartesian2, Cartesian3, Cartographic, CatmullRomSpline, ExtrapolationType, JulianDate, LinearApproximation,
-    Math as CesiumMath, Matrix4, SampledPositionProperty, SceneTransforms, Transforms,
+    ArcType, Cartesian2, Cartesian3, Cartographic, CatmullRomSpline, Color, ExtrapolationType, JulianDate,
+    HeightReference, HorizontalOrigin, LinearApproximation, Math as CesiumMath, Matrix4,
+    PolylineDashMaterialProperty, SampledPositionProperty, SceneTransforms, Transforms, VerticalOrigin,
 }                                                                                          from 'cesium'
+import { faCamera }                                                                        from '@fortawesome/pro-solid-svg-icons'
+import { faPersonHiking }                                                                  from '@fortawesome/pro-regular-svg-icons'
 import {
     FlythroughCesiumRenderer,
 }                                                                                          from './FlythroughCesiumRenderer'
@@ -50,7 +54,7 @@ import {
     FLYTHROUGH_CAMERA_HEADING_OFFSET_MAX, FLYTHROUGH_CAMERA_HEADING_OFFSET_MIN, FLYTHROUGH_CAMERA_POSITION_SYSTEM,
     FLYTHROUGH_MARKER_MODE_HYSTERESIS, FLYTHROUGH_MARKER_MODE_NAVIGATION,
     FLYTHROUGH_MARKER_MODE_TRACE, getFlythroughSettings, normalizeFlythroughCamera, normalizeFlythroughMarker,
-    normalizeFlythroughTrace,
+    normalizeFlythroughProgressionStyle, normalizeFlythroughTrace,
 }                                                                                          from './FlythroughProgressionStyle'
 
 const DEFAULT_DURATION = 60
@@ -81,6 +85,9 @@ const FLYTHROUGH_TOLERANCE_INNER_INSET_RATIO = 0.2
 const FLYTHROUGH_TOLERANCE_RECENTER_REPLACE_DELAY_MS = 300
 const FLYTHROUGH_POI_TRIGGER_EPSILON_METERS = 0.001
 const FLYTHROUGH_POI_TRIGGER_SCAN_MARGIN_METERS = 5
+const CAMERA_ANGLE_PREVIEW_AXIS_LENGTH = 1800
+const CAMERA_ANGLE_PREVIEW_OFFSET_LENGTH = 1800
+const CAMERA_ANGLE_PREVIEW_ICON_SIZE = 24
 export const FLYTHROUGH_JOURNEY_TOOLBAR_VISIBILITY_EVENT = 'lgs:flythrough:journey-toolbar-visibility'
 export const FLYTHROUGH_EVENT_STOP_CLIPS_COMPLETE = 'flythrough/stop-clips-complete'
 
@@ -107,6 +114,28 @@ const CAMERA_REDIRECT_CANDIDATES = Object.freeze([
 const finiteNumber = value => {
     const number = Number(value)
     return Number.isFinite(number) ? number : null
+}
+
+const makeFontAwesomeIconDataUri = (definition, color, size = 24) => {
+    const [width, height, , , pathData] = definition.icon
+    const paths = (Array.isArray(pathData) ? pathData : [pathData]).filter(Boolean)
+    const scale = Math.min((size * 0.78) / width, (size * 0.78) / height)
+    const x = (size - width * scale) / 2
+    const y = (size - height * scale) / 2
+    const fill = `${color ?? '#ffffff'}`
+    const svg = `
+        <svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+            <g transform="translate(${x} ${y}) scale(${scale})">
+                ${paths.map(path => `<path d="${path}" fill="${fill}"/>`).join('')}
+            </g>
+        </svg>
+    `.trim()
+    return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`
+}
+
+const resolveJourneyActivityIcon = (journey = null) => {
+    const activityIcon = Journey.activityProfile(journey?.activity, journey?.activitySettings)?.icon
+    return activityIcon === 'person-hiking' ? faPersonHiking : faPersonHiking
 }
 
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value))
@@ -709,6 +738,8 @@ export class FlythroughMode {
     #lastToleranceRecenterAt = null
     #lastToleranceRecenterProgress = null
     #toleranceZoneOverlay = null
+    #cameraAnglePreviewEntities = null
+    #cameraAnglePreviewPOIVisibilityState = new Map()
     #journeyToolbarWasVisible = null
     #journeyToolbarHidden = false
     #hiddenJourneyVisibility = new Map()
@@ -1714,6 +1745,14 @@ export class FlythroughMode {
         }
     }
 
+    showCameraAnglePreview = (options = {}) => {
+        this.#showCameraAnglePreviewOverlay(options)
+    }
+
+    hideCameraAnglePreview = () => {
+        this.#hideCameraAnglePreviewOverlay()
+    }
+
     stop = (options = {}) => {
         this.#clipSequenceToken++
         this.#stopStopClipPOIMaskLoop()
@@ -1729,6 +1768,7 @@ export class FlythroughMode {
         this.#setFlythroughOrbitAllowed(true)
         this.#setContinuousRender(false)
         this.#removeToleranceZoneOverlay()
+        this.#hideCameraAnglePreviewOverlay()
         if (options.emit === false) {
             this.#restorePlaybackCameraSettings()
             this.#restoreCameraState()
@@ -2057,6 +2097,7 @@ export class FlythroughMode {
         this.#journeyToolbarWasVisible = null
         this.#introHeadingTransition = null
         this.#removeToleranceZoneOverlay()
+        this.#hideCameraAnglePreviewOverlay()
         if (this.#cameraManualInteractionTimer !== null) {
             clearTimeout(this.#cameraManualInteractionTimer)
             this.#cameraManualInteractionTimer = null
@@ -3540,6 +3581,206 @@ export class FlythroughMode {
     #removeToleranceZoneOverlay = () => {
         this.#toleranceZoneOverlay?.remove?.()
         this.#toleranceZoneOverlay = null
+    }
+
+    #cameraAnglePreviewEntityCollection = () => globalThis.lgs?.viewer?.entities ?? null
+
+    #removeCameraAnglePreviewOverlay = () => {
+        const entities = this.#cameraAnglePreviewEntities
+        const collection = this.#cameraAnglePreviewEntityCollection()
+        if (entities && collection) {
+            collection.remove?.(entities.axis)
+            collection.remove?.(entities.axisEndIcon)
+            collection.remove?.(entities.angle)
+            collection.remove?.(entities.cameraIcon)
+        }
+        this.#cameraAnglePreviewEntities = null
+    }
+
+    #cameraAnglePreviewPOIIds = () => {
+        const clips = this.#clipSettings()
+        return Array.from(new Set([
+            ...(clips.start ?? []),
+            ...(clips.stop ?? []),
+        ].map(clip => clip?.clipId).filter(clipId => clipId === 'take-off' || clipId === 'landing')))
+    }
+
+    #cameraAnglePreviewPOIForId = (poiId) => globalThis.lgs?.stores?.main?.components?.pois?.list?.get?.(poiId)
+        ?? globalThis.__?.ui?.poiManager?.get?.(poiId)
+        ?? null
+
+    #hideCameraAnglePreviewPOIs = () => {
+        for (const poiId of this.#cameraAnglePreviewPOIIds()) {
+            const poi = this.#cameraAnglePreviewPOIForId(poiId)
+            if (!poi?.id) {
+                continue
+            }
+
+            if (!this.#cameraAnglePreviewPOIVisibilityState.has(poi.id)) {
+                this.#cameraAnglePreviewPOIVisibilityState.set(poi.id, {
+                    visible: this.#isPOIVisibleBeforePlayback(poi),
+                })
+            }
+
+            this.#setPOIEntityVisibility(poi, false)
+        }
+    }
+
+    #restoreCameraAnglePreviewPOIs = () => {
+        for (const [poiId, state] of this.#cameraAnglePreviewPOIVisibilityState.entries()) {
+            const poi = this.#cameraAnglePreviewPOIForId(poiId)
+            if (!poi?.id) {
+                continue
+            }
+
+            this.#setPOIEntityVisibility(poi, state?.visible === true && poi.visible !== false)
+        }
+
+        this.#cameraAnglePreviewPOIVisibilityState.clear()
+    }
+
+    #cameraAnglePreviewStartHeading = () => {
+        const sampler = this.#sampler
+        if (!sampler?.hasSamples) {
+            return 0
+        }
+
+        const previewSamples = sampler?.samples?.slice?.(0, 6) ?? []
+        if (previewSamples.length < 2) {
+            return 0
+        }
+
+        const current = previewSamples[0]
+        const future = previewSamples[previewSamples.length - 1]
+        const heading = this.#headingBetweenPoints(current, future)
+        return Number.isFinite(heading) ? heading : 0
+    }
+
+    #showCameraAnglePreviewOverlay = ({
+                                          displayOffset = 0,
+                                          positionMode = FLYTHROUGH_CAMERA_POSITION_SYSTEM,
+                                          fillColor = null,
+                                          borderColor = null,
+                                      } = {}) => {
+        this.#removeCameraAnglePreviewOverlay()
+        const viewer = globalThis.lgs?.viewer
+        const sampler = this.#sampler
+        const entities = viewer?.entities ?? null
+        if (!viewer || !entities || positionMode === FLYTHROUGH_CAMERA_POSITION_SYSTEM || !sampler?.hasSamples) {
+            return
+        }
+
+        const sample = sampler.atProgress?.(0)
+        const anchor = safeCartesianFromLonLat(sample)
+        if (!anchor) {
+            return
+        }
+
+        const traceHeading = this.#cameraAnglePreviewStartHeading()
+        const baseHeading = positionMode === FLYTHROUGH_CAMERA_POSITION_AHEAD
+                            ? traceHeading
+                            : traceHeading + Math.PI
+        const localTransform = Transforms.eastNorthUpToFixedFrame(anchor)
+        const offsetDegrees = clamp(finiteNumber(displayOffset) ?? 0, FLYTHROUGH_CAMERA_HEADING_OFFSET_MIN, FLYTHROUGH_CAMERA_HEADING_OFFSET_MAX)
+        const offsetRadians = CesiumMath.toRadians(offsetDegrees)
+        const axisHeading = baseHeading
+        const angleHeading = baseHeading + (finiteNumber(offsetRadians) ?? 0)
+        const axisEnd = Matrix4.multiplyByPoint(localTransform, new Cartesian3(
+            Math.sin(axisHeading) * CAMERA_ANGLE_PREVIEW_AXIS_LENGTH,
+            Math.cos(axisHeading) * CAMERA_ANGLE_PREVIEW_AXIS_LENGTH,
+            0,
+        ), new Cartesian3())
+        const angleEnd = Matrix4.multiplyByPoint(localTransform, new Cartesian3(
+            Math.sin(angleHeading) * CAMERA_ANGLE_PREVIEW_OFFSET_LENGTH,
+            Math.cos(angleHeading) * CAMERA_ANGLE_PREVIEW_OFFSET_LENGTH,
+            0,
+        ), new Cartesian3())
+        const followTerrain = true
+        const markerColorCss = globalThis.lgs?.theTrack?.marker?.foregroundColor
+                               ?? globalThis.lgs?.theTrack?.marker?.color
+                               ?? normalizeFlythroughProgressionStyle(
+                                   globalThis.lgs?.stores?.flythrough?.progression ?? getFlythroughSettings()?.progression,
+                               ).fill.color
+                               ?? fillColor
+                               ?? borderColor
+                               ?? '#4f7cff'
+        const markerColor = Color.fromCssColorString(markerColorCss) ?? Color.WHITE
+        const axis = entities.add({
+            id:       `flythrough-camera-angle-preview-axis-${this.#sampler?.journey?.slug ?? 'current'}`,
+            name:     'Flythrough camera angle axis',
+            polyline: {
+                positions:     [anchor, axisEnd],
+                width:         2,
+                material:      markerColor,
+                clampToGround: followTerrain,
+                arcType:       followTerrain ? ArcType.GEODESIC : ArcType.NONE,
+            },
+            show: true,
+        })
+        const axisEndIcon = entities.add({
+            id:       `flythrough-camera-angle-preview-axis-end-${this.#sampler?.journey?.slug ?? 'current'}`,
+            name:     'Flythrough journey axis end',
+            position: axisEnd,
+            billboard: {
+                image:            makeFontAwesomeIconDataUri(resolveJourneyActivityIcon(this.#sampler?.journey), markerColorCss, CAMERA_ANGLE_PREVIEW_ICON_SIZE),
+                width:            CAMERA_ANGLE_PREVIEW_ICON_SIZE,
+                height:           CAMERA_ANGLE_PREVIEW_ICON_SIZE,
+                horizontalOrigin: HorizontalOrigin.CENTER,
+                verticalOrigin:   VerticalOrigin.CENTER,
+                disableDepthTestDistance: Number.POSITIVE_INFINITY,
+                heightReference:  followTerrain ? HeightReference.CLAMP_TO_GROUND : HeightReference.NONE,
+                pixelOffset:      new Cartesian2(18, 0),
+            },
+            show: true,
+        })
+        const angle = entities.add({
+            id:       `flythrough-camera-angle-preview-angle-${this.#sampler?.journey?.slug ?? 'current'}`,
+            name:     'Flythrough camera angle offset',
+            polyline: {
+                positions:     [anchor, angleEnd],
+                width:         1.5,
+                material:      new PolylineDashMaterialProperty({
+                    color:       markerColor,
+                    gapColor:    Color.TRANSPARENT,
+                    dashLength:  18,
+                    dashPattern: 255,
+                }),
+                clampToGround: followTerrain,
+                arcType:       followTerrain ? ArcType.GEODESIC : ArcType.NONE,
+            },
+            show: true,
+        })
+        const cameraIcon = Math.abs(offsetDegrees) > 0.0001
+            ? entities.add({
+                id:       `flythrough-camera-angle-preview-camera-${this.#sampler?.journey?.slug ?? 'current'}`,
+                name:     'Flythrough camera angle camera',
+                position: angleEnd,
+                billboard: {
+                    image:            makeFontAwesomeIconDataUri(faCamera, markerColorCss, CAMERA_ANGLE_PREVIEW_ICON_SIZE),
+                    width:            CAMERA_ANGLE_PREVIEW_ICON_SIZE,
+                    height:           CAMERA_ANGLE_PREVIEW_ICON_SIZE,
+                    horizontalOrigin: HorizontalOrigin.CENTER,
+                    verticalOrigin:   VerticalOrigin.CENTER,
+                    disableDepthTestDistance: Number.POSITIVE_INFINITY,
+                    heightReference: followTerrain ? HeightReference.CLAMP_TO_GROUND : HeightReference.NONE,
+                    pixelOffset:      new Cartesian2(18, 0),
+                },
+                show: true,
+            })
+            : null
+        this.#cameraAnglePreviewEntities = {
+            axis,
+            axisEndIcon,
+            angle,
+            cameraIcon,
+        }
+        globalThis.lgs?.scene?.requestRender?.()
+        this.#hideCameraAnglePreviewPOIs()
+    }
+
+    #hideCameraAnglePreviewOverlay = () => {
+        this.#removeCameraAnglePreviewOverlay()
+        this.#restoreCameraAnglePreviewPOIs()
     }
 
     #videoCropRect = () => {

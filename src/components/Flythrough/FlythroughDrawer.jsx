@@ -101,60 +101,6 @@ const FlythroughStyleField = ({children}) => (
     </div>
 )
 
-const FlythroughCameraAnglePreview = ({active, headingOffset, positionMode, fillColor, borderColor}) => {
-    if (!active || positionMode === FLYTHROUGH_CAMERA_POSITION_SYSTEM) {
-        return null
-    }
-
-    const displayOffset = clampFlythroughNumber(
-        Number.isFinite(Number(headingOffset)) ? -Number(headingOffset) : 0,
-        0,
-        FLYTHROUGH_CAMERA_HEADING_OFFSET_MIN,
-        FLYTHROUGH_CAMERA_HEADING_OFFSET_MAX,
-    )
-    const direction = positionMode === FLYTHROUGH_CAMERA_POSITION_AHEAD ? 1 : -1
-    const lineX2 = direction > 0 ? 108 : 12
-    const lineRotation = displayOffset * (direction > 0 ? 1 : -1)
-
-    return (
-        <div
-            className="flythrough-camera-angle-preview"
-            data-testid="flythrough-angle-preview"
-            aria-hidden="true"
-            style={{
-                '--flythrough-angle-fill':   fillColor,
-                '--flythrough-angle-border': borderColor,
-            }}
-        >
-            <svg viewBox="0 0 120 72" preserveAspectRatio="none" focusable="false">
-                <line
-                    className="flythrough-camera-angle-preview-axis"
-                    x1="60"
-                    y1="36"
-                    x2={lineX2}
-                    y2="36"
-                    vectorEffect="non-scaling-stroke"
-                />
-                <line
-                    className="flythrough-camera-angle-preview-angle"
-                    x1="60"
-                    y1="36"
-                    x2={lineX2}
-                    y2="36"
-                    transform={`rotate(${lineRotation} 60 36)`}
-                    vectorEffect="non-scaling-stroke"
-                />
-                <circle
-                    className="flythrough-camera-angle-preview-origin"
-                    cx="60"
-                    cy="36"
-                    r="3"
-                />
-            </svg>
-        </div>
-    )
-}
-
 const mergeProgressionStyle = (current, updates) => normalizeFlythroughProgressionStyle({
                                                                                             ...current,
                                                                                             ...updates,
@@ -324,15 +270,15 @@ export const FlythroughDrawer = memo(() => {
     const fillProfileMarker = progression.fill.profileMarker
     const borderProfileMarker = progression.border.profileMarker
     const trace = normalizeFlythroughTrace(flythroughSettings.trace)
-    const clips = normalizeFlythroughClips({
-                                                   catalog: flythroughSettings.clips?.catalog ?? flythroughSettings.clips?.definitions ?? {},
-                                                   start:   Array.isArray(currentJourney?.flythrough?.start)
-                                                            ? currentJourney.flythrough.start
-                                                            : flythroughSettings.clips?.start ?? [],
-                                                   stop:    Array.isArray(currentJourney?.flythrough?.stop)
-                                                            ? currentJourney.flythrough.stop
-                                                            : flythroughSettings.clips?.stop ?? [],
-                                               })
+    const clips = useMemo(() => normalizeFlythroughClips({
+                                                             catalog: flythroughSettings.clips?.catalog ?? flythroughSettings.clips?.definitions ?? {},
+                                                             start:   Array.isArray(currentJourney?.flythrough?.start)
+                                                                      ? currentJourney.flythrough.start
+                                                                      : flythroughSettings.clips?.start ?? [],
+                                                             stop:    Array.isArray(currentJourney?.flythrough?.stop)
+                                                                      ? currentJourney.flythrough.stop
+                                                                      : flythroughSettings.clips?.stop ?? [],
+                                                         }), [currentJourney, flythroughSettings.clips])
     const remainingUseDefinedTrackStyle = trace.remaining.useDefinedTrackStyle !== false
     const remainingColor = toOpaqueColorValue(trace.remaining.color)
     const camera = normalizeFlythroughCamera(flythroughSettings.camera)
@@ -366,7 +312,6 @@ export const FlythroughDrawer = memo(() => {
         heading:  null,
         pitch:    null,
     })
-    const [cameraAnglePreviewActive, setCameraAnglePreviewActive] = useState(false)
     const cameraDraftValues = useRef({
         altitude: null,
         heading:  null,
@@ -375,6 +320,8 @@ export const FlythroughDrawer = memo(() => {
     const cameraDraftBaseline = useRef(null)
     const cameraDraftField = useRef(null)
     const cameraUpdateSourceClearTimer = useRef(null)
+    const cameraAnglePreviewHideTimer = useRef(null)
+    const nearbyPoisRefreshTimer = useRef(null)
     const totalVideoDurationSeconds = useMemo(() => {
         const clipDurationSeconds = [...(clips.start ?? []), ...(clips.stop ?? [])]
             .reduce((total, clip) => total + Math.max(0, finiteNumber(clip?.params?.duration) ?? 0), 0)
@@ -460,14 +407,41 @@ export const FlythroughDrawer = memo(() => {
         }
 
         if (!hasJourney) {
-            lgs.stores.flythrough.nearbyPois = []
+            if (Array.isArray(lgs.stores.flythrough.nearbyPois) && lgs.stores.flythrough.nearbyPois.length > 0) {
+                lgs.stores.flythrough.nearbyPois = []
+            }
             return
         }
 
-        lgs.stores.flythrough.nearbyPois = __.ui.poiManager?.getFlythroughPOIsForJourney?.(
-            currentJourney,
-            flythroughSettings.poiDistance,
-        ) ?? []
+        if (nearbyPoisRefreshTimer.current !== null) {
+            clearTimeout(nearbyPoisRefreshTimer.current)
+            nearbyPoisRefreshTimer.current = null
+        }
+
+        nearbyPoisRefreshTimer.current = setTimeout(() => {
+            nearbyPoisRefreshTimer.current = null
+            if (__.ui.drawerManager?.isCurrent?.(FLYTHROUGH_DRAWER) !== true) {
+                return
+            }
+
+            const nextNearbyPois = __.ui.poiManager?.getFlythroughPOIsForJourney?.(
+                currentJourney,
+                flythroughSettings.poiDistance,
+            ) ?? []
+            const currentNearbyPois = Array.isArray(lgs.stores.flythrough.nearbyPois) ? lgs.stores.flythrough.nearbyPois : []
+            const sameLength = currentNearbyPois.length === nextNearbyPois.length
+            const sameEntries = sameLength && currentNearbyPois.every((entry, index) => {
+                const nextEntry = nextNearbyPois[index]
+                return entry?.poi?.id === nextEntry?.poi?.id
+                    && entry?.projectedAbscissa === nextEntry?.projectedAbscissa
+                    && entry?.distanceToJourneyMeters === nextEntry?.distanceToJourneyMeters
+                    && entry?.source === nextEntry?.source
+            })
+
+            if (!sameEntries) {
+                lgs.stores.flythrough.nearbyPois = nextNearbyPois
+            }
+        }, 0)
     }, [currentJourney, drawerOpen, flythroughSettings.poiDistance, hasJourney, journeySlug])
 
     const refreshFlythrough = useCallback((camera = true) => {
@@ -540,6 +514,14 @@ export const FlythroughDrawer = memo(() => {
         if (cameraUpdateSourceClearTimer.current !== null) {
             clearTimeout(cameraUpdateSourceClearTimer.current)
             cameraUpdateSourceClearTimer.current = null
+        }
+        if (cameraAnglePreviewHideTimer.current !== null) {
+            clearTimeout(cameraAnglePreviewHideTimer.current)
+            cameraAnglePreviewHideTimer.current = null
+        }
+        if (nearbyPoisRefreshTimer.current !== null) {
+            clearTimeout(nearbyPoisRefreshTimer.current)
+            nearbyPoisRefreshTimer.current = null
         }
     }, [])
 
@@ -887,21 +869,62 @@ export const FlythroughDrawer = memo(() => {
         })
     }, [camera.altitude, camera.altitudeMode, flythroughState.sample, updateCamera])
 
+    const cameraAngleDisplayOffset = -camera.headingOffset
+
     const updateCameraPositionMode = useCallback((event) => {
         updateCamera({positionMode: event.target.value})
     }, [updateCamera])
 
+    const clearCameraAnglePreview = useCallback(() => {
+        if (cameraAnglePreviewHideTimer.current !== null) {
+            clearTimeout(cameraAnglePreviewHideTimer.current)
+            cameraAnglePreviewHideTimer.current = null
+        }
+        __.ui.flythrough?.hideCameraAnglePreview?.()
+    }, [])
+
+    const showCameraAnglePreview = useCallback((displayOffset = cameraAngleDisplayOffset) => {
+        if (camera.positionMode === FLYTHROUGH_CAMERA_POSITION_SYSTEM) {
+            clearCameraAnglePreview()
+            return
+        }
+
+        __.ui.flythrough?.showCameraAnglePreview?.({
+                                                       displayOffset,
+                                                       positionMode: camera.positionMode,
+                                                       fillColor,
+                                                       borderColor,
+                                                   })
+
+        if (cameraAnglePreviewHideTimer.current !== null) {
+            clearTimeout(cameraAnglePreviewHideTimer.current)
+        }
+        cameraAnglePreviewHideTimer.current = setTimeout(() => {
+            __.ui.flythrough?.hideCameraAnglePreview?.()
+            cameraAnglePreviewHideTimer.current = null
+        }, 5000)
+    }, [borderColor, camera.positionMode, cameraAngleDisplayOffset, clearCameraAnglePreview, fillColor])
+
     const updateCameraHeadingOffset = useCallback((event) => {
         const sliderValue = Number(event.target.value)
+        const displayOffset = Number.isFinite(sliderValue) ? sliderValue : cameraAngleDisplayOffset
+        const nextHeadingOffset = Number.isFinite(sliderValue) ? -sliderValue : camera.headingOffset
         updateCamera({
                          headingOffset: clampFlythroughNumber(
-                             Number.isFinite(sliderValue) ? -sliderValue : camera.headingOffset,
+                             nextHeadingOffset,
                              camera.headingOffset,
                              FLYTHROUGH_CAMERA_HEADING_OFFSET_MIN,
                              FLYTHROUGH_CAMERA_HEADING_OFFSET_MAX,
                          ),
                      })
-    }, [camera.headingOffset, updateCamera])
+        showCameraAnglePreview(-displayOffset)
+    }, [camera.headingOffset, cameraAngleDisplayOffset, showCameraAnglePreview, updateCamera])
+
+    useEffect(() => {
+        if (drawerOpen !== FLYTHROUGH_DRAWER || camera.positionMode === FLYTHROUGH_CAMERA_POSITION_SYSTEM) {
+            clearCameraAnglePreview()
+        }
+    }, [camera.positionMode, clearCameraAnglePreview, drawerOpen])
 
     const updateCameraPreset = useCallback((event) => {
         const presetKey = event.target.value
@@ -920,7 +943,6 @@ export const FlythroughDrawer = memo(() => {
     const altitudeFieldLabel = camera.altitudeMode === FLYTHROUGH_CAMERA_ALTITUDE_GROUND_OFFSET
         ? `Ground offset (${altitudeUnit})`
         : `Altitude (${altitudeUnit})`
-    const cameraAngleDisplayOffset = -camera.headingOffset
 
     const updateHysteresisMarginRatio = useCallback((event) => {
         updateCamera({
@@ -1114,29 +1136,21 @@ export const FlythroughDrawer = memo(() => {
                                                             value={FLYTHROUGH_CAMERA_POSITION_AHEAD}>{'Ahead'}</WaOption>
                                                     </WaSelect>
                                                     {camera.positionMode !== FLYTHROUGH_CAMERA_POSITION_SYSTEM &&
-                                                        <FlythroughStyleField>
-                                                            <FlythroughCameraAnglePreview
-                                                                active={cameraAnglePreviewActive}
-                                                                headingOffset={camera.headingOffset}
-                                                                positionMode={camera.positionMode}
-                                                                fillColor={fillColor}
-                                                                borderColor={borderColor}
-                                                            />
+                                                       <FlythroughStyleField>
                                                             <WaSlider
                                                                 label="Camera angle"
                                                                 hint="Offset from the trace heading in Behind or Ahead mode."
                                                                 size="s"
                                                                 min={FLYTHROUGH_CAMERA_HEADING_OFFSET_MIN}
                                                                 max={FLYTHROUGH_CAMERA_HEADING_OFFSET_MAX}
-                                                                step="1"
+                                                                step="5"
                                                                 value={cameraAngleDisplayOffset}
                                                                 withTooltip
                                                                 label-at-start half-width
                                                                 valueFormatter={value => `${Math.round(Number(value) || 0)}°`}
-                                                                onFocus={() => setCameraAnglePreviewActive(true)}
-                                                                onBlur={() => setCameraAnglePreviewActive(false)}
+                                                                onFocus={() => showCameraAnglePreview(-cameraAngleDisplayOffset)}
+                                                                onBlur={clearCameraAnglePreview}
                                                                 onInput={event => {
-                                                                    setCameraAnglePreviewActive(true)
                                                                     updateCameraHeadingOffset(event)
                                                                 }}
                                                             />

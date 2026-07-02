@@ -38,6 +38,7 @@ export const FLYTHROUGH_CAMERA_ALTITUDE_GROUND_OFFSET = 'ground-offset'
 export const FLYTHROUGH_CAMERA_POSITION_BEHIND = 'behind'
 export const FLYTHROUGH_CAMERA_POSITION_AHEAD = 'ahead'
 export const FLYTHROUGH_CAMERA_POSITION_SYSTEM = 'system'
+export const FLYTHROUGH_CAMERA_PREVIEW_MODE_TERRAIN = 'terrain'
 export const FLYTHROUGH_CAMERA_HEADING_OFFSET_MIN = -90
 export const FLYTHROUGH_CAMERA_HEADING_OFFSET_MAX = 90
 export const FLYTHROUGH_CAMERA_PRESET_CUSTOM = 'custom'
@@ -90,6 +91,7 @@ export const DEFAULT_FLYTHROUGH_CAMERA = {
     // In fixed mode it is an absolute altitude; in ground-offset mode it is the offset above terrain.
     altitude:      1200,
     headingOffset: 0,
+    previewMode:    FLYTHROUGH_CAMERA_PREVIEW_MODE_TERRAIN,
     pitch:         -65,
     heading:       0,
     hysteresis:    {
@@ -309,6 +311,7 @@ export const normalizeFlythroughMarker = (marker = {}) => ({
  * - `easing`: smoothness of the recenter flight.
  *
  * `headingOffset` is used by the Behind/Ahead camera modes to bias the nominal trace-facing heading.
+ *
  */
 export const normalizeFlythroughCamera = (camera = {}) => ({
     positionMode: camera?.positionMode === FLYTHROUGH_CAMERA_POSITION_AHEAD
@@ -334,6 +337,7 @@ export const normalizeFlythroughCamera = (camera = {}) => ({
         FLYTHROUGH_CAMERA_HEADING_OFFSET_MIN,
         FLYTHROUGH_CAMERA_HEADING_OFFSET_MAX,
     ),
+    previewMode:   FLYTHROUGH_CAMERA_PREVIEW_MODE_TERRAIN,
     hysteresis:   (() => {
         const zone = normalizeFlythroughToleranceZone(camera?.hysteresis?.zone, DEFAULT_FLYTHROUGH_CAMERA.hysteresis.zone)
         return {

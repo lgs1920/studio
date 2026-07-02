@@ -14,7 +14,7 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { cleanup, fireEvent, render, waitFor }             from '@testing-library/react'
+import { cleanup, fireEvent, render, waitFor }            from '@testing-library/react'
 import { useState }                                        from 'react'
 import { FLYTHROUGH_DRAWER }                               from '@Core/constants'
 import {
@@ -158,6 +158,26 @@ describe('FlythroughDrawer', () => {
                 },
             },
         })
+        poiList.set('take-off', {
+            id:       'take-off',
+            title:    'Take-off',
+            visible:  true,
+            flythrough: {
+                visible: true,
+            },
+        })
+        poiList.set('landing', {
+            id:       'landing',
+            title:    'Landing',
+            visible:  true,
+            flythrough: {
+                visible: true,
+            },
+        })
+        const poiEntities = new Map([
+            ['take-off', {id: 'take-off', show: true, billboard: {show: true}}],
+            ['landing', {id: 'landing', show: true, billboard: {show: true}}],
+        ])
         globalThis.lgs = {
             colors: {
                 poiDefault:           '#fff',
@@ -199,6 +219,17 @@ describe('FlythroughDrawer', () => {
                     getHeight: vi.fn(() => 300),
                 },
             },
+            viewer: {
+                container: document.body,
+                entities: {
+                    getById: id => poiEntities.get(id) ?? null,
+                },
+                dataSources: {
+                    length: 0,
+                    get: vi.fn(),
+                    getByName: vi.fn(() => []),
+                },
+            },
             editorSettingsProxy: {
                 menu: proxy({
                     drawer: 'right',
@@ -233,6 +264,26 @@ describe('FlythroughDrawer', () => {
                     refreshCamera: vi.fn(),
                     stop:          vi.fn(),
                     setHideOtherJourneys: vi.fn(),
+                    showCameraAnglePreview: vi.fn(() => {
+                        const takeOff = poiEntities.get('take-off')
+                        const landing = poiEntities.get('landing')
+                        if (takeOff) {
+                            takeOff.show = false
+                        }
+                        if (landing) {
+                            landing.show = false
+                        }
+                    }),
+                    hideCameraAnglePreview: vi.fn(() => {
+                        const takeOff = poiEntities.get('take-off')
+                        const landing = poiEntities.get('landing')
+                        if (takeOff) {
+                            takeOff.show = true
+                        }
+                        if (landing) {
+                            landing.show = true
+                        }
+                    }),
                 },
             },
         }
@@ -309,16 +360,37 @@ describe('FlythroughDrawer', () => {
         expect(view.getByLabelText('Camera feel')).toBeTruthy()
     })
 
-    it('inverts the camera angle slider before persisting it', async () => {
+    it('inverts the camera angle slider and shows the runtime preview while editing', async () => {
+        const setTimeoutSpy = vi.spyOn(globalThis, 'setTimeout')
         globalThis.lgs.stores.flythrough.camera.positionMode = 'behind'
         globalThis.lgs.settings.ui.flythrough.camera.positionMode = 'behind'
+        globalThis.lgs.settings.ui.flythrough.clips = {
+            catalog: {
+                'take-off': {id: 'take-off', slots: ['start']},
+                landing:    {id: 'landing', slots: ['stop']},
+            },
+            start: [
+                createFlythroughClipInstance({id: 'take-off', slots: ['start']}, 'start'),
+            ],
+            stop: [
+                createFlythroughClipInstance({id: 'landing', slots: ['stop']}, 'stop'),
+            ],
+        }
+        globalThis.lgs.stores.main.theJourney.flythrough = {
+            start: [...globalThis.lgs.settings.ui.flythrough.clips.start],
+            stop:  [...globalThis.lgs.settings.ui.flythrough.clips.stop],
+        }
+        globalThis.lgs.stores.flythrough.clips = globalThis.lgs.settings.ui.flythrough.clips
 
         const view = render(<FlythroughDrawer/>)
         const angleInput = view.getByLabelText('Camera angle')
 
-        expect(view.queryByTestId('flythrough-angle-preview')).toBeNull()
         fireEvent.focus(angleInput)
-        expect(view.getByTestId('flythrough-angle-preview')).toBeTruthy()
+        expect(globalThis.__.ui.flythrough.showCameraAnglePreview).toHaveBeenCalledTimes(1)
+        expect(globalThis.__.ui.flythrough.showCameraAnglePreview.mock.calls[0][0].positionMode).toBe('behind')
+        expect(Math.abs(globalThis.__.ui.flythrough.showCameraAnglePreview.mock.calls[0][0].displayOffset)).toBe(0)
+        expect(globalThis.lgs.viewer.entities.getById('take-off').show).toBe(false)
+        expect(globalThis.lgs.viewer.entities.getById('landing').show).toBe(false)
         fireEvent.input(angleInput, {target: {value: '20'}})
 
         await waitFor(() => {
@@ -326,10 +398,17 @@ describe('FlythroughDrawer', () => {
             expect(globalThis.lgs.stores.flythrough.camera.headingOffset).toBe(-20)
         })
 
+        expect(globalThis.__.ui.flythrough.showCameraAnglePreview).toHaveBeenLastCalledWith(expect.objectContaining({
+            displayOffset: -20,
+            positionMode:  'behind',
+        }))
+        expect(setTimeoutSpy).toHaveBeenCalledWith(expect.any(Function), 5000)
+
         fireEvent.blur(angleInput)
-        await waitFor(() => {
-            expect(view.queryByTestId('flythrough-angle-preview')).toBeNull()
-        })
+        expect(globalThis.__.ui.flythrough.hideCameraAnglePreview).toHaveBeenCalledTimes(1)
+        expect(globalThis.lgs.viewer.entities.getById('take-off').show).toBe(true)
+        expect(globalThis.lgs.viewer.entities.getById('landing').show).toBe(true)
+        setTimeoutSpy.mockRestore()
     })
 
     it('shows the ground offset label when the camera mode is ground offset', () => {
