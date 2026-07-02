@@ -177,6 +177,8 @@ describe('FlythroughDrawer', () => {
         const poiEntities = new Map([
             ['take-off', {id: 'take-off', show: true, billboard: {show: true}}],
             ['landing', {id: 'landing', show: true, billboard: {show: true}}],
+            ['journey-start', {id: 'journey-start', show: true, billboard: {show: true}}],
+            ['journey-stop', {id: 'journey-stop', show: true, billboard: {show: true}}],
         ])
         globalThis.lgs = {
             colors: {
@@ -264,24 +266,32 @@ describe('FlythroughDrawer', () => {
                     refreshCamera: vi.fn(),
                     stop:          vi.fn(),
                     setHideOtherJourneys: vi.fn(),
-                    showCameraAnglePreview: vi.fn(() => {
-                        const takeOff = poiEntities.get('take-off')
-                        const landing = poiEntities.get('landing')
-                        if (takeOff) {
-                            takeOff.show = false
+                    getAnglePreviewPoiIds: vi.fn(() => {
+                        const journey = globalThis.lgs?.stores?.main?.theJourney
+                        const tracks = Array.from(journey?.tracks?.values?.() ?? [])
+                        if (tracks.length === 0) {
+                            return []
                         }
-                        if (landing) {
-                            landing.show = false
+
+                        return Array.from(new Set([
+                            tracks[0]?.flags?.start,
+                            tracks[tracks.length - 1]?.flags?.stop,
+                        ].filter(Boolean)))
+                    }),
+                    showCameraAnglePreview: vi.fn(() => {
+                        for (const poiId of globalThis.__.ui.flythrough.getAnglePreviewPoiIds()) {
+                            const poi = poiEntities.get(poiId)
+                            if (poi) {
+                                poi.show = false
+                            }
                         }
                     }),
                     hideCameraAnglePreview: vi.fn(() => {
-                        const takeOff = poiEntities.get('take-off')
-                        const landing = poiEntities.get('landing')
-                        if (takeOff) {
-                            takeOff.show = true
-                        }
-                        if (landing) {
-                            landing.show = true
+                        for (const poiId of globalThis.__.ui.flythrough.getAnglePreviewPoiIds()) {
+                            const poi = poiEntities.get(poiId)
+                            if (poi) {
+                                poi.show = true
+                            }
                         }
                     }),
                 },
@@ -380,6 +390,15 @@ describe('FlythroughDrawer', () => {
             start: [...globalThis.lgs.settings.ui.flythrough.clips.start],
             stop:  [...globalThis.lgs.settings.ui.flythrough.clips.stop],
         }
+        globalThis.lgs.stores.main.theJourney.tracks = new Map([
+            ['track#journey-a#main', {
+                slug:  'track#journey-a#main',
+                flags: {
+                    start: 'journey-start',
+                    stop:  'journey-stop',
+                },
+            }],
+        ])
         globalThis.lgs.stores.flythrough.clips = globalThis.lgs.settings.ui.flythrough.clips
 
         const view = render(<FlythroughDrawer/>)
@@ -389,8 +408,8 @@ describe('FlythroughDrawer', () => {
         expect(globalThis.__.ui.flythrough.showCameraAnglePreview).toHaveBeenCalledTimes(1)
         expect(globalThis.__.ui.flythrough.showCameraAnglePreview.mock.calls[0][0].positionMode).toBe('behind')
         expect(Math.abs(globalThis.__.ui.flythrough.showCameraAnglePreview.mock.calls[0][0].displayOffset)).toBe(0)
-        expect(globalThis.lgs.viewer.entities.getById('take-off').show).toBe(false)
-        expect(globalThis.lgs.viewer.entities.getById('landing').show).toBe(false)
+        expect(globalThis.lgs.viewer.entities.getById('journey-start').show).toBe(false)
+        expect(globalThis.lgs.viewer.entities.getById('journey-stop').show).toBe(false)
         fireEvent.input(angleInput, {target: {value: '20'}})
 
         await waitFor(() => {
@@ -406,8 +425,8 @@ describe('FlythroughDrawer', () => {
 
         fireEvent.blur(angleInput)
         expect(globalThis.__.ui.flythrough.hideCameraAnglePreview).toHaveBeenCalledTimes(1)
-        expect(globalThis.lgs.viewer.entities.getById('take-off').show).toBe(true)
-        expect(globalThis.lgs.viewer.entities.getById('landing').show).toBe(true)
+        expect(globalThis.lgs.viewer.entities.getById('journey-start').show).toBe(true)
+        expect(globalThis.lgs.viewer.entities.getById('journey-stop').show).toBe(true)
         setTimeoutSpy.mockRestore()
     })
 

@@ -3599,11 +3599,18 @@ export class FlythroughMode {
     }
 
     #cameraAnglePreviewPOIIds = () => {
-        const clips = this.#clipSettings()
+        const journey = this.#sampler?.journey ?? globalThis.lgs?.theJourney ?? null
+        const tracks = Array.from(journey?.tracks?.values?.() ?? [])
+        if (tracks.length === 0) {
+            return []
+        }
+
+        const firstTrack = tracks[0]
+        const lastTrack = tracks[tracks.length - 1]
         return Array.from(new Set([
-            ...(clips.start ?? []),
-            ...(clips.stop ?? []),
-        ].map(clip => clip?.clipId).filter(clipId => clipId === 'take-off' || clipId === 'landing')))
+            firstTrack?.flags?.start,
+            lastTrack?.flags?.stop,
+        ].filter(Boolean)))
     }
 
     #cameraAnglePreviewPOIForId = (poiId) => globalThis.lgs?.stores?.main?.components?.pois?.list?.get?.(poiId)
@@ -3623,6 +3630,7 @@ export class FlythroughMode {
                 })
             }
 
+            poi.visible = false
             this.#setPOIEntityVisibility(poi, false)
         }
     }
@@ -3634,7 +3642,8 @@ export class FlythroughMode {
                 continue
             }
 
-            this.#setPOIEntityVisibility(poi, state?.visible === true && poi.visible !== false)
+            poi.visible = state?.visible === true
+            this.#setPOIEntityVisibility(poi, state?.visible === true)
         }
 
         this.#cameraAnglePreviewPOIVisibilityState.clear()

@@ -1139,7 +1139,6 @@ export const FlythroughDrawer = memo(() => {
                                                        <FlythroughStyleField>
                                                             <WaSlider
                                                                 label="Camera angle"
-                                                                hint="Offset from the trace heading in Behind or Ahead mode."
                                                                 size="s"
                                                                 min={FLYTHROUGH_CAMERA_HEADING_OFFSET_MIN}
                                                                 max={FLYTHROUGH_CAMERA_HEADING_OFFSET_MAX}
@@ -1260,9 +1259,10 @@ export const FlythroughDrawer = memo(() => {
                                                             label-at-start className="half-width"/>
                                                     </div>
                                                 </div>
-                                                <WaDetails small open className="lgs--details-hoverable">
+                                                 <WaDetails small className="lgs--details-hoverable">
                                                     <span slot="summary">{'Advanced camera setup'}</span>
                                                     <div className="flythrough-fieldset">
+                                                        <WaDivider/>
                                                         <WaSelect appearance="filled"
                                                             label="Camera feel"
                                                             label-at-start
