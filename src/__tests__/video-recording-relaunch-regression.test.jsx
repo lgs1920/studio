@@ -177,7 +177,7 @@ describe('video recording relaunch regression', () => {
         })
 
         await waitFor(() => {
-            expect(widgetCache.restoreAllHiddenWidgetsExcept).toHaveBeenCalledWith(VIDEO_WIDGETS_BOARD)
+            expect(widgetCache.restoreAllHiddenWidgetsExcept).not.toHaveBeenCalled()
             expect(lgs.stores.ui.video.step).toBeNull()
             expect(lgs.stores.ui.video.recording).toBe(false)
         })

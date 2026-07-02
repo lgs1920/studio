@@ -116,8 +116,8 @@ export const VideoRecordingSettingsToolbar = memo(() => {
      */
     useEffect(() => {
         __.ui.widgetCache.hideAllExceptBoards(VIDEO_WIDGETS_BOARD)
-        // Note: Widgets will be restored by VideoRecorderToolbar when recording stops,
-        // or by handleCancel when user cancels editing
+        // Note: Widgets are restored when the recording dialog/session is fully closed,
+        // or by handleCancel when user cancels editing.
     }, [])
 
     useEffect(() => {

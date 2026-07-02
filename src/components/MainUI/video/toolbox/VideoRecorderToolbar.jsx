@@ -18,7 +18,6 @@
  * VideoRecorderToolbar.jsx - Displays video recording controls and stats
  ******************************************************************************/
 import { FlythroughProgressBar } from '@Components/Flythrough/FlythroughProgressBar'
-import { VIDEO_WIDGETS_BOARD } from '@Core/constants'
 import { ScreenMediaRecorder } from '@Core/ui/screen-media-recorder/recorder/ScreenMediaRecorder'
 import { UIToast }                          from '@Utils/UIToast'
 import { DISTANCE_UNITS, km, UnitUtils }    from '@Utils/UnitUtils'
@@ -260,8 +259,6 @@ export const VideoRecorderToolbar = ({toolbar}) => {
                 __.recorder.stopVideo()
             }
 
-            __.ui.widgetCache.restoreAllHiddenWidgetsExcept(VIDEO_WIDGETS_BOARD)
-
             updateState({
                             preRecording: false,
                             recording:    false,
@@ -270,7 +267,6 @@ export const VideoRecorderToolbar = ({toolbar}) => {
                             size:         0,
                             recordedDuration: 0,
                             recordedSize: 0,
-                            finalizing:   false,
                         })
 
             switch (event.type) {
