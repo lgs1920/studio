@@ -16,6 +16,7 @@
 
 import { Mobility } from '@Utils/Mobility'
 import { getTrackRenderContent, trackRenderSmoothingKey } from '@Utils/cesium/trackRenderSmoothing'
+import { Track } from '@Core/Track'
 
 const LINE_STRING = 'LineString'
 const MULTI_LINE_STRING = 'MultiLineString'
@@ -156,6 +157,11 @@ const interpolateSample = (start, end, targetDistance, totalDistance) => {
         latitude: interpolateValue(start.latitude, end.latitude, segmentRatio),
         altitude,
         height: altitude,
+        cumulativeElevationGain: interpolateNullableValue(
+            start.cumulativeElevationGain,
+            end.cumulativeElevationGain,
+            segmentRatio,
+        ) ?? 0,
         interpolated: true,
         source: {
             startPoint: sampleReference(start),
@@ -284,11 +290,14 @@ export class FlythroughPathSampler {
 
                 const startIndex = this.#samples.length
                 const startDistance = cumulativeDistance
-                const segmentSamples = []
 
                 points.forEach((point, pointIndex) => {
+                    const segmentDistance = pointIndex > 0
+                        ? Mobility.distance(points[pointIndex - 1], point)
+                        : 0
+
                     if (pointIndex > 0) {
-                        cumulativeDistance += Mobility.distance(points[pointIndex - 1], point)
+                        cumulativeDistance += segmentDistance
                     }
 
                     const sample = {
@@ -315,7 +324,6 @@ export class FlythroughPathSampler {
                         },
                     }
 
-                    segmentSamples.push(sample)
                     this.#samples.push(sample)
                 })
 
@@ -330,6 +338,23 @@ export class FlythroughPathSampler {
                     endDistance: cumulativeDistance,
                 })
             })
+
+            const elevationBreakpoints = FlythroughPathSampler.cumulativeElevationBreakpointsFromTrack(
+                track,
+                trackStartDistance,
+                cumulativeDistance,
+            )
+
+            for (let index = this.#samples.length - 1; index >= 0; index--) {
+                const sample = this.#samples[index]
+                if (sample.trackSlug !== track.slug) {
+                    break
+                }
+                sample.cumulativeElevationGain = FlythroughPathSampler.valueAtDistance(
+                    elevationBreakpoints,
+                    sample.distanceFromStart,
+                ) ?? 0
+            }
 
             metricTimeBreakpoints.push(
                 ...FlythroughPathSampler.metricTimeBreakpointsFromTrack(track, trackStartDistance, cumulativeDistance),
@@ -729,6 +754,32 @@ export class FlythroughPathSampler {
         return breakpoints[breakpoints.length - 1].timeMillis
     }
 
+    static valueAtDistance = (breakpoints, distance) => {
+        if (!Array.isArray(breakpoints) || breakpoints.length === 0) {
+            return null
+        }
+
+        const targetDistance = Number(distance) || 0
+        if (targetDistance <= breakpoints[0].distance) {
+            return breakpoints[0].value
+        }
+        if (targetDistance >= breakpoints[breakpoints.length - 1].distance) {
+            return breakpoints[breakpoints.length - 1].value
+        }
+
+        for (let index = 1; index < breakpoints.length; index++) {
+            const start = breakpoints[index - 1]
+            const end = breakpoints[index]
+            if (targetDistance <= end.distance) {
+                const span = end.distance - start.distance
+                const segmentRatio = span > 0 ? clamp((targetDistance - start.distance) / span, 0, 1) : 0
+                return interpolateValue(start.value, end.value, segmentRatio)
+            }
+        }
+
+        return breakpoints[breakpoints.length - 1].value
+    }
+
     static metricTimeBreakpointsFromTrack = (track, trackStartDistance, trackEndDistance) => {
         const metrics = track?.metrics
         const metricPoints = Array.isArray(metrics?.points) ? metrics.points : []
@@ -784,6 +835,60 @@ export class FlythroughPathSampler {
             return {
                 distance:   trackStartDistance + (renderSpan * ratio),
                 timeMillis: point.timeMillis,
+            }
+        })
+
+        cacheBucket?.set(cacheEntryKey, breakpoints)
+        return breakpoints
+    }
+
+    static cumulativeElevationBreakpointsFromTrack = (track, trackStartDistance, trackEndDistance) => {
+        const metrics = track?.metrics
+        const metricPoints = Array.isArray(metrics?.points) ? metrics.points : []
+        const cacheKey = metrics
+        const cacheBucket = getWeakMapBucket(metricBreakpointsCache, cacheKey)
+        const cacheEntryKey = `elevation:${trackStartDistance ?? 0}:${trackEndDistance ?? 0}`
+        const cachedBreakpoints = cacheBucket?.get(cacheEntryKey)
+        if (cachedBreakpoints) {
+            return cachedBreakpoints
+        }
+
+        const activityProfile = Track.activityProfile(track?.activity, track?.activitySettings)
+        const minSlopeThreshold = activityProfile.minSlope ?? globalThis.lgs?.settings?.getMetrics?.minSlope ?? 0
+        const timedPoints = []
+        let metricDistance = 0
+        let cumulativeElevationGain = 0
+
+        metricPoints.forEach(point => {
+            const pointDistance = finiteNumber(point?.distance) ?? 0
+            const elevation = finiteNumber(point?.elevation) ?? 0
+            const slope = finiteNumber(point?.slope) ?? 0
+
+            metricDistance += pointDistance
+            if (slope > minSlopeThreshold && elevation > 0) {
+                cumulativeElevationGain += elevation
+            }
+
+            timedPoints.push({
+                distance: metricDistance,
+                value:    cumulativeElevationGain,
+            })
+        })
+
+        if (timedPoints.length === 0) {
+            return []
+        }
+
+        const metricStartDistance = timedPoints[0].distance
+        const metricEndDistance = timedPoints[timedPoints.length - 1].distance
+        const metricSpan = metricEndDistance - metricStartDistance
+        const renderSpan = trackEndDistance - trackStartDistance
+
+        const breakpoints = timedPoints.map(point => {
+            const ratio = metricSpan > 0 ? clamp((point.distance - metricStartDistance) / metricSpan, 0, 1) : 0
+            return {
+                distance: trackStartDistance + (renderSpan * ratio),
+                value:    point.value,
             }
         })
 

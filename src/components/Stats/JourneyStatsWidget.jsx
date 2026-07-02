@@ -16,7 +16,8 @@
 
 import { Widget }                                                                 from '@Components/MainUI/widgets/Widget'
 import { JourneyStats }                                                           from '@Components/Stats/JourneyStats'
-import { JOURNEY_WIDGETS, LGS_VISUAL_WIDGET, SCENE_WIDGETS, SCENE_WIDGETS_BOARD } from '@Core/constants'
+import { isVideoWidgetEditorPhase, shouldShowDynamicStatsWidget, shouldShowJourneyStatsWidget } from '@Components/Stats/flythroughStatsWidgetUtils'
+import { JOURNEY_WIDGETS, LGS_VISUAL_WIDGET, SCENE_WIDGETS, SCENE_WIDGETS_BOARD, VIDEO_WIDGETS_BOARD } from '@Core/constants'
 import { useManagedStylesheet }                                                   from '@Utils/useManagedStylesheet'
 import { useOptionalSnapshot } from '@Utils/ValtioUtils'
 import { DISTANCE_UNITS, ELEVATION_UNITS, PACE_UNITS, SPEED_UNITS }               from '@Utils/UnitUtils'
@@ -27,12 +28,21 @@ import journeyStatsStylesheetHref                                               
 const JOURNEY_STATS_WIDGET_CONTEXT_FALLBACK = {widgetsBoard: ''}
 const JOURNEY_STATS_WIDGET_STYLESHEET_ID = 'journey-stats-widget'
 
-export const JourneyStatsWidget = ({id, context, zIndex, widgetsBoard: persistedWidgetsBoard}) => {
+export const JourneyStatsWidget = ({
+    id,
+    context,
+    zIndex,
+    widgetsBoard: persistedWidgetsBoard,
+    mode = 'journey',
+    widgetKey = 'journey-stats-widget',
+}) => {
     useManagedStylesheet(JOURNEY_STATS_WIDGET_STYLESHEET_ID, journeyStatsStylesheetHref)
 
     const contextState = useOptionalSnapshot(context, JOURNEY_STATS_WIDGET_CONTEXT_FALLBACK)
     const widgetsBoard = contextState.widgetsBoard || persistedWidgetsBoard || ''
     const main = useSnapshot(lgs.stores.main)
+    const flythrough = useSnapshot(lgs.stores.flythrough)
+    useSnapshot(lgs.stores.ui.video)
     const journey = lgs.theJourney
     const journeySlug = main.theJourney?.slug ?? null
 
@@ -92,23 +102,41 @@ export const JourneyStatsWidget = ({id, context, zIndex, widgetsBoard: persisted
         }
     }, [container, widgetsBoard, id, zIndex])
 
-    if (!journeySlug || !journey || !widgetsBoard || Object.keys(config).length === 0) {
+    const isVisible = useMemo(() => {
+        if (!widgetsBoard) {
+            return false
+        }
+
+        if (widgetsBoard === VIDEO_WIDGETS_BOARD) {
+            if (isVideoWidgetEditorPhase()) {
+                return true
+            }
+            return mode === 'dynamic'
+                   ? shouldShowDynamicStatsWidget(flythrough)
+                   : shouldShowJourneyStatsWidget(flythrough)
+        }
+
+        return true
+    }, [flythrough, mode, widgetsBoard])
+
+    if (!journeySlug || !journey || !widgetsBoard || Object.keys(config).length === 0 || !isVisible) {
         return null
     }
 
     return (
         <Widget
-            isVisible={true}
+            isVisible={isVisible}
             config={config}
             key={journeySlug}
         >
-            {metrics && (
-                <JourneyStats
-                    id={id}
-                    metrics={metrics}
-                    units={units}
-                />
-            )}
+            <JourneyStats
+                id={id}
+                metrics={metrics}
+                units={units}
+                mode={mode}
+                widgetKey={widgetKey}
+                widgetsBoard={widgetsBoard}
+            />
         </Widget>
     )
 }

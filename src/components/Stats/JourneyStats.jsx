@@ -17,6 +17,7 @@
 import { NameValueUnit }                                from '@Components/DataDisplay/NameValueUnit'
 import { DateTimeDisplay }                              from '@Components/DateTimeDisplay'
 import { useWidgetScaleCorrection } from '@Components/MainUI/widgets/useWidgetScaleCorrection'
+import { VIDEO_WIDGETS_BOARD }                          from '@Core/constants'
 import {
     JOURNEY_STATS_TEXT_ITEM_MAP,
     isJourneyStatsSummaryTextItem,
@@ -24,11 +25,18 @@ import {
     normalizeJourneyStatsSummaryBreaks,
     normalizeJourneyStatsTextOrder,
 }                                                       from '@Components/Stats/journeyStatsTextOrder'
+import {
+    buildDynamicFlythroughStatsMetrics,
+    isVideoWidgetEditorPhase,
+    shouldShowDynamicStatsWidget,
+    shouldShowJourneyStatsWidget,
+}                                                       from '@Components/Stats/flythroughStatsWidgetUtils'
 import { WIDGET_RADIUS }                                from '@Core/constants'
 import { faArrowDownToLine, faArrowUpToLine }           from '@fortawesome/pro-regular-svg-icons'
 import { SlDivider, SlIcon }                            from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                                        from '@Utils/FA2SL'
 import { DISTANCE_UNITS, ELEVATION_UNITS, PACE_UNITS, SPEED_UNITS, UnitUtils } from '@Utils/UnitUtils'
+import { useOptionalSnapshot }                          from '@Utils/ValtioUtils'
 import { Fragment, memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSnapshot }                                  from 'valtio'
 
@@ -127,11 +135,18 @@ const measureUnconstrainedContent = (target, content) => {
     return {width, height}
 }
 
+const resolveWidgetConfiguration = (widgetKey) => {
+    const widgets = lgs.settings.widgets ?? {}
+    return widgets?.[widgetKey]?.configuration
+           ?? __.widgets.get(widgetKey)?.configuration
+           ?? null
+}
+
 /**
  * Statistical display component for journeys.
  * Maintains layout consistency by preserving slots even when values are zero.
  */
-export const JourneyStats = memo(({id, metrics, units, style = {}}) => {
+export const JourneyStats = memo(({id, metrics, units, style = {}, mode = 'journey', widgetKey = 'journey-stats-widget', widgetsBoard = null}) => {
     const main = useSnapshot(lgs.stores.main)
     const journey = lgs.theJourney
     const journeySlug = main.theJourney?.slug ?? null
@@ -139,8 +154,10 @@ export const JourneyStats = memo(({id, metrics, units, style = {}}) => {
     const [journeyLocationState, setJourneyLocationState] = useState({slug: null, value: ''})
     const widgetRef = useRef(null)
 
-    const $configuration = lgs.settings.widgets['journey-stats-widget'].configuration
-    const configuration = useSnapshot($configuration)
+    const configuration = useOptionalSnapshot(
+        resolveWidgetConfiguration(widgetKey),
+        {default: {}, user: {}, elements: {}},
+    )
 
     const fallbackMetrics = useMemo(() => metrics ?? {}, [metrics])
     const $metrics = journey?.metrics ?? lgs.stores.main.components.journeyStats
@@ -150,6 +167,10 @@ export const JourneyStats = memo(({id, metrics, units, style = {}}) => {
     const unitSystem = useSnapshot($unitSystem)
     const currentUnitSystem = unitSystem.current
     const isImperial = currentUnitSystem === 'imperial'
+    const flythrough = useSnapshot(lgs.stores.flythrough)
+    useSnapshot(lgs.stores.ui.video)
+    const isDynamicMode = mode === 'dynamic'
+    const isVideoBoard = widgetsBoard === VIDEO_WIDGETS_BOARD
 
     const element = useMemo(() => {
         if (id && configuration.elements?.[id]) {
@@ -162,6 +183,10 @@ export const JourneyStats = memo(({id, metrics, units, style = {}}) => {
      * Merges metrics based on defined data source (global, external, user)
      */
     const displayMetrics = useMemo(() => {
+        if (isDynamicMode) {
+            return buildDynamicFlythroughStatsMetrics(flythrough)
+        }
+
         const source = element.dataSource || 'global'
         const global = metricsSnap.global || fallbackMetrics.global || {}
         const external = metricsSnap.external || fallbackMetrics.external || {}
@@ -181,11 +206,11 @@ export const JourneyStats = memo(({id, metrics, units, style = {}}) => {
                 ...(source === 'user' ? {...(external.positive || {}), ...(user.positive || {})} : {}),
             }
         }
-    }, [element.dataSource, fallbackMetrics, metricsSnap])
+    }, [element.dataSource, fallbackMetrics, flythrough, isDynamicMode, metricsSnap])
 
     const formattedDuration = useMemo(() => {
         const seconds = displayMetrics?.duration
-        if (!Number.isFinite(seconds) || seconds <= 0) {
+        if (!Number.isFinite(seconds) || seconds < 0) {
             return null
         }
 
@@ -224,8 +249,10 @@ export const JourneyStats = memo(({id, metrics, units, style = {}}) => {
         min: formatPace(displayMetrics?.minPace),
     }), [displayMetrics?.averagePace, displayMetrics?.minPace, formatPace])
 
-    const hasDuration = journey?.hasTime ?? false
-    const hasElevation = journey?.hasAltitude ?? false
+    const hasDuration = isDynamicMode ? Boolean(flythrough?.elapsedMillis) : (journey?.hasTime ?? false)
+    const hasElevation = isDynamicMode
+                         ? Boolean(displayMetrics?.positive?.elevation || displayMetrics?.positive?.elevation === 0)
+                         : (journey?.hasAltitude ?? false)
     const date = journey ? __.ui.ui.formatJourneyDurationDates(journey.getDate()) : {}
     const hasDateRange = Boolean(date?.prefix && date?.sufix)
     const journeyLocation = (journeyLocationState.slug === journeySlug ? journeyLocationState.value : '') || journey?.location || ''
@@ -239,7 +266,9 @@ export const JourneyStats = memo(({id, metrics, units, style = {}}) => {
         () => new Set(normalizeJourneyStatsSummaryBreaks(element?.summaryBreaks)),
         [element?.summaryBreaks],
     )
-    const showAltitudeRow = (hasElevation || element?.altitude) && (displayMetrics.minHeight > 0 || displayMetrics.maxHeight > 0)
+    const showAltitudeRow = !isDynamicMode
+                            && (hasElevation || element?.altitude)
+                            && (displayMetrics.minHeight > 0 || displayMetrics.maxHeight > 0)
     const showSpeedRow = element?.performance && (displayMetrics.averageSpeed > 0 || displayMetrics.maxSpeed > 0)
     const showPaceRow = element?.performance && (paceValues.average !== null || paceValues.min !== null)
 
@@ -247,9 +276,9 @@ export const JourneyStats = memo(({id, metrics, units, style = {}}) => {
         const visibleById = {
             date:      showDate,
             location:  showLocation,
-            distance:  isJourneyStatsTextItemEnabled(element, 'distance') && displayMetrics.distance > 0,
+            distance:  isDynamicMode ? displayMetrics.distance >= 0 : (isJourneyStatsTextItemEnabled(element, 'distance') && displayMetrics.distance > 0),
             elevation: isJourneyStatsTextItemEnabled(element, 'elevation') && displayMetrics.positive?.elevation > 0,
-            duration:  isJourneyStatsTextItemEnabled(element, 'duration') && Boolean(formattedDuration),
+            duration:  isDynamicMode ? Boolean(formattedDuration) : (isJourneyStatsTextItemEnabled(element, 'duration') && Boolean(formattedDuration)),
             altitude:  showAltitudeRow,
             speed:     showSpeedRow,
             pace:      showPaceRow,
@@ -573,7 +602,25 @@ export const JourneyStats = memo(({id, metrics, units, style = {}}) => {
         return group.items.map(renderTextItem)
     }
 
-    if (!journeySlug || !journey) {
+    const isVisible = useMemo(() => {
+        if (!journeySlug || !journey) {
+            return false
+        }
+
+        if (!isVideoBoard) {
+            return true
+        }
+
+        if (isVideoWidgetEditorPhase()) {
+            return true
+        }
+
+        return isDynamicMode
+               ? shouldShowDynamicStatsWidget(flythrough)
+               : shouldShowJourneyStatsWidget(flythrough)
+    }, [flythrough, isDynamicMode, isVideoBoard, journey, journeySlug])
+
+    if (!isVisible) {
         return null
     }
 

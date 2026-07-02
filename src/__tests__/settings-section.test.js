@@ -21,6 +21,20 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const waitForSubscription = () => new Promise(resolve => globalThis.setTimeout(resolve, 0))
 
+vi.mock('@Utils/UIToast', () => ({
+    UIToast: {
+        DURATION: 5000,
+        error:    vi.fn(),
+        notify:   vi.fn(),
+        success:  vi.fn(),
+        warning:  vi.fn(),
+    },
+    LGS_ERROR_TOAST:       'danger',
+    LGS_INFORMATION_TOAST: 'primary',
+    LGS_SUCCESS_TOAST:     'success',
+    LGS_WARNING_TOAST:     'warning',
+}))
+
 describe('SettingsSection', () => {
     beforeEach(() => {
         vi.stubGlobal('lgs', {
@@ -28,6 +42,26 @@ describe('SettingsSection', () => {
                 ui: {
                     profile: {
                         liveData: false,
+                    },
+                },
+                widgets: {
+                    'journey-stats-widget': {
+                        configuration: {
+                            default: {
+                                title: 'Journey Stats',
+                            },
+                            user: {},
+                            elements: {},
+                        },
+                    },
+                    'dynamic-stats-widget': {
+                        configuration: {
+                            default: {
+                                title: 'Dynamic Stats',
+                            },
+                            user: {},
+                            elements: {},
+                        },
                     },
                 },
                 journey: {
@@ -55,6 +89,26 @@ describe('SettingsSection', () => {
                 ui: {
                     profile: {
                         liveData: false,
+                    },
+                },
+                widgets: {
+                    'journey-stats-widget': {
+                        configuration: {
+                            default: {
+                                title: 'Journey Stats',
+                            },
+                            user: {},
+                            elements: {},
+                        },
+                    },
+                    'dynamic-stats-widget': {
+                        configuration: {
+                            default: {
+                                title: 'Dynamic Stats',
+                            },
+                            user: {},
+                            elements: {},
+                        },
                     },
                 },
                 journey: {
@@ -315,5 +369,27 @@ describe('SettingsSection', () => {
                                     }),
             SETTINGS_STORE,
         )
+    })
+
+    it('adds new widget definitions from the template when widgets are persisted', async () => {
+        lgs.db.settings.get.mockResolvedValue({
+            'journey-stats-widget': {
+                configuration: {
+                    default: {
+                        title: 'Persisted Journey Stats',
+                    },
+                    user: {},
+                    elements: {},
+                },
+            },
+        })
+
+        const section = new SettingsSection('widgets')
+        await section.init()
+
+        expect(section.content['journey-stats-widget'].configuration.default.title).toBe('Persisted Journey Stats')
+        expect(section.content['dynamic-stats-widget']).toBeDefined()
+        expect(section.content['dynamic-stats-widget'].configuration.default.title).toBe('Dynamic Stats')
+        expect(lgs.configuration.widgets['dynamic-stats-widget']).toBeDefined()
     })
 })

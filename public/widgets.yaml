@@ -298,3 +298,71 @@ widgets:
 
       user:
       elements:
+
+  dynamic-stats-widget:
+    id: "dynamic-stats-widget"
+    name: "Dynamic Stats"
+    description: "Live flythrough stats"
+    icon: "route"
+    mandatory: false
+    max: 1
+    component: "DynamicStatsWidget"
+    type: "lgs-visual-widget"
+    path: "@Components/Stats"
+    groups:
+      - "journey-widgets"
+    availability:
+      boards:
+        - "video"
+      requires:
+        - "hasJourney"
+    configuration:
+      default:
+        background:
+          show: false
+          color: transparent
+          opacity: 0.15
+          blur: false
+        border:
+          show: false
+          color: "#ffffff"
+          radius: none
+          thickness: 1
+          opacity: 1
+          scaled: false
+          radiusScaled: false
+          shadow: false
+          pill: false
+        padding:
+          top: 16
+          right: 16
+          bottom: 16
+          left: 16
+          scaled: false
+        text:
+          color: "#ffffff"
+          shadow:
+            show: false
+            value: normal
+          opacity: 1
+        separator:
+          show: true
+          color: "#ffffff"
+          opacity: 1
+          padding: 0
+
+        date: false
+        location: false
+        distance: true
+        elevation: true
+        duration: true
+        altitude: false
+        performance: false
+        textOrder:
+          - distance
+          - elevation
+          - duration
+        summaryBreaks: []
+
+      user:
+      elements:

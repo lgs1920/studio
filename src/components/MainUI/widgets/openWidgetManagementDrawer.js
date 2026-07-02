@@ -26,7 +26,13 @@ const resolveCurrentBoard = () => {
         }
     }
 
-    if (lgs.stores.ui.video.editing) {
+    if (lgs.stores.ui.video.editing
+        || lgs.stores.ui.video.preRecording
+        || lgs.stores.ui.video.recording
+        || lgs.stores.ui.video.snapshot
+        || lgs.stores.ui.video.finalizing
+        || lgs.stores.ui.video.cropper?.widgetEditor === true
+        || lgs.stores.ui.video.cropper?.ratioEditor === true) {
         return VIDEO_WIDGETS_BOARD
     }
 

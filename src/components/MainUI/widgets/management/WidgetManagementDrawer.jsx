@@ -44,7 +44,14 @@ export const WidgetManagementDrawer = () => {
     const widget = useSnapshot(lgs.stores.ui.widget)
     const {drawer: drawerPlacement} = useSnapshot(lgs.editorSettingsProxy.menu)
     const drawerRoot = __.ui.drawerManager.drawerRoot
-    const widgetsBoard = drawers.entity || (video.editing ? VIDEO_WIDGETS_BOARD : SCENE_WIDGETS_BOARD)
+    const isVideoBoardContext = video.editing
+        || video.preRecording
+        || video.recording
+        || video.snapshot
+        || video.finalizing
+        || video.cropper?.widgetEditor === true
+        || video.cropper?.ratioEditor === true
+    const widgetsBoard = drawers.entity || (isVideoBoardContext ? VIDEO_WIDGETS_BOARD : SCENE_WIDGETS_BOARD)
     const isCurrentDrawer = drawers.open === WIDGET_MANAGEMENT_DRAWER && Boolean(widgetsBoard)
     const manageableWidgets = useMemo(
         () => getManageableWidgets(widgetsBoard, widget.list),

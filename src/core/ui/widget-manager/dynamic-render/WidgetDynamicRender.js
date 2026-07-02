@@ -15,6 +15,7 @@
  ******************************************************************************/
 
 import { WIDGET_LAYER_START } from '@Core/constants'
+import { isWidgetAvailable } from '@Core/ui/widget-manager/widgetAvailability'
 import { WidgetRegistry }     from '@Core/ui/widget-manager/registry/WidgetRegistry'
 
 /**
@@ -114,6 +115,11 @@ export class WidgetDynamicRenderer {
         const baseKey = this.#getBaseKey(key)
         const isConcreteInstance = key.includes('#')
         const lookupKey = isConcreteInstance ? key : baseKey
+        const widgetDef = __.widgets.get(group)?.widgets?.get(baseKey)
+
+        if (!isWidgetAvailable(widgetDef, {widgetsBoard})) {
+            return {canRender: false, widgetId: null, existingInList: null}
+        }
 
         const isMaxReached = __.ui.widgetManager.isMaxWidgetsReached(group, baseKey, widgetsBoard)
         const existingInList = this.findExistingInList(lookupKey, widgetsBoard)

@@ -178,6 +178,11 @@ export class SettingsSection {
             this.#syncUpdatedValues(newConfig, diffs.updated, SETTING_EXCLUSIONS, SETTING_EXCLUSION_ALLOWLIST, this.key)
         }
 
+        if (this.key === 'widgets') {
+            this.#syncAddedValues(newConfig, updated, [], [], this.key)
+            this.#data.added = this.#data.added || JSON.stringify(newConfig) !== JSON.stringify(origin)
+        }
+
         return newConfig
     }
 

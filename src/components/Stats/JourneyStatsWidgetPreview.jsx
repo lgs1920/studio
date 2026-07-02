@@ -16,6 +16,7 @@
 
 import { JourneyStats }                                             from '@Components/Stats/JourneyStats'
 import { DISTANCE_UNITS, ELEVATION_UNITS, PACE_UNITS, SPEED_UNITS } from '@Utils/UnitUtils'
+import { useOptionalSnapshot }                                      from '@Utils/ValtioUtils'
 import { useEffect, useMemo, useState } from 'react'
 import { useSnapshot }                                              from 'valtio'
 
@@ -23,7 +24,7 @@ import { useSnapshot }                                              from 'valtio
  * Preview component for Journey Stats.
  * Syncs initial rotation with widgetManager via async call and handles live updates.
  */
-export const JourneyStatsWidgetPreview = ({entity}) => {
+export const JourneyStatsWidgetPreview = ({entity, widgetKey = 'journey-stats-widget', mode = 'journey'}) => {
     const $widget = lgs.stores.ui.widget
     const widget = useSnapshot($widget)
     const main = useSnapshot(lgs.stores.main)
@@ -34,8 +35,13 @@ export const JourneyStatsWidgetPreview = ({entity}) => {
     const unitSystem = useSnapshot($unitSystem)
     const currentUnit = unitSystem.current
 
-    const $configuration = lgs.settings.widgets['journey-stats-widget'].configuration
-    const configuration = useSnapshot($configuration)
+    const widgets = lgs.settings.widgets ?? {}
+    const configuration = useOptionalSnapshot(
+        widgets?.[widgetKey]?.configuration
+        ?? __.widgets.get(widgetKey)?.configuration
+        ?? null,
+        {default: {}, user: {}, elements: {}},
+    )
 
     const $metrics = journey?.metrics ?? lgs.stores.main.components.journeyStats
     const metrics = useSnapshot($metrics)
@@ -107,6 +113,8 @@ export const JourneyStatsWidgetPreview = ({entity}) => {
                         metrics={journeyMetrics.metrics}
                         id={entity}
                         units={units}
+                        mode={mode}
+                        widgetKey={widgetKey}
                     />
                 </div>
             </div>

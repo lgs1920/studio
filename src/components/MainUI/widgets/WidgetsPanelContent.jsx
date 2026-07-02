@@ -15,13 +15,14 @@
  ******************************************************************************/
 
 import {
-    VIDEO_WIDGETS_BOARD, LGS_VISUAL_WIDGET, WIDGET_LAYER_START, WIDGET_LAYER_STEP,
+    SCENE_WIDGETS_BOARD, VIDEO_WIDGETS_BOARD, LGS_VISUAL_WIDGET, WIDGET_LAYER_START, WIDGET_LAYER_STEP,
 }                                from '@Core/constants'
 import {
     getManageableWidgets,
     openWidgetManagementDrawer,
 } from '@Components/MainUI/widgets/openWidgetManagementDrawer'
 import { WidgetDynamicRenderer } from '@Core/ui/widget-manager/dynamic-render/WidgetDynamicRender'
+import { isWidgetAvailable }     from '@Core/ui/widget-manager/widgetAvailability'
 import { WaDivider, WaIcon }                from '@web.awesome.me/webawesome-pro/dist/react'
 import classNames                from 'classnames'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -39,8 +40,17 @@ export const WidgetsPanelContent = ({groups}) => {
     const _widgetDeckPanel = useRef(null)
     const widgetDynamicRenderer = WidgetDynamicRenderer.instance
     const widget = useSnapshot(lgs.stores.ui.widget)
+    const video = useSnapshot(lgs.stores.ui.video)
     const toolbars = useSnapshot(lgs.settings.ui.toolbars)
     const [isInitialized, setIsInitialized] = useState(false)
+    const isVideoBoardContext = video.editing
+        || video.preRecording
+        || video.recording
+        || video.snapshot
+        || video.finalizing
+        || video.cropper?.widgetEditor === true
+        || video.cropper?.ratioEditor === true
+    const widgetsBoard = isVideoBoardContext ? VIDEO_WIDGETS_BOARD : SCENE_WIDGETS_BOARD
 
     // Counter to ensure new widgets are placed on top of the stack
     const _widgetIndex = useRef(WIDGET_LAYER_START)
@@ -79,7 +89,7 @@ export const WidgetsPanelContent = ({groups}) => {
         const groupDef = groupsMap.get(group)
         const widgetDef = groupDef?.widgets.get(key.split('#')[0])
 
-        if (!widgetDef) {
+        if (!widgetDef || !isWidgetAvailable(widgetDef, {widgetsBoard})) {
             return
         }
 
@@ -98,14 +108,14 @@ export const WidgetsPanelContent = ({groups}) => {
 
         widgetDynamicRenderer.renderWidget(group, id, {
             ...props,
-            widgetsBoard: VIDEO_WIDGETS_BOARD,
+            widgetsBoard,
             forceRefresh: true,
             ...additionalProps,
         })
 
         // Ensure the global list Map is ordered correctly after insertion
         sortWidgetStore()
-    }, [sortWidgetStore, widgetDynamicRenderer])
+    }, [sortWidgetStore, widgetDynamicRenderer, widgetsBoard])
 
     /**
      * Stops event propagation for both mouse and touch interactions.
@@ -132,7 +142,7 @@ export const WidgetsPanelContent = ({groups}) => {
         let count = 0
 
         for (const [id, entry] of widget.cache.entries()) {
-            if (entry?.group !== groupKey || entry?.widgetsBoard !== VIDEO_WIDGETS_BOARD) {
+            if (entry?.group !== groupKey || entry?.widgetsBoard !== widgetsBoard) {
                 continue
             }
             if (id.split('#')[0] === baseKey) {
@@ -159,7 +169,7 @@ export const WidgetsPanelContent = ({groups}) => {
             for (const [groupId] of availableGroups.entries()) {
                 const widgets = await __.ui.widgetManager.getWidgetsByGroup(groupId)
                 for (const widgetToRender of widgets) {
-                    if (widgetToRender?.widgetsBoard !== VIDEO_WIDGETS_BOARD) {
+                    if (widgetToRender?.widgetsBoard !== widgetsBoard) {
                         continue
                     }
                     // Pass existing widget data to preserve its original zIndex
@@ -175,9 +185,9 @@ export const WidgetsPanelContent = ({groups}) => {
             for (const [groupId, group] of availableGroups.entries()) {
                 for (const [widgetId, widgetDef] of group.widgets) {
                     const existingMandatory = Array.from(lgs.stores.ui.widget.list.entries()).some(([id, entry]) => {
-                        return id.startsWith(widgetId) && entry?.widgetsBoard === VIDEO_WIDGETS_BOARD
+                        return id.startsWith(widgetId) && entry?.widgetsBoard === widgetsBoard
                     })
-                    if (widgetDef.mandatory && !existingMandatory) {
+                    if (widgetDef.mandatory && !existingMandatory && isWidgetAvailable(widgetDef, {widgetsBoard})) {
                         addWidget(groupId, widgetId)
                     }
                 }
@@ -191,7 +201,7 @@ export const WidgetsPanelContent = ({groups}) => {
         }
 
         initializePanel()
-    }, [addWidget, availableGroups])
+    }, [addWidget, availableGroups, widgetsBoard])
 
     if (!isInitialized) {
         return null
@@ -215,7 +225,9 @@ export const WidgetsPanelContent = ({groups}) => {
             {[...availableGroups.entries()].map(([groupKey, groupValue]) => (
                 <ul key={groupKey} className="widget-group">
                     {[...groupValue.widgets.entries()].map(([widgetKey, widgetDef]) => {
-                        if (widgetDef.mandatory || (widgetKey === 'journey-stats-widget' && !hasJourney)) {
+                        if (widgetDef.mandatory
+                            || (widgetKey === 'journey-stats-widget' && !hasJourney)
+                            || !isWidgetAvailable(widgetDef, {widgetsBoard})) {
                             return null
                         }
                         const stats = getWidgetStats(groupKey, widgetKey, widgetDef)

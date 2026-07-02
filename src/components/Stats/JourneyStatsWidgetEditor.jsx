@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-05-10
- * Last modified: 2026-05-10
+ * Created on: 2026-07-02
+ * Last modified: 2026-07-02
  *
  *
  * Copyright © 2026 LGS1920
@@ -50,9 +50,10 @@ import {
     WaTabGroup,
     WaTabPanel,
 }                                                                   from '@web.awesome.me/webawesome-pro/dist/react'
+import { useOptionalSnapshot }                                      from '@Utils/ValtioUtils'
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Sortable                                               from 'sortablejs'
-import { subscribe, useSnapshot }                            from 'valtio'
+import { subscribe, useSnapshot }                             from 'valtio'
 
 /**
  * Configuration for slider elements in the editor
@@ -81,7 +82,19 @@ const JOURNEY_STATS_SLIDERS = {
     },
 }
 
-export const JourneyStatsWidgetEditor = ({entity}) => {
+const resolveWidgetConfiguration = (widgetKey) => {
+    const widgets = lgs.settings.widgets ?? {}
+    return widgets?.[widgetKey]?.configuration
+           ?? __.widgets.get(widgetKey)?.configuration
+           ?? null
+}
+
+export const JourneyStatsWidgetEditor = ({
+    entity,
+    widgetKey = 'journey-stats-widget',
+    mode = 'journey',
+    showDataTab = true,
+}) => {
     const main = useSnapshot(lgs.stores.main)
     const journey = lgs.theJourney
     const journeySlug = main.theJourney?.slug ?? null
@@ -105,9 +118,14 @@ export const JourneyStatsWidgetEditor = ({entity}) => {
     const $widgetStore = lgs.stores.ui.widget
     const widgetStore = useSnapshot($widgetStore)
 
-    const $configuration = lgs.settings.widgets['journey-stats-widget'].configuration
-    const configuration = useSnapshot($configuration)
+    const configuration = useOptionalSnapshot(
+        resolveWidgetConfiguration(widgetKey),
+        {default: {}, user: {}, elements: {}},
+    )
     const swatches = useMemo(() => lgs.settings.getSwatches.list.join(';'), [])
+    const allowedTextItemIds = useMemo(() => (
+        mode === 'dynamic' ? new Set(['distance', 'elevation', 'duration']) : null
+    ), [mode])
 
     const element = useMemo(() => {
         return configuration.elements?.[entity] ?? configuration.user ?? configuration.default
@@ -148,6 +166,7 @@ export const JourneyStatsWidgetEditor = ({entity}) => {
 
     const dataEditorOrderItems = orderedJourneyStatsTextItems(element.textOrder)
         .filter(item => item.id !== 'date' || hasJourneyDate)
+        .filter(item => !allowedTextItemIds || allowedTextItemIds.has(item.id))
     const textOrderItems = dataEditorOrderItems.filter(item =>
         (item.id !== 'duration' || hasDurationData) &&
         isJourneyStatsTextItemEnabled(element, item.id, {hasJourneyDate}))
@@ -196,15 +215,15 @@ export const JourneyStatsWidgetEditor = ({entity}) => {
             return
         }
 
-        if (!$configuration.elements) {
-            $configuration.elements = {}
+        if (!configuration.elements) {
+            configuration.elements = {}
         }
-        if (!$configuration.elements[entity]) {
-            $configuration.elements[entity] = JSON.parse(JSON.stringify(element))
+        if (!configuration.elements[entity]) {
+            configuration.elements[entity] = JSON.parse(JSON.stringify(element))
         }
 
         const _keys = path.split('.')
-        let _curr = $configuration.elements[entity]
+        let _curr = configuration.elements[entity]
         for (let i = 0; i < _keys.length - 1; i++) {
             if (!_curr[_keys[i]]) {
                 _curr[_keys[i]] = {}
@@ -219,7 +238,7 @@ export const JourneyStatsWidgetEditor = ({entity}) => {
             requestAnimationFrame(() => moveable?.updateRect())
         })
 
-    }, [$configuration, element, entity])
+    }, [configuration, element, entity])
 
     useEffect(() => {
         finalizeTextOrderRef.current = (orderedIds) => {
@@ -426,7 +445,7 @@ export const JourneyStatsWidgetEditor = ({entity}) => {
 
     // Logic to determine if the source selector should be displayed
     const hasUserData = metricsSnap.user && Object.keys(metricsSnap.user).length > 0
-    const isDataTabWithExternal = activeTab === 'data' && hasExternal
+    const isDataTabWithExternal = showDataTab && activeTab === 'data' && hasExternal
     const isUserOrExternalAvailable = (metricsSnap.user || hasExternal) && hasUserData
 
     const sourceSelector = isDataTabWithExternal || isUserOrExternalAvailable
@@ -754,9 +773,11 @@ export const JourneyStatsWidgetEditor = ({entity}) => {
                 <WaTab slot="nav" panel="style">
                     <WaIcon size="s" name="pen-paintbrush"/> Style
                 </WaTab>
-                <WaTab slot="nav" panel="data">
-                    <WaIcon size="s" name="money-check-pen"/> Data editor
-                </WaTab>
+                {showDataTab && (
+                    <WaTab slot="nav" panel="data">
+                        <WaIcon size="s" name="money-check-pen"/> Data editor
+                    </WaTab>
+                )}
                 <WaTab slot="nav" panel="text-order">
                     <WaIcon size="s" name="arrow-down-arrow-up"/> Text order
                 </WaTab>
@@ -803,7 +824,6 @@ export const JourneyStatsWidgetEditor = ({entity}) => {
                                                        value={getColor(element.separator)}
                                                        onInput={(e) => updateValue('separator.color', e.target.value)}/>
                                     </div>
-                                    <div className="drawer-horizontal-element xlarge-element">
                                         <WaSlider ref={setSliderRef('separator.opacity')}
                                                   size="s"
                                                   label="Opacity"
@@ -811,26 +831,24 @@ export const JourneyStatsWidgetEditor = ({entity}) => {
                                                   max={JOURNEY_STATS_SLIDERS['separator.opacity'].max}
                                                   step={JOURNEY_STATS_SLIDERS['separator.opacity'].step}
                                                   label-at-start
+                                                  half-width
                                                   withTooltip
                                                   placement="top"
                                                   valueFormatter={formatSliderPercent}
                                                   defaultValue={getSliderValue('separator.opacity')}
                                                   onInput={(e) => handleSliderInput('separator.opacity', e.target.value)}/>
-                                    </div>
-                                    <div className="drawer-horizontal-element xlarge-element">
                                         <WaSlider ref={setSliderRef('separator.padding')}
                                                   size="s"
                                                   label="Padding"
                                                   min={JOURNEY_STATS_SLIDERS['separator.padding'].min}
                                                   max={JOURNEY_STATS_SLIDERS['separator.padding'].max}
                                                   step={JOURNEY_STATS_SLIDERS['separator.padding'].step}
-                                                  label-at-start
+                                                  label-at-start half-width
                                                   withTooltip
                                                   placement="top"
                                                   valueFormatter={formatSliderPixels}
                                                   defaultValue={getSliderValue('separator.padding')}
                                                   onInput={(e) => handleSliderInput('separator.padding', e.target.value)}/>
-                                    </div>
                                 </div>
                             )}
                             <WaDivider/><ShadowElement element={element} swatches={swatches} getColor={getColor}
@@ -845,18 +863,20 @@ export const JourneyStatsWidgetEditor = ({entity}) => {
                     </LGSScrollbars>
                 </WaTabPanel>
 
-                <WaTabPanel name="data">
-                    <LGSScrollbars>
-                        <WaCard appearance="plain" orientation="vertical"
-                                className="journey-stats-widget-editor-data lgs-widget-editor-card">
-                            <div className="drawer-horizontal-element">
-                                {'Source'} {sourceSelector}
-                            </div>
-                            <WaDivider/>
-                            {renderDataEditorItems()}
-                        </WaCard>
-                    </LGSScrollbars>
-                </WaTabPanel>
+                {showDataTab && (
+                    <WaTabPanel name="data">
+                        <LGSScrollbars>
+                            <WaCard appearance="plain" orientation="vertical"
+                                    className="journey-stats-widget-editor-data lgs-widget-editor-card">
+                                <div className="drawer-horizontal-element">
+                                    {'Source'} {sourceSelector}
+                                </div>
+                                <WaDivider/>
+                                {renderDataEditorItems()}
+                            </WaCard>
+                        </LGSScrollbars>
+                    </WaTabPanel>
+                )}
 
                 <WaTabPanel name="text-order">
                     <LGSScrollbars>
