@@ -1253,6 +1253,10 @@ wa-details.lgs--details-hoverable:not([open]):hover {
     box-shadow: var(--wa-shadow-l);
 }
 
+wa-tab-panel wa-details.lgs--details-hoverable {
+    margin-right: 4px;
+    margin-left: 4px;
+}
 /*******************************************************************************
  * Context menu
  ******************************************************************************/
@@ -1449,6 +1453,7 @@ wa-number-input[no-end]::part(end), wa-number-input[no-start]::part(start) {
  ******************************************************************************/
 
 wa-slider {
+    font-size: var(--lgs-font-size);
     width: 100%;
 }
 
@@ -1480,6 +1485,11 @@ wa-slider[size="s"] {
 
 wa-slider[label-at-start]::part(label) {
     margin-block-end: 0;
+}
+
+wa-slider[label-at-start]::part(hint) {
+    grid-column: 1 / -1;
+    margin-block-start: 0;
 }
 
 wa-slider::part(track) {
