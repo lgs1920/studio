@@ -34,6 +34,7 @@ flythrough:
     positionMode: system
     altitudeMode: constant
     altitude: 1200
+    headingOffset: 0
     pitch: -65
     heading: 0
     hysteresis:

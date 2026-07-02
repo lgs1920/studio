@@ -327,6 +327,7 @@ flythrough.start()
 The dead zone is driven by `camera.hysteresis.marginRatio`. The zone is centered in the viewport, so the camera can drift a little before the algorithm reacts. That prevents the visible "breathing" effect when the marker only moves slightly.
 The tolerance zone overlay stays visible during playback for the non-`Trace` tracking modes, so the recenter window is easy to read while the FT runs.
 Smaller `marginRatio` values make the hysteresis less sensitive and leave a larger stable zone in the middle of the viewport.
+For `Behind` and `Ahead`, the nominal heading also includes `camera.headingOffset` in degrees, clamped between `-90` and `90`. That offset is applied before the existing heading hysteresis and visibility checks, so it behaves like a simple angular bias on top of the current trace-facing view.
 
 ### Visibility model
 

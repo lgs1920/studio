@@ -47,7 +47,8 @@ import {
 }                                                                                          from './FlythroughPOISettings'
 import {
     FLYTHROUGH_CAMERA_ALTITUDE_CONSTANT, FLYTHROUGH_CAMERA_ALTITUDE_GROUND_OFFSET, FLYTHROUGH_CAMERA_POSITION_AHEAD,
-    FLYTHROUGH_CAMERA_POSITION_SYSTEM, FLYTHROUGH_MARKER_MODE_HYSTERESIS, FLYTHROUGH_MARKER_MODE_NAVIGATION,
+    FLYTHROUGH_CAMERA_HEADING_OFFSET_MAX, FLYTHROUGH_CAMERA_HEADING_OFFSET_MIN, FLYTHROUGH_CAMERA_POSITION_SYSTEM,
+    FLYTHROUGH_MARKER_MODE_HYSTERESIS, FLYTHROUGH_MARKER_MODE_NAVIGATION,
     FLYTHROUGH_MARKER_MODE_TRACE, getFlythroughSettings, normalizeFlythroughCamera, normalizeFlythroughMarker,
     normalizeFlythroughTrace,
 }                                                                                          from './FlythroughProgressionStyle'
@@ -125,9 +126,10 @@ export const flythroughHeadingFromLocalAxisAngle = axisAngle => {
     return Math.atan2(Math.cos(angle), Math.sin(angle))
 }
 
-export const flythroughCameraHeadingForPositionMode = ({axisHeading = 0, positionMode} = {}) => {
+export const flythroughCameraHeadingForPositionMode = ({axisHeading = 0, positionMode, headingOffset = 0} = {}) => {
     const heading = finiteNumber(axisHeading) ?? 0
-    return positionMode === FLYTHROUGH_CAMERA_POSITION_AHEAD ? heading + Math.PI : heading
+    const offset = degreesToRadians(clamp(finiteNumber(headingOffset) ?? 0, FLYTHROUGH_CAMERA_HEADING_OFFSET_MIN, FLYTHROUGH_CAMERA_HEADING_OFFSET_MAX)) ?? 0
+    return (positionMode === FLYTHROUGH_CAMERA_POSITION_AHEAD ? heading + Math.PI : heading) + offset
 }
 
 export const flythroughAngularDelta = (from, to) => {
@@ -1788,6 +1790,7 @@ export class FlythroughMode {
         return flythroughCameraHeadingForPositionMode({
             axisHeading: this.#headingFromPositionProperty(progress),
             positionMode: cameraSettings.positionMode,
+            headingOffset: cameraSettings.headingOffset,
         })
     }
 
@@ -2718,9 +2721,10 @@ export class FlythroughMode {
             }
         }
         else {
-            desiredHeading = flythroughCameraHeadingForPositionMode({
+                desiredHeading = flythroughCameraHeadingForPositionMode({
                                                                         axisHeading:  this.#headingFromPositionProperty(progress),
                                                                         positionMode: cameraSettings.positionMode,
+                                                                        headingOffset: cameraSettings.headingOffset,
                                                                     })
         }
         const heading = source === 'drawer'

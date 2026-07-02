@@ -32,7 +32,7 @@ import {
 }                                                                      from '@Core/ui/flythrough/FlythroughPlaybackController'
 import {
     defaultFlythroughSettings, FLYTHROUGH_CAMERA_ALTITUDE_CONSTANT, FLYTHROUGH_CAMERA_ALTITUDE_GROUND_OFFSET,
-    FLYTHROUGH_CAMERA_POSITION_AHEAD, FLYTHROUGH_CAMERA_POSITION_BEHIND, FLYTHROUGH_CAMERA_POSITION_SYSTEM,
+    FLYTHROUGH_CAMERA_HEADING_OFFSET_MAX, FLYTHROUGH_CAMERA_POSITION_AHEAD, FLYTHROUGH_CAMERA_POSITION_BEHIND, FLYTHROUGH_CAMERA_POSITION_SYSTEM,
     FLYTHROUGH_CAMERA_PRESET_DEFAULT, FLYTHROUGH_CAMERA_PRESET_ULTRA_SMOOTH,
     FLYTHROUGH_MARKER_MODE_HYSTERESIS, FLYTHROUGH_MARKER_MODE_NAVIGATION, FLYTHROUGH_MARKER_MODE_TRACE,
     getFlythroughCameraPresetKey, normalizeFlythroughCamera, normalizeFlythroughMarker, normalizeFlythroughSettings,
@@ -42,6 +42,15 @@ import { applyGpxStyleExtensionProperties, extractLgsTrackProperties } from '@Ut
 import { Cartesian3, Matrix4, Transforms }                             from 'cesium'
 import { proxy }                                                       from 'valtio'
 import { describe, expect, it, vi }                                    from 'vitest'
+
+vi.mock('@Components/Toast', () => ({
+    LGS_ERROR_TOAST:       'danger',
+    LGS_INFORMATION_TOAST: 'primary',
+    LGS_SUCCESS_TOAST:     'success',
+    LGS_TOAST_DURATION:    5000,
+    LGS_WARNING_TOAST:     'warning',
+    showToast:             vi.fn(),
+}))
 
 const makeTrack = ({
                        slug,
@@ -6384,11 +6393,13 @@ describe('flythrough settings normalization', () => {
         const camera = normalizeFlythroughCamera({
             altitudeMode: 'constant',
             altitude:     1500,
+            headingOffset: 120,
             pitch:        -50,
             positionMode: FLYTHROUGH_CAMERA_POSITION_AHEAD,
         })
 
         expect(camera.altitude).toBe(1500)
+        expect(camera.headingOffset).toBe(FLYTHROUGH_CAMERA_HEADING_OFFSET_MAX)
         expect(camera.pitch).toBe(-50)
         expect(camera.positionMode).toBe(FLYTHROUGH_CAMERA_POSITION_AHEAD)
     })
@@ -6530,11 +6541,13 @@ describe('flythrough settings normalization', () => {
         expect(flythroughCameraHeadingForPositionMode({
             axisHeading:   0.75,
             positionMode: FLYTHROUGH_CAMERA_POSITION_BEHIND,
-        })).toBeCloseTo(0.75, 6)
+            headingOffset: 15,
+        })).toBeCloseTo(0.75 + (Math.PI / 12), 6)
         expect(flythroughCameraHeadingForPositionMode({
             axisHeading:   0.75,
             positionMode: FLYTHROUGH_CAMERA_POSITION_AHEAD,
-        })).toBeCloseTo(0.75 + Math.PI, 6)
+            headingOffset: -15,
+        })).toBeCloseTo(0.75 + Math.PI - (Math.PI / 12), 6)
     })
 
     it('keeps the last heading when the requested change stays within hysteresis', () => {

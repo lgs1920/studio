@@ -29,7 +29,8 @@ import { getFlythroughHideOtherJourneys } from '@Core/ui/JourneyVisibility'
 import {
     clampFlythroughNumber, DEFAULT_FLYTHROUGH_SCOPE, ensureFlythroughSettings, FLYTHROUGH_CAMERA_ALTITUDE_CONSTANT,
     FLYTHROUGH_CAMERA_ALTITUDE_GROUND_OFFSET, FLYTHROUGH_CAMERA_POSITION_AHEAD, FLYTHROUGH_CAMERA_POSITION_BEHIND,
-    FLYTHROUGH_CAMERA_POSITION_SYSTEM, FLYTHROUGH_LABEL, FLYTHROUGH_MARKER_MODE_HYSTERESIS,
+    FLYTHROUGH_CAMERA_HEADING_OFFSET_MAX, FLYTHROUGH_CAMERA_HEADING_OFFSET_MIN, FLYTHROUGH_CAMERA_POSITION_SYSTEM,
+    FLYTHROUGH_LABEL, FLYTHROUGH_MARKER_MODE_HYSTERESIS,
     FLYTHROUGH_MARKER_MODE_NAVIGATION, FLYTHROUGH_MARKER_MODE_TRACE, FLYTHROUGH_PROFILE_MARKER_BORDER_MAX_WIDTH,
     FLYTHROUGH_PROFILE_MARKER_BORDER_MIN_WIDTH, FLYTHROUGH_PROFILE_MARKER_FILL_MAX_SIZE,
     FLYTHROUGH_PROFILE_MARKER_FILL_MIN_SIZE, FLYTHROUGH_PROGRESSION_BORDER_MAX_WIDTH,
@@ -835,6 +836,17 @@ export const FlythroughDrawer = memo(() => {
         updateCamera({positionMode: event.target.value})
     }, [updateCamera])
 
+    const updateCameraHeadingOffset = useCallback((event) => {
+        updateCamera({
+                         headingOffset: clampFlythroughNumber(
+                             event.target.value,
+                             camera.headingOffset,
+                             FLYTHROUGH_CAMERA_HEADING_OFFSET_MIN,
+                             FLYTHROUGH_CAMERA_HEADING_OFFSET_MAX,
+                         ),
+                     })
+    }, [camera.headingOffset, updateCamera])
+
     const updateCameraPreset = useCallback((event) => {
         const presetKey = event.target.value
         if (presetKey === FLYTHROUGH_CAMERA_PRESET_CUSTOM) {
@@ -1039,11 +1051,27 @@ export const FlythroughDrawer = memo(() => {
                                                         className="half-width">
                                                         <WaOption
                                                             value={FLYTHROUGH_CAMERA_POSITION_SYSTEM}>{'Fixed'}</WaOption>
-                                                        <WaOption
+                                                    <WaOption
                                                             value={FLYTHROUGH_CAMERA_POSITION_BEHIND}>{'Behind'}</WaOption>
                                                         <WaOption
                                                             value={FLYTHROUGH_CAMERA_POSITION_AHEAD}>{'Ahead'}</WaOption>
                                                     </WaSelect>
+                                                    {camera.positionMode !== FLYTHROUGH_CAMERA_POSITION_SYSTEM &&
+                                                        <FlythroughStyleField>
+                                                            <WaSlider
+                                                                label="Camera angle"
+                                                                hint="Offset from the trace heading in Behind or Ahead mode."
+                                                                size="s"
+                                                                min={FLYTHROUGH_CAMERA_HEADING_OFFSET_MIN}
+                                                                max={FLYTHROUGH_CAMERA_HEADING_OFFSET_MAX}
+                                                                step="1"
+                                                                value={camera.headingOffset}
+                                                                withTooltip
+                                                                valueFormatter={value => `${Math.round(Number(value) || 0)}°`}
+                                                                onInput={updateCameraHeadingOffset}
+                                                            />
+                                                        </FlythroughStyleField>
+                                                    }
                                                 </div>
                                                 <div className="flythrough-fieldset">
                                                     <WaSelect appearance="filled"

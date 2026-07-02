@@ -291,11 +291,14 @@ describe('FlythroughDrawer', () => {
     it('shows advanced camera setup fields in passive mode', () => {
         globalThis.lgs.stores.flythrough.marker.mode = FLYTHROUGH_MARKER_MODE_TRACE
         globalThis.lgs.settings.ui.flythrough.marker.mode = FLYTHROUGH_MARKER_MODE_TRACE
+        globalThis.lgs.stores.flythrough.camera.positionMode = 'behind'
+        globalThis.lgs.settings.ui.flythrough.camera.positionMode = 'behind'
 
         const view = render(<FlythroughDrawer/>)
 
         expect(view.getByText('Advanced camera setup')).toBeTruthy()
         expect(view.getByLabelText('Camera position')).toBeTruthy()
+        expect(view.getByLabelText('Camera angle')).toBeTruthy()
         expect(view.getByLabelText('Camera altitude')).toBeTruthy()
         expect(view.getByLabelText('Altitude (m)')).toBeTruthy()
         expect(view.getByLabelText('Pitch (deg)')).toBeTruthy()

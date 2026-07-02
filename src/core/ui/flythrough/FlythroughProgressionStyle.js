@@ -38,6 +38,8 @@ export const FLYTHROUGH_CAMERA_ALTITUDE_GROUND_OFFSET = 'ground-offset'
 export const FLYTHROUGH_CAMERA_POSITION_BEHIND = 'behind'
 export const FLYTHROUGH_CAMERA_POSITION_AHEAD = 'ahead'
 export const FLYTHROUGH_CAMERA_POSITION_SYSTEM = 'system'
+export const FLYTHROUGH_CAMERA_HEADING_OFFSET_MIN = -90
+export const FLYTHROUGH_CAMERA_HEADING_OFFSET_MAX = 90
 export const FLYTHROUGH_CAMERA_PRESET_CUSTOM = 'custom'
 export const FLYTHROUGH_CAMERA_PRESET_DEFAULT = 'default'
 export const FLYTHROUGH_CAMERA_PRESET_ULTRA_SMOOTH = 'ultra-smooth'
@@ -87,6 +89,7 @@ export const DEFAULT_FLYTHROUGH_CAMERA = {
     // Single persisted altitude value.
     // In fixed mode it is an absolute altitude; in ground-offset mode it is the offset above terrain.
     altitude:      1200,
+    headingOffset: 0,
     pitch:         -65,
     heading:       0,
     hysteresis:    {
@@ -304,6 +307,8 @@ export const normalizeFlythroughMarker = (marker = {}) => ({
  * - `marginRatio`: inner safe zone width/height margin on each side.
  * - `zone`: outer viewport crop rectangle, expressed as normalized top/left/width/height.
  * - `easing`: smoothness of the recenter flight.
+ *
+ * `headingOffset` is used by the Behind/Ahead camera modes to bias the nominal trace-facing heading.
  */
 export const normalizeFlythroughCamera = (camera = {}) => ({
     positionMode: camera?.positionMode === FLYTHROUGH_CAMERA_POSITION_AHEAD
@@ -323,6 +328,12 @@ export const normalizeFlythroughCamera = (camera = {}) => ({
     ),
     pitch:        clampFlythroughNumber(camera?.pitch, DEFAULT_FLYTHROUGH_CAMERA.pitch, -89, -5, true),
     heading:      clampFlythroughNumber(camera?.heading, DEFAULT_FLYTHROUGH_CAMERA.heading, -180, 180),
+    headingOffset: clampFlythroughNumber(
+        camera?.headingOffset,
+        DEFAULT_FLYTHROUGH_CAMERA.headingOffset,
+        FLYTHROUGH_CAMERA_HEADING_OFFSET_MIN,
+        FLYTHROUGH_CAMERA_HEADING_OFFSET_MAX,
+    ),
     hysteresis:   (() => {
         const zone = normalizeFlythroughToleranceZone(camera?.hysteresis?.zone, DEFAULT_FLYTHROUGH_CAMERA.hysteresis.zone)
         return {
