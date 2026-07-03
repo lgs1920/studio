@@ -73,7 +73,7 @@ describe('CropZoneWidget sync mode', () => {
                         step: 0,
                     }),
                 },
-                flythrough: proxy({
+                replay: proxy({
                     recordingSync: false,
                 }),
             },
@@ -86,7 +86,7 @@ describe('CropZoneWidget sync mode', () => {
         globalThis.lgs = undefined
     })
 
-    it('keeps the cropper draggable when video is not linked to flythrough', () => {
+    it('keeps the cropper draggable when video is not linked to replay', () => {
         const context = proxy({id: 'video-crop-zone'})
 
         render(<CropZoneWidget context={context}/>)
@@ -95,8 +95,8 @@ describe('CropZoneWidget sync mode', () => {
         expect(__.ui.widgetManager.toCenter).not.toHaveBeenCalled()
     })
 
-    it('centers and locks the cropper only when video is linked to flythrough', () => {
-        lgs.stores.flythrough.recordingSync = true
+    it('centers and locks the cropper only when video is linked to replay', () => {
+        lgs.stores.replay.recordingSync = true
         const context = proxy({id: 'video-crop-zone'})
 
         render(<CropZoneWidget context={context}/>)

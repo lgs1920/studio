@@ -18,8 +18,8 @@
 import { Widget } from '@Components/MainUI/widgets/Widget'
 import { JOURNEY_TOOLBAR_WIDGET, LGS_TOOLBAR } from '@Core/constants'
 import {
-    FLYTHROUGH_JOURNEY_TOOLBAR_VISIBILITY_EVENT,
-} from '@Core/ui/flythrough/FlythroughMode'
+    REPLAY_JOURNEY_TOOLBAR_VISIBILITY_EVENT,
+} from '@Core/ui/replay/JourneyReplayMode'
 import { JourneyToolbar }    from '@Editor/JourneyToolbar'
 import { useEffect, useMemo, useState } from 'react'
 import { useSnapshot }       from 'valtio'
@@ -37,7 +37,7 @@ export const JourneyToolbarWidget = ({id}) => {
     const $journeyToolbar = lgs.settings.ui.journeyToolbar
     const journeyToolbar = useSnapshot($journeyToolbar)
     const [journeyToolbarTemporarilyHidden, setJourneyToolbarTemporarilyHidden] = useState(
-        __.ui.flythrough?.isJourneyToolbarTemporarilyHidden?.() === true,
+        __.ui.replay?.isJourneyToolbarTemporarilyHidden?.() === true,
     )
 
     // Stabilize config with useMemo
@@ -58,13 +58,13 @@ export const JourneyToolbarWidget = ({id}) => {
 
     useEffect(() => {
         const syncVisibility = () => {
-            setJourneyToolbarTemporarilyHidden(__.ui.flythrough?.isJourneyToolbarTemporarilyHidden?.() === true)
+            setJourneyToolbarTemporarilyHidden(__.ui.replay?.isJourneyToolbarTemporarilyHidden?.() === true)
         }
 
         syncVisibility()
-        globalThis.window?.addEventListener?.(FLYTHROUGH_JOURNEY_TOOLBAR_VISIBILITY_EVENT, syncVisibility)
+        globalThis.window?.addEventListener?.(REPLAY_JOURNEY_TOOLBAR_VISIBILITY_EVENT, syncVisibility)
         return () => {
-            globalThis.window?.removeEventListener?.(FLYTHROUGH_JOURNEY_TOOLBAR_VISIBILITY_EVENT, syncVisibility)
+            globalThis.window?.removeEventListener?.(REPLAY_JOURNEY_TOOLBAR_VISIBILITY_EVENT, syncVisibility)
         }
     }, [])
 

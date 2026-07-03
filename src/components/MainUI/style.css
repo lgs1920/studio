@@ -760,9 +760,9 @@ body.mobile .orbit-widget-body {
 }
 
 /***************************************
- * Flythrough Controls
+ * JourneyReplay Controls
  */
-.flythroughDuration {
+.replayDuration {
     width: 7rem;
 }
 

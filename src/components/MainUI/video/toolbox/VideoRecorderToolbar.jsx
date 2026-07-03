@@ -17,7 +17,7 @@
 /*******************************************************************************
  * VideoRecorderToolbar.jsx - Displays video recording controls and stats
  ******************************************************************************/
-import { FlythroughProgressBar } from '@Components/Flythrough/FlythroughProgressBar'
+import { JourneyReplayProgressBar } from '@Components/JourneyReplay/JourneyReplayProgressBar'
 import { ScreenMediaRecorder } from '@Core/ui/screen-media-recorder/recorder/ScreenMediaRecorder'
 import { UIToast }                          from '@Utils/UIToast'
 import { DISTANCE_UNITS, km, UnitUtils }    from '@Utils/UnitUtils'
@@ -133,20 +133,20 @@ const playbackProgressFromSample = ({sample, totalDistance, direction, fallback}
  */
 export const VideoRecorderToolbar = ({toolbar}) => {
     const $video = lgs.stores.ui.video
-    const flythrough = useSnapshot(lgs.stores.flythrough)
+    const replay = useSnapshot(lgs.stores.replay)
     const {current: unitSystem} = useSnapshot(lgs.settings.unitSystem)
     const video = useSnapshot($video)
-    const syncWithFlythrough = flythrough.recordingSync === true
+    const syncWithJourneyReplay = replay.recordingSync === true
     const isMobile = __.device?.isMobile === true
-    const hasPlaybackSample = Boolean((flythrough.active || flythrough.playing || flythrough.paused) && flythrough.sample)
-    const direction = Number(flythrough.direction) < 0 ? -1 : 1
-    const totalMillis = finiteNumber(flythrough.durationMillis)
-    const elapsedMillis = finiteNumber(flythrough.elapsedMillis)
-    const totalDistance = hasPlaybackSample ? flythrough.totalDistance ?? 0 : 0
+    const hasPlaybackSample = Boolean((replay.active || replay.playing || replay.paused) && replay.sample)
+    const direction = Number(replay.direction) < 0 ? -1 : 1
+    const totalMillis = finiteNumber(replay.durationMillis)
+    const elapsedMillis = finiteNumber(replay.elapsedMillis)
+    const totalDistance = hasPlaybackSample ? replay.totalDistance ?? 0 : 0
     const distanceUnit = DISTANCE_UNITS[unitSystem] ?? km
-    const progress = hasPlaybackSample ? clampProgress(flythrough.progress) : 0
+    const progress = hasPlaybackSample ? clampProgress(replay.progress) : 0
     const playbackProgress = playbackProgressFromSample({
-        sample: hasPlaybackSample ? flythrough.sample : null,
+        sample: hasPlaybackSample ? replay.sample : null,
         totalDistance,
         direction,
         fallback: direction < 0 ? 1 - progress : progress,
@@ -154,8 +154,8 @@ export const VideoRecorderToolbar = ({toolbar}) => {
     const timeLabel = hasPlaybackSample && totalMillis !== null && totalMillis > 0 && elapsedMillis !== null
                       ? formatElapsedHoursMinutes(elapsedMillis, totalMillis)
                       : null
-    const coveredDistance = hasPlaybackSample && flythrough.sample
-                            ? (direction < 0 ? flythrough.sample.remainingDistance : flythrough.sample.distanceFromStart)
+    const coveredDistance = hasPlaybackSample && replay.sample
+                            ? (direction < 0 ? replay.sample.remainingDistance : replay.sample.distanceFromStart)
                             : totalDistance * playbackProgress
     const distanceLabel = hasPlaybackSample
                           ? `${formatDistance(coveredDistance, distanceUnit)} ${distanceUnit}`
@@ -343,15 +343,15 @@ export const VideoRecorderToolbar = ({toolbar}) => {
             />
             <span className="duration">{formatDuration(state.recordedDuration)}</span>
             <span className="size">{formatSize(state.recordedSize)}</span>
-            {syncWithFlythrough && (
+            {syncWithJourneyReplay && (
                 isMobile ? (
                     <>
-                        {timeLabel && <span className="video-recorder-flythrough-time">{timeLabel}</span>}
-                        {distanceLabel && <span className="video-recorder-flythrough-distance">{distanceLabel}</span>}
+                        {timeLabel && <span className="video-recorder-replay-time">{timeLabel}</span>}
+                        {distanceLabel && <span className="video-recorder-replay-distance">{distanceLabel}</span>}
                     </>
                 ) : (
-                    <FlythroughProgressBar
-                        className="video-recorder-flythrough-progress"
+                    <JourneyReplayProgressBar
+                        className="video-recorder-replay-progress"
                         showActions={false}
                         showSettings={false}
                         disabled={video.preRecording}

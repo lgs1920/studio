@@ -126,7 +126,7 @@ describe('VideoDownloadAndShareDialog', () => {
         globalThis.__ = {
             recorder,
             ui: {
-                flythrough: {
+                replay: {
                     restorePlaybackScene: vi.fn(),
                 },
             },
@@ -179,7 +179,7 @@ describe('VideoDownloadAndShareDialog', () => {
     }
 
     const expectDialogCleanup = () => {
-        expect(globalThis.__.ui.flythrough.restorePlaybackScene).toHaveBeenCalledTimes(1)
+        expect(globalThis.__.ui.replay.restorePlaybackScene).toHaveBeenCalledTimes(1)
         expect(cancelVideoEditing).toHaveBeenCalledTimes(1)
         expect(globalThis.URL.revokeObjectURL).toHaveBeenCalledWith('blob:recording')
         expect(recorder.releaseMedia).toHaveBeenCalledTimes(1)

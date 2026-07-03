@@ -16,7 +16,7 @@
 
 import { Widget }                                                                 from '@Components/MainUI/widgets/Widget'
 import { JourneyStats }                                                           from '@Components/Stats/JourneyStats'
-import { isVideoWidgetEditorPhase, shouldShowDynamicStatsWidget, shouldShowJourneyStatsWidget } from '@Components/Stats/flythroughStatsWidgetUtils'
+import { isVideoWidgetEditorPhase, shouldShowDynamicStatsWidget, shouldShowJourneyStatsWidget } from '@Components/Stats/replayStatsWidgetUtils'
 import { JOURNEY_WIDGETS, LGS_VISUAL_WIDGET, SCENE_WIDGETS, SCENE_WIDGETS_BOARD, VIDEO_WIDGETS_BOARD } from '@Core/constants'
 import { useManagedStylesheet }                                                   from '@Utils/useManagedStylesheet'
 import { useOptionalSnapshot } from '@Utils/ValtioUtils'
@@ -41,7 +41,7 @@ export const JourneyStatsWidget = ({
     const contextState = useOptionalSnapshot(context, JOURNEY_STATS_WIDGET_CONTEXT_FALLBACK)
     const widgetsBoard = contextState.widgetsBoard || persistedWidgetsBoard || ''
     const main = useSnapshot(lgs.stores.main)
-    const flythrough = useSnapshot(lgs.stores.flythrough)
+    const replay = useSnapshot(lgs.stores.replay)
     useSnapshot(lgs.stores.ui.video)
     const journey = lgs.theJourney
     const journeySlug = main.theJourney?.slug ?? null
@@ -112,12 +112,12 @@ export const JourneyStatsWidget = ({
                 return true
             }
             return mode === 'dynamic'
-                   ? shouldShowDynamicStatsWidget(flythrough)
-                   : shouldShowJourneyStatsWidget(flythrough)
+                   ? shouldShowDynamicStatsWidget(replay)
+                   : shouldShowJourneyStatsWidget(replay)
         }
 
         return true
-    }, [flythrough, mode, widgetsBoard])
+    }, [replay, mode, widgetsBoard])
 
     if (!journeySlug || !journey || !widgetsBoard || Object.keys(config).length === 0 || !isVisible) {
         return null

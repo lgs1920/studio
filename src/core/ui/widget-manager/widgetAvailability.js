@@ -17,7 +17,7 @@
 import { SCENE_WIDGETS_BOARD, VIDEO_WIDGETS_BOARD } from '@Core/constants'
 
 const WIDGET_AVAILABILITY_RESOLVERS = {
-    flythroughRecordingSync: () => globalThis.lgs?.stores?.flythrough?.recordingSync === true,
+    replayRecordingSync: () => globalThis.lgs?.stores?.replay?.recordingSync === true,
     hasJourney: () => Boolean(globalThis.lgs?.theJourney),
 }
 

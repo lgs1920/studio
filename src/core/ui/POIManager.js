@@ -784,7 +784,7 @@ export class POIManager {
         return lgs.getJourneyByTrackSlug?.(poi.parent)?.slug === journey.slug
     }
 
-    getFlythroughPOIsForJourney = (journey, maxDistanceMeters = this.journeyAssociationDistance) => {
+    getJourneyReplayPOIsForJourney = (journey, maxDistanceMeters = this.journeyAssociationDistance) => {
         const maxDistance = finiteNumber(maxDistanceMeters) ?? POI_JOURNEY_ASSOCIATION_DISTANCE
         if (!journey?.slug || maxDistance <= 0) {
             return []

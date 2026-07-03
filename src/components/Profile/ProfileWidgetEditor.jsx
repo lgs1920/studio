@@ -28,9 +28,9 @@ import {
     PaddingElement,
 } from '@Components/MainUI/widgets/editor/elements/PaddingElement'
 import {
-    ensureFlythroughSettings,
-    normalizeFlythroughProfileInfo,
-}                                                         from '@Core/ui/flythrough/FlythroughProgressionStyle'
+    ensureJourneyReplaySettings,
+    normalizeJourneyReplayProfileInfo,
+}                                                         from '@Core/ui/replay/JourneyReplayProgressionStyle'
 import {
     WaButton, WaCard, WaColorPicker, WaDivider, WaIcon, WaNumberInput, WaOption, WaSelect,
     WaSwitch,
@@ -195,8 +195,8 @@ const readWidgetBox = (element, config) => {
 export const ProfileWidgetEditor = ({entity}) => {
     const $configuration = lgs.settings.widgets['profile-widget'].configuration
     const configuration = useSnapshot($configuration)
-    ensureFlythroughSettings()
-    const flythroughSettings = useSnapshot(lgs.settings.ui.flythrough)
+    ensureJourneyReplaySettings()
+    const replaySettings = useSnapshot(lgs.settings.ui.replay)
     const profileSettings = useSnapshot(lgs.settings.ui.profile)
     const sliderRefs = useRef({})
     const ratioPresets = useMemo(() => {
@@ -242,9 +242,9 @@ export const ProfileWidgetEditor = ({entity}) => {
     }, [configuration, entity])
 
     const swatches = useMemo(() => lgs.settings.getSwatches.list.join(';'), [])
-    const flythroughProfileInfo = useMemo(
-        () => normalizeFlythroughProfileInfo(flythroughSettings.profileInfo),
-        [flythroughSettings.profileInfo],
+    const replayProfileInfo = useMemo(
+        () => normalizeJourneyReplayProfileInfo(replaySettings.profileInfo),
+        [replaySettings.profileInfo],
     )
     const gradientFallbackColor = useMemo(() => {
         const fallbackColor = __.ui.profiler?.prepareData()?.options?.[0]?.color ?? '#3b82f6'
@@ -340,14 +340,14 @@ export const ProfileWidgetEditor = ({entity}) => {
         curr[keys[keys.length - 1]] = value
     }, [$configuration, element, entity])
 
-    const updateFlythroughProfileInfo = useCallback((updates) => {
-        const nextProfileInfo = normalizeFlythroughProfileInfo({
-                                                                   ...lgs.settings.ui.flythrough.profileInfo,
+    const updateJourneyReplayProfileInfo = useCallback((updates) => {
+        const nextProfileInfo = normalizeJourneyReplayProfileInfo({
+                                                                   ...lgs.settings.ui.replay.profileInfo,
                                                                    ...updates,
                                                                })
-        lgs.settings.ui.flythrough.profileInfo = nextProfileInfo
-        if (lgs.stores.flythrough) {
-            lgs.stores.flythrough.profileInfo = nextProfileInfo
+        lgs.settings.ui.replay.profileInfo = nextProfileInfo
+        if (lgs.stores.replay) {
+            lgs.stores.replay.profileInfo = nextProfileInfo
         }
         __.ui.profiler?.draw?.()
     }, [])
@@ -792,14 +792,14 @@ export const ProfileWidgetEditor = ({entity}) => {
 
                 <WaDivider/>
                 <div className="drawer-horizontal-line">
-                    <div className="drawer-horizontal-element">{'Flythrough'}</div>
+                    <div className="drawer-horizontal-element">{'Replay'}</div>
                 </div>
                 <WaSwitch
-                    className="profile-widget-flythrough-track-style-switch"
+                    className="profile-widget-replay-track-style-switch"
                     size="xs"
                     label-at-start
-                    checked={flythroughProfileInfo.useTrackStyle}
-                    onChange={(e) => updateFlythroughProfileInfo({useTrackStyle: e.target.checked})}
+                    checked={replayProfileInfo.useTrackStyle}
+                    onChange={(e) => updateJourneyReplayProfileInfo({useTrackStyle: e.target.checked})}
                 >
                     {'Use track style'}
                 </WaSwitch>

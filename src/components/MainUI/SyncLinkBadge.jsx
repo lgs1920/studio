@@ -20,40 +20,40 @@ import { useSnapshot }                 from 'valtio'
 
 export const SyncLinkBadge = ({visible = true, className = ''} = {}) => {
     const video = useSnapshot(lgs.stores.ui.video)
-    const flythrough = useSnapshot(lgs.stores.flythrough)
-    const flythroughSettings = useSnapshot(lgs.settings.ui.flythrough)
-    const isLinked = flythrough.recordingSync === true
+    const replay = useSnapshot(lgs.stores.replay)
+    const replaySettings = useSnapshot(lgs.settings.ui.replay)
+    const isLinked = replay.recordingSync === true
     const isRecording = video.recording || video.preRecording || video.snapshot
     const buttonId = 'sync-link-toggle'
 
     const toggleSync = useCallback(() => {
         if (isLinked) {
-            __.ui.flythroughVideoSync?.disarm?.()
+            __.ui.replayVideoSync?.disarm?.()
             return
         }
 
-        __.ui.flythroughVideoSync?.arm?.({
+        __.ui.replayVideoSync?.arm?.({
             autoStopRecording: true,
             resetToStart:      true,
         })
     }, [isLinked])
 
     useEffect(() => {
-        const shouldBeLinked = flythroughSettings.recordingSync === true
+        const shouldBeLinked = replaySettings.recordingSync === true
         if (shouldBeLinked === isLinked) {
             return
         }
 
         if (shouldBeLinked) {
-            __.ui.flythroughVideoSync?.arm?.({
+            __.ui.replayVideoSync?.arm?.({
                 autoStopRecording: true,
                 resetToStart:      true,
             })
             return
         }
 
-        __.ui.flythroughVideoSync?.disarm?.()
-    }, [flythroughSettings.recordingSync, isLinked])
+        __.ui.replayVideoSync?.disarm?.()
+    }, [replaySettings.recordingSync, isLinked])
 
     if (!visible || isRecording) {
         return null
@@ -62,7 +62,7 @@ export const SyncLinkBadge = ({visible = true, className = ''} = {}) => {
     return (
         <>
             <WaTooltip for={buttonId} placement="top">
-                {isLinked ? 'Unlink video and flythrough' : 'Link video and flythrough'}
+                {isLinked ? 'Unlink video and replay' : 'Link video and replay'}
             </WaTooltip>
             <WaButton
                 className={`sync-link-badge ${className}`.trim()}
@@ -71,7 +71,7 @@ export const SyncLinkBadge = ({visible = true, className = ''} = {}) => {
                 variant={isLinked ? 'brand' : 'neutral'}
                 size="s"
                 aria-pressed={isLinked}
-                aria-label={isLinked ? 'Unlink video and flythrough' : 'Link video and flythrough'}
+                aria-label={isLinked ? 'Unlink video and replay' : 'Link video and replay'}
                 onPointerDown={(event) => event.stopPropagation()}
                 onMouseDown={(event) => event.stopPropagation()}
                 onClick={(event) => {

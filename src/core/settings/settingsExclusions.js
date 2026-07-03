@@ -25,7 +25,7 @@ export const SETTING_EXCLUSIONS = [
         'ui.camera', 'ui.welcome', 'swatches.current',
         'ui.menu', 'ui.poi.rotate', 'ui.poi.focusOnEdit', 'ui.journeyToolbar',
         'ui.compass.mode', 'ui.video.fps', 'ui.video.quality', 'ui.video.ratio', 'ui.pwa',
-        'ui.flythrough',
+        'ui.replay',
         'widgets',
     ].sort((a, b) => {
         const segmentsA = a.split('.')
@@ -49,7 +49,7 @@ export const SETTING_EXCLUSIONS = [
     })
 
 export const SETTING_EXCLUSION_ALLOWLIST = [
-    'ui.flythrough.clips',
+    'ui.replay.clips',
 ]
 
 const isPathMatch = (path, rule) => path === rule || path.startsWith(`${rule}.`)

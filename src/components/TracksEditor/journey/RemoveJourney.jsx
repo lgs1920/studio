@@ -73,9 +73,9 @@ export const RemoveJourney = (props) => {
 
             //TODO add a REMOVE_JOURNEY event
 
-            // Stop Flythrough runner
-            __.ui.flythrough?.stop?.()
-            __.ui.flythroughRunner.stop()
+            // Stop JourneyReplay runner
+            __.ui.replay?.stop?.()
+            __.ui.replayRunner.stop()
         }
 
         // Let's inform the user

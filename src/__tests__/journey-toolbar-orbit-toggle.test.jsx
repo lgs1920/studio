@@ -49,7 +49,7 @@ describe('JourneyToolbar orbit toggle', () => {
                 cameraManager: {
                     stopRotate: vi.fn(async () => undefined),
                 },
-                flythrough: {
+                replay: {
                     isJourneyToolbarTemporarilyHidden: vi.fn(() => false),
                 },
             },
@@ -83,7 +83,7 @@ describe('JourneyToolbar orbit toggle', () => {
                 },
             },
             stores: {
-                flythrough: proxy({
+                replay: proxy({
                     active:  false,
                     playing: false,
                     paused:  false,

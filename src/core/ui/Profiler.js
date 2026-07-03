@@ -15,11 +15,11 @@
  ******************************************************************************/
 
 import {
-    buildFlythroughProfileMetricSummary,
-    appendFlythroughProfileMetadata,
-    extendFlythroughProfileDimensions,
-    flythroughSampleFromProfileRow,
-}                                                         from '@Core/ui/flythrough/FlythroughProfileProgress'
+    buildJourneyReplayProfileMetricSummary,
+    appendJourneyReplayProfileMetadata,
+    extendJourneyReplayProfileDimensions,
+    replaySampleFromProfileRow,
+}                                                         from '@Core/ui/replay/JourneyReplayProfileProgress'
 import { getTrackRenderContent }                         from '@Utils/cesium/trackRenderSmoothing'
 import { normalizeTrackRenderStyle }                     from '@Utils/cesium/trackRenderStyle'
 import { Mobility }                                      from '@Utils/Mobility'
@@ -144,11 +144,11 @@ export class Profiler {
             dataset:    [],
             options:    [],
             axisNames:  {},
-            dimensions: extendFlythroughProfileDimensions([DISTANCE, ELEVATION, TIME, POINT, UNIT_SYSTEM]),
+            dimensions: extendJourneyReplayProfileDimensions([DISTANCE, ELEVATION, TIME, POINT, UNIT_SYSTEM]),
         }
 
         // Keep a journey-wide cumulative distance so the profile axis stays aligned
-        // with flythrough samples even when some tracks are hidden or smoothed.
+        // with replay samples even when some tracks are hidden or smoothed.
         let distance = 0
         lgs.theJourney.tracks.forEach((track, trackIndex) => {
             const trackPoints = trackProfilePoints(track)
@@ -181,7 +181,7 @@ export class Profiler {
                 let coords = []
                 switch (type) {
                     case ELEVATION_VS_DISTANCE : {
-                        coords = appendFlythroughProfileMetadata([
+                        coords = appendJourneyReplayProfileMetadata([
                             __.convert(distance).to(units.x[lgs.settings.unitSystem.current]),
                             __.convert(elevation).to(units.y[lgs.settings.unitSystem.current]),
                             point.time ?? null,
@@ -234,15 +234,15 @@ export class Profiler {
      */
     tooltipElevationVsDistance = ([serie, index, distance, elevation, time, point, distances, colors]) => {
 
-        if (__.ui.flythrough?.running || __.ui.flythroughRunner.running) {
+        if (__.ui.replay?.running || __.ui.replayRunner.running) {
             return ''
         }
 
-        const sample = flythroughSampleFromProfileRow(
+        const sample = replaySampleFromProfileRow(
             [distance, elevation, time, point],
             [DISTANCE, ELEVATION, TIME, POINT],
         )
-        const summary = buildFlythroughProfileMetricSummary(sample, {
+        const summary = buildJourneyReplayProfileMetricSummary(sample, {
             totalDistance:      distances?.[distances.length - 1]?.end ?? 0,
             direction:          1,
             unitSystem:         lgs.settings.unitSystem.current,
@@ -429,7 +429,7 @@ export class Profiler {
                     border:  {color: borderColor ?? 'transparent'},
                 },
             )
-            __.ui.flythroughRunner.marker = lgs.theTrack.marker
+            __.ui.replayRunner.marker = lgs.theTrack.marker
         }
     }
 

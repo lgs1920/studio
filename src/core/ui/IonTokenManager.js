@@ -158,14 +158,14 @@ export class IonTokenManager {
 
     #hasContinuousUsageActivity = () => {
         const stores = globalThis.lgs?.stores
-        const flythrough = stores?.flythrough
+        const replay = stores?.replay
         const video = stores?.ui?.video
 
-        return flythrough?.active === true
-            || flythrough?.playing === true
-            || flythrough?.paused === true
-            || flythrough?.recordingSync === true
-            || flythrough?.clipSequenceActive === true
+        return replay?.active === true
+            || replay?.playing === true
+            || replay?.paused === true
+            || replay?.recordingSync === true
+            || replay?.clipSequenceActive === true
             || video?.recording === true
             || video?.preRecording === true
             || video?.snapshot === true

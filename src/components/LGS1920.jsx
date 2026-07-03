@@ -136,8 +136,8 @@ const AppSurface = ({onReady}) => {
 
     useEffect(() => {
         return () => {
-            __.ui.flythrough?.stop?.({emit: false})
-            __.ui.flythrough?.restoreJourneyToolbarVisibility?.()
+            __.ui.replay?.stop?.({emit: false})
+            __.ui.replay?.restoreJourneyToolbarVisibility?.()
         }
     }, [])
 

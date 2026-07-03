@@ -113,7 +113,7 @@ describe('JourneyStatsWidgetPreview', () => {
                         journeyStats: proxy({global: {distance: 1}}),
                     },
                 }),
-                flythrough: proxy({}),
+                replay: proxy({}),
             },
         }
     })

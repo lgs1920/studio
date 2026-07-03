@@ -53,9 +53,9 @@ import { JourneyEditor }       from './ui/JourneyEditor'
 import { PanelManager }        from './ui/panels/PanelManager'
 import { Profiler }            from './ui/Profiler'
 import { SceneManager }        from './ui/SceneManager'
-import { FlythroughRunner }    from './ui/FlythroughRunner'
-import { FlythroughMode }      from './ui/flythrough/FlythroughMode'
-import { FlythroughVideoSync } from './ui/flythrough/FlythroughVideoSync'
+import { JourneyReplayRunner }    from './ui/JourneyReplayRunner'
+import { JourneyReplayMode }      from './ui/replay/JourneyReplayMode'
+import { JourneyReplayVideoSync } from './ui/replay/JourneyReplayVideoSync'
 
 export class LGS1920Context {
     /** @type {Proxy} */
@@ -412,9 +412,9 @@ export class LGS1920Context {
             journey: new JourneyEditor(),
         }
 
-        __.ui.flythroughRunner = new FlythroughRunner()
-        __.ui.flythrough = new FlythroughMode()
-        __.ui.flythroughVideoSync = new FlythroughVideoSync()
+        __.ui.replayRunner = new JourneyReplayRunner()
+        __.ui.replay = new JourneyReplayMode()
+        __.ui.replayVideoSync = new JourneyReplayVideoSync()
         __.ui.journeyGroupManager = new JourneyGroupManager()
         __.ui.cameraManager = new CameraManager()
         __.ui.drawerManager = new PanelManager()

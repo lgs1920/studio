@@ -71,7 +71,7 @@ describe('app orbit and panorama shortcuts', () => {
                     },
                 },
                 ui: {
-                    flythrough: proxy({}),
+                    replay: proxy({}),
                     journeyToolbar: proxy({
                         show:  true,
                         usage: true,
@@ -131,7 +131,7 @@ describe('app orbit and panorama shortcuts', () => {
                         list:    new Map(),
                     }),
                 }),
-                flythrough: proxy({
+                replay: proxy({
                     active:  false,
                     playing: false,
                     paused:  false,

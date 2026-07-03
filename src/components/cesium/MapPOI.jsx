@@ -15,13 +15,13 @@
  ******************************************************************************/
 
 import { MapPOIContent }                   from '@Components/MainUI/MapPOI/MapPOIContent'
-import { normalizeFlythroughPOISettings }  from '@Core/ui/flythrough/FlythroughPOISettings'
+import { normalizeJourneyReplayPOISettings }  from '@Core/ui/replay/JourneyReplayPOISettings'
 import { POIUtils }                                       from '@Utils/cesium/POIUtils'
 import { memo, useEffect, useRef, useState } from 'react'
 import { useSnapshot }                                    from 'valtio'
 import { proxy }                           from 'valtio'
 
-const EMPTY_FLYTHROUGH_PROXY = proxy({nearbyPois: []})
+const EMPTY_REPLAY_PROXY = proxy({nearbyPois: []})
 
 export const MapPOI = memo(({point}) => {
 
@@ -29,7 +29,7 @@ export const MapPOI = memo(({point}) => {
     const list = useSnapshot($list)
     const thePOI = list.get(point) // Récupère les informations du POI
     const viewable = useSnapshot(lgs.stores.main.components.pois.visibleList)
-    const flythrough = useSnapshot(lgs.stores?.flythrough ?? EMPTY_FLYTHROUGH_PROXY)
+    const replay = useSnapshot(lgs.stores?.replay ?? EMPTY_REPLAY_PROXY)
     const hasPOI = Boolean(thePOI)
     const hasCoordinates = Number.isFinite(thePOI?.latitude) && Number.isFinite(thePOI?.longitude)
 
@@ -37,12 +37,12 @@ export const MapPOI = memo(({point}) => {
     const [pixels, setPixels] = useState(null)
     const [scale, setScale] = useState(1)
     const [tooFar, setTooFar] = useState(false)
-    const flythroughEntry = Array.isArray(flythrough.nearbyPois)
-                            ? flythrough.nearbyPois.find(entry => entry?.poi?.id === thePOI?.id)
+    const replayEntry = Array.isArray(replay.nearbyPois)
+                            ? replay.nearbyPois.find(entry => entry?.poi?.id === thePOI?.id)
                             : null
-    const flythroughActive = Boolean(flythrough.active || flythrough.playing || flythrough.paused)
-    const flythroughSettings = normalizeFlythroughPOISettings(thePOI?.flythrough)
-    const flythroughMasked = thePOI?.visible === false || (flythroughActive && flythroughSettings.visible === false)
+    const replayActive = Boolean(replay.active || replay.playing || replay.paused)
+    const replaySettings = normalizeJourneyReplayPOISettings(thePOI?.replay)
+    const replayMasked = thePOI?.visible === false || (replayActive && replaySettings.visible === false)
     useEffect(() => {
         let cancelled = false
         let rafId = null
@@ -95,9 +95,9 @@ export const MapPOI = memo(({point}) => {
                   thePOI?.height,
                   thePOI?.simulatedHeight,
                   thePOI?.visible,
-                  flythroughActive,
-                  flythroughEntry?.poi?.id,
-                  flythroughSettings.visible,
+                  replayActive,
+                  replayEntry?.poi?.id,
+                  replaySettings.visible,
                   list,
                   point,
               ])
@@ -128,7 +128,7 @@ export const MapPOI = memo(({point}) => {
                         '--lgs-poi-background-color': thePOI.bgColor ?? lgs.colors.poiDefaultBackground,
                         '--lgs-poi-border-color':     thePOI.color ?? lgs.colors.poiDefault,
                         '--lgs-poi-color':            thePOI.color ?? lgs.colors.poiDefault,
-                        display:                      flythroughMasked ? 'none' : undefined,
+                        display:                      replayMasked ? 'none' : undefined,
                         zIndex:                       viewable.get(thePOI.id),
                     }}
                     onPointerMove={__.ui.sceneManager.propagateEventToCanvas}

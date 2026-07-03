@@ -22,7 +22,7 @@ describe('report visibility restore timing', () => {
                     hideOtherJourneys: false,
                 },
                 ui: {
-                    flythrough: {},
+                    replay: {},
                 },
             },
         }

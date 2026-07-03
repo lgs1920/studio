@@ -2486,41 +2486,41 @@ wa-option:state(current) {
     --track-width: 3px;
 }
 
-.flythrough-camera-angle-overlay {
+.replay-camera-angle-overlay {
     z-index: var(--lgs-ui-layer-zindex);
     box-sizing: border-box;
     width: 120px;
     height: 72px;
     pointer-events: none;
     opacity: 0.85;
-    color: var(--flythrough-angle-fill, var(--wa-color-brand-fill-loud));
+    color: var(--replay-angle-fill, var(--wa-color-brand-fill-loud));
 }
 
-.flythrough-camera-angle-overlay svg {
+.replay-camera-angle-overlay svg {
     display: block;
     overflow: visible;
     width: 100%;
     height: 100%;
 }
 
-.flythrough-camera-angle-overlay-axis,
-.flythrough-camera-angle-overlay-angle {
+.replay-camera-angle-overlay-axis,
+.replay-camera-angle-overlay-angle {
     fill: none;
     stroke: currentColor;
     stroke-linecap: round;
     stroke-width: 2;
 }
 
-.flythrough-camera-angle-overlay-axis {
+.replay-camera-angle-overlay-axis {
     opacity: 0.45;
     stroke-dasharray: 6 6;
 }
 
-.flythrough-camera-angle-overlay-angle {
+.replay-camera-angle-overlay-angle {
     stroke-dasharray: 0;
 }
 
-.flythrough-camera-angle-overlay-origin {
+.replay-camera-angle-overlay-origin {
     opacity: 0.9;
-    fill: var(--flythrough-angle-border, currentColor);
+    fill: var(--replay-angle-border, currentColor);
 }

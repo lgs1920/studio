@@ -20,7 +20,7 @@
  * Renders a call-to-action bar for the video cropper interface.
  ******************************************************************************/
 import { Tunnel } from '@Components/Tunnel/Tunnel'
-import { FlythroughButton } from '@Components/Flythrough/FlythroughButton'
+import { JourneyReplayButton } from '@Components/JourneyReplay/JourneyReplayButton'
 import { VIDEO_CROP_ZONE, VIDEO_WIDGETS_BOARD } from '@Core/constants'
 import { cancelVideoEditing } from '@Components/MainUI/video/videoEditingCleanup'
 import { memo, useCallback, useEffect, useMemo, useRef } from 'react'
@@ -49,7 +49,7 @@ const resolveRecorderToolbarPosition = (event) => {
  */
 export const VideoRecordingSettingsToolbar = memo(() => {
     const $video = lgs.stores.ui.video
-    const flythrough = useSnapshot(lgs.stores.flythrough)
+    const replay = useSnapshot(lgs.stores.replay)
     const video = useSnapshot($video)
     const videoCropConfig = __.ui.widgetManager.getWidgetConfig?.(VIDEO_CROP_ZONE)
     const hasDefinedCropDimensions = Number.isFinite(videoCropConfig?.cropDimensions?.width) &&
@@ -70,18 +70,18 @@ export const VideoRecordingSettingsToolbar = memo(() => {
         cancelVideoEditing()
     }, [])
 
-    const leadingAction = flythrough.recordingSync === true && Boolean(lgs.theJourney) ? (
-        <FlythroughButton
-            id="launch-the-flythrough-editor-from-video"
+    const leadingAction = replay.recordingSync === true && Boolean(lgs.theJourney) ? (
+        <JourneyReplayButton
+            id="launch-the-replay-editor-from-video"
             tooltip="top"
-            tooltipText="Open Flythrough drawer"
+            tooltipText="Open Replay drawer"
             tooltipPlacement="top"
             tooltipStyle="tunnel"
             variant="neutral"
             appearance="plain"
             className=""
             showOnlyWhenLinked
-            ariaLabel="Open Flythrough drawer"
+            ariaLabel="Open Replay drawer"
         />
     ) : null
 
@@ -121,7 +121,7 @@ export const VideoRecordingSettingsToolbar = memo(() => {
     }, [])
 
     useEffect(() => {
-        if (!video.editing || flythrough.recordingSync !== true) {
+        if (!video.editing || replay.recordingSync !== true) {
             return undefined
         }
 
@@ -140,7 +140,7 @@ export const VideoRecordingSettingsToolbar = memo(() => {
             }
 
             __.ui.widgetManager.toCenter(element, 0)
-            syncCropFrame('flythrough-sync-center')
+            syncCropFrame('replay-sync-center')
         }
 
         raf = requestAnimationFrame(centerCropZone)
@@ -149,7 +149,7 @@ export const VideoRecordingSettingsToolbar = memo(() => {
             cancelled = true
             cancelAnimationFrame(raf)
         }
-    }, [flythrough.recordingSync, syncCropFrame, video.editing])
+    }, [replay.recordingSync, syncCropFrame, video.editing])
 
     // --- Tunnel Steps ---
     const steps = useMemo(() => {

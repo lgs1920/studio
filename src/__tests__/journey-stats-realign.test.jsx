@@ -103,7 +103,7 @@ describe('JourneyStats', () => {
                         journeyStats: proxy({global: {}}),
                     },
                 }),
-                flythrough: proxy({
+                replay: proxy({
                     sample: {},
                 }),
                 ui: {
