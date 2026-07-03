@@ -375,7 +375,7 @@ export const VideoDownloadAndShareDialog = () => {
      * Handle cancel and cleanup.
      */
     const handleCancel = useCallback(() => {
-        __.ui.flythrough?.restorePlaybackScene?.()
+        __.ui.replay?.restorePlaybackScene?.()
         if (_dialogCleanupDone.current) {
             setDialogOpen(false)
             return

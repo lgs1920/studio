@@ -95,7 +95,7 @@ describe('Valtio store contracts', () => {
         expect(sameStores.ui).toBe(stores.ui)
         expect(sameStores.journeyEditor).toBe(stores.journeyEditor)
         expect(sameStores.editorSettings).toBe(stores.editorSettings)
-        expect(sameStores.flythrough).toBe(stores.flythrough)
+        expect(sameStores.replay).toBe(stores.replay)
         expect(sameStores.ion).toBe(stores.ion)
     })
 
@@ -106,7 +106,7 @@ describe('Valtio store contracts', () => {
         expect(isValtioProxy(stores.ui)).toBe(true)
         expect(isValtioProxy(stores.journeyEditor)).toBe(true)
         expect(isValtioProxy(stores.editorSettings)).toBe(true)
-        expect(isValtioProxy(stores.flythrough)).toBe(true)
+        expect(isValtioProxy(stores.replay)).toBe(true)
         expect(isValtioProxy(stores.ion)).toBe(true)
     })
 

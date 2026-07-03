@@ -65,7 +65,7 @@ export class TrackMenu {
             data.picked.longitude = menuStore.longitude
             data.picked.latitude = menuStore.latitude
             data.picked.index = nearest.properties.index
-            lgs.events.emit('flythrough/drawPoint', data)
+            lgs.events.emit('replay/drawPoint', data)
 
         }
     }

@@ -16,9 +16,9 @@
 
 import { OrbitButton } from '@Components/MainUI/OrbitButton'
 import {
-    defaultFlythroughSettings,
-    FLYTHROUGH_MARKER_MODE_NAVIGATION,
-} from '@Core/ui/flythrough/FlythroughProgressionStyle'
+    defaultJourneyReplaySettings,
+    REPLAY_MARKER_MODE_NAVIGATION,
+} from '@Core/ui/replay/JourneyReplayProgressionStyle'
 import { cleanup, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { proxy } from 'valtio'
@@ -36,8 +36,8 @@ vi.mock('@Core/OrbitSettings', () => ({
 
 describe('OrbitButton', () => {
     beforeEach(() => {
-        const flythrough = defaultFlythroughSettings()
-        flythrough.marker.mode = FLYTHROUGH_MARKER_MODE_NAVIGATION
+        const replay = defaultJourneyReplaySettings()
+        replay.marker.mode = REPLAY_MARKER_MODE_NAVIGATION
 
         globalThis.__ = {
             ui: {
@@ -50,7 +50,7 @@ describe('OrbitButton', () => {
         globalThis.lgs = {
             settings: {
                 ui: {
-                    flythrough,
+                    replay,
                 },
             },
             stores: {
@@ -71,7 +71,7 @@ describe('OrbitButton', () => {
                         },
                     },
                 }),
-                flythrough: proxy({
+                replay: proxy({
                     active:       false,
                     playing:      false,
                     paused:       false,
@@ -87,14 +87,14 @@ describe('OrbitButton', () => {
         globalThis.lgs = undefined
     })
 
-    it('enables orbit outside flythrough even when the flythrough marker is not passive', () => {
+    it('enables orbit outside replay even when the replay marker is not passive', () => {
         render(<OrbitButton/>)
 
         expect(screen.getByRole('button').disabled).toBe(false)
     })
 
-    it('disables orbit while any flythrough is active', () => {
-        globalThis.lgs.stores.flythrough.active = true
+    it('disables orbit while any replay is active', () => {
+        globalThis.lgs.stores.replay.active = true
         render(<OrbitButton/>)
 
         expect(screen.getByRole('button').disabled).toBe(true)

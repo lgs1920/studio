@@ -17,7 +17,7 @@
 import { proxy }            from 'valtio'
 import { editorSettings }   from './editorSettings.js'
 import { ion }              from './ion.js'
-import { flythrough }       from './flythrough.js'
+import { replay }       from './replay.js'
 import { main }             from './main.js'
 import { theJourneyEditor } from './theJourneyEditor.js'
 import { ui }               from './ui.js'
@@ -47,8 +47,8 @@ export class StoresManager {
     /** @type {Object} Editor settings store */
     #editorSettings
 
-    /** @type {Object} Flythrough runtime store */
-    #flythrough
+    /** @type {Object} JourneyReplay runtime store */
+    #replay
 
     /** @type {Object} Cesium Ion runtime store */
     #ion
@@ -69,7 +69,7 @@ export class StoresManager {
         this.#ui = proxy(ui)
         this.#journeyEditor = proxy(theJourneyEditor)
         this.#editorSettings = proxy(editorSettings)
-        this.#flythrough = proxy(flythrough)
+        this.#replay = proxy(replay)
         this.#ion = proxy(ion)
 
         StoresManager.#instance = this
@@ -108,11 +108,11 @@ export class StoresManager {
     }
 
     /**
-     * Gets the flythrough runtime store
-     * @returns {Object} Proxied flythrough runtime store
+     * Gets the replay runtime store
+     * @returns {Object} Proxied replay runtime store
      */
-    get flythrough() {
-        return this.#flythrough
+    get replay() {
+        return this.#replay
     }
 
     /**

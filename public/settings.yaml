@@ -193,8 +193,8 @@ journey:
   ## POIs
   pois:
 
-    ## FlythroughRunner mode
-    flythroughRunner:
+    ## JourneyReplayRunner mode
+    replayRunner:
       color: '#1689CCff'
       border: '#FFF'
     ## Start POI colors

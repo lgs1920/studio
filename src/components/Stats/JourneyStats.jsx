@@ -26,11 +26,11 @@ import {
     normalizeJourneyStatsTextOrder,
 }                                                       from '@Components/Stats/journeyStatsTextOrder'
 import {
-    buildDynamicFlythroughStatsMetrics,
+    buildDynamicJourneyReplayStatsMetrics,
     isVideoWidgetEditorPhase,
     shouldShowDynamicStatsWidget,
     shouldShowJourneyStatsWidget,
-}                                                       from '@Components/Stats/flythroughStatsWidgetUtils'
+}                                                       from '@Components/Stats/replayStatsWidgetUtils'
 import { WIDGET_RADIUS }                                from '@Core/constants'
 import { faArrowDownToLine, faArrowUpToLine }           from '@fortawesome/pro-regular-svg-icons'
 import { SlDivider, SlIcon }                            from '@shoelace-style/shoelace/dist/react'
@@ -182,7 +182,7 @@ export const JourneyStats = memo(({id, metrics, units, style = {}, mode = 'journ
     const unitSystem = useSnapshot($unitSystem)
     const currentUnitSystem = unitSystem.current
     const isImperial = currentUnitSystem === 'imperial'
-    const flythrough = useSnapshot(lgs.stores.flythrough)
+    const replay = useSnapshot(lgs.stores.replay)
     useSnapshot(lgs.stores.ui.video)
     const isDynamicMode = mode === 'dynamic'
     const isVideoBoard = widgetsBoard === VIDEO_WIDGETS_BOARD
@@ -199,7 +199,7 @@ export const JourneyStats = memo(({id, metrics, units, style = {}, mode = 'journ
      */
     const displayMetrics = useMemo(() => {
         if (isDynamicMode) {
-            return buildDynamicFlythroughStatsMetrics(flythrough, journey)
+            return buildDynamicJourneyReplayStatsMetrics(replay, journey)
         }
 
         const source = element.dataSource || 'global'
@@ -221,7 +221,7 @@ export const JourneyStats = memo(({id, metrics, units, style = {}, mode = 'journ
                 ...(source === 'user' ? {...(external.positive || {}), ...(user.positive || {})} : {}),
             }
         }
-    }, [element.dataSource, fallbackMetrics, flythrough, isDynamicMode, metricsSnap])
+    }, [element.dataSource, fallbackMetrics, replay, isDynamicMode, metricsSnap])
 
     const formattedDuration = useMemo(() => {
         const seconds = displayMetrics?.duration
@@ -264,7 +264,7 @@ export const JourneyStats = memo(({id, metrics, units, style = {}, mode = 'journ
         min: formatPace(displayMetrics?.minPace),
     }), [displayMetrics?.averagePace, displayMetrics?.minPace, formatPace])
 
-    const hasDuration = isDynamicMode ? Boolean(flythrough?.elapsedMillis) : (journey?.hasTime ?? false)
+    const hasDuration = isDynamicMode ? Boolean(replay?.elapsedMillis) : (journey?.hasTime ?? false)
     const hasElevation = isDynamicMode
                          ? displayMetrics?.hasElevation !== false
                          : (journey?.hasAltitude ?? false)
@@ -650,9 +650,9 @@ export const JourneyStats = memo(({id, metrics, units, style = {}, mode = 'journ
         }
 
         return isDynamicMode
-               ? shouldShowDynamicStatsWidget(flythrough)
-               : shouldShowJourneyStatsWidget(flythrough)
-    }, [flythrough, isDynamicMode, isVideoBoard, journey, journeySlug])
+               ? shouldShowDynamicStatsWidget(replay)
+               : shouldShowJourneyStatsWidget(replay)
+    }, [replay, isDynamicMode, isVideoBoard, journey, journeySlug])
 
     if (!isVisible) {
         return null

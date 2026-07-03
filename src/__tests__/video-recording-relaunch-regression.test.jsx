@@ -72,7 +72,7 @@ describe('video recording relaunch regression', () => {
     let recorder
     let widgetManager
     let widgetCache
-    let flythroughSync
+    let replaySync
     let board
 
     beforeEach(() => {
@@ -84,8 +84,8 @@ describe('video recording relaunch regression', () => {
         widgetCache = {
             restoreAllHiddenWidgetsExcept: vi.fn(),
         }
-        flythroughSync = {
-            stopFlythrough: vi.fn(),
+        replaySync = {
+            stopJourneyReplay: vi.fn(),
         }
 
         globalThis.__ = {
@@ -94,7 +94,7 @@ describe('video recording relaunch regression', () => {
             },
             recorder,
             ui: {
-                flythroughVideoSync: flythroughSync,
+                replayVideoSync: replaySync,
                 widgetCache,
                 widgetManager,
             },
@@ -130,7 +130,7 @@ describe('video recording relaunch regression', () => {
                         ]),
                     }),
                 }),
-                flythrough: proxy({
+                replay: proxy({
                     active: false,
                     playing: false,
                     paused: false,
@@ -202,19 +202,19 @@ describe('video recording relaunch regression', () => {
         view.unmount()
     })
 
-    it('shows flythrough progression in the recorder toolbar when the sync link is active', () => {
+    it('shows replay progression in the recorder toolbar when the sync link is active', () => {
         globalThis.lgs.stores.ui.video.recording = true
-        globalThis.lgs.stores.flythrough.recordingSync = true
-        globalThis.lgs.stores.flythrough.active = true
-        globalThis.lgs.stores.flythrough.playing = true
-        globalThis.lgs.stores.flythrough.sample = {
+        globalThis.lgs.stores.replay.recordingSync = true
+        globalThis.lgs.stores.replay.active = true
+        globalThis.lgs.stores.replay.playing = true
+        globalThis.lgs.stores.replay.sample = {
             progress: 0.5,
             distanceFromStart: 50,
             remainingDistance: 50,
         }
-        globalThis.lgs.stores.flythrough.totalDistance = 100
-        globalThis.lgs.stores.flythrough.elapsedMillis = 60000
-        globalThis.lgs.stores.flythrough.durationMillis = 120000
+        globalThis.lgs.stores.replay.totalDistance = 100
+        globalThis.lgs.stores.replay.elapsedMillis = 60000
+        globalThis.lgs.stores.replay.durationMillis = 120000
 
         render(<VideoRecorderToolbar/>)
 
@@ -224,20 +224,20 @@ describe('video recording relaunch regression', () => {
         expect(screen.queryByText(/fps/i)).toBeNull()
     })
 
-    it('shows a compact mobile flythrough summary without totals', () => {
+    it('shows a compact mobile replay summary without totals', () => {
         globalThis.__.device.isMobile = true
         globalThis.lgs.stores.ui.video.recording = true
-        globalThis.lgs.stores.flythrough.recordingSync = true
-        globalThis.lgs.stores.flythrough.active = true
-        globalThis.lgs.stores.flythrough.playing = true
-        globalThis.lgs.stores.flythrough.sample = {
+        globalThis.lgs.stores.replay.recordingSync = true
+        globalThis.lgs.stores.replay.active = true
+        globalThis.lgs.stores.replay.playing = true
+        globalThis.lgs.stores.replay.sample = {
             progress: 0.5,
             distanceFromStart: 50,
             remainingDistance: 50,
         }
-        globalThis.lgs.stores.flythrough.totalDistance = 100
-        globalThis.lgs.stores.flythrough.elapsedMillis = 60000
-        globalThis.lgs.stores.flythrough.durationMillis = 120000
+        globalThis.lgs.stores.replay.totalDistance = 100
+        globalThis.lgs.stores.replay.elapsedMillis = 60000
+        globalThis.lgs.stores.replay.durationMillis = 120000
 
         render(<VideoRecorderToolbar/>)
 
@@ -248,20 +248,20 @@ describe('video recording relaunch regression', () => {
         expect(screen.queryByText('50%')).toBeNull()
     })
 
-    it('keeps the mobile flythrough summary rendered inline', () => {
+    it('keeps the mobile replay summary rendered inline', () => {
         globalThis.__.device.isMobile = true
         globalThis.lgs.stores.ui.video.recording = true
-        globalThis.lgs.stores.flythrough.recordingSync = true
-        globalThis.lgs.stores.flythrough.active = true
-        globalThis.lgs.stores.flythrough.playing = true
-        globalThis.lgs.stores.flythrough.sample = {
+        globalThis.lgs.stores.replay.recordingSync = true
+        globalThis.lgs.stores.replay.active = true
+        globalThis.lgs.stores.replay.playing = true
+        globalThis.lgs.stores.replay.sample = {
             progress: 0.5,
             distanceFromStart: 50,
             remainingDistance: 50,
         }
-        globalThis.lgs.stores.flythrough.totalDistance = 100
-        globalThis.lgs.stores.flythrough.elapsedMillis = 60000
-        globalThis.lgs.stores.flythrough.durationMillis = 120000
+        globalThis.lgs.stores.replay.totalDistance = 100
+        globalThis.lgs.stores.replay.elapsedMillis = 60000
+        globalThis.lgs.stores.replay.durationMillis = 120000
 
         render(<VideoRecorderToolbar/>)
 

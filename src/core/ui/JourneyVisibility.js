@@ -55,13 +55,13 @@ export const sortJourneysByCentroidDistance = async (journeys = [], currentJourn
 
 export const getGlobalHideOtherJourneys = () => globalThis.lgs?.settings?.journey?.hideOtherJourneys === true
 
-export const getFlythroughHideOtherJourneys = () => {
-    const flythrough = globalThis.lgs?.settings?.ui?.flythrough
-    if (flythrough?.inheritHideOtherJourneys === false) {
-        return flythrough.hideOtherJourneys === true
+export const getJourneyReplayHideOtherJourneys = () => {
+    const replay = globalThis.lgs?.settings?.ui?.replay
+    if (replay?.inheritHideOtherJourneys === false) {
+        return replay.hideOtherJourneys === true
     }
 
-    if (flythrough?.hideOtherJourneys === true) {
+    if (replay?.hideOtherJourneys === true) {
         return true
     }
 

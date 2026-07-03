@@ -124,7 +124,7 @@ export const ensureViewer = () => {
 export function Viewer() {
     useEffect(() => {
         ensureViewer()
-        __.ui.flythrough?.bindCesiumCameraBridge?.()
+        __.ui.replay?.bindCesiumCameraBridge?.()
     }, [])
 
     return (<></>)

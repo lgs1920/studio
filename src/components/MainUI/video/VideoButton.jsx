@@ -20,15 +20,15 @@ import { useSnapshot }                 from 'valtio'
 
 export const VideoButton = (props) => {
     const $video = lgs.stores.ui.video
-    const flythrough = useSnapshot(lgs.stores.flythrough)
+    const replay = useSnapshot(lgs.stores.replay)
     const video = useSnapshot($video)
-    const syncWithFlythrough = flythrough.recordingSync === true
+    const syncWithJourneyReplay = replay.recordingSync === true
     const {
         id = 'launch-the-video-editor',
         className = 'square-button',
         tooltip = 'right',
         tooltipText = 'Record a new video',
-        variant = syncWithFlythrough ? 'warning' : 'brand',
+        variant = syncWithJourneyReplay ? 'warning' : 'brand',
         appearance = 'Filled',
     } = props ?? {}
 

@@ -198,11 +198,11 @@ describe('SettingsSection', () => {
         expect(lgs.configuration.journey.activity.types[0].maxSpeed).toBe(4.25)
     })
 
-    it('keeps user flythrough settings while adding new default keys', () => {
+    it('keeps user replay settings while adding new default keys', () => {
         const section = new SettingsSection('ui')
         const merged = section.update(
             {
-                flythrough: {
+                replay: {
                     duration:    240,
                     loop:        true,
                     progression: {
@@ -215,7 +215,7 @@ describe('SettingsSection', () => {
                 },
             },
             {
-                flythrough: {
+                replay: {
                     duration:    60,
                     loop:        false,
                     progression: {
@@ -237,21 +237,21 @@ describe('SettingsSection', () => {
             },
         )
 
-        expect(merged.flythrough.duration).toBe(240)
-        expect(merged.flythrough.loop).toBe(true)
-        expect(merged.flythrough.progression.fill.color).toBe('#123456')
-        expect(merged.flythrough.progression.fill.opacity).toBe(0.4)
-        expect(merged.flythrough.progression.fill.width).toBe(7)
-        expect(merged.flythrough.progression.fill.profileMarker).toBeUndefined()
-        expect(merged.flythrough.progression.border?.profileMarker).toBeUndefined()
-        expect(merged.flythrough.profileInfo).toBeUndefined()
+        expect(merged.replay.duration).toBe(240)
+        expect(merged.replay.loop).toBe(true)
+        expect(merged.replay.progression.fill.color).toBe('#123456')
+        expect(merged.replay.progression.fill.opacity).toBe(0.4)
+        expect(merged.replay.progression.fill.width).toBe(7)
+        expect(merged.replay.progression.fill.profileMarker).toBeUndefined()
+        expect(merged.replay.progression.border?.profileMarker).toBeUndefined()
+        expect(merged.replay.profileInfo).toBeUndefined()
     })
 
-    it('keeps flythrough excluded but still syncs its clips subtree', () => {
+    it('keeps replay excluded but still syncs its clips subtree', () => {
         const section = new SettingsSection('ui')
         const merged = section.update(
             {
-                flythrough: {
+                replay: {
                     camera: {
                         altitude: 900,
                     },
@@ -265,7 +265,7 @@ describe('SettingsSection', () => {
                 },
             },
             {
-                flythrough: {
+                replay: {
                     camera: {
                         altitude: 1200,
                         pitch:    -65,
@@ -286,11 +286,11 @@ describe('SettingsSection', () => {
             },
         )
 
-        expect(merged.flythrough.camera.altitude).toBe(900)
-        expect(merged.flythrough.camera.pitch).toBeUndefined()
-        expect(merged.flythrough.clips.catalog['take-off'].label).toBe('TakeOff')
-        expect(merged.flythrough.clips.catalog['take-off'].slots).toEqual(['start'])
-        expect(merged.flythrough.clips.catalog.landing).toEqual({
+        expect(merged.replay.camera.altitude).toBe(900)
+        expect(merged.replay.camera.pitch).toBeUndefined()
+        expect(merged.replay.clips.catalog['take-off'].label).toBe('TakeOff')
+        expect(merged.replay.clips.catalog['take-off'].slots).toEqual(['start'])
+        expect(merged.replay.clips.catalog.landing).toEqual({
             label: 'Landing',
             slots: ['stop'],
         })

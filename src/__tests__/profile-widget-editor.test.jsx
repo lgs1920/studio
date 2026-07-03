@@ -163,7 +163,7 @@ describe('ProfileWidgetEditor', () => {
                     list: ['#ffffff', '#000000'],
                 },
                 ui:          proxy({
-                                       flythrough: proxy({
+                                       replay: proxy({
                                                              profileInfo: proxy({
                                                                                     color:         '#ffffff',
                                                                                     useTrackStyle: false,

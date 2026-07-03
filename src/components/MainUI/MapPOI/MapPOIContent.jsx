@@ -20,7 +20,7 @@ import { stylePOIDuotoneIcon }                     from '@Components/MainUI/MapP
 import { openPOIEditor }                           from '@Components/MainUI/MapPOI/openPOIEditor'
 import { ICONS_PATH }                              from '@Core/constants'
 import { MapPOI }                                  from '@Core/MapPOI'
-import { normalizeFlythroughPOISettings }          from '@Core/ui/flythrough/FlythroughPOISettings'
+import { normalizeJourneyReplayPOISettings }          from '@Core/ui/replay/JourneyReplayPOISettings'
 import { ELEVATION_UNITS }                         from '@Utils/UnitUtils'
 import { WaIcon }                                  from '@web.awesome.me/webawesome-pro/dist/react'
 import { snapdom }                                 from '@zumer/snapdom'
@@ -29,7 +29,7 @@ import { useCallback, useEffect, useMemo, useRef } from 'react'
 import { proxy, useSnapshot }                      from 'valtio'
 import './style.css'
 
-const EMPTY_FLYTHROUGH_PROXY = proxy({nearbyPois: []})
+const EMPTY_REPLAY_PROXY = proxy({nearbyPois: []})
 
 /**
  * Renders the content of a Point of Interest (POI) for the map canvas or UI lists.
@@ -44,7 +44,7 @@ export const MapPOIContent = ({poi, useInMenu = false, style}) => {
 
     const $pois = lgs.stores.main.components.pois
     const poisSnap = useSnapshot($pois)
-    const flythrough = useSnapshot(lgs.stores?.flythrough ?? EMPTY_FLYTHROUGH_PROXY)
+    const replay = useSnapshot(lgs.stores?.replay ?? EMPTY_REPLAY_PROXY)
 
 
     /** * Direct reactive access to the point from the snapshot.
@@ -57,13 +57,13 @@ export const MapPOIContent = ({poi, useInMenu = false, style}) => {
     const pointLatitude = point?.latitude
     const pointLocation = point?.location
     const pointCountryCode = point?.countryCode
-    const flythroughEntry = Array.isArray(flythrough.nearbyPois)
-        ? flythrough.nearbyPois.find(entry => entry?.poi?.id === point?.id)
+    const replayEntry = Array.isArray(replay.nearbyPois)
+        ? replay.nearbyPois.find(entry => entry?.poi?.id === point?.id)
         : null
-    const flythroughActive = Boolean(flythrough.active || flythrough.playing || flythrough.paused)
-    const flythroughSettings = normalizeFlythroughPOISettings(point?.flythrough)
-    const flythroughMasked = flythroughActive && flythroughSettings.visible === false
-    const hideFlythroughField = key => flythroughActive && flythroughEntry && flythroughSettings.hiddenFields[key] === true
+    const replayActive = Boolean(replay.active || replay.playing || replay.paused)
+    const replaySettings = normalizeJourneyReplayPOISettings(point?.replay)
+    const replayMasked = replayActive && replaySettings.visible === false
+    const hideJourneyReplayField = key => replayActive && replayEntry && replaySettings.hiddenFields[key] === true
 
     const iconName = point?.categoryIcon(point?.category)
     const isSvgIcon = iconName?.endsWith('.svg')
@@ -135,7 +135,7 @@ export const MapPOIContent = ({poi, useInMenu = false, style}) => {
 
     /** Synchronizes DOM content to map canvas */
     const renderToCanvas = useCallback(() => {
-        if (useInMenu || !point?.visible || flythroughMasked || !pointId) {
+        if (useInMenu || !point?.visible || replayMasked || !pointId) {
             return
         }
 
@@ -176,10 +176,10 @@ export const MapPOIContent = ({poi, useInMenu = false, style}) => {
                 console.error('Error rendering POI to canvas:', error)
             }
         })
-    }, [useInMenu, point?.visible, flythroughMasked, pointId, $pois.list])
+    }, [useInMenu, point?.visible, replayMasked, pointId, $pois.list])
 
     useEffect(() => {
-        if (useInMenu || !pointId || (point?.visible !== false && !flythroughMasked)) {
+        if (useInMenu || !pointId || (point?.visible !== false && !replayMasked)) {
             return
         }
 
@@ -193,7 +193,7 @@ export const MapPOIContent = ({poi, useInMenu = false, style}) => {
             visible: false,
         })
         void mapPOI.utils.draw(mapPOI)
-    }, [useInMenu, pointId, point?.visible, flythroughMasked, $pois.list])
+    }, [useInMenu, pointId, point?.visible, replayMasked, $pois.list])
 
     const renderToCanvasAfterIconLoad = useCallback((event = null) => {
         const icon = event?.target ?? _icon.current
@@ -241,14 +241,14 @@ export const MapPOIContent = ({poi, useInMenu = false, style}) => {
                   point?.latitude,
                   point?.type,
                   point?.visible,
-                  flythroughActive,
-                  flythroughEntry?.poi?.id,
-                  flythroughSettings.visible,
-                  flythroughSettings.animated,
-                  flythroughSettings.hiddenFields.location,
-                  flythroughSettings.hiddenFields.category,
-                  flythroughSettings.hiddenFields.altitude,
-                  flythroughSettings.hiddenFields.coordinates,
+                  replayActive,
+                  replayEntry?.poi?.id,
+                  replaySettings.visible,
+                  replaySettings.animated,
+                  replaySettings.hiddenFields.location,
+                  replaySettings.hiddenFields.category,
+                  replaySettings.hiddenFields.altitude,
+                  replaySettings.hiddenFields.coordinates,
                   unitSystem,
                   coordinateSystem,
                   renderToCanvas,
@@ -298,7 +298,7 @@ export const MapPOIContent = ({poi, useInMenu = false, style}) => {
                     {point?.expanded && !useInMenu ? (
                         <>
                             <h3>{point.title ?? 'Point Of Interest'}</h3>
-                            {point.location && !hideFlythroughField('location') && (
+                            {point.location && !hideJourneyReplayField('location') && (
                                 <div className="poi-location" title={point.location}>
                                     <WaIcon name="location-dot"
                                             variant="regular"
@@ -308,7 +308,7 @@ export const MapPOIContent = ({poi, useInMenu = false, style}) => {
                                 </div>
                             )}
 
-                            {!hideFlythroughField('category') && (
+                            {!hideJourneyReplayField('category') && (
                                 <div className="poi-location" title={point.location}>
                                     <WaIcon name={iconName}
                                             variant="regular"
@@ -321,7 +321,7 @@ export const MapPOIContent = ({poi, useInMenu = false, style}) => {
 
 
                             <div className="poi-full-coordinates">
-                                {point.height > 0 && point.height !== point.simulatedHeight && !hideFlythroughField('altitude') && (
+                                {point.height > 0 && point.height !== point.simulatedHeight && !hideJourneyReplayField('altitude') && (
                                     <NameValueUnit
                                         className="poi-elevation"
                                         text={'Altitude:'}
@@ -330,7 +330,7 @@ export const MapPOIContent = ({poi, useInMenu = false, style}) => {
                                         units={ELEVATION_UNITS}
                                     />
                                 )}
-                                {!hideFlythroughField('coordinates') && (
+                                {!hideJourneyReplayField('coordinates') && (
                                     <div className="poi-coordinates">
                                         <span>
                                             {__.convert(point.latitude).to(coordinateSystem.current)},{' '}

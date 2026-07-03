@@ -35,12 +35,12 @@
   keys:
     - Alt+Shift+V
   scope: App
-- action: Show Flythrough controls
-  description: Opens the Flythrough management drawer.
-  id: flythrough-management-show
+- action: Show Replay controls
+  description: Opens the Replay management drawer.
+  id: replay-management-show
   keys:
     - Alt+Shift+W
-  scope: Flythrough mode
+  scope: Replay mode
 - action: Manage widgets
   description: Opens the widget management drawer for the current board.
   id: widget-management-show

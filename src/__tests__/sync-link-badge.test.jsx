@@ -45,7 +45,7 @@ describe('SyncLinkBadge', () => {
         disarm = vi.fn()
         globalThis.__ = {
             ui: {
-                flythroughVideoSync: {
+                replayVideoSync: {
                     arm,
                     disarm,
                 },
@@ -56,11 +56,11 @@ describe('SyncLinkBadge', () => {
                 ui: {
                     video: proxy({recording: false, preRecording: false, snapshot: false}),
                 },
-                flythrough: proxy({recordingSync: false}),
+                replay: proxy({recordingSync: false}),
             },
             settings: {
                 ui: {
-                    flythrough: proxy({recordingSync: false}),
+                    replay: proxy({recordingSync: false}),
                 },
             },
         }
@@ -90,8 +90,8 @@ describe('SyncLinkBadge', () => {
         expect(arm).toHaveBeenCalledTimes(1)
         expect(parentClick).not.toHaveBeenCalled()
 
-        lgs.stores.flythrough.recordingSync = true
-        lgs.settings.ui.flythrough.recordingSync = true
+        lgs.stores.replay.recordingSync = true
+        lgs.settings.ui.replay.recordingSync = true
         rerender(
             <div onClick={parentClick}>
                 <SyncLinkBadge visible className="sync-linked-actions-badge"/>

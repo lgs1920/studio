@@ -46,7 +46,7 @@ export const DESKTOP_MIN = 992
  */
 export const CONFIGURATION = 'config.yaml'
 export const SETTINGS = 'settings.yaml'
-export const FLYTHROUGH_SETTINGS = 'flythrough.yaml'
+export const REPLAY_SETTINGS = 'replay.yaml'
 export const LAYERS_TERRAINS_SETTINGS = 'layers-terrains.yaml'
 export const SHORTCUTS_CATALOG = 'shortcuts.yaml'
 export const COUNTRIES = 'countries.yaml'
@@ -267,7 +267,7 @@ export const SETTINGS_EDITOR_DRAWER = 'settings-editor-drawer'
 export const POIS_EDITOR_DRAWER = 'pois-editor-drawer'
 export const WIDGETS_EDITOR_DRAWER = 'widgets-editor-drawer'
 export const WIDGET_MANAGEMENT_DRAWER = 'widget-management-drawer'
-export const FLYTHROUGH_DRAWER = 'flythrough-drawer'
+export const REPLAY_DRAWER = 'replay-drawer'
 
 /** Jaurney, Track, POI **/
 

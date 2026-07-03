@@ -17,7 +17,7 @@
 import { icon, library } from '@fortawesome/fontawesome-svg-core'
 import { faLocationDot } from '@fortawesome/pro-regular-svg-icons'
 import { faLocationPin } from '@fortawesome/pro-solid-svg-icons'
-import { normalizeFlythroughPOISettings } from '@Core/ui/flythrough/FlythroughPOISettings'
+import { normalizeJourneyReplayPOISettings } from '@Core/ui/replay/JourneyReplayPOISettings'
 
 import { Canvg, Property } from 'canvg'
 import {
@@ -368,16 +368,16 @@ export class POIUtils {
      *
      */
     static setPOIVisibility = (poi, visibility) => {
-        const flythrough = globalThis.lgs?.stores?.flythrough
-        const flythroughActive = Boolean(flythrough?.active || flythrough?.playing || flythrough?.paused)
-        const hideAllPoisDuringFlythrough = Boolean(
-            flythrough?.hideAllPoisDuringFlythrough
-            || globalThis.lgs?.settings?.ui?.flythrough?.hideAllPoisDuringFlythrough,
+        const replay = globalThis.lgs?.stores?.replay
+        const replayActive = Boolean(replay?.active || replay?.playing || replay?.paused)
+        const hideAllPoisDuringJourneyReplay = Boolean(
+            replay?.hideAllPoisDuringJourneyReplay
+            || globalThis.lgs?.settings?.ui?.replay?.hideAllPoisDuringJourneyReplay,
         )
-        if (flythroughActive && hideAllPoisDuringFlythrough) {
+        if (replayActive && hideAllPoisDuringJourneyReplay) {
             return false
         }
-        if (flythroughActive && normalizeFlythroughPOISettings(poi?.flythrough).visible === false) {
+        if (replayActive && normalizeJourneyReplayPOISettings(poi?.replay).visible === false) {
             return false
         }
 

@@ -64,7 +64,7 @@ export class Journey extends MapElement {
     cameraOrigin = {}
     rotation = {}
     panorama = {}
-    flythrough = {
+    replay = {
         start: [],
         stop:  [],
     }
@@ -104,7 +104,7 @@ export class Journey extends MapElement {
             this.camera = options.camera ?? null
             this.rotation = options.rotation ?? {}
             this.panorama = options.panorama ?? {}
-            this.flythrough = options.flythrough ?? {
+            this.replay = options.replay ?? {
                 start: [],
                 stop:  [],
             }
@@ -294,9 +294,9 @@ export class Journey extends MapElement {
         instance.renderSmoothing = instance.renderSmoothing === undefined
                                    ? undefined
                                    : normalizeTrackRenderSmoothing(instance.renderSmoothing)
-        instance.flythrough = {
-            start: Array.isArray(instance.flythrough?.start) ? instance.flythrough.start : [],
-            stop:  Array.isArray(instance.flythrough?.stop) ? instance.flythrough.stop : [],
+        instance.replay = {
+            start: Array.isArray(instance.replay?.start) ? instance.replay.start : [],
+            stop:  Array.isArray(instance.replay?.stop) ? instance.replay.stop : [],
         }
 
         // Transform Tracks from object to class

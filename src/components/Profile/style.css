@@ -320,7 +320,7 @@ sl-input.widget-border-field-width::part(input) {
     justify-self: flex-end;
 }
 
-.profile-toolbar .flythrough-menu {
+.profile-toolbar .replay-menu {
     display: flex;
     gap: var(--lgs-gutter-xs);
 }
@@ -376,6 +376,6 @@ sl-input.widget-border-field-width::part(input) {
     gap: 2rem
 }
 
-.profile-widget-flythrough-track-style-switch::part(base) {
+.profile-widget-replay-track-style-switch::part(base) {
     width: 100%;
 }

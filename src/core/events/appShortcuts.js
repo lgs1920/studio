@@ -15,14 +15,14 @@
  ******************************************************************************/
 
 import {
-    CURRENT_MAP_POINT, CURRENT_POI, FLYTHROUGH_DRAWER, SCENE_MODE_2D, SETTINGS_EDITOR_DRAWER, SHORTCUTS_CATALOG,
+    CURRENT_MAP_POINT, CURRENT_POI, REPLAY_DRAWER, SCENE_MODE_2D, SETTINGS_EDITOR_DRAWER, SHORTCUTS_CATALOG,
     VIDEO_CROP_ZONE,
 }                                                       from '@Core/constants'
 import { hasActiveAppShortcutBlocker }                  from '@Core/events/shortcutBlockers'
 import { MapTarget }                                    from '@Core/MapTarget'
 import { getOrbitSettings, setOrbitStoreSettings }      from '@Core/OrbitSettings'
 import { getGlobalHideOtherJourneys, setGlobalHideOtherJourneys } from '@Core/ui/JourneyVisibility'
-import { FLYTHROUGH_MARKER_MODE_TRACE, normalizeFlythroughMarker } from '@Core/ui/flythrough/FlythroughProgressionStyle'
+import { REPLAY_MARKER_MODE_TRACE, normalizeJourneyReplayMarker } from '@Core/ui/replay/JourneyReplayProgressionStyle'
 import {
     hasManageableWidgets,
     openWidgetManagementDrawer,
@@ -206,7 +206,7 @@ const currentCameraOrbitOptions = () => {
 const isScene2D = () => Number(lgs.settings.scene.mode.value) === Number(SCENE_MODE_2D.value)
 
 const toggleJourneyToolbar = () => {
-    if (lgs.stores?.flythrough?.active || lgs.stores?.flythrough?.playing || lgs.stores?.flythrough?.paused) {
+    if (lgs.stores?.replay?.active || lgs.stores?.replay?.playing || lgs.stores?.replay?.paused) {
         return false
     }
 
@@ -224,10 +224,10 @@ const toggleHideOtherJourneys = async () => {
     return true
 }
 
-const flythroughRotationIsAllowed = () => {
-    const flythrough = lgs.settings?.ui?.flythrough
-    const marker = normalizeFlythroughMarker(flythrough?.marker)
-    return marker.mode === FLYTHROUGH_MARKER_MODE_TRACE
+const replayRotationIsAllowed = () => {
+    const replay = lgs.settings?.ui?.replay
+    const marker = normalizeJourneyReplayMarker(replay?.marker)
+    return marker.mode === REPLAY_MARKER_MODE_TRACE
 }
 
 const openJourneyImporter = () => {
@@ -245,9 +245,9 @@ const openJourneyGroups = () => {
     return true
 }
 
-const openFlythroughManagement = () => {
+const openJourneyReplayManagement = () => {
     lgs.stores.ui.mainUI.callForActions.active = false
-    __.ui.drawerManager?.open?.(FLYTHROUGH_DRAWER)
+    __.ui.drawerManager?.open?.(REPLAY_DRAWER)
     return true
 }
 
@@ -325,11 +325,11 @@ const setPoiAnimated = async (target, animated) => {
 const toggleRotation = () => {
     const rotate = lgs.stores.ui.mainUI.rotate
     const panorama = lgs.stores.ui.mainUI.panorama
-    const flythrough = lgs.stores.flythrough
+    const replay = lgs.stores.replay
 
     if (!rotate.running && !panorama.active
-        && (flythrough?.active || flythrough?.playing || flythrough?.paused)
-        && !flythroughRotationIsAllowed()) {
+        && (replay?.active || replay?.playing || replay?.paused)
+        && !replayRotationIsAllowed()) {
         return false
     }
 
@@ -695,7 +695,7 @@ const SHORTCUT_ACTIONS = {
     'journey-toolbar-show': toggleJourneyToolbar,
     'journey-hide-others-toggle': toggleHideOtherJourneys,
     'profile-settings-show': openUserProfileSettings,
-    'flythrough-management-show': openFlythroughManagement,
+    'replay-management-show': openJourneyReplayManagement,
     'widget-management-show': openWidgetManagement,
     'video-recording':      launchVideoRecording,
     'orbit-toggle':         toggleRotation,

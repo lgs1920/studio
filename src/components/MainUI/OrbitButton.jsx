@@ -73,13 +73,13 @@ const normalizedFocusPoint = point => {
 export const OrbitButton = memo(({tooltip = 'top'}) => {
     // Targeted snapshots to minimize re-renders
     const {rotate, panorama} = useSnapshot(lgs.stores.ui.mainUI)
-    const flythroughState = useSnapshot(lgs.stores.flythrough)
+    const replayState = useSnapshot(lgs.stores.replay)
     const {target, position} = useSnapshot(lgs.stores.main.components.camera)
     const orbitTarget = rotate.target
     const sceneTarget = __.ui.sceneManager.target
-    const flythroughActive = flythroughState.active || flythroughState.playing || flythroughState.paused
-    const orbitAllowedByFlythrough = !flythroughActive && flythroughState.orbitAllowed !== false
-    const disableOrbitStart = !orbitAllowedByFlythrough && !rotate.running && !panorama.active
+    const replayActive = replayState.active || replayState.playing || replayState.paused
+    const orbitAllowedByJourneyReplay = !replayActive && replayState.orbitAllowed !== false
+    const disableOrbitStart = !orbitAllowedByJourneyReplay && !rotate.running && !panorama.active
 
     /**
      * Toggles map orbit and updates POI animation state if applicable.

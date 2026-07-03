@@ -15,7 +15,7 @@
  ******************************************************************************/
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { getFlythroughHideOtherJourneys, getGlobalHideOtherJourneys, refreshJourneyVisibility, setGlobalHideOtherJourneys, sortJourneysByCentroidDistance } from '@Core/ui/JourneyVisibility'
+import { getJourneyReplayHideOtherJourneys, getGlobalHideOtherJourneys, refreshJourneyVisibility, setGlobalHideOtherJourneys, sortJourneysByCentroidDistance } from '@Core/ui/JourneyVisibility'
 import { SceneUtils } from '@Utils/cesium/SceneUtils'
 
 describe('journey visibility policy', () => {
@@ -41,7 +41,7 @@ describe('journey visibility policy', () => {
                     hideOtherJourneys: false,
                 },
                 ui: {
-                    flythrough: {
+                    replay: {
                         hideOtherJourneys: null,
                     },
                 },
@@ -54,11 +54,11 @@ describe('journey visibility policy', () => {
         vi.restoreAllMocks()
     })
 
-    it('falls back to the global journey setting for flythrough when no explicit override exists', () => {
+    it('falls back to the global journey setting for replay when no explicit override exists', () => {
         expect(getGlobalHideOtherJourneys()).toBe(false)
-        expect(getFlythroughHideOtherJourneys()).toBe(false)
+        expect(getJourneyReplayHideOtherJourneys()).toBe(false)
         globalThis.lgs.settings.journey.hideOtherJourneys = true
-        expect(getFlythroughHideOtherJourneys()).toBe(true)
+        expect(getJourneyReplayHideOtherJourneys()).toBe(true)
     })
 
     it('refreshes every journey with the current visibility policy', async () => {

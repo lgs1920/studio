@@ -302,7 +302,7 @@ widgets:
   dynamic-stats-widget:
     id: "dynamic-stats-widget"
     name: "Dynamic Stats"
-    description: "Live flythrough stats"
+    description: "Live replay stats"
     icon: "route"
     mandatory: false
     max: 1

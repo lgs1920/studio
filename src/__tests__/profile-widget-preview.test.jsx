@@ -92,7 +92,7 @@ describe('ProfileWidgetPreview', () => {
             settings: {
                 unitSystem: proxy({current: 0}),
                 ui: {
-                    flythrough: proxy({
+                    replay: proxy({
                         profileInfo: proxy({
                             useTrackStyle: false,
                             color:         '#ffffff',

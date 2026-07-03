@@ -15,14 +15,14 @@
  ******************************************************************************/
 
 import {
-    BUILD, CONFIGURATION, COUNTRIES, FLYTHROUGH_SETTINGS, FREE_ANONYMOUS_ACCESS, LAYERS_TERRAINS_SETTINGS,
+    BUILD, CONFIGURATION, COUNTRIES, REPLAY_SETTINGS, FREE_ANONYMOUS_ACCESS, LAYERS_TERRAINS_SETTINGS,
     LGS_CONTEXT_MENU_HOOK, MILLIS, platforms, SERVERS, SETTINGS, SETTINGS_STORE, VAULT_STORE, WIDGET_LAYER_TOP, WIDGETS,
 }                                   from '@Core/constants'
 import { ElevationServer }          from '@Core/Elevation/ElevationServer'
 import { Settings }                 from '@Core/settings/Settings'
 import { SettingsSection }          from '@Core/settings/SettingsSection'
 import { ionTokenManager }          from '@Core/ui/IonTokenManager'
-import { ensureFlythroughSettings } from '@Core/ui/flythrough/FlythroughProgressionStyle'
+import { ensureJourneyReplaySettings } from '@Core/ui/replay/JourneyReplayProgressionStyle'
 import axios                        from 'axios'
 import * as Cesium                  from 'cesium'
 import YAML                         from 'yaml'
@@ -274,15 +274,15 @@ export class AppUtils {
             .then(text => YAML.parse(text),
             )
 
-        const flythrough = await fetch(FLYTHROUGH_SETTINGS, {cache: 'no-store'})
+        const replay = await fetch(REPLAY_SETTINGS, {cache: 'no-store'})
             .then(res => res.text())
             .then(text => YAML.parse(text),
             )
 
-        const flythroughYamlSettings = flythrough?.flythrough ?? flythrough ?? {}
+        const replayYamlSettings = replay?.replay ?? replay ?? {}
 
         settings.ui = settings.ui ?? {}
-        settings.ui.flythrough = AppUtils.deepClone(flythroughYamlSettings)
+        settings.ui.replay = AppUtils.deepClone(replayYamlSettings)
 
         // add settings section
         settings.widgets = raw.widgets
@@ -396,7 +396,7 @@ export class AppUtils {
         })
         await Promise.all(promises)
 
-        Object.assign(lgs.stores.flythrough, ensureFlythroughSettings())
+        Object.assign(lgs.stores.replay, ensureJourneyReplaySettings())
 
         await ionTokenManager.load()
 

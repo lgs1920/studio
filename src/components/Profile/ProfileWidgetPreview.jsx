@@ -35,7 +35,7 @@ export const ProfileWidgetPreview = ({entity}) => {
     const $unitSystem = lgs.settings.unitSystem
     const currentUnit = useSnapshot($unitSystem).current
     const profile = useSnapshot(lgs.stores.main.components.profile)
-    const flythroughSettings = useSnapshot(lgs.settings.ui.flythrough)
+    const replaySettings = useSnapshot(lgs.settings.ui.replay)
     const widgetListSnapshot = useSnapshot(lgs.stores.ui.widget.list)
     const widgetConfig = __.ui.widgetManager.getWidgetConfig?.(entity)
     const widgetDimensions = widgetListSnapshot.get(entity)?.dimensions ?? widgetConfig?.dimensions ?? null
@@ -49,8 +49,8 @@ export const ProfileWidgetPreview = ({entity}) => {
         entity,
         currentUnit,
         profile.key,
-        flythroughSettings.profileInfo?.useTrackStyle === true ? 'track-style' : 'track-color',
-        flythroughSettings.profileInfo?.color ?? '',
+        replaySettings.profileInfo?.useTrackStyle === true ? 'track-style' : 'track-color',
+        replaySettings.profileInfo?.color ?? '',
     ].join(':')
 
     const previewRatio = useMemo(() => {

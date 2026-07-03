@@ -94,7 +94,7 @@ describe('IonTokenManager', () => {
 
         Object.assign(globalThis.lgs.stores.ui.mainUI.rotate, {running: false})
         Object.assign(globalThis.lgs.stores.ui.mainUI.panorama, {active: false})
-        Object.assign(globalThis.lgs.stores.flythrough, {
+        Object.assign(globalThis.lgs.stores.replay, {
             active:             false,
             playing:            false,
             paused:             false,
@@ -287,8 +287,8 @@ describe('IonTokenManager', () => {
     })
 
     it.each([
-        ['flythrough', () => {
-            globalThis.lgs.stores.flythrough.playing = true
+        ['replay', () => {
+            globalThis.lgs.stores.replay.playing = true
         }],
         ['video recording', () => {
             globalThis.lgs.stores.ui.video.recording = true
@@ -310,8 +310,8 @@ describe('IonTokenManager', () => {
     })
 
     it.each([
-        ['flythrough', () => {
-            globalThis.lgs.stores.flythrough.playing = true
+        ['replay', () => {
+            globalThis.lgs.stores.replay.playing = true
         }],
         ['video recording', () => {
             globalThis.lgs.stores.ui.video.recording = true

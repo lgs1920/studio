@@ -82,7 +82,7 @@ describe('VideoRecordingSettingsToolbar', () => {
                         cropper: {},
                     }),
                 }),
-                flythrough: proxy({
+                replay: proxy({
                     recordingSync: false,
                 }),
             },
@@ -95,16 +95,16 @@ describe('VideoRecordingSettingsToolbar', () => {
         globalThis.lgs = undefined
     })
 
-    it('shows the Flythrough launcher only when the sync link is active', () => {
+    it('shows the JourneyReplay launcher only when the sync link is active', () => {
         const {unmount} = render(<VideoRecordingSettingsToolbar/>)
 
-        expect(screen.queryByRole('button', {name: 'Open Flythrough drawer'})).toBeNull()
+        expect(screen.queryByRole('button', {name: 'Open Replay drawer'})).toBeNull()
 
         unmount()
-        globalThis.lgs.stores.flythrough.recordingSync = true
+        globalThis.lgs.stores.replay.recordingSync = true
         render(<VideoRecordingSettingsToolbar/>)
 
-        const button = screen.getByRole('button', {name: 'Open Flythrough drawer'})
+        const button = screen.getByRole('button', {name: 'Open Replay drawer'})
         expect(button).not.toBeNull()
         expect(button.getAttribute('aria-pressed')).toBe('false')
         expect(button.getAttribute('variant')).toBe('neutral')
@@ -123,13 +123,13 @@ describe('VideoRecordingSettingsToolbar', () => {
         expect(__.ui.widgetManager.syncCropDimensionsFromElement).not.toHaveBeenCalled()
     })
 
-    it('marks the Flythrough launcher as selected when the drawer is already open', () => {
-        globalThis.lgs.stores.flythrough.recordingSync = true
+    it('marks the JourneyReplay launcher as selected when the drawer is already open', () => {
+        globalThis.lgs.stores.replay.recordingSync = true
         globalThis.__.ui.drawerManager.isCurrent = vi.fn(() => true)
 
         render(<VideoRecordingSettingsToolbar/>)
 
-        const button = screen.getByRole('button', {name: 'Open Flythrough drawer'})
+        const button = screen.getByRole('button', {name: 'Open Replay drawer'})
         expect(button.getAttribute('aria-pressed')).toBe('true')
         expect(button.className).toContain('is-selected')
     })

@@ -55,7 +55,7 @@ describe('TrackUtils css color normalization', () => {
         }
         const journeySource = {name: journey.slug, show: false}
         const trackSource = {name: 'track#journey#gpx#main', show: false}
-        const straySource = {name: 'flythrough#journey#gpx#ghost', show: true}
+        const straySource = {name: 'replay#journey#gpx#ghost', show: true}
 
         globalThis.lgs = {
             viewer: {

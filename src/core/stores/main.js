@@ -117,7 +117,7 @@ export const main = {
             tiles3d: null,
         },
 
-        flythroughRunner: {
+        replayRunner: {
             run:   false,
             pause: false,
             forward: true,
