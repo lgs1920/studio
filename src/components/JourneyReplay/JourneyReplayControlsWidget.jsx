@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-05-04
- * Last modified: 2026-05-04
+ * Created on: 2026-07-03
+ * Last modified: 2026-07-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -31,7 +31,7 @@ export const JourneyReplayControlsWidget = memo(() => {
         top:            '82%',
         left:           '50%',
         attachTo:       'bottom',
-        icon:           'video-arrow-up-right',
+        icon: 'drone',
         opacity:        lgs.settings.ui.toolbars.opacity,
         type:           LGS_TOOLBAR,
         persist:        true,

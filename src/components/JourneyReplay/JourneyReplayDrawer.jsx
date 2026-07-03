@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-07-02
- * Last modified: 2026-07-02
+ * Created on: 2026-07-03
+ * Last modified: 2026-07-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -1003,7 +1003,7 @@ export const JourneyReplayDrawer = memo(() => {
                     className={classNames('replay-drawer', {'drawer-is-stacked': isStacked})}
                 >
                     <span slot="label" className="replay-drawer-title">
-                        <WaIcon name="video-arrow-up-right" variant="regular"/>
+                        <WaIcon name="drone" variant="regular"/>
                         {REPLAY_LABEL}
                     </span>
                     <PanelActions stackedPanel={isStacked} onBack={isStacked ? closeDrawerWithManager : null}/>

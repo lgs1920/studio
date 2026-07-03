@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-06-17
- * Last modified: 2026-06-17
+ * Created on: 2026-07-03
+ * Last modified: 2026-07-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -98,13 +98,13 @@ describe('VideoRecordingSettingsToolbar', () => {
     it('shows the JourneyReplay launcher only when the sync link is active', () => {
         const {unmount} = render(<VideoRecordingSettingsToolbar/>)
 
-        expect(screen.queryByRole('button', {name: 'Open Replay drawer'})).toBeNull()
+        expect(screen.queryByRole('button', {name: 'Journey Replay Settings'})).toBeNull()
 
         unmount()
         globalThis.lgs.stores.replay.recordingSync = true
         render(<VideoRecordingSettingsToolbar/>)
 
-        const button = screen.getByRole('button', {name: 'Open Replay drawer'})
+        const button = screen.getByRole('button', {name: 'Journey Replay Settings'})
         expect(button).not.toBeNull()
         expect(button.getAttribute('aria-pressed')).toBe('false')
         expect(button.getAttribute('variant')).toBe('neutral')
@@ -129,7 +129,7 @@ describe('VideoRecordingSettingsToolbar', () => {
 
         render(<VideoRecordingSettingsToolbar/>)
 
-        const button = screen.getByRole('button', {name: 'Open Replay drawer'})
+        const button = screen.getByRole('button', {name: 'Journey Replay Settings'})
         expect(button.getAttribute('aria-pressed')).toBe('true')
         expect(button.className).toContain('is-selected')
     })

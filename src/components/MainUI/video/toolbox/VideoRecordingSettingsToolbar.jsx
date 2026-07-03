@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-06-17
- * Last modified: 2026-06-17
+ * Created on: 2026-07-03
+ * Last modified: 2026-07-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -74,14 +74,14 @@ export const VideoRecordingSettingsToolbar = memo(() => {
         <JourneyReplayButton
             id="launch-the-replay-editor-from-video"
             tooltip="top"
-            tooltipText="Open Replay drawer"
+            tooltipText="Journey Replay Settings"
             tooltipPlacement="top"
             tooltipStyle="tunnel"
             variant="neutral"
             appearance="plain"
             className=""
             showOnlyWhenLinked
-            ariaLabel="Open Replay drawer"
+            ariaLabel="Journey Replay Settings"
         />
     ) : null
 

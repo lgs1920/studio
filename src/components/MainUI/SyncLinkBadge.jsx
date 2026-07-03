@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-06-02
- * Last modified: 2026-06-02
+ * Created on: 2026-07-03
+ * Last modified: 2026-07-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -68,7 +68,7 @@ export const SyncLinkBadge = ({visible = true, className = ''} = {}) => {
                 className={`sync-link-badge ${className}`.trim()}
                 id={buttonId}
                 appearance={isLinked ? 'filled' : 'filled-outlined'}
-                variant={isLinked ? 'brand' : 'neutral'}
+                variant={isLinked ? 'brand' : 'warning'}
                 size="s"
                 aria-pressed={isLinked}
                 aria-label={isLinked ? 'Unlink video and replay' : 'Link video and replay'}

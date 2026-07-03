@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-05-10
- * Last modified: 2026-05-10
+ * Created on: 2026-07-03
+ * Last modified: 2026-07-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -254,13 +254,13 @@ export const MainUI = memo(() => {
                                         <div className="sync-linked-actions">
                                             <VideoButton
                                                 tooltip={toolBar.fromStart ? 'left' : 'right'}
-                                                variant={replay.recordingSync === true ? 'neutral' : 'brand'}
+                                                variant={replay.recordingSync === true ? 'warning' : 'brand'}
                                                 appearance="filled"
                                             />
                                             <SyncLinkBadge visible={Boolean(theJourney)} className="sync-linked-actions-badge"/>
                                             <JourneyReplayButton
                                                 tooltip={toolBar.fromStart ? 'left' : 'right'}
-                                                variant={replay.recordingSync === true ? 'neutral' : 'brand'}
+                                                variant={replay.recordingSync === true ? 'warning' : 'brand'}
                                                 appearance="filled"
                                             />
                                         </div>

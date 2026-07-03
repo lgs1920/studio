@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-23
- * Last modified: 2026-04-23
+ * Created on: 2026-07-03
+ * Last modified: 2026-07-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -32,6 +32,7 @@ export const VideoButton = (props) => {
         appearance = 'Filled',
     } = props ?? {}
 
+    console.log('VideoButton', props)
     const handleClick = () => {
         $video.editing = !$video.editing
     }

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-06-05
- * Last modified: 2026-06-05
+ * Created on: 2026-07-03
+ * Last modified: 2026-07-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -29,7 +29,7 @@ export const JourneyReplayButton = (props) => {
         id = 'launch-the-replay-editor',
         tooltip = 'right',
         className = 'square-button',
-        tooltipText = REPLAY_LABEL,
+              tooltipText = `${REPLAY_LABEL} Settings`,
         tooltipPlacement = tooltip,
         variant = 'brand',
         appearance = 'Filled',
@@ -38,7 +38,7 @@ export const JourneyReplayButton = (props) => {
         tooltipStyle = 'wa',
         selected = undefined,
         onClick = null,
-        ariaLabel = REPLAY_LABEL,
+              ariaLabel   = `${REPLAY_LABEL} Settings`,
     } = props ?? {}
     const isLinked = replay.recordingSync === true
     const isDrawerOpen = selected !== undefined ? selected : __.ui.drawerManager?.isCurrent?.(REPLAY_DRAWER) === true
@@ -65,7 +65,7 @@ export const JourneyReplayButton = (props) => {
                         <TunnelTooltip
                             anchorId={id}
                             tooltip={tooltipText}
-                            icon="video-arrow-up-right"
+                            icon="drone"
                             placement={tooltipPlacement}
                         >
                             <WaButton
@@ -78,7 +78,7 @@ export const JourneyReplayButton = (props) => {
                                 aria-label={ariaLabel}
                                 aria-pressed={isDrawerOpen}
                             >
-                                <WaIcon name="video-arrow-up-right" variant="regular"/>
+                                <WaIcon name="drone" variant="regular"/>
                             </WaButton>
                         </TunnelTooltip>
                     )
@@ -95,7 +95,7 @@ export const JourneyReplayButton = (props) => {
                                 aria-label={ariaLabel}
                                 aria-pressed={isDrawerOpen}
                             >
-                                <WaIcon name="video-arrow-up-right" variant="regular"/>
+                                <WaIcon name="drone" variant="regular"/>
                             </WaButton>
                         </>
                     )
