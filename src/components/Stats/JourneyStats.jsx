@@ -135,6 +135,21 @@ const measureUnconstrainedContent = (target, content) => {
     return {width, height}
 }
 
+const getCurrentWidgetBox = (target, config) => {
+    const rect = target?.getBoundingClientRect?.()
+    const left = Number.parseFloat(target?.style?.left || '')
+    const top = Number.parseFloat(target?.style?.top || '')
+    const width = Number.parseFloat(target?.style?.width || '')
+    const height = Number.parseFloat(target?.style?.height || '')
+
+    return {
+        left:   Number.isFinite(left) ? left : (config?.position?.left ?? rect?.left ?? 0),
+        top:    Number.isFinite(top) ? top : (config?.position?.top ?? rect?.top ?? 0),
+        width:  Number.isFinite(width) && width > 0 ? width : (config?.dimensions?.width ?? rect?.width ?? 0),
+        height: Number.isFinite(height) && height > 0 ? height : (config?.dimensions?.height ?? rect?.height ?? 0),
+    }
+}
+
 const resolveWidgetConfiguration = (widgetKey) => {
     const widgets = lgs.settings.widgets ?? {}
     return widgets?.[widgetKey]?.configuration
@@ -184,7 +199,7 @@ export const JourneyStats = memo(({id, metrics, units, style = {}, mode = 'journ
      */
     const displayMetrics = useMemo(() => {
         if (isDynamicMode) {
-            return buildDynamicFlythroughStatsMetrics(flythrough)
+            return buildDynamicFlythroughStatsMetrics(flythrough, journey)
         }
 
         const source = element.dataSource || 'global'
@@ -251,7 +266,7 @@ export const JourneyStats = memo(({id, metrics, units, style = {}, mode = 'journ
 
     const hasDuration = isDynamicMode ? Boolean(flythrough?.elapsedMillis) : (journey?.hasTime ?? false)
     const hasElevation = isDynamicMode
-                         ? Boolean(displayMetrics?.positive?.elevation || displayMetrics?.positive?.elevation === 0)
+                         ? displayMetrics?.hasElevation !== false
                          : (journey?.hasAltitude ?? false)
     const date = journey ? __.ui.ui.formatJourneyDurationDates(journey.getDate()) : {}
     const hasDateRange = Boolean(date?.prefix && date?.sufix)
@@ -277,7 +292,8 @@ export const JourneyStats = memo(({id, metrics, units, style = {}, mode = 'journ
             date:      showDate,
             location:  showLocation,
             distance:  isDynamicMode ? displayMetrics.distance >= 0 : (isJourneyStatsTextItemEnabled(element, 'distance') && displayMetrics.distance > 0),
-            elevation: isJourneyStatsTextItemEnabled(element, 'elevation') && displayMetrics.positive?.elevation > 0,
+            elevation: isJourneyStatsTextItemEnabled(element, 'elevation')
+                       && (isDynamicMode ? hasElevation : (displayMetrics.positive?.elevation > 0 || displayMetrics.positive?.elevation === 0)),
             duration:  isDynamicMode ? Boolean(formattedDuration) : (isJourneyStatsTextItemEnabled(element, 'duration') && Boolean(formattedDuration)),
             altitude:  showAltitudeRow,
             speed:     showSpeedRow,
@@ -305,6 +321,7 @@ export const JourneyStats = memo(({id, metrics, units, style = {}, mode = 'journ
     }, [
         displayMetrics.distance,
         displayMetrics.positive?.elevation,
+        hasElevation,
         element,
         formattedDuration,
         showAltitudeRow,
@@ -341,6 +358,7 @@ export const JourneyStats = memo(({id, metrics, units, style = {}, mode = 'journ
 
             const currentWidth = getRenderedSize(target, 'width')
             const currentHeight = getRenderedSize(target, 'height')
+            const currentBox = getCurrentWidgetBox(target, __.ui.widgetManager.getWidgetConfig(id))
             const measuredSize = measureUnconstrainedContent(target, content)
 
             if (!measuredSize) {
@@ -350,17 +368,33 @@ export const JourneyStats = memo(({id, metrics, units, style = {}, mode = 'journ
 
             const {width, height} = measuredSize
             const sizeChanged = Math.abs(currentWidth - width) > 0.5 || Math.abs(currentHeight - height) > 0.5
+            const centerX = currentBox.left + (currentBox.width / 2)
+            const centerY = currentBox.top + (currentBox.height / 2)
+            const nextLeft = centerX - (width / 2)
+            const nextTop = centerY - (height / 2)
 
             target.style.width = `${width}px`
             target.style.height = `${height}px`
+            target.style.left = `${nextLeft}px`
+            target.style.top = `${nextTop}px`
 
             if (sizeChanged) {
                 const config = __.ui.widgetManager.getWidgetConfig(id)
                 if (config) {
                     config.dimensions = {width, height}
+                    config.position = {left: nextLeft, top: nextTop}
                     if (config.persist && config.runtimeReady) {
                         void __.ui.widgetManager.saveWidgetPosition(id, config)
                     }
+                }
+
+                if (lgs.stores?.ui?.widget?.list?.set) {
+                    const widgetEntry = lgs.stores.ui.widget.list.get(id) ?? {}
+                    lgs.stores.ui.widget.list.set(id, {
+                        ...widgetEntry,
+                        dimensions: {width, height},
+                        position:   {left: nextLeft, top: nextTop},
+                    })
                 }
             }
 
