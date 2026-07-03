@@ -82,13 +82,6 @@ const JOURNEY_STATS_SLIDERS = {
     },
 }
 
-const resolveWidgetConfiguration = (widgetKey) => {
-    const widgets = lgs.settings.widgets ?? {}
-    return widgets?.[widgetKey]?.configuration
-           ?? __.widgets.get(widgetKey)?.configuration
-           ?? null
-}
-
 export const JourneyStatsWidgetEditor = ({
     entity,
     widgetKey = 'journey-stats-widget',
@@ -118,8 +111,9 @@ export const JourneyStatsWidgetEditor = ({
     const $widgetStore = lgs.stores.ui.widget
     const widgetStore = useSnapshot($widgetStore)
 
+    const $configuration = lgs.settings.widgets?.[widgetKey]?.configuration ?? null
     const configuration = useOptionalSnapshot(
-        resolveWidgetConfiguration(widgetKey),
+        $configuration,
         {default: {}, user: {}, elements: {}},
     )
     const swatches = useMemo(() => lgs.settings.getSwatches.list.join(';'), [])
@@ -215,15 +209,19 @@ export const JourneyStatsWidgetEditor = ({
             return
         }
 
-        if (!configuration.elements) {
-            configuration.elements = {}
+        if (!$configuration) {
+            return
         }
-        if (!configuration.elements[entity]) {
-            configuration.elements[entity] = JSON.parse(JSON.stringify(element))
+
+        if (!$configuration.elements) {
+            $configuration.elements = {}
+        }
+        if (!$configuration.elements[entity]) {
+            $configuration.elements[entity] = JSON.parse(JSON.stringify(element))
         }
 
         const _keys = path.split('.')
-        let _curr = configuration.elements[entity]
+        let _curr = $configuration.elements[entity]
         for (let i = 0; i < _keys.length - 1; i++) {
             if (!_curr[_keys[i]]) {
                 _curr[_keys[i]] = {}
@@ -238,7 +236,7 @@ export const JourneyStatsWidgetEditor = ({
             requestAnimationFrame(() => moveable?.updateRect())
         })
 
-    }, [configuration, element, entity])
+    }, [$configuration, element, entity])
 
     useEffect(() => {
         finalizeTextOrderRef.current = (orderedIds) => {
