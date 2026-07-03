@@ -14,6 +14,7 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
+import { EDIT_WIDGET_ICON }                   from '@Core/constants'
 import { WaButton, WaCard, WaIcon, WaTooltip } from '@web.awesome.me/webawesome-pro/dist/react'
 import { useMemo }                             from 'react'
 import { useSnapshot }    from 'valtio'
@@ -85,6 +86,12 @@ export const SortableWidgetRow = ({widget}) => {
         await __.ui.widgetManager.removeWidget(widget.id)
     }
 
+    const editWidget = async (event) => {
+        event?.preventDefault?.()
+        event?.stopPropagation?.()
+        __.ui.widgetManager.editWidget(widget.id, {stacked: true})
+    }
+
     return (
         <WaCard appearance="outlined"
                 onClick={() => selectWidget(widget.id)}
@@ -109,6 +116,19 @@ export const SortableWidgetRow = ({widget}) => {
                     onClick={centerWidget}
                 >
                     <WaIcon name="plus" variant="regular"/>
+                </WaButton>
+
+                <WaTooltip placement="top" for={`edit-widget-${widget.id}`}>{'Edit'}</WaTooltip>
+                <WaButton
+                    id={`edit-widget-${widget.id}`}
+                    appearance="plain"
+                    variant="brand"
+                    className="widget-ordering-action-button"
+                    aria-label="Edit"
+                    onClick={editWidget}
+                    size="s"
+                >
+                    <WaIcon name={EDIT_WIDGET_ICON} variant="regular"/>
                 </WaButton>
 
                 <WaTooltip placement="top" for={`remove-widget-${widget.id}`}>{'Remove'}</WaTooltip>

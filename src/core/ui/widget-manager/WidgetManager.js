@@ -634,7 +634,7 @@ export class WidgetManager {
             return false
         }
 
-        const {toggle = false} = options
+        const {toggle = false, stacked = false} = options
         const drawers = lgs.stores?.ui?.drawers
         const isCurrentlyEditing = drawers?.open === WIDGETS_EDITOR_DRAWER && drawers.entity === widgetId
 
@@ -663,6 +663,7 @@ export class WidgetManager {
         __.ui.drawerManager.open(WIDGETS_EDITOR_DRAWER, {
             action: 'edit-current',
             entity: widgetId,
+            stacked,
         })
         window.dispatchEvent(new CustomEvent(WIDGET_EDITOR_POST_RENDER_EVENT, {
             detail: {entity: widgetId},

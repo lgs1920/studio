@@ -67,15 +67,28 @@ export const PaddingElement = ({
             return
         }
 
+        const widgetManager = __.ui.widgetManager
+
         realignFrameRef.current = requestAnimationFrame(() => {
             realignFrameRef.current = null
             trailingRealignFrameRef.current = requestAnimationFrame(() => {
                 trailingRealignFrameRef.current = requestAnimationFrame(() => {
                     trailingRealignFrameRef.current = null
                     realignWidgetAroundContent(moveableId)
-                    __.ui.widgetManager.getMoveable(moveableId)?.current?.updateRect()
+                    widgetManager.getMoveable(moveableId)?.current?.updateRect()
                 })
             })
+        })
+    }, [moveableId])
+
+    const syncMoveableRect = useCallback(() => {
+        if (!moveableId) {
+            return
+        }
+
+        const widgetManager = __.ui.widgetManager
+        requestAnimationFrame(() => {
+            widgetManager.getMoveable(moveableId)?.current?.updateRect()
         })
     }, [moveableId])
 
@@ -98,7 +111,13 @@ export const PaddingElement = ({
         updateValue(buildPaddingPath(path, 'right'), value)
         updateValue(buildPaddingPath(path, 'bottom'), value)
         updateValue(buildPaddingPath(path, 'left'), value)
-        realignWidget()
+
+        if (autoRealign) {
+            realignWidget()
+            return
+        }
+
+        syncMoveableRect()
     }
 
     return (

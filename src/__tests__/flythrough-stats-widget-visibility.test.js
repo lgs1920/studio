@@ -30,6 +30,7 @@ describe('flythrough stats widget visibility', () => {
         globalThis.lgs = {
             theJourney: {
                 slug: 'journey-a',
+                hasElevation: true,
             },
             stores: {
                 ui: {
@@ -97,7 +98,23 @@ describe('flythrough stats widget visibility', () => {
         const metrics = buildDynamicFlythroughStatsMetrics(globalThis.lgs.stores.flythrough)
         expect(metrics.distance).toBe(120)
         expect(metrics.positive.elevation).toBe(87)
+        expect(metrics.hasElevation).toBe(true)
         expect(metrics.duration).toBe(4)
+    })
+
+    it('keeps elevation visible at zero when the journey has elevation data', () => {
+        globalThis.lgs.stores.flythrough.sample.cumulativeElevationGain = 0
+
+        const metrics = buildDynamicFlythroughStatsMetrics(globalThis.lgs.stores.flythrough)
+        expect(metrics.positive.elevation).toBe(0)
+        expect(metrics.hasElevation).toBe(true)
+    })
+
+    it('hides elevation when the journey has no elevation data', () => {
+        globalThis.lgs.theJourney.hasElevation = false
+
+        const metrics = buildDynamicFlythroughStatsMetrics(globalThis.lgs.stores.flythrough)
+        expect(metrics.hasElevation).toBe(false)
     })
 
     it('treats the video editor phase as mountable before recording starts', () => {

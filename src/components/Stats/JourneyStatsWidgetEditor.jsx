@@ -28,6 +28,9 @@ import {
     PaddingElement,
 } from '@Components/MainUI/widgets/editor/elements/PaddingElement'
 import {
+    SeparatorElement,
+}                                                                   from '@Components/MainUI/widgets/editor/elements/SeparatorElement'
+import {
     RotationElement,
 }                                                                   from '@Components/MainUI/widgets/editor/elements/RotationElement'
 import {
@@ -35,7 +38,6 @@ import {
 }                                                                   from '@Components/MainUI/widgets/editor/elements/ShadowElement'
 import {
     formatSliderPercent,
-    formatSliderPixels,
 }                                                                   from '@Components/MainUI/widgets/editor/elements/sliderUtils'
 import {
     isJourneyStatsSummaryTextItem,
@@ -59,20 +61,6 @@ import { subscribe, useSnapshot }                             from 'valtio'
  * Configuration for slider elements in the editor
  */
 const JOURNEY_STATS_SLIDERS = {
-    'separator.opacity': {
-        fallback: 1,
-        getValue: element => element.separator?.opacity,
-        max:      1,
-        min:      0,
-        step:     0.05,
-    },
-    'separator.padding': {
-        fallback: 0,
-        getValue: element => element.separator?.padding,
-        max:      10,
-        min:      0,
-        step:     1,
-    },
     'text.opacity':      {
         fallback: 1,
         getValue: element => element.text?.opacity,
@@ -813,42 +801,7 @@ export const JourneyStatsWidgetEditor = ({
                                 </div>
                             </div>
                             <WaDivider/>
-                            <WaSwitch label-at-start size="xs" checked={element.separator?.show ?? false}
-                                      onInput={(e) => updateValue('separator.show', e.target.checked)}><span>Separator</span></WaSwitch>
-                            {element.separator?.show && (
-                                <div className="drawer-horizontal-line three-columns">
-                                    <div className="drawer-horizontal-element">
-                                        <WaColorPicker size="s" swatches={swatches}
-                                                       value={getColor(element.separator)}
-                                                       onInput={(e) => updateValue('separator.color', e.target.value)}/>
-                                    </div>
-                                        <WaSlider ref={setSliderRef('separator.opacity')}
-                                                  size="s"
-                                                  label="Opacity"
-                                                  min={JOURNEY_STATS_SLIDERS['separator.opacity'].min}
-                                                  max={JOURNEY_STATS_SLIDERS['separator.opacity'].max}
-                                                  step={JOURNEY_STATS_SLIDERS['separator.opacity'].step}
-                                                  label-at-start
-                                                  half-width
-                                                  withTooltip
-                                                  placement="top"
-                                                  valueFormatter={formatSliderPercent}
-                                                  defaultValue={getSliderValue('separator.opacity')}
-                                                  onInput={(e) => handleSliderInput('separator.opacity', e.target.value)}/>
-                                        <WaSlider ref={setSliderRef('separator.padding')}
-                                                  size="s"
-                                                  label="Padding"
-                                                  min={JOURNEY_STATS_SLIDERS['separator.padding'].min}
-                                                  max={JOURNEY_STATS_SLIDERS['separator.padding'].max}
-                                                  step={JOURNEY_STATS_SLIDERS['separator.padding'].step}
-                                                  label-at-start half-width
-                                                  withTooltip
-                                                  placement="top"
-                                                  valueFormatter={formatSliderPixels}
-                                                  defaultValue={getSliderValue('separator.padding')}
-                                                  onInput={(e) => handleSliderInput('separator.padding', e.target.value)}/>
-                                </div>
-                            )}
+                            <SeparatorElement element={element} swatches={swatches} getColor={getColor} updateValue={updateValue}/>
                             <WaDivider/><ShadowElement element={element} swatches={swatches} getColor={getColor}
                                                        updateValue={updateValue}/>
                             <WaDivider/><BorderElement element={element} swatches={swatches} getColor={getColor}

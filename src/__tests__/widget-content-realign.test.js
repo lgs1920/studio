@@ -156,4 +156,53 @@ describe('realignWidgetAroundContent', () => {
         expect(mocks.updateRect).toHaveBeenCalled()
         expect(mocks.saveWidgetPosition).not.toHaveBeenCalled()
     })
+
+    it('falls back to DOM measurements for non-text widgets', () => {
+        const statsTarget = {
+            style: {
+                left:   '40px',
+                top:    '50px',
+                width:  '180px',
+                height: '60px',
+            },
+            getBoundingClientRect: vi.fn(() => ({
+                width:  180,
+                height: 60,
+            })),
+        }
+
+        globalThis.__.ui.widgetManager.getMoveable.mockReturnValueOnce({
+            current: {
+                target: statsTarget,
+                updateRect: mocks.updateRect,
+            },
+        })
+        globalThis.__.ui.widgetManager.getWidgetConfig.mockReturnValueOnce({
+            dimensions: {
+                width:  180,
+                height: 60,
+            },
+            position: {
+                left: 40,
+                top:  50,
+            },
+            scale: {
+                x: 1,
+                y: 1,
+            },
+            persist:      false,
+            runtimeReady: false,
+        })
+        globalThis.lgs.settings.widgets['text-widget'].configuration = null
+        mocks.measureContent.mockClear()
+
+        realignWidgetAroundContent('dynamic-stats-widget#1')
+
+        expect(mocks.measureContent).not.toHaveBeenCalled()
+        expect(statsTarget.style.left).toBe('40px')
+        expect(statsTarget.style.top).toBe('50px')
+        expect(statsTarget.style.width).toBe('180px')
+        expect(statsTarget.style.height).toBe('60px')
+        expect(mocks.updateRect).toHaveBeenCalled()
+    })
 })

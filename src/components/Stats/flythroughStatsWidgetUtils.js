@@ -76,7 +76,10 @@ export const shouldShowJourneyStatsWidget = (flythrough = globalThis.lgs?.stores
     return remainingMillis !== null && remainingMillis <= END_WIDGET_LEAD_MS
 }
 
-export const buildDynamicFlythroughStatsMetrics = (flythrough = globalThis.lgs?.stores?.flythrough ?? null) => {
+export const buildDynamicFlythroughStatsMetrics = (
+    flythrough = globalThis.lgs?.stores?.flythrough ?? null,
+    journey = globalThis.lgs?.theJourney ?? null,
+) => {
     const sample = flythrough?.sample ?? null
     const coveredDistance = finiteNumber(
         Number(flythrough?.direction) < 0
@@ -85,6 +88,7 @@ export const buildDynamicFlythroughStatsMetrics = (flythrough = globalThis.lgs?.
     )
     const elapsedSeconds = finiteNumber(flythrough?.elapsedMillis)
     const elevationGain = finiteNumber(sample?.cumulativeElevationGain)
+    const hasElevation = journey?.hasElevation !== false
 
     return {
         distance: coveredDistance ?? 0,
@@ -92,5 +96,6 @@ export const buildDynamicFlythroughStatsMetrics = (flythrough = globalThis.lgs?.
             elevation: elevationGain ?? 0,
         },
         duration: elapsedSeconds !== null ? elapsedSeconds / 1000 : 0,
+        hasElevation,
     }
 }
