@@ -26,34 +26,41 @@ export const SyncLinkBadge = ({visible = true, className = ''} = {}) => {
     const isRecording = video.recording || video.preRecording || video.snapshot
     const buttonId = 'sync-link-toggle'
 
-    const toggleSync = useCallback(() => {
-        if (isLinked) {
-            __.ui.replayVideoSync?.disarm?.()
-            return
-        }
-
+    const armSync = useCallback(() => {
         __.ui.replayVideoSync?.arm?.({
             autoStopRecording: true,
             resetToStart:      true,
         })
-    }, [isLinked])
+    }, [])
+
+    const disarmSync = useCallback(() => {
+        __.ui.replayVideoSync?.disarm?.()
+    }, [])
+
+    const toggleSync = useCallback(() => {
+        if (isLinked) {
+            disarmSync()
+            return
+        }
+
+        armSync()
+    }, [armSync, disarmSync, isLinked])
 
     useEffect(() => {
         const shouldBeLinked = replaySettings.recordingSync === true
-        if (shouldBeLinked === isLinked) {
-            return
-        }
+        const isArmed = __.ui.replayVideoSync?.isArmed?.() === true
 
         if (shouldBeLinked) {
-            __.ui.replayVideoSync?.arm?.({
-                autoStopRecording: true,
-                resetToStart:      true,
-            })
+            if (!isArmed || !isLinked) {
+                armSync()
+            }
             return
         }
 
-        __.ui.replayVideoSync?.disarm?.()
-    }, [replaySettings.recordingSync, isLinked])
+        if (isLinked || isArmed) {
+            disarmSync()
+        }
+    }, [armSync, disarmSync, replaySettings.recordingSync, isLinked])
 
     if (!visible || isRecording) {
         return null

@@ -32,7 +32,6 @@ export const VideoButton = (props) => {
         appearance = 'Filled',
     } = props ?? {}
 
-    console.log('VideoButton', props)
     const handleClick = () => {
         $video.editing = !$video.editing
     }

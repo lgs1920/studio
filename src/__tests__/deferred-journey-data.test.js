@@ -17,6 +17,16 @@
 import { describe, expect, it, vi } from 'vitest'
 import { runDeferredJourneyDataLoad } from '@Core/ui/deferredJourneyData'
 
+vi.hoisted(() => {
+    if (!Object.getOwnPropertyDescriptor(document, 'adoptedStyleSheets')) {
+        Object.defineProperty(document, 'adoptedStyleSheets', {
+            configurable: true,
+            get:          () => [],
+            set:          () => {},
+        })
+    }
+})
+
 const dependencies = ({journeys = []} = {}) => ({
     trackUtils:          {
         readRemainingFromDB: vi.fn(async () => journeys),
@@ -28,9 +38,6 @@ const dependencies = ({journeys = []} = {}) => ({
         readAllFromDB:         vi.fn(async () => undefined),
         rebuildJourneyIndex:  vi.fn(),
         ensureAllPOILocations: vi.fn(async () => undefined),
-    },
-    widgetCache:         {
-        init: vi.fn(async () => undefined),
     },
     precacheAssets:      vi.fn(async () => undefined),
     uiToast:             {
@@ -49,7 +56,6 @@ describe('deferred journey data loading', () => {
         expect(deps.journeyGroupManager.initialize).toHaveBeenCalledOnce()
         expect(deps.poiManager.rebuildJourneyIndex).toHaveBeenCalledOnce()
         expect(deps.poiManager.ensureAllPOILocations).toHaveBeenCalledOnce()
-        expect(deps.widgetCache.init).toHaveBeenCalledOnce()
         expect(deps.precacheAssets).toHaveBeenCalledOnce()
     })
 
@@ -82,7 +88,6 @@ describe('deferred journey data loading', () => {
         expect(deps.journeyGroupManager.initialize).not.toHaveBeenCalled()
         expect(deps.poiManager.rebuildJourneyIndex).not.toHaveBeenCalled()
         expect(deps.poiManager.ensureAllPOILocations).not.toHaveBeenCalled()
-        expect(deps.widgetCache.init).not.toHaveBeenCalled()
         expect(deps.precacheAssets).not.toHaveBeenCalled()
         expect(deps.uiToast.success).not.toHaveBeenCalled()
     })

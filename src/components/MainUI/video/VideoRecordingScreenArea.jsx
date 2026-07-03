@@ -294,6 +294,36 @@ export const VideoRecordingScreenArea = memo(() => {
 
     const isValidCrop = Number.isFinite(crop.left) && crop.width > 0
 
+    const isJourneyReplaySyncRequested = useCallback(() => (
+        lgs.stores.replay.recordingSync === true
+        || lgs.settings?.ui?.replay?.recordingSync === true
+    ), [])
+
+    const prepareJourneyReplayForRecording = useCallback(() => {
+        if (!isJourneyReplaySyncRequested()) {
+            return true
+        }
+
+        __.ui.replayVideoSync?.arm?.({
+            recorder:          __.recorder,
+            replay:            __.ui.replay,
+            store:             lgs.stores.replay,
+            autoStopRecording: true,
+            resetToStart:      true,
+        })
+
+        const sampler = __.ui.replay?.configure?.({progress: 0})
+        if (sampler?.hasSamples) {
+            return true
+        }
+
+        UIToast.error({
+            caption: 'Journey Replay',
+            text:    'Replay data is not ready for video recording.',
+        })
+        return false
+    }, [isJourneyReplaySyncRequested])
+
     // Dispose composer and release references.
     const disposeComposer = useCallback(() => {
         _composer.current?.dispose()
@@ -429,6 +459,9 @@ export const VideoRecordingScreenArea = memo(() => {
         if (startToken !== _recordingStartToken.current) {
             return false
         }
+        if (!prepareJourneyReplayForRecording()) {
+            return false
+        }
         const outputConfig = computeRecordingOutput({
             cropWidth: videoFrame.cropDimensions.width,
             cropHeight: videoFrame.cropDimensions.height,
@@ -473,7 +506,7 @@ export const VideoRecordingScreenArea = memo(() => {
         __.recorder.setCanvas(composer.getCanvas())
         startOverlaysRefresh(composer, videoFrame.cropDimensions)
         return true
-    }, [maxDuration, maxSize, disposeComposer, stopOverlaysRefresh, buildComposerOverlays, startOverlaysRefresh, syncVideoCropFrame, $video])
+    }, [maxDuration, maxSize, disposeComposer, stopOverlaysRefresh, buildComposerOverlays, startOverlaysRefresh, syncVideoCropFrame, prepareJourneyReplayForRecording, $video])
 
     const markRecordingStarted = useCallback(() => {
         if (!$video.preRecording && $video.recording) {

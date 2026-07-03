@@ -36,7 +36,6 @@ export const runDeferredJourneyDataLoad = async ({
                                                      trackUtils = TrackUtils,
                                                      journeyGroupManager = __.ui.journeyGroupManager,
                                                      poiManager = __.ui.poiManager,
-                                                     widgetCache = __.ui.widgetCache,
                                                      precacheAssets = precacheSnapdomAssets,
                                                      uiToast = UIToast,
                                                  } = {}) => {
@@ -53,6 +52,5 @@ export const runDeferredJourneyDataLoad = async ({
                         })
     }
 
-    await widgetCache.init()
     await precacheAssets()
 }
