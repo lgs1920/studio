@@ -73,8 +73,6 @@ export const MainUI = memo(() => {
     const {drawers, toolBar} = useSnapshot(lgs.settings.ui.menu)
     const {video} = useSnapshot(lgs.stores.ui)
     const flythrough = useSnapshot(lgs.stores.flythrough)
-
-
     const windowResized = useCallback(__.tools.debounce(() => {
         if (formerDevice.current !== __.device.isMobile) {
             __.ui.menuManager.reset()
@@ -224,7 +222,6 @@ export const MainUI = memo(() => {
     const tooltipDir = toolBar.fromStart ? 'right' : 'left'
     const {primaryEntrance, secondaryEntrance} = arrangeDrawers()
     const videoCaptureActive = video.preRecording || video.recording || video.snapshot || video.finalizing
-    const syncWithVideo = flythrough.recordingSync === true
     const isFlythroughUiHidden = flythrough.mainUiHidden === true
 
     return (
@@ -255,9 +252,17 @@ export const MainUI = memo(() => {
                                         <OrbitButton tooltip={toolBar.fromStart ? 'left' : 'right'}/>
                                         {!videoCaptureActive && <FullScreenButton tooltip={toolBar.fromStart ? 'left' : 'right'}/>}
                                         <div className="sync-linked-actions">
-                                            <VideoButton tooltip={toolBar.fromStart ? 'left' : 'right'}/>
-                                            <FlythroughButton tooltip={toolBar.fromStart ? 'left' : 'right'}/>
-                                            <SyncLinkBadge visible={syncWithVideo} className="sync-linked-actions-badge"/>
+                                            <VideoButton
+                                                tooltip={toolBar.fromStart ? 'left' : 'right'}
+                                                variant={flythrough.recordingSync === true ? 'neutral' : 'brand'}
+                                                appearance="filled"
+                                            />
+                                            <SyncLinkBadge visible={Boolean(theJourney)} className="sync-linked-actions-badge"/>
+                                            <FlythroughButton
+                                                tooltip={toolBar.fromStart ? 'left' : 'right'}
+                                                variant={flythrough.recordingSync === true ? 'neutral' : 'brand'}
+                                                appearance="filled"
+                                            />
                                         </div>
                                     </div>
                                 </div>

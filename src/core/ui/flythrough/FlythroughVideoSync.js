@@ -48,6 +48,9 @@ export class FlythroughVideoSync {
         if (this.#store) {
             this.#store.recordingSync = this.#armed
         }
+        if (globalThis.lgs?.settings?.ui?.flythrough) {
+            globalThis.lgs.settings.ui.flythrough.recordingSync = this.#armed
+        }
     }
 
     #resolveRecorder = () => this.#recorder ?? globalThis.__?.recorder ?? null

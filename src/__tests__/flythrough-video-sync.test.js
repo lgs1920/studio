@@ -20,6 +20,16 @@ import { FLYTHROUGH_EVENT_STOP_CLIPS_COMPLETE } from '@Core/ui/flythrough/Flythr
 import { ScreenMediaRecorder } from '@Core/ui/screen-media-recorder/recorder/ScreenMediaRecorder'
 import { describe, expect, it, vi } from 'vitest'
 
+vi.hoisted(() => {
+    if (!Object.getOwnPropertyDescriptor(document, 'adoptedStyleSheets')) {
+        Object.defineProperty(document, 'adoptedStyleSheets', {
+            configurable: true,
+            get: () => [],
+            set: () => {},
+        })
+    }
+})
+
 class FakeRecorder extends EventTarget {
     constructor() {
         super()
@@ -68,12 +78,14 @@ describe('FlythroughVideoSync', () => {
         const recorder = new FakeRecorder()
         const flythrough = makeFlythrough()
         const store = {recordingSync: false}
+        globalThis.lgs = {settings: {ui: {flythrough: {recordingSync: false}}}}
         const sync = new FlythroughVideoSync({recorder, flythrough, store})
 
         sync.arm()
         recorder.dispatchEvent(new CustomEvent(ScreenMediaRecorder.events.START))
         return new Promise(resolve => setTimeout(resolve, 0)).then(() => {
             expect(store.recordingSync).toBe(true)
+            expect(globalThis.lgs.settings.ui.flythrough.recordingSync).toBe(true)
             expect(flythrough.setVideoSafeMode).toHaveBeenCalledWith(true)
             expect(flythrough.start).toHaveBeenCalledWith({progress: 0})
         })
@@ -84,6 +96,7 @@ describe('FlythroughVideoSync', () => {
         recorder.recording = true
         const flythrough = makeFlythrough()
         const store = {recordingSync: false}
+        globalThis.lgs = {settings: {ui: {flythrough: {recordingSync: false}}}}
         const sync = new FlythroughVideoSync({recorder, flythrough, store})
 
         sync.arm({autoStopRecording: true})
@@ -100,6 +113,7 @@ describe('FlythroughVideoSync', () => {
         const flythrough = makeFlythrough()
         flythrough.running = true
         const store = {recordingSync: false}
+        globalThis.lgs = {settings: {ui: {flythrough: {recordingSync: false}}}}
         const sync = new FlythroughVideoSync({recorder, flythrough, store})
 
         sync.arm()
@@ -117,6 +131,7 @@ describe('FlythroughVideoSync', () => {
         recorder.recording = true
         const flythrough = makeFlythrough()
         const store = {recordingSync: false}
+        globalThis.lgs = {settings: {ui: {flythrough: {recordingSync: false}}}}
         const sync = new FlythroughVideoSync({recorder, flythrough, store})
 
         sync.arm({autoStopRecording: true})
@@ -125,6 +140,7 @@ describe('FlythroughVideoSync', () => {
         window.dispatchEvent(new CustomEvent(FLYTHROUGH_EVENT_STOP_CLIPS_COMPLETE))
 
         expect(store.recordingSync).toBe(false)
+        expect(globalThis.lgs.settings.ui.flythrough.recordingSync).toBe(false)
         expect(flythrough.setVideoSafeMode).toHaveBeenCalledWith(false)
         expect(recorder.stopVideo).not.toHaveBeenCalled()
     })
