@@ -22,7 +22,7 @@ import {
 import { MapPOI }                        from '@Core/MapPOI'
 import { gpx, kml }                      from '@tmcw/togeojson'
 import { getGeom }                       from '@turf/invariant'
-import { normalizeTrackRenderSmoothing } from '@Utils/cesium/trackRenderSmoothing'
+import { defaultTrackRenderSmoothing, normalizeTrackRenderSmoothing } from '@Utils/cesium/trackRenderSmoothing'
 
 import {
     FEATURE_COLLECTION, FEATURE_LINE_STRING, FEATURE_MULTILINE_STRING, FEATURE_POINT, IMPORT_LOADING_ERROR, TrackUtils,
@@ -97,9 +97,10 @@ export class Journey extends MapElement {
             this.countryCodes = options.countryCodes ?? []
             this.activity = options.activity ?? Journey.defaultActivity()
             this.activitySettings = Journey.activityProfile(this.activity, options.activitySettings)
-            this.renderSmoothing = options.renderSmoothing === undefined
-                                   ? undefined
-                                   : normalizeTrackRenderSmoothing(options.renderSmoothing)
+            this.renderSmoothing = normalizeTrackRenderSmoothing(
+                options.renderSmoothing,
+                defaultTrackRenderSmoothing(),
+            )
 
             this.camera = options.camera ?? null
             this.rotation = options.rotation ?? {}
@@ -291,9 +292,10 @@ export class Journey extends MapElement {
         let instance = super.deserialize(props)
         instance.activity ??= Journey.defaultActivity()
         instance.activitySettings = Journey.activityProfile(instance.activity, instance.activitySettings)
-        instance.renderSmoothing = instance.renderSmoothing === undefined
-                                   ? undefined
-                                   : normalizeTrackRenderSmoothing(instance.renderSmoothing)
+        instance.renderSmoothing = normalizeTrackRenderSmoothing(
+            instance.renderSmoothing,
+            defaultTrackRenderSmoothing(),
+        )
         instance.replay = {
             start: Array.isArray(instance.replay?.start) ? instance.replay.start : [],
             stop:  Array.isArray(instance.replay?.stop) ? instance.replay.stop : [],

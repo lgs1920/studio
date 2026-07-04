@@ -15,6 +15,9 @@
  ******************************************************************************/
 
 import { defaultJourneyReplayClips, normalizeJourneyReplayClips } from './JourneyReplayClips'
+import {
+    TRACK_RENDER_SMOOTHING_MAX_STEP, TRACK_RENDER_SMOOTHING_MIN_STEP, normalizeTrackRenderSmoothing,
+} from '@Utils/cesium/trackRenderSmoothing'
 
 export const REPLAY_PROGRESSION_FILL_MIN_WIDTH = 1
 export const REPLAY_PROGRESSION_FILL_MAX_WIDTH = 10
@@ -49,6 +52,8 @@ export const REPLAY_HYSTERESIS_MARGIN_RATIO_MAX = 0.45
 export const REPLAY_HYSTERESIS_EASING_MIN = 0.02
 export const REPLAY_HYSTERESIS_EASING_MAX = 0.5
 export const REPLAY_HYSTERESIS_LOOKAHEAD_PROGRESS = 0.025
+export const REPLAY_SMOOTHING_MIN_STEP = TRACK_RENDER_SMOOTHING_MIN_STEP
+export const REPLAY_SMOOTHING_MAX_STEP = TRACK_RENDER_SMOOTHING_MAX_STEP
 
 export const DEFAULT_REPLAY_PROGRESSION = {
     fill:   {
@@ -77,6 +82,11 @@ export const DEFAULT_REPLAY_TRACE = {
         color:                '#6f7d8c',
         opacity:              0.45,
     },
+}
+
+export const DEFAULT_REPLAY_SMOOTHING = {
+    enabled: true,
+    step:    2,
 }
 
 export const DEFAULT_REPLAY_MARKER = {
@@ -127,6 +137,7 @@ export const defaultJourneyReplayTraceStyle = () => ({
     mode:      DEFAULT_REPLAY_TRACE.mode,
     remaining: {...DEFAULT_REPLAY_TRACE.remaining},
 })
+export const defaultJourneyReplaySmoothing = () => ({...DEFAULT_REPLAY_SMOOTHING})
 export const defaultJourneyReplayMarkerStyle = () => ({...DEFAULT_REPLAY_MARKER})
 export const defaultJourneyReplayCameraStyle = () => ({...DEFAULT_REPLAY_CAMERA})
 
@@ -161,6 +172,7 @@ export const defaultJourneyReplaySettings = () => ({
     progression: defaultJourneyReplayProgressionStyle(),
     profileInfo: defaultJourneyReplayProfileInfoStyle(),
     trace:       defaultJourneyReplayTraceStyle(),
+    smoothing:   defaultJourneyReplaySmoothing(),
     marker:      defaultJourneyReplayMarkerStyle(),
     camera:      defaultJourneyReplayCameraStyle(),
     clips:       (() => {
@@ -278,6 +290,11 @@ export const normalizeJourneyReplayTrace = (trace = {}) => {
     }
 }
 
+export const normalizeJourneyReplaySmoothing = (smoothing = {}) => normalizeTrackRenderSmoothing(
+    smoothing,
+    DEFAULT_REPLAY_SMOOTHING,
+)
+
 /**
  * Normalizes the FT marker mode and optional override position.
  * The runtime uses this shape directly to keep the drawer, store, and Cesium in sync.
@@ -389,6 +406,7 @@ export const normalizeJourneyReplaySettings = (settings = {}) => {
         progression: normalizeJourneyReplayProgressionStyle(settings?.progression),
         profileInfo: normalizeJourneyReplayProfileInfo(settings?.profileInfo),
         trace:       normalizeJourneyReplayTrace(settings?.trace),
+        smoothing:   normalizeJourneyReplaySmoothing(settings?.smoothing),
         marker:      normalizeJourneyReplayMarker(settings?.marker),
         camera:      normalizeJourneyReplayCamera(settings?.camera),
         clips:       clips,

@@ -16,7 +16,7 @@
 
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
-    getTrackRenderContent, normalizeTrackRenderSmoothing, resolveTrackRenderSmoothing,
+    getTrackRenderContent, normalizeTrackRenderSmoothing, resolveTrackRenderSmoothing, trackRenderSmoothingKey,
 }                                                from '@Utils/cesium/trackRenderSmoothing'
 
 const makeTrack = (renderSmoothing = undefined) => ({
@@ -64,6 +64,30 @@ describe('track render smoothing', () => {
         expect(renderContent.geometry.coordinates[0]).toEqual([6, 45, 100])
         expect(renderContent.geometry.coordinates.at(-1)).toEqual([6.2, 45, 120])
         expect(track.content.geometry.coordinates).toHaveLength(3)
+    })
+
+    it('can force smoothing for replay without mutating stored track settings', () => {
+        const track = makeTrack({enabled: false, step: 2})
+        const renderContent = getTrackRenderContent(track, {forceRenderSmoothing: true})
+
+        expect(renderContent).not.toBe(track.content)
+        expect(renderContent.geometry.coordinates).toHaveLength(12)
+        expect(track.renderSmoothing).toEqual({enabled: false, step: 2})
+        expect(trackRenderSmoothingKey(track)).toBe('0:2')
+        expect(trackRenderSmoothingKey(track, {forceRenderSmoothing: true})).toBe('1:2')
+    })
+
+    it('can use a replay smoothing override with its own step', () => {
+        const track = makeTrack({enabled: false, step: 1})
+        const renderContent = getTrackRenderContent(track, {
+            renderSmoothing: {enabled: true, step: 2},
+        })
+
+        expect(renderContent).not.toBe(track.content)
+        expect(renderContent.geometry.coordinates).toHaveLength(12)
+        expect(trackRenderSmoothingKey(track, {
+            renderSmoothing: {enabled: true, step: 2},
+        })).toBe('1:2')
     })
 
     it('uses journey settings for a single-track journey and track settings for multi-track journeys', () => {

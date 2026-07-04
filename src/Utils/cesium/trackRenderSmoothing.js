@@ -131,8 +131,18 @@ export const resolveTrackRenderSmoothing = track => {
     return normalizeTrackRenderSmoothing(source, defaults)
 }
 
-export const trackRenderSmoothingKey = track => {
-    const smoothing = resolveTrackRenderSmoothing(track)
+const effectiveTrackRenderSmoothing = (track, {forceRenderSmoothing = false, renderSmoothing = undefined} = {}) => {
+    const smoothing = renderSmoothing === undefined
+                      ? resolveTrackRenderSmoothing(track)
+                      : normalizeTrackRenderSmoothing(renderSmoothing, resolveTrackRenderSmoothing(track))
+
+    return forceRenderSmoothing === true
+           ? {...smoothing, enabled: true}
+           : smoothing
+}
+
+export const trackRenderSmoothingKey = (track, options = {}) => {
+    const smoothing = effectiveTrackRenderSmoothing(track, options)
 
     return `${smoothing.enabled ? 1 : 0}:${smoothing.step}`
 }
@@ -147,10 +157,10 @@ export const smoothCoordinateSegment = (coordinates, step) => {
     return result
 }
 
-export const getTrackRenderContent = track => {
+export const getTrackRenderContent = (track, options = {}) => {
     const content = track?.content
     const geometry = content?.geometry
-    const smoothing = resolveTrackRenderSmoothing(track)
+    const smoothing = effectiveTrackRenderSmoothing(track, options)
 
     if (!smoothing.enabled || !geometry || ![LINE_STRING, MULTI_LINE_STRING].includes(geometry.type)) {
         return content

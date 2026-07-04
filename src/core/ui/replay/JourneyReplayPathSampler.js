@@ -175,6 +175,8 @@ export class JourneyReplayPathSampler {
     #scope = REPLAY_SCOPE_VISIBLE_TRACKS
     #trackSlug = null
     #includeHiddenTracks = false
+    #forceRenderSmoothing = false
+    #renderSmoothing = undefined
     #samples = []
     #segments = []
     #totalDistance = 0
@@ -191,11 +193,15 @@ export class JourneyReplayPathSampler {
                   scope = this.#scope,
                   trackSlug = this.#trackSlug,
                   includeHiddenTracks = this.#includeHiddenTracks,
+                  forceRenderSmoothing = this.#forceRenderSmoothing,
+                  renderSmoothing = this.#renderSmoothing,
               } = {}) => {
         this.#journey = journey
         this.#scope = scope
         this.#trackSlug = trackSlug
         this.#includeHiddenTracks = includeHiddenTracks
+        this.#forceRenderSmoothing = forceRenderSmoothing === true
+        this.#renderSmoothing = renderSmoothing
         this.#build()
         return this
     }
@@ -277,7 +283,10 @@ export class JourneyReplayPathSampler {
 
         selectedTracks.forEach(({track, index: trackIndex}) => {
             const trackStartDistance = cumulativeDistance
-            const coordinateSegments = JourneyReplayPathSampler.coordinateSegmentsFromTrack(track)
+            const coordinateSegments = JourneyReplayPathSampler.coordinateSegmentsFromTrack(track, {
+                forceRenderSmoothing: this.#forceRenderSmoothing,
+                renderSmoothing:      this.#renderSmoothing,
+            })
             const timeSegments = JourneyReplayPathSampler.timeSegmentsFromTrack(track)
 
             coordinateSegments.forEach((coordinates, segmentIndex) => {
@@ -606,14 +615,14 @@ export class JourneyReplayPathSampler {
         return segments
     }
 
-    static coordinateSegmentsFromTrack = (track) => {
-        const geometry = getTrackRenderContent(track)?.geometry
+    static coordinateSegmentsFromTrack = (track, options = {}) => {
+        const geometry = getTrackRenderContent(track, options)?.geometry
         if (!geometry) {
             return []
         }
 
         const cacheKey = track?.content
-        const smoothingKey = trackRenderSmoothingKey(track)
+        const smoothingKey = trackRenderSmoothingKey(track, options)
         const cacheBucket = getWeakMapBucket(renderedCoordinateSegmentsCache, cacheKey)
         const cachedSegments = cacheBucket?.get(smoothingKey)
         if (cachedSegments) {
