@@ -16,6 +16,7 @@
 
 import { REPLAY_EVENT_STOP_CLIPS_COMPLETE } from './JourneyReplayMode'
 import { ScreenMediaRecorder } from '@Core/ui/screen-media-recorder/recorder/ScreenMediaRecorder'
+import { hasJourneyReplayStopClips } from '@Components/Stats/replayStatsWidgetUtils'
 
 const defaultJourneyReplayStore = () => globalThis.lgs?.stores?.replay ?? null
 
@@ -87,11 +88,28 @@ export class JourneyReplayVideoSync {
             return
         }
 
-        this.#setVideoSafeMode(false)
         const recorder = this.#resolveRecorder()
-        if (recorder?.isRecording?.()) {
-            void recorder.stopVideo()
+        const stopRecorder = () => {
+            this.#setVideoSafeMode(false)
+            if (recorder?.isRecording?.()) {
+                void recorder.stopVideo()
+            }
         }
+
+        if (!hasJourneyReplayStopClips()) {
+            const raf = globalThis.requestAnimationFrame
+                        ?? globalThis.window?.requestAnimationFrame?.bind(globalThis.window)
+                        ?? (callback => setTimeout(callback, 0))
+
+            raf(() => {
+                raf(() => {
+                    stopRecorder()
+                })
+            })
+            return
+        }
+
+        stopRecorder()
     }
 
     #bind = () => {
@@ -115,17 +133,14 @@ export class JourneyReplayVideoSync {
 
             this.#setVideoSafeMode(true)
             this.#cancelPendingStart()
-            this.#pendingStartTimeout = setTimeout(() => {
-                this.#pendingStartTimeout = null
-                if (!this.#armed) {
-                    this.#setVideoSafeMode(false)
-                    return
-                }
-                if (this.#resetToStart && this.#replay?.running) {
-                    this.#replay.stop?.({emit: false})
-                }
-                this.#replay?.start?.({progress: 0})
-            }, 0)
+            if (!this.#armed) {
+                this.#setVideoSafeMode(false)
+                return
+            }
+            if (this.#resetToStart && this.#replay?.running) {
+                this.#replay.stop?.({emit: false})
+            }
+            this.#replay?.start?.({progress: 0})
         }
 
         const handleRecorderStart = () => {
@@ -151,7 +166,7 @@ export class JourneyReplayVideoSync {
             this.stopJourneyReplay({
                 deferSceneRestore: event?.type === ScreenMediaRecorder.events.STOP,
             })
-            this.#resolveJourneyReplay()?.restorePlaybackScene?.()
+            this.#resolveJourneyReplay()?.restorePlaybackScene?.({force: true})
         }
 
         const handleStopClipsComplete = () => {

@@ -29,7 +29,6 @@ import { WidgetMountErrorDialog } from '@Components/MainUI/video/WidgetMountErro
 import { UIToast }                                              from '@Utils/UIToast'
 import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import { useSnapshot }           from 'valtio'
-
 // Overlay refresh cadence (in ms). Balanced for smooth updates and low CPU.
 const OVERLAYS_REFRESH_MS = 250
 // Cache TTL for expensive DOM metrics (in ms).
@@ -311,17 +310,7 @@ export const VideoRecordingScreenArea = memo(() => {
             autoStopRecording: true,
             resetToStart:      true,
         })
-
-        const sampler = __.ui.replay?.configure?.({progress: 0})
-        if (sampler?.hasSamples) {
-            return true
-        }
-
-        UIToast.error({
-            caption: 'Journey Replay',
-            text:    'Replay data is not ready for video recording.',
-        })
-        return false
+        return true
     }, [isJourneyReplaySyncRequested])
 
     // Dispose composer and release references.
