@@ -39,8 +39,9 @@ import {
     REPLAY_CAMERA_PRESET_CUSTOM, REPLAY_CAMERA_PRESETS, REPLAY_HYSTERESIS_EASING_MAX,
     REPLAY_HYSTERESIS_EASING_MIN,
     REPLAY_HYSTERESIS_MARGIN_RATIO_MAX, REPLAY_HYSTERESIS_MARGIN_RATIO_MIN,
+    REPLAY_SMOOTHING_MAX_STEP, REPLAY_SMOOTHING_MIN_STEP,
     getJourneyReplayCameraPresetKey, getJourneyReplayCameraPresetUpdates, normalizeJourneyReplayCamera, normalizeJourneyReplayMarker, normalizeJourneyReplayProfileInfo,
-    normalizeJourneyReplayProgressionStyle, normalizeJourneyReplayTrace,
+    normalizeJourneyReplayProgressionStyle, normalizeJourneyReplaySmoothing, normalizeJourneyReplayTrace,
 }                 from '@Core/ui/replay/JourneyReplayProgressionStyle'
 import { normalizeJourneyReplayClips } from '@Core/ui/replay/JourneyReplayClips'
 import { normalizeJourneyReplayPOISettings } from '@Core/ui/replay/JourneyReplayPOISettings'
@@ -122,6 +123,11 @@ const mergeTrace = (current, updates) => normalizeJourneyReplayTrace({
                                                                           ...updates?.remaining,
                                                                       },
                                                                   })
+
+const mergeSmoothing = (current, updates) => normalizeJourneyReplaySmoothing({
+                                                                                ...current,
+                                                                                ...updates,
+                                                                            })
 
 const mergeCamera = (current, updates) => normalizeJourneyReplayCamera({
                                                                         ...current,
@@ -243,11 +249,13 @@ const REPLAY_POI_HIDDEN_FIELDS = [
     {key: 'altitude', label: 'Hide altitude'},
     {key: 'coordinates', label: 'Hide coordinates'},
 ]
+const REPLAY_TAB_RUNNER = 'runner'
+const REPLAY_TAB_POIS = 'pois'
 
 export const JourneyReplayDrawer = memo(() => {
     const {drawers: {open: drawerOpen}} = useSnapshot(lgs.stores.ui)
     const {theJourney: currentJourney} = useSnapshot(lgs.stores.main)
-    const poiList = useSnapshot(lgs.stores.main.components.pois.list)
+    const poiList = lgs.stores.main.components.pois.list
     const replayState = useSnapshot(lgs.stores.replay)
     ensureJourneyReplaySettings()
     const replaySettings = useSnapshot(lgs.settings.ui.replay)
@@ -270,6 +278,7 @@ export const JourneyReplayDrawer = memo(() => {
     const fillProfileMarker = progression.fill.profileMarker
     const borderProfileMarker = progression.border.profileMarker
     const trace = normalizeJourneyReplayTrace(replaySettings.trace)
+    const smoothing = normalizeJourneyReplaySmoothing(replaySettings.smoothing)
     const clips = useMemo(() => normalizeJourneyReplayClips({
                                                              catalog: replaySettings.clips?.catalog ?? replaySettings.clips?.definitions ?? {},
                                                              start:   Array.isArray(currentJourney?.replay?.start)
@@ -282,7 +291,12 @@ export const JourneyReplayDrawer = memo(() => {
     const remainingUseDefinedTrackStyle = trace.remaining.useDefinedTrackStyle !== false
     const remainingColor = toOpaqueColorValue(trace.remaining.color)
     const camera = normalizeJourneyReplayCamera(replaySettings.camera)
+    const [activeTab, setActiveTab] = useState(REPLAY_TAB_RUNNER)
     const nearbyPOIs = useMemo(() => {
+        if (activeTab !== REPLAY_TAB_POIS) {
+            return []
+        }
+
         const entries = Array.isArray(replayState.nearbyPois) ? [...replayState.nearbyPois] : []
         return entries.sort((left, right) => {
             const leftDistance = finiteNumber(left?.projectedAbscissa)
@@ -298,7 +312,7 @@ export const JourneyReplayDrawer = memo(() => {
             }
             return leftDistance - rightDistance
         })
-    }, [replayState.nearbyPois])
+    }, [activeTab, replayState.nearbyPois])
     const cameraPresetKey = getJourneyReplayCameraPresetKey(camera)
     const marker = normalizeJourneyReplayMarker(replaySettings.marker)
     const hideOtherJourneys = getJourneyReplayHideOtherJourneys()
@@ -307,6 +321,7 @@ export const JourneyReplayDrawer = memo(() => {
     const durationLocked = replayState.active || replayState.playing || replayState.paused
     const syncWithVideo = replayState.recordingSync === true
     const [poiVisibilityOverrides, setPoiVisibilityOverrides] = useState({})
+    const [, setPoiRevision] = useState(0)
     const [cameraDrafts, setCameraDrafts] = useState({
         altitude: null,
         heading:  null,
@@ -347,6 +362,7 @@ export const JourneyReplayDrawer = memo(() => {
         replayRuntime.progression = normalizeJourneyReplayProgressionStyle(replaySettings.progression)
         replayRuntime.profileInfo = normalizeJourneyReplayProfileInfo(replaySettings.profileInfo)
         replayRuntime.trace = normalizeJourneyReplayTrace(replaySettings.trace)
+        replayRuntime.smoothing = normalizeJourneyReplaySmoothing(replaySettings.smoothing)
         replayRuntime.marker = normalizeJourneyReplayMarker(replaySettings.marker)
         replayRuntime.camera = normalizeJourneyReplayCamera(replaySettings.camera)
         replayRuntime.hideAllPoisDuringJourneyReplay = replaySettings.hideAllPoisDuringJourneyReplay === true
@@ -368,6 +384,7 @@ export const JourneyReplayDrawer = memo(() => {
                   replaySettings.poiDistance,
         replaySettings.profileInfo,
         replaySettings.progression,
+        replaySettings.smoothing,
         replaySettings.trace,
         replaySettings.marker,
         replaySettings.camera,
@@ -389,11 +406,13 @@ export const JourneyReplayDrawer = memo(() => {
 
         const replayRuntime = lgs.stores.replay
         replayRuntime.toolbarVisible = true
+    }, [drawerOpen, hasJourney])
 
-        if (!replayRuntime.active && !replayRuntime.playing && !replayRuntime.paused) {
-            __.ui.replay?.configure?.({progress: replayRuntime.progress ?? 0})
+    useEffect(() => {
+        if (drawerOpen === REPLAY_DRAWER) {
+            setActiveTab(REPLAY_TAB_RUNNER)
         }
-    }, [drawerOpen, replaySettings.duration, hasJourney, journeySlug])
+    }, [drawerOpen, journeySlug])
 
     useEffect(() => {
         if (drawerOpen === REPLAY_DRAWER) {
@@ -402,7 +421,7 @@ export const JourneyReplayDrawer = memo(() => {
     }, [drawerOpen])
 
     useEffect(() => {
-        if (drawerOpen !== REPLAY_DRAWER) {
+        if (drawerOpen !== REPLAY_DRAWER || activeTab !== REPLAY_TAB_POIS) {
             return
         }
 
@@ -442,10 +461,19 @@ export const JourneyReplayDrawer = memo(() => {
                 lgs.stores.replay.nearbyPois = nextNearbyPois
             }
         }, 0)
-    }, [currentJourney, drawerOpen, replaySettings.poiDistance, hasJourney, journeySlug])
+    }, [activeTab, currentJourney, drawerOpen, replaySettings.poiDistance, hasJourney, journeySlug])
 
-    const refreshJourneyReplay = useCallback((camera = true) => {
-        __.ui.replay?.refresh?.({camera})
+    const refreshJourneyReplay = useCallback((camera = true, rebuildSampler = false) => {
+        const replayRuntime = lgs.stores.replay
+        const replayVisible = replayRuntime.active
+            || replayRuntime.playing
+            || replayRuntime.paused
+            || replayRuntime.clipSequenceActive
+            || Boolean(replayRuntime.sample)
+        if (rebuildSampler && !replayVisible) {
+            return
+        }
+        __.ui.replay?.refresh?.(rebuildSampler ? {camera, rebuildSampler} : {camera})
         lgs.scene?.requestRender?.()
     }, [])
 
@@ -470,6 +498,13 @@ export const JourneyReplayDrawer = memo(() => {
         lgs.settings.ui.replay.trace = nextTrace
         lgs.stores.replay.trace = nextTrace
         refreshJourneyReplay(false)
+    }, [refreshJourneyReplay])
+
+    const updateSmoothing = useCallback((updates) => {
+        const nextSmoothing = mergeSmoothing(lgs.settings.ui.replay.smoothing, updates)
+        lgs.settings.ui.replay.smoothing = nextSmoothing
+        lgs.stores.replay.smoothing = nextSmoothing
+        refreshJourneyReplay(false, true)
     }, [refreshJourneyReplay])
 
     const updateMarker = useCallback(async (event) => {
@@ -669,6 +704,7 @@ export const JourneyReplayDrawer = memo(() => {
                                                     })
 
         await __.ui.poiManager.updatePOI(poiId, {replay: next}, {immediate: true})
+        setPoiRevision(current => current + 1)
         if (drawerOpen === REPLAY_DRAWER && hasJourney) {
             lgs.stores.replay.nearbyPois = __.ui.poiManager?.getJourneyReplayPOIsForJourney?.(
                 currentJourney,
@@ -730,6 +766,14 @@ export const JourneyReplayDrawer = memo(() => {
         else {
             __.ui.replayVideoSync?.disarm()
         }
+    }, [])
+
+    const updateActiveTab = useCallback((event) => {
+        setActiveTab(event?.detail?.name ?? REPLAY_TAB_RUNNER)
+    }, [])
+
+    const setReplayTab = useCallback(tab => () => {
+        setActiveTab(tab)
     }, [])
 
     const updateHideOtherJourneys = useCallback((event) => {
@@ -826,6 +870,22 @@ export const JourneyReplayDrawer = memo(() => {
     const updateTraceMode = useCallback((event) => {
         updateTrace({mode: event.target.value})
     }, [updateTrace])
+
+    const updateSmoothingEnabled = useCallback((event) => {
+        updateSmoothing({enabled: getChecked(event)})
+    }, [updateSmoothing])
+
+    const updateSmoothingStep = useCallback((event) => {
+        updateSmoothing({
+                            step: clampJourneyReplayNumber(
+                                event.target.value,
+                                smoothing.step,
+                                REPLAY_SMOOTHING_MIN_STEP,
+                                REPLAY_SMOOTHING_MAX_STEP,
+                                true,
+                            ),
+                        })
+    }, [smoothing.step, updateSmoothing])
 
     const updateRemainingColor = useCallback((event) => {
         updateTrace({remaining: {color: toOpaqueColorValue(event.target.value)}})
@@ -1077,20 +1137,20 @@ export const JourneyReplayDrawer = memo(() => {
                                      <WaOption
                                          value={REPLAY_MARKER_MODE_HYSTERESIS}>{'Dynamic'}</WaOption>
                                  </WaSelect>
-                                 <WaTabGroup className="replay-tabs">
-                                     <WaTab slot="nav" panel="runner">
+                                 <WaTabGroup className="replay-tabs" onWaTabShow={updateActiveTab}>
+                                     <WaTab slot="nav" panel="runner" onClick={setReplayTab(REPLAY_TAB_RUNNER)}>
                                          <WaIcon name="clock" variant="regular"/>
                                          {'Playback'}
                                      </WaTab>
-                                     <WaTab slot="nav" panel="edit">
+                                     <WaTab slot="nav" panel="edit" onClick={setReplayTab('edit')}>
                                          <WaIcon name="paintbrush-pencil" variant="regular"/>
                                          {'Edit'}
                                      </WaTab>
-                                     <WaTab slot="nav" panel="clips">
+                                     <WaTab slot="nav" panel="clips" onClick={setReplayTab('clips')}>
                                          <WaIcon name="sparkles" variant="regular"/>
                                          {'Clips'}
                                      </WaTab>
-                                     <WaTab slot="nav" panel="pois">
+                                     <WaTab slot="nav" panel="pois" onClick={setReplayTab(REPLAY_TAB_POIS)}>
                                          <WaIcon name="location-dot" variant="regular"/>
                                          {'POIs'}
                                      </WaTab>
@@ -1314,6 +1374,32 @@ export const JourneyReplayDrawer = memo(() => {
                                              <div className="replay-tab-panel">
                                                  <>
                                                      <section className="replay-progression-section">
+                                                         <h3>{'Trace smoothing'}</h3>
+                                                         <div className="replay-fieldset">
+                                                             <WaSwitch
+                                                                 className="replay-smoothing-switch half-width"
+                                                                 size="xs"
+                                                                 label-at-start
+                                                                 checked={smoothing.enabled}
+                                                                 onChange={updateSmoothingEnabled}
+                                                             >
+                                                                 {'Smooth replay trace'}
+                                                             </WaSwitch>
+                                                             {smoothing.enabled && (
+                                                                 <WaNumberInput
+                                                                     className="replay-smoothing-step-input half-width"
+                                                                     label="Step"
+                                                                     size="s"
+                                                                     appearance="filled"
+                                                                     min={REPLAY_SMOOTHING_MIN_STEP}
+                                                                     max={REPLAY_SMOOTHING_MAX_STEP}
+                                                                     step="1"
+                                                                     value={smoothing.step}
+                                                                     onInput={updateSmoothingStep}
+                                                                     label-at-start/>
+                                                             )}
+                                                         </div>
+                                                         <WaDivider/>
                                                          {trace.mode === REPLAY_TRACE_MODE_FULL &&
                                                              <>
                                                                  <h3>{'Remaining trace'}</h3>
@@ -1408,8 +1494,9 @@ export const JourneyReplayDrawer = memo(() => {
                                          </LGSScrollbars>
                                      </WaTabPanel>
                                      <WaTabPanel name="pois">
-                                         <LGSScrollbars>
-                                            <div className="replay-tab-panel">
+                                         {activeTab === REPLAY_TAB_POIS && (
+                                             <LGSScrollbars>
+                                                <div className="replay-tab-panel">
                                                 <div className="replay-poi-switches">
                                                     <WaSwitch
                                                         size="xs"
@@ -1597,13 +1684,14 @@ export const JourneyReplayDrawer = memo(() => {
                                                                               </WaButton>
                                                                           </div>
                                                                       </div>
-                                                                  </WaDetails>
-                                                              )
-                                                          })}
+                                                        </WaDetails>
+                                                            )
+                                                        })}
                                                       </div>
-                                                  )}
-                                             </div>
-                                         </LGSScrollbars>
+                                                )}
+                                                </div>
+                                             </LGSScrollbars>
+                                         )}
                                      </WaTabPanel>
                                  </WaTabGroup>
                              </>

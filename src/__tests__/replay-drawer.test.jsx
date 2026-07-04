@@ -90,7 +90,7 @@ vi.mock('@web.awesome.me/webawesome-pro/dist/react', () => {
             {children}
         </label>
     )
-    const WaTabGroup = ({children}) => {
+    const WaTabGroup = ({children, onWaTabShow}) => {
         const childrenArray = Array.isArray(children) ? children : [children]
         const tabs = childrenArray.filter(child => child?.type === WaTab)
         const panels = childrenArray.filter(child => child?.type === WaTabPanel)
@@ -103,7 +103,11 @@ vi.mock('@web.awesome.me/webawesome-pro/dist/react', () => {
                         <button
                             key={tab.props.panel}
                             type="button"
-                            onClick={() => setActive(tab.props.panel)}
+                            onClick={() => {
+                                setActive(tab.props.panel)
+                                tab.props.onClick?.()
+                                onWaTabShow?.({detail: {name: tab.props.panel}})
+                            }}
                         >
                             {tab.props.children}
                         </button>
@@ -696,8 +700,11 @@ describe('JourneyReplayDrawer', () => {
         expect(view.getByText('65')).toBeTruthy()
     })
 
-    it('loads nearby poi candidates when the replay drawer opens', async () => {
-        render(<JourneyReplayDrawer/>)
+    it('loads nearby poi candidates when the POIs tab opens', async () => {
+        const view = render(<JourneyReplayDrawer/>)
+
+        expect(__.ui.poiManager.getJourneyReplayPOIsForJourney).not.toHaveBeenCalled()
+        fireEvent.click(view.getByText('POIs'))
 
         await waitFor(() => {
             expect(__.ui.poiManager.getJourneyReplayPOIsForJourney).toHaveBeenCalledWith(
