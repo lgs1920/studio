@@ -19,6 +19,7 @@ import {
     isVideoWidgetEditorPhase,
     shouldShowDynamicStatsWidget,
     shouldShowJourneyStatsWidget,
+    shouldShowVideoStatsWidget,
 } from '@Components/Stats/replayStatsWidgetUtils'
 import { VIDEO_WIDGETS_BOARD } from '@Core/constants'
 import { isWidgetAvailable } from '@Core/ui/widget-manager/widgetAvailability'
@@ -123,6 +124,21 @@ describe('replay stats widget visibility', () => {
         expect(isVideoWidgetEditorPhase()).toBe(true)
         globalThis.lgs.stores.ui.video.recording = true
         expect(isVideoWidgetEditorPhase()).toBe(false)
+    })
+
+    it('shows stats widgets during the video editor phase for placement', () => {
+        expect(shouldShowVideoStatsWidget({mode: 'dynamic'})).toBe(true)
+        expect(shouldShowVideoStatsWidget({mode: 'journey'})).toBe(true)
+    })
+
+    it('uses the replay end threshold outside the editor phase', () => {
+        globalThis.lgs.stores.ui.video.recording = true
+
+        expect(shouldShowVideoStatsWidget({mode: 'dynamic'})).toBe(true)
+
+        globalThis.lgs.stores.replay.progress = 0.9
+        expect(shouldShowVideoStatsWidget({mode: 'dynamic'})).toBe(false)
+        expect(shouldShowVideoStatsWidget({mode: 'journey'})).toBe(true)
     })
 
     it('filters widget availability through the generic availability gate', () => {

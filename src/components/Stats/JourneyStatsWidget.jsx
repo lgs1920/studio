@@ -16,7 +16,6 @@
 
 import { Widget }                                                                 from '@Components/MainUI/widgets/Widget'
 import { JourneyStats }                                                           from '@Components/Stats/JourneyStats'
-import { isVideoWidgetEditorPhase, shouldShowDynamicStatsWidget, shouldShowJourneyStatsWidget } from '@Components/Stats/replayStatsWidgetUtils'
 import { JOURNEY_WIDGETS, LGS_VISUAL_WIDGET, SCENE_WIDGETS, SCENE_WIDGETS_BOARD, VIDEO_WIDGETS_BOARD } from '@Core/constants'
 import { useManagedStylesheet }                                                   from '@Utils/useManagedStylesheet'
 import { useOptionalSnapshot } from '@Utils/ValtioUtils'
@@ -39,10 +38,13 @@ export const JourneyStatsWidget = ({
     useManagedStylesheet(JOURNEY_STATS_WIDGET_STYLESHEET_ID, journeyStatsStylesheetHref)
 
     const contextState = useOptionalSnapshot(context, JOURNEY_STATS_WIDGET_CONTEXT_FALLBACK)
-    const widgetsBoard = contextState.widgetsBoard || persistedWidgetsBoard || ''
+    const video = useSnapshot(lgs.stores.ui.video)
+    const widgetsBoard = contextState.widgetsBoard
+                         || persistedWidgetsBoard
+                         || (video.editing || video.preRecording || video.recording || video.snapshot || video.finalizing
+                             ? VIDEO_WIDGETS_BOARD
+                             : '')
     const main = useSnapshot(lgs.stores.main)
-    const replay = useSnapshot(lgs.stores.replay)
-    useSnapshot(lgs.stores.ui.video)
     const journey = lgs.theJourney
     const journeySlug = main.theJourney?.slug ?? null
 
@@ -107,17 +109,8 @@ export const JourneyStatsWidget = ({
             return false
         }
 
-        if (widgetsBoard === VIDEO_WIDGETS_BOARD) {
-            if (isVideoWidgetEditorPhase()) {
-                return true
-            }
-            return mode === 'dynamic'
-                   ? shouldShowDynamicStatsWidget(replay)
-                   : shouldShowJourneyStatsWidget(replay)
-        }
-
         return true
-    }, [replay, mode, widgetsBoard])
+    }, [widgetsBoard])
 
     if (!journeySlug || !journey || !widgetsBoard || Object.keys(config).length === 0 || !isVisible) {
         return null

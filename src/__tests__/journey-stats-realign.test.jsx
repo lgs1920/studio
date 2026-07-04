@@ -17,6 +17,7 @@
 import { cleanup, render, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { proxy } from 'valtio'
+import { VIDEO_WIDGETS_BOARD } from '@Core/constants'
 
 vi.mock('@Components/DataDisplay/NameValueUnit', () => ({
     NameValueUnit: ({value}) => <span>{String(value)}</span>,
@@ -104,6 +105,12 @@ describe('JourneyStats', () => {
                     },
                 }),
                 replay: proxy({
+                    recordingSync: true,
+                    playing:       true,
+                    paused:        false,
+                    progress:      0.1,
+                    durationMillis: 10000,
+                    elapsedMillis:  1000,
                     sample: {},
                 }),
                 ui: {
@@ -198,5 +205,63 @@ describe('JourneyStats', () => {
             expect(target.style.left).toBe('-10px')
             expect(target.style.top).toBe('0px')
         })
+    })
+
+    it('stays visible on the video board before the recording starts', async () => {
+        globalThis.lgs.stores.ui.video.preRecording = true
+
+        const {container} = render(
+            <JourneyStats
+                id="journey-stats-widget#1"
+                metrics={{
+                    distance: 120,
+                    positive: {elevation: 87},
+                    duration: 4,
+                }}
+                units={{
+                    elevation: 'm',
+                    distance:  'm',
+                    pace:      'min/km',
+                    speed:     'km/h',
+                }}
+                mode="journey"
+                widgetKey="journey-stats-widget"
+                widgetsBoard={VIDEO_WIDGETS_BOARD}
+            />,
+        )
+
+        const widget = container.querySelector('.journey-stats-widget')
+        expect(widget).not.toBeNull()
+        expect(widget.style.visibility).not.toBe('hidden')
+    })
+
+    it('hides the journey stats widget on the video board while recording is active and the replay is not near the end', async () => {
+        globalThis.lgs.stores.ui.video.recording = true
+        globalThis.lgs.stores.replay.playing = true
+        globalThis.lgs.stores.replay.progress = 0.1
+
+        const {container} = render(
+            <JourneyStats
+                id="journey-stats-widget#1"
+                metrics={{
+                    distance: 120,
+                    positive: {elevation: 87},
+                    duration: 4,
+                }}
+                units={{
+                    elevation: 'm',
+                    distance:  'm',
+                    pace:      'min/km',
+                    speed:     'km/h',
+                }}
+                mode="journey"
+                widgetKey="journey-stats-widget"
+                widgetsBoard={VIDEO_WIDGETS_BOARD}
+            />,
+        )
+
+        const widget = container.querySelector('.journey-stats-widget')
+        expect(widget).not.toBeNull()
+        expect(widget.style.visibility).toBe('hidden')
     })
 })

@@ -18,7 +18,7 @@ import { JourneyReplayVideoSync } from '@Core/ui/replay/JourneyReplayVideoSync'
 import { REPLAY_EVENT_END } from '@Core/ui/replay/JourneyReplayPlaybackController'
 import { REPLAY_EVENT_STOP_CLIPS_COMPLETE } from '@Core/ui/replay/JourneyReplayMode'
 import { ScreenMediaRecorder } from '@Core/ui/screen-media-recorder/recorder/ScreenMediaRecorder'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 vi.hoisted(() => {
     if (!Object.getOwnPropertyDescriptor(document, 'adoptedStyleSheets')) {
@@ -74,6 +74,11 @@ const makeJourneyReplay = () => {
 }
 
 describe('JourneyReplayVideoSync', () => {
+    afterEach(() => {
+        vi.useRealTimers()
+        globalThis.lgs = undefined
+    })
+
     it('starts the replay when the recorder starts', () => {
         const recorder = new FakeRecorder()
         const replay = makeJourneyReplay()
@@ -91,18 +96,32 @@ describe('JourneyReplayVideoSync', () => {
         })
     })
 
-    it('stops the recorder after stop clips complete', async () => {
+    it('stops the recorder immediately after stop clips complete when stop clips exist', async () => {
         const recorder = new FakeRecorder()
         recorder.recording = true
         const replay = makeJourneyReplay()
         const store = {recordingSync: false}
-        globalThis.lgs = {settings: {ui: {replay: {recordingSync: false}}}}
+        globalThis.lgs = {settings: {ui: {replay: {recordingSync: false, clips: {stop: [{}]}}}}}
         const sync = new JourneyReplayVideoSync({recorder, replay, store})
 
         sync.arm({autoStopRecording: true})
         replay.controller.emit(REPLAY_EVENT_END)
         expect(recorder.stopVideo).not.toHaveBeenCalled()
 
+        window.dispatchEvent(new CustomEvent(REPLAY_EVENT_STOP_CLIPS_COMPLETE))
+
+        expect(recorder.stopVideo).toHaveBeenCalledTimes(1)
+    })
+
+    it('stops the recorder immediately without stop clips', async () => {
+        const recorder = new FakeRecorder()
+        recorder.recording = true
+        const replay = makeJourneyReplay()
+        const store = {recordingSync: false}
+        globalThis.lgs = {settings: {ui: {replay: {recordingSync: false, clips: {stop: []}}}}}
+        const sync = new JourneyReplayVideoSync({recorder, replay, store})
+
+        sync.arm({autoStopRecording: true})
         window.dispatchEvent(new CustomEvent(REPLAY_EVENT_STOP_CLIPS_COMPLETE))
 
         expect(recorder.stopVideo).toHaveBeenCalledTimes(1)
@@ -124,6 +143,7 @@ describe('JourneyReplayVideoSync', () => {
             emit:              false,
             deferSceneRestore: true,
         })
+        expect(replay.restorePlaybackScene).toHaveBeenCalledTimes(1)
     })
 
     it('disarm prevents stop-clips-complete events from stopping the recorder', () => {

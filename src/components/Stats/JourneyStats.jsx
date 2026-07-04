@@ -27,9 +27,7 @@ import {
 }                                                       from '@Components/Stats/journeyStatsTextOrder'
 import {
     buildDynamicJourneyReplayStatsMetrics,
-    isVideoWidgetEditorPhase,
-    shouldShowDynamicStatsWidget,
-    shouldShowJourneyStatsWidget,
+    shouldShowVideoStatsWidget,
 }                                                       from '@Components/Stats/replayStatsWidgetUtils'
 import { WIDGET_RADIUS }                                from '@Core/constants'
 import { faArrowDownToLine, faArrowUpToLine }           from '@fortawesome/pro-regular-svg-icons'
@@ -339,7 +337,12 @@ export const JourneyStats = memo(({id, metrics, units, style = {}, mode = 'journ
         }
 
         requestAnimationFrame(() => {
-            const moveable = __.ui.widgetManager.getMoveable(id)?.current
+            const widgetManager = globalThis.__?.ui?.widgetManager
+            if (!widgetManager) {
+                return
+            }
+
+            const moveable = widgetManager.getMoveable(id)?.current
 
             if (!moveable) {
                 if (attempt < 6) {
@@ -358,7 +361,7 @@ export const JourneyStats = memo(({id, metrics, units, style = {}, mode = 'journ
 
             const currentWidth = getRenderedSize(target, 'width')
             const currentHeight = getRenderedSize(target, 'height')
-            const currentBox = getCurrentWidgetBox(target, __.ui.widgetManager.getWidgetConfig(id))
+            const currentBox = getCurrentWidgetBox(target, widgetManager.getWidgetConfig(id))
             const measuredSize = measureUnconstrainedContent(target, content)
 
             if (!measuredSize) {
@@ -379,12 +382,12 @@ export const JourneyStats = memo(({id, metrics, units, style = {}, mode = 'journ
             target.style.top = `${nextTop}px`
 
             if (sizeChanged) {
-                const config = __.ui.widgetManager.getWidgetConfig(id)
+                const config = widgetManager.getWidgetConfig(id)
                 if (config) {
                     config.dimensions = {width, height}
                     config.position = {left: nextLeft, top: nextTop}
                     if (config.persist && config.runtimeReady) {
-                        void __.ui.widgetManager.saveWidgetPosition(id, config)
+                        void widgetManager.saveWidgetPosition(id, config)
                     }
                 }
 
@@ -645,21 +648,25 @@ export const JourneyStats = memo(({id, metrics, units, style = {}, mode = 'journ
             return true
         }
 
-        if (isVideoWidgetEditorPhase()) {
-            return true
-        }
+        return shouldShowVideoStatsWidget({mode, replay})
+    }, [replay, isVideoBoard, journey, journeySlug, mode])
 
-        return isDynamicMode
-               ? shouldShowDynamicStatsWidget(replay)
-               : shouldShowJourneyStatsWidget(replay)
-    }, [replay, isDynamicMode, isVideoBoard, journey, journeySlug])
+    const widgetStyle = useMemo(() => (
+        isVisible
+            ? mainStyle
+            : {
+                ...mainStyle,
+                visibility: 'hidden',
+                pointerEvents: 'none',
+            }
+    ), [isVisible, mainStyle])
 
-    if (!isVisible) {
+    if (!journeySlug || !journey) {
         return null
     }
 
     return (
-        <div ref={widgetRef} className="journey-stats-widget" style={mainStyle}>
+        <div ref={widgetRef} className="journey-stats-widget" style={widgetStyle} aria-hidden={!isVisible}>
             {visibleTextGroups.map((group, index) => (
                 <Fragment key={`${group.group}-${group.items.join('-')}`}>
                     {index > 0 && <SlDivider style={separatorStyle}/>}

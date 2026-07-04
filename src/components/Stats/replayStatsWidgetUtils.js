@@ -76,6 +76,19 @@ export const shouldShowJourneyStatsWidget = (replay = globalThis.lgs?.stores?.re
     return remainingMillis !== null && remainingMillis <= END_WIDGET_LEAD_MS
 }
 
+export const shouldShowVideoStatsWidget = ({
+    mode = 'journey',
+    replay = globalThis.lgs?.stores?.replay ?? null,
+} = {}) => {
+    if (isVideoWidgetEditorPhase()) {
+        return true
+    }
+
+    return mode === 'dynamic'
+           ? shouldShowDynamicStatsWidget(replay)
+           : shouldShowJourneyStatsWidget(replay)
+}
+
 export const buildDynamicJourneyReplayStatsMetrics = (
     replay = globalThis.lgs?.stores?.replay ?? null,
     journey = globalThis.lgs?.theJourney ?? null,

@@ -151,6 +151,7 @@ export class JourneyReplayVideoSync {
             this.stopJourneyReplay({
                 deferSceneRestore: event?.type === ScreenMediaRecorder.events.STOP,
             })
+            this.#resolveJourneyReplay()?.restorePlaybackScene?.()
         }
 
         const handleStopClipsComplete = () => {

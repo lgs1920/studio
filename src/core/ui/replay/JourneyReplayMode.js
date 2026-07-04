@@ -4654,6 +4654,19 @@ export class JourneyReplayMode {
                         },
                     }))
                 }
+                const notifyStopClipsCompleteAfterFinalWidgetFrame = () => {
+                    const raf = globalThis.requestAnimationFrame
+                                ?? globalThis.window?.requestAnimationFrame?.bind(globalThis.window)
+                                ?? (callback => setTimeout(callback, 0))
+
+                    raf(() => {
+                        raf(() => {
+                            if (token === this.#clipSequenceToken) {
+                                notifyStopClipsComplete()
+                            }
+                        })
+                    })
+                }
                 const finalize = () => {
                     if (token !== this.#clipSequenceToken) {
                         return
@@ -4661,14 +4674,14 @@ export class JourneyReplayMode {
 
                     this.#stopStopClipPOIMaskLoop()
                     this.#setContinuousRender(false)
-                    this.#renderer.clear()
-                    this.#setJourneyReplayOrbitAllowed(true)
-                    resetRuntimeProgress(replayStore())
                     if (replayStore()?.recordingSync === true) {
                         this.#sceneRestoreDeferred = true
                         return
                     }
 
+                    this.#renderer.clear()
+                    this.#setJourneyReplayOrbitAllowed(true)
+                    resetRuntimeProgress(replayStore())
                     this.#restorePlaybackScene()
                 }
 
@@ -4684,8 +4697,8 @@ export class JourneyReplayMode {
 
                     const closeOpenedPOIs = this.#closeJourneyReplayOpenedPOIsBeforeStopClips()
                     if (!closeOpenedPOIs && stopList.length === 0) {
-                        notifyStopClipsComplete()
                         finalize()
+                        notifyStopClipsCompleteAfterFinalWidgetFrame()
                         return
                     }
 
@@ -4697,8 +4710,8 @@ export class JourneyReplayMode {
                             }
 
                             if (stopList.length === 0) {
-                                notifyStopClipsComplete()
                                 finalize()
+                                notifyStopClipsCompleteAfterFinalWidgetFrame()
                                 return
                             }
 

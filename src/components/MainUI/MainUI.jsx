@@ -302,11 +302,11 @@ export const MainUI = memo(() => {
                     <SupportUI/>
                     <JourneyLoaderUI multiple/>
                     <ContextMenuRenderer/>
-                    <VideoDownloadAndShareDialog/>
 
                     {mainUI.callForActions.active && <CallForActions/>}
                 </>
             )}
+            <VideoDownloadAndShareDialog/>
 
         </>
     )
