@@ -39,7 +39,7 @@ import {
 }                                                                      from '@Core/ui/replay/JourneyReplayProgressionStyle'
 import { gpx }                                                         from '@tmcw/togeojson'
 import { applyGpxStyleExtensionProperties, extractLgsTrackProperties } from '@Utils/JourneyGpxUtils'
-import { Cartesian3, Matrix4, Transforms }                             from 'cesium'
+import { Cartesian3, Cartographic, Matrix4, Math as CesiumMath, Transforms } from 'cesium'
 import { proxy }                                                       from 'valtio'
 import { describe, expect, it, vi }                                    from 'vitest'
 
@@ -6367,6 +6367,124 @@ describe('replay phase 1 playback controller', () => {
             )).toBeLessThan(1)
             expect(journey.visible).toBe(true)
             expect(journey.updateVisibility).toHaveBeenCalledWith(true)
+        }
+        finally {
+            globalThis.lgs = previousLgs
+            globalThis.__ = previousDoubleUnderscore
+        }
+    })
+
+    it('places the replay camera at the start sample when trace marker mode has no start clip', () => {
+        const journey = makeJourney([
+                                        makeTrack({
+                                                      slug:        'track#journey#gpx#main',
+                                                      coordinates: [[2, 48, 120], [2.001, 48.001, 130]],
+                                                  }),
+                                    ])
+        const previousLgs = globalThis.lgs
+        const previousDoubleUnderscore = globalThis.__
+        const replay = defaultJourneyReplaySettings()
+        const staleMarkerPosition = {
+            longitude: 8,
+            latitude:  9,
+            altitude:  999,
+        }
+        const setViewCalls = []
+
+        globalThis.__ = {
+            ui: {
+                cameraManager: {
+                    stopRotate: vi.fn(async () => undefined),
+                },
+            },
+        }
+        globalThis.lgs = {
+            theJourney: journey,
+            theTrack:   null,
+            settings:   {
+                ui: {
+                    replay: {
+                        ...replay,
+                        marker: {
+                            ...replay.marker,
+                            mode: REPLAY_MARKER_MODE_TRACE,
+                            position: staleMarkerPosition,
+                        },
+                        clips: {
+                            ...replay.clips,
+                            start: [],
+                        },
+                    },
+                },
+            },
+            stores:     {
+                replay: proxy({
+                                      progress: 0,
+                                      camera:   replay.camera,
+                                      marker:   {
+                                          ...replay.marker,
+                                          mode: REPLAY_MARKER_MODE_TRACE,
+                                          position: staleMarkerPosition,
+                                      },
+                                      clips:    {
+                                          ...replay.clips,
+                                          start: [],
+                                      },
+                                  }),
+            },
+            viewer:     {
+                trackedEntity: null,
+                camera:        {
+                    heading:              1.1,
+                    pitch:                -0.2,
+                    roll:                 0,
+                    positionCartographic: {longitude: 0.1, latitude: 0.2, height: 3456},
+                    moveStart:            {
+                        addEventListener:    () => {},
+                        removeEventListener: () => {},
+                    },
+                    moveEnd:              {
+                        addEventListener:    () => {},
+                        removeEventListener: () => {},
+                    },
+                    cancelFlight:         () => {},
+                    setView:              options => setViewCalls.push(options),
+                    lookAtTransform:      () => {},
+                },
+            },
+            scene:      {
+                requestRender: () => {},
+                globe:         {getHeight: () => 120},
+            },
+        }
+
+        try {
+            const mode = new JourneyReplayMode({
+                controller: new JourneyReplayPlaybackController({
+                    requestFrame: () => 1,
+                    cancelFrame:  () => {},
+                    now:          () => 0,
+                }),
+                renderer:   {
+                    clear:  () => {},
+                    show:   () => {},
+                    update: () => {},
+                },
+            })
+
+            mode.start({duration: 1})
+
+            expect(setViewCalls).toHaveLength(1)
+            expect(setViewCalls[0]).toEqual(expect.objectContaining({
+                destination: expect.any(Cartesian3),
+                orientation: expect.objectContaining({
+                    direction: expect.any(Cartesian3),
+                    up:        expect.any(Cartesian3),
+                }),
+            }))
+            const destination = Cartographic.fromCartesian(setViewCalls[0].destination)
+            expect(CesiumMath.toDegrees(destination.longitude)).toBeCloseTo(2, 1)
+            expect(CesiumMath.toDegrees(destination.latitude)).toBeCloseTo(48, 1)
         }
         finally {
             globalThis.lgs = previousLgs

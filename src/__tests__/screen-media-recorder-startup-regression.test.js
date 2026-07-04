@@ -82,7 +82,14 @@ describe('ScreenMediaRecorder startup', () => {
                 ],
             },
         }
-        globalThis.requestAnimationFrame = vi.fn()
+        let rafCalls = 0
+        globalThis.requestAnimationFrame = vi.fn((callback) => {
+            rafCalls += 1
+            if (rafCalls <= 2) {
+                queueMicrotask(() => callback(performance.now()))
+            }
+            return rafCalls
+        })
         globalThis.cancelAnimationFrame = vi.fn()
         globalThis.document.body.classList.remove('recording-in-progress', 'recording-paused')
 

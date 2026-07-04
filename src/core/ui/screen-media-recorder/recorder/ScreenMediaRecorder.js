@@ -33,6 +33,7 @@ const VIDEO_FIRST_PACKET_TIMEOUT_MS = 3500
 const VIDEO_FIRST_PACKET_MAX_WAIT_MS = Math.max(VIDEO_START_TIMEOUT_MS, 10000)
 const VIDEO_START_CLEANUP_TIMEOUT_MS = 2000
 const VIDEO_EMPTY_OUTPUT_MAX_BYTES = 256
+const VIDEO_START_SETTLE_FRAMES = 2
 
 /**
  * Singleton class responsible for screen/canvas/stream recording using mediabunny
@@ -583,17 +584,19 @@ export class ScreenMediaRecorder extends EventTarget {
             )
             this.#isRecording = true
             this.#isPaused = false
-            this.#startTime = performance.now()
             this.#pausedTime = 0
             this.#nextFrameDueMs = 0
             document.body.classList.add(ScreenMediaRecorder.CLASSES.RECORDING)
 
+            await this.#waitForStartFrameReady()
+
+            this.dispatchEvent(new CustomEvent(ScreenMediaRecorder.events.START))
+            this.#startTime = performance.now()
             this.#emitInfo(0)
             this.#startMonitoring()
             this.#scheduleNextFrame()
             this.#submitVideoFrame(0, this.#frameIntervalSec, {keyFrame: true})
 
-            this.dispatchEvent(new CustomEvent(ScreenMediaRecorder.events.START))
             this.#startFirstEncodedPacketMonitor()
         }
         catch (error) {
@@ -836,6 +839,17 @@ export class ScreenMediaRecorder extends EventTarget {
         }
 
         setTimeout(check, VIDEO_FIRST_PACKET_TIMEOUT_MS)
+    }
+
+    #waitForStartFrameReady = async () => {
+        const raf = globalThis.requestAnimationFrame
+        if (typeof raf !== 'function') {
+            return
+        }
+
+        for (let frame = 0; frame < VIDEO_START_SETTLE_FRAMES; frame += 1) {
+            await new Promise(resolve => raf(() => resolve()))
+        }
     }
 
     #emitRecorderError = (error) => {

@@ -54,7 +54,7 @@ import {
     REPLAY_CAMERA_HEADING_OFFSET_MAX, REPLAY_CAMERA_HEADING_OFFSET_MIN, REPLAY_CAMERA_POSITION_SYSTEM,
     REPLAY_MARKER_MODE_HYSTERESIS, REPLAY_MARKER_MODE_NAVIGATION,
     REPLAY_MARKER_MODE_TRACE, getJourneyReplaySettings, normalizeJourneyReplayCamera, normalizeJourneyReplayMarker,
-    normalizeJourneyReplayProgressionStyle, normalizeJourneyReplayTrace,
+    normalizeJourneyReplayProgressionStyle, normalizeJourneyReplaySmoothing, normalizeJourneyReplayTrace,
 }                                                                                          from './JourneyReplayProgressionStyle'
 
 const DEFAULT_DURATION = 60
@@ -803,6 +803,7 @@ export class JourneyReplayMode {
         const progression = options.progression ?? replay.progression
         const profileInfo = options.profileInfo ?? replay.profileInfo
         const trace = options.trace ?? replay.trace
+        const smoothing = normalizeJourneyReplaySmoothing(options.smoothing ?? replay.smoothing)
         const marker = options.marker ?? replay.marker
         const camera = options.camera ?? replay.camera
         const clips = resolveJourneyReplayRuntimeClips({
@@ -816,6 +817,7 @@ export class JourneyReplayMode {
             scope,
             trackSlug,
             includeHiddenTracks: options.includeHiddenTracks ?? false,
+            renderSmoothing: smoothing,
         })
         this.#resetCameraController()
 
@@ -827,6 +829,7 @@ export class JourneyReplayMode {
             store.progression = progression
             store.profileInfo = profileInfo
             store.trace = normalizeJourneyReplayTrace(trace)
+            store.smoothing = smoothing
             store.marker = normalizeJourneyReplayMarker(marker)
             store.camera = normalizeJourneyReplayCamera(camera)
             store.clips = clips
@@ -929,6 +932,7 @@ export class JourneyReplayMode {
         }
         else {
             this.#deferStartCameraRecenter = false
+            this.#placeCameraAtPlaybackStart(startSample, options.progress ?? 0)
             startResult = this.#controller.start({
                 progress: options.progress ?? 0,
             })
@@ -1393,8 +1397,19 @@ export class JourneyReplayMode {
 
     seek = progress => this.#controller.seek(progress)
 
-    refresh = ({camera = true, suppressMoveEvents = camera === true} = {}) => {
-        const sample = this.#controller.currentSample()
+    refresh = ({camera = true, suppressMoveEvents = camera === true, rebuildSampler = false} = {}) => {
+        let sample = this.#controller.currentSample()
+        if (rebuildSampler) {
+            const progress = finiteNumber(this.#controller.progress ?? sample?.progress) ?? 0
+            this.configure({progress})
+            sample = this.#controller.currentSample()
+            if (sample && this.#sampler) {
+                this.#renderer.show({
+                    sampler: this.#sampler,
+                    options: {smoothedGuide: this.#smoothedGuide()},
+                })
+            }
+        }
         if (sample && this.#sampler) {
             this.#renderer.update({
                 sample,
@@ -1783,11 +1798,12 @@ export class JourneyReplayMode {
         return sample
     }
 
-    restorePlaybackScene = () => {
-        if (!this.#sceneRestoreDeferred) {
+    restorePlaybackScene = ({force = false} = {}) => {
+        if (!force && !this.#sceneRestoreDeferred) {
             return false
         }
 
+        this.#renderer.clear()
         this.#restorePlaybackScene()
         return true
     }
@@ -1797,6 +1813,44 @@ export class JourneyReplayMode {
     #clipListForSlot = (slot) => {
         const clips = this.#clipSettings()
         return slot === REPLAY_CLIP_SLOT_STOP ? clips.stop : clips.start
+    }
+
+    #placeCameraAtPlaybackStart = (sample, progress = 0) => {
+        if (!sample) {
+            return
+        }
+
+        const settings = getJourneyReplaySettings()
+        const cameraSettings = normalizeJourneyReplayCamera(globalThis.lgs?.stores?.replay?.camera ?? settings.camera)
+        const markerSettings = normalizeJourneyReplayMarker({
+            ...(globalThis.lgs?.stores?.replay?.marker ?? settings.marker),
+            position: null,
+        })
+        const view = this.#cameraViewForSample({
+            sample,
+            progress,
+            source: 'drawer',
+            cameraSettings,
+            markerSettings,
+            previousHeading: null,
+            previousPitch:   null,
+        })
+        if (!view) {
+            return
+        }
+
+        this.#recenterCameraToSample({
+            sample:         view.sample,
+            heading:        view.heading,
+            pitch:          view.pitch,
+            cameraSettings,
+            cameraHeight:   view.cameraHeight,
+            instant:        true,
+            duration:       0,
+        })
+        this.#lastCameraHeading = view.heading
+        this.#lastCameraPitch = view.pitch
+        this.#rememberNominalCameraView(view)
     }
 
     #runClipDelay = (durationSeconds = 0) => new Promise(resolve => {
@@ -4288,6 +4342,7 @@ export class JourneyReplayMode {
         const smoothHeading = nominalView.heading
         const smoothPitch = nominalView.pitch
         const futureSample = this.#cameraLookaheadSample(anchorSample)
+
         const introTransition = this.#introHeadingTransition
         if (introTransition) {
             const now = this.#now()
@@ -4654,7 +4709,7 @@ export class JourneyReplayMode {
                         },
                     }))
                 }
-                const notifyStopClipsCompleteAfterFinalWidgetFrame = () => {
+                const notifyStopClipsCompleteAfterFinalWidgetFrame = (afterFrame = null) => {
                     const raf = globalThis.requestAnimationFrame
                                 ?? globalThis.window?.requestAnimationFrame?.bind(globalThis.window)
                                 ?? (callback => setTimeout(callback, 0))
@@ -4662,6 +4717,9 @@ export class JourneyReplayMode {
                     raf(() => {
                         raf(() => {
                             if (token === this.#clipSequenceToken) {
+                                if (typeof afterFrame === 'function') {
+                                    afterFrame()
+                                }
                                 notifyStopClipsComplete()
                             }
                         })
@@ -4697,8 +4755,7 @@ export class JourneyReplayMode {
 
                     const closeOpenedPOIs = this.#closeJourneyReplayOpenedPOIsBeforeStopClips()
                     if (!closeOpenedPOIs && stopList.length === 0) {
-                        finalize()
-                        notifyStopClipsCompleteAfterFinalWidgetFrame()
+                        notifyStopClipsCompleteAfterFinalWidgetFrame(finalize)
                         return
                     }
 
@@ -4710,8 +4767,7 @@ export class JourneyReplayMode {
                             }
 
                             if (stopList.length === 0) {
-                                finalize()
-                                notifyStopClipsCompleteAfterFinalWidgetFrame()
+                                notifyStopClipsCompleteAfterFinalWidgetFrame(finalize)
                                 return
                             }
 
