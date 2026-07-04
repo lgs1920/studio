@@ -32,6 +32,8 @@ export class Widget2Canvas {
     #refreshing = false
     #destroyed = false
 
+    #timingLabel = 'Widget2Canvas'
+
     constructor(target, options = {}) {
         if (!target || !(target instanceof HTMLElement)) {
             return
@@ -42,6 +44,7 @@ export class Widget2Canvas {
             scale: window.devicePixelRatio || 1,
             ...options,
         }
+        this.#timingLabel = `Widget2Canvas:${this.#options.widgetId ?? this.#original?.id ?? 'unknown'}`
     }
 
     init = async () => {
@@ -259,6 +262,7 @@ export class Widget2Canvas {
             return
         }
         this.#refreshing = true
+        const startedAt = this.#shouldLogTiming() ? performance.now() : 0
 
         try {
             const staticParts = this.#original?.querySelectorAll(`.${STATIC_WIDGET_PART}`)
@@ -296,6 +300,9 @@ export class Widget2Canvas {
             this.#updateCanvas(buffer)
         }
         finally {
+            if (startedAt) {
+                this.#logTiming('refresh', startedAt)
+            }
             this.#refreshing = false
         }
     }
@@ -306,6 +313,7 @@ export class Widget2Canvas {
      * Scaled to match device pixel ratio or custom scale for maximum sharpness.
      */
     #elementToCanvasSource = async (el, options = {}) => {
+        const startedAt = this.#shouldLogTiming() ? performance.now() : 0
         if (el instanceof SVGElement) {
             const $clone = el.cloneNode(true)
             const style = getComputedStyle(el)
@@ -365,10 +373,17 @@ export class Widget2Canvas {
             img.src = `data:image/svg+xml;base64,${base64}`
 
             await img.decode()
+            if (startedAt) {
+                this.#logTiming(`svg:${el.tagName?.toLowerCase?.() ?? 'svg'}`, startedAt)
+            }
             return img
         }
 
-        return await snapdom.toCanvas(el, options)
+        const canvas = await snapdom.toCanvas(el, options)
+        if (startedAt) {
+            this.#logTiming(`snapdom:${el?.tagName?.toLowerCase?.() ?? 'node'}`, startedAt)
+        }
+        return canvas
     }
     #renderPart = async (el) => {
         let target = el
@@ -424,6 +439,17 @@ export class Widget2Canvas {
     }
     getContext = () => this.#canvas?.getContext('2d') ?? null
     getCanvas = () => this.#canvas
+
+    #shouldLogTiming = () => this.#options.debugTiming === true
+
+    #logTiming = (phase, startedAt) => {
+        if (!startedAt || !this.#shouldLogTiming()) {
+            return
+        }
+
+        const duration = Math.round((performance.now() - startedAt) * 100) / 100
+        console.info(`[${this.#timingLabel}] ${phase} ${duration}ms`)
+    }
 
     destroy = () => {
         this.#destroyed = true

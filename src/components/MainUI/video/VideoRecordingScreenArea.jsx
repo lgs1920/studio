@@ -29,8 +29,6 @@ import { WidgetMountErrorDialog } from '@Components/MainUI/video/WidgetMountErro
 import { UIToast }                                              from '@Utils/UIToast'
 import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import { useSnapshot }           from 'valtio'
-// Overlay refresh cadence (in ms). Balanced for smooth updates and low CPU.
-const OVERLAYS_REFRESH_MS = 200
 // Cache TTL for expensive DOM metrics (in ms).
 const METRICS_CACHE_TTL_MS = 750
 // Softer recorder timeslice to reduce INFO event overhead.
@@ -222,7 +220,6 @@ export const VideoRecordingScreenArea = memo(() => {
     const _composer = useRef(null)
     const _pendingFinish = useRef(null)
     const _overlaysRefreshRafId = useRef(null)
-    const _overlaysRefreshLast = useRef(0)
     const _metricsCache = useRef(new Map())
     const _wakeLock = useRef(null)
     const _recordingStartToken = useRef(0)
@@ -325,7 +322,6 @@ export const VideoRecordingScreenArea = memo(() => {
             cancelAnimationFrame(_overlaysRefreshRafId.current)
             _overlaysRefreshRafId.current = null
         }
-        _overlaysRefreshLast.current = 0
         _metricsCache.current.clear()
     }, [])
 
@@ -389,21 +385,15 @@ export const VideoRecordingScreenArea = memo(() => {
         return Boolean(element.querySelector('.lgs-widget-canvas'))
     }, [])
 
-    // rAF-based refresh loop to avoid setInterval bursts.
+    // rAF-based refresh loop to keep overlays in sync with the recording frames.
     const startOverlaysRefresh = useCallback((composer, cropRect) => {
         stopOverlaysRefresh()
-        const tick = (time) => {
+        const tick = () => {
             if (!_composer.current) {
                 _overlaysRefreshRafId.current = null
                 return
             }
-            if (!_overlaysRefreshLast.current) {
-                _overlaysRefreshLast.current = time
-            }
-            if ((time - _overlaysRefreshLast.current) >= OVERLAYS_REFRESH_MS) {
-                _overlaysRefreshLast.current = time
-                buildComposerOverlays(composer, cropRect)
-            }
+            buildComposerOverlays(composer, cropRect)
             _overlaysRefreshRafId.current = requestAnimationFrame(tick)
         }
         _overlaysRefreshRafId.current = requestAnimationFrame(tick)

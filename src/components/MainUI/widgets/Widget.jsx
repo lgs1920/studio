@@ -1254,6 +1254,8 @@ export const Widget = ({isVisible, className = '', moveableClassName = '', conta
                             type:            fullConfig.snap,
                             outerTransforms: true,
                             outerShadows:    true,
+                            widgetId:        config.id,
+                            debugTiming:     config.refreshMode === 'both',
                             refreshMode:     config.refreshMode ?? (interactionLocked ? 'live' : 'mutation'),
                         })
                         await _w2c.current.init()
