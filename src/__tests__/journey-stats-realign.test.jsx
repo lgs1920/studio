@@ -233,6 +233,7 @@ describe('JourneyStats', () => {
         const widget = container.querySelector('.journey-stats-widget')
         expect(widget).not.toBeNull()
         expect(widget.style.visibility).not.toBe('hidden')
+        expect(widget.dataset.videoOverlayVisible).toBe('true')
     })
 
     it('hides the journey stats widget on the video board while recording is active and the replay is not near the end', async () => {
@@ -263,5 +264,6 @@ describe('JourneyStats', () => {
         const widget = container.querySelector('.journey-stats-widget')
         expect(widget).not.toBeNull()
         expect(widget.style.visibility).toBe('hidden')
+        expect(widget.dataset.videoOverlayVisible).toBe('false')
     })
 })

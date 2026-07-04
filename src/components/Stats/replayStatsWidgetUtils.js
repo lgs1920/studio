@@ -73,7 +73,15 @@ export const shouldShowJourneyStatsWidget = (replay = globalThis.lgs?.stores?.re
     }
 
     const remainingMillis = getJourneyReplayRemainingMillis(replay)
-    return remainingMillis !== null && remainingMillis <= END_WIDGET_LEAD_MS
+    if (remainingMillis === null || remainingMillis > END_WIDGET_LEAD_MS) {
+        return false
+    }
+
+    if (hasJourneyReplayStopClips()) {
+        return true
+    }
+
+    return remainingMillis > 0
 }
 
 export const shouldShowVideoStatsWidget = ({

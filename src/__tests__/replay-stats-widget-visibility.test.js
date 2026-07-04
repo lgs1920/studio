@@ -95,6 +95,11 @@ describe('replay stats widget visibility', () => {
         expect(shouldShowJourneyStatsWidget(globalThis.lgs.stores.replay)).toBe(false)
     })
 
+    it('hides the journey stats widget exactly at the end when no stop clips exist', () => {
+        globalThis.lgs.stores.replay.progress = 1
+        expect(shouldShowJourneyStatsWidget(globalThis.lgs.stores.replay)).toBe(false)
+    })
+
     it('builds live metrics from the replay sample', () => {
         const metrics = buildDynamicJourneyReplayStatsMetrics(globalThis.lgs.stores.replay)
         expect(metrics.distance).toBe(120)
