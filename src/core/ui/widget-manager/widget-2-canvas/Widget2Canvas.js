@@ -114,7 +114,9 @@ export class Widget2Canvas {
                 return
             }
 
-            this.#refreshLiveCanvas()
+            if (!this.#refreshLiveCanvas() && this.#options.refreshMode === 'both') {
+                void this.refresh()
+            }
 
             if (this.#tickLoopActive && !this.#destroyed && this.#original) {
                 this.#tickFrame = requestAnimationFrame(tick)

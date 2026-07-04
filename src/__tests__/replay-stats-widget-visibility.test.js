@@ -108,6 +108,23 @@ describe('replay stats widget visibility', () => {
         expect(metrics.duration).toBe(4)
     })
 
+    it('prefers an explicit live sample override for dynamic metrics', () => {
+        const metrics = buildDynamicJourneyReplayStatsMetrics(
+            globalThis.lgs.stores.replay,
+            globalThis.lgs.theJourney,
+            {
+                distanceFromStart: 123,
+                remainingDistance:  77,
+                cumulativeElevationGain: 99,
+                journeyElapsedMillis: 9876,
+            },
+        )
+
+        expect(metrics.distance).toBe(123)
+        expect(metrics.positive.elevation).toBe(99)
+        expect(metrics.duration).toBeCloseTo(9.876)
+    })
+
     it('keeps elevation visible at zero when the journey has elevation data', () => {
         globalThis.lgs.stores.replay.sample.cumulativeElevationGain = 0
 

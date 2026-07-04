@@ -385,6 +385,9 @@ export class JourneyReplayPlaybackController {
             return
         }
 
+        store.liveSample = sample
+        store.dynamicStatsTick = this.#now()
+
         const now = this.#now()
         if (!force && now - this.#lastStoreSync < this.#storeSyncInterval) {
             return

@@ -30,7 +30,7 @@ import { UIToast }                                              from '@Utils/UIT
 import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import { useSnapshot }           from 'valtio'
 // Overlay refresh cadence (in ms). Balanced for smooth updates and low CPU.
-const OVERLAYS_REFRESH_MS = 250
+const OVERLAYS_REFRESH_MS = 200
 // Cache TTL for expensive DOM metrics (in ms).
 const METRICS_CACHE_TTL_MS = 750
 // Softer recorder timeslice to reduce INFO event overhead.

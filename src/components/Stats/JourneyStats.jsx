@@ -184,7 +184,6 @@ export const JourneyStats = memo(({id, metrics, units, style = {}, mode = 'journ
     useSnapshot(lgs.stores.ui.video)
     const isDynamicMode = mode === 'dynamic'
     const isVideoBoard = widgetsBoard === VIDEO_WIDGETS_BOARD
-
     const element = useMemo(() => {
         if (id && configuration.elements?.[id]) {
             return configuration.elements[id]
@@ -192,12 +191,50 @@ export const JourneyStats = memo(({id, metrics, units, style = {}, mode = 'journ
         return configuration.user ?? configuration.default
     }, [id, configuration])
 
+    const [dynamicStatsTick, setDynamicStatsTick] = useState(0)
+    const replayController = __.ui?.replay?.controller ?? null
+
+    useEffect(() => {
+        if (!isDynamicMode || !replay?.playing) {
+            return undefined
+        }
+
+        const raf = globalThis.requestAnimationFrame ?? (callback => setTimeout(callback, 16))
+        const caf = globalThis.cancelAnimationFrame ?? clearTimeout
+        let rafId = 0
+        let cancelled = false
+
+        const tick = () => {
+            if (cancelled) {
+                return
+            }
+
+            setDynamicStatsTick(current => current + 1)
+            rafId = raf(tick)
+        }
+
+        rafId = raf(tick)
+
+        return () => {
+            cancelled = true
+            caf(rafId)
+        }
+    }, [isDynamicMode, replay?.playing])
+
+    const dynamicReplaySample = useMemo(() => {
+        if (!isDynamicMode) {
+            return null
+        }
+
+        return replayController?.currentSample?.() ?? replay?.sample ?? null
+    }, [dynamicStatsTick, isDynamicMode, replay, replayController])
+
     /**
      * Merges metrics based on defined data source (global, external, user)
      */
     const displayMetrics = useMemo(() => {
         if (isDynamicMode) {
-            return buildDynamicJourneyReplayStatsMetrics(replay, journey)
+            return buildDynamicJourneyReplayStatsMetrics(replay, journey, dynamicReplaySample)
         }
 
         const source = element.dataSource || 'global'
@@ -219,7 +256,7 @@ export const JourneyStats = memo(({id, metrics, units, style = {}, mode = 'journ
                 ...(source === 'user' ? {...(external.positive || {}), ...(user.positive || {})} : {}),
             }
         }
-    }, [element.dataSource, fallbackMetrics, replay, isDynamicMode, metricsSnap])
+    }, [dynamicReplaySample, element.dataSource, fallbackMetrics, replay, isDynamicMode, metricsSnap])
 
     const formattedDuration = useMemo(() => {
         const seconds = displayMetrics?.duration

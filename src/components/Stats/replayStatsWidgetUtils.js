@@ -100,14 +100,18 @@ export const shouldShowVideoStatsWidget = ({
 export const buildDynamicJourneyReplayStatsMetrics = (
     replay = globalThis.lgs?.stores?.replay ?? null,
     journey = globalThis.lgs?.theJourney ?? null,
+    sampleOverride = null,
 ) => {
-    const sample = replay?.sample ?? null
+    const sample = sampleOverride ?? replay?.sample ?? null
     const coveredDistance = finiteNumber(
         Number(replay?.direction) < 0
             ? sample?.remainingDistance
             : sample?.distanceFromStart,
     )
-    const elapsedSeconds = finiteNumber(replay?.elapsedMillis)
+    const elapsedSeconds = finiteNumber(
+        sample?.journeyElapsedMillis
+        ?? replay?.elapsedMillis
+    )
     const elevationGain = finiteNumber(sample?.cumulativeElevationGain)
     const hasElevation = journey?.hasElevation !== false
 

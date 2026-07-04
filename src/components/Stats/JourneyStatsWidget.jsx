@@ -99,6 +99,7 @@ export const JourneyStatsWidget = ({
             mandatory:       false,
             stopPropagation: false,
             snap:            false,
+            refreshMode:     mode === 'dynamic' ? 'both' : undefined,
             widgetsBoard:    widgetsBoard,
             zIndex: zIndex,
         }
