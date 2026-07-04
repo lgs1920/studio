@@ -66,6 +66,26 @@ describe('track render smoothing', () => {
         expect(track.content.geometry.coordinates).toHaveLength(3)
     })
 
+    it('reuses the rendered content cache for the same smoothing settings', () => {
+        const track = makeTrack({enabled: true, step: 6})
+        const firstRenderContent = getTrackRenderContent(track)
+        const secondRenderContent = getTrackRenderContent(track)
+
+        expect(secondRenderContent).toBe(firstRenderContent)
+        expect(secondRenderContent.geometry.coordinates).toHaveLength(firstRenderContent.geometry.coordinates.length)
+    })
+
+    it('caps runaway smoothing growth on long segments', () => {
+        const track = makeTrack({enabled: true, step: 6})
+        track.content.geometry.coordinates = Array.from({length: 200}, (_, index) => [6 + (index * 0.001), 45 + (index * 0.001), 100 + index])
+
+        const renderContent = getTrackRenderContent(track)
+
+        expect(renderContent.geometry.coordinates.length).toBeLessThanOrEqual(4096)
+        expect(renderContent.geometry.coordinates[0]).toEqual([6, 45, 100])
+        expect(renderContent.geometry.coordinates.at(-1)).toEqual([6.199, 45.199, 299])
+    })
+
     it('can force smoothing for replay without mutating stored track settings', () => {
         const track = makeTrack({enabled: false, step: 2})
         const renderContent = getTrackRenderContent(track, {forceRenderSmoothing: true})

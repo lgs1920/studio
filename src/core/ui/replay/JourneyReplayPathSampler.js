@@ -616,17 +616,17 @@ export class JourneyReplayPathSampler {
     }
 
     static coordinateSegmentsFromTrack = (track, options = {}) => {
-        const geometry = getTrackRenderContent(track, options)?.geometry
-        if (!geometry) {
-            return []
-        }
-
         const cacheKey = track?.content
         const smoothingKey = trackRenderSmoothingKey(track, options)
         const cacheBucket = getWeakMapBucket(renderedCoordinateSegmentsCache, cacheKey)
         const cachedSegments = cacheBucket?.get(smoothingKey)
         if (cachedSegments) {
             return cachedSegments
+        }
+
+        const geometry = getTrackRenderContent(track, options)?.geometry
+        if (!geometry) {
+            return []
         }
 
         let segments = []

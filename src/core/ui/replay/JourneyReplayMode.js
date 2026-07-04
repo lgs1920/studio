@@ -706,6 +706,7 @@ export class JourneyReplayMode {
     #controller
     #renderer
     #sampler = null
+    #samplerConfigKey = null
     #unbind = []
     #requestRenderMode = null
     #pendingProfileHoverSample = null
@@ -789,6 +790,22 @@ export class JourneyReplayMode {
         return this.#controller.paused
     }
 
+    #samplerConfigurationKey = ({
+                                    journey = null,
+                                    scope = REPLAY_SCOPE_ALL_TRACKS,
+                                    trackSlug = null,
+                                    includeHiddenTracks = false,
+                                    smoothing = null,
+                                } = {}) => [
+        journey?.slug ?? '',
+        journey?.tracks?.size ?? 0,
+        scope,
+        trackSlug ?? '',
+        includeHiddenTracks === true ? 1 : 0,
+        smoothing?.enabled === true ? 1 : 0,
+        smoothing?.step ?? 0,
+    ].join('|')
+
     configure = (options = {}) => {
         const store = replayStore()
         const journey = options.journey ?? globalThis.lgs?.theJourney
@@ -806,20 +823,30 @@ export class JourneyReplayMode {
         const smoothing = normalizeJourneyReplaySmoothing(options.smoothing ?? replay.smoothing)
         const marker = options.marker ?? replay.marker
         const camera = options.camera ?? replay.camera
+        const samplerConfigKey = this.#samplerConfigurationKey({
+            journey,
+            scope,
+            trackSlug,
+            includeHiddenTracks: options.includeHiddenTracks ?? false,
+            smoothing,
+        })
         const clips = resolveJourneyReplayRuntimeClips({
             clips:         options.clips,
             settingsClips: replay.clips,
             journey,
         })
 
-        this.#sampler = new JourneyReplayPathSampler({
-            journey,
-            scope,
-            trackSlug,
-            includeHiddenTracks: options.includeHiddenTracks ?? false,
-            renderSmoothing: smoothing,
-        })
-        this.#resetCameraController()
+        if (this.#samplerConfigKey !== samplerConfigKey || !this.#sampler) {
+            this.#sampler = new JourneyReplayPathSampler({
+                journey,
+                scope,
+                trackSlug,
+                includeHiddenTracks: options.includeHiddenTracks ?? false,
+                renderSmoothing: smoothing,
+            })
+            this.#samplerConfigKey = samplerConfigKey
+            this.#resetCameraController()
+        }
 
         if (store) {
             store.journeySlug = journey.slug
