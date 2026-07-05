@@ -71,6 +71,13 @@ describe('VideoRecordingSettingsToolbar', () => {
 
         globalThis.lgs = {
             theJourney: {slug: 'journey-a'},
+            settings: {
+                ui: {
+                    video: proxy({
+                        captureMode: 'speed',
+                    }),
+                },
+            },
             stores: {
                 ui: proxy({
                     video: proxy({

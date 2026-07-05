@@ -33,6 +33,8 @@ export class JourneyReplayVideoSync {
     #armed = false
     #autoStopRecording = true
     #resetToStart = true
+    #captureMode = 'speed'
+    #captureFps = null
     #recorder = null
     #replay = null
     #store = null
@@ -83,6 +85,25 @@ export class JourneyReplayVideoSync {
         this.#resolveJourneyReplay()?.setVideoSafeMode?.(enabled)
     }
 
+    #setVideoCaptureCadence = () => {
+        const replay = this.#resolveJourneyReplay()
+        if (!replay) {
+            return
+        }
+
+        if (this.#captureMode === 'quality') {
+            const fps = Number(this.#captureFps)
+            const interval = Number.isFinite(fps) && fps > 0 ? Math.max(16, Math.round(1000 / fps)) : 16
+            replay.setPublicationCadence?.({
+                storeSyncInterval:   interval,
+                globalUpdateInterval: interval,
+            })
+            return
+        }
+
+        replay.setVideoSafeMode?.(true)
+    }
+
     #stopRecorderAfterStopClips = () => {
         if (!this.#armed || !this.#autoStopRecording) {
             return
@@ -131,7 +152,7 @@ export class JourneyReplayVideoSync {
                 return
             }
 
-            this.#setVideoSafeMode(true)
+            this.#setVideoCaptureCadence()
             this.#cancelPendingStart()
             if (!this.#armed) {
                 this.#setVideoSafeMode(false)
@@ -193,6 +214,8 @@ export class JourneyReplayVideoSync {
         store = null,
         autoStopRecording = true,
         resetToStart = true,
+        captureMode = 'speed',
+        captureFps = null,
     } = {}) => {
         if (recorder) {
             this.#recorder = recorder
@@ -206,6 +229,8 @@ export class JourneyReplayVideoSync {
 
         this.#autoStopRecording = autoStopRecording !== false
         this.#resetToStart = resetToStart !== false
+        this.#captureMode = captureMode === 'quality' ? 'quality' : 'speed'
+        this.#captureFps = captureFps
         this.#armed = true
         this.#syncStore()
         this.#bind()
@@ -216,6 +241,8 @@ export class JourneyReplayVideoSync {
         this.#armed = false
         this.#cancelPendingStart()
         this.#setVideoSafeMode(false)
+        this.#captureMode = 'speed'
+        this.#captureFps = null
         this.#syncStore()
         return this
     }

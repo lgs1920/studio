@@ -69,6 +69,7 @@ const makeJourneyReplay = () => {
         resume: vi.fn(),
         stop: vi.fn(),
         setVideoSafeMode: vi.fn(),
+        setPublicationCadence: vi.fn(),
         restorePlaybackScene: vi.fn(),
     }
 }
@@ -95,6 +96,23 @@ describe('JourneyReplayVideoSync', () => {
             expect(replay.setVideoSafeMode).toHaveBeenCalledWith(true)
             expect(replay.start).toHaveBeenCalledWith({progress: 0})
         })
+    })
+
+    it('uses a tighter publication cadence in quality capture mode', () => {
+        const recorder = new FakeRecorder()
+        const replay = makeJourneyReplay()
+        const store = {recordingSync: false}
+        globalThis.lgs = {settings: {ui: {replay: {recordingSync: false}}}}
+        const sync = new JourneyReplayVideoSync({recorder, replay, store})
+
+        sync.arm({captureMode: 'quality', captureFps: 60})
+        recorder.dispatchEvent(new CustomEvent(ScreenMediaRecorder.events.START))
+
+        expect(replay.setPublicationCadence).toHaveBeenCalledWith({
+            storeSyncInterval:   17,
+            globalUpdateInterval: 17,
+        })
+        expect(replay.setVideoSafeMode).not.toHaveBeenCalledWith(true)
     })
 
     it('stops the recorder immediately after stop clips complete when stop clips exist', async () => {

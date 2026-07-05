@@ -60,6 +60,15 @@ The retained model is closer to the beta behavior:
 - do not `await` encoder writes in the frame loop,
 - wait for in-flight writes only when stopping.
 
+## Capture modes
+
+The recorder now accepts an internal `captureMode` flag:
+
+- `speed` keeps the current real-time behavior and is the default.
+- `quality` waits for the next ready frame before snapshotting and keeps the replay publication cadence aligned with the selected FPS.
+
+This mode is intentionally kept out of the visible UI for now. It is wired through the recorder and replay sync path so it can be re-enabled later without changing the capture contract again.
+
 ## Recorder behavior
 
 ### Source types

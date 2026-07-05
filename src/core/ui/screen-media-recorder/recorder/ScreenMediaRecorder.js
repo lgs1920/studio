@@ -142,6 +142,8 @@ export class ScreenMediaRecorder extends EventTarget {
     #metadata = null
     #ratio = null
     #type = null
+    #captureMode = 'speed'
+    #frameCaptureReady = null
     #snapshot
     #mimeType = 'video/mp4'
     #extension = 'mp4'
@@ -228,6 +230,10 @@ export class ScreenMediaRecorder extends EventTarget {
         }
     }
 
+    setFrameCaptureReady = (callback = null) => {
+        this.#frameCaptureReady = typeof callback === 'function' ? callback : null
+    }
+
     async url() {
         if (!this.#blob) {
             if (this.isVideo()) {
@@ -253,6 +259,8 @@ export class ScreenMediaRecorder extends EventTarget {
                       metadata = null,
                       dimensions = null,
                       ratio,
+                      captureMode = 'speed',
+                      frameCaptureReady = null,
                   } = {}) => {
         if (this.#isRecording) {
             throw this.error('Cannot initialize while recording')
@@ -271,6 +279,8 @@ export class ScreenMediaRecorder extends EventTarget {
         this.#timeslice = timeslice
         this.#metadata = {...(metadata || {date: new Date()})}
         this.#ratio = lgs.configuration.videoFormats.find(f => f.value === ratio)
+        this.#captureMode = captureMode === 'quality' ? 'quality' : 'speed'
+        this.#frameCaptureReady = typeof frameCaptureReady === 'function' ? frameCaptureReady : null
         if (dimensions?.width > 0 && dimensions?.height > 0) {
             this.#dimensions = this.#getEncoderSafeSize(dimensions.width, dimensions.height)
         }
@@ -397,7 +407,7 @@ export class ScreenMediaRecorder extends EventTarget {
     }
 
     /** Encode next frame using the current real-time timestamp. */
-    #processFrame = () => {
+    #processFrame = async () => {
         if (!this.#isRecording || this.#isPaused || !this.#videoSource) {
             this.#frameLoopActive = false
             return
@@ -406,12 +416,22 @@ export class ScreenMediaRecorder extends EventTarget {
         const now = performance.now()
         const elapsedMs = now - this.#startTime + this.#pausedTime
 
-        if (elapsedMs + 0.5 < this.#nextFrameDueMs) {
+        if (this.#captureMode !== 'quality' && elapsedMs + 0.5 < this.#nextFrameDueMs) {
             this.#scheduleNextFrame()
             return
         }
 
         const elapsedSec = elapsedMs / 1000
+
+        if (this.#captureMode === 'quality' && this.#frameCaptureReady) {
+            try {
+                await this.#frameCaptureReady()
+            }
+            catch (error) {
+                this.#handleFrameEncodingError(error)
+                return
+            }
+        }
 
         const pendingWrite = this.#submitVideoFrame(elapsedSec, this.#frameIntervalSec)
         if (!pendingWrite) {
@@ -420,7 +440,17 @@ export class ScreenMediaRecorder extends EventTarget {
 
         this.#encodedFrames += 1
         this.#recordedDuration = elapsedSec
-        this.#nextFrameDueMs = elapsedMs + this.#frameIntervalMs
+        this.#nextFrameDueMs = this.#captureMode === 'quality' ? 0 : (elapsedMs + this.#frameIntervalMs)
+
+        if (this.#captureMode === 'quality') {
+            pendingWrite.finally(() => {
+                if (!this.#isRecording || this.#isPaused) {
+                    return
+                }
+                this.#scheduleNextFrame()
+            })
+            return
+        }
 
         this.#scheduleNextFrame()
     }
@@ -439,6 +469,7 @@ export class ScreenMediaRecorder extends EventTarget {
         this.#infoInterval = null
         this.#frameLoopActive = false
         this.#pendingFrameWrites.clear()
+        this.#frameCaptureReady = null
     }
 
     #submitVideoFrame = (timestampSec, durationSec, encodeOptions = undefined) => {

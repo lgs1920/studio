@@ -300,15 +300,18 @@ export const VideoRecordingScreenArea = memo(() => {
             return true
         }
 
+        const selectedFps = ScreenMediaRecorder.FPS[$video.fps]
         __.ui.replayVideoSync?.arm?.({
             recorder:          __.recorder,
             replay:            __.ui.replay,
             store:             lgs.stores.replay,
             autoStopRecording: true,
             resetToStart:      true,
+            captureMode:       $video.captureMode ?? lgs.settings.ui.video.captureMode ?? 'speed',
+            captureFps:        selectedFps,
         })
         return true
-    }, [isJourneyReplaySyncRequested])
+    }, [isJourneyReplaySyncRequested, $video])
 
     // Dispose composer and release references.
     const disposeComposer = useCallback(() => {
@@ -461,6 +464,7 @@ export const VideoRecordingScreenArea = memo(() => {
                                        height: outputConfig.targetHeight,
                                     },
                                     ratio:      videoFrame.ratio.value,
+                                    captureMode: $video.captureMode ?? lgs.settings.ui.video.captureMode ?? 'speed',
                                     metadata: {artist: lgs.servers.studio.name, date: new Date(), album: LGS_PROJECT},
                                     useWebGL:   true,
                                 })
@@ -475,6 +479,14 @@ export const VideoRecordingScreenArea = memo(() => {
             flushWebGLBuffer: () => lgs.scene.render(),
         })
         _composer.current = composer
+
+        if (($video.captureMode ?? lgs.settings.ui.video.captureMode ?? 'speed') === 'quality') {
+            composer.setFps(0)
+            __.recorder.setFrameCaptureReady(() => composer.renderFrame({waitForNextFrame: true}))
+        }
+        else {
+            __.recorder.setFrameCaptureReady(null)
+        }
 
         buildComposerOverlays(composer, videoFrame.cropDimensions)
         await composer.renderFrame({waitForNextFrame: true})
