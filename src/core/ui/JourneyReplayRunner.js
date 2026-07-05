@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-07-05
+ * Last modified: 2026-07-05
  *
  *
  * Copyright © 2026 LGS1920
@@ -133,7 +133,7 @@ export class JourneyReplayRunner {
             return JourneyReplayRunner.instance
         }
         this.forward = true
-        this.marker ==null
+        this.marker = null
         this.update(options)
         this.#current = 1
 
