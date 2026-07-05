@@ -164,6 +164,25 @@ describe('Widget2Canvas refresh modes', () => {
         expect(chartDrawCall?.[4]).toBe(40)
     })
 
+    it('copies a canvas root directly instead of snapshotting it through snapdom', async () => {
+        target?.remove?.()
+        target = document.createElement('canvas')
+        target.width = 180
+        target.height = 90
+        Object.defineProperties(target, {
+            offsetWidth:  {configurable: true, value: 180},
+            offsetHeight: {configurable: true, value: 90},
+        })
+        target.getBoundingClientRect = () => ({left: 0, top: 0, width: 180, height: 90})
+        document.body.appendChild(target)
+
+        mirror = new Widget2Canvas(target)
+        await mirror.init()
+
+        expect(snapdomToCanvasMock).not.toHaveBeenCalled()
+        expect(canvasContext.drawImage.mock.calls.some(call => call[0] === target)).toBe(true)
+    })
+
     it('reuses static widget zones and only re-renders dirty dynamic zones', async () => {
         target?.remove?.()
         target = document.createElement('div')

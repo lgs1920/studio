@@ -294,6 +294,24 @@ export class Widget2Canvas {
         return buffer
     }
 
+    #copyCanvasBitmap = (canvas) => {
+        if (!(canvas instanceof HTMLCanvasElement)) {
+            return null
+        }
+
+        const copy = document.createElement('canvas')
+        copy.width = canvas.width
+        copy.height = canvas.height
+
+        const ctx = copy.getContext('2d')
+        if (!ctx) {
+            return null
+        }
+
+        ctx.drawImage(canvas, 0, 0)
+        return copy
+    }
+
     #getCaptureSandbox = () => {
         if (this.#captureSandbox?.isConnected) {
             return this.#captureSandbox
@@ -320,7 +338,7 @@ export class Widget2Canvas {
         }
 
         const clone = el.cloneNode(true)
-        clone.querySelectorAll(`.${DYNAMIC_WIDGET_PART}`).forEach((node) => {
+        clone.querySelectorAll(`.${DYNAMIC_WIDGET_PART}, canvas`).forEach((node) => {
             if (node instanceof HTMLElement) {
                 node.style.visibility = 'hidden'
             }
@@ -498,6 +516,15 @@ export class Widget2Canvas {
      */
     #elementToCanvasSource = async (el, options = {}) => {
         const startedAt = this.#shouldLogTiming() ? performance.now() : 0
+        if (el instanceof HTMLCanvasElement) {
+            const canvasCopy = this.#copyCanvasBitmap(el)
+            if (canvasCopy) {
+                if (startedAt) {
+                    this.#logTiming(`canvas:${el.tagName?.toLowerCase?.() ?? 'canvas'}`, startedAt)
+                }
+                return canvasCopy
+            }
+        }
         if (el instanceof SVGElement) {
             const $clone = el.cloneNode(true)
             const style = getComputedStyle(el)

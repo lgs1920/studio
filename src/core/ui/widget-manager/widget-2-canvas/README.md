@@ -41,6 +41,7 @@ Rules:
 - Static parts are captured once and cached
 - Dynamic parts are recaptured when they mutate
 - If a static part contains dynamic descendants, those descendants must also be marked dynamic so the static capture does not keep stale text or duplicated values
+- Canvas elements are treated as dynamic bitmap sources and are copied directly instead of being frozen through DOM snapshotting
 - If no zone is marked, `Widget2Canvas` falls back to a full-widget capture
 
 This contract is especially important for video/replay widgets, where the visible DOM and the recorded canvas must stay aligned without stacking old and new text.
