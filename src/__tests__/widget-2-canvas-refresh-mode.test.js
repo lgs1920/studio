@@ -14,8 +14,28 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { Widget2Canvas } from '@Core/ui/widget-manager/widget-2-canvas/Widget2Canvas'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+
+const {snapdomToCanvasMock} = vi.hoisted(() => ({
+    snapdomToCanvasMock: vi.fn(async (element) => {
+        const canvas = document.createElement('canvas')
+        const rect = element?.getBoundingClientRect?.()
+        const width = Math.max(1, Math.ceil(rect?.width ?? element?.offsetWidth ?? 1))
+        const height = Math.max(1, Math.ceil(rect?.height ?? element?.offsetHeight ?? 1))
+
+        canvas.width = width
+        canvas.height = height
+        return canvas
+    }),
+}))
+
+vi.mock('@zumer/snapdom', () => ({
+    snapdom: {
+        toCanvas: snapdomToCanvasMock,
+    },
+}))
+
+import { Widget2Canvas } from '@Core/ui/widget-manager/widget-2-canvas/Widget2Canvas'
 
 describe('Widget2Canvas refresh modes', () => {
     let target = null
@@ -58,6 +78,7 @@ describe('Widget2Canvas refresh modes', () => {
         mirror = null
         target = null
         child = null
+        snapdomToCanvasMock.mockClear()
         vi.unstubAllGlobals()
         vi.restoreAllMocks()
         rafCallbacks = []
@@ -141,5 +162,45 @@ describe('Widget2Canvas refresh modes', () => {
         expect(chartDrawCall?.[2]).toBe(5)
         expect(chartDrawCall?.[3]).toBe(80)
         expect(chartDrawCall?.[4]).toBe(40)
+    })
+
+    it('reuses static widget zones and only re-renders dirty dynamic zones', async () => {
+        target?.remove?.()
+        target = document.createElement('div')
+        target.className = 'static-widget-part'
+        Object.defineProperties(target, {
+            offsetWidth:  {configurable: true, value: 120},
+            offsetHeight: {configurable: true, value: 40},
+        })
+        target.getBoundingClientRect = () => ({left: 0, top: 0, width: 120, height: 40})
+
+        const staticLabel = document.createElement('div')
+        staticLabel.textContent = 'Label'
+        staticLabel.getBoundingClientRect = () => ({left: 0, top: 0, width: 60, height: 20})
+
+        const dynamicValue = document.createElement('div')
+        dynamicValue.textContent = '0'
+        dynamicValue.className = 'dynamic-widget-part'
+        dynamicValue.getBoundingClientRect = () => ({left: 60, top: 0, width: 20, height: 20})
+
+        target.append(staticLabel, dynamicValue)
+        document.body.appendChild(target)
+
+        mirror = new Widget2Canvas(target, {scale: 1})
+        await mirror.init()
+        expect(snapdomToCanvasMock).toHaveBeenCalledTimes(2)
+        expect(snapdomToCanvasMock.mock.calls[0][0]).not.toBe(target)
+        expect(snapdomToCanvasMock.mock.calls[0][0].querySelector('.dynamic-widget-part')?.style.visibility).toBe('hidden')
+        expect(snapdomToCanvasMock.mock.calls[1][0]).toBe(dynamicValue)
+
+        dynamicValue.firstChild.nodeValue = '1'
+        await flushMicrotasks()
+
+        expect(rafCallbacks).toHaveLength(1)
+        await rafCallbacks.shift()(performance.now())
+        await flushMicrotasks()
+
+        expect(snapdomToCanvasMock).toHaveBeenCalledTimes(3)
+        expect(snapdomToCanvasMock.mock.calls[2][0]).toBe(dynamicValue)
     })
 })

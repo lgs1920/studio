@@ -31,6 +31,10 @@ export class Widget2Canvas {
     #pendingRefresh = false
     #refreshing = false
     #destroyed = false
+    #parts = new Map()
+    #partOrder = []
+    #partsDirty = true
+    #captureSandbox = null
 
     #timingLabel = 'Widget2Canvas'
 
@@ -75,13 +79,13 @@ export class Widget2Canvas {
                     return
                 }
 
+                this.#handleMutations(mutations)
                 this.#pendingRefresh = true
                 requestAnimationFrame(async () => {
                     try {
                         if (this.#shouldUseLiveLoop() && this.#refreshLiveCanvas()) {
                             return
                         }
-                        // Refresh everything to ensure correct layering
                         await this.refresh()
                     }
                     finally {
@@ -127,6 +131,204 @@ export class Widget2Canvas {
         }
 
         this.#tickFrame = requestAnimationFrame(tick)
+    }
+
+    #collectMarkedParts = () => {
+        if (!this.#original) {
+            return []
+        }
+
+        const selector = `.${STATIC_WIDGET_PART}, .${DYNAMIC_WIDGET_PART}`
+        const parts = []
+
+        if (this.#original.classList?.contains(STATIC_WIDGET_PART) || this.#original.classList?.contains(DYNAMIC_WIDGET_PART)) {
+            parts.push(this.#original)
+        }
+
+        parts.push(...this.#original.querySelectorAll(selector))
+        return parts
+    }
+
+    #syncPartRegistry = () => {
+        if (!this.#original) {
+            this.#parts.clear()
+            this.#partOrder = []
+            this.#partsDirty = false
+            return
+        }
+
+        const orderedParts = this.#collectMarkedParts()
+        const nextParts = new Map()
+
+        for (const element of orderedParts) {
+            if (!(element instanceof Element)) {
+                continue
+            }
+
+            const role = element.classList.contains(DYNAMIC_WIDGET_PART) ? 'dynamic' : 'static'
+            const existing = this.#parts.get(element)
+            nextParts.set(element, {
+                element,
+                role,
+                dirty: existing?.dirty ?? true,
+                canvas: existing?.canvas ?? null,
+            })
+        }
+
+        this.#parts = nextParts
+        this.#partOrder = orderedParts
+            .map(element => this.#parts.get(element))
+            .filter(Boolean)
+        this.#partsDirty = false
+    }
+
+    #markAllPartsDirty = () => {
+        this.#parts.forEach((entry) => {
+            entry.dirty = true
+        })
+        this.#partsDirty = true
+    }
+
+    #markPartDirty = (element) => {
+        if (!element) {
+            this.#markAllPartsDirty()
+            return
+        }
+
+        const entry = this.#parts.get(element)
+        if (entry) {
+            entry.dirty = true
+            return
+        }
+
+        this.#markAllPartsDirty()
+    }
+
+    #findMarkedAncestor = (node) => {
+        let current = node instanceof Element ? node : node?.parentElement
+
+        while (current && current !== this.#original) {
+            if (current.classList?.contains(STATIC_WIDGET_PART) || current.classList?.contains(DYNAMIC_WIDGET_PART)) {
+                return current
+            }
+            current = current.parentElement
+        }
+
+        if (this.#original?.classList?.contains(STATIC_WIDGET_PART) || this.#original?.classList?.contains(DYNAMIC_WIDGET_PART)) {
+            return this.#original
+        }
+
+        return null
+    }
+
+    #handleMutations = (mutations) => {
+        let shouldRescan = false
+
+        for (const mutation of mutations) {
+            if (mutation.type === 'childList') {
+                this.#markAllPartsDirty()
+                shouldRescan = true
+            }
+
+            const marked = this.#findMarkedAncestor(mutation.target)
+            if (marked) {
+                this.#markPartDirty(marked)
+                continue
+            }
+
+            this.#markAllPartsDirty()
+        }
+
+        if (shouldRescan) {
+            this.#partsDirty = true
+        }
+    }
+
+    #composeMarkedParts = async () => {
+        if (!this.#original) {
+            return null
+        }
+
+        const scale = this.#options.scale
+        const {width: logicalW, height: logicalH} = this.#readOriginalLogicalSize()
+
+        if (logicalW <= 0 || logicalH <= 0) {
+            return null
+        }
+
+        const buffer = document.createElement('canvas')
+        buffer.width = Math.ceil(logicalW * scale)
+        buffer.height = Math.ceil(logicalH * scale)
+        const ctx = buffer.getContext('2d')
+        const parentRect = this.#original.getBoundingClientRect()
+        const renderScaleX = parentRect.width > 0 ? (parentRect.width / logicalW) : 1
+        const renderScaleY = parentRect.height > 0 ? (parentRect.height / logicalH) : 1
+
+        this.#paintLiveBackdrop(ctx, buffer.width, buffer.height)
+
+        for (const entry of this.#partOrder) {
+            if (!entry?.element) {
+                continue
+            }
+
+            if (entry.dirty || !entry.canvas) {
+                entry.canvas = await this.#renderPart(entry.element, entry.role)
+                entry.dirty = false
+            }
+
+            const source = entry.canvas
+            const rect = entry.element.getBoundingClientRect()
+            if (!source || rect.width <= 0 || rect.height <= 0) {
+                continue
+            }
+
+            ctx.drawImage(
+                source,
+                ((rect.left - parentRect.left) / renderScaleX) * scale,
+                ((rect.top - parentRect.top) / renderScaleY) * scale,
+                (rect.width / renderScaleX) * scale,
+                (rect.height / renderScaleY) * scale,
+            )
+        }
+
+        return buffer
+    }
+
+    #getCaptureSandbox = () => {
+        if (this.#captureSandbox?.isConnected) {
+            return this.#captureSandbox
+        }
+
+        const sandbox = document.createElement('div')
+        sandbox.className = 'lgs-widget-clone'
+        sandbox.style.position = 'absolute'
+        sandbox.style.top = '-100000px'
+        sandbox.style.left = '-100000px'
+        sandbox.style.visibility = 'visible'
+        sandbox.style.pointerEvents = 'none'
+        sandbox.style.opacity = '1'
+        sandbox.style.contain = 'layout style paint'
+
+        document.body.appendChild(sandbox)
+        this.#captureSandbox = sandbox
+        return sandbox
+    }
+
+    #buildStaticCaptureTarget = (el) => {
+        if (!el) {
+            return null
+        }
+
+        const clone = el.cloneNode(true)
+        clone.querySelectorAll(`.${DYNAMIC_WIDGET_PART}`).forEach((node) => {
+            if (node instanceof HTMLElement) {
+                node.style.visibility = 'hidden'
+            }
+        })
+
+        const sandbox = this.#getCaptureSandbox()
+        sandbox.appendChild(clone)
+        return clone
     }
 
     #readOriginalLogicalSize = () => {
@@ -265,38 +467,20 @@ export class Widget2Canvas {
         const startedAt = this.#shouldLogTiming() ? performance.now() : 0
 
         try {
-            const staticParts = this.#original?.querySelectorAll(`.${STATIC_WIDGET_PART}`)
-            const dynamicParts = this.#original?.querySelectorAll(`.${DYNAMIC_WIDGET_PART}`)
+            if (this.#partsDirty) {
+                this.#syncPartRegistry()
+            }
 
-            // If no parts defined, render the whole element
-            if ((!staticParts || staticParts.length === 0) && (!dynamicParts || dynamicParts.length === 0)) {
+            if (!this.#partOrder.length) {
                 const fullCanvas = await this.#renderPart(this.#original)
                 this.#updateCanvas(fullCanvas)
                 return
             }
 
-            // Create a composition buffer
-            const buffer = document.createElement('canvas')
-            const {width: logicalW, height: logicalH} = this.#readOriginalLogicalSize()
-
-            buffer.width = Math.ceil(logicalW * this.#options.scale)
-            buffer.height = Math.ceil(logicalH * this.#options.scale)
-            const ctx = buffer.getContext('2d')
-
-            const allParts = [...(staticParts || []), ...(dynamicParts || [])]
-
-            for (const el of allParts) {
-                const partCanvas = await this.#renderPart(el)
-                const rect = el.getBoundingClientRect()
-                const parentRect = this.#original.getBoundingClientRect()
-
-                // Calculate relative position within the widget
-                const dx = (rect.left - parentRect.left) * this.#options.scale
-                const dy = (rect.top - parentRect.top) * this.#options.scale
-
-                ctx.drawImage(partCanvas, dx, dy)
+            const buffer = await this.#composeMarkedParts()
+            if (!buffer) {
+                return
             }
-
             this.#updateCanvas(buffer)
         }
         finally {
@@ -385,7 +569,7 @@ export class Widget2Canvas {
         }
         return canvas
     }
-    #renderPart = async (el) => {
+    #renderPart = async (el, role = 'dynamic') => {
         let target = el
         if (el instanceof SVGElement || this.#options.type === 'svg') {
             const childSvg = el.querySelector('svg')
@@ -393,7 +577,22 @@ export class Widget2Canvas {
                 target = childSvg
             }
         }
-        return await this.#elementToCanvasSource(target, this.#options)
+
+        let captureTarget = target
+        const shouldMaskDynamicChildren = role === 'static' && target instanceof HTMLElement && target.querySelector?.(`.${DYNAMIC_WIDGET_PART}`)
+
+        if (shouldMaskDynamicChildren) {
+            captureTarget = this.#buildStaticCaptureTarget(target)
+        }
+
+        try {
+            return await this.#elementToCanvasSource(captureTarget, this.#options)
+        }
+        finally {
+            if (captureTarget && captureTarget !== target && captureTarget.parentElement) {
+                captureTarget.remove()
+            }
+        }
     }
 
     /**
@@ -465,5 +664,10 @@ export class Widget2Canvas {
         this.#canvas?.remove()
         this.#canvas = null
         this.#original = null
+        this.#captureSandbox?.remove()
+        this.#captureSandbox = null
+        this.#parts.clear()
+        this.#partOrder = []
+        this.#partsDirty = true
     }
 }

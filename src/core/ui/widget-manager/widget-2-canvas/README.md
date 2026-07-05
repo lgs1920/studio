@@ -27,6 +27,26 @@ Ideal for:
 
 ---
 
+## Widget Zones
+
+`Widget2Canvas` can mirror a widget in two modes:
+
+- `static-widget-part`
+- `dynamic-widget-part`
+
+Rules:
+
+- Mark the stable shell of a widget as `static-widget-part`
+- Mark every value, icon, or block that changes during replay as `dynamic-widget-part`
+- Static parts are captured once and cached
+- Dynamic parts are recaptured when they mutate
+- If a static part contains dynamic descendants, those descendants must also be marked dynamic so the static capture does not keep stale text or duplicated values
+- If no zone is marked, `Widget2Canvas` falls back to a full-widget capture
+
+This contract is especially important for video/replay widgets, where the visible DOM and the recorded canvas must stay aligned without stacking old and new text.
+
+---
+
 ## Installation
 
 ```

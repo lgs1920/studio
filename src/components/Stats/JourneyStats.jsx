@@ -566,7 +566,7 @@ export const JourneyStats = memo(({id, metrics, units, style = {}, mode = 'journ
             case 'distance':
                 return (
                     <div className="journey-stats-summary-item track-summary-column" key="distance">
-                        <div className="journey-stats-val-huge">
+                        <div className="journey-stats-val-huge dynamic-widget-part">
                             <NameValueUnit value={displayMetrics.distance} units={DISTANCE_UNITS} noUnit/>
                         </div>
                         <div className="journey-stats-label-bold">{`Distance (${units.distance})`}</div>
@@ -575,7 +575,7 @@ export const JourneyStats = memo(({id, metrics, units, style = {}, mode = 'journ
             case 'elevation':
                 return (
                     <div className="journey-stats-summary-item track-summary-column" key="elevation">
-                        <div className="journey-stats-val-huge">
+                        <div className="journey-stats-val-huge dynamic-widget-part">
                             <NameValueUnit value={displayMetrics.positive.elevation} units={ELEVATION_UNITS} noUnit
                                            precision="0"/>
                         </div>
@@ -585,7 +585,7 @@ export const JourneyStats = memo(({id, metrics, units, style = {}, mode = 'journ
             case 'duration':
                 return (
                     <div className="journey-stats-summary-item track-summary-column" key="duration">
-                        <div className="journey-stats-val-huge">{formattedDuration}</div>
+                        <div className="journey-stats-val-huge dynamic-widget-part">{formattedDuration}</div>
                         <div className="journey-stats-label-bold">{'DURATION'}</div>
                     </div>
                 )
@@ -593,7 +593,7 @@ export const JourneyStats = memo(({id, metrics, units, style = {}, mode = 'journ
                 return (
                     <div className="journey-stats-row" key="altitude">
                         <div className="journey-stats-label">{'Altitude'}<span>{`(${units.elevation})`}</span></div>
-                        <div className="journey-stats-value">
+                        <div className="journey-stats-value dynamic-widget-part">
                             {displayMetrics.minHeight > 0 &&
                                 <>
                                     <SlIcon variant="primary" library="fa" name={FA2SL.set(faArrowDownToLine)}/>
@@ -602,7 +602,7 @@ export const JourneyStats = memo(({id, metrics, units, style = {}, mode = 'journ
                                 </>
                             }
                         </div>
-                        <div className="journey-stats-value">
+                        <div className="journey-stats-value dynamic-widget-part">
                             {displayMetrics.maxHeight > 0 &&
                                 <>
                                     <SlIcon variant="primary" library="fa" name={FA2SL.set(faArrowUpToLine)}/>
@@ -617,12 +617,12 @@ export const JourneyStats = memo(({id, metrics, units, style = {}, mode = 'journ
                 return (
                     <div className="journey-stats-row" key="speed">
                         <div className="journey-stats-label">{'Speed'}<span>{`(${units.speed})`}</span></div>
-                        <div className="journey-stats-value">
+                        <div className="journey-stats-value dynamic-widget-part">
                             {displayMetrics.averageSpeed > 0 &&
                                 <NameValueUnit value={displayMetrics.averageSpeed} units={SPEED_UNITS} noUnit/>
                             }
                         </div>
-                        <div className="journey-stats-value">
+                        <div className="journey-stats-value dynamic-widget-part">
                             {displayMetrics.maxSpeed > 0 &&
                                 <>
                                     <SlIcon variant="primary" library="fa" name={FA2SL.set(faArrowUpToLine)}/>
@@ -636,10 +636,10 @@ export const JourneyStats = memo(({id, metrics, units, style = {}, mode = 'journ
                 return (
                     <div className="journey-stats-row" key="pace">
                         <div className="journey-stats-label">{'Pace'}<span>{`(${units.pace})`}</span></div>
-                        <div className="journey-stats-value">
+                        <div className="journey-stats-value dynamic-widget-part">
                             {paceValues.average && paceValues.average}
                         </div>
-                        <div className="journey-stats-value">
+                        <div className="journey-stats-value dynamic-widget-part">
                             {paceValues.min &&
                                 <>
                                     <SlIcon variant="primary" library="fa" name={FA2SL.set(faArrowUpToLine)}/>
@@ -703,7 +703,7 @@ export const JourneyStats = memo(({id, metrics, units, style = {}, mode = 'journ
     }
 
     return (
-        <div ref={widgetRef} className="journey-stats-widget" style={widgetStyle} aria-hidden={!isVisible}>
+        <div ref={widgetRef} className="journey-stats-widget static-widget-part" style={widgetStyle} aria-hidden={!isVisible}>
             {visibleTextGroups.map((group, index) => (
                 <Fragment key={`${group.group}-${group.items.join('-')}`}>
                     {index > 0 && <SlDivider style={separatorStyle}/>}
