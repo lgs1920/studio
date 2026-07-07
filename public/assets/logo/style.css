@@ -1,0 +1,140 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: style.css
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2026-07-07
+ * Last modified: 2026-07-07
+ *
+ *
+ * Copyright © 2026 LGS1920
+ ******************************************************************************/
+
+/**
+ * LGS1920 - shared styles
+ *
+ * The only two color variables are:
+ *   --lgs--logo-primary
+ *   --lgs--logo-secondary
+ * Text can be overridden independently with:
+ *   --lgs--logo-text-primary
+ *   --lgs--logo-text-secondary
+ *   --lgs--logo-wordmark-gap
+ *   --lgs--logo-secondary-opacity
+ *
+ * The secondary layer can be hidden with --lgs--logo-secondary-opacity: 0.
+ */
+
+@import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@300..700&display=swap');
+
+.lgs--logo-composition {
+  --lgs--logo-primary: #0d426d;
+  --lgs--logo-secondary: #bfa062;
+  --lgs--logo-text-primary: var(--lgs--logo-primary);
+  --lgs--logo-text-secondary: var(--lgs--logo-secondary);
+  --lgs--logo-wordmark-gap: 20px;
+  --lgs--logo-secondary-opacity: 1;
+
+  --lgs--logo-gap-horizontal: 50px;
+  --lgs--logo-gap-vertical: 20px;
+
+  --lgs--logo-wordmark-font-family: Fredoka, Arial, Helvetica, sans-serif;
+  --lgs--logo-wordmark-font-size: 150px;
+  --lgs--logo-wordmark-main-weight: 700;
+  --lgs--logo-wordmark-year-weight: 300;
+
+  overflow: visible;
+}
+
+.lgs--logo-only,
+.lgs--logo-instance,
+.lgs--logo-import {
+  overflow: visible;
+}
+
+.lgs--logo-mark {
+  shape-rendering: geometricPrecision;
+}
+
+.lgs--logo-part {
+  vector-effect: non-scaling-stroke;
+}
+
+/* Primary layer: secondary areas are always cut out. */
+.lgs--logo-primary-layer {
+  fill: var(--lgs--logo-primary);
+}
+
+/* Secondary display layer. Keep defs unstyled so the mask stays black. */
+.lgs--logo-secondary-layer {
+  fill: var(--lgs--logo-secondary);
+  opacity: var(--lgs--logo-secondary-opacity);
+}
+
+/* The mask is technical: white visible, black cut out. */
+.lgs--logo-cutout-mask {
+  mask-type: luminance;
+}
+
+.lgs--logo-mask-base {
+  fill: #ffffff;
+}
+
+.lgs--logo-mask-cutout {
+  fill: #000000;
+}
+
+/* Native SVG text. */
+.lgs--logo-wordmark {
+  font-family: var(--lgs--logo-wordmark-font-family);
+  font-size: var(--lgs--logo-wordmark-font-size);
+  line-height: 1;
+  text-rendering: geometricPrecision;
+}
+
+.lgs--logo-text-primary,
+.lgs--logo-wordmark-main {
+  fill: var(--lgs--logo-text-primary);
+  font-weight: var(--lgs--logo-wordmark-main-weight);
+  font-variation-settings: "wght" var(--lgs--logo-wordmark-main-weight);
+}
+
+.lgs--logo-text-secondary,
+.lgs--logo-wordmark-year {
+  fill: var(--lgs--logo-text-secondary);
+  font-weight: var(--lgs--logo-wordmark-year-weight);
+  font-variation-settings: "wght" var(--lgs--logo-wordmark-year-weight);
+}
+
+.lgs--logo-wordmark-position,
+.lgs--logo-gap-horizontal,
+.lgs--logo-gap-vertical {
+  transform-origin: 0 0;
+}
+
+.lgs--logo-horizontal .lgs--logo-gap-horizontal {
+  transform: translate(var(--lgs--logo-gap-horizontal), 0);
+}
+
+.lgs--logo-vertical .lgs--logo-gap-vertical {
+  transform: translate(0, var(--lgs--logo-gap-vertical));
+}
+
+/* Override examples:
+
+   Two colors:
+   .lgs--logo-composition {
+     --lgs--logo-primary: #ffffff;
+     --lgs--logo-secondary: #ff0000;
+   }
+
+   Hidden secondary areas:
+   .lgs--logo-composition {
+     --lgs--logo-secondary: #ffffff;
+     --lgs--logo-secondary-opacity: 0;
+   }
+*/

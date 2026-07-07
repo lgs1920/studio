@@ -15,6 +15,7 @@
  ******************************************************************************/
 
 import { BASE_ENTITY, OVERLAY_ENTITY, TERRAIN_ENTITY } from '@Core/constants'
+import { LogoSvg }                                     from '@Components/MainUI/LogoSvg'
 import { LayersAndTerrainManager }                     from '@Core/ui/LayerAndTerrainManager'
 import { memo, useEffect }                             from 'react'
 import { proxy, useSnapshot }                          from 'valtio'
@@ -103,7 +104,18 @@ export const CreditsBar = ({contentRef = null}) => {
     return (
         <div id="lgs-credits-bar" ref={contentRef} className="credits-bar">
             <div className="main-logo">
-                <img src="/assets/images/logo-lgs1920.png" alt="LGS1920 Logo"/>
+                <LogoSvg
+                    src="/assets/logo/logo.svg"
+                    primaryColor="var(--wa-color-brand)"
+                    secondaryColor="var(--wa-color-brand)"
+                    secondaryOpacity={0}
+                    textPrimaryColor="#ffffff"
+                    textSecondaryColor="#ffffff"
+                    height="100%"
+                    className="credits-logo"
+                    style={{height: '100%'}}
+                    title="LGS1920 logo"
+                />
             </div>
             <div className="provider-credits lgs-credits lgs-one-line-card wa-theme-lgs1920-on-map">
                 {providers.terrain && <CreditLink provider={providers.terrain}/>}

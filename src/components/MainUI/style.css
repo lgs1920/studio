@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-06-02
- * Last modified: 2026-06-02
+ * Created on: 2026-07-07
+ * Last modified: 2026-07-07
  *
  *
  * Copyright © 2026 LGS1920
@@ -851,30 +851,15 @@ body.mobile .orbit-widget-body {
 
 #welcome-modal .welcome-logo {
     position: relative;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    width: min(28rem, calc(100vw - var(--lgs-gutter) - var(--lgs-gutter))) !important;
-    min-height: 14rem;
-    color: white;
-    border-color: transparent;
-    background: transparent;
-    box-shadow: none;
-    text-shadow: 0 2px 18px var(--lgs-dark-color-90);
-    gap: var(--lgs-gutter);
+    display: block;
+    width: min(200px, calc(100vw - var(--lgs-gutter) - var(--lgs-gutter))) !important;
+    margin-inline: auto;
 }
 
-#welcome-modal .welcome-logo img {
-    filter: brightness(0) invert(1) drop-shadow(0 2px 18px var(--lgs-dark-color-90));
-}
-
-#welcome-modal .welcome-logo .the-slogan,
-#welcome-modal .welcome-logo .version-info {
-    color: white;
-}
-
-#welcome-modal .welcome-logo-bootstrap {
-    padding: var(--lgs-gutter);
+#welcome-modal .welcome-logo svg {
+    display: block;
+    width: 100%;
+    height: auto;
 }
 
 #welcome-modal > .welcome-modal-timer {

@@ -14,13 +14,13 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { APP_EVENT, MILLIS, SECOND, SLOGAN }                 from '@Core/constants'
-import { LGSPopup }                    from '@Components/LGSPopup'
+import { APP_EVENT, MILLIS, SECOND }                         from '@Core/constants'
+import { LGSPopup }                                          from '@Components/LGSPopup'
 import { formatBuildInfo }                                   from '@Utils/BuildInfoUtils'
 import { UIToast }                                           from '@Utils/UIToast'
-import { WaButton, WaIcon, WaSpinner } from '@web.awesome.me/webawesome-pro/dist/react'
+import { WaButton, WaIcon, WaSpinner }                       from '@web.awesome.me/webawesome-pro/dist/react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { StudioLogo }                                        from './StudioLogo'
+import { LogoSvg }                                           from './LogoSvg'
 
 const DEFAULT_WELCOME_DISPLAY_TIME = 6
 const WELCOME_VIDEO_DESKTOP = '/assets/media/trekking-hero-desktop.mp4'
@@ -52,7 +52,6 @@ export const WelcomeModal = ({initComplete = false, appReady = false, settingsRe
     const shouldAutoEnter = readyToEnter && (!showIntro || autoCloseReached)
     const studioVersion = settingsReady ? (lgs.versions?.studio ?? lgs.versions?.version) : null
     const buildInfo = settingsReady ? formatBuildInfo(lgs.build) : null
-    const canShowFullLogo = settingsReady && Boolean(studioVersion)
     const fogDuration = Math.min(WELCOME_MAX_FOG_DURATION, displayDuration * MILLIS)
     const fogProgress = Math.min(elapsedMillis / fogDuration, 1)
     const fogStrength = Math.max(1 - fogProgress, 0)
@@ -215,18 +214,17 @@ export const WelcomeModal = ({initComplete = false, appReady = false, settingsRe
             )}
 
             <div className="welcome-modal-content">
-                {canShowFullLogo ? (
-                    <StudioLogo
-                        width="100%"
-                        slogan={SLOGAN}
-                        addClassName="welcome-logo"
-                    />
-                ) : (
-                     <div className="main-logo signage-style welcome-logo welcome-logo-bootstrap">
-                         <img src="/assets/images/logo-lgs1920-studio.png" alt="LGS1920 Studio"/>
-                         <span className="the-slogan">{SLOGAN}</span>
-                     </div>
-                 )}
+                <LogoSvg
+                    src="/assets/logo/logo-vertical.svg"
+                    primaryColor="#ffffff"
+                    secondaryColor="#ffffff"
+                    secondaryOpacity={0}
+                    textPrimaryColor="#ffffff"
+                    textSecondaryColor="#ffffff"
+                    width="100%"
+                    className="welcome-logo"
+                    title="LGS1920 Studio logo"
+                />
 
                 {showIntro && settingsReady && (
                     <div className="welcome-enter-call-for-action">

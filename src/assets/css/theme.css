@@ -808,6 +808,37 @@ body.mobile wa-popup:has(.lgs--popup-in-drawer)::part(popup) {
 
 .credits-pane-footer {
     flex-direction: row !important;
+    color: #ffffff;
+    justify-content: flex-start;
+}
+
+.credits-pane-footer strong {
+    color: #ffffff;
+}
+
+.credits-pane-footer span {
+    color: var(--wa-color-brand);
+}
+
+.credits-pane-footer .drawer-footer-studio {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    min-width: 0;
+    gap: var(--lgs-gutter-xs);
+}
+
+.credits-pane-footer .drawer-footer-logo {
+    display: flex;
+    align-items: center;
+    flex: 0 0 auto;
+    height: 1.25rem;
+}
+
+.credits-pane-footer .drawer-footer-logo svg {
+    display: block;
+    width: auto;
+    height: 100%;
 }
 
 
