@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-05-01
- * Last modified: 2026-05-01
+ * Created on: 2026-07-08
+ * Last modified: 2026-07-08
  *
  *
  * Copyright © 2026 LGS1920
@@ -33,17 +33,7 @@ const DrawerFooter = React.memo(() => (
         <div className="drawer-pane-footer credits-pane-footer" slot="footer">
 
             <div className="drawer-footer-studio">
-                <LogoSvg
-                    src="/assets/logo/logo.svg"
-                    primaryColor="var(--wa-color-brand)"
-                    secondaryColor="var(--wa-color-brand)"
-                    secondaryOpacity={0}
-                    textPrimaryColor="#ffffff"
-                    textSecondaryColor="#ffffff"
-                    height="1.25rem"
-                    className="drawer-footer-logo"
-                    title="LGS1920 logo"
-                />
+
                 <strong>{lgs?.servers?.studio?.shortname || 'Studio'}</strong>
                 <span>{lgs?.versions?.studio || 'N/A'}</span>
             </div>
