@@ -75,6 +75,13 @@
     --padding: 0;
 }
 
+.credits-bar .main-logo .main-logo-link {
+    display: inline-flex;
+    align-items: flex-end;
+    height: 100%;
+    line-height: 0;
+}
+
 .credits-bar .main-logo .credits-logo {
     line-height: 0;
     display: flex;

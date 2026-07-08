@@ -54,6 +54,7 @@ const CreditLink = memo(({provider}) => {
 export const CreditsBar = ({contentRef = null}) => {
 
     const providers = useSnapshot($providers)
+    const siteUrl = __.app.buildUrl(lgs?.configuration?.website || 'https://lgs1920.fr')
 
     /**
      * Retrieves and updates provider data dynamically.
@@ -104,17 +105,19 @@ export const CreditsBar = ({contentRef = null}) => {
     return (
         <div id="lgs-credits-bar" ref={contentRef} className="credits-bar">
             <div className="main-logo">
-                <LogoSvg
-                    src="/assets/logo/logo-vertical.svg"
-                    primaryColor="#ffffff"
-                    secondaryColor="#ffffff"
-                    secondaryOpacity={0}
-                    textPrimaryColor="#ffffff"
-                    textSecondaryColor="#ffffff"
-                    className="credits-logo"
-                    style={{height: '100%'}}
-                    title="LGS1920 logo"
-                />
+                <a className="main-logo-link" href={siteUrl} target="_blank" rel="noreferrer" title="LGS1920 website">
+                    <LogoSvg
+                        src="/assets/logo/logo-vertical.svg"
+                        primaryColor="#ffffff"
+                        secondaryColor="#ffffff"
+                        secondaryOpacity={0}
+                        textPrimaryColor="#ffffff"
+                        textSecondaryColor="#ffffff"
+                        className="credits-logo"
+                        style={{height: '100%'}}
+                        title="LGS1920 logo"
+                    />
+                </a>
             </div>
             <div className="provider-credits lgs-credits">
                 {providers.terrain && <CreditLink provider={providers.terrain}/>}
