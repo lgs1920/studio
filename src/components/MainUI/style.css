@@ -862,6 +862,24 @@ body.mobile .orbit-widget-body {
     height: auto;
 }
 
+#welcome-modal .welcome-slogan {
+    display: block;
+    width: 100%;
+    height: auto;
+    max-width: min(28rem, calc(100vw - var(--lgs-gutter) - var(--lgs-gutter)));
+    margin: 0 0 var(--lgs-gutter);
+    color: var(--wa-color-brand-fill-loud);
+    filter: drop-shadow(0 2px 14px var(--lgs-dark-color-90));
+}
+
+#welcome-modal .welcome-slogan text {
+    font-size: clamp(3.5rem, calc(2.25 * var(--lgs-gutter)), 5rem);
+}
+
+#welcome-modal .welcome-slogan-stroke {
+    opacity: 1;
+}
+
 #welcome-modal > .welcome-modal-timer {
     font-size: calc(var(--lgs-font-size-l) / 2);
     font-weight: var(--lgs-font-weight-bold);

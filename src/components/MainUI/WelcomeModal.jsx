@@ -16,6 +16,7 @@
 
 import { APP_EVENT, MILLIS, SECOND }                         from '@Core/constants'
 import { LGSPopup }                                          from '@Components/LGSPopup'
+import { SloganSvg }                                         from '@Components/MainUI/SloganSvg'
 import { formatBuildInfo }                                   from '@Utils/BuildInfoUtils'
 import { UIToast }                                           from '@Utils/UIToast'
 import { WaButton, WaIcon, WaSpinner }                       from '@web.awesome.me/webawesome-pro/dist/react'
@@ -225,6 +226,7 @@ export const WelcomeModal = ({initComplete = false, appReady = false, settingsRe
                     className="welcome-logo"
                     title="LGS1920 Studio logo"
                 />
+                <SloganSvg className="welcome-slogan" />
 
                 {showIntro && settingsReady && (
                     <div className="welcome-enter-call-for-action">
