@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-05-01
- * Last modified: 2026-05-01
+ * Created on: 2026-07-08
+ * Last modified: 2026-07-08
  *
  *
  * Copyright © 2026 LGS1920
@@ -426,7 +426,7 @@ export const LGS1920 = () => {
 
             {initStatus === true && <AppSurface onReady={markAppSurfaceReady}/>}
 
-            {!initError && !appVisible && (
+            {!initError && !appVisible && appSurfaceReady && (
                 <WelcomeModal
                     initComplete={initStatus === true}
                     appReady={initStatus === true && initialFocusReady && appSurfaceReady}
