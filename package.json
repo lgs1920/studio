@@ -8,6 +8,8 @@
     "build": "bun run test:stores && bunx --bun vite build",
     "deploy": "bun deploy.js",
     "lint": "eslint . --ext js,jsx,ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "logo:export": "bun scripts/logo-tool.mjs export",
+    "logo:import": "bun scripts/logo-tool.mjs import",
     "preview": "bunx --bun vite preview",
     "test": "vitest run",
     "test:stores": "vitest run src/__tests__/store-proxy-contracts.test.js",

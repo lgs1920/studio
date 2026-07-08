@@ -239,3 +239,47 @@ After changing the logo assets:
 2. Build the `site` and confirm the generated header logo matches the `studio` treatment.
 3. Inspect one page in each app to verify the mask still cuts out the arrow and the visible border uses the secondary color.
 
+## Edit Workflow Tool
+
+There is a small reversible CLI in `scripts/logo-tool.mjs`.
+
+Export a more editor-friendly copy:
+
+```bash
+bun run logo:export
+```
+
+That command reads `public/assets/logo/logo.svg` and writes a flat authoring file:
+
+```text
+public/assets/logo/logo-editable.svg
+```
+
+The editable copy contains direct `<path>` elements for the visible shapes, with no `<use>` references and no embedded stylesheet. One technical outline path is kept hidden so the importer can rebuild the production arrow geometry.
+
+Import the edited file back into the production format:
+
+```bash
+bun run logo:import
+```
+
+That command reads `public/assets/logo/logo-editable.svg`, takes the edited path geometry, restores `public/assets/logo/logo.svg`, and copies the canonical stylesheet back to:
+
+```text
+public/assets/logo/style.css
+```
+
+You can also pass explicit paths:
+
+```bash
+bun scripts/logo-tool.mjs export path/to/logo.svg path/to/logo-editable.svg
+bun scripts/logo-tool.mjs import path/to/logo-editable.svg path/to/logo.svg
+```
+
+This is intentionally narrow. It is meant for the logo assets in this folder, not for arbitrary SVG files.
+
+Important limitation:
+
+- the script does not redraw geometry for you
+- if a section of the logo is a single Bézier `path`, it will remain one path in the editable export
+- the main body shape of this logo is one path by design
