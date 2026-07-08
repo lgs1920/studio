@@ -1,14 +1,14 @@
 /*******************************************************************************
  *
  * This file is part of the LGS1920/studio project.
- *
+ *  
  * File: style.css
  *
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-27
- * Last modified: 2026-04-27
+ * Created on: 2026-07-08
+ * Last modified: 2026-07-08
  *
  *
  * Copyright © 2026 LGS1920
@@ -23,7 +23,7 @@
 }
 
 .credits-bar {
-    font-size: var(--lgs-font-size-s);
+    /*font-size: var(--lgs-font-size-s);*/
     display: flex;
     align-items: center;
     flex-direction: row-reverse;
@@ -39,11 +39,13 @@
 .credits-bar > div {
     display: flex;
     align-content: center;
+    align-items: flex-end;
+    width: auto;
+    min-height: var(--lgs-credits-bar-height);
+    max-height: var(--lgs-credits-bar-height);
+    margin-bottom: 5%;
     padding: var(--padding);
     border-radius: var(--lgs-border-radius-xs);
-    width: auto;
-    max-height: var(--lgs-credits-bar-height);
-    min-height: var(--lgs-credits-bar-height);
 }
 
 .credits-bar a {
@@ -51,23 +53,41 @@
     align-items: center;
 }
 
+.credits-bar .main-logo .credits-logo svg,
+.credits-bar .provider-credits img,
+.credits-bar .cesium-credits img,
+.credits-bar .provider-credits .credits {
+    filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.32));
+}
+
 .credits-bar .main-logo {
+    overflow: hidden;
+    align-self: flex-end;
+    width: 90px;
+    height: var(--lgs-credits-logo-height);
+    max-height: var(--lgs-credits-logo-height);
+    margin: 0;
+    opacity: 0.8;
     border-radius: var(--lgs-border-radius-xs);
     background: transparent;
     box-shadow: none;
+    --lgs-credits-logo-height: calc(1.8 * var(--lgs-credits-bar-height));
     --padding: 0;
 }
 
 .credits-bar .main-logo .credits-logo {
+    line-height: 0;
     display: flex;
-    align-items: center;
+    align-items: flex-end;
+    width: max-content;
     height: 100%;
 }
 
 .credits-bar .main-logo .credits-logo svg {
     display: block;
-    height: 100%;
     width: auto;
+    max-width: none;
+    height: 100%;
 }
 
 .credits-bar .provider-credits img {
@@ -102,7 +122,7 @@
     align-items: center;
     flex-direction: row;
     flex-wrap: nowrap;
-    backdrop-filter: blur(var(--lgs-blur));
+    /*backdrop-: blur(var(--lgs-blur));*/
 }
 
 .lgs-credits > a, .lgs-credits > a:link {
@@ -119,7 +139,6 @@
 
 .lgs-credits {
     overflow: hidden;
-
     white-space: nowrap; /* prevents text wrapping */
     text-overflow: ellipsis; /* adds "..." if text overflows */
 
@@ -132,5 +151,4 @@
 
 .provider-credits {
     color: #ffffff;
-    background-color: rgba(255, 255, 255, 0.5);
 }

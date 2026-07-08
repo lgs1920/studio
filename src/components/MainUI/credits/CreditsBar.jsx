@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-27
- * Last modified: 2026-04-27
+ * Created on: 2026-07-08
+ * Last modified: 2026-07-08
  *
  *
  * Copyright © 2026 LGS1920
@@ -105,24 +105,23 @@ export const CreditsBar = ({contentRef = null}) => {
         <div id="lgs-credits-bar" ref={contentRef} className="credits-bar">
             <div className="main-logo">
                 <LogoSvg
-                    src="/assets/logo/logo.svg"
-                    primaryColor="var(--wa-color-brand)"
-                    secondaryColor="var(--wa-color-brand)"
+                    src="/assets/logo/logo-vertical.svg"
+                    primaryColor="#ffffff"
+                    secondaryColor="#ffffff"
                     secondaryOpacity={0}
                     textPrimaryColor="#ffffff"
                     textSecondaryColor="#ffffff"
-                    height="100%"
                     className="credits-logo"
                     style={{height: '100%'}}
                     title="LGS1920 logo"
                 />
             </div>
-            <div className="provider-credits lgs-credits lgs-one-line-card wa-theme-lgs1920-on-map">
+            <div className="provider-credits lgs-credits">
                 {providers.terrain && <CreditLink provider={providers.terrain}/>}
                 {providers.overlay && <CreditLink provider={providers.overlay}/>}
                 {providers.base && <CreditLink provider={providers.base}/>}
             </div>
-            <div className="cesium-credits lgs-credits lgs-one-line-card wa-theme-lgs1920-on-map">
+            <div className="cesium-credits lgs-credits  ">
                 <a href="https://www.cesium.com/" target="_blank" rel="noreferrer">
                     <img src="/assets/images/Cesium_light_color.svg" alt="Cesium"/>
                 </a>
