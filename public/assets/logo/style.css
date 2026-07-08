@@ -41,6 +41,8 @@
 
   --lgs--logo-secondary-opacity: 1;
   --lgs--logo-gap-horizontal: 50px;
+  --lgs--logo-horizontal-wordmark-offset-y: 50px;
+  --lgs--logo-play-arrow-border-width: 30px;
 
   --lgs--logo-gap-vertical: 20px;
   --lgs--logo-wordmark-font-family: Fredoka, Arial, Helvetica, sans-serif;
@@ -73,6 +75,13 @@
 .lgs--logo-secondary-layer {
   fill: var(--lgs--logo-secondary);
   opacity: var(--lgs--logo-secondary-opacity);
+}
+
+.lgs--logo-play-arrow-border {
+  fill: none;
+  stroke-width: var(--lgs--logo-play-arrow-border-width);
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 /* The mask is technical: white visible, black cut out. */
@@ -117,7 +126,7 @@
 }
 
 .lgs--logo-horizontal .lgs--logo-gap-horizontal {
-  transform: translate(var(--lgs--logo-gap-horizontal), 0);
+  transform: translate(var(--lgs--logo-gap-horizontal), var(--lgs--logo-horizontal-wordmark-offset-y));
 }
 
 .lgs--logo-vertical .lgs--logo-gap-vertical {
