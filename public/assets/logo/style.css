@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-07-07
- * Last modified: 2026-07-07
+ * Created on: 2026-07-08
+ * Last modified: 2026-07-08
  *
  *
  * Copyright © 2026 LGS1920
@@ -32,22 +32,22 @@
 @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@300..700&display=swap');
 
 .lgs--logo-composition {
+  overflow: visible;
   --lgs--logo-primary: #0d426d;
   --lgs--logo-secondary: #bfa062;
   --lgs--logo-text-primary: var(--lgs--logo-primary);
   --lgs--logo-text-secondary: var(--lgs--logo-secondary);
   --lgs--logo-wordmark-gap: 20px;
+
   --lgs--logo-secondary-opacity: 1;
-
   --lgs--logo-gap-horizontal: 50px;
-  --lgs--logo-gap-vertical: 20px;
 
+  --lgs--logo-gap-vertical: 20px;
   --lgs--logo-wordmark-font-family: Fredoka, Arial, Helvetica, sans-serif;
   --lgs--logo-wordmark-font-size: 150px;
-  --lgs--logo-wordmark-main-weight: 700;
-  --lgs--logo-wordmark-year-weight: 300;
+  --lgs--logo-wordmark-main-weight: 500;
 
-  overflow: visible;
+  --lgs--logo-wordmark-year-weight: 300;
 }
 
 .lgs--logo-only,
