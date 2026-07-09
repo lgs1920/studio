@@ -46,6 +46,8 @@
     <!-- Windows PWA -->
     <meta content="/assets/images/app-icons/windows/144.png" name="msapplication-TileImage">
     <meta content="#000000" name="msapplication-TileColor">
+    <link rel="preload" href="/assets/media/trekking-hero-mobile.mp4" as="video" type="video/mp4" media="(max-width: 700px)">
+    <link rel="preload" href="/assets/media/trekking-hero-desktop.mp4" as="video" type="video/mp4" media="(min-width: 701px)">
 
     <!-- Web Awesome -->
     <script crossorigin="anonymous" src="https://kit.webawesome.com/e55a0a6efad544ac.js"></script>
@@ -80,6 +82,59 @@
             root.classList.toggle('wa-light', !isDark)
         })()
     </script>
+    <style>
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            background: #050807;
+        }
+
+        #cesium-viewer,
+        #lgs1920-container {
+            position: absolute;
+            inset: 0;
+        }
+
+        #lgs-boot-splash {
+            position: fixed;
+            z-index: 2;
+            overflow: hidden;
+            transition: opacity 450ms ease, visibility 450ms ease;
+            pointer-events: none;
+            background: #050807;
+            inset: 0;
+        }
+
+        #lgs-boot-splash video {
+            width: 100%;
+            height: 100%;
+            transform: scale(1.015);
+            filter: blur(4.5px) brightness(.92) saturate(.82);
+            object-fit: cover;
+            object-position: center;
+        }
+
+        #lgs-boot-splash::after {
+            position: absolute;
+            content: "";
+            background: linear-gradient(180deg, rgba(7, 54, 9, .5) 0%, rgba(7, 54, 9, .24) 44%, rgba(7, 54, 9, .76) 100%),
+            radial-gradient(circle at 50% 45%, transparent 0%, rgba(7, 54, 9, .38) 62%, rgba(7, 54, 9, .92) 100%);
+            inset: 0;
+        }
+
+        body.lgs-app-booting #cesium-viewer {
+            visibility: hidden;
+            pointer-events: none;
+            opacity: 0;
+        }
+
+        body:not(.lgs-app-booting) #lgs-boot-splash {
+            visibility: hidden;
+            opacity: 0;
+        }
+    </style>
 
     <!-- Favicon for browsers -->
     <link href="/assets/images/favicon.png" rel="icon"/>
@@ -87,8 +142,14 @@
     <!-- Page title -->
     <title>Studio LGS1920: Replay The World Outdoors !</title>
 </head>
-<body>
+<body class="lgs-app-booting">
 <div id="cesium-viewer"></div>
+<div id="lgs-boot-splash" aria-hidden="true">
+    <video autoplay muted loop playsinline preload="auto">
+        <source src="/assets/media/trekking-hero-mobile.mp4" media="(max-width: 700px)" type="video/mp4">
+        <source src="/assets/media/trekking-hero-desktop.mp4" type="video/mp4">
+    </video>
+</div>
 <div id="lgs1920-container"></div>
 
 <script src="/src/main.jsx" type="module"></script>

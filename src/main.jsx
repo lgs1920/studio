@@ -38,10 +38,9 @@ ResizeObserver.prototype.unobserve = function (target) {
 /**
  * Load Google Fonts once at startup
  */
-const bootstrap = async () => {
-    await UIUtils.importFonts()
-    AppUtils.setTheme(localStorage.getItem('theme') || 'system')
+const bootstrap = () => {
     document.body.classList.add('lgs-app-booting')
+    AppUtils.setTheme(localStorage.getItem('theme') || 'system')
 
     if (!window.lgs) {
         window.lgs = new LGS1920Context()
@@ -53,6 +52,10 @@ const bootstrap = async () => {
     createRoot(document.getElementById('lgs1920-container')).render(
         <LGS1920/>,
     )
+
+    void UIUtils.importFonts().catch(error => {
+        console.warn('Unable to load Google Fonts.', error)
+    })
 }
 
 bootstrap()

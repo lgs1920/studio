@@ -117,7 +117,6 @@ const AppSurface = ({onReady}) => {
         let cancelled = false
 
         const ready = async () => {
-            document.body.classList.remove('lgs-app-booting')
             await nextFrame()
             await nextFrame()
             await waitForAppSurfaceReady()
@@ -426,7 +425,7 @@ export const LGS1920 = () => {
 
             {initStatus === true && <AppSurface onReady={markAppSurfaceReady}/>}
 
-            {!initError && !appVisible && appSurfaceReady && (
+            {!initError && !appVisible && (
                 <WelcomeModal
                     initComplete={initStatus === true}
                     appReady={initStatus === true && initialFocusReady && appSurfaceReady}

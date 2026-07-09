@@ -26,7 +26,6 @@ import { LogoSvg }                                           from './LogoSvg'
 const DEFAULT_WELCOME_DISPLAY_TIME = 6
 const WELCOME_VIDEO_DESKTOP = '/assets/media/trekking-hero-desktop.mp4'
 const WELCOME_VIDEO_MOBILE = '/assets/media/trekking-hero-mobile.mp4'
-const WELCOME_FALLBACK_IMAGE = '/assets/images/welcome-splash.png'
 const WELCOME_MAX_FOG_DURATION = 3 * MILLIS
 const WELCOME_FOG_UPDATE_INTERVAL = 100
 const WELCOME_EXIT_DURATION = 3000
@@ -38,6 +37,7 @@ export const WelcomeModal = ({initComplete = false, appReady = false, settingsRe
     const [readyElapsedMillis, setReadyElapsedMillis] = useState(0)
     const [dismissed, setDismissed] = useState(false)
     const [exiting, setExiting] = useState(false)
+    const [videoReady, setVideoReady] = useState(false)
     const [buildInfoOpen, setBuildInfoOpen] = useState(false)
 
     const welcomeSettings = settingsReady ? lgs.settings?.ui?.welcome : null
@@ -63,7 +63,6 @@ export const WelcomeModal = ({initComplete = false, appReady = false, settingsRe
         '--welcome-video-saturation': (0.82 + fogProgress * 0.18).toFixed(3),
         '--welcome-scrim-opacity':    (0.58 - fogProgress * 0.10).toFixed(3),
         '--welcome-exit-duration':    `${WELCOME_EXIT_DURATION}ms`,
-        '--welcome-background-image': `url(${WELCOME_FALLBACK_IMAGE})`,
     }
 
     const hide = useCallback(({animate = true} = {}) => {
@@ -191,7 +190,7 @@ export const WelcomeModal = ({initComplete = false, appReady = false, settingsRe
 
     return (
         <div id="welcome-modal"
-             className={`lgs-theme${exiting ? ' welcome-modal-exiting' : ''}`}
+             className={`lgs-theme${exiting ? ' welcome-modal-exiting' : ''}${videoReady ? ' welcome-modal-video-ready' : ''}`}
              aria-busy={!readyToEnter}
              style={welcomeStyle}>
             <div className="welcome-modal-media" aria-hidden="true">
@@ -201,7 +200,10 @@ export const WelcomeModal = ({initComplete = false, appReady = false, settingsRe
                     muted
                     loop
                     playsInline
-                    poster={WELCOME_FALLBACK_IMAGE}
+                    preload="auto"
+                    onLoadedData={() => setVideoReady(true)}
+                    onCanPlay={() => setVideoReady(true)}
+                    onPlaying={() => setVideoReady(true)}
                 >
                     <source src={WELCOME_VIDEO_MOBILE} media="(max-width: 700px)" type="video/mp4"/>
                     <source src={WELCOME_VIDEO_DESKTOP} type="video/mp4"/>
@@ -228,20 +230,22 @@ export const WelcomeModal = ({initComplete = false, appReady = false, settingsRe
                 />
                 <SloganSvg className="welcome-slogan" />
 
-                {showIntro && settingsReady && (
+                {showIntro && (
                     <div className="welcome-enter-call-for-action">
-                        <WaButton
-                            className="welcome-site-button"
-                            appearance="outlined"
-                            variant="brand"
-                            href={__.app.buildUrl(lgs.configuration.website)}
-                            target="_blank"
-                            rel="noreferrer"
-                            onClick={enter}
-                        >
-                            <WaIcon slot="start" name="globe-pointer" variant="regular"/>
-                            {'Visit our Site'}
-                        </WaButton>
+                        {settingsReady && (
+                            <WaButton
+                                className="welcome-site-button"
+                                appearance="outlined"
+                                variant="brand"
+                                href={__.app.buildUrl(lgs.configuration.website)}
+                                target="_blank"
+                                rel="noreferrer"
+                                onClick={enter}
+                            >
+                                <WaIcon slot="start" name="globe-pointer" variant="regular"/>
+                                {'Visit our Site'}
+                            </WaButton>
+                        )}
                         {readyToEnter ? (
                             <WaButton className="welcome-explore-button" variant="brand" onClick={enter}>
                                 <WaIcon

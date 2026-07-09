@@ -777,7 +777,7 @@ body.mobile .orbit-widget-body {
     overflow: hidden;
     transition: background-color var(--welcome-exit-duration, 3000ms) ease;
     color: var(--lgs-text-on-color);
-    background-color: var(--lgs-dark-color-95);
+    background-color: transparent;
     inset: 0;
     --welcome-overlay-transition-duration: 600ms;
 }
@@ -798,16 +798,22 @@ body.mobile .orbit-widget-body {
 
 .welcome-modal-media {
     transition: opacity var(--welcome-exit-duration, 3000ms) ease;
-    background: var(--lgs-dark-color-95) var(--welcome-background-image, url("/assets/images/welcome-splash.png")) center / cover no-repeat;
+    background: transparent;
 }
 
 .welcome-modal-video {
     width: 100%;
     height: 100%;
     transform: scale(1.015);
+    transition: opacity 350ms ease;
+    opacity: 0;
     filter: blur(var(--welcome-video-blur, 7px)) brightness(var(--welcome-video-brightness, .84)) saturate(var(--welcome-video-saturation, .72));
     object-fit: cover;
     object-position: center;
+}
+
+#welcome-modal.welcome-modal-video-ready .welcome-modal-video {
+    opacity: 1;
 }
 
 .welcome-modal-fog {
