@@ -392,4 +392,38 @@ describe('SettingsSection', () => {
         expect(section.content['dynamic-stats-widget'].configuration.default.title).toBe('Dynamic Stats')
         expect(lgs.configuration.widgets['dynamic-stats-widget']).toBeDefined()
     })
+
+    it('migrates legacy scalar widget text values into nested text content objects', () => {
+        const section = new SettingsSection('widgets')
+        const merged = section.update(
+            {
+                'text-widget': {
+                    configuration: {
+                        default: {
+                            text: 'Legacy text value',
+                        },
+                    },
+                },
+            },
+            {
+                'text-widget': {
+                    configuration: {
+                        default: {
+                            text: {
+                                content: 'Enter text here',
+                                color:   '#ffffff',
+                                opacity: 1,
+                            },
+                        },
+                    },
+                },
+            },
+        )
+
+        expect(merged['text-widget'].configuration.default.text).toEqual({
+            content: 'Legacy text value',
+            color:   '#ffffff',
+            opacity: 1,
+        })
+    })
 })
