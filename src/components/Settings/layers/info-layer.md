@@ -14,8 +14,12 @@ The tokens used to unlock access to the are stored on your browser, nowhere else
 
 We invite you to read carefully the **terms and conditions** of each provider.
 
-**Disclaimer**: *The LGS1920 project is in no way affiliated with the providers.
-We simply try to offer you the elements that might suit you best.  
+**Disclaimer**: The LGS1920 **project is in no way affiliated with any of the layers and terrain providers**.
+We simply
+try
+to offer you the elements that might suit you best.
 We cannot be held responsible for expensive usage. All we do is,each time you act on the map,we send a request with your
-token to the provider, and we display the information received.*
+token to the provider, and we display the information received.
+
+It's up to you to take care of tour data volume.
 
