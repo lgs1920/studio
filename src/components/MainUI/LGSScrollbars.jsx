@@ -22,8 +22,17 @@ import { Scrollbars } from 'react-custom-scrollbars-2'
  * Correctly forwards refs for SortableJS and hides native scrollbars.
  */
 export const LGSScrollbars = forwardRef(
-    ({children, autoHide = true, onUpdate, thumbMinSize = 30, thumbSize, ...props}, ref) => {
+    ({
+         children,
+         autoHide = true,
+         onScrollStateChange,
+         onUpdate,
+         thumbMinSize = 30,
+         thumbSize,
+         ...props
+     }, ref) => {
         const containerRef = useRef(null)
+        const lastScrollStateRef = useRef(null)
 
         const syncVerticalThumb = values => {
             const container = containerRef.current
@@ -73,6 +82,19 @@ export const LGSScrollbars = forwardRef(
 
         const handleUpdate = values => {
             syncVerticalThumb(values)
+            const {
+                      scrollTop = 0,
+                      scrollHeight = 0,
+                      clientHeight = 0,
+                  } = values ?? {}
+            const hasOverflow = scrollHeight > clientHeight
+            const scrolled = hasOverflow && scrollTop > 0
+
+            if (lastScrollStateRef.current !== scrolled) {
+                lastScrollStateRef.current = scrolled
+                onScrollStateChange?.(scrolled, values)
+            }
+
             onUpdate?.(values)
         }
 
