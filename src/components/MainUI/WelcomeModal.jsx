@@ -7,16 +7,16 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-07-08
- * Last modified: 2026-07-08
+ * Created on: 2026-07-09
+ * Last modified: 2026-07-09
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { APP_EVENT, MILLIS, SECOND }                         from '@Core/constants'
 import { LGSPopup }                                          from '@Components/LGSPopup'
 import { SloganSvg }                                         from '@Components/MainUI/SloganSvg'
+import { APP_EVENT, MILLIS, SECOND } from '@Core/constants'
 import { formatBuildInfo }                                   from '@Utils/BuildInfoUtils'
 import { UIToast }                                           from '@Utils/UIToast'
 import { WaButton, WaIcon, WaSpinner }                       from '@web.awesome.me/webawesome-pro/dist/react'
@@ -33,8 +33,10 @@ const WELCOME_EXIT_DURATION = 3000
 export const WelcomeModal = ({initComplete = false, appReady = false, settingsReady = false, onEnter}) => {
     const enterHandled = useRef(false)
     const exitTimerRef = useRef(null)
+    const countdownTimerRef = useRef(null)
     const [elapsedMillis, setElapsedMillis] = useState(0)
-    const [readyElapsedMillis, setReadyElapsedMillis] = useState(0)
+    const [countdownSeconds, setCountdownSeconds] = useState(null)
+    const [replayArmed, setReplayArmed] = useState(false)
     const [dismissed, setDismissed] = useState(false)
     const [exiting, setExiting] = useState(false)
     const [videoReady, setVideoReady] = useState(false)
@@ -47,10 +49,7 @@ export const WelcomeModal = ({initComplete = false, appReady = false, settingsRe
     const showIntro = welcomeSettings?.showIntro !== false
     const autoClose = welcomeSettings?.autoClose !== false
     const readyToEnter = initComplete && appReady
-    const readyElapsedSeconds = Math.floor(readyElapsedMillis / MILLIS)
-    const closure = showIntro && autoClose && readyToEnter ? Math.max(displayDuration - readyElapsedSeconds, 0) : 0
-    const autoCloseReached = showIntro && autoClose && readyToEnter && closure <= 0
-    const shouldAutoEnter = readyToEnter && (!showIntro || autoCloseReached)
+    const replayAvailable = replayArmed && showIntro && autoClose && countdownSeconds !== null
     const studioVersion = settingsReady ? (lgs.versions?.studio ?? lgs.versions?.version) : null
     const buildInfo = settingsReady ? formatBuildInfo(lgs.build) : null
     const fogDuration = Math.min(WELCOME_MAX_FOG_DURATION, displayDuration * MILLIS)
@@ -66,7 +65,7 @@ export const WelcomeModal = ({initComplete = false, appReady = false, settingsRe
     }
 
     const hide = useCallback(({animate = true} = {}) => {
-        if (!readyToEnter) {
+        if (!readyToEnter && !replayArmed) {
             return
         }
 
@@ -105,7 +104,11 @@ export const WelcomeModal = ({initComplete = false, appReady = false, settingsRe
             setDismissed(true)
             onEnter?.()
         }, WELCOME_EXIT_DURATION)
-    }, [onEnter, readyToEnter, settingsReady])
+    }, [onEnter, readyToEnter, replayArmed, settingsReady])
+
+    const triggerReplay = useCallback(() => {
+        hide({animate: showIntro})
+    }, [hide, showIntro])
 
     const enter = () => {
         hide()
@@ -143,30 +146,61 @@ export const WelcomeModal = ({initComplete = false, appReady = false, settingsRe
                 window.clearTimeout(exitTimerRef.current)
                 exitTimerRef.current = null
             }
+            if (countdownTimerRef.current !== null) {
+                window.clearTimeout(countdownTimerRef.current)
+                countdownTimerRef.current = null
+            }
         }
     }, [])
 
     useEffect(() => {
-        if (!readyToEnter) {
+        if (!readyToEnter || !showIntro || !autoClose) {
+            setCountdownSeconds(null)
+            setReplayArmed(false)
+            if (countdownTimerRef.current !== null) {
+                window.clearTimeout(countdownTimerRef.current)
+                countdownTimerRef.current = null
+            }
             return undefined
         }
 
-        const startedAt = Date.now()
+        setReplayArmed(true)
+        let remainingSeconds = displayDuration
+        let cancelled = false
 
-        const timer = setInterval(() => {
-            setReadyElapsedMillis(Date.now() - startedAt)
-        }, WELCOME_FOG_UPDATE_INTERVAL)
-
-        return () => clearInterval(timer)
-    }, [readyToEnter])
-
-    useEffect(() => {
-        if (shouldAutoEnter) {
-            const frameId = requestAnimationFrame(() => hide({animate: showIntro}))
-            return () => cancelAnimationFrame(frameId)
+        const stopCountdown = () => {
+            if (countdownTimerRef.current !== null) {
+                window.clearTimeout(countdownTimerRef.current)
+                countdownTimerRef.current = null
+            }
         }
-        return undefined
-    }, [hide, shouldAutoEnter, showIntro])
+
+        const stepCountdown = () => {
+            if (cancelled) {
+                return
+            }
+
+            setCountdownSeconds(remainingSeconds)
+
+            if (remainingSeconds <= 0) {
+                stopCountdown()
+                triggerReplay()
+                return
+            }
+
+            countdownTimerRef.current = window.setTimeout(() => {
+                remainingSeconds -= 1
+                stepCountdown()
+            }, MILLIS)
+        }
+
+        stepCountdown()
+
+        return () => {
+            cancelled = true
+            stopCountdown()
+        }
+    }, [autoClose, displayDuration, readyToEnter, showIntro, triggerReplay])
 
     const links = useMemo(() => {
         if (!settingsReady) {
@@ -212,8 +246,8 @@ export const WelcomeModal = ({initComplete = false, appReady = false, settingsRe
             <div className="welcome-modal-fog" aria-hidden="true"/>
             <div className="welcome-modal-scrim" aria-hidden="true"/>
 
-            {showIntro && autoClose && readyToEnter && closure > 0 && (
-                <div className="welcome-modal-timer">{closure} s</div>
+            {replayAvailable && countdownSeconds > 0 && (
+                <div className="welcome-modal-timer">{countdownSeconds} s</div>
             )}
 
             <div className="welcome-modal-content">
@@ -228,7 +262,7 @@ export const WelcomeModal = ({initComplete = false, appReady = false, settingsRe
                     className="welcome-logo"
                     title="LGS1920 Studio logo"
                 />
-                <SloganSvg className="welcome-slogan" />
+                <SloganSvg className="welcome-slogan"/>
 
                 {showIntro && (
                     <div className="welcome-enter-call-for-action">
@@ -246,7 +280,7 @@ export const WelcomeModal = ({initComplete = false, appReady = false, settingsRe
                                 {'Visit our Site'}
                             </WaButton>
                         )}
-                        {readyToEnter ? (
+                        {replayAvailable ? (
                             <WaButton className="welcome-explore-button" variant="brand" onClick={enter}>
                                 <WaIcon
                                     slot="start"

@@ -7,7 +7,7 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-06-20
+ * Created on: 2026-07-09
  * Last modified: 2026-06-20
  *
  *
@@ -207,7 +207,6 @@ body.lgs-app-booting #cesium-viewer {
 }
 
 .main-logo .version-info, .main-logo .welcome-modal-timer {
-    font-size: var(--lgs-font-size-s);
     line-height: 1;
     display: flex;
     align-items: center;
@@ -216,6 +215,7 @@ body.lgs-app-booting #cesium-viewer {
 
 .main-logo .welcome-modal-timer {
     font-size: var(--lgs-font-size-s);
+    font-weight: 400;
     position: absolute;
     top: var(--lgs-gutter-s);
     right: var(--lgs-gutter-s);
