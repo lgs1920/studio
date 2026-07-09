@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-07-08
- * Last modified: 2026-07-08
+ * Created on: 2026-07-09
+ * Last modified: 2026-07-09
  *
  *
  * Copyright © 2026 LGS1920
@@ -29,7 +29,7 @@
  * The secondary layer can be hidden with --lgs--logo-secondary-opacity: 0.
  */
 
-@import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@300..700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans:wght@300;400;500;600;700;800&family=Open+Sans:wght@300;400;500;600;700;800&display=swap');
 
 .lgs--logo-composition {
   overflow: visible;
@@ -44,12 +44,12 @@
   --lgs--logo-horizontal-wordmark-offset-y: 50px;
   --lgs--logo-play-arrow-border-width: 30px;
 
-  --lgs--logo-gap-vertical: 20px;
-  --lgs--logo-wordmark-font-family: Fredoka, Arial, Helvetica, sans-serif;
+  --lgs--
+  --lgs--logo-wordmark-font-family: "Noto Sans", sans-serif;
   --lgs--logo-wordmark-font-size: 150px;
-  --lgs--logo-wordmark-main-weight: 500;
+  --lgs--logo-wordmark-main-weight: 700;
 
-  --lgs--logo-wordmark-year-weight: 300;
+  --lgs--logo-wordmark-year-weight: 400;
 }
 
 .lgs--logo-only,

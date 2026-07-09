@@ -7,15 +7,15 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-24
- * Last modified: 2026-04-24
+ * Created on: 2026-07-09
+ * Last modified: 2026-07-09
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 import { APP_GOOGLE_FONTS, COUNTRY_FLAGS_DIR, WIDGET_GOOGLE_FONTS } from '@Core/constants'
-import { colord }                                 from 'colord'
-import { DateTime }                               from 'luxon'
+import { colord }                                                   from 'colord'
+import { DateTime }                                                 from 'luxon'
 
 export class UIUtils {
 
@@ -176,7 +176,14 @@ export class UIUtils {
 
     static importFonts = () => {
         const linkId = 'google-fonts'
-        const fontFamilies = [...new Set([...WIDGET_GOOGLE_FONTS, ...APP_GOOGLE_FONTS])]
+        const fontFamilies = [
+            ...new Set([
+                           ...WIDGET_GOOGLE_FONTS,
+                           ...APP_GOOGLE_FONTS,
+                           'Noto Sans',
+                           'Open Sans',
+                       ]),
+        ]
 
         if (!document.getElementById(linkId)) {
             const link = document.createElement('link')

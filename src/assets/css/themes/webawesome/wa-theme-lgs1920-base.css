@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-06-22
- * Last modified: 2026-06-22
+ * Created on: 2026-07-09
+ * Last modified: 2026-07-09
  *
  *
  * Copyright © 2026 LGS1920
@@ -201,8 +201,8 @@
     .wa-theme-lgs1920 .wa-invert {
         font-family: var(--wa-font-family-body);
 
-        --wa-font-family-body: "Inter", sans-serif;
-        --wa-font-family-heading: var(--wa-font-family-body);
+        --wa-font-family-body: "Open Sans", sans-serif;
+        --wa-font-family-heading: "Noto Sans", sans-serif;
         --wa-font-family-code: ui-monospace, monospace;
         --wa-font-family-longform: ui-serif, serif;
 

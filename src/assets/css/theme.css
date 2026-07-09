@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-07-02
- * Last modified: 2026-07-02
+ * Created on: 2026-07-09
+ * Last modified: 2026-07-09
  *
  *
  * Copyright © 2026 LGS1920
@@ -17,8 +17,8 @@
 
 /* WebAwesome theme contract overrides. */
 :root {
-    --wa-font-family-body: "Wix Madefor Text", sans-serif;
-    --wa-font-family-heading: "Wix Madefor Text", sans-serif;
+    --wa-font-family-body: "Open Sans", sans-serif;
+    --wa-font-family-heading: "Noto Sans", sans-serif;
     --wa-font-family-code: "Roboto Mono", monospace;
     --wa-font-family-longform: "Roboto Serif", serif;
     --wa-font-weight-body: 400;
@@ -54,7 +54,8 @@
     --lgs-border-radius-pill: 50%;
 
     /* Legacy LGS typography tokens used outside WebAwesome components. */
-    --lgs-font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+    --lgs-font-family: "Open Sans", sans-serif;
+    --lgs-font-family-heading: "Noto Sans", sans-serif;
     --lgs-font-line-height: 1.2;
     --lgs-font-weight: 400;
     --lgs-font-weight-bold: 700;
@@ -1944,11 +1945,15 @@ h1, h2, h3, p, ul, li {
 }
 
 h1 {
+    font-family: var(--lgs-font-family-heading);
     font-size: var(--lgs-font-size-l);
+    font-weight: 600;
 }
 
 h2 {
+    font-family: var(--lgs-font-family-heading);
     font-size: var(--lgs-font-size-m);
+    font-weight: 600;
 }
 
 ul {
@@ -1956,6 +1961,7 @@ ul {
 }
 
 h3 {
+    font-family: var(--lgs-font-family-heading);
     font-size: var(--lgs-font-size);
     font-weight: bold;
 }
