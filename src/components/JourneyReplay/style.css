@@ -28,7 +28,7 @@
 .replay-drawer-title {
     align-items: center;
     display: inline-flex;
-    gap: var(--wa-space-xs, 0.5rem);
+    gap: var(--lgs-gutter-s);
 }
 
 .replay-tabs::part(base) {

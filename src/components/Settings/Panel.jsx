@@ -62,6 +62,7 @@ export const Panel = memo(() => {
                               open={true}
                               modal="false"
                               onWaAfterHide={closePanel}>
+                        <span slot="label"><WaIcon name="gear" variant="regular"/>{'Settings'}</span>
                         <PanelActions/>
                         <WaTabGroup>
                             <WaTab panel="tab-tools">

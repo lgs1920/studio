@@ -70,7 +70,7 @@
 .drawer-header-title {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: var(--lgs-gutter-s);
 }
 
 .widget-editor-reset-menus {

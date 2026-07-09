@@ -1101,7 +1101,7 @@ wa-tab::part(base) {
     display: inline-flex;
     align-items: center;
     min-width: 0;
-    gap: var(--lgs-gutter-xs);
+    gap: var(--lgs-gutter-s);
 }
 
 .journey-groups-drawer-content {

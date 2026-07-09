@@ -24,7 +24,7 @@ import { useOptionalSnapshot }                       from '@Utils/ValtioUtils'
 import classNames                                    from 'classnames'
 
 import './style.css'
-import { WaSwitch }                                  from '@web.awesome.me/webawesome-pro/dist/react'
+import { WaIcon, WaSwitch }                          from '@web.awesome.me/webawesome-pro/dist/react'
 import { memo, useCallback, useEffect, useRef }      from 'react'
 import { createPortal }                              from 'react-dom'
 import { useSnapshot }              from 'valtio'
@@ -148,8 +148,7 @@ export const TracksEditor = memo(() => {
                         placement={drawerPlacement}
                         className={classNames({'drawer-is-stacked': isStacked})}
                     >
-
-                        <span slot="label">{'Edit the Journey'}</span>
+                        <span slot="label"><WaIcon name="route" variant="regular"/>{'Edit Journey'}</span>
                         <PanelActions stackedPanel={isStacked} onBack={isStacked ? closePanelWithManager : null}>
                             <ToolbarHeader
                             show={toolbarShow}

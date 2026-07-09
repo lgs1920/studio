@@ -18,7 +18,7 @@ import DrawerFooter                                  from '@Components/DrawerFoo
 import PanelActions                        from '@Components/PanelsActions'
 import WaDrawer                                      from '@Components/WaDrawerNonModal'
 import { INFO_CHANGELOG_TAB, INFO_DRAWER } from '@Core/constants'
-import { WaScroller, WaTab, WaTabGroup, WaTabPanel } from '@web.awesome.me/webawesome-pro/dist/react'
+import { WaIcon, WaScroller, WaTab, WaTabGroup, WaTabPanel } from '@web.awesome.me/webawesome-pro/dist/react'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal }                from 'react-dom'
@@ -106,6 +106,7 @@ export const Panel = () => {
                   lightDismiss
                   placement={useSnapshot(lgs.editorSettingsProxy.menu).drawer}
         >
+            <span slot="label"><WaIcon name="circle-info" variant="regular"/>{'Information'}</span>
             <PanelActions stackedPanel={isStacked} onBack={isStacked ? closePanelWithManager : null}/>
             <WaTabGroup onWaTabShow={handleTabShow}>
                 <WaTab slot="nav" panel={INFO_CHANGELOG_TAB}>

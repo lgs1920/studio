@@ -85,10 +85,7 @@ export const WidgetManagementDrawer = () => {
             }}
         >
             <PanelActions/>
-            <div slot="label" className="widget-management-drawer-title">
-                <WaIcon name="layer"/>
-                <span>{'Widget management'}</span>
-            </div>
+            <div slot="label" className="widget-management-drawer-title"><WaIcon name="layer"/><span>{'Widget management'}</span></div>
 
             <div className="widget-management-drawer-content">
                 <div className="widget-management-drawer-board">

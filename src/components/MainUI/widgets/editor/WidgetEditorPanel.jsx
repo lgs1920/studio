@@ -289,11 +289,7 @@ export const WidgetEditorPanel = () => {
             onWaHide={closeEditor}
         >
             {lgs.stores.ui.widget.list.size > 1 &&
-
-                <div slot="label" className="drawer-header-title">
-                <WaIcon name={data.icon}/>
-                <span>{data.name}</span>
-            </div>
+                <div slot="label" className="drawer-header-title"><WaIcon name={data.icon ?? 'square'} variant="regular"/><span>{data.name}</span></div>
             }
             <PanelActions stackedPanel={isStacked} onBack={isStacked ? closeEditorWithManager : null}/>
 
