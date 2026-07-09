@@ -22,7 +22,7 @@ import React, { useEffect, useState }            from 'react'
 import { default as ReactMarkdown }   from 'react-markdown'
 import { useSnapshot }                from 'valtio'
 import { FA2SL }         from '@Utils/FA2SL'
-import { markdown as infoText } from './info-layer.md'
+import infoText from './info-layer.md?raw'
 
 export const InfoLayerModal = () => {
     const editor = lgs.editorSettingsProxy
@@ -48,7 +48,7 @@ export const InfoLayerModal = () => {
 
             <LGSScrollbars onScrollStateChange={scrolled => setShowScrollHint(!scrolled)}>
                 <div>
-                    <ReactMarkdown children={infoText}/>
+                    <ReactMarkdown>{infoText}</ReactMarkdown>
                 </div>
             </LGSScrollbars>
 
