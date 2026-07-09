@@ -16,6 +16,12 @@
 
 
 /* WebAwesome theme contract overrides. */
+:root,
+html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+}
+
 :root {
     --wa-font-family-body: "Open Sans", sans-serif;
     --wa-font-family-heading: "Noto Sans", sans-serif;
@@ -28,6 +34,13 @@
     --wa-border-radius-scale: 1;
     --wa-border-width-scale: 1.5;
     --wa-space-scale: 1;
+}
+
+:root,
+.wa-theme-lgs1920,
+.wa-theme-lgs1920-on-map {
+    font-optical-sizing: none;
+    font-synthesis: none;
 }
 
 /* LGS application tokens shared by global CSS, components and map overlays. */
@@ -75,7 +88,7 @@
     --lgs-dark-ui-bg-color: var(--lgs-dark-ui-5th-color);
 
     /* LGS type scale for app-level UI and non-WebAwesome content. */
-    --lgs-font-size: 0.9rem;
+    --lgs-font-size: 0.825rem;
     --lgs-font-size-s: 0.75rem;
     --lgs-font-size-xs: 0.5rem;
     --lgs-font-size-m: 1.1rem;

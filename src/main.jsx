@@ -38,18 +38,21 @@ ResizeObserver.prototype.unobserve = function (target) {
 /**
  * Load Google Fonts once at startup
  */
-UIUtils.importFonts()
-AppUtils.setTheme(localStorage.getItem('theme') || 'system')
-document.body.classList.add('lgs-app-booting')
+const bootstrap = async () => {
+    await UIUtils.importFonts()
+    AppUtils.setTheme(localStorage.getItem('theme') || 'system')
+    document.body.classList.add('lgs-app-booting')
 
-if (!window.lgs) {
-    window.lgs = new LGS1920Context()
+    if (!window.lgs) {
+        window.lgs = new LGS1920Context()
+    }
+
+    /**
+     * Let's go
+     */
+    createRoot(document.getElementById('lgs1920-container')).render(
+        <LGS1920/>,
+    )
 }
 
-/**
- * Let's go
- */
-
-createRoot(document.getElementById('lgs1920-container')).render(
-    <LGS1920/>,
-)
+bootstrap()

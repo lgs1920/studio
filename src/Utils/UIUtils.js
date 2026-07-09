@@ -174,7 +174,7 @@ export class UIUtils {
         return `${COUNTRY_FLAGS_DIR}${countryCode.toLowerCase()}.svg`
     }
 
-    static importFonts = () => {
+    static importFonts = async () => {
         const linkId = 'google-fonts'
         const fontFamilies = [
             ...new Set([
@@ -186,11 +186,35 @@ export class UIUtils {
         ]
 
         if (!document.getElementById(linkId)) {
-            const link = document.createElement('link')
-            link.id = linkId
-            link.rel = 'stylesheet'
-            link.href = `https://fonts.googleapis.com/css2?${fontFamilies.map(f => `family=${f.replace(/\s+/g, '+')}`).join('&')}&display=swap`
-            document.head.appendChild(link)
+            const preconnectGoogleFonts = document.createElement('link')
+            preconnectGoogleFonts.rel = 'preconnect'
+            preconnectGoogleFonts.href = 'https://fonts.googleapis.com'
+            document.head.appendChild(preconnectGoogleFonts)
+
+            const preconnectGstatic = document.createElement('link')
+            preconnectGstatic.rel = 'preconnect'
+            preconnectGstatic.href = 'https://fonts.gstatic.com'
+            preconnectGstatic.crossOrigin = 'anonymous'
+            document.head.appendChild(preconnectGstatic)
+
+            await new Promise(resolve => {
+                const link = document.createElement('link')
+                link.id = linkId
+                link.rel = 'stylesheet'
+                link.href = `https://fonts.googleapis.com/css2?${fontFamilies.map(f => `family=${f.replace(/\s+/g, '+')}`).join('&')}&display=swap`
+                link.onload = resolve
+                link.onerror = resolve
+                document.head.appendChild(link)
+            })
+        }
+
+        const fontLoads = [
+            document.fonts?.load?.('400 1rem "Open Sans"'),
+            document.fonts?.load?.('600 1rem "Noto Sans"'),
+        ].filter(Boolean)
+
+        if (fontLoads.length) {
+            await Promise.allSettled(fontLoads)
         }
     }
 
