@@ -1,12 +1,13 @@
 # Map Provider Configuration
 
-Map, overlay, and terrain providers are declared in `public/layers-terrains.yaml`.
+Map, overlay, terrain, and 3D providers are declared in `public/layers-terrains.yaml`.
 The file is loaded as runtime settings, indexed by `LayersAndTerrainManager`, and rendered by Cesium through
-`MapLayer.jsx` for imagery layers or `TerrainUtils.js` for terrain layers.
+`MapLayer.jsx` for imagery layers, `TerrainUtils.js` for terrain layers, or the dedicated 3D layer helpers.
 
 ## Files
 
 - `public/layers-terrains.yaml`: provider, layer, overlay, terrain, and filter configuration.
+- `public/layers-sample.yaml`: complete sample file showing all supported fields.
 - `src/core/ui/LayerAndTerrainManager.js`: indexes providers and layer entities by `id`.
 - `src/components/cesium/MapLayer.jsx`: creates Cesium imagery providers from layer settings.
 - `src/Utils/cesium/TerrainUtils.js`: creates Cesium terrain providers from terrain settings.
@@ -17,6 +18,8 @@ The file is loaded as runtime settings, indexed by `LayersAndTerrainManager`, an
 
 ```yaml
 base: arcgis-wayback-20191212
+base3d: null
+tiles3d: null
 overlay: null
 terrain: cesium-world
 
@@ -38,6 +41,8 @@ providers:
 ```
 
 - `base`: selected base layer id. It must point to a layer with `type: base`.
+- `base3d`: selected 3D scene id, or `null`. It must point to a layer with `type: base3d`.
+- `tiles3d`: selected 3D tiles overlay id, or `null`. It must point to a layer with `type: tiles3d`.
 - `overlay`: selected overlay id, or `null`. It must point to a layer with `type: overlay`.
 - `terrain`: selected terrain id. It must point to a layer with `type: terrain`.
 - `colorSettings`: optional per-layer visual settings persisted by layer id.
@@ -76,14 +81,21 @@ Common fields:
 | `id` | Yes | Unique entity id across all providers. It must start with the provider id and `-`, because entity lookup derives the provider from this prefix. Keep it stable because settings persist by id. |
 | `name` | Yes | Display name in the layer selector. |
 | `image` | Recommended | Thumbnail filename under the layer images assets. |
-| `type` | Yes | `base`, `overlay`, or `terrain`. |
-| `usage.type` | Yes | `free`, `freemium`, `premium`, or `account`. |
+| `type` | Yes | `base`, `overlay`, `terrain`, `base3d`, or `tiles3d`. |
+| `usage.type` | Yes | `free`, `freemium`, `premium`, `account`, or `personal`. |
 | `usage.doc` | Optional | Provider documentation or API key documentation URL. |
 | `usage.signin` | Optional | Account/token creation URL. |
 | `usage.name` | Required for token layers | Query parameter name, for example `key` or `apikey`. |
 | `countries` | Optional | ISO-like country tags used by filters, for example `[ FR ]`. |
 | `doc` | Optional | Layer-specific documentation URL. |
 | `credits` | Optional | Layer-specific attribution override. |
+| `assetId` | Optional | Cesium ion asset id. Supported by imagery, terrain, and 3D layers. |
+| `ionAssetId` | Optional | Alias for `assetId`, used by the ion 3D helpers. |
+| `sceneKind` | Optional | Extra ion scene hint, for example `google-photorealistic`. |
+| `imageryKind` | Optional | Ion imagery hint, for example `ion` or `google2d`. |
+| `mapType` | Optional | Cesium Google2D map type, for example `satellite`. |
+| `overlayLayerType` | Optional | Extra Google2D overlay hint. |
+| `show` | Optional | Initial 3D visibility flag. |
 
 Imagery fields:
 
@@ -102,6 +114,20 @@ Terrain fields:
 | `terrainType` | Yes | `cesium`, `ellipsoid`, or `url`. |
 | `url` | Required for `terrainType: url` | Terrain endpoint. Can include `{%authent%}` for token replacement. |
 | `noRelief` | Optional | UI hint for ellipsoid terrain. |
+
+Ion 3D fields:
+
+| Field | Required | Notes |
+| --- | --- | --- |
+| `base3d` | Required for `type: base3d` | Nested options for the active 3D base scene. |
+| `tiles3d` | Required for `type: tiles3d` | Nested options for an additional 3D tileset. |
+| `base3d.kind` | Optional | Scene kind hint, typically `google-photorealistic` or `ion`. |
+| `base3d.flyToOnLoad` | Optional | Automatically fly the camera after load. |
+| `base3d.showGlobe` | Optional | Keep the globe visible under the 3D scene. |
+| `base3d.showTerrain` | Optional | Keep terrain enabled under the 3D scene. |
+| `tiles3d.kind` | Optional | 3D tileset kind hint. |
+| `tiles3d.flyToOnLoad` | Optional | Automatically fly the camera after load. |
+| `tiles3d.maximumScreenSpaceError` | Optional | Cesium 3D tileset quality / performance tradeoff. |
 
 ## Supported Imagery Tile Types
 
@@ -254,6 +280,40 @@ usage:
 
 Uses `CesiumTerrainProvider.fromUrl`.
 
+## Supported Ion 3D Types
+
+### `base3d`
+
+Uses a Cesium ion 3D tileset as the active scene base.
+
+```yaml
+type: base3d
+assetId: 2275207
+sceneKind: google-photorealistic
+base3d:
+  kind: google-photorealistic
+  flyToOnLoad: false
+  showGlobe: true
+  showTerrain: false
+```
+
+This is meant for root scene assets like Google Photorealistic 3D Tiles.
+
+### `tiles3d`
+
+Uses a Cesium ion 3D tileset as an overlay primitive.
+
+```yaml
+type: tiles3d
+assetId: 96188
+tiles3d:
+  kind: ion
+  flyToOnLoad: false
+  maximumScreenSpaceError: 16
+```
+
+This is meant for add-on 3D tilesets such as Cesium OSM Buildings.
+
 ## Authentication
 
 Token-protected layers use the `usage` block:
@@ -296,13 +356,14 @@ with `Failed to obtain image tile` errors.
 
 1. Add a provider entry under `providers`.
 2. Add one or more layers with stable unique ids.
-3. Choose the correct `type`: `base`, `overlay`, or `terrain`.
+3. Choose the correct `type`: `base`, `overlay`, `terrain`, `base3d`, or `tiles3d`.
 4. Choose the correct `tile` or `terrainType`.
 5. Add `minimumLevel` and `maximumLevel` for each imagery layer.
 6. Add `usage.signin`, `usage.doc`, and `usage.name` for token-protected providers.
-7. Add thumbnails under `public/assets/images/layers/thumbnails/` and logos under `public/assets/images/layers/logos/` when needed.
-8. Add proper credits.
-9. Parse the YAML and run a build before committing.
+7. Add `assetId` / `ionAssetId` and the relevant `base3d` or `tiles3d` block for ion 3D layers.
+8. Add thumbnails under `public/assets/images/layers/thumbnails/` and logos under `public/assets/images/layers/logos/` when needed.
+9. Add proper credits.
+10. Parse the YAML and run a build before committing.
 
 Useful local checks:
 

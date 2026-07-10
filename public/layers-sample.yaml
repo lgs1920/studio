@@ -1,0 +1,113 @@
+########################################
+# Layers sample
+########################################
+# Template file for adding a provider to `public/layers-terrains.yaml`.
+# The block is intentionally complete: for a real layer, keep only the fields
+# that match the selected type.
+#
+# Supported types:
+# - base / overlay: 2D imagery layer via `tile`
+# - terrain: terrain via `terrainType`
+# - base3d: base 3D scene via Cesium ion
+# - tiles3d: extra 3D tileset added to the scene via Cesium ion
+#
+# Never store a real token in this file.
+
+## Current IDs
+base: sample-layer                  # Active `type: base` layer id
+base3d: null                        # Active `type: base3d` layer id
+tiles3d: null                       # Active `type: tiles3d` layer id
+overlay: null                       # Active `type: overlay` layer id
+terrain: null                       # Active `type: terrain` layer id
+
+## Layer color settings
+colorSettings:
+  sample-layer:
+    brightness: 1.0
+    contrast: 1.0
+    alpha: 1.0
+    hue: 0.0
+    saturation: 1.0
+    gamma: 1.0
+    colorToAlphaThreshold: 0
+    colorToAlpha: '#ffffff'
+
+## Filter criteria
+filter:
+  byUsage: all                      # all / unlocked / locked
+  byName: ''
+  active: false
+  thumbnail: true
+  provider: true
+  alphabetic: true
+  byCountries: [ ]
+
+## Providers list
+providers:
+  - id: sample                      # Provider ID. Layer ids must use this prefix.
+    name: Sample Provider           # Display name in the selector.
+    credits: 'Credits Sample Provider'
+    logo: '/assets/images/layers/logos/sample.svg'
+    url: 'https://provider.example'
+
+    layers:
+      - name: Sample Layer
+        id: sample-layer            # Must start with `sample-`.
+        image: sample-layer.png     # `public/assets/images/layers/thumbnails/sample-layer.png`
+        doc: 'https://provider.example/docs/layers/sample-layer'
+        credits: 'Credits Sample Layer'
+        countries: [ FR ]
+
+        ## Common layer fields
+        type: base                  # base / overlay / terrain / base3d / tiles3d
+        alpha: 1.0                  # Initial opacity, mainly useful for `overlay`.
+        show: true                  # Used by Cesium ion 3D layers.
+
+        ## Usage / token fields
+        usage:
+          type: free                # free / freemium / premium / account / personal
+          doc: 'https://provider.example/docs/api'
+          signin: 'https://provider.example/account'
+          name: key                 # Token parameter name: key / apikey / access_token...
+          # token: ''               # Runtime only: do not commit.
+          # unlocked: false         # Runtime only: set after token validation.
+
+        ## Imagery fields: type `base` ou `overlay`
+        tile: wmts                  # slippy / maptiler / thunderforest / swisstopo / wmts / wmts-legacy / wayback / ion
+        url: 'https://provider.example/wmts'
+        layer: SAMPLE_LAYER_NAME
+        style: normal
+        format: image/png
+        tileMatrixSetID: PM
+        minimumLevel: 0
+        maximumLevel: 19
+        apikey: sample_public_key   # Only for `wmts-legacy` when the provider uses a public apikey.
+        other: '&Service=WMTS&Request=GetTile&Version=1.0.0'
+
+        ## Cesium ion fields: `tile: ion`, `type: terrain`, `type: base3d`, or `type: tiles3d`
+        assetId: 1                  # Format already used in `layers-terrains.yaml`.
+        ionAssetId: 1               # Alias supported by the Cesium ion code.
+        imageryKind: ion            # ion / google2d
+        tilesKind: ion              # Read if `imageryKind` is missing.
+        providerKind: ion           # Read if both `imageryKind` and `tilesKind` are missing.
+        mapType: satellite          # For `imageryKind: google2d`.
+        overlayLayerType: null      # Cesium Google2D option.
+        sceneKind: ion              # ion / google-photorealistic
+        maximumScreenSpaceError: 16 # Root value accepted for tiles3d.
+
+        ## Terrain fields: `type: terrain`
+        terrainType: url            # cesium / ellipsoid / url
+        noRelief: false             # UI hint for `terrainType: ellipsoid`.
+
+        ## Base 3D fields: `type: base3d`
+        base3d:
+          kind: ion                 # ion / google-photorealistic
+          flyToOnLoad: false
+          showGlobe: true
+          showTerrain: false
+
+        ## 3D Tiles fields: `type: tiles3d`
+        tiles3d:
+          kind: ion                 # ion / google-photorealistic
+          flyToOnLoad: false
+          maximumScreenSpaceError: 16
