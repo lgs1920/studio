@@ -84,7 +84,12 @@ export class LayersAndTerrainManager {
         lgs.settings.layers.providers.forEach(provider => {
             this.#providers.set(provider.id, provider)
             provider.layers.forEach(layer => {
-                const enhancedLayer = {...layer, provider: provider.id, countries: layer.countries ?? []}
+                const enhancedLayer = {
+                    ...layer,
+                    provider:     provider.id,
+                    providerName: provider.name ?? '',
+                    countries:    layer.countries ?? [],
+                }
                 this.#bases.set(layer.id, enhancedLayer)
                 // Collect unique country names
                 if (Array.isArray(enhancedLayer.countries)) {
