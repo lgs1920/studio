@@ -214,6 +214,7 @@ export const SelectEntity = (props) => {
     const list = props.list.map(entity => ({
         ...entity,
         providerName: __.layersAndTerrainManager.providers.get(entity.provider)?.name ?? '',
+        providerFullname: __.layersAndTerrainManager.providers.get(entity.provider)?.fullname ?? '',
     }))
 
     const selectEntityHandler = (event) => {
@@ -304,7 +305,13 @@ export const SelectEntity = (props) => {
                                 {layers.filter.provider &&
                                     entity.providerName && entity.providerName !== previousProviderName &&
                                     <div className="layers-provider-header">
-                                        <span className="provider-name">{entity.providerName}</span>
+                                        <span className="provider-name"
+                                              id={`provider-name-${entity.provider}`}>
+                                            {entity.providerName}
+                                        </span>
+                                        <WaTooltip placement="top" for={`provider-name-${entity.provider}`}>
+                                            {entity.providerFullname || entity.providerName}
+                                        </WaTooltip>
                                     </div>
                                 }
                                 <Thumbnail entity={entity} key={entity.name} onClick={selectEntityHandler}/>

@@ -18,7 +18,7 @@ import { BASE_ENTITY, OVERLAY_ENTITY, URL_AUTHENT_KEY } from '@Core/constants'
 import { IonLayerUtils }                                from '@Utils/cesium/IonLayerUtils'
 import {
     ImageryLayer, NeverTileDiscardPolicy, OpenStreetMapImageryProvider, UrlTemplateImageryProvider,
-    WebMapTileServiceImageryProvider,
+    WebMapServiceImageryProvider, WebMapTileServiceImageryProvider,
 }                                                       from 'cesium'
 import { useEffect, useMemo }     from 'react'
 import { subscribe, useSnapshot } from 'valtio'
@@ -27,6 +27,7 @@ import { DEFAULT_LAYERS_COLOR_SETTINGS, OVERLAY_INDEX } from '../../core/constan
 export const SLIPPY = 'slippy'
 export const WMTS = 'wmts'
 export const WMTS_LEGACY = 'wmts-legacy'
+export const WMS = 'wms'
 export const ARCGIS = 'arcgis'
 export const THUNDERFOREST = 'thunderforest'
 export const SWISSTOPO = 'swisstopo'
@@ -211,6 +212,11 @@ export const MapLayer = (props) => {
     const layerName = theLayer?.layer
     const layerFormat = theLayer?.format
     const layerTileMatrixSetID = theLayer?.tileMatrixSetID
+    const layerTileMatrixLabels = theLayer?.tileMatrixLabels
+    const layerCrs = theLayer?.crs
+    const layerSrs = theLayer?.srs
+    const layerWmsVersion = theLayer?.version
+    const layerTransparent = theLayer?.transparent
     const layerApiKey = theLayer?.apikey
     const layerOther = theLayer?.other
     const layerUsageName = theLayer?.usage?.name
@@ -289,10 +295,28 @@ export const MapLayer = (props) => {
                                                             style:           layerStyle,
                                                             format:          layerFormat,
                                                             tileMatrixSetID: layerTileMatrixSetID,
+                                                            tileMatrixLabels: layerTileMatrixLabels,
                                                             ...levelOptions,
                                                             // We credit to get if it is base or overlay.
                                                             credit: props.type,
                                                         })
+        }
+
+        if (layerTile === WMS && layerType === props.type) {
+            return new WebMapServiceImageryProvider({
+                                                        url:        theURL,
+                                                        layers:     layerName,
+                                                        parameters: {
+                                                            format:      layerFormat,
+                                                            styles:      layerStyle ?? '',
+                                                            transparent: layerTransparent ?? true,
+                                                            ...(layerWmsVersion ? {version: layerWmsVersion} : {}),
+                                                        },
+                                                        ...(layerCrs ? {crs: layerCrs} : {}),
+                                                        ...(layerSrs ? {srs: layerSrs} : {}),
+                                                        ...levelOptions,
+                                                        credit: props.type,
+                                                    })
         }
 
         if (layerTile === WMTS_LEGACY && layerType === props.type) {
@@ -332,6 +356,11 @@ export const MapLayer = (props) => {
         layerFormat,
         layerStyle,
         layerTileMatrixSetID,
+        layerTileMatrixLabels,
+        layerCrs,
+        layerSrs,
+        layerWmsVersion,
+        layerTransparent,
         layerUsageName,
         layerUsageToken,
         layerUsageUnlocked,

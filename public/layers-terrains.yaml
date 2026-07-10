@@ -24,7 +24,8 @@ providers:
   ## Cesium
   - id: cesium
     name: Cesium
-    credits: 'Credits CesiumJS'
+    fullname: Cesium
+    credits: 'Cesium'
     logo: ''
     url: 'https://cesium.com/platform/cesiumjs/'
     layers:
@@ -138,8 +139,9 @@ providers:
 
   ## IGN Provider (France)
   - id: ign                           # Provider ID
-    name: IGN (France)                    # Provider name
-    credits: 'Credits IGN (France)'       # Credits added to logo
+    name: IGN (FR)                    # Provider name
+    fullname: Institut national de l'information géographique et forestière
+    credits: 'IGN (FR)'       # Credits added to logo
     # Logo
     logo: /assets/images/layers/logos/ign-simplifie.svg
     url: 'https://ign.fr'             # Provider Url
@@ -336,8 +338,9 @@ providers:
         type: overlay
   ## WayMarked Trail Provider
   - id: wmt
-    name: WayMarked Trail
-    credits: 'Credits https://waymarkedtrails.org/'
+    name: WMT
+    fullname: WayMarked Trails
+    credits: 'WMT'
     logo: ''
     url: 'https://waymarkedtrails.org/'
     layers:
@@ -359,8 +362,9 @@ providers:
 
   ## SwissTopo
   - id: swtopo
-    name: Swisstopo
-    credits: 'Credits Swisstopo'
+    name: swisstopo (CH)
+    fullname: swisstopo
+    credits: 'swisstopo (CH)'
     logo: https://www.geo.admin.ch/images/swiss-logo-flag.svg
     url: 'https://geo.admin.ch/'
     layers:
@@ -403,7 +407,8 @@ providers:
   ## https://wayback.maptiles.arcgis.com/arcgis/rest/services/world_imagery/mapserver/wmts/1.0.0/wmtscapabilities.xml
   - id: arcgis
     name: ArcGIS
-    credits: 'Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community'
+    fullname: ArcGIS
+    credits: 'ArcGIS'
     logo: ''
     url: 'https://arcgis.com/'
     layers:
@@ -440,9 +445,10 @@ providers:
   ## Open Street Map
 
   - id: osm
-    name: OpenStreetMap
-    credits: Credits Openstreetmap.org & contributors
-    logo: ''
+    name: OSM
+    fullname: OpenStreetMap
+    credits: 'OSM'
+    logo: /assets/images/layers/logos/openstreetmap.png
     url: 'https://www.openstreetmap.org'
     layers:
       # OpenStreetMap standard
@@ -462,8 +468,9 @@ providers:
 
   ## Open Topo Map Provider
   - id: otm
-    name: OpenTopoMap
-    credits: Credits OpenTopoMap.org
+    name: OTM
+    fullname: OpenTopoMap
+    credits: 'OTM'
     logo: 'https://opentopomap.org/img/OpenTopoMap_rechts.png'
     url: 'https://opentopomap.org'
     layers:
@@ -485,8 +492,9 @@ providers:
 
   ## MapTiler
   - id: mpt
-    name: Maptiler
-    credits: © MapTiler - © OpenStreetMap contributors
+    name: MapTiler
+    fullname: MapTiler
+    credits: 'MapTiler'
     logo: '/assets/images/logo-maptiler.png'
     url: 'https://www.maptiler.com'
     layers:
@@ -559,10 +567,11 @@ providers:
 
   ## Open Snow Map
   - id: osmorg
-    name: OpenSnowMap
-    credits: Credits OpenSnowMap.org
-    logo: ''
-    url: 'https://OpenSnowMap.org'
+    name: OSM.org
+    fullname: OpenSnowMap
+    credits: 'OSM.org'
+    logo: /assets/images/layers/logos/opensnowmap.png
+    url: 'https://www.opensnowmap.org'
     layers:
       #         ## Tracks
       #        - name: OpenSnowMap
@@ -592,7 +601,8 @@ providers:
   ## ThunderForest
   - id: thdfrst
     name: Thunderforest
-    credits: Credits Gravitystorm Limited
+    fullname: Thunderforest
+    credits: 'Thunderforest'
     logo: ''
     url: 'https://www.thunderforest.com/'
     layers:
@@ -651,8 +661,9 @@ providers:
 
   ## IGN Spain
   - id: ign-es
-    name: IGN (Spain)
-    credits: 'Credits IGN/CNIG'
+    name: IGN (ES)
+    fullname: Instituto Geográfico Nacional / CNIG
+    credits: 'IGN (ES)'
     logo: '/assets/images/layers/logos/Instituto_Geográfico_Nacional.png'
     url: 'https://www.ign.es/'
 
@@ -723,6 +734,317 @@ providers:
         maximumLevel: 19
         other: '&Service=WMTS&Request=GetTile&Version=1.0.0'
 
+  ## Germany - BKG Provider
+  - id: bkg-de
+    name: BKG (DE)
+    fullname: Bundesamt für Kartographie und Geodäsie
+    credits: 'BKG (DE)'
+    logo: ''
+    url: 'https://www.bkg.bund.de'
+    layers:
+
+      ## Germany - TopPlusOpen Map Layer
+      - name: Germany - TopPlusOpen (Map)
+        id: bkg-de-topplus-open
+        image: bkg-de-topplus-open.png
+        doc: 'https://sgx.geodatenzentrum.de/wmts_topplus_open/1.0.0/WMTSCapabilities.xml'
+        credits: '© Bundesamt für Kartographie und Geodäsie (BKG)'
+        countries: [ DE ]
+        type: base
+        alpha: 1.0
+        show: true
+        usage:
+          type: free
+        tile: wmts
+        url: 'https://sgx.geodatenzentrum.de/wmts_topplus_open/tile/1.0.0/web/{Style}/{TileMatrixSet}/{TileMatrix}/{TileRow}/{TileCol}.png'
+        layer: web
+        style: default
+        format: image/png
+        tileMatrixSetID: WEBMERCATOR
+        tileMatrixLabels: [ '00', '01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12', '13', '14', '15', '16', '17', '18' ]
+        minimumLevel: 0
+        maximumLevel: 18
+
+      ## Germany - Sentinel-2 Photo Layer
+      - name: Germany - Sentinel-2 (Photo)
+        id: bkg-de-sentinel2
+        image: bkg-de-sentinel2.png
+        doc: 'https://sgx.geodatenzentrum.de/wms_sentinel2_de?SERVICE=WMS&REQUEST=GetCapabilities&VERSION=1.3.0'
+        credits: '© Bundesamt für Kartographie und Geodäsie (BKG) / Copernicus'
+        countries: [ DE ]
+        type: base
+        alpha: 1.0
+        show: true
+        usage:
+          type: free
+        tile: wms
+        url: 'https://sgx.geodatenzentrum.de/wms_sentinel2_de?'
+        layer: rgb
+        format: image/jpeg
+        version: 1.3.0
+        crs: CRS:84
+        minimumLevel: 0
+        maximumLevel: 19
+
+  ## Norway - Kartverket Provider
+  - id: kartverket-no
+    name: Kartverket (NO)
+    fullname: Kartverket
+    credits: 'Kartverket (NO)'
+    logo: ''
+    url: 'https://www.kartverket.no'
+    layers:
+
+      ## Norway - Topografisk Norgeskart Map Layer
+      - name: Norway - Topografisk Norgeskart (Map)
+        id: kartverket-no-topo
+        image: kartverket-no-topo.png
+        doc: 'https://cache.kartverket.no/v1/wmts/1.0.0/WMTSCapabilities.xml'
+        credits: '© Kartverket'
+        countries: [ NO ]
+        type: base
+        alpha: 1.0
+        show: true
+        usage:
+          type: free
+        tile: wmts
+        url: 'https://cache.kartverket.no/v1/wmts/1.0.0/topo/default/{TileMatrixSet}/{TileMatrix}/{TileRow}/{TileCol}.png'
+        layer: topo
+        style: default
+        format: image/png
+        tileMatrixSetID: webmercator
+        tileMatrixLabels: [ '00', '01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12', '13', '14', '15', '16', '17', '18' ]
+        minimumLevel: 0
+        maximumLevel: 18
+
+      ## Norway - Geocache Aerial Photo Layer
+      - name: Norway - Geocache Aerial Photo (Photo)
+        id: kartverket-no-orto
+        image: kartverket-no-orto.png
+        doc: 'https://services.geodataonline.no/arcgis/rest/services/Geocache_WMAS_WGS84/GeocacheBilder/MapServer'
+        credits: '© Geodata AS, Kartverket, Geovekst og kommunene'
+        countries: [ NO ]
+        type: base
+        alpha: 1.0
+        show: true
+        usage:
+          type: free
+        tile: wayback
+        url: 'https://services.geodataonline.no/arcgis/rest/services/Geocache_WMAS_WGS84/GeocacheBilder/MapServer/tile'
+        minimumLevel: 0
+        maximumLevel: 19
+
+  ## Great Britain - Ordnance Survey Provider
+  - id: os-gb
+    name: OS (GB)
+    fullname: Ordnance Survey
+    credits: 'OS (GB)'
+    logo: ''
+    url: 'https://osdatahub.os.uk'
+    layers:
+
+      ## Great Britain - OS Outdoor Map Layer
+      - name: Great Britain - OS Outdoor (Map)
+        id: os-gb-outdoor
+        image: os-gb-outdoor.png
+        doc: 'https://osdatahub.os.uk/docs/wmts/technicalSpecification'
+        credits: 'Contains OS data © Crown copyright and database right'
+        countries: [ GB ]
+        type: base
+        alpha: 1.0
+        show: true
+        usage:
+          type: freemium
+          doc: 'https://osdatahub.os.uk/docs/wmts/overview'
+          signin: 'https://osdatahub.os.uk/projects'
+          name: key
+        tile: wmts
+        url: 'https://api.os.uk/maps/raster/v1/wmts?{%authent%}'
+        layer: Outdoor_3857
+        style: default
+        format: image/png
+        tileMatrixSetID: EPSG:3857
+        minimumLevel: 0
+        maximumLevel: 19
+        other: '&Service=WMTS&Request=GetTile&Version=1.0.0'
+
+      ## Great Britain - OS Aerial Photo Layer
+      - name: Great Britain - OS Aerial (Photo)
+        id: os-gb-aerial
+        image: os-gb-aerial.png
+        doc: 'https://osdatahub.os.uk/docs/wmts/technicalSpecification'
+        credits: 'Contains OS data © Crown copyright and database right'
+        countries: [ GB ]
+        type: base
+        alpha: 1.0
+        show: true
+        usage:
+          type: freemium
+          doc: 'https://osdatahub.os.uk/docs/wmts/overview'
+          signin: 'https://osdatahub.os.uk/projects'
+          name: key
+        tile: wmts
+        url: 'https://api.os.uk/maps/raster/v1/wmts?{%authent%}'
+        layer: Aerial_3857
+        style: default
+        format: image/jpeg
+        tileMatrixSetID: EPSG:3857
+        minimumLevel: 0
+        maximumLevel: 19
+        other: '&Service=WMTS&Request=GetTile&Version=1.0.0'
+
+  ## Italy - PCN Provider
+  - id: pcn-it
+    name: PCN (IT)
+    fullname: Portale Cartografico Nazionale
+    credits: 'PCN (IT)'
+    logo: ''
+    url: 'https://gn.mase.gov.it/portale/servizio-di-consultazione-wms'
+    layers:
+
+      ## Italy - IGM Topographic Map Layer
+      - name: Italy - IGM Topographic Map (Map)
+        id: pcn-it-igm
+        image: pcn-it-igm.png
+        doc: 'https://gn.mase.gov.it/portale/servizio-di-consultazione-wms'
+        credits: '© Istituto Geografico Militare (IGM) / PCN'
+        countries: [ IT ]
+        type: base
+        alpha: 1.0
+        show: true
+        usage:
+          type: free
+        tile: wms
+        url: 'https://wms.pcn.minambiente.it/ogc?map=/ms_ogc/WMS_v1.3/raster/IGM_25000.map'
+        layer: CB.IGM25000.32,CB.IGM25000.33
+        format: image/png
+        version: 1.1.1
+        srs: EPSG:4326
+        transparent: false
+
+      ## Italy - Color Orthophoto Layer
+      - name: Italy - Color Orthophoto (Photo)
+        id: pcn-it-orto
+        image: pcn-it-orto.png
+        doc: 'https://gn.mase.gov.it/portale/servizio-di-consultazione-wms'
+        credits: '© Ministero dellʼAmbiente / PCN'
+        countries: [ IT ]
+        type: base
+        alpha: 1.0
+        show: true
+        usage:
+          type: free
+        tile: wms
+        url: 'https://wms.pcn.minambiente.it/ogc?map=/ms_ogc/WMS_v1.3/raster/ortofoto_colore_12.map'
+        layer: OI.ORTOIMMAGINI.2012.32,OI.ORTOIMMAGINI.2012.33
+        format: image/jpeg
+        version: 1.1.1
+        srs: EPSG:4326
+        transparent: false
+
+  ## Belgium - NGI Provider
+  - id: ngi-be
+    name: IGN/NGI (BE)
+    fullname: Institut Géographique National (IGN / NGI)
+    credits: 'IGN/NGI (BE)'
+    logo: ''
+    url: 'https://www.ngi.be'
+    layers:
+
+      ## Belgium - CartoWeb Map Layer
+      - name: Belgium - CartoWeb (Map)
+        id: ngi-be-cartoweb
+        image: ngi-be-cartoweb.png
+        doc: 'https://cartoweb.wmts.ngi.be/1.0.0/WMTSCapabilities.xml'
+        credits: '© IGN-NGI Belgique'
+        countries: [ BE ]
+        type: base
+        alpha: 1.0
+        show: true
+        usage:
+          type: free
+        tile: wmts
+        url: 'https://cartoweb.wmts.ngi.be/1.0.0/topo/default/{TileMatrixSet}/{TileMatrix}/{TileRow}/{TileCol}.png'
+        layer: topo
+        style: default
+        format: image/png
+        tileMatrixSetID: 3857
+        minimumLevel: 7
+        maximumLevel: 17
+
+      ## Belgium - Orthophotos Photo Layer
+      - name: Belgium - Orthophotos (Photo)
+        id: ngi-be-ortho
+        image: ngi-be-ortho.png
+        doc: 'https://wmts.ngi.be/inspire/ortho/1.0.0/WMTSCapabilities.xml'
+        credits: '© IGN-NGI Belgique'
+        countries: [ BE ]
+        type: base
+        alpha: 1.0
+        show: true
+        usage:
+          type: free
+        tile: wmts
+        url: 'https://wmts.ngi.be/inspire/ortho/1.0.0/orthoimage_coverage/default/{TileMatrixSet}/latest/{TileMatrix}/{TileRow}/{TileCol}.png'
+        layer: orthoimage_coverage
+        style: default
+        format: image/png
+        tileMatrixSetID: 3857
+        minimumLevel: 7
+        maximumLevel: 19
+
+  ## Netherlands - PDOK Provider
+  - id: pdok-nl
+    name: PDOK (NL)
+    fullname: Publieke Dienstverlening Op de Kaart
+    credits: 'PDOK (NL)'
+    logo: ''
+    url: 'https://www.pdok.nl'
+    layers:
+
+      ## Netherlands - BRT Background Map Layer
+      - name: Netherlands - BRT Background Map (Map)
+        id: pdok-nl-brt
+        image: pdok-nl-brt.png
+        doc: 'https://service.pdok.nl/brt/achtergrondkaart/wmts/v2_0?request=GetCapabilities&service=WMTS'
+        credits: '© Kadaster / PDOK'
+        countries: [ NL ]
+        type: base
+        alpha: 1.0
+        show: true
+        usage:
+          type: free
+        tile: wmts
+        url: 'https://service.pdok.nl/kadaster/brt-achtergrondkaart/wmts/v2_0/standaard/{TileMatrixSet}/{TileMatrix}/{TileCol}/{TileRow}.png'
+        layer: standaard
+        style: default
+        format: image/png
+        tileMatrixSetID: EPSG:3857
+        tileMatrixLabels: [ '00', '01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19' ]
+        minimumLevel: 0
+        maximumLevel: 19
+
+      ## Netherlands - Current Aerial Photo Layer
+      - name: Netherlands - Current Aerial Photo (Photo)
+        id: pdok-nl-photo
+        image: pdok-nl-photo.png
+        doc: 'https://service.pdok.nl/hwh/luchtfotorgb/wmts/v1_0?request=GetCapabilities&service=WMTS'
+        credits: '© Beeldmateriaal.nl / PDOK'
+        countries: [ NL ]
+        type: base
+        alpha: 1.0
+        show: true
+        usage:
+          type: free
+        tile: wmts
+        url: 'https://service.pdok.nl/hwh/luchtfotorgb/wmts/v1_0/Actueel_ortho25/{TileMatrixSet}/{TileMatrix}/{TileCol}/{TileRow}.jpeg'
+        layer: Actueel_ortho25
+        style: default
+        format: image/jpeg
+        tileMatrixSetID: EPSG:3857
+        tileMatrixLabels: [ '00', '01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21' ]
+        minimumLevel: 0
+        maximumLevel: 21
 
   ## Consortium of Ancient World Mappers
 #  - id: cawm

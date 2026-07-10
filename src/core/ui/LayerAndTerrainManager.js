@@ -88,6 +88,7 @@ export class LayersAndTerrainManager {
                     ...layer,
                     provider:     provider.id,
                     providerName: provider.name ?? '',
+                    providerFullname: provider.fullname ?? provider.name ?? '',
                     countries:    layer.countries ?? [],
                 }
                 this.#bases.set(layer.id, enhancedLayer)

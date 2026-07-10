@@ -35,10 +35,11 @@ const $providers = proxy({
 const LAYERS_TYPE = [BASE_ENTITY, OVERLAY_ENTITY, TERRAIN_ENTITY]
 
 const CreditLink = memo(({provider}) => {
+    const title = provider.fullname ?? provider.name
     return (
-        <a href={provider.url} target="_blank" rel="noreferrer">
+        <a href={provider.url} target="_blank" rel="noreferrer" title={title}>
             {provider.logo
-             ? <img src={provider.logo} alt={provider.name}/>
+             ? <img src={provider.logo} alt={title}/>
              : <span className={'credits'}>{provider.name}</span>
             }
         </a>
