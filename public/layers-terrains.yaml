@@ -136,7 +136,7 @@ providers:
         tile: ion
         imageryKind: ion
 
-  ## IGN Provider
+  ## IGN Provider (France)
   - id: ign                           # Provider ID
     name: IGN (France)                    # Provider name
     credits: 'Credits IGN (France)'       # Credits added to logo
@@ -647,6 +647,82 @@ providers:
         maximumLevel: 22
         doc: 'https://www.thunderforest.com/'
         type: base
+
+
+  ## IGN Spain
+  - id: ign-es
+    name: IGN (Spain)
+    credits: 'Credits IGN/CNIG'
+    logo: '/assets/images/layers/logos/Instituto_Geográfico_Nacional.png'
+    url: 'https://www.ign.es/'
+
+    layers:
+      ## Map
+      - name: Mapa
+        id: ign-es-mapa-raster
+        image: ign-es-mapa-raster.png
+        doc: 'https://www.ign.es/wmts/mapa-raster?request=GetCapabilities&service=WMTS'
+        credits: '© Instituto Geográfico Nacional / Centro Nacional de Información Geográfica'
+        countries: [ ES ]
+        type: base
+        alpha: 1.0
+        show: true
+        usage:
+          type: free
+        tile: wmts
+        url: 'https://www.ign.es/wmts/mapa-raster'
+        layer: MTN
+        style: default
+        format: image/jpeg
+        tileMatrixSetID: GoogleMapsCompatible
+        minimumLevel: 0
+        maximumLevel: 19
+        other: '&Service=WMTS&Request=GetTile&Version=1.0.0'
+
+      # Photo
+      - name: Photo
+        id: ign-es-pnoa
+        image: ign-es-pnoa.png
+        doc: 'https://www.ign.es/wmts/pnoa-ma?request=GetCapabilities&service=WMTS'
+        credits: '© Instituto Geográfico Nacional / Centro Nacional de Información Geográfica'
+        countries: [ ES ]
+        type: base
+        alpha: 1.0
+        show: true
+        usage:
+          type: free
+        tile: wmts
+        url: 'https://www.ign.es/wmts/pnoa-ma'
+        layer: OI.OrthoimageCoverage
+        style: default
+        format: image/jpeg
+        tileMatrixSetID: GoogleMapsCompatible
+        minimumLevel: 0
+        maximumLevel: 19
+        other: '&Service=WMTS&Request=GetTile&Version=1.0.0'
+
+      ## Old Map
+      - name: Primera Edición
+        id: ign-es-primera-edicion-mtn
+        image: ign-es-primera-edicion-mtn.png
+        doc: 'https://www.ign.es/wmts/primera-edicion-mtn?request=GetCapabilities&service=WMTS'
+        credits: '© Instituto Geográfico Nacional / Centro Nacional de Información Geográfica'
+        countries: [ ES ]
+        type: base
+        alpha: 1.0
+        show: true
+        usage:
+          type: free
+        tile: wmts
+        url: 'https://www.ign.es/wmts/primera-edicion-mtn'
+        layer: mtn50-edicion1
+        style: default
+        format: image/jpeg
+        tileMatrixSetID: GoogleMapsCompatible
+        minimumLevel: 0
+        maximumLevel: 19
+        other: '&Service=WMTS&Request=GetTile&Version=1.0.0'
+
 
   ## Consortium of Ancient World Mappers
 #  - id: cawm
