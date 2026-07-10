@@ -15,7 +15,7 @@
  ******************************************************************************/
 
 import {
-    HIGH_TERRAIN_PRECISION, SCENE_MODE_2D, SCENE_MODE_3D, SCENE_MODE_COLUMBUS, SCENE_MODES,
+    HIGH_TERRAIN_PRECISION, SCENE_MODE_2D, SCENE_MODE_3D, SCENE_MODE_COLUMBUS, SCENE_MODES, TERRAIN_ENTITY,
 }                                  from '@Core/constants'
 import { MapTarget }               from '@Core/MapTarget'
 import { SceneUtils }              from '@Utils/cesium/SceneUtils'
@@ -129,7 +129,7 @@ export class SceneManager {
 
     noRelief = () => {
         const manager = new LayersAndTerrainManager()
-        const terrain = manager.getEntityProxy(lgs.settings.layers.terrain)
+        const terrain = manager.getEntityProxyByType(lgs.settings.layers.terrain, TERRAIN_ENTITY)
         return lgs.settings.scene.mode.value * 1 === SCENE_MODE_2D.value
             || (terrain?.noRelief ?? false)
     }

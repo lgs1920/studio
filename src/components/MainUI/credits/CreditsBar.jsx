@@ -67,13 +67,13 @@ export const CreditsBar = ({contentRef = null}) => {
     const getProviders = (type, layer = undefined) => {
         const manager = new LayersAndTerrainManager()
         const tmp = {
-            [BASE_ENTITY]: manager.getProviderProxyByEntity(lgs.settings.layers.base),
-            [OVERLAY_ENTITY]: manager.getProviderProxyByEntity(lgs.settings.layers.overlay),
-            [TERRAIN_ENTITY]: manager.getProviderProxyByEntity(lgs.settings.layers.terrain),
+            [BASE_ENTITY]: manager.getProviderProxyByEntity(lgs.settings.layers.base, BASE_ENTITY),
+            [OVERLAY_ENTITY]: manager.getProviderProxyByEntity(lgs.settings.layers.overlay, OVERLAY_ENTITY),
+            [TERRAIN_ENTITY]: manager.getProviderProxyByEntity(lgs.settings.layers.terrain, TERRAIN_ENTITY),
         }
 
         if (layer) {
-            tmp[type] = manager.getProviderProxyByEntity(layer)
+            tmp[type] = manager.getProviderProxyByEntity(layer, type)
         }
 
         // Remove duplicate providers

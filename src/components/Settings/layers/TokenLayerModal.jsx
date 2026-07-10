@@ -61,7 +61,7 @@ export const TokenLayerModal = () => {
     const docUrl = tmpEntity.usage?.doc
                    ? `<a href="${tmpEntity.usage.doc}" target="_blank">See documentation</a>`
                    : null
-    const provider = __.layersAndTerrainManager.getProviderProxy(__.layersAndTerrainManager.getProviderIdByLayerId(tmpEntity.id))
+    const provider = __.layersAndTerrainManager.getProviderProxyByEntity(tmpEntity.id, tmpEntity.type)
     const providerUrl = provider?.url ? `<a href="${provider.url}" target="_blank">Visit Provider</a>` : null
 
     const validateToken = async () => {
