@@ -81,9 +81,17 @@ export class LayersAndTerrainManager {
         this.#provider = this.#base?.split('-')[0] ?? null
 
         // Map providers and layers in a single pass, adding countries field
-        lgs.settings.layers.providers.forEach(provider => {
+        for (const provider of (lgs.settings.layers.providers ?? [])) {
+            if (!provider?.id || !Array.isArray(provider.layers)) {
+                continue
+            }
+
             this.#providers.set(provider.id, provider)
-            provider.layers.forEach(layer => {
+            for (const layer of provider.layers) {
+                if (!layer?.id) {
+                    continue
+                }
+
                 const enhancedLayer = {
                     ...layer,
                     provider:     provider.id,
@@ -100,8 +108,8 @@ export class LayersAndTerrainManager {
                         }
                     })
                 }
-            })
-        });
+            }
+        }
 
         // Set singleton instance
         LayersAndTerrainManager.instance = this

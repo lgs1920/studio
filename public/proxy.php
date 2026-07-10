@@ -52,6 +52,16 @@ const EXTERNAL_PROXY_TARGETS = [
         'scheme' => 'https',
         'port' => 443,
     ],
+    [
+        'host' => 'wms.pcn.minambiente.it',
+        'scheme' => 'https',
+        'port' => 443,
+    ],
+    [
+        'host' => 'wms.pcn.minambiente.it',
+        'scheme' => 'http',
+        'port' => 80,
+    ],
 ];
 
 $config = load_config();

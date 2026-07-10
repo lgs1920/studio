@@ -54,7 +54,7 @@ providers:
         noRelief: true
 
       ## Google Photorealistic 3D Tiles
-      - name: Google Photorealistic 3D Tiles
+      - name: Google Photo 3D
         id: google-photorealistic-3d
         image: cesium-world.png
         assetId: 2275207
@@ -69,20 +69,6 @@ providers:
           showGlobe: true
           showTerrain: false
 
-      ## Cesium OSM Buildings
-      - name: Cesium OSM Buildings
-        id: cesium-osm-buildings
-        image: cesium-world.png
-        assetId: 96188
-        usage:
-          type: personal
-          doc: ''
-
-        type: tiles3d
-        tiles3d:
-          flyToOnLoad: false
-          maximumScreenSpaceError: 16
-
       ## Azure Maps Aerial
       - name: Azure Maps Aerial
         id: azure-maps-aerial
@@ -96,8 +82,8 @@ providers:
         tile: ion
         imageryKind: ion
 
-      ## Google Maps 2D Satellite
-      - name: Google Maps 2D Satellite
+      ## Google Maps 2D Photos
+      - name: Google Maps 2D\Photos
         id: google-maps-2d-satellite
         image: cesium-world.png
         assetId: 3830182
@@ -111,7 +97,7 @@ providers:
         mapType: satellite
 
       ## Google Maps 2D Satellite with Labels
-      - name: Google Maps 2D Satellite with Labels
+      - name: Google Maps 2D\Photos + Labels
         id: google-maps-2d-satellite-labels
         image: cesium-world.png
         assetId: 3830183
@@ -125,7 +111,7 @@ providers:
         mapType: satellite
 
       ## Azure Maps With Label
-      - name: Azure Maps With Label
+      - name: Azure Maps\Photos + Labels
         id: azure-maps-with-label
         image: cesium-world.png
         assetId: 3891168
@@ -139,7 +125,7 @@ providers:
 
   ## IGN Provider (France)
   - id: ign                           # Provider ID
-    name: IGN (FR)                    # Provider name
+    name: IGN (France)                    # Provider name
     fullname: Institut national de l'information géographique et forestière
     credits: 'IGN (FR)'       # Credits added to logo
     # Logo
@@ -362,7 +348,7 @@ providers:
 
   ## SwissTopo
   - id: swtopo
-    name: swisstopo (CH)
+    name: swisstopo (Swiss)
     fullname: swisstopo
     credits: 'swisstopo (CH)'
     logo: https://www.geo.admin.ch/images/swiss-logo-flag.svg
@@ -386,7 +372,7 @@ providers:
         credits: 'Credits Swisstopo'
 
       ## Photo
-      - name: Swisstopo Imagery
+      - name: Swisstopo Photos
         id: swtopo-img
         image: swtopo-img.png
         usage:
@@ -661,7 +647,7 @@ providers:
 
   ## IGN Spain
   - id: ign-es
-    name: IGN (ES)
+    name: IGN (Spain)
     fullname: Instituto Geográfico Nacional / CNIG
     credits: 'IGN (ES)'
     logo: '/assets/images/layers/logos/Instituto_Geográfico_Nacional.png'
@@ -691,7 +677,7 @@ providers:
         other: '&Service=WMTS&Request=GetTile&Version=1.0.0'
 
       # Photo
-      - name: Photo
+      - name: Photos
         id: ign-es-pnoa
         image: ign-es-pnoa.png
         doc: 'https://www.ign.es/wmts/pnoa-ma?request=GetCapabilities&service=WMTS'
@@ -736,15 +722,15 @@ providers:
 
   ## Germany - BKG Provider
   - id: bkg-de
-    name: BKG (DE)
+    name: BKG (Germany)
     fullname: Bundesamt für Kartographie und Geodäsie
-    credits: 'BKG (DE)'
-    logo: ''
+    credits: '© Bundesamt für Kartographie und Geodäsie (BKG)'
+    logo: '/assets/images/layers/logos/bkg-de.svg'
     url: 'https://www.bkg.bund.de'
     layers:
 
       ## Germany - TopPlusOpen Map Layer
-      - name: Germany - TopPlusOpen (Map)
+      - name: TopPlusOpen (Map)
         id: bkg-de-topplus-open
         image: bkg-de-topplus-open.png
         doc: 'https://sgx.geodatenzentrum.de/wmts_topplus_open/1.0.0/WMTSCapabilities.xml'
@@ -766,7 +752,7 @@ providers:
         maximumLevel: 18
 
       ## Germany - Sentinel-2 Photo Layer
-      - name: Germany - Sentinel-2 (Photo)
+      - name: Sentinel-2 (Photos)
         id: bkg-de-sentinel2
         image: bkg-de-sentinel2.png
         doc: 'https://sgx.geodatenzentrum.de/wms_sentinel2_de?SERVICE=WMS&REQUEST=GetCapabilities&VERSION=1.3.0'
@@ -786,17 +772,39 @@ providers:
         minimumLevel: 0
         maximumLevel: 19
 
+      ## Germany - TopPlusOpen Hillshade Overlay Layer
+      - name: TopPlusOpen Hillshade
+        id: bkg-de-topplus-hillshade
+        image: bkg-de-topplus-hillshade.png
+        doc: 'https://sgx.geodatenzentrum.de/wmts_topplus_open/1.0.0/WMTSCapabilities.xml'
+        credits: '© Bundesamt für Kartographie und Geodäsie (BKG)'
+        countries: [ DE ]
+        type: overlay
+        alpha: 0.5
+        show: false
+        usage:
+          type: free
+        tile: wmts
+        url: 'https://sgx.geodatenzentrum.de/wmts_topplus_open/tile/1.0.0'
+        layer: topplus_open_schattierung
+        style: normal
+        format: image/png
+        tileMatrixSetID: scale_3857
+        minimumLevel: 0
+        maximumLevel: 19
+        other: '&Service=WMTS&Request=GetTile&Version=1.0.0'
+
   ## Norway - Kartverket Provider
   - id: kartverket-no
-    name: Kartverket (NO)
+    name: Kartverket (Norway)
     fullname: Kartverket
-    credits: 'Kartverket (NO)'
-    logo: ''
+    credits: '© Kartverket'
+    logo: '/assets/images/layers/logos/kartverket-no.svg'
     url: 'https://www.kartverket.no'
     layers:
 
       ## Norway - Topografisk Norgeskart Map Layer
-      - name: Norway - Topografisk Norgeskart (Map)
+      - name: Topografisk Norgeskart (Map)
         id: kartverket-no-topo
         image: kartverket-no-topo.png
         doc: 'https://cache.kartverket.no/v1/wmts/1.0.0/WMTSCapabilities.xml'
@@ -818,7 +826,7 @@ providers:
         maximumLevel: 18
 
       ## Norway - Geocache Aerial Photo Layer
-      - name: Norway - Geocache Aerial Photo (Photo)
+      - name: Aerial Photos
         id: kartverket-no-orto
         image: kartverket-no-orto.png
         doc: 'https://services.geodataonline.no/arcgis/rest/services/Geocache_WMAS_WGS84/GeocacheBilder/MapServer'
@@ -834,17 +842,39 @@ providers:
         minimumLevel: 0
         maximumLevel: 19
 
+      ## Norway - Terrain Hillshade Overlay Layer
+      - name: Hillshade
+        id: kartverket-no-hillshade
+        image: kartverket-no-hillshade.png
+        doc: 'https://cache.kartverket.no/capabilities/skyggeflate/WMTSCapabilities.xml?request=GetCapabilities'
+        credits: '© Kartverket'
+        countries: [ NO ]
+        type: overlay
+        alpha: 0.4
+        show: false
+        usage:
+          type: free
+        tile: wmts
+        url: 'https://cache.kartverket.no/skyggeflate/v1/wmts'
+        layer: skyggeflate
+        style: default
+        format: image/png
+        tileMatrixSetID: googlemaps
+        minimumLevel: 0
+        maximumLevel: 19
+        other: '&Service=WMTS&Request=GetTile&Version=1.0.0'
+
   ## Great Britain - Ordnance Survey Provider
   - id: os-gb
-    name: OS (GB)
+    name: Ordnance Survey
     fullname: Ordnance Survey
-    credits: 'OS (GB)'
-    logo: ''
+    credits: '© Ordnance Survey'
+    logo: '/assets/images/layers/logos/os-gb.svg'
     url: 'https://osdatahub.os.uk'
     layers:
 
       ## Great Britain - OS Outdoor Map Layer
-      - name: Great Britain - OS Outdoor (Map)
+      - name: OS Outdoor (Map)
         id: os-gb-outdoor
         image: os-gb-outdoor.png
         doc: 'https://osdatahub.os.uk/docs/wmts/technicalSpecification'
@@ -869,7 +899,7 @@ providers:
         other: '&Service=WMTS&Request=GetTile&Version=1.0.0'
 
       ## Great Britain - OS Aerial Photo Layer
-      - name: Great Britain - OS Aerial (Photo)
+      - name: OS Aerial (Photos)
         id: os-gb-aerial
         image: os-gb-aerial.png
         doc: 'https://osdatahub.os.uk/docs/wmts/technicalSpecification'
@@ -893,17 +923,42 @@ providers:
         maximumLevel: 19
         other: '&Service=WMTS&Request=GetTile&Version=1.0.0'
 
+      ## Great Britain - OS Open Greenspace Overlay Layer
+      - name: OS Open Greenspace
+        id: os-gb-greenspace
+        image: os-gb-greenspace.png
+        doc: 'https://osdatahub.os.uk/docs/wmts/technicalSpecification'
+        credits: 'Contains OS data © Crown copyright and database right'
+        countries: [ GB ]
+        type: overlay
+        alpha: 0.6
+        show: false
+        usage:
+          type: freemium
+          doc: 'https://osdatahub.os.uk/docs/wmts/overview'
+          signin: 'https://osdatahub.os.uk/projects'
+          name: key
+        tile: wmts
+        url: 'https://api.os.uk/maps/raster/v1/wmts'
+        layer: Greenspace_3857
+        style: default
+        format: image/png
+        tileMatrixSetID: EPSG:3857
+        minimumLevel: 0
+        maximumLevel: 19
+        other: '&Service=WMTS&Request=GetTile&Version=1.0.0'
+
   ## Italy - PCN Provider
   - id: pcn-it
-    name: PCN (IT)
+    name: PCN (Italy)
     fullname: Portale Cartografico Nazionale
-    credits: 'PCN (IT)'
-    logo: ''
-    url: 'https://gn.mase.gov.it/portale/servizio-di-consultazione-wms'
+    credits: '© Ministero dellʼAmbiente / PCN'
+    logo: '/assets/images/layers/logos/pcn-it.svg'
+    url: 'http://www.pcn.minambiente.it'
     layers:
 
       ## Italy - IGM Topographic Map Layer
-      - name: Italy - IGM Topographic Map (Map)
+      - name: IGM Topographic Map
         id: pcn-it-igm
         image: pcn-it-igm.png
         doc: 'https://gn.mase.gov.it/portale/servizio-di-consultazione-wms'
@@ -916,6 +971,7 @@ providers:
           type: free
         tile: wms
         url: 'https://wms.pcn.minambiente.it/ogc?map=/ms_ogc/WMS_v1.3/raster/IGM_25000.map'
+        proxy: '/proxy.php?csurl='
         layer: CB.IGM25000.32,CB.IGM25000.33
         format: image/png
         version: 1.1.1
@@ -923,7 +979,7 @@ providers:
         transparent: false
 
       ## Italy - Color Orthophoto Layer
-      - name: Italy - Color Orthophoto (Photo)
+      - name: Color Orthophoto
         id: pcn-it-orto
         image: pcn-it-orto.png
         doc: 'https://gn.mase.gov.it/portale/servizio-di-consultazione-wms'
@@ -936,23 +992,45 @@ providers:
           type: free
         tile: wms
         url: 'https://wms.pcn.minambiente.it/ogc?map=/ms_ogc/WMS_v1.3/raster/ortofoto_colore_12.map'
+        proxy: '/proxy.php?csurl='
         layer: OI.ORTOIMMAGINI.2012.32,OI.ORTOIMMAGINI.2012.33
         format: image/jpeg
         version: 1.1.1
         srs: EPSG:4326
         transparent: false
 
+      ## Italy - Regional Boundaries WMS Overlay Layer
+      - name: Regional Boundaries
+        id: pcn-it-boundaries
+        image: pcn-it-boundaries.png
+        doc: 'https://wms.pcn.minambiente.it/ogc?map=/ms_ogc/WMS_v1.3/Vettoriali/LimitiAmministrativi_2020.map&service=WMS&request=GetCapabilities&version=1.3.0'
+        credits: '© Ministero dellʼAmbiente / PCN'
+        countries: [ IT ]
+        type: overlay
+        alpha: 0.7
+        show: false
+        usage:
+          type: free
+        tile: wms
+        url: 'https://wms.pcn.minambiente.it/ogc?map=/ms_ogc/WMS_v1.3/Vettoriali/LimitiAmministrativi_2020.map'
+        proxy: '/proxy.php?csurl='
+        layer: UA.UNITAAMMINISTRATIVE.REGIONI
+        format: image/png
+        version: 1.3.0
+        crs: CRS:84
+        transparent: true
+
   ## Belgium - NGI Provider
   - id: ngi-be
-    name: IGN/NGI (BE)
+    name: IGN / NGI (Belgium)
     fullname: Institut Géographique National (IGN / NGI)
-    credits: 'IGN/NGI (BE)'
-    logo: ''
+    credits: '© Institut Géographique National Belgique'
+    logo: '/assets/images/layers/logos/ngi-be.svg'
     url: 'https://www.ngi.be'
     layers:
 
       ## Belgium - CartoWeb Map Layer
-      - name: Belgium - CartoWeb (Map)
+      - name: Belgium - CartoWeb
         id: ngi-be-cartoweb
         image: ngi-be-cartoweb.png
         doc: 'https://cartoweb.wmts.ngi.be/1.0.0/WMTSCapabilities.xml'
@@ -973,7 +1051,7 @@ providers:
         maximumLevel: 17
 
       ## Belgium - Orthophotos Photo Layer
-      - name: Belgium - Orthophotos (Photo)
+      - name: Belgium - Orthophotos
         id: ngi-be-ortho
         image: ngi-be-ortho.png
         doc: 'https://wmts.ngi.be/inspire/ortho/1.0.0/WMTSCapabilities.xml'
@@ -993,17 +1071,34 @@ providers:
         minimumLevel: 7
         maximumLevel: 19
 
+      ## Belgium - Hillshade Hillshade Overlay Layer
+      - name: Hillshade
+        id: ngi-be-hillshade
+        image: ngi-be-hillshade.png
+        doc: 'https://topowms.ngi.be/cwa/wms/v1_0?request=GetCapabilities&service=WMS'
+        credits: '© IGN-NGI Belgique'
+        countries: [ BE ]
+        type: overlay
+        alpha: 0.4
+        show: false
+        usage:
+          type: free
+        tile: wms
+        url: 'https://topowms.ngi.be/cwa/wms/v1_0'
+        layer: hillshade
+        format: image/png
+
   ## Netherlands - PDOK Provider
   - id: pdok-nl
-    name: PDOK (NL)
+    name: PDOK (Netherlands)
     fullname: Publieke Dienstverlening Op de Kaart
-    credits: 'PDOK (NL)'
-    logo: ''
+    credits: '© Kadaster / PDOK'
+    logo: '/assets/images/layers/logos/pdok-nl.svg'
     url: 'https://www.pdok.nl'
     layers:
 
       ## Netherlands - BRT Background Map Layer
-      - name: Netherlands - BRT Background Map (Map)
+      - name: BRT Background Map
         id: pdok-nl-brt
         image: pdok-nl-brt.png
         doc: 'https://service.pdok.nl/brt/achtergrondkaart/wmts/v2_0?request=GetCapabilities&service=WMTS'
@@ -1025,7 +1120,7 @@ providers:
         maximumLevel: 19
 
       ## Netherlands - Current Aerial Photo Layer
-      - name: Netherlands - Current Aerial Photo (Photo)
+      - name: Current Aerial Photos
         id: pdok-nl-photo
         image: pdok-nl-photo.png
         doc: 'https://service.pdok.nl/hwh/luchtfotorgb/wmts/v1_0?request=GetCapabilities&service=WMTS'
@@ -1046,22 +1141,45 @@ providers:
         minimumLevel: 0
         maximumLevel: 21
 
+      ## Netherlands - Cadastral Parcels Overlay Layer
+      - name: Cadastral Parcels
+        id: pdok-nl-cadastral
+        image: pdok-nl-cadastral.png
+        doc: 'https://service.pdok.nl/kadaster/kadastralekaart/wmts/v5_0?request=GetCapabilities&service=WMTS'
+        credits: '© Kadaster / PDOK'
+        countries: [ NL ]
+        type: overlay
+        alpha: 0.6
+        show: false
+        usage:
+          type: free
+        tile: wmts
+        url: 'https://service.pdok.nl/kadaster/kadastralekaart/wmts/v5_0'
+        layer: kadastralekaart
+        style: default
+        format: image/png
+        tileMatrixSetID: EPSG:3857
+        minimumLevel: 0
+        maximumLevel: 19
+        other: '&Service=WMTS&Request=GetTile&Version=1.0.0'
+
   ## Consortium of Ancient World Mappers
-#  - id: cawm
-#    name: AWM
-#    credits: Credits UNiv. Iowa Lib
-#    logo: 'https://opentopomap.org/img/OpenTopoMap_rechts.png'
-#    url: 'https://opentopomap.org'
-#    layers:
-#      ## Open Topo Map standard
-#      - name: cawm
-#        id: cawm-map
-#        image: otm-map.png
-#        usage:
-#          type: free
-#          doc: ''
-#
-#        tile: slippy
-#        url: https://cawm.lib.uiowa.edu/tiles
-#        doc: ''
-#        type: overlay
+  - id: cawm
+    name: AWM
+    fullname: Consortium of Ancient World Mappers
+    credits: 'Credits Univ. Iowa Lib'
+    logo: ''
+    url: 'https://cawm.lib.uiowa.edu/'
+    layers:
+      ## Open Topo Map standard
+      - name: CAWM
+        id: cawm-map
+        image: otm-map.png
+        usage:
+          type: free
+          doc: ''
+
+        tile: slippy
+        url: 'https://cawm.lib.uiowa.edu/tiles'
+        doc: ''
+        type: overlay

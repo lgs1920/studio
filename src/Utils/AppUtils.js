@@ -408,19 +408,20 @@ export class AppUtils {
         }
 
         // Read and apply tokens
-        for (const provider of lgs.settings.layers.providers) {
-            let index = 0
-            for (const layer of provider.layers) {
-                if (layer.usage.type !== FREE_ANONYMOUS_ACCESS) {
+        for (const provider of lgs.settings.layers.providers ?? []) {
+            for (const layer of provider?.layers ?? []) {
+                if (!layer?.usage?.type) {
+                    continue
+                }
 
+                if (layer.usage.type !== FREE_ANONYMOUS_ACCESS) {
                     const token = await lgs.db.vault.get(layer.id, VAULT_STORE)
                     // We get a token, let's use it now
                     if (token) {
-                        provider.layers[index].usage.token = token
-                        provider.layers[index].usage.unlocked = true
+                        layer.usage.token = token
+                        layer.usage.unlocked = true
                     }
                 }
-                index++
             }
         }
 

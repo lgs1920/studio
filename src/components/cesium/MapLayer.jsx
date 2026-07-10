@@ -17,7 +17,7 @@
 import { BASE_ENTITY, OVERLAY_ENTITY, URL_AUTHENT_KEY } from '@Core/constants'
 import { IonLayerUtils }                                from '@Utils/cesium/IonLayerUtils'
 import {
-    ImageryLayer, NeverTileDiscardPolicy, OpenStreetMapImageryProvider, UrlTemplateImageryProvider,
+    DefaultProxy, ImageryLayer, NeverTileDiscardPolicy, OpenStreetMapImageryProvider, UrlTemplateImageryProvider,
     WebMapServiceImageryProvider, WebMapTileServiceImageryProvider,
 }                                                       from 'cesium'
 import { useEffect, useMemo }     from 'react'
@@ -133,14 +133,37 @@ const MapLayerImagery = ({imageryProvider, isBase, layerId, collection}) => {
 
         let layer
         let cancelled = false
+        let removeErrorListener = null
 
         const addLayer = async () => {
             const nextLayer = typeof imageryProvider?.then === 'function'
                               ? await ImageryLayer.fromProviderAsync(imageryProvider)
                               : new ImageryLayer(imageryProvider)
 
+            const provider = nextLayer?.imageryProvider
+            if (provider?.errorEvent?.addEventListener) {
+                const onProviderError = (tileError) => {
+                    console.warn('Cesium imagery tile error', {
+                        layerId,
+                        layerKind: isBase ? BASE_ENTITY : OVERLAY_ENTITY,
+                        providerType: provider?.constructor?.name,
+                        providerUrl: provider?.url,
+                        providerLayers: provider?.layers,
+                        x: tileError?.x,
+                        y: tileError?.y,
+                        level: tileError?.level,
+                        message: tileError?.message,
+                        timesRetried: tileError?.timesRetried,
+                    })
+                }
+
+                provider.errorEvent.addEventListener(onProviderError)
+                removeErrorListener = () => provider.errorEvent.removeEventListener(onProviderError)
+            }
+
             if (cancelled) {
                 nextLayer.destroy?.()
+                removeErrorListener?.()
                 return
             }
 
@@ -170,6 +193,8 @@ const MapLayerImagery = ({imageryProvider, isBase, layerId, collection}) => {
 
         return () => {
             cancelled = true
+            removeErrorListener?.()
+            removeErrorListener = null
             if (!layer) {
                 return
             }
@@ -219,6 +244,7 @@ export const MapLayer = (props) => {
     const layerTransparent = theLayer?.transparent
     const layerApiKey = theLayer?.apikey
     const layerOther = theLayer?.other
+    const layerProxy = theLayer?.proxy
     const layerUsageName = theLayer?.usage?.name
     const layerUsageToken = theLayer?.usage?.token
     const layerUsageUnlocked = theLayer?.usage?.unlocked
@@ -303,9 +329,10 @@ export const MapLayer = (props) => {
         }
 
         if (layerTile === WMS && layerType === props.type) {
-            return new WebMapServiceImageryProvider({
+                return new WebMapServiceImageryProvider({
                                                         url:        theURL,
                                                         layers:     layerName,
+                                                        ...(layerProxy ? {proxy: new DefaultProxy(layerProxy)} : {}),
                                                         parameters: {
                                                             format:      layerFormat,
                                                             styles:      layerStyle ?? '',
