@@ -17,8 +17,8 @@
 import { BASE_ENTITY, OVERLAY_ENTITY, URL_AUTHENT_KEY } from '@Core/constants'
 import { IonLayerUtils }                                from '@Utils/cesium/IonLayerUtils'
 import {
-    DefaultProxy, ImageryLayer, NeverTileDiscardPolicy, OpenStreetMapImageryProvider, UrlTemplateImageryProvider,
-    WebMapServiceImageryProvider, WebMapTileServiceImageryProvider,
+    DefaultProxy, ImageryLayer, NeverTileDiscardPolicy, OpenStreetMapImageryProvider, Resource,
+    UrlTemplateImageryProvider, WebMapServiceImageryProvider, WebMapTileServiceImageryProvider,
 }                                                       from 'cesium'
 import { useEffect, useMemo }     from 'react'
 import { subscribe, useSnapshot } from 'valtio'
@@ -329,10 +329,15 @@ export const MapLayer = (props) => {
         }
 
         if (layerTile === WMS && layerType === props.type) {
-                return new WebMapServiceImageryProvider({
-                                                        url:        theURL,
+            const wmsUrl = layerProxy
+                          ? new Resource({
+                              url:   theURL,
+                              proxy: new DefaultProxy(layerProxy),
+                          })
+                          : theURL
+            return new WebMapServiceImageryProvider({
+                                                        url:        wmsUrl,
                                                         layers:     layerName,
-                                                        ...(layerProxy ? {proxy: new DefaultProxy(layerProxy)} : {}),
                                                         parameters: {
                                                             format:      layerFormat,
                                                             styles:      layerStyle ?? '',
