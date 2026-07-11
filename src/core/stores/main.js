@@ -27,7 +27,6 @@ export const main = {
     components: {
         fileLoader: {
             fileList: new proxyMap(),
-            loadSample: false,
         },
 
         camera: {

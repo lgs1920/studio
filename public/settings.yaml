@@ -121,6 +121,24 @@ swatches:
   current: 0
 
 ########################################
+# Journey samples catalog
+########################################
+samples:
+  journeys:
+    basePath: samples/journeys
+    items:
+      - slug: lgs1920#gpx
+        name: LGS1920
+        description: La grande sure - 1920m
+        filename: LGS1920.gpx
+        format: gpx
+      - slug: mont-blanc#gpx
+        name: MB4806
+        description: Le Mont Blanc - 4806m
+        filename: Mont Blanc.gpx
+        format: gpx
+
+########################################
 # Tracks and POIs
 ########################################
 journey:

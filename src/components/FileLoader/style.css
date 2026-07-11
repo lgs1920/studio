@@ -159,6 +159,11 @@
     gap: var(--lgs-gutter);
 }
 
+.load-sample {
+    align-items: flex-start;
+    flex-wrap: wrap;
+}
+
 .remote-import {
     display: flex;
     flex-direction: column;
@@ -174,6 +179,31 @@
 .load-sample sl-button,
 .load-sample wa-button {
     width: 8rem;
+}
+
+.journey-samples-copy {
+    display: flex;
+    flex: 1 1 10rem;
+    flex-direction: column;
+    min-width: 0;
+    gap: var(--lgs-gutter-xs);
+}
+
+.journey-samples-copy span {
+    font-size: var(--lgs-font-size-s);
+    color: var(--wa-color-text-quiet);
+}
+
+.journey-samples wa-select {
+    flex: 1 1 100%;
+    width: 100%;
+    min-width: 0;
+}
+
+@media (max-width: 480px) {
+    .journey-samples wa-select {
+        flex-basis: 100%;
+    }
 }
 
 .drag-and-drop-container .comment {
