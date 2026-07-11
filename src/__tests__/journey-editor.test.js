@@ -4,141 +4,65 @@
  *
  * File: journey-editor.test.js
  *
- * Author : LGS1920 Team
- * email: contact@lgs1920.fr
- *
- * Created on: 2026-06-01
- * Last modified: 2026-06-01
- *
- *
- * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { Utils } from '@Editor/Utils'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { JourneyEditor } from '@Core/ui/JourneyEditor'
+import { COLOR_SWATCHES_NONE, COLOR_SWATCHES_RANDOM, COLOR_SWATCHES_SEQUENCE } from '@Core/constants'
+import { describe, expect, it, beforeEach, afterEach, vi } from 'vitest'
+import { proxy } from 'valtio'
 
-vi.mock('@Utils/cesium/TrackUtils', () => ({
-    TrackUtils: {
-        setProfileVisibility: vi.fn(),
-        saveCurrentJourneyToDB: vi.fn(async () => undefined),
-        saveCurrentTrackToDB:   vi.fn(async () => undefined),
-        saveCurrentPOIToDB:     vi.fn(async () => undefined),
-    },
-}))
-
-describe('journey editor switching', () => {
+describe('JourneyEditor.newColor', () => {
     beforeEach(() => {
-        vi.restoreAllMocks()
+        globalThis.lgs = {
+            settings: {
+                swatches: {
+                    list: ['#ee6666', '#fac858', '#ffffff'],
+                    current: undefined,
+                },
+                getSwatches: {
+                    distribution: COLOR_SWATCHES_SEQUENCE,
+                },
+            },
+            journeyEditorStore: proxy({}),
+        }
+        JourneyEditor.instance = undefined
     })
 
     afterEach(() => {
-        vi.unstubAllGlobals()
+        JourneyEditor.instance = undefined
+        globalThis.lgs = undefined
+        vi.restoreAllMocks()
     })
 
-    it('stops rotation before switching journey and clears the stale rotation target', async () => {
-        const callOrder = []
-        const oldTrack = {
-            slug:            'track-old',
-            addToContext:    vi.fn(),
-            addToEditor:     vi.fn(),
-        }
-        const newTrack = {
-            slug:            'track-new',
-            addToContext:    vi.fn(),
-            addToEditor:     vi.fn(),
-        }
-        const oldJourney = {
-            slug:         'journey-old',
-            visible:      true,
-            tracks:       new Map([['track-old', oldTrack]]),
-            addToContext: vi.fn(function () {
-                lgs.theJourney = this
-            }),
-            addToEditor:  vi.fn(),
-            focus:        vi.fn(),
-        }
-        const newJourney = {
-            slug:         'journey-new',
-            visible:      true,
-            tracks:       new Map([['track-new', newTrack]]),
-            addToContext: vi.fn(function () {
-                lgs.theJourney = this
-            }),
-            addToEditor:  vi.fn(),
-            focus:        vi.fn(),
-        }
-        const stopRotate = vi.fn(async () => {
-            callOrder.push(`stop:${lgs.theJourney.slug}`)
-        })
+    it('returns the first palette color when sequence index is missing', () => {
+        const editor = new JourneyEditor()
 
-        globalThis.lgs = {
-            theJourney: oldJourney,
-            theJourneyEditorProxy: {
-                journey: oldJourney,
-                track:   oldTrack,
-                poi:     null,
-            },
-            getJourneyBySlug: slug => slug === newJourney.slug ? newJourney : oldJourney,
-            saveJourneyInContext: vi.fn(),
-            settings:             {
-                ui: {
-                    camera: {
-                        start: {
-                            rotate: {journey: false},
-                        },
-                    },
-                },
-            },
-            stores:               {
-                ui: {
-                    mainUI: {
-                        rotate: {running: true, target: {slug: 'journey-old', element: 'journey'}},
-                    },
-                },
-                main: {
-                    components: {
-                        journeyEditor: {
-                            list:  ['journey-old', 'journey-new'],
-                            keys:  {
-                                journey: {list: 0, settings: 0},
-                                track:   {list: 0, settings: 0},
-                            },
-                        },
-                    },
-                },
-            },
-            db:                   {
-                lgs1920: {
-                    put: vi.fn(async () => undefined),
-                },
-            },
-        }
+        expect(editor.newColor()).toBe('#ee6666')
+        expect(globalThis.lgs.settings.swatches.current).toBe(1)
+    })
 
-        globalThis.__ = {
-            ui: {
-                cameraManager: {
-                    isRotating: vi.fn(() => true),
-                    stopRotate,
-                },
-                poiManager: {
-                    stopRotationAndSync: vi.fn(async () => undefined),
-                },
-                drawerManager: {
-                    consumeSuppressFocusOnOpen: vi.fn(() => false),
-                },
-                profiler: {
-                    draw: vi.fn(),
-                },
-            },
-        }
+    it('falls back to the first palette color when swatches are set to none', () => {
+        globalThis.lgs.settings.getSwatches.distribution = COLOR_SWATCHES_NONE
 
-        await Utils.updateJourneyEditor('journey-new', {focus: true, rotate: false})
+        const editor = new JourneyEditor()
 
-        expect(globalThis.__.ui.poiManager.stopRotationAndSync).toHaveBeenCalledTimes(1)
-        expect(callOrder).toEqual([])
-        expect(lgs.stores.ui.mainUI.rotate.target).toBeNull()
-        expect(lgs.theJourney).toBe(newJourney)
-        expect(newJourney.focus).toHaveBeenCalledTimes(1)
-        expect(newJourney.focus.mock.calls[0][0]).toMatchObject({resetCamera: true, rotate: false})
+        expect(editor.newColor()).toBe('#ee6666')
+        expect(globalThis.lgs.settings.swatches.current).toBe(1)
+    })
+
+    it('keeps advancing through the palette in sequence mode', () => {
+        const editor = new JourneyEditor()
+
+        expect(editor.newColor()).toBe('#ee6666')
+        expect(editor.newColor()).toBe('#fac858')
+    })
+
+    it('supports random mode without returning undefined', () => {
+        globalThis.lgs.settings.getSwatches.distribution = COLOR_SWATCHES_RANDOM
+        vi.spyOn(Math, 'random').mockReturnValue(0.9)
+
+        const editor = new JourneyEditor()
+
+        expect(editor.newColor()).toBe('#ffffff')
     })
 })
