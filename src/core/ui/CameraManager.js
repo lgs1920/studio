@@ -605,11 +605,6 @@ export class CameraManager {
       }
       if (heightOffset !== tracedOrbitHeightOffset) {
         tracedOrbitHeightOffset = heightOffset;
-        console.debug("[orbit-wheel]", "camera manager applied height", {
-          baseOrbitCameraHeight,
-          heightOffset,
-          nextHeight,
-        });
       }
     };
 

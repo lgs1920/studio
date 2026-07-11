@@ -68,9 +68,6 @@ const EDITABLE_SELECTOR = [
   '[contenteditable="true"]',
   '[role="textbox"]',
 ].join(",");
-const traceOrbitWheel = (...args) => {
-  console.debug("[orbit-wheel]", ...args);
-};
 const numericValueOf = (value) => {
   const numericValue = Number(value);
   return Number.isFinite(numericValue) ? numericValue : 0;
@@ -782,16 +779,11 @@ export const OrbitWidget = memo(() => {
 
   useEffect(() => {
     if (!rotate.running || panorama.active) {
-      traceOrbitWheel("listener skipped", {
-        panoramaActive: panorama.active,
-        rotateRunning: rotate.running,
-      });
       return undefined;
     }
 
     const canvas = lgs.viewer?.canvas ?? lgs.canvas;
     if (!canvas) {
-      traceOrbitWheel("listener skipped: no canvas");
       return undefined;
     }
 
@@ -807,9 +799,6 @@ export const OrbitWidget = memo(() => {
       document.removeEventListener("pointercancel", handlePointerUp, true);
     };
 
-    traceOrbitWheel("listener mounted", {
-      rotateTarget: $rotate.target ?? rotate.target,
-    });
     const isCanvasWheel = (event) =>
       event.target === canvas || event.composedPath?.().includes(canvas);
 
@@ -875,24 +864,15 @@ export const OrbitWidget = memo(() => {
 
     const handleWheel = (event) => {
       const fromCanvas = isCanvasWheel(event);
-      traceOrbitWheel("wheel received", {
-        deltaMode: event.deltaMode,
-        deltaY: event.deltaY,
-        fromCanvas,
-        rotateRunning: $rotate.running,
-        target: event.target,
-      });
       if (!fromCanvas) {
         return;
       }
       if (!$rotate.running) {
-        traceOrbitWheel("wheel ignored: rotate stopped");
         return;
       }
 
       const direction = Math.sign(event.deltaY);
       if (direction === 0) {
-        traceOrbitWheel("wheel ignored: zero direction");
         return;
       }
 
@@ -902,10 +882,6 @@ export const OrbitWidget = memo(() => {
 
       const heightOffsetDelta = direction * orbitWheelHeightMetersPerStep(event);
       addOrbitHeightOffset($rotate, heightOffsetDelta);
-      traceOrbitWheel("height offset changed", {
-        delta: heightOffsetDelta,
-        next: $rotate.heightOffset,
-      });
     };
     const handleContextMenu = (event) => {
       if (!$rotate.running) {
@@ -925,7 +901,6 @@ export const OrbitWidget = memo(() => {
     canvas.addEventListener("contextmenu", handleContextMenu, true);
 
     return () => {
-      traceOrbitWheel("listener removed");
       canvas.removeEventListener("pointerdown", handlePointerDown, true);
       window.removeEventListener("wheel", handleWheel, { capture: true });
       canvas.removeEventListener("contextmenu", handleContextMenu, true);
