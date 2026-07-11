@@ -409,7 +409,10 @@ body[data-on-map-theme="fall"] :is(.wa-theme-lgs1920-on-map, .lgs-on-map-theme-v
     color-scheme: dark;
     --lgs-on-map-dark-color: #b15600;
     --lgs-on-map-light-color: #f1bb6a;
-    --lgs-on-map-text-color: #fff4e4;
+    --lgs-on-map-text-color: #fff0a6;
+    --lgs-button-plain-color: var(--lgs-on-map-text-color);
+    --lgs-button-plain-hover-color: var(--lgs-on-map-text-color);
+    --lgs-button-plain-bg-hover-color: var(--lgs-card-on-map-hover-bg-color);
     --lgs-on-map-surface-gradient: linear-gradient(28deg, color-mix(in oklab, var(--wa-color-brand) 22%, var(--lgs-on-map-dark-color) 18%) 0%, color-mix(in oklab, var(--wa-color-brand-60, var(--wa-color-brand)) 14%, var(--lgs-on-map-light-color) 16%) 38%, transparent 78%),
     linear-gradient(138deg, transparent 0%, color-mix(in oklab, var(--wa-color-brand) 16%, var(--lgs-on-map-light-color) 18%) 44%, color-mix(in oklab, var(--wa-color-brand-70, var(--wa-color-brand)) 8%, var(--lgs-on-map-dark-color) 12%) 66%, transparent 88%),
     linear-gradient(168deg, color-mix(in oklab, var(--lgs-dark-color-80) 88%, var(--wa-color-brand) 12%) 0%, color-mix(in oklab, var(--lgs-dark-color-95) 84%, var(--wa-color-brand) 16%) 54%, var(--lgs-dark-color-95) 100%);
@@ -421,7 +424,16 @@ body[data-on-map-theme="winter"] :is(.wa-theme-lgs1920-on-map, .lgs-on-map-theme
     color-scheme: light;
     --lgs-on-map-dark-color: #eaf1fc;
     --lgs-on-map-light-color: #89a9cf;
-    --lgs-on-map-text-color: #1f2f45;
+    --lgs-on-map-text-color: #142033;
+    --lgs-button-border-color: color-mix(in oklab, var(--lgs-on-map-light-color) 34%, var(--lgs-on-map-dark-color) 66%);
+    --lgs-button-color: var(--lgs-on-map-text-color);
+    --lgs-button-bg-color: color-mix(in oklab, var(--lgs-on-map-light-color) 10%, var(--lgs-card-on-map-bg-color) 90%);
+    --lgs-button-border-hover-color: color-mix(in oklab, var(--lgs-on-map-light-color) 48%, transparent);
+    --lgs-button-hover-color: var(--lgs-on-map-text-color);
+    --lgs-button-bg-hover-color: color-mix(in oklab, var(--lgs-on-map-light-color) 18%, var(--lgs-card-on-map-hover-bg-color) 82%);
+    --lgs-button-plain-color: var(--lgs-on-map-text-color);
+    --lgs-button-plain-hover-color: var(--lgs-on-map-text-color);
+    --lgs-button-plain-bg-hover-color: var(--lgs-card-on-map-hover-bg-color);
     --lgs-on-map-surface-gradient: linear-gradient(28deg, color-mix(in oklab, var(--wa-color-brand) 20%, var(--lgs-on-map-dark-color) 20%) 0%, color-mix(in oklab, var(--wa-color-brand-60, var(--wa-color-brand)) 12%, var(--lgs-on-map-light-color) 18%) 38%, transparent 78%),
     linear-gradient(138deg, transparent 0%, color-mix(in oklab, var(--wa-color-brand) 14%, var(--lgs-on-map-light-color) 20%) 44%, color-mix(in oklab, var(--wa-color-brand-70, var(--wa-color-brand)) 6%, var(--lgs-on-map-dark-color) 14%) 66%, transparent 88%),
     linear-gradient(168deg, color-mix(in oklab, var(--lgs-dark-color-80) 88%, var(--wa-color-brand) 12%) 0%, color-mix(in oklab, var(--lgs-dark-color-95) 84%, var(--wa-color-brand) 16%) 54%, var(--lgs-dark-color-95) 100%);
@@ -433,7 +445,16 @@ body[data-on-map-theme="spring"] :is(.wa-theme-lgs1920-on-map, .lgs-on-map-theme
     color-scheme: dark;
     --lgs-on-map-dark-color: #34cc57;
     --lgs-on-map-light-color: #c8a36a;
-    --lgs-on-map-text-color: #0a1800;
+    --lgs-on-map-text-color: #000000;
+    --lgs-button-border-color: color-mix(in oklab, var(--lgs-on-map-dark-color) 72%, black 28%);
+    --lgs-button-color: var(--lgs-on-map-text-color);
+    --lgs-button-bg-color: color-mix(in oklab, var(--lgs-on-map-dark-color) 14%, var(--lgs-card-on-map-bg-color) 86%);
+    --lgs-button-border-hover-color: color-mix(in oklab, var(--lgs-on-map-dark-color) 54%, transparent);
+    --lgs-button-hover-color: var(--lgs-on-map-text-color);
+    --lgs-button-bg-hover-color: color-mix(in oklab, var(--lgs-on-map-dark-color) 20%, var(--lgs-card-on-map-hover-bg-color) 80%);
+    --lgs-button-plain-color: var(--lgs-on-map-text-color);
+    --lgs-button-plain-hover-color: var(--lgs-on-map-text-color);
+    --lgs-button-plain-bg-hover-color: var(--lgs-card-on-map-hover-bg-color);
     --lgs-on-map-surface-gradient: linear-gradient(28deg, color-mix(in oklab, var(--wa-color-brand) 22%, var(--lgs-on-map-dark-color) 18%) 0%, color-mix(in oklab, var(--wa-color-brand-60, var(--wa-color-brand)) 14%, var(--lgs-on-map-light-color) 16%) 38%, transparent 78%),
     linear-gradient(138deg, transparent 0%, color-mix(in oklab, var(--wa-color-brand) 16%, var(--lgs-on-map-light-color) 18%) 44%, color-mix(in oklab, var(--wa-color-brand-70, var(--wa-color-brand)) 8%, var(--lgs-on-map-dark-color) 12%) 66%, transparent 88%),
     linear-gradient(168deg, color-mix(in oklab, var(--lgs-dark-color-80) 88%, var(--wa-color-brand) 12%) 0%, color-mix(in oklab, var(--lgs-dark-color-95) 84%, var(--wa-color-brand) 16%) 54%, var(--lgs-dark-color-95) 100%);

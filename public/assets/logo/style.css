@@ -34,7 +34,7 @@
 .lgs--logo-composition {
   overflow: visible;
   --lgs--logo-primary: #0d426d;
-  --lgs--logo-secondary: #bfa062;
+  --lgs--logo-secondary: rgb(175, 218, 188);
   --lgs--logo-text-primary: var(--lgs--logo-primary);
   --lgs--logo-text-secondary: var(--lgs--logo-secondary);
   --lgs--logo-wordmark-gap: 20px;
