@@ -224,20 +224,74 @@
   platform: macOS / Windows / Linux
   reference: true
   scope: Rotation mode
-- action: Adjust distance
-  description: Move the camera closer to or farther from the active target.
-  id: rotation-distance-macos
+- action: Adjust height
+  description: Change the orbit camera height by 100 m.
+  id: rotation-height-macos
   keys:
     - Trackpad scroll
+    - Option+Left drag
+    - Shift+Left drag
+    - Right drag
   platform: macOS
   reference: true
   scope: Rotation mode
-- action: Adjust distance
-  description: Move the camera closer to or farther from the active target.
-  id: rotation-distance-windows-linux
+- action: Adjust height
+  description: Change the orbit camera height by 100 m.
+  id: rotation-height-windows-linux
   keys:
     - Wheel
+    - Alt+Left drag
+    - Shift+Left drag
+    - Right drag
   platform: Windows / Linux
+  reference: true
+  scope: Rotation mode
+- action: Adjust height faster
+  description: Change the orbit camera height by 10 m.
+  id: rotation-height-keyboard-fast-macos
+  keys:
+    - Shift+Trackpad scroll
+  platform: macOS
+  reference: true
+  scope: Rotation mode
+- action: Adjust height faster
+  description: Change the orbit camera height by 10 m.
+  id: rotation-height-keyboard-fast-windows-linux
+  keys:
+    - Shift+Wheel
+  platform: Windows / Linux
+  reference: true
+  scope: Rotation mode
+- action: Adjust height precisely
+  description: Change the orbit camera height by 1 m.
+  id: rotation-height-keyboard-fine-macos
+  keys:
+    - Option+Shift+Trackpad scroll
+  platform: macOS
+  reference: true
+  scope: Rotation mode
+- action: Adjust height precisely
+  description: Change the orbit camera height by 1 m.
+  id: rotation-height-keyboard-fine-windows-linux
+  keys:
+    - Alt+Shift+Wheel
+  platform: Windows / Linux
+  reference: true
+  scope: Rotation mode
+- action: Adjust height
+  description: Change the orbit camera height by 2 m.
+  id: rotation-height-keyboard
+  keys:
+    - ArrowUp
+    - ArrowDown
+  reference: true
+  scope: Rotation mode
+- action: Adjust height faster
+  description: Change the orbit camera height by 10 m.
+  id: rotation-height-keyboard-fast
+  keys:
+    - Ctrl+ArrowUp
+    - Ctrl+ArrowDown
   reference: true
   scope: Rotation mode
 - action: Adjust RPM
@@ -265,7 +319,7 @@
   reference: true
   scope: Panorama mode
 - action: Adjust height
-  description: Change the panorama camera altitude.
+  description: Change the panorama camera altitude by 100 m.
   id: panorama-height-macos
   keys:
     - Trackpad scroll
@@ -276,13 +330,45 @@
   reference: true
   scope: Panorama mode
 - action: Adjust height
-  description: Change the panorama camera altitude.
+  description: Change the panorama camera altitude by 100 m.
   id: panorama-height-windows-linux
   keys:
     - Wheel
     - Alt+Left drag
     - Shift+Left drag
     - Right drag
+  platform: Windows / Linux
+  reference: true
+  scope: Panorama mode
+- action: Adjust height faster
+  description: Change the panorama camera altitude by 10 m.
+  id: panorama-height-keyboard-fast-macos
+  keys:
+    - Shift+Trackpad scroll
+  platform: macOS
+  reference: true
+  scope: Panorama mode
+- action: Adjust height faster
+  description: Change the panorama camera altitude by 10 m.
+  id: panorama-height-keyboard-fast-windows-linux
+  keys:
+    - Shift+Wheel
+  platform: Windows / Linux
+  reference: true
+  scope: Panorama mode
+- action: Adjust height precisely
+  description: Change the panorama camera altitude by 1 m.
+  id: panorama-height-keyboard-fine-macos
+  keys:
+    - Option+Shift+Trackpad scroll
+  platform: macOS
+  reference: true
+  scope: Panorama mode
+- action: Adjust height precisely
+  description: Change the panorama camera altitude by 1 m.
+  id: panorama-height-keyboard-fine-windows-linux
+  keys:
+    - Alt+Shift+Wheel
   platform: Windows / Linux
   reference: true
   scope: Panorama mode
@@ -319,7 +405,7 @@
   reference: true
   scope: Panorama mode
 - action: Rotate or pan
-  description: 'Cesium default: rotate the camera in 3D, or pan the map in 2D.'
+  description: "Cesium default: rotate the camera in 3D, or pan the map in 2D."
   id: cesium-rotate-pan
   keys:
     - Left drag
