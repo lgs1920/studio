@@ -33,9 +33,10 @@ export const InitErrorMessage = ({error}) => {
     const errorType = error?.type ? `[${String(error.type)}]` : ''
     const errorMessage = String(error?.message ?? error?.cause?.message ?? error ?? 'Unknown initialization error')
     const errorStack = String(error?.stack ?? '')
+    const studioName = lgs?.servers?.studio?.name ?? 'LGS1920'
 
     return (
-        <WaDialog label={`${lgs.servers.studio.name} stopped!`}
+        <WaDialog label={`${studioName} stopped!`}
                   open={true}
                   withFooter
                   id={'init-error-modal'}
