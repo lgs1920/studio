@@ -194,6 +194,37 @@ export class Utils {
         return journey
     }
 
+    static refreshJourneysStatistics = async (activityId, {focus = false} = {}) => {
+        const editorJourney = lgs.theJourneyEditorProxy?.journey
+        const editorSlug = editorJourney?.slug ?? null
+        const journeys = Array.from(lgs.journeys.values()).filter(journey => journey?.activity === activityId)
+        let updatedCurrentJourney = null
+
+        for (const journey of journeys) {
+            if (journey?.slug === editorSlug) {
+                updatedCurrentJourney = await Utils.updateJourney(UPDATE_JOURNEY_SILENTLY, {focus})
+                continue
+            }
+
+            await journey.extractMetrics()
+            lgs.saveJourneyInContext(journey)
+        }
+
+        if (updatedCurrentJourney) {
+            updatedCurrentJourney.addToContext()
+            const track = updatedCurrentJourney.tracks.get(lgs.theJourneyEditorProxy.track?.slug)
+                         ?? Array.from(updatedCurrentJourney.tracks.values())[0]
+            track?.addToContext()
+            track?.addToEditor()
+            TrackUtils.setProfileVisibility(updatedCurrentJourney)
+        }
+
+        Utils.renderJourneySettings()
+        __.ui.profiler?.draw()
+
+        return updatedCurrentJourney
+    }
+
     settings = () => {
         lgs.stores.main.components.journeyEditor.keys.journey.settings++
     }

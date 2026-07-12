@@ -16,7 +16,6 @@
 
 import { LGSScrollbars } from '@Components/MainUI/LGSScrollbars'
 import { Track } from '@Core/Track'
-import { UPDATE_JOURNEY_SILENTLY } from '@Core/constants'
 import { Utils } from '@Editor/Utils'
 import {
     WaButton, WaCallout, WaDivider, WaIcon, WaInput, WaOption, WaSelect,
@@ -197,21 +196,7 @@ export const JourneyStatisticsSettings = () => {
     }, [])
 
     const refreshJourneyStatistics = useMemo(() => __.tools.debounce(async (activityId) => {
-        const editorJourney = lgs.theJourneyEditorProxy?.journey
-        if (!editorJourney?.slug || editorJourney.activity !== activityId) {
-            return
-        }
-
-        const updated = await Utils.updateJourney(UPDATE_JOURNEY_SILENTLY, {focus: false})
-        updated.addToContext()
-        updated.addToEditor()
-
-        const track = updated.tracks.get(lgs.theJourneyEditorProxy.track?.slug) ?? Array.from(updated.tracks.values())[0]
-        track?.addToContext()
-        track?.addToEditor()
-
-        Utils.renderJourneySettings()
-        __.ui.profiler?.draw()
+        await Utils.refreshJourneysStatistics(activityId, {focus: false})
     }, 350), [])
 
     const profiles = useMemo(() => {

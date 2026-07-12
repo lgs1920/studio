@@ -16,6 +16,8 @@
 
 import { Journey }                              from '@Core/Journey'
 import { Track }                                from '@Core/Track'
+import { TrackUtils }                           from '@Utils/cesium/TrackUtils'
+import { Utils }                                from '@Editor/Utils'
 import { mkm, mpmile, UnitUtils }               from '@Utils/UnitUtils'
 import { readFileSync }                         from 'fs'
 import { gpx }                                  from '@tmcw/togeojson'
@@ -449,6 +451,119 @@ describe('journey metrics', () => {
         expect(track.metrics.points[1].reliableMotion).toBe(false)
         expect(track.metrics.global.maxSpeed).toBeLessThan(3)
         expect(track.metrics.global.minPace).toBeGreaterThan(0)
+    })
+
+    it('recomputes all journeys that use the edited activity profile', async () => {
+        globalThis.__ = {
+            app: {
+                deepClone:   value => JSON.parse(JSON.stringify(value)),
+                setSlug:     ({content}) => content.join('#').toLowerCase(),
+                singleTitle: title => title,
+            },
+            ui: {
+                profiler: {
+                    draw: vi.fn(),
+                },
+            },
+            tools: {
+                debounce: fn => fn,
+            },
+        }
+        globalThis.lgs.db = {
+            lgs1920: {
+                put: vi.fn(async () => undefined),
+            },
+        }
+        globalThis.lgs.stores = {
+            journeyEditor: {},
+            main: {
+                components: {
+                    journeyEditor: {
+                        keys: {
+                            journey: {
+                                settings: 0,
+                            },
+                        },
+                    },
+                },
+            },
+        }
+        globalThis.lgs.saveJourneyInContext = vi.fn((journey) => {
+            globalThis.lgs.journeys.set(journey.slug, journey)
+        })
+        globalThis.lgs.getJourneyBySlug = slug => globalThis.lgs.journeys.get(slug)
+
+        const trekTrack = makeLineTrack({
+            slug:        'trek-track',
+            activity:    'trek',
+            coordinates: [
+                [0, 0, 100],
+                [0.001, 0, 110],
+            ],
+            times:       [
+                '2026-01-01T00:00:00Z',
+                '2026-01-01T00:01:00Z',
+            ],
+        })
+        trekTrack.parent = 'trek#gpx'
+        const trekSecondTrack = makeLineTrack({
+            slug:        'trek-second-track',
+            activity:    'trek',
+            coordinates: [
+                [0, 0, 100],
+                [0.001, 0, 110],
+            ],
+            times:       [
+                '2026-01-01T00:00:00Z',
+                '2026-01-01T00:01:00Z',
+            ],
+        })
+        trekSecondTrack.parent = 'trek-second#gpx'
+        const trekJourney = new Journey('Trek', 'gpx', {
+            allowRename: false,
+            slug:        'trek#gpx',
+            activity:    'trek',
+        })
+        const trekSecondJourney = new Journey('Trek 2', 'gpx', {
+            allowRename: false,
+            slug:        'trek-second#gpx',
+            activity:    'trek',
+        })
+
+        trekJourney.tracks.set(trekTrack.slug, trekTrack)
+        trekJourney.hasTime = true
+        trekJourney.hasAltitude = true
+        trekJourney.metrics = {global: {}, user: {}, external: {}, points: []}
+
+        trekSecondJourney.tracks.set(trekSecondTrack.slug, trekSecondTrack)
+        trekSecondJourney.hasTime = true
+        trekSecondJourney.hasAltitude = true
+        trekSecondJourney.metrics = {global: {}, user: {}, external: {}, points: []}
+
+        trekJourney.extractMetrics()
+        trekSecondJourney.extractMetrics()
+
+        globalThis.lgs.journeys = new Map([
+            [trekJourney.slug, trekJourney],
+            [trekSecondJourney.slug, trekSecondJourney],
+        ])
+        globalThis.lgs.theJourney = trekJourney
+        globalThis.lgs.theJourneyEditorProxy = {
+            journey: trekJourney,
+            track:   trekTrack,
+        }
+        globalThis.lgs.settings.getJourney.activity.types[0].minSegmentDistance = 10000
+
+        const secondExtractSpy = vi.spyOn(trekSecondJourney, 'extractMetrics')
+        const profileVisibilitySpy = vi.spyOn(TrackUtils, 'setProfileVisibility').mockImplementation(() => {})
+
+        await Utils.refreshJourneysStatistics('trek', {focus: false})
+
+        expect(secondExtractSpy).toHaveBeenCalledTimes(1)
+        expect(globalThis.lgs.saveJourneyInContext).toHaveBeenCalledWith(trekSecondJourney)
+        expect(trekSecondJourney.metrics.points).toHaveLength(1)
+        expect(trekSecondJourney.metrics.global.distance).toBeGreaterThan(100)
+        expect(profileVisibilitySpy).toHaveBeenCalled()
     })
 
     it('matches the expected Mont Blanc journey statistics', () => {
