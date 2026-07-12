@@ -1085,7 +1085,13 @@ providers:
           type: free
           doc: ''
 
-        tile: slippy
-        url: 'https://cawm.lib.uiowa.edu/tiles'
+        tile: wmts
+        url: 'https://cawm.lib.uiowa.edu/wmts'
+        layer: tiles
+        style: default
+        format: image/png
+        tileMatrixSetID: GoogleMapsCompatible
+        minimumLevel: 0
+        maximumLevel: 18
         doc: ''
         type: overlay
