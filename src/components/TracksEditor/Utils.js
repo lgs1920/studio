@@ -199,15 +199,28 @@ export class Utils {
         const editorSlug = editorJourney?.slug ?? null
         const journeys = Array.from(lgs.journeys.values()).filter(journey => journey?.activity === activityId)
         let updatedCurrentJourney = null
-
-        for (const journey of journeys) {
-            if (journey?.slug === editorSlug) {
-                updatedCurrentJourney = await Utils.updateJourney(UPDATE_JOURNEY_SILENTLY, {focus})
-                continue
+        const yieldToMainThread = () => new Promise(resolve => {
+            const idleCallback = globalThis.requestIdleCallback
+            if (typeof idleCallback === 'function') {
+                idleCallback(() => resolve(), {timeout: 100})
+                return
             }
 
-            await journey.extractMetrics()
-            lgs.saveJourneyInContext(journey)
+            setTimeout(resolve, 0)
+        })
+
+        for (const [index, journey] of journeys.entries()) {
+            if (journey?.slug === editorSlug) {
+                updatedCurrentJourney = await Utils.updateJourney(UPDATE_JOURNEY_SILENTLY, {focus})
+            }
+            else {
+                await journey.extractMetrics()
+                lgs.saveJourneyInContext(journey)
+            }
+
+            if (index < journeys.length - 1) {
+                await yieldToMainThread()
+            }
         }
 
         if (updatedCurrentJourney) {
