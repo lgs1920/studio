@@ -156,7 +156,7 @@ journey:
         minSegmentDuration: 2
         minSegmentDistance: 3
         maxAltitudeJump: 10
-        altitudeSmoothingWindow: 3
+        altitudeSmoothingWindow: 5
         maxSpeed: 3.0          # 10.8 km/h
         maxClimbRate: 1.5      # m/s
         maxDescentRate: 2.5    # m/s
@@ -170,7 +170,7 @@ journey:
         minSegmentDuration: 2
         minSegmentDistance: 3
         maxAltitudeJump: 10
-        altitudeSmoothingWindow: 3
+        altitudeSmoothingWindow: 5
         maxSpeed: 5.5          # 19.8 km/h
         maxClimbRate: 2.0
         maxDescentRate: 3.0
@@ -184,7 +184,7 @@ journey:
         minSegmentDuration: 2
         minSegmentDistance: 5
         maxAltitudeJump: 20
-        altitudeSmoothingWindow: 3
+        altitudeSmoothingWindow: 4
         maxSpeed: 16.0         # 57.6 km/h
         maxClimbRate: 2.5
         maxDescentRate: 4.0
@@ -198,7 +198,7 @@ journey:
         minSegmentDuration: 2
         minSegmentDistance: 4
         maxAltitudeJump: 15
-        altitudeSmoothingWindow: 3
+        altitudeSmoothingWindow: 5
         maxSpeed: 8.0          # 28.8 km/h
         maxClimbRate: 1.6
         maxDescentRate: 6.0
@@ -419,7 +419,7 @@ ui:
         minSegmentDuration: 2
         minSegmentDistance: 3
         maxAltitudeJump: 10
-        altitudeSmoothingWindow: 3
+        altitudeSmoothingWindow: 5
         maxSpeed: 3.0
         maxClimbRate: 1.5
         maxDescentRate: 2.5
@@ -433,7 +433,7 @@ ui:
         minSegmentDuration: 2
         minSegmentDistance: 3
         maxAltitudeJump: 10
-        altitudeSmoothingWindow: 3
+        altitudeSmoothingWindow: 5
         maxSpeed: 5.5
         maxClimbRate: 2.0
         maxDescentRate: 3.0
@@ -447,7 +447,7 @@ ui:
         minSegmentDuration: 2
         minSegmentDistance: 5
         maxAltitudeJump: 20
-        altitudeSmoothingWindow: 3
+        altitudeSmoothingWindow: 4
         maxSpeed: 16.0
         maxClimbRate: 2.5
         maxDescentRate: 4.0
@@ -461,7 +461,7 @@ ui:
         minSegmentDuration: 2
         minSegmentDistance: 4
         maxAltitudeJump: 15
-        altitudeSmoothingWindow: 3
+        altitudeSmoothingWindow: 5
         maxSpeed: 8.0
         maxClimbRate: 1.6
         maxDescentRate: 6.0
