@@ -413,7 +413,6 @@ export class Track extends MapElement {
                                          points = [],
                                          hasTime = false,
                                          hasAltitude = false,
-                                         activityProfile = Track.activityProfile(),
                                          minHeight = undefined,
                                          maxHeight = undefined,
                                      } = {}) => {
@@ -423,7 +422,7 @@ export class Track extends MapElement {
         }
         const createElevationBucket = () => ({elevation: 0, distance: 0, duration: 0, pace: 0, speed: 0, points: 0})
         const addToElevationBucket = (bucket, point) => {
-            bucket.elevation += point.elevation ?? 0
+            bucket.elevation += point.rawElevation ?? point.elevation ?? 0
             bucket.distance += point.distance ?? 0
             bucket.duration += point.duration ?? 0
             bucket.points++
@@ -445,7 +444,6 @@ export class Track extends MapElement {
         let maxPace
         let minSlope
         let maxSlope
-        const minSlopeThreshold = activityProfile.minSlope ?? globalThis.lgs?.settings?.getMetrics?.minSlope ?? 0
         const altitudeBuckets = hasAltitude
                                ? {
                                    positive: createElevationBucket(),
@@ -462,7 +460,7 @@ export class Track extends MapElement {
                 const pointDuration = finiteNumber(point.duration) ?? 0
                 duration += pointDuration
 
-                if (point.activity === true && point.reliableMotion !== false) {
+                if (point.activity === true && point.reliableMotion !== false && point.ignored !== true) {
                     movingDistance += pointDistance
                     movingDuration += pointDuration
 
@@ -489,10 +487,10 @@ export class Track extends MapElement {
                 minSlope = minSlope === undefined ? slope : Math.min(minSlope, slope)
                 maxSlope = maxSlope === undefined ? slope : Math.max(maxSlope, slope)
 
-                if (slope > minSlopeThreshold) {
+                if ((point.elevation ?? 0) > 0) {
                     addToElevationBucket(altitudeBuckets.positive, point)
                 }
-                else if (slope < -minSlopeThreshold) {
+                else if ((point.elevation ?? 0) < 0) {
                     addToElevationBucket(altitudeBuckets.negative, point)
                 }
                 else {
@@ -556,6 +554,8 @@ export class Track extends MapElement {
         const maxPaceThreshold = Math.max(0, Number(activityProfile.maxPace) || 0)
         const maxSpeedDeltaThreshold = Math.max(0, Number(activityProfile.maxSpeedDelta) || 0)
         let previousMovingSpeed
+        let rawPositiveElevation = 0
+        let rawNegativeElevation = 0
 
         // 1st step : Metrics per points
         // we iterate on all points to compute
@@ -570,6 +570,25 @@ export class Track extends MapElement {
             const rawAltitudes = this.hasAltitude ? aggregate.map(point => finiteNumber(point?.altitude)) : []
             const clippedAltitudes = this.hasAltitude ? clipAltitudeSeries(rawAltitudes, maxAltitudeJump, altitudeSmoothingWindow) : []
             const smoothedAltitudes = this.hasAltitude ? smoothAltitudeSeries(clippedAltitudes, altitudeSmoothingWindow) : []
+
+            if (this.hasAltitude) {
+                for (let index = 1; index < rawAltitudes.length; index++) {
+                    const rawPreviousAltitude = finiteNumber(rawAltitudes[index - 1])
+                    const rawCurrentAltitude = finiteNumber(rawAltitudes[index])
+
+                    if (rawPreviousAltitude === null || rawCurrentAltitude === null) {
+                        continue
+                    }
+
+                    const rawElevation = rawCurrentAltitude - rawPreviousAltitude
+                    if (rawElevation > 0) {
+                        rawPositiveElevation += rawElevation
+                    }
+                    else if (rawElevation < 0) {
+                        rawNegativeElevation += rawElevation
+                    }
+                }
+            }
 
             if (this.hasAltitude) {
                 smoothedAltitudes.forEach((altitude) => {
@@ -628,6 +647,12 @@ export class Track extends MapElement {
                         pointData.height = currentAltitude
                     }
 
+                    const rawCurrentAltitude = finiteNumber(rawAltitudes[index])
+                    const rawPreviousAltitude = finiteNumber(rawAltitudes[index - 1])
+                    pointData.rawElevation =
+                        rawCurrentAltitude !== null && rawPreviousAltitude !== null
+                        ? rawCurrentAltitude - rawPreviousAltitude
+                        : 0
                     pointData.elevation =
                         currentAltitude !== null && previousAltitude !== null
                         ? currentAltitude - previousAltitude
@@ -635,14 +660,16 @@ export class Track extends MapElement {
                     pointData.slope = pointData.distance > 0 ? pointData.elevation / pointData.distance * 100 : 0
                 }
                 pointData.ignored = Track.isOutlierMetric(pointData, activityProfile)
-                if (!pointData.ignored) {
-                    cumulativeDistance += pointData.distance ?? 0
-                    segmentData.push({
-                        ...current,
-                        ...pointData,
-                        distanceFromStart: cumulativeDistance,
-                    })
+                if (pointData.ignored) {
+                    pointData.reliableMotion = false
                 }
+
+                cumulativeDistance += pointData.distance ?? 0
+                segmentData.push({
+                    ...current,
+                    ...pointData,
+                    distanceFromStart: cumulativeDistance,
+                })
             }
             featureMetrics.push(segmentData)
         })
@@ -658,6 +685,11 @@ export class Track extends MapElement {
                                                         minHeight,
                                                         maxHeight,
                                                     })
+        if (this.hasAltitude) {
+            global.positive.elevation = rawPositiveElevation
+            global.negative.elevation = rawNegativeElevation
+            global.flat.elevation = 0
+        }
         this.metrics = {points: featureMetrics, global: global}
     }
 

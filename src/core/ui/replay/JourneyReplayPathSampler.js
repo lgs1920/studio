@@ -862,8 +862,6 @@ export class JourneyReplayPathSampler {
             return cachedBreakpoints
         }
 
-        const activityProfile = Track.activityProfile(track?.activity, track?.activitySettings)
-        const minSlopeThreshold = activityProfile.minSlope ?? globalThis.lgs?.settings?.getMetrics?.minSlope ?? 0
         const timedPoints = []
         let metricDistance = 0
         let cumulativeElevationGain = 0
@@ -871,10 +869,9 @@ export class JourneyReplayPathSampler {
         metricPoints.forEach(point => {
             const pointDistance = finiteNumber(point?.distance) ?? 0
             const elevation = finiteNumber(point?.elevation) ?? 0
-            const slope = finiteNumber(point?.slope) ?? 0
 
             metricDistance += pointDistance
-            if (slope > minSlopeThreshold && elevation > 0) {
+            if (elevation > 0) {
                 cumulativeElevationGain += elevation
             }
 

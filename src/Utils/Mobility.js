@@ -15,7 +15,6 @@
  ******************************************************************************/
 
 import { MILLIS }        from '@Core/constants'
-import { Cartographic, EllipsoidGeodesic } from 'cesium'
 import { DateTime }                       from 'luxon'
 
 export class Mobility {
@@ -40,23 +39,14 @@ export class Mobility {
                 return 0
             }
 
-            try {
-                const geodesic = new EllipsoidGeodesic(
-                    Cartographic.fromDegrees(startLongitude, startLatitude),
-                    Cartographic.fromDegrees(endLongitude, endLatitude),
-                )
-                return geodesic.surfaceDistance
-            }
-            catch {
-                const toRadians = degrees => degrees * Math.PI / 180
-                const dLat = toRadians(endLatitude - startLatitude)
-                const dLon = toRadians(endLongitude - startLongitude)
-                const lat1 = toRadians(startLatitude)
-                const lat2 = toRadians(endLatitude)
-                const a = Math.sin(dLat / 2) ** 2 +
-                    Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) ** 2
-                return 6378137 * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)))
-            }
+            const toRadians = degrees => degrees * Math.PI / 180
+            const lat1 = toRadians(startLatitude)
+            const lat2 = toRadians(endLatitude)
+            const dLon = toRadians(endLongitude - startLongitude)
+            const cosine = Math.sin(lat1) * Math.sin(lat2) +
+                Math.cos(lat1) * Math.cos(lat2) * Math.cos(dLon)
+
+            return 6371000 * Math.acos(Math.min(1, Math.max(-1, cosine)))
         }
         return 0
     }

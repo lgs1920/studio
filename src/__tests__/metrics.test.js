@@ -17,7 +17,17 @@
 import { Journey }                              from '@Core/Journey'
 import { Track }                                from '@Core/Track'
 import { mkm, mpmile, UnitUtils }               from '@Utils/UnitUtils'
+import { readFileSync }                         from 'fs'
+import { gpx }                                  from '@tmcw/togeojson'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+
+vi.mock('@Utils/UIToast', () => ({
+    UIToast: {
+        error:   vi.fn(),
+        success: vi.fn(),
+        warning: vi.fn(),
+    },
+}))
 
 const makeLineTrack = ({slug = 'track-1', coordinates, times, hasTime = true, activity = 'trek'}) => {
     return new Track(slug, {
@@ -161,8 +171,8 @@ describe('journey metrics', () => {
         expect(metrics.averagePace).toBeCloseTo(metrics.duration / metrics.distance, 8)
         expect(metrics.minHeight).toBe(100)
         expect(metrics.maxHeight).toBe(105)
-        expect(metrics.positive.elevation).toBe(5)
-        expect(metrics.negative.elevation).toBe(0)
+        expect(metrics.positive.elevation).toBe(10)
+        expect(metrics.negative.elevation).toBe(-5)
         expect(metrics.maxSpeed).toBeGreaterThan(0)
         expect(metrics.minPace).toBeGreaterThan(0)
     })
@@ -186,7 +196,7 @@ describe('journey metrics', () => {
         expect(track.metrics.global.averageSpeedMoving).toBe(0)
     })
 
-    it('ignores impossible segments for the selected activity profile', () => {
+    it('keeps geometric distance while excluding impossible segments from speed extrema', () => {
         const trek = makeLineTrack({
             activity:    'trek',
             coordinates: [
@@ -213,10 +223,14 @@ describe('journey metrics', () => {
         trek.extractMetrics()
         bike.extractMetrics()
 
-        expect(trek.metrics.points).toHaveLength(0)
-        expect(trek.metrics.global.distance).toBe(0)
+        expect(trek.metrics.points).toHaveLength(1)
+        expect(trek.metrics.points[0].ignored).toBe('speed')
+        expect(trek.metrics.global.distance).toBeCloseTo(bike.metrics.global.distance, 8)
+        expect(trek.metrics.global.maxSpeed).toBe(0)
         expect(bike.metrics.points).toHaveLength(1)
+        expect(bike.metrics.points[0].ignored).toBe(false)
         expect(bike.metrics.global.distance).toBeGreaterThan(700)
+        expect(bike.metrics.global.maxSpeed).toBeGreaterThan(trek.metrics.global.maxSpeed)
     })
 
     it('aggregates multi-track journey metrics from track points', () => {
@@ -269,8 +283,8 @@ describe('journey metrics', () => {
         expect(metrics.averageSpeed).toBeCloseTo(expectedDistance / expectedDuration, 8)
         expect(metrics.minHeight).toBe(90)
         expect(metrics.maxHeight).toBe(105)
-        expect(metrics.positive.elevation).toBe(10)
-        expect(metrics.negative.elevation).toBe(0)
+        expect(metrics.positive.elevation).toBe(15)
+        expect(metrics.negative.elevation).toBe(-5)
     })
 
     it('captures current activity thresholds on journey recalculation', () => {
@@ -390,6 +404,24 @@ describe('journey metrics', () => {
         expect(track.metrics.global.maxHeight).toBe(102)
     })
 
+    it('counts gentle uphill elevation even when the slope stays below the minimum slope threshold', () => {
+        const track = makeLineTrack({
+            hasTime: false,
+            coordinates: [
+                [0, 0, 100],
+                [0.01, 0, 120],
+                [0.02, 0, 140],
+            ],
+        })
+
+        track.extractMetrics()
+
+        expect(track.metrics.points).toHaveLength(2)
+        expect(track.metrics.global.positive.elevation).toBe(40)
+        expect(track.metrics.global.flat.elevation).toBe(0)
+        expect(track.metrics.global.negative.elevation).toBe(0)
+    })
+
     it('filters sudden speed spikes from speed and pace extrema', () => {
         globalThis.lgs.settings.getJourney.activity.types[0].maxSpeed = 20
         globalThis.lgs.settings.getJourney.activity.types[0].maxSpeedDelta = 2
@@ -418,6 +450,34 @@ describe('journey metrics', () => {
         expect(track.metrics.global.maxSpeed).toBeLessThan(3)
         expect(track.metrics.global.minPace).toBeGreaterThan(0)
     })
+
+    it('matches the expected Mont Blanc journey statistics', () => {
+        const document = new DOMParser().parseFromString(
+            readFileSync('public/samples/journeys/Mont Blanc.gpx', 'utf8'),
+            'text/xml',
+        )
+        const geoJson = gpx(document)
+        const trackFeature = geoJson.features.find(feature => feature?.geometry?.type === 'LineString')
+        const track = new Track('MB4806', {
+            parent:    'mont-blanc#gpx',
+            slug:      'mont-blanc#gpx',
+            activity:  'trek',
+            color:     '#ffffff',
+            thickness: 2,
+            hasTime:   true,
+            hasAltitude: true,
+            content:   trackFeature,
+        })
+
+        track.extractMetrics()
+        expect(track.metrics.global.distance / 1000).toBeCloseTo(39.94, 2)
+        expect(track.metrics.global.duration).toBe(66518)
+        expect(track.metrics.global.averageSpeed * 3.6).toBeCloseTo(2.16, 2)
+        expect(track.metrics.global.positive.elevation).toBe(4434)
+        expect(track.metrics.global.negative.elevation).toBe(-4369)
+        expect(track.metrics.global.flat.elevation).toBe(0)
+        expect(track.metrics.global.positive.points).toBeGreaterThan(0)
+    }, 60000)
 
     it('skips malformed coordinates instead of failing metrics calculation', () => {
         const track = makeLineTrack({
