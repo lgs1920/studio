@@ -131,12 +131,10 @@ samples:
         name: LGS1920
         description: La grande sure - 1920m
         filename: LGS1920.gpx
-        format: gpx
       - slug: mont-blanc#gpx
         name: MB4806
         description: Le Mont Blanc - 4806m
         filename: Mont Blanc.gpx
-        format: gpx
 
 ########################################
 # Tracks and POIs
