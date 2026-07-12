@@ -17,7 +17,14 @@
 * © SwissTopo.
 * © ThunderForest.
 * © WayMarked Trails.
-* Crédits BNF - IGN.
+* Esri
+* Vantor
+* Earthstar Geographics
+* GIS User Community
+* Re:Earth Terrain
+* Mapterhorn
+* EGM2008.
+* BNF - IGN.
 * © Instituto Geográfico Nacional / Centro Nacional de Información Geográfica (Spain).
 * © Bundesamt für Kartographie und Geodäsie (BKG).
 * © Bundesamt für Kartographie und Geodäsie (BKG) / Copernicus.
