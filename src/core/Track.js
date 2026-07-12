@@ -69,6 +69,16 @@ const medianNumber = (values = []) => {
     return (filteredValues[middle - 1] + filteredValues[middle]) / 2
 }
 
+const meanNumber = (values = []) => {
+    const filteredValues = values.filter(Number.isFinite)
+
+    if (filteredValues.length === 0) {
+        return null
+    }
+
+    return filteredValues.reduce((sum, value) => sum + value, 0) / filteredValues.length
+}
+
 const smoothAltitudeSeries = (altitudes = [], windowSize = 1) => {
     const normalizedWindow = Math.max(1, Math.round(Number(windowSize) || 1))
     if (normalizedWindow <= 1 || altitudes.length < 2) {
@@ -87,6 +97,27 @@ const smoothAltitudeSeries = (altitudes = [], windowSize = 1) => {
         }
 
         return medianNumber(slice) ?? finiteNumber(value)
+    })
+}
+
+const trendAltitudeSeries = (altitudes = [], windowSize = 1) => {
+    const normalizedWindow = Math.max(1, Math.round(Number(windowSize) || 1))
+    if (normalizedWindow <= 1 || altitudes.length < 2) {
+        return altitudes.map(value => finiteNumber(value))
+    }
+
+    const radius = Math.floor(normalizedWindow / 2)
+
+    return altitudes.map((value, index, values) => {
+        const start = Math.max(0, index - radius)
+        const end = Math.min(values.length - 1, index + radius)
+        const slice = values.slice(start, end + 1).filter(Number.isFinite)
+
+        if (slice.length < normalizedWindow) {
+            return finiteNumber(value)
+        }
+
+        return meanNumber(slice) ?? finiteNumber(value)
     })
 }
 
@@ -487,10 +518,12 @@ export class Track extends MapElement {
                 minSlope = minSlope === undefined ? slope : Math.min(minSlope, slope)
                 maxSlope = maxSlope === undefined ? slope : Math.max(maxSlope, slope)
 
-                if ((point.elevation ?? 0) > 0) {
+                const trendElevation = finiteNumber(point.trendElevation) ?? finiteNumber(point.elevation) ?? 0
+
+                if (trendElevation > 0) {
                     addToElevationBucket(altitudeBuckets.positive, point)
                 }
-                else if ((point.elevation ?? 0) < 0) {
+                else if (trendElevation < 0) {
                     addToElevationBucket(altitudeBuckets.negative, point)
                 }
                 else {
@@ -570,6 +603,7 @@ export class Track extends MapElement {
             const rawAltitudes = this.hasAltitude ? aggregate.map(point => finiteNumber(point?.altitude)) : []
             const clippedAltitudes = this.hasAltitude ? clipAltitudeSeries(rawAltitudes, maxAltitudeJump, altitudeSmoothingWindow) : []
             const smoothedAltitudes = this.hasAltitude ? smoothAltitudeSeries(clippedAltitudes, altitudeSmoothingWindow) : []
+            const trendAltitudes = this.hasAltitude ? trendAltitudeSeries(clippedAltitudes, altitudeSmoothingWindow) : []
 
             if (this.hasAltitude) {
                 for (let index = 1; index < rawAltitudes.length; index++) {
@@ -638,6 +672,8 @@ export class Track extends MapElement {
                     const rawAltitude = finiteNumber(current.altitude)
                     const currentAltitude = finiteNumber(smoothedAltitudes[index])
                     const previousAltitude = finiteNumber(smoothedAltitudes[index - 1])
+                    const trendCurrentAltitude = finiteNumber(trendAltitudes[index])
+                    const trendPreviousAltitude = finiteNumber(trendAltitudes[index - 1])
 
                     if (rawAltitude !== null) {
                         pointData.rawAltitude = rawAltitude
@@ -656,6 +692,10 @@ export class Track extends MapElement {
                     pointData.elevation =
                         currentAltitude !== null && previousAltitude !== null
                         ? currentAltitude - previousAltitude
+                        : 0
+                    pointData.trendElevation =
+                        trendCurrentAltitude !== null && trendPreviousAltitude !== null
+                        ? trendCurrentAltitude - trendPreviousAltitude
                         : 0
                     pointData.slope = pointData.distance > 0 ? pointData.elevation / pointData.distance * 100 : 0
                 }
@@ -684,7 +724,7 @@ export class Track extends MapElement {
                                                         activityProfile,
                                                         minHeight,
                                                         maxHeight,
-                                                    })
+        })
         if (this.hasAltitude) {
             global.positive.elevation = rawPositiveElevation
             global.negative.elevation = rawNegativeElevation

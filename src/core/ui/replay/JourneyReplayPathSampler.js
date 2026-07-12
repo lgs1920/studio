@@ -868,7 +868,7 @@ export class JourneyReplayPathSampler {
 
         metricPoints.forEach(point => {
             const pointDistance = finiteNumber(point?.distance) ?? 0
-            const elevation = finiteNumber(point?.elevation) ?? 0
+            const elevation = finiteNumber(point?.trendElevation ?? point?.elevation) ?? 0
 
             metricDistance += pointDistance
             if (elevation > 0) {

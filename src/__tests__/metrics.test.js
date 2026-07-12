@@ -473,6 +473,8 @@ describe('journey metrics', () => {
         expect(track.metrics.global.distance / 1000).toBeCloseTo(39.94, 2)
         expect(track.metrics.global.duration).toBe(66518)
         expect(track.metrics.global.averageSpeed * 3.6).toBeCloseTo(2.16, 2)
+        expect(track.metrics.global.positive.distance).toBeGreaterThan(10000)
+        expect(track.metrics.global.negative.distance).toBeGreaterThan(10000)
         expect(track.metrics.global.positive.elevation).toBe(4434)
         expect(track.metrics.global.negative.elevation).toBe(-4369)
         expect(track.metrics.global.flat.elevation).toBe(0)
