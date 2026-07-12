@@ -21,11 +21,30 @@ filter:
 
 ## Providers List
 providers:
+  - id: reearth
+    name: Reearth
+    fullname: Reearth
+    credits: 'Rearth'
+    logo: ''
+    url: "https://terrain.reearth.land/"
+    layers:
+      ## WorldTerrain
+      - name: World Terrain
+        id: reearth-world
+        image: reearth-world.png
+        usage:
+          type: free
+          doc: 'https://github.com/reearth/reearth-terrain'
+
+        type: terrain
+        terrainType: 'url'
+        url: 'https://terrain.reearth.land/cesium-mesh/ellipsoid'
+
   ## Cesium
   - id: cesium
     name: Cesium
     fullname: Cesium
-    credits: 'Cesium'
+    credits: 'Cesium'²
     logo: ''
     url: 'https://cesium.com/platform/cesiumjs/'
     layers:
