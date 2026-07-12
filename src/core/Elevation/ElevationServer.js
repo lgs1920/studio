@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-01
- * Last modified: 2026-04-01
+ * Created on: 2026-07-12
+ * Last modified: 2026-07-12
  *
  *
  * Copyright © 2026 LGS1920
@@ -24,6 +24,7 @@ export class ElevationServer {
     // Real servers
     static OPEN_ELEVATION = 'open-elevation'
     static IGN_GEOPORTAIL = 'ign-geoportail'
+    static REEARTH = 'reearth'
 
     /**
      * Define elevation servers metadata
@@ -77,6 +78,17 @@ export class ElevationServer {
                                          doc:         'https://geoservices.ign.fr/documentation/services/services-deprecies/calcul-altimetrique-rest',
                                          url:         'https://data.geopf.fr/altimetrie/1.0/calcul/alti/rest/elevation.json',
                                          maxPerQuery: 5000,
+                                         icon:        'map-location',
+                                     },
+                                 ],
+                                 [
+                                     ElevationServer.REEARTH,
+                                     {
+                                         label:       'Re:Earth Terrain (Worldwide, ellipsoid)',
+                                         id:          ElevationServer.REEARTH,
+                                         doc:         'https://github.com/reearth/reearth-terrain',
+                                         url:         'https://terrain.reearth.land/heights.json',
+                                         maxPerQuery: 256,
                                          icon:        'map-location',
                                      },
                                  ],
@@ -154,6 +166,29 @@ export class ElevationServer {
     }
 
     /**
+     * Re:Earth Implementation
+     */
+    static fetchReEarth = async (coordinates) => {
+        const points = coordinates.map(c => `${c[0]},${c[1]}`).join(';')
+
+        try {
+            const response = await lgs.axios.get(`${ElevationServer.SERVERS.get(ElevationServer.REEARTH).url}?points=${points}`)
+            const results = Array.isArray(response?.data?.results) ? response.data.results : []
+            const data = results.map((point, index) => {
+                const lon = Number.isFinite(Number(point?.lon)) ? Number(point.lon) : coordinates[index]?.[0]
+                const lat = Number.isFinite(Number(point?.lat)) ? Number(point.lat) : coordinates[index]?.[1]
+                const elevation = point?.ellipsoid ?? point?.elevation
+                return [lon, lat, elevation]
+            })
+
+            return {coordinates: data, hasElevation: true}
+        }
+        catch (error) {
+            return {errors: [error]}
+        }
+    }
+
+    /**
      * Clear elevation data (Remove Z index)
      */
     static clearElevation = async (coordinates) => {
@@ -206,6 +241,9 @@ export class ElevationServer {
                     break
                 case ElevationServer.IGN_GEOPORTAIL:
                     this.fetchElevation = ElevationServer.fetchIGNGeoportail
+                    break
+                case ElevationServer.REEARTH:
+                    this.fetchElevation = ElevationServer.fetchReEarth
                     break
             }
 
