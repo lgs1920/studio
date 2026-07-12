@@ -22,10 +22,10 @@ filter:
 ## Providers List
 providers:
   - id: reearth
-    name: Reearth
-    fullname: Reearth
-    credits: 'Rearth'
-    logo: ''
+    name: Re:Earth
+    fullname: Re:Earth
+    credits: 'Re:Earth Terrain'
+    logo: '/assets/images/layers/logos/reearth.png'
     url: "https://terrain.reearth.land/"
     layers:
       ## WorldTerrain
@@ -44,7 +44,7 @@ providers:
   - id: cesium
     name: Cesium
     fullname: Cesium
-    credits: 'Cesium'²
+    credits: 'Cesium'
     logo: ''
     url: 'https://cesium.com/platform/cesiumjs/'
     layers:
