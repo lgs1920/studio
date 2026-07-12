@@ -75,10 +75,10 @@ export class JourneyEditor {
                 return palette[0]
             }
             case COLOR_SWATCHES_SEQUENCE: {   // Increment index each time
-                const currentIndex = this.#normalizeSwatchIndex(lgs.settings.swatches.current, swatchesLength)
+                const currentIndex = this.#normalizeSwatchIndex(this.swatchesIndex, swatchesLength)
                 const nextIndex = reset ? 0 : currentIndex
-                this.swatchesIndex = nextIndex
-                lgs.settings.swatches.current = (nextIndex + 1) % swatchesLength
+                this.swatchesIndex = (nextIndex + 1) % swatchesLength
+                lgs.settings.swatches.current = this.swatchesIndex
                 return palette[nextIndex] ?? palette[0]
             }
             case COLOR_SWATCHES_RANDOM: {     // Randomize

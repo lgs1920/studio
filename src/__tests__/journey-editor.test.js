@@ -57,6 +57,14 @@ describe('JourneyEditor.newColor', () => {
         expect(editor.newColor()).toBe('#fac858')
     })
 
+    it('keeps advancing even if the settings cursor is reset externally', () => {
+        const editor = new JourneyEditor()
+
+        expect(editor.newColor()).toBe('#ee6666')
+        globalThis.lgs.settings.swatches.current = 0
+        expect(editor.newColor()).toBe('#fac858')
+    })
+
     it('supports random mode without returning undefined', () => {
         globalThis.lgs.settings.getSwatches.distribution = COLOR_SWATCHES_RANDOM
         vi.spyOn(Math, 'random').mockReturnValue(0.9)
