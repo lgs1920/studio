@@ -24,7 +24,7 @@ providers:
   - id: reearth
     name: Re:Earth
     fullname: Re:Earth
-    credits: 'Re:Earth Terrain'
+    credits: 'Re:Earth Terrain - Mapterhorn - EGM2008'
     logo: '/assets/images/layers/logos/reearth.png'
     url: "https://terrain.reearth.land/"
     layers:
@@ -44,7 +44,7 @@ providers:
   - id: cesium
     name: Cesium
     fullname: Cesium
-    credits: 'Cesium'
+    credits: 'Esri, Vantor, Earthstar Geographics, and the GIS User Community'
     logo: ''
     url: 'https://cesium.com/platform/cesiumjs/'
     layers:
@@ -413,7 +413,7 @@ providers:
   - id: arcgis
     name: ArcGIS
     fullname: ArcGIS
-    credits: 'ArcGIS'
+    credits: 'Esri'
     logo: ''
     url: 'https://arcgis.com/'
     layers:
