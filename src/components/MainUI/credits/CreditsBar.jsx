@@ -17,7 +17,8 @@
 import { BASE_ENTITY, OVERLAY_ENTITY, TERRAIN_ENTITY } from '@Core/constants'
 import { LogoSvg }                                     from '@Components/MainUI/LogoSvg'
 import { LayersAndTerrainManager }                     from '@Core/ui/LayerAndTerrainManager'
-import { memo, useEffect }                             from 'react'
+import { WaTooltip }                                   from '@web.awesome.me/webawesome-pro/dist/react'
+import { memo, useEffect, useId }                      from 'react'
 import { proxy, useSnapshot }                          from 'valtio'
 import { subscribeKey }                                from 'valtio/utils'
 import './style.css'
@@ -33,11 +34,16 @@ const $providers = proxy({
 
 /** List of available layer types */
 const LAYERS_TYPE = [BASE_ENTITY, OVERLAY_ENTITY, TERRAIN_ENTITY]
+const CREDIT_TYPE_LABELS = {
+    [BASE_ENTITY]:    'Base',
+    [OVERLAY_ENTITY]: 'Overlay',
+    [TERRAIN_ENTITY]: 'Terrain',
+}
 
-const CreditLink = memo(({provider}) => {
+const CreditLink = memo(({id, provider}) => {
     const title = provider.fullname ?? provider.name
     return (
-        <a href={provider.url} target="_blank" rel="noreferrer" title={title}>
+        <a id={id} href={provider.url} target="_blank" rel="noreferrer" aria-label={title}>
             {provider.logo
              ? <img src={provider.logo} alt={title}/>
              : <span className={'credits'}>{provider.name}</span>
@@ -56,6 +62,13 @@ export const CreditsBar = ({contentRef = null, widgetMode = false}) => {
 
     const providers = useSnapshot($providers)
     const siteUrl = __.app.buildUrl(lgs?.configuration?.website || 'https://lgs1920.fr')
+    const tooltipIdPrefix = `credits-${useId().replace(/[^a-zA-Z0-9_-]/g, '')}`
+    const cesiumLinkId = `${tooltipIdPrefix}-cesium`
+    const mainLogoLinkId = `${tooltipIdPrefix}-lgs1920`
+    const providerCredits = LAYERS_TYPE
+        .map((type) => ({type, provider: providers[type]}))
+        .filter(({provider}) => provider)
+    const providerTooltip = (type, provider) => `${CREDIT_TYPE_LABELS[type]}: ${provider.name ?? provider.fullname}`
 
     /**
      * Retrieves and updates provider data dynamically.
@@ -110,7 +123,14 @@ export const CreditsBar = ({contentRef = null, widgetMode = false}) => {
             className={`credits-bar${widgetMode ? ' credits-bar-widget-mode' : ''}`}
         >
             <div className="main-logo">
-                <a className="main-logo-link" href={siteUrl} target="_blank" rel="noreferrer" title="LGS1920 website">
+                <a
+                    id={mainLogoLinkId}
+                    className="main-logo-link"
+                    href={siteUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    aria-label="LGS1920 website"
+                >
                     <LogoSvg
                         src="/assets/logo/logo-vertical.svg"
                         primaryColor="#ffffff"
@@ -125,14 +145,27 @@ export const CreditsBar = ({contentRef = null, widgetMode = false}) => {
                 </a>
             </div>
             <div className="provider-credits lgs-credits">
-                {providers.terrain && <CreditLink provider={providers.terrain}/>}
-                {providers.overlay && <CreditLink provider={providers.overlay}/>}
-                {providers.base && <CreditLink provider={providers.base}/>}
+                {providerCredits.map(({type, provider}) => (
+                    <CreditLink
+                        key={type}
+                        id={`${tooltipIdPrefix}-${type}`}
+                        provider={provider}
+                    />
+                ))}
             </div>
             <div className="cesium-credits lgs-credits  ">
-                <a href="https://www.cesium.com/" target="_blank" rel="noreferrer">
+                <a id={cesiumLinkId} href="https://www.cesium.com/" target="_blank" rel="noreferrer" aria-label="Cesium">
                     <img src="/assets/images/Cesium_light_color.svg" alt="Cesium"/>
                 </a>
+            </div>
+            <div className="credits-tooltips">
+                <WaTooltip for={mainLogoLinkId} placement="top">{'LGS1920 website'}</WaTooltip>
+                {providerCredits.map(({type, provider}) => (
+                    <WaTooltip key={type} for={`${tooltipIdPrefix}-${type}`} placement="top">
+                        {providerTooltip(type, provider)}
+                    </WaTooltip>
+                ))}
+                <WaTooltip for={cesiumLinkId} placement="top">{'Cesium'}</WaTooltip>
             </div>
         </div>
     )

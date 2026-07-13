@@ -24,6 +24,7 @@
 
 .credits-bar {
     /*font-size: var(--lgs-font-size-s);*/
+    position: relative;
     display: flex;
     align-items: flex-end;
     flex-direction: row-reverse;
@@ -71,6 +72,13 @@
     background-color: var(--lgs-credits-hover-bg);
     backdrop-filter: blur(var(--lgs-blur));
     -webkit-backdrop-filter: blur(var(--lgs-blur));
+}
+
+.credits-tooltips {
+    position: absolute;
+    width: 0;
+    height: 0;
+    overflow: visible;
 }
 
 .credits-bar .main-logo .credits-logo svg,
