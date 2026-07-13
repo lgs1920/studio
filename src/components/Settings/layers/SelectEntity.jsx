@@ -17,9 +17,8 @@
 import { LGSScrollbars } from '@Components/MainUI/LGSScrollbars'
 import { useConfirm }    from '@Components/Modals/ConfirmUI'
 import {
-    ACCESS_ICONS, BASE3D_ENTITY, BASE_ENTITY, FREE_ACCOUNT_ACCESS, FREE_ANONYMOUS_ACCESS, FREEMIUM_ACCESS, LAYERS_THUMBS_DIR,
-    LOCKED_ACCESS, OVERLAY_ENTITY, PERSONAL_ACCESS, PREMIUM_ACCESS, TERRAIN_ENTITY, TILES3D_ENTITY, UNLOCKED_ACCESS,
-    VAULT_STORE,
+    ACCESS_ICONS, BASE_ENTITY, DEFAULT_LAYERS_COLOR_SETTINGS, FREE_ACCOUNT_ACCESS, FREE_ANONYMOUS_ACCESS, FREEMIUM_ACCESS,
+    LAYERS_THUMBS_DIR, LOCKED_ACCESS, OVERLAY_ENTITY, PERSONAL_ACCESS, PREMIUM_ACCESS, TERRAIN_ENTITY, UNLOCKED_ACCESS, VAULT_STORE,
 }                        from '@Core/constants'
 
 import {
@@ -29,8 +28,8 @@ import parse               from 'html-react-parser'
 import { Fragment, useRef, useLayoutEffect } from 'react'
 
 import { useSnapshot }                   from 'valtio'
-import { DEFAULT_LAYERS_COLOR_SETTINGS } from '@Core/constants'
 import { LayersUtils }                   from '@Utils/cesium/LayersUtils'
+import { applyLayerSelection }           from './layerSelection'
 
 /**
  * Component to display and select map entities.
@@ -235,25 +234,15 @@ export const SelectEntity = (props) => {
             return
         }
 
-        const isSelectedOverlay = type === OVERLAY_ENTITY && layers[type] === id
-        const isSelectedBase3D = $entity.type === BASE3D_ENTITY && layers.base3d === id
-        const isSelectedTiles3D = $entity.type === TILES3D_ENTITY && layers.tiles3d === id
         const requiresPersonalToken = $entity.usage.type === PERSONAL_ACCESS
         const selectUnlockedEntity = () => {
-            if ($entity.type === BASE3D_ENTITY) {
-                $layers.base = ''
-                $layers.base3d = isSelectedBase3D ? '' : id
-            }
-            else if ($entity.type === BASE_ENTITY) {
-                $layers.base3d = ''
-                $layers.base = id
-            }
-            else if ($entity.type === TILES3D_ENTITY) {
-                $layers.tiles3d = isSelectedTiles3D ? '' : id
-            }
-            else {
-                $layers[type] = isSelectedOverlay ? '' : id
-            }
+            applyLayerSelection({
+                                    entity:         $entity,
+                                    id,
+                                    requestedType:  type,
+                                    layersSnapshot: layers,
+                                    layersProxy:    $layers,
+                                })
         }
 
         if ($entity.usage.type === FREE_ANONYMOUS_ACCESS || (requiresPersonalToken && ion.source === 'user')) {

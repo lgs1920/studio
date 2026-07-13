@@ -2,8 +2,9 @@
 # Layers and Terrains
 ########################################
 ## Current IDs
-base: arcgis-wayback-20191212         # ID of the current base
+base: arcgis-normal                   # ID of the current base
 base3d: null                          # ID of the current 3D base scene
+tiles3d: null                         # ID of the current 3D tiles overlay
 overlay: null                         # ID of the current overlay
 terrain: cesium-world                 # ID of the current terrain
 
@@ -25,7 +26,7 @@ providers:
     name: Re:Earth
     fullname: Re:Earth
     credits: 'Re:Earth Terrain - Mapterhorn - EGM2008'
-    logo: '/assets/images/layers/logos/reearth.png'
+    logo: 'https://avatars.githubusercontent.com/u/78837781?s=200&v=4'
     url: "https://terrain.reearth.land/"
     layers:
       ## WorldTerrain
@@ -55,6 +56,9 @@ providers:
           url: 'https://buildings.reearth.land/tileset.json'
           flyToOnLoad: false
           maximumScreenSpaceError: 16
+          errorLabel: 'Re:Earth Buildings server error'
+          errorLabelHeight: 120
+          errorLabelPerTileMaxHeight: 5000
 
   ## Cesium
   - id: cesium

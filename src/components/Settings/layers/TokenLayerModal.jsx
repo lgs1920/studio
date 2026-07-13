@@ -20,6 +20,7 @@ import { WaBadge, WaButton, WaDialog, WaIcon, WaInput }                         
 import parse                                                                          from 'html-react-parser'
 import { useEffect, useState }                                                         from 'react'
 import { useSnapshot }                                                                 from 'valtio'
+import { applyLayerSelection }                                                         from './layerSelection'
 
 const closeTokenModal = () => {
     lgs.editorSettingsProxy.layer.tokenDialog = false
@@ -87,22 +88,23 @@ export const TokenLayerModal = () => {
 
             if (proxy.type === BASE_ENTITY) {
                 lgs.stores.main.theLayer = proxy
-                lgs.settings.layers.base3d = ''
-                lgs.settings.layers.base = proxy.id
             }
             else if (proxy.type === BASE3D_ENTITY) {
                 lgs.stores.main.theBase3DLayer = proxy
-                lgs.settings.layers.base = ''
-                lgs.settings.layers.base3d = proxy.id
             }
             else if (proxy.type === TILES3D_ENTITY) {
                 lgs.stores.main.theTiles3DLayer = proxy
-                lgs.settings.layers.tiles3d = proxy.id
             }
             else {
                 lgs.stores.main.theLayerOverlay = proxy
-                lgs.settings.layers[proxy.type] = proxy.id
             }
+
+            applyLayerSelection({
+                                    entity:         proxy,
+                                    layersSnapshot: lgs.settings.layers,
+                                    layersProxy:    lgs.settings.layers,
+                                    forceSelect:    true,
+                                })
 
             if (proxy.type === TERRAIN_ENTITY) {
                 __.layersAndTerrainManager.changeTerrain(proxy)

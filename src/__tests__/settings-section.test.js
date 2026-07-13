@@ -296,6 +296,28 @@ describe('SettingsSection', () => {
         })
     })
 
+    it('adds missing excluded primitive defaults without overwriting existing user choices', () => {
+        const section = new SettingsSection('layers')
+        const merged = section.update(
+            {
+                base:    'custom-base',
+                overlay: null,
+                terrain: 'cesium-world',
+            },
+            {
+                base:    'arcgis-normal',
+                base3d:  null,
+                tiles3d: null,
+                overlay: null,
+                terrain: 'cesium-world',
+            },
+        )
+
+        expect(merged.base).toBe('custom-base')
+        expect(merged.base3d).toBeNull()
+        expect(merged.tiles3d).toBeNull()
+    })
+
     it('persists profile UI settings changes', async () => {
         const section = new SettingsSection('ui')
         await section.init()

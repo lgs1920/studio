@@ -102,7 +102,7 @@ describe('IonLayerUtils Cesium cache', () => {
         Cesium3DTileset.fromUrl.mockResolvedValue({id: 'tileset'})
 
         const tileset = await IonLayerUtils.createTileset({
-            id: 'reearth-buildings',
+            id: 'external-buildings',
             type: 'tiles3d',
             show: true,
             tiles3d: {

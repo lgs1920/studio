@@ -246,11 +246,8 @@ export class SettingsSection {
                     }
                     this.#syncAddedValues(target[key], toAdd[key], excludeKeys, allowKeys, fullKey)
                 }
-                else {
-                    // Add primitive only if it doesn't exist and isn't explicitly excluded
-                    if (!(key in target) && !isSettingPathExcluded(fullKey, excludeKeys, allowKeys)) {
-                        target[key] = toAdd[key]
-                    }
+                else if (!(key in target)) {
+                    target[key] = toAdd[key]
                 }
             }
         }
