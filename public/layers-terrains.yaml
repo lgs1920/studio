@@ -40,6 +40,22 @@ providers:
         terrainType: 'url'
         url: 'https://terrain.reearth.land/cesium-mesh/ellipsoid'
 
+      ## Buildings
+      - name: Buildings
+        id: reearth-buildings
+        image: reearth-world.png
+        usage:
+          type: free
+          doc: 'https://github.com/reearth/reearth-buildings'
+
+        type: tiles3d
+        show: true
+        tiles3d:
+          kind: url
+          url: 'https://buildings.reearth.land/tileset.json'
+          flyToOnLoad: false
+          maximumScreenSpaceError: 16
+
   ## Cesium
   - id: cesium
     name: Cesium
@@ -410,38 +426,38 @@ providers:
 
   ## wayback
   ## https://wayback.maptiles.arcgis.com/arcgis/rest/services/world_imagery/mapserver/wmts/1.0.0/wmtscapabilities.xml
-  - id: arcgis
-    name: ArcGIS
-    fullname: ArcGIS
+  - id: esri
+    name: ESRI Wayback
+    fullname: ESRI Wayback
     credits: 'Esri'
     logo: ''
-    url: 'https://arcgis.com/'
+    url: 'https://livingatlas.arcgis.com//'
     layers:
       # Tracks
-      - name: Wayback Last\(2024-11-18)
-        id: arcgis-wayback-last
-        image: arcgis-wayback-last.png
+      - name: Spring (2022)
+        id: arcgis-normal
+        image: arcgis-normal.png
         usage:
           type: free
           doc: ''
 
         tile: wayback
-        url: 'https://wayback-b.maptiles.arcgis.com/arcgis/rest/services/World_Imagery/WMTS/1.0.0/default028mm/MapServer/tile/49849/'
+        url: 'https://wayback-b.maptiles.arcgis.com/arcgis/rest/services/World_Imagery/WMTS/1.0.0/default028mm/MapServer/tile/16245/'
         minimumLevel: 0
         maximumLevel: 23
         doc: ''
         type: base
 
 
-      - name: Wayback\(2019-12-12)
-        id: arcgis-wayback-20191212
-        image: arcgis-wayback-20191212.png
+      - name: Winter (2024)
+        id: arcgis-winter
+        image: arcgis-winter.png
         usage:
           type: free
           doc: ''
 
         tile: wayback
-        url: 'https://wayback-b.maptiles.arcgis.com/arcgis/rest/services/World_Imagery/WMTS/1.0.0/default028mm/MapServer/tile/4756/'
+        url: 'https://wayback-b.maptiles.arcgis.com/arcgis/rest/services/World_Imagery/WMTS/1.0.0/default028mm/MapServer/tile/60013/'
         minimumLevel: 0
         maximumLevel: 23
         doc: ''
@@ -977,7 +993,7 @@ providers:
     layers:
 
       ## Belgium - CartoWeb Map Layer
-      - name: Belgium - CartoWeb
+      - name: CartoWeb
         id: ngi-be-cartoweb
         image: ngi-be-cartoweb.png
         doc: 'https://cartoweb.wmts.ngi.be/1.0.0/WMTSCapabilities.xml'
@@ -998,7 +1014,7 @@ providers:
         maximumLevel: 17
 
       ## Belgium - Orthophotos Photo Layer
-      - name: Belgium - Orthophotos
+      - name: Orthophotos
         id: ngi-be-ortho
         image: ngi-be-ortho.png
         doc: 'https://wmts.ngi.be/inspire/ortho/1.0.0/WMTSCapabilities.xml'

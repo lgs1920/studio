@@ -97,12 +97,24 @@ export class IonLayerUtils {
     static async createTileset(layer, {accessToken = getActiveToken()} = {}) {
         const kind = `${layer?.sceneKind ?? layer?.base3d?.kind ?? layer?.tiles3d?.kind ?? ''}`.toLowerCase()
         const assetId = Number(layer?.ionAssetId ?? layer?.assetId)
+        const tilesetUrl = layer?.tiles3d?.url ?? layer?.url ?? layer?.tiles3d?.tilesetUrl ?? layer?.tilesetUrl
 
         if (kind === 'google-photorealistic'
             || kind === 'google-photorealistic-3d'
             || kind === 'google-photorealistic-tiles'
             || `${layer?.id ?? ''}`.includes('photorealistic')) {
             return createGooglePhotorealistic3DTileset({}, {
+                show: layer?.show ?? true,
+            })
+        }
+
+        if (kind === 'url' || tilesetUrl) {
+            if (!tilesetUrl) {
+                throw new Error(`Missing 3D tiles URL for layer: ${layer?.id ?? 'unknown'}`)
+            }
+
+            return Cesium3DTileset.fromUrl(tilesetUrl, {
+                maximumScreenSpaceError: layer?.tiles3d?.maximumScreenSpaceError ?? layer?.maximumScreenSpaceError ?? 16,
                 show: layer?.show ?? true,
             })
         }

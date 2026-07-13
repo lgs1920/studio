@@ -96,4 +96,28 @@ describe('IonLayerUtils Cesium cache', () => {
         expect(firstCache.clear).toHaveBeenCalledTimes(1)
         expect(cacheManagerInstances).toHaveLength(1)
     })
+
+    it('creates 3D tiles from a direct URL when provided', async () => {
+        const {Cesium3DTileset} = await import('cesium')
+        Cesium3DTileset.fromUrl.mockResolvedValue({id: 'tileset'})
+
+        const tileset = await IonLayerUtils.createTileset({
+            id: 'reearth-buildings',
+            type: 'tiles3d',
+            show: true,
+            tiles3d: {
+                kind: 'url',
+                url:  'https://example.com/tileset.json',
+            },
+        })
+
+        expect(Cesium3DTileset.fromUrl).toHaveBeenCalledWith(
+            'https://example.com/tileset.json',
+            expect.objectContaining({
+                maximumScreenSpaceError: 16,
+                show: true,
+            }),
+        )
+        expect(tileset).toEqual({id: 'tileset'})
+    })
 })
