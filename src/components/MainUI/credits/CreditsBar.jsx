@@ -52,7 +52,7 @@ const CreditLink = memo(({provider}) => {
  *
  * @returns {JSX.Element} The CreditsBar component.
  */
-export const CreditsBar = ({contentRef = null}) => {
+export const CreditsBar = ({contentRef = null, widgetMode = false}) => {
 
     const providers = useSnapshot($providers)
     const siteUrl = __.app.buildUrl(lgs?.configuration?.website || 'https://lgs1920.fr')
@@ -104,7 +104,11 @@ export const CreditsBar = ({contentRef = null}) => {
     }, [])
 
     return (
-        <div id="lgs-credits-bar" ref={contentRef} className="credits-bar">
+        <div
+            id="lgs-credits-bar"
+            ref={contentRef}
+            className={`credits-bar${widgetMode ? ' credits-bar-widget-mode' : ''}`}
+        >
             <div className="main-logo">
                 <a className="main-logo-link" href={siteUrl} target="_blank" rel="noreferrer" title="LGS1920 website">
                     <LogoSvg

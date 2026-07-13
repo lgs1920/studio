@@ -110,7 +110,7 @@ export const CreditsWidget = ({id, context, zIndex, widgetsBoard: persistedWidge
 
     return (
         <Widget isVisible={true} config={config}>
-            <CreditsBar contentRef={_content}/>
+            <CreditsBar contentRef={_content} widgetMode/>
         </Widget>
     )
 }
