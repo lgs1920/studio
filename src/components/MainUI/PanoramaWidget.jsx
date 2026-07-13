@@ -38,6 +38,7 @@ import {
   normalizePanoramaPitch,
 } from "@Core/OrbitSettings";
 import { Widget } from "@Components/MainUI/widgets/Widget";
+import { OrbitInteractionHintsToggleButton } from "@Components/MainUI/OrbitInteractionHintsWidget";
 import { faAngle, faVideo } from "@fortawesome/pro-regular-svg-icons";
 import { FA2SL } from "@Utils/FA2SL";
 import { foot, meter, UnitUtils } from "@Utils/UnitUtils";
@@ -57,8 +58,9 @@ import { getOrbitRPMGaugeIcon } from "./orbitWidgetPresentation";
 
 const POINTER_PITCH_DEGREES_PER_PIXEL = 0.25;
 const POINTER_HEIGHT_METERS_PER_PIXEL = 10;
-const KEYBOARD_HEIGHT_STEP_METERS = 2;
+const KEYBOARD_HEIGHT_STEP_METERS = 100;
 const KEYBOARD_FAST_HEIGHT_STEP_METERS = 10;
+const KEYBOARD_FINE_HEIGHT_STEP_METERS = 1;
 const INTERACTION_PERSIST_DELAY = 400;
 const ADJUSTMENT_OVERLAY_DELAY = 2000;
 const PANORAMA_ADJUSTMENT_WIDGET = "panorama-adjustment-widget";
@@ -77,14 +79,12 @@ const EDITABLE_SELECTOR = [
 const hasFinePointer = () =>
   typeof window !== "undefined" &&
   (window.matchMedia?.("(any-pointer: fine)").matches ?? false);
-const wheelHeightMetersPerPixel = (event) => {
-  if (event.altKey && event.shiftKey) {
-    return 1;
-  }
+const wheelHeightMetersPerStep = (event) => {
+  if (event.ctrlKey) return KEYBOARD_FINE_HEIGHT_STEP_METERS;
   if (event.shiftKey) {
-    return 10;
+    return KEYBOARD_FAST_HEIGHT_STEP_METERS;
   }
-  return 100;
+  return KEYBOARD_HEIGHT_STEP_METERS;
 };
 const isEditableTarget = (target) => {
   const ElementClass = globalThis.Element;
@@ -114,6 +114,15 @@ const panoramaHeightKeyboardDirection = (event) => {
     return -1;
   }
   return 0;
+};
+const panoramaHeightKeyboardStep = (event) => {
+  if (event.ctrlKey) {
+    return KEYBOARD_FINE_HEIGHT_STEP_METERS;
+  }
+  if (event.shiftKey) {
+    return KEYBOARD_FAST_HEIGHT_STEP_METERS;
+  }
+  return KEYBOARD_HEIGHT_STEP_METERS;
 };
 const orbitRPMKeyboardDirection = (event) => {
   if (isPlusKey(event)) {
@@ -499,11 +508,12 @@ export const PanoramaWidget = memo(() => {
       if (!panorama.active) {
         return;
       }
+      const direction = Math.sign(event.deltaY);
+      if (direction === 0) {
+        return;
+      }
       setPanoramaHeightOffset(
-        heightOffsetRef.current +
-          event.deltaY *
-            wheelDeltaModeFactor(event) *
-            WHEEL_HEIGHT_METERS_PER_PIXEL,
+        heightOffsetRef.current + direction * wheelHeightMetersPerStep(event),
         true
       );
     },
@@ -550,9 +560,7 @@ export const PanoramaWidget = memo(() => {
       event.stopPropagation();
       event.stopImmediatePropagation?.();
 
-      const step = event.ctrlKey
-        ? KEYBOARD_FAST_HEIGHT_STEP_METERS
-        : KEYBOARD_HEIGHT_STEP_METERS;
+      const step = panoramaHeightKeyboardStep(event);
       setPanoramaHeightOffset(
         heightOffsetRef.current + heightDirection * step,
         true
@@ -880,7 +888,7 @@ export const PanoramaWidget = memo(() => {
       event.stopPropagation();
 
       setPanoramaHeightOffset(
-        heightOffsetRef.current + direction * wheelHeightMetersPerPixel(event),
+        heightOffsetRef.current + direction * wheelHeightMetersPerStep(event),
         true
       );
     };
@@ -1107,17 +1115,24 @@ export const PanoramaWidget = memo(() => {
               />
             </WaButton>
             {!hasSingleSlider && (
-              <WaButton
-                aria-label="Stop panorama"
-                appearance="outlined"
-                className="orbit-widget-header-button orbit-widget-stop-button lgs-widget-no-drag"
-                size="s"
-                variant="brand"
-                onClick={closePanorama}
-                onPointerDownCapture={blockWidgetDrag}
-              >
-                <WaIcon name="xmark" variant="regular" />
-              </WaButton>
+              <>
+                <OrbitInteractionHintsToggleButton
+                  id="panorama-interaction-hints-toggle-header"
+                  className="orbit-widget-header-button orbit-widget-hints-button lgs-widget-no-drag"
+                  onPointerDownCapture={blockWidgetDrag}
+                />
+                <WaButton
+                  aria-label="Stop panorama"
+                  appearance="outlined"
+                  className="orbit-widget-header-button orbit-widget-stop-button lgs-widget-no-drag"
+                  size="s"
+                  variant="brand"
+                  onClick={closePanorama}
+                  onPointerDownCapture={blockWidgetDrag}
+                >
+                  <WaIcon name="xmark" variant="regular" />
+                </WaButton>
+              </>
             )}
           </div>
 
@@ -1191,7 +1206,12 @@ export const PanoramaWidget = memo(() => {
           </div>
 
           {hasSingleSlider && (
-            <div className="orbit-widget-footer orbit-widget-footer-centered">
+            <div className="orbit-widget-footer orbit-widget-footer-centered orbit-widget-footer-stack">
+              <OrbitInteractionHintsToggleButton
+                id="panorama-interaction-hints-toggle-footer"
+                className="orbit-widget-footer-button orbit-widget-hints-button lgs-widget-no-drag"
+                onPointerDownCapture={blockWidgetDrag}
+              />
               <WaButton
                 aria-label="Stop panorama"
                 appearance="outlined"

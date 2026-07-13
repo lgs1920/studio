@@ -22,7 +22,10 @@ import {
   normalizeOrbitRPM,
   persistOrbitSettings,
 } from "@Core/OrbitSettings";
-import { OrbitInteractionHintsWidget } from "@Components/MainUI/OrbitInteractionHintsWidget";
+import {
+  OrbitInteractionHintsToggleButton,
+  OrbitInteractionHintsWidget,
+} from "@Components/MainUI/OrbitInteractionHintsWidget";
 import { Widget } from "@Components/MainUI/widgets/Widget";
 import {
   LGS_WIDGET,
@@ -133,6 +136,16 @@ const isEditableTarget = (target) => {
   return Boolean(target.closest(EDITABLE_SELECTOR));
 };
 
+const isPlusKey = (event) =>
+  event.key === "+" ||
+  event.code === "NumpadAdd" ||
+  event.key?.toLowerCase() === "plus" ||
+  (event.code === "Equal" && event.shiftKey);
+const isMinusKey = (event) =>
+  event.key === "-" ||
+  event.code === "Minus" ||
+  event.code === "NumpadSubtract" ||
+  event.key?.toLowerCase() === "minus";
 const orbitWheelHeightStep = (event) => {
   if (event.ctrlKey) {
     return ORBIT_WHEEL_FINE_HEIGHT_STEP_METERS;
@@ -147,6 +160,24 @@ const orbitKeyboardHeightDirection = (event) => {
     return 1;
   }
   if (event.key === "ArrowDown") {
+    return -1;
+  }
+  return 0;
+};
+const orbitRPMKeyboardDirection = (event) => {
+  if (isPlusKey(event)) {
+    return 1;
+  }
+  if (isMinusKey(event)) {
+    return -1;
+  }
+  return 0;
+};
+const orbitDirectionKeyboardSign = (event) => {
+  if (event.key === "ArrowRight") {
+    return 1;
+  }
+  if (event.key === "ArrowLeft") {
     return -1;
   }
   return 0;
@@ -180,6 +211,29 @@ const addOrbitHeightOffset = (rotate, delta) => {
   rotate.heightOffset = heightOffset;
   holdOrbitAngleDuringHeightAdjustment(rotate);
   lgs.scene?.requestRender?.();
+};
+const setOrbitRPMShortcut = (rotate, direction) => {
+  const rpm = normalizeOrbitRPM(Number(rotate.rpm) + direction * ORBIT_RPM_STEP);
+  if (rpm === rotate.rpm) {
+    return;
+  }
+
+  rotate.rpm = rpm;
+  void persistOrbitSettings(rotate.target, "rotation", { rpm });
+};
+const setOrbitDirectionShortcut = (rotate, sign) => {
+  const currentMagnitude = Math.abs(Number(rotate.direction));
+  const magnitude =
+    Number.isFinite(currentMagnitude) && currentMagnitude > 0
+      ? currentMagnitude
+      : 1;
+  const direction = normalizeOrbitDirection(sign * magnitude, rotate.direction);
+  if (direction === rotate.direction) {
+    return;
+  }
+
+  rotate.direction = direction;
+  void persistOrbitSettings(rotate.target, "rotation", { direction });
 };
 
 const OrbitCameraAdjustmentOverlay = memo(() => {
@@ -557,7 +611,30 @@ const OrbitCameraAdjustmentOverlay = memo(() => {
       pointerActiveRef.current = false;
     };
     const handleKeyDown = (event) => {
-      if (isEditableTarget(event.target)) {
+      if (event.altKey || event.metaKey || isEditableTarget(event.target)) {
+        return;
+      }
+
+      const rotateStore = lgs.stores.ui.mainUI.rotate;
+      const directionSign = event.ctrlKey ? 0 : orbitDirectionKeyboardSign(event);
+      if (directionSign !== 0) {
+        event.preventDefault();
+        event.stopPropagation();
+        event.stopImmediatePropagation?.();
+        if (!event.repeat) {
+          setOrbitDirectionShortcut(rotateStore, directionSign);
+        }
+        showAfterUserAction();
+        return;
+      }
+
+      const rpmDirection = event.ctrlKey ? 0 : orbitRPMKeyboardDirection(event);
+      if (rpmDirection !== 0) {
+        event.preventDefault();
+        event.stopPropagation();
+        event.stopImmediatePropagation?.();
+        setOrbitRPMShortcut(rotateStore, rpmDirection);
+        showAfterUserAction();
         return;
       }
 
@@ -567,7 +644,7 @@ const OrbitCameraAdjustmentOverlay = memo(() => {
         event.stopPropagation();
         event.stopImmediatePropagation?.();
         addOrbitHeightOffset(
-          lgs.stores.ui.mainUI.rotate,
+          rotateStore,
           direction * orbitKeyboardHeightStep(event)
         );
       }
@@ -795,7 +872,12 @@ export const OrbitWidget = memo(() => {
             </div>
           </div>
 
-          <div className="orbit-widget-footer orbit-widget-footer-centered">
+          <div className="orbit-widget-footer orbit-widget-footer-centered orbit-widget-footer-stack">
+            <OrbitInteractionHintsToggleButton
+              id="orbit-interaction-hints-toggle-orbit"
+              className="orbit-widget-footer-button orbit-widget-hints-button lgs-widget-no-drag"
+              onPointerDownCapture={blockWidgetDrag}
+            />
             <WaButton
               aria-label="Stop orbit"
               appearance="outlined"

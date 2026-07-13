@@ -218,6 +218,10 @@ html {
     justify-content: center;
 }
 
+.orbit-widget-footer-stack {
+    flex-direction: column;
+}
+
 .ion-token-prompt {
     display: flex;
     flex-direction: column;

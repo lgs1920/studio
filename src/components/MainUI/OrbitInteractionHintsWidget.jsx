@@ -20,11 +20,19 @@ import {
   SCENE_WIDGETS,
   SCENE_WIDGETS_BOARD,
 } from "@Core/constants";
-import { WaIcon } from "@web.awesome.me/webawesome-pro/dist/react";
-import { memo, useEffect, useMemo, useState } from "react";
+import {
+  WaButton,
+  WaIcon,
+  WaTooltip,
+} from "@web.awesome.me/webawesome-pro/dist/react";
+import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { useSnapshot } from "valtio";
 
 export const ORBIT_INTERACTION_HINTS_WIDGET = "orbit-interaction-hints-widget";
+const ORBIT_INTERACTION_HINTS_WIDGET_DEFAULTS = {
+  widgetsBoard: SCENE_WIDGETS_BOARD,
+  zIndex: 11850,
+};
 
 const SHORTCUT_ICONS = {
   cameraRotate: "camera-rotate",
@@ -96,6 +104,70 @@ const ArrowUpDown = () => (
         <KeyTag>{"↓"}</KeyTag>
     </>
 );
+const ArrowLeftRight = () => (
+  <>
+    <KeyTag>{"←"}</KeyTag>
+    <Or />
+    <KeyTag>{"→"}</KeyTag>
+  </>
+);
+const PlusMinus = () => (
+  <>
+    <KeyTag>{"+"}</KeyTag>
+    <Or />
+    <KeyTag>{"-"}</KeyTag>
+  </>
+);
+
+export const toggleOrbitInteractionHintsWidget = () => {
+  const widgetList = lgs.stores.ui.widget.list;
+  if (widgetList.has(ORBIT_INTERACTION_HINTS_WIDGET)) {
+    widgetList.delete(ORBIT_INTERACTION_HINTS_WIDGET);
+    return false;
+  }
+
+  widgetList.set(ORBIT_INTERACTION_HINTS_WIDGET, {
+    ...ORBIT_INTERACTION_HINTS_WIDGET_DEFAULTS,
+  });
+  return true;
+};
+
+export const OrbitInteractionHintsToggleButton = memo(
+  ({ className = "", id, onPointerDownCapture }) => {
+    const widgetList = useSnapshot(lgs.stores.ui.widget.list);
+    const visible = widgetList.has(ORBIT_INTERACTION_HINTS_WIDGET);
+    const tooltip = visible ? "Hide interaction shortcuts" : "Show interaction shortcuts";
+    const toggle = useCallback(
+      (event) => {
+        event.stopPropagation();
+        event.nativeEvent?.stopImmediatePropagation?.();
+        toggleOrbitInteractionHintsWidget();
+      },
+      []
+    );
+
+    return (
+      <>
+        <WaTooltip for={id} placement="top">
+          {tooltip}
+        </WaTooltip>
+        <WaButton
+          id={id}
+          aria-label={tooltip}
+          aria-pressed={visible}
+          appearance="outlined"
+          className={className}
+          size="s"
+          variant="brand"
+          onClick={toggle}
+          onPointerDownCapture={onPointerDownCapture}
+        >
+          <WaIcon name="circle-info" variant="regular" />
+        </WaButton>
+      </>
+    );
+  }
+);
 
 export const OrbitInteractionHintsWidget = memo(() => {
   const rotate = useSnapshot(lgs.stores.ui.mainUI.rotate);
@@ -117,20 +189,6 @@ export const OrbitInteractionHintsWidget = memo(() => {
 
     return () => mediaQuery.removeEventListener("change", updatePointerMode);
   }, []);
-
-  useEffect(() => {
-    if (
-      !active ||
-      lgs.stores.ui.widget.list.has(ORBIT_INTERACTION_HINTS_WIDGET)
-    ) {
-      return;
-    }
-
-    lgs.stores.ui.widget.list.set(ORBIT_INTERACTION_HINTS_WIDGET, {
-      widgetsBoard: SCENE_WIDGETS_BOARD,
-      zIndex: 11850,
-    });
-  }, [active]);
 
   const config = useMemo(
     () => ({
@@ -172,7 +230,7 @@ export const OrbitInteractionHintsWidget = memo(() => {
     [appleOS]
   );
   const shiftKey = useMemo(() => <KeyTag>{"Shift"}</KeyTag>, []);
-    const ctrlKey = useMemo(() => <KeyTag>{'Ctrl'}</KeyTag>, [])
+  const ctrlKey = useMemo(() => <KeyTag>{"Ctrl"}</KeyTag>, []);
   const fastHeightGesture = useMemo(
     () => (
       <Gesture
@@ -186,32 +244,42 @@ export const OrbitInteractionHintsWidget = memo(() => {
     () => (
       <Gesture
         icon={SHORTCUT_ICONS.scrollwheel}
-        label={
-          appleOS ? "Option + Shift + trackpad scroll" : "Alt + Shift + wheel"
-        }
+        label={appleOS ? "Ctrl + trackpad scroll" : "Ctrl + wheel"}
       />
     ),
     [appleOS]
   );
-    const orbitFineHeightGesture = useMemo(
-        () => (
-            <Gesture
-                icon={SHORTCUT_ICONS.scrollwheel}
-                label={appleOS ? 'Ctrl + trackpad scroll' : 'Ctrl + wheel'}
-            />
-        ),
-        [appleOS],
-    )
-    const panoramaFinePointerShortcuts = (
+  const panoramaFinePointerShortcuts = (
     <>
       <Shortcut
         gesture={
           <Gesture icon={SHORTCUT_ICONS.scrollwheel} label="Wheel / trackpad" />
         }
-        action="Height"
+        action="Height (+100 m)"
       />
       <Shortcut gesture={fastHeightGesture} action="Height (+10 m)" />
       <Shortcut gesture={fineHeightGesture} action="Height (+1 m)" />
+      <Shortcut gesture={<ArrowUpDown />} action="Height (+100 m)" />
+      <Shortcut
+        gesture={
+          <>
+            {shiftKey}
+            <Plus />
+            <ArrowUpDown />
+          </>
+        }
+        action="Height (+10 m)"
+      />
+      <Shortcut
+        gesture={
+          <>
+            {ctrlKey}
+            <Plus />
+            <ArrowUpDown />
+          </>
+        }
+        action="Height (+1 m)"
+      />
       <Shortcut
         gesture={
           <>
@@ -236,42 +304,44 @@ export const OrbitInteractionHintsWidget = memo(() => {
       <Shortcut gesture={<LeftClickDrag />} action="Angle" />
     </>
   );
-    const orbitFinePointerShortcuts = (
-        <>
-            <Shortcut gesture={<LeftClickDrag/>} action="Angle"/>
+  const orbitFinePointerShortcuts = (
+    <>
+      <Shortcut gesture={<LeftClickDrag />} action="Angle" />
 
-            <Shortcut
-                gesture={
-                    <Gesture icon={SHORTCUT_ICONS.scrollwheel} label="Wheel / trackpad"/>
-                }
-                action="Height"
-            />
-            <Shortcut gesture={fastHeightGesture} action="Height (+10 m)"/>
-            <Shortcut gesture={orbitFineHeightGesture} action="Height (+1 m)"/>
-            <Shortcut gesture={<ArrowUpDown/>} action="Height (+100 m)"/>
-            <Shortcut
-                gesture={
-                    <>
-                        {shiftKey}
-                        <Plus/>
-                        <ArrowUpDown/>
-                    </>
-                }
-                action="Height (+10 m)"
-            />
-            <Shortcut
-                gesture={
-                    <>
-                        {ctrlKey}
-                        <Plus/>
-                        <ArrowUpDown/>
-                    </>
-                }
-                action="Height (+1 m)"
-            />
-            <Shortcut gesture={<RightClickDrag/>} action="Height"/>
-        </>
-    )
+      <Shortcut
+        gesture={
+          <Gesture icon={SHORTCUT_ICONS.scrollwheel} label="Wheel / trackpad" />
+        }
+        action="Height"
+      />
+      <Shortcut gesture={fastHeightGesture} action="Height (+10 m)" />
+      <Shortcut gesture={fineHeightGesture} action="Height (+1 m)" />
+      <Shortcut gesture={<ArrowUpDown />} action="Height (+100 m)" />
+      <Shortcut
+        gesture={
+          <>
+            {shiftKey}
+            <Plus />
+            <ArrowUpDown />
+          </>
+        }
+        action="Height (+10 m)"
+      />
+      <Shortcut
+        gesture={
+          <>
+            {ctrlKey}
+            <Plus />
+            <ArrowUpDown />
+          </>
+        }
+        action="Height (+1 m)"
+      />
+      <Shortcut gesture={<RightClickDrag />} action="Height" />
+      <Shortcut gesture={<PlusMinus />} action="RPM (+/-0.1)" />
+      <Shortcut gesture={<ArrowLeftRight />} action="Direction" />
+    </>
+  );
 
   if (!active || !widgetList.has(ORBIT_INTERACTION_HINTS_WIDGET)) {
     return null;

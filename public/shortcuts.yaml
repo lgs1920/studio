@@ -217,7 +217,7 @@
   reference: true
   scope: Map objects
 - action: Adjust angle
-  description: Use Cesium default rotate, tilt, and look controls while rotation mode is active.
+  description: Use Cesium default rotate, tilt, and look controls while Orbit is active.
   id: rotation-angle
   keys:
     - Left drag
@@ -227,9 +227,9 @@
     - Shift+Left drag
   platform: macOS / Windows / Linux
   reference: true
-  scope: Rotation mode
+  scope: Orbit
 - action: Adjust height
-  description: Use Cesium default zoom controls while rotation mode is active.
+  description: Use Cesium default zoom controls while Orbit is active.
   id: rotation-height
   keys:
     - Right drag
@@ -237,47 +237,47 @@
     - Pinch
   platform: macOS / Windows / Linux
   reference: true
-  scope: Rotation mode
+  scope: Orbit
 - action: Adjust height faster
-  description: Change the orbit camera height by 10 m while rotation mode is active.
+  description: Change the orbit camera height by 10 m while Orbit is active.
   id: rotation-height-wheel-fast
   keys:
     - Shift+Wheel
   platform: macOS / Windows / Linux
   reference: true
-  scope: Rotation mode
+  scope: Orbit
 - action: Adjust height precisely
-  description: Change the orbit camera height by 1 m while rotation mode is active.
+  description: Change the orbit camera height by 1 m while Orbit is active.
   id: rotation-height-wheel-fine
   keys:
     - Ctrl+Wheel
   platform: macOS / Windows / Linux
   reference: true
-  scope: Rotation mode
+  scope: Orbit
 - action: Adjust height
-  description: Change the orbit camera height by 100 m while rotation mode is active.
+  description: Change the orbit camera height by 100 m while Orbit is active.
   id: rotation-height-keyboard
   keys:
     - ArrowUp
     - ArrowDown
   reference: true
-  scope: Rotation mode
+  scope: Orbit
 - action: Adjust height faster
-  description: Change the orbit camera height by 10 m while rotation mode is active.
+  description: Change the orbit camera height by 10 m while Orbit is active.
   id: rotation-height-keyboard-shift
   keys:
     - Shift+ArrowUp
     - Shift+ArrowDown
   reference: true
-  scope: Rotation mode
+  scope: Orbit
 - action: Adjust height precisely
-  description: Change the orbit camera height by 1 m while rotation mode is active.
+  description: Change the orbit camera height by 1 m while Orbit is active.
   id: rotation-height-keyboard-ctrl
   keys:
     - Ctrl+ArrowUp
     - Ctrl+ArrowDown
   reference: true
-  scope: Rotation mode
+  scope: Orbit
 - action: Adjust RPM
   description: Increase or decrease rotation speed by 0.1 RPM.
   id: rotation-rpm-keyboard
@@ -285,7 +285,7 @@
     - Plus
     - Minus
   reference: true
-  scope: Rotation mode
+  scope: Orbit
 - action: Adjust direction
   description: Set clockwise or counterclockwise rotation.
   id: rotation-direction-keyboard
@@ -293,7 +293,7 @@
     - ArrowLeft
     - ArrowRight
   reference: true
-  scope: Rotation mode
+  scope: Orbit
 - action: Adjust angle
   description: Drag on the globe while panorama mode is active.
   id: panorama-angle
@@ -307,9 +307,6 @@
   id: panorama-height-macos
   keys:
     - Trackpad scroll
-    - Option+Left drag
-    - Shift+Left drag
-    - Right drag
   platform: macOS
   reference: true
   scope: Panorama mode
@@ -318,15 +315,12 @@
   id: panorama-height-windows-linux
   keys:
     - Wheel
-    - Alt+Left drag
-    - Shift+Left drag
-    - Right drag
   platform: Windows / Linux
   reference: true
   scope: Panorama mode
 - action: Adjust height faster
   description: Change the panorama camera altitude by 10 m.
-  id: panorama-height-keyboard-fast-macos
+  id: panorama-height-wheel-shift-macos
   keys:
     - Shift+Trackpad scroll
   platform: macOS
@@ -334,7 +328,7 @@
   scope: Panorama mode
 - action: Adjust height faster
   description: Change the panorama camera altitude by 10 m.
-  id: panorama-height-keyboard-fast-windows-linux
+  id: panorama-height-wheel-shift-windows-linux
   keys:
     - Shift+Wheel
   platform: Windows / Linux
@@ -342,22 +336,42 @@
   scope: Panorama mode
 - action: Adjust height precisely
   description: Change the panorama camera altitude by 1 m.
-  id: panorama-height-keyboard-fine-macos
+  id: panorama-height-wheel-ctrl-macos
   keys:
-    - Option+Shift+Trackpad scroll
+    - Ctrl+Trackpad scroll
   platform: macOS
   reference: true
   scope: Panorama mode
 - action: Adjust height precisely
   description: Change the panorama camera altitude by 1 m.
-  id: panorama-height-keyboard-fine-windows-linux
+  id: panorama-height-wheel-ctrl-windows-linux
   keys:
-    - Alt+Shift+Wheel
+    - Ctrl+Wheel
+  platform: Windows / Linux
+  reference: true
+  scope: Panorama mode
+- action: Adjust height by drag
+  description: Drag to change the panorama camera altitude continuously.
+  id: panorama-height-drag-macos
+  keys:
+    - Option+Left drag
+    - Shift+Left drag
+    - Right drag
+  platform: macOS
+  reference: true
+  scope: Panorama mode
+- action: Adjust height by drag
+  description: Drag to change the panorama camera altitude continuously.
+  id: panorama-height-drag-windows-linux
+  keys:
+    - Alt+Left drag
+    - Shift+Left drag
+    - Right drag
   platform: Windows / Linux
   reference: true
   scope: Panorama mode
 - action: Adjust height
-  description: Change the panorama camera altitude by 2 m.
+  description: Change the panorama camera altitude by 100 m.
   id: panorama-height-keyboard
   keys:
     - ArrowUp
@@ -366,7 +380,15 @@
   scope: Panorama mode
 - action: Adjust height faster
   description: Change the panorama camera altitude by 10 m.
-  id: panorama-height-keyboard-fast
+  id: panorama-height-keyboard-shift
+  keys:
+    - Shift+ArrowUp
+    - Shift+ArrowDown
+  reference: true
+  scope: Panorama mode
+- action: Adjust height precisely
+  description: Change the panorama camera altitude by 1 m.
+  id: panorama-height-keyboard-ctrl
   keys:
     - Ctrl+ArrowUp
     - Ctrl+ArrowDown

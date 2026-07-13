@@ -2,19 +2,19 @@
  *
  * This file is part of the LGS1920/studio project.
  *
- * File: orbit-widget-interactions.test.jsx
+ * File: panorama-widget-interactions.test.jsx
  *
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-07-11
- * Last modified: 2026-07-11
+ * Created on: 2026-07-13
+ * Last modified: 2026-07-13
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { cleanup, fireEvent, render, waitFor } from '@testing-library/react'
+import { cleanup, fireEvent, render } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { proxy } from 'valtio'
 import { proxyMap } from 'valtio/utils'
@@ -65,6 +65,7 @@ vi.mock('cesium', async importOriginal => {
         Math: {
             ...actual.Math,
             toDegrees: radians => radians * 180 / globalThis.Math.PI,
+            toRadians: degrees => degrees * globalThis.Math.PI / 180,
         },
     }
 })
@@ -91,10 +92,9 @@ const makeMatchMedia = matches => vi.fn(() => ({
     removeEventListener: vi.fn(),
 }))
 
-const setupOrbitGlobals = ({showMovementWidget = false} = {}) => {
+const setupPanoramaGlobals = () => {
     const canvas = document.createElement('canvas')
     document.body.appendChild(canvas)
-    document.body.classList.add('lgs-app-visible')
 
     globalThis.lgs = {
         camera: {
@@ -106,21 +106,30 @@ const setupOrbitGlobals = ({showMovementWidget = false} = {}) => {
                 latitude:  2,
                 height:    1200,
             },
+            changed: {
+                addEventListener: vi.fn(() => vi.fn()),
+            },
+            flyTo:   vi.fn(),
+            setView: vi.fn(),
         },
-        canvas,
         gutter: {
             s: '8px',
         },
         scene: {
             requestRender: vi.fn(),
             screenSpaceCameraController: {
-                enableZoom: true,
+                enableInputs:    true,
+                enableLook:      true,
+                enableRotate:    true,
+                enableTilt:      true,
+                enableTranslate: true,
+                enableZoom:      true,
             },
         },
         settings: {
             ui: {
                 camera: proxy({
-                    showMovementWidget,
+                    showMovementWidget: false,
                 }),
                 menu: proxy({
                     toolBar: {
@@ -131,6 +140,13 @@ const setupOrbitGlobals = ({showMovementWidget = false} = {}) => {
             unitSystem: proxy({}),
         },
         stores: {
+            main: {
+                components: {
+                    pois: {
+                        list: new Map(),
+                    },
+                },
+            },
             ui: {
                 device: proxy({
                     mobile: false,
@@ -140,21 +156,17 @@ const setupOrbitGlobals = ({showMovementWidget = false} = {}) => {
                         running: false,
                     }),
                     panorama: proxy({
-                        active:  false,
-                        visible: true,
+                        active:       true,
+                        direction:    1,
+                        heading:      0,
+                        heightOffset: 100,
+                        pitch:        -12,
+                        rpm:          1,
+                        target:       null,
+                        visible:      true,
                     }),
                     rotate: proxy({
-                        direction:    1,
-                        heightOffset: 0,
-                        rpm:          1,
-                        running:      true,
-                        target:       {
-                            element:   'map-point',
-                            longitude: 1,
-                            latitude:  2,
-                            height:    120,
-                        },
-                        visible: true,
+                        running: false,
                     }),
                 },
                 widget: proxy({
@@ -169,9 +181,19 @@ const setupOrbitGlobals = ({showMovementWidget = false} = {}) => {
     }
 
     globalThis.__ = {
+        device: {
+            isMobile: false,
+        },
         ui: {
+            cameraManager: {
+                beginFlight:                    vi.fn(),
+                endFlight:                      vi.fn(),
+                optimizeContinuousCameraRender: vi.fn(),
+                raiseUpdateEvent:               vi.fn(() => undefined),
+                restoreContinuousCameraRender:  vi.fn(),
+            },
             poiManager: {
-                stopRotationAndSync: vi.fn(),
+                updatePOI: vi.fn(),
             },
             widgetManager: {
                 getWidgetConfig: vi.fn(() => ({})),
@@ -183,44 +205,45 @@ const setupOrbitGlobals = ({showMovementWidget = false} = {}) => {
     return {canvas}
 }
 
-describe('OrbitWidget interactions', () => {
+describe('PanoramaWidget interactions', () => {
     beforeEach(() => {
         vi.resetModules()
         cleanup()
         window.matchMedia = makeMatchMedia(true)
-        vi.spyOn(window, 'requestAnimationFrame').mockImplementation(callback => (
-            window.setTimeout(() => callback(performance.now()), 0)
-        ))
-        vi.spyOn(window, 'cancelAnimationFrame').mockImplementation(id => window.clearTimeout(id))
         vi.spyOn(console, 'debug').mockImplementation(() => undefined)
     })
 
     afterEach(() => {
         cleanup()
-        document.body.classList.remove('lgs-app-visible')
         globalThis.lgs = undefined
         globalThis.__ = undefined
         vi.restoreAllMocks()
     })
 
-    it('keeps Cesium zoom enabled and lets wheel adjust height through Cesium', async () => {
-        const {canvas} = setupOrbitGlobals()
-        const {OrbitWidget} = await import('@Components/MainUI/OrbitWidget')
+    it('maps wheel events to panorama height steps', async () => {
+        const {canvas} = setupPanoramaGlobals()
+        const {PanoramaWidget} = await import('@Components/MainUI/PanoramaWidget')
 
-        render(<OrbitWidget/>)
+        render(<PanoramaWidget/>)
 
-        fireEvent.wheel(canvas, {deltaY: 1})
-        expect(lgs.scene.screenSpaceCameraController.enableZoom).toBe(true)
-        expect(lgs.stores.ui.mainUI.rotate.heightOffset).toBe(0)
-    })
+        const wheel = new WheelEvent('wheel', {
+            bubbles:    true,
+            cancelable: true,
+            deltaY:     1,
+        })
+        canvas.dispatchEvent(wheel)
+        expect(wheel.defaultPrevented).toBe(true)
+        expect(lgs.stores.ui.mainUI.panorama.heightOffset).toBe(200)
 
-    it('maps modified wheel events to orbit height steps', async () => {
-        const {canvas} = setupOrbitGlobals()
-        const {OrbitWidget} = await import('@Components/MainUI/OrbitWidget')
+        const wheelReverse = new WheelEvent('wheel', {
+            bubbles:    true,
+            cancelable: true,
+            deltaY:     -1,
+        })
+        canvas.dispatchEvent(wheelReverse)
+        expect(wheelReverse.defaultPrevented).toBe(true)
+        expect(lgs.stores.ui.mainUI.panorama.heightOffset).toBe(100)
 
-        render(<OrbitWidget/>)
-
-        const beforeWheel = performance.now()
         const shiftWheel = new WheelEvent('wheel', {
             bubbles:    true,
             cancelable: true,
@@ -228,10 +251,8 @@ describe('OrbitWidget interactions', () => {
             shiftKey:   true,
         })
         canvas.dispatchEvent(shiftWheel)
-
         expect(shiftWheel.defaultPrevented).toBe(true)
-        expect(lgs.stores.ui.mainUI.rotate.heightOffset).toBe(10)
-        expect(lgs.stores.ui.mainUI.rotate.heightAdjustmentUntil).toBeGreaterThan(beforeWheel)
+        expect(lgs.stores.ui.mainUI.panorama.heightOffset).toBe(110)
 
         const shiftWheelReverse = new WheelEvent('wheel', {
             bubbles:    true,
@@ -240,9 +261,8 @@ describe('OrbitWidget interactions', () => {
             shiftKey:   true,
         })
         canvas.dispatchEvent(shiftWheelReverse)
-
         expect(shiftWheelReverse.defaultPrevented).toBe(true)
-        expect(lgs.stores.ui.mainUI.rotate.heightOffset).toBe(0)
+        expect(lgs.stores.ui.mainUI.panorama.heightOffset).toBe(100)
 
         const ctrlWheel = new WheelEvent('wheel', {
             bubbles:    true,
@@ -251,9 +271,8 @@ describe('OrbitWidget interactions', () => {
             deltaY:     1,
         })
         canvas.dispatchEvent(ctrlWheel)
-
         expect(ctrlWheel.defaultPrevented).toBe(true)
-        expect(lgs.stores.ui.mainUI.rotate.heightOffset).toBe(1)
+        expect(lgs.stores.ui.mainUI.panorama.heightOffset).toBe(101)
 
         const ctrlWheelReverse = new WheelEvent('wheel', {
             bubbles:    true,
@@ -262,57 +281,41 @@ describe('OrbitWidget interactions', () => {
             deltaY:     -1,
         })
         canvas.dispatchEvent(ctrlWheelReverse)
-
         expect(ctrlWheelReverse.defaultPrevented).toBe(true)
-        expect(lgs.stores.ui.mainUI.rotate.heightOffset).toBe(0)
+        expect(lgs.stores.ui.mainUI.panorama.heightOffset).toBe(100)
     })
 
-    it('lets Cesium wheel events reach existing canvas handlers', async () => {
-        const {canvas} = setupOrbitGlobals()
-        let wheelReachedCesiumHandler = false
-        canvas.addEventListener('wheel', event => {
-            if (!event.defaultPrevented) {
-                wheelReachedCesiumHandler = true
-            }
-        }, {capture: true})
-        const {OrbitWidget} = await import('@Components/MainUI/OrbitWidget')
+    it('maps adjustment overlay wheel events to panorama height steps', async () => {
+        setupPanoramaGlobals()
+        const {PanoramaWidget} = await import('@Components/MainUI/PanoramaWidget')
 
-        render(<OrbitWidget/>)
-        canvas.dispatchEvent(new WheelEvent('wheel', {
-            bubbles:    true,
-            cancelable: true,
-            deltaY:     1,
-        }))
+        const {container} = render(<PanoramaWidget/>)
+        const overlay = container.querySelector('.panorama-adjustment-overlay')
 
-        expect(wheelReachedCesiumHandler).toBe(true)
-        expect(lgs.stores.ui.mainUI.rotate.heightOffset).toBe(0)
+        fireEvent.wheel(overlay, {deltaY: 1})
+        expect(lgs.stores.ui.mainUI.panorama.heightOffset).toBe(200)
+
+        fireEvent.wheel(overlay, {deltaY: -1})
+        expect(lgs.stores.ui.mainUI.panorama.heightOffset).toBe(100)
+
+        fireEvent.wheel(overlay, {deltaY: 1, shiftKey: true})
+        expect(lgs.stores.ui.mainUI.panorama.heightOffset).toBe(110)
+
+        fireEvent.wheel(overlay, {deltaY: -1, shiftKey: true})
+        expect(lgs.stores.ui.mainUI.panorama.heightOffset).toBe(100)
+
+        fireEvent.wheel(overlay, {ctrlKey: true, deltaY: 1})
+        expect(lgs.stores.ui.mainUI.panorama.heightOffset).toBe(101)
+
+        fireEvent.wheel(overlay, {ctrlKey: true, deltaY: -1})
+        expect(lgs.stores.ui.mainUI.panorama.heightOffset).toBe(100)
     })
 
-    it('lets Cesium pointer gestures handle orbit height and angle', async () => {
-        const {canvas} = setupOrbitGlobals()
-        const {OrbitWidget} = await import('@Components/MainUI/OrbitWidget')
+    it('maps arrow keys to panorama height steps', async () => {
+        setupPanoramaGlobals()
+        const {PanoramaWidget} = await import('@Components/MainUI/PanoramaWidget')
 
-        render(<OrbitWidget/>)
-
-        fireEvent.pointerDown(canvas, {button: 2, clientY: 100, pointerType: 'mouse'})
-        fireEvent.pointerMove(document, {clientY: 90, pointerType: 'mouse'})
-        fireEvent.pointerUp(document, {clientY: 90, pointerType: 'mouse'})
-
-        fireEvent.pointerDown(canvas, {altKey: true, button: 0, clientY: 100, pointerType: 'mouse'})
-        fireEvent.pointerMove(document, {clientY: 80, pointerType: 'mouse'})
-        fireEvent.pointerUp(document, {clientY: 80, pointerType: 'mouse'})
-
-        fireEvent.pointerDown(canvas, {button: 0, clientY: 100, pointerType: 'mouse', shiftKey: true})
-        fireEvent.pointerMove(document, {clientY: 110, pointerType: 'mouse'})
-        fireEvent.pointerUp(document, {clientY: 110, pointerType: 'mouse'})
-        expect(lgs.stores.ui.mainUI.rotate.heightOffset).toBe(0)
-    })
-
-    it('maps arrow keys to orbit height steps', async () => {
-        setupOrbitGlobals()
-        const {OrbitWidget} = await import('@Components/MainUI/OrbitWidget')
-
-        render(<OrbitWidget/>)
+        render(<PanoramaWidget/>)
 
         const arrowUp = new KeyboardEvent('keydown', {
             bubbles:    true,
@@ -321,7 +324,7 @@ describe('OrbitWidget interactions', () => {
         })
         document.dispatchEvent(arrowUp)
         expect(arrowUp.defaultPrevented).toBe(true)
-        expect(lgs.stores.ui.mainUI.rotate.heightOffset).toBe(100)
+        expect(lgs.stores.ui.mainUI.panorama.heightOffset).toBe(200)
 
         const arrowDown = new KeyboardEvent('keydown', {
             bubbles:    true,
@@ -330,7 +333,7 @@ describe('OrbitWidget interactions', () => {
         })
         document.dispatchEvent(arrowDown)
         expect(arrowDown.defaultPrevented).toBe(true)
-        expect(lgs.stores.ui.mainUI.rotate.heightOffset).toBe(0)
+        expect(lgs.stores.ui.mainUI.panorama.heightOffset).toBe(100)
 
         const shiftArrowUp = new KeyboardEvent('keydown', {
             bubbles:    true,
@@ -340,7 +343,7 @@ describe('OrbitWidget interactions', () => {
         })
         document.dispatchEvent(shiftArrowUp)
         expect(shiftArrowUp.defaultPrevented).toBe(true)
-        expect(lgs.stores.ui.mainUI.rotate.heightOffset).toBe(10)
+        expect(lgs.stores.ui.mainUI.panorama.heightOffset).toBe(110)
 
         const shiftArrowDown = new KeyboardEvent('keydown', {
             bubbles:    true,
@@ -350,7 +353,7 @@ describe('OrbitWidget interactions', () => {
         })
         document.dispatchEvent(shiftArrowDown)
         expect(shiftArrowDown.defaultPrevented).toBe(true)
-        expect(lgs.stores.ui.mainUI.rotate.heightOffset).toBe(0)
+        expect(lgs.stores.ui.mainUI.panorama.heightOffset).toBe(100)
 
         const ctrlArrowUp = new KeyboardEvent('keydown', {
             bubbles:    true,
@@ -360,7 +363,7 @@ describe('OrbitWidget interactions', () => {
         })
         document.dispatchEvent(ctrlArrowUp)
         expect(ctrlArrowUp.defaultPrevented).toBe(true)
-        expect(lgs.stores.ui.mainUI.rotate.heightOffset).toBe(1)
+        expect(lgs.stores.ui.mainUI.panorama.heightOffset).toBe(101)
 
         const ctrlArrowDown = new KeyboardEvent('keydown', {
             bubbles:    true,
@@ -370,97 +373,23 @@ describe('OrbitWidget interactions', () => {
         })
         document.dispatchEvent(ctrlArrowDown)
         expect(ctrlArrowDown.defaultPrevented).toBe(true)
-        expect(lgs.stores.ui.mainUI.rotate.heightOffset).toBe(0)
+        expect(lgs.stores.ui.mainUI.panorama.heightOffset).toBe(100)
     })
 
-    it('maps plus, minus, and horizontal arrows to orbit rpm and direction', async () => {
-        setupOrbitGlobals()
-        const {OrbitWidget} = await import('@Components/MainUI/OrbitWidget')
+    it('toggles interaction hints from panorama', async () => {
+        setupPanoramaGlobals()
+        const {PanoramaWidget} = await import('@Components/MainUI/PanoramaWidget')
 
-        render(<OrbitWidget/>)
-
-        const plus = new KeyboardEvent('keydown', {
-            bubbles:    true,
-            cancelable: true,
-            key:        '+',
-        })
-        document.dispatchEvent(plus)
-        expect(plus.defaultPrevented).toBe(true)
-        expect(lgs.stores.ui.mainUI.rotate.rpm).toBe(1.1)
-
-        const minus = new KeyboardEvent('keydown', {
-            bubbles:    true,
-            cancelable: true,
-            key:        '-',
-        })
-        document.dispatchEvent(minus)
-        expect(minus.defaultPrevented).toBe(true)
-        expect(lgs.stores.ui.mainUI.rotate.rpm).toBe(1)
-
-        const arrowLeft = new KeyboardEvent('keydown', {
-            bubbles:    true,
-            cancelable: true,
-            key:        'ArrowLeft',
-        })
-        document.dispatchEvent(arrowLeft)
-        expect(arrowLeft.defaultPrevented).toBe(true)
-        expect(lgs.stores.ui.mainUI.rotate.direction).toBe(-1)
-
-        const arrowRight = new KeyboardEvent('keydown', {
-            bubbles:    true,
-            cancelable: true,
-            key:        'ArrowRight',
-        })
-        document.dispatchEvent(arrowRight)
-        expect(arrowRight.defaultPrevented).toBe(true)
-        expect(lgs.stores.ui.mainUI.rotate.direction).toBe(1)
-
-        const ctrlPlus = new KeyboardEvent('keydown', {
-            bubbles:    true,
-            cancelable: true,
-            ctrlKey:    true,
-            key:        '+',
-        })
-        document.dispatchEvent(ctrlPlus)
-        expect(ctrlPlus.defaultPrevented).toBe(false)
-        expect(lgs.stores.ui.mainUI.rotate.rpm).toBe(1)
-    })
-
-    it('keeps interaction hints hidden by default and toggles them from orbit', async () => {
-        setupOrbitGlobals()
-        const {OrbitWidget} = await import('@Components/MainUI/OrbitWidget')
-
-        const view = render(<OrbitWidget/>)
-        const toggle = view.container.querySelector('#orbit-interaction-hints-toggle-orbit')
+        const {container} = render(<PanoramaWidget/>)
+        const toggle = container.querySelector('#panorama-interaction-hints-toggle-footer')
 
         expect(toggle).not.toBeNull()
         expect(lgs.stores.ui.widget.list.has('orbit-interaction-hints-widget')).toBe(false)
-        expect(view.container.querySelector('.orbit-interaction-hints')).toBeNull()
 
         fireEvent.click(toggle)
         expect(lgs.stores.ui.widget.list.has('orbit-interaction-hints-widget')).toBe(true)
-        await waitFor(() => {
-            expect(view.container.querySelector('.orbit-interaction-hints')).not.toBeNull()
-        })
 
         fireEvent.click(toggle)
         expect(lgs.stores.ui.widget.list.has('orbit-interaction-hints-widget')).toBe(false)
-        await waitFor(() => {
-            expect(view.container.querySelector('.orbit-interaction-hints')).toBeNull()
-        })
-    })
-
-    it('shows the height and angle overlay during orbit adjustments even when the global camera movement widget is disabled', async () => {
-        const {canvas} = setupOrbitGlobals({showMovementWidget: false})
-        const {OrbitWidget} = await import('@Components/MainUI/OrbitWidget')
-
-        const view = render(<OrbitWidget/>)
-        fireEvent.wheel(canvas, {deltaY: 1})
-
-        await waitFor(() => {
-            expect(
-                view.container.querySelector('.panorama-adjustment-widget-shell.adjustment-visible'),
-            ).not.toBeNull()
-        })
     })
 })
