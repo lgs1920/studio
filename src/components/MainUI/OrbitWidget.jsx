@@ -53,8 +53,6 @@ const USER_CAMERA_ACTION_WINDOW = 1000;
 const INITIAL_OVERLAY_RETRY_DELAY = 100;
 const INITIAL_OVERLAY_RETRY_LIMIT = 40;
 const POINTER_HEIGHT_METERS_PER_PIXEL = 10;
-const KEYBOARD_HEIGHT_STEP_METERS = 2;
-const KEYBOARD_FAST_HEIGHT_STEP_METERS = 10;
 const ORBIT_HEIGHT_ADJUSTMENT_ANGLE_HOLD_MS = 400;
 const ORBIT_CAMERA_ADJUSTMENT_EVENT = "lgs:orbit-camera-adjustment";
 const EDITABLE_SELECTOR = [
@@ -134,43 +132,6 @@ const isEditableTarget = (target) => {
   return Boolean(target.closest(EDITABLE_SELECTOR));
 };
 
-const isPlusKey = (event) =>
-  event.key === "+" ||
-  event.code === "NumpadAdd" ||
-  event.key?.toLowerCase() === "plus" ||
-  (event.code === "Equal" && event.shiftKey);
-const isMinusKey = (event) =>
-  event.key === "-" ||
-  event.code === "Minus" ||
-  event.code === "NumpadSubtract" ||
-  event.key?.toLowerCase() === "minus";
-const orbitRPMKeyboardDirection = (event) => {
-  if (isPlusKey(event)) {
-    return 1;
-  }
-  if (isMinusKey(event)) {
-    return -1;
-  }
-  return 0;
-};
-const orbitDirectionKeyboardSign = (event) => {
-  if (event.key === "ArrowRight") {
-    return 1;
-  }
-  if (event.key === "ArrowLeft") {
-    return -1;
-  }
-  return 0;
-};
-const orbitHeightKeyboardDirection = (event) => {
-  if (event.key === "ArrowUp") {
-    return 1;
-  }
-  if (event.key === "ArrowDown") {
-    return -1;
-  }
-  return 0;
-};
 const orbitWheelHeightMetersPerStep = (event) => {
   if (event.altKey && event.shiftKey) {
     return 1;
@@ -907,64 +868,6 @@ export const OrbitWidget = memo(() => {
       stopDragListeners();
     };
   }, [$rotate, panorama.active, rotate.running, rotate.target]);
-
-  useEffect(() => {
-    if (!rotate.running || panorama.active) {
-      return;
-    }
-
-    const handleKeyDown = (event) => {
-      if (event.altKey || event.metaKey || isEditableTarget(event.target)) {
-        return;
-      }
-
-      const directionSign = event.ctrlKey
-        ? 0
-        : orbitDirectionKeyboardSign(event);
-      if (directionSign !== 0) {
-        event.preventDefault();
-        event.stopPropagation();
-        event.stopImmediatePropagation?.();
-        if (!event.repeat) {
-          setOrbitDirectionSign(directionSign, true);
-        }
-        return;
-      }
-
-      const rpmDirection = event.ctrlKey ? 0 : orbitRPMKeyboardDirection(event);
-      if (rpmDirection !== 0) {
-        event.preventDefault();
-        event.stopPropagation();
-        event.stopImmediatePropagation?.();
-        setOrbitRPM($rotate.rpm + rpmDirection * ORBIT_RPM_STEP, true);
-        return;
-      }
-
-      const heightDirection = orbitHeightKeyboardDirection(event);
-      if (heightDirection === 0) {
-        return;
-      }
-      event.preventDefault();
-      event.stopPropagation();
-      event.stopImmediatePropagation?.();
-
-      const step = event.ctrlKey
-        ? KEYBOARD_FAST_HEIGHT_STEP_METERS
-        : KEYBOARD_HEIGHT_STEP_METERS;
-      addOrbitHeightOffset($rotate, heightDirection * step);
-    };
-
-    window.addEventListener("keydown", handleKeyDown, { capture: true });
-
-    return () =>
-      window.removeEventListener("keydown", handleKeyDown, { capture: true });
-  }, [
-    $rotate,
-    panorama.active,
-    rotate.running,
-    setOrbitDirectionSign,
-    setOrbitRPM,
-  ]);
 
   const directionIsAntiClockwise = rotate.direction > 0;
   const directionTooltip = directionIsAntiClockwise

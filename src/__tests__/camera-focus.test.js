@@ -118,7 +118,7 @@ describe('camera focus defaults', () => {
         expect(Math.round(M.toDegrees(flyOptions.offset.pitch))).toBe(DEFAULT_2D_FOCUS_PITCH)
     })
 
-    it('recenters the focus target with a zero-duration flyTo before starting journey rotation under the snap distance', async () => {
+    it('starts same-target rotation immediately without a zero-duration flyTo', async () => {
         const journey = makeJourney()
         installFocusGlobals(journey)
 
@@ -133,17 +133,13 @@ describe('camera focus defaults', () => {
             }),
         })
 
-        expect(lgs.camera.flyToBoundingSphere).toHaveBeenCalledTimes(1)
-        expect(lgs.camera.flyToBoundingSphere.mock.calls[0][1].duration).toBe(0)
-        expect(__.ui.cameraManager.beginFlight).toHaveBeenCalledTimes(1)
-        expect(__.ui.cameraManager.rotateAround).not.toHaveBeenCalled()
-
-        await lgs.camera.flyToBoundingSphere.mock.calls[0][1].complete()
-
+        expect(lgs.camera.flyToBoundingSphere).not.toHaveBeenCalled()
+        expect(__.ui.cameraManager.beginFlight).not.toHaveBeenCalled()
         expect(__.ui.cameraManager.rotateAround).toHaveBeenCalledTimes(1)
         expect(__.ui.cameraManager.rotateAround.mock.calls[0][0].longitude).toBe(0)
         expect(__.ui.cameraManager.rotateAround.mock.calls[0][0].latitude).toBe(0)
-        expect(__.ui.cameraManager.rotateAround.mock.calls[0][1].preserveView).toBe(false)
+        expect(__.ui.cameraManager.rotateAround.mock.calls[0][1].lookAt).toBe(false)
+        expect(__.ui.cameraManager.rotateAround.mock.calls[0][1].preserveView).toBe(true)
     })
 
     it('keeps the flyTo when rotating toward another target even under the snap distance', async () => {

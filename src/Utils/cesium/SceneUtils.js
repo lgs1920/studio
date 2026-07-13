@@ -466,6 +466,11 @@ export class SceneUtils {
                 pitchAdjustHeight = initializer.height + 1000
             }
         }
+        const instantOrbitWithoutFlight = options.rotate === true
+            && flyingTime === 0
+            && !cameraDestination
+            && !options.boundingSphere
+            && (options.preserveView === true || initializer?.sameRotateTarget === true)
 
         const syncFocusedCamera = async () => {
             if (!cameraDestination && !options.boundingSphere) {
@@ -500,14 +505,17 @@ export class SceneUtils {
             }
 
             if (options.rotate ?? false) {
-                __.ui.cameraManager.rotateAround(target, {
+                const preserveView = options.preserveView === true
+                    || instantOrbitWithoutFlight
+                    || Boolean(cameraDestination)
+                await __.ui.cameraManager.rotateAround(target, {
                     rpm:       options.rpm ?? lgs.settings.camera.rpm,
                     direction: options.direction ?? 1,
                     infinite:  options.infinite ?? true,
                     fps:       lgs.settings.camera.fps,
                     rotations: options.rotations ?? lgs.settings.camera.rotations,
-                    lookAt:    true,
-                    preserveView: Boolean(cameraDestination),
+                    lookAt:    !preserveView,
+                    preserveView,
                 })
             }
             else {
@@ -571,6 +579,11 @@ export class SceneUtils {
             easingFunction:    options.easingFunction ?? SceneUtils.resolveFlightEasing(options.resetCamera === true),
             complete:          completeFlight,
             cancel:            cancelFlight,
+        }
+
+        if (instantOrbitWithoutFlight) {
+            await complete()
+            return true
         }
 
         if (cameraDestination) {

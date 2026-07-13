@@ -206,6 +206,11 @@ describe('app orbit and panorama shortcuts', () => {
 
         await callback(event)
         expect(globalThis.__.ui.sceneManager.focus).toHaveBeenCalled()
+        expect(globalThis.__.ui.sceneManager.focus.mock.calls[0][1]).toMatchObject({
+            flyingTime:   0,
+            preserveView: true,
+            rotate:       true,
+        })
 
         globalThis.lgs.stores.ui.mainUI.rotate.running = true
         await callback(event)

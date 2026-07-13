@@ -264,17 +264,17 @@ describe('OrbitWidget interactions', () => {
         expect(lgs.stores.ui.mainUI.rotate.heightOffset).toBe(200)
     })
 
-    it('maps ArrowUp and Ctrl+ArrowDown to orbit height', async () => {
+    it('does not map global arrow keys to orbit height', async () => {
         setupOrbitGlobals()
         const {OrbitWidget} = await import('@Components/MainUI/OrbitWidget')
 
         render(<OrbitWidget/>)
 
         fireEvent.keyDown(window, {key: 'ArrowUp'})
-        expect(lgs.stores.ui.mainUI.rotate.heightOffset).toBe(2)
+        expect(lgs.stores.ui.mainUI.rotate.heightOffset).toBe(0)
 
         fireEvent.keyDown(window, {ctrlKey: true, key: 'ArrowDown'})
-        expect(lgs.stores.ui.mainUI.rotate.heightOffset).toBe(-8)
+        expect(lgs.stores.ui.mainUI.rotate.heightOffset).toBe(0)
     })
 
     it('shows the height and angle overlay during orbit adjustments even when the global camera movement widget is disabled', async () => {

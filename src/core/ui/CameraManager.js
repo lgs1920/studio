@@ -545,7 +545,7 @@ export class CameraManager {
     const baseOrbitTargetHeight = Number(point.simulatedHeight ?? point.height);
     const orbitHeightWorldPosition = new Cartesian3();
     const orbitHeightLocalOffset = new Cartesian3();
-    let tracedOrbitHeightOffset = null;
+    let appliedOrbitHeightOffset = 0;
     const applyOrbitHeightWithPitch = (nextHeight) => {
       const heading = Number(lgs.camera?.heading);
       const pitch = Number(lgs.camera?.pitch);
@@ -584,7 +584,10 @@ export class CameraManager {
         !Number.isFinite(cartographic.longitude) ||
         !Number.isFinite(cartographic.latitude)
       ) {
-        return;
+        return false;
+      }
+      if (heightOffset === appliedOrbitHeightOffset) {
+        return false;
       }
 
       const nextHeight = Math.max(1, baseOrbitCameraHeight + heightOffset);
@@ -603,9 +606,8 @@ export class CameraManager {
         );
         lgs.camera.lookAtTransform(lgs.camera.transform, orbitHeightLocalOffset);
       }
-      if (heightOffset !== tracedOrbitHeightOffset) {
-        tracedOrbitHeightOffset = heightOffset;
-      }
+      appliedOrbitHeightOffset = heightOffset;
+      return true;
     };
 
     let lastFrameTime = null;
@@ -630,19 +632,26 @@ export class CameraManager {
           currentTime <= heightAdjustmentUntil;
 
         if ((lgs.camera && infinite) || totalRotation < totalTurns) {
+          const heightOffset = Number($rotate.heightOffset);
+          const heightOffsetChanged =
+            Number.isFinite(heightOffset) &&
+            heightOffset !== appliedOrbitHeightOffset;
+
           if (effectiveRpm > 0 && !heightAdjusting) {
             if (direction >= 0) {
               lgs.camera.rotateRight(angleRotation);
             } else {
               lgs.camera.rotateLeft(angleRotation);
             }
-            applyOrbitHeightOffset();
+            if (heightOffsetChanged) {
+              applyOrbitHeightOffset();
+            }
             totalRotation += Math.abs(angleRotation);
             __.ui.css.setCSSVariable(
               "--map-rotation-speed",
               `${60 / Math.max(effectiveRpm, 0.2)}s`
             );
-          } else {
+          } else if (heightAdjusting || heightOffsetChanged) {
             applyOrbitHeightOffset();
           }
           this.move.animation = __.requestAnimationFrame(rotateCamera);

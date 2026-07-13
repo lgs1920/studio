@@ -125,6 +125,7 @@ export const OrbitButton = memo(({tooltip = 'top'}) => {
                 direction: orbitSettings.direction,
                 ...position,
                 infinite:   true,
+                preserveView: true,
                 rotate:     true,
                 flyingTime: 0,
                 rpm:       orbitSettings.rpm,

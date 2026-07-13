@@ -135,6 +135,7 @@ export const MapPointContextMenu = ({target, menuRef}) => {
             heading:    lgs.stores.main.components.camera.position.heading,
             infinite:   true,
             pitch:      lgs.stores.main.components.camera.position.pitch,
+            preserveView: true,
             range:      lgs.stores.main.components.camera.position.range,
             roll:       lgs.stores.main.components.camera.position.roll,
             rotate:     true,

@@ -364,6 +364,7 @@ const toggleRotation = () => {
             flyingTime: 0,
             ...currentCameraOrbitOptions(),
             infinite: true,
+            preserveView: true,
             rotate:   true,
             rpm:      rotationSettings.rpm,
             target,
