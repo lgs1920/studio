@@ -207,9 +207,9 @@ html {
     --lgs-warning-border-color: hsla(32.1 97.7% 83.1% / 0.25);
 
     /* Tooltip and generic interaction states. */
-    --lgs-tooltip-color: var(--lgs-text-on-color);
-    --lgs-tooltip-bg-color: var(--lgs-first-color-90);
-    --lgs-tooltip-border-color: var(--lgs-third-color-90);
+    --lgs-tooltip-color: var(--wa-color-text-normal);
+    --lgs-tooltip-bg-color: var(--wa-color-surface-raised);
+    --lgs-tooltip-border-color: var(--wa-color-surface-border);
 
     --lgs-hover-color: var(--wa-color-brand);
     --lgs-hover-bg-color: var(--wa-color-brand-fill-quiet);
@@ -1173,19 +1173,34 @@ wa-scroller {
  ******************************************************************************/
 
 wa-tooltip {
-    /*--wa-tooltip-border-radius: var(--lgs-border-radius-xs);*/
-    /*--wa-tooltip-background-color: var(--lgs-tooltip-bg-color);*/
-    /*--wa-tooltip-content-color: var(--lgs-text-on-color);*/
-    /*--wa-tooltip-font-family: var(--wa-font-family-body);*/
-    /*--wa-tooltip-font-weight: var(--wa-font-weight-normal);*/
-    /*--wa-tooltip-font-size: var(--lgs-font-size-s);*/
-    /*--wa-tooltip-line-height: var(--wa-line-height-condensed);*/
-    /*--wa-tooltip-padding: var(--lgs-gutter-xs);*/
-    /*--wa-tooltip-arrow-size: 0;*/
-
-    /*box-shadow: var(--wa-shadow-l);*/
-    /*border-color: var(--lgs-tooltip-border-color);*/
+    --wa-tooltip-background-color: var(--lgs-tooltip-bg-color);
+    --wa-tooltip-border-color: var(--lgs-tooltip-border-color);
+    --wa-tooltip-content-color: var(--lgs-tooltip-color);
     --hide-delay: 0.2s;
+}
+
+:root.wa-light wa-tooltip {
+    --lgs-tooltip-color: var(--wa-color-neutral-10);
+    --lgs-tooltip-bg-color: var(--wa-color-neutral-95);
+    --lgs-tooltip-border-color: var(--wa-color-neutral-80);
+}
+
+:root.wa-dark wa-tooltip {
+    --lgs-tooltip-color: var(--wa-color-neutral-95);
+    --lgs-tooltip-bg-color: var(--wa-color-neutral-20);
+    --lgs-tooltip-border-color: var(--wa-color-neutral-40);
+}
+
+:root.wa-light :is(wa-dialog, wa-drawer) wa-tooltip {
+    --lgs-tooltip-color: var(--wa-color-neutral-95);
+    --lgs-tooltip-bg-color: var(--wa-color-neutral-20);
+    --lgs-tooltip-border-color: var(--wa-color-neutral-40);
+}
+
+:root.wa-dark :is(wa-dialog, wa-drawer) wa-tooltip {
+    --lgs-tooltip-color: var(--wa-color-neutral-10);
+    --lgs-tooltip-bg-color: var(--wa-color-neutral-95);
+    --lgs-tooltip-border-color: var(--wa-color-neutral-80);
 }
 
 wa-tooltip::part(body)::first-letter {

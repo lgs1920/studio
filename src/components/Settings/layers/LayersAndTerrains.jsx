@@ -18,7 +18,7 @@ import { PopupAnchor }                  from '@Components/PopupAnchor'
 import { LGSPopup }                     from '@Components/LGSPopup'
 import { ALL, BASE3D_ENTITY, BASE_ENTITY, FREE_ANONYMOUS_ACCESS, OVERLAY_ENTITY, PERSONAL_ACCESS, TERRAIN_ENTITY, TILES3D_ENTITY, UNLOCKED } from '@Core/constants'
 import {
-    WaButton, WaIcon, WaTab, WaTabGroup, WaTabPanel, WaTooltip,
+    WaBadge, WaButton, WaIcon, WaTab, WaTabGroup, WaTabPanel, WaTooltip,
 }                                       from '@web.awesome.me/webawesome-pro/dist/react'
 import { useSnapshot }                  from 'valtio'
 import {
@@ -174,6 +174,8 @@ export const LayersAndTerrains = () => {
     const canViewSettings = () =>
         editor.layer.selectedType === BASE_ENTITY || (editor.layer.selectedType === OVERLAY_ENTITY && layers.overlay !== '')
 
+    const selectedOverlaysCount = [layers.overlay, layers.tiles3d].filter(Boolean).length
+
     /**
      * Generates a unique key for entity components to optimize rendering
      * @param {string} type - The entity type
@@ -209,7 +211,17 @@ export const LayersAndTerrains = () => {
                     {'Bases'}
                 </WaTab>
                 <WaTab panel="tab-overlays" onClick={() => ($editor.layer.selectedType = OVERLAY_ENTITY)}>
-                    {'Overlays'}
+                    {selectedOverlaysCount > 0
+                     ? (
+                         <span className="layers-tab-with-badge">
+                             <span>{'Overlays'}</span>
+                             <WaBadge className="layers-tab-selection-count" variant="brand" appearance="filled" pill
+                                      aria-label={`${selectedOverlaysCount} selected overlays`}>
+                                 {selectedOverlaysCount}
+                             </WaBadge>
+                         </span>
+                     )
+                     : 'Overlays'}
                 </WaTab>
                 <WaTab panel="tab-terrains" onClick={() => ($editor.layer.selectedType = TERRAIN_ENTITY)}>
                     {'Terrains'}
