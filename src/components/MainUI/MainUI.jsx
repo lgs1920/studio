@@ -251,7 +251,11 @@ export const MainUI = memo(() => {
                                         <GeocodingButton tooltip={toolBar.fromStart ? 'left' : 'right'}/>
                                         <OrbitButton tooltip={toolBar.fromStart ? 'left' : 'right'}/>
                                         {!videoCaptureActive && <FullScreenButton tooltip={toolBar.fromStart ? 'left' : 'right'}/>}
-                                        <div className="sync-linked-actions">
+                                        <div
+                                            className={`sync-linked-actions ${
+                                                replay.recordingSync === true ? 'is-linked' : 'is-unlinked'
+                                            }`}
+                                        >
                                             <VideoButton
                                                 tooltip={toolBar.fromStart ? 'left' : 'right'}
                                                 variant={replay.recordingSync === true ? 'warning' : 'brand'}
