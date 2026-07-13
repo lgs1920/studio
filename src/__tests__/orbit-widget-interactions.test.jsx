@@ -203,30 +203,76 @@ describe('OrbitWidget interactions', () => {
         vi.restoreAllMocks()
     })
 
-    it('uses the same wheel height steps as panorama mode', async () => {
+    it('keeps Cesium zoom enabled and lets wheel adjust height through Cesium', async () => {
+        const {canvas} = setupOrbitGlobals()
+        const {OrbitWidget} = await import('@Components/MainUI/OrbitWidget')
+
+        render(<OrbitWidget/>)
+
+        fireEvent.wheel(canvas, {deltaY: 1})
+        expect(lgs.scene.screenSpaceCameraController.enableZoom).toBe(true)
+        expect(lgs.stores.ui.mainUI.rotate.heightOffset).toBe(0)
+    })
+
+    it('maps modified wheel events to orbit height steps', async () => {
         const {canvas} = setupOrbitGlobals()
         const {OrbitWidget} = await import('@Components/MainUI/OrbitWidget')
 
         render(<OrbitWidget/>)
 
         const beforeWheel = performance.now()
-        fireEvent.wheel(canvas, {deltaY: 1})
-        expect(lgs.stores.ui.mainUI.rotate.heightOffset).toBe(100)
+        const shiftWheel = new WheelEvent('wheel', {
+            bubbles:    true,
+            cancelable: true,
+            deltaY:     1,
+            shiftKey:   true,
+        })
+        canvas.dispatchEvent(shiftWheel)
+
+        expect(shiftWheel.defaultPrevented).toBe(true)
+        expect(lgs.stores.ui.mainUI.rotate.heightOffset).toBe(10)
         expect(lgs.stores.ui.mainUI.rotate.heightAdjustmentUntil).toBeGreaterThan(beforeWheel)
 
-        fireEvent.wheel(canvas, {deltaY: 1, shiftKey: true})
-        expect(lgs.stores.ui.mainUI.rotate.heightOffset).toBe(110)
+        const shiftWheelReverse = new WheelEvent('wheel', {
+            bubbles:    true,
+            cancelable: true,
+            deltaY:     -1,
+            shiftKey:   true,
+        })
+        canvas.dispatchEvent(shiftWheelReverse)
 
-        fireEvent.wheel(canvas, {deltaY: 1, altKey: true, shiftKey: true})
-        expect(lgs.stores.ui.mainUI.rotate.heightOffset).toBe(111)
+        expect(shiftWheelReverse.defaultPrevented).toBe(true)
+        expect(lgs.stores.ui.mainUI.rotate.heightOffset).toBe(0)
+
+        const ctrlWheel = new WheelEvent('wheel', {
+            bubbles:    true,
+            cancelable: true,
+            ctrlKey:    true,
+            deltaY:     1,
+        })
+        canvas.dispatchEvent(ctrlWheel)
+
+        expect(ctrlWheel.defaultPrevented).toBe(true)
+        expect(lgs.stores.ui.mainUI.rotate.heightOffset).toBe(1)
+
+        const ctrlWheelReverse = new WheelEvent('wheel', {
+            bubbles:    true,
+            cancelable: true,
+            ctrlKey:    true,
+            deltaY:     -1,
+        })
+        canvas.dispatchEvent(ctrlWheelReverse)
+
+        expect(ctrlWheelReverse.defaultPrevented).toBe(true)
+        expect(lgs.stores.ui.mainUI.rotate.heightOffset).toBe(0)
     })
 
-    it('captures orbit wheel events before existing canvas wheel handlers can change the camera angle', async () => {
+    it('lets Cesium wheel events reach existing canvas handlers', async () => {
         const {canvas} = setupOrbitGlobals()
-        let angleChanged = false
+        let wheelReachedCesiumHandler = false
         canvas.addEventListener('wheel', event => {
             if (!event.defaultPrevented) {
-                angleChanged = true
+                wheelReachedCesiumHandler = true
             }
         }, {capture: true})
         const {OrbitWidget} = await import('@Components/MainUI/OrbitWidget')
@@ -238,11 +284,11 @@ describe('OrbitWidget interactions', () => {
             deltaY:     1,
         }))
 
-        expect(angleChanged).toBe(false)
-        expect(lgs.stores.ui.mainUI.rotate.heightOffset).toBe(100)
+        expect(wheelReachedCesiumHandler).toBe(true)
+        expect(lgs.stores.ui.mainUI.rotate.heightOffset).toBe(0)
     })
 
-    it('maps right, alt-left and shift-left drags to orbit height', async () => {
+    it('lets Cesium pointer gestures handle orbit height and angle', async () => {
         const {canvas} = setupOrbitGlobals()
         const {OrbitWidget} = await import('@Components/MainUI/OrbitWidget')
 
@@ -251,29 +297,79 @@ describe('OrbitWidget interactions', () => {
         fireEvent.pointerDown(canvas, {button: 2, clientY: 100, pointerType: 'mouse'})
         fireEvent.pointerMove(document, {clientY: 90, pointerType: 'mouse'})
         fireEvent.pointerUp(document, {clientY: 90, pointerType: 'mouse'})
-        expect(lgs.stores.ui.mainUI.rotate.heightOffset).toBe(100)
 
         fireEvent.pointerDown(canvas, {altKey: true, button: 0, clientY: 100, pointerType: 'mouse'})
         fireEvent.pointerMove(document, {clientY: 80, pointerType: 'mouse'})
         fireEvent.pointerUp(document, {clientY: 80, pointerType: 'mouse'})
-        expect(lgs.stores.ui.mainUI.rotate.heightOffset).toBe(300)
 
         fireEvent.pointerDown(canvas, {button: 0, clientY: 100, pointerType: 'mouse', shiftKey: true})
         fireEvent.pointerMove(document, {clientY: 110, pointerType: 'mouse'})
         fireEvent.pointerUp(document, {clientY: 110, pointerType: 'mouse'})
-        expect(lgs.stores.ui.mainUI.rotate.heightOffset).toBe(200)
+        expect(lgs.stores.ui.mainUI.rotate.heightOffset).toBe(0)
     })
 
-    it('does not map global arrow keys to orbit height', async () => {
+    it('maps arrow keys to orbit height steps', async () => {
         setupOrbitGlobals()
         const {OrbitWidget} = await import('@Components/MainUI/OrbitWidget')
 
         render(<OrbitWidget/>)
 
-        fireEvent.keyDown(window, {key: 'ArrowUp'})
+        const arrowUp = new KeyboardEvent('keydown', {
+            bubbles:    true,
+            cancelable: true,
+            key:        'ArrowUp',
+        })
+        document.dispatchEvent(arrowUp)
+        expect(arrowUp.defaultPrevented).toBe(true)
+        expect(lgs.stores.ui.mainUI.rotate.heightOffset).toBe(100)
+
+        const arrowDown = new KeyboardEvent('keydown', {
+            bubbles:    true,
+            cancelable: true,
+            key:        'ArrowDown',
+        })
+        document.dispatchEvent(arrowDown)
+        expect(arrowDown.defaultPrevented).toBe(true)
         expect(lgs.stores.ui.mainUI.rotate.heightOffset).toBe(0)
 
-        fireEvent.keyDown(window, {ctrlKey: true, key: 'ArrowDown'})
+        const shiftArrowUp = new KeyboardEvent('keydown', {
+            bubbles:    true,
+            cancelable: true,
+            key:        'ArrowUp',
+            shiftKey:   true,
+        })
+        document.dispatchEvent(shiftArrowUp)
+        expect(shiftArrowUp.defaultPrevented).toBe(true)
+        expect(lgs.stores.ui.mainUI.rotate.heightOffset).toBe(10)
+
+        const shiftArrowDown = new KeyboardEvent('keydown', {
+            bubbles:    true,
+            cancelable: true,
+            key:        'ArrowDown',
+            shiftKey:   true,
+        })
+        document.dispatchEvent(shiftArrowDown)
+        expect(shiftArrowDown.defaultPrevented).toBe(true)
+        expect(lgs.stores.ui.mainUI.rotate.heightOffset).toBe(0)
+
+        const ctrlArrowUp = new KeyboardEvent('keydown', {
+            bubbles:    true,
+            cancelable: true,
+            ctrlKey:    true,
+            key:        'ArrowUp',
+        })
+        document.dispatchEvent(ctrlArrowUp)
+        expect(ctrlArrowUp.defaultPrevented).toBe(true)
+        expect(lgs.stores.ui.mainUI.rotate.heightOffset).toBe(1)
+
+        const ctrlArrowDown = new KeyboardEvent('keydown', {
+            bubbles:    true,
+            cancelable: true,
+            ctrlKey:    true,
+            key:        'ArrowDown',
+        })
+        document.dispatchEvent(ctrlArrowDown)
+        expect(ctrlArrowDown.defaultPrevented).toBe(true)
         expect(lgs.stores.ui.mainUI.rotate.heightOffset).toBe(0)
     })
 

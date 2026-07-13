@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-05-01
- * Last modified: 2026-05-01
+ * Created on: 2026-07-13
+ * Last modified: 2026-07-13
  *
  *
  * Copyright © 2026 LGS1920
@@ -76,6 +76,10 @@ const RightClickDrag = () => (
   <Gesture icon={SHORTCUT_ICONS.mouseButtonRight} label="Right click + drag" />
 );
 
+const MiddleClickDrag = () => (
+    <Gesture icon={SHORTCUT_ICONS.scrollwheel} label="Middle click + drag"/>
+)
+
 const Shortcut = ({ gesture, action }) => (
   <span className="orbit-shortcut-row">
     <span className="orbit-shortcut-combo">{gesture}</span>
@@ -84,6 +88,14 @@ const Shortcut = ({ gesture, action }) => (
 );
 
 const Plus = () => <span className="orbit-shortcut-plus">{"+"}</span>;
+const Or = () => <span className="orbit-shortcut-plus">{"/"}</span>;
+const ArrowUpDown = () => (
+    <>
+        <KeyTag>{"↑"}</KeyTag>
+        <Or/>
+        <KeyTag>{"↓"}</KeyTag>
+    </>
+);
 
 export const OrbitInteractionHintsWidget = memo(() => {
   const rotate = useSnapshot(lgs.stores.ui.mainUI.rotate);
@@ -160,6 +172,7 @@ export const OrbitInteractionHintsWidget = memo(() => {
     [appleOS]
   );
   const shiftKey = useMemo(() => <KeyTag>{"Shift"}</KeyTag>, []);
+    const ctrlKey = useMemo(() => <KeyTag>{'Ctrl'}</KeyTag>, [])
   const fastHeightGesture = useMemo(
     () => (
       <Gesture
@@ -180,7 +193,16 @@ export const OrbitInteractionHintsWidget = memo(() => {
     ),
     [appleOS]
   );
-  const finePointerShortcuts = (
+    const orbitFineHeightGesture = useMemo(
+        () => (
+            <Gesture
+                icon={SHORTCUT_ICONS.scrollwheel}
+                label={appleOS ? 'Ctrl + trackpad scroll' : 'Ctrl + wheel'}
+            />
+        ),
+        [appleOS],
+    )
+    const panoramaFinePointerShortcuts = (
     <>
       <Shortcut
         gesture={
@@ -214,6 +236,42 @@ export const OrbitInteractionHintsWidget = memo(() => {
       <Shortcut gesture={<LeftClickDrag />} action="Angle" />
     </>
   );
+    const orbitFinePointerShortcuts = (
+        <>
+            <Shortcut gesture={<LeftClickDrag/>} action="Angle"/>
+
+            <Shortcut
+                gesture={
+                    <Gesture icon={SHORTCUT_ICONS.scrollwheel} label="Wheel / trackpad"/>
+                }
+                action="Height"
+            />
+            <Shortcut gesture={fastHeightGesture} action="Height (+10 m)"/>
+            <Shortcut gesture={orbitFineHeightGesture} action="Height (+1 m)"/>
+            <Shortcut gesture={<ArrowUpDown/>} action="Height (+100 m)"/>
+            <Shortcut
+                gesture={
+                    <>
+                        {shiftKey}
+                        <Plus/>
+                        <ArrowUpDown/>
+                    </>
+                }
+                action="Height (+10 m)"
+            />
+            <Shortcut
+                gesture={
+                    <>
+                        {ctrlKey}
+                        <Plus/>
+                        <ArrowUpDown/>
+                    </>
+                }
+                action="Height (+1 m)"
+            />
+            <Shortcut gesture={<RightClickDrag/>} action="Height"/>
+        </>
+    )
 
   if (!active || !widgetList.has(ORBIT_INTERACTION_HINTS_WIDGET)) {
     return null;
@@ -228,7 +286,7 @@ export const OrbitInteractionHintsWidget = memo(() => {
       <div className="orbit-interaction-hints lgs-card wa-theme-lgs1920-on-map">
         {panorama.active ? (
           finePointer ? (
-            finePointerShortcuts
+              panoramaFinePointerShortcuts
           ) : (
             <>
               <Shortcut
@@ -246,7 +304,7 @@ export const OrbitInteractionHintsWidget = memo(() => {
             </>
           )
         ) : (
-          finePointerShortcuts
+             orbitFinePointerShortcuts
         )}
       </div>
     </Widget>

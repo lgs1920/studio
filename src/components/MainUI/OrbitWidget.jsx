@@ -52,9 +52,10 @@ const ADJUSTMENT_OVERLAY_DELAY = 2000;
 const USER_CAMERA_ACTION_WINDOW = 1000;
 const INITIAL_OVERLAY_RETRY_DELAY = 100;
 const INITIAL_OVERLAY_RETRY_LIMIT = 40;
-const POINTER_HEIGHT_METERS_PER_PIXEL = 10;
+const ORBIT_WHEEL_HEIGHT_STEP_METERS = 10;
+const ORBIT_WHEEL_FINE_HEIGHT_STEP_METERS = 1;
+const ORBIT_KEYBOARD_HEIGHT_STEP_METERS = 100;
 const ORBIT_HEIGHT_ADJUSTMENT_ANGLE_HOLD_MS = 400;
-const ORBIT_CAMERA_ADJUSTMENT_EVENT = "lgs:orbit-camera-adjustment";
 const EDITABLE_SELECTOR = [
   "input",
   "textarea",
@@ -132,14 +133,32 @@ const isEditableTarget = (target) => {
   return Boolean(target.closest(EDITABLE_SELECTOR));
 };
 
-const orbitWheelHeightMetersPerStep = (event) => {
-  if (event.altKey && event.shiftKey) {
-    return 1;
+const orbitWheelHeightStep = (event) => {
+  if (event.ctrlKey) {
+    return ORBIT_WHEEL_FINE_HEIGHT_STEP_METERS;
   }
   if (event.shiftKey) {
-    return 10;
+    return ORBIT_WHEEL_HEIGHT_STEP_METERS;
   }
-  return 100;
+  return 0;
+};
+const orbitKeyboardHeightDirection = (event) => {
+  if (event.key === "ArrowUp") {
+    return 1;
+  }
+  if (event.key === "ArrowDown") {
+    return -1;
+  }
+  return 0;
+};
+const orbitKeyboardHeightStep = (event) => {
+  if (event.ctrlKey) {
+    return ORBIT_WHEEL_FINE_HEIGHT_STEP_METERS;
+  }
+  if (event.shiftKey) {
+    return ORBIT_WHEEL_HEIGHT_STEP_METERS;
+  }
+  return ORBIT_KEYBOARD_HEIGHT_STEP_METERS;
 };
 const orbitHeightOffsetValue = (rotate) => {
   const value = Number(rotate.heightOffset);
@@ -152,13 +171,8 @@ const now = () =>
 const holdOrbitAngleDuringHeightAdjustment = (rotate) => {
   rotate.heightAdjustmentUntil = now() + ORBIT_HEIGHT_ADJUSTMENT_ANGLE_HOLD_MS;
 };
-const notifyOrbitCameraAdjustment = () => {
-  if (typeof window !== "undefined") {
-    window.dispatchEvent(new Event(ORBIT_CAMERA_ADJUSTMENT_EVENT));
-  }
-};
-const setOrbitHeightOffsetValue = (rotate, value) => {
-  const heightOffset = Number(value);
+const addOrbitHeightOffset = (rotate, delta) => {
+  const heightOffset = orbitHeightOffsetValue(rotate) + delta;
   if (!Number.isFinite(heightOffset)) {
     return;
   }
@@ -166,11 +180,8 @@ const setOrbitHeightOffsetValue = (rotate, value) => {
   rotate.heightOffset = heightOffset;
   holdOrbitAngleDuringHeightAdjustment(rotate);
   lgs.scene?.requestRender?.();
-  notifyOrbitCameraAdjustment();
 };
-const addOrbitHeightOffset = (rotate, delta) => {
-  setOrbitHeightOffsetValue(rotate, orbitHeightOffsetValue(rotate) + delta);
-};
+
 const OrbitCameraAdjustmentOverlay = memo(() => {
   const rotate = useSnapshot(lgs.stores.ui.mainUI.rotate);
   const panorama = useSnapshot(lgs.stores.ui.mainUI.panorama);
@@ -189,7 +200,6 @@ const OrbitCameraAdjustmentOverlay = memo(() => {
   const [values, setValues] = useState(() =>
     formatCameraAdjustmentValues(currentCameraMovementSnapshot()?.position)
   );
-  const controllerStateRef = useRef(null);
   const showCameraMovementWidget = cameraSettings.showMovementWidget ?? true;
   const cameraFlightRunning = cameraFlight.running;
   const adjustmentWidgetLocked = Boolean(
@@ -346,31 +356,6 @@ const OrbitCameraAdjustmentOverlay = memo(() => {
       showCurrentSnapshot();
     });
   }, [cameraFlightRunning, showCurrentSnapshot]);
-
-  const handleAdjustmentWheel = useCallback(
-    (event) => {
-      event.preventDefault();
-      event.stopPropagation();
-      if (
-        !lgs.stores.ui.mainUI.rotate.running ||
-        lgs.stores.ui.mainUI.panorama.active
-      ) {
-        return;
-      }
-
-      const direction = Math.sign(event.deltaY);
-      if (direction === 0) {
-        return;
-      }
-
-      addOrbitHeightOffset(
-        lgs.stores.ui.mainUI.rotate,
-        direction * orbitWheelHeightMetersPerStep(event)
-      );
-      showAfterUserAction();
-    },
-    [showAfterUserAction]
-  );
 
   useEffect(() => {
     return () => {
@@ -537,28 +522,6 @@ const OrbitCameraAdjustmentOverlay = memo(() => {
       return undefined;
     }
 
-    const controller = lgs.scene?.screenSpaceCameraController;
-    if (controller) {
-      controllerStateRef.current = {
-        enableZoom: controller.enableZoom,
-      };
-      controller.enableZoom = false;
-    }
-
-    return () => {
-      const nextController = lgs.scene?.screenSpaceCameraController;
-      if (nextController && controllerStateRef.current) {
-        Object.assign(nextController, controllerStateRef.current);
-      }
-      controllerStateRef.current = null;
-    };
-  }, [panorama.active, rotate.running]);
-
-  useEffect(() => {
-    if (!rotate.running || panorama.active) {
-      return undefined;
-    }
-
     const canvas = lgs.viewer?.canvas ?? lgs.canvas;
     if (!canvas) {
       return undefined;
@@ -573,6 +536,20 @@ const OrbitCameraAdjustmentOverlay = memo(() => {
         showAfterUserAction();
       }
     };
+    const handleWheel = (event) => {
+      const direction = Math.sign(event.deltaY);
+      const step = orbitWheelHeightStep(event);
+      if (direction !== 0 && step > 0) {
+        event.preventDefault();
+        event.stopPropagation();
+        event.stopImmediatePropagation?.();
+        addOrbitHeightOffset(
+          lgs.stores.ui.mainUI.rotate,
+          direction * step
+        );
+      }
+      showAfterUserAction();
+    };
     const handlePointerUp = () => {
       if (pointerActiveRef.current) {
         showAfterUserAction();
@@ -580,30 +557,40 @@ const OrbitCameraAdjustmentOverlay = memo(() => {
       pointerActiveRef.current = false;
     };
     const handleKeyDown = (event) => {
-      if (!isEditableTarget(event.target)) {
-        showAfterUserAction();
+      if (isEditableTarget(event.target)) {
+        return;
       }
-    };
-    const handleAdjustmentEvent = () => showAfterUserAction();
 
+      const direction = orbitKeyboardHeightDirection(event);
+      if (direction !== 0) {
+        event.preventDefault();
+        event.stopPropagation();
+        event.stopImmediatePropagation?.();
+        addOrbitHeightOffset(
+          lgs.stores.ui.mainUI.rotate,
+          direction * orbitKeyboardHeightStep(event)
+        );
+      }
+      showAfterUserAction();
+    };
     canvas.addEventListener("pointerdown", handlePointerDown, true);
     canvas.addEventListener("pointermove", handlePointerMove, true);
+    canvas.addEventListener("wheel", handleWheel, {
+      capture: true,
+      passive: false,
+    });
     document.addEventListener("pointerup", handlePointerUp, true);
     document.addEventListener("pointercancel", handlePointerUp, true);
     document.addEventListener("keydown", handleKeyDown, true);
-    window.addEventListener(ORBIT_CAMERA_ADJUSTMENT_EVENT, handleAdjustmentEvent);
 
     return () => {
       pointerActiveRef.current = false;
       canvas.removeEventListener("pointerdown", handlePointerDown, true);
       canvas.removeEventListener("pointermove", handlePointerMove, true);
+      canvas.removeEventListener("wheel", handleWheel, { capture: true });
       document.removeEventListener("pointerup", handlePointerUp, true);
       document.removeEventListener("pointercancel", handlePointerUp, true);
       document.removeEventListener("keydown", handleKeyDown, true);
-      window.removeEventListener(
-        ORBIT_CAMERA_ADJUSTMENT_EVENT,
-        handleAdjustmentEvent
-      );
     };
   }, [
     panorama.active,
@@ -620,10 +607,7 @@ const OrbitCameraAdjustmentOverlay = memo(() => {
         visible ? " adjustment-visible" : ""
       }`}
     >
-      <div
-        className="panorama-adjustment-overlay"
-        onWheel={handleAdjustmentWheel}
-      >
+      <div className="panorama-adjustment-overlay">
         <span className="panorama-adjustment-metric">
           <sl-icon library="fa" name={FA2SL.set(faVideo)} />
           <strong>{values.height}</strong>
@@ -737,137 +721,6 @@ export const OrbitWidget = memo(() => {
     },
     [$rotate, rotate.target]
   );
-
-  useEffect(() => {
-    if (!rotate.running || panorama.active) {
-      return undefined;
-    }
-
-    const canvas = lgs.viewer?.canvas ?? lgs.canvas;
-    if (!canvas) {
-      return undefined;
-    }
-
-    const drag = {
-      active: false,
-      startHeight: 0,
-      startY: 0,
-    };
-
-    const stopDragListeners = () => {
-      document.removeEventListener("pointermove", handlePointerMove, true);
-      document.removeEventListener("pointerup", handlePointerUp, true);
-      document.removeEventListener("pointercancel", handlePointerUp, true);
-    };
-
-    const isCanvasWheel = (event) =>
-      event.target === canvas || event.composedPath?.().includes(canvas);
-
-    function handlePointerDown(event) {
-      if (
-        event.pointerType === "touch" ||
-        ![0, 2].includes(event.button) ||
-        !$rotate.running
-      ) {
-        return;
-      }
-
-      const heightDrag = event.button === 2 || event.altKey || event.shiftKey;
-      if (!heightDrag) {
-        return;
-      }
-
-      event.preventDefault();
-      event.stopPropagation();
-      event.stopImmediatePropagation?.();
-
-      drag.active = true;
-      holdOrbitAngleDuringHeightAdjustment($rotate);
-      drag.startHeight = orbitHeightOffsetValue($rotate);
-      drag.startY = event.clientY;
-
-      document.addEventListener("pointermove", handlePointerMove, true);
-      document.addEventListener("pointerup", handlePointerUp, true);
-      document.addEventListener("pointercancel", handlePointerUp, true);
-      notifyOrbitCameraAdjustment();
-    }
-
-    function handlePointerMove(event) {
-      if (!drag.active) {
-        return;
-      }
-
-      event.preventDefault();
-      event.stopPropagation();
-      event.stopImmediatePropagation?.();
-
-      setOrbitHeightOffsetValue(
-        $rotate,
-        drag.startHeight -
-          (event.clientY - drag.startY) * POINTER_HEIGHT_METERS_PER_PIXEL
-      );
-    }
-
-    function handlePointerUp(event) {
-      if (!drag.active) {
-        return;
-      }
-
-      event.preventDefault();
-      event.stopPropagation();
-      event.stopImmediatePropagation?.();
-
-      drag.active = false;
-      holdOrbitAngleDuringHeightAdjustment($rotate);
-      stopDragListeners();
-      notifyOrbitCameraAdjustment();
-    }
-
-    const handleWheel = (event) => {
-      const fromCanvas = isCanvasWheel(event);
-      if (!fromCanvas) {
-        return;
-      }
-      if (!$rotate.running) {
-        return;
-      }
-
-      const direction = Math.sign(event.deltaY);
-      if (direction === 0) {
-        return;
-      }
-
-      event.preventDefault();
-      event.stopPropagation();
-      event.stopImmediatePropagation?.();
-
-      const heightOffsetDelta = direction * orbitWheelHeightMetersPerStep(event);
-      addOrbitHeightOffset($rotate, heightOffsetDelta);
-    };
-    const handleContextMenu = (event) => {
-      if (!$rotate.running) {
-        return;
-      }
-
-      event.preventDefault();
-      event.stopPropagation();
-      event.stopImmediatePropagation?.();
-    };
-
-    canvas.addEventListener("pointerdown", handlePointerDown, true);
-    window.addEventListener("wheel", handleWheel, {
-      capture: true,
-      passive: false,
-    });
-    canvas.addEventListener("contextmenu", handleContextMenu, true);
-
-    return () => {
-      canvas.removeEventListener("pointerdown", handlePointerDown, true);
-      window.removeEventListener("wheel", handleWheel, { capture: true });
-      canvas.removeEventListener("contextmenu", handleContextMenu, true);
-      stopDragListeners();
-    };
-  }, [$rotate, panorama.active, rotate.running, rotate.target]);
 
   const directionIsAntiClockwise = rotate.direction > 0;
   const directionTooltip = directionIsAntiClockwise
