@@ -15,12 +15,13 @@
  ******************************************************************************/
 
 import {
-    buildDynamicJourneyReplayStatsMetrics,
     isVideoWidgetEditorPhase,
+    resolveVideoOverlayVisibility,
     shouldShowDynamicStatsWidget,
     shouldShowJourneyStatsWidget,
     shouldShowVideoStatsWidget,
-} from '@Components/Stats/replayStatsWidgetUtils'
+} from '@Core/ui/replay/ReplayOverlayResolver'
+import { buildDynamicJourneyReplayStatsMetrics } from '@Components/Stats/replayStatsWidgetUtils'
 import { VIDEO_WIDGETS_BOARD } from '@Core/constants'
 import { isWidgetAvailable } from '@Core/ui/widget-manager/widgetAvailability'
 import { describe, expect, it, beforeEach, afterEach } from 'vitest'
@@ -76,6 +77,7 @@ describe('replay stats widget visibility', () => {
 
     afterEach(() => {
         globalThis.lgs = undefined
+        globalThis.__ = undefined
     })
 
     it('shows the dynamic stats widget while the replay is active and not near the end', () => {
@@ -161,6 +163,75 @@ describe('replay stats widget visibility', () => {
         globalThis.lgs.stores.replay.progress = 0.9
         expect(shouldShowVideoStatsWidget({mode: 'dynamic'})).toBe(false)
         expect(shouldShowVideoStatsWidget({mode: 'journey'})).toBe(true)
+    })
+
+    it('prefers the live replay controller over a throttled store snapshot for visibility', () => {
+        globalThis.lgs.stores.ui.video.editing = false
+        globalThis.lgs.stores.ui.video.recording = true
+        globalThis.lgs.stores.replay.progress = 0.1
+        globalThis.__ = {
+            ui: {
+                replay: {
+                    controller: {
+                        progress: 0.9,
+                        direction: 1,
+                        duration: 10,
+                        playing: true,
+                        paused: false,
+                        running: true,
+                        currentSample: () => ({
+                            distanceFromStart:  180,
+                            remainingDistance:  20,
+                            cumulativeElevationGain: 95,
+                            journeyElapsedMillis: 9000,
+                            journeyDurationMillis: 10000,
+                        }),
+                    },
+                },
+            },
+        }
+
+        expect(shouldShowVideoStatsWidget({mode: 'dynamic'})).toBe(false)
+        expect(shouldShowVideoStatsWidget({mode: 'journey'})).toBe(true)
+    })
+
+    it('resolves video overlay visibility for stats widgets from the live replay state', () => {
+        globalThis.lgs.stores.ui.video.editing = false
+        globalThis.lgs.stores.ui.video.recording = true
+        globalThis.lgs.stores.replay.progress = 0.1
+        globalThis.__ = {
+            ui: {
+                replay: {
+                    controller: {
+                        progress: 0.9,
+                        direction: 1,
+                        duration: 10,
+                        playing: true,
+                        paused: false,
+                        running: true,
+                        currentSample: () => ({
+                            journeyElapsedMillis: 9000,
+                            journeyDurationMillis: 10000,
+                        }),
+                    },
+                },
+            },
+        }
+
+        expect(resolveVideoOverlayVisibility({widgetId: 'dynamic-stats-widget#1'})).toBe(false)
+        expect(resolveVideoOverlayVisibility({widgetId: 'journey-stats-widget#1'})).toBe(true)
+    })
+
+    it('respects explicit dataset visibility for non-replay overlays', () => {
+        const widgetEl = document.createElement('div')
+        const overlay = document.createElement('div')
+        overlay.dataset.videoOverlayVisible = 'false'
+        widgetEl.appendChild(overlay)
+
+        expect(resolveVideoOverlayVisibility({widgetId: 'text-widget#1', widgetEl})).toBe(false)
+
+        overlay.dataset.videoOverlayVisible = 'true'
+        expect(resolveVideoOverlayVisibility({widgetId: 'text-widget#1', widgetEl})).toBe(true)
     })
 
     it('filters widget availability through the generic availability gate', () => {

@@ -24,6 +24,7 @@
 import { RecordingInfo } from '@Components/MainUI/video/RecordingInfo'
 import { LGSPopup }      from '@Components/LGSPopup'
 import { ScreenMediaRecorder } from '@Core/ui/screen-media-recorder/recorder/ScreenMediaRecorder'
+import { exportReplayDeferredMp4 } from '@Core/ui/replay/ReplayDeferredExporter'
 import { cancelVideoEditing } from '@Components/MainUI/video/videoEditingCleanup'
 import {
     WaButton, WaDialog, WaIcon, WaInput, WaTooltip,
@@ -45,6 +46,8 @@ export const VideoDownloadAndShareDialog = () => {
     const _recordingInfoButton = useRef(null)
     const _recordingInfoPopup = useRef(null)
     const _mediaBlob = useRef({blob: null, url: null, filename: ''})
+    const _hqMediaBlob = useRef({blob: null, filename: '', mimeType: null, extension: null})
+    const _hqExportInFlight = useRef(null)
     const _shareInFlight = useRef(false)
     const _dialogCleanupDone = useRef(true)
     const releaseMediaUrl = useCallback(() => {
@@ -56,6 +59,21 @@ export const VideoDownloadAndShareDialog = () => {
     }, [])
     const getVideoExtension = useCallback(() => __.recorder.mediaData?.extension || lgs.settings.ui.video.format, [])
     const getVideoMimeType = useCallback(() => __.recorder.mediaData?.mimeType || 'video/mp4', [])
+    const getHqExportFilename = useCallback(() => `${_mediaBlob.current.filename || __.recorder.filename({}) || 'video'}.mp4`, [])
+    const hasReplayDeferredExportPlan = useCallback(() => Boolean(lgs.stores?.replay?.deferredExportPlan), [])
+
+    const downloadBlobFile = useCallback((blob, downloadFilename) => {
+        if (!(blob instanceof Blob) || !downloadFilename) {
+            return
+        }
+
+        const url = URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = url
+        link.download = downloadFilename
+        link.click()
+        setTimeout(() => URL.revokeObjectURL(url), 100)
+    }, [])
 
     /**
      * Safely accesses media data from recorder with fallback.
@@ -262,10 +280,76 @@ export const VideoDownloadAndShareDialog = () => {
         const value = event.target?.value || ''
         const sanitized = value.replace(/[^a-zA-Z0-9_\-\s]/g, '')
         _mediaBlob.current.filename = sanitized
+        _hqMediaBlob.current = {blob: null, filename: '', mimeType: null, extension: null}
         const canProceed = sanitized.length > 0
         setCanDownloadAndShare(canProceed)
         setFilename(sanitized)
     }, [])
+
+    /**
+     * Resolve the media blob the dialog should expose.
+     *
+     * The final dialog prefers the replay HQ export when the replay pipeline
+     * prepared a deferred master plan. Otherwise it falls back to the recorder
+     * blob produced by the live draft.
+     */
+    const resolveSmartVideoBlob = useCallback(async () => {
+        if (!__.recorder.isVideo() || !hasReplayDeferredExportPlan()) {
+            return {
+                blob:      _mediaBlob.current.blob,
+                filename:   _mediaBlob.current.filename,
+                extension:  getVideoExtension(),
+                mimeType:   getVideoMimeType(),
+                isDeferred: false,
+            }
+        }
+
+        if (_hqMediaBlob.current.blob instanceof Blob) {
+            return {
+                blob:      _hqMediaBlob.current.blob,
+                filename:   _hqMediaBlob.current.filename || _mediaBlob.current.filename,
+                extension:  _hqMediaBlob.current.extension || getVideoExtension(),
+                mimeType:   _hqMediaBlob.current.mimeType || getVideoMimeType(),
+                isDeferred: true,
+            }
+        }
+
+        if (_hqExportInFlight.current) {
+            return await _hqExportInFlight.current
+        }
+
+        const exportPromise = (async () => {
+            const exportFilename = getHqExportFilename()
+            // Reuse the same replay/export pipeline as the drawer, but keep the
+            // blob in memory so the dialog can decide whether to download or share.
+            const result = await exportReplayDeferredMp4({
+                replay: lgs.stores.replay,
+                journey: lgs.theJourney,
+                controller: __.ui.replay?.controller ?? null,
+                sourceCanvas: lgs.canvas,
+                dimensions: lgs.canvas ? {width: lgs.canvas.width, height: lgs.canvas.height} : null,
+                filename: exportFilename,
+            })
+
+            const payload = {
+                blob:      result.blob,
+                filename:  _mediaBlob.current.filename || result.plan?.label || 'video',
+                extension: result.extension || getVideoExtension(),
+                mimeType:  result.mimeType || getVideoMimeType(),
+                isDeferred: true,
+            }
+            _hqMediaBlob.current = payload
+            return payload
+        })()
+
+        _hqExportInFlight.current = exportPromise
+        try {
+            return await exportPromise
+        }
+        finally {
+            _hqExportInFlight.current = null
+        }
+    }, [getHqExportFilename, getVideoExtension, getVideoMimeType, hasReplayDeferredExportPlan])
 
     /**
      * Handle share action with Web Share API fallback.
@@ -274,7 +358,8 @@ export const VideoDownloadAndShareDialog = () => {
         if (_shareInFlight.current) {
             return
         }
-        const blob = _mediaBlob.current.blob
+        const exportMedia = await resolveSmartVideoBlob()
+        const blob = exportMedia.blob
         if (!(blob instanceof Blob) || blob.size === 0) {
             UIToast.error({
                               caption: 'Share',
@@ -285,16 +370,16 @@ export const VideoDownloadAndShareDialog = () => {
 
         _shareInFlight.current = true
         const isVideo = __.recorder.isVideo()
-        const extension = isVideo ? getVideoExtension() : lgs.settings.ui.video.image
+        const extension = isVideo ? exportMedia.extension || getVideoExtension() : lgs.settings.ui.video.image
         const file = new File(
             [blob],
-            `${_mediaBlob.current.filename}.${extension}`,
-            {type: blob.type || (isVideo ? getVideoMimeType() : `image/${extension}`)},
+            `${exportMedia.filename}.${extension}`,
+            {type: blob.type || (isVideo ? (exportMedia.mimeType || getVideoMimeType()) : `image/${extension}`)},
         )
-        const media = isVideo ? 'video' : 'shot'
+        const shareMediaLabel = isVideo ? 'video' : 'shot'
         const shareData = {
             title: 'LGS1920 Studio Video',
-            text:  `Check out my last ${media} created with LGS1920 Studio!`,
+            text:  `Check out my last ${shareMediaLabel} created with LGS1920 Studio!`,
             files: [file],
         }
 
@@ -322,7 +407,7 @@ export const VideoDownloadAndShareDialog = () => {
             }
 
             UIToast.warning({
-                                caption: `Share your ${media}`,
+                                caption: `Share your ${shareMediaLabel}`,
                                 text: 'This browser cannot share this media file directly.',
                             })
 
@@ -340,7 +425,7 @@ export const VideoDownloadAndShareDialog = () => {
         finally {
             _shareInFlight.current = false
         }
-    }, [getVideoExtension, getVideoMimeType])
+    }, [getVideoExtension, getVideoMimeType, resolveSmartVideoBlob])
 
     const mediaData = getMediaData()
     const isVideo = __.recorder.isVideo()
@@ -349,16 +434,28 @@ export const VideoDownloadAndShareDialog = () => {
     /**
      * Handle download via recorder API.
      */
+    /**
+     * Download the current media choice.
+     *
+     * For replay-linked videos, this may trigger the HQ export first.
+     */
     const handleDownload = useCallback(async () => {
         try {
             if (__.recorder.isVideo()) {
-                const blob = _mediaBlob.current.blob
+                const media = await resolveSmartVideoBlob()
+                const blob = media.blob
                 if (!blob || blob.size === 0) {
                     return
                 }
-                await __.recorder.download({
-                                               filename: `${_mediaBlob.current.filename}.${getVideoExtension()}`,
-                                           })
+                const downloadFilename = `${media.filename}.${media.extension || getVideoExtension()}`
+                if (media.isDeferred) {
+                    downloadBlobFile(blob, downloadFilename)
+                }
+                else {
+                    await __.recorder.download({
+                                                   filename: downloadFilename,
+                                               })
+                }
             }
             else {
                 await __.recorder.download({
@@ -369,7 +466,7 @@ export const VideoDownloadAndShareDialog = () => {
         catch (error) {
             console.error('Download failed:', error.message)
         }
-    }, [getVideoExtension])
+    }, [downloadBlobFile, getVideoExtension, resolveSmartVideoBlob])
 
     /**
      * Handle cancel and cleanup.
@@ -386,6 +483,8 @@ export const VideoDownloadAndShareDialog = () => {
         cancelVideoEditing()
         releaseMediaUrl()
         _mediaBlob.current = {blob: null, url: null, filename: ''}
+        _hqMediaBlob.current = {blob: null, filename: '', mimeType: null, extension: null}
+        _hqExportInFlight.current = null
         setMediaUrl(null)
         Object.assign(lgs.stores.ui.video, {
             preRecording:     false,
@@ -553,7 +652,7 @@ export const VideoDownloadAndShareDialog = () => {
                         onClick={handleDownload}
                     >
                         <WaIcon slot="start" className="video-preview-action-icon" name="download" variant="regular"/>
-                        {'Download'}
+                        {__?.recorder.isVideo() && hasReplayDeferredExportPlan() ? 'Download HQ' : 'Download'}
                     </WaButton>
                 </div>
             </div>

@@ -23,6 +23,8 @@ import {
     APP_KEY, CROP_TOOLS_WIDGETS, LGS_PROJECT, MINUTE, NAVIGATOR, SECOND, VIDEO_CROP_ZONE,
     VIDEO_TOOLS_WIDGETS, WIDGET_MOUNT_TIMEOUT, VIDEO_WIDGETS_BOARD,
 } from '@Core/constants'
+import { resolveVideoOverlayVisibility } from '@Core/ui/replay/ReplayOverlayResolver'
+import { prepareReplayDeferredExportPlan, warmReplayDeferredExportPlan } from '@Core/ui/replay/ReplayDeferredExporter'
 import { CanvasOverlayComposer } from '@Core/ui/screen-media-recorder/composer/CanvasOverlayComposer'
 import { ScreenMediaRecorder }   from '@Core/ui/screen-media-recorder/recorder/ScreenMediaRecorder'
 import { WidgetMountErrorDialog } from '@Components/MainUI/video/WidgetMountErrorDialog'
@@ -338,6 +340,10 @@ export const VideoRecordingScreenArea = memo(() => {
 
         for (const key of sortedWidgetKeys) {
             const widgetEl = __.ui.widgetManager.getElementById(key)
+            if (!resolveVideoOverlayVisibility({widgetId: key, widgetEl})) {
+                continue
+            }
+
             const canvasEl = widgetEl?.querySelector('.lgs-widget-canvas')
             if (canvasEl instanceof HTMLCanvasElement) {
                 const config = __.ui.widgetManager.getWidgetConfig(key)
@@ -452,6 +458,34 @@ export const VideoRecordingScreenArea = memo(() => {
             deviceDpr: __.device.dpr,
             browser: __.device.browser,
         })
+        if (isJourneyReplaySyncRequested()) {
+            // Prepare the deferred master export as soon as the draft starts.
+            // This only stores a compact context and warms the codec/config.
+            const {exporter, plan} = prepareReplayDeferredExportPlan({
+                replay: lgs.stores.replay,
+                journey: lgs.theJourney,
+                controller: __.ui.replay?.controller ?? null,
+                fps: selectedFps,
+                label: `${lgs.theJourney?.slug ?? lgs.stores.replay?.journeySlug ?? 'replay'}-master-export`,
+                dimensions: {
+                    width: outputConfig.targetWidth,
+                    height: outputConfig.targetHeight,
+                },
+                captureMode: $video.captureMode ?? lgs.settings.ui.video.captureMode ?? 'speed',
+            })
+            plan.runtime.status = 'warming'
+            plan.runtime.preparedAt = plan.runtime.preparedAt ?? new Date().toISOString()
+            plan.runtime.warmPromise = warmReplayDeferredExportPlan({
+                exporter,
+                plan,
+                replay: lgs.stores.replay,
+                dimensions: {
+                    width: outputConfig.targetWidth,
+                    height: outputConfig.targetHeight,
+                },
+                browser: __.device.browser,
+            })
+        }
         __.recorder.initialize({
                                    maxSize:    maxSize * 1048576,
                                     maxDuration: maxDuration * MINUTE,
@@ -482,7 +516,10 @@ export const VideoRecordingScreenArea = memo(() => {
 
         if (($video.captureMode ?? lgs.settings.ui.video.captureMode ?? 'speed') === 'quality') {
             composer.setFps(0)
-            __.recorder.setFrameCaptureReady(() => composer.renderFrame({waitForNextFrame: true}))
+            __.recorder.setFrameCaptureReady(() => {
+                buildComposerOverlays(composer, videoFrame.cropDimensions)
+                return composer.renderFrame({waitForNextFrame: true})
+            })
         }
         else {
             __.recorder.setFrameCaptureReady(null)

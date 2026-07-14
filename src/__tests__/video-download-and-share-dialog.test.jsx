@@ -30,10 +30,21 @@ vi.mock('@Components/MainUI/video/videoEditingCleanup', () => ({
     cancelVideoEditing: vi.fn(),
 }))
 
+vi.mock('@Core/ui/replay/ReplayDeferredExporter', () => ({
+    exportReplayDeferredMp4: vi.fn(async () => ({
+        blob: new Blob(['hq-video'], {type: 'video/mp4'}),
+        mimeType: 'video/mp4',
+        extension: 'mp4',
+        filename: 'recording-master.mp4',
+        plan: {label: 'recording-master'},
+    })),
+}))
+
 vi.mock('@Utils/UIToast', () => ({
     UIToast: {
         error:   vi.fn(),
         warning: vi.fn(),
+        success: vi.fn(),
     },
 }))
 
@@ -90,6 +101,7 @@ vi.mock('@web.awesome.me/webawesome-pro/dist/react', () => ({
 }))
 
 import { cancelVideoEditing } from '@Components/MainUI/video/videoEditingCleanup'
+import { exportReplayDeferredMp4 } from '@Core/ui/replay/ReplayDeferredExporter'
 import { VideoDownloadAndShareDialog } from '@Components/MainUI/video/VideoDownloadAndShareDialog'
 
 class FakeRecorder extends EventTarget {
@@ -122,6 +134,7 @@ describe('VideoDownloadAndShareDialog', () => {
         recorder = new FakeRecorder()
         globalThis.URL.createObjectURL = vi.fn(() => 'blob:recording')
         globalThis.URL.revokeObjectURL = vi.fn()
+        globalThis.navigator.share = vi.fn(async () => undefined)
 
         globalThis.__ = {
             recorder,
@@ -131,7 +144,7 @@ describe('VideoDownloadAndShareDialog', () => {
                 },
             },
             app: {
-                canShare: vi.fn(() => false),
+                canShare: vi.fn(() => true),
             },
         }
         globalThis.lgs = {
@@ -220,5 +233,22 @@ describe('VideoDownloadAndShareDialog', () => {
         expect(globalThis.URL.revokeObjectURL).not.toHaveBeenCalled()
         expect(recorder.releaseMedia).not.toHaveBeenCalled()
         expect(screen.queryByTestId('video-preview-dialog')).not.toBeNull()
+    })
+
+    it('exports the replay master mp4 before sharing the final video', async () => {
+        globalThis.lgs.stores.replay = {
+            deferredExportPlan: {runtime: {contextKey: 'ctx-1'}},
+        }
+
+        openDialog()
+
+        await act(async () => {
+            fireEvent.click(screen.getByRole('button', {name: 'Share'}))
+        })
+
+        expect(exportReplayDeferredMp4).toHaveBeenCalledTimes(1)
+        expect(globalThis.navigator.share).toHaveBeenCalledTimes(1)
+        expect(globalThis.navigator.share.mock.calls[0][0].files[0]).toBeInstanceOf(File)
+        expect(globalThis.navigator.share.mock.calls[0][0].files[0].name).toBe('recording.mp4')
     })
 })

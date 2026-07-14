@@ -44,6 +44,7 @@ export const replay = {
     mainUiHidden:   false,
     clipSequenceActive: false,
     recordingSync:  false,
+    deferredExportPlan: null,
     videoCropRect:  null,
     orbitAllowed:   true,
 }

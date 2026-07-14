@@ -9,7 +9,19 @@ The implementation is split into a small set of focused modules:
 - `JourneyReplayCesiumRenderer`: draws the cursor, trace, guides, and Cesium overlays.
 - `JourneyReplayMode`: orchestrates sampler, playback, renderer, and camera behavior.
 - `JourneyReplayVideoSync`: bridges recorder events with replay playback for video capture.
+- `ReplayOverlayResolver`: resolves replay-driven widget and overlay visibility for video capture.
+- `ReplayFrameTimeline`: generates deterministic replay frames from duration and fps.
+- `ReplayVideoRenderSession`: renders replay frames through a caller-provided pipeline.
+- `ReplayDeferredExporter`: wraps the render session and returns a master-export manifest plus rendered frames.
+- `captureReplayDeferredExportContext`: records a lightweight, non-frame export context snapshot.
+- `warmReplayDeferredExportPlan`: pre-resolves the MP4 codec/config while the draft is starting.
+- `resolveReplayDeferredExportPlan`: reuses the warm plan only when the export context still matches.
+- `exportReplayDeferredMp4`: renders the master MP4 and returns the blob without forcing a download.
+- `runReplayDeferredMp4Export`: prepares, renders, encodes, and downloads a master MP4 export.
 - `JourneyReplayDebug`: exposes debug snapshots and diagnostic logging.
+
+For a longer architecture walkthrough that maps the replay/video pipeline end
+to end, see [REPLAY_VIDEO_ARCHITECTURE.md](./REPLAY_VIDEO_ARCHITECTURE.md).
 
 ## Configuration model
 

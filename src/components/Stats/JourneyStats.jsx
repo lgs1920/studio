@@ -18,6 +18,7 @@ import { NameValueUnit }                                from '@Components/DataDi
 import { DateTimeDisplay }                              from '@Components/DateTimeDisplay'
 import { useWidgetScaleCorrection } from '@Components/MainUI/widgets/useWidgetScaleCorrection'
 import { VIDEO_WIDGETS_BOARD }                          from '@Core/constants'
+import { resolveReplayVideoStatsWidgetVisibility }      from '@Core/ui/replay/ReplayOverlayResolver'
 import {
     JOURNEY_STATS_TEXT_ITEM_MAP,
     isJourneyStatsSummaryTextItem,
@@ -27,7 +28,6 @@ import {
 }                                                       from '@Components/Stats/journeyStatsTextOrder'
 import {
     buildDynamicJourneyReplayStatsMetrics,
-    shouldShowVideoStatsWidget,
 }                                                       from '@Components/Stats/replayStatsWidgetUtils'
 import { WIDGET_RADIUS }                                from '@Core/constants'
 import { faArrowDownToLine, faArrowUpToLine }           from '@fortawesome/pro-regular-svg-icons'
@@ -191,11 +191,11 @@ export const JourneyStats = memo(({id, metrics, units, style = {}, mode = 'journ
         return configuration.user ?? configuration.default
     }, [id, configuration])
 
-    const [dynamicStatsTick, setDynamicStatsTick] = useState(0)
+    const [replayFrameTick, setReplayFrameTick] = useState(0)
     const replayController = __.ui?.replay?.controller ?? null
 
     useEffect(() => {
-        if (!isDynamicMode || !replay?.playing) {
+        if (!(isDynamicMode || isVideoBoard) || !replay?.playing) {
             return undefined
         }
 
@@ -209,7 +209,7 @@ export const JourneyStats = memo(({id, metrics, units, style = {}, mode = 'journ
                 return
             }
 
-            setDynamicStatsTick(current => current + 1)
+            setReplayFrameTick(current => current + 1)
             rafId = raf(tick)
         }
 
@@ -219,7 +219,7 @@ export const JourneyStats = memo(({id, metrics, units, style = {}, mode = 'journ
             cancelled = true
             caf(rafId)
         }
-    }, [isDynamicMode, replay?.playing])
+    }, [isDynamicMode, isVideoBoard, replay?.playing])
 
     const dynamicReplaySample = useMemo(() => {
         if (!isDynamicMode) {
@@ -227,7 +227,7 @@ export const JourneyStats = memo(({id, metrics, units, style = {}, mode = 'journ
         }
 
         return replayController?.currentSample?.() ?? replay?.sample ?? null
-    }, [dynamicStatsTick, isDynamicMode, replay, replayController])
+    }, [replayFrameTick, isDynamicMode, replay, replayController])
 
     /**
      * Merges metrics based on defined data source (global, external, user)
@@ -685,7 +685,7 @@ export const JourneyStats = memo(({id, metrics, units, style = {}, mode = 'journ
             return true
         }
 
-        return shouldShowVideoStatsWidget({mode, replay})
+        return resolveReplayVideoStatsWidgetVisibility({mode, replay})
     }, [replay, isVideoBoard, journey, journeySlug, mode])
 
     const widgetStyle = useMemo(() => (
@@ -703,7 +703,14 @@ export const JourneyStats = memo(({id, metrics, units, style = {}, mode = 'journ
     }
 
     return (
-        <div ref={widgetRef} className="journey-stats-widget static-widget-part" style={widgetStyle} aria-hidden={!isVisible}>
+        <div
+            ref={widgetRef}
+            className="journey-stats-widget static-widget-part"
+            style={widgetStyle}
+            aria-hidden={!isVisible}
+            data-video-overlay-mode={isVideoBoard ? mode : undefined}
+            data-video-overlay-visible={isVideoBoard ? String(isVisible) : undefined}
+        >
             {visibleTextGroups.map((group, index) => (
                 <Fragment key={`${group.group}-${group.items.join('-')}`}>
                     {index > 0 && <SlDivider style={separatorStyle}/>}

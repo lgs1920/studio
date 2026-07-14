@@ -34,6 +34,7 @@ class FakeRecorder extends EventTarget {
     constructor() {
         super()
         this.stopVideo = vi.fn(async () => {
+            this.recording = false
             this.dispatchEvent(new CustomEvent(ScreenMediaRecorder.events.STOP))
         })
         this.recording = false
@@ -130,6 +131,7 @@ describe('JourneyReplayVideoSync', () => {
         window.dispatchEvent(new CustomEvent(REPLAY_EVENT_STOP_CLIPS_COMPLETE))
 
         expect(recorder.stopVideo).toHaveBeenCalledTimes(1)
+        expect(recorder.stopVideo).toHaveBeenCalledWith({captureFinalFrame: true})
     })
 
     it('stops the recorder immediately without stop clips', async () => {
@@ -157,6 +159,22 @@ describe('JourneyReplayVideoSync', () => {
         await vi.runOnlyPendingTimersAsync()
 
         expect(recorder.stopVideo).toHaveBeenCalledTimes(1)
+        expect(recorder.stopVideo).toHaveBeenCalledWith({captureFinalFrame: true})
+    })
+
+    it('captures the final frame before stopping the recorder', async () => {
+        const recorder = new FakeRecorder()
+        recorder.recording = true
+        const replay = makeJourneyReplay()
+        const store = {recordingSync: false}
+        globalThis.lgs = {settings: {ui: {replay: {recordingSync: false, clips: {stop: [{}]}}}}}
+        const sync = new JourneyReplayVideoSync({recorder, replay, store})
+
+        sync.arm({autoStopRecording: true})
+        window.dispatchEvent(new CustomEvent(REPLAY_EVENT_STOP_CLIPS_COMPLETE))
+
+        expect(recorder.stopVideo).toHaveBeenCalledTimes(1)
+        expect(recorder.stopVideo).toHaveBeenCalledWith({captureFinalFrame: true})
     })
 
     it('stops the replay when the recorder stops', () => {

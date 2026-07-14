@@ -406,6 +406,44 @@ export class ScreenMediaRecorder extends EventTarget {
         this.#rafId = requestAnimationFrame(this.#processFrame)
     }
 
+    #captureFinalFrameForStop = async ({keyFrame = true} = {}) => {
+        if (!this.#isRecording || this.#isPaused || !this.#videoSource) {
+            return false
+        }
+
+        if (this.#captureMode === 'quality' && this.#frameCaptureReady) {
+            try {
+                await this.#frameCaptureReady()
+            }
+            catch (error) {
+                this.#handleFrameEncodingError(error)
+                return false
+            }
+        }
+
+        const now = performance.now()
+        const elapsedMs = Math.max(0, now - this.#startTime + this.#pausedTime)
+        const elapsedSec = Math.max(
+            elapsedMs / 1000,
+            this.#recordedDuration + this.#frameIntervalSec,
+        )
+        const pendingWrite = this.#submitVideoFrame(
+            elapsedSec,
+            this.#frameIntervalSec,
+            keyFrame ? {keyFrame: true} : undefined,
+        )
+
+        if (!pendingWrite) {
+            return false
+        }
+
+        this.#encodedFrames += 1
+        this.#recordedDuration = elapsedSec
+        this.#nextFrameDueMs = elapsedMs + this.#frameIntervalMs
+        await pendingWrite
+        return true
+    }
+
     /** Encode next frame using the current real-time timestamp. */
     #processFrame = async () => {
         if (!this.#isRecording || this.#isPaused || !this.#videoSource) {
@@ -956,13 +994,24 @@ export class ScreenMediaRecorder extends EventTarget {
     }
 
     /** Finalize MP4 and emit STOP */
-    stopVideo = async () => {
+    stopVideo = async ({captureFinalFrame = false} = {}) => {
         if (!this.#isRecording) {
             return
         }
+
+        this.#stopScheduling()
+
+        if (captureFinalFrame) {
+            try {
+                await this.#captureFinalFrameForStop()
+            }
+            catch (error) {
+                console.error('[ScreenMediaRecorder] Final frame capture before stop failed.', error)
+            }
+        }
+
         this.type = ScreenMediaRecorder.VIDEO
         this.#isRecording = false
-        this.#stopScheduling()
 
         if (this.#pendingFrameWrites.size) {
             await Promise.allSettled([...this.#pendingFrameWrites])

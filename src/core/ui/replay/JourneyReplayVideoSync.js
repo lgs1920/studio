@@ -16,7 +16,7 @@
 
 import { REPLAY_EVENT_STOP_CLIPS_COMPLETE } from './JourneyReplayMode'
 import { ScreenMediaRecorder } from '@Core/ui/screen-media-recorder/recorder/ScreenMediaRecorder'
-import { hasJourneyReplayStopClips } from '@Components/Stats/replayStatsWidgetUtils'
+import { hasJourneyReplayStopClips } from '@Core/ui/replay/ReplayOverlayResolver'
 
 const defaultJourneyReplayStore = () => globalThis.lgs?.stores?.replay ?? null
 
@@ -110,10 +110,17 @@ export class JourneyReplayVideoSync {
         }
 
         const recorder = this.#resolveRecorder()
-        const stopRecorder = () => {
-            this.#setVideoSafeMode(false)
-            if (recorder?.isRecording?.()) {
-                void recorder.stopVideo()
+        const stopRecorder = async () => {
+            if (!recorder?.isRecording?.()) {
+                this.#setVideoSafeMode(false)
+                return
+            }
+
+            try {
+                await recorder.stopVideo({captureFinalFrame: true})
+            }
+            finally {
+                this.#setVideoSafeMode(false)
             }
         }
 
