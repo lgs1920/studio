@@ -151,18 +151,16 @@ The root dependency documentation has been synchronized with the current `packag
 
 ## Contributing
 
-Contributions are welcome, but contributors must accept the Contributor License Agreement (CLA) before their changes can
-be merged.
+Contributions are welcome under the same AGPL terms as the repository.
 
-- CLA text: [CONTRIBUTOR_LICENSE_AGREEMENT.md](CONTRIBUTOR_LICENSE_AGREEMENT.md)
+- Contribution terms: [CONTRIBUTOR_LICENSE_AGREEMENT.md](CONTRIBUTOR_LICENSE_AGREEMENT.md)
 
-For contribution or CLA questions: `contact@lgs1920.fr`
+For contribution questions: `contact@lgs1920.fr`
 
 ## License
 
-This project is licensed under the **PolyForm Noncommercial License 1.0.0**.
+This project is licensed under the **GNU Affero General Public License v3.0 or later**.
 
-- Commercial use is not permitted without a separate agreement from LGS1920
 - See [LICENSE.md](LICENSE.md) for the full license text
 - See [LICENSES.md](LICENSES.md) for the repository licensing model summary
 

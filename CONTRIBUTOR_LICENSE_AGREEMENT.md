@@ -1,6 +1,8 @@
-# Contributor License Agreement (CLA)
+# Contributor Terms
 
-By submitting a contribution to this project, you agree to the following terms:
+By submitting a contribution to this project, you agree to the following terms.
+This document is a contribution license notice, not an assignment agreement and
+not a relicensing agreement.
 
 ## 1. Originality of Contributions
 
@@ -9,37 +11,29 @@ You certify that each contribution you submit is:
 - your own original work, or
 - work for which you have received explicit permission to contribute.
 
-You confirm that your contribution does not violate any third‑party rights.
+You confirm that your contribution does not violate any third-party rights.
 
-## 2. License Granted to LGS1920
+## 2. License for Contributions
 
-You grant LGS1920, as the project’s copyright holder, a worldwide,
-perpetual, irrevocable, royalty‑free, transferable, and non‑exclusive license to:
+Unless you state otherwise in writing, you license your contribution under the
+same terms as the repository: GNU Affero General Public License v3.0 or later.
 
-- use, reproduce, modify, adapt, publish, distribute, sublicense,
-  and create derivative works from your contribution,
-- for any purpose, including commercial purposes,
-- without requiring additional permission from you.
+This means LGS1920 and downstream recipients may use, reproduce, modify,
+publish, and distribute your contribution under the AGPL.
 
-## 3. Relicensing Rights
+Nothing in this document transfers ownership of your contribution or grants any
+right to relicense it outside the AGPL, except by a later written agreement
+signed by you.
 
-You acknowledge that:
-
-- LGS1920 may relicense the project, in whole or in part,
-  under any license, now or in the future,
-- without requiring your approval or additional agreement.
-
-This includes releasing future versions under commercial licenses.
-
-## 4. Contributor Rights
+## 3. Contributor Rights
 
 You retain the copyright to your contribution.
-This CLA does not transfer ownership of your work.
 
-You may continue to use, modify, and distribute your contribution
-independently under your own terms.
+You may continue to use, modify, and distribute your contribution independently
+under your own terms, so long as those terms do not conflict with the rights you
+grant here.
 
-## 5. Acceptance
+## 4. Acceptance
 
 By submitting a contribution (including pull requests, patches, code snippets,
-documentation, or any other material), you agree to be bound by this CLA.
+documentation, or any other material), you agree to be bound by these terms.
