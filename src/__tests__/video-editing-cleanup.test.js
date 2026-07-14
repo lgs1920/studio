@@ -15,7 +15,7 @@
  ******************************************************************************/
 
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { cancelVideoEditing } from '@Components/MainUI/video/videoEditingCleanup'
+import { cancelVideoEditing, prepareVideoCaptureUi, prepareVideoEditingUi, restoreVideoCaptureUi } from '@Components/MainUI/video/videoEditingCleanup'
 import { CROP_TOOLS_WIDGETS, VIDEO_WIDGETS_BOARD } from '@Core/constants'
 
 describe('cancelVideoEditing', () => {
@@ -27,6 +27,7 @@ describe('cancelVideoEditing', () => {
                     disposeByGroup: vi.fn(),
                 },
                 widgetCache: {
+                    hideAllExceptBoards: vi.fn(),
                     restoreAllHiddenWidgetsExcept: vi.fn(),
                 },
                 contextMenu: {
@@ -43,17 +44,54 @@ describe('cancelVideoEditing', () => {
                 ui: {
                     video: {
                         editing: true,
+                        cropper: {
+                            ratioEditor:  true,
+                            presetEditor: true,
+                            widgetEditor: true,
+                        },
                     },
+                },
+                replay: {
+                    mainUiHidden: false,
                 },
             },
         }
     })
 
+    it('prepares the editing UI without hiding MainUI or context menu support', () => {
+        prepareVideoEditingUi()
+
+        expect(__.ui.widgetCache.hideAllExceptBoards).toHaveBeenCalledWith(VIDEO_WIDGETS_BOARD)
+        expect(__.ui.contextMenu.hide).not.toHaveBeenCalled()
+        expect(lgs.stores.replay.mainUiHidden).toBe(false)
+    })
+
+    it('prepares and restores the capture UI mask', () => {
+        prepareVideoCaptureUi()
+
+        expect(__.ui.widgetCache.hideAllExceptBoards).toHaveBeenCalledWith(VIDEO_WIDGETS_BOARD)
+        expect(__.ui.contextMenu.hide).toHaveBeenCalled()
+        expect(lgs.stores.replay.mainUiHidden).toBe(true)
+        expect(lgs.stores.ui.video.cropper).toEqual(expect.objectContaining({
+            ratioEditor:  false,
+            presetEditor: false,
+            widgetEditor: false,
+        }))
+
+        restoreVideoCaptureUi()
+
+        expect(__.ui.widgetCache.restoreAllHiddenWidgetsExcept).toHaveBeenCalledWith(VIDEO_WIDGETS_BOARD)
+        expect(lgs.stores.replay.mainUiHidden).toBe(false)
+    })
+
     it('does not sync the crop when canceling', async () => {
+        lgs.stores.replay.mainUiHidden = true
+
         cancelVideoEditing()
 
         expect(__.ui.widgetManager.syncCropDimensionsFromElement).not.toHaveBeenCalled()
         expect(lgs.stores.ui.video.editing).toBe(false)
+        expect(lgs.stores.replay.mainUiHidden).toBe(false)
         expect(__.ui.widgetManager.disposeByGroup).toHaveBeenCalledWith(CROP_TOOLS_WIDGETS, true)
         expect(__.ui.widgetCache.restoreAllHiddenWidgetsExcept).toHaveBeenCalledWith(VIDEO_WIDGETS_BOARD)
         expect(__.ui.contextMenu.hide).toHaveBeenCalled()

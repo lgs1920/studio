@@ -22,7 +22,7 @@
 import { Tunnel } from '@Components/Tunnel/Tunnel'
 import { JourneyReplayButton } from '@Components/JourneyReplay/JourneyReplayButton'
 import { VIDEO_CROP_ZONE, VIDEO_WIDGETS_BOARD } from '@Core/constants'
-import { cancelVideoEditing } from '@Components/MainUI/video/videoEditingCleanup'
+import { cancelVideoEditing, prepareVideoCaptureUi, prepareVideoEditingUi } from '@Components/MainUI/video/videoEditingCleanup'
 import { memo, useCallback, useEffect, useMemo, useRef } from 'react'
 import { useSnapshot } from 'valtio'
 import '../style.css'
@@ -51,6 +51,11 @@ export const VideoRecordingSettingsToolbar = memo(() => {
     const $video = lgs.stores.ui.video
     const replay = useSnapshot(lgs.stores.replay)
     const video = useSnapshot($video)
+    const shouldShowToolbar = video.editing === true
+                              && !video.preRecording
+                              && !video.recording
+                              && !video.snapshot
+                              && !video.finalizing
     const videoCropConfig = __.ui.widgetManager.getWidgetConfig?.(VIDEO_CROP_ZONE)
     const hasDefinedCropDimensions = Number.isFinite(videoCropConfig?.cropDimensions?.width) &&
         Number.isFinite(videoCropConfig?.cropDimensions?.height) &&
@@ -86,6 +91,7 @@ export const VideoRecordingSettingsToolbar = memo(() => {
     ) : null
 
     const handleSnapShot = useCallback(async () => {
+        prepareVideoCaptureUi()
         Object.assign($video, {
             snapshot:     true,
             preRecording: false,
@@ -101,6 +107,7 @@ export const VideoRecordingSettingsToolbar = memo(() => {
             return
         }
 
+        prepareVideoCaptureUi()
         const toolbarPosition = resolveRecorderToolbarPosition(event)
         Object.assign($video, {
             preRecording: true,
@@ -115,13 +122,17 @@ export const VideoRecordingSettingsToolbar = memo(() => {
      * Side effect to hide background widgets when the toolbar appears.
      */
     useEffect(() => {
-        __.ui.widgetCache.hideAllExceptBoards(VIDEO_WIDGETS_BOARD)
+        if (!shouldShowToolbar) {
+            return
+        }
+
+        prepareVideoEditingUi()
         // Note: Widgets are restored when the recording dialog/session is fully closed,
         // or by handleCancel when user cancels editing.
-    }, [])
+    }, [shouldShowToolbar])
 
     useEffect(() => {
-        if (!video.editing || replay.recordingSync !== true) {
+        if (!shouldShowToolbar || replay.recordingSync !== true) {
             return undefined
         }
 
@@ -149,7 +160,7 @@ export const VideoRecordingSettingsToolbar = memo(() => {
             cancelled = true
             cancelAnimationFrame(raf)
         }
-    }, [replay.recordingSync, syncCropFrame, video.editing])
+    }, [replay.recordingSync, shouldShowToolbar, syncCropFrame])
 
     // --- Tunnel Steps ---
     const steps = useMemo(() => {
@@ -275,7 +286,7 @@ export const VideoRecordingSettingsToolbar = memo(() => {
         return _steps.current
     }, [$video, handleVideoRecording, handleSnapShot, hasDefinedCropDimensions, syncCropFrame])
 
-    if (!video.editing) {
+    if (!shouldShowToolbar) {
         return null
     }
 

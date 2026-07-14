@@ -22,6 +22,8 @@ import {
     resolveReplayDeferredExportPlan,
     runReplayDeferredMp4Export,
 } from '@Core/ui/replay/ReplayDeferredExporter'
+import { buildReplayVideoRenderSpec } from '@Core/ui/replay/ReplayVideoRenderSpec'
+import { CanvasOverlayComposer } from '@Core/ui/screen-media-recorder/composer/CanvasOverlayComposer'
 
 vi.hoisted(() => {
     if (!Object.getOwnPropertyDescriptor(document, 'adoptedStyleSheets')) {
@@ -78,11 +80,38 @@ vi.mock('mediabunny', () => {
     }
 })
 
+vi.mock('@Core/ui/screen-media-recorder/composer/CanvasOverlayComposer', () => {
+    const instances = []
+    const CanvasOverlayComposerMock = vi.fn(function FakeCanvasOverlayComposer(sourceCanvas, options = {}) {
+        const outputDpr = Math.max(1, Number(options.outputDpr) || 1)
+        this.sourceCanvas = sourceCanvas
+        this.options = options
+        this.canvas = {
+            width:  Math.round((Number(options.width) || 0) * outputDpr),
+            height: Math.round((Number(options.height) || 0) * outputDpr),
+        }
+        this.beginUpdate = vi.fn()
+        this.addOverlay = vi.fn()
+        this.endUpdate = vi.fn()
+        this.renderFrame = vi.fn(() => Promise.resolve(this.canvas))
+        this.getCanvas = vi.fn(() => this.canvas)
+        this.dispose = vi.fn()
+        instances.push(this)
+    })
+    CanvasOverlayComposerMock.instances = instances
+
+    return {
+        CanvasOverlayComposer: CanvasOverlayComposerMock,
+    }
+})
+
 afterEach(() => {
     globalThis.__ = undefined
     globalThis.lgs = undefined
     globalThis.requestAnimationFrame = undefined
     globalThis.cancelAnimationFrame = undefined
+    CanvasOverlayComposer.mockClear()
+    CanvasOverlayComposer.instances.length = 0
 })
 
 describe('ReplayDeferredExporter', () => {
@@ -153,6 +182,10 @@ describe('ReplayDeferredExporter', () => {
             quality: 'ultra',
         })
         expect(result.plan.dimensions).toEqual({width: 1920, height: 1080})
+        expect(result.plan.renderSpec).toMatchObject({
+            captureMode: 'quality',
+            dimensions:  {width: 1920, height: 1080},
+        })
         expect(result.plan.captureMode).toBe('quality')
         expect(result.plan.runtime.contextKey).toEqual(expect.any(String))
         expect(result.plan.runtime.context).toMatchObject({
@@ -163,6 +196,36 @@ describe('ReplayDeferredExporter', () => {
         expect(uiToast.success).toHaveBeenCalledWith({
             caption: 'Replay export',
             text:    'Master export plan prepared.',
+        })
+    })
+
+    it('builds the shared draft and HQ video render spec from crop, fps, quality, and dpr', () => {
+        const spec = buildReplayVideoRenderSpec({
+            cropRect: {left: 10, top: 20, width: 640, height: 360},
+            video: {
+                fps: 0,
+                quality: 0,
+                captureMode: 'quality',
+            },
+            device: {
+                dpr: 2,
+                browser: 'chromium',
+                mobile: false,
+            },
+            sourceCanvas: {
+                width: 1280,
+                height: 720,
+            },
+        })
+
+        expect(spec).toMatchObject({
+            fps:         30,
+            qualityIndex: 0,
+            captureMode: 'quality',
+            cropRect:    {left: 10, top: 20, width: 640, height: 360},
+            composerClip: {x: 10, y: 20, width: 640, height: 360},
+            dimensions:  {width: 1280, height: 720},
+            outputDpr:   2,
         })
     })
 
@@ -181,6 +244,7 @@ describe('ReplayDeferredExporter', () => {
         globalThis.__ = {
             ui: {
                 widgetCache: {
+                    isMounted: vi.fn(() => true),
                     getAll: vi.fn(() => new Map([
                         ['journey-overlay#1', {mounted: true}],
                     ])),
@@ -248,6 +312,7 @@ describe('ReplayDeferredExporter', () => {
 
         expect(stalePlan.reused).toBe(false)
         expect(stalePlan.plan.runtime.contextKey).not.toBe(context.contextKey)
+        expect(stalePlan.plan.renderSpec.cropRect).toEqual({left: 10, top: 20, width: 800, height: 360})
     })
 
     it('exports an mp4 with mediabunny using rendered frames', async () => {
@@ -289,13 +354,37 @@ describe('ReplayDeferredExporter', () => {
         const sourceCanvas = document.createElement('canvas')
         sourceCanvas.width = 640
         sourceCanvas.height = 360
-        sourceCanvas.getContext = vi.fn(() => ({
-            clearRect: vi.fn(),
-            drawImage: vi.fn(),
+        sourceCanvas.getBoundingClientRect = vi.fn(() => ({
+            left: 0,
+            top:  0,
+            width: 640,
+            height: 360,
         }))
+
+        const widgetCanvas = document.createElement('canvas')
+        widgetCanvas.className = 'lgs-widget-canvas'
+        widgetCanvas.width = 200
+        widgetCanvas.height = 100
+        widgetCanvas.getBoundingClientRect = vi.fn(() => ({
+            left: 40,
+            top:  50,
+            width: 200,
+            height: 100,
+        }))
+
+        const widgetEl = document.createElement('div')
+        widgetEl.appendChild(widgetCanvas)
 
         const download = vi.fn()
         const seek = vi.fn()
+        const exportContext = {
+            clearRect: vi.fn(),
+            drawImage: vi.fn(),
+            save:      vi.fn(),
+            restore:   vi.fn(),
+            translate:  vi.fn(),
+            rotate:    vi.fn(),
+        }
         globalThis.requestAnimationFrame = vi.fn(callback => {
             callback()
             return 1
@@ -303,6 +392,7 @@ describe('ReplayDeferredExporter', () => {
         globalThis.lgs = {
             canvas: sourceCanvas,
             scene: {
+                render: vi.fn(),
                 requestRender: vi.fn(),
             },
             stores: {
@@ -321,15 +411,55 @@ describe('ReplayDeferredExporter', () => {
             device: {
                 browser: 'chromium',
             },
+            ui: {
+                replay: {
+                    refresh: vi.fn(),
+                },
+                widgetCache: {
+                    getAll: vi.fn(() => new Map([
+                        ['journey-overlay#1', {mounted: true}],
+                    ])),
+                },
+                widgetManager: {
+                    getElementById: vi.fn(() => widgetEl),
+                    getWidgetConfig: vi.fn(() => ({
+                        position: {left: 40, top: 50},
+                        rotate: 45,
+                        zIndex: 10,
+                    })),
+                },
+            },
         }
+        const replay = {
+            journeySlug: 'journey-a',
+            trackSlug: 'track-a',
+            progress: 0.25,
+            durationMillis: 1000,
+            videoCropRect: {left: 0, top: 0, width: 640, height: 360},
+        }
+        prepareReplayDeferredExportPlan({
+            replay,
+            journey: {slug: 'journey-a'},
+            controller: {
+                duration: 1,
+                direction: 1,
+                progress: 0.25,
+                seek,
+            },
+            label: 'journey-a-master-export',
+            dimensions: {width: 1280, height: 720},
+            captureMode: 'quality',
+            sourceCanvas,
+            uiToast: {success: vi.fn()},
+        })
+        const buildCanvas = vi.fn(dimensions => ({
+            width: dimensions.width,
+            height: dimensions.height,
+            getContext: () => exportContext,
+        }))
 
         const result = await runReplayDeferredMp4Export({
-            replay: {
-                journeySlug: 'journey-a',
-                trackSlug: 'track-a',
-                progress: 0.25,
-                durationMillis: 1000,
-            },
+            replay,
             journey: {
                 slug: 'journey-a',
             },
@@ -340,20 +470,283 @@ describe('ReplayDeferredExporter', () => {
                 seek,
             },
             sourceCanvas,
-            buildCanvas: () => ({
-                width: 640,
-                height: 360,
-                getContext: () => ({
-                    clearRect: vi.fn(),
-                    drawImage: vi.fn(),
-                }),
-            }),
+            buildCanvas,
             download,
         })
 
         expect(result.mimeType).toBe('video/mp4')
+        expect(buildCanvas).toHaveBeenCalledWith({width: 1280, height: 720})
+        expect(result.plan.dimensions).toEqual({width: 1280, height: 720})
+        expect(result.plan.renderSpec).toMatchObject({
+            cropRect:  {left: 0, top: 0, width: 640, height: 360},
+            dimensions: {width: 1280, height: 720},
+            outputDpr: 2,
+        })
+        expect(CanvasOverlayComposer).toHaveBeenCalledWith(sourceCanvas, expect.objectContaining({
+            clip:      {x: 0, y: 0, width: 640, height: 360},
+            width:     640,
+            height:    360,
+            fps:       0,
+            outputDpr: 2,
+        }))
+        expect(result.plan.captureMode).toBe('quality')
         expect(download).toHaveBeenCalledOnce()
         expect(download.mock.calls[0][1]).toMatch(/journey-a-master-export\.mp4$/)
         expect(seek).toHaveBeenCalled()
+        expect(globalThis.lgs.scene.requestRender).toHaveBeenCalledTimes(1)
+        expect(globalThis.__.ui.replay.refresh).toHaveBeenCalled()
+        expect(result.plan.runtime.exportProgress).toBe(1)
+        expect(result.plan.runtime.exportProcessedFrames).toBe(result.plan.manifest.frameCount)
+        expect(result.plan.runtime.exportEstimatedRemainingMillis).toBe(0)
+    })
+
+    it('keeps the HQ composer canvas at the exact MP4 dimensions when crop and output ratios differ', async () => {
+        const sourceCanvas = document.createElement('canvas')
+        sourceCanvas.width = 1280
+        sourceCanvas.height = 800
+        sourceCanvas.getBoundingClientRect = vi.fn(() => ({
+            left:   0,
+            top:    0,
+            width:  640,
+            height: 400,
+        }))
+
+        const exportContext = {
+            clearRect: vi.fn(),
+            drawImage: vi.fn(),
+        }
+        const replay = {
+            journeySlug: 'journey-a',
+            trackSlug: 'track-a',
+            progress: 0,
+            durationMillis: 1000,
+            videoCropRect: {left: 0, top: 0, width: 640, height: 400},
+        }
+
+        globalThis.requestAnimationFrame = vi.fn(callback => {
+            callback()
+            return 1
+        })
+        globalThis.lgs = {
+            canvas: sourceCanvas,
+            scene: {
+                render: vi.fn(),
+                requestRender: vi.fn(),
+            },
+            stores: {
+                ui: {
+                    video: {
+                        fps: 0,
+                        quality: 0,
+                    },
+                },
+            },
+        }
+        globalThis.__ = {
+            device: {
+                browser: 'chromium',
+            },
+            ui: {
+                replay: {
+                    refresh: vi.fn(),
+                },
+                widgetCache: {
+                    getAll: vi.fn(() => new Map()),
+                },
+                widgetManager: {
+                    getElementById: vi.fn(() => null),
+                    getWidgetConfig: vi.fn(() => ({})),
+                },
+            },
+        }
+
+        prepareReplayDeferredExportPlan({
+            replay,
+            journey: {slug: 'journey-a'},
+            controller: {
+                duration: 1,
+                direction: 1,
+                progress: 0,
+                seek: vi.fn(),
+            },
+            label: 'journey-a-master-export',
+            dimensions: {width: 1280, height: 720},
+            captureMode: 'quality',
+            sourceCanvas,
+            uiToast: {success: vi.fn()},
+        })
+
+        await runReplayDeferredMp4Export({
+            replay,
+            journey: {slug: 'journey-a'},
+            controller: {
+                duration: 1,
+                direction: 1,
+                progress: 0,
+                seek: vi.fn(),
+            },
+            sourceCanvas,
+            buildCanvas: dimensions => ({
+                width: dimensions.width,
+                height: dimensions.height,
+                getContext: () => exportContext,
+            }),
+            download: vi.fn(),
+        })
+
+        const composerOptions = CanvasOverlayComposer.mock.calls[0][1]
+        expect(composerOptions.outputDpr).toBeCloseTo(1.8, 5)
+        expect(composerOptions.width).toBeCloseTo(1280 / 1.8, 5)
+        expect(composerOptions.height).toBe(400)
+        expect(CanvasOverlayComposer.instances[0].canvas).toMatchObject({
+            width:  1280,
+            height: 720,
+        })
+        expect(exportContext.drawImage).toHaveBeenCalledWith(
+            expect.objectContaining({width: 1280, height: 720}),
+            0,
+            0,
+            1280,
+            720,
+            0,
+            0,
+            1280,
+            720,
+        )
+    })
+
+    it('routes HQ export frames through start, replay, and stop clip phases', async () => {
+        let now = 0
+        const performanceNow = vi.spyOn(globalThis.performance, 'now').mockImplementation(() => now)
+        const sourceCanvas = document.createElement('canvas')
+        sourceCanvas.width = 320
+        sourceCanvas.height = 180
+        sourceCanvas.getBoundingClientRect = vi.fn(() => ({
+            left: 0,
+            top:  0,
+            width: 320,
+            height: 180,
+        }))
+
+        const exportContext = {
+            clearRect: vi.fn(),
+            drawImage: vi.fn(),
+        }
+        const seek = vi.fn(progress => ({progress}))
+        const renderReplayExportFrame = vi.fn(({phase}) => {
+            now += 40
+            return {progress: phase.progress}
+        })
+        const preparePlaybackSceneForExport = vi.fn(() => true)
+        const restorePlaybackScene = vi.fn()
+
+        try {
+            globalThis.requestAnimationFrame = vi.fn(callback => {
+                callback()
+                return 1
+            })
+            globalThis.lgs = {
+                canvas: sourceCanvas,
+                scene: {
+                    render: vi.fn(),
+                    requestRender: vi.fn(),
+                },
+                stores: {
+                    ui: {
+                        video: {
+                            fps: 0,
+                            quality: 0,
+                        },
+                    },
+                },
+                theJourney: {
+                    slug: 'journey-a',
+                },
+            }
+            globalThis.__ = {
+                device: {
+                    browser: 'chromium',
+                },
+                ui: {
+                    replay: {
+                        renderReplayExportFrame,
+                        preparePlaybackSceneForExport,
+                        restorePlaybackScene,
+                    },
+                    widgetCache: {
+                        getAll: vi.fn(() => new Map()),
+                    },
+                    widgetManager: {
+                        getElementById: vi.fn(() => null),
+                        getWidgetConfig: vi.fn(() => ({})),
+                    },
+                },
+            }
+
+            const result = await runReplayDeferredMp4Export({
+                replay: {
+                    journeySlug: 'journey-a',
+                    trackSlug: 'track-a',
+                    progress: 0,
+                    durationMillis: 1000,
+                    clips: {
+                        catalog: {
+                            'zoom-in': {
+                                slots: ['start'],
+                            },
+                            landing: {
+                                slots: ['stop'],
+                            },
+                        },
+                        start: [{clipId: 'zoom-in', params: {duration: 1}}],
+                        stop:  [{clipId: 'landing', params: {duration: 1}}],
+                    },
+                },
+                journey: {
+                    slug: 'journey-a',
+                },
+                controller: {
+                    duration: 1,
+                    direction: 1,
+                    progress: 0,
+                    sampler: {
+                        atProgress: progress => ({progress}),
+                    },
+                    currentSample: () => ({progress: 0}),
+                    seek,
+                },
+                fps: 10,
+                sourceCanvas,
+                buildCanvas: () => ({
+                    width: 320,
+                    height: 180,
+                    getContext: () => exportContext,
+                }),
+                download: vi.fn(),
+            })
+
+            const phases = renderReplayExportFrame.mock.calls.map(([args]) => args.phase.kind)
+            expect(result.plan.manifest.durationMillis).toBe(3000)
+            expect(phases).toContain('start')
+            expect(phases).toContain('replay')
+            expect(phases).toContain('stop')
+            expect(renderReplayExportFrame.mock.calls.at(-1)?.[0]?.phase).toMatchObject({
+                kind: 'stop',
+                localProgress: 1,
+            })
+            expect(renderReplayExportFrame.mock.calls.some(([args]) => args.phase.isLastTwoReplayFrames === true)).toBe(true)
+            expect(preparePlaybackSceneForExport).toHaveBeenCalledWith(expect.objectContaining({
+                journey: expect.objectContaining({slug: 'journey-a'}),
+                progress: 0,
+                hideReplayMarker: true,
+            }))
+            expect(restorePlaybackScene).toHaveBeenCalledWith({force: true})
+            expect(result.plan.runtime.exportElapsedMillis).toBe(result.plan.manifest.frameCount * 40)
+            expect(result.plan.runtime.exportAverageFrameMillis).toBeCloseTo(40, 1)
+            expect(result.plan.runtime.exportEstimatedTotalMillis).toBeCloseTo(result.plan.runtime.exportElapsedMillis, 1)
+        }
+        finally {
+            performanceNow.mockRestore()
+        }
     })
 })

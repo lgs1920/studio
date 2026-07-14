@@ -20,54 +20,22 @@ import { VideoSettingsInfo }                                    from '@Component
 import { CropOverlay }                                          from '@Components/ToolsUI/cropper/CropOverlay'
 import { DefinedCropZone }       from '@Components/ToolsUI/cropper/widgets/DefinedCropZone'
 import {
-    APP_KEY, CROP_TOOLS_WIDGETS, LGS_PROJECT, MINUTE, NAVIGATOR, SECOND, VIDEO_CROP_ZONE,
+    APP_KEY, CROP_TOOLS_WIDGETS, LGS_PROJECT, MINUTE, SECOND, VIDEO_CROP_ZONE,
     VIDEO_TOOLS_WIDGETS, WIDGET_MOUNT_TIMEOUT, VIDEO_WIDGETS_BOARD,
 } from '@Core/constants'
-import { resolveVideoOverlayVisibility } from '@Core/ui/replay/ReplayOverlayResolver'
 import { prepareReplayDeferredExportPlan, warmReplayDeferredExportPlan } from '@Core/ui/replay/ReplayDeferredExporter'
+import { buildReplayVideoComposerOverlays, isReplayVideoWidgetReady } from '@Core/ui/replay/ReplayVideoOverlayComposer'
+import { buildReplayVideoRenderSpec } from '@Core/ui/replay/ReplayVideoRenderSpec'
 import { CanvasOverlayComposer } from '@Core/ui/screen-media-recorder/composer/CanvasOverlayComposer'
 import { ScreenMediaRecorder }   from '@Core/ui/screen-media-recorder/recorder/ScreenMediaRecorder'
 import { WidgetMountErrorDialog } from '@Components/MainUI/video/WidgetMountErrorDialog'
+import { prepareVideoCaptureUi } from '@Components/MainUI/video/videoEditingCleanup'
 import { UIToast }                                              from '@Utils/UIToast'
 import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import { useSnapshot }           from 'valtio'
-// Cache TTL for expensive DOM metrics (in ms).
-const METRICS_CACHE_TTL_MS = 750
 // Softer recorder timeslice to reduce INFO event overhead.
 const SOFT_TIMESLICE_MS = SECOND * 2
 const VIDEO_RECORDER_INITIALIZE_TIMEOUT_MS = 6000
-const VIDEO_PIXEL_BUDGETS_BY_FPS = {
-    30: 2_800_000,
-    45: 2_250_000,
-    60: 1_700_000,
-}
-const VIDEO_QUALITY_BUDGET_FACTORS = [0.9, 1, 1.12]
-const VIDEO_BROWSER_BUDGET_FACTORS = {
-    [NAVIGATOR.firefox]: 0.92,
-    [NAVIGATOR.edge]: 0.65,
-}
-const VIDEO_HIGH_DPR_BUDGET_FACTORS_BY_FPS = {
-    30: 1.12,
-    45: 1.08,
-    60: 1.04,
-}
-const VIDEO_MOBILE_BUDGET_FACTORS_BY_FPS = {
-    30: 1.08,
-    45: 1.04,
-    60: 1,
-}
-const VIDEO_DESKTOP_MAX_DPR_BY_FPS = {
-    30: 2.75,
-    45: 2.5,
-    60: 2.25,
-}
-const VIDEO_MOBILE_MAX_DPR_BY_FPS = {
-    30: 2.5,
-    45: 2.3,
-    60: 2.1,
-}
-
-const toEvenInt = (value) => Math.max(2, Math.floor(value / 2) * 2)
 
 const withTimeout = async (promise, timeoutMs, message) => {
     let timeoutId = null
@@ -82,136 +50,6 @@ const withTimeout = async (promise, timeoutMs, message) => {
     finally {
         clearTimeout(timeoutId)
     }
-}
-
-const computeRecordingOutput = ({
-    cropWidth,
-    cropHeight,
-    fps,
-    qualityIndex,
-    deviceDpr,
-    browser,
-}) => {
-    const baseWidth = Math.max(2, Math.round(cropWidth))
-    const baseHeight = Math.max(2, Math.round(cropHeight))
-    const nativeDpr = Math.max(1, Number(deviceDpr) || 1)
-    const isHighDpr = nativeDpr > 1.25
-    const platformDprCap = __.device.mobile
-                           ? (VIDEO_MOBILE_MAX_DPR_BY_FPS[fps] ?? VIDEO_MOBILE_MAX_DPR_BY_FPS[30])
-                           : (VIDEO_DESKTOP_MAX_DPR_BY_FPS[fps] ?? VIDEO_DESKTOP_MAX_DPR_BY_FPS[30])
-    const usableDpr = Math.max(1, Math.min(nativeDpr, isHighDpr ? platformDprCap : nativeDpr))
-    const nativeWidth = toEvenInt(baseWidth * usableDpr)
-    const nativeHeight = toEvenInt(baseHeight * usableDpr)
-    const basePixels = baseWidth * baseHeight
-    const nativePixels = nativeWidth * nativeHeight
-    const qualityFactor = VIDEO_QUALITY_BUDGET_FACTORS[qualityIndex] ?? 1
-    const browserFactor = VIDEO_BROWSER_BUDGET_FACTORS[browser] ?? 1
-    const highDprFactor = isHighDpr ? (VIDEO_HIGH_DPR_BUDGET_FACTORS_BY_FPS[fps] ?? VIDEO_HIGH_DPR_BUDGET_FACTORS_BY_FPS[30]) : 1
-    const mobileFactor = __.device.mobile ? (VIDEO_MOBILE_BUDGET_FACTORS_BY_FPS[fps] ?? VIDEO_MOBILE_BUDGET_FACTORS_BY_FPS[30]) : 1
-    const pixelBudget = Math.round((VIDEO_PIXEL_BUDGETS_BY_FPS[fps] ?? VIDEO_PIXEL_BUDGETS_BY_FPS[30]) * qualityFactor * browserFactor * highDprFactor * mobileFactor)
-    const targetPixels = Math.max(basePixels, Math.min(nativePixels, pixelBudget))
-    const scale = Math.sqrt(targetPixels / basePixels)
-    const targetWidth = Math.min(nativeWidth, toEvenInt(baseWidth * scale))
-    const targetHeight = Math.min(nativeHeight, toEvenInt(baseHeight * scale))
-    const outputDpr = Math.max(1, Math.min(usableDpr, targetWidth / baseWidth, targetHeight / baseHeight))
-
-    return {
-        outputDpr,
-        targetWidth,
-        targetHeight,
-        nativeWidth,
-        nativeHeight,
-        pixelBudget,
-    }
-}
-
-/**
- * Extract overlay metrics from DOM styles, with a shallow search on children.
- * Handles CSS variables for blur (e.g. blur(var(--foo))).
- */
-const getOverlayMetrics = (el, depth = 0) => {
-    if (!el || depth > 2) {
-        return {blur: 0, radius: 0, border: 0, margins: {top: 0, right: 0, bottom: 0, left: 0}}
-    }
-    const style = window.getComputedStyle(el)
-    const filter = style.backdropFilter || style.webkitBackdropFilter
-    let blur = 0
-    const blurMatch = filter?.match(/blur\(([^)]+)\)/)
-    if (blurMatch) {
-        const raw = blurMatch[1].trim()
-        if (raw.endsWith('px')) {
-            blur = parseFloat(raw) || 0
-        }
-        else if (raw.startsWith('var(')) {
-            const varName = raw.slice(4, -1).trim()
-            const varValue = style.getPropertyValue(varName).trim()
-            blur = varValue.endsWith('px') ? (parseFloat(varValue) || 0) : (parseFloat(varValue) || 0)
-        }
-        else {
-            blur = parseFloat(raw) || 0
-        }
-    }
-    const radiusMatch = style.borderRadius?.match(/(\d+)px/)
-    const radius = radiusMatch ? parseFloat(radiusMatch[1]) : 0
-    const borderWidthMatch = style.borderWidth?.match(/([\d.]+)px/)
-    const border = borderWidthMatch ? parseFloat(borderWidthMatch[1]) : 0
-
-    let margins = {top: 0, right: 0, bottom: 0, left: 0}
-    const shadow = style.boxShadow
-    if (shadow && shadow !== 'none') {
-        const values = shadow.match(/(-?[\d.]+)px/g)
-        if (values && values.length >= 2) {
-            const px = (v) => parseFloat(v) || 0
-            margins = __.ui.widgetManager.getShadowMargins(px(values[0]), px(values[1]), px(values[2]), px(values[3]))
-        }
-    }
-
-    if (blur > 0 || radius > 0 || border > 0 || margins.top > 0 || margins.bottom > 0 || margins.left > 0 || margins.right > 0) {
-        return {blur, radius, border, margins}
-    }
-
-    for (const child of el.children) {
-        const m = getOverlayMetrics(child, depth + 1)
-        if (m.blur > 0 || m.radius > 0 || m.border > 0 || m.margins.top > 0 || m.margins.bottom > 0 || m.margins.left > 0 || m.margins.right > 0) {
-            return m
-        }
-    }
-
-    return {blur: 0, radius: 0, border: 0, margins: {top: 0, right: 0, bottom: 0, left: 0}}
-}
-
-/**
- * Resolve the effective widget scale based on CSS transforms and layout.
- * @param {HTMLElement} el
- * @param {number|{x:number,y:number}} configScale
- * @returns {{x:number,y:number}}
- */
-const resolveWidgetScale = (el, configScale) => {
-    const baseScaleX = typeof configScale === 'object' ? (configScale?.x ?? 1) : (configScale ?? 1)
-    const baseScaleY = typeof configScale === 'object' ? (configScale?.y ?? baseScaleX) : (configScale ?? 1)
-    if (!el) {
-        return {x: baseScaleX, y: baseScaleY}
-    }
-    const style = window.getComputedStyle(el)
-    const transform = style.transform
-    let matrixScaleX = 0
-    let matrixScaleY = 0
-    if (transform && transform !== 'none') {
-        try {
-            const matrix = new DOMMatrixReadOnly(transform)
-            matrixScaleX = Math.hypot(matrix.a, matrix.b)
-            matrixScaleY = Math.hypot(matrix.c, matrix.d)
-        }
-        catch {
-            // Ignore invalid transform matrices and keep fallback scale resolution.
-        }
-    }
-    const rect = el.getBoundingClientRect()
-    const cssWidth = parseFloat(style.width) || rect.width
-    const cssHeight = parseFloat(style.height) || rect.height
-    const ratioScaleX = cssWidth ? rect.width / cssWidth : 0
-    const ratioScaleY = cssHeight ? rect.height / cssHeight : 0
-    return {x: matrixScaleX || ratioScaleX || baseScaleX, y: matrixScaleY || ratioScaleY || baseScaleY}
 }
 
 export const VideoRecordingScreenArea = memo(() => {
@@ -297,20 +135,19 @@ export const VideoRecordingScreenArea = memo(() => {
         || lgs.settings?.ui?.replay?.recordingSync === true
     ), [])
 
-    const prepareJourneyReplayForRecording = useCallback(() => {
+    const prepareJourneyReplayForRecording = useCallback((renderSpec = null) => {
         if (!isJourneyReplaySyncRequested()) {
             return true
         }
 
-        const selectedFps = ScreenMediaRecorder.FPS[$video.fps]
         __.ui.replayVideoSync?.arm?.({
             recorder:          __.recorder,
             replay:            __.ui.replay,
             store:             lgs.stores.replay,
             autoStopRecording: true,
             resetToStart:      true,
-            captureMode:       $video.captureMode ?? lgs.settings.ui.video.captureMode ?? 'speed',
-            captureFps:        selectedFps,
+            captureMode:       renderSpec?.captureMode ?? $video.captureMode ?? lgs.settings.ui.video.captureMode ?? 'speed',
+            captureFps:        renderSpec?.fps ?? ScreenMediaRecorder.FPS[$video.fps],
         })
         return true
     }, [isJourneyReplaySyncRequested, $video])
@@ -332,66 +169,16 @@ export const VideoRecordingScreenArea = memo(() => {
 
     // Rebuild overlay list with pooled objects.
     const buildComposerOverlays = useCallback((composer, cropRect, widgetKeys) => {
-        composer.beginUpdate()
-
-        const sortedWidgetKeys = (widgetKeys?.length ? widgetKeys : [...__.ui.widgetCache.getAll({widgetsBoard: VIDEO_WIDGETS_BOARD}).entries()]
-            .sort((a, b) => (a[1].zIndex || 0) - (b[1].zIndex || 0))
-            .map(entry => entry[0]))
-
-        for (const key of sortedWidgetKeys) {
-            const widgetEl = __.ui.widgetManager.getElementById(key)
-            if (!resolveVideoOverlayVisibility({widgetId: key, widgetEl})) {
-                continue
-            }
-
-            const canvasEl = widgetEl?.querySelector('.lgs-widget-canvas')
-            if (canvasEl instanceof HTMLCanvasElement) {
-                const config = __.ui.widgetManager.getWidgetConfig(key)
-                const now = performance.now()
-                const cacheKey = key
-                const cached = _metricsCache.current.get(cacheKey)
-                const useCached = cached && (now - cached.time) < METRICS_CACHE_TTL_MS
-                const metrics = useCached ? cached.metrics : getOverlayMetrics(widgetEl)
-                if (!useCached) {
-                    _metricsCache.current.set(cacheKey, {time: now, metrics})
-                }
-                const {blur, radius, border, margins} = metrics
-                const canvasStyle = window.getComputedStyle(canvasEl)
-                const width = parseFloat(canvasStyle.width)
-                const height = parseFloat(canvasStyle.height)
-
-                composer.addOverlay(canvasEl, {
-                    x:             config.position.left - cropRect.left - margins.left,
-                    y:             config.position.top - cropRect.top - margins.top,
-                    w:             width,
-                    h:             height,
-                    contentWidth:  Math.max(0, width - (margins.left + margins.right)),
-                    contentHeight: Math.max(0, height - (margins.top + margins.bottom)),
-                    blur,
-                    radius,
-                    border,
-                    rotate:        config.rotate || 0,
-                    scale:         resolveWidgetScale(widgetEl, config.scale),
-                    shadowMargins: margins,
-                })
-            }
-        }
-
-        composer.endUpdate()
+        buildReplayVideoComposerOverlays({
+            composer,
+            cropRect,
+            widgetKeys,
+            metricsCache: _metricsCache.current,
+        })
     }, [])
 
     const isWidgetReadyForRecording = useCallback((widgetId) => {
-        const element = __.ui.widgetManager.getElementById(widgetId)
-        if (!element || !__.ui.widgetCache.isMounted(widgetId)) {
-            return false
-        }
-
-        const baseId = widgetId.split('#')[0]
-        if (baseId === 'text-widget') {
-            return true
-        }
-
-        return Boolean(element.querySelector('.lgs-widget-canvas'))
+        return isReplayVideoWidgetReady(widgetId)
     }, [])
 
     // rAF-based refresh loop to keep overlays in sync with the recording frames.
@@ -438,7 +225,7 @@ export const VideoRecordingScreenArea = memo(() => {
     }, [])
 
     const initializeRecorder = useCallback(async (startToken) => {
-        const selectedFps = ScreenMediaRecorder.FPS[$video.fps]
+        prepareVideoCaptureUi()
         $video.settings = {quality: $video.quality, fps: $video.fps}
         const videoFrame = await syncVideoCropFrame('before-record')
         if (!videoFrame) {
@@ -447,17 +234,17 @@ export const VideoRecordingScreenArea = memo(() => {
         if (startToken !== _recordingStartToken.current) {
             return false
         }
-        if (!prepareJourneyReplayForRecording()) {
+        const renderSpec = buildReplayVideoRenderSpec({
+            cropRect:     videoFrame.cropDimensions,
+            video:        $video,
+            settings:     lgs.settings.ui.video,
+            device:       __.device,
+            sourceCanvas: lgs.canvas,
+        })
+        const selectedFps = renderSpec.fps
+        if (!prepareJourneyReplayForRecording(renderSpec)) {
             return false
         }
-        const outputConfig = computeRecordingOutput({
-            cropWidth: videoFrame.cropDimensions.width,
-            cropHeight: videoFrame.cropDimensions.height,
-            fps: selectedFps,
-            qualityIndex: $video.quality,
-            deviceDpr: __.device.dpr,
-            browser: __.device.browser,
-        })
         if (isJourneyReplaySyncRequested()) {
             // Prepare the deferred master export as soon as the draft starts.
             // This only stores a compact context and warms the codec/config.
@@ -467,11 +254,9 @@ export const VideoRecordingScreenArea = memo(() => {
                 controller: __.ui.replay?.controller ?? null,
                 fps: selectedFps,
                 label: `${lgs.theJourney?.slug ?? lgs.stores.replay?.journeySlug ?? 'replay'}-master-export`,
-                dimensions: {
-                    width: outputConfig.targetWidth,
-                    height: outputConfig.targetHeight,
-                },
-                captureMode: $video.captureMode ?? lgs.settings.ui.video.captureMode ?? 'speed',
+                dimensions: renderSpec.dimensions,
+                captureMode: renderSpec.captureMode,
+                renderSpec,
             })
             plan.runtime.status = 'warming'
             plan.runtime.preparedAt = plan.runtime.preparedAt ?? new Date().toISOString()
@@ -479,10 +264,7 @@ export const VideoRecordingScreenArea = memo(() => {
                 exporter,
                 plan,
                 replay: lgs.stores.replay,
-                dimensions: {
-                    width: outputConfig.targetWidth,
-                    height: outputConfig.targetHeight,
-                },
+                dimensions: renderSpec.dimensions,
                 browser: __.device.browser,
             })
         }
@@ -493,31 +275,30 @@ export const VideoRecordingScreenArea = memo(() => {
                                     filename:   APP_KEY,
                                     fps: selectedFps,
                                     timeslice: SOFT_TIMESLICE_MS,
-                                    dimensions: {
-                                       width: outputConfig.targetWidth,
-                                       height: outputConfig.targetHeight,
-                                    },
+                                    dimensions: renderSpec.dimensions,
                                     ratio:      videoFrame.ratio.value,
-                                    captureMode: $video.captureMode ?? lgs.settings.ui.video.captureMode ?? 'speed',
+                                    captureMode: renderSpec.captureMode,
                                     metadata: {artist: lgs.servers.studio.name, date: new Date(), album: LGS_PROJECT},
                                     useWebGL:   true,
                                 })
 
-        const {top: y, left: x, width, height} = videoFrame.cropDimensions
+        const {width, height} = renderSpec.cropRect
         disposeComposer()
         stopOverlaysRefresh()
         const composer = new CanvasOverlayComposer(lgs.canvas, {
-            clip: {x, y, width, height}, width, height,
+            clip: renderSpec.composerClip,
+            width,
+            height,
             fps: selectedFps,
-            outputDpr: outputConfig.outputDpr,
+            outputDpr: renderSpec.outputDpr,
             flushWebGLBuffer: () => lgs.scene.render(),
         })
         _composer.current = composer
 
-        if (($video.captureMode ?? lgs.settings.ui.video.captureMode ?? 'speed') === 'quality') {
+        if (renderSpec.captureMode === 'quality') {
             composer.setFps(0)
             __.recorder.setFrameCaptureReady(() => {
-                buildComposerOverlays(composer, videoFrame.cropDimensions)
+                buildComposerOverlays(composer, renderSpec.cropRect)
                 return composer.renderFrame({waitForNextFrame: true})
             })
         }
@@ -525,16 +306,16 @@ export const VideoRecordingScreenArea = memo(() => {
             __.recorder.setFrameCaptureReady(null)
         }
 
-        buildComposerOverlays(composer, videoFrame.cropDimensions)
+        buildComposerOverlays(composer, renderSpec.cropRect)
         await composer.renderFrame({waitForNextFrame: true})
         if (startToken !== _recordingStartToken.current) {
             composer.dispose()
             return false
         }
         __.recorder.setCanvas(composer.getCanvas())
-        startOverlaysRefresh(composer, videoFrame.cropDimensions)
+        startOverlaysRefresh(composer, renderSpec.cropRect)
         return true
-    }, [maxDuration, maxSize, disposeComposer, stopOverlaysRefresh, buildComposerOverlays, startOverlaysRefresh, syncVideoCropFrame, prepareJourneyReplayForRecording, $video])
+    }, [maxDuration, maxSize, disposeComposer, stopOverlaysRefresh, buildComposerOverlays, startOverlaysRefresh, syncVideoCropFrame, prepareJourneyReplayForRecording, isJourneyReplaySyncRequested, $video])
 
     const markRecordingStarted = useCallback(() => {
         if (!$video.preRecording && $video.recording) {
@@ -586,6 +367,7 @@ export const VideoRecordingScreenArea = memo(() => {
     }, [$video, initializeRecorder, markRecordingStarted, disposeComposer, stopOverlaysRefresh])
 
     const handlePhotoSnapshot = useCallback(async () => {
+        prepareVideoCaptureUi()
         const videoFrame = await syncVideoCropFrame('before-snapshot')
         if (!videoFrame) {
             Object.assign($video, {snapshot: false, finalizing: false})
@@ -634,13 +416,22 @@ export const VideoRecordingScreenArea = memo(() => {
             return () => {
             }
         }
-        const observer = new MutationObserver(() => {
+        const notifyIfReady = () => {
             if (widgets.every(isWidgetReadyForRecording)) {
-                observer.disconnect()
                 onReady?.(widgets)
+                return true
+            }
+            return false
+        }
+        const observer = new MutationObserver(() => {
+            if (notifyIfReady()) {
+                observer.disconnect()
             }
         })
         observer.observe(document.body, {childList: true, subtree: true})
+        if (notifyIfReady()) {
+            observer.disconnect()
+        }
         return () => observer.disconnect()
     }, [isWidgetReadyForRecording])
 

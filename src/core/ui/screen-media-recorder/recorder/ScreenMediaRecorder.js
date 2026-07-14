@@ -406,19 +406,28 @@ export class ScreenMediaRecorder extends EventTarget {
         this.#rafId = requestAnimationFrame(this.#processFrame)
     }
 
+    #prepareFrameCapture = async () => {
+        if (!this.#frameCaptureReady) {
+            return true
+        }
+
+        try {
+            await this.#frameCaptureReady()
+            return true
+        }
+        catch (error) {
+            this.#handleFrameEncodingError(error)
+            return false
+        }
+    }
+
     #captureFinalFrameForStop = async ({keyFrame = true} = {}) => {
         if (!this.#isRecording || this.#isPaused || !this.#videoSource) {
             return false
         }
 
-        if (this.#captureMode === 'quality' && this.#frameCaptureReady) {
-            try {
-                await this.#frameCaptureReady()
-            }
-            catch (error) {
-                this.#handleFrameEncodingError(error)
-                return false
-            }
+        if (!await this.#prepareFrameCapture()) {
+            return false
         }
 
         const now = performance.now()
@@ -461,14 +470,8 @@ export class ScreenMediaRecorder extends EventTarget {
 
         const elapsedSec = elapsedMs / 1000
 
-        if (this.#captureMode === 'quality' && this.#frameCaptureReady) {
-            try {
-                await this.#frameCaptureReady()
-            }
-            catch (error) {
-                this.#handleFrameEncodingError(error)
-                return
-            }
+        if (!await this.#prepareFrameCapture()) {
+            return
         }
 
         const pendingWrite = this.#submitVideoFrame(elapsedSec, this.#frameIntervalSec)

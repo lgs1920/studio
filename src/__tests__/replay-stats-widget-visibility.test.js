@@ -16,6 +16,8 @@
 
 import {
     isVideoWidgetEditorPhase,
+    resolveReplayExportFrameState,
+    resolveReplayVisibilityState,
     resolveVideoOverlayVisibility,
     shouldShowDynamicStatsWidget,
     shouldShowJourneyStatsWidget,
@@ -84,22 +86,48 @@ describe('replay stats widget visibility', () => {
         expect(shouldShowDynamicStatsWidget(globalThis.lgs.stores.replay)).toBe(true)
     })
 
-    it('hides the dynamic stats widget once the end threshold is reached without stop clips', () => {
-        globalThis.lgs.stores.replay.progress = 0.9
+    it('hides the dynamic stats widget on the last two replay frames', () => {
+        globalThis.lgs.stores.replay.replayFramePhase = {
+            kind: 'replay',
+            slot: 'replay',
+            replayFrameIndex: 8,
+            replayFrameCount: 10,
+            isLastTwoReplayFrames: true,
+        }
+
         expect(shouldShowDynamicStatsWidget(globalThis.lgs.stores.replay)).toBe(false)
     })
 
-    it('shows the journey stats widget only near the end of the replay', () => {
-        globalThis.lgs.stores.replay.progress = 0.9
+    it('shows the journey stats widget only on the last two replay frames', () => {
+        globalThis.lgs.stores.replay.replayFramePhase = {
+            kind: 'replay',
+            slot: 'replay',
+            replayFrameIndex: 8,
+            replayFrameCount: 10,
+            isLastTwoReplayFrames: true,
+        }
         expect(shouldShowJourneyStatsWidget(globalThis.lgs.stores.replay)).toBe(true)
 
-        globalThis.lgs.stores.replay.progress = 0.2
+        globalThis.lgs.stores.replay.replayFramePhase = {
+            kind: 'replay',
+            slot: 'replay',
+            replayFrameIndex: 7,
+            replayFrameCount: 10,
+            isLastTwoReplayFrames: false,
+        }
         expect(shouldShowJourneyStatsWidget(globalThis.lgs.stores.replay)).toBe(false)
     })
 
-    it('hides the journey stats widget exactly at the end when no stop clips exist', () => {
-        globalThis.lgs.stores.replay.progress = 1
-        expect(shouldShowJourneyStatsWidget(globalThis.lgs.stores.replay)).toBe(false)
+    it('keeps the journey stats widget visible on the final replay frame', () => {
+        globalThis.lgs.stores.replay.replayFramePhase = {
+            kind: 'replay',
+            slot: 'replay',
+            replayFrameIndex: 9,
+            replayFrameCount: 10,
+            isLastTwoReplayFrames: true,
+        }
+
+        expect(shouldShowJourneyStatsWidget(globalThis.lgs.stores.replay)).toBe(true)
     })
 
     it('builds live metrics from the replay sample', () => {
@@ -155,14 +183,130 @@ describe('replay stats widget visibility', () => {
         expect(shouldShowVideoStatsWidget({mode: 'journey'})).toBe(true)
     })
 
-    it('uses the replay end threshold outside the editor phase', () => {
+    it('keeps dynamic stats visible while an HQ export frame is being rendered', () => {
+        globalThis.lgs.stores.ui.video.finalizing = true
+        globalThis.lgs.stores.replay.playing = false
+        globalThis.lgs.stores.replay.deferredExportPlan = {
+            runtime: {
+                status: 'exporting',
+                frameState: {
+                    active: true,
+                    playing: true,
+                    paused: false,
+                    progress: 0.4,
+                    direction: 1,
+                    durationMillis: 10000,
+                    elapsedMillis: 4000,
+                    sample: {
+                        distanceFromStart: 333,
+                        remainingDistance:  667,
+                        cumulativeElevationGain: 44,
+                        journeyElapsedMillis: 4000,
+                        journeyDurationMillis: 10000,
+                    },
+                },
+            },
+        }
+
+        expect(resolveReplayExportFrameState(globalThis.lgs.stores.replay)?.progress).toBe(0.4)
+        expect(shouldShowVideoStatsWidget({mode: 'dynamic'})).toBe(true)
+
+        const resolvedReplayState = resolveReplayVisibilityState({replay: globalThis.lgs.stores.replay})
+        expect(resolvedReplayState.progress).toBe(0.4)
+        expect(resolvedReplayState.sample.distanceFromStart).toBe(333)
+
+        const metrics = buildDynamicJourneyReplayStatsMetrics(globalThis.lgs.stores.replay)
+        expect(metrics.distance).toBe(333)
+        expect(metrics.positive.elevation).toBe(44)
+        expect(metrics.duration).toBe(4)
+    })
+
+    it('uses the shared dynamic replay frame state for live widget metrics', () => {
+        globalThis.lgs.stores.ui.video.editing = false
+        globalThis.lgs.stores.ui.video.recording = true
+        globalThis.lgs.stores.replay.playing = false
+        globalThis.lgs.stores.replay.dynamicFrameState = {
+            active: true,
+            playing: true,
+            paused: false,
+            progress: 0.25,
+            direction: 1,
+            durationMillis: 10000,
+            elapsedMillis: 2500,
+            frameId: 10,
+            source: 'controller',
+            sample: {
+                distanceFromStart: 222,
+                remainingDistance:  778,
+                cumulativeElevationGain: 66,
+                journeyElapsedMillis: 2500,
+                journeyDurationMillis: 10000,
+            },
+        }
+
+        expect(shouldShowVideoStatsWidget({mode: 'dynamic'})).toBe(true)
+
+        const resolvedReplayState = resolveReplayVisibilityState({replay: globalThis.lgs.stores.replay})
+        expect(resolvedReplayState.progress).toBe(0.25)
+        expect(resolvedReplayState.sample.distanceFromStart).toBe(222)
+
+        const metrics = buildDynamicJourneyReplayStatsMetrics(globalThis.lgs.stores.replay)
+        expect(metrics.distance).toBe(222)
+        expect(metrics.positive.elevation).toBe(66)
+        expect(metrics.duration).toBe(2.5)
+    })
+
+    it('uses the last-two-replay-frame window outside the editor phase', () => {
         globalThis.lgs.stores.ui.video.recording = true
 
         expect(shouldShowVideoStatsWidget({mode: 'dynamic'})).toBe(true)
 
-        globalThis.lgs.stores.replay.progress = 0.9
+        globalThis.lgs.stores.replay.replayFramePhase = {
+            kind: 'replay',
+            slot: 'replay',
+            replayFrameIndex: 9,
+            replayFrameCount: 10,
+            isLastTwoReplayFrames: true,
+        }
         expect(shouldShowVideoStatsWidget({mode: 'dynamic'})).toBe(false)
         expect(shouldShowVideoStatsWidget({mode: 'journey'})).toBe(true)
+    })
+
+    it('applies clip-phase visibility only to dynamic and journey stats', () => {
+        globalThis.lgs.stores.ui.video.recording = true
+        globalThis.lgs.stores.replay.clipSequenceActive = true
+        globalThis.lgs.stores.replay.replayFramePhase = {
+            kind: 'start',
+            slot: 'start',
+        }
+
+        expect(shouldShowVideoStatsWidget({mode: 'dynamic'})).toBe(false)
+        expect(shouldShowVideoStatsWidget({mode: 'journey'})).toBe(false)
+        expect(resolveVideoOverlayVisibility({widgetId: 'text-widget#1'})).toBe(true)
+
+        globalThis.lgs.stores.replay.replayFramePhase = {
+            kind: 'stop',
+            slot: 'stop',
+        }
+
+        expect(shouldShowVideoStatsWidget({mode: 'dynamic'})).toBe(false)
+        expect(shouldShowVideoStatsWidget({mode: 'journey'})).toBe(true)
+        expect(resolveVideoOverlayVisibility({widgetId: 'text-widget#1'})).toBe(true)
+    })
+
+    it('does not leak stale stop-phase visibility after replay completion', () => {
+        globalThis.lgs.stores.ui.video.recording = true
+        globalThis.lgs.stores.replay.active = false
+        globalThis.lgs.stores.replay.playing = false
+        globalThis.lgs.stores.replay.paused = false
+        globalThis.lgs.stores.replay.clipSequenceActive = false
+        globalThis.lgs.stores.replay.replayFramePhase = {
+            kind: 'stop',
+            slot: 'stop',
+        }
+
+        expect(shouldShowVideoStatsWidget({mode: 'dynamic'})).toBe(false)
+        expect(shouldShowVideoStatsWidget({mode: 'journey'})).toBe(false)
     })
 
     it('prefers the live replay controller over a throttled store snapshot for visibility', () => {
@@ -173,7 +317,7 @@ describe('replay stats widget visibility', () => {
             ui: {
                 replay: {
                     controller: {
-                        progress: 0.9,
+                        progress: 0.998,
                         direction: 1,
                         duration: 10,
                         playing: true,
@@ -183,7 +327,7 @@ describe('replay stats widget visibility', () => {
                             distanceFromStart:  180,
                             remainingDistance:  20,
                             cumulativeElevationGain: 95,
-                            journeyElapsedMillis: 9000,
+                            journeyElapsedMillis: 9980,
                             journeyDurationMillis: 10000,
                         }),
                     },
@@ -203,14 +347,14 @@ describe('replay stats widget visibility', () => {
             ui: {
                 replay: {
                     controller: {
-                        progress: 0.9,
+                        progress: 0.998,
                         direction: 1,
                         duration: 10,
                         playing: true,
                         paused: false,
                         running: true,
                         currentSample: () => ({
-                            journeyElapsedMillis: 9000,
+                            journeyElapsedMillis: 9980,
                             journeyDurationMillis: 10000,
                         }),
                     },

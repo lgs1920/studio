@@ -44,12 +44,16 @@ vi.mock('@web.awesome.me/webawesome-pro/dist/react', () => ({
 
 vi.mock('@Components/MainUI/video/videoEditingCleanup', () => ({
     cancelVideoEditing: vi.fn(),
+    prepareVideoCaptureUi: vi.fn(),
+    prepareVideoEditingUi: vi.fn(),
 }))
 
+import { prepareVideoCaptureUi, prepareVideoEditingUi } from '@Components/MainUI/video/videoEditingCleanup'
 import { VideoRecordingSettingsToolbar } from '@Components/MainUI/video/toolbox/VideoRecordingSettingsToolbar'
 
 describe('VideoRecordingSettingsToolbar', () => {
     beforeEach(() => {
+        vi.clearAllMocks()
         lastTunnelProps = null
         globalThis.__ = {
             ui: {
@@ -105,6 +109,8 @@ describe('VideoRecordingSettingsToolbar', () => {
     it('shows the JourneyReplay launcher only when the sync link is active', () => {
         const {unmount} = render(<VideoRecordingSettingsToolbar/>)
 
+        expect(prepareVideoEditingUi).toHaveBeenCalledTimes(1)
+        expect(prepareVideoCaptureUi).not.toHaveBeenCalled()
         expect(screen.queryByRole('button', {name: 'Journey Replay Settings'})).toBeNull()
 
         unmount()
@@ -128,6 +134,43 @@ describe('VideoRecordingSettingsToolbar', () => {
         expect(toolbar.className).toContain('lgs-toolbar-horizontal')
         expect(toolbar.className).toContain('wa-theme-lgs1920-on-map')
         expect(__.ui.widgetManager.syncCropDimensionsFromElement).not.toHaveBeenCalled()
+    })
+
+    it('forces video UI masking before entering recording and snapshot phases', async () => {
+        render(<VideoRecordingSettingsToolbar/>)
+        prepareVideoCaptureUi.mockClear()
+        prepareVideoEditingUi.mockClear()
+
+        await lastTunnelProps.steps[2].onClick(2, {
+            currentTarget: {
+                getBoundingClientRect: () => ({left: 10, top: 20, width: 100, height: 40}),
+            },
+            nativeEvent: {
+                clientX: 40,
+                clientY: 60,
+            },
+        })
+        expect(prepareVideoCaptureUi).toHaveBeenCalledTimes(1)
+        expect(prepareVideoEditingUi).not.toHaveBeenCalled()
+        expect(globalThis.lgs.stores.ui.video.preRecording).toBe(true)
+
+        prepareVideoCaptureUi.mockClear()
+        await lastTunnelProps.steps[3].onClick?.(3)
+        expect(prepareVideoCaptureUi).toHaveBeenCalledTimes(1)
+        expect(globalThis.lgs.stores.ui.video.snapshot).toBe(true)
+    })
+
+    it('hides the tunnel while an HQ export is finalizing', () => {
+        Object.assign(globalThis.lgs.stores.ui.video, {
+            editing:    true,
+            finalizing: true,
+        })
+
+        render(<VideoRecordingSettingsToolbar/>)
+
+        expect(screen.queryByTestId('tunnel')).toBeNull()
+        expect(prepareVideoEditingUi).not.toHaveBeenCalled()
+        expect(prepareVideoCaptureUi).not.toHaveBeenCalled()
     })
 
     it('marks the JourneyReplay launcher as selected when the drawer is already open', () => {

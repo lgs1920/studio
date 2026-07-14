@@ -22,14 +22,29 @@ import { snapdom }                                 from '@zumer/snapdom'
  * Correctly handles HiDPI scales and prevents edge truncation.
  */
 export class Widget2Canvas {
+    static #instances = new Map()
+
+    static get = widgetId => Widget2Canvas.#instances.get(widgetId) ?? null
+
+    static refresh = (widgetId, options = {}) => (
+        Widget2Canvas.get(widgetId)?.requestRefresh?.(options) ?? false
+    )
+
+    static flush = (widgetId, options = {}) => (
+        Widget2Canvas.get(widgetId)?.flush?.(options) ?? Promise.resolve(false)
+    )
+
     #original = null
     #canvas = null
     #options = {}
+    #widgetId = null
     #observer = null
     #tickFrame = null
     #tickLoopActive = false
     #pendingRefresh = false
+    #queuedRefresh = false
     #refreshing = false
+    #refreshIdleWaiters = []
     #destroyed = false
     #parts = new Map()
     #partOrder = []
@@ -48,10 +63,14 @@ export class Widget2Canvas {
             scale: window.devicePixelRatio || 1,
             ...options,
         }
-        this.#timingLabel = `Widget2Canvas:${this.#options.widgetId ?? this.#original?.id ?? 'unknown'}`
+        this.#widgetId = this.#options.widgetId ?? this.#original?.id ?? null
+        this.#timingLabel = `Widget2Canvas:${this.#widgetId ?? 'unknown'}`
     }
 
     init = async () => {
+        if (this.#widgetId) {
+            Widget2Canvas.#instances.set(this.#widgetId, this)
+        }
         if (!this.#shouldUseLiveLoop() || !this.#refreshLiveCanvas()) {
             await this.refresh()
         }
@@ -75,23 +94,12 @@ export class Widget2Canvas {
 
         if (this.#shouldUseMutationObserver()) {
             this.#observer = new MutationObserver((mutations) => {
-                if (!mutations.length || this.#pendingRefresh) {
+                if (!mutations.length) {
                     return
                 }
 
                 this.#handleMutations(mutations)
-                this.#pendingRefresh = true
-                requestAnimationFrame(async () => {
-                    try {
-                        if (this.#shouldUseLiveLoop() && this.#refreshLiveCanvas()) {
-                            return
-                        }
-                        await this.refresh()
-                    }
-                    finally {
-                        this.#pendingRefresh = false
-                    }
-                })
+                this.requestRefresh({afterFrame: true})
             })
 
             this.#observer.observe(this.#original, {
@@ -122,7 +130,7 @@ export class Widget2Canvas {
             }
 
             if (!this.#refreshLiveCanvas() && this.#options.refreshMode === 'both') {
-                void this.refresh()
+                this.requestRefresh()
             }
 
             if (this.#tickLoopActive && !this.#destroyed && this.#original) {
@@ -131,6 +139,68 @@ export class Widget2Canvas {
         }
 
         this.#tickFrame = requestAnimationFrame(tick)
+    }
+
+    requestRefresh = ({afterFrame = false} = {}) => {
+        if (this.#destroyed || !this.#original) {
+            return false
+        }
+
+        if (this.#pendingRefresh || this.#refreshing) {
+            this.#queuedRefresh = true
+            return true
+        }
+
+        this.#pendingRefresh = true
+        const run = async () => {
+            try {
+                if (this.#shouldUseLiveLoop() && this.#refreshLiveCanvas()) {
+                    return
+                }
+                await this.refresh()
+            }
+            finally {
+                this.#pendingRefresh = false
+                if (this.#queuedRefresh && !this.#destroyed && this.#original) {
+                    this.#queuedRefresh = false
+                    this.requestRefresh({afterFrame: true})
+                    return
+                }
+                this.#resolveRefreshIdleWaiters(true)
+            }
+        }
+
+        if (afterFrame) {
+            requestAnimationFrame(() => void run())
+        }
+        else {
+            void run()
+        }
+        return true
+    }
+
+    flush = ({afterFrame = false} = {}) => {
+        if (this.#destroyed || !this.#original) {
+            return Promise.resolve(false)
+        }
+
+        this.requestRefresh({afterFrame})
+        return this.waitForIdle()
+    }
+
+    waitForIdle = () => {
+        if (!this.#pendingRefresh && !this.#refreshing && !this.#queuedRefresh) {
+            return Promise.resolve(true)
+        }
+
+        return new Promise(resolve => {
+            this.#refreshIdleWaiters.push(resolve)
+        })
+    }
+
+    #resolveRefreshIdleWaiters = (result) => {
+        const waiters = this.#refreshIdleWaiters.splice(0)
+        waiters.forEach(resolve => resolve(result))
     }
 
     #collectMarkedParts = () => {
@@ -479,6 +549,7 @@ export class Widget2Canvas {
         }
 
         if (this.#refreshing) {
+            this.#queuedRefresh = true
             return
         }
         this.#refreshing = true
@@ -679,6 +750,9 @@ export class Widget2Canvas {
 
     destroy = () => {
         this.#destroyed = true
+        if (this.#widgetId && Widget2Canvas.get(this.#widgetId) === this) {
+            Widget2Canvas.#instances.delete(this.#widgetId)
+        }
         this.#observer?.disconnect()
         this.#observer = null
         this.#tickLoopActive = false
@@ -687,7 +761,9 @@ export class Widget2Canvas {
         }
         this.#tickFrame = null
         this.#pendingRefresh = false
+        this.#queuedRefresh = false
         this.#refreshing = false
+        this.#resolveRefreshIdleWaiters(false)
         this.#canvas?.remove()
         this.#canvas = null
         this.#original = null

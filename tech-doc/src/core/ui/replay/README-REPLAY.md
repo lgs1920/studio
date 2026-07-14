@@ -18,6 +18,8 @@ The implementation is split into a small set of focused modules:
 - `resolveReplayDeferredExportPlan`: reuses the warm plan only when the export context still matches.
 - `exportReplayDeferredMp4`: renders the master MP4 and returns the blob without forcing a download.
 - `runReplayDeferredMp4Export`: prepares, renders, encodes, and downloads a master MP4 export.
+- The final video dialog starts the HQ export explicitly and switches its share/download actions to the HQ blob once the export completes.
+- `JourneyReplayControlsWidget` exposes the single stop action while an HQ export is running.
 - `JourneyReplayDebug`: exposes debug snapshots and diagnostic logging.
 
 For a longer architecture walkthrough that maps the replay/video pipeline end

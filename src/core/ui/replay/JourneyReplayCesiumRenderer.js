@@ -102,19 +102,15 @@ export class JourneyReplayCesiumRenderer {
         this.#sampler = sampler
         this.#sample = sample
         this.#ensureSource()
-        this.#updateCursor(sample)
-        if (hideCursor) {
-            this.#setCursorVisibility(false)
-        }
         if (freezeDynamic) {
             this.#freezeDynamicLines()
-            globalThis.lgs?.scene?.requestRender?.()
-            return
         }
-        if (forceGeometry || this.#shouldUpdatePathGeometry(sample)) {
+        else if (forceGeometry || this.#shouldUpdatePathGeometry(sample)) {
             this.#updateCompletedLines(sample)
             this.#updateRemainingLines(sample)
         }
+        this.#updateCursor(sample)
+        this.#syncCursorVisibilityWithTrace({hideCursor})
         globalThis.lgs?.scene?.requestRender?.()
     }
 
@@ -146,13 +142,25 @@ export class JourneyReplayCesiumRenderer {
         globalThis.lgs?.scene?.requestRender?.()
     }
 
+    hideCursor = () => {
+        this.#setCursorVisibility(false)
+        globalThis.lgs?.scene?.requestRender?.()
+    }
+
     #setCursorVisibility = (visible) => {
         if (this.#cursor) {
             this.#cursor.show = visible
         }
         if (this.#cursorBorder) {
-            this.#cursorBorder.show = visible && this.#cursorBorder.show !== false
+            this.#cursorBorder.show = visible && this.#style().cursorBorder > 0
         }
+    }
+
+    #hasVisibleTraceEntity = () => Array.from(this.#lineEntities.values())
+        .some(record => Boolean(record?.entity?.polyline) && record.entity.show !== false)
+
+    #syncCursorVisibilityWithTrace = ({hideCursor = false} = {}) => {
+        this.#setCursorVisibility(!hideCursor && this.#hasVisibleTraceEntity())
     }
 
     #resetSourceEntities = () => {

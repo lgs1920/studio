@@ -57,7 +57,7 @@ describe('JourneyReplayProgressBar', () => {
     it('shows the settings button when the replay is idle', () => {
         render(<JourneyReplayProgressBar showSettings/>)
 
-        expect(screen.getByRole('button', {name: 'Replay settings'})).not.toBeNull()
+        expect(screen.getByRole('button', {name: 'Journey Replay settings'})).not.toBeNull()
     })
 
     it('hides the settings button while the main UI is hidden for replay clips', () => {
@@ -65,7 +65,7 @@ describe('JourneyReplayProgressBar', () => {
 
         render(<JourneyReplayProgressBar showSettings/>)
 
-        expect(screen.queryByRole('button', {name: 'Replay settings'})).toBeNull()
+        expect(screen.queryByRole('button', {name: 'Journey Replay settings'})).toBeNull()
     })
 
     it('keeps the pause action visible until the clip sequence fully ends', () => {
@@ -73,8 +73,8 @@ describe('JourneyReplayProgressBar', () => {
 
         render(<JourneyReplayProgressBar/>)
 
-        expect(screen.getByRole('button', {name: 'Pause Replay'})).not.toBeNull()
-        expect(screen.queryByRole('button', {name: 'Start Replay'})).toBeNull()
+        expect(screen.getByRole('button', {name: 'Pause Journey Replay'})).not.toBeNull()
+        expect(screen.queryByRole('button', {name: 'Start Journey Replay'})).toBeNull()
     })
 
     it('disables the replay actions when requested', () => {
@@ -88,8 +88,23 @@ describe('JourneyReplayProgressBar', () => {
 
         render(<JourneyReplayProgressBar disabled showSettings/>)
 
-        expect(screen.getByRole('button', {name: 'Pause Replay'}).disabled).toBe(true)
-        expect(screen.getByRole('button', {name: 'Stop Replay'}).disabled).toBe(true)
-        expect(screen.getByRole('button', {name: 'Replay settings'}).disabled).toBe(true)
+        expect(screen.getByRole('button', {name: 'Pause Journey Replay'}).disabled).toBe(true)
+        expect(screen.getByRole('button', {name: 'Stop Journey Replay'}).disabled).toBe(true)
+        expect(screen.getByRole('button', {name: 'Journey Replay settings'}).disabled).toBe(true)
+    })
+
+    it('can show compact export progress without journey distance', () => {
+        render(
+            <JourneyReplayProgressBar
+                showActions={false}
+                showDistance={false}
+                progressOverride={0.25}
+                timeLabelOverride="00:42"
+            />,
+        )
+
+        expect(screen.getByText('00:42')).not.toBeNull()
+        expect(screen.getByText('25%')).not.toBeNull()
+        expect(screen.queryByText(/km/)).toBeNull()
     })
 })

@@ -14,11 +14,15 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-const END_WIDGET_LEAD_MS = 2000
 const VIDEO_STATS_WIDGET_MODES = Object.freeze({
     'dynamic-stats-widget': 'dynamic',
     'journey-stats-widget': 'journey',
 })
+
+const REPLAY_VIDEO_PHASE_REPLAY = 'replay'
+const REPLAY_VIDEO_PHASE_START = 'start'
+const REPLAY_VIDEO_PHASE_STOP = 'stop'
+const LAST_REPLAY_FRAME_WINDOW = 2
 
 const finiteNumber = value => {
     const numeric = Number(value)
@@ -27,6 +31,135 @@ const finiteNumber = value => {
 
 const defaultReplayStore = () => globalThis.lgs?.stores?.replay ?? null
 const defaultReplayController = () => globalThis.__?.ui?.replay?.controller ?? null
+
+const normalizeReplayFramePhase = phase => {
+    if (!phase) {
+        return null
+    }
+
+    const kind = `${phase.kind ?? phase.slot ?? REPLAY_VIDEO_PHASE_REPLAY}`
+    const slot = `${phase.slot ?? kind}`
+    return {
+        ...phase,
+        kind,
+        slot,
+    }
+}
+
+const resolveReplayCaptureFps = (replay = defaultReplayStore()) => {
+    const candidates = [
+        replay?.captureFps,
+        replay?.fps,
+        globalThis.lgs?.stores?.ui?.video?.captureFps,
+        globalThis.lgs?.stores?.ui?.video?.currentFps,
+        globalThis.lgs?.settings?.ui?.video?.captureFps,
+        globalThis.lgs?.settings?.ui?.video?.fps,
+        30,
+    ]
+
+    for (const candidate of candidates) {
+        const fps = finiteNumber(candidate)
+        if (fps !== null && fps > 0) {
+            return fps
+        }
+    }
+
+    return 30
+}
+
+const isReplayRuntimeActive = replayState => Boolean(
+    replayState?.active
+    || replayState?.playing
+    || replayState?.paused
+    || replayState?.clipSequenceActive,
+)
+
+const resolveReplayFrameWindow = replayState => {
+    const phase = normalizeReplayFramePhase(replayState?.framePhase ?? replayState?.phase ?? null)
+    if (phase && phase.slot !== REPLAY_VIDEO_PHASE_REPLAY && phase.kind !== REPLAY_VIDEO_PHASE_REPLAY) {
+        return {
+            phase,
+            isLastReplayFrames: false,
+        }
+    }
+
+    if (phase?.isLastTwoReplayFrames === true) {
+        return {
+            phase,
+            isLastReplayFrames: true,
+        }
+    }
+
+    const replayFrameIndex = finiteNumber(
+        phase?.replayFrameIndex
+        ?? replayState?.replayFrameIndex
+        ?? replayState?.frameIndex
+        ?? replayState?.index,
+    )
+    const replayFrameCount = finiteNumber(
+        phase?.replayFrameCount
+        ?? replayState?.replayFrameCount
+        ?? replayState?.frameCount,
+    )
+    if (replayFrameIndex !== null && replayFrameCount !== null && replayFrameCount > 0) {
+        return {
+            phase,
+            isLastReplayFrames: (replayFrameCount - replayFrameIndex) <= LAST_REPLAY_FRAME_WINDOW,
+        }
+    }
+
+    const durationMillis = finiteNumber(replayState?.durationMillis)
+    const progress = finiteNumber(replayState?.progress)
+    if (durationMillis === null || progress === null || durationMillis <= 0) {
+        return {
+            phase,
+            isLastReplayFrames: false,
+        }
+    }
+
+    const fps = resolveReplayCaptureFps(replayState)
+    const frameIntervalMillis = 1000 / fps
+    const frameCount = Math.max(1, Math.ceil(durationMillis / frameIntervalMillis) + 1)
+    const playbackProgress = Number(replayState?.direction) < 0 ? 1 - progress : progress
+    const frameIndex = Math.min(
+        frameCount - 1,
+        Math.max(0, Math.round(Math.max(0, Math.min(1, playbackProgress)) * (frameCount - 1))),
+    )
+
+    return {
+        phase,
+        isLastReplayFrames: (frameCount - frameIndex) <= LAST_REPLAY_FRAME_WINDOW,
+    }
+}
+
+/**
+ * Return the deterministic frame currently rendered by the HQ exporter.
+ *
+ * This state wins over the live controller/store snapshot so dynamic widgets
+ * can render the exact frame being encoded instead of the last live replay
+ * position.
+ */
+export const resolveReplayExportFrameState = (replay = defaultReplayStore()) => {
+    const runtime = replay?.deferredExportPlan?.runtime ?? null
+    const frameState = runtime?.frameState ?? null
+    if (runtime?.status !== 'exporting' || frameState?.active !== true) {
+        return null
+    }
+
+    return frameState
+}
+
+/**
+ * Return the active dynamic replay frame, regardless of its producer.
+ *
+ * Draft recording publishes `dynamicFrameState` from the playback controller.
+ * HQ export publishes `runtime.frameState` from the deferred exporter.
+ */
+export const resolveReplayDynamicFrameState = (replay = defaultReplayStore()) => (
+    resolveReplayExportFrameState(replay)
+    ?? replay?.dynamicFrameState
+    ?? null
+)
 
 const resolveVideoOverlayRoot = (widgetEl = null) => {
     if (!widgetEl) {
@@ -83,13 +216,22 @@ export const resolveReplayVisibilityState = ({
         return null
     }
 
-    const liveSample = replayController?.currentSample?.() ?? null
+    const dynamicFrameState = resolveReplayDynamicFrameState(replayState)
+    const framePhase = normalizeReplayFramePhase(
+        dynamicFrameState?.phase
+        ?? replayState?.replayFramePhase
+        ?? replayState?.framePhase
+        ?? null,
+    )
+    const liveSample = dynamicFrameState?.sample ?? replayController?.currentSample?.() ?? null
     const controllerDuration = finiteNumber(replayController?.duration)
-    const controllerProgress = finiteNumber(replayController?.progress)
-    const controllerDirection = replayController ? (Number(replayController.direction) < 0 ? -1 : 1) : null
-    const controllerPlaying = replayController ? Boolean(replayController.playing) : null
-    const controllerPaused = replayController ? Boolean(replayController.paused) : null
-    const controllerActive = replayController ? Boolean(replayController.running || replayController.paused) : null
+    const controllerProgress = finiteNumber(dynamicFrameState?.progress) ?? finiteNumber(replayController?.progress)
+    const controllerDirection = dynamicFrameState
+                                ? (Number(dynamicFrameState.direction) < 0 ? -1 : 1)
+                                : (replayController ? (Number(replayController.direction) < 0 ? -1 : 1) : null)
+    const controllerPlaying = dynamicFrameState ? Boolean(dynamicFrameState.playing) : (replayController ? Boolean(replayController.playing) : null)
+    const controllerPaused = dynamicFrameState ? Boolean(dynamicFrameState.paused) : (replayController ? Boolean(replayController.paused) : null)
+    const controllerActive = dynamicFrameState ? Boolean(dynamicFrameState.active) : (replayController ? Boolean(replayController.running || replayController.paused) : null)
 
     return {
         ...replayState,
@@ -99,12 +241,20 @@ export const resolveReplayVisibilityState = ({
         progress:       controllerProgress ?? replayState?.progress ?? null,
         direction:      controllerDirection ?? (Number(replayState?.direction) < 0 ? -1 : 1),
         sample:         liveSample ?? replayState?.sample ?? replayState?.liveSample ?? null,
-        elapsedMillis:  finiteNumber(liveSample?.journeyElapsedMillis)
+        elapsedMillis:  finiteNumber(dynamicFrameState?.elapsedMillis)
+                        ?? finiteNumber(liveSample?.journeyElapsedMillis)
                         ?? finiteNumber(replayState?.elapsedMillis),
-        durationMillis: finiteNumber(liveSample?.journeyDurationMillis)
+        durationMillis: finiteNumber(dynamicFrameState?.durationMillis)
+                        ?? finiteNumber(liveSample?.journeyDurationMillis)
                         ?? finiteNumber(replayController?.sampler?.durationMillis)
                         ?? (controllerDuration !== null ? controllerDuration * 1000 : null)
                         ?? finiteNumber(replayState?.durationMillis),
+        framePhase,
+        phase:            framePhase,
+        frameIndex:       finiteNumber(dynamicFrameState?.index ?? dynamicFrameState?.frameIndex ?? replayState?.frameIndex),
+        frameCount:       finiteNumber(dynamicFrameState?.frameCount ?? replayState?.frameCount),
+        replayFrameIndex: finiteNumber(dynamicFrameState?.replayFrameIndex ?? framePhase?.replayFrameIndex ?? replayState?.replayFrameIndex),
+        replayFrameCount: finiteNumber(dynamicFrameState?.replayFrameCount ?? framePhase?.replayFrameCount ?? replayState?.replayFrameCount),
     }
 }
 
@@ -141,31 +291,22 @@ const resolveReplayStatsWidgetVisibility = ({
         return false
     }
 
-    if (mode === 'dynamic') {
-        if (!(replayState.playing || replayState.paused)) {
-            return false
-        }
-
-        if (!hasJourneyReplayStopClips()) {
-            const remainingMillis = getJourneyReplayRemainingMillis(replayState)
-            if (remainingMillis !== null && remainingMillis <= END_WIDGET_LEAD_MS) {
-                return false
-            }
-        }
-
-        return true
-    }
-
-    const remainingMillis = getJourneyReplayRemainingMillis(replayState)
-    if (remainingMillis === null || remainingMillis > END_WIDGET_LEAD_MS) {
+    const {phase, isLastReplayFrames} = resolveReplayFrameWindow(replayState)
+    if (phase?.slot === REPLAY_VIDEO_PHASE_START || phase?.kind === REPLAY_VIDEO_PHASE_START) {
         return false
     }
 
-    if (hasJourneyReplayStopClips()) {
-        return true
+    if (!isReplayRuntimeActive(replayState)) {
+        return false
     }
 
-    return remainingMillis > 0
+    if (phase?.slot === REPLAY_VIDEO_PHASE_STOP || phase?.kind === REPLAY_VIDEO_PHASE_STOP) {
+        return mode === 'journey'
+    }
+
+    return mode === 'dynamic'
+           ? !isLastReplayFrames
+           : isLastReplayFrames
 }
 
 export const resolveReplayVideoStatsWidgetVisibility = ({

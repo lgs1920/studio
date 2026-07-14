@@ -596,6 +596,29 @@ wa-select[label-at-start].half-width::part(base) {
     min-width: 0;
 }
 
+.replay-controls-hq-row {
+    align-items: center;
+    display: inline-flex;
+    gap: var(--lgs-gutter-s);
+    justify-content: center;
+    min-width: 0;
+    white-space: nowrap;
+}
+
+.replay-controls-hq-label {
+    font-size: var(--lgs-font-size-s);
+    font-weight: 600;
+    letter-spacing: 0;
+}
+
+.replay-controls-hq-progress {
+    min-width: 0;
+}
+
+.replay-controls-action {
+    flex: 0 0 auto;
+}
+
 .replay-progress-bar {
     align-items: center;
     display: inline-flex;

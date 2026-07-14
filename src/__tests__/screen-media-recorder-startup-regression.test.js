@@ -112,7 +112,10 @@ describe('ScreenMediaRecorder startup', () => {
         recorder.addEventListener(ScreenMediaRecorder.events.ERROR, errorHandler)
     })
 
-    afterEach(() => {
+    afterEach(async () => {
+        if (recorder?.isRecording?.()) {
+            await recorder.cancelVideo()
+        }
         recorder?.removeEventListener?.(ScreenMediaRecorder.events.ERROR, errorHandler)
         ScreenMediaRecorder.instance = null
         vi.useRealTimers()
@@ -131,5 +134,30 @@ describe('ScreenMediaRecorder startup', () => {
 
         expect(errorHandler).not.toHaveBeenCalled()
         expect(recorder.isRecording()).toBe(true)
+    })
+
+    it('runs frameCaptureReady before speed-mode encoded frames when provided', async () => {
+        const frameCaptureReady = vi.fn(async () => undefined)
+        globalThis.requestAnimationFrame = vi.fn((callback) => {
+            queueMicrotask(() => callback(performance.now()))
+            return 1
+        })
+
+        recorder.initialize({
+            fps:        30,
+            quality:    1,
+            maxDuration: 60,
+            maxSize:    1000000,
+            ratio:      '16:9',
+            captureMode: 'speed',
+            frameCaptureReady,
+        })
+
+        await recorder.startVideo()
+        await Promise.resolve()
+        await Promise.resolve()
+
+        expect(frameCaptureReady).toHaveBeenCalled()
+        expect(errorHandler).not.toHaveBeenCalled()
     })
 })

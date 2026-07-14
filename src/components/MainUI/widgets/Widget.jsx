@@ -1254,7 +1254,7 @@ export const Widget = ({isVisible, className = '', moveableClassName = '', conta
                             type:            fullConfig.snap,
                             outerTransforms: true,
                             outerShadows:    true,
-                            widgetId:        config.id,
+                            widgetId,
                             debugTiming:     config.refreshMode === 'both',
                             refreshMode:     config.refreshMode ?? (interactionLocked ? 'live' : 'mutation'),
                         })

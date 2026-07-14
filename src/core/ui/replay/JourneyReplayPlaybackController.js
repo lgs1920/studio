@@ -42,6 +42,11 @@ const safeDuration = duration => {
     return Number.isFinite(numeric) && numeric > 0 ? numeric : DEFAULT_DURATION
 }
 
+const safeFps = fps => {
+    const numeric = Number(fps)
+    return Number.isFinite(numeric) && numeric > 0 ? numeric : 30
+}
+
 export class JourneyReplayPlaybackController {
     #sampler = null
     #duration = DEFAULT_DURATION
@@ -62,6 +67,7 @@ export class JourneyReplayPlaybackController {
     #lastGlobalUpdate = 0
     #storeSyncInterval = STORE_SYNC_INTERVAL
     #globalUpdateInterval = GLOBAL_UPDATE_EVENT_INTERVAL
+    #dynamicFrameId = 0
 
     constructor({
                     requestFrame = callback => globalThis.__?.requestAnimationFrame?.(callback)
@@ -385,8 +391,44 @@ export class JourneyReplayPlaybackController {
             return
         }
 
+        const frameNow = this.#now()
+        this.#dynamicFrameId += 1
+        const frameIntervalMillis = MILLIS / safeFps(store.captureFps)
+        const replayFrameCount = Math.max(1, Math.ceil((this.#duration * MILLIS) / frameIntervalMillis) + 1)
+        const playbackProgress = this.#direction < 0 ? 1 - this.#progress : this.#progress
+        const replayFrameIndex = Math.min(
+            replayFrameCount - 1,
+            Math.max(0, Math.round(clamp(playbackProgress, 0, 1) * (replayFrameCount - 1))),
+        )
+        const phase = {
+            kind: 'replay',
+            slot: 'replay',
+            progress: this.#progress,
+            localProgress: clamp(playbackProgress, 0, 1),
+            replayFrameIndex,
+            replayFrameCount,
+            isLastTwoReplayFrames: (replayFrameCount - replayFrameIndex) <= 2,
+        }
+        // Shared live draft tick for replay-driven widgets.
         store.liveSample = sample
-        store.dynamicStatsTick = this.#now()
+        store.dynamicStatsTick = frameNow
+        store.replayFramePhase = phase
+        store.dynamicFrameState = {
+            active:        this.#running || this.#paused,
+            playing:       this.#running && !this.#paused,
+            paused:        this.#paused,
+            progress:      this.#progress,
+            direction:     this.#direction,
+            sample,
+            elapsedMillis: sample?.journeyElapsedMillis ?? null,
+            durationMillis: sample?.journeyDurationMillis ?? this.#sampler?.durationMillis ?? null,
+            frameId:       this.#dynamicFrameId,
+            replayFrameIndex,
+            replayFrameCount,
+            phase,
+            source:        'controller',
+            updatedAt:     frameNow,
+        }
 
         const now = this.#now()
         if (!force && now - this.#lastStoreSync < this.#storeSyncInterval) {

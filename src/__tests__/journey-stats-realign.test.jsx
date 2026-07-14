@@ -207,8 +207,13 @@ describe('JourneyStats', () => {
         })
     })
 
-    it('stays visible on the video board before the recording starts', async () => {
+    it('keeps journey stats values on the video board before the recording starts', async () => {
         globalThis.lgs.stores.ui.video.preRecording = true
+        globalThis.lgs.theJourney.metrics.global = {
+            distance: 120,
+            positive: {elevation: 87},
+            duration: 4,
+        }
 
         const {container} = render(
             <JourneyStats
@@ -234,6 +239,46 @@ describe('JourneyStats', () => {
         expect(widget).not.toBeNull()
         expect(widget.style.visibility).not.toBe('hidden')
         expect(widget.dataset.videoOverlayVisible).toBe('true')
+        expect(widget.textContent).toContain('120')
+        expect(widget.querySelector('.journey-stats-placeholder')).toBeNull()
+    })
+
+    it('uses placeholder values for dynamic stats on the video board before recording starts', async () => {
+        globalThis.lgs.stores.ui.video.preRecording = true
+        globalThis.lgs.stores.replay.sample = {
+            distanceFromStart: 120,
+            remainingDistance:  80,
+            cumulativeElevationGain: 87,
+            journeyElapsedMillis: 4000,
+        }
+
+        const {container} = render(
+            <JourneyStats
+                id="journey-stats-widget#1"
+                metrics={{
+                    distance: 120,
+                    positive: {elevation: 87},
+                    duration: 4,
+                }}
+                units={{
+                    elevation: 'm',
+                    distance:  'm',
+                    pace:      'min/km',
+                    speed:     'km/h',
+                }}
+                mode="dynamic"
+                widgetKey="journey-stats-widget"
+                widgetsBoard={VIDEO_WIDGETS_BOARD}
+            />,
+        )
+
+        const widget = container.querySelector('.journey-stats-widget')
+        expect(widget).not.toBeNull()
+        expect(widget.style.visibility).not.toBe('hidden')
+        expect(widget.dataset.videoOverlayVisible).toBe('true')
+        expect(widget.textContent).toContain('00')
+        expect(widget.querySelector('.journey-stats-placeholder')).not.toBeNull()
+        expect(widget.textContent).not.toContain('120')
     })
 
     it('hides the journey stats widget on the video board while recording is active and the replay is not near the end', async () => {

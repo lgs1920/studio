@@ -47,6 +47,9 @@ describe('Widget2Canvas refresh modes', () => {
     const flushMicrotasks = async () => {
         await Promise.resolve()
         await Promise.resolve()
+        await Promise.resolve()
+        await Promise.resolve()
+        await Promise.resolve()
     }
 
     beforeEach(() => {
@@ -221,5 +224,43 @@ describe('Widget2Canvas refresh modes', () => {
 
         expect(snapdomToCanvasMock).toHaveBeenCalledTimes(3)
         expect(snapdomToCanvasMock.mock.calls[2][0]).toBe(dynamicValue)
+    })
+
+    it('queues a fresh refresh while a refresh is already pending', async () => {
+        let resolveSnapshot = null
+        mirror = new Widget2Canvas(target, {widgetId: 'stats-widget#1'})
+
+        await mirror.init()
+        expect(Widget2Canvas.get('stats-widget#1')).toBe(mirror)
+        expect(snapdomToCanvasMock).toHaveBeenCalledTimes(1)
+
+        snapdomToCanvasMock.mockImplementationOnce(() => new Promise(resolve => {
+            resolveSnapshot = () => {
+                const canvas = document.createElement('canvas')
+                canvas.width = 10
+                canvas.height = 10
+                resolve(canvas)
+            }
+        }))
+
+        child.textContent = 'first update'
+        await flushMicrotasks()
+        expect(rafCallbacks).toHaveLength(1)
+
+        rafCallbacks.shift()(performance.now())
+        await flushMicrotasks()
+
+        expect(mirror.requestRefresh({afterFrame: true})).toBe(true)
+        expect(rafCallbacks).toHaveLength(0)
+
+        resolveSnapshot()
+        await flushMicrotasks()
+
+        expect(rafCallbacks).toHaveLength(1)
+        await rafCallbacks.shift()(performance.now())
+        await flushMicrotasks()
+
+        expect(snapdomToCanvasMock).toHaveBeenCalledTimes(3)
+        expect(snapdomToCanvasMock.mock.calls[2][0]).toBe(target)
     })
 })

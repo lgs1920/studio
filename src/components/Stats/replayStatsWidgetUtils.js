@@ -18,7 +18,9 @@ import {
     getJourneyReplayRemainingMillis,
     hasJourneyReplayStopClips,
     isJourneyReplayLinked,
+    resolveReplayDynamicFrameState,
     isVideoWidgetEditorPhase,
+    resolveReplayExportFrameState,
     resolveReplayVideoStatsWidgetVisibility,
     resolveReplayVisibilityState,
     resolveVideoOverlayVisibility,
@@ -44,6 +46,24 @@ export const shouldShowVideoStatsWidget = ({
     replay = globalThis.lgs?.stores?.replay ?? null,
 } = {}) => {
     return resolveReplayVideoStatsWidgetVisibility({mode, replay})
+}
+
+/**
+ * Resolve the journey sample used by dynamic Stats.
+ *
+ * The shared replay frame state is preferred so Stats, Profile, and HQ export
+ * widgets all render from the same tick.
+ */
+export const resolveDynamicJourneyReplayStatsSample = ({
+    replay = defaultReplayStore(),
+    controller = globalThis.__?.ui?.replay?.controller ?? null,
+} = {}) => {
+    const dynamicFrameState = resolveReplayDynamicFrameState(replay)
+    return dynamicFrameState?.sample
+           ?? controller?.currentSample?.()
+           ?? replay?.liveSample
+           ?? replay?.sample
+           ?? null
 }
 
 export const buildDynamicJourneyReplayStatsMetrics = (
@@ -80,5 +100,7 @@ export {
     hasJourneyReplayStopClips,
     isJourneyReplayLinked,
     isVideoWidgetEditorPhase,
+    resolveReplayDynamicFrameState,
+    resolveReplayExportFrameState,
     resolveVideoOverlayVisibility,
 }

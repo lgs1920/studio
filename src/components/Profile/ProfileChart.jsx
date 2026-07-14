@@ -27,14 +27,7 @@ import {
     normalizeJourneyReplayProgressionStyle,
     normalizeJourneyReplayTrace,
 } from '@Core/ui/replay/JourneyReplayProgressionStyle'
-import {
-    REPLAY_EVENT_END,
-    REPLAY_EVENT_PAUSE,
-    REPLAY_EVENT_RESUME,
-    REPLAY_EVENT_START,
-    REPLAY_EVENT_STOP,
-    REPLAY_EVENT_UPDATE,
-} from '@Core/ui/replay/JourneyReplayPlaybackController'
+import { resolveReplayVisibilityState } from '@Core/ui/replay/ReplayOverlayResolver'
 import { CHART_ELEVATION_VS_DISTANCE, DISTANCE, ELEVATION, POINT, TIME } from '@Core/ui/Profiler'
 import { INTERNATIONAL } from '@Utils/UnitUtils'
 import { colord }        from 'colord'
@@ -1193,19 +1186,24 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
             return null
         }
 
-        const visible = replayState?.active
-            || replayState?.paused
-            || replayState?.playing
+        const resolvedReplayState = resolveReplayVisibilityState({replay: replayState})
+        const visible = resolvedReplayState?.active
+            || resolvedReplayState?.paused
+            || resolvedReplayState?.playing
             || replayState?.toolbarVisible
-        const controllerSample = controllerSampleOverride ?? __.ui.replay?.controller?.currentSample?.()
+        const controllerSample = controllerSampleOverride
+                                 ?? resolvedReplayState?.sample
+                                 ?? __.ui.replay?.controller?.currentSample?.()
         const activeSample = visible
-                             ? (replayState?.playing ? (controllerSample ?? replayState?.sample) : (replayState?.sample ?? controllerSample))
+                             ? (resolvedReplayState?.playing
+                                ? (controllerSample ?? resolvedReplayState?.sample)
+                                : (resolvedReplayState?.sample ?? controllerSample))
                              : null
         const lockedSample = !activeSample && locked ? lockedProfileSample : null
         const displaySample = activeSample ?? lockedSample
         const hoverSample = replayState?.hoverSample
         const metricState = activeSample
-                            ? replayState
+                            ? resolvedReplayState
                             : (lockedSample ? {
                                 totalDistance: profileTooltipMeta.totalDistanceFromStart,
                                 direction:     1,
@@ -1502,44 +1500,10 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
 
         applyJourneyReplayProgress()
         const unsubscribe = subscribe(replayStore, applyJourneyReplayProgress)
-        const replayController = __.ui.replay?.controller
-        const handleControllerUpdate = (detail) => {
-            if (!detail) {
-                renderJourneyReplayProgress()
-                return
-            }
-
-            const nextJourneyReplayState = {
-                ...replayStore,
-                active:         detail.running || detail.paused,
-                paused:         detail.paused,
-                playing:        detail.running && !detail.paused,
-                sample:         detail.sample ?? replayStore.sample,
-                progress:       detail.progress ?? replayStore.progress,
-                duration:       detail.duration ?? replayStore.duration,
-                direction:      detail.direction ?? replayStore.direction,
-                loop:           detail.loop ?? replayStore.loop,
-                toolbarVisible:  replayStore.toolbarVisible,
-                hoverSample:    replayStore.hoverSample,
-            }
-            renderJourneyReplayProgress(detail.sample ?? null, nextJourneyReplayState)
-        }
-        const unsubscribeController = replayController
-                                      ? [
-                                          replayController.on(REPLAY_EVENT_START, handleControllerUpdate),
-                                          replayController.on(REPLAY_EVENT_UPDATE, handleControllerUpdate),
-                                          replayController.on(REPLAY_EVENT_PAUSE, handleControllerUpdate),
-                                          replayController.on(REPLAY_EVENT_RESUME, handleControllerUpdate),
-                                          replayController.on(REPLAY_EVENT_STOP, handleControllerUpdate),
-                                          replayController.on(REPLAY_EVENT_END, handleControllerUpdate),
-                                      ]
-                                      : []
-
         return () => {
             if (frame !== null) {
                 cancelAnimationFrame(frame)
             }
-            unsubscribeController.forEach(unsubscribeEvent => unsubscribeEvent?.())
             unsubscribe()
         }
     }, [replayProfileOption, preview])

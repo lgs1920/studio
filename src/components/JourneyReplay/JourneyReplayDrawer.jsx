@@ -26,7 +26,6 @@ import WaDrawer     from '@Components/WaDrawerNonModal'
 import { REPLAY_DRAWER } from '@Core/constants'
 import classNames from 'classnames'
 import { getJourneyReplayHideOtherJourneys } from '@Core/ui/JourneyVisibility'
-import { runReplayDeferredMp4Export } from '@Core/ui/replay/ReplayDeferredExporter'
 import {
     clampJourneyReplayNumber, DEFAULT_REPLAY_SCOPE, ensureJourneyReplaySettings, REPLAY_CAMERA_ALTITUDE_CONSTANT,
     REPLAY_CAMERA_ALTITUDE_GROUND_OFFSET, REPLAY_CAMERA_POSITION_AHEAD, REPLAY_CAMERA_POSITION_BEHIND,
@@ -769,22 +768,6 @@ export const JourneyReplayDrawer = memo(() => {
         }
     }, [])
 
-    const exportDeferredMp4 = useCallback(() => {
-        if (!hasJourney) {
-            return
-        }
-
-        // This button is a convenience entry point. The real export logic
-        // lives in the replay deferred exporter.
-        void runReplayDeferredMp4Export({
-            replay: replayState,
-            journey: currentJourney,
-            controller: __.ui.replay?.controller ?? null,
-            sourceCanvas: lgs.canvas,
-            dimensions: lgs.canvas ? {width: lgs.canvas.width, height: lgs.canvas.height} : null,
-        })
-    }, [currentJourney, hasJourney, replayState])
-
     const updateActiveTab = useCallback((event) => {
         setActiveTab(event?.detail?.name ?? REPLAY_TAB_RUNNER)
     }, [])
@@ -1115,17 +1098,6 @@ export const JourneyReplayDrawer = memo(() => {
                                              appearance="Filled"
                                          />
                                      }
-                                     <WaButton
-                                         id="prepare-replay-master-export"
-                                         className="replay-sync-video-button square-button"
-                                         variant="neutral"
-                                         appearance="plain"
-                                         size="s"
-                                         onClick={exportDeferredMp4}
-                                     >
-                                         <WaIcon name="download" variant="regular"/>
-                                         <WaTooltip for="prepare-replay-master-export">{'Export master MP4'}</WaTooltip>
-                                     </WaButton>
                                  </div>
                                  <WaSwitch
                                      label-at-start

@@ -19,6 +19,7 @@ import { DateTimeDisplay }                              from '@Components/DateTi
 import { useWidgetScaleCorrection } from '@Components/MainUI/widgets/useWidgetScaleCorrection'
 import { VIDEO_WIDGETS_BOARD }                          from '@Core/constants'
 import { resolveReplayVideoStatsWidgetVisibility }      from '@Core/ui/replay/ReplayOverlayResolver'
+import { Widget2Canvas }                                from '@Core/ui/widget-manager/widget-2-canvas/Widget2Canvas'
 import {
     JOURNEY_STATS_TEXT_ITEM_MAP,
     isJourneyStatsSummaryTextItem,
@@ -28,6 +29,7 @@ import {
 }                                                       from '@Components/Stats/journeyStatsTextOrder'
 import {
     buildDynamicJourneyReplayStatsMetrics,
+    resolveDynamicJourneyReplayStatsSample,
 }                                                       from '@Components/Stats/replayStatsWidgetUtils'
 import { WIDGET_RADIUS }                                from '@Core/constants'
 import { faArrowDownToLine, faArrowUpToLine }           from '@fortawesome/pro-regular-svg-icons'
@@ -35,7 +37,7 @@ import { SlDivider, SlIcon }                            from '@shoelace-style/sh
 import { FA2SL }                                        from '@Utils/FA2SL'
 import { DISTANCE_UNITS, ELEVATION_UNITS, PACE_UNITS, SPEED_UNITS, UnitUtils } from '@Utils/UnitUtils'
 import { useOptionalSnapshot }                          from '@Utils/ValtioUtils'
-import { Fragment, memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useSnapshot }                                  from 'valtio'
 
 const scaleValue = (value, correction = 1) => {
@@ -181,9 +183,15 @@ export const JourneyStats = memo(({id, metrics, units, style = {}, mode = 'journ
     const currentUnitSystem = unitSystem.current
     const isImperial = currentUnitSystem === 'imperial'
     const replay = useSnapshot(lgs.stores.replay)
-    useSnapshot(lgs.stores.ui.video)
+    const video = useSnapshot(lgs.stores.ui.video)
     const isDynamicMode = mode === 'dynamic'
     const isVideoBoard = widgetsBoard === VIDEO_WIDGETS_BOARD
+    const useVideoStatsPlaceholder = isDynamicMode
+                                     && isVideoBoard
+                                     && Boolean(video.editing || video.preRecording)
+                                     && !video.recording
+                                     && !video.finalizing
+                                     && !video.snapshot
     const element = useMemo(() => {
         if (id && configuration.elements?.[id]) {
             return configuration.elements[id]
@@ -191,43 +199,21 @@ export const JourneyStats = memo(({id, metrics, units, style = {}, mode = 'journ
         return configuration.user ?? configuration.default
     }, [id, configuration])
 
-    const [replayFrameTick, setReplayFrameTick] = useState(0)
     const replayController = __.ui?.replay?.controller ?? null
-
-    useEffect(() => {
-        if (!(isDynamicMode || isVideoBoard) || !replay?.playing) {
-            return undefined
-        }
-
-        const raf = globalThis.requestAnimationFrame ?? (callback => setTimeout(callback, 16))
-        const caf = globalThis.cancelAnimationFrame ?? clearTimeout
-        let rafId = 0
-        let cancelled = false
-
-        const tick = () => {
-            if (cancelled) {
-                return
-            }
-
-            setReplayFrameTick(current => current + 1)
-            rafId = raf(tick)
-        }
-
-        rafId = raf(tick)
-
-        return () => {
-            cancelled = true
-            caf(rafId)
-        }
-    }, [isDynamicMode, isVideoBoard, replay?.playing])
+    const replayFrameState = replay?.deferredExportPlan?.runtime?.frameState
+                             ?? replay?.dynamicFrameState
+                             ?? null
 
     const dynamicReplaySample = useMemo(() => {
         if (!isDynamicMode) {
             return null
         }
 
-        return replayController?.currentSample?.() ?? replay?.sample ?? null
-    }, [replayFrameTick, isDynamicMode, replay, replayController])
+        return resolveDynamicJourneyReplayStatsSample({
+            replay,
+            controller: replayController,
+        })
+    }, [isDynamicMode, replay, replayController, replayFrameState])
 
     /**
      * Merges metrics based on defined data source (global, external, user)
@@ -257,6 +243,22 @@ export const JourneyStats = memo(({id, metrics, units, style = {}, mode = 'journ
             }
         }
     }, [dynamicReplaySample, element.dataSource, fallbackMetrics, replay, isDynamicMode, metricsSnap])
+
+    useLayoutEffect(() => {
+        if (!isDynamicMode || !isVideoBoard || !id) {
+            return
+        }
+
+        Widget2Canvas.refresh(id)
+    }, [
+        id,
+        isDynamicMode,
+        isVideoBoard,
+        replayFrameState,
+        displayMetrics.distance,
+        displayMetrics.positive?.elevation,
+        displayMetrics.duration,
+    ])
 
     const formattedDuration = useMemo(() => {
         const seconds = displayMetrics?.duration
@@ -326,13 +328,17 @@ export const JourneyStats = memo(({id, metrics, units, style = {}, mode = 'journ
         const visibleById = {
             date:      showDate,
             location:  showLocation,
-            distance:  isDynamicMode ? displayMetrics.distance >= 0 : (isJourneyStatsTextItemEnabled(element, 'distance') && displayMetrics.distance > 0),
+            distance:  useVideoStatsPlaceholder
+                       ? isJourneyStatsTextItemEnabled(element, 'distance')
+                       : (isDynamicMode ? displayMetrics.distance >= 0 : (isJourneyStatsTextItemEnabled(element, 'distance') && displayMetrics.distance > 0)),
             elevation: isJourneyStatsTextItemEnabled(element, 'elevation')
-                       && (isDynamicMode ? hasElevation : (displayMetrics.positive?.elevation > 0 || displayMetrics.positive?.elevation === 0)),
-            duration:  isDynamicMode ? Boolean(formattedDuration) : (isJourneyStatsTextItemEnabled(element, 'duration') && Boolean(formattedDuration)),
-            altitude:  showAltitudeRow,
-            speed:     showSpeedRow,
-            pace:      showPaceRow,
+                       && (useVideoStatsPlaceholder || (isDynamicMode ? hasElevation : (displayMetrics.positive?.elevation > 0 || displayMetrics.positive?.elevation === 0))),
+            duration:  useVideoStatsPlaceholder
+                       ? isJourneyStatsTextItemEnabled(element, 'duration')
+                       : (isDynamicMode ? Boolean(formattedDuration) : (isJourneyStatsTextItemEnabled(element, 'duration') && Boolean(formattedDuration))),
+            altitude:  useVideoStatsPlaceholder ? element?.altitude === true : showAltitudeRow,
+            speed:     useVideoStatsPlaceholder ? element?.performance === true : showSpeedRow,
+            pace:      useVideoStatsPlaceholder ? element?.performance === true : showPaceRow,
         }
 
         return textOrder.reduce((groups, itemId) => {
@@ -366,6 +372,7 @@ export const JourneyStats = memo(({id, metrics, units, style = {}, mode = 'journ
         showSpeedRow,
         summaryBreaks,
         textOrder,
+        useVideoStatsPlaceholder,
     ])
 
     const syncWidgetFrame = useCallback((attempt = 0) => {
@@ -552,6 +559,15 @@ export const JourneyStats = memo(({id, metrics, units, style = {}, mode = 'journ
     }, [element.separator])
 
     const renderTextItem = (itemId) => {
+        const placeholder = <span className="journey-stats-placeholder">{'00'}</span>
+        const durationPlaceholder = isImperial
+                                    ? '00:00'
+                                    : (
+                <>
+                    {'00'}<span className="duration-hour">h</span>{'00'}<span className="duration-minute">m</span>
+                </>
+            )
+
         switch (itemId) {
             case 'date':
                 return (
@@ -567,7 +583,9 @@ export const JourneyStats = memo(({id, metrics, units, style = {}, mode = 'journ
                 return (
                     <div className="journey-stats-summary-item track-summary-column" key="distance">
                         <div className="journey-stats-val-huge dynamic-widget-part">
-                            <NameValueUnit value={displayMetrics.distance} units={DISTANCE_UNITS} noUnit/>
+                            {useVideoStatsPlaceholder
+                             ? placeholder
+                             : <NameValueUnit value={displayMetrics.distance} units={DISTANCE_UNITS} noUnit/>}
                         </div>
                         <div className="journey-stats-label-bold">{`Distance (${units.distance})`}</div>
                     </div>
@@ -576,8 +594,10 @@ export const JourneyStats = memo(({id, metrics, units, style = {}, mode = 'journ
                 return (
                     <div className="journey-stats-summary-item track-summary-column" key="elevation">
                         <div className="journey-stats-val-huge dynamic-widget-part">
-                            <NameValueUnit value={displayMetrics.positive.elevation} units={ELEVATION_UNITS} noUnit
-                                           precision="0"/>
+                            {useVideoStatsPlaceholder
+                             ? placeholder
+                             : <NameValueUnit value={displayMetrics.positive.elevation} units={ELEVATION_UNITS} noUnit
+                                              precision="0"/>}
                         </div>
                         <div className="journey-stats-label-bold">{`Elevation (${units.elevation})`}</div>
                     </div>
@@ -585,7 +605,9 @@ export const JourneyStats = memo(({id, metrics, units, style = {}, mode = 'journ
             case 'duration':
                 return (
                     <div className="journey-stats-summary-item track-summary-column" key="duration">
-                        <div className="journey-stats-val-huge dynamic-widget-part">{formattedDuration}</div>
+                        <div className="journey-stats-val-huge dynamic-widget-part">
+                            {useVideoStatsPlaceholder ? durationPlaceholder : formattedDuration}
+                        </div>
                         <div className="journey-stats-label-bold">{'DURATION'}</div>
                     </div>
                 )
@@ -594,7 +616,9 @@ export const JourneyStats = memo(({id, metrics, units, style = {}, mode = 'journ
                     <div className="journey-stats-row" key="altitude">
                         <div className="journey-stats-label">{'Altitude'}<span>{`(${units.elevation})`}</span></div>
                         <div className="journey-stats-value dynamic-widget-part">
-                            {displayMetrics.minHeight > 0 &&
+                            {useVideoStatsPlaceholder
+                             ? placeholder
+                             : displayMetrics.minHeight > 0 &&
                                 <>
                                     <SlIcon variant="primary" library="fa" name={FA2SL.set(faArrowDownToLine)}/>
                                     <NameValueUnit value={displayMetrics.minHeight} units={ELEVATION_UNITS} noUnit
@@ -603,7 +627,9 @@ export const JourneyStats = memo(({id, metrics, units, style = {}, mode = 'journ
                             }
                         </div>
                         <div className="journey-stats-value dynamic-widget-part">
-                            {displayMetrics.maxHeight > 0 &&
+                            {useVideoStatsPlaceholder
+                             ? placeholder
+                             : displayMetrics.maxHeight > 0 &&
                                 <>
                                     <SlIcon variant="primary" library="fa" name={FA2SL.set(faArrowUpToLine)}/>
                                     <NameValueUnit value={displayMetrics.maxHeight} units={ELEVATION_UNITS} noUnit
@@ -618,12 +644,16 @@ export const JourneyStats = memo(({id, metrics, units, style = {}, mode = 'journ
                     <div className="journey-stats-row" key="speed">
                         <div className="journey-stats-label">{'Speed'}<span>{`(${units.speed})`}</span></div>
                         <div className="journey-stats-value dynamic-widget-part">
-                            {displayMetrics.averageSpeed > 0 &&
+                            {useVideoStatsPlaceholder
+                             ? placeholder
+                             : displayMetrics.averageSpeed > 0 &&
                                 <NameValueUnit value={displayMetrics.averageSpeed} units={SPEED_UNITS} noUnit/>
                             }
                         </div>
                         <div className="journey-stats-value dynamic-widget-part">
-                            {displayMetrics.maxSpeed > 0 &&
+                            {useVideoStatsPlaceholder
+                             ? placeholder
+                             : displayMetrics.maxSpeed > 0 &&
                                 <>
                                     <SlIcon variant="primary" library="fa" name={FA2SL.set(faArrowUpToLine)}/>
                                     <NameValueUnit value={displayMetrics.maxSpeed} units={SPEED_UNITS} noUnit/>
@@ -637,10 +667,12 @@ export const JourneyStats = memo(({id, metrics, units, style = {}, mode = 'journ
                     <div className="journey-stats-row" key="pace">
                         <div className="journey-stats-label">{'Pace'}<span>{`(${units.pace})`}</span></div>
                         <div className="journey-stats-value dynamic-widget-part">
-                            {paceValues.average && paceValues.average}
+                            {useVideoStatsPlaceholder ? placeholder : paceValues.average && paceValues.average}
                         </div>
                         <div className="journey-stats-value dynamic-widget-part">
-                            {paceValues.min &&
+                            {useVideoStatsPlaceholder
+                             ? placeholder
+                             : paceValues.min &&
                                 <>
                                     <SlIcon variant="primary" library="fa" name={FA2SL.set(faArrowUpToLine)}/>
                                     {paceValues.min}

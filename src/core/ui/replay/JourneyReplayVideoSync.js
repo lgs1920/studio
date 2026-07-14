@@ -50,6 +50,7 @@ export class JourneyReplayVideoSync {
     #syncStore = () => {
         if (this.#store) {
             this.#store.recordingSync = this.#armed
+            this.#store.captureFps = this.#armed ? this.#captureFps : null
         }
         if (globalThis.lgs?.settings?.ui?.replay) {
             globalThis.lgs.settings.ui.replay.recordingSync = this.#armed

@@ -144,7 +144,26 @@ const JourneyReplayTooltip = ({targetId, children}) => {
     )
 }
 
-export const JourneyReplayProgressBar = memo(({showSettings = false, showActions = true, disabled = false, className = ''}) => {
+export const JourneyReplayProgressBar = memo(({
+                                                 showSettings = false,
+                                                 showActions = true,
+                                                 disabled = false,
+                                                 className = '',
+                                                 showTime = true,
+                                                 showDistance = true,
+                                                 progressOverride = null,
+                                                 timeLabelOverride = undefined,
+                                                 playingOverride = null,
+                                                 pausedOverride = null,
+                                                 onPlay = null,
+                                                 onPause = null,
+                                                 onStop = null,
+                                                 playLabelOverride = null,
+                                                 pauseLabelOverride = null,
+                                                 stopLabelOverride = null,
+                                                 stopIcon = 'stop',
+                                                 stopVariant = 'brand',
+                                             }) => {
     const replay = useSnapshot(lgs.stores.replay)
     const {current: unitSystem} = useSnapshot(lgs.settings.unitSystem)
     const {drawers: {open: openDrawer}} = useSnapshot(lgs.stores.ui)
@@ -165,11 +184,23 @@ export const JourneyReplayProgressBar = memo(({showSettings = false, showActions
         direction,
         fallback: direction < 0 ? 1 - progress : progress,
     })
+    const overrideProgress = progressOverride === null || progressOverride === undefined
+                             ? null
+                             : finiteNumber(progressOverride)
+    const displayProgress = overrideProgress !== null ? clampProgress(overrideProgress) : playbackProgress
     const coveredDistance = hasPlaybackSample && replay.sample
                             ? (direction < 0 ? replay.sample.remainingDistance : replay.sample.distanceFromStart)
                             : totalDistance * playbackProgress
 
     const timeLabel = useMemo(() => {
+        if (!showTime) {
+            return null
+        }
+
+        if (timeLabelOverride !== undefined) {
+            return timeLabelOverride
+        }
+
         if (!hasPlaybackSample) {
             return `${PLACEHOLDER_VALUE} / ${PLACEHOLDER_VALUE}`
         }
@@ -179,9 +210,13 @@ export const JourneyReplayProgressBar = memo(({showSettings = false, showActions
         }
 
         return `${formatElapsedHoursMinutes(elapsedMillis, totalMillis)} / ${formatHoursMinutes(totalMillis, {ceil: true})}`
-    }, [elapsedMillis, hasJourneyTime, hasPlaybackSample, totalMillis])
+    }, [elapsedMillis, hasJourneyTime, hasPlaybackSample, showTime, timeLabelOverride, totalMillis])
 
     const distanceLabel = useMemo(() => {
+        if (!showDistance) {
+            return null
+        }
+
         if (!hasPlaybackSample) {
             return `${PLACEHOLDER_VALUE} / ${PLACEHOLDER_VALUE} ${distanceUnit}`
         }
@@ -189,34 +224,49 @@ export const JourneyReplayProgressBar = memo(({showSettings = false, showActions
         const covered = formatDistance(coveredDistance, distanceUnit)
         const total = formatDistance(totalDistance, distanceUnit)
         return `${covered} / ${total} ${distanceUnit}`
-    }, [coveredDistance, distanceUnit, hasPlaybackSample, totalDistance])
+    }, [coveredDistance, distanceUnit, hasPlaybackSample, showDistance, totalDistance])
 
-    const percentLabel = hasPlaybackSample ? `${(playbackProgress * 100).toFixed(0)}%` : `${PLACEHOLDER_VALUE}%`
-    const playing = replay.playing
-    const paused = replay.paused
+    const percentLabel = hasPlaybackSample || overrideProgress !== null ? `${(displayProgress * 100).toFixed(0)}%` : `${PLACEHOLDER_VALUE}%`
+    const playing = playingOverride ?? replay.playing
+    const paused = pausedOverride ?? replay.paused
     const showPauseAction = playing || (isClipSequenceActive && !paused)
-    const playLabel = paused ? `Resume ${REPLAY_LABEL}` : `Start ${REPLAY_LABEL}`
-    const pauseLabel = `Pause ${REPLAY_LABEL}`
-    const stopLabel = `Stop ${REPLAY_LABEL}`
+    const playLabel = playLabelOverride ?? (paused ? `Resume ${REPLAY_LABEL}` : `Start ${REPLAY_LABEL}`)
+    const pauseLabel = pauseLabelOverride ?? `Pause ${REPLAY_LABEL}`
+    const stopLabel = stopLabelOverride ?? `Stop ${REPLAY_LABEL}`
     const settingsLabel = `${REPLAY_LABEL} settings`
 
     const playOrResume = useCallback(() => {
+        if (typeof onPlay === 'function') {
+            onPlay()
+            return
+        }
+
         lgs.stores.replay.toolbarVisible = true
         if (__.ui.replay?.paused) {
             __.ui.replay.resume()
             return
         }
         __.ui.replay?.start()
-    }, [])
+    }, [onPlay])
 
     const pause = useCallback(() => {
+        if (typeof onPause === 'function') {
+            onPause()
+            return
+        }
+
         __.ui.replay?.pause()
-    }, [])
+    }, [onPause])
 
     const stop = useCallback(() => {
+        if (typeof onStop === 'function') {
+            onStop()
+            return
+        }
+
         __.ui.replay?.stop()
         lgs.stores.replay.toolbarVisible = false
-    }, [])
+    }, [onStop])
 
     const toggleSettings = useCallback(() => {
         if (openDrawer === REPLAY_DRAWER) {
@@ -231,7 +281,8 @@ export const JourneyReplayProgressBar = memo(({showSettings = false, showActions
         <div className={`replay-progress-bar${className ? ` ${className}` : ''}`}>
             {timeLabel &&
                 <span className="replay-progress-segment replay-progress-time">{timeLabel}</span>}
-            <span className="replay-progress-segment replay-progress-distance">{distanceLabel}</span>
+            {distanceLabel &&
+                <span className="replay-progress-segment replay-progress-distance">{distanceLabel}</span>}
             <span className="replay-progress-segment replay-progress-percent">{percentLabel}</span>
             {showActions &&
                 <span className="replay-progress-segment replay-progress-actions">
@@ -275,14 +326,14 @@ export const JourneyReplayProgressBar = memo(({showSettings = false, showActions
                         id={`${idPrefix}-stop`}
                         className="replay-progress-action"
                         appearance="plain"
-                        variant="brand"
+                        variant={stopVariant}
                         size="s"
                         title={stopLabel}
                         aria-label={stopLabel}
                         onClick={stop}
                         disabled={disabled}
                     >
-                        <WaIcon name="stop" variant="regular"/>
+                        <WaIcon name={stopIcon} variant="regular"/>
                     </WaButton>
                 </span>}
             {showSettings && !isUiHidden &&
