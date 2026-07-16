@@ -475,7 +475,7 @@ export const Widget = ({isVisible, className = '', moveableClassName = '', conta
             verticalGuidelines:   [rect.left + (rect.width / 2)],
             horizontalGuidelines: [rect.top + (rect.height / 2)],
         }
-        const gridGuidelines = widgetGrid.snap
+        const gridGuidelines = widgetGrid.enabled && widgetGrid.snap
                                ? buildCenteredGridLines(rect, widgetGrid.size)
                                : {verticalGuidelines: [], horizontalGuidelines: []}
         const localGridGuidelines = config?.snapGrid
@@ -1448,7 +1448,7 @@ export const Widget = ({isVisible, className = '', moveableClassName = '', conta
                 snapThreshold={snapThreshold}
                 snapRotationThreshold={5}
                 snapRotationDegrees={[0, -30, -45, -60, -90, -120, -135, -150, -180]}
-                snappable={(config?.snappable ?? true) && widgetGrid.snap}
+                snappable={(config?.snappable ?? true) && widgetGrid.enabled && widgetGrid.snap}
                 snapDirections={{top: true, right: true, bottom: true, left: true, center: true, middle: true}}
                 elementSnapDirections={{top: true, left: true, bottom: true, right: true, center: true, middle: true}}
                 maxSnapElementGuidelineDistance={10}
