@@ -16,9 +16,10 @@
 
 import { CreditsBar }                          from '@Components/MainUI/credits/CreditsBar'
 import { Widget }                              from '@Components/MainUI/widgets/Widget'
-import { HOUR, LGS_VISUAL_WIDGET, MULTI_PURPOSE_WIDGETS } from '@Core/constants'
+import { HOUR, LGS_VISUAL_WIDGET, MULTI_PURPOSE_WIDGETS, VIDEO_WIDGETS_BOARD } from '@Core/constants'
 import { useOptionalSnapshot } from '@Utils/ValtioUtils'
 import { useEffect, useMemo, useRef } from 'react'
+import { useSnapshot } from 'valtio'
 
 const CREDITS_WIDGET_CONTEXT_FALLBACK = {widgetEditor: false, widgetsBoard: ''}
 
@@ -32,8 +33,15 @@ const CREDITS_WIDGET_CONTEXT_FALLBACK = {widgetEditor: false, widgetsBoard: ''}
 export const CreditsWidget = ({id, context, zIndex, widgetsBoard: persistedWidgetsBoard}) => {
     // Get snapshot of context
     const contextState = useOptionalSnapshot(context, CREDITS_WIDGET_CONTEXT_FALLBACK)
+    const video = useSnapshot(lgs.stores.ui.video)
+    const replay = useSnapshot(lgs.stores.replay)
     const widgetEditor = contextState.widgetEditor
     const widgetsBoard = contextState.widgetsBoard || persistedWidgetsBoard || ''
+    const isHqExporting = replay.deferredExportPlan?.runtime?.status === 'exporting'
+    const showDuringDraftRecording = widgetsBoard === VIDEO_WIDGETS_BOARD
+        && (video.preRecording || video.recording)
+        && !isHqExporting
+    const shouldRender = widgetEditor || showDuringDraftRecording
     const _content = useRef(null)
     const container = useMemo(
         () => __.ui.widgetManager.resolveWidgetsBoardContainer(widgetsBoard),
@@ -41,7 +49,7 @@ export const CreditsWidget = ({id, context, zIndex, widgetsBoard: persistedWidge
     )
 
     useEffect(() => {
-        if (!widgetEditor || !container || !_content.current) {
+        if (!shouldRender || !container || !_content.current) {
             return
         }
 
@@ -71,7 +79,7 @@ export const CreditsWidget = ({id, context, zIndex, widgetsBoard: persistedWidge
                 image.removeEventListener('error', updateRect)
             })
         }
-    }, [container, id, widgetEditor])
+    }, [container, id, shouldRender])
 
     // Memoize widget configuration
     const config = useMemo(() => {
@@ -87,7 +95,7 @@ export const CreditsWidget = ({id, context, zIndex, widgetsBoard: persistedWidge
             type:            LGS_VISUAL_WIDGET,
             group:           MULTI_PURPOSE_WIDGETS,
             margin:          5,
-            attachTo:        'bottom',
+            attachTo:        'bottom-left',
             resizable:      false,
             scalable:        false,
             showControlBox: false,
@@ -103,14 +111,14 @@ export const CreditsWidget = ({id, context, zIndex, widgetsBoard: persistedWidge
         }
     }, [container, id, widgetsBoard, zIndex])
 
-    // Render only when widgetEditor is true and container is defined
-    if (!widgetEditor || !container) {
+    // Render in widget editor and during draft recording capture.
+    if (!shouldRender || !container) {
         return null
     }
 
     return (
         <Widget isVisible={true} config={config}>
-            <CreditsBar contentRef={_content} widgetMode/>
+            <CreditsBar contentRef={_content} widgetMode showMainLogo={false}/>
         </Widget>
     )
 }

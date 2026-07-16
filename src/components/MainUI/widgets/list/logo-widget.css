@@ -1,0 +1,64 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: logo-widget.css
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2026-07-16
+ * Last modified: 2026-07-16
+ *
+ *
+ * Copyright © 2026 LGS1920
+ ******************************************************************************/
+
+:root {
+    --lgs-logo-widget-height: calc(1.105 * var(--lgs-line-dimension, 32px));
+    --lgs-logo-widget-width: calc(var(--lgs-logo-widget-height) * 1.5033);
+}
+
+.lgs-logo-widget-shell {
+    width: var(--lgs-logo-widget-width);
+    height: var(--lgs-logo-widget-height);
+    margin: 0;
+    background: transparent;
+    box-shadow: none;
+    contain: layout size paint;
+}
+
+.lgs-logo-widget {
+    display: flex;
+    align-items: flex-end;
+    justify-content: flex-end;
+    width: var(--lgs-logo-widget-width);
+    height: var(--lgs-logo-widget-height);
+    opacity: 0.8;
+    pointer-events: auto;
+}
+
+.lgs-logo-widget-link {
+    line-height: 0;
+    display: inline-flex;
+    align-items: flex-end;
+    justify-content: flex-end;
+    width: auto;
+    height: 100%;
+}
+
+.lgs-logo-widget-logo {
+    line-height: 0;
+    display: flex;
+    align-items: flex-end;
+    width: max-content;
+    height: 100%;
+}
+
+.lgs-logo-widget-logo svg {
+    display: block;
+    width: auto;
+    max-width: none;
+    height: 100%;
+    filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.32));
+}

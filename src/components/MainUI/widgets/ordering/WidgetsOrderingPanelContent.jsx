@@ -15,7 +15,7 @@
  ******************************************************************************/
 
 import { LGSScrollbars } from '@Components/MainUI/LGSScrollbars'
-import { CREDITS_WIDGET, WIDGET_LAYER_START, WIDGET_LAYER_STEP, WIDGET_LAYER_TOP } from '@Core/constants'
+import { CREDITS_WIDGET, LOGO_WIDGET, WIDGET_LAYER_START, WIDGET_LAYER_STEP, WIDGET_LAYER_TOP } from '@Core/constants'
 import { WaCard, WaDivider }                        from '@web.awesome.me/webawesome-pro/dist/react'
 import classNames from 'classnames'
 import { useCallback, useEffect, useMemo, useRef } from 'react'
@@ -24,6 +24,7 @@ import { useSnapshot }       from 'valtio'
 import { SortableWidgetRow } from './SortableWidgetRow'
 
 const NO_EXCLUDED_WIDGET_TYPES = []
+const CORE_FIXED_WIDGET_TYPES = [CREDITS_WIDGET, LOGO_WIDGET]
 
 export const WidgetsOrderingPanelContent = ({
     widgetsBoard,
@@ -57,7 +58,7 @@ export const WidgetsOrderingPanelContent = ({
             .filter(([id, entry]) => {
                 const _widgetType = id.split('#')[0]
                 return entry?.widgetsBoard === widgetsBoard &&
-                    _widgetType !== CREDITS_WIDGET &&
+                    !CORE_FIXED_WIDGET_TYPES.includes(_widgetType) &&
                     !excludedWidgetTypeSet.has(_widgetType)
             })
             .map(([id, entry], index) => {
@@ -92,7 +93,7 @@ export const WidgetsOrderingPanelContent = ({
         const _updatedItems = newOrderedIds.map((id, index) => {
             const _item = activeWidgets.find(w => w.id === id)
             const _reversedIndex = _totalItems - 1 - index
-            const _newZ = (_item?.type === CREDITS_WIDGET)
+            const _newZ = CORE_FIXED_WIDGET_TYPES.includes(_item?.type)
                           ? WIDGET_LAYER_TOP
                           : WIDGET_LAYER_START + (_reversedIndex * WIDGET_LAYER_STEP)
 

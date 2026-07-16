@@ -86,6 +86,20 @@ widgets:
     groups:
       - "multi-purpose-widgets"
 
+  logo-widget:
+    id: "logo-widget"
+    name: "Logo"
+    description: "LGS1920 logo"
+    icon: "image"
+    mandatory: true
+    max: 1
+    component: "LogoWidget"
+    type: "lgs-visual-widget"
+    alwaysOnTop: true
+    fixedPosition: true
+    groups:
+      - "multi-purpose-widgets"
+
   profile-widget:
     id: "profile-widget"
     name: "Elevation Profile"

@@ -14,7 +14,9 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { COMPASS_WIDGET, CREDITS_WIDGET, SCENE_WIDGETS_BOARD, VIDEO_WIDGETS_BOARD, WIDGET_MANAGEMENT_DRAWER } from '@Core/constants'
+import {
+    COMPASS_WIDGET, CREDITS_WIDGET, LOGO_WIDGET, SCENE_WIDGETS_BOARD, VIDEO_WIDGETS_BOARD, WIDGET_MANAGEMENT_DRAWER,
+} from '@Core/constants'
 
 const resolveCurrentBoard = () => {
     const currentWidgetId = lgs.stores.ui.widget.current?.id
@@ -40,7 +42,7 @@ const resolveCurrentBoard = () => {
 }
 
 export const getWidgetManagementExcludedTypes = (widgetsBoard) => {
-    return widgetsBoard === SCENE_WIDGETS_BOARD ? [COMPASS_WIDGET, CREDITS_WIDGET] : [CREDITS_WIDGET]
+    return widgetsBoard === SCENE_WIDGETS_BOARD ? [COMPASS_WIDGET, CREDITS_WIDGET, LOGO_WIDGET] : [CREDITS_WIDGET, LOGO_WIDGET]
 }
 
 export const getManageableWidgets = (widgetsBoard, widgetList = lgs.stores?.ui?.widget?.list) => {

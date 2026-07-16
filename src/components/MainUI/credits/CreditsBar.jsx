@@ -58,7 +58,7 @@ const CreditLink = memo(({id, provider}) => {
  *
  * @returns {JSX.Element} The CreditsBar component.
  */
-export const CreditsBar = ({contentRef = null, widgetMode = false}) => {
+export const CreditsBar = ({contentRef = null, widgetMode = false, showMainLogo = true}) => {
 
     const providers = useSnapshot($providers)
     const siteUrl = __.app.buildUrl(lgs?.configuration?.website || 'https://lgs1920.fr')
@@ -120,30 +120,32 @@ export const CreditsBar = ({contentRef = null, widgetMode = false}) => {
         <div
             id="lgs-credits-bar"
             ref={contentRef}
-            className={`credits-bar${widgetMode ? ' credits-bar-widget-mode' : ''}`}
+            className={`credits-bar${widgetMode ? ' credits-bar-widget-mode' : ''}${showMainLogo ? '' : ' credits-bar-no-main-logo'}`}
         >
-            <div className="main-logo">
-                <a
-                    id={mainLogoLinkId}
-                    className="main-logo-link"
-                    href={siteUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    aria-label="LGS1920 website"
-                >
-                    <LogoSvg
-                        src="/assets/logo/logo-vertical.svg"
-                        primaryColor="#ffffff"
-                        secondaryColor="#ffffff"
-                        secondaryOpacity={0}
-                        textPrimaryColor="#ffffff"
-                        textSecondaryColor="#ffffff"
-                        className="credits-logo"
-                        style={{height: '100%'}}
-                        title="LGS1920 logo"
-                    />
-                </a>
-            </div>
+            {showMainLogo && (
+                <div className="main-logo">
+                    <a
+                        id={mainLogoLinkId}
+                        className="main-logo-link"
+                        href={siteUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        aria-label="LGS1920 website"
+                    >
+                        <LogoSvg
+                            src="/assets/logo/logo-vertical.svg"
+                            primaryColor="#ffffff"
+                            secondaryColor="#ffffff"
+                            secondaryOpacity={0}
+                            textPrimaryColor="#ffffff"
+                            textSecondaryColor="#ffffff"
+                            className="credits-logo"
+                            style={{height: '100%'}}
+                            title="LGS1920 logo"
+                        />
+                    </a>
+                </div>
+            )}
             <div className="provider-credits lgs-credits">
                 {providerCredits.map(({type, provider}) => (
                     <CreditLink
@@ -159,7 +161,7 @@ export const CreditsBar = ({contentRef = null, widgetMode = false}) => {
                 </a>
             </div>
             <div className="credits-tooltips">
-                <WaTooltip for={mainLogoLinkId} placement="top">{'LGS1920 website'}</WaTooltip>
+                {showMainLogo && <WaTooltip for={mainLogoLinkId} placement="top">{'LGS1920 website'}</WaTooltip>}
                 {providerCredits.map(({type, provider}) => (
                     <WaTooltip key={type} for={`${tooltipIdPrefix}-${type}`} placement="top">
                         {providerTooltip(type, provider)}

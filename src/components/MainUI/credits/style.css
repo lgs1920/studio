@@ -47,6 +47,10 @@
     --lgs-credits-item-padding: 0;
 }
 
+.credits-bar.credits-bar-no-main-logo {
+    min-height: var(--lgs-credits-bar-height);
+}
+
 .credits-bar > div {
     display: flex;
     align-content: center;

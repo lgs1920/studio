@@ -24,8 +24,8 @@ import {
 import PanelActions
     from '@Components/PanelsActions'
 import {
-    COMPASS_WIDGET, CREDITS_WIDGET, SCENE_WIDGETS_BOARD, SETTINGS_EDITOR_DRAWER, WIDGET_LAYER_START, WIDGET_LAYER_STEP,
-    WIDGETS_EDITOR_DRAWER,
+    COMPASS_WIDGET, CREDITS_WIDGET, LOGO_WIDGET, SCENE_WIDGETS_BOARD, SETTINGS_EDITOR_DRAWER, WIDGET_LAYER_START,
+    WIDGET_LAYER_STEP, WIDGETS_EDITOR_DRAWER,
 }   from '@Core/constants'
 import {
     WidgetRegistry,
@@ -230,7 +230,7 @@ export const WidgetEditorPanel = () => {
             .filter(([id, entry]) => {
                 const _widgetType = id.split('#')[0]
                 // Safe comparison with the current board
-                return entry?.widgetsBoard === cached.widgetsBoard && _widgetType !== CREDITS_WIDGET
+                return entry?.widgetsBoard === cached.widgetsBoard && _widgetType !== CREDITS_WIDGET && _widgetType !== LOGO_WIDGET
             })
             .map(([id, entry], index) => {
                 const _widgetType = id.split('#')[0]
@@ -255,7 +255,7 @@ export const WidgetEditorPanel = () => {
     }, [widget.list, cached]) // Use 'cached' as a dependency to react to any change
 
     const excludedOrderingWidgetTypes = useMemo(
-        () => cached?.widgetsBoard === SCENE_WIDGETS_BOARD ? [COMPASS_WIDGET] : [],
+        () => cached?.widgetsBoard === SCENE_WIDGETS_BOARD ? [COMPASS_WIDGET, LOGO_WIDGET] : [LOGO_WIDGET],
         [cached?.widgetsBoard],
     )
     const activeWidgets = useMemo(() => activeWidgetsList(), [activeWidgetsList])
