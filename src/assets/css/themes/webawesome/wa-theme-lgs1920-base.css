@@ -36,7 +36,7 @@
         --wa-color-surface-border: var(--wa-color-neutral-80);
 
         --wa-color-text-normal: var(--wa-color-neutral-10);
-        --wa-color-text-quiet: var(--wa-color-neutral-40);
+        --wa-color-text-quiet: var(--wa-color-neutral-30);
         --wa-color-text-link: var(--wa-color-brand-40);
 
         --wa-color-overlay-modal: color-mix(in oklab, var(--wa-color-neutral-05) 50%, transparent);
@@ -99,9 +99,12 @@
         --wa-color-neutral-border-quiet: var(--wa-color-neutral-80);
         --wa-color-neutral-border-normal: var(--wa-color-neutral-70);
         --wa-color-neutral-border-loud: var(--wa-color-neutral-50);
-        --wa-color-neutral-on-quiet: var(--wa-color-neutral-40);
+        --wa-color-neutral-on-quiet: var(--wa-color-neutral-30);
         --wa-color-neutral-on-normal: var(--wa-color-neutral-30);
         --wa-color-neutral-on-loud: var(--wa-color-neutral-95);
+
+        --lgs-card-text-color: var(--wa-color-text-normal);
+        --lgs-card-text-quiet-color: var(--wa-color-text-quiet);
     }
 
     :root.wa-theme-lgs1920.wa-dark,
@@ -187,6 +190,9 @@
         --wa-color-neutral-on-quiet: var(--wa-color-neutral-80);
         --wa-color-neutral-on-normal: var(--wa-color-neutral-90);
         --wa-color-neutral-on-loud: var(--wa-color-neutral-10);
+
+        --lgs-card-text-color: var(--wa-color-text-normal);
+        --lgs-card-text-quiet-color: var(--wa-color-text-quiet);
     }
 
     :root.wa-theme-lgs1920,
@@ -321,7 +327,7 @@
         --wa-form-control-hint-color: var(--wa-color-text-quiet);
         --wa-form-control-hint-font-weight: var(--wa-font-weight-body);
         --wa-form-control-hint-line-height: var(--wa-line-height-normal);
-        --wa-form-control-placeholder-color: var(--wa-color-gray-50);
+        --wa-form-control-placeholder-color: var(--wa-color-text-quiet);
         --wa-form-control-required-content: "*";
         --wa-form-control-required-content-color: inherit;
         --wa-form-control-required-content-offset: 0.1em;

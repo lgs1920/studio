@@ -242,25 +242,25 @@ html {
     --lgs-slogan-color: black;
 
     /* On-map card states. These feed widgets, deck panels and floating map surfaces. */
-    --lgs-card-on-map-bg-color: var(--lgs-dark-color-50);
+    --lgs-card-on-map-bg-color: color-mix(in oklab, var(--lgs-dark-color) 88%, var(--wa-color-brand) 12%);
     --lgs-card-on-map-bg-image: var(--lgs-on-map-surface-gradient);
     --lgs-card-on-map-bg-blend-mode: soft-light, screen, normal;
     --lgs-card-on-map-border-color: var(--lgs-light-color-25);
-    --lgs-card-on-map-hover-bg-color: var(--lgs-dark-color-75);
+    --lgs-card-on-map-hover-bg-color: color-mix(in oklab, var(--lgs-text-on-color) 12%, var(--lgs-card-on-map-bg-color) 88%);
     --lgs-card-on-map-hover-border-color: var(--lgs-light-color-50);
     --lgs-card-on-map-hover-outline-color: var(--lgs-card-on-map-border-color);
     --lgs-card-on-map-hover-outline: 1px solid var(--lgs-card-on-map-hover-outline-color);
     --lgs-card-on-map-hover-outline-offset: 1px;
-    --lgs-card-on-map-selected-bg-color: var(--lgs-dark-color);
+    --lgs-card-on-map-selected-bg-color: color-mix(in oklab, var(--wa-color-brand) 10%, var(--lgs-card-on-map-bg-color) 90%);
     --lgs-card-on-map-selected-bg-image: none;
     --lgs-card-on-map-selected-bg-blend-mode: normal;
     --lgs-card-on-map-selected-bg: var(--lgs-card-on-map-selected-bg-color);
     --lgs-card-on-map-selected-border-color: var(--lgs-light-color-75);
-    --lgs-disabled-color: var(--lgs-light-color-20);
-    --lgs-disabled-bg-color: var(--lgs-dark-color-20);
-    --lgs-card-on-map-disabled-color: var(--lgs-light-color-20);
-    --lgs-card-on-map-disabled-bg-color: var(--lgs-dark-color-20);
-    --lgs-card-on-map-disabled-border-color: var(--lgs-light-color-10);
+    --lgs-disabled-color: color-mix(in oklab, var(--lgs-text-on-color) 90%, var(--lgs-card-on-map-bg-color) 10%);
+    --lgs-disabled-bg-color: color-mix(in oklab, var(--lgs-card-on-map-bg-color) 98%, var(--lgs-text-on-color) 2%);
+    --lgs-card-on-map-disabled-color: var(--lgs-disabled-color);
+    --lgs-card-on-map-disabled-bg-color: var(--lgs-disabled-bg-color);
+    --lgs-card-on-map-disabled-border-color: color-mix(in oklab, var(--lgs-disabled-color) 38%, transparent);
 
     /* Form controls and selection tokens shared by WebAwesome wrappers. */
 
@@ -915,6 +915,7 @@ wa-drawer.drawer-is-stacked::part(header-actions) {
  ******************************************************************************/
 
 wa-card {
+    color: var(--lgs-card-text-color, var(--wa-color-text-normal));
     box-shadow: none;
     --wa-panel-border-radius: var(--lgs-border-radius-s);
 }
@@ -922,6 +923,7 @@ wa-card {
 wa-card::part(body) {
     display: flex;
     padding: var(--lgs-gutter-s);
+    color: var(--lgs-card-text-color, var(--wa-color-text-normal));
     --spacing: var(--lgs-gutter-s);
 }
 
@@ -960,6 +962,7 @@ wa-card.wa-theme-lgs1920-on-map::part(body) {
 .lgs-card, .lgs-card::part(base), .lgs-one-line-card, .lgs-one-line-card::part(base) {
     display: flex;
     padding: var(--lgs-gutter-s);
+    color: var(--lgs-card-text-color, var(--wa-color-text-normal));
     border: 1px solid var(--lgs-card-border-color);
     border-radius: var(--lgs-border-radius-s);
     background-color: rgba(255, 255, 255, 0.15);
