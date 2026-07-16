@@ -7,14 +7,23 @@ import {
 describe('widget grid utils', () => {
     it('normalizes invalid grid sizes to the default', () => {
         expect(normalizeWidgetGridSize('bad')).toBe(30)
-        expect(normalizeWidgetGridSize(0)).toBe(1)
+        expect(normalizeWidgetGridSize(0)).toBe(10)
+        expect(normalizeWidgetGridSize(13)).toBe(15)
         expect(normalizeWidgetGridSize(24.7)).toBe(25)
+        expect(normalizeWidgetGridSize(104)).toBe(100)
     })
 
     it('resolves persisted grid settings', () => {
-        expect(getWidgetGridSettings({enabled: true, size: '45'})).toEqual({
+        expect(getWidgetGridSettings({enabled: true, size: '45', snap: 1})).toEqual({
             enabled: true,
             size:    45,
+            snap:    true,
+        })
+
+        expect(getWidgetGridSettings({enabled: false, size: 30})).toEqual({
+            enabled: false,
+            size:    30,
+            snap:    true,
         })
     })
 

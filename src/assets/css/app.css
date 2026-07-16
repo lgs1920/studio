@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-07-09
- * Last modified: 2026-06-20
+ * Created on: 2026-07-16
+ * Last modified: 2026-07-16
  *
  *
  * Copyright © 2026 LGS1920
@@ -571,14 +571,17 @@ body.lgs-app-booting #cesium-viewer {
 }
 
 .widget-deck-panel {
+    position: relative;
+    z-index: var(--lgs-above-widgets);
     overflow: hidden;
     align-items: stretch;
     flex-direction: column;
     box-sizing: border-box;
-    width: max-content;
-    min-width: max-content;
+    width: fit-content;
+    min-width: fit-content;
     padding: var(--lgs-gutter-xs);
     box-shadow: var(--lgs-on-map-floating-shadow, var(--wa-shadow-l));
+    --widget-deck-panel-max-width: 14rem;
     padding-block-end: calc(var(--lgs-gutter-s) + var(--lgs-gutter-xs));
     gap: 0;
 }
@@ -595,10 +598,11 @@ body.lgs-app-booting #cesium-viewer {
 .widget-deck-panel ul {
     display: flex;
     flex-direction: column;
-    width: max-content;
-    min-width: 100%;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
     margin: 0;
-    padding: 0 var(--lgs-gutter-xs);
+    padding: 0;
     list-style: none;
     gap: 0;
 }
@@ -614,7 +618,9 @@ body.lgs-app-booting #cesium-viewer {
 .widget-deck-entry {
     display: flex;
     align-items: center;
+    flex-wrap: nowrap;
     box-sizing: border-box;
+    min-width: 0;
     margin: 2px;
     padding: 2px;
     transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
@@ -669,6 +675,31 @@ body.lgs-app-booting #cesium-viewer {
     width: 100%;
 }
 
+.widget-grid-size-input {
+    width: 100%;
+}
+
+.widget-grid-setting .widget-grid-switch {
+    display: block;
+}
+
+.widget-grid-setting .widget-grid-switch::part(base) {
+    display: flex;
+    align-items: center;
+    width: 100%;
+}
+
+.widget-grid-setting .widget-grid-switch::part(label) {
+    display: flex;
+    align-items: center;
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.widget-grid-setting .widget-grid-switch::part(control) {
+    flex: 0 0 auto;
+}
+
 .widget-deck-entry .widget-grid-switch-label,
 .widget-deck-entry .widget-grid-input-label {
     display: inline-flex;
@@ -678,13 +709,12 @@ body.lgs-app-booting #cesium-viewer {
     gap: var(--lgs-gutter-xs);
 }
 
-.widget-deck-entry .widget-grid-switch-text,
-.widget-deck-entry .widget-grid-input-text {
-    flex: 0 0 auto;
-}
-
 .widget-grid-setting wa-input::part(base) {
     min-width: 9rem;
+}
+
+.widget-grid-setting wa-number-input::part(base) {
+    width: 100%;
 }
 
 .widget-grid-setting wa-input::part(input),
@@ -694,6 +724,7 @@ body.lgs-app-booting #cesium-viewer {
 
 .lgs-widget-grid-overlay {
     position: fixed;
+    z-index: calc(var(--lgs-above-widgets) - 1);
     pointer-events: none;
     overflow: hidden;
     user-select: none;
@@ -721,6 +752,7 @@ body.lgs-app-booting #cesium-viewer {
 }
 
 .widget-deck-entry wa-icon {
+    flex: 0 0 auto;
     width: calc(var(--lgs-font-size-s) + 4px);
     height: calc(var(--lgs-font-size-s) + 4px);
 }
@@ -734,7 +766,10 @@ body.lgs-app-booting #cesium-viewer {
 }
 
 .widget-deck-entry .widget-name {
+    overflow: hidden;
     text-align: left;
+    white-space: nowrap;
+    text-overflow: ellipsis;
 }
 
 .widget-deck-entry .widget-remaining {

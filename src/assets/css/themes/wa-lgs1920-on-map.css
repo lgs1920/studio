@@ -68,9 +68,9 @@
     --lgs-card-on-map-disabled-border-color: var(--lgs-light-color-10);
 
     --lgs-hover-context-menu-bg-color: var(--lgs-card-on-map-hover-bg-color);
-    --lgs-switch-active-track-color: var(--wa-color-brand);
-    --lgs-switch-active-thumb-color: var(--wa-color-brand-40);
-    --lgs-switch-inactive-thumb-color: var(--wa-color-brand-80);
+    --lgs-switch-active-track-color: var(--lgs-card-on-map-selected-bg-color);
+    --lgs-switch-active-thumb-color: var(--lgs-card-on-map-selected-color);
+    --lgs-switch-inactive-thumb-color: var(--lgs-light-color-75);
     --lgs-select-bg-color: var(--wa-form-control-background-color);
     --lgs-select-border-color: var(--lgs-card-on-map-border-color);
     --lgs-select-color: var(--wa-form-control-value-color);
@@ -112,9 +112,13 @@
     --wa-color-text-quiet: var(--lgs-light-color-75);
     --wa-color-text-link: var(--lgs-light-color-95);
     --wa-color-focus: var(--lgs-card-on-map-hover-outline-color);
+    --wa-form-control-background-color: var(--wa-color-neutral-fill-quiet);
     --wa-form-control-border-color: var(--lgs-card-on-map-border-color);
+    --wa-form-control-label-color: var(--lgs-text-on-color);
+    --wa-form-control-value-color: var(--lgs-text-on-color);
+    --wa-form-control-hint-color: var(--lgs-light-color-75);
     --wa-form-control-placeholder-color: var(--lgs-light-color-40);
-    --wa-form-control-activated-color: var(--lgs-card-on-map-selected-bg-color);
+    --wa-form-control-activated-color: var(--lgs-switch-active-track-color);
     --wa-color-mix-hover: transparent 0%;
 
     --lgs-button-border-color: var(--wa-color-neutral-border-normal);
@@ -154,6 +158,35 @@
     --wa-form-control-background-color: var(--wa-color-neutral-fill-quiet);
     --wa-form-control-border-color: var(--wa-color-neutral-border-normal);
     --wa-form-control-activated-color: var(--lgs-switch-active-track-color);
+    --wa-form-control-label-color: var(--lgs-text-on-color);
+    --wa-form-control-value-color: var(--lgs-text-on-color);
+}
+
+.wa-theme-lgs1920-on-map:is(wa-number-input),
+.wa-theme-lgs1920-on-map wa-number-input {
+    --wa-form-control-background-color: var(--wa-color-neutral-fill-quiet);
+    --wa-form-control-border-color: var(--wa-color-neutral-border-normal);
+    --wa-form-control-label-color: var(--lgs-text-on-color);
+    --wa-form-control-value-color: var(--lgs-text-on-color);
+}
+
+.wa-theme-lgs1920-on-map:is(wa-number-input)::part(base),
+.wa-theme-lgs1920-on-map wa-number-input::part(base) {
+    border-color: var(--lgs-card-on-map-border-color);
+    background-color: var(--wa-color-neutral-fill-quiet);
+}
+
+.wa-theme-lgs1920-on-map:is(wa-number-input)::part(label),
+.wa-theme-lgs1920-on-map:is(wa-number-input)::part(form-control-label),
+.wa-theme-lgs1920-on-map:is(wa-number-input)::part(input),
+.wa-theme-lgs1920-on-map:is(wa-number-input)::part(end),
+.wa-theme-lgs1920-on-map:is(wa-number-input)::part(stepper),
+.wa-theme-lgs1920-on-map wa-number-input::part(label),
+.wa-theme-lgs1920-on-map wa-number-input::part(form-control-label),
+.wa-theme-lgs1920-on-map wa-number-input::part(input),
+.wa-theme-lgs1920-on-map wa-number-input::part(end),
+.wa-theme-lgs1920-on-map wa-number-input::part(stepper) {
+    color: var(--lgs-text-on-color);
 }
 
 .wa-theme-lgs1920-on-map wa-dropdown::part(menu),

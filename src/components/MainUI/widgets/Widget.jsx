@@ -314,7 +314,7 @@ export const Widget = ({isVisible, className = '', moveableClassName = '', conta
     const gridSnapshot = useOptionalSnapshot(lgs.settings?.ui?.widgets?.grid, DEFAULT_WIDGET_GRID_SETTINGS)
     const widgetGrid = useMemo(
         () => getWidgetGridSettings(gridSnapshot),
-        [gridSnapshot.enabled, gridSnapshot.size],
+        [gridSnapshot.enabled, gridSnapshot.size, gridSnapshot.snap],
     )
     const $video = lgs.stores.ui.video
     const video = useSnapshot($video)
@@ -475,7 +475,7 @@ export const Widget = ({isVisible, className = '', moveableClassName = '', conta
             verticalGuidelines:   [rect.left + (rect.width / 2)],
             horizontalGuidelines: [rect.top + (rect.height / 2)],
         }
-        const gridGuidelines = widgetGrid.enabled
+        const gridGuidelines = widgetGrid.snap
                                ? buildCenteredGridLines(rect, widgetGrid.size)
                                : {verticalGuidelines: [], horizontalGuidelines: []}
         const localGridGuidelines = config?.snapGrid
@@ -493,7 +493,7 @@ export const Widget = ({isVisible, className = '', moveableClassName = '', conta
                 ...localGridGuidelines.horizontalGuidelines,
             ])].sort((a, b) => a - b),
         }
-    }, [actualContainer, config.snapGrid, widgetGrid.enabled, widgetGrid.size])
+    }, [actualContainer, config.snapGrid, widgetGrid.enabled, widgetGrid.size, widgetGrid.snap])
 
     useEffect(() => {
         const update = () => {
@@ -1448,7 +1448,7 @@ export const Widget = ({isVisible, className = '', moveableClassName = '', conta
                 snapThreshold={snapThreshold}
                 snapRotationThreshold={5}
                 snapRotationDegrees={[0, -30, -45, -60, -90, -120, -135, -150, -180]}
-                snappable={config?.snappable ?? true}
+                snappable={(config?.snappable ?? true) && widgetGrid.snap}
                 snapDirections={{top: true, right: true, bottom: true, left: true, center: true, middle: true}}
                 elementSnapDirections={{top: true, left: true, bottom: true, right: true, center: true, middle: true}}
                 maxSnapElementGuidelineDistance={10}

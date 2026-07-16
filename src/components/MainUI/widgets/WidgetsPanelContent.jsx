@@ -26,7 +26,10 @@ import { WidgetDynamicRenderer } from '@Core/ui/widget-manager/dynamic-render/Wi
 import {
     DEFAULT_WIDGET_GRID_SETTINGS,
     getWidgetGridSettings,
+    MAX_WIDGET_GRID_SIZE,
+    MIN_WIDGET_GRID_SIZE,
     normalizeWidgetGridSize,
+    WIDGET_GRID_SIZE_STEP,
 }                                from '@Core/ui/widget-manager/widgetGridUtils'
 import { isWidgetAvailable }     from '@Core/ui/widget-manager/widgetAvailability'
 import { useOptionalSnapshot }    from '@Utils/ValtioUtils'
@@ -52,7 +55,7 @@ export const WidgetsPanelContent = ({groups}) => {
     const gridSnapshot = useOptionalSnapshot(lgs.settings?.ui?.widgets?.grid, DEFAULT_WIDGET_GRID_SETTINGS)
     const grid = useMemo(
         () => getWidgetGridSettings(gridSnapshot),
-        [gridSnapshot.enabled, gridSnapshot.size],
+        [gridSnapshot.enabled, gridSnapshot.size, gridSnapshot.snap],
     )
     const [isInitialized, setIsInitialized] = useState(false)
     const isVideoBoardContext = video.editing
@@ -176,6 +179,9 @@ export const WidgetsPanelContent = ({groups}) => {
     const ensureGridSettings = () => {
         lgs.settings.ui.widgets ??= {}
         lgs.settings.ui.widgets.grid ??= {...DEFAULT_WIDGET_GRID_SETTINGS}
+        lgs.settings.ui.widgets.grid.enabled ??= DEFAULT_WIDGET_GRID_SETTINGS.enabled
+        lgs.settings.ui.widgets.grid.size ??= DEFAULT_WIDGET_GRID_SETTINGS.size
+        lgs.settings.ui.widgets.grid.snap ??= DEFAULT_WIDGET_GRID_SETTINGS.snap
         return lgs.settings.ui.widgets.grid
     }
 
@@ -185,6 +191,10 @@ export const WidgetsPanelContent = ({groups}) => {
 
     const updateGridSize = (event) => {
         ensureGridSettings().size = normalizeWidgetGridSize(event.target.value, grid.size)
+    }
+
+    const updateGridSnap = (event) => {
+        ensureGridSettings().snap = event.target.checked
     }
 
     useEffect(() => {
@@ -253,37 +263,53 @@ export const WidgetsPanelContent = ({groups}) => {
             <ul className="widget-group widget-grid-settings">
                 <li className="widget-deck-entry widget-grid-setting widget-no-hover">
                     <WaSwitch
+                        className="widget-grid-switch"
                         size="xs"
                         label-at-start
                         checked={grid.enabled}
                         onInput={updateGridEnabled}
                     >
                         <span className="widget-grid-switch-label">
-                            <WaIcon name="magnet" variant="regular"/>
-                            <span className="widget-grid-switch-text">Grid</span>
+                            <WaIcon name="frame" variant="regular"/>
+                            <span>Grid</span>
                         </span>
                     </WaSwitch>
                 </li>
-                {grid.enabled && (
+            </ul>
+
+            {grid.enabled && (
+                <ul className="widget-group widget-grid-settings">
                     <li className="widget-deck-entry widget-grid-setting widget-no-hover">
                         <WaNumberInput
-                            label-at-start
+                            className="widget-grid-size-input"
                             size="s"
-                            min={1}
-                            max={1000}
-                            step={1}
+                            appearance="filled"
+                            aria-label="Grid size"
+                            min={MIN_WIDGET_GRID_SIZE}
+                            max={MAX_WIDGET_GRID_SIZE}
+                            step={WIDGET_GRID_SIZE_STEP}
                             value={`${grid.size}`}
                             onInput={updateGridSize}
                         >
-                            <span slot="label" className="widget-grid-input-label">
-                                <WaIcon name="frame" variant="regular"/>
-                                <span className="widget-grid-input-text">Size</span>
-                            </span>
                             <span slot="end">px</span>
                         </WaNumberInput>
                     </li>
-                )}
-            </ul>
+                    <li className="widget-deck-entry widget-grid-setting widget-no-hover">
+                        <WaSwitch
+                            className="widget-grid-switch"
+                            size="xs"
+                            label-at-start
+                            checked={grid.snap}
+                            onInput={updateGridSnap}
+                        >
+                            <span className="widget-grid-switch-label">
+                                <WaIcon name="magnet" variant="regular"/>
+                                <span>Snap to grid</span>
+                            </span>
+                        </WaSwitch>
+                    </li>
+                </ul>
+            )}
 
             {[...availableGroups.entries()].map(([groupKey, groupValue]) => (
                 <ul key={groupKey} className="widget-group">

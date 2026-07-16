@@ -14,7 +14,6 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { VIDEO_WIDGETS_BOARD } from '@Core/constants'
 import {
     buildCenteredGridLines,
     DEFAULT_WIDGET_GRID_SETTINGS,
@@ -108,7 +107,7 @@ export const WidgetGridOverlay = ({widgetsBoard}) => {
         return null
     }
 
-    const zIndex = widgetsBoard === VIDEO_WIDGETS_BOARD ? 'calc(var(--crop-zindex) + 1)' : 3999
+    const zIndex = 'calc(var(--lgs-above-widgets) - 1)'
 
     return createPortal(
         <div

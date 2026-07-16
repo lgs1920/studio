@@ -15,11 +15,13 @@
  ******************************************************************************/
 
 export const DEFAULT_WIDGET_GRID_SIZE = 30
-export const MIN_WIDGET_GRID_SIZE = 1
-export const MAX_WIDGET_GRID_SIZE = 1000
+export const MIN_WIDGET_GRID_SIZE = 10
+export const MAX_WIDGET_GRID_SIZE = 100
+export const WIDGET_GRID_SIZE_STEP = 5
 export const DEFAULT_WIDGET_GRID_SETTINGS = {
     enabled: false,
     size:    DEFAULT_WIDGET_GRID_SIZE,
+    snap:    true,
 }
 
 const toFiniteNumber = value => {
@@ -30,12 +32,14 @@ const toFiniteNumber = value => {
 export const normalizeWidgetGridSize = (value, fallback = DEFAULT_WIDGET_GRID_SIZE) => {
     const number = toFiniteNumber(value)
     const resolved = number ?? fallback
-    return Math.min(Math.max(Math.round(resolved), MIN_WIDGET_GRID_SIZE), MAX_WIDGET_GRID_SIZE)
+    const snapped = Math.round(resolved / WIDGET_GRID_SIZE_STEP) * WIDGET_GRID_SIZE_STEP
+    return Math.min(Math.max(snapped, MIN_WIDGET_GRID_SIZE), MAX_WIDGET_GRID_SIZE)
 }
 
 export const getWidgetGridSettings = (settings = DEFAULT_WIDGET_GRID_SETTINGS) => ({
     enabled: Boolean(settings?.enabled),
     size:    normalizeWidgetGridSize(settings?.size),
+    snap:    settings?.snap === undefined ? DEFAULT_WIDGET_GRID_SETTINGS.snap : Boolean(settings.snap),
 })
 
 const normalizeGridAxisSize = (size, axis) => {

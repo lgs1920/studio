@@ -263,6 +263,7 @@ describe('SettingsSection', () => {
                     grid: {
                         enabled: false,
                         size:    30,
+                        snap:    true,
                     },
                 },
             },
@@ -271,6 +272,7 @@ describe('SettingsSection', () => {
         expect(merged.widgets.grid).toEqual({
             enabled: false,
             size:    30,
+            snap:    true,
         })
     })
 
