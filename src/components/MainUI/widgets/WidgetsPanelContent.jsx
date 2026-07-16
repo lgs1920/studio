@@ -274,42 +274,42 @@ export const WidgetsPanelContent = ({groups}) => {
                             <span>Grid</span>
                         </span>
                     </WaSwitch>
+
+                    {grid.enabled && (
+                        <div className="widget-grid-setting-content">
+                            <div className="widget-grid-setting-row">
+                                <WaNumberInput
+                                    className="widget-grid-size-input"
+                                    size="s"
+                                    appearance="filled"
+                                    aria-label="Grid size"
+                                    min={MIN_WIDGET_GRID_SIZE}
+                                    max={MAX_WIDGET_GRID_SIZE}
+                                    step={WIDGET_GRID_SIZE_STEP}
+                                    value={`${grid.size}`}
+                                    onInput={updateGridSize}
+                                >
+                                    <span slot="end">px</span>
+                                </WaNumberInput>
+                            </div>
+                            <div className="widget-grid-setting-row">
+                                <WaSwitch
+                                    className="widget-grid-switch"
+                                    size="xs"
+                                    label-at-start
+                                    checked={grid.snap}
+                                    onInput={updateGridSnap}
+                                >
+                                    <span className="widget-grid-switch-label">
+                                        <WaIcon name="magnet" variant="regular"/>
+                                        <span>Snap to grid</span>
+                                    </span>
+                                </WaSwitch>
+                            </div>
+                        </div>
+                    )}
                 </li>
             </ul>
-
-            {grid.enabled && (
-                <ul className="widget-group widget-grid-settings">
-                    <li className="widget-deck-entry widget-grid-setting widget-no-hover">
-                        <WaNumberInput
-                            className="widget-grid-size-input"
-                            size="s"
-                            appearance="filled"
-                            aria-label="Grid size"
-                            min={MIN_WIDGET_GRID_SIZE}
-                            max={MAX_WIDGET_GRID_SIZE}
-                            step={WIDGET_GRID_SIZE_STEP}
-                            value={`${grid.size}`}
-                            onInput={updateGridSize}
-                        >
-                            <span slot="end">px</span>
-                        </WaNumberInput>
-                    </li>
-                    <li className="widget-deck-entry widget-grid-setting widget-no-hover">
-                        <WaSwitch
-                            className="widget-grid-switch"
-                            size="xs"
-                            label-at-start
-                            checked={grid.snap}
-                            onInput={updateGridSnap}
-                        >
-                            <span className="widget-grid-switch-label">
-                                <WaIcon name="magnet" variant="regular"/>
-                                <span>Snap to grid</span>
-                            </span>
-                        </WaSwitch>
-                    </li>
-                </ul>
-            )}
 
             {[...availableGroups.entries()].map(([groupKey, groupValue]) => (
                 <ul key={groupKey} className="widget-group">

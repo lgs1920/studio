@@ -666,6 +666,10 @@ body.lgs-app-booting #cesium-viewer {
 }
 
 .widget-grid-setting {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
     width: 100%;
 }
 
@@ -676,6 +680,18 @@ body.lgs-app-booting #cesium-viewer {
 }
 
 .widget-grid-size-input {
+    width: 100%;
+}
+
+.widget-grid-setting-content {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    margin-top: var(--lgs-gutter-xs);
+    gap: var(--lgs-gutter-xs);
+}
+
+.widget-grid-setting-row {
     width: 100%;
 }
 
@@ -724,7 +740,7 @@ body.lgs-app-booting #cesium-viewer {
 
 .lgs-widget-grid-overlay {
     position: fixed;
-    z-index: calc(var(--lgs-above-widgets) - 1);
+    z-index: calc(var(--lgs-above-widgets) - 1002);
     pointer-events: none;
     overflow: hidden;
     user-select: none;

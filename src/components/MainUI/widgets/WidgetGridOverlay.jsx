@@ -19,6 +19,7 @@ import {
     DEFAULT_WIDGET_GRID_SETTINGS,
     getWidgetGridSettings,
 } from '@Core/ui/widget-manager/widgetGridUtils'
+import { WIDGET_LAYER_START } from '@Core/constants'
 import { useOptionalSnapshot } from '@Utils/ValtioUtils'
 import { useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
@@ -107,7 +108,7 @@ export const WidgetGridOverlay = ({widgetsBoard}) => {
         return null
     }
 
-    const zIndex = 'calc(var(--lgs-above-widgets) - 1)'
+    const zIndex = WIDGET_LAYER_START - 1
 
     return createPortal(
         <div
