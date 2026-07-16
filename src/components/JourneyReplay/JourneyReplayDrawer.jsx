@@ -47,7 +47,7 @@ import { normalizeJourneyReplayClips } from '@Core/ui/replay/JourneyReplayClips'
 import { normalizeJourneyReplayPOISettings } from '@Core/ui/replay/JourneyReplayPOISettings'
 import { ELEVATION_UNITS, UnitUtils } from '@Utils/UnitUtils'
 import {
-    WaButton, WaCard, WaColorPicker, WaDetails, WaDivider, WaIcon, WaNumberInput, WaOption, WaSelect, WaSlider,
+    WaBadge, WaButton, WaCard, WaColorPicker, WaDetails, WaDivider, WaIcon, WaNumberInput, WaOption, WaSelect, WaSlider,
     WaSwitch, WaTab, WaTooltip,
     WaTabGroup,
     WaTabPanel,
@@ -207,6 +207,26 @@ const JourneyReplayWidthField = ({label, unit = 'm', value, min, max, step, onIn
     </JourneyReplayStyleField>
 )
 
+const JourneyReplayTabLabelWithBadge = ({icon, label, count, ariaLabel}) => (
+    <span className="lgs-tab-with-badge">
+        <span className="lgs-tab-with-badge-label">
+            <WaIcon name={icon} variant="regular"/>
+            {label}
+        </span>
+        {count > 0 && (
+            <WaBadge
+                className="lgs-tab-selection-count"
+                variant="brand"
+                appearance="filled"
+                pill
+                aria-label={ariaLabel}
+            >
+                {count}
+            </WaBadge>
+        )}
+    </span>
+)
+
 const JourneyReplayProgressionGroup = ({
                                         title,
                                         color,
@@ -288,6 +308,8 @@ export const JourneyReplayDrawer = memo(() => {
                                                                       ? currentJourney.replay.stop
                                                                       : replaySettings.clips?.stop ?? [],
                                                          }), [currentJourney, replaySettings.clips])
+    const selectedClipCount = useMemo(() => [...(clips.start ?? []), ...(clips.stop ?? [])]
+        .length, [clips.start, clips.stop])
     const remainingUseDefinedTrackStyle = trace.remaining.useDefinedTrackStyle !== false
     const remainingColor = toOpaqueColorValue(trace.remaining.color)
     const camera = normalizeJourneyReplayCamera(replaySettings.camera)
@@ -313,11 +335,11 @@ export const JourneyReplayDrawer = memo(() => {
             return leftDistance - rightDistance
         })
     }, [activeTab, replayState.nearbyPois])
+    const hideAllPoisDuringJourneyReplay = replaySettings.hideAllPoisDuringJourneyReplay === true
+    const animateAllPoisDuringJourneyReplay = replaySettings.animateAllPoisDuringJourneyReplay === true
     const cameraPresetKey = getJourneyReplayCameraPresetKey(camera)
     const marker = normalizeJourneyReplayMarker(replaySettings.marker)
     const hideOtherJourneys = getJourneyReplayHideOtherJourneys()
-    const hideAllPoisDuringJourneyReplay = replaySettings.hideAllPoisDuringJourneyReplay === true
-    const animateAllPoisDuringJourneyReplay = replaySettings.animateAllPoisDuringJourneyReplay === true
     const durationLocked = replayState.active || replayState.playing || replayState.paused
     const syncWithVideo = replayState.recordingSync === true
     const [poiVisibilityOverrides, setPoiVisibilityOverrides] = useState({})
@@ -739,6 +761,45 @@ export const JourneyReplayDrawer = memo(() => {
         return next
     }, [poiList, poiVisibilityOverrides])
 
+    const nearbyPOIsForBadge = useMemo(() => {
+        if (!hasJourney) {
+            return []
+        }
+
+        const cachedNearbyPois = Array.isArray(replayState.nearbyPois) ? replayState.nearbyPois : []
+        if (cachedNearbyPois.length > 0) {
+            return cachedNearbyPois
+        }
+
+        return __.ui.poiManager?.getJourneyReplayPOIsForJourney?.(
+            currentJourney,
+            replaySettings.poiDistance,
+        ) ?? []
+    }, [currentJourney, hasJourney, replaySettings.poiDistance, replayState.nearbyPois])
+
+    const visibleOrAnimatedNearbyPOICount = useMemo(() => nearbyPOIsForBadge.reduce((count, entry) => {
+        const poi = poiList.get(entry?.poi?.id) ?? entry?.poi
+        if (!poi?.id) {
+            return count
+        }
+
+        const settings = normalizeJourneyReplayPOISettings(poi.replay)
+        const replayEnabled = hideAllPoisDuringJourneyReplay
+            ? false
+            : activePoiVisibilityOverrides[poi.id] ?? settings.visible !== false
+        const animated = hideAllPoisDuringJourneyReplay
+            ? false
+            : animateAllPoisDuringJourneyReplay || settings.animated !== false
+
+        return count + (replayEnabled || animated ? 1 : 0)
+    }, 0), [
+        animateAllPoisDuringJourneyReplay,
+        hideAllPoisDuringJourneyReplay,
+        nearbyPOIsForBadge,
+        poiList,
+        activePoiVisibilityOverrides,
+    ])
+
     const editJourneyReplayPOI = useCallback(async (poiId) => {
         await openPOIEditor(poiId, {stacked: true})
     }, [])
@@ -1138,22 +1199,29 @@ export const JourneyReplayDrawer = memo(() => {
                                          value={REPLAY_MARKER_MODE_HYSTERESIS}>{'Dynamic'}</WaOption>
                                  </WaSelect>
                                  <WaTabGroup className="replay-tabs" onWaTabShow={updateActiveTab}>
-                                     <WaTab slot="nav" panel="runner" onClick={setReplayTab(REPLAY_TAB_RUNNER)}>
-                                         <WaIcon name="clock" variant="regular"/>
-                                         {'Playback'}
-                                     </WaTab>
-                                     <WaTab slot="nav" panel="edit" onClick={setReplayTab('edit')}>
-                                         <WaIcon name="paintbrush-pencil" variant="regular"/>
-                                         {'Edit'}
-                                     </WaTab>
-                                     <WaTab slot="nav" panel="clips" onClick={setReplayTab('clips')}>
-                                         <WaIcon name="sparkles" variant="regular"/>
-                                         {'Clips'}
-                                     </WaTab>
-                                     <WaTab slot="nav" panel="pois" onClick={setReplayTab(REPLAY_TAB_POIS)}>
-                                         <WaIcon name="location-dot" variant="regular"/>
-                                         {'POIs'}
-                                     </WaTab>
+                                    <WaTab slot="nav" panel="runner" onClick={setReplayTab(REPLAY_TAB_RUNNER)}>
+                                        <JourneyReplayTabLabelWithBadge icon="clock" label="Playback" count={0}/>
+                                    </WaTab>
+                                    <WaTab slot="nav" panel="edit" onClick={setReplayTab('edit')}>
+                                        <WaIcon name="paintbrush-pencil" variant="regular"/>
+                                        {'Edit'}
+                                    </WaTab>
+                                    <WaTab slot="nav" panel="clips" onClick={setReplayTab('clips')}>
+                                        <JourneyReplayTabLabelWithBadge
+                                            icon="sparkles"
+                                            label="Clips"
+                                            count={selectedClipCount}
+                                            ariaLabel={`${selectedClipCount} selected clip${selectedClipCount > 1 ? 's' : ''}`}
+                                        />
+                                    </WaTab>
+                                    <WaTab slot="nav" panel="pois" onClick={setReplayTab(REPLAY_TAB_POIS)}>
+                                        <JourneyReplayTabLabelWithBadge
+                                            icon="location-dot"
+                                            label="POIs"
+                                            count={visibleOrAnimatedNearbyPOICount}
+                                            ariaLabel={`${visibleOrAnimatedNearbyPOICount} visible or animated POI${visibleOrAnimatedNearbyPOICount > 1 ? 's' : ''}`}
+                                        />
+                                    </WaTab>
 
                                      <WaTabPanel name="runner">
                                          <LGSScrollbars>

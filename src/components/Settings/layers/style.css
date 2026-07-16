@@ -28,41 +28,6 @@
     padding-top: var(--lgs-gutter-s);
 }
 
-#layers-and-terrains-settings .layers-tab-with-badge {
-    position: relative;
-    display: inline-flex;
-    align-items: center;
-    padding-inline-end: var(--lgs-gutter-xs);
-}
-
-#layers-and-terrains-settings .layers-tab-selection-count {
-    font-size: 7px;
-
-    line-height: 1;
-
-    position: absolute;
-    z-index: 1;
-    transform: translate(60%, -70%);
-    pointer-events: none;
-    --layers-tab-selection-badge-size: 10px;
-    inset-block-start: 30%;
-    inset-inline-end: 2px;
-}
-
-#layers-and-terrains-settings .layers-tab-selection-count::part(base) {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-sizing: border-box;
-    padding: 0;
-    border: 0;
-    box-shadow: none;
-    min-inline-size: var(--layers-tab-selection-badge-size);
-    inline-size: var(--layers-tab-selection-badge-size);
-    min-block-size: var(--layers-tab-selection-badge-size);
-    block-size: var(--layers-tab-selection-badge-size);
-}
-
 .layer-entities-wrapper::part(body) {
     display: grid;
     flex-wrap: wrap;

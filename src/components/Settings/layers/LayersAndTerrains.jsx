@@ -213,9 +213,9 @@ export const LayersAndTerrains = () => {
                 <WaTab panel="tab-overlays" onClick={() => ($editor.layer.selectedType = OVERLAY_ENTITY)}>
                     {selectedOverlaysCount > 0
                      ? (
-                         <span className="layers-tab-with-badge">
+                         <span className="lgs-tab-with-badge">
                              <span>{'Overlays'}</span>
-                             <WaBadge className="layers-tab-selection-count" variant="brand" appearance="filled" pill
+                             <WaBadge className="lgs-tab-selection-count" variant="brand" appearance="filled" pill
                                       aria-label={`${selectedOverlaysCount} selected overlays`}>
                                  {selectedOverlaysCount}
                              </WaBadge>

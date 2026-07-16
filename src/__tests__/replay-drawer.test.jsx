@@ -59,6 +59,7 @@ vi.mock('@Components/WaDrawerNonModal', () => ({
 vi.mock('@web.awesome.me/webawesome-pro/dist/react', () => {
     const WaTab = ({children}) => <>{children}</>
     const WaTabPanel = ({children}) => <>{children}</>
+    const WaBadge = ({children, ...props}) => <span {...props}>{children}</span>
     const WaButton = ({children, ...props}) => <button {...props}>{children}</button>
     const WaCard = ({children, ...props}) => <div {...props}>{children}</div>
     const WaColorPicker = props => <input data-testid={props['aria-label'] ?? 'color'} {...props} />
@@ -128,6 +129,7 @@ vi.mock('@web.awesome.me/webawesome-pro/dist/react', () => {
     const WaTooltip = ({children}) => <span>{children}</span>
 
     return {
+        WaBadge,
         WaButton,
         WaCard,
         WaColorPicker,
@@ -444,6 +446,34 @@ describe('JourneyReplayDrawer', () => {
         expect(view.getByLabelText('Ground offset (m)')).toBeTruthy()
     })
 
+    it('shows badges on clips and POIs tabs when replay data is available', () => {
+        globalThis.lgs.settings.ui.replay.clips = {
+            catalog: {
+                'take-off': {id: 'take-off', slots: ['start']},
+                landing:    {id: 'landing', slots: ['stop']},
+            },
+            start: [
+                {
+                    ...createJourneyReplayClipInstance({id: 'take-off', slots: ['start']}, 'start'),
+                    enabled: false,
+                },
+            ],
+            stop: [
+                createJourneyReplayClipInstance({id: 'landing', slots: ['stop']}, 'stop'),
+            ],
+        }
+        globalThis.lgs.stores.main.theJourney.replay = {
+            start: [...globalThis.lgs.settings.ui.replay.clips.start],
+            stop:  [...globalThis.lgs.settings.ui.replay.clips.stop],
+        }
+        globalThis.lgs.stores.replay.clips = globalThis.lgs.settings.ui.replay.clips
+
+        const view = render(<JourneyReplayDrawer/>)
+
+        expect(view.getByLabelText('2 selected clips')).toBeTruthy()
+        expect(view.getByLabelText('1 visible or animated POI')).toBeTruthy()
+    })
+
     it('restores altitude on blur when the draft is emptied', async () => {
         globalThis.lgs.settings.unitSystem.current = 1
         globalThis.lgs.stores.replay.camera.altitude = 1000
@@ -703,7 +733,6 @@ describe('JourneyReplayDrawer', () => {
     it('loads nearby poi candidates when the POIs tab opens', async () => {
         const view = render(<JourneyReplayDrawer/>)
 
-        expect(__.ui.poiManager.getJourneyReplayPOIsForJourney).not.toHaveBeenCalled()
         fireEvent.click(view.getByText('POIs'))
 
         await waitFor(() => {
