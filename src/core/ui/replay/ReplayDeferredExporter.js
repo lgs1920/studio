@@ -64,6 +64,20 @@ const normalizeDimensions = (dimensions = {}) => {
     return {width, height}
 }
 
+const outputTargetByteLength = target => {
+    const finalizedSize = finiteNumber(target?.buffer?.byteLength, null)
+    if (finalizedSize !== null) {
+        return Math.max(0, Math.trunc(finalizedSize))
+    }
+
+    const writtenSize = finiteNumber(target?._maxPos, null)
+    if (writtenSize !== null) {
+        return Math.max(0, Math.trunc(writtenSize))
+    }
+
+    return null
+}
+
 const normalizeReplayWidgetIds = (widgetIds = []) => (
     [...new Set((widgetIds ?? []).map(widgetId => `${widgetId}`))]
         .filter(Boolean)
@@ -538,6 +552,7 @@ const initializeReplayExportCreationProgress = ({plan = null} = {}) => {
         exportFrameCount:               frameCount,
         exportProcessedFrames:          0,
         exportElapsedMillis:            0,
+        exportFileSize:                 0,
         exportEstimatedRemainingMillis: null,
         exportEstimatedTotalMillis:     null,
         exportAverageFrameMillis:       null,
@@ -549,6 +564,24 @@ const initializeReplayExportCreationProgress = ({plan = null} = {}) => {
         exportPausedAt:                 null,
         exportPausedDurationMillis:     0,
         exportUpdatedAt:                now,
+    })
+
+    return plan.runtime
+}
+
+const updateReplayExportFileSize = ({plan = null, bytes = null} = {}) => {
+    if (!plan?.runtime) {
+        return null
+    }
+
+    const size = finiteNumber(bytes, null)
+    if (size === null || size < 0) {
+        return plan.runtime
+    }
+
+    Object.assign(plan.runtime, {
+        exportFileSize:  Math.max(0, Math.trunc(size)),
+        exportUpdatedAt: runtimeNow(),
     })
 
     return plan.runtime
@@ -818,6 +851,7 @@ export class ReplayDeferredExporter {
                            browser = globalThis.__?.device?.browser ?? 'chromium',
                            renderFrame = null,
                            buildCanvas = null,
+                           onFileSize = null,
                        } = {}) => {
         if (typeof renderFrame !== 'function') {
             throw new Error('ReplayDeferredExporter.exportMp4 requires a renderFrame callback.')
@@ -850,14 +884,36 @@ export class ReplayDeferredExporter {
         }
 
         const manifest = this.buildManifest({label, metadata})
+        const target = new BufferTarget()
         const output = new Output({
             format: outputConfig.format,
-            target: new BufferTarget(),
+            target,
         })
         await output.setMetadataTags({
             title: label,
             comment: JSON.stringify(manifest),
         })
+
+        let encodedPacketBytes = 0
+        let lastPublishedFileSize = -1
+        const publishFileSize = ({force = false} = {}) => {
+            if (typeof onFileSize !== 'function') {
+                return
+            }
+
+            const targetBytes = outputTargetByteLength(target)
+            const bytes = Math.max(targetBytes ?? 0, encodedPacketBytes)
+            if (!force && bytes === lastPublishedFileSize) {
+                return
+            }
+
+            lastPublishedFileSize = bytes
+            onFileSize(bytes, {
+                encodedPacketBytes,
+                targetBytes,
+                finalized: Boolean(target.buffer),
+            })
+        }
 
         const source = new CanvasSource(canvas, {
             codec:                outputConfig.codec,
@@ -872,7 +928,16 @@ export class ReplayDeferredExporter {
             },
             sizeChangeBehavior: 'fill',
             onEncoderConfig:    () => {},
-            onEncodedPacket:    () => {},
+            onEncodedPacket:    packet => {
+                const packetBytes = finiteNumber(packet?.byteLength, null)
+                                    ?? finiteNumber(packet?.data?.byteLength, 0)
+                                    ?? 0
+                const alphaBytes = finiteNumber(packet?.sideData?.alphaByteLength, null)
+                                   ?? finiteNumber(packet?.sideData?.alpha?.byteLength, 0)
+                                   ?? 0
+                encodedPacketBytes += Math.max(0, packetBytes) + Math.max(0, alphaBytes)
+                publishFileSize()
+            },
         })
 
         const maximumPacketCount = Number.isFinite(this.#timeline.frameCount)
@@ -884,6 +949,7 @@ export class ReplayDeferredExporter {
         })
 
         await output.start()
+        publishFileSize({force: true})
 
         const renderedFrames = []
         const frames = await this.#session.renderAll({
@@ -902,6 +968,7 @@ export class ReplayDeferredExporter {
                     rendered.frameIntervalMs / 1000,
                     rendered.isFirst ? {keyFrame: true} : undefined,
                 )
+                publishFileSize()
                 if (typeof onFrame === 'function') {
                     await onFrame(rendered, manifest)
                 }
@@ -912,6 +979,14 @@ export class ReplayDeferredExporter {
         await output.finalize()
 
         const blob = new Blob([output.target.buffer], {type: outputConfig.mimeType})
+        publishFileSize({force: true})
+        if (typeof onFileSize === 'function') {
+            onFileSize(blob.size, {
+                encodedPacketBytes,
+                targetBytes: blob.size,
+                finalized: true,
+            })
+        }
         return this.#buildArtifact({
             blob,
             manifest,
@@ -1306,6 +1381,9 @@ export const runReplayDeferredMp4Export = async ({
             metadata: plan.manifest.metadata,
             dimensions: outputDimensions,
             buildCanvas,
+            onFileSize: bytes => {
+                updateReplayExportFileSize({plan, bytes})
+            },
             renderFrame: async ({canvas, context, frame}) => {
                 await waitForReplayExportResume({plan, signal})
                 if (signal?.aborted) {

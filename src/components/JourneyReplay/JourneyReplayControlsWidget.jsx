@@ -17,7 +17,7 @@
 import { JourneyReplayProgressBar } from '@Components/JourneyReplay/JourneyReplayProgressBar'
 import { Widget } from '@Components/MainUI/widgets/Widget'
 import { LGS_TOOLBAR } from '@Core/constants'
-import { WaCard } from '@web.awesome.me/webawesome-pro/dist/react'
+import { WaCard, WaIcon } from '@web.awesome.me/webawesome-pro/dist/react'
 import { memo, useCallback, useMemo } from 'react'
 import { useSnapshot } from 'valtio'
 import './style.css'
@@ -46,6 +46,23 @@ const formatCountdownTime = millis => {
     return `${minuteLabel}:${secondLabel}`
 }
 
+const formatFileSize = bytes => {
+    const size = Math.max(0, finiteNumber(bytes, 0) ?? 0)
+    const units = ['B', 'KB', 'MB', 'GB']
+    let value = size
+    let unitIndex = 0
+    while (value >= 1024 && unitIndex < units.length - 1) {
+        value /= 1024
+        unitIndex += 1
+    }
+
+    if (unitIndex === 0) {
+        return `${Math.round(value)} ${units[unitIndex]}`
+    }
+
+    return `${value >= 10 ? value.toFixed(0) : value.toFixed(1)} ${units[unitIndex]}`
+}
+
 const hqExportCreationProgress = runtime => {
     const progress = finiteNumber(runtime?.exportProgress, null)
     if (progress !== null) {
@@ -64,15 +81,23 @@ const hqExportCreationProgress = runtime => {
 export const JourneyReplayControlsWidget = memo(() => {
     const replay = useSnapshot(lgs.stores.replay)
     const video = useSnapshot(lgs.stores.ui.video)
-    const hqExportRuntime = replay.deferredExportPlan?.runtime ?? null
+    const hqExportPlan = replay.deferredExportPlan ?? null
+    const hqExportRuntime = hqExportPlan?.runtime ?? null
     const hqExportRunning = hqExportRuntime?.status === 'exporting'
     const hqProgress = hqExportCreationProgress(hqExportRuntime)
     const hqRemainingMillis = finiteNumber(hqExportRuntime?.exportEstimatedRemainingMillis, null)
     const hqElapsedMillis = finiteNumber(hqExportRuntime?.exportElapsedMillis, null)
     const hqPaused = hqExportRuntime?.exportPaused === true
+    const hqFileSizeLabel = formatFileSize(hqExportRuntime?.exportFileSize)
     const hqTimeLabel = hqRemainingMillis !== null
                         ? formatCountdownTime(hqRemainingMillis)
                         : (hqElapsedMillis !== null ? formatCountdownTime(hqElapsedMillis) : null)
+    const hqTimeDisplay = hqTimeLabel ? (
+        <span className="replay-controls-hq-time">
+            <WaIcon name="stopwatch" variant="regular"/>
+            <span>{hqTimeLabel}</span>
+        </span>
+    ) : null
 
     const pauseHqExport = useCallback(() => {
         lgs.stores.replay.deferredExportPlan?.runtime?.pauseExport?.()
@@ -125,13 +150,17 @@ export const JourneyReplayControlsWidget = memo(() => {
             <WaCard className="replay-controls lgs-toolbar-content lgs-toolbar lgs-toolbar-horizontal wa-theme-lgs1920-on-map">
                 {hqExportRunning && (
                     <div className="replay-controls-hq-row">
-                        <span className="replay-controls-hq-label">{'HQ Video creation'}</span>
+                        <span className="replay-controls-hq-label">{'Recording...'}</span>
+                        <span className="replay-controls-hq-file">
+                            <WaIcon name="file-video" variant="regular"/>
+                            <span>{hqFileSizeLabel}</span>
+                        </span>
                         <JourneyReplayProgressBar
                             className="replay-controls-hq-progress"
                             showSettings={false}
                             showDistance={false}
                             progressOverride={hqProgress}
-                            timeLabelOverride={hqTimeLabel}
+                            timeLabelOverride={hqTimeDisplay}
                             playingOverride={!hqPaused}
                             pausedOverride={hqPaused}
                             onPlay={resumeHqExport}

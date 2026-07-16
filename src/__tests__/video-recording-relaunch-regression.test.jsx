@@ -224,6 +224,33 @@ describe('video recording relaunch regression', () => {
         expect(screen.queryByText(/fps/i)).toBeNull()
     })
 
+    it('uses the draft video timeline for replay percent while clips are recording', async () => {
+        globalThis.lgs.stores.ui.video.recording = true
+        globalThis.lgs.stores.replay.recordingSync = true
+        globalThis.lgs.stores.replay.clipSequenceActive = true
+        globalThis.lgs.stores.replay.deferredExportPlan = {
+            videoTimeline: {
+                durationMillis: 200000,
+            },
+        }
+
+        render(<VideoRecorderToolbar/>)
+
+        act(() => {
+            recorder.dispatchEvent(new CustomEvent(ScreenMediaRecorder.events.INFO, {
+                detail: {
+                    duration: 30000,
+                    size:     0,
+                },
+            }))
+        })
+
+        await waitFor(() => {
+            expect(screen.getByText('15%')).not.toBeNull()
+        })
+        expect(screen.queryByText('50%')).toBeNull()
+    })
+
     it('shows a compact mobile replay summary without totals', () => {
         globalThis.__.device.isMobile = true
         globalThis.lgs.stores.ui.video.recording = true

@@ -611,6 +611,28 @@ wa-select[label-at-start].half-width::part(base) {
     letter-spacing: 0;
 }
 
+.replay-controls-hq-file,
+.replay-controls-hq-time {
+    align-items: center;
+    display: inline-flex;
+    gap: var(--lgs-gutter-xxs, 0.25rem);
+    min-width: 0;
+}
+
+.replay-controls-hq-file {
+    border-right: 1px solid var(--lgs-card-on-map-border-color);
+    font-size: var(--lgs-font-size-s);
+    font-variant-numeric: tabular-nums;
+    margin-right: var(--lgs-gutter-s);
+    padding-inline-end: var(--lgs-gutter-s);
+}
+
+.replay-controls-hq-file wa-icon,
+.replay-controls-hq-time wa-icon {
+    flex: 0 0 auto;
+    font-size: var(--lgs-font-size);
+}
+
 .replay-controls-hq-progress {
     min-width: 0;
 }

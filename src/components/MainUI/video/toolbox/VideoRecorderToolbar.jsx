@@ -160,12 +160,18 @@ export const VideoRecorderToolbar = ({toolbar}) => {
     const distanceLabel = hasPlaybackSample
                           ? `${formatDistance(coveredDistance, distanceUnit)} ${distanceUnit}`
                           : null
+    const videoTimelineDurationMillis = finiteNumber(replay.deferredExportPlan?.videoTimeline?.durationMillis)
 
     const [state, setState] = useState({
                                            recordedDuration: 0,
                                            recordedSize: 0,
                                            finalizing:   false,
                                        })
+    const draftVideoProgress = syncWithJourneyReplay
+                               && videoTimelineDurationMillis !== null
+                               && videoTimelineDurationMillis > 0
+                               ? clampProgress(state.recordedDuration / videoTimelineDurationMillis)
+                               : null
 
     const _toolbar = useRef(toolbar || null)
     const caption = 'Video Recording'
@@ -354,6 +360,7 @@ export const VideoRecorderToolbar = ({toolbar}) => {
                         className="video-recorder-replay-progress"
                         showActions={false}
                         showSettings={false}
+                        progressOverride={draftVideoProgress}
                         disabled={video.preRecording}
                     />
                 )

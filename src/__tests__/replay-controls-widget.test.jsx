@@ -68,11 +68,16 @@ describe('JourneyReplayControlsWidget', () => {
         const resumeExport = vi.fn()
         const abortExport = vi.fn()
         globalThis.lgs.stores.replay.deferredExportPlan = {
+            dimensions: {
+                width:  1920,
+                height: 1080,
+            },
             runtime: {
                 status:                         'exporting',
                 exportProgress:                 0.5,
                 exportElapsedMillis:            5000,
                 exportEstimatedRemainingMillis: 5000,
+                exportFileSize:                 1572864,
                 exportPaused:                   false,
                 pauseExport,
                 resumeExport,
@@ -82,7 +87,13 @@ describe('JourneyReplayControlsWidget', () => {
 
         const view = render(<JourneyReplayControlsWidget/>)
 
-        expect(screen.getByText('HQ Video creation')).not.toBeNull()
+        expect(screen.getByText('Recording...')).not.toBeNull()
+        expect(screen.queryByText('HQ Video creation')).toBeNull()
+        expect(screen.queryByText('MP4')).toBeNull()
+        expect(screen.getByText('1.5 MB')).not.toBeNull()
+        expect(screen.queryByText('1920x1080')).toBeNull()
+        expect(document.querySelector('[data-icon="file-video"]')).not.toBeNull()
+        expect(document.querySelector('[data-icon="stopwatch"]')).not.toBeNull()
         expect(screen.getByText('00:05')).not.toBeNull()
         expect(screen.getByText('50%')).not.toBeNull()
         expect(screen.queryByText(/km/)).toBeNull()
@@ -94,7 +105,9 @@ describe('JourneyReplayControlsWidget', () => {
 
         view.unmount()
         globalThis.lgs.stores.replay.deferredExportPlan.runtime.exportPaused = true
+        globalThis.lgs.stores.replay.deferredExportPlan.runtime.exportFileSize = 2097152
         render(<JourneyReplayControlsWidget/>)
+        expect(screen.getByText('2.0 MB')).not.toBeNull()
         fireEvent.click(screen.getByRole('button', {name: 'Continue HQ creation'}))
 
         expect(resumeExport).toHaveBeenCalledTimes(1)

@@ -37,7 +37,8 @@ vi.hoisted(() => {
 vi.mock('mediabunny', () => {
     class FakeBufferTarget {
         constructor() {
-            this.buffer = new ArrayBuffer(1024)
+            this.buffer = null
+            this._maxPos = 0
             this.onwrite = null
         }
     }
@@ -46,7 +47,17 @@ vi.mock('mediabunny', () => {
         constructor(canvas, config) {
             this.canvas = canvas
             this.config = config
-            this.add = vi.fn(() => Promise.resolve())
+            this.target = null
+            this.add = vi.fn(() => {
+                if (this.target) {
+                    this.target._maxPos += 256
+                }
+                this.config.onEncodedPacket?.({
+                    byteLength: 256,
+                    sideData:   {},
+                })
+                return Promise.resolve()
+            })
             this.close = vi.fn(() => Promise.resolve())
         }
     }
@@ -57,8 +68,13 @@ vi.mock('mediabunny', () => {
             this.target = target ?? new FakeBufferTarget()
             this.start = vi.fn(() => Promise.resolve())
             this.cancel = vi.fn(() => Promise.resolve())
-            this.finalize = vi.fn(() => Promise.resolve())
-            this.addVideoTrack = vi.fn()
+            this.finalize = vi.fn(() => {
+                this.target.buffer = new ArrayBuffer(Math.max(0, this.target._maxPos))
+                return Promise.resolve()
+            })
+            this.addVideoTrack = vi.fn(source => {
+                source.target = this.target
+            })
             this.setMetadataTags = vi.fn(() => Promise.resolve())
         }
     }
@@ -498,6 +514,8 @@ describe('ReplayDeferredExporter', () => {
         expect(result.plan.runtime.exportProgress).toBe(1)
         expect(result.plan.runtime.exportProcessedFrames).toBe(result.plan.manifest.frameCount)
         expect(result.plan.runtime.exportEstimatedRemainingMillis).toBe(0)
+        expect(result.plan.runtime.exportFileSize).toBe(result.blob.size)
+        expect(result.plan.runtime.exportFileSize).toBeGreaterThan(0)
     })
 
     it('keeps the HQ composer canvas at the exact MP4 dimensions when crop and output ratios differ', async () => {
