@@ -21,9 +21,16 @@ import {
     getManageableWidgets,
     openWidgetManagementDrawer,
 } from '@Components/MainUI/widgets/openWidgetManagementDrawer'
+import { WidgetGridOverlay }     from '@Components/MainUI/widgets/WidgetGridOverlay'
 import { WidgetDynamicRenderer } from '@Core/ui/widget-manager/dynamic-render/WidgetDynamicRender'
+import {
+    DEFAULT_WIDGET_GRID_SETTINGS,
+    getWidgetGridSettings,
+    normalizeWidgetGridSize,
+}                                from '@Core/ui/widget-manager/widgetGridUtils'
 import { isWidgetAvailable }     from '@Core/ui/widget-manager/widgetAvailability'
-import { WaDivider, WaIcon }                from '@web.awesome.me/webawesome-pro/dist/react'
+import { useOptionalSnapshot }    from '@Utils/ValtioUtils'
+import { WaDivider, WaIcon, WaNumberInput, WaSwitch } from '@web.awesome.me/webawesome-pro/dist/react'
 import classNames                from 'classnames'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSnapshot }           from 'valtio'
@@ -42,6 +49,11 @@ export const WidgetsPanelContent = ({groups}) => {
     const widget = useSnapshot(lgs.stores.ui.widget)
     const video = useSnapshot(lgs.stores.ui.video)
     const toolbars = useSnapshot(lgs.settings.ui.toolbars)
+    const gridSnapshot = useOptionalSnapshot(lgs.settings?.ui?.widgets?.grid, DEFAULT_WIDGET_GRID_SETTINGS)
+    const grid = useMemo(
+        () => getWidgetGridSettings(gridSnapshot),
+        [gridSnapshot.enabled, gridSnapshot.size],
+    )
     const [isInitialized, setIsInitialized] = useState(false)
     const isVideoBoardContext = video.editing
         || video.preRecording
@@ -161,6 +173,20 @@ export const WidgetsPanelContent = ({groups}) => {
     const getRemainingLabel = stats =>
         stats.max > 1 && stats.remaining > 0 && stats.remaining < 5 ? `(${stats.remaining})` : ''
 
+    const ensureGridSettings = () => {
+        lgs.settings.ui.widgets ??= {}
+        lgs.settings.ui.widgets.grid ??= {...DEFAULT_WIDGET_GRID_SETTINGS}
+        return lgs.settings.ui.widgets.grid
+    }
+
+    const updateGridEnabled = (event) => {
+        ensureGridSettings().enabled = event.target.checked
+    }
+
+    const updateGridSize = (event) => {
+        ensureGridSettings().size = normalizeWidgetGridSize(event.target.value, grid.size)
+    }
+
     useEffect(() => {
         /**
          * Load widgets already existing in the state/database.
@@ -217,10 +243,47 @@ export const WidgetsPanelContent = ({groups}) => {
             onMouseDown={handleInteraction}
             onTouchStart={handleInteraction}
         >
+            <WidgetGridOverlay widgetsBoard={widgetsBoard}/>
+
             <div className="widget-deck-entry widget-deck-title">
                 <WaIcon name="box"/>
                 <span>Widgets</span>
             </div>
+
+            <ul className="widget-group widget-grid-settings">
+                <li className="widget-deck-entry widget-grid-setting widget-no-hover">
+                    <WaSwitch
+                        size="xs"
+                        label-at-start
+                        checked={grid.enabled}
+                        onInput={updateGridEnabled}
+                    >
+                        <span className="widget-grid-switch-label">
+                            <WaIcon name="magnet" variant="regular"/>
+                            <span className="widget-grid-switch-text">Grid</span>
+                        </span>
+                    </WaSwitch>
+                </li>
+                {grid.enabled && (
+                    <li className="widget-deck-entry widget-grid-setting widget-no-hover">
+                        <WaNumberInput
+                            label-at-start
+                            size="s"
+                            min={1}
+                            max={1000}
+                            step={1}
+                            value={`${grid.size}`}
+                            onInput={updateGridSize}
+                        >
+                            <span slot="label" className="widget-grid-input-label">
+                                <WaIcon name="frame" variant="regular"/>
+                                <span className="widget-grid-input-text">Size</span>
+                            </span>
+                            <span slot="end">px</span>
+                        </WaNumberInput>
+                    </li>
+                )}
+            </ul>
 
             {[...availableGroups.entries()].map(([groupKey, groupValue]) => (
                 <ul key={groupKey} className="widget-group">

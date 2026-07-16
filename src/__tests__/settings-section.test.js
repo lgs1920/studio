@@ -247,6 +247,33 @@ describe('SettingsSection', () => {
         expect(merged.replay.profileInfo).toBeUndefined()
     })
 
+    it('adds widget grid settings to existing UI settings', () => {
+        const section = new SettingsSection('ui')
+        const merged = section.update(
+            {
+                toolbars: {
+                    opacity: 0.7,
+                },
+            },
+            {
+                toolbars: {
+                    opacity: 0.9,
+                },
+                widgets: {
+                    grid: {
+                        enabled: false,
+                        size:    30,
+                    },
+                },
+            },
+        )
+
+        expect(merged.widgets.grid).toEqual({
+            enabled: false,
+            size:    30,
+        })
+    })
+
     it('keeps replay excluded but still syncs its clips subtree', () => {
         const section = new SettingsSection('ui')
         const merged = section.update(

@@ -28,6 +28,12 @@ import {
 import {
     Widget2Canvas,
 }                                 from '@Core/ui/widget-manager/widget-2-canvas/Widget2Canvas'
+import {
+    buildCenteredGridLines,
+    DEFAULT_WIDGET_GRID_SETTINGS,
+    getWidgetGridSettings,
+}                                 from '@Core/ui/widget-manager/widgetGridUtils'
+import { useOptionalSnapshot }     from '@Utils/ValtioUtils'
 import { WaIcon }                 from '@web.awesome.me/webawesome-pro/dist/react'
 import classNames                 from 'classnames'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -305,6 +311,11 @@ export const Widget = ({isVisible, className = '', moveableClassName = '', conta
     const drawers = useSnapshot($drawers)
     const $toolbars = lgs.settings.ui.toolbars
     const toolbars = useSnapshot($toolbars)
+    const gridSnapshot = useOptionalSnapshot(lgs.settings?.ui?.widgets?.grid, DEFAULT_WIDGET_GRID_SETTINGS)
+    const widgetGrid = useMemo(
+        () => getWidgetGridSettings(gridSnapshot),
+        [gridSnapshot.enabled, gridSnapshot.size],
+    )
     const $video = lgs.stores.ui.video
     const video = useSnapshot($video)
 
@@ -454,48 +465,39 @@ export const Widget = ({isVisible, className = '', moveableClassName = '', conta
     }, [config?.snapSensitivity])
     const {threshold: snapThreshold, gap: snapGap} = snapSettings
 
-    const centerGuidelines = useMemo(() => {
+    const buildGuidelines = useCallback(() => {
         const container = actualContainer ?? lgs.canvas
         if (!container) {
             return {verticalGuidelines: [], horizontalGuidelines: []}
         }
-        const {width, height, left, top} = container.getBoundingClientRect()
-        return {verticalGuidelines: [left + width / 2], horizontalGuidelines: [top + height / 2]}
-    }, [actualContainer])
-
-    const gridGuidelines = useMemo(() => {
-        if (!config?.snapGrid || !lgs.canvas) {
-            return {verticalGuidelines: [], horizontalGuidelines: []}
+        const rect = container.getBoundingClientRect()
+        const centerGuidelines = {
+            verticalGuidelines:   [rect.left + (rect.width / 2)],
+            horizontalGuidelines: [rect.top + (rect.height / 2)],
         }
-        const rect = lgs.canvas.getBoundingClientRect()
-        const {x: gx = 0, y: gy = 0} = config.snapGrid
-        const cx = rect.left + rect.width / 2
-        const cy = rect.top + rect.height / 2
-        const vertical = [cx], horizontal = [cy]
-        if (gx > 0) {
-            for (let x = cx + gx; x <= rect.right; x += gx) {
-                vertical.push(x)
-            }
-            for (let x = cx - gx; x >= rect.left; x -= gx) {
-                vertical.push(x)
-            }
+        const gridGuidelines = widgetGrid.enabled
+                               ? buildCenteredGridLines(rect, widgetGrid.size)
+                               : {verticalGuidelines: [], horizontalGuidelines: []}
+        const localGridGuidelines = config?.snapGrid
+                                    ? buildCenteredGridLines(rect, config.snapGrid)
+                                    : {verticalGuidelines: [], horizontalGuidelines: []}
+        return {
+            verticalGuidelines:   [...new Set([
+                ...centerGuidelines.verticalGuidelines,
+                ...gridGuidelines.verticalGuidelines,
+                ...localGridGuidelines.verticalGuidelines,
+            ])].sort((a, b) => a - b),
+            horizontalGuidelines: [...new Set([
+                ...centerGuidelines.horizontalGuidelines,
+                ...gridGuidelines.horizontalGuidelines,
+                ...localGridGuidelines.horizontalGuidelines,
+            ])].sort((a, b) => a - b),
         }
-        if (gy > 0) {
-            for (let y = cy + gy; y <= rect.bottom; y += gy) {
-                horizontal.push(y)
-            }
-            for (let y = cy - gy; y >= rect.top; y -= gy) {
-                horizontal.push(y)
-            }
-        }
-        return {verticalGuidelines: vertical, horizontalGuidelines: horizontal}
-    }, [config.snapGrid])
+    }, [actualContainer, config.snapGrid, widgetGrid.enabled, widgetGrid.size])
 
     useEffect(() => {
         const update = () => {
-            const v = [...new Set([...centerGuidelines.verticalGuidelines, ...gridGuidelines.verticalGuidelines])].sort((a, b) => a - b)
-            const h = [...new Set([...centerGuidelines.horizontalGuidelines, ...gridGuidelines.horizontalGuidelines])].sort((a, b) => a - b)
-            setGuidelines({verticalGuidelines: v, horizontalGuidelines: h})
+            setGuidelines(buildGuidelines())
             _moveable.current?.updateRect()
         }
         update()
@@ -506,7 +508,7 @@ export const Widget = ({isVisible, className = '', moveableClassName = '', conta
         const observer = new ResizeObserver(update)
         observer.observe(container)
         return () => observer.unobserve(container)
-    }, [centerGuidelines, gridGuidelines, actualContainer])
+    }, [actualContainer, buildGuidelines])
 
     // Pre-render snapshotting
     useEffect(() => {

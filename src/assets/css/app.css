@@ -655,6 +655,71 @@ body.lgs-app-booting #cesium-viewer {
     border: 0;
 }
 
+.widget-grid-settings {
+    padding-block: var(--lgs-gutter-xs) !important;
+}
+
+.widget-grid-setting {
+    width: 100%;
+}
+
+.widget-grid-setting wa-switch,
+.widget-grid-setting wa-input,
+.widget-grid-setting wa-number-input {
+    width: 100%;
+}
+
+.widget-deck-entry .widget-grid-switch-label,
+.widget-deck-entry .widget-grid-input-label {
+    display: inline-flex;
+    align-items: center;
+    flex: 0 0 auto;
+    width: auto;
+    gap: var(--lgs-gutter-xs);
+}
+
+.widget-deck-entry .widget-grid-switch-text,
+.widget-deck-entry .widget-grid-input-text {
+    flex: 0 0 auto;
+}
+
+.widget-grid-setting wa-input::part(base) {
+    min-width: 9rem;
+}
+
+.widget-grid-setting wa-input::part(input),
+.widget-grid-setting wa-number-input::part(input) {
+    text-align: right;
+}
+
+.lgs-widget-grid-overlay {
+    position: fixed;
+    pointer-events: none;
+    overflow: hidden;
+    user-select: none;
+    contain: strict;
+}
+
+.lgs-widget-grid-overlay-line {
+    position: absolute;
+    display: block;
+    pointer-events: none;
+    opacity: 0.5;
+    background: var(--lgs-third-color-75);
+}
+
+.lgs-widget-grid-overlay-line-vertical {
+    top: 0;
+    bottom: 0;
+    width: 1px;
+}
+
+.lgs-widget-grid-overlay-line-horizontal {
+    right: 0;
+    left: 0;
+    height: 1px;
+}
+
 .widget-deck-entry wa-icon {
     width: calc(var(--lgs-font-size-s) + 4px);
     height: calc(var(--lgs-font-size-s) + 4px);
