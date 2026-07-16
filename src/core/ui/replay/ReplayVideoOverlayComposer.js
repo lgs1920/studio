@@ -16,6 +16,7 @@
 import { VIDEO_WIDGETS_BOARD } from '@Core/constants'
 import { resolveVideoOverlayVisibility } from '@Core/ui/replay/ReplayOverlayResolver'
 import { normalizeReplayVideoCropRect } from '@Core/ui/replay/ReplayVideoRenderSpec'
+import { replayVideoTraceDebug } from '@Core/ui/replay/ReplayVideoTraceDebug'
 
 const DEFAULT_METRICS_CACHE_TTL_MS = 750
 
@@ -136,6 +137,7 @@ const resolveMetrics = ({widgetId, widgetEl, metricsCache = null, metricsCacheTt
 export const buildReplayVideoComposerOverlays = ({
                                                      composer,
                                                      cropRect,
+                                                     sceneOverlays = [],
                                                      widgetKeys = null,
                                                      replay = globalThis.lgs?.stores?.replay ?? null,
                                                      controller = globalThis.__?.ui?.replay?.controller ?? null,
@@ -149,6 +151,37 @@ export const buildReplayVideoComposerOverlays = ({
 
     const normalizedCrop = normalizeReplayVideoCropRect(cropRect) ?? {left: 0, top: 0, width: 0, height: 0}
     composer.beginUpdate()
+    let sceneOverlayCount = 0
+    for (const overlay of sceneOverlays ?? []) {
+        const element = overlay?.element ?? overlay?.canvas ?? null
+        if (!(element instanceof HTMLCanvasElement)) {
+            replayVideoTraceDebug('composer.scene-overlay.skip.invalid-element', {
+                hasOverlay: Boolean(overlay),
+                elementType: element?.constructor?.name ?? typeof element,
+            })
+            continue
+        }
+
+        composer.addOverlay(element, {
+            x:             0,
+            y:             0,
+            w:             normalizedCrop.width,
+            h:             normalizedCrop.height,
+            contentWidth:  normalizedCrop.width,
+            contentHeight: normalizedCrop.height,
+            scale:         1,
+            ...(overlay.options ?? {}),
+        })
+        sceneOverlayCount += 1
+    }
+    if ((sceneOverlays ?? []).length > 0) {
+        replayVideoTraceDebug('composer.scene-overlays.added', {
+            requested: sceneOverlays.length,
+            added: sceneOverlayCount,
+            crop: normalizedCrop,
+        })
+    }
+
     for (const key of getSortedVideoWidgetKeys({widgetKeys, widgetsBoard})) {
         const widgetEl = globalThis.__?.ui?.widgetManager?.getElementById?.(key)
         if (!resolveVideoOverlayVisibility({widgetId: key, widgetEl, replay, controller})) {

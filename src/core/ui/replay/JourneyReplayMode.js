@@ -46,6 +46,7 @@ import {
     REPLAY_EVENT_END, REPLAY_EVENT_PAUSE, REPLAY_EVENT_RESUME, REPLAY_EVENT_START,
     REPLAY_EVENT_STOP, REPLAY_EVENT_UPDATE, JourneyReplayPlaybackController,
 }                                                                                          from './JourneyReplayPlaybackController'
+import { replayVideoTraceDebug }                                                           from './ReplayVideoTraceDebug'
 import {
     DEFAULT_REPLAY_POI_DISPLAY_DURATION_SECONDS, normalizeJourneyReplayPOISettings,
 }                                                                                          from './JourneyReplayPOISettings'
@@ -1061,7 +1062,11 @@ export class JourneyReplayMode {
         this.#suppressPlaybackCameraSync = false
 
         const safeProgress = Math.max(0, Math.min(1, Number(progress) || 0))
-        const sample = this.#sampler?.atProgress?.(safeProgress)
+        const sampler = this.configure({
+            journey,
+            progress: safeProgress,
+        }) ?? this.#sampler
+        const sample = sampler?.atProgress?.(safeProgress)
                        ?? this.#controller?.currentSample?.()
                        ?? null
 
@@ -1094,6 +1099,12 @@ export class JourneyReplayMode {
         this.#hideCurrentJourneyVisibility()
         if (hideOtherJourneys) {
             this.#hideOtherJourneysVisibility()
+        }
+        if (sampler?.hasSamples) {
+            this.#renderer.show({
+                sampler,
+                options: {smoothedGuide: this.#smoothedGuide()},
+            })
         }
         void this.#prepareNearbyPOIsForPlayback(sample)
         if (hideReplayMarker) {
@@ -1613,13 +1624,29 @@ export class JourneyReplayMode {
                        ?? null
         const hideClipCursor = phase?.slot === REPLAY_CLIP_SLOT_START
                                || phase?.slot === REPLAY_CLIP_SLOT_STOP
+        const staticCompletedTrace = phase?.slot === REPLAY_CLIP_SLOT_STOP
+        if (staticCompletedTrace) {
+            replayVideoTraceDebug('mode.export-frame.stop.begin', {
+                clipId: phase?.clip?.clipId ?? null,
+                progress,
+                anchorProgress,
+                localProgress: phase?.localProgress ?? null,
+                localMillis: phase?.localMillis ?? null,
+                hasSample: Boolean(sample),
+                sampleProgress: sample?.progress ?? null,
+                hasSampler: Boolean(this.#sampler),
+            })
+        }
         if (sample && this.#sampler) {
             this.#renderer.update({
                 sample,
-                sampler:        this.#sampler,
-                forceGeometry:  true,
-                freezeDynamic:  phase?.slot === REPLAY_CLIP_SLOT_STOP,
-                hideCursor:     hideClipCursor,
+                sampler:               this.#sampler,
+                forceGeometry:         true,
+                freezeDynamic:         false,
+                hideCursor:            hideClipCursor,
+                hideRemainingTrace:    staticCompletedTrace,
+                staticCompletedTrace:  false,
+                completedTraceMode:    staticCompletedTrace ? 'stop-dynamic' : 'dynamic',
             })
         }
         await this.#renderReplayExportClipFrame({
@@ -1629,8 +1656,28 @@ export class JourneyReplayMode {
             localProgress: phase.localProgress,
             localMillis: phase.localMillis,
         })
+        if (staticCompletedTrace) {
+            replayVideoTraceDebug('mode.export-frame.stop.after-camera', {
+                clipId: phase?.clip?.clipId ?? null,
+                localProgress: phase?.localProgress ?? null,
+                sampleProgress: sample?.progress ?? null,
+                cameraHeading: globalThis.lgs?.viewer?.camera?.heading ?? null,
+                cameraPitch: globalThis.lgs?.viewer?.camera?.pitch ?? null,
+            })
+        }
         globalThis.lgs?.scene?.requestRender?.()
         return sample
+    }
+
+    createReplayExportTraceOverlay = ({phase = null, cropRect = null, outputDpr = null, sourceCanvas = null} = {}) => {
+        const slot = phase?.slot ?? 'unknown'
+        replayVideoTraceDebug(`mode.overlay.${slot}.disabled`, {
+            reason: 'trace-must-remain-cesium-terrain-clamped',
+            cropRect,
+            outputDpr,
+            hasSourceCanvas: Boolean(sourceCanvas),
+        })
+        return null
     }
 
     #syncRuntimeNearbyPOIs = (journey = globalThis.lgs?.theJourney ?? null) => {
@@ -5127,10 +5174,12 @@ export class JourneyReplayMode {
                 try {
                     this.#renderer.update({
                         ...detail,
-                        sampler: this.#sampler,
-                        forceGeometry: true,
-                        freezeDynamic:  true,
-                        hideCursor:     true,
+                        sampler:               this.#sampler,
+                        forceGeometry:         true,
+                        freezeDynamic:         false,
+                        hideCursor:            true,
+                        hideRemainingTrace:    true,
+                        staticCompletedTrace:  true,
                     })
                     this.#startStopClipPOIMaskLoop()
 

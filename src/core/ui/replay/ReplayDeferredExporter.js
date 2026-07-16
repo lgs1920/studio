@@ -20,6 +20,7 @@ import { resolveVideoOverlayVisibility } from '@Core/ui/replay/ReplayOverlayReso
 import { REPLAY_CLIP_SLOT_START, REPLAY_CLIP_SLOT_STOP, normalizeJourneyReplayClips } from '@Core/ui/replay/JourneyReplayClips'
 import { buildReplayVideoComposerOverlays, isReplayVideoWidgetReady } from '@Core/ui/replay/ReplayVideoOverlayComposer'
 import { buildReplayVideoRenderSpec, normalizeReplayVideoCropRect, replayVideoComposerClipFromCropRect } from '@Core/ui/replay/ReplayVideoRenderSpec'
+import { replayVideoTraceDebug } from '@Core/ui/replay/ReplayVideoTraceDebug'
 import { CanvasOverlayComposer } from '@Core/ui/screen-media-recorder/composer/CanvasOverlayComposer'
 import { VIDEO_WIDGETS_BOARD } from '@Core/constants'
 import { ScreenMediaRecorder } from '@Core/ui/screen-media-recorder/recorder/ScreenMediaRecorder'
@@ -1456,9 +1457,34 @@ export const runReplayDeferredMp4Export = async ({
                     }
 
                     if (replayComposer) {
+                        const traceOverlay = typeof replayMode?.createReplayExportTraceOverlay === 'function'
+                                             ? replayMode.createReplayExportTraceOverlay({
+                                                 phase,
+                                                 cropRect,
+                                                 outputDpr: composerOutputDpr,
+                                                 sourceCanvas: frameSource,
+                                             })
+                                             : null
+                        if (phase?.slot === REPLAY_CLIP_SLOT_STOP) {
+                            replayVideoTraceDebug('exporter.stop.composer-overlay', {
+                                frameIndex: frame?.index ?? null,
+                                frameTimeMs: frame?.frameTimeMs ?? null,
+                                localProgress: phase?.localProgress ?? null,
+                                hasComposer: Boolean(replayComposer),
+                                hasTraceOverlay: Boolean(traceOverlay),
+                                cropRect,
+                                composerClip,
+                                composerOutputDpr,
+                                outputCanvasWidth: canvas.width,
+                                outputCanvasHeight: canvas.height,
+                                sourceCanvasWidth: frameSource.width,
+                                sourceCanvasHeight: frameSource.height,
+                            })
+                        }
                         buildReplayVideoComposerOverlays({
-                            composer: replayComposer,
-                            cropRect: cropRect ?? {left: 0, top: 0, width: canvas.width, height: canvas.height},
+                            composer:      replayComposer,
+                            cropRect:      cropRect ?? {left: 0, top: 0, width: canvas.width, height: canvas.height},
+                            sceneOverlays: traceOverlay ? [traceOverlay] : [],
                             replay,
                             controller,
                         })

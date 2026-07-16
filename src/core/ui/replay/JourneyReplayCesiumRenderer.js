@@ -17,12 +17,13 @@
 import { normalizeTrackRenderSmoothing, smoothCoordinateSegment } from '@Utils/cesium/trackRenderSmoothing'
 import { TrackUtils }                                              from '@Utils/cesium/TrackUtils'
 import {
-    ArcType, CallbackProperty, Cartesian3, Color, CustomDataSource, ExtrapolationType, HeightReference, JulianDate,
-    LinearApproximation, SampledPositionProperty,
+    ArcType, CallbackProperty, Cartesian2, Cartesian3, Cartographic, Color, CustomDataSource, ExtrapolationType,
+    HeightReference, JulianDate, LinearApproximation, SampledPositionProperty, SceneTransforms,
 }                                                                 from 'cesium'
 import {
     REPLAY_TRACE_MODE_FULL, getJourneyReplaySettings, normalizeJourneyReplayProgressionStyle, normalizeJourneyReplayTrace,
 }                                                                 from './JourneyReplayProgressionStyle'
+import { replayVideoTraceDebug }                                  from './ReplayVideoTraceDebug'
 
 export const REPLAY_DATA_SOURCE_PREFIX = 'replay'
 
@@ -39,7 +40,7 @@ const REMAINING_KEY_PREFIX = 'remaining:'
 const PATH_GEOMETRY_UPDATE_INTERVAL = 120
 const DYNAMIC_POLYLINE_PROGRESS_STEP = 0.002
 const DYNAMIC_POLYLINE_PROGRESS_STEP_PLAYING = 0.00025
-const LIVE_PROGRESS_MAX_POINTS = 512
+const LIVE_PROGRESS_MAX_POINTS = 2048
 const cssColor = (value, fallback) => {
     if (value instanceof Color) {
         return value
@@ -60,6 +61,61 @@ const finiteNumber = value => {
     const number = Number(value)
     return Number.isFinite(number) ? number : null
 }
+
+const rectNumber = (rect, key) => finiteNumber(rect?.[key]) ?? 0
+
+const canvasCssSize = canvas => {
+    const rect = canvas?.getBoundingClientRect?.() ?? {}
+    const width = finiteNumber(rect.width) ?? finiteNumber(canvas?.clientWidth) ?? finiteNumber(canvas?.width) ?? 0
+    const height = finiteNumber(rect.height) ?? finiteNumber(canvas?.clientHeight) ?? finiteNumber(canvas?.height) ?? 0
+
+    return {
+        left: rectNumber(rect, 'left'),
+        top: rectNumber(rect, 'top'),
+        width,
+        height,
+    }
+}
+
+const projectedBounds = points => {
+    let minX = Number.POSITIVE_INFINITY
+    let minY = Number.POSITIVE_INFINITY
+    let maxX = Number.NEGATIVE_INFINITY
+    let maxY = Number.NEGATIVE_INFINITY
+    let count = 0
+
+    for (const point of points) {
+        if (!point || !Number.isFinite(point.x) || !Number.isFinite(point.y)) {
+            continue
+        }
+        minX = Math.min(minX, point.x)
+        minY = Math.min(minY, point.y)
+        maxX = Math.max(maxX, point.x)
+        maxY = Math.max(maxY, point.y)
+        count += 1
+    }
+
+    if (count === 0) {
+        return null
+    }
+
+    return {
+        minX: Math.round(minX),
+        minY: Math.round(minY),
+        maxX: Math.round(maxX),
+        maxY: Math.round(maxY),
+    }
+}
+
+const visibleProjectedPointCount = (points, crop) => points.reduce((count, point) => (
+    point
+    && point.x >= 0
+    && point.x <= crop.width
+    && point.y >= 0
+    && point.y <= crop.height
+        ? count + 1
+        : count
+), 0)
 
 export class JourneyReplayCesiumRenderer {
     #source = null
@@ -94,7 +150,16 @@ export class JourneyReplayCesiumRenderer {
         return this
     }
 
-    update = ({sample, sampler = this.#sampler, forceGeometry = false, freezeDynamic = false, hideCursor = false} = {}) => {
+    update = ({
+                  sample,
+                  sampler = this.#sampler,
+                  forceGeometry = false,
+                  freezeDynamic = false,
+                  hideCursor = false,
+                  hideRemainingTrace = false,
+                  staticCompletedTrace = false,
+                  completedTraceMode = staticCompletedTrace ? 'static' : 'dynamic',
+              } = {}) => {
         if (!sample || !sampler) {
             return
         }
@@ -102,16 +167,326 @@ export class JourneyReplayCesiumRenderer {
         this.#sampler = sampler
         this.#sample = sample
         this.#ensureSource()
-        if (freezeDynamic) {
-            this.#freezeDynamicLines()
+        const stopCompletedTrace = staticCompletedTrace || completedTraceMode === 'stop-dynamic'
+        if (stopCompletedTrace) {
+            replayVideoTraceDebug('renderer.update.stop.begin', {
+                progress: sample.progress,
+                forceGeometry,
+                freezeDynamic,
+                hideCursor,
+                hideRemainingTrace,
+                samplerSamples: sampler?.samples?.length ?? null,
+                source: this.#source?.name ?? null,
+                sourceShow: this.#source?.show ?? null,
+                sourceAddPending: this.#sourceAddPending,
+            })
         }
-        else if (forceGeometry || this.#shouldUpdatePathGeometry(sample)) {
-            this.#updateCompletedLines(sample)
-            this.#updateRemainingLines(sample)
+        const shouldUpdateGeometry = forceGeometry || (!freezeDynamic && this.#shouldUpdatePathGeometry(sample))
+        if (shouldUpdateGeometry) {
+            this.#updateCompletedLines(sample, {staticGeometry: completedTraceMode === 'static'})
+            this.#updateRemainingLines(sample, {hideRemainingTrace})
+        }
+        else if (hideRemainingTrace) {
+            this.#hideRemainingLines()
+        }
+        if (freezeDynamic && !staticCompletedTrace) {
+            this.#freezeDynamicLines()
         }
         this.#updateCursor(sample)
         this.#syncCursorVisibilityWithTrace({hideCursor})
+        if (stopCompletedTrace) {
+            replayVideoTraceDebug('renderer.update.stop.end', {
+                progress: sample.progress,
+                shouldUpdateGeometry,
+                completedTraceMode,
+                entities: this.#traceEntitySummary(),
+            })
+        }
         globalThis.lgs?.scene?.requestRender?.()
+    }
+
+    createCompletedTraceVideoOverlay = ({
+                                            cropRect = null,
+                                            outputDpr = null,
+                                            sourceCanvas: exportSourceCanvas = null,
+                                            phaseSlot = 'stop',
+                                        } = {}) => {
+        const scene = globalThis.lgs?.viewer?.scene ?? globalThis.lgs?.scene ?? null
+        const sceneCanvas = scene?.canvas ?? globalThis.lgs?.viewer?.canvas ?? null
+        const sourceCanvas = exportSourceCanvas
+                             ?? globalThis.lgs?.canvas
+                             ?? sceneCanvas
+                             ?? globalThis.lgs?.scene?.canvas
+                             ?? null
+        const debugSlot = `${phaseSlot || 'trace'}`
+        const debugEvent = suffix => `renderer.overlay.${debugSlot}.${suffix}`
+        if (!sourceCanvas || !scene || typeof document === 'undefined' || !this.#sampler || !this.#sample) {
+            replayVideoTraceDebug(debugEvent('skip.missing-runtime'), {
+                hasSourceCanvas: Boolean(sourceCanvas),
+                hasSceneCanvas: Boolean(sceneCanvas),
+                hasScene: Boolean(scene),
+                hasDocument: typeof document !== 'undefined',
+                hasSampler: Boolean(this.#sampler),
+                hasSample: Boolean(this.#sample),
+            })
+            return null
+        }
+
+        const sourceRect = canvasCssSize(sourceCanvas)
+        const sceneRect = canvasCssSize(sceneCanvas ?? sourceCanvas)
+        const sceneDpr = sceneRect.width > 0 ? Math.max(1, (finiteNumber(sceneCanvas?.width) ?? sceneRect.width) / sceneRect.width) : 1
+        const crop = {
+            left:   finiteNumber(cropRect?.left ?? cropRect?.x) ?? 0,
+            top:    finiteNumber(cropRect?.top ?? cropRect?.y) ?? 0,
+            width:  finiteNumber(cropRect?.width) ?? finiteNumber(sourceRect.width) ?? finiteNumber(sourceCanvas.width) ?? 0,
+            height: finiteNumber(cropRect?.height) ?? finiteNumber(sourceRect.height) ?? finiteNumber(sourceCanvas.height) ?? 0,
+        }
+        if (crop.width <= 0 || crop.height <= 0) {
+            replayVideoTraceDebug(debugEvent('skip.invalid-crop'), {
+                crop,
+                sourceCanvasWidth: sourceCanvas.width ?? null,
+                sourceCanvasHeight: sourceCanvas.height ?? null,
+            })
+            return null
+        }
+
+        const positions = this.#terrainSurfacePositions(this.#completedSmoothedPositions())
+        if (positions.length < 2) {
+            replayVideoTraceDebug(debugEvent('skip.no-positions'), {
+                positions: positions.length,
+                samplerSamples: this.#sampler?.samples?.length ?? null,
+                sampleProgress: this.#sample?.progress ?? null,
+            })
+            return null
+        }
+
+        const dpr = Math.max(1, finiteNumber(outputDpr)
+                                ?? finiteNumber(globalThis.window?.devicePixelRatio)
+                                ?? 1)
+        const canvas = document.createElement('canvas')
+        canvas.width = Math.max(1, Math.round(crop.width * dpr))
+        canvas.height = Math.max(1, Math.round(crop.height * dpr))
+        canvas.style.width = `${crop.width}px`
+        canvas.style.height = `${crop.height}px`
+
+        const ctx = canvas.getContext?.('2d')
+        if (!ctx) {
+            replayVideoTraceDebug(debugEvent('skip.no-context'), {
+                canvasWidth: canvas.width,
+                canvasHeight: canvas.height,
+            })
+            return null
+        }
+
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+        ctx.lineCap = 'round'
+        ctx.lineJoin = 'round'
+
+        const projectedCandidates = [
+            {
+                mode: 'scene-css-to-source-css',
+                points: [],
+            },
+            {
+                mode: 'scene-css',
+                points: [],
+            },
+            {
+                mode: 'scene-drawing-buffer-to-source-css',
+                points: [],
+            },
+        ]
+
+        positions.forEach(position => {
+            let point = null
+            try {
+                point = SceneTransforms.worldToWindowCoordinates(scene, position, new Cartesian2()) ?? null
+            }
+            catch {
+                point = null
+            }
+
+            if (point && Number.isFinite(point.x) && Number.isFinite(point.y)) {
+                projectedCandidates[0].points.push({
+                    x: point.x + sceneRect.left - sourceRect.left - crop.left,
+                    y: point.y + sceneRect.top - sourceRect.top - crop.top,
+                })
+                projectedCandidates[1].points.push({
+                    x: point.x - crop.left,
+                    y: point.y - crop.top,
+                })
+            }
+            else {
+                projectedCandidates[0].points.push(null)
+                projectedCandidates[1].points.push(null)
+            }
+
+            let bufferPoint = null
+            try {
+                bufferPoint = SceneTransforms.worldToDrawingBufferCoordinates?.(scene, position, new Cartesian2()) ?? null
+            }
+            catch {
+                bufferPoint = null
+            }
+
+            if (bufferPoint && Number.isFinite(bufferPoint.x) && Number.isFinite(bufferPoint.y)) {
+                projectedCandidates[2].points.push({
+                    x: (bufferPoint.x / sceneDpr) + sceneRect.left - sourceRect.left - crop.left,
+                    y: (bufferPoint.y / sceneDpr) + sceneRect.top - sourceRect.top - crop.top,
+                })
+            }
+            else {
+                projectedCandidates[2].points.push(null)
+            }
+        })
+
+        const scoredCandidates = projectedCandidates.map(candidate => ({
+            ...candidate,
+            projected: candidate.points.filter(Boolean).length,
+            visible:   visibleProjectedPointCount(candidate.points, crop),
+            bounds:    projectedBounds(candidate.points),
+        }))
+        const selectedCandidate = scoredCandidates.reduce((best, candidate) => {
+            if (!best) {
+                return candidate
+            }
+            if (candidate.visible !== best.visible) {
+                return candidate.visible > best.visible ? candidate : best
+            }
+            return candidate.projected > best.projected ? candidate : best
+        }, null)
+        const projected = selectedCandidate?.points ?? []
+        const projectedCount = projected.filter(Boolean).length
+        const visibleCount = visibleProjectedPointCount(projected, crop)
+        const bounds = projectedBounds(projected)
+
+        const drawTrace = (color, width) => {
+            ctx.strokeStyle = color.toCssColorString?.() ?? `${color}`
+            ctx.lineWidth = width
+            ctx.beginPath()
+            let active = false
+            let drawnPoints = 0
+            for (const point of projected) {
+                if (!point) {
+                    active = false
+                    continue
+                }
+
+                if (!active) {
+                    ctx.moveTo(point.x, point.y)
+                    active = true
+                }
+                else {
+                    ctx.lineTo(point.x, point.y)
+                }
+                drawnPoints += 1
+            }
+            if (drawnPoints >= 2) {
+                ctx.stroke()
+            }
+            return drawnPoints
+        }
+
+        const style = this.#style()
+        const fillWidth = Math.max(style.fillWidth, 5)
+        const borderWidth = Math.max(fillWidth + (style.borderWidth * 2), fillWidth + 4)
+        const drawnPoints = drawTrace(style.borderColor, borderWidth)
+        drawTrace(style.fillColor, fillWidth)
+
+        if (drawnPoints < 2) {
+            replayVideoTraceDebug(debugEvent('skip.not-drawn'), {
+                positions: positions.length,
+                projected: projectedCount,
+                visible: visibleCount,
+                drawnPoints,
+                crop,
+                dpr,
+                sourceRect,
+                sceneRect,
+                sceneDpr,
+                projectionMode: selectedCandidate?.mode ?? null,
+                bounds,
+                candidates: scoredCandidates.map(candidate => ({
+                    mode:      candidate.mode,
+                    projected: candidate.projected,
+                    visible:   candidate.visible,
+                    bounds:    candidate.bounds,
+                })),
+            })
+            return null
+        }
+
+        replayVideoTraceDebug(debugEvent('created'), {
+            positions: positions.length,
+            projected: projectedCount,
+            visible: visibleCount,
+            drawnPoints,
+            crop,
+            dpr,
+            sourceRect,
+            sceneRect,
+            sceneDpr,
+            projectionMode: selectedCandidate?.mode ?? null,
+            bounds,
+            candidates: scoredCandidates.map(candidate => ({
+                mode:      candidate.mode,
+                projected: candidate.projected,
+                visible:   candidate.visible,
+                bounds:    candidate.bounds,
+            })),
+            canvasWidth: canvas.width,
+            canvasHeight: canvas.height,
+            fillWidth,
+            borderWidth,
+            fillColor: style.fillColor?.toCssColorString?.() ?? null,
+            borderColor: style.borderColor?.toCssColorString?.() ?? null,
+        })
+
+        return {
+            element: canvas,
+            options: {
+                x:             0,
+                y:             0,
+                w:             crop.width,
+                h:             crop.height,
+                contentWidth:  crop.width,
+                contentHeight: crop.height,
+                scale:         1,
+            },
+        }
+    }
+
+    #traceEntitySummary = () => {
+        const summary = {
+            records:  this.#lineEntities.size,
+            sourceValues: this.#source?.entities?.values?.length ?? null,
+            completed: 0,
+            completedVisible: 0,
+            remaining: 0,
+            remainingVisible: 0,
+            dynamic: 0,
+        }
+
+        this.#lineEntities.forEach((record, key) => {
+            const visible = record?.entity?.show !== false && record?.show !== false
+            if (record?.geometryKey === 'dynamic') {
+                summary.dynamic += 1
+            }
+            if (key.startsWith(REMAINING_KEY_PREFIX)) {
+                summary.remaining += 1
+                if (visible) {
+                    summary.remainingVisible += 1
+                }
+                return
+            }
+
+            summary.completed += 1
+            if (visible) {
+                summary.completedVisible += 1
+            }
+        })
+
+        return summary
     }
 
     clear = () => {
@@ -152,7 +527,7 @@ export class JourneyReplayCesiumRenderer {
             this.#cursor.show = visible
         }
         if (this.#cursorBorder) {
-            this.#cursorBorder.show = visible && this.#style().cursorBorder > 0
+            this.#cursorBorder.show = false
         }
     }
 
@@ -270,8 +645,13 @@ export class JourneyReplayCesiumRenderer {
         Array.from(this.#lineEntities.entries()).forEach(([key, record]) => {
             if (predicate(key, record)) {
                 record.entity.show = false
+                record.show = false
             }
         })
+    }
+
+    #hideRemainingLines = () => {
+        this.#hideLineEntities(key => key.startsWith(REMAINING_KEY_PREFIX))
     }
 
     #coordinateParts = (coordinate) => {
@@ -296,6 +676,28 @@ export class JourneyReplayCesiumRenderer {
 
         return Cartesian3.fromDegrees(point.longitude, point.latitude, 0)
     }
+
+    #terrainSurfacePositions = positions => (positions ?? [])
+        .map(position => {
+            if (!position) {
+                return null
+            }
+
+            const cartographic = Cartographic.fromCartesian(position)
+            if (!cartographic) {
+                return position
+            }
+
+            const globe = globalThis.lgs?.scene?.globe ?? globalThis.lgs?.viewer?.scene?.globe ?? null
+            const terrainHeight = finiteNumber(globe?.getHeight?.(cartographic))
+            const height = terrainHeight ?? finiteNumber(cartographic.height) ?? 0
+            return Cartesian3.fromRadians(
+                cartographic.longitude,
+                cartographic.latitude,
+                height,
+            )
+        })
+        .filter(Boolean)
 
     #groundPositionsFromCoordinates = coordinates => coordinates
         .map(coordinate => this.#groundPositionFromCoordinate(coordinate))
@@ -655,20 +1057,9 @@ export class JourneyReplayCesiumRenderer {
         const style = this.#style()
         const cursorPosition = Cartesian3.fromDegrees(sample.longitude, sample.latitude, 0)
         const pointSize = this.#metersToPixels(style.cursorDiameter * 2, cursorPosition, 80) * 2
-        const borderSize = pointSize + Math.max(4, Math.round(pointSize * 0.35))
-        if (style.cursorBorder > 0 && !this.#cursorBorder) {
-            this.#cursorBorder = source.entities.add({
-                id:       `${source.name}#cursor-border`,
-                name:     'JourneyReplay cursor border',
-                position: cursorPosition,
-                point:    {
-                    pixelSize:       borderSize,
-                    color:           style.borderColor,
-                    outlineColor:    style.borderColor,
-                    outlineWidth:    0,
-                    heightReference: HeightReference.CLAMP_TO_GROUND,
-                },
-            })
+        const outlineWidth = Math.max(0, Number(style.cursorBorder) || 0)
+        if (this.#cursorBorder) {
+            this.#cursorBorder.show = false
         }
 
         if (!this.#cursor) {
@@ -679,8 +1070,8 @@ export class JourneyReplayCesiumRenderer {
                 point:    {
                     pixelSize:       pointSize,
                     color:           style.cursorColor,
-                    outlineColor:    style.cursorColor,
-                    outlineWidth:    0,
+                    outlineColor:    style.borderColor,
+                    outlineWidth,
                     heightReference: HeightReference.CLAMP_TO_GROUND,
                 },
             })
@@ -688,20 +1079,11 @@ export class JourneyReplayCesiumRenderer {
             return
         }
 
-        if (this.#cursorBorder) {
-            this.#cursorBorder.position = cursorPosition
-            this.#cursorBorder.point.pixelSize = borderSize
-            this.#cursorBorder.point.color = style.borderColor
-            this.#cursorBorder.point.outlineColor = style.borderColor
-            this.#cursorBorder.point.outlineWidth = 0
-            this.#cursorBorder.point.heightReference = HeightReference.CLAMP_TO_GROUND
-            this.#cursorBorder.show = style.cursorBorder > 0
-        }
         this.#cursor.position = cursorPosition
         this.#cursor.point.pixelSize = pointSize
         this.#cursor.point.color = style.cursorColor
-        this.#cursor.point.outlineColor = style.cursorColor
-        this.#cursor.point.outlineWidth = 0
+        this.#cursor.point.outlineColor = style.borderColor
+        this.#cursor.point.outlineWidth = outlineWidth
         this.#cursor.point.heightReference = HeightReference.CLAMP_TO_GROUND
         this.#setCursorVisibility(true)
     }
@@ -738,20 +1120,32 @@ export class JourneyReplayCesiumRenderer {
         ].join(':')
     }
 
-    #polylineStyleKey = ({width, material, zIndex}) => [
+    #polylineStyleKey = ({width, material, zIndex, clampToGround = true, depthFailMaterial = null}) => [
         width,
         material?.toCssColorString?.() ?? `${material}`,
+        depthFailMaterial?.toCssColorString?.() ?? `${depthFailMaterial ?? ''}`,
         zIndex,
+        clampToGround === false ? 0 : 1,
     ].join(':')
 
-    #polylineOptions = ({positions, width, material, zIndex}) => ({
-        positions,
-        clampToGround: true,
-        material,
-        width,
-        zIndex,
-        arcType: ArcType.GEODESIC,
-    })
+    #polylineOptions = ({positions, width, material, zIndex, clampToGround = true, depthFailMaterial = null}) => {
+        const options = {
+            positions,
+            clampToGround: clampToGround !== false,
+            material,
+            width,
+            arcType:       ArcType.GEODESIC,
+        }
+
+        if (options.clampToGround) {
+            options.zIndex = zIndex
+        }
+        else if (depthFailMaterial) {
+            options.depthFailMaterial = depthFailMaterial
+        }
+
+        return options
+    }
 
     #syncPolyline = (record, options) => {
         const geometryKey = this.#polylineGeometryKey(options.positions)
@@ -765,11 +1159,19 @@ export class JourneyReplayCesiumRenderer {
         if (record.styleKey !== styleKey) {
             record.entity.polyline.width = options.width
             record.entity.polyline.material = options.material
-            record.entity.polyline.zIndex = options.zIndex
+            record.entity.polyline.clampToGround = options.clampToGround !== false
+            record.entity.polyline.depthFailMaterial = options.depthFailMaterial ?? undefined
+            record.entity.polyline.zIndex = options.clampToGround === false ? undefined : options.zIndex
             record.styleKey = styleKey
         }
 
         record.entity.show = options.show ?? true
+        record.width = options.width
+        record.material = options.material
+        record.zIndex = options.zIndex
+        record.clampToGround = options.clampToGround !== false
+        record.depthFailMaterial = options.depthFailMaterial ?? null
+        record.show = options.show ?? true
     }
 
     #freezeDynamicLines = () => {
@@ -786,6 +1188,7 @@ export class JourneyReplayCesiumRenderer {
             const positions = record.positionsFactory()
             if (!Array.isArray(positions) || positions.length < 2) {
                 record.entity.show = false
+                record.show = false
                 return
             }
 
@@ -794,7 +1197,9 @@ export class JourneyReplayCesiumRenderer {
                 width:    record.width,
                 material: record.material,
                 zIndex:   record.zIndex,
-                show:     record.show ?? record.entity.show,
+                clampToGround: record.clampToGround !== false,
+                depthFailMaterial: record.depthFailMaterial ?? null,
+                show:     record.show !== false && record.entity.show !== false,
             }
 
             const id = record.entity.id
@@ -810,7 +1215,18 @@ export class JourneyReplayCesiumRenderer {
         })
     }
 
-    #upsertPolyline = ({key, id, name, positions, width, material, zIndex, show = true}) => {
+    #upsertPolyline = ({
+                           key,
+                           id,
+                           name,
+                           positions,
+                           width,
+                           material,
+                           zIndex,
+                           show = true,
+                           clampToGround = true,
+                           depthFailMaterial = null,
+                       }) => {
         const source = this.#ensureSource()
         if (!source || positions.length < 2) {
             return
@@ -821,10 +1237,16 @@ export class JourneyReplayCesiumRenderer {
             width,
             material,
             zIndex,
+            clampToGround: clampToGround !== false,
+            depthFailMaterial,
             show,
         }
         const record = this.#lineEntities.get(key)
-        if (record?.entity?.polyline) {
+        if (
+            record?.entity?.polyline
+            && record.geometryKey !== 'dynamic'
+            && record.clampToGround === options.clampToGround
+        ) {
             this.#syncPolyline(record, options)
             return
         }
@@ -842,6 +1264,12 @@ export class JourneyReplayCesiumRenderer {
             }),
             geometryKey: this.#polylineGeometryKey(positions),
             styleKey:    this.#polylineStyleKey(options),
+            width,
+            material,
+            zIndex,
+            clampToGround: options.clampToGround,
+            depthFailMaterial,
+            show,
         })
     }
 
@@ -881,6 +1309,8 @@ export class JourneyReplayCesiumRenderer {
             width,
             material,
             zIndex,
+            clampToGround: true,
+            depthFailMaterial: null,
             show,
             lastProgressKey:  null,
             lastPositions:    [],
@@ -916,7 +1346,7 @@ export class JourneyReplayCesiumRenderer {
         this.#lineEntities.set(key, dynamicRecord)
     }
 
-    #updateCompletedLines = (sample) => {
+    #updateCompletedLines = (sample, {staticGeometry = false} = {}) => {
         const source = this.#ensureSource()
         if (!source || !this.#sampler) {
             return
@@ -929,6 +1359,46 @@ export class JourneyReplayCesiumRenderer {
             const borderWidth = Math.max(fillWidth + (style.borderWidth * 2), fillWidth + 2)
             const activeKeys = new Set(['smoothed#border', 'smoothed#fill'])
             const playing = globalThis.lgs?.stores?.replay?.playing === true
+
+            if (staticGeometry) {
+                const positions = this.#completedSmoothedPositions()
+                replayVideoTraceDebug('renderer.completed.stop.static', {
+                    source: source.name ?? null,
+                    positions: positions.length,
+                    fillWidth,
+                    borderWidth,
+                    fillColor: style.fillColor?.toCssColorString?.() ?? null,
+                    borderColor: style.borderColor?.toCssColorString?.() ?? null,
+                })
+                if (positions.length >= 2) {
+                    this.#upsertPolyline({
+                        key:               'smoothed#border',
+                        id:                `${source.name}#completed#smoothed#border`,
+                        name:              'JourneyReplay completed track border',
+                        positions,
+                        material:          style.borderColor,
+                        width:             borderWidth,
+                        zIndex:            PROGRESS_Z_INDEX_BORDER,
+                        clampToGround:     true,
+                    })
+                    this.#upsertPolyline({
+                        key:               'smoothed#fill',
+                        id:                `${source.name}#completed#smoothed#fill`,
+                        name:              'JourneyReplay completed track',
+                        positions,
+                        material:          style.fillColor,
+                        width:             fillWidth,
+                        zIndex:            PROGRESS_Z_INDEX_FILL,
+                        clampToGround:     true,
+                    })
+                }
+                else {
+                    this.#hideLineEntities(key => !key.startsWith(REMAINING_KEY_PREFIX))
+                    return
+                }
+                this.#hideLineEntities(key => !key.startsWith(REMAINING_KEY_PREFIX) && !activeKeys.has(key))
+                return
+            }
 
             if (playing) {
                 this.#upsertDynamicPolyline({
@@ -1015,15 +1485,15 @@ export class JourneyReplayCesiumRenderer {
         this.#hideLineEntities(key => !key.startsWith(REMAINING_KEY_PREFIX) && !activeKeys.has(key))
     }
 
-    #updateRemainingLines = (sample) => {
+    #updateRemainingLines = (sample, {hideRemainingTrace = false} = {}) => {
         const source = this.#ensureSource()
         if (!source || !this.#sampler) {
             return
         }
 
         const style = this.#style()
-        if (style.traceMode !== REPLAY_TRACE_MODE_FULL) {
-            this.#hideLineEntities(key => key.startsWith(REMAINING_KEY_PREFIX))
+        if (hideRemainingTrace || style.traceMode !== REPLAY_TRACE_MODE_FULL) {
+            this.#hideRemainingLines()
             return
         }
 
