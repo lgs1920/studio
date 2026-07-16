@@ -13,7 +13,7 @@ It complements the existing documents:
 
 - [ion-token-technical.md](../Settings/application/profile/ion-token-technical.md)
 - [README-CESIUM](README-CESIUM)
-- [ion-token-help.md](../../assets/ion-token-help.md)
+- [ion-token-help.md](../../../../src/assets/ion-token-help.md)
 
 ## Current State
 
