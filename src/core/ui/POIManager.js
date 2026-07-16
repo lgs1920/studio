@@ -801,7 +801,7 @@ export class POIManager {
 
         for (const poi of allPois) {
             const normalizedPoi = normalizeCoordinate(poi)
-            if (!normalizedPoi || poi.visible === false) {
+            if (!normalizedPoi || poi.visible === false || poi.tooClose === true) {
                 continue
             }
 

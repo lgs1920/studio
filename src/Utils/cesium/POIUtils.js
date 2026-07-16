@@ -156,7 +156,10 @@ export class POIUtils {
         }
 
         // Update visibility state
-        entity.show = poi.visible
+        entity.show = POIUtils.setPOIVisibility(poi, poi.visible)
+        if (entity.billboard) {
+            entity.billboard.show = entity.show
+        }
         lgs.viewer.scene.render()
         return true
     }
@@ -368,6 +371,10 @@ export class POIUtils {
      *
      */
     static setPOIVisibility = (poi, visibility) => {
+        if (poi?.tooClose === true) {
+            return false
+        }
+
         const replay = globalThis.lgs?.stores?.replay
         const replayActive = Boolean(replay?.active || replay?.playing || replay?.paused)
         const hideAllPoisDuringJourneyReplay = Boolean(

@@ -38,6 +38,8 @@ import { MapElement }         from './MapElement'
 import { getOrbitSettings }   from './OrbitSettings'
 import { Track }              from './Track'
 
+const START_STOP_TOO_CLOSE_DISTANCE = 100
+
 
 export class Journey extends MapElement {
 
@@ -681,9 +683,8 @@ export class Journey extends MapElement {
 
                         const key = getCoordKey(lon, lat)
                         const type = isStart ? POI_FLAG_START : POI_FLAG_STOP
-
-                        // Priority to lookup key, then fallback to existing track flag ID
-                        const existingPoi = existingLookup.get(key) || __.ui.poiManager.list.get(isStart ? track.flags.start : track.flags.stop)
+                        const previousFlagId = isStart ? track.flags.start : track.flags.stop
+                        const existingPoi = existingLookup.get(key)
 
                         const clampedHeight = await __.ui.poiManager.getHeightFromTerrain({
                                                                                               coordinates: {
@@ -692,23 +693,48 @@ export class Journey extends MapElement {
                                                                                                   height:    z ?? 0,
                                                                                               },
                                                                                           })
+                        const startPoi = isStart ? null : __.ui.poiManager.list.get(track.flags.start)
+                        const tooClose = !isStart
+                            && startPoi
+                            && __.ui.poiManager.haversineDistance(
+                                startPoi,
+                                {longitude: lon, latitude: lat},
+                            ) < START_STOP_TOO_CLOSE_DISTANCE
+
+                        const flagUpdates = {
+                            longitude:       lon,
+                            latitude:        lat,
+                            height:          z ?? undefined,
+                            simulatedHeight: clampedHeight,
+                            tooClose:        tooClose === true,
+                        }
 
                         if (existingPoi) {
-                            existingPoi.longitude = lon
-                            existingPoi.latitude = lat
-                            existingPoi.height = z ?? undefined
-                            existingPoi.simulatedHeight = clampedHeight
+                            await __.ui.poiManager.updatePOI(existingPoi.id, flagUpdates, {
+                                immediate:          true,
+                                skipLocationUpdate: true,
+                            })
+                            if (existingPoi.type === type) {
+                                if (isStart) {
+                                    track.flags.start = existingPoi.id
+                                }
+                                else {
+                                    track.flags.stop = existingPoi.id
+                                }
+                            }
                         }
                         else {
+                            const previousFlag = previousFlagId ? __.ui.poiManager.list.get(previousFlagId) : null
+                            if (previousFlag?.type === type && previousFlag.parent === trackSlug) {
+                                await __.ui.poiManager.remove({id: previousFlagId})
+                            }
+
                             const newPoi = new MapPOI({
                                                           ...common,
                                                           parent:          trackSlug,
                                                           type:            type,
                                                           title:           isStart ? 'Start' : 'End',
-                                                          longitude:       lon,
-                                                          latitude:        lat,
-                                                          height:          z ?? undefined,
-                                                          simulatedHeight: clampedHeight,
+                                                          ...flagUpdates,
                                                           color:           isStart ? lgs.settings.journey.pois.start.color : lgs.settings.journey.pois.stop.color,
                                                       })
                             await __.ui.poiManager.add(newPoi, false)
@@ -731,7 +757,8 @@ export class Journey extends MapElement {
 
         // Adjust visibility for flagged POIs if limited to journey boundaries
         if (this.poisOnLimits) {
-            Array.from(this.tracks.values()).forEach((track, index) => {
+            const tracks = Array.from(this.tracks.values())
+            tracks.forEach((track, index) => {
                 const startPoi = __.ui.poiManager.list.get(track.flags.start)
                 const stopPoi = __.ui.poiManager.list.get(track.flags.stop)
 
@@ -742,6 +769,17 @@ export class Journey extends MapElement {
                     stopPoi.visible = index === this.tracks.size - 1
                 }
             })
+
+            const firstStartPoi = __.ui.poiManager.list.get(tracks[0]?.flags?.start)
+            const lastStopPoi = __.ui.poiManager.list.get(tracks[tracks.length - 1]?.flags?.stop)
+            const tooClose = firstStartPoi && lastStopPoi
+                && __.ui.poiManager.haversineDistance(firstStartPoi, lastStopPoi) < START_STOP_TOO_CLOSE_DISTANCE
+            if (lastStopPoi && lastStopPoi.tooClose !== (tooClose === true)) {
+                await __.ui.poiManager.updatePOI(lastStopPoi.id, {tooClose: tooClose === true}, {
+                    immediate:          true,
+                    skipLocationUpdate: true,
+                })
+            }
         }
     }
 

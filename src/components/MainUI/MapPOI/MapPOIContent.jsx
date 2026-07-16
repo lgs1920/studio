@@ -63,6 +63,7 @@ export const MapPOIContent = ({poi, useInMenu = false, style}) => {
     const replayActive = Boolean(replay.active || replay.playing || replay.paused)
     const replaySettings = normalizeJourneyReplayPOISettings(point?.replay)
     const replayMasked = replayActive && replaySettings.visible === false
+    const hiddenBecauseTooClose = point?.tooClose === true
     const hideJourneyReplayField = key => replayActive && replayEntry && replaySettings.hiddenFields[key] === true
 
     const iconName = point?.categoryIcon(point?.category)
@@ -135,7 +136,7 @@ export const MapPOIContent = ({poi, useInMenu = false, style}) => {
 
     /** Synchronizes DOM content to map canvas */
     const renderToCanvas = useCallback(() => {
-        if (useInMenu || !point?.visible || replayMasked || !pointId) {
+        if (useInMenu || !point?.visible || replayMasked || hiddenBecauseTooClose || !pointId) {
             return
         }
 
@@ -154,7 +155,8 @@ export const MapPOIContent = ({poi, useInMenu = false, style}) => {
                                                                    const currentPoint = $pois.list.get(pointId)
                                                                    if (renderRequestId !== _renderRequestId.current
                                                                        || !currentPoint
-                                                                       || !currentPoint.visible) {
+                                                                       || !currentPoint.visible
+                                                                       || currentPoint.tooClose === true) {
                                                                        return
                                                                    }
 
@@ -176,10 +178,10 @@ export const MapPOIContent = ({poi, useInMenu = false, style}) => {
                 console.error('Error rendering POI to canvas:', error)
             }
         })
-    }, [useInMenu, point?.visible, replayMasked, pointId, $pois.list])
+    }, [useInMenu, point?.visible, replayMasked, hiddenBecauseTooClose, pointId, $pois.list])
 
     useEffect(() => {
-        if (useInMenu || !pointId || (point?.visible !== false && !replayMasked)) {
+        if (useInMenu || !pointId || (point?.visible !== false && !replayMasked && !hiddenBecauseTooClose)) {
             return
         }
 
@@ -193,7 +195,7 @@ export const MapPOIContent = ({poi, useInMenu = false, style}) => {
             visible: false,
         })
         void mapPOI.utils.draw(mapPOI)
-    }, [useInMenu, pointId, point?.visible, replayMasked, $pois.list])
+    }, [useInMenu, pointId, point?.visible, replayMasked, hiddenBecauseTooClose, $pois.list])
 
     const renderToCanvasAfterIconLoad = useCallback((event = null) => {
         const icon = event?.target ?? _icon.current
@@ -241,6 +243,7 @@ export const MapPOIContent = ({poi, useInMenu = false, style}) => {
                   point?.latitude,
                   point?.type,
                   point?.visible,
+                  point?.tooClose,
                   replayActive,
                   replayEntry?.poi?.id,
                   replaySettings.visible,

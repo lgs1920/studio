@@ -78,6 +78,10 @@ export const main = {
                 this.filtered.journey.clear()
 
                 this.list.forEach(($poi, id) => {
+                    if ($poi.tooClose === true) {
+                        return
+                    }
+
                     // Global list: usually based on visibility
                     if ($poi.visible !== false) {
                         this.filtered.global.set(id, true)

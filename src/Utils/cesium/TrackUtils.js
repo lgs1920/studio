@@ -1390,8 +1390,9 @@ export class TrackUtils {
         TrackUtils.getDataSourcesByName(journey.slug, true)[0]?.entities.values.forEach(entity => {
             const current = TrackUtils.getTrackFromEntityId(journey, entity.id)
             if (entity.id.startsWith(POI_FLAG) && entity.id.endsWith(type) && current?.slug === track.slug) {
+                const poiId = track.flags[entity.id.endsWith(POI_FLAG_START) ? 'start' : 'stop']
                 entity.show = POIUtils.setPOIVisibility(
-                    track.flags[entity.id.endsWith(POI_FLAG_START) ? 'start' : 'stop'], visibility,
+                    __.ui.poiManager.get(poiId), visibility,
                 )
             }
         })

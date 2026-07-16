@@ -36,7 +36,7 @@ export const MapPOIEditFilterPopup = memo(() => {
     const onlyJourney = useMemo(() => drawers.open === JOURNEY_EDITOR_DRAWER, [drawers.open])
 
     const enoughPOIs = useCallback(() => {
-        return Array.from(pois.list.values()).some(obj => obj.type !== undefined)
+        return Array.from(pois.list.values()).some(obj => obj.type !== undefined && obj.tooClose !== true)
     }, [pois.list])
 
     const applyFilter = useCallback(() => {
@@ -48,7 +48,7 @@ export const MapPOIEditFilterPopup = memo(() => {
 
         const {byName, byCategories, global, journey, exclude} = lgs.settings.poi.filter
         const search = byName.toLowerCase().trim()
-        const allPois = Array.from(pois.list.values())
+        const allPois = Array.from(pois.list.values()).filter(item => item.tooClose !== true)
 
         const filtered = allPois.filter(item => {
             // 1. Name Filter

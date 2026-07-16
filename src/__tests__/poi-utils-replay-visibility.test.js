@@ -106,6 +106,13 @@ describe('POIUtils replay visibility', () => {
         }, true)).toBe(false)
     })
 
+    it('keeps a too-close poi hidden even when it is otherwise visible', () => {
+        expect(POIUtils.setPOIVisibility({
+            visible:  true,
+            tooClose: true,
+        }, true)).toBe(false)
+    })
+
     it('updates an existing billboard visibility when replay hides the poi', async () => {
         await POIUtils.draw({
             id:        'poi-1',

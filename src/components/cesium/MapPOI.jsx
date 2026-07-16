@@ -42,7 +42,9 @@ export const MapPOI = memo(({point}) => {
                             : null
     const replayActive = Boolean(replay.active || replay.playing || replay.paused)
     const replaySettings = normalizeJourneyReplayPOISettings(thePOI?.replay)
-    const replayMasked = thePOI?.visible === false || (replayActive && replaySettings.visible === false)
+    const replayMasked = thePOI?.visible === false
+        || thePOI?.tooClose === true
+        || (replayActive && replaySettings.visible === false)
     useEffect(() => {
         let cancelled = false
         let rafId = null
@@ -95,6 +97,7 @@ export const MapPOI = memo(({point}) => {
                   thePOI?.height,
                   thePOI?.simulatedHeight,
                   thePOI?.visible,
+                  thePOI?.tooClose,
                   replayActive,
                   replayEntry?.poi?.id,
                   replaySettings.visible,

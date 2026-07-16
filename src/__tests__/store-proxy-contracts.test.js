@@ -141,6 +141,7 @@ describe('Valtio store contracts', () => {
 
         pois.list.set('visible-global', {visible: true, inJourney: false})
         pois.list.set('hidden-journey', {visible: false, inJourney: true})
+        pois.list.set('too-close-stop', {visible: true, inJourney: true, tooClose: true})
 
         pois.updateFiltered()
 
@@ -148,8 +149,10 @@ describe('Valtio store contracts', () => {
         expect(pois.filtered.journey).toBe(journeyFiltered)
         expect(globalFiltered.has('visible-global')).toBe(true)
         expect(globalFiltered.has('hidden-journey')).toBe(false)
+        expect(globalFiltered.has('too-close-stop')).toBe(false)
         expect(journeyFiltered.has('visible-global')).toBe(false)
         expect(journeyFiltered.has('hidden-journey')).toBe(true)
+        expect(journeyFiltered.has('too-close-stop')).toBe(false)
 
         pois.list.clear()
         globalFiltered.clear()

@@ -319,7 +319,12 @@ export const JourneyReplayDrawer = memo(() => {
             return []
         }
 
-        const entries = Array.isArray(replayState.nearbyPois) ? [...replayState.nearbyPois] : []
+        const entries = Array.isArray(replayState.nearbyPois)
+            ? replayState.nearbyPois.filter(entry => {
+                const poi = poiList.get(entry?.poi?.id) ?? entry?.poi
+                return poi?.tooClose !== true
+            })
+            : []
         return entries.sort((left, right) => {
             const leftDistance = finiteNumber(left?.projectedAbscissa)
             const rightDistance = finiteNumber(right?.projectedAbscissa)
@@ -334,7 +339,7 @@ export const JourneyReplayDrawer = memo(() => {
             }
             return leftDistance - rightDistance
         })
-    }, [activeTab, replayState.nearbyPois])
+    }, [activeTab, replayState.nearbyPois, poiList])
     const hideAllPoisDuringJourneyReplay = replaySettings.hideAllPoisDuringJourneyReplay === true
     const animateAllPoisDuringJourneyReplay = replaySettings.animateAllPoisDuringJourneyReplay === true
     const cameraPresetKey = getJourneyReplayCameraPresetKey(camera)
@@ -768,14 +773,17 @@ export const JourneyReplayDrawer = memo(() => {
 
         const cachedNearbyPois = Array.isArray(replayState.nearbyPois) ? replayState.nearbyPois : []
         if (cachedNearbyPois.length > 0) {
-            return cachedNearbyPois
+            return cachedNearbyPois.filter(entry => {
+                const poi = poiList.get(entry?.poi?.id) ?? entry?.poi
+                return poi?.tooClose !== true
+            })
         }
 
         return __.ui.poiManager?.getJourneyReplayPOIsForJourney?.(
             currentJourney,
             replaySettings.poiDistance,
         ) ?? []
-    }, [currentJourney, hasJourney, replaySettings.poiDistance, replayState.nearbyPois])
+    }, [currentJourney, hasJourney, replaySettings.poiDistance, replayState.nearbyPois, poiList])
 
     const visibleOrAnimatedNearbyPOICount = useMemo(() => nearbyPOIsForBadge.reduce((count, entry) => {
         const poi = poiList.get(entry?.poi?.id) ?? entry?.poi

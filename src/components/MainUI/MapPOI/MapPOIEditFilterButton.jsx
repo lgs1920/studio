@@ -37,7 +37,8 @@ export const MapPOIEditFilterButton = memo(() => {
 
     // Memoize the POI count calculation
     const enoughPOIs = useMemo(() => {
-        return Array.from(list.values()).reduce((count, obj) => count + (obj.type !== undefined ? 1 : 0), 0) >= 1
+        return Array.from(list.values())
+            .reduce((count, obj) => count + (obj.type !== undefined && obj.tooClose !== true ? 1 : 0), 0) >= 1
     }, [list])
 
     // Memoize visibility condition

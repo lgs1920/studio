@@ -139,6 +139,9 @@ export class MapPOI extends MapElement {
     /** @type {number} **/
     distance
 
+    /** @type {boolean} **/
+    tooClose = false
+
 
     /**
      * Initializes a new instance of the MapPOI class.
