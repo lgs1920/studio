@@ -75,6 +75,116 @@
     gap: var(--lgs-gutter-s);
 }
 
+.lgs--info-credits-tab {
+    margin-inline-start: auto;
+}
+
+.lgs--license-panel {
+    display: flex;
+    flex-direction: column;
+    padding: var(--lgs-gutter-s);
+    gap: var(--lgs-gutter-s);
+}
+
+.lgs--license-summary {
+    display: flex;
+    flex-direction: column;
+    gap: var(--lgs-gutter-s);
+}
+
+.lgs--license-summary h2,
+.lgs--license-summary h3,
+.lgs--license-document h1,
+.lgs--license-document h2 {
+    margin: 0;
+}
+
+.lgs--license-summary p {
+    margin: 0;
+    color: var(--wa-color-neutral-60);
+}
+
+.lgs--license-summary-items {
+    display: flex;
+    flex-direction: column;
+    gap: var(--lgs-gutter-s);
+}
+
+.lgs--license-summary-items > div {
+    display: flex;
+    flex-direction: column;
+    gap: var(--lgs-gutter-xs);
+}
+
+.lgs--license-summary-items h3 {
+    font-size: var(--lgs-font-size);
+    display: inline-flex;
+    align-items: center;
+    gap: var(--lgs-gutter-xs);
+}
+
+.lgs--license-summary-items wa-icon {
+    color: var(--wa-color-brand);
+}
+
+.lgs--license-note {
+    font-size: var(--lgs-font-size-s);
+}
+
+.lgs--license-document {
+    overflow: hidden;
+}
+
+.lgs--license-document::part(body) {
+    display: flex;
+    flex-direction: column;
+}
+
+.lgs--license-markdown {
+    line-height: 1.45;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    color: var(--wa-color-neutral-80);
+    gap: var(--lgs-gutter-xs);
+}
+
+.lgs--license-markdown h1,
+.lgs--license-markdown h2,
+.lgs--license-markdown h3,
+.lgs--license-markdown p,
+.lgs--license-markdown ul,
+.lgs--license-markdown ol {
+    margin: 0;
+}
+
+.lgs--license-markdown h1 {
+    font-size: var(--lgs-font-size-l);
+}
+
+.lgs--license-markdown h2,
+.lgs--license-markdown h3 {
+    font-size: var(--lgs-font-size);
+}
+
+.lgs--license-markdown p,
+.lgs--license-markdown li {
+    font-size: var(--lgs-font-size-s);
+}
+
+.lgs--license-markdown ul,
+.lgs--license-markdown ol {
+    display: flex;
+    flex-direction: column;
+    gap: calc(var(--lgs-gutter-xs) / 2);
+    padding-inline-start: var(--lgs-gutter);
+}
+
+.lgs--license-markdown a {
+    color: var(--wa-color-brand);
+    overflow-wrap: anywhere;
+}
+
 .lgs--shortcuts-panel {
     position: relative;
     height: 100%;
@@ -215,4 +325,5 @@
     .lgs--shortcuts-row {
         grid-template-columns: 1fr;
     }
+
 }
