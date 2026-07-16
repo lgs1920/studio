@@ -1163,6 +1163,7 @@ export const Widget = ({isVisible, className = '', moveableClassName = '', conta
 
             const fullConfig = {
                 animationWhenDragging: config.animationWhenDragging ?? config.type === LGS_TOOLBAR,
+                anchorOnScale:  config.anchorOnScale ?? null,
                 attachTo:       config.attachTo ?? 'top-left',
                 container:      __.ui.widgetManager.resolveWidgetsBoardReferenceContainer(config.widgetsBoard) ?? actualContainer,
                 boundsContainer: actualContainer,
@@ -1186,6 +1187,8 @@ export const Widget = ({isVisible, className = '', moveableClassName = '', conta
                 min:            {width: config?.min?.width ?? 10, height: config?.min?.height ?? 10},
                 max:            {width: config?.max?.width ?? 500, height: config?.max?.height ?? 500},
                 mandatory:      config.mandatory ?? false,
+                maxScale:       config.maxScale ?? null,
+                minScale:       config.minScale ?? null,
                 opacity: liveOpacity,
                 outsideOverlay: config.outsideOverlay ?? false,
                 persist:        config.persist ?? false,

@@ -679,14 +679,18 @@ export class WidgetCoreControls {
 
         const limitX = rotatedWidth > 0 ? container.width / rotatedWidth : 1
         const limitY = rotatedHeight > 0 ? container.height / rotatedHeight : 1
-        let finalScale = Math.min(scaleX, scaleY, limitX, limitY)
+        const minScale = Number(config.minScale)
+        const maxScale = Number(config.maxScale)
+        const explicitMinScale = Number.isFinite(minScale) && minScale > 0 ? minScale : MIN_SCALE
+        const explicitMaxScale = Number.isFinite(maxScale) && maxScale > 0 ? maxScale : Infinity
+        let finalScale = Math.min(scaleX, scaleY, limitX, limitY, explicitMaxScale)
 
         if (!Number.isFinite(finalScale)) {
-            finalScale = Math.min(scaleX, scaleY)
+            finalScale = Math.min(scaleX, scaleY, explicitMaxScale)
         }
 
-        if (finalScale < MIN_SCALE) {
-            finalScale = MIN_SCALE
+        if (finalScale < explicitMinScale) {
+            finalScale = explicitMinScale
         }
 
         return {x: finalScale, y: finalScale}

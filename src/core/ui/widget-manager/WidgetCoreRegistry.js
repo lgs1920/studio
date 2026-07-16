@@ -447,6 +447,7 @@ export class WidgetCoreRegistry {
             config = {
                 animationWhenDragging:  initialConfig.animationWhenDragging ?? false,
                 animationWhenScaling:   initialConfig.animationWhenScaling ?? false,
+                anchorOnScale:          initialConfig.anchorOnScale ?? null,
                 attachTo:               anchor,
                 boundStatus:            {left: false, top: false, right: false, bottom: false},
                 bounds:                 {left: 0, top: 0, right: 0, bottom: 0},
@@ -474,7 +475,9 @@ export class WidgetCoreRegistry {
                 mandatory:              initialConfig.mandatory ?? false,
                 margin:                 initialConfig.margin,
                 max:                    initialConfig.max ?? {width: 500, height: 500},
+                maxScale:               initialConfig.maxScale ?? null,
                 min:                    initialConfig.min ?? {width: 10, height: 10},
+                minScale:               initialConfig.minScale ?? null,
                 minCropSize:            initialConfig.minCropSize ?? {width: 100, height: 100},
                 observer:               null,
                 outsideOverlay:         initialConfig.outsideOverlay,
@@ -517,6 +520,15 @@ export class WidgetCoreRegistry {
             }
             if (initialConfig.boundsContainer) {
                 config.boundsContainer = initialConfig.boundsContainer
+            }
+            if (initialConfig.anchorOnScale !== undefined) {
+                config.anchorOnScale = initialConfig.anchorOnScale
+            }
+            if (initialConfig.minScale !== undefined) {
+                config.minScale = initialConfig.minScale
+            }
+            if (initialConfig.maxScale !== undefined) {
+                config.maxScale = initialConfig.maxScale
             }
             if (initialConfig.group !== undefined) {
                 config.group = initialConfig.group

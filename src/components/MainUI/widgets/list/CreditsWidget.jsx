@@ -22,6 +22,8 @@ import { useEffect, useMemo, useRef } from 'react'
 import { useSnapshot } from 'valtio'
 
 const CREDITS_WIDGET_CONTEXT_FALLBACK = {widgetEditor: false, widgetsBoard: ''}
+const CREDITS_WIDGET_MIN_SCALE = 0.8
+const CREDITS_WIDGET_MAX_SCALE = 2
 
 /**
  * CreditsWidget component to display a compass in the widget editor
@@ -86,9 +88,9 @@ export const CreditsWidget = ({id, context, zIndex, widgetsBoard: persistedWidge
         return {
             container,
             contextMenu:     {
-                canReset:    false,
+                canReset:    true,
                 canMaximize: false,
-                canPosition: true,
+                canPosition: false,
             },
             top:             '100%',
             left:            '0px',
@@ -96,9 +98,14 @@ export const CreditsWidget = ({id, context, zIndex, widgetsBoard: persistedWidge
             group:           MULTI_PURPOSE_WIDGETS,
             margin:          5,
             attachTo:        'bottom-left',
-            resizable:      false,
-            scalable:        false,
-            showControlBox: false,
+            anchorOnScale:   'bottom-left',
+            draggable:       false,
+            minScale:        CREDITS_WIDGET_MIN_SCALE,
+            maxScale:        CREDITS_WIDGET_MAX_SCALE,
+            resizable:       false,
+            scalable:        true,
+            showControlBox:  true,
+            canLock:         false,
             id,
             persist:         true,
             transient:       true,
@@ -107,7 +114,7 @@ export const CreditsWidget = ({id, context, zIndex, widgetsBoard: persistedWidge
             mandatory:       true,
             stopPropagation: true,
             widgetsBoard:    widgetsBoard,
-            zIndex: zIndex ?? 10000,
+            zIndex:          zIndex ?? 10000,
         }
     }, [container, id, widgetsBoard, zIndex])
 
