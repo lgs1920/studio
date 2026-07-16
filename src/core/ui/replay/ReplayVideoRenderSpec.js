@@ -17,6 +17,7 @@ import { NAVIGATOR } from '@Core/constants'
 import { ScreenMediaRecorder } from '@Core/ui/screen-media-recorder/recorder/ScreenMediaRecorder'
 
 const VIDEO_PIXEL_BUDGETS_BY_FPS = {
+    15: 3_600_000,
     30: 2_800_000,
     45: 2_250_000,
     60: 1_700_000,
@@ -27,21 +28,25 @@ const VIDEO_BROWSER_BUDGET_FACTORS = {
     [NAVIGATOR.edge]:    0.65,
 }
 const VIDEO_HIGH_DPR_BUDGET_FACTORS_BY_FPS = {
+    15: 1.16,
     30: 1.12,
     45: 1.08,
     60: 1.04,
 }
 const VIDEO_MOBILE_BUDGET_FACTORS_BY_FPS = {
+    15: 1.12,
     30: 1.08,
     45: 1.04,
     60: 1,
 }
 const VIDEO_DESKTOP_MAX_DPR_BY_FPS = {
+    15: 3,
     30: 2.75,
     45: 2.5,
     60: 2.25,
 }
 const VIDEO_MOBILE_MAX_DPR_BY_FPS = {
+    15: 2.75,
     30: 2.5,
     45: 2.3,
     60: 2.1,

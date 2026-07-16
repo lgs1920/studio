@@ -245,6 +245,34 @@ describe('ReplayDeferredExporter', () => {
         })
     })
 
+    it('supports the 15 fps medium-quality preset in the video render spec', () => {
+        const spec = buildReplayVideoRenderSpec({
+            cropRect: {left: 0, top: 0, width: 640, height: 360},
+            video: {
+                fps: 3,
+                quality: 0,
+                captureMode: 'speed',
+            },
+            device: {
+                dpr: 1,
+                browser: 'chromium',
+                mobile: false,
+            },
+            sourceCanvas: {
+                width: 640,
+                height: 360,
+            },
+        })
+
+        expect(spec).toMatchObject({
+            fps:         15,
+            fpsIndex:    3,
+            qualityIndex: 0,
+            pixelBudget:  3_240_000,
+            dimensions:  {width: 640, height: 360},
+        })
+    })
+
     it('captures a lightweight export context and reuses only matching plans', () => {
         const replay = {
             videoCropRect: {left: 10, top: 20, width: 640, height: 360},

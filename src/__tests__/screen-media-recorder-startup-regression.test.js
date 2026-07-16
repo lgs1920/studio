@@ -160,4 +160,14 @@ describe('ScreenMediaRecorder startup', () => {
         expect(frameCaptureReady).toHaveBeenCalled()
         expect(errorHandler).not.toHaveBeenCalled()
     })
+
+    it('exposes the 15 fps medium-quality preset', () => {
+        expect(ScreenMediaRecorder.FPS).toContain(15)
+        expect(ScreenMediaRecorder.VIDEO_PRESETS.get('15-medium')).toMatchObject({
+            fps:         3,
+            quality:     0,
+            name:        'Low',
+            description: '15 FPS / Medium quality',
+        })
+    })
 })
