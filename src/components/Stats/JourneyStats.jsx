@@ -537,7 +537,9 @@ export const JourneyStats = memo(({id, metrics, units, style = {}, mode = 'journ
             ) : undefined,
             border:         element.border.show ? `${scaleValue(element.border.thickness, borderCorrection)}px solid ${__.ui.ui.resolveItemColor(element.border, true)}` : 'none',
             padding:        resolvePadding(element, scaleCorrection),
-            background:     __.ui.ui.resolveItemColor(element.background, true),
+            background:     element.background?.show
+                            ? __.ui.ui.resolveItemColor(element.background, true)
+                            : 'transparent',
             backdropFilter: (element.background?.show && element.background?.blur)
                             ? 'blur(var(--lgs-blur-s))'
                             : 'blur(0)',

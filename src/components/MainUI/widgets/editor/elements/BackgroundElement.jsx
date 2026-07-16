@@ -36,7 +36,6 @@ export const BackgroundElement = ({
         updateValue('background.show', checked)
         if (!checked) {
             updateValue('background.blur', false)
-            updateValue('background.opacity', 0)
         }
     }
 
