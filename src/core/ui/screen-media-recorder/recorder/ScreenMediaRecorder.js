@@ -68,10 +68,18 @@ export class ScreenMediaRecorder extends EventTarget {
         {value: QUALITY_VERY_HIGH, name: 'Ultra High Quality', short: 'V'},
     ]
     /** Supported output frame rates */
-    static FPS = [30, 45, 60]
+    static FPS = [30, 45, 60, 15]
 
     /** Presets for video recording */
     static VIDEO_PRESETS = new Map([
+                                       [
+                                           '15-medium', {
+                                           quality: 0,
+                                           fps:     3,
+                                           name:        'Low',
+                                           description: '15 FPS / Medium quality',
+                                       },
+                                       ],
                                        [
                                            'medium', {
                                            quality: 0,

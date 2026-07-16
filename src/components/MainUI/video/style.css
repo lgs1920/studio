@@ -442,6 +442,14 @@
     gap: var(--lgs-gutter-xs);
 }
 
+.video-preset-custom .video-fps-widget .buttons-bar-on-map {
+    display: grid;
+    grid-template-columns: repeat(4, 2rem);
+    width: max-content;
+    justify-content: start;
+    gap: var(--lgs-gutter-xs);
+}
+
 .video-preset-custom .video-fps-widget > span,
 .video-preset-custom .video-quality-widget > span {
     font-size: var(--lgs-font-size-s);
@@ -484,7 +492,15 @@
 
 .video-fps-widget .buttons-bar-on-map, .video-quality-widget .buttons-bar-on-map {
     display: grid;
-    grid-template-columns: repeat(3, 2rem) !important;
+    justify-content: start;
+}
+
+.video-fps-widget .buttons-bar-on-map {
+    grid-template-columns: repeat(4, 2rem) !important;
+}
+
+.video-quality-widget .buttons-bar-on-map {
+    grid-template-columns: repeat(4, 2rem) !important;
 }
 
 /***************************************
