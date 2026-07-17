@@ -230,3 +230,7 @@ This project is licensed under the **GNU Affero General Public License v3.0 or l
 - See [LICENSES.md](LICENSES.md) for the repository licensing model summary
 
 Copyright © 2026 LGS1920
+
+## Sponsors
+
+This project welcomes sponsors who want to help support its continued development, hosting, maintenance, and the cartographic data and services that power it. If your organization would like to become a sponsor, your contribution will help keep the studio sustainable and allow the project to evolve over time.
