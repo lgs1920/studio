@@ -36,3 +36,8 @@
 * © IGN-NGI Belgique.
 * © Kadaster / PDOK.
 * © Beeldmateriaal.nl / PDOK.
+
+## Sample journeys credits
+
+* Mont Blanc: placeoweb.com/
+* LGS1920: christian.denat@orange.fr
