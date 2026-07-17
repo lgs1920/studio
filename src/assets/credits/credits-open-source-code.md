@@ -16,7 +16,6 @@ The application, including studio, backend,APIs,site is based on :
 * [FontAwesome](https://fontawesome.com/) - The icons library
 * [WebAwesome](https://webawesome.com/) - The web components library
 * [Eleventy](https://www.11ty.dev/) - The web site engine
-
 * [echarts](https://echarts.apache.org/) - Chart library
 * [snapdom](https://snapdom.dev/) - next-generation DOM Capture Engine
 * [mediabunny](https://mediabunny.dev/) - Video reading/writing/encoding
