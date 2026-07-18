@@ -105,7 +105,8 @@ describe('ReplayVideoRenderSession', () => {
 
         const rendered = await session.renderFrame(1)
 
-        expect(resolveSample).toHaveBeenCalled()
+        expect(resolveSample).toHaveBeenCalledTimes(1)
+        expect(seek.mock.invocationCallOrder[0]).toBeLessThan(resolveSample.mock.invocationCallOrder[0])
         expect(rendered.sample.frameIndex).toBe(1)
         expect(rendered.sample.progress).toBeCloseTo(0.1, 6)
     })

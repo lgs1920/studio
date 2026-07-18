@@ -1551,7 +1551,12 @@ export class JourneyReplayMode {
 
     seek = progress => this.#controller.seek(progress)
 
-    refresh = ({camera = true, suppressMoveEvents = camera === true, rebuildSampler = false} = {}) => {
+    refresh = ({
+                   camera = true,
+                   suppressMoveEvents = camera === true,
+                   rebuildSampler = false,
+                   forceGeometry = true,
+               } = {}) => {
         let sample = this.#controller.currentSample()
         if (rebuildSampler) {
             const progress = finiteNumber(this.#controller.progress ?? sample?.progress) ?? 0
@@ -1568,7 +1573,7 @@ export class JourneyReplayMode {
             this.#renderer.update({
                 sample,
                 sampler: this.#sampler,
-                forceGeometry: true,
+                forceGeometry,
             })
             if (camera) {
                 if (suppressMoveEvents) {
@@ -1614,7 +1619,7 @@ export class JourneyReplayMode {
                            ?? this.#sampler?.atProgress?.(progress)
                            ?? activeController?.currentSample?.()
                            ?? null
-            this.refresh({camera: true, suppressMoveEvents: true})
+            this.refresh({camera: true, suppressMoveEvents: true, forceGeometry: false})
             return sample
         }
 

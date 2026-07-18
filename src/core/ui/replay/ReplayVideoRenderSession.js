@@ -71,9 +71,8 @@ export class ReplayVideoRenderSession {
      */
     renderFrame = async (frameIndex = 0, options = {}) => {
         const frame = this.#timeline.frameAtIndex(frameIndex)
-        const sample = await this.#resolveSample(frame)
         await this.#seek?.(frame.progress, frame, options)
-        const nextSample = await this.#resolveSample(frame) ?? sample
+        const nextSample = await this.#resolveSample(frame)
 
         await this.#beforeFrame({
             frame,
