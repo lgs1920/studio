@@ -362,7 +362,6 @@ export const JourneyReplayDrawer = memo(() => {
     const cameraDraftBaseline = useRef(null)
     const cameraDraftField = useRef(null)
     const cameraUpdateSourceClearTimer = useRef(null)
-    const cameraAnglePreviewHideTimer = useRef(null)
     const nearbyPoisRefreshTimer = useRef(null)
     const totalVideoDurationSeconds = useMemo(() => {
         const clipDurationSeconds = [...(clips.start ?? []), ...(clips.stop ?? [])]
@@ -576,10 +575,6 @@ export const JourneyReplayDrawer = memo(() => {
         if (cameraUpdateSourceClearTimer.current !== null) {
             clearTimeout(cameraUpdateSourceClearTimer.current)
             cameraUpdateSourceClearTimer.current = null
-        }
-        if (cameraAnglePreviewHideTimer.current !== null) {
-            clearTimeout(cameraAnglePreviewHideTimer.current)
-            cameraAnglePreviewHideTimer.current = null
         }
         if (nearbyPoisRefreshTimer.current !== null) {
             clearTimeout(nearbyPoisRefreshTimer.current)
@@ -1004,39 +999,8 @@ export const JourneyReplayDrawer = memo(() => {
         updateCamera({positionMode: event.target.value})
     }, [updateCamera])
 
-    const clearCameraAnglePreview = useCallback(() => {
-        if (cameraAnglePreviewHideTimer.current !== null) {
-            clearTimeout(cameraAnglePreviewHideTimer.current)
-            cameraAnglePreviewHideTimer.current = null
-        }
-        __.ui.replay?.hideCameraAnglePreview?.()
-    }, [])
-
-    const showCameraAnglePreview = useCallback((displayOffset = cameraAngleDisplayOffset) => {
-        if (camera.positionMode === REPLAY_CAMERA_POSITION_SYSTEM) {
-            clearCameraAnglePreview()
-            return
-        }
-
-        __.ui.replay?.showCameraAnglePreview?.({
-                                                       displayOffset,
-                                                       positionMode: camera.positionMode,
-                                                       fillColor,
-                                                       borderColor,
-                                                   })
-
-        if (cameraAnglePreviewHideTimer.current !== null) {
-            clearTimeout(cameraAnglePreviewHideTimer.current)
-        }
-        cameraAnglePreviewHideTimer.current = setTimeout(() => {
-            __.ui.replay?.hideCameraAnglePreview?.()
-            cameraAnglePreviewHideTimer.current = null
-        }, 5000)
-    }, [borderColor, camera.positionMode, cameraAngleDisplayOffset, clearCameraAnglePreview, fillColor])
-
     const updateCameraHeadingOffset = useCallback((event) => {
         const sliderValue = Number(event.target.value)
-        const displayOffset = Number.isFinite(sliderValue) ? sliderValue : cameraAngleDisplayOffset
         const nextHeadingOffset = Number.isFinite(sliderValue) ? -sliderValue : camera.headingOffset
         updateCamera({
                          headingOffset: clampJourneyReplayNumber(
@@ -1046,14 +1010,7 @@ export const JourneyReplayDrawer = memo(() => {
                              REPLAY_CAMERA_HEADING_OFFSET_MAX,
                          ),
                      })
-        showCameraAnglePreview(-displayOffset)
-    }, [camera.headingOffset, cameraAngleDisplayOffset, showCameraAnglePreview, updateCamera])
-
-    useEffect(() => {
-        if (drawerOpen !== REPLAY_DRAWER || camera.positionMode === REPLAY_CAMERA_POSITION_SYSTEM) {
-            clearCameraAnglePreview()
-        }
-    }, [camera.positionMode, clearCameraAnglePreview, drawerOpen])
+    }, [camera.headingOffset, updateCamera])
 
     const updateCameraPreset = useCallback((event) => {
         const presetKey = event.target.value
@@ -1283,8 +1240,6 @@ export const JourneyReplayDrawer = memo(() => {
                                                                 withTooltip
                                                                 label-at-start half-width
                                                                 valueFormatter={value => `${Math.round(Number(value) || 0)}°`}
-                                                                onFocus={() => showCameraAnglePreview(-cameraAngleDisplayOffset)}
-                                                                onBlur={clearCameraAnglePreview}
                                                                 onInput={event => {
                                                                     updateCameraHeadingOffset(event)
                                                                 }}

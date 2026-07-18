@@ -1996,9 +1996,7 @@ export class JourneyReplayMode {
         }
     }
 
-    showCameraAnglePreview = (options = {}) => {
-        this.#showCameraAnglePreviewOverlay(options)
-    }
+    showCameraAnglePreview = () => {}
 
     hideCameraAnglePreview = () => {
         this.#hideCameraAnglePreviewOverlay()

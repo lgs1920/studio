@@ -376,7 +376,7 @@ describe('JourneyReplayDrawer', () => {
         expect(view.getByLabelText('Camera feel')).toBeTruthy()
     })
 
-    it('inverts the camera angle slider and shows the runtime preview while editing', async () => {
+    it('inverts the camera angle slider without showing the runtime preview while editing', async () => {
         const setTimeoutSpy = vi.spyOn(globalThis, 'setTimeout')
         globalThis.lgs.stores.replay.camera.positionMode = 'behind'
         globalThis.lgs.settings.ui.replay.camera.positionMode = 'behind'
@@ -411,11 +411,9 @@ describe('JourneyReplayDrawer', () => {
         const angleInput = view.getByLabelText('Camera angle')
 
         fireEvent.focus(angleInput)
-        expect(globalThis.__.ui.replay.showCameraAnglePreview).toHaveBeenCalledTimes(1)
-        expect(globalThis.__.ui.replay.showCameraAnglePreview.mock.calls[0][0].positionMode).toBe('behind')
-        expect(Math.abs(globalThis.__.ui.replay.showCameraAnglePreview.mock.calls[0][0].displayOffset)).toBe(0)
-        expect(globalThis.lgs.viewer.entities.getById('journey-start').show).toBe(false)
-        expect(globalThis.lgs.viewer.entities.getById('journey-stop').show).toBe(false)
+        expect(globalThis.__.ui.replay.showCameraAnglePreview).not.toHaveBeenCalled()
+        expect(globalThis.lgs.viewer.entities.getById('journey-start').show).toBe(true)
+        expect(globalThis.lgs.viewer.entities.getById('journey-stop').show).toBe(true)
         fireEvent.input(angleInput, {target: {value: '20'}})
 
         await waitFor(() => {
@@ -423,14 +421,11 @@ describe('JourneyReplayDrawer', () => {
             expect(globalThis.lgs.stores.replay.camera.headingOffset).toBe(-20)
         })
 
-        expect(globalThis.__.ui.replay.showCameraAnglePreview).toHaveBeenLastCalledWith(expect.objectContaining({
-            displayOffset: -20,
-            positionMode:  'behind',
-        }))
-        expect(setTimeoutSpy).toHaveBeenCalledWith(expect.any(Function), 5000)
+        expect(globalThis.__.ui.replay.showCameraAnglePreview).not.toHaveBeenCalled()
+        expect(setTimeoutSpy).not.toHaveBeenCalledWith(expect.any(Function), 5000)
 
         fireEvent.blur(angleInput)
-        expect(globalThis.__.ui.replay.hideCameraAnglePreview).toHaveBeenCalledTimes(1)
+        expect(globalThis.__.ui.replay.hideCameraAnglePreview).not.toHaveBeenCalled()
         expect(globalThis.lgs.viewer.entities.getById('journey-start').show).toBe(true)
         expect(globalThis.lgs.viewer.entities.getById('journey-stop').show).toBe(true)
         setTimeoutSpy.mockRestore()
