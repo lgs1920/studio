@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-05-10
- * Last modified: 2026-05-10
+ * Created on: 2026-07-18
+ * Last modified: 2026-07-18
  *
  *
  * Copyright © 2026 LGS1920
@@ -1260,7 +1260,7 @@ export const Widget = ({isVisible, className = '', moveableClassName = '', conta
                             outerTransforms: true,
                             outerShadows:    true,
                             widgetId,
-                            debugTiming:     config.refreshMode === 'both',
+                            debugTiming: false,//config.refreshMode === 'both',
                             refreshMode:     config.refreshMode ?? (interactionLocked ? 'live' : 'mutation'),
                         })
                         await _w2c.current.init()
