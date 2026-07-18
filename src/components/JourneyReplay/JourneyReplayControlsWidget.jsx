@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-07-03
- * Last modified: 2026-07-03
+ * Created on: 2026-07-18
+ * Last modified: 2026-07-18
  *
  *
  * Copyright © 2026 LGS1920
@@ -130,7 +130,7 @@ export const JourneyReplayControlsWidget = memo(() => {
         top:            hqExportRunning ? '50%' : '82%',
         left:           hqExportRunning ? '50%' : '50%',
         attachTo:       hqExportRunning ? 'center' : 'bottom',
-        icon: 'drone',
+        icon:           'drone',
         opacity:        lgs.settings.ui.toolbars.opacity,
         type:           LGS_TOOLBAR,
         persist:        true,
@@ -156,9 +156,16 @@ export const JourneyReplayControlsWidget = memo(() => {
 
     return (
         <Widget isVisible={true} config={config}>
-            <WaCard className="replay-controls lgs-toolbar-content lgs-toolbar lgs-toolbar-horizontal wa-theme-lgs1920-on-map">
+            <WaCard className={`replay-controls lgs-toolbar-content lgs-toolbar lgs-toolbar-horizontal wa-theme-lgs1920-on-map${hqExportRunning ? ' video-recorder-widget' : ''}`}>
                 {hqExportRunning && (
                     <div className="replay-controls-hq-row">
+                        <WaIcon
+                            name="circle"
+                            family="duotone"
+                            variant="regular"
+                            animation={hqPaused ? 'fade' : undefined}
+                            className={hqPaused ? 'video-recorder-indicator paused' : 'video-recorder-indicator'}
+                        />
                         <span className="replay-controls-hq-label">{'Recording...'}</span>
                         <span className="replay-controls-hq-file">
                             <WaIcon name="films" variant="regular"/>

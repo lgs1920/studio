@@ -344,8 +344,8 @@ export const VideoRecorderToolbar = ({toolbar}) => {
                 name="circle"
                 family="duotone"
                 variant="regular"
-                animation={video.paused || video.finalizing ? 'beat' : undefined}
-                className={video.finalizing ? 'video-recorder-indicator finalizing' : 'video-recorder-indicator'}
+                animation={video.paused ? 'fade' : undefined}
+                className={video.paused ? 'video-recorder-indicator paused' : 'video-recorder-indicator'}
             />
             <span className="duration">{formatDuration(state.recordedDuration)}</span>
             <span className="size">{formatSize(state.recordedSize)}</span>

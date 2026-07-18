@@ -596,6 +596,24 @@ wa-select[label-at-start].half-width::part(base) {
     min-width: 0;
 }
 
+.replay-controls.video-recorder-widget {
+    z-index: var(--lgs-video-recorder-toolbar-zindex);
+}
+
+.replay-controls .video-recorder-indicator {
+    font-size: var(--lgs-font-size);
+    margin: 0 var(--lgs-gutter) 0 var(--lgs-gutter-s);
+    --primary-color: var(--lgs-video-recorder-color, var(--lgs-error-color));
+    --primary-opacity: 1;
+    --secondary-color: var(--lgs-video-recorder-bg-color, var(--lgs-error-bg-color));
+    --secondary-opacity: 1;
+}
+
+.replay-controls .video-recorder-indicator.paused {
+    --primary-color: var(--lgs-video-warning-color, var(--lgs-warning-color));
+    --secondary-color: var(--lgs-video-warning-bg-color, var(--lgs-warning-bg-color));
+}
+
 .replay-controls-hq-row {
     align-items: center;
     display: inline-flex;

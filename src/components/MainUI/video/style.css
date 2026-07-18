@@ -104,7 +104,7 @@
     --secondary-opacity: 1;
 }
 
-.video-recorder-indicator.finalizing {
+.video-recorder-indicator.paused {
     --primary-color: var(--lgs-video-warning-color, var(--lgs-warning-color));
     --secondary-color: var(--lgs-video-warning-bg-color, var(--lgs-warning-bg-color));
 }

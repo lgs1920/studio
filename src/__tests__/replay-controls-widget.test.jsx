@@ -1,3 +1,19 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: replay-controls-widget.test.jsx
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2026-07-18
+ * Last modified: 2026-07-18
+ *
+ *
+ * Copyright © 2026 LGS1920
+ ******************************************************************************/
+
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { proxy } from 'valtio'
@@ -9,7 +25,8 @@ vi.mock('@Components/MainUI/widgets/Widget', () => ({
 vi.mock('@web.awesome.me/webawesome-pro/dist/react', () => ({
     WaCard: ({children, ...props}) => <div {...props}>{children}</div>,
     WaButton: ({children, ...props}) => <button type="button" {...props}>{children}</button>,
-    WaIcon: ({name}) => <span data-icon={name}/>,
+    WaIcon: ({animation, className, family, name}) => <span className={className} data-animation={animation}
+                                                            data-family={family} data-icon={name}/>,
     WaTooltip: ({children}) => <>{children}</>,
 }))
 
@@ -88,11 +105,14 @@ describe('JourneyReplayControlsWidget', () => {
         const view = render(<JourneyReplayControlsWidget/>)
 
         expect(screen.getByText('Recording...')).not.toBeNull()
+        expect(document.querySelector('[data-icon="circle"][data-family="duotone"]')).not.toBeNull()
+        expect(document.querySelector('[data-icon="circle"]').className).toContain('video-recorder-indicator')
+        expect(document.querySelector('[data-icon="circle"]').getAttribute('data-animation')).toBeNull()
         expect(screen.queryByText('HQ Video creation')).toBeNull()
         expect(screen.queryByText('MP4')).toBeNull()
-        expect(screen.getByText('1.5 MB')).not.toBeNull()
+        expect(screen.getByText(/1\.5 MB/)).not.toBeNull()
         expect(screen.queryByText('1920x1080')).toBeNull()
-        expect(document.querySelector('[data-icon="file-video"]')).not.toBeNull()
+        expect(document.querySelector('[data-icon="films"]')).not.toBeNull()
         expect(document.querySelector('[data-icon="stopwatch"]')).not.toBeNull()
         expect(screen.getByText('00:05')).not.toBeNull()
         expect(screen.getByText('50%')).not.toBeNull()
@@ -107,7 +127,9 @@ describe('JourneyReplayControlsWidget', () => {
         globalThis.lgs.stores.replay.deferredExportPlan.runtime.exportPaused = true
         globalThis.lgs.stores.replay.deferredExportPlan.runtime.exportFileSize = 2097152
         render(<JourneyReplayControlsWidget/>)
-        expect(screen.getByText('2.0 MB')).not.toBeNull()
+        expect(screen.getByText(/2\.0 MB/)).not.toBeNull()
+        expect(document.querySelector('[data-icon="circle"][data-animation="fade"]')).not.toBeNull()
+        expect(document.querySelector('[data-icon="circle"]').className).toContain('paused')
         fireEvent.click(screen.getByRole('button', {name: 'Continue HQ creation'}))
 
         expect(resumeExport).toHaveBeenCalledTimes(1)
