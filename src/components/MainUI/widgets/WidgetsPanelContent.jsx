@@ -185,16 +185,26 @@ export const WidgetsPanelContent = ({groups}) => {
         return lgs.settings.ui.widgets.grid
     }
 
+    const updateGridSettings = (updates) => {
+        lgs.settings.ui.widgets = {
+            ...(lgs.settings.ui.widgets ?? {}),
+            grid: {
+                ...getWidgetGridSettings(ensureGridSettings()),
+                ...updates,
+            },
+        }
+    }
+
     const updateGridEnabled = (event) => {
-        ensureGridSettings().enabled = event.target.checked
+        updateGridSettings({enabled: event.target.checked})
     }
 
     const updateGridSize = (event) => {
-        ensureGridSettings().size = normalizeWidgetGridSize(event.target.value, grid.size)
+        updateGridSettings({size: normalizeWidgetGridSize(event.target.value, grid.size)})
     }
 
     const updateGridSnap = (event) => {
-        ensureGridSettings().snap = event.target.checked
+        updateGridSettings({snap: event.target.checked})
     }
 
     useEffect(() => {

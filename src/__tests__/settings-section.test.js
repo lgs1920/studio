@@ -276,6 +276,36 @@ describe('SettingsSection', () => {
         })
     })
 
+    it('preserves the user widget grid settings when the UI template changes', () => {
+        const section = new SettingsSection('ui')
+        const merged = section.update(
+            {
+                widgets: {
+                    grid: {
+                        enabled: true,
+                        size:    50,
+                        snap:    false,
+                    },
+                },
+            },
+            {
+                widgets: {
+                    grid: {
+                        enabled: false,
+                        size:    30,
+                        snap:    true,
+                    },
+                },
+            },
+        )
+
+        expect(merged.widgets.grid).toEqual({
+            enabled: true,
+            size:    50,
+            snap:    false,
+        })
+    })
+
     it('keeps replay excluded but still syncs its clips subtree', () => {
         const section = new SettingsSection('ui')
         const merged = section.update(

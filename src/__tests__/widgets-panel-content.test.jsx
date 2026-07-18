@@ -1,5 +1,7 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { SETTINGS_STORE } from '@Core/constants'
+import { SettingsSection } from '@Core/settings/SettingsSection'
 import { proxy } from 'valtio'
 
 vi.mock('@Core/ui/widget-manager/dynamic-render/WidgetDynamicRender', () => ({
@@ -87,5 +89,52 @@ describe('WidgetsPanelContent', () => {
 
         const input = document.querySelector('wa-number-input.widget-grid-size-input')
         expect(input.closest('.widget-grid-setting').classList.contains('lgs-widget-no-drag')).toBe(true)
+    })
+
+    it('persists grid visibility changes in UI settings', async () => {
+        const settingsPut = vi.fn(() => Promise.resolve())
+        const section = new SettingsSection('ui')
+        globalThis.lgs.configuration = {
+            ui: {
+                toolbars: {
+                    opacity: 1,
+                },
+                widgets: {
+                    grid: {
+                        enabled: false,
+                        size:    30,
+                        snap:    true,
+                    },
+                },
+            },
+        }
+        globalThis.lgs.db = {
+            settings: {
+                get: vi.fn(() => Promise.resolve(null)),
+                put: settingsPut,
+            },
+        }
+        await section.init()
+        globalThis.lgs.settings.ui = section.content
+        settingsPut.mockClear()
+
+        render(<WidgetsPanelContent groups={[]}/>)
+        await waitFor(() => expect(screen.getByText('Widgets')).not.toBeNull())
+
+        fireEvent.click(screen.getByText('Grid').closest('button'))
+
+        await waitFor(() => {
+            expect(settingsPut).toHaveBeenCalledWith(
+                'ui',
+                expect.objectContaining({
+                    widgets: expect.objectContaining({
+                        grid: expect.objectContaining({
+                            enabled: true,
+                        }),
+                    }),
+                }),
+                SETTINGS_STORE,
+            )
+        })
     })
 })

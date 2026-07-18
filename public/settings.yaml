@@ -384,6 +384,7 @@ ui:
     grid:
       enabled: false
       size: 30
+      snap: true
 
   ## Profile
   profile:

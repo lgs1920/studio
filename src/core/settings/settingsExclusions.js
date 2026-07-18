@@ -25,6 +25,7 @@ export const SETTING_EXCLUSIONS = [
         'ui.camera', 'ui.welcome', 'swatches.current',
         'ui.menu', 'ui.poi.rotate', 'ui.poi.focusOnEdit', 'ui.journeyToolbar',
         'ui.compass.mode', 'ui.video.fps', 'ui.video.quality', 'ui.video.ratio', 'ui.pwa',
+        'ui.widgets.grid',
         'ui.replay',
         'widgets',
     ].sort((a, b) => {
