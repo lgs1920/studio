@@ -464,6 +464,8 @@ export const Widget = ({isVisible, className = '', moveableClassName = '', conta
         }
     }, [config?.snapSensitivity])
     const {threshold: snapThreshold, gap: snapGap} = snapSettings
+    const canSnapWidget = isVisualWidget && (config?.snappable ?? true)
+    const gridSnapEnabled = canSnapWidget && widgetGrid.enabled && widgetGrid.snap
 
     const buildGuidelines = useCallback(() => {
         const container = actualContainer ?? lgs.canvas
@@ -471,14 +473,16 @@ export const Widget = ({isVisible, className = '', moveableClassName = '', conta
             return {verticalGuidelines: [], horizontalGuidelines: []}
         }
         const rect = container.getBoundingClientRect()
-        const centerGuidelines = {
-            verticalGuidelines:   [rect.left + (rect.width / 2)],
-            horizontalGuidelines: [rect.top + (rect.height / 2)],
-        }
-        const gridGuidelines = widgetGrid.enabled && widgetGrid.snap
+        const centerGuidelines = canSnapWidget
+                                  ? {
+                                      verticalGuidelines:   [rect.left + (rect.width / 2)],
+                                      horizontalGuidelines: [rect.top + (rect.height / 2)],
+                                  }
+                                  : {verticalGuidelines: [], horizontalGuidelines: []}
+        const gridGuidelines = gridSnapEnabled
                                ? buildCenteredGridLines(rect, widgetGrid.size)
                                : {verticalGuidelines: [], horizontalGuidelines: []}
-        const localGridGuidelines = config?.snapGrid
+        const localGridGuidelines = canSnapWidget && config?.snapGrid
                                     ? buildCenteredGridLines(rect, config.snapGrid)
                                     : {verticalGuidelines: [], horizontalGuidelines: []}
         return {
@@ -493,7 +497,7 @@ export const Widget = ({isVisible, className = '', moveableClassName = '', conta
                 ...localGridGuidelines.horizontalGuidelines,
             ])].sort((a, b) => a - b),
         }
-    }, [actualContainer, config.snapGrid, widgetGrid.enabled, widgetGrid.size, widgetGrid.snap])
+    }, [actualContainer, canSnapWidget, config.snapGrid, gridSnapEnabled, widgetGrid.size])
 
     useEffect(() => {
         const update = () => {
@@ -1201,6 +1205,7 @@ export const Widget = ({isVisible, className = '', moveableClassName = '', conta
                 scalable:       config.scalable ?? false,
                 showControlBox: config.showControlBox ?? true,
                 snap:           config.snap ?? false,
+                snappable:      isVisualWidget ? (config.snappable ?? true) : false,
                 stopPropagation: config.stopPropagation ?? false,
                 top:            config.top,
                 transient:      config.transient ?? false,
@@ -1439,19 +1444,19 @@ export const Widget = ({isVisible, className = '', moveableClassName = '', conta
                 onRotateEnd={handleRotateEnd}
                 rotationPosition={'bottom'}
                 bounds={bounds}
-                elementGuidelines={[lgs.canvas]}
+                elementGuidelines={canSnapWidget ? [lgs.canvas] : []}
                 horizontalGuidelines={guidelines.horizontalGuidelines}
                 verticalGuidelines={guidelines.verticalGuidelines}
-                snapCenter={true}
-                snapElement={true}
+                snapCenter={canSnapWidget}
+                snapElement={canSnapWidget}
                 snapGap={snapGap}
                 snapThreshold={snapThreshold}
                 snapRotationThreshold={5}
                 snapRotationDegrees={[0, -30, -45, -60, -90, -120, -135, -150, -180]}
-                snappable={(config?.snappable ?? true) && widgetGrid.enabled && widgetGrid.snap}
-                snapDirections={{top: true, right: true, bottom: true, left: true, center: true, middle: true}}
-                elementSnapDirections={{top: true, left: true, bottom: true, right: true, center: true, middle: true}}
-                maxSnapElementGuidelineDistance={10}
+                snappable={canSnapWidget}
+                snapDirections={canSnapWidget ? {top: true, right: true, bottom: true, left: true, center: true, middle: true} : false}
+                elementSnapDirections={canSnapWidget ? {top: true, left: true, bottom: true, right: true, center: true, middle: true} : false}
+                maxSnapElementGuidelineDistance={canSnapWidget ? 10 : 0}
                 renderDirections={controlBox.renderDirections}
                 zoom={controlBox.zoom}
                 onRender={(event) => !config.isCropper && (event.target.style.cssText += event.cssText)}
