@@ -85,8 +85,12 @@ const REPLAY_TOLERANCE_OUTER_INSET_RATIO = 0.05
 const REPLAY_TOLERANCE_INNER_INSET_RATIO = 0.2
 const REPLAY_TOLERANCE_RECENTER_REPLACE_DELAY_MS = 300
 const REPLAY_TRACKING_NAVIGATION_ZONE_RATIO = 0.2
-const REPLAY_TRACKING_DYNAMIC_TRIGGER_ZONE_RATIO = 0.85
+const REPLAY_TRACKING_DYNAMIC_TRIGGER_ZONE_RATIO = 0.5
 const REPLAY_TRACKING_DYNAMIC_TARGET_ZONE_RATIO = 0.3
+// Dynamic recentering must lead the marker beyond the nominal easing duration:
+// a closed pitch can keep the marker moving toward the crop edge while the
+// camera is still interpolating.
+const REPLAY_TRACKING_DYNAMIC_LOOKAHEAD_FACTOR = 1.35
 const REPLAY_POI_TRIGGER_EPSILON_METERS = 0.001
 const REPLAY_POI_TRIGGER_SCAN_MARGIN_METERS = 5
 const CAMERA_ANGLE_PREVIEW_AXIS_LENGTH = 1800
@@ -1097,10 +1101,10 @@ export class JourneyReplayMode {
                         return
                     }
 
+                    this.#deferStartCameraRecenter = false
                     startResult = this.#controller.start({
                         progress: options.progress ?? 0,
                     })
-                    this.#deferStartCameraRecenter = false
                 }
                 catch (error) {
                     console.error('[JourneyReplayMode] Failed to run replay start clips.', error)
@@ -2354,6 +2358,9 @@ export class JourneyReplayMode {
                         cameraSettings: clipCamera,
                     }
                     plan.endView = {...plan.startView}
+                    plan.endView.heading = replayHeading
+                    plan.endView.pitch = degreesToRadians(replayCamera.pitch) ?? baseView.pitch
+                    plan.endView.cameraSettings = replayCamera
                     return plan
                 })
             }
@@ -4842,6 +4849,47 @@ export class JourneyReplayMode {
                 done(result)
             }
 
+            // The live Draft recorder can render the Cesium scene without
+            // running the normal camera flight lifecycle. In that situation
+            // flyTo may never invoke complete/cancel, leaving the replay
+            // permanently locked in #cameraApplyingView. Use the same frame
+            // interpolation as HQ while a Draft is being captured.
+            const replayStore = globalThis.lgs?.stores?.replay
+            const videoStore = globalThis.lgs?.stores?.ui?.video
+            const draftRecording = videoStore?.recording === true
+                                    && replayStore?.recordingSync !== true
+                                    && !globalThis.lgs?.settings?.ui?.replay?.recordingSync
+            if (draftRecording) {
+                const startFrame = this.#currentCameraFrame(frame)
+                if (!startFrame) {
+                    this.#cameraApplyingView = false
+                    this.#cameraFlightActive = false
+                    settle(false)
+                    return
+                }
+                const startedAt = this.#now()
+                const transitionDuration = Math.max(1, (Number(duration) || 0) * 1000)
+                const tick = () => {
+                    if (this.#cameraBezierResolve === null) {
+                        return
+                    }
+
+                    const ratio = clamp((this.#now() - startedAt) / transitionDuration, 0, 1)
+                    this.#applyCameraFrame(this.#interpolateCameraFrame(startFrame, {
+                        destination: endPosition,
+                        direction:   endDirection,
+                        up:          endUp,
+                    }, ratio))
+                    if (ratio >= 1) {
+                        settle(true)
+                        return
+                    }
+                    this.#cameraBezierFrame = globalThis.setTimeout?.(tick, 16) ?? null
+                }
+                tick()
+                return
+            }
+
             if (typeof viewer.camera.flyTo === 'function') {
                 try {
                     viewer.camera.flyTo({
@@ -5121,7 +5169,7 @@ export class JourneyReplayMode {
         const nominalView = this.#cameraViewForSample({
                                                           sample,
                                                           progress,
-                                                          source,
+                                                          source: source === 'start' ? 'drawer' : source,
                                                           cameraSettings,
                                                           markerSettings,
                                                       })
@@ -5194,6 +5242,64 @@ export class JourneyReplayMode {
         }
 
         this.#updateToleranceZoneOverlay(cameraSettings.hysteresis)
+
+        if (source === 'start' && immediateToleranceRecenter) {
+            this.#cameraRedirectState = null
+            this.#applyCameraView({
+                anchor: anchorSample,
+                heading: smoothHeading,
+                pitch:   smoothPitch,
+                cameraSettings,
+            })
+            this.#lastCameraHeading = smoothHeading
+            this.#lastCameraPitch = smoothPitch
+            return
+        }
+
+        // Draft playback is driven by the live Cesium render loop. Keep its
+        // historical follow path: applying the current frame on each playback
+        // tick is what made Draft responsive. HQ is advanced by export frame
+        // time and must keep its deterministic path below.
+        const draftLiveCamera = !exportMode
+                                 && globalThis.lgs?.stores?.ui?.video?.recording === true
+        if (draftLiveCamera && source === 'playback') {
+            if (marker.mode === REPLAY_MARKER_MODE_NAVIGATION) {
+                this.#applyCameraView({
+                    anchor: anchorSample,
+                    heading: smoothHeading,
+                    pitch: smoothPitch,
+                    cameraSettings,
+                })
+                this.#lastCameraHeading = smoothHeading
+                this.#lastCameraPitch = smoothPitch
+                return
+            }
+
+            if (marker.mode === REPLAY_MARKER_MODE_HYSTERESIS) {
+                const runtimeTracking = replayRuntimeTrackingSettings(globalThis.lgs?.settings?.ui?.replay?.camera ?? cameraSettings)
+                const dynamicCameraSettings = normalizeJourneyReplayCamera({
+                    ...cameraSettings,
+                    hysteresis: {
+                        ...(cameraSettings.hysteresis ?? {}),
+                        zone: runtimeTracking.dynamic.triggerZone,
+                    },
+                })
+                const trackingSample = predictedSample ?? anchorSample
+                const currentCollision = this.#cameraCollisionForSample(anchorSample, dynamicCameraSettings)
+                const predictedCollision = this.#cameraCollisionForSample(trackingSample, dynamicCameraSettings)
+                if (currentCollision?.hard || predictedCollision?.hard) {
+                    this.#applyCameraView({
+                        anchor: trackingSample,
+                        heading: smoothHeading,
+                        pitch: this.#liveCameraPitch(smoothPitch),
+                        cameraSettings,
+                    })
+                }
+                this.#lastCameraHeading = smoothHeading
+                this.#lastCameraPitch = smoothPitch
+                return
+            }
+        }
 
         if (marker.mode === REPLAY_MARKER_MODE_NAVIGATION) {
             const runtimeTracking = replayRuntimeTrackingSettings(globalThis.lgs?.settings?.ui?.replay?.camera ?? cameraSettings)
@@ -5289,9 +5395,24 @@ export class JourneyReplayMode {
                     zone: runtimeTracking.dynamic.triggerZone,
                 },
             })
-            const trackingSample = (source === 'playback' || exportMode) ? predictedSample : anchorSample
-            const collision = this.#cameraCollisionForSample(trackingSample, dynamicCameraSettings)
-            const outsideTolerance = collision?.hard ?? false
+            const dynamicPredictedSample = (source === 'playback' || exportMode)
+                                           ? this.#cameraLookaheadSample(anchorSample, {
+                                               lookaheadSeconds: recenterDuration * REPLAY_TRACKING_DYNAMIC_LOOKAHEAD_FACTOR,
+                                           }) ?? predictedSample
+                                           : anchorSample
+            const trackingSample = dynamicPredictedSample
+            const currentCollision = this.#cameraCollisionForSample(anchorSample, dynamicCameraSettings)
+            const predictedCollision = this.#cameraCollisionForSample(trackingSample, dynamicCameraSettings)
+            const outsideTolerance = Boolean(currentCollision?.hard || predictedCollision?.hard)
+            const dynamicTargetCameraSettings = normalizeJourneyReplayCamera({
+                ...cameraSettings,
+                hysteresis: {
+                    ...(cameraSettings.hysteresis ?? {}),
+                    zone: runtimeTracking.dynamic.targetZone,
+                },
+            })
+            const targetCollision = this.#cameraCollisionForSample(trackingSample, dynamicTargetCameraSettings)
+            const outsideDynamicTargetZone = Boolean(targetCollision?.hard)
             const currentScreen = this.#windowPositionForSample(anchorSample)
             const predictedScreen = this.#windowPositionForSample(trackingSample)
             const rect = this.#viewportRectForCesiumSurface()
@@ -5361,17 +5482,24 @@ export class JourneyReplayMode {
                                          && now - this.#lastToleranceRecenterAt < 80
             const activeRecenterStillFresh = this.#lastToleranceRecenterAt !== null
                                             && now - this.#lastToleranceRecenterAt < toleranceRecenterLockMs
+            // Once the previous easing has completed, also validate the
+            // promised Z2 landing zone. This catches the closed-pitch case
+            // where the marker continues to the crop edge during the flight.
+            const targetCorrectionDue = outsideDynamicTargetZone
+                                        && this.#lastToleranceRecenterAt !== null
+                                        && now - this.#lastToleranceRecenterAt >= Math.ceil(recenterDuration * 1000)
             if (
                 !forceToleranceRecenter
                 && !immediateToleranceRecenter
                 && (sameProgressRecenter || activeRecenterStillFresh)
                 && (outsideTolerance || needsVisibilityCorrection)
+                && !targetCorrectionDue
             ) {
                 this.#lastCameraHeading = smoothHeading
                 this.#lastCameraPitch = smoothPitch
                 return
             }
-            if (!outsideTolerance && !forceToleranceRecenter && !immediateToleranceRecenter) {
+            if (!outsideTolerance && !targetCorrectionDue && !forceToleranceRecenter && !immediateToleranceRecenter) {
                 this.#lastToleranceRecenterProgress = null
                 if (!needsVisibilityCorrection) {
                     if (this.#cameraRedirectState && nominalVisible) {
@@ -5451,7 +5579,7 @@ export class JourneyReplayMode {
                 return
             }
 
-            if (outsideTolerance || needsVisibilityCorrection || forceToleranceRecenter || immediateToleranceRecenter) {
+            if (outsideTolerance || targetCorrectionDue || needsVisibilityCorrection || forceToleranceRecenter || immediateToleranceRecenter) {
                 const canUseNominalView = !renderedOccluded && nominalCurrentVisible
                 let targetView = canUseNominalView ? nominalView : null
                 let nextRedirectState = canUseNominalView ? null : this.#cameraRedirectState
@@ -5496,7 +5624,7 @@ export class JourneyReplayMode {
                                                  // the next few frames do not
                                                  // immediately trigger another
                                                  // correction.
-                                                 sample:  outsideTolerance && !useRedirectTransition
+                                                 sample:  (outsideTolerance || targetCorrectionDue) && !useRedirectTransition
                                                           ? trackingSample
                                                           : targetView.sample,
                                                  heading: targetView.heading,
@@ -5553,6 +5681,7 @@ export class JourneyReplayMode {
                         else {
                             this.#updateCamera({
                                                    ...detail,
+                                                   source:                    'start',
                                                    forceToleranceRecenter:     true,
                                                    immediateToleranceRecenter: true,
                                                })
