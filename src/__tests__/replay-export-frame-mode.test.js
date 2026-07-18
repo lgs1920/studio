@@ -18,7 +18,7 @@ import { JourneyReplayMode }          from '@Core/ui/replay/JourneyReplayMode'
 import { JourneyReplayPlaybackController } from '@Core/ui/replay/JourneyReplayPlaybackController'
 import { REPLAY_CLIP_SLOT_START, REPLAY_CLIP_SLOT_STOP } from '@Core/ui/replay/JourneyReplayClips'
 import { defaultJourneyReplaySettings } from '@Core/ui/replay/JourneyReplayProgressionStyle'
-import { Cartesian3 }                  from 'cesium'
+import { Cartesian3, Cartographic } from 'cesium'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('@Utils/cesium/TrackUtils', () => ({
@@ -238,6 +238,163 @@ describe('JourneyReplayMode HQ export frames', () => {
             staticCompletedTrace: false,
             completedTraceMode:   'stop-dynamic',
         }))
+    })
+
+    it('keeps HQ landing clips fixed like the draft landing behavior', async () => {
+        const journey = makeJourney([
+            makeTrack({
+                slug:        'track#journey#gpx#main',
+                coordinates: [[2, 48, 120], [2.001, 48.001, 130]],
+            }),
+        ])
+        installReplayGlobals(journey)
+
+        const setView = vi.fn(options => {
+            globalThis.lgs.viewer.camera.position = options.destination
+            globalThis.lgs.viewer.camera.positionCartographic = Cartographic.fromCartesian(options.destination)
+        })
+        globalThis.lgs.viewer.camera.setView = setView
+
+        const mode = new JourneyReplayMode({
+            controller: new JourneyReplayPlaybackController({
+                requestFrame: () => 1,
+                cancelFrame:  () => {},
+                now:          () => 0,
+            }),
+        })
+
+        mode.configure({duration: 1})
+
+        await mode.renderReplayExportFrame({
+            phase: {
+                kind: REPLAY_CLIP_SLOT_STOP,
+                slot: REPLAY_CLIP_SLOT_STOP,
+                clip: {clipId: 'landing', params: {duration: 1}},
+                anchorProgress: 1,
+                localProgress: 0,
+                localMillis: 0,
+            },
+        })
+        await mode.renderReplayExportFrame({
+            phase: {
+                kind: REPLAY_CLIP_SLOT_STOP,
+                slot: REPLAY_CLIP_SLOT_STOP,
+                clip: {clipId: 'landing', params: {duration: 1}},
+                anchorProgress: 1,
+                localProgress: 0.5,
+                localMillis: 500,
+            },
+        })
+
+        expect(setView).toHaveBeenCalledTimes(2)
+        expect(Cartesian3.distance(
+            setView.mock.calls[0][0].destination,
+            setView.mock.calls[1][0].destination,
+        )).toBeLessThan(1e-6)
+    })
+
+    it('uses the replay camera heading for HQ zoom clip frames instead of snapping to north', async () => {
+        const destinationForHeading = async heading => {
+            const journey = makeJourney([
+                makeTrack({
+                    slug:        'track#journey#gpx#main',
+                    coordinates: [[2, 48, 120], [2.001, 48.001, 130]],
+                }),
+            ])
+            installReplayGlobals(journey)
+            globalThis.lgs.settings.ui.replay.camera.heading = heading
+            globalThis.lgs.stores.replay.camera = globalThis.lgs.settings.ui.replay.camera
+
+            const setView = vi.fn(options => {
+                globalThis.lgs.viewer.camera.position = options.destination
+                globalThis.lgs.viewer.camera.positionCartographic = Cartographic.fromCartesian(options.destination)
+            })
+            globalThis.lgs.viewer.camera.setView = setView
+
+            const mode = new JourneyReplayMode({
+                controller: new JourneyReplayPlaybackController({
+                    requestFrame: () => 1,
+                    cancelFrame:  () => {},
+                    now:          () => 0,
+                }),
+            })
+
+            mode.configure({duration: 1})
+
+            await mode.renderReplayExportFrame({
+                phase: {
+                    kind: REPLAY_CLIP_SLOT_START,
+                    slot: REPLAY_CLIP_SLOT_START,
+                    clip: {clipId: 'zoom-in', params: {duration: 1}},
+                    anchorProgress: 0,
+                    localProgress: 1,
+                    localMillis: 1000,
+                },
+            })
+
+            return setView.mock.calls[0][0].destination
+        }
+
+        const northDestination = await destinationForHeading(0)
+        const replayAngleDestination = await destinationForHeading(45)
+
+        expect(Cartesian3.distance(northDestination, replayAngleDestination)).toBeGreaterThan(100)
+    })
+
+    it('keeps the replay trace visible on the final HQ scene frame after stop clips', async () => {
+        const journey = makeJourney([
+            makeTrack({
+                slug:        'track#journey#gpx#main',
+                coordinates: [[2, 48, 120], [2.001, 48.001, 130]],
+            }),
+        ])
+        journey.visible = false
+        journey.updateVisibility = vi.fn(visible => {
+            journey.visible = visible
+        })
+        installReplayGlobals(journey)
+
+        const renderer = {
+            clear:      vi.fn(),
+            show:       vi.fn(),
+            update:     vi.fn(),
+            hideCursor: vi.fn(),
+        }
+        const mode = new JourneyReplayMode({
+            controller: new JourneyReplayPlaybackController({
+                requestFrame: () => 1,
+                cancelFrame:  () => {},
+                now:          () => 0,
+            }),
+            renderer,
+        })
+
+        mode.configure({duration: 1})
+        renderer.update.mockClear()
+        renderer.clear.mockClear()
+
+        await mode.renderReplayExportFrame({
+            phase: {
+                kind: REPLAY_CLIP_SLOT_STOP,
+                slot: REPLAY_CLIP_SLOT_STOP,
+                clip: {clipId: 'zoom-out', params: {duration: 1}},
+                anchorProgress: 1,
+                localProgress: 1,
+                localMillis: 1000,
+                isFinalSceneFrame: true,
+            },
+        })
+
+        expect(renderer.update.mock.calls).toEqual(expect.arrayContaining([
+            [expect.objectContaining({
+            hideCursor:           true,
+            hideRemainingTrace:   true,
+            completedTraceMode:   'stop-dynamic',
+            })],
+        ]))
+        expect(renderer.clear).not.toHaveBeenCalled()
+        expect(journey.visible).toBe(false)
+        expect(journey.updateVisibility).not.toHaveBeenCalled()
     })
 
     it('does not use a video trace overlay because the replay trace must stay terrain clamped', () => {
