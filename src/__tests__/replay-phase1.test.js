@@ -21,7 +21,7 @@ import {
     replayCameraRangeFromPitch, replayCameraRecenterDuration, replayCameraRecenterHeight,
     replayCameraRecenterHorizontalDistance, replayHeadingEasingFactor, replayHeadingFromLocalAxisAngle,
     replayIsWindowPointOutsideToleranceZone, JourneyReplayMode, replayTargetSampleForClip,
-    replayToleranceZoneBounds,
+    replayToleranceZoneBounds, replayCenteredZone, replayRuntimeTrackingSettings, replayDynamicTargetPointInZone,
 }                                                                      from '@Core/ui/replay/JourneyReplayMode'
 import {
     REPLAY_SCOPE_ALL_TRACKS, REPLAY_SCOPE_CURRENT_TRACK, REPLAY_SCOPE_VISIBLE_TRACKS, JourneyReplayPathSampler,
@@ -3286,14 +3286,18 @@ describe('replay phase 1 playback controller', () => {
 
             const overlay = document.querySelector('.replay-tolerance-zone-overlay')
             expect(overlay).not.toBeNull()
-            expect(Number.parseFloat(overlay.style.left)).toBeCloseTo(60, 6)
-            expect(Number.parseFloat(overlay.style.top)).toBeCloseTo(60, 6)
-            expect(Number.parseFloat(overlay.style.width)).toBeCloseTo(900, 6)
-            expect(Number.parseFloat(overlay.style.height)).toBeCloseTo(720, 6)
+            expect(Number.parseFloat(overlay.style.left)).toBeCloseTo(85, 6)
+            expect(Number.parseFloat(overlay.style.top)).toBeCloseTo(80, 6)
+            expect(Number.parseFloat(overlay.style.width)).toBeCloseTo(850, 6)
+            expect(Number.parseFloat(overlay.style.height)).toBeCloseTo(680, 6)
             expect(overlay.style.background).toContain('rgba(255, 0, 0')
             expect(overlay.firstElementChild?.className).toBe('replay-tolerance-zone-overlay-outer')
+            expect(overlay.firstElementChild?.dataset.zone).toBe('z1')
             expect(overlay.lastElementChild?.className).toBe('replay-tolerance-zone-overlay-inner')
+            expect(overlay.lastElementChild?.dataset.zone).toBe('z2')
             expect(overlay.lastElementChild?.style.border).toContain('dashed')
+            expect(Number.parseFloat(overlay.lastElementChild.style.left)).toBeCloseTo(32.35294, 5)
+            expect(Number.parseFloat(overlay.lastElementChild.style.width)).toBeCloseTo(35.29412, 5)
 
             mode.stop({emit: false})
         }
@@ -3413,15 +3417,220 @@ describe('replay phase 1 playback controller', () => {
 
             const overlay = document.querySelector('.replay-tolerance-zone-overlay')
             expect(overlay).not.toBeNull()
-            expect(Number.parseFloat(overlay.style.left)).toBeCloseTo(170, 6)
-            expect(Number.parseFloat(overlay.style.top)).toBeCloseTo(100, 6)
-            expect(Number.parseFloat(overlay.style.width)).toBeCloseTo(900, 6)
-            expect(Number.parseFloat(overlay.style.height)).toBeCloseTo(720, 6)
+            expect(Number.parseFloat(overlay.style.left)).toBeCloseTo(195, 6)
+            expect(Number.parseFloat(overlay.style.top)).toBeCloseTo(120, 6)
+            expect(Number.parseFloat(overlay.style.width)).toBeCloseTo(850, 6)
+            expect(Number.parseFloat(overlay.style.height)).toBeCloseTo(680, 6)
 
             mode.stop({emit: false})
         }
         finally {
             document.querySelector('.replay-tolerance-zone-overlay')?.remove()
+            globalThis.lgs = previousLgs
+        }
+    })
+
+    it('draws the navigation Z1 overlay as the central 30 percent viewport zone', () => {
+        const journey = makeJourney([
+                                        makeTrack({
+                                                      slug:        'track#journey#gpx#main',
+                                                      coordinates: [[2, 48, 120], [2.001, 48.001, 130]],
+                                                  }),
+                                    ])
+        const previousLgs = globalThis.lgs
+        const replay = defaultJourneyReplaySettings()
+        const canvas = {
+            clientWidth:           1000,
+            clientHeight:          800,
+            addEventListener:      () => {},
+            removeEventListener:   () => {},
+            getBoundingClientRect: () => ({
+                left:   10,
+                top:    20,
+                width:  1000,
+                height: 800,
+            }),
+        }
+
+        globalThis.lgs = {
+            theJourney: journey,
+            theTrack:   null,
+            canvas,
+            settings:   {
+                ui: {
+                    replay: {
+                        ...replay,
+                        marker: {
+                            ...replay.marker,
+                            mode: REPLAY_MARKER_MODE_NAVIGATION,
+                        },
+                    },
+                },
+            },
+            stores:     {
+                replay: proxy({
+                                      progress: 0,
+                                      camera:   replay.camera,
+                                  }),
+            },
+            viewer:     {
+                trackedEntity: null,
+                canvas,
+                camera:        {
+                    heading:              0.8,
+                    pitch:                -Math.PI / 4,
+                    positionCartographic: {longitude: 0.1, latitude: 0.2, height: 1800},
+                    moveStart:            {
+                        addEventListener:       () => {},
+                        removeEventListener:    () => {},
+                    },
+                    moveEnd:              {
+                        addEventListener:       () => {},
+                        removeEventListener:    () => {},
+                    },
+                    cancelFlight:         () => {},
+                    flyTo:                () => {},
+                    setView:              () => {},
+                    lookAtTransform:      () => {},
+                },
+            },
+            scene:      {
+                canvas,
+                cartesianToCanvasCoordinates: () => ({x: 500, y: 400}),
+                requestRender:                () => {},
+                globe:                        {getHeight: () => 120},
+            },
+        }
+
+        try {
+            document.querySelectorAll('.replay-tolerance-zone-overlay').forEach(element => element.remove())
+            const mode = new JourneyReplayMode({
+                                                controller: new JourneyReplayPlaybackController({
+                                                                                                 requestFrame: () => 1,
+                                                                                                 cancelFrame:  () => {},
+                                                                                                 now:          () => 0,
+                                                                                             }),
+                                                renderer:   {
+                                                    clear:  () => {},
+                                                    show:   () => {},
+                                                    update: () => {},
+                                                },
+                                            })
+            mode.start()
+
+            const overlay = document.querySelector('.replay-tolerance-zone-overlay')
+            expect(overlay).not.toBeNull()
+            expect(overlay.dataset.mode).toBe(REPLAY_MARKER_MODE_NAVIGATION)
+            expect(Number.parseFloat(overlay.style.left)).toBeCloseTo(360, 6)
+            expect(Number.parseFloat(overlay.style.top)).toBeCloseTo(300, 6)
+            expect(Number.parseFloat(overlay.style.width)).toBeCloseTo(300, 6)
+            expect(Number.parseFloat(overlay.style.height)).toBeCloseTo(240, 6)
+            expect(overlay.querySelector('[data-zone="z1"]')).not.toBeNull()
+            expect(overlay.querySelector('[data-zone="z2"]')).toBeNull()
+
+            mode.stop({emit: false})
+        }
+        finally {
+            document.querySelector('.replay-tolerance-zone-overlay')?.remove()
+            globalThis.lgs = previousLgs
+        }
+    })
+
+    it('recenters navigation playback toward the predicted sample when leaving Z1', () => {
+        const journey = makeJourney([
+                                        makeTrack({
+                                                      slug:        'track#journey#gpx#main',
+                                                      coordinates: [[2, 48, 120], [2.01, 48, 120], [2.02, 48, 120]],
+                                                  }),
+                                    ])
+        const previousLgs = globalThis.lgs
+        const replay = defaultJourneyReplaySettings()
+        const canvas = {
+            clientWidth:         1000,
+            clientHeight:        1000,
+            addEventListener:    () => {},
+            removeEventListener: () => {},
+        }
+        const flyToCalls = []
+        const cameraPosition = Cartesian3.fromDegrees(2, 47.99, 1800)
+        const camera = {
+            heading:              0,
+            pitch:                -Math.PI / 4,
+            position:             cameraPosition,
+            positionWC:           cameraPosition,
+            positionCartographic: {height: 1800},
+            moveStart:            {
+                addEventListener:    () => {},
+                removeEventListener: () => {},
+            },
+            moveEnd:              {
+                addEventListener:    () => {},
+                removeEventListener: () => {},
+            },
+            cancelFlight:         () => {},
+            flyTo:                options => flyToCalls.push(options),
+            setView:              () => {},
+            lookAtTransform:      () => {},
+        }
+
+        globalThis.lgs = {
+            theJourney: journey,
+            theTrack:   null,
+            canvas,
+            settings:   {
+                ui: {
+                    replay: {
+                        ...replay,
+                        marker: {
+                            ...replay.marker,
+                            mode: REPLAY_MARKER_MODE_NAVIGATION,
+                        },
+                    },
+                },
+            },
+            stores:     {
+                replay: proxy({
+                                      progress: 0,
+                                      camera:   replay.camera,
+                                  }),
+            },
+            viewer:     {
+                trackedEntity: null,
+                canvas,
+                camera,
+            },
+            scene:      {
+                canvas,
+                cartesianToCanvasCoordinates: () => ({x: 900, y: 500}),
+                requestRender:                () => {},
+                globe:                        {getHeight: () => 120},
+            },
+        }
+
+        try {
+            const mode = new JourneyReplayMode({
+                                                controller: new JourneyReplayPlaybackController({
+                                                                                                 requestFrame: () => 1,
+                                                                                                 cancelFrame:  () => {},
+                                                                                                 now:          () => 0,
+                                                                                             }),
+                                                renderer:   {
+                                                    clear:  () => {},
+                                                    show:   () => {},
+                                                    update: () => {},
+                                                },
+            })
+            mode.configure({duration: 10})
+            mode.refreshCamera({
+                sample:   mode.controller.sampler.atProgress(0),
+                progress: 0,
+                source:   'playback',
+            })
+
+            expect(flyToCalls).toHaveLength(1)
+            expect(flyToCalls[0].duration).toBeGreaterThan(0)
+        }
+        finally {
             globalThis.lgs = previousLgs
         }
     })
@@ -6749,6 +6958,63 @@ describe('replay settings normalization', () => {
                                                            })).toBe(true)
         expect(replayIsWindowPointOutsideToleranceZone({
                                                                point:  null,
+                                                               width:  1000,
+                                                               height: 1000,
+                                                               zone,
+                                                           })).toBe(true)
+    })
+
+    it('builds runtime-only centered tracking zones for navigation and dynamic camera modes', () => {
+        expect(replayCenteredZone(0.3, 0.3)).toEqual({
+                                                         top:    0.35,
+                                                         left:   0.35,
+                                                         width:  0.3,
+                                                         height: 0.3,
+                                                     })
+
+        const tracking = replayRuntimeTrackingSettings()
+        expect(tracking.navigation.triggerZone).toEqual({
+                                                            top:    0.35,
+                                                            left:   0.35,
+                                                            width:  0.3,
+                                                            height: 0.3,
+                                                        })
+        expect(tracking.dynamic.triggerZone.top).toBeCloseTo(0.075, 6)
+        expect(tracking.dynamic.triggerZone.left).toBeCloseTo(0.075, 6)
+        expect(tracking.dynamic.triggerZone.width).toBeCloseTo(0.85, 6)
+        expect(tracking.dynamic.triggerZone.height).toBeCloseTo(0.85, 6)
+        expect(tracking.dynamic.targetZone).toEqual({
+                                                       top:    0.35,
+                                                       left:   0.35,
+                                                       width:  0.3,
+                                                       height: 0.3,
+                                                   })
+    })
+
+    it('places dynamic target inside Z2 opposite to screen movement direction', () => {
+        const target = replayDynamicTargetPointInZone({
+                                                          currentPoint:   {x: 500, y: 500},
+                                                          predictedPoint: {x: 700, y: 500},
+                                                          viewportWidth:  1000,
+                                                          viewportHeight: 1000,
+                                                          zone:           replayCenteredZone(0.3, 0.3),
+                                                      })
+
+        expect(target.x).toBeLessThan(500)
+        expect(target.x).toBeGreaterThanOrEqual(350)
+        expect(target.y).toBeCloseTo(500, 6)
+    })
+
+    it('treats dynamic Z1 as the hard trigger zone instead of the inner safe zone', () => {
+        const zone = replayCenteredZone(0.5, 0.5)
+        expect(replayIsWindowPointOutsideToleranceZone({
+                                                               point:  {x: 400, y: 500},
+                                                               width:  1000,
+                                                               height: 1000,
+                                                               zone,
+                                                           })).toBe(false)
+        expect(replayIsWindowPointOutsideToleranceZone({
+                                                               point:  {x: 100, y: 500},
                                                                width:  1000,
                                                                height: 1000,
                                                                zone,

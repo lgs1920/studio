@@ -15,6 +15,7 @@
  ******************************************************************************/
 
 import { describe, expect, it, vi } from 'vitest'
+import { Output } from 'mediabunny'
 import {
     ReplayDeferredExporter,
     captureReplayDeferredExportContext,
@@ -63,9 +64,12 @@ vi.mock('mediabunny', () => {
     }
 
     class FakeOutput {
+        static instances = []
+
         constructor({format, target}) {
             this.format = format
             this.target = target ?? new FakeBufferTarget()
+            FakeOutput.instances.push(this)
             this.start = vi.fn(() => Promise.resolve())
             this.cancel = vi.fn(() => Promise.resolve())
             this.finalize = vi.fn(() => {
@@ -186,6 +190,7 @@ describe('ReplayDeferredExporter', () => {
             dimensions: {width: 1920, height: 1080},
             captureMode: 'quality',
             metadata: {quality: 'ultra'},
+            mediaMetadata: {artist: 'LGS1920', date: '2026-07-18', album: 'Studio'},
             uiToast,
         })
 
@@ -198,6 +203,7 @@ describe('ReplayDeferredExporter', () => {
             quality: 'ultra',
         })
         expect(result.plan.dimensions).toEqual({width: 1920, height: 1080})
+        expect(result.plan.mediaMetadata).toEqual({artist: 'LGS1920', date: '2026-07-18', album: 'Studio'})
         expect(result.plan.renderSpec).toMatchObject({
             captureMode: 'quality',
             dimensions:  {width: 1920, height: 1080},
@@ -360,7 +366,9 @@ describe('ReplayDeferredExporter', () => {
     })
 
     it('exports an mp4 with mediabunny using rendered frames', async () => {
+        Output.instances.length = 0
         const frames = []
+        const mediaMetadata = {artist: 'LGS1920', date: '2026-07-18', album: 'Studio'}
         const exporter = new ReplayDeferredExporter({
             timeline: {durationMillis: 1000, fps: 10},
             controller: {
@@ -372,6 +380,7 @@ describe('ReplayDeferredExporter', () => {
 
         const result = await exporter.exportMp4({
             dimensions: {width: 640, height: 360},
+            metadata: mediaMetadata,
             buildCanvas: () => ({
                 width: 0,
                 height: 0,
@@ -392,6 +401,7 @@ describe('ReplayDeferredExporter', () => {
         expect(result.frames).toHaveLength(11)
         expect(frames[0]).toBe(0)
         expect(frames).toContain('on:0')
+        expect(Output.instances.at(-1).setMetadataTags).toHaveBeenCalledWith(mediaMetadata)
     })
 
     it('runs the deferred mp4 export and downloads the file', async () => {
@@ -781,6 +791,7 @@ describe('ReplayDeferredExporter', () => {
             expect(renderReplayExportFrame.mock.calls.at(-1)?.[0]?.phase).toMatchObject({
                 kind: 'stop',
                 localProgress: 1,
+                isFinalSceneFrame: true,
             })
             expect(renderReplayExportFrame.mock.calls.some(([args]) => args.phase.isLastTwoReplayFrames === true)).toBe(true)
             expect(createReplayExportTraceOverlay.mock.calls.some(([args]) => args.phase.slot === 'stop')).toBe(true)

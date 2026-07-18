@@ -84,8 +84,8 @@ const CAMERA_REDIRECT_RENDERED_DEPTH_CLEARANCE_METERS = 8
 const REPLAY_TOLERANCE_OUTER_INSET_RATIO = 0.05
 const REPLAY_TOLERANCE_INNER_INSET_RATIO = 0.2
 const REPLAY_TOLERANCE_RECENTER_REPLACE_DELAY_MS = 300
-const REPLAY_TRACKING_NAVIGATION_ZONE_RATIO = 0.2
-const REPLAY_TRACKING_DYNAMIC_TRIGGER_ZONE_RATIO = 0.5
+const REPLAY_TRACKING_NAVIGATION_ZONE_RATIO = 0.3
+const REPLAY_TRACKING_DYNAMIC_TRIGGER_ZONE_RATIO = 0.85
 const REPLAY_TRACKING_DYNAMIC_TARGET_ZONE_RATIO = 0.3
 // Dynamic recentering must lead the marker beyond the nominal easing duration:
 // a closed pitch can keep the marker moving toward the crop edge while the
@@ -888,6 +888,8 @@ export class JourneyReplayMode {
     #lastDynamicTargetScreen = null
     #skipNextImmediateStartRecenter = false
     #toleranceZoneOverlay = null
+    #toleranceZoneOverlayVisible = false
+    #lastToleranceZoneHysteresis = null
     #cameraAnglePreviewEntities = null
     #cameraAnglePreviewPOIVisibilityState = new Map()
     #journeyToolbarWasVisible = null
@@ -1171,20 +1173,17 @@ export class JourneyReplayMode {
         if (journey) {
             journey.visible = true
             journey.updateVisibility?.(true)
-            const focusResult = typeof journey.focus === 'function'
-                ? journey.focus({
-                    resetCamera: true,
-                    rotate:      false,
-                    snapDistance: 50000,
-                })
-                : globalThis.__?.ui?.sceneManager?.focusOnJourney?.({
-                    journey,
-                    target:      journey,
-                    resetCamera: true,
-                    rotate:      false,
-                    snapDistance: 50000,
-                })
-            await Promise.resolve(focusResult)
+
+            // Keep HQ on the same initial camera path as Draft. A generic
+            // journey focus uses the journey bounding sphere/centroid and can
+            // leave the camera much farther away than the replay start view.
+            // Draft only places the camera directly when there is no start
+            // clip; start clips deliberately keep the current camera as
+            // their source view.
+            const startClips = this.#clipListForSlot(REPLAY_CLIP_SLOT_START)
+            if (startClips.length === 0) {
+                this.#placeCameraAtPlaybackStart(sample, safeProgress)
+            }
         }
 
         this.#setJourneyReplayOrbitAllowed(false)
@@ -1224,6 +1223,8 @@ export class JourneyReplayMode {
                 this.#hiddenJourneyVisibility.set(journey.slug, journey.visible !== false)
             }
 
+            // Other journeys keep their original persisted state in the
+            // visibility map and are restored when replay ends.
             journey.visible = false
             journey.updateVisibility?.(false)
         }
@@ -1237,7 +1238,8 @@ export class JourneyReplayMode {
             return
         }
 
-        journey.visible = false
+        // Keep the persisted visibility untouched. The replay trace replaces
+        // the original polylines only at the Cesium rendering layer.
         journey.updateVisibility?.(false)
         this.#preserveCurrentJourneyPOIVisibility(journey)
         globalThis.lgs?.scene?.requestRender?.()
@@ -2151,8 +2153,7 @@ export class JourneyReplayMode {
         }
 
         this.#renderer.clear()
-        this.#restorePlaybackScene()
-        return true
+        return this.#restorePlaybackScene().then(() => true)
     }
 
     #interpolateReplayExportSample = (start = null, end = null, ratio = 0) => {
@@ -2903,7 +2904,7 @@ export class JourneyReplayMode {
         this.#restoreCurrentJourneyVisibility()
         this.#resetCameraController({preserveSavedCameraState: true})
         this.#suppressPlaybackCameraSync = true
-        void this.#focusJourneyAfterPlayback({
+        return this.#focusJourneyAfterPlayback({
             snapDistance: 50000,
         }).finally(() => {
             this.#deferPlaybackCameraRestore = false
@@ -4387,6 +4388,27 @@ export class JourneyReplayMode {
         this.#toleranceZoneOverlay = null
     }
 
+    /**
+     * Toggle the diagnostic Z1/Z2 overlay without changing the tracking
+     * algorithm. It is hidden during normal replay/video usage, but remains
+     * available for future camera debugging.
+     */
+    setToleranceZoneOverlayVisible = (visible = true) => {
+        this.#toleranceZoneOverlayVisible = visible === true
+        if (!this.#toleranceZoneOverlayVisible) {
+            if (this.#toleranceZoneOverlay) {
+                this.#toleranceZoneOverlay.hidden = true
+                this.#toleranceZoneOverlay.style.display = 'none'
+            }
+            return false
+        }
+
+        if (this.#lastToleranceZoneHysteresis) {
+            this.#updateToleranceZoneOverlay(this.#lastToleranceZoneHysteresis)
+        }
+        return true
+    }
+
     #cameraAnglePreviewEntityCollection = () => globalThis.lgs?.viewer?.entities ?? null
 
     #removeCameraAnglePreviewOverlay = () => {
@@ -4649,6 +4671,7 @@ export class JourneyReplayMode {
     }
 
     #updateToleranceZoneOverlay = hysteresis => {
+        this.#lastToleranceZoneHysteresis = hysteresis
         this.#removeToleranceZoneOverlay()
         const viewer = globalThis.lgs?.viewer
         const container = viewer?.container ?? globalThis.document?.body ?? null
@@ -4682,9 +4705,11 @@ export class JourneyReplayMode {
 
         const overlay = globalThis.document.createElement('div')
         overlay.className = 'replay-tolerance-zone-overlay'
+        overlay.hidden = !this.#toleranceZoneOverlayVisible
         overlay.dataset.mode = marker.mode
         overlay.style.position = 'absolute'
         overlay.style.pointerEvents = 'none'
+        overlay.style.display = this.#toleranceZoneOverlayVisible ? '' : 'none'
         overlay.style.left = `${rect.left + (outerBounds.left * rect.width)}px`
         overlay.style.top = `${rect.top + (outerBounds.top * rect.height)}px`
         overlay.style.width = `${(outerBounds.right - outerBounds.left) * rect.width}px`
@@ -5395,10 +5420,34 @@ export class JourneyReplayMode {
                     zone: runtimeTracking.dynamic.triggerZone,
                 },
             })
+            const rect = this.#viewportRectForCesiumSurface()
+            const currentScreen = this.#windowPositionForSample(anchorSample)
+            const hasViewport = (rect?.width ?? 0) > 0 && (rect?.height ?? 0) > 0
+            const currentInsideDynamicTriggerZone = hasViewport
+                                                    && !replayIsWindowPointOutsideToleranceZone({
+                                                                                                    point:  currentScreen,
+                                                                                                    width:  rect?.width,
+                                                                                                    height: rect?.height,
+                                                                                                    zone:   runtimeTracking.dynamic.triggerZone,
+                                                                                                })
+            const currentInsideDynamicTargetZone = hasViewport
+                                                   && !replayIsWindowPointOutsideToleranceZone({
+                                                                                                  point:  currentScreen,
+                                                                                                  width:  rect?.width,
+                                                                                                  height: rect?.height,
+                                                                                                  zone:   runtimeTracking.dynamic.targetZone,
+                                                                                              })
+            // The extended look-ahead is only needed in the ring between Z1
+            // and Z2. It protects tight camera angles near the crop edge, but
+            // must not perturb a marker that is already safely inside Z2.
+            const useExtendedDynamicLookahead = currentInsideDynamicTriggerZone
+                                                && !currentInsideDynamicTargetZone
             const dynamicPredictedSample = (source === 'playback' || exportMode)
-                                           ? this.#cameraLookaheadSample(anchorSample, {
-                                               lookaheadSeconds: recenterDuration * REPLAY_TRACKING_DYNAMIC_LOOKAHEAD_FACTOR,
-                                           }) ?? predictedSample
+                                           ? useExtendedDynamicLookahead
+                                             ? this.#cameraLookaheadSample(anchorSample, {
+                                                 lookaheadSeconds: recenterDuration * REPLAY_TRACKING_DYNAMIC_LOOKAHEAD_FACTOR,
+                                             }) ?? predictedSample
+                                             : predictedSample ?? anchorSample
                                            : anchorSample
             const trackingSample = dynamicPredictedSample
             const currentCollision = this.#cameraCollisionForSample(anchorSample, dynamicCameraSettings)
@@ -5413,9 +5462,7 @@ export class JourneyReplayMode {
             })
             const targetCollision = this.#cameraCollisionForSample(trackingSample, dynamicTargetCameraSettings)
             const outsideDynamicTargetZone = Boolean(targetCollision?.hard)
-            const currentScreen = this.#windowPositionForSample(anchorSample)
             const predictedScreen = this.#windowPositionForSample(trackingSample)
-            const rect = this.#viewportRectForCesiumSurface()
             const dynamicTargetScreen = replayDynamicTargetPointInZone({
                 currentPoint:    currentScreen,
                 predictedPoint:  predictedScreen,
@@ -5792,10 +5839,15 @@ export class JourneyReplayMode {
                     raf(() => {
                         raf(() => {
                             if (token === this.#clipSequenceToken) {
+                                // The recorder captures the final Draft frame
+                                // synchronously from this notification. Keep
+                                // the completed trace rendered until that
+                                // capture has happened; clearing first makes
+                                // the trace disappear from the last frame.
+                                notifyStopClipsComplete()
                                 if (typeof afterFrame === 'function') {
                                     afterFrame()
                                 }
-                                notifyStopClipsComplete()
                             }
                         })
                     })
@@ -5807,7 +5859,11 @@ export class JourneyReplayMode {
 
                     this.#stopStopClipPOIMaskLoop()
                     this.#setContinuousRender(false)
-                    if (replayStore()?.recordingSync === true) {
+                    const recorder = globalThis.__?.recorder ?? null
+                    if (replayStore()?.recordingSync === true || recorder?.isRecording?.() === true) {
+                        // The recorder still needs the Cesium source canvas for
+                        // its asynchronous final-frame capture. Do not clear
+                        // the replay trace while recording is still active.
                         this.#sceneRestoreDeferred = true
                         return
                     }

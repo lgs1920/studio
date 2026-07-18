@@ -134,7 +134,7 @@ describe('JourneyReplayVideoSync', () => {
         expect(recorder.stopVideo).toHaveBeenCalledWith({captureFinalFrame: true})
     })
 
-    it('stops the recorder immediately without stop clips', async () => {
+    it('stops the recorder immediately without stop clips after the final frame is ready', async () => {
         const recorder = new FakeRecorder()
         recorder.recording = true
         const replay = makeJourneyReplay()
@@ -142,21 +142,8 @@ describe('JourneyReplayVideoSync', () => {
         globalThis.lgs = {settings: {ui: {replay: {recordingSync: false, clips: {stop: []}}}}}
         const sync = new JourneyReplayVideoSync({recorder, replay, store})
 
-        vi.useFakeTimers()
-        let rafCalls = 0
-        globalThis.requestAnimationFrame = vi.fn(callback => {
-            rafCalls += 1
-            setTimeout(() => callback(performance.now()), 0)
-            return rafCalls
-        })
-
         sync.arm({autoStopRecording: true})
         window.dispatchEvent(new CustomEvent(REPLAY_EVENT_STOP_CLIPS_COMPLETE))
-
-        expect(recorder.stopVideo).not.toHaveBeenCalled()
-
-        await vi.runOnlyPendingTimersAsync()
-        await vi.runOnlyPendingTimersAsync()
 
         expect(recorder.stopVideo).toHaveBeenCalledTimes(1)
         expect(recorder.stopVideo).toHaveBeenCalledWith({captureFinalFrame: true})

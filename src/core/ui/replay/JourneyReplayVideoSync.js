@@ -126,15 +126,11 @@ export class JourneyReplayVideoSync {
         }
 
         if (!hasJourneyReplayStopClips()) {
-            const raf = globalThis.requestAnimationFrame
-                        ?? globalThis.window?.requestAnimationFrame?.bind(globalThis.window)
-                        ?? (callback => setTimeout(callback, 0))
-
-            raf(() => {
-                raf(() => {
-                    stopRecorder()
-                })
-            })
+            // JourneyReplayMode already waits for the final widget/render
+            // frames before dispatching STOP_CLIPS_COMPLETE. Starting the
+            // recorder stop immediately keeps the final Cesium trace alive
+            // while captureFinalFrame reads the source canvas.
+            stopRecorder()
             return
         }
 

@@ -209,6 +209,7 @@ const resolveReplayVideoFramePhase = ({timeline = null, frame = null} = {}) => {
     }
 
     const timeMs = Math.max(0, finiteNumber(frame?.frameTimeMs, 0) ?? 0)
+    const isFinalSceneFrame = frame?.isLast === true
     const phase = timeline.phases.find(item => timeMs < item.endMillis)
                   ?? timeline.phases[timeline.phases.length - 1]
                   ?? null
@@ -233,6 +234,7 @@ const resolveReplayVideoFramePhase = ({timeline = null, frame = null} = {}) => {
         ...metrics,
         replayFrameIndex,
         replayFrameCount,
+        isFinalSceneFrame,
         isLastPhaseFrame: metrics.phaseFrameIndex >= (metrics.phaseFrameCount - 1),
         isLastTwoReplayFrames: phase.kind === 'replay'
                                && replayFrameCount !== null
@@ -890,10 +892,7 @@ export class ReplayDeferredExporter {
             format: outputConfig.format,
             target,
         })
-        await output.setMetadataTags({
-            title: label,
-            comment: JSON.stringify(manifest),
-        })
+        await output.setMetadataTags(metadata ?? {})
 
         let encodedPacketBytes = 0
         let lastPublishedFileSize = -1
@@ -1014,6 +1013,7 @@ export const prepareReplayDeferredExportPlan = ({
                                                     fps = defaultReplayExportFps(),
                                                     label = 'replay-master-export',
                                                     metadata = null,
+                                                    mediaMetadata = null,
                                                     dimensions = null,
                                                     renderSpec = null,
                                                     captureMode = 'deferred-master',
@@ -1076,6 +1076,7 @@ export const prepareReplayDeferredExportPlan = ({
         dimensions: effectiveDimensions,
         renderSpec: effectiveRenderSpec,
         captureMode,
+        mediaMetadata,
         runtime:    {
             status:      'cold',
             preparedAt:  null,
@@ -1205,6 +1206,7 @@ export const resolveReplayDeferredExportPlan = ({
                                                     fps = defaultReplayExportFps(),
                                                     label = null,
                                                     metadata = null,
+                                                    mediaMetadata = null,
                                                     dimensions = null,
                                                     captureMode = null,
                                                     sourceCanvas = defaultReplaySourceCanvas(),
@@ -1222,6 +1224,9 @@ export const resolveReplayDeferredExportPlan = ({
         sourceCanvas,
     })
     if (existingPlan?.runtime?.contextKey === currentContext.contextKey) {
+        if (mediaMetadata !== null && mediaMetadata !== undefined) {
+            existingPlan.mediaMetadata = mediaMetadata
+        }
         return {
             exporter: existingPlan.exporter ?? null,
             plan:     existingPlan,
@@ -1237,6 +1242,7 @@ export const resolveReplayDeferredExportPlan = ({
         fps,
         label: label ?? `${journey?.slug ?? replay?.journeySlug ?? 'replay'}-master-export`,
         metadata,
+        mediaMetadata,
         dimensions: requestedDimensions,
         captureMode: requestedCaptureMode,
         sourceCanvas,
@@ -1264,6 +1270,7 @@ export const runReplayDeferredMp4Export = async ({
                                                      fps = defaultReplayExportFps(),
                                                      label = null,
                                                      metadata = null,
+                                                     mediaMetadata = null,
                                                      filename = null,
                                                      dimensions = null,
                                                      captureMode = null,
@@ -1285,6 +1292,7 @@ export const runReplayDeferredMp4Export = async ({
         fps,
         label,
         metadata,
+        mediaMetadata,
         dimensions: requestedDimensions,
         captureMode: requestedCaptureMode,
         sourceCanvas,
@@ -1379,7 +1387,7 @@ export const runReplayDeferredMp4Export = async ({
         const result = await exporter.exportMp4({
             signal,
             label: plan.label,
-            metadata: plan.manifest.metadata,
+            metadata: plan.mediaMetadata ?? mediaMetadata ?? metadata ?? {},
             dimensions: outputDimensions,
             buildCanvas,
             onFileSize: bytes => {
@@ -1566,7 +1574,7 @@ export const runReplayDeferredMp4Export = async ({
         }
         clearReplayExportFrameState(plan)
         if (playbackScenePrepared && typeof replayMode?.restorePlaybackScene === 'function') {
-            replayMode.restorePlaybackScene({force: true})
+            await replayMode.restorePlaybackScene({force: true})
         }
         if (replay && originalReplayState) {
             Object.assign(replay, originalReplayState)

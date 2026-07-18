@@ -245,6 +245,11 @@ export const VideoRecordingScreenArea = memo(() => {
         if (!prepareJourneyReplayForRecording(renderSpec)) {
             return false
         }
+        const recordingMetadata = {
+            artist: lgs.servers.studio.name,
+            date:   new Date(),
+            album:  LGS_PROJECT,
+        }
         if (isJourneyReplaySyncRequested()) {
             // Prepare the deferred master export as soon as the draft starts.
             // This only stores a compact context and warms the codec/config.
@@ -257,6 +262,7 @@ export const VideoRecordingScreenArea = memo(() => {
                 dimensions: renderSpec.dimensions,
                 captureMode: renderSpec.captureMode,
                 renderSpec,
+                mediaMetadata: recordingMetadata,
             })
             plan.runtime.status = 'warming'
             plan.runtime.preparedAt = plan.runtime.preparedAt ?? new Date().toISOString()
@@ -278,7 +284,7 @@ export const VideoRecordingScreenArea = memo(() => {
                                     dimensions: renderSpec.dimensions,
                                     ratio:      videoFrame.ratio.value,
                                     captureMode: renderSpec.captureMode,
-                                    metadata: {artist: lgs.servers.studio.name, date: new Date(), album: LGS_PROJECT},
+                                    metadata: recordingMetadata,
                                     useWebGL:   true,
                                 })
 
@@ -297,14 +303,16 @@ export const VideoRecordingScreenArea = memo(() => {
 
         if (renderSpec.captureMode === 'quality') {
             composer.setFps(0)
-            __.recorder.setFrameCaptureReady(() => {
-                buildComposerOverlays(composer, renderSpec.cropRect)
-                return composer.renderFrame({waitForNextFrame: true})
-            })
         }
-        else {
-            __.recorder.setFrameCaptureReady(null)
-        }
+
+        // The final recorder frame must be composed from the current Cesium
+        // canvas. This is required for Draft as well as HQ: without the
+        // callback, Draft can submit the previous compositor frame even when
+        // the replay trace is still visible on the source canvas.
+        __.recorder.setFrameCaptureReady(() => {
+            buildComposerOverlays(composer, renderSpec.cropRect)
+            return composer.renderFrame({waitForNextFrame: true})
+        })
 
         buildComposerOverlays(composer, renderSpec.cropRect)
         await composer.renderFrame({waitForNextFrame: true})
