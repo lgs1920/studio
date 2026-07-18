@@ -613,10 +613,10 @@ wa-select[label-at-start].half-width::part(base) {
 
 .replay-controls-hq-file,
 .replay-controls-hq-time {
-    align-items: center;
     display: inline-flex;
-    gap: var(--lgs-gutter-xxs, 0.25rem);
+    align-items: center;
     min-width: 0;
+    gap: var(--lgs-gutter-xs);
 }
 
 .replay-controls-hq-file {

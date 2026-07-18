@@ -78,6 +78,12 @@ const hqExportCreationProgress = runtime => {
     return 0
 }
 
+const hqExportVideoDurationMillis = plan => (
+    finiteNumber(plan?.videoTimeline?.durationMillis, null)
+    ?? finiteNumber(plan?.manifest?.durationMillis, null)
+    ?? finiteNumber(plan?.manifest?.metadata?.replayDurationMillis, 0)
+)
+
 export const JourneyReplayControlsWidget = memo(() => {
     const replay = useSnapshot(lgs.stores.replay)
     const video = useSnapshot(lgs.stores.ui.video)
@@ -85,6 +91,9 @@ export const JourneyReplayControlsWidget = memo(() => {
     const hqExportRuntime = hqExportPlan?.runtime ?? null
     const hqExportRunning = hqExportRuntime?.status === 'exporting'
     const hqProgress = hqExportCreationProgress(hqExportRuntime)
+    const hqVideoDurationSeconds = (
+        hqProgress * Math.max(0, hqExportVideoDurationMillis(hqExportPlan)) / SECOND_MILLIS
+    ).toFixed(1)
     const hqRemainingMillis = finiteNumber(hqExportRuntime?.exportEstimatedRemainingMillis, null)
     const hqElapsedMillis = finiteNumber(hqExportRuntime?.exportElapsedMillis, null)
     const hqPaused = hqExportRuntime?.exportPaused === true
@@ -152,8 +161,9 @@ export const JourneyReplayControlsWidget = memo(() => {
                     <div className="replay-controls-hq-row">
                         <span className="replay-controls-hq-label">{'Recording...'}</span>
                         <span className="replay-controls-hq-file">
-                            <WaIcon name="file-video" variant="regular"/>
-                            <span>{hqFileSizeLabel}</span>
+                            <WaIcon name="films" variant="regular"/>
+                            <span>{hqFileSizeLabel} / {`${hqVideoDurationSeconds}s`}</span>
+
                         </span>
                         <JourneyReplayProgressBar
                             className="replay-controls-hq-progress"
