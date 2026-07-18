@@ -832,6 +832,10 @@ export const Widget = ({isVisible, className = '', moveableClassName = '', conta
     }, [isMouseOver])
 
     const handleDoubleClick = useCallback((event) => {
+        if (hasNoDragInPath(event)) {
+            return
+        }
+
         if (!canReduce) {
             openEditorFromDoubleClick(event)
             return

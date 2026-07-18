@@ -261,7 +261,7 @@ export const WidgetsPanelContent = ({groups}) => {
             </div>
 
             <ul className="widget-group widget-grid-settings">
-                <li className="widget-deck-entry widget-grid-setting widget-no-hover">
+                <li className="widget-deck-entry widget-grid-setting widget-no-hover lgs-widget-no-drag">
                     <WaSwitch
                         className="widget-grid-switch"
                         size="xs"
