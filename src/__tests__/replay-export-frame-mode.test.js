@@ -17,7 +17,12 @@
 import { JourneyReplayMode }          from '@Core/ui/replay/JourneyReplayMode'
 import { JourneyReplayPlaybackController } from '@Core/ui/replay/JourneyReplayPlaybackController'
 import { REPLAY_CLIP_SLOT_START, REPLAY_CLIP_SLOT_STOP } from '@Core/ui/replay/JourneyReplayClips'
-import { defaultJourneyReplaySettings } from '@Core/ui/replay/JourneyReplayProgressionStyle'
+import {
+    defaultJourneyReplaySettings,
+    REPLAY_CAMERA_POSITION_AHEAD,
+    REPLAY_CAMERA_POSITION_BEHIND,
+    REPLAY_CAMERA_POSITION_SYSTEM,
+} from '@Core/ui/replay/JourneyReplayProgressionStyle'
 import { Cartesian3, Cartographic } from 'cesium'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
@@ -339,6 +344,124 @@ describe('JourneyReplayMode HQ export frames', () => {
         const replayAngleDestination = await destinationForHeading(45)
 
         expect(Cartesian3.distance(northDestination, replayAngleDestination)).toBeGreaterThan(100)
+    })
+
+    it('uses the replay camera position mode for HQ zoom clip headings', async () => {
+        const destinationForCameraMode = async ({positionMode, heading = 0, headingOffset = 0}) => {
+            const journey = makeJourney([
+                makeTrack({
+                    slug:        'track#journey#gpx#main',
+                    coordinates: [[2, 48, 120], [2.001, 48.001, 130], [2.002, 48.002, 140]],
+                }),
+            ])
+            installReplayGlobals(journey)
+            globalThis.lgs.settings.ui.replay.camera.positionMode = positionMode
+            globalThis.lgs.settings.ui.replay.camera.heading = heading
+            globalThis.lgs.settings.ui.replay.camera.headingOffset = headingOffset
+            globalThis.lgs.stores.replay.camera = globalThis.lgs.settings.ui.replay.camera
+
+            const setView = vi.fn(options => {
+                globalThis.lgs.viewer.camera.position = options.destination
+                globalThis.lgs.viewer.camera.positionCartographic = Cartographic.fromCartesian(options.destination)
+            })
+            globalThis.lgs.viewer.camera.setView = setView
+
+            const mode = new JourneyReplayMode({
+                controller: new JourneyReplayPlaybackController({
+                    requestFrame: () => 1,
+                    cancelFrame:  () => {},
+                    now:          () => 0,
+                }),
+            })
+
+            mode.configure({duration: 1})
+
+            await mode.renderReplayExportFrame({
+                phase: {
+                    kind: REPLAY_CLIP_SLOT_START,
+                    slot: REPLAY_CLIP_SLOT_START,
+                    clip: {clipId: 'zoom-in', params: {duration: 1}},
+                    anchorProgress: 0,
+                    localProgress: 1,
+                    localMillis: 1000,
+                },
+            })
+
+            return setView.mock.calls[0][0].destination
+        }
+
+        const fixedDestination = await destinationForCameraMode({
+            positionMode: REPLAY_CAMERA_POSITION_SYSTEM,
+            heading: 150,
+        })
+        const behindDestination = await destinationForCameraMode({
+            positionMode: REPLAY_CAMERA_POSITION_BEHIND,
+        })
+        const aheadDestination = await destinationForCameraMode({
+            positionMode: REPLAY_CAMERA_POSITION_AHEAD,
+        })
+        const offsetBehindDestination = await destinationForCameraMode({
+            positionMode: REPLAY_CAMERA_POSITION_BEHIND,
+            headingOffset: 30,
+        })
+
+        expect(Cartesian3.distance(fixedDestination, behindDestination)).toBeGreaterThan(100)
+        expect(Cartesian3.distance(behindDestination, aheadDestination)).toBeGreaterThan(100)
+        expect(Cartesian3.distance(behindDestination, offsetBehindDestination)).toBeGreaterThan(100)
+    })
+
+    it('renders HQ replay frames from the export controller sample', async () => {
+        const journey = makeJourney([
+            makeTrack({
+                slug:        'track#journey#gpx#main',
+                coordinates: [[2, 48, 120], [2.001, 48.001, 130]],
+            }),
+        ])
+        installReplayGlobals(journey)
+
+        const renderer = {
+            clear:      vi.fn(),
+            show:       vi.fn(),
+            update:     vi.fn(),
+            hideCursor: vi.fn(),
+        }
+        const mode = new JourneyReplayMode({
+            controller: new JourneyReplayPlaybackController({
+                requestFrame: () => 1,
+                cancelFrame:  () => {},
+                now:          () => 0,
+            }),
+            renderer,
+        })
+        const exportSample = {
+            longitude: 9,
+            latitude:  43,
+            altitude:  220,
+            height:    220,
+            progress:  0.75,
+        }
+        const exportController = {
+            progress: 0.75,
+            seek:     vi.fn(() => exportSample),
+        }
+
+        mode.configure({duration: 1})
+        renderer.update.mockClear()
+
+        await mode.renderReplayExportFrame({
+            controller: exportController,
+            phase: {
+                kind: 'replay',
+                slot: 'replay',
+                progress: 0.75,
+                localMillis: 750,
+            },
+        })
+
+        expect(exportController.seek).toHaveBeenCalledWith(0.75)
+        expect(renderer.update).toHaveBeenCalledWith(expect.objectContaining({
+            sample: exportSample,
+        }))
     })
 
     it('keeps the replay trace visible on the final HQ scene frame after stop clips', async () => {
