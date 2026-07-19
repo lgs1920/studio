@@ -32,9 +32,10 @@ import {
   SCENE_WIDGETS,
   SCENE_WIDGETS_BOARD,
 } from "@Core/constants";
-import { faAngle, faVideo } from "@fortawesome/pro-regular-svg-icons";
+import { faAngle, faMagnifyingGlassPlus, faVideo } from "@fortawesome/pro-regular-svg-icons";
 import { FA2SL } from "@Utils/FA2SL";
 import { foot, meter, UnitUtils } from "@Utils/UnitUtils";
+import { cameraViewToSlippyLevel } from "@Utils/cesium/CameraLevel";
 import {
   WaButton,
   WaCard,
@@ -86,6 +87,7 @@ const formatCameraPitch = (pitch) => `${Math.round(numericValueOf(pitch))}°`;
 const formatCameraAdjustmentValues = (position) => ({
   height: formatCameraAltitude(position?.height),
   pitch: formatCameraPitch(position?.pitch),
+  level: position?.level ?? null,
 });
 
 const currentCameraMovementSnapshot = () => {
@@ -117,6 +119,10 @@ const currentCameraMovementSnapshot = () => {
     position: {
       height: cartographic.height,
       pitch: M.toDegrees(camera.pitch ?? 0),
+      level: cameraViewToSlippyLevel(camera, lgs.scene ?? lgs.viewer?.scene, {
+        imageryProvider: lgs.viewer?.imageryLayers?.get?.(0)?.imageryProvider,
+        fallbackHeight: cartographic.height,
+      }),
     },
   };
 };
@@ -693,6 +699,12 @@ const OrbitCameraAdjustmentOverlay = memo(() => {
           <sl-icon library="fa" name={FA2SL.set(faAngle)} />
           <strong>{values.pitch}</strong>
         </span>
+        {values.level !== null && (
+          <span className="panorama-adjustment-metric">
+            <sl-icon library="fa" name={FA2SL.set(faMagnifyingGlassPlus)} />
+            <strong>{values.level}</strong>
+          </span>
+        )}
         {adjustmentWidgetLocked && (
           <button
             type="button"
