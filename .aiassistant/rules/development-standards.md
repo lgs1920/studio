@@ -10,7 +10,7 @@ This file defines the absolute constraints for all code generation and project i
 
 - **Language:** All conversational responses must be in **French**.
 - **Documentation:** All JSDoc blocks, inline comments, and code documentation must be strictly in **English**.
-- **Autonomy:** If a choice is ambiguous, stop and ask. Final decisions are made by the user.
+- **Autonomy:** If a choice is ambiguous, stop and ask. **Important**: Final decisions are made by the user.
 
 ## 2. Coding Syntax & Style
 
