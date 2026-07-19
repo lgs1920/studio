@@ -202,6 +202,19 @@ describe('video recording relaunch regression', () => {
         view.unmount()
     })
 
+    it('keeps video widgets mounted while recording is starting after the editor closes', async () => {
+        globalThis.lgs.stores.ui.video.editing = false
+        globalThis.lgs.stores.ui.video.recording = false
+        globalThis.lgs.stores.ui.video.preRecording = true
+
+        render(<VideoSceneWidgetsPortal context={lgs.stores.ui.video.cropper}/>)
+
+        expect(screen.getByTestId('dynamic-widget')).not.toBeNull()
+        await waitFor(() => {
+            expect(widgetManager.rehydrateWidgetsByBoard).toHaveBeenCalledWith(VIDEO_WIDGETS_BOARD)
+        })
+    })
+
     it('shows replay progression in the recorder toolbar when the sync link is active', () => {
         globalThis.lgs.stores.ui.video.recording = true
         globalThis.lgs.stores.replay.recordingSync = true

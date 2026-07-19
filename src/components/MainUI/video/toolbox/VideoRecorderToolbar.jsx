@@ -131,7 +131,7 @@ const playbackProgressFromSample = ({sample, totalDistance, direction, fallback}
 /**
  * VideoRecorderToolbar component
  */
-export const VideoRecorderToolbar = ({toolbar}) => {
+export const VideoRecorderToolbar = ({toolbar, widgetsReady = false, onStartRecording}) => {
     const $video = lgs.stores.ui.video
     const replay = useSnapshot(lgs.stores.replay)
     const {current: unitSystem} = useSnapshot(lgs.settings.unitSystem)
@@ -366,7 +366,25 @@ export const VideoRecorderToolbar = ({toolbar}) => {
                 )
             )}
             {video.preRecording ? (
-                <div className="blinking">Starting...</div>
+                widgetsReady ? (
+                    <>
+                        <WaTooltip for="video-recorder-start-recording" placement="top">
+                            {'Start recording'}
+                        </WaTooltip>
+                        <WaButton
+                            id="video-recorder-start-recording"
+                            variant="brand"
+                            appearance="filled"
+                            size="s"
+                            className="video-recorder-action video-recorder-start-recording"
+                            aria-label="Start"
+                            onClick={onStartRecording}
+                        >
+                            <WaIcon name="clapperboard-play" variant="regular"/>
+                            <span>Start</span>
+                        </WaButton>
+                    </>
+                ) : <div className="blinking">Starting...</div>
             ) : state.finalizing ? (
                 <div className="blinking">Finalisation...</div>
             ) : (

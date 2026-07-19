@@ -546,4 +546,8 @@
     .video-recorder-widget .video-recorder-spacer {
         display: none;
     }
+
+    .video-recorder-widget .video-recorder-start-recording > span {
+        display: none;
+    }
 }

@@ -308,7 +308,9 @@ export class WidgetManager {
         }
 
         if (widgetsBoard === VIDEO_WIDGETS_BOARD) {
-            return document.querySelector(`[data-widget="${widgetsBoard}"] .lgs-widget`) ?? null
+            return document.querySelector(`[data-widget="${widgetsBoard}"] .lgs-widget`)
+                ?? document.querySelector(`[data-widget^="${widgetsBoard}#"] .lgs-widget`)
+                ?? null
         }
 
         return document.querySelector(`[data-widget-id="${widgetsBoard}"] .crop-zone`)

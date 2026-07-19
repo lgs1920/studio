@@ -24,6 +24,12 @@ import { useSnapshot } from 'valtio'
 export const VideoSceneWidgetsPortal = memo(({context, hidden = false}) => {
     const list = useSnapshot(lgs.stores.ui.widget.list)
     const video = useSnapshot(lgs.stores.ui.video)
+    // The editor is closed as soon as recording starts, but the video widgets
+    // must remain mounted so the recorder can wait for and capture them.
+    const videoCaptureActive = video.editing === true
+                              || video.preRecording === true
+                              || video.recording === true
+                              || video.finalizing === true
     const previewOnly = video.editing === true && video.cropper?.widgetEditor === false
     const _rehydrateKey = useRef('')
     const _rehydrateFrame = useRef(null)
@@ -32,11 +38,41 @@ export const VideoSceneWidgetsPortal = memo(({context, hidden = false}) => {
         .sort(([, a], [, b]) => (b.zIndex || 0) - (a.zIndex || 0))
     const widgetIds = widgets.map(([key]) => key).join('|')
 
-    const boardElement = typeof document !== 'undefined'
-                         ? (globalThis.__?.ui?.widgetManager?.resolveWidgetsBoardBoundsContainer?.(VIDEO_WIDGETS_BOARD) ??
-                            document.querySelector(`#${VIDEO_WIDGETS_BOARD}.defined`))
-                         : null
+    const [boardElement, setBoardElement] = useState(null)
     const [boardReady, setBoardReady] = useState(false)
+
+    useEffect(() => {
+        if (hidden || typeof document === 'undefined') {
+            setBoardElement(null)
+            return undefined
+        }
+
+        let cancelled = false
+        let frame = null
+
+        const resolveBoardElement = () => {
+            if (cancelled) {
+                return
+            }
+
+            const nextBoardElement = globalThis.__?.ui?.widgetManager?.resolveWidgetsBoardBoundsContainer?.(VIDEO_WIDGETS_BOARD)
+                                    ?? document.querySelector(`#${VIDEO_WIDGETS_BOARD}.defined`)
+            setBoardElement(current => current === nextBoardElement ? current : nextBoardElement)
+
+            if (!nextBoardElement) {
+                frame = requestAnimationFrame(resolveBoardElement)
+            }
+        }
+
+        resolveBoardElement()
+
+        return () => {
+            cancelled = true
+            if (frame) {
+                cancelAnimationFrame(frame)
+            }
+        }
+    }, [hidden, videoCaptureActive, widgetIds])
 
     useEffect(() => {
         if (!boardElement || typeof document === 'undefined') {
@@ -69,7 +105,7 @@ export const VideoSceneWidgetsPortal = memo(({context, hidden = false}) => {
     }, [boardElement])
 
     useEffect(() => {
-        if (!boardReady || hidden || !video.editing || widgets.length === 0) {
+        if (!boardReady || hidden || !videoCaptureActive || widgets.length === 0) {
             return
         }
 
@@ -102,17 +138,17 @@ export const VideoSceneWidgetsPortal = memo(({context, hidden = false}) => {
                 _rehydrateFrame.current = null
             }
         }
-    }, [boardReady, hidden, video.editing, widgetIds, widgets.length])
+    }, [boardReady, hidden, videoCaptureActive, widgetIds, widgets.length])
 
     useEffect(() => {
-        if (!video.editing) {
-            return
+        if (!videoCaptureActive) {
+            return undefined
         }
 
         return () => {
             __.ui.widgetManager.invalidateRuntimeByBoard(VIDEO_WIDGETS_BOARD)
         }
-    }, [video.editing])
+    }, [videoCaptureActive])
 
     if (hidden || typeof document === 'undefined' || widgets.length === 0 || !boardElement || !boardReady) {
         return null

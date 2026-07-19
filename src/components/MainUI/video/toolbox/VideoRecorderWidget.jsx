@@ -22,7 +22,7 @@ import { useSnapshot } from 'valtio'
 
 const VIDEO_RECORDER_TOOLBAR_ZINDEX = 'var(--lgs-video-recorder-toolbar-zindex)'
 
-export const VideoRecorderWidget = ({id}) => {
+export const VideoRecorderWidget = ({id, widgetsReady, onStartRecording}) => {
     const $video = lgs.stores.ui.video
     const video = useSnapshot($video)
     const position = video.toolbarPosition ?? video.position ?? {}
@@ -52,7 +52,10 @@ export const VideoRecorderWidget = ({id}) => {
     return (
         <>
             <Widget isVisible={true} config={config}>
-                <VideoRecorderToolbar/>
+                <VideoRecorderToolbar
+                    widgetsReady={widgetsReady}
+                    onStartRecording={onStartRecording}
+                />
             </Widget>
         </>
     )

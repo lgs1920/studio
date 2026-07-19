@@ -66,6 +66,7 @@ export const VideoRecordingScreenArea = memo(() => {
     const [mountTimeoutOpen, setMountTimeoutOpen] = useState(false)
     const [mountTimeoutError] = useState({missing: [], timeoutMs: WIDGET_MOUNT_TIMEOUT})
     const [mountTimeoutAction] = useState('record')
+    const [widgetsMounted, setWidgetsMounted] = useState(false)
 
     const updateJourneyReplayVideoCropRect = useCallback((cropRect = null) => {
         const replayStore = lgs.stores?.replay
@@ -374,6 +375,11 @@ export const VideoRecordingScreenArea = memo(() => {
         }
     }, [$video, initializeRecorder, markRecordingStarted, disposeComposer, stopOverlaysRefresh])
 
+    const handleStartRecording = useCallback(async () => {
+        setWidgetsMounted(false)
+        await handleVideoRecording()
+    }, [handleVideoRecording])
+
     const handlePhotoSnapshot = useCallback(async () => {
         prepareVideoCaptureUi()
         const videoFrame = await syncVideoCropFrame('before-snapshot')
@@ -447,10 +453,11 @@ export const VideoRecordingScreenArea = memo(() => {
         if (!$video.preRecording && !$video.snapshot) {
             return
         }
+        setWidgetsMounted(false)
         const keys = [...__.ui.widgetCache.getAll({widgetsBoard: VIDEO_WIDGETS_BOARD}).keys()]
         if (!keys.length) {
             if ($video.preRecording) {
-                void handleVideoRecording()
+                setWidgetsMounted(true)
             }
             else if ($video.snapshot) {
                 void handlePhotoSnapshot()
@@ -464,7 +471,7 @@ export const VideoRecordingScreenArea = memo(() => {
             }
             done = true
             if ($video.preRecording) {
-                await handleVideoRecording()
+                setWidgetsMounted(true)
             }
             else if ($video.snapshot) {
                 await handlePhotoSnapshot()
@@ -561,7 +568,13 @@ export const VideoRecordingScreenArea = memo(() => {
         <>
             <CropOverlay
                 style={{clipPath: `polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%, 0% ${crop.top}px, ${crop.left}px ${crop.top}px, ${crop.left}px ${crop.top + crop.height}px, ${crop.left + crop.width}px ${crop.top + crop.height}px, ${crop.left + crop.width}px ${crop.top}px, 0% ${crop.top}px)`}}/>
-            {(video.preRecording || video.recording) && <VideoRecorderWidget id="video-recorder-widget"/>}
+            {(video.preRecording || video.recording) && (
+                <VideoRecorderWidget
+                    id="video-recorder-widget"
+                    widgetsReady={video.preRecording && widgetsMounted}
+                    onStartRecording={handleStartRecording}
+                />
+            )}
             <WidgetMountErrorDialog open={mountTimeoutOpen} error={mountTimeoutError} action={mountTimeoutAction}
                                     onConfirm={() => {
                                         setMountTimeoutOpen(false)

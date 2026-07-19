@@ -16,9 +16,10 @@
 
 import { Compass }                                        from '@Components/MainUI/compass/Compass'
 import { Widget }                                         from '@Components/MainUI/widgets/Widget'
-import { HOUR, LGS_VISUAL_WIDGET, MULTI_PURPOSE_WIDGETS } from '@Core/constants'
+import { HOUR, LGS_VISUAL_WIDGET, MULTI_PURPOSE_WIDGETS, VIDEO_WIDGETS_BOARD } from '@Core/constants'
 import { useOptionalSnapshot } from '@Utils/ValtioUtils'
 import { useMemo }             from 'react'
+import { useSnapshot }         from 'valtio'
 
 const COMPASS_WIDGET_CONTEXT_FALLBACK = {widgetEditor: false, widgetsBoard: ''}
 
@@ -32,8 +33,11 @@ const COMPASS_WIDGET_CONTEXT_FALLBACK = {widgetEditor: false, widgetsBoard: ''}
 export const CompassWidget = ({id, context, zIndex, widgetsBoard: persistedWidgetsBoard}) => {
     // Get snapshot of context
     const contextState = useOptionalSnapshot(context, COMPASS_WIDGET_CONTEXT_FALLBACK)
+    const video = useSnapshot(lgs.stores.ui.video)
     const widgetEditor = contextState.widgetEditor
     const widgetsBoard = contextState.widgetsBoard || persistedWidgetsBoard || ''
+    const showDuringVideoCapture = widgetsBoard === VIDEO_WIDGETS_BOARD
+        && (video.preRecording || video.recording || video.finalizing)
     const container = useMemo(() => __.ui.widgetManager.resolveWidgetsBoardContainer(widgetsBoard), [widgetsBoard])
 
     // Memoize widget configuration
@@ -67,7 +71,7 @@ export const CompassWidget = ({id, context, zIndex, widgetsBoard: persistedWidge
     }, [container, id, widgetsBoard, zIndex])
 
     // Render only when widgetEditor is true and container is defined
-    if (!widgetEditor || !container) {
+    if ((!widgetEditor && !showDuringVideoCapture) || !container) {
         return null
     }
 

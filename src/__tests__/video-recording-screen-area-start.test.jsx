@@ -20,8 +20,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { proxy } from 'valtio'
 import { proxyMap } from 'valtio/utils'
 
+const mockRecorderWidget = vi.hoisted(() => ({onStartRecording: null}))
+
 vi.mock('@Components/MainUI/video/toolbox/VideoRecorderWidget', () => ({
-    VideoRecorderWidget: () => <div data-testid="video-recorder-widget"/>,
+    VideoRecorderWidget: ({onStartRecording}) => {
+        mockRecorderWidget.onStartRecording = onStartRecording
+        return <div data-testid="video-recorder-widget"/>
+    },
 }))
 
 vi.mock('@Components/MainUI/video/VideoSceneWidgetsPortal', () => ({
@@ -110,6 +115,7 @@ describe('VideoRecordingScreenArea start flow', () => {
 
     beforeEach(() => {
         vi.clearAllMocks()
+        mockRecorderWidget.onStartRecording = null
         globalThis.requestAnimationFrame = vi.fn(callback => {
             setTimeout(callback, 0)
             return 1
@@ -208,8 +214,15 @@ describe('VideoRecordingScreenArea start flow', () => {
         delete globalThis.cancelAnimationFrame
     })
 
-    it('starts immediately when expected video widgets are already ready', async () => {
+    it('shows the start callback after expected video widgets are ready', async () => {
         render(<VideoRecordingScreenArea/>)
+
+        await waitFor(() => {
+            expect(mockRecorderWidget.onStartRecording).toEqual(expect.any(Function))
+        })
+        expect(recorder.startVideo).not.toHaveBeenCalled()
+
+        await mockRecorderWidget.onStartRecording()
 
         await waitFor(() => {
             expect(recorder.startVideo).toHaveBeenCalledTimes(1)
