@@ -125,9 +125,9 @@ describe('VideoRecordingSettingsToolbar', () => {
         expect(button.className).not.toContain('square-button')
         expect(button.className).not.toContain('lgs-tunnel-element')
 
-        expect(screen.getByRole('button', {name: 'Video parameters'}).getAttribute('variant')).toBe('neutral')
-        expect(screen.getByRole('button', {name: 'Video parameters'}).getAttribute('appearance')).toBe('plain')
-        const toolbar = screen.getByText('Video parameters').closest('.video-recording-settings-toolbar')
+        expect(screen.getByRole('button', {name: 'Compose video'}).getAttribute('variant')).toBe('neutral')
+        expect(screen.getByRole('button', {name: 'Compose video'}).getAttribute('appearance')).toBe('plain')
+        const toolbar = screen.getByText('Compose video').closest('.video-recording-settings-toolbar')
         expect(toolbar).not.toBeNull()
         expect(toolbar.className).toContain('lgs-toolbar-content')
         expect(toolbar.className).toContain('lgs-toolbar')
@@ -141,7 +141,7 @@ describe('VideoRecordingSettingsToolbar', () => {
         prepareVideoCaptureUi.mockClear()
         prepareVideoEditingUi.mockClear()
 
-        await lastTunnelProps.steps[2].onClick(2, {
+        await lastTunnelProps.steps[1].onClick(1, {
             currentTarget: {
                 getBoundingClientRect: () => ({left: 10, top: 20, width: 100, height: 40}),
             },
@@ -155,7 +155,7 @@ describe('VideoRecordingSettingsToolbar', () => {
         expect(globalThis.lgs.stores.ui.video.preRecording).toBe(true)
 
         prepareVideoCaptureUi.mockClear()
-        await lastTunnelProps.steps[3].onClick?.(3)
+        await lastTunnelProps.steps[2].onClick?.(2)
         expect(prepareVideoCaptureUi).toHaveBeenCalledTimes(1)
         expect(globalThis.lgs.stores.ui.video.snapshot).toBe(true)
     })
@@ -184,7 +184,7 @@ describe('VideoRecordingSettingsToolbar', () => {
         expect(button.className).toContain('is-selected')
     })
 
-    it('starts the tunnel on step 2 when video dimensions are already defined', () => {
+    it('starts on the crop zone while recording is immediately available', () => {
         globalThis.__.ui.widgetManager.getWidgetConfig = vi.fn(() => ({
             cropDimensions: {
                 left:   10,
@@ -196,10 +196,9 @@ describe('VideoRecordingSettingsToolbar', () => {
 
         render(<VideoRecordingSettingsToolbar/>)
 
-        expect(screen.getByTestId('default-step-index').textContent).toBe('2')
+        expect(screen.getByTestId('default-step-index').textContent).toBe('0')
         expect(lastTunnelProps.steps[0].icon).toBe('camera-viewfinder')
         expect(lastTunnelProps.steps[0].done).toBe(true)
-        expect(lastTunnelProps.steps[1].done).toBe(true)
         expect(__.ui.widgetManager.syncCropDimensionsFromElement).not.toHaveBeenCalled()
     })
 
@@ -220,8 +219,8 @@ describe('VideoRecordingSettingsToolbar', () => {
 
         render(<VideoRecordingSettingsToolbar/>)
 
-        expect(lastTunnelProps.steps[2].beforeStep()).toBe(true)
-        expect(globalThis.lgs.stores.ui.video.step).toBe(2)
+        expect(lastTunnelProps.steps[1].beforeStep()).toBe(true)
+        expect(globalThis.lgs.stores.ui.video.step).toBe(1)
         expect(globalThis.lgs.stores.ui.video.cropper).toEqual(expect.objectContaining({
                                                                                            ratioEditor:  false,
                                                                                            presetEditor: false,
@@ -235,8 +234,8 @@ describe('VideoRecordingSettingsToolbar', () => {
             widgetEditor: true,
         })
 
-        expect(lastTunnelProps.steps[3].beforeStep()).toBe(true)
-        expect(globalThis.lgs.stores.ui.video.step).toBe(3)
+        expect(lastTunnelProps.steps[2].beforeStep()).toBe(true)
+        expect(globalThis.lgs.stores.ui.video.step).toBe(2)
         expect(globalThis.lgs.stores.ui.video.cropper).toEqual(expect.objectContaining({
                                                                                            ratioEditor:  false,
                                                                                            presetEditor: false,
@@ -244,7 +243,7 @@ describe('VideoRecordingSettingsToolbar', () => {
                                                                                        }))
     })
 
-    it('opens only widget editing without crop auto-resize when returning to add widgets', () => {
+    it('keeps crop resizing and widget editing active in the unified composition step', () => {
         globalThis.__.ui.widgetManager.getWidgetConfig = vi.fn(() => ({
             cropDimensions: {
                 left:   10,
@@ -254,9 +253,7 @@ describe('VideoRecordingSettingsToolbar', () => {
             },
         }))
         globalThis.__.ui.widgetManager.windowResizing = true
-        Object.assign(globalThis.lgs.stores.ui.video, {
-            step: 2,
-        })
+        Object.assign(globalThis.lgs.stores.ui.video, {step: 1})
         Object.assign(globalThis.lgs.stores.ui.video.cropper, {
             ratioEditor:  true,
             presetEditor: true,
@@ -265,14 +262,14 @@ describe('VideoRecordingSettingsToolbar', () => {
 
         render(<VideoRecordingSettingsToolbar/>)
 
-        expect(lastTunnelProps.steps[1].beforeStep()).toBe(true)
-        expect(globalThis.lgs.stores.ui.video.step).toBe(1)
+        expect(lastTunnelProps.steps[0].beforeStep()).toBe(true)
+        expect(globalThis.lgs.stores.ui.video.step).toBe(0)
         expect(globalThis.lgs.stores.ui.video.cropper).toEqual(expect.objectContaining({
-                                                                                           ratioEditor:  false,
-                                                                                           presetEditor: false,
+                                                                                           ratioEditor:  true,
+                                                                                           presetEditor: true,
                                                                                            widgetEditor: true,
                                                                                        }))
-        expect(__.ui.widgetManager.windowResizing).toBe(false)
+        expect(__.ui.widgetManager.windowResizing).toBe(true)
     })
 
     it('persists the current crop dimensions when leaving video parameters', () => {
@@ -283,11 +280,11 @@ describe('VideoRecordingSettingsToolbar', () => {
         expect(__.ui.widgetManager.syncCropDimensionsFromElement).toHaveBeenCalledWith(
             expect.any(String),
             true,
-            'ratio-editor-exit',
+            'composition-exit',
         )
     })
 
-    it('starts the tunnel on step 0 when no video dimensions are defined', () => {
+    it('still starts on the crop zone when no dimensions are defined', () => {
         globalThis.__.ui.widgetManager.getWidgetConfig = vi.fn(() => ({
             cropDimensions: null,
         }))
@@ -296,7 +293,6 @@ describe('VideoRecordingSettingsToolbar', () => {
 
         expect(screen.getByTestId('default-step-index').textContent).toBe('0')
         expect(lastTunnelProps.steps[0].done).toBe(false)
-        expect(lastTunnelProps.steps[1].done).toBe(false)
     })
 
 })

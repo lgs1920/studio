@@ -167,58 +167,33 @@ export const VideoRecordingSettingsToolbar = memo(() => {
         _steps.current = [
             {
                 icon: 'camera-viewfinder',
-                text:       'Video parameters',
+                text:       'Compose video',
                 tooltip: {
-                    title: 'Video parameters',
-                    text:  'Choose the video format and presets before composing the capture.',
+                    title: 'Compose video',
+                    text:  'Choose the format, resize the crop, and arrange the widgets.',
                 },
                 done: hasDefinedCropDimensions,
+                // The crop zone is the initial view, but recording can be
+                // launched immediately with the current crop.
                 mandatory:  false,
                 beforeStep: () => {
                     $video.step = 0
                     Object.assign($video.cropper, {
                         ratioEditor:   true,
                         presetEditor: true,
-                        widgetEditor:  false,
+                        widgetEditor:  true,
                     })
                     __.ui.widgetManager.windowResizing = true
                     return true
                 },
                 afterStep:  () => {
-                    syncCropFrame('ratio-editor-exit')
+                    syncCropFrame('composition-exit')
                     Object.assign($video.cropper, {
                         ratioEditor:   false,
                         presetEditor: false,
+                        widgetEditor:  false,
                     })
                     _steps.current[0].done = true
-                    return true
-                },
-            },
-            {
-                icon: 'photo-film',
-                text:       'Add widgets',
-                tooltip: {
-                    title: 'Add widgets',
-                    text:  'Place, resize, and arrange the widgets that will appear in the video.',
-                },
-                done:       hasDefinedCropDimensions,
-                mandatory:  true,
-                beforeStep: () => {
-                    $video.step = 1
-                    Object.assign($video.cropper, {
-                        ratioEditor:  false,
-                        presetEditor: false,
-                        widgetEditor: true,
-                    })
-                    __.ui.widgetManager.windowResizing = false
-                    _steps.current[1].done = true
-                    _steps.current[2].done = true
-                    _steps.current[3].done = true
-                    return true
-                },
-                afterStep:  () => {
-                    $video.cropper.widgetEditor = false
-                    __.ui.drawerManager.close()
                     return true
                 },
             },
@@ -230,9 +205,11 @@ export const VideoRecordingSettingsToolbar = memo(() => {
                     text: 'Record the selected zone.',
                 },
                 done:       false,
+                // Recording can start immediately with the current crop. The
+                // composition step remains available as an optional editor.
                 mandatory:  false,
                 beforeStep: () => {
-                    $video.step = 2
+                    $video.step = 1
                     Object.assign($video.cropper, {
                         ratioEditor:  false,
                         presetEditor: false,
@@ -261,7 +238,7 @@ export const VideoRecordingSettingsToolbar = memo(() => {
                 done: false,
                 mandatory:  false,
                 beforeStep: () => {
-                    $video.step = 3
+                    $video.step = 2
                     Object.assign($video.cropper, {
                         ratioEditor:  false,
                         presetEditor: false,
@@ -277,7 +254,7 @@ export const VideoRecordingSettingsToolbar = memo(() => {
                         editing:    false,
                         finalizing: false,
                     })
-                    _steps.current[3].done = true
+                    _steps.current[2].done = true
                     await handleSnapShot()
                     return true
                 },
@@ -295,7 +272,9 @@ export const VideoRecordingSettingsToolbar = memo(() => {
             <Tunnel
                 leadingAction={leadingAction}
                 steps={steps}
-                defaultStepIndex={hasDefinedCropDimensions ? 2 : 0}
+                // Keep the crop zone visible initially; recording is available
+                // immediately because the composition step is optional.
+                defaultStepIndex={0}
                 cancelTooltip={{
                     title: 'Cancel',
                     text:  'Leave video setup.',
