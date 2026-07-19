@@ -10,6 +10,7 @@ This directory centralizes the repository technical documentation. Paths mirror 
 - [Sync guide](SYNC-GUIDE.md)
 - [Cloud sync TODO](CLOUD-SYNC-TODO.md)
 - [Journey settings memo](JOURNEY_SETTINGS_MEMO.md)
+- [Journey import formats specification](JOURNEY_IMPORT_FORMATS_SPEC.md)
 - [Journey replay video issues](PROBLEMES_JOURNEY_REPLAY_VIDEO.md)
 - [Translation notes](Translate.md)
 
