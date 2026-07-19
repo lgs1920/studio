@@ -137,4 +137,17 @@ describe('WidgetsPanelContent', () => {
             )
         })
     })
+
+    it('updates the grid controls when grid visibility is toggled', async () => {
+        render(<WidgetsPanelContent groups={[]}/>)
+
+        await waitFor(() => expect(screen.getByText('Widgets')).not.toBeNull())
+        expect(document.querySelector('wa-number-input.widget-grid-size-input')).not.toBeNull()
+
+        fireEvent.click(screen.getByText('Grid').closest('button'))
+
+        await waitFor(() => {
+            expect(document.querySelector('wa-number-input.widget-grid-size-input')).toBeNull()
+        })
+    })
 })

@@ -186,13 +186,7 @@ export const WidgetsPanelContent = ({groups}) => {
     }
 
     const updateGridSettings = (updates) => {
-        lgs.settings.ui.widgets = {
-            ...(lgs.settings.ui.widgets ?? {}),
-            grid: {
-                ...getWidgetGridSettings(ensureGridSettings()),
-                ...updates,
-            },
-        }
+        Object.assign(ensureGridSettings(), updates)
     }
 
     const updateGridEnabled = (event) => {
