@@ -110,4 +110,35 @@ describe('WidgetCropper syncCropDimensionsFromElement', () => {
         })
         expect(widgetManager.setConfig).toHaveBeenCalledWith('video-crop-zone', config)
     })
+
+    it('does not apply the previous crop twice during deferred layout', () => {
+        const cropper = new WidgetCropper(widgetManager)
+        widgetManager.repositionWidgetsForBoard = vi.fn()
+        const previousCrop = {left: 0, top: 0, width: 800, height: 450}
+        config.cropDimensions = {left: 100, top: 50, width: 600, height: 338}
+        const originalRequestAnimationFrame = globalThis.requestAnimationFrame
+        globalThis.requestAnimationFrame = callback => {
+            callback()
+            return 1
+        }
+
+        try {
+            cropper.dispatchCropUpdate(config, 'resize', previousCrop)
+        }
+        finally {
+            globalThis.requestAnimationFrame = originalRequestAnimationFrame
+        }
+
+        expect(widgetManager.repositionWidgetsForBoard).toHaveBeenNthCalledWith(
+            1,
+            'video-crop-zone',
+            config.cropDimensions,
+            previousCrop,
+        )
+        expect(widgetManager.repositionWidgetsForBoard).toHaveBeenNthCalledWith(
+            2,
+            'video-crop-zone',
+            config.cropDimensions,
+        )
+    })
 })

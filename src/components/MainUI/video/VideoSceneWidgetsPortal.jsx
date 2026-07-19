@@ -15,6 +15,7 @@
  ******************************************************************************/
 
 import { DynamicWidget } from '@Components/MainUI/widgets/DynamicWidget'
+import { WidgetPreviewContext } from '@Components/MainUI/widgets/Widget'
 import { VIDEO_WIDGETS_BOARD } from '@Core/constants'
 import { memo, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
@@ -23,6 +24,7 @@ import { useSnapshot } from 'valtio'
 export const VideoSceneWidgetsPortal = memo(({context, hidden = false}) => {
     const list = useSnapshot(lgs.stores.ui.widget.list)
     const video = useSnapshot(lgs.stores.ui.video)
+    const previewOnly = video.editing === true && video.cropper?.widgetEditor === false
     const _rehydrateKey = useRef('')
     const _rehydrateFrame = useRef(null)
     const widgets = Array.from(list.entries())
@@ -31,7 +33,8 @@ export const VideoSceneWidgetsPortal = memo(({context, hidden = false}) => {
     const widgetIds = widgets.map(([key]) => key).join('|')
 
     const boardElement = typeof document !== 'undefined'
-                         ? document.querySelector(`#${VIDEO_WIDGETS_BOARD}.defined`)
+                         ? (globalThis.__?.ui?.widgetManager?.resolveWidgetsBoardBoundsContainer?.(VIDEO_WIDGETS_BOARD) ??
+                            document.querySelector(`#${VIDEO_WIDGETS_BOARD}.defined`))
                          : null
     const [boardReady, setBoardReady] = useState(false)
 
@@ -116,8 +119,9 @@ export const VideoSceneWidgetsPortal = memo(({context, hidden = false}) => {
     }
 
     return createPortal(
-        <div
-            className="video-scene-widgets-portal"
+        <WidgetPreviewContext.Provider value={previewOnly}>
+            <div
+            className={`video-scene-widgets-portal${previewOnly ? ' video-scene-widgets-portal-preview' : ''}`}
             data-widgets-board={VIDEO_WIDGETS_BOARD}
             style={{
                 position: 'fixed',
@@ -135,7 +139,8 @@ export const VideoSceneWidgetsPortal = memo(({context, hidden = false}) => {
                     />
                 </div>
             ))}
-        </div>,
+            </div>
+        </WidgetPreviewContext.Provider>,
         document.body,
     )
 })

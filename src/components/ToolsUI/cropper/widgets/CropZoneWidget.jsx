@@ -105,6 +105,13 @@ export const CropZoneWidget = memo(({
         return () => cancelAnimationFrame(raf)
     }, [$context.id, lockToCenter])
 
+    useEffect(() => {
+        // In composition mode this is the only crop representation mounted.
+        // Keep the shared context anchored to the interactive crop board so
+        // widgets and board-specific controls use the same reference.
+        context.widgetsBoard = $context.id
+    }, [context, $context.id])
+
     // Render the widget with the CropZone component
     return (
         <Widget

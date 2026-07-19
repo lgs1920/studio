@@ -43,6 +43,8 @@
 }
 
 .credits-bar.credits-bar-widget-mode {
+    align-items: center;
+    justify-content: center;
     --lgs-credits-item-gap: var(--lgs-gutter-xs);
     --lgs-credits-item-padding: 0;
 }
@@ -66,6 +68,7 @@
 .credits-bar a {
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     box-sizing: border-box;
     transition: background-color 140ms ease, backdrop-filter 140ms ease;
     border-radius: var(--lgs-credits-hover-radius);
@@ -104,6 +107,10 @@
     background: transparent;
     box-shadow: none;
     --padding: 0;
+}
+
+.credits-bar.credits-bar-widget-mode .main-logo {
+    align-self: center;
 }
 
 .credits-bar .main-logo .main-logo-link {
@@ -153,6 +160,7 @@
 .provider-credits .credits {
     display: flex;
     align-items: center;
+    justify-content: center;
     height: var(--lgs-credits-bar-height);
 }
 

@@ -308,7 +308,7 @@ export class WidgetManager {
         }
 
         if (widgetsBoard === VIDEO_WIDGETS_BOARD) {
-            return null
+            return document.querySelector(`[data-widget="${widgetsBoard}"] .lgs-widget`) ?? null
         }
 
         return document.querySelector(`[data-widget-id="${widgetsBoard}"] .crop-zone`)
@@ -380,6 +380,16 @@ export class WidgetManager {
      */
     monitorContainerResize = (config, setBounds, moveable, element, setPosition) =>
         this.#controls.monitorContainerResize(config, setBounds, moveable, element, setPosition)
+
+    /**
+     * Repositions widgets attached to a board after that board changes size.
+     * @param {string} widgetsBoard
+     * @param {DOMRect|Object} nextBoardRect
+     * @param {DOMRect|Object} previousBoardRect
+     * @returns {number}
+     */
+    repositionWidgetsForBoard = (widgetsBoard, nextBoardRect = null, previousBoardRect = null) =>
+        this.#controls.repositionWidgetsForBoard(widgetsBoard, nextBoardRect, previousBoardRect)
 
     /**
      * Handles the start of a scale event.
@@ -986,6 +996,14 @@ export class WidgetManager {
 
             refreshed += 1
         }
+
+        // Widgets may be mounted after the crop update event. Re-run the board
+        // layout after the complete video board has been rehydrated. The
+        // repositioner accepts cropDimensions in the crop container's local
+        // coordinate system; referenceRect is an on-screen rectangle and must
+        // not be passed as if it were cropDimensions (that double-counts the
+        // crop offset and clamps widgets into corners).
+        this.repositionWidgetsForBoard(widgetsBoard)
 
         return refreshed
     }

@@ -337,6 +337,36 @@ body.lgs-app-booting #cesium-viewer {
     z-index: var(--lgs-above-widgets) !important;
 }
 
+/* Video widget preview: visible at its persisted position, never interactive. */
+.video-scene-widgets-portal-preview .lgs-widget-preview-only {
+    cursor: not-allowed !important;
+    opacity: 0.5 !important;
+}
+
+.video-scene-widgets-portal-preview .lgs-widget-preview-only ~ .lgs-widget-control-box {
+    display: none !important;
+}
+
+.video-scene-widgets-portal-preview .lgs-widget-preview-forbidden {
+    position: absolute;
+    z-index: 10000;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: not-allowed;
+    opacity: 0;
+    pointer-events: auto;
+    color: var(--lgs-text-on-color, currentColor);
+    background: color-mix(in srgb, var(--lgs-dark-color, #000) 12%, transparent);
+    transition: opacity 0.15s ease-in-out;
+}
+
+.video-scene-widgets-portal-preview .lgs-widget-preview-forbidden:hover,
+.video-scene-widgets-portal-preview .lgs-widget-preview-only:hover .lgs-widget-preview-forbidden {
+    opacity: 1;
+}
+
 .lgs-widget-control-box * {
     transition: opacity 0.2s ease-in-out;
 }

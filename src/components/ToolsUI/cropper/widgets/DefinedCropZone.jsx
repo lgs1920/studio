@@ -24,7 +24,7 @@
 import classNames                            from 'classnames'
 import { memo, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useSnapshot }                              from 'valtio'
-import { CropZoneInfo }                             from './CropZoneInfo'
+import { CropZoneInfoPopup }                        from './CropZoneInfoPopup'
 
 export const DefinedCropZone = memo(function DefinedCropZone({
                                                                  className = '',
@@ -75,9 +75,12 @@ export const DefinedCropZone = memo(function DefinedCropZone({
         if (_definedCropZone.current) {
             context.widgetsBoard = _definedCropZone.current.id
             context.resizable = video.cropper?.resizable ?? context.resizable
-            context.widgetEditor = !video.cropper?.ratioEditor
+            // The composition flow can keep the crop interactive and widgets
+            // interactive at the same time. Do not derive widget editing only
+            // from the ratio panel state in that case.
+            context.widgetEditor = video.cropper?.widgetEditor ?? !video.cropper?.ratioEditor
         }
-    }, [context, video.cropper?.ratioEditor, video.cropper?.resizable])
+    }, [context, video.cropper?.ratioEditor, video.cropper?.resizable, video.cropper?.widgetEditor])
 
     // Apply DOM styles for the static crop box
     useLayoutEffect(() => {
@@ -134,16 +137,8 @@ export const DefinedCropZone = memo(function DefinedCropZone({
                 aria-label="defined-crop-zone"
                 id={context.id}
             >
-                {infoPosition && (
-                    <div className="crop-info lgs-one-line-card wa-theme-lgs1920-on-map small">
-                        <CropZoneInfo id={context.id}/>
-                    </div>
-                )}
-
-                {infoComponent && (
-                    <div className="crop-info-custom lgs-one-line-card wa-theme-lgs1920-on-map small">
-                        {infoComponent}
-                    </div>
+                {(infoPosition || infoComponent) && (
+                    <CropZoneInfoPopup id={context.id} infoComponent={infoComponent} showDimensions={infoPosition}/>
                 )}
 
                 {children}

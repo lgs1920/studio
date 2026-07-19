@@ -78,40 +78,62 @@
 /***************************************
  *  On map crop info
  **************************************/
-.crop-info, .crop-info-custom {
-    font-size: var(--lgs-font-size-s);
+.crop-info-popup-control {
     position: absolute;
     z-index: calc(var(--crop-zindex) + 1);
-    display: flex;
-
-    align-items: center;
+    right: var(--lgs-gutter-xs);
+    bottom: var(--lgs-gutter-xs);
     width: max-content;
-    pointer-events: none;
+    pointer-events: auto;
     opacity: 0.92;
-    gap: var(--lgs-gutter-xs);
 }
 
-.crop-ratio-widget.lgs-card.wa-theme-lgs1920-on-map,
-.crop-ratio-popup-menu.lgs-card.wa-theme-lgs1920-on-map {
+.crop-info-popup-control > :is(wa-button, .wa-button) {
+    font-size: var(--lgs-font-size-s);
+    display: inline-flex;
+    align-items: center;
+    box-sizing: border-box;
+    min-height: 2rem;
+    padding: var(--lgs-gutter-xxs) var(--lgs-gutter-xs);
+    cursor: pointer;
+    gap: var(--lgs-gutter-xxs);
+}
+
+.crop-info-popup-control > :is(wa-button, .wa-button) wa-icon,
+.crop-info-popup-control > :is(wa-button, .wa-button) > span {
+    font-size: 1.1em;
+    line-height: 1;
+}
+
+.crop-info-popup-card {
+    position: absolute;
+    right: 0;
+    bottom: calc(100% + var(--lgs-gutter-xs));
+    display: flex;
+    align-items: center;
+    width: max-content;
+    max-width: min(22rem, calc(100vw - 2 * var(--lgs-gutter)));
+    padding: var(--lgs-gutter-xs) var(--lgs-gutter-s);
+    gap: var(--lgs-gutter-xs);
     box-shadow: var(--lgs-on-map-floating-shadow, var(--sl-shadow-large)) !important;
     filter: drop-shadow(var(--lgs-on-map-floating-drop-shadow, 0 0.45rem 1rem rgb(0 0 0 / 0.22)));
 }
 
-.crop-info {
-    top: var(--lgs-gutter-xs);
-    left: var(--lgs-gutter-xs);
+.crop-info-popup-dimensions,
+.crop-info-popup-custom {
+    display: flex;
+    align-items: center;
+    width: max-content;
+    gap: var(--lgs-gutter-xs);
 }
 
-.crop-info-custom {
-    right: var(--lgs-gutter-xs);
-    bottom: var(--lgs-gutter-xs);
-}
-
-[class^="crop-info"] span {
+.crop-info-popup-dimensions span,
+.crop-info-popup-custom span {
     padding-inline: var(--lgs-gutter-s);
 }
 
-[class^="crop-info"] :not(:last-child) {
+.crop-info-popup-dimensions span:not(:last-child),
+.crop-info-popup-custom span:not(:last-child) {
     border-right: 1px solid var(--lgs-card-on-map-border-color);
 }
 

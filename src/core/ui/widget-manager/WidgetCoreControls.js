@@ -14,7 +14,7 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { LGS_VISUAL_WIDGET } from '@Core/constants'
+import { LGS_VISUAL_WIDGET, VIDEO_CROP_ZONE, VIDEO_WIDGETS_BOARD } from '@Core/constants'
 import { v4 as uuid }        from 'uuid'
 
 /**
@@ -31,6 +31,138 @@ export class WidgetCoreControls {
     }
 
     #getBoundsTarget = (config) => config.boundsContainer ?? config.container
+
+    /**
+     * Keeps widgets attached to the video crop board inside the new crop rect.
+     * The widget center and size are normalized against the previous crop and
+     * then projected into the new crop. This deliberately ignores initial or
+     * persisted anchors while resizing.
+     *
+     * @param {string} widgetsBoard - Board identifier
+     * @param {DOMRect|Object} [nextBoardRect] - New board rectangle
+     * @returns {number} Number of adapted widgets
+     */
+    repositionWidgetsForBoard = (widgetsBoard, nextBoardRect = null, previousBoardRect = null) => {
+        if (widgetsBoard !== VIDEO_WIDGETS_BOARD || typeof document === 'undefined') {
+            return 0
+        }
+
+        const board = __.ui.widgetManager.resolveWidgetsBoardBoundsContainer(widgetsBoard)
+        const measuredBoardRect = board?.getBoundingClientRect?.()
+        const cropConfig = this.#registry.getWidgetConfig(VIDEO_CROP_ZONE)
+        const referenceRect = cropConfig?.container?.getBoundingClientRect?.() ??
+            board?.parentElement?.getBoundingClientRect?.() ?? measuredBoardRect
+        const resolveScreenBoardRect = cropRect => {
+            if (!cropRect || !referenceRect || !Number.isFinite(cropRect.left) || !Number.isFinite(cropRect.top)) {
+                return null
+            }
+            return {
+                ...(measuredBoardRect ?? {}),
+                left: referenceRect.left + cropRect.left,
+                top: referenceRect.top + cropRect.top,
+                width: cropRect.width,
+                height: cropRect.height,
+                right: referenceRect.left + cropRect.left + cropRect.width,
+                bottom: referenceRect.top + cropRect.top + cropRect.height,
+            }
+        }
+        // cropDimensions.left/top are local to the crop container, while the
+        // video portal uses fixed screen coordinates. Rebuild the screen rect
+        // from the crop reference and the local crop coordinates.
+        const rawBoardRect = resolveScreenBoardRect(nextBoardRect) ?? measuredBoardRect ?? nextBoardRect
+        if (!rawBoardRect || rawBoardRect.width <= 0 || rawBoardRect.height <= 0) {
+            return 0
+        }
+        const boardRect = {
+            ...rawBoardRect,
+            left: rawBoardRect.left ?? 0,
+            top: rawBoardRect.top ?? 0,
+            right: rawBoardRect.right ?? ((rawBoardRect.left ?? 0) + rawBoardRect.width),
+            bottom: rawBoardRect.bottom ?? ((rawBoardRect.top ?? 0) + rawBoardRect.height),
+        }
+
+        let adapted = 0
+        for (const config of this.#registry.widgets.values()) {
+            if (config.widgetsBoard !== widgetsBoard || config.isCropper || !config.element?.isConnected) {
+                continue
+            }
+
+            const element = config.element
+            const previousRect = element.getBoundingClientRect?.()
+            if (!previousRect || previousRect.width <= 0 || previousRect.height <= 0) {
+                continue
+            }
+
+            const oldBoardWidth = previousBoardRect?.width > 0 ? previousBoardRect.width : boardRect.width
+            const oldBoardHeight = previousBoardRect?.height > 0 ? previousBoardRect.height : boardRect.height
+            const previousScreenBoardRect = resolveScreenBoardRect(previousBoardRect) ?? boardRect
+            const previousLeft = previousRect.left - previousScreenBoardRect.left
+            const previousTop = previousRect.top - previousScreenBoardRect.top
+            // The live DOM rectangle is authoritative during a crop resize.
+            // savedRatios and attachTo describe initial/persisted placement;
+            // using either here can send a widget to top-left/bottom-right
+            // when that data belongs to another crop.
+            const centerRatioX = oldBoardWidth > 0
+                ? (previousLeft + previousRect.width / 2) / oldBoardWidth
+                : 0.5
+            const centerRatioY = oldBoardHeight > 0
+                ? (previousTop + previousRect.height / 2) / oldBoardHeight
+                : 0.5
+
+            // Resize widgets by the same relative factor as the crop. Use one
+            // factor for both axes so visual widgets are never distorted when
+            // the crop aspect ratio changes.
+            const fitScale = Math.min(
+                oldBoardWidth > 0 ? boardRect.width / oldBoardWidth : 1,
+                oldBoardHeight > 0 ? boardRect.height / oldBoardHeight : 1,
+            )
+            const width = previousRect.width * fitScale
+            const height = previousRect.height * fitScale
+            const currentScaleX = Number(config.scale?.x ?? 1)
+            const currentScaleY = Number(config.scale?.y ?? 1)
+            const nextScale = {
+                x: currentScaleX * fitScale,
+                y: currentScaleY * fitScale,
+            }
+            const scaleChanged = nextScale.x !== currentScaleX || nextScale.y !== currentScaleY
+            if (scaleChanged) {
+                config.scale = nextScale
+                __.ui.widgetManager.transform.setScale(element, nextScale.x, nextScale.y)
+            }
+            let left = boardRect.left + (centerRatioX * boardRect.width) - (width / 2)
+            let top = boardRect.top + (centerRatioY * boardRect.height) - (height / 2)
+
+            left = Math.max(boardRect.left, Math.min(left, Math.max(boardRect.left, boardRect.right - width)))
+            top = Math.max(boardRect.top, Math.min(top, Math.max(boardRect.top, boardRect.bottom - height)))
+
+            const currentLeft = Number.parseFloat(element.style.left || '')
+            const currentTop = Number.parseFloat(element.style.top || '')
+            const changed = scaleChanged ||
+                !Number.isFinite(currentLeft) || Math.abs(currentLeft - left) > 0.5 ||
+                !Number.isFinite(currentTop) || Math.abs(currentTop - top) > 0.5
+            if (!changed) {
+                continue
+            }
+
+            element.style.left = `${left}px`
+            element.style.top = `${top}px`
+            config.position = {left, top}
+            config.savedRatios = {
+                leftRatio: boardRect.width > 0 ? ((left + width / 2 - boardRect.left) / boardRect.width) * 100 : 0,
+                topRatio: boardRect.height > 0 ? ((top + height / 2 - boardRect.top) / boardRect.height) * 100 : 0,
+            }
+            this.#registry.setConfig(config.id, config)
+            this.#registry.getMoveable(config.id)?.current?.updateRect?.()
+            // TODO(delete later): Logo is transient by design, but must temporarily
+            // persist its corrected position together with Credits.
+            if (config.persist || scaleChanged) {
+                void __.ui.widgetManager.saveWidgetPosition(config.id, config)
+            }
+            __.ui.widgetManager.refreshEditorPreviewSnapshot(config.id)
+            adapted += 1
+        }
+        return adapted
+    }
 
     #throttle = (func, limit) => {
         let lastCall = 0
@@ -386,6 +518,10 @@ export class WidgetCoreControls {
             const oldBounds = {...config.bounds}
             const mv = this.#registry.getMoveable(elementId)
             const newBounds = this.refreshBounds(config, mv?.current)
+            if (!first && config.isCropper && config.id === VIDEO_CROP_ZONE) {
+                __.ui.widgetManager.applyCropToOverlay(config)
+                this.repositionWidgetsForBoard(VIDEO_WIDGETS_BOARD)
+            }
             if (!first && newBounds.left === oldBounds.left && newBounds.top === oldBounds.top &&
                 newBounds.right === oldBounds.right && newBounds.bottom === oldBounds.bottom) {
                 return
@@ -404,13 +540,24 @@ export class WidgetCoreControls {
             const isContainerShrinking = newContainerWidth < oldContainerWidth ||
                 newContainerHeight < oldContainerHeight
             if (config.isCropper && allowAutoAdapt && !isContainerShrinking) {
+                // A window resize can move the crop board without changing its
+                // crop dimensions. Video widgets live in a fixed portal and
+                // must follow the board's new screen rectangle in that case.
+                if (!first && config.id === VIDEO_CROP_ZONE) {
+                    this.repositionWidgetsForBoard(VIDEO_WIDGETS_BOARD)
+                }
                 return
             }
             const margin = Number.isFinite(config.margin) ? config.margin : 0
             let isOutOfBounds = false
             const outOfBoundsDetails = {top: false, bottom: false, left: false, right: false}
 
-            if (allowAutoAdapt && !first && config.savedRatios && !config.isCropper) {
+            // Video-board widgets are repositioned from the crop board's
+            // coordinate system by repositionWidgetsForBoard. Applying the
+            // generic container ratios here afterwards reintroduces the old
+            // 0%/100% jumps, especially for centered widgets.
+            const isVideoBoardWidget = config.widgetsBoard === VIDEO_WIDGETS_BOARD
+            if (allowAutoAdapt && !first && config.savedRatios && !config.isCropper && !isVideoBoardWidget) {
                 const leftRatio = config.savedRatios.leftRatio
                 const topRatio = config.savedRatios.topRatio
                 const relativeCenterX = (leftRatio / 100) * referenceRect.width
@@ -425,7 +572,8 @@ export class WidgetCoreControls {
             }
 
             let scaleWasAdapted = false
-            if (allowAutoAdapt && !skipInitialAutoAdapt && config.type === LGS_VISUAL_WIDGET) {
+            if (allowAutoAdapt && !skipInitialAutoAdapt && config.type === LGS_VISUAL_WIDGET &&
+                config.widgetsBoard !== VIDEO_WIDGETS_BOARD) {
                 const oldScale = {...config.scale}
                 config.scale = this.adaptScaleToContainer(config, boundsRect)
 
@@ -436,7 +584,7 @@ export class WidgetCoreControls {
             }
 
             let positionWasAdapted = false
-            if (allowAutoAdapt && !skipInitialAutoAdapt && !config.isCropper) {
+            if (allowAutoAdapt && !skipInitialAutoAdapt && !config.isCropper && !isVideoBoardWidget) {
                 const adaptedPosition = this.adaptPositionToContainer(config, boundsRect)
                 if (adaptedPosition.left !== config.position.left || adaptedPosition.top !== config.position.top) {
                     config.position = adaptedPosition
@@ -444,13 +592,14 @@ export class WidgetCoreControls {
                 }
             }
 
-            if ((!first && config.savedRatios) || scaleWasAdapted || positionWasAdapted) {
+            if ((!first && config.savedRatios && !isVideoBoardWidget) || scaleWasAdapted || positionWasAdapted) {
                 element.style.left = `${config.position.left}px`
                 element.style.top = `${config.position.top}px`
                 setPosition(config.position)
             }
 
-            if (!first && allowAutoAdapt && !config.isCropper && (scaleWasAdapted || positionWasAdapted) && config.persist) {
+            if (!first && allowAutoAdapt && !config.isCropper && !isVideoBoardWidget &&
+                (scaleWasAdapted || positionWasAdapted) && config.persist) {
                 __.ui.widgetManager.saveWidgetPosition(config.id, config)
             }
 
@@ -802,6 +951,12 @@ export class WidgetCoreControls {
 
         this.#registry.setConfig(elementId, config)
         this.#registry.setMoveable(elementId, moveable)
+
+        // The video portal can mount widgets after the crop update event.
+        // Reposition once more after registration so late-mounted widgets are included.
+        if (config.widgetsBoard === VIDEO_WIDGETS_BOARD) {
+            this.repositionWidgetsForBoard(VIDEO_WIDGETS_BOARD)
+        }
 
         if (config.persist && !config.fromDB && !config.fromRuntime) {
             await __.ui.widgetManager.saveWidgetPosition(elementId, config)

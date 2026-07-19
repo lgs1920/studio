@@ -59,7 +59,7 @@ export const Cropper = memo(({overlay = false, className = '', context, options 
             }
 
             <div ref={_cropperContainer} className="crop-container lgs-on-map-theme-vars">
-                {overlayElement && (
+                {overlayElement && !cropper.ratioEditor && (
                     <DefinedCropZone
                         className={[className, cropper.ratioEditor ? 'defined-crop-zone-hidden' : ''].filter(Boolean).join(' ')}
                         infoPosition={options.infoPosition}
@@ -85,7 +85,8 @@ export const Cropper = memo(({overlay = false, className = '', context, options 
                     <WidgetsPanel id="widget-deck" context={context} groups={[MULTI_PURPOSE_WIDGETS, JOURNEY_WIDGETS]}/>
                 )}
             </div>
-            <VideoSceneWidgetsPortal context={context} hidden={cropper.ratioEditor}/>
+            {/* Crop and video widgets remain mounted together during composition. */}
+            <VideoSceneWidgetsPortal context={context}/>
         </>
     )
 })

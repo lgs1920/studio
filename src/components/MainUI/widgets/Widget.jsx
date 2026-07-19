@@ -36,7 +36,7 @@ import {
 import { useOptionalSnapshot }     from '@Utils/ValtioUtils'
 import { WaIcon }                 from '@web.awesome.me/webawesome-pro/dist/react'
 import classNames                 from 'classnames'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import Moveable                   from 'react-moveable'
 import { useSnapshot }            from 'valtio'
 
@@ -52,6 +52,8 @@ const SNAPSHOT_MAX_SIZE = 1024
 const SNAPSHOT_MIN_SIZE = 240
 const SNAPSHOT_MIN_PADDING = 80
 const SNAPSHOT_MAX_PADDING = 220
+
+export const WidgetPreviewContext = createContext(false)
 
 const clamp = (value, min, max) => Math.min(Math.max(value, min), max)
 
@@ -289,6 +291,7 @@ export const Widget = ({isVisible, className = '', moveableClassName = '', conta
     const _prevRotate = useRef(0)
     const _suppressClickUntil = useRef(0)
     const _w2c = useRef(null)
+    const previewOnly = useContext(WidgetPreviewContext)
 
     // UI state
     const [bounds, setBounds] = useState({left: 0, top: 0, right: 0, bottom: 0})
@@ -354,6 +357,7 @@ export const Widget = ({isVisible, className = '', moveableClassName = '', conta
     const liveOpacity = config.type === LGS_TOOLBAR
                         ? (effectiveCollapsed ? 1 : (toolbars.opacity ?? config.opacity ?? 1))
                         : (config.opacity ?? 1)
+    const displayOpacity = previewOnly ? 0.5 : liveOpacity
 
     // Reactive depth resolution: priority to Store, fallback to initial Config
     const activeZIndex = widgetListSnapshot.get(widgetId)?.zIndex ?? config.zIndex
@@ -447,7 +451,7 @@ export const Widget = ({isVisible, className = '', moveableClassName = '', conta
         }
     }, [config.widgetsBoard, isTargetingBoard])
 
-    const interactionLocked = (video.preRecording || video.recording || video.snapshot || video.finalizing) && config.type === LGS_VISUAL_WIDGET
+    const interactionLocked = previewOnly || ((video.preRecording || video.recording || video.snapshot || video.finalizing) && config.type === LGS_VISUAL_WIDGET)
     const showGhostOnly = Boolean(config?.showGhostDuringRecording) && video.recording && config.type === LGS_VISUAL_WIDGET
     const canInteract = !interactionLocked && !effectiveLocked
     const canDrag = canInteract && (config?.draggable ?? true)
@@ -962,8 +966,6 @@ export const Widget = ({isVisible, className = '', moveableClassName = '', conta
         if (!canResize) {
             return
         }
-        event.target.style.width = `${event.width}px`
-        event.target.style.height = `${event.height}px`
         __.ui.widgetManager.onResize(event, {widget: _widget, child: _children}, setPosition)
     }, [canResize])
 
@@ -1183,6 +1185,7 @@ export const Widget = ({isVisible, className = '', moveableClassName = '', conta
                 contextMenu:    __.ui.widgetManager.cloneContext(config?.contextMenu ?? {}, WIDGETS_CAPABILITIES),
                 cropDimensions: config.cropDimensions ?? {left: 0, top: 0, width: 0, height: 0},
                 dynamic:        config.dynamic ?? false,
+                draggable:      config.draggable ?? true,
                 expandedDimensions: config.expandedDimensions ?? null,
                 expandedInlineDimensions: config.expandedInlineDimensions ?? null,
                 forceEven:      config.forceEven ?? false,
@@ -1199,7 +1202,7 @@ export const Widget = ({isVisible, className = '', moveableClassName = '', conta
                 mandatory:      config.mandatory ?? false,
                 maxScale:       config.maxScale ?? null,
                 minScale:       config.minScale ?? null,
-                opacity: liveOpacity,
+                opacity: displayOpacity,
                 outsideOverlay: config.outsideOverlay ?? false,
                 persist:        config.persist ?? false,
                 ratio:          config.ratio ?? null,
@@ -1328,15 +1331,15 @@ export const Widget = ({isVisible, className = '', moveableClassName = '', conta
             return
         }
 
-        _widget.current.style.opacity = liveOpacity
+        _widget.current.style.opacity = displayOpacity
 
         const elementId = __.ui.widgetManager.retrieveElementId(_widget.current) ?? widgetId
         const storedConfig = __.ui.widgetManager.getWidgetConfig(elementId)
 
-        if (storedConfig && storedConfig.opacity !== liveOpacity) {
+        if (!previewOnly && storedConfig && storedConfig.opacity !== liveOpacity) {
             __.ui.widgetManager.setConfig(elementId, {...storedConfig, opacity: liveOpacity})
         }
-    }, [widgetId, liveOpacity])
+    }, [widgetId, displayOpacity, liveOpacity, previewOnly])
 
     useEffect(() => {
         const canvas = _w2c.current?.getCanvas?.()
@@ -1368,6 +1371,7 @@ export const Widget = ({isVisible, className = '', moveableClassName = '', conta
                     'lgs-one-line-card': effectiveCollapsed,
                     'wa-theme-lgs1920-on-map': effectiveCollapsed,
                     'recording-locked': interactionLocked,
+                    'lgs-widget-preview-only': previewOnly,
                 })}
                 ref={(el) => {
                     _widget.current = el
@@ -1408,6 +1412,11 @@ export const Widget = ({isVisible, className = '', moveableClassName = '', conta
                         <div className={classNames('lgs-widget-lock-badge', {'lgs-widget-lock-badge-on-map': isOnMapWidget})}>
                             <WaIcon name={LOCKED_HINT_ICON} variant="regular"/>
                         </div>
+                    </div>
+                )}
+                {previewOnly && (
+                    <div className="lgs-widget-preview-forbidden" aria-hidden="true">
+                        <WaIcon name="ban" variant="regular"/>
                     </div>
                 )}
             </div>

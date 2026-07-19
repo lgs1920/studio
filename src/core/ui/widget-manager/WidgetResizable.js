@@ -44,6 +44,7 @@ export class WidgetResizable {
     #resizeStartPosition = {left: 0, top: 0}
     #pendingCropUpdateFrame = null
     #pendingCropUpdateConfig = null
+    #pendingCropUpdatePrevious = null
     /**
      * Creates or returns the singleton instance of WidgetResizable.
      * @param {WidgetManager} widgetManager - The WidgetManager instance
@@ -61,18 +62,21 @@ export class WidgetResizable {
     #runPendingCropUpdate = () => {
         this.#pendingCropUpdateFrame = null
         const config = this.#pendingCropUpdateConfig
+        const previousCrop = this.#pendingCropUpdatePrevious
         this.#pendingCropUpdateConfig = null
+        this.#pendingCropUpdatePrevious = null
 
         if (!config?.isCropper || !config.cropDimensions) {
             return
         }
 
         this.#widgetCropper.applyCropToOverlay(config)
-        this.#widgetCropper.dispatchCropUpdate(config, 'resize')
+        this.#widgetCropper.dispatchCropUpdate(config, 'resize', previousCrop)
     }
 
-    #schedulePendingCropUpdate = (config) => {
+    #schedulePendingCropUpdate = (config, previousCrop = null) => {
         this.#pendingCropUpdateConfig = config
+        this.#pendingCropUpdatePrevious = previousCrop
         if (this.#pendingCropUpdateFrame !== null) {
             return
         }
@@ -95,6 +99,7 @@ export class WidgetResizable {
         }
         this.#pendingCropUpdateFrame = null
         this.#pendingCropUpdateConfig = null
+        this.#pendingCropUpdatePrevious = null
     }
 
     /**
@@ -184,7 +189,7 @@ export class WidgetResizable {
                 prevCropDimensions.top !== after.top ||
                 prevCropDimensions.width !== after.width ||
                 prevCropDimensions.height !== after.height) {
-                this.#schedulePendingCropUpdate(config)
+                this.#schedulePendingCropUpdate(config, prevCropDimensions)
             }
         }
         else {

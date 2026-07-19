@@ -14,6 +14,8 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
+import { VIDEO_CROP_ZONE, VIDEO_WIDGETS_BOARD } from '@Core/constants'
+
 /**
  * Singleton class that manages cropping functionality for widgets.
  */
@@ -121,6 +123,8 @@ export class WidgetCropper {
             return null
         }
 
+        const previousCrop = config.cropDimensions ? {...config.cropDimensions} : null
+
         const element = config.element?.isConnected
                         ? config.element
                         : this.#widgetManager.getElementById(cropzoneId)
@@ -169,7 +173,7 @@ export class WidgetCropper {
         }
 
         this.applyCropToOverlay(config)
-        this.dispatchCropUpdate(config, phase)
+        this.dispatchCropUpdate(config, phase, previousCrop)
         this.#widgetManager.setConfig(cropzoneId, config)
 
         if (persist && config.persist) {
@@ -293,6 +297,8 @@ export class WidgetCropper {
         config.previousCropDimensions = null
         this.#widgetManager._current = cropzoneId
 
+        const previousCrop = config.cropDimensions ? {...config.cropDimensions} : null
+
         // Calculate new dimensions based on aspect ratio
         const container = config.container.getBoundingClientRect()
         const padding = config.margin || 0
@@ -355,16 +361,40 @@ export class WidgetCropper {
         }
 
         // Dispatch crop update event
-        this.dispatchCropUpdate(config, 'ratio')
+        this.dispatchCropUpdate(config, 'ratio', previousCrop)
     }
 
     /**
      * Dispatches a crop update event.
      * @param {Object} config - Widget configuration
      * @param {string} phase - The phase of the crop update
+     * @param {Object|null} previousCrop - Previous crop dimensions
      */
-    dispatchCropUpdate = (config, phase) => {
+    dispatchCropUpdate = (config, phase, previousCrop = null) => {
         try {
+            if (config.id === VIDEO_CROP_ZONE) {
+                this.#widgetManager.repositionWidgetsForBoard?.(
+                    VIDEO_WIDGETS_BOARD,
+                    config.cropDimensions,
+                    previousCrop,
+                )
+                const refreshAfterLayout = () => {
+                    const currentConfig = this.#widgetManager.getWidgetConfig(VIDEO_CROP_ZONE) ?? config
+                    this.applyCropToOverlay(currentConfig)
+                    // The first pass already projected mounted widgets from
+                    // previousCrop to the new crop. The deferred pass is only
+                    // for late-mounted widgets and must use the current crop
+                    // as its reference; reusing previousCrop here applies the
+                    // resize twice and sends widgets toward the corners.
+                    this.#widgetManager.repositionWidgetsForBoard?.(
+                        VIDEO_WIDGETS_BOARD,
+                        currentConfig.cropDimensions,
+                    )
+                }
+                if (typeof requestAnimationFrame === 'function') {
+                    requestAnimationFrame(refreshAfterLayout)
+                }
+            }
             document.dispatchEvent(new CustomEvent('onCropUpdate', {
 
                 detail: {

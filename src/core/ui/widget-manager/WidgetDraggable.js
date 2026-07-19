@@ -34,6 +34,7 @@ export class WidgetDraggable {
 
     #pendingCropUpdateFrame = null
     #pendingCropUpdateConfig = null
+    #pendingCropUpdatePrevious = null
 
     /**
      * Creates or returns the singleton instance of WidgetDraggable.
@@ -54,18 +55,23 @@ export class WidgetDraggable {
     #runPendingCropUpdate = () => {
         this.#pendingCropUpdateFrame = null
         const config = this.#pendingCropUpdateConfig
+        const previousCrop = this.#pendingCropUpdatePrevious
         this.#pendingCropUpdateConfig = null
+        this.#pendingCropUpdatePrevious = null
 
         if (!config?.isCropper || !config.cropDimensions) {
             return
         }
 
         this.#widgetCropper.applyCropToOverlay(config)
-        this.#widgetCropper.dispatchCropUpdate(config, 'drag')
+        this.#widgetCropper.dispatchCropUpdate(config, 'drag', previousCrop)
     }
 
-    #schedulePendingCropUpdate = (config) => {
+    #schedulePendingCropUpdate = (config, previousCrop = null) => {
         this.#pendingCropUpdateConfig = config
+        if (!this.#pendingCropUpdatePrevious && previousCrop) {
+            this.#pendingCropUpdatePrevious = previousCrop
+        }
         if (this.#pendingCropUpdateFrame !== null) {
             return
         }
@@ -88,6 +94,7 @@ export class WidgetDraggable {
         }
         this.#pendingCropUpdateFrame = null
         this.#pendingCropUpdateConfig = null
+        this.#pendingCropUpdatePrevious = null
     }
 
     /**
@@ -114,13 +121,15 @@ export class WidgetDraggable {
             const [dx, dy] = event.translate || [0, 0]
             const baseLeft = __.app.parsePx(event.target.style.left || '0')
             const baseTop = __.app.parsePx(event.target.style.top || '0')
+            const previousCrop = this.#pendingCropUpdatePrevious
+                ?? (config.cropDimensions ? {...config.cropDimensions} : null)
             const left = baseLeft + dx
             const top = baseTop + dy
             const width = Number.isFinite(config.cropDimensions?.width) ? config.cropDimensions.width : __.app.parsePx(event.target.style.width || '0') || event.target.getBoundingClientRect().width || 200
             const height = Number.isFinite(config.cropDimensions?.height) ? config.cropDimensions.height : __.app.parsePx(event.target.style.height || '0') || event.target.getBoundingClientRect().height || 200
             if (Number.isFinite(left) && Number.isFinite(top) && Number.isFinite(width) && Number.isFinite(height) && width > 0 && height > 0) {
                 config.cropDimensions = {left, top, width, height}
-                this.#schedulePendingCropUpdate(config)
+                this.#schedulePendingCropUpdate(config, previousCrop)
             }
         }
     }

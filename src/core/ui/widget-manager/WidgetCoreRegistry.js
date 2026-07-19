@@ -461,6 +461,7 @@ export class WidgetCoreRegistry {
                 cropDimensions:         initialConfig.cropDimensions,
                 dimensions:             {width: 0, height: 0},
                 dynamic:                initialConfig.dynamic ?? false,
+                draggable:              initialConfig.draggable ?? true,
                 element:                initialConfig.element,
                 elementObserver:        null,
                 expandedDimensions:     initialConfig.expandedDimensions ?? null,
@@ -486,9 +487,11 @@ export class WidgetCoreRegistry {
                 previousCropDimensions: null,
                 ratio:                  ratio,
                 resizeFromCenter:       initialConfig.resizeFromCenter ?? false,
+                resizable:              initialConfig.resizable ?? false,
                 rotate:                 initialConfig.rotate ?? 0,
                 runtimeReady:           false,
                 scale:                  initialConfig.scale ?? {x: 1, y: 1},
+                scalable:               initialConfig.scalable ?? false,
                 setPosition:            initialConfig.setPosition,
                 showControlBox:         initialConfig.showControlBox,
                 snap:                   initialConfig.snap ?? false,
@@ -523,6 +526,15 @@ export class WidgetCoreRegistry {
             }
             if (initialConfig.anchorOnScale !== undefined) {
                 config.anchorOnScale = initialConfig.anchorOnScale
+            }
+            if (initialConfig.draggable !== undefined) {
+                config.draggable = initialConfig.draggable
+            }
+            if (initialConfig.resizable !== undefined) {
+                config.resizable = initialConfig.resizable
+            }
+            if (initialConfig.scalable !== undefined) {
+                config.scalable = initialConfig.scalable
             }
             if (initialConfig.minScale !== undefined) {
                 config.minScale = initialConfig.minScale
