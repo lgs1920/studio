@@ -35,7 +35,7 @@ describe('crop board widget repositioning', () => {
         controls = new WidgetCoreControls(registry)
     })
 
-    it('preserves the live center position for centered widgets in the new crop', () => {
+    it('does not move a widget that fits in the new crop', () => {
         widget.style.left = '400px'
         widget.style.top = '250px'
         widget.getBoundingClientRect = vi.fn(() => ({left: 400, top: 250, width: 200, height: 100, right: 600, bottom: 350}))
@@ -62,10 +62,10 @@ describe('crop board widget repositioning', () => {
             {left: 0, top: 0, width: 1000, height: 600},
         )
 
-        expect(changed).toBe(1)
-        expect(config.position.left).toBe(240)
-        expect(config.position.top).toBe(170)
-        expect(widget.style.left).toBe('240px')
+        expect(changed).toBe(0)
+        expect(config.position.left).toBe(400)
+        expect(config.position.top).toBe(250)
+        expect(widget.style.left).toBe('400px')
     })
 
     it('converts local crop coordinates to the screen board only once', () => {
@@ -110,10 +110,9 @@ describe('crop board widget repositioning', () => {
             {left: 200, top: 120, width: 600, height: 400},
         )
 
-        // The widget center was 50% / 45% in the old crop. It remains at
-        // those percentages in the new crop, in viewport coordinates.
-        expect(config.position.left).toBeCloseTo(525)
-        expect(config.position.top).toBeCloseTo(297.5)
+        // The widget still fits, so its live position is unchanged.
+        expect(config.position.left).toBe(500)
+        expect(config.position.top).toBe(300)
     })
 
     it('does not move widgets belonging to another board', () => {
@@ -132,7 +131,7 @@ describe('crop board widget repositioning', () => {
         expect(widget.style.left).toBe('780px')
     })
 
-    it('preserves the live position of a non-draggable widget', () => {
+    it('forces the logo to the bottom-right crop corner', () => {
         const config = {
             id: 'logo-widget#video',
             type: LGS_WIDGET,
@@ -154,14 +153,49 @@ describe('crop board widget repositioning', () => {
             {left: 0, top: 0, width: 600, height: 400},
             {left: 0, top: 0, width: 1000, height: 600},
         )).toBe(1)
-        expect(config.position.left).toBeCloseTo(468)
-        expect(config.position.top).toBeCloseTo(70)
-        expect(widget.style.left).toBe('468px')
-        expect(widget.style.top).toBe('70px')
+        expect(config.position.left).toBeCloseTo(392)
+        expect(config.position.top).toBeCloseTo(292)
+        expect(parseFloat(widget.style.left)).toBeCloseTo(392)
+        expect(widget.style.top).toBe('292px')
         expect(manager.saveWidgetPosition).toHaveBeenCalledWith(config.id, config)
     })
 
-    it('resizes widgets by the crop percentage without distorting them', () => {
+    it('forces credits to the bottom-left crop corner', () => {
+        widget.style.left = '730px'
+        widget.style.top = '50px'
+        widget.getBoundingClientRect = vi.fn(() => ({
+            left: 780, top: 100, width: 100, height: 50, right: 880, bottom: 150,
+        }))
+        const config = {
+            id: 'credits-widget#video',
+            type: LGS_WIDGET,
+            widgetsBoard: VIDEO_WIDGETS_BOARD,
+            element: widget,
+            position: {left: 780, top: 100},
+            dimensions: {width: 200, height: 100},
+            scale: {x: 0.5, y: 0.5},
+            margin: 5,
+            draggable: false,
+            resizable: false,
+            scalable: true,
+        }
+        registry.setConfig(config.id, config)
+
+        expect(controls.repositionWidgetsForBoard(
+            VIDEO_WIDGETS_BOARD,
+            {left: 0, top: 0, width: 600, height: 400},
+        )).toBe(1)
+        expect(config.position.left).toBeCloseTo(5)
+        // The logical top includes the center-origin transform offset; the
+        // rendered rectangle is anchored at the crop bottom-left.
+        expect(config.position.top).toBeCloseTo(270)
+        expect(config.scale).toEqual({x: 1, y: 1})
+        expect(manager.transform.setScale).toHaveBeenCalledWith(widget, 1, 1)
+    })
+
+    it('resizes only a widget larger than the crop', () => {
+        widget.style.left = '0px'
+        widget.style.top = '0px'
         widget.getBoundingClientRect = vi.fn(() => ({
             left: 0,
             top: 0,
@@ -187,10 +221,14 @@ describe('crop board widget repositioning', () => {
             {left: 0, top: 0, width: 600, height: 400},
             {left: 0, top: 0, width: 1000, height: 800},
         )).toBe(1)
-        expect(config.scale.x).toBeCloseTo(0.5)
-        expect(config.scale.y).toBeCloseTo(0.5)
-        expect(manager.transform.setScale).toHaveBeenCalledWith(widget, 0.5, 0.5)
-        expect(config.position.left).toBe(40)
-        expect(config.position.top).toBe(0)
+        expect(config.scale.x).toBeCloseTo(2 / 3)
+        expect(config.scale.y).toBeCloseTo(2 / 3)
+        expect(manager.transform.setScale).toHaveBeenCalledWith(widget, 2 / 3, 2 / 3)
+        // With a center-origin transform, the logical position becomes
+        // negative so that the visible rectangle remains at the crop origin.
+        expect(config.position.left).toBeCloseTo(-(800 - (800 * (2 / 3))) / 2)
+        expect(config.position.top).toBeCloseTo(-(600 - (600 * (2 / 3))) / 2)
+        expect(config.savedRatios.leftEdgeRatio).toBe(0)
+        expect(config.savedRatios.topEdgeRatio).toBe(0)
     })
 })
