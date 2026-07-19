@@ -326,6 +326,85 @@ The implementation is tracked as the following issues:
 
 Each implementation issue must link back to this document and must keep the adapter, persistence, UI, security, and test requirements in scope.
 
+## Issue dependencies and ownership
+
+The issues are related, but they do not represent the same feature. The main distinction is between **source acquisition**, **provider authentication**, and **journey normalization**.
+
+```text
+                    ┌──────────────────────────────┐
+                    │ #385 Cloud File Manager       │
+                    │ remote file discovery/fetch   │
+                    └──────────────┬───────────────┘
+                                   │ provides binary/text files
+                                   ▼
+                    ┌──────────────────────────────┐
+                    │ Shared import pipeline        │
+                    │ validation → adapter → Journey│
+                    └──────────────┬───────────────┘
+                                   │
+                    ┌──────────────┴───────────────┐
+                    │                              │
+                    ▼                              ▼
+          ┌──────────────────┐           ┌──────────────────────┐
+          │ #388 FIT loader  │           │ #391 TCX loader      │
+          │ local/remote FIT │           │ local/remote TCX     │
+          └──────────────────┘           └──────────────────────┘
+
+                    ┌──────────────────────────────┐
+                    │ #393 Strava OAuth            │
+                    │ auth, tokens, revocation     │
+                    └──────────────┬───────────────┘
+                                   │ authenticated API access
+                                   ▼
+                    ┌──────────────────────────────┐
+                    │ #392 Strava activity import │
+                    │ activity list + API streams │
+                    └──────────────────────────────┘
+```
+
+### #385 — Cloud File Manager
+
+`#385` owns generic remote-file acquisition and cloud-provider UX. It should provide a file-like result to the shared import pipeline, including filename, extension, MIME type, size, source provider, and binary-safe content. It should not contain FIT, TCX, or Strava-specific parsing logic.
+
+Potential consumers are:
+
+- `#388` for remote Garmin or Strava-exported FIT files;
+- `#391` for remote TCX files;
+- the existing GPX/KML/GeoJSON/JSON importers.
+
+`#385` is therefore an optional upstream dependency for remote-file import, but not a prerequisite for local FIT/TCX support.
+
+### #388 — Garmin FIT loader
+
+`#388` owns the FIT decoder, FIT validation, FIT Activity/Course mapping, source metadata, observations, and external metrics. It can be delivered independently for local files. Remote FIT support becomes available when `#385` can return binary-safe file content.
+
+### #391 — TCX journey loader
+
+`#391` owns TCX XML parsing and normalization. Like `#388`, it should work locally first and consume `#385` only for remote files. It shares the normalized record contract and persistence model with FIT.
+
+### #393 — Strava OAuth
+
+`#393` is the authentication dependency for direct Strava API access. It owns authorization-code flow, scopes, callback validation, token storage, refresh, disconnect, revocation, and deauthorization handling. It is related to [#372 — Add Cloud access](https://github.com/lgs1920/studio/issues/372).
+
+`#393` is not required for importing a local FIT file exported from Strava. It is required before `#392` can list or import activities directly from Strava.
+
+### #392 — Strava activity import
+
+`#392` owns Strava-specific activity discovery and stream normalization. It depends on `#393` for authenticated API access, but it should reuse the same normalized Journey import contract as `#388` and `#391`.
+
+It should not depend on `#385` for the normal API flow. A Strava activity is not a remote file-manager item: it is a provider resource composed of activity metadata and multiple aligned streams. `#385` is relevant only if a future workflow allows users to download a Strava-exported FIT/TCX file and route it through the generic cloud-file path.
+
+### Recommended implementation order
+
+1. Shared binary-safe import contract and adapter registry.
+2. `#388` local FIT loader.
+3. `#391` local TCX loader.
+4. `#385` cloud file acquisition integration with the shared import pipeline.
+5. `#393` Strava OAuth and token lifecycle.
+6. `#392` Strava activity listing, stream retrieval, and normalization.
+
+This order keeps local imports useful offline, allows `#385` to remain format-agnostic, and prevents the Strava API integration from being incorrectly modeled as a generic file download.
+
 ## Testing strategy
 
 ### Unit tests
