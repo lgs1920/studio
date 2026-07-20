@@ -5896,6 +5896,21 @@ export class JourneyReplayMode {
                     })
                 }
                 const notifyStopClipsComplete = () => {
+                    // Rebuild the complete final replay path immediately
+                    // before Draft capture. The controller END notification
+                    // can otherwise leave the renderer on its previous live
+                    // geometry when the last playback tick was skipped.
+                    if (sample && this.#sampler) {
+                        this.#renderer.update({
+                            sample,
+                            sampler:               this.#sampler,
+                            forceGeometry:         true,
+                            freezeDynamic:         false,
+                            hideCursor:            true,
+                            hideRemainingTrace:   true,
+                            staticCompletedTrace: true,
+                        })
+                    }
                     // Draft captures the source canvas immediately after this
                     // event. Flush the final terrain-clamped trace first so
                     // the recorder cannot read the previous Cesium frame.
