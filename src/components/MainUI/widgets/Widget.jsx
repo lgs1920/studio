@@ -52,6 +52,32 @@ const SNAPSHOT_MAX_SIZE = 1024
 const SNAPSHOT_MIN_SIZE = 240
 const SNAPSHOT_MIN_PADDING = 80
 const SNAPSHOT_MAX_PADDING = 220
+const WIDGET_SNAP_GRID_GUIDELINE_CLASS = 'lgs-widget-snap-grid-guideline'
+const WIDGET_SNAP_CENTER_GUIDELINE_CLASS = 'lgs-widget-snap-center-guideline'
+
+/**
+ * Converts numeric positions into Moveable guidelines with a visual class.
+ * @param {number[]} positions - Guideline positions in viewport pixels
+ * @param {string} className - Class applied to rendered Moveable guidelines
+ * @returns {Array<{pos: number, className: string}>} Styled Moveable guidelines
+ */
+const createStyledGuidelines = (positions, className) => positions.map(pos => ({pos, className}))
+
+/**
+ * Merges Moveable guidelines while keeping the first style for duplicate positions.
+ * @param {...Array<{pos: number, className: string}>} guidelineGroups - Guideline groups
+ * @returns {Array<{pos: number, className: string}>} Unique styled guidelines
+ */
+const mergeStyledGuidelines = (...guidelineGroups) => {
+    const seenPositions = new Set()
+    return guidelineGroups.flat().filter(guideline => {
+        if (seenPositions.has(guideline.pos)) {
+            return false
+        }
+        seenPositions.add(guideline.pos)
+        return true
+    }).sort((a, b) => a.pos - b.pos)
+}
 
 export const WidgetPreviewContext = createContext(false)
 
@@ -479,8 +505,8 @@ export const Widget = ({isVisible, className = '', moveableClassName = '', conta
         const rect = container.getBoundingClientRect()
         const centerGuidelines = canSnapWidget
                                   ? {
-                                      verticalGuidelines:   [rect.left + (rect.width / 2)],
-                                      horizontalGuidelines: [rect.top + (rect.height / 2)],
+                                      verticalGuidelines:   createStyledGuidelines([rect.left + (rect.width / 2)], WIDGET_SNAP_CENTER_GUIDELINE_CLASS),
+                                      horizontalGuidelines: createStyledGuidelines([rect.top + (rect.height / 2)], WIDGET_SNAP_CENTER_GUIDELINE_CLASS),
                                   }
                                   : {verticalGuidelines: [], horizontalGuidelines: []}
         const gridGuidelines = gridSnapEnabled
@@ -490,16 +516,16 @@ export const Widget = ({isVisible, className = '', moveableClassName = '', conta
                                     ? buildCenteredGridLines(rect, config.snapGrid)
                                     : {verticalGuidelines: [], horizontalGuidelines: []}
         return {
-            verticalGuidelines:   [...new Set([
-                ...centerGuidelines.verticalGuidelines,
-                ...gridGuidelines.verticalGuidelines,
-                ...localGridGuidelines.verticalGuidelines,
-            ])].sort((a, b) => a - b),
-            horizontalGuidelines: [...new Set([
-                ...centerGuidelines.horizontalGuidelines,
-                ...gridGuidelines.horizontalGuidelines,
-                ...localGridGuidelines.horizontalGuidelines,
-            ])].sort((a, b) => a - b),
+            verticalGuidelines:   mergeStyledGuidelines(
+                centerGuidelines.verticalGuidelines,
+                createStyledGuidelines(gridGuidelines.verticalGuidelines, WIDGET_SNAP_GRID_GUIDELINE_CLASS),
+                createStyledGuidelines(localGridGuidelines.verticalGuidelines, WIDGET_SNAP_GRID_GUIDELINE_CLASS),
+            ),
+            horizontalGuidelines: mergeStyledGuidelines(
+                centerGuidelines.horizontalGuidelines,
+                createStyledGuidelines(gridGuidelines.horizontalGuidelines, WIDGET_SNAP_GRID_GUIDELINE_CLASS),
+                createStyledGuidelines(localGridGuidelines.horizontalGuidelines, WIDGET_SNAP_GRID_GUIDELINE_CLASS),
+            ),
         }
     }, [actualContainer, canSnapWidget, config.snapGrid, gridSnapEnabled, widgetGrid.size])
 
@@ -913,13 +939,13 @@ export const Widget = ({isVisible, className = '', moveableClassName = '', conta
     }, [blockDoubleClick, canReduce, toggleCollapsed])
 
     const openContextMenu = useCallback((event) => {
-        if (interactionLocked) {
-            return
-        }
         event?.preventDefault?.()
         event?.stopPropagation?.()
         event?.nativeEvent?.stopImmediatePropagation?.()
         event?.stopImmediatePropagation?.()
+        if (interactionLocked) {
+            return
+        }
         const clientX = event.clientX ?? event.touches?.[0]?.clientX ?? 0
         const clientY = event.clientY ?? event.touches?.[0]?.clientY ?? 0
         lgs.stores.ui.contextMenu.visible = true
