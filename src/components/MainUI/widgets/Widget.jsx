@@ -913,13 +913,13 @@ export const Widget = ({isVisible, className = '', moveableClassName = '', conta
     }, [blockDoubleClick, canReduce, toggleCollapsed])
 
     const openContextMenu = useCallback((event) => {
-        if (interactionLocked) {
-            return
-        }
         event?.preventDefault?.()
         event?.stopPropagation?.()
         event?.nativeEvent?.stopImmediatePropagation?.()
         event?.stopImmediatePropagation?.()
+        if (interactionLocked) {
+            return
+        }
         const clientX = event.clientX ?? event.touches?.[0]?.clientX ?? 0
         const clientY = event.clientY ?? event.touches?.[0]?.clientY ?? 0
         lgs.stores.ui.contextMenu.visible = true

@@ -79,28 +79,47 @@
  *  On map crop info
  **************************************/
 .crop-info-popup-control {
-    position: absolute;
-    z-index: calc(var(--crop-zindex) + 1);
-    right: var(--lgs-gutter-xs);
-    bottom: var(--lgs-gutter-xs);
     width: max-content;
     pointer-events: auto;
     opacity: 0.92;
 }
 
-.crop-info-popup-control > :is(wa-button, .wa-button) {
+.crop-info-popup-widget-shell {
+    position: fixed;
+    z-index: calc(var(--lgs-tools-ui-zindex) + 3);
+    right: var(--lgs-gutter-s);
+    bottom: var(--lgs-gutter-s);
+    width: max-content !important;
+    min-width: 0 !important;
+    max-width: calc(100vw - 2 * var(--lgs-gutter-s)) !important;
+    height: auto !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    cursor: grab;
+    border: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    touch-action: none;
+}
+
+.crop-info-popup-widget-shell.wa-theme-lgs1920-on-map {
+    color: var(--lgs-card-on-map-color);
+}
+
+.crop-info-popup-widget-shell.dragging {
+    cursor: grabbing;
+}
+
+.crop-info-popup-control > wa-button::part(base) {
     font-size: var(--lgs-font-size-s);
-    display: inline-flex;
-    align-items: center;
     box-sizing: border-box;
     min-height: 2rem;
     padding: var(--lgs-gutter-xxs) var(--lgs-gutter-xs);
     cursor: pointer;
-    gap: var(--lgs-gutter-xxs);
 }
 
-.crop-info-popup-control > :is(wa-button, .wa-button) wa-icon,
-.crop-info-popup-control > :is(wa-button, .wa-button) > span {
+.crop-info-popup-control > wa-button wa-icon {
     font-size: 1.1em;
     line-height: 1;
 }
@@ -110,9 +129,11 @@
     right: 0;
     bottom: calc(100% + var(--lgs-gutter-xs));
     display: flex;
-    align-items: center;
-    width: max-content;
-    max-width: min(22rem, calc(100vw - 2 * var(--lgs-gutter)));
+    flex-direction: column;
+    align-items: stretch;
+    box-sizing: border-box;
+    width: min(22rem, calc(100vw - 2 * var(--lgs-gutter)));
+    min-width: 0;
     padding: var(--lgs-gutter-xs) var(--lgs-gutter-s);
     gap: var(--lgs-gutter-xs);
     box-shadow: var(--lgs-on-map-floating-shadow, var(--sl-shadow-large)) !important;
@@ -122,19 +143,38 @@
 .crop-info-popup-dimensions,
 .crop-info-popup-custom {
     display: flex;
-    align-items: center;
-    width: max-content;
-    gap: var(--lgs-gutter-xs);
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+    min-width: 0;
+    gap: var(--lgs-gutter-xxs);
 }
 
 .crop-info-popup-dimensions span,
 .crop-info-popup-custom span {
-    padding-inline: var(--lgs-gutter-s);
+    min-width: 0;
+    padding: 0;
+    overflow-wrap: anywhere;
 }
 
 .crop-info-popup-dimensions span:not(:last-child),
 .crop-info-popup-custom span:not(:last-child) {
-    border-right: 1px solid var(--lgs-card-on-map-border-color);
+    border: 0;
+}
+
+.crop-zone-info,
+.video-settings-info {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    min-width: 0;
+    gap: var(--lgs-gutter-xxs);
+}
+
+.crop-zone-info span,
+.video-settings-info span {
+    min-width: 0;
+    overflow-wrap: anywhere;
 }
 
 /***************************************

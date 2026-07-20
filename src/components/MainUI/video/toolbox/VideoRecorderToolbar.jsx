@@ -61,7 +61,7 @@ const RecorderControls = memo(({recording, paused, recorder, starting, onFinaliz
             >
                 <WaIcon name={paused ? 'play' : 'pause'} variant="regular"/>
             </WaButton>
-            {recording && !paused && (
+            {recording && (
                 <>
                     <WaTooltip for="video-recorder-stop">{'Click to stop'}</WaTooltip>
                     <WaButton
@@ -71,6 +71,7 @@ const RecorderControls = memo(({recording, paused, recorder, starting, onFinaliz
                         size="s"
                         className="video-recorder-action"
                         onClick={handleStop}
+                        aria-label="Stop recording"
                     >
                         <WaIcon name="stop" variant="regular"/>
                     </WaButton>

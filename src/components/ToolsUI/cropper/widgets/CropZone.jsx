@@ -15,7 +15,6 @@
  ******************************************************************************/
 
 import { useCallback, useEffect, useRef } from 'react'
-import { CropZoneInfoPopup } from './CropZoneInfoPopup'
 
 /**
  * CropZone component for rendering the crop zone content with imperative API.
@@ -44,9 +43,6 @@ export const CropZone = ({onDoubleClick, infoComponent, infoPosition, children, 
                 onDoubleClick={onDoubleClick}
                 onContextMenu={handleContextMenu}
             >
-                {(infoPosition || infoComponent) && (
-                    <CropZoneInfoPopup id={context.id} infoComponent={infoComponent} showDimensions={infoPosition}/>
-                )}
                 {children}
             </div>
         </>

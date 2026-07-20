@@ -25,9 +25,10 @@ export const VideoSettingsInfo = () => {
     const ratio = lgs.configuration.videoFormats.find(f => f.value === video.ratio)?.label ?? String(video.ratio)
 
     return (
-        <>
-            <span>{`${fps} FPS ${quality?.name}`}</span>
-            <span>{ratio}</span>
-        </>
+        <div className="video-settings-info">
+            <span><strong>FPS :</strong> {fps}</span>
+            <span><strong>Qual :</strong> {quality?.name}</span>
+            <span><strong>Format :</strong> {ratio}</span>
+        </div>
     )
 }
