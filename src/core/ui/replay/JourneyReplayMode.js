@@ -5896,6 +5896,10 @@ export class JourneyReplayMode {
                     })
                 }
                 const notifyStopClipsComplete = () => {
+                    // Draft captures the source canvas immediately after this
+                    // event. Flush the final terrain-clamped trace first so
+                    // the recorder cannot read the previous Cesium frame.
+                    globalThis.lgs?.scene?.render?.()
                     globalThis.window?.dispatchEvent?.(new CustomEvent(REPLAY_EVENT_STOP_CLIPS_COMPLETE, {
                         detail: {
                             sample,
