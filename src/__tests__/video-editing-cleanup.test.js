@@ -53,6 +53,7 @@ describe('cancelVideoEditing', () => {
                 },
                 replay: {
                     mainUiHidden: false,
+                    recordingSync: true,
                 },
             },
         }
@@ -81,6 +82,14 @@ describe('cancelVideoEditing', () => {
         restoreVideoCaptureUi()
 
         expect(__.ui.widgetCache.restoreAllHiddenWidgetsExcept).toHaveBeenCalledWith(VIDEO_WIDGETS_BOARD)
+        expect(lgs.stores.replay.mainUiHidden).toBe(false)
+    })
+
+    it('keeps MainUI visible for a standalone recording', () => {
+        lgs.stores.replay.recordingSync = false
+
+        prepareVideoCaptureUi()
+
         expect(lgs.stores.replay.mainUiHidden).toBe(false)
     })
 

@@ -38,7 +38,9 @@ export const prepareVideoCaptureUi = () => {
 
     const replayStore = globalThis.lgs?.stores?.replay
     if (replayStore) {
-        replayStore.mainUiHidden = true
+        const replayVideoLinked = replayStore.recordingSync === true
+                                   || globalThis.lgs?.settings?.ui?.replay?.recordingSync === true
+        replayStore.mainUiHidden = replayVideoLinked
     }
 }
 

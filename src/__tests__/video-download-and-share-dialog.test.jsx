@@ -248,6 +248,9 @@ describe('VideoDownloadAndShareDialog', () => {
                 },
             },
             stores: {
+                replay: {
+                    recordingSync: true,
+                },
                 ui: {
                     video: {
                         preRecording: false,
@@ -359,6 +362,7 @@ describe('VideoDownloadAndShareDialog', () => {
 
     it('creates an HQ video from the final dialog and switches to HQ actions once ready', async () => {
         globalThis.lgs.stores.replay = {
+            recordingSync: true,
             deferredExportPlan: {
                 dimensions: {width: 320, height: 180},
                 runtime:    {contextKey: 'ctx-1'},
@@ -424,6 +428,7 @@ describe('VideoDownloadAndShareDialog', () => {
         globalThis.lgs.stores.ui.video.fps = 0
         globalThis.lgs.stores.ui.video.quality = 0
         globalThis.lgs.stores.replay = {
+            recordingSync: true,
             deferredExportPlan: {
                 dimensions: {width: 960, height: 540},
                 runtime:    {contextKey: 'stale-dimensions'},
@@ -456,6 +461,7 @@ describe('VideoDownloadAndShareDialog', () => {
 
     it('downloads HQ and draft videos from the split button once HQ is ready', async () => {
         globalThis.lgs.stores.replay = {
+            recordingSync: true,
             deferredExportPlan: {
                 dimensions: {width: 320, height: 180},
                 runtime:    {contextKey: 'ctx-1'},
@@ -517,6 +523,7 @@ describe('VideoDownloadAndShareDialog', () => {
         })
 
         globalThis.lgs.stores.replay = {
+            recordingSync: true,
             deferredExportPlan: {runtime: {contextKey: 'ctx-1'}},
         }
 
@@ -545,6 +552,7 @@ describe('VideoDownloadAndShareDialog', () => {
         }))
 
         globalThis.lgs.stores.replay = {
+            recordingSync: true,
             deferredExportPlan: {runtime: {contextKey: 'ctx-1'}},
         }
 

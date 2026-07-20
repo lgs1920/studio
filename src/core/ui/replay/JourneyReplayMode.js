@@ -1039,8 +1039,11 @@ export class JourneyReplayMode {
 
         const shouldHideOtherJourneys = options.hideOtherJourneys
                                         ?? getJourneyReplayHideOtherJourneys()
-        void globalThis.__?.ui?.cameraManager?.stopRotate?.()
-        this.#setJourneyReplayOrbitAllowed(false)
+        const videoReplayLinked = this.#isReplayVideoLinked()
+        if (videoReplayLinked) {
+            void globalThis.__?.ui?.cameraManager?.stopRotate?.()
+        }
+        this.#setJourneyReplayOrbitAllowed(!videoReplayLinked)
         this.#restoreOtherJourneysVisibility()
         this.#hideCurrentJourneyVisibility()
         if (shouldHideOtherJourneys) {
@@ -1058,6 +1061,7 @@ export class JourneyReplayMode {
             (startList.reduce((total, clip) => total + Math.max(0, Number(clip?.params?.duration ?? this.#cameraSettingsForClip(clip)?.duration ?? 0)), 0) - introLeadSeconds) * 1000,
         )
         const camera = globalThis.lgs?.viewer?.camera
+        this.#placeCameraAtPlaybackStart(startSample, options.progress ?? 0)
         this.#introHeadingTransition = startList.length > 0
                                        ? {
                 startAt:       introStartAt,
@@ -1076,10 +1080,12 @@ export class JourneyReplayMode {
         const runtimeStore = replayStore()
         if (runtimeStore) {
             runtimeStore.toolbarVisible = true
-            runtimeStore.mainUiHidden = true
+            runtimeStore.mainUiHidden = videoReplayLinked
             runtimeStore.clipSequenceActive = true
         }
-        this.#hideMainUI()
+        if (videoReplayLinked) {
+            this.#hideMainUI()
+        }
 
         if (startList.length > 0) {
             publishReplayClipFrameState({
@@ -1089,7 +1095,9 @@ export class JourneyReplayMode {
                 progress: options.progress ?? 0,
             })
             this.#setContinuousRender(true)
-            this.#hideJourneyToolbarVisibility()
+            if (videoReplayLinked) {
+                this.#hideJourneyToolbarVisibility()
+            }
             void (async () => {
                 try {
                     if (startSample) {
@@ -1117,7 +1125,7 @@ export class JourneyReplayMode {
         }
         else {
             this.#deferStartCameraRecenter = false
-            this.#skipNextImmediateStartRecenter = this.#placeCameraAtPlaybackStart(startSample, options.progress ?? 0) === true
+            this.#skipNextImmediateStartRecenter = true
             startResult = this.#controller.start({
                 progress: options.progress ?? 0,
             })
@@ -1177,13 +1185,9 @@ export class JourneyReplayMode {
             // Keep HQ on the same initial camera path as Draft. A generic
             // journey focus uses the journey bounding sphere/centroid and can
             // leave the camera much farther away than the replay start view.
-            // Draft only places the camera directly when there is no start
-            // clip; start clips deliberately keep the current camera as
-            // their source view.
-            const startClips = this.#clipListForSlot(REPLAY_CLIP_SLOT_START)
-            if (startClips.length === 0) {
-                this.#placeCameraAtPlaybackStart(sample, safeProgress)
-            }
+            // Both paths now establish the configured replay start view before
+            // any start clip is evaluated.
+            this.#placeCameraAtPlaybackStart(sample, safeProgress)
         }
 
         this.#setJourneyReplayOrbitAllowed(false)
@@ -1201,6 +1205,16 @@ export class JourneyReplayMode {
         void this.#prepareNearbyPOIsForPlayback(sample)
         if (hideReplayMarker) {
             this.#renderer.hideCursor?.()
+        }
+
+        // Keep the HQ playback session in the same runtime state as Draft
+        // playback. The controls widget remains available outside the main UI
+        // mask, while replay/camera consumers receive the same active flags.
+        const runtimeStore = replayStore()
+        if (runtimeStore) {
+            runtimeStore.toolbarVisible = true
+            runtimeStore.mainUiHidden = true
+            runtimeStore.clipSequenceActive = true
         }
         this.#hideMainUI()
         globalThis.lgs?.scene?.requestRender?.()
@@ -2443,10 +2457,24 @@ export class JourneyReplayMode {
             return
         }
 
+        if (this.#isVideoDraftCapture()) {
+            if (plan.kind === 'focus') {
+                this.#setContinuousRender(true)
+                if (this.#isReplayVideoLinked()) {
+                    this.#hideJourneyToolbarVisibility()
+                }
+                this.#applyJourneyReplayPOIVisibility()
+            }
+            await this.#runReplayClipCameraTimeline(plan, {token})
+            return
+        }
+
         if (plan.kind === 'focus') {
             const journey = globalThis.lgs?.theJourney
             this.#setContinuousRender(true)
-            this.#hideJourneyToolbarVisibility()
+            if (this.#isReplayVideoLinked()) {
+                this.#hideJourneyToolbarVisibility()
+            }
             const focusResult = typeof journey?.focus === 'function'
                                 ? journey.focus({
                                     resetCamera: true,
@@ -2502,6 +2530,91 @@ export class JourneyReplayMode {
             instant:        plan.instant,
             duration:       plan.duration,
         })
+    }
+
+    /**
+     * Run a clip using the same sampled camera trajectory used by HQ export.
+     *
+     * @param {Object} plan
+     * @param {{token: number}} options
+     * @returns {Promise<void>}
+     */
+    #runReplayClipCameraTimeline = (plan, {token = this.#clipSequenceToken} = {}) => new Promise(resolve => {
+        const durationMillis = Math.max(0, Number(plan.duration) || 0) * 1000
+        const startedAt = this.#now()
+        let frame = null
+        let settled = false
+
+        const settle = () => {
+            if (settled) {
+                return
+            }
+            settled = true
+            if (frame !== null) {
+                globalThis.clearTimeout?.(frame)
+            }
+            resolve()
+        }
+
+        const tick = () => {
+            if (token !== this.#clipSequenceToken) {
+                settle()
+                return
+            }
+
+            const localMillis = durationMillis > 0
+                                ? Math.min(durationMillis, Math.max(0, this.#now() - startedAt))
+                                : 0
+            const localProgress = durationMillis > 0 ? localMillis / durationMillis : 1
+            const frameView = this.#sampleJourneyReplayClipCameraPlan(plan, {
+                localProgress,
+                localMillis,
+            })
+
+            if (frameView) {
+                this.#recenterCameraToSample({
+                    sample:         frameView.sample,
+                    heading:        frameView.heading,
+                    pitch:          frameView.pitch,
+                    cameraSettings: frameView.cameraSettings,
+                    cameraHeight:   frameView.height,
+                    instant:        true,
+                    duration:       0,
+                    deterministic:  true,
+                    logicalNow:     localMillis,
+                    force:          true,
+                })
+            }
+
+            if (localMillis >= durationMillis) {
+                settle()
+                return
+            }
+
+            frame = globalThis.setTimeout?.(tick, 16) ?? null
+        }
+
+        tick()
+    })
+
+    /**
+     * Return true when a draft video is actively capturing a synchronized replay.
+     *
+     * @returns {boolean}
+     */
+    #isReplayVideoLinked = () => {
+        const replay = globalThis.lgs?.stores?.replay
+        const replaySetting = globalThis.lgs?.settings?.ui?.replay?.recordingSync
+        if (replay?.recordingSync === false || replaySetting === false) {
+            return false
+        }
+        return replay?.recordingSync === true || replaySetting === true || Boolean(replay)
+    }
+
+    #isVideoDraftCapture = () => {
+        const video = globalThis.lgs?.stores?.ui?.video
+        return video?.recording === true
+               && this.#isReplayVideoLinked()
     }
 
     #renderReplayExportClipFrame = async ({
@@ -5176,6 +5289,8 @@ export class JourneyReplayMode {
             return
         }
 
+        const replayExportMode = exportMode || this.#isVideoDraftCapture()
+
         if (this.#cameraApplyingView) {
             return
         }
@@ -5219,7 +5334,7 @@ export class JourneyReplayMode {
         const recenterDuration = replayCameraRecenterDuration(cameraSettings.hysteresis.easing)
         const futureSample = this.#cameraLookaheadSample(anchorSample, {lookaheadSeconds: recenterDuration})
         const predictedSample = futureSample ?? anchorSample
-        const deterministicCamera = exportMode || globalThis.lgs?.stores?.replay?.recordingSync === true
+        const deterministicCamera = replayExportMode || globalThis.lgs?.stores?.replay?.recordingSync === true
         // Playback progress is not a reliable wall clock in Draft (it can be
         // quantized or remain unchanged between two render ticks). Use it only
         // for deterministic HQ frames; live transitions use monotonic time.
@@ -5296,7 +5411,7 @@ export class JourneyReplayMode {
         // historical follow path: applying the current frame on each playback
         // tick is what made Draft responsive. HQ is advanced by export frame
         // time and must keep its deterministic path below.
-        const draftLiveCamera = !exportMode
+        const draftLiveCamera = !replayExportMode
                                  && globalThis.lgs?.stores?.ui?.video?.recording === true
         if (draftLiveCamera && source === 'playback') {
             if (marker.mode === REPLAY_MARKER_MODE_NAVIGATION) {
@@ -5369,7 +5484,7 @@ export class JourneyReplayMode {
                                                    && now - this.#lastNavigationRecenterAt < 80
             const navigationRecenterStillRunning = this.#lastNavigationRecenterAt !== null
                                                    && now - this.#lastNavigationRecenterAt < navigationRecenterLockMs
-            if ((forceToleranceRecenter || source === 'refresh') && !immediateToleranceRecenter && source !== 'playback' && !exportMode) {
+            if ((forceToleranceRecenter || source === 'refresh') && !immediateToleranceRecenter && source !== 'playback' && !replayExportMode) {
                 this.#applyCameraView({
                     anchor: anchorSample,
                     heading: smoothHeading,
@@ -5391,7 +5506,7 @@ export class JourneyReplayMode {
                 return
             }
             if (outsideNavigationZone || forceToleranceRecenter || immediateToleranceRecenter) {
-                const navigationTargetSample = !immediateToleranceRecenter && (source === 'playback' || exportMode)
+                const navigationTargetSample = !immediateToleranceRecenter && (source === 'playback' || replayExportMode)
                                                ? predictedSample
                                                : anchorSample
                 if (immediateToleranceRecenter) {
@@ -5715,7 +5830,9 @@ export class JourneyReplayMode {
             this.#controller.on(REPLAY_EVENT_START, detail => {
                 try {
                     this.#lastPlaybackUpdateProgressKey = null
-                    this.#hideJourneyToolbarVisibility()
+                    if (this.#isReplayVideoLinked()) {
+                        this.#hideJourneyToolbarVisibility()
+                    }
                     this.#setContinuousRender(true)
                     this.#renderer.show({
                         sampler: detail.sampler,

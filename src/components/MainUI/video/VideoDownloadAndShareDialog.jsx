@@ -171,6 +171,9 @@ export const VideoDownloadAndShareDialog = () => {
     const getHqExportFilename = useCallback(() => buildMediaFilename(getHqFilenameStem(), 'mp4'), [getHqFilenameStem])
     const hasHqMedia = Boolean(hqMedia?.blob instanceof Blob)
     const isHqExporting = hqExportStatus === 'exporting'
+    const isReplayVideoLinked = lgs.stores?.replay
+                                  ? lgs.stores.replay.recordingSync !== false
+                                  : false
 
     const downloadBlobFile = useCallback((blob, downloadFilename) => {
         if (!(blob instanceof Blob) || !downloadFilename) {
@@ -447,7 +450,7 @@ export const VideoDownloadAndShareDialog = () => {
     }, [getDraftFilenameStem, getHqFilenameStem, getVideoExtension, getVideoMimeType, hqMedia])
 
     const startHqExport = useCallback(async () => {
-        if (isHqExporting || !__.recorder.isVideo()) {
+        if (isHqExporting || !__.recorder.isVideo() || !isReplayVideoLinked) {
             return
         }
 
@@ -553,7 +556,7 @@ export const VideoDownloadAndShareDialog = () => {
         finally {
             _hqExportAbortController.current = null
         }
-    }, [__.recorder, getHqExportFilename, getHqFilenameStem, getMediaData, getVideoExtension, getVideoMimeType, isHqExporting, releaseHqMediaUrl, waitForAnimationFrame])
+    }, [__.recorder, getHqExportFilename, getHqFilenameStem, getMediaData, getVideoExtension, getVideoMimeType, isHqExporting, isReplayVideoLinked, releaseHqMediaUrl, waitForAnimationFrame])
 
     /**
      * Handle share action with Web Share API fallback.
@@ -973,7 +976,7 @@ export const VideoDownloadAndShareDialog = () => {
                             </WaButton>
                         </>
                     )}
-                    {!hasHqMedia && (
+                    {!hasHqMedia && isReplayVideoLinked && (
                         <>
                             <WaTooltip for="video-preview-create-hq">{isHqExporting ? 'Creating HQ video' : 'Create an HQ version'}</WaTooltip>
                             <WaButton
