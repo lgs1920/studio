@@ -91,15 +91,15 @@ html {
     width: fit-content;
     margin-top: var(--lgs-gutter);
     border-radius: var(--lgs-border-radius-s);
-    border: 3px solid transparent;
+    border: 4px solid transparent;
     outline: none;
     background-color: transparent;
     gap: var(--lgs-gutter-xs);
 }
 
 .sync-linked-actions.is-linked {
-    border: 3px solid var(--wa-color-brand);
-    background-color: transparent;
+    border-color: var(--wa-color-brand);
+    background-color: var(--wa-color-brand);
 }
 
 .sync-linked-actions.is-unlinked {
