@@ -196,6 +196,12 @@ export class JourneyReplayCesiumRenderer {
         if (hideTrace) {
             this.#hideLineEntities(() => true)
         }
+        else {
+            // `hideTrace` is intentionally used for the empty start frame.
+            // Re-enable existing entities as soon as playback advances; Draft
+            // may otherwise skip a geometry rebuild on the first live tick.
+            this.#showLineEntities((key) => !hideRemainingTrace || !key.startsWith(REMAINING_KEY_PREFIX))
+        }
         this.#updateCursor(sample)
         this.#syncCursorVisibilityWithTrace({hideCursor})
         if (stopCompletedTrace) {
@@ -650,6 +656,15 @@ export class JourneyReplayCesiumRenderer {
             if (predicate(key, record)) {
                 record.entity.show = false
                 record.show = false
+            }
+        })
+    }
+
+    #showLineEntities = predicate => {
+        Array.from(this.#lineEntities.entries()).forEach(([key, record]) => {
+            if (predicate(key, record)) {
+                record.entity.show = true
+                record.show = true
             }
         })
     }
