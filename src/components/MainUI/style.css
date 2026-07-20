@@ -91,7 +91,7 @@ html {
     width: fit-content;
     margin-top: var(--lgs-gutter);
     border-radius: var(--lgs-border-radius-s);
-    border: 0 solid transparent;
+    border: 3px solid transparent;
     outline: none;
     background-color: transparent;
     gap: var(--lgs-gutter-xs);
@@ -107,7 +107,7 @@ html {
 }
 
 .sync-linked-actions.is-unlinked:hover {
-    border: 0 solid transparent;
+    border-color: transparent;
     outline: none;
     background-color: transparent;
 }
