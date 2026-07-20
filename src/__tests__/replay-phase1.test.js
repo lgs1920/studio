@@ -4843,6 +4843,7 @@ describe('replay phase 1 playback controller', () => {
         const previousLgs = globalThis.lgs
         const replay = defaultJourneyReplaySettings()
         journey.focus = vi.fn()
+        journey.persistToDatabase = vi.fn(() => Promise.resolve())
         journey.visible = false
         const editorJourney = {visible: false}
         let cancelFlightCalls = 0
@@ -4920,6 +4921,7 @@ describe('replay phase 1 playback controller', () => {
             expect(journey.visible).toBe(true)
             expect(editorJourney.visible).toBe(true)
             expect(globalThis.lgs.stores.replay.orbitAllowed).toBe(true)
+            expect(journey.persistToDatabase).toHaveBeenCalled()
 
             expect(cancelFlightCalls).toBeGreaterThan(0)
             expect(journey.focus).toHaveBeenCalledTimes(1)

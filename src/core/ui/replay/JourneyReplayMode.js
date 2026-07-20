@@ -1245,6 +1245,16 @@ export class JourneyReplayMode {
         globalThis.lgs?.scene?.requestRender?.()
     }
 
+    #persistCurrentJourneyVisibility = journey => {
+        if (typeof journey?.persistToDatabase !== 'function') {
+            return
+        }
+
+        void Promise.resolve(journey.persistToDatabase()).catch(error => {
+            console.error('[JourneyReplayMode] Failed to persist current journey visibility.', error)
+        })
+    }
+
     #restoreCurrentJourneyVisibility = ({restorePOIs = true} = {}) => {
         const journey = globalThis.lgs?.theJourney
         if (!journey) {
@@ -1257,6 +1267,7 @@ export class JourneyReplayMode {
         if (editorJourney) {
             editorJourney.visible = true
         }
+        this.#persistCurrentJourneyVisibility(journey)
         journey.updateVisibility?.(true)
         this.#restoreCurrentJourneyPolylineVisibility()
         if (!restorePOIs) {
