@@ -91,13 +91,14 @@ html {
     width: fit-content;
     margin-top: var(--lgs-gutter);
     border-radius: var(--lgs-border-radius-s);
-    border: none;
+    border: 0 solid transparent;
     outline: none;
     background-color: transparent;
     gap: var(--lgs-gutter-xs);
 }
 
 .sync-linked-actions.is-linked {
+    border: 3px solid var(--wa-color-brand);
     background-color: var(--wa-color-brand-fill-loud);
 }
 
@@ -106,7 +107,7 @@ html {
 }
 
 .sync-linked-actions.is-unlinked:hover {
-    border: none;
+    border: 0 solid transparent;
     outline: none;
     background-color: transparent;
 }
