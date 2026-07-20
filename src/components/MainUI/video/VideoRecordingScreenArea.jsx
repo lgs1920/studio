@@ -138,10 +138,6 @@ export const VideoRecordingScreenArea = memo(() => {
 
     const prepareJourneyReplayForRecording = useCallback((renderSpec = null) => {
         if (!isJourneyReplaySyncRequested()) {
-            // A previous linked session may have armed the bridge while the
-            // link was subsequently removed. Keep standalone recordings
-            // completely independent from replay playback and its auto-stop.
-            __.ui.replayVideoSync?.disarm?.()
             return true
         }
 

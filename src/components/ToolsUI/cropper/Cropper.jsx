@@ -35,7 +35,6 @@ import { JOURNEY_WIDGETS, MULTI_PURPOSE_WIDGETS } from '@Core/constants'
 import { memo, useEffect, useRef, useState } from 'react'
 import { useSnapshot } from 'valtio'
 import { CropZoneWidget }        from './widgets/CropZoneWidget'
-import { CropZoneInfoPopup }     from './widgets/CropZoneInfoPopup'
 import './style.css'
 
 export const Cropper = memo(({overlay = false, className = '', context, options = {}, children}) => {
@@ -86,9 +85,6 @@ export const Cropper = memo(({overlay = false, className = '', context, options 
                     <WidgetsPanel id="widget-deck" context={context} groups={[MULTI_PURPOSE_WIDGETS, JOURNEY_WIDGETS]}/>
                 )}
             </div>
-            {(options.infoPosition || options.infoComponent) && (
-                <CropZoneInfoPopup id={context.id} infoComponent={options.infoComponent} showDimensions={options.infoPosition}/>
-            )}
             {/* Crop and video widgets remain mounted together during composition. */}
             <VideoSceneWidgetsPortal context={context}/>
         </>

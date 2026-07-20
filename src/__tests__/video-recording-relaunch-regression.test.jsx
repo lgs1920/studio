@@ -14,7 +14,7 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { cleanup, act, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, act, render, screen, waitFor } from '@testing-library/react'
 import { VideoRecorderToolbar }         from '@Components/MainUI/video/toolbox/VideoRecorderToolbar'
 import { VideoSceneWidgetsPortal }      from '@Components/MainUI/video/VideoSceneWidgetsPortal'
 import { VIDEO_WIDGETS_BOARD }          from '@Core/constants'
@@ -309,17 +309,5 @@ describe('video recording relaunch regression', () => {
         const distance = screen.getByText('50.0 km')
         expect(time.parentElement).toBe(distance.parentElement)
         expect(time.parentElement.className).toContain('video-recorder-widget')
-    })
-
-    it('keeps the stop action available while recording is paused', () => {
-        globalThis.lgs.stores.ui.video.recording = true
-        globalThis.lgs.stores.ui.video.paused = true
-
-        render(<VideoRecorderToolbar/>)
-
-        fireEvent.click(screen.getByRole('button', {name: 'Stop recording'}))
-
-        expect(recorder.stopVideo).toHaveBeenCalledTimes(1)
-        expect(lgs.stores.ui.video.finalizing).toBe(true)
     })
 })

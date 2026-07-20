@@ -15,7 +15,7 @@
  ******************************************************************************/
 
 /**
- * Displays the crop zone output dimensions in physical pixels.
+ * Minimal display of crop zone info, old-style, single prop: id
  * @param {Object} props - Component props
  * @param {string} props.id - ID of the widget to get crop dimensions
  * @returns {JSX.Element} - Crop zone information display
@@ -60,7 +60,8 @@ export const CropZoneInfo = memo(function CropZoneInfo({id}) {
 
     return (
         <div className="crop-zone-info">
-            <span><strong>W/H :</strong> {Math.floor(info.width)}×{Math.floor(info.height)}</span>
+            <span>{Math.max(0, Math.floor(info.left))}×{Math.max(0, Math.floor(info.top))}</span>
+            <span>{Math.floor(info.width)}×{Math.floor(info.height)}</span>
         </div>
     )
 })

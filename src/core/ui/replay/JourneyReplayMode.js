@@ -2443,16 +2443,6 @@ export class JourneyReplayMode {
             return
         }
 
-        if (this.#isVideoDraftCapture()) {
-            if (plan.kind === 'focus') {
-                this.#setContinuousRender(true)
-                this.#hideJourneyToolbarVisibility()
-                this.#applyJourneyReplayPOIVisibility()
-            }
-            await this.#runReplayClipCameraTimeline(plan, {token})
-            return
-        }
-
         if (plan.kind === 'focus') {
             const journey = globalThis.lgs?.theJourney
             this.#setContinuousRender(true)
@@ -2512,84 +2502,6 @@ export class JourneyReplayMode {
             instant:        plan.instant,
             duration:       plan.duration,
         })
-    }
-
-    /**
-     * Run a clip using the same sampled camera trajectory used by HQ export.
-     *
-     * @param {Object} plan
-     * @param {{token: number}} options
-     * @returns {Promise<void>}
-     */
-    #runReplayClipCameraTimeline = (plan, {token = this.#clipSequenceToken} = {}) => new Promise(resolve => {
-        const durationMillis = Math.max(0, Number(plan.duration) || 0) * 1000
-        const startedAt = this.#now()
-        let frame = null
-        let settled = false
-
-        const settle = () => {
-            if (settled) {
-                return
-            }
-            settled = true
-            if (frame !== null) {
-                globalThis.clearTimeout?.(frame)
-            }
-            resolve()
-        }
-
-        const tick = () => {
-            if (token !== this.#clipSequenceToken) {
-                settle()
-                return
-            }
-
-            const localMillis = durationMillis > 0
-                                ? Math.min(durationMillis, Math.max(0, this.#now() - startedAt))
-                                : 0
-            const localProgress = durationMillis > 0 ? localMillis / durationMillis : 1
-            const frameView = this.#sampleJourneyReplayClipCameraPlan(plan, {
-                localProgress,
-                localMillis,
-            })
-
-            if (frameView) {
-                this.#recenterCameraToSample({
-                    sample:         frameView.sample,
-                    heading:        frameView.heading,
-                    pitch:          frameView.pitch,
-                    cameraSettings: frameView.cameraSettings,
-                    cameraHeight:   frameView.height,
-                    instant:        true,
-                    duration:       0,
-                    deterministic:  true,
-                    logicalNow:     localMillis,
-                    force:          true,
-                })
-            }
-
-            if (localMillis >= durationMillis) {
-                settle()
-                return
-            }
-
-            frame = globalThis.setTimeout?.(tick, 16) ?? null
-        }
-
-        tick()
-    })
-
-    /**
-     * Return true when a draft video is actively capturing replay frames.
-     *
-     * @returns {boolean}
-     */
-    #isVideoDraftCapture = () => {
-        const video = globalThis.lgs?.stores?.ui?.video
-        const replay = globalThis.lgs?.stores?.replay
-        return video?.recording === true
-               && replay?.recordingSync !== true
-               && globalThis.lgs?.settings?.ui?.replay?.recordingSync !== true
     }
 
     #renderReplayExportClipFrame = async ({

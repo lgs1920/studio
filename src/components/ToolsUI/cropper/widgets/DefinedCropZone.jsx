@@ -24,6 +24,7 @@
 import classNames                            from 'classnames'
 import { memo, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useSnapshot }                              from 'valtio'
+import { CropZoneInfoPopup }                        from './CropZoneInfoPopup'
 
 export const DefinedCropZone = memo(function DefinedCropZone({
                                                                  className = '',
@@ -136,6 +137,10 @@ export const DefinedCropZone = memo(function DefinedCropZone({
                 aria-label="defined-crop-zone"
                 id={context.id}
             >
+                {(infoPosition || infoComponent) && (
+                    <CropZoneInfoPopup id={context.id} infoComponent={infoComponent} showDimensions={infoPosition}/>
+                )}
+
                 {children}
 
             </div>
