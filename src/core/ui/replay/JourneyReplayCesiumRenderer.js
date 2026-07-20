@@ -156,6 +156,7 @@ export class JourneyReplayCesiumRenderer {
                   forceGeometry = false,
                   freezeDynamic = false,
                   hideCursor = false,
+                  hideTrace = false,
                   hideRemainingTrace = false,
                   staticCompletedTrace = false,
                   completedTraceMode = staticCompletedTrace ? 'static' : 'dynamic',
@@ -191,6 +192,9 @@ export class JourneyReplayCesiumRenderer {
         }
         if (freezeDynamic && !staticCompletedTrace) {
             this.#freezeDynamicLines()
+        }
+        if (hideTrace) {
+            this.#hideLineEntities(() => true)
         }
         this.#updateCursor(sample)
         this.#syncCursorVisibilityWithTrace({hideCursor})

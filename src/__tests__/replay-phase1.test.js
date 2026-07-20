@@ -3522,9 +3522,9 @@ describe('replay phase 1 playback controller', () => {
             expect(overlay).not.toBeNull()
             expect(overlay.dataset.mode).toBe(REPLAY_MARKER_MODE_NAVIGATION)
             expect(Number.parseFloat(overlay.style.left)).toBeCloseTo(360, 6)
-            expect(Number.parseFloat(overlay.style.top)).toBeCloseTo(300, 6)
+            expect(Number.parseFloat(overlay.style.top)).toBeCloseTo(270, 6)
             expect(Number.parseFloat(overlay.style.width)).toBeCloseTo(300, 6)
-            expect(Number.parseFloat(overlay.style.height)).toBeCloseTo(240, 6)
+            expect(Number.parseFloat(overlay.style.height)).toBeCloseTo(300, 6)
             expect(overlay.querySelector('[data-zone="z1"]')).not.toBeNull()
             expect(overlay.querySelector('[data-zone="z2"]')).toBeNull()
 
