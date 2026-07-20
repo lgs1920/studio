@@ -431,7 +431,17 @@ body.lgs-app-booting #cesium-viewer {
 }
 
 .lgs-widget-control-box .moveable-guideline {
-    background: var(--lgs-third-color-75) !important;
+    background: var(--wa-color-brand) !important;
+    opacity: var(--lgs-widget-snap-guideline-opacity);
+}
+
+.lgs-widget-control-box .moveable-guideline.lgs-widget-snap-grid-guideline {
+    background: var(--wa-color-brand) !important;
+}
+
+.lgs-widget-control-box .moveable-guideline.lgs-widget-snap-center-guideline {
+    background: var(--wa-color-warning) !important;
+    opacity: var(--lgs-widget-snap-center-opacity);
 }
 
 /* snap inside a target */
@@ -781,8 +791,8 @@ body.lgs-app-booting #cesium-viewer {
     position: absolute;
     display: block;
     pointer-events: none;
-    opacity: 0.4;
-    background: var(--lgs-third-color-75);
+    opacity: var(--lgs-widget-snap-guideline-opacity);
+    background: var(--wa-color-brand);
 }
 
 .lgs-widget-grid-overlay-line-vertical {
