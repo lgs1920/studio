@@ -39,7 +39,7 @@ import {
 } from "@Core/OrbitSettings";
 import { Widget } from "@Components/MainUI/widgets/Widget";
 import { OrbitInteractionHintsToggleButton } from "@Components/MainUI/OrbitInteractionHintsWidget";
-import { faAngle, faMagnifyingGlassPlus, faVideo } from "@fortawesome/pro-regular-svg-icons";
+import { faAngle, faMagnifyingGlassLocation, faVideo } from "@fortawesome/pro-regular-svg-icons";
 import { FA2SL } from "@Utils/FA2SL";
 import { foot, meter, UnitUtils } from "@Utils/UnitUtils";
 import { cameraViewToSlippyLevel } from "@Utils/cesium/CameraLevel";
@@ -1259,7 +1259,7 @@ export const PanoramaWidget = memo(() => {
           </span>
           {adjustmentValues.level !== null && (
             <span className="panorama-adjustment-metric">
-              <sl-icon library="fa" name={FA2SL.set(faMagnifyingGlassPlus)} />
+              <sl-icon library="fa" name={FA2SL.set(faMagnifyingGlassLocation)} />
               <strong>{adjustmentValues.level}</strong>
             </span>
           )}
