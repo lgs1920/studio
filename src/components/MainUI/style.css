@@ -99,7 +99,7 @@ html {
 
 .sync-linked-actions.is-linked {
     border: 3px solid var(--wa-color-brand);
-    background-color: var(--wa-color-brand-fill-loud);
+    background-color: transparent;
 }
 
 .sync-linked-actions.is-unlinked {
