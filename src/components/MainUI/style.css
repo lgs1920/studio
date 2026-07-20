@@ -91,17 +91,24 @@ html {
     width: fit-content;
     margin-top: var(--lgs-gutter);
     border-radius: var(--lgs-border-radius-s);
-    outline: 2px solid var(--sync-linked-actions-outline-color, var(--wa-color-warning-border-normal));
-    outline-offset: 2px;
+    border: none;
+    outline: none;
+    background-color: transparent;
     gap: var(--lgs-gutter-xs);
 }
 
 .sync-linked-actions.is-linked {
-    --sync-linked-actions-outline-color: var(--wa-color-brand);
+    background-color: var(--wa-color-brand-fill-loud);
 }
 
 .sync-linked-actions.is-unlinked {
-    --sync-linked-actions-outline-color: var(--wa-color-warning-border-normal);
+    background-color: transparent;
+}
+
+.sync-linked-actions.is-unlinked:hover {
+    border: none;
+    outline: none;
+    background-color: transparent;
 }
 
 .sync-linked-actions-badge {
