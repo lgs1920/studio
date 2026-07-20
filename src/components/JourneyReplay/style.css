@@ -733,6 +733,24 @@ wa-select[label-at-start].half-width::part(base) {
 }
 
 @media (max-width: 640px) {
+    .replay-controls-hq-row {
+        gap: 0;
+        max-width: 100%;
+    }
+
+    .replay-controls-hq-label {
+        display: none;
+    }
+
+    .replay-controls-hq-file,
+    .replay-controls .replay-progress-distance {
+        display: none;
+    }
+
+    .replay-controls-hq-progress {
+        flex: 0 1 auto;
+    }
+
     .replay-controls .replay-progress-segment {
         margin-right: var(--lgs-gutter-xs, 0.25rem);
         padding-inline-end: var(--lgs-gutter-xs, 0.25rem);

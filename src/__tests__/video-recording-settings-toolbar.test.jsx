@@ -136,7 +136,7 @@ describe('VideoRecordingSettingsToolbar', () => {
         expect(__.ui.widgetManager.syncCropDimensionsFromElement).not.toHaveBeenCalled()
     })
 
-    it('forces video UI masking before entering recording and snapshot phases', async () => {
+    it('forces video UI masking before entering the recording phase', async () => {
         render(<VideoRecordingSettingsToolbar/>)
         prepareVideoCaptureUi.mockClear()
         prepareVideoEditingUi.mockClear()
@@ -153,11 +153,6 @@ describe('VideoRecordingSettingsToolbar', () => {
         expect(prepareVideoCaptureUi).toHaveBeenCalledTimes(1)
         expect(prepareVideoEditingUi).not.toHaveBeenCalled()
         expect(globalThis.lgs.stores.ui.video.preRecording).toBe(true)
-
-        prepareVideoCaptureUi.mockClear()
-        await lastTunnelProps.steps[2].onClick?.(2)
-        expect(prepareVideoCaptureUi).toHaveBeenCalledTimes(1)
-        expect(globalThis.lgs.stores.ui.video.snapshot).toBe(true)
     })
 
     it('hides the tunnel while an HQ export is finalizing', () => {
@@ -202,7 +197,7 @@ describe('VideoRecordingSettingsToolbar', () => {
         expect(__.ui.widgetManager.syncCropDimensionsFromElement).not.toHaveBeenCalled()
     })
 
-    it('closes crop editors when entering recording or snapshot steps directly', () => {
+    it('closes crop editors when entering the recording step directly', () => {
         globalThis.__.ui.widgetManager.getWidgetConfig = vi.fn(() => ({
             cropDimensions: {
                 left:   10,
@@ -228,19 +223,6 @@ describe('VideoRecordingSettingsToolbar', () => {
                                                                                        }))
         expect(__.ui.widgetManager.windowResizing).toBe(false)
 
-        Object.assign(globalThis.lgs.stores.ui.video.cropper, {
-            ratioEditor:  true,
-            presetEditor: true,
-            widgetEditor: true,
-        })
-
-        expect(lastTunnelProps.steps[2].beforeStep()).toBe(true)
-        expect(globalThis.lgs.stores.ui.video.step).toBe(2)
-        expect(globalThis.lgs.stores.ui.video.cropper).toEqual(expect.objectContaining({
-                                                                                           ratioEditor:  false,
-                                                                                           presetEditor: false,
-                                                                                           widgetEditor: false,
-                                                                                       }))
     })
 
     it('keeps crop resizing and widget editing active in the unified composition step', () => {

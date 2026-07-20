@@ -20,7 +20,7 @@
 import { JourneyReplayProgressBar } from '@Components/JourneyReplay/JourneyReplayProgressBar'
 import { ScreenMediaRecorder } from '@Core/ui/screen-media-recorder/recorder/ScreenMediaRecorder'
 import { UIToast }                          from '@Utils/UIToast'
-import { DISTANCE_UNITS, km, UnitUtils }    from '@Utils/UnitUtils'
+import { UnitUtils }                        from '@Utils/UnitUtils'
 import { WaButton, WaCard, WaIcon, WaTooltip } from '@web.awesome.me/webawesome-pro/dist/react'
 import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import { useSnapshot }                      from 'valtio'
@@ -86,80 +86,15 @@ const finiteNumber = value => {
     return Number.isFinite(numeric) ? numeric : null
 }
 
-const formatMinutes = minutes => {
-    const safeMinutes = Math.max(0, Number.isFinite(minutes) ? minutes : 0)
-    const hours = Math.floor(safeMinutes / 60)
-    const remainingMinutes = String(safeMinutes % 60).padStart(2, '0')
-    return `${String(hours).padStart(2, '0')}:${remainingMinutes}`
-}
-
-const formatElapsedHoursMinutes = (elapsedMillis, totalMillis) => {
-    const safeTotalMillis = Math.max(0, finiteNumber(totalMillis) ?? 0)
-    if (safeTotalMillis <= 0) {
-        return null
-    }
-
-    const totalMinutes = Math.max(1, Math.ceil(safeTotalMillis / 60000))
-    const elapsedMinutes = Math.min(
-        totalMinutes,
-        Math.max(0, Math.round(Math.max(0, finiteNumber(elapsedMillis) ?? 0) / 60000)),
-    )
-
-    return formatMinutes(elapsedMinutes)
-}
-
-const formatDistance = (value, unit) => (UnitUtils.convert(value ?? 0).to(unit) ?? 0).toFixed(1)
-
-const playbackProgressFromSample = ({sample, totalDistance, direction, fallback}) => {
-    const sampleProgress = finiteNumber(sample?.progress)
-    const total = finiteNumber(totalDistance)
-    const coveredDistance = direction < 0
-                            ? finiteNumber(sample?.remainingDistance)
-                            : finiteNumber(sample?.distanceFromStart)
-
-    if (total !== null && total > 0 && coveredDistance !== null) {
-        return clampProgress(coveredDistance / total)
-    }
-
-    if (sampleProgress !== null) {
-        return clampProgress(direction < 0 ? 1 - sampleProgress : sampleProgress)
-    }
-
-    return fallback
-}
-
 /**
  * VideoRecorderToolbar component
  */
 export const VideoRecorderToolbar = ({toolbar, widgetsReady = false, onStartRecording}) => {
     const $video = lgs.stores.ui.video
     const replay = useSnapshot(lgs.stores.replay)
-    const {current: unitSystem} = useSnapshot(lgs.settings.unitSystem)
     const video = useSnapshot($video)
     const syncWithJourneyReplay = replay.recordingSync === true
     const isMobile = __.device?.isMobile === true
-    const hasPlaybackSample = Boolean((replay.active || replay.playing || replay.paused) && replay.sample)
-    const direction = Number(replay.direction) < 0 ? -1 : 1
-    const totalMillis = finiteNumber(replay.durationMillis)
-    const elapsedMillis = finiteNumber(replay.elapsedMillis)
-    const totalDistance = hasPlaybackSample ? replay.totalDistance ?? 0 : 0
-    const distanceUnit = DISTANCE_UNITS[unitSystem] ?? km
-    const progress = hasPlaybackSample ? clampProgress(replay.progress) : 0
-    const playbackProgress = playbackProgressFromSample({
-        sample: hasPlaybackSample ? replay.sample : null,
-        totalDistance,
-        direction,
-        fallback: direction < 0 ? 1 - progress : progress,
-    })
-    const timeLabel = hasPlaybackSample && totalMillis !== null && totalMillis > 0 && elapsedMillis !== null
-                      ? formatElapsedHoursMinutes(elapsedMillis, totalMillis)
-                      : null
-    const coveredDistance = hasPlaybackSample && replay.sample
-                            ? (direction < 0 ? replay.sample.remainingDistance : replay.sample.distanceFromStart)
-                            : totalDistance * playbackProgress
-    const distanceLabel = hasPlaybackSample
-                          ? `${formatDistance(coveredDistance, distanceUnit)} ${distanceUnit}`
-                          : null
     const videoTimelineDurationMillis = finiteNumber(replay.deferredExportPlan?.videoTimeline?.durationMillis)
 
     const [state, setState] = useState({
@@ -351,14 +286,21 @@ export const VideoRecorderToolbar = ({toolbar, widgetsReady = false, onStartReco
             <span className="size">{formatSize(state.recordedSize)}</span>
             {syncWithJourneyReplay && (
                 isMobile ? (
-                    <>
-                        {timeLabel && <span className="video-recorder-replay-time">{timeLabel}</span>}
-                        {distanceLabel && <span className="video-recorder-replay-distance">{distanceLabel}</span>}
-                    </>
+                    <JourneyReplayProgressBar
+                        className="video-recorder-replay-progress"
+                        showActions={false}
+                        showSnapshot
+                        showSettings={false}
+                        showTime={false}
+                        showDistance={false}
+                        progressOverride={draftVideoProgress}
+                        disabled={video.preRecording}
+                    />
                 ) : (
                     <JourneyReplayProgressBar
                         className="video-recorder-replay-progress"
                         showActions={false}
+                        showSnapshot
                         showSettings={false}
                         progressOverride={draftVideoProgress}
                         disabled={video.preRecording}

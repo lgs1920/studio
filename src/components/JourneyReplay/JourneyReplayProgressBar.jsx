@@ -16,6 +16,7 @@
 
 import { REPLAY_DRAWER } from '@Core/constants'
 import { REPLAY_LABEL }  from '@Core/ui/replay/JourneyReplayProgressionStyle'
+import { captureReplayCropSnapshot } from '@Core/ui/ReplayCropSnapshot'
 import { DISTANCE_UNITS, km, UnitUtils } from '@Utils/UnitUtils'
 import { WaButton, WaIcon, WaTooltip } from '@web.awesome.me/webawesome-pro/dist/react'
 import { memo, useCallback, useEffect, useMemo, useRef } from 'react'
@@ -147,6 +148,7 @@ const JourneyReplayTooltip = ({targetId, children}) => {
 export const JourneyReplayProgressBar = memo(({
                                                  showSettings = false,
                                                  showActions = true,
+                                                 showSnapshot = true,
                                                  disabled = false,
                                                  className = '',
                                                  showTime = true,
@@ -161,8 +163,10 @@ export const JourneyReplayProgressBar = memo(({
                                                  playLabelOverride = null,
                                                  pauseLabelOverride = null,
                                                  stopLabelOverride = null,
+                                                 snapshotLabelOverride = 'Take replay snapshot',
                                                  stopIcon = 'stop',
                                                  stopVariant = 'brand',
+                                                 onSnapshot = null,
                                              }) => {
     const replay = useSnapshot(lgs.stores.replay)
     const {current: unitSystem} = useSnapshot(lgs.settings.unitSystem)
@@ -233,6 +237,7 @@ export const JourneyReplayProgressBar = memo(({
     const playLabel = playLabelOverride ?? (paused ? `Resume ${REPLAY_LABEL}` : `Start ${REPLAY_LABEL}`)
     const pauseLabel = pauseLabelOverride ?? `Pause ${REPLAY_LABEL}`
     const stopLabel = stopLabelOverride ?? `Stop ${REPLAY_LABEL}`
+    const snapshotLabel = snapshotLabelOverride
     const settingsLabel = `${REPLAY_LABEL} settings`
 
     const playOrResume = useCallback(() => {
@@ -267,6 +272,10 @@ export const JourneyReplayProgressBar = memo(({
         __.ui.replay?.stop()
         lgs.stores.replay.toolbarVisible = false
     }, [onStop])
+
+    const snapshot = useCallback(() => {
+        void (typeof onSnapshot === 'function' ? onSnapshot() : captureReplayCropSnapshot())
+    }, [onSnapshot])
 
     const toggleSettings = useCallback(() => {
         if (openDrawer === REPLAY_DRAWER) {
@@ -321,6 +330,23 @@ export const JourneyReplayProgressBar = memo(({
                              </WaButton>
                          </>
                      )}
+                    {showSnapshot &&
+                        <>
+                            <JourneyReplayTooltip targetId={`${idPrefix}-snapshot`}>{snapshotLabel}</JourneyReplayTooltip>
+                            <WaButton
+                                id={`${idPrefix}-snapshot`}
+                                className="replay-progress-action"
+                                appearance="plain"
+                                variant="brand"
+                                size="s"
+                                title={snapshotLabel}
+                                aria-label={snapshotLabel}
+                                onClick={snapshot}
+                                disabled={disabled}
+                            >
+                                <WaIcon name="camera" variant="regular"/>
+                            </WaButton>
+                        </>}
                     <JourneyReplayTooltip targetId={`${idPrefix}-stop`}>{stopLabel}</JourneyReplayTooltip>
                     <WaButton
                         id={`${idPrefix}-stop`}
@@ -334,6 +360,23 @@ export const JourneyReplayProgressBar = memo(({
                         disabled={disabled}
                     >
                         <WaIcon name={stopIcon} variant="regular"/>
+                    </WaButton>
+                </span>}
+            {showSnapshot && !showActions &&
+                <span className="replay-progress-segment replay-progress-snapshot">
+                    <JourneyReplayTooltip targetId={`${idPrefix}-snapshot`}>{snapshotLabel}</JourneyReplayTooltip>
+                    <WaButton
+                        id={`${idPrefix}-snapshot`}
+                        className="replay-progress-action"
+                        appearance="plain"
+                        variant="brand"
+                        size="s"
+                        title={snapshotLabel}
+                        aria-label={snapshotLabel}
+                        onClick={snapshot}
+                        disabled={disabled}
+                    >
+                        <WaIcon name="camera" variant="regular"/>
                     </WaButton>
                 </span>}
             {showSettings && !isUiHidden &&

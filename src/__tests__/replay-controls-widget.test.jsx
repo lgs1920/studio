@@ -22,6 +22,10 @@ vi.mock('@Components/MainUI/widgets/Widget', () => ({
     Widget: ({children}) => <div data-testid="widget">{children}</div>,
 }))
 
+vi.mock('@Core/ui/ReplayCropSnapshot', () => ({
+    captureReplayCropSnapshot: vi.fn(),
+}))
+
 vi.mock('@web.awesome.me/webawesome-pro/dist/react', () => ({
     WaCard: ({children, ...props}) => <div {...props}>{children}</div>,
     WaButton: ({children, ...props}) => <button type="button" {...props}>{children}</button>,
@@ -31,6 +35,7 @@ vi.mock('@web.awesome.me/webawesome-pro/dist/react', () => ({
 }))
 
 import { JourneyReplayControlsWidget } from '@Components/JourneyReplay/JourneyReplayControlsWidget'
+import { captureReplayCropSnapshot } from '@Core/ui/ReplayCropSnapshot'
 
 describe('JourneyReplayControlsWidget', () => {
     beforeEach(() => {
@@ -119,9 +124,11 @@ describe('JourneyReplayControlsWidget', () => {
         expect(screen.queryByText(/km/)).toBeNull()
         fireEvent.click(screen.getByRole('button', {name: 'Pause HQ creation'}))
         fireEvent.click(screen.getByRole('button', {name: 'Abort HQ creation'}))
+        fireEvent.click(screen.getByRole('button', {name: 'Take replay snapshot'}))
 
         expect(pauseExport).toHaveBeenCalledTimes(1)
         expect(abortExport).toHaveBeenCalledTimes(1)
+        expect(captureReplayCropSnapshot).toHaveBeenCalledTimes(1)
 
         view.unmount()
         globalThis.lgs.stores.replay.deferredExportPlan.runtime.exportPaused = true

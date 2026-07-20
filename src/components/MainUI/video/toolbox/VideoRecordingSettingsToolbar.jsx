@@ -90,17 +90,6 @@ export const VideoRecordingSettingsToolbar = memo(() => {
         />
     ) : null
 
-    const handleSnapShot = useCallback(async () => {
-        prepareVideoCaptureUi()
-        Object.assign($video, {
-            snapshot:     true,
-            preRecording: false,
-            recording:    false,
-        })
-        // Restoration logic should be triggered by the store observer or a dedicated event
-        // after the actual file is saved/processed.
-    }, [$video])
-
     const handleVideoRecording = useCallback(async (event) => {
         if (!__.recorder) {
             console.warn('[VideoRecordingSettingsToolbar] Recorder not initialized')
@@ -228,40 +217,9 @@ export const VideoRecordingSettingsToolbar = memo(() => {
                     return true
                 },
             },
-            {
-                icon: 'camera',
-                text:       'Snapshot',
-                tooltip: {
-                    title: 'Snapshot',
-                    text:  'Export one image from the current zone.',
-                },
-                done: false,
-                mandatory:  false,
-                beforeStep: () => {
-                    $video.step = 2
-                    Object.assign($video.cropper, {
-                        ratioEditor:  false,
-                        presetEditor: false,
-                        widgetEditor: false,
-                    })
-                    __.ui.widgetManager.windowResizing = false
-                    return true
-                },
-                onClick: async () => {
-                    syncCropFrame('before-snapshot')
-                    Object.assign($video, {
-                        recording:  false,
-                        editing:    false,
-                        finalizing: false,
-                    })
-                    _steps.current[2].done = true
-                    await handleSnapShot()
-                    return true
-                },
-            },
         ]
         return _steps.current
-    }, [$video, handleVideoRecording, handleSnapShot, hasDefinedCropDimensions, syncCropFrame])
+    }, [$video, handleVideoRecording, hasDefinedCropDimensions, syncCropFrame])
 
     if (!shouldShowToolbar) {
         return null

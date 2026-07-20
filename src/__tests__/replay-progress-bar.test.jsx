@@ -107,4 +107,10 @@ describe('JourneyReplayProgressBar', () => {
         expect(screen.getByText('25%')).not.toBeNull()
         expect(screen.queryByText(/km/)).toBeNull()
     })
+
+    it('keeps the snapshot action visible when playback actions are hidden', () => {
+        render(<JourneyReplayProgressBar showActions={false} showSnapshot/>)
+
+        expect(screen.getByRole('button', {name: 'Take replay snapshot'})).not.toBeNull()
+    })
 })
