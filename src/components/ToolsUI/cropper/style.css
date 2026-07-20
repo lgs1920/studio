@@ -223,7 +223,7 @@
     cursor: pointer;
     transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
     white-space: nowrap;
-    color: var(--lgs-light-color-75);
+    color: var(--lgs-text-on-color);
     border: 1px solid transparent;
     border-radius: var(--lgs-on-map-interactive-radius, var(--lgs-border-radius-xs));
     outline: var(--lgs-card-on-map-hover-outline);

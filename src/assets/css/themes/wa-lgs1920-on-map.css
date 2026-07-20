@@ -61,16 +61,17 @@
     --lgs-card-on-map-selected-border-color: var(--lgs-card-on-map-border-color);
     --lgs-card-on-map-selected-color: var(--lgs-text-on-color);
     --lgs-widget-collapsed-icon-color: var(--wa-color-brand-on-quiet);
-    --lgs-disabled-color: color-mix(in oklab, var(--lgs-text-on-color) 90%, var(--lgs-card-on-map-bg-color) 10%);
+    --lgs-disabled-color: color-mix(in oklab, var(--lgs-text-on-color) 50%, transparent);
     --lgs-disabled-bg-color: color-mix(in oklab, var(--lgs-card-on-map-bg-color) 98%, var(--lgs-text-on-color) 2%);
     --lgs-card-on-map-disabled-color: var(--lgs-disabled-color);
     --lgs-card-on-map-disabled-bg-color: var(--lgs-disabled-bg-color);
     --lgs-card-on-map-disabled-border-color: color-mix(in oklab, var(--lgs-disabled-color) 38%, transparent);
 
     --lgs-hover-context-menu-bg-color: var(--lgs-card-on-map-hover-bg-color);
-    --lgs-switch-active-track-color: var(--lgs-card-on-map-selected-bg-color);
-    --lgs-switch-active-thumb-color: var(--lgs-card-on-map-selected-color);
-    --lgs-switch-inactive-thumb-color: var(--lgs-light-color-75);
+    --lgs-switch-active-track-color: color-mix(in oklab, var(--lgs-card-on-map-bg-color) 42%, var(--lgs-text-on-color) 58%);
+    --lgs-switch-active-thumb-color: var(--lgs-card-on-map-bg-color);
+    --lgs-switch-inactive-track-color: color-mix(in oklab, var(--lgs-card-on-map-bg-color) 76%, var(--lgs-text-on-color) 24%);
+    --lgs-switch-inactive-thumb-color: var(--lgs-text-on-color);
     --lgs-select-bg-color: var(--wa-form-control-background-color);
     --lgs-select-border-color: var(--lgs-card-on-map-border-color);
     --lgs-select-color: var(--wa-form-control-value-color);
@@ -160,6 +161,33 @@
     --wa-form-control-activated-color: var(--lgs-switch-active-track-color);
     --wa-form-control-label-color: var(--lgs-text-on-color);
     --wa-form-control-value-color: var(--lgs-text-on-color);
+}
+
+.wa-theme-lgs1920-on-map:is(wa-switch),
+.wa-theme-lgs1920-on-map wa-switch {
+    --wa-form-control-border-color: var(--lgs-text-on-color);
+}
+
+.wa-theme-lgs1920-on-map:is(wa-switch)::part(control),
+.wa-theme-lgs1920-on-map wa-switch::part(control) {
+    border-color: var(--lgs-card-on-map-border-color);
+    background-color: var(--lgs-switch-inactive-track-color);
+}
+
+.wa-theme-lgs1920-on-map:is(wa-switch):state(checked)::part(control),
+.wa-theme-lgs1920-on-map wa-switch:state(checked)::part(control) {
+    border-color: var(--lgs-card-on-map-border-color);
+    background-color: var(--lgs-switch-active-track-color);
+}
+
+.wa-theme-lgs1920-on-map:is(wa-switch)::part(thumb),
+.wa-theme-lgs1920-on-map wa-switch::part(thumb) {
+    background-color: var(--lgs-switch-inactive-thumb-color);
+}
+
+.wa-theme-lgs1920-on-map:is(wa-switch):state(checked)::part(thumb),
+.wa-theme-lgs1920-on-map wa-switch:state(checked)::part(thumb) {
+    background-color: var(--lgs-switch-active-thumb-color);
 }
 
 .wa-theme-lgs1920-on-map:is(wa-number-input),
@@ -256,8 +284,8 @@
     color: var(--lgs-card-on-map-disabled-color) !important;
     border-color: var(--lgs-card-on-map-disabled-border-color) !important;
     outline-color: transparent !important;
-    background: var(--lgs-card-on-map-disabled-bg-color) !important;
-    background-color: var(--lgs-card-on-map-disabled-bg-color) !important;
+    background: transparent !important;
+    background-color: transparent !important;
     background-image: none !important;
 }
 
@@ -406,8 +434,9 @@
 .wa-theme-lgs1920-on-map .journey-selector-tree-panel wa-tree-item[aria-disabled="true"]::part(item) {
     color: var(--lgs-card-on-map-disabled-color) !important;
     outline-color: transparent;
-    background: var(--lgs-card-on-map-disabled-bg-color) !important;
-    background-color: var(--lgs-card-on-map-disabled-bg-color) !important;
+    background: transparent !important;
+    background-color: transparent !important;
+    background-image: none !important;
     opacity: 1;
 }
 
@@ -496,6 +525,7 @@ body[data-on-map-theme="winter"] :is(.wa-theme-lgs1920-on-map, .lgs-on-map-theme
     --lgs-on-map-dark-color: #eaf1fc;
     --lgs-on-map-light-color: #89a9cf;
     --lgs-on-map-text-color: #142033;
+    --lgs-card-on-map-selected-border-color: color-mix(in oklab, var(--lgs-on-map-text-color) 58%, var(--lgs-card-on-map-bg-color) 42%);
     --lgs-button-border-color: color-mix(in oklab, var(--lgs-on-map-light-color) 34%, var(--lgs-on-map-dark-color) 66%);
     --lgs-button-color: var(--lgs-on-map-text-color);
     --lgs-button-bg-color: color-mix(in oklab, var(--lgs-on-map-light-color) 10%, var(--lgs-card-on-map-bg-color) 90%);
@@ -531,4 +561,21 @@ body[data-on-map-theme="spring"] :is(.wa-theme-lgs1920-on-map, .lgs-on-map-theme
     linear-gradient(168deg, color-mix(in oklab, var(--lgs-dark-color-80) 88%, var(--wa-color-brand) 12%) 0%, color-mix(in oklab, var(--lgs-dark-color-95) 84%, var(--wa-color-brand) 16%) 54%, var(--lgs-dark-color-95) 100%);
     --lgs-card-on-map-bg-color: color-mix(in oklab, var(--lgs-on-map-dark-color) 74%, var(--lgs-on-map-light-color) 26%);
     --lgs-card-on-map-bg-image: var(--lgs-on-map-surface-gradient);
+}
+
+/* Seasonal crop-ratio entries use the active on-map text color in every
+ * seasonal palette. Selection remains differentiated by its background and
+ * border tokens above. */
+body[data-on-map-theme="spring"] .wa-theme-lgs1920-on-map .crop-ratio-popup-menu li.crop-ratio-choice-button,
+body[data-on-map-theme="fall"] .wa-theme-lgs1920-on-map .crop-ratio-popup-menu li.crop-ratio-choice-button,
+body[data-on-map-theme="winter"] .wa-theme-lgs1920-on-map .crop-ratio-popup-menu li.crop-ratio-choice-button {
+    color: var(--lgs-text-on-color);
+}
+
+/* Brand controls embedded in on-map toolbars inherit the seasonal on-map
+ * foreground instead of resolving to the global brand foreground. */
+body[data-on-map-theme="fall"] .wa-theme-lgs1920-on-map :is(wa-button, wa-icon-button)[variant="brand"] {
+    --wa-color-on-quiet: var(--lgs-text-on-color);
+    --wa-color-on-normal: var(--lgs-text-on-color);
+    --wa-color-on-loud: var(--lgs-text-on-color);
 }

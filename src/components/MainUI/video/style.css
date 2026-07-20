@@ -121,9 +121,9 @@
     --dashing-width: 25px;
     --border-dance-duration: 40s;
     --video-recorder-bg-color: var(--wa-color-red-40);
-    --video-recorder-color: white;
+    --video-recorder-color: var(--lgs-text-on-color);
     --video-warning-bg-color: var(--wa-color-orange-40);
-    --video-warning-color: white;
+    --video-warning-color: var(--lgs-text-on-color);
 }
 
 .recording-in-progress .lgs-widget-inner-overlay {

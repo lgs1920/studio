@@ -180,7 +180,7 @@ html {
 }
 
 .orbit-widget.wa-theme-lgs1920-on-map {
-    --orbit-widget-icon-color: var(--wa-color-brand-on-quiet);
+    --orbit-widget-icon-color: var(--lgs-text-on-color);
     padding: var(--lgs-on-map-padding, var(--lgs-gutter-xs)) !important;
     border-radius: var(--lgs-on-map-border-radius, var(--lgs-border-radius-s));
     background-color: color-mix(in oklab, var(--lgs-card-on-map-bg-color) 96%, black 4%);
@@ -370,7 +370,7 @@ html {
     --thumb-width: 0.8rem;
     --thumb-height: 0.8rem;
     --lgs-slider-track-color: color-mix(in oklab, var(--lgs-card-on-map-bg-color) 74%, var(--wa-color-brand) 26%);
-    --lgs-slider-thumb-color: var(--wa-color-brand);
+    --lgs-slider-thumb-color: var(--lgs-text-on-color);
 }
 
 .orbit-widget.wa-theme-lgs1920-on-map .panorama-widget-range::part(slider) {
@@ -394,7 +394,13 @@ html {
     font-size: var(--lgs-font-size-s);
     font-weight: 400;
     line-height: 1;
-    color: var(--wa-color-brand);
+    color: var(--lgs-text-on-color);
+}
+
+.orbit-widget.wa-theme-lgs1920-on-map wa-button::part(base),
+.orbit-widget.wa-theme-lgs1920-on-map wa-icon-button::part(base) {
+    color: var(--lgs-text-on-color);
+    border-color: var(--lgs-card-on-map-border-color);
 }
 
 .orbit-direction-toggle,
@@ -740,6 +746,14 @@ body.mobile .orbit-widget-body {
 
 .journey-toolbar .journey-title {
     max-height: calc(var(--lgs-line-dimension) - 2 * var(--lgs-gutter-xs));
+}
+
+.journey-toolbar.wa-theme-lgs1920-on-map :is(wa-button, wa-icon-button)::part(base) {
+    color: var(--lgs-text-on-color);
+}
+
+.journey-toolbar.wa-theme-lgs1920-on-map wa-icon {
+    color: var(--lgs-text-on-color);
 }
 
 
