@@ -75,9 +75,5 @@ export const replayVideoTraceDebug = (event, payload = {}) => {
         buffer.shift()
     }
 
-    if (root[TRACE_CONSOLE_FLAG] !== false) {
-        root.console?.info?.('[replay-video-trace]', event, entry.data)
-    }
-
     return entry
 }
