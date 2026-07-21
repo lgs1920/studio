@@ -126,6 +126,9 @@ TunnelTooltip.displayName = 'TunnelTooltip'
  * @property {React.ReactNode} [component] - Content to render for the step
  * @property {string|Object|false} [tooltip] - Optional tooltip content. Uses text when omitted, false disables it
  * @property {string} [tooltipPlacement='top'] - Preferred tooltip placement. It flips vertically when needed
+ * @property {string} [variant='neutral'] - Web Awesome button variant
+ * @property {string} [appearance='plain'] - Web Awesome button appearance
+ * @property {string} [hoverVariant] - Web Awesome button variant while hovered
  * @property {(index: number, event?: PointerEvent) => boolean} [beforeStep] - Called before navigating to this step,
  *     return false to cancel
  * @property {(index: number) => void} [afterStep] - Called after navigating to this step
@@ -152,10 +155,12 @@ export const Tunnel = memo(({
                                 onCancel,
                                 className = '',
                                 cancelTooltip = 'Exit',
+                                cancelAppearance = 'plain',
                                 leadingAction = null,
                             }) => {
     // State for the current step index
     const [currentContainer, setCurrentStepIndex] = useState(defaultStepIndex)
+    const [hoveredStep, setHoveredStep] = useState(null)
     const tunnelId = useId().replace(/:/g, '')
     // Ref for the tunnel container
     const _tunnelContainer = useRef(null)
@@ -247,13 +252,15 @@ export const Tunnel = memo(({
                                                   placement={step.tooltipPlacement ?? 'top'}
                                               >
                                                   <WaButton
-                                                    variant="neutral"
-                                                    appearance="plain"
+                                                    variant={hoveredStep === index ? (step.hoverVariant ?? step.variant ?? 'neutral') : (step.variant ?? 'neutral')}
+                                                    appearance={step.appearance ?? 'plain'}
                                                     aria-label={step.text}
                                                     aria-disabled={isBlocked}
                                                     className={classNames({
                                                         'lgs-tunnel-button-disabled': isBlocked,
                                                     }, step.className)}
+                                                    onPointerEnter={() => setHoveredStep(index)}
+                                                    onPointerLeave={() => setHoveredStep(current => current === index ? null : current)}
                                                     onClick={event => handleStepClick(index, event)}
                                                 >
                                                       <WaIcon name={step.icon} variant="regular"/>
@@ -278,7 +285,8 @@ export const Tunnel = memo(({
                 >
                     <WaButton
                         variant="neutral"
-                        appearance="plain"
+                        appearance={cancelAppearance}
+                        className="lgs-tunnel-cancel"
                         aria-label="Exit"
                         onPointerDown={onCancel}>
                         <WaIcon name="xmark" variant="regular"/>

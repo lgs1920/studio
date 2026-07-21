@@ -149,6 +149,8 @@ export const JourneyReplayProgressBar = memo(({
                                                  showSettings = false,
                                                  showActions = true,
                                                  showSnapshot = true,
+                                                 actionAppearance = 'plain',
+                                                 snapshotAppearance = 'plain',
                                                  disabled = false,
                                                  className = '',
                                                  showTime = true,
@@ -301,7 +303,7 @@ export const JourneyReplayProgressBar = memo(({
                             <WaButton
                                 id={`${idPrefix}-pause`}
                                 className="replay-progress-action"
-                                appearance="plain"
+                                appearance={actionAppearance}
                                 variant="brand"
                                 size="s"
                                 title={pauseLabel}
@@ -318,7 +320,7 @@ export const JourneyReplayProgressBar = memo(({
                              <WaButton
                                  id={`${idPrefix}-play`}
                                  className="replay-progress-action"
-                                 appearance="plain"
+                                 appearance={actionAppearance}
                                  variant="brand"
                                  size="s"
                                  title={playLabel}
@@ -336,7 +338,7 @@ export const JourneyReplayProgressBar = memo(({
                             <WaButton
                                 id={`${idPrefix}-snapshot`}
                                 className="replay-progress-action"
-                                appearance="plain"
+                                appearance={snapshotAppearance}
                                 variant="brand"
                                 size="s"
                                 title={snapshotLabel}
@@ -351,7 +353,7 @@ export const JourneyReplayProgressBar = memo(({
                     <WaButton
                         id={`${idPrefix}-stop`}
                         className="replay-progress-action"
-                        appearance="plain"
+                        appearance={actionAppearance}
                         variant={stopVariant}
                         size="s"
                         title={stopLabel}
@@ -368,7 +370,7 @@ export const JourneyReplayProgressBar = memo(({
                     <WaButton
                         id={`${idPrefix}-snapshot`}
                         className="replay-progress-action"
-                        appearance="plain"
+                        appearance={snapshotAppearance}
                         variant="brand"
                         size="s"
                         title={snapshotLabel}
@@ -385,7 +387,7 @@ export const JourneyReplayProgressBar = memo(({
                     <WaButton
                         id={`${idPrefix}-settings`}
                         className="replay-progress-action"
-                        appearance="plain"
+                        appearance={actionAppearance}
                         variant="brand"
                         size="s"
                         title={settingsLabel}

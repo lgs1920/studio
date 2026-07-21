@@ -1121,7 +1121,7 @@ export const JourneyReplayDrawer = memo(() => {
                                              tooltip="left"
                                              className="replay-sync-video-button square-button"
                                              variant="brand"
-                                             appearance="Filled"
+                                             appearance="plain"
                                          />
                                      }
                                  </div>

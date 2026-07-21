@@ -83,7 +83,7 @@ export const VideoRecordingSettingsToolbar = memo(() => {
             tooltipPlacement="top"
             tooltipStyle="tunnel"
             variant="neutral"
-            appearance="plain"
+            appearance="filled"
             className=""
             showOnlyWhenLinked
             ariaLabel="Journey Replay Settings"
@@ -189,6 +189,9 @@ export const VideoRecordingSettingsToolbar = memo(() => {
             {
                 icon: 'clapperboard-play',
                 text:       'Start Recording',
+                variant:    'brand',
+                appearance: 'plain',
+                className:  'video-recorder-start-recording wa-theme-lgs1920',
                 tooltip: {
                     title: 'Start recording',
                     text: 'Record the selected zone.',
@@ -238,6 +241,7 @@ export const VideoRecordingSettingsToolbar = memo(() => {
                     text:  'Leave video setup.',
                 }}
                 onCancel={handleCancel}
+                cancelAppearance="filled"
             />
         </div>
     )

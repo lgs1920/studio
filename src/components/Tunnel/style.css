@@ -153,3 +153,7 @@
     content: "";
     background-color: var(--lgs-tunnel-color);
 }
+
+.lgs-tunnel-bar .lgs-tunnel-cancel {
+    margin-left: var(--lgs-gutter-s);
+}

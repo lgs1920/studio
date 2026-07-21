@@ -291,6 +291,8 @@ export const VideoRecorderToolbar = ({toolbar, widgetsReady = false, onStartReco
                         className="video-recorder-replay-progress"
                         showActions={false}
                         showSnapshot
+                        actionAppearance="plain"
+                        snapshotAppearance="plain"
                         showSettings={false}
                         showTime={false}
                         showDistance={false}
@@ -302,6 +304,8 @@ export const VideoRecorderToolbar = ({toolbar, widgetsReady = false, onStartReco
                         className="video-recorder-replay-progress"
                         showActions={false}
                         showSnapshot
+                        actionAppearance="plain"
+                        snapshotAppearance="plain"
                         showSettings={false}
                         progressOverride={draftVideoProgress}
                         disabled={video.preRecording}
@@ -317,14 +321,13 @@ export const VideoRecorderToolbar = ({toolbar, widgetsReady = false, onStartReco
                         <WaButton
                             id="video-recorder-start-recording"
                             variant="brand"
-                            appearance="filled"
+                            appearance="plain"
                             size="s"
                             className="video-recorder-action video-recorder-start-recording"
                             aria-label="Start"
                             onClick={onStartRecording}
                         >
                             <WaIcon name="clapperboard-play" variant="regular"/>
-                            <span>Start</span>
                         </WaButton>
                     </>
                 ) : <div className="blinking">Starting...</div>

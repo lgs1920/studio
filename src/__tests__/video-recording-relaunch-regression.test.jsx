@@ -322,4 +322,22 @@ describe('video recording relaunch regression', () => {
         expect(recorder.stopVideo).toHaveBeenCalledTimes(1)
         expect(lgs.stores.ui.video.finalizing).toBe(true)
     })
+
+    it('uses the requested appearances for video recording progress actions', () => {
+        globalThis.lgs.stores.replay.recordingSync = true
+        const view = render(<VideoRecorderToolbar widgetsReady onStartRecording={vi.fn()}/>)
+
+        expect(document.getElementById('video-recorder-play-pause')?.getAttribute('appearance')).toBe('plain')
+        expect(document.getElementById('video-recorder-stop')?.getAttribute('appearance')).toBe('plain')
+        expect(document.querySelector('[id$="-snapshot"]')?.getAttribute('appearance')).toBe('plain')
+        expect(document.getElementById('video-recorder-cancel')?.getAttribute('appearance')).toBe('plain')
+
+        act(() => {
+            globalThis.lgs.stores.ui.video.recording = false
+            globalThis.lgs.stores.ui.video.preRecording = true
+        })
+        view.rerender(<VideoRecorderToolbar widgetsReady onStartRecording={vi.fn()}/>)
+
+        expect(document.getElementById('video-recorder-start-recording')?.getAttribute('appearance')).toBe('plain')
+    })
 })
