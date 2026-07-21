@@ -104,9 +104,10 @@ duration, motion profiles, look-at targets, and optional 360-degree maneuvers. T
 Journey Replay: the drone path engine should be reusable, deterministic, and testable without a live Cesium scene, while
 Cesium remains the runtime adapter that applies the final camera pose.
 
-The first version focuses on a path model, target model, easing, runtime controller, and Cesium adapter. A later authoring
-version is planned around a Three.js preview/editor so users can shape a camera path visually before running it in the
-main scene.
+The first version focuses on a path model, target model, easing, runtime controller, and Cesium adapter. It also defines
+deterministic clip transitions, immediate or animated fly-to moves, variable-speed take-off and landing, and directly
+editable 3D Bezier camera paths. A later authoring version is planned around a Three.js preview/editor so users can shape
+a camera path visually before running it in the main scene.
 
 Technical spec: [Drone camera path architecture](tech-doc/src/core/ui/camera/DRONE_CAMERA_PATH_ARCHITECTURE.md).
 
