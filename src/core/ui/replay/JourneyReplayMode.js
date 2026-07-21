@@ -5949,18 +5949,6 @@ export class JourneyReplayMode {
                     }))
                 }
                 const notifyStopClipsCompleteAfterFinalWidgetFrame = (afterFrame = null) => {
-                    const recorder = globalThis.__?.recorder ?? null
-                    const recordingSync = replayStore()?.recordingSync === true || recorder?.isRecording?.() === true
-                    if (recordingSync) {
-                        if (token === this.#clipSequenceToken) {
-                            notifyStopClipsComplete()
-                            if (typeof afterFrame === 'function') {
-                                afterFrame()
-                            }
-                        }
-                        return
-                    }
-
                     const raf = globalThis.requestAnimationFrame
                                 ?? globalThis.window?.requestAnimationFrame?.bind(globalThis.window)
                                 ?? (callback => setTimeout(callback, 0))
