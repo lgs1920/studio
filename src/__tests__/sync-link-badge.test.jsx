@@ -31,7 +31,7 @@ vi.mock('@web.awesome.me/webawesome-pro/dist/react', () => ({
         </button>
     ),
     WaIcon: ({name}) => <span data-testid="icon" data-name={name}/>,
-    WaTooltip: () => null,
+    WaTooltip: ({children, ...props}) => <div data-testid="tooltip" {...props}>{children}</div>,
 }))
 
 import { SyncLinkBadge } from '@Components/MainUI/SyncLinkBadge'
@@ -110,6 +110,12 @@ describe('SyncLinkBadge', () => {
         fireEvent.click(container.querySelector('button'))
         expect(disarm).toHaveBeenCalledTimes(1)
         expect(parentClick).not.toHaveBeenCalled()
+    })
+
+    it('uses the requested tooltip placement', () => {
+        const {container} = render(<SyncLinkBadge visible tooltip="left"/>)
+
+        expect(container.querySelector('[data-testid="tooltip"]')?.getAttribute('placement')).toBe('left')
     })
 
     it('arms the bridge when persisted sync is already enabled at mount', async () => {

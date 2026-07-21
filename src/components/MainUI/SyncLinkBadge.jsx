@@ -18,7 +18,7 @@ import { WaButton, WaIcon, WaTooltip } from '@web.awesome.me/webawesome-pro/dist
 import { useCallback, useEffect }      from 'react'
 import { useSnapshot }                 from 'valtio'
 
-export const SyncLinkBadge = ({visible = true, className = ''} = {}) => {
+export const SyncLinkBadge = ({visible = true, className = '', tooltip = 'right'} = {}) => {
     const video = useSnapshot(lgs.stores.ui.video)
     const replay = useSnapshot(lgs.stores.replay)
     const replaySettings = useSnapshot(lgs.settings.ui.replay)
@@ -68,7 +68,7 @@ export const SyncLinkBadge = ({visible = true, className = ''} = {}) => {
 
     return (
         <>
-            <WaTooltip for={buttonId} placement="top">
+            <WaTooltip for={buttonId} placement={tooltip}>
                 {isLinked ? 'Unlink video and replay' : 'Link video and replay'}
             </WaTooltip>
             <WaButton

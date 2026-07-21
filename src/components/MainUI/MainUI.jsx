@@ -261,7 +261,11 @@ export const MainUI = memo(() => {
                                                 className="square-button sync-linked-video-button"
                                                 appearance="filled"
                                             />
-                                            <SyncLinkBadge visible={Boolean(theJourney)} className="sync-linked-actions-badge"/>
+                                            <SyncLinkBadge
+                                                visible={Boolean(theJourney)}
+                                                tooltip={toolBar.fromStart ? 'left' : 'right'}
+                                                className="sync-linked-actions-badge"
+                                            />
                                             <JourneyReplayButton
                                                 tooltip={toolBar.fromStart ? 'left' : 'right'}
                                                 variant={replay.recordingSync === true ? 'warning' : 'brand'}
