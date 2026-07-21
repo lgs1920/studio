@@ -3286,6 +3286,8 @@ describe('replay phase 1 playback controller', () => {
 
             const overlay = document.querySelector('.replay-tolerance-zone-overlay')
             expect(overlay).not.toBeNull()
+            expect(overlay.hidden).toBe(false)
+            expect(overlay.style.display).not.toBe('none')
             expect(Number.parseFloat(overlay.style.left)).toBeCloseTo(85, 6)
             expect(Number.parseFloat(overlay.style.top)).toBeCloseTo(80, 6)
             expect(Number.parseFloat(overlay.style.width)).toBeCloseTo(850, 6)
@@ -3629,6 +3631,12 @@ describe('replay phase 1 playback controller', () => {
 
             expect(flyToCalls).toHaveLength(1)
             expect(flyToCalls[0].duration).toBeGreaterThan(0)
+            const targetCartesian = Cartesian3.fromDegrees(2.01, 48, 120)
+            const targetTransform = Transforms.eastNorthUpToFixedFrame(targetCartesian)
+            const east = Matrix4.getColumn(targetTransform, 0, new Cartesian3())
+            const delta = Cartesian3.subtract(flyToCalls[0].destination, targetCartesian, new Cartesian3())
+
+            expect(Cartesian3.dot(delta, east)).toBeLessThan(-200)
         }
         finally {
             globalThis.lgs = previousLgs

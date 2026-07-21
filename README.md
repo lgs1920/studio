@@ -37,6 +37,7 @@ The repository already contains the main product surface used by the studio:
 - Journey Replay playback and replay-aware video synchronization
 - Video recording, deferred HQ export, and image snapshot workflows
 - Deterministic HQ camera following for navigation and dynamic corrections, including 1.5-second transitions
+- Crop-aware Z1/Z2 collision tracking and visible diagnostic overlays across video formats
 - IndexedDB persistence for editor state and loaded content
 - Privacy-first local workspace for imported journeys and generated media
 - PWA support and offline-friendly caching

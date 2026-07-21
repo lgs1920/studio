@@ -957,7 +957,7 @@ export class JourneyReplayMode {
     #lastDynamicTargetScreen = null
     #skipNextImmediateStartRecenter = false
     #toleranceZoneOverlay = null
-    #toleranceZoneOverlayVisible = false
+    #toleranceZoneOverlayVisible = true
     #lastToleranceZoneHysteresis = null
     #cameraAnglePreviewEntities = null
     #cameraAnglePreviewPOIVisibilityState = new Map()
@@ -3585,6 +3585,7 @@ export class JourneyReplayMode {
                                 source = null,
                                 cameraSettings,
                                 markerSettings,
+                                collision = false,
                                 previousHeading = this.#lastNominalCameraHeading ?? this.#lastCameraHeading,
                                 previousPitch = this.#lastNominalCameraPitch ?? this.#lastCameraPitch,
                             } = {}) => {
@@ -3599,7 +3600,10 @@ export class JourneyReplayMode {
                         ? SAFE_TOP_DOWN_PITCH
                         : degreesToRadians(normalizedPitch)
         let desiredHeading
-        if (cameraSettings.positionMode === REPLAY_CAMERA_POSITION_SYSTEM) {
+        if (collision && cameraSettings.positionMode === REPLAY_CAMERA_POSITION_SYSTEM) {
+            desiredHeading = this.#headingFromPositionProperty(progress)
+        }
+        else if (cameraSettings.positionMode === REPLAY_CAMERA_POSITION_SYSTEM) {
             if (Number.isFinite(cameraSettings?.heading)) {
                 desiredHeading = degreesToRadians(cameraSettings.heading)
             }
@@ -4142,10 +4146,33 @@ export class JourneyReplayMode {
         return windowPosition ?? canvasPosition ?? null
     }
 
+    /**
+     * Converts Cesium window coordinates into the active crop-local coordinate space.
+     *
+     * @param {object} sample - Replay sample to project.
+     * @returns {{x: number, y: number}|null} Crop-local screen position.
+     */
+    #trackingWindowPositionForSample = sample => {
+        const windowPosition = this.#windowPositionForSample(sample)
+        if (!windowPosition) {
+            return null
+        }
+
+        const cropRect = this.#videoCropRect()
+        if (!cropRect) {
+            return windowPosition
+        }
+
+        return {
+            x: windowPosition.x - cropRect.left,
+            y: windowPosition.y - cropRect.top,
+        }
+    }
+
     #cameraCollisionForSample = (sample, cameraSettings) => {
         const viewer = globalThis.lgs?.viewer
         const scene = this.#cesiumScene()
-        const windowPosition = this.#windowPositionForSample(sample)
+        const windowPosition = this.#trackingWindowPositionForSample(sample)
         if (!viewer || !scene || !windowPosition) {
             const outerBounds = replayToleranceZoneBounds(cameraSettings?.hysteresis?.zone)
             const safeBounds = replayInnerToleranceZoneBounds(
@@ -4164,13 +4191,6 @@ export class JourneyReplayMode {
         }
 
         const rect = this.#viewportRectForCesiumSurface()
-        const cropRect = this.#videoCropRect()
-        const point = cropRect
-            ? {
-                x: windowPosition.x - cropRect.left,
-                y: windowPosition.y - cropRect.top,
-            }
-            : windowPosition
         const markerRadius = finiteNumber(globalThis.lgs?.stores?.replay?.markerRadius) ?? 35
         const overlayBounds = replayToleranceZoneBounds(cameraSettings?.hysteresis?.zone)
         const safeBounds = replayInnerToleranceZoneBounds(
@@ -4178,7 +4198,7 @@ export class JourneyReplayMode {
             finiteNumber(cameraSettings?.hysteresis?.marginRatio) ?? 0.12,
         )
         return replayWindowCollisionFromPoint({
-                                                      point:        point,
+                                                      point:        windowPosition,
                                                       width:        rect.width,
                                                       height:       rect.height,
                                                       outerBounds:  overlayBounds,
@@ -4909,8 +4929,7 @@ export class JourneyReplayMode {
 
     /**
      * Toggle the diagnostic Z1/Z2 overlay without changing the tracking
-     * algorithm. It is hidden during normal replay/video usage, but remains
-     * available for future camera debugging.
+     * algorithm.
      */
     setToleranceZoneOverlayVisible = (visible = true) => {
         this.#toleranceZoneOverlayVisible = visible === true
@@ -5966,6 +5985,7 @@ export class JourneyReplayMode {
                                                  source,
                                                  cameraSettings,
                                                  markerSettings,
+                                                 collision:      true,
                                                  previousHeading: smoothHeading,
                                                  previousPitch:   smoothPitch,
                                              })
@@ -6024,7 +6044,7 @@ export class JourneyReplayMode {
                 },
             })
             const rect = this.#viewportRectForCesiumSurface()
-            const currentScreen = this.#windowPositionForSample(anchorSample)
+            const currentScreen = this.#trackingWindowPositionForSample(anchorSample)
             const hasViewport = (rect?.width ?? 0) > 0 && (rect?.height ?? 0) > 0
             const currentInsideDynamicTriggerZone = hasViewport
                                                     && !replayIsWindowPointOutsideToleranceZone({
@@ -6089,7 +6109,7 @@ export class JourneyReplayMode {
             })
             const targetCollision = this.#cameraCollisionForSample(trackingSample, dynamicTargetCameraSettings)
             const outsideDynamicTargetZone = Boolean(targetCollision?.hard)
-            const predictedScreen = this.#windowPositionForSample(trackingSample)
+            const predictedScreen = this.#trackingWindowPositionForSample(trackingSample)
             const dynamicTargetScreen = replayDynamicTargetPointInZone({
                 currentPoint:    currentScreen,
                 predictedPoint:  predictedScreen,
@@ -6316,6 +6336,7 @@ export class JourneyReplayMode {
                                               source,
                                               cameraSettings,
                                               markerSettings,
+                                              collision:      outsideTolerance || targetCorrectionDue,
                                               previousHeading: smoothHeading,
                                               previousPitch:   smoothPitch,
                                           })
