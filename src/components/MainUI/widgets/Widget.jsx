@@ -39,6 +39,7 @@ import classNames                 from 'classnames'
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import Moveable                   from 'react-moveable'
 import { useSnapshot }            from 'valtio'
+import { resolveActiveWidgetZIndex } from './widgetZIndex'
 
 const COLLAPSED_WIDGET_SIZE = 40
 const DEFAULT_COLLAPSED_WIDGET_ICON = 'sliders'
@@ -385,8 +386,9 @@ export const Widget = ({isVisible, className = '', moveableClassName = '', conta
                         : (config.opacity ?? 1)
     const displayOpacity = previewOnly ? 0.5 : liveOpacity
 
-    // Reactive depth resolution: priority to Store, fallback to initial Config
-    const activeZIndex = widgetListSnapshot.get(widgetId)?.zIndex ?? config.zIndex
+    // Reactive depth resolution: priority to Store, fallback to initial Config.
+    // Credits and Logo are composition infrastructure and must stay above ordinary widgets.
+    const activeZIndex = resolveActiveWidgetZIndex({widgetId, widgetListSnapshot, config, widgetDefinition})
     /**
      * Ensures Moveable handles are correctly layered when zIndex changes.
      */
