@@ -85,12 +85,12 @@ describe('cancelVideoEditing', () => {
         expect(lgs.stores.replay.mainUiHidden).toBe(false)
     })
 
-    it('keeps MainUI visible for a standalone recording', () => {
+    it('hides MainUI for a standalone recording', () => {
         lgs.stores.replay.recordingSync = false
 
         prepareVideoCaptureUi()
 
-        expect(lgs.stores.replay.mainUiHidden).toBe(false)
+        expect(lgs.stores.replay.mainUiHidden).toBe(true)
     })
 
     it('does not sync the crop when canceling', async () => {

@@ -38,9 +38,9 @@ export const prepareVideoCaptureUi = () => {
 
     const replayStore = globalThis.lgs?.stores?.replay
     if (replayStore) {
-        const replayVideoLinked = replayStore.recordingSync === true
-                                   || globalThis.lgs?.settings?.ui?.replay?.recordingSync === true
-        replayStore.mainUiHidden = replayVideoLinked
+        // The capture canvas must stay free of the interactive MainUI for both
+        // standalone videos and replay-linked recordings.
+        replayStore.mainUiHidden = true
     }
 }
 
