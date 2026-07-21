@@ -40,6 +40,7 @@ The repository already contains the main product surface used by the studio:
 - IndexedDB persistence for editor state and loaded content
 - Privacy-first local workspace for imported journeys and generated media
 - PWA support and offline-friendly caching
+- Boot splash video loading uses browser-supported video element preloading
 
 ## Main Features
 
