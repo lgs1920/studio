@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-07-03
- * Last modified: 2026-07-03
+ * Created on: 2026-07-21
+ * Last modified: 2026-07-21
  *
  *
  * Copyright © 2026 LGS1920
@@ -83,7 +83,7 @@ export const VideoRecordingSettingsToolbar = memo(() => {
             tooltipPlacement="top"
             tooltipStyle="tunnel"
             variant="neutral"
-            appearance="filled"
+            appearance="plain"
             className=""
             showOnlyWhenLinked
             ariaLabel="Journey Replay Settings"
@@ -155,7 +155,7 @@ export const VideoRecordingSettingsToolbar = memo(() => {
     const steps = useMemo(() => {
         _steps.current = [
             {
-                icon: 'camera-viewfinder',
+                icon: 'paintbrush-pencil',
                 text:       'Compose video',
                 tooltip: {
                     title: 'Compose video',
@@ -241,7 +241,7 @@ export const VideoRecordingSettingsToolbar = memo(() => {
                     text:  'Leave video setup.',
                 }}
                 onCancel={handleCancel}
-                cancelAppearance="filled"
+                cancelAppearance="plain"
             />
         </div>
     )
