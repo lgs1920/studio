@@ -464,6 +464,33 @@ describe('JourneyReplayMode HQ export frames', () => {
         }))
     })
 
+    it('updates the camera only through the deterministic HQ frame path', async () => {
+        const journey = makeJourney([
+            makeTrack({
+                slug:        'track#journey#gpx#main',
+                coordinates: [[2, 48, 120], [2.001, 48.001, 130]],
+            }),
+        ])
+        installReplayGlobals(journey)
+        const renderer = {clear: vi.fn(), show: vi.fn(), update: vi.fn(), hideCursor: vi.fn()}
+        const mode = new JourneyReplayMode({
+            controller: new JourneyReplayPlaybackController({
+                requestFrame: () => 1,
+                cancelFrame:  () => {},
+                now:          () => 0,
+            }),
+            renderer,
+        })
+
+        mode.configure({duration: 1})
+        renderer.update.mockClear()
+        await mode.renderReplayExportFrame({
+            phase: {kind: 'replay', slot: 'replay', progress: 0.5, localMillis: 500},
+        })
+
+        expect(renderer.update).toHaveBeenCalledTimes(1)
+    })
+
     it('keeps the replay trace visible on the final HQ scene frame after stop clips', async () => {
         const journey = makeJourney([
             makeTrack({
@@ -520,44 +547,6 @@ describe('JourneyReplayMode HQ export frames', () => {
         expect(journey.updateVisibility).not.toHaveBeenCalled()
     })
 
-    it('does not use a video trace overlay because the replay trace must stay terrain clamped', () => {
-        const journey = makeJourney([
-            makeTrack({
-                slug:        'track#journey#gpx#main',
-                coordinates: [[2, 48, 120], [2.001, 48.001, 130]],
-            }),
-        ])
-        installReplayGlobals(journey)
-
-        const sourceCanvas = document.createElement('canvas')
-        const renderer = {
-            createCompletedTraceVideoOverlay: vi.fn(),
-        }
-        const mode = new JourneyReplayMode({
-            controller: new JourneyReplayPlaybackController({
-                requestFrame: () => 1,
-                cancelFrame:  () => {},
-                now:          () => 0,
-            }),
-            renderer,
-        })
-
-        expect(mode.createReplayExportTraceOverlay({
-            phase: {slot: REPLAY_CLIP_SLOT_START},
-            sourceCanvas,
-        })).toBeNull()
-        expect(mode.createReplayExportTraceOverlay({
-            phase: {slot: 'replay'},
-            cropRect: {left: 0, top: 0, width: 320, height: 180},
-            outputDpr: 2,
-            sourceCanvas,
-        })).toBeNull()
-        expect(mode.createReplayExportTraceOverlay({
-            phase: {slot: REPLAY_CLIP_SLOT_STOP},
-            sourceCanvas,
-        })).toBeNull()
-        expect(renderer.createCompletedTraceVideoOverlay).not.toHaveBeenCalled()
-    })
 
     it('prepares the replay renderer for HQ export even when playback is not already configured', async () => {
         const journey = makeJourney([

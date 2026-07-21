@@ -17,7 +17,7 @@
 import { JourneyReplayCesiumRenderer } from '@Core/ui/replay/JourneyReplayCesiumRenderer'
 import { JourneyReplayPathSampler }    from '@Core/ui/replay/JourneyReplayPathSampler'
 import { defaultJourneyReplaySettings, REPLAY_TRACE_MODE_FULL } from '@Core/ui/replay/JourneyReplayProgressionStyle'
-import { Cartesian3, Cartographic, Color, SceneTransforms }     from 'cesium'
+import { Cartesian3, Color }                                   from 'cesium'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('@Utils/cesium/TrackUtils', () => ({
@@ -332,97 +332,4 @@ describe('JourneyReplayCesiumRenderer', () => {
             .some(entity => String(entity.id).includes('#remaining#'))).toBe(false)
     })
 
-    it('projects stop clip video trace from the Cesium canvas into the export crop', () => {
-        const dataSources = makeDataSources()
-        installReplayGlobals({dataSources})
-        globalThis.__lgsReplayVideoTraceConsole = false
-
-        const sourceCanvas = document.createElement('canvas')
-        sourceCanvas.width = 2000
-        sourceCanvas.height = 1000
-        sourceCanvas.getBoundingClientRect = vi.fn(() => ({
-            left: 100, top: 50, width: 1000, height: 500,
-        }))
-
-        const sceneCanvas = document.createElement('canvas')
-        sceneCanvas.width = 2000
-        sceneCanvas.height = 1000
-        sceneCanvas.getBoundingClientRect = vi.fn(() => ({
-            left: 150, top: 80, width: 1000, height: 500,
-        }))
-
-        globalThis.lgs.canvas = sourceCanvas
-        globalThis.lgs.viewer.scene.canvas = sceneCanvas
-        globalThis.lgs.scene.canvas = sceneCanvas
-        globalThis.lgs.scene.globe = {getHeight: vi.fn(() => 250)}
-
-        const ctx = {
-            setTransform: vi.fn(),
-            beginPath:    vi.fn(),
-            moveTo:       vi.fn(),
-            lineTo:       vi.fn(),
-            stroke:       vi.fn(),
-            set lineCap(value) {
-                this._lineCap = value
-            },
-            set lineJoin(value) {
-                this._lineJoin = value
-            },
-            set strokeStyle(value) {
-                this._strokeStyle = value
-            },
-            set lineWidth(value) {
-                this._lineWidth = value
-            },
-        }
-        vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(ctx)
-
-        const projectedPoints = [{x: 500, y: 240}, {x: 510, y: 250}, {x: 520, y: 260}]
-        const projectedHeights = []
-        let projectionIndex = 0
-        vi.spyOn(SceneTransforms, 'worldToWindowCoordinates').mockImplementation((_scene, position, result) => {
-            projectedHeights.push(Math.round(Cartographic.fromCartesian(position)?.height ?? 0))
-            const point = projectedPoints[Math.min(projectionIndex, projectedPoints.length - 1)]
-            projectionIndex += 1
-            result.x = point.x
-            result.y = point.y
-            return result
-        })
-        vi.spyOn(SceneTransforms, 'worldToDrawingBufferCoordinates').mockReturnValue(undefined)
-
-        const journey = makeJourney([
-            makeTrack({
-                slug:        'track#journey#gpx#main',
-                coordinates: [[2, 48, 120], [2.001, 48.001, 130], [2.002, 48.002, 140]],
-            }),
-        ])
-        const sampler = new JourneyReplayPathSampler({journey})
-        const renderer = new JourneyReplayCesiumRenderer()
-
-        renderer.show({sampler})
-        renderer.update({
-            sample: sampler.atProgress(1),
-            sampler,
-            forceGeometry: true,
-            hideCursor: true,
-            hideRemainingTrace: true,
-            staticCompletedTrace: true,
-        })
-
-        const overlay = renderer.createCompletedTraceVideoOverlay({
-            cropRect: {left: 540, top: 270, width: 80, height: 60},
-            outputDpr: 2,
-            sourceCanvas,
-        })
-
-        const createdTrace = globalThis.__lgsReplayVideoTrace
-            ?.find(entry => entry.event === 'renderer.overlay.stop.created')
-
-        expect(overlay?.element).toBeInstanceOf(HTMLCanvasElement)
-        expect(createdTrace?.data?.projectionMode).toBe('scene-css-to-source-css')
-        expect(createdTrace?.data?.visible).toBeGreaterThan(0)
-        expect(projectedHeights.every(height => height === 250)).toBe(true)
-        expect(ctx.moveTo).toHaveBeenCalledWith(10, 0)
-        expect(ctx.lineTo).toHaveBeenCalledWith(20, 10)
-    })
 })

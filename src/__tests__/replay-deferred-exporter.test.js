@@ -693,7 +693,6 @@ describe('ReplayDeferredExporter', () => {
             now += 40
             return {progress: phase.progress}
         })
-        const createReplayExportTraceOverlay = vi.fn(() => null)
         const preparePlaybackSceneForExport = vi.fn(() => true)
         const restorePlaybackScene = vi.fn()
 
@@ -727,7 +726,6 @@ describe('ReplayDeferredExporter', () => {
                 ui: {
                     replay: {
                         renderReplayExportFrame,
-                        createReplayExportTraceOverlay,
                         preparePlaybackSceneForExport,
                         restorePlaybackScene,
                     },
@@ -794,7 +792,6 @@ describe('ReplayDeferredExporter', () => {
                 isFinalSceneFrame: true,
             })
             expect(renderReplayExportFrame.mock.calls.some(([args]) => args.phase.isLastTwoReplayFrames === true)).toBe(true)
-            expect(createReplayExportTraceOverlay.mock.calls.some(([args]) => args.phase.slot === 'stop')).toBe(true)
             expect(CanvasOverlayComposer.instances.some(instance => instance.addOverlay.mock.calls.length > 0)).toBe(false)
             expect(preparePlaybackSceneForExport).toHaveBeenCalledWith(expect.objectContaining({
                 journey: expect.objectContaining({slug: 'journey-a'}),

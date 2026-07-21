@@ -17,8 +17,8 @@
 import { normalizeTrackRenderSmoothing, smoothCoordinateSegment } from '@Utils/cesium/trackRenderSmoothing'
 import { TrackUtils }                                              from '@Utils/cesium/TrackUtils'
 import {
-    ArcType, CallbackProperty, Cartesian2, Cartesian3, Cartographic, Color, CustomDataSource, ExtrapolationType,
-    HeightReference, JulianDate, LinearApproximation, SampledPositionProperty, SceneTransforms,
+    ArcType, CallbackProperty, Cartesian3, Cartographic, Color, CustomDataSource, ExtrapolationType,
+    HeightReference, JulianDate, LinearApproximation, SampledPositionProperty,
 }                                                                 from 'cesium'
 import {
     REPLAY_TRACE_MODE_FULL, getJourneyReplaySettings, normalizeJourneyReplayProgressionStyle, normalizeJourneyReplayTrace,
@@ -62,61 +62,6 @@ const finiteNumber = value => {
     return Number.isFinite(number) ? number : null
 }
 
-const rectNumber = (rect, key) => finiteNumber(rect?.[key]) ?? 0
-
-const canvasCssSize = canvas => {
-    const rect = canvas?.getBoundingClientRect?.() ?? {}
-    const width = finiteNumber(rect.width) ?? finiteNumber(canvas?.clientWidth) ?? finiteNumber(canvas?.width) ?? 0
-    const height = finiteNumber(rect.height) ?? finiteNumber(canvas?.clientHeight) ?? finiteNumber(canvas?.height) ?? 0
-
-    return {
-        left: rectNumber(rect, 'left'),
-        top: rectNumber(rect, 'top'),
-        width,
-        height,
-    }
-}
-
-const projectedBounds = points => {
-    let minX = Number.POSITIVE_INFINITY
-    let minY = Number.POSITIVE_INFINITY
-    let maxX = Number.NEGATIVE_INFINITY
-    let maxY = Number.NEGATIVE_INFINITY
-    let count = 0
-
-    for (const point of points) {
-        if (!point || !Number.isFinite(point.x) || !Number.isFinite(point.y)) {
-            continue
-        }
-        minX = Math.min(minX, point.x)
-        minY = Math.min(minY, point.y)
-        maxX = Math.max(maxX, point.x)
-        maxY = Math.max(maxY, point.y)
-        count += 1
-    }
-
-    if (count === 0) {
-        return null
-    }
-
-    return {
-        minX: Math.round(minX),
-        minY: Math.round(minY),
-        maxX: Math.round(maxX),
-        maxY: Math.round(maxY),
-    }
-}
-
-const visibleProjectedPointCount = (points, crop) => points.reduce((count, point) => (
-    point
-    && point.x >= 0
-    && point.x <= crop.width
-    && point.y >= 0
-    && point.y <= crop.height
-        ? count + 1
-        : count
-), 0)
-
 export class JourneyReplayCesiumRenderer {
     #source = null
     #cursor = null
@@ -135,6 +80,7 @@ export class JourneyReplayCesiumRenderer {
     #smoothedPositionPropertyKey = null
     #traceGuide = null
     #traceGuideKey = null
+    #traceHidden = false
 
     constructor(options = {}) {
         this.#options = options
@@ -182,7 +128,10 @@ export class JourneyReplayCesiumRenderer {
                 sourceAddPending: this.#sourceAddPending,
             })
         }
-        const shouldUpdateGeometry = forceGeometry || (!freezeDynamic && this.#shouldUpdatePathGeometry(sample))
+        const wasTraceHidden = this.#traceHidden
+        const shouldUpdateGeometry = forceGeometry
+                                     || (!hideTrace && wasTraceHidden)
+                                     || (!freezeDynamic && this.#shouldUpdatePathGeometry(sample))
         if (shouldUpdateGeometry) {
             this.#updateCompletedLines(sample, {staticGeometry: completedTraceMode === 'static'})
             this.#updateRemainingLines(sample, {hideRemainingTrace})
@@ -196,12 +145,7 @@ export class JourneyReplayCesiumRenderer {
         if (hideTrace) {
             this.#hideLineEntities(() => true)
         }
-        else {
-            // `hideTrace` is intentionally used for the empty start frame.
-            // Re-enable existing entities as soon as playback advances; Draft
-            // may otherwise skip a geometry rebuild on the first live tick.
-            this.#showLineEntities((key) => !hideRemainingTrace || !key.startsWith(REMAINING_KEY_PREFIX))
-        }
+        this.#traceHidden = hideTrace
         this.#updateCursor(sample)
         this.#syncCursorVisibilityWithTrace({hideCursor})
         if (stopCompletedTrace) {
@@ -213,257 +157,6 @@ export class JourneyReplayCesiumRenderer {
             })
         }
         globalThis.lgs?.scene?.requestRender?.()
-    }
-
-    createCompletedTraceVideoOverlay = ({
-                                            cropRect = null,
-                                            outputDpr = null,
-                                            sourceCanvas: exportSourceCanvas = null,
-                                            phaseSlot = 'stop',
-                                        } = {}) => {
-        const scene = globalThis.lgs?.viewer?.scene ?? globalThis.lgs?.scene ?? null
-        const sceneCanvas = scene?.canvas ?? globalThis.lgs?.viewer?.canvas ?? null
-        const sourceCanvas = exportSourceCanvas
-                             ?? globalThis.lgs?.canvas
-                             ?? sceneCanvas
-                             ?? globalThis.lgs?.scene?.canvas
-                             ?? null
-        const debugSlot = `${phaseSlot || 'trace'}`
-        const debugEvent = suffix => `renderer.overlay.${debugSlot}.${suffix}`
-        if (!sourceCanvas || !scene || typeof document === 'undefined' || !this.#sampler || !this.#sample) {
-            replayVideoTraceDebug(debugEvent('skip.missing-runtime'), {
-                hasSourceCanvas: Boolean(sourceCanvas),
-                hasSceneCanvas: Boolean(sceneCanvas),
-                hasScene: Boolean(scene),
-                hasDocument: typeof document !== 'undefined',
-                hasSampler: Boolean(this.#sampler),
-                hasSample: Boolean(this.#sample),
-            })
-            return null
-        }
-
-        const sourceRect = canvasCssSize(sourceCanvas)
-        const sceneRect = canvasCssSize(sceneCanvas ?? sourceCanvas)
-        const sceneDpr = sceneRect.width > 0 ? Math.max(1, (finiteNumber(sceneCanvas?.width) ?? sceneRect.width) / sceneRect.width) : 1
-        const crop = {
-            left:   finiteNumber(cropRect?.left ?? cropRect?.x) ?? 0,
-            top:    finiteNumber(cropRect?.top ?? cropRect?.y) ?? 0,
-            width:  finiteNumber(cropRect?.width) ?? finiteNumber(sourceRect.width) ?? finiteNumber(sourceCanvas.width) ?? 0,
-            height: finiteNumber(cropRect?.height) ?? finiteNumber(sourceRect.height) ?? finiteNumber(sourceCanvas.height) ?? 0,
-        }
-        if (crop.width <= 0 || crop.height <= 0) {
-            replayVideoTraceDebug(debugEvent('skip.invalid-crop'), {
-                crop,
-                sourceCanvasWidth: sourceCanvas.width ?? null,
-                sourceCanvasHeight: sourceCanvas.height ?? null,
-            })
-            return null
-        }
-
-        const positions = this.#terrainSurfacePositions(this.#completedSmoothedPositions())
-        if (positions.length < 2) {
-            replayVideoTraceDebug(debugEvent('skip.no-positions'), {
-                positions: positions.length,
-                samplerSamples: this.#sampler?.samples?.length ?? null,
-                sampleProgress: this.#sample?.progress ?? null,
-            })
-            return null
-        }
-
-        const dpr = Math.max(1, finiteNumber(outputDpr)
-                                ?? finiteNumber(globalThis.window?.devicePixelRatio)
-                                ?? 1)
-        const canvas = document.createElement('canvas')
-        canvas.width = Math.max(1, Math.round(crop.width * dpr))
-        canvas.height = Math.max(1, Math.round(crop.height * dpr))
-        canvas.style.width = `${crop.width}px`
-        canvas.style.height = `${crop.height}px`
-
-        const ctx = canvas.getContext?.('2d')
-        if (!ctx) {
-            replayVideoTraceDebug(debugEvent('skip.no-context'), {
-                canvasWidth: canvas.width,
-                canvasHeight: canvas.height,
-            })
-            return null
-        }
-
-        ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
-        ctx.lineCap = 'round'
-        ctx.lineJoin = 'round'
-
-        const projectedCandidates = [
-            {
-                mode: 'scene-css-to-source-css',
-                points: [],
-            },
-            {
-                mode: 'scene-css',
-                points: [],
-            },
-            {
-                mode: 'scene-drawing-buffer-to-source-css',
-                points: [],
-            },
-        ]
-
-        positions.forEach(position => {
-            let point = null
-            try {
-                point = SceneTransforms.worldToWindowCoordinates(scene, position, new Cartesian2()) ?? null
-            }
-            catch {
-                point = null
-            }
-
-            if (point && Number.isFinite(point.x) && Number.isFinite(point.y)) {
-                projectedCandidates[0].points.push({
-                    x: point.x + sceneRect.left - sourceRect.left - crop.left,
-                    y: point.y + sceneRect.top - sourceRect.top - crop.top,
-                })
-                projectedCandidates[1].points.push({
-                    x: point.x - crop.left,
-                    y: point.y - crop.top,
-                })
-            }
-            else {
-                projectedCandidates[0].points.push(null)
-                projectedCandidates[1].points.push(null)
-            }
-
-            let bufferPoint = null
-            try {
-                bufferPoint = SceneTransforms.worldToDrawingBufferCoordinates?.(scene, position, new Cartesian2()) ?? null
-            }
-            catch {
-                bufferPoint = null
-            }
-
-            if (bufferPoint && Number.isFinite(bufferPoint.x) && Number.isFinite(bufferPoint.y)) {
-                projectedCandidates[2].points.push({
-                    x: (bufferPoint.x / sceneDpr) + sceneRect.left - sourceRect.left - crop.left,
-                    y: (bufferPoint.y / sceneDpr) + sceneRect.top - sourceRect.top - crop.top,
-                })
-            }
-            else {
-                projectedCandidates[2].points.push(null)
-            }
-        })
-
-        const scoredCandidates = projectedCandidates.map(candidate => ({
-            ...candidate,
-            projected: candidate.points.filter(Boolean).length,
-            visible:   visibleProjectedPointCount(candidate.points, crop),
-            bounds:    projectedBounds(candidate.points),
-        }))
-        const selectedCandidate = scoredCandidates.reduce((best, candidate) => {
-            if (!best) {
-                return candidate
-            }
-            if (candidate.visible !== best.visible) {
-                return candidate.visible > best.visible ? candidate : best
-            }
-            return candidate.projected > best.projected ? candidate : best
-        }, null)
-        const projected = selectedCandidate?.points ?? []
-        const projectedCount = projected.filter(Boolean).length
-        const visibleCount = visibleProjectedPointCount(projected, crop)
-        const bounds = projectedBounds(projected)
-
-        const drawTrace = (color, width) => {
-            ctx.strokeStyle = color.toCssColorString?.() ?? `${color}`
-            ctx.lineWidth = width
-            ctx.beginPath()
-            let active = false
-            let drawnPoints = 0
-            for (const point of projected) {
-                if (!point) {
-                    active = false
-                    continue
-                }
-
-                if (!active) {
-                    ctx.moveTo(point.x, point.y)
-                    active = true
-                }
-                else {
-                    ctx.lineTo(point.x, point.y)
-                }
-                drawnPoints += 1
-            }
-            if (drawnPoints >= 2) {
-                ctx.stroke()
-            }
-            return drawnPoints
-        }
-
-        const style = this.#style()
-        const fillWidth = Math.max(style.fillWidth, 5)
-        const borderWidth = Math.max(fillWidth + (style.borderWidth * 2), fillWidth + 4)
-        const drawnPoints = drawTrace(style.borderColor, borderWidth)
-        drawTrace(style.fillColor, fillWidth)
-
-        if (drawnPoints < 2) {
-            replayVideoTraceDebug(debugEvent('skip.not-drawn'), {
-                positions: positions.length,
-                projected: projectedCount,
-                visible: visibleCount,
-                drawnPoints,
-                crop,
-                dpr,
-                sourceRect,
-                sceneRect,
-                sceneDpr,
-                projectionMode: selectedCandidate?.mode ?? null,
-                bounds,
-                candidates: scoredCandidates.map(candidate => ({
-                    mode:      candidate.mode,
-                    projected: candidate.projected,
-                    visible:   candidate.visible,
-                    bounds:    candidate.bounds,
-                })),
-            })
-            return null
-        }
-
-        replayVideoTraceDebug(debugEvent('created'), {
-            positions: positions.length,
-            projected: projectedCount,
-            visible: visibleCount,
-            drawnPoints,
-            crop,
-            dpr,
-            sourceRect,
-            sceneRect,
-            sceneDpr,
-            projectionMode: selectedCandidate?.mode ?? null,
-            bounds,
-            candidates: scoredCandidates.map(candidate => ({
-                mode:      candidate.mode,
-                projected: candidate.projected,
-                visible:   candidate.visible,
-                bounds:    candidate.bounds,
-            })),
-            canvasWidth: canvas.width,
-            canvasHeight: canvas.height,
-            fillWidth,
-            borderWidth,
-            fillColor: style.fillColor?.toCssColorString?.() ?? null,
-            borderColor: style.borderColor?.toCssColorString?.() ?? null,
-        })
-
-        return {
-            element: canvas,
-            options: {
-                x:             0,
-                y:             0,
-                w:             crop.width,
-                h:             crop.height,
-                contentWidth:  crop.width,
-                contentHeight: crop.height,
-                scale:         1,
-            },
-        }
     }
 
     #traceEntitySummary = () => {
@@ -523,6 +216,7 @@ export class JourneyReplayCesiumRenderer {
         this.#smoothedPositionPropertyKey = null
         this.#traceGuide = null
         this.#traceGuideKey = null
+        this.#traceHidden = false
         this.#restoreOriginalTrackSources()
         globalThis.lgs?.scene?.requestRender?.()
     }
@@ -560,6 +254,7 @@ export class JourneyReplayCesiumRenderer {
         this.#smoothedPositionPropertyKey = null
         this.#traceGuide = null
         this.#traceGuideKey = null
+        this.#traceHidden = false
     }
 
     #dataSources = () => globalThis.lgs?.viewer?.dataSources ?? null
@@ -656,15 +351,6 @@ export class JourneyReplayCesiumRenderer {
             if (predicate(key, record)) {
                 record.entity.show = false
                 record.show = false
-            }
-        })
-    }
-
-    #showLineEntities = predicate => {
-        Array.from(this.#lineEntities.entries()).forEach(([key, record]) => {
-            if (predicate(key, record)) {
-                record.entity.show = true
-                record.show = true
             }
         })
     }

@@ -296,9 +296,18 @@ Draft playback receives live Cesium render-loop updates. HQ export advances the
 replay to an exact logical timestamp before each encoded frame. The HQ runtime
 publishes that frame state to dynamic widgets and the renderer.
 
+`recordingSync` identifies a live Draft controlled by the replay toolbar. It
+must not select the deterministic HQ camera clock; otherwise collision
+transitions are created but never advanced by the Draft render loop.
+
+During HQ export, `controller.seek()` publishes frame state but its normal live
+update listener must not apply the camera. The export frame renderer is the
+single owner of the deterministic camera update; applying both paths on the
+same frame produces visible camera jitter.
+
 Consequently:
 
-- navigation uses Z1 = 30% in both Draft and HQ;
+- navigation uses Z1 = 30% normally, or 15% for a narrow crop, in both Draft and HQ;
 - dynamic mode uses Z1 = 85% and Z2 = 30% in both Draft and HQ;
 - no free-running widget timer is required during HQ export;
 - the same marker sample, projection, collision, and recentering decisions are

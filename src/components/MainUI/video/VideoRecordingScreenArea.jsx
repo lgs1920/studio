@@ -182,6 +182,14 @@ export const VideoRecordingScreenArea = memo(() => {
         })
     }, [])
 
+    const buildFinalComposerOverlays = useCallback((composer, cropRect) => {
+        buildReplayVideoComposerOverlays({
+            composer,
+            cropRect,
+            metricsCache: _metricsCache.current,
+        })
+    }, [])
+
     const isWidgetReadyForRecording = useCallback((widgetId) => {
         return isReplayVideoWidgetReady(widgetId)
     }, [])
@@ -315,8 +323,11 @@ export const VideoRecordingScreenArea = memo(() => {
         // callback, Draft can submit the previous compositor frame even when
         // the replay trace is still visible on the source canvas.
         __.recorder.setFrameCaptureReady(() => {
-            buildComposerOverlays(composer, renderSpec.cropRect)
-            return composer.renderFrame({waitForNextFrame: true})
+            buildFinalComposerOverlays(composer, renderSpec.cropRect, renderSpec.outputDpr)
+            // The replay runtime has already rendered the final Cesium frame.
+            // Waiting for another rAF makes Draft duration depend on browser
+            // throttling when the replay UI is hidden.
+            return composer.renderFrame({waitForNextFrame: false})
         })
 
         buildComposerOverlays(composer, renderSpec.cropRect)
@@ -328,7 +339,7 @@ export const VideoRecordingScreenArea = memo(() => {
         __.recorder.setCanvas(composer.getCanvas())
         startOverlaysRefresh(composer, renderSpec.cropRect)
         return true
-    }, [maxDuration, maxSize, disposeComposer, stopOverlaysRefresh, buildComposerOverlays, startOverlaysRefresh, syncVideoCropFrame, prepareJourneyReplayForRecording, isJourneyReplaySyncRequested, $video])
+    }, [maxDuration, maxSize, disposeComposer, stopOverlaysRefresh, buildComposerOverlays, buildFinalComposerOverlays, startOverlaysRefresh, syncVideoCropFrame, prepareJourneyReplayForRecording, isJourneyReplaySyncRequested, $video])
 
     const markRecordingStarted = useCallback(() => {
         if (!$video.preRecording && $video.recording) {

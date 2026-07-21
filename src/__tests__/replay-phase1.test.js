@@ -3635,6 +3635,91 @@ describe('replay phase 1 playback controller', () => {
         }
     })
 
+    it('keeps navigation collision recentering live in a replay-synced Draft', () => {
+        vi.useFakeTimers()
+        const journey = makeJourney([
+                                        makeTrack({
+                                                      slug:        'track#journey#gpx#main',
+                                                      coordinates: [[2, 48, 120], [2.01, 48, 120], [2.02, 48, 120]],
+                                                  }),
+                                    ])
+        const previousLgs = globalThis.lgs
+        const replay = defaultJourneyReplaySettings()
+        const canvas = {
+            clientWidth:         1000,
+            clientHeight:        1000,
+            addEventListener:    () => {},
+            removeEventListener: () => {},
+        }
+        const flyTo = vi.fn()
+        const setView = vi.fn()
+        const cameraPosition = Cartesian3.fromDegrees(2, 47.99, 1800)
+        const camera = {
+            heading:              0,
+            pitch:                -Math.PI / 4,
+            position:             cameraPosition,
+            positionWC:           cameraPosition,
+            positionCartographic: {height: 1800},
+            moveStart:            {addEventListener: () => {}, removeEventListener: () => {}},
+            moveEnd:              {addEventListener: () => {}, removeEventListener: () => {}},
+            cancelFlight:         () => {},
+            flyTo,
+            setView,
+            lookAtTransform:      () => {},
+        }
+
+        globalThis.lgs = {
+            theJourney: journey,
+            theTrack:   null,
+            canvas,
+            settings:   {
+                ui: {
+                    replay: {
+                        ...replay,
+                        recordingSync: true,
+                        marker:        {...replay.marker, mode: REPLAY_MARKER_MODE_NAVIGATION},
+                    },
+                },
+            },
+            stores:     {
+                replay: proxy({progress: 0, camera: replay.camera, recordingSync: true}),
+                ui:     {video: {recording: true}},
+            },
+            viewer:     {trackedEntity: null, canvas, camera},
+            scene:      {
+                canvas,
+                cartesianToCanvasCoordinates: () => ({x: 900, y: 500}),
+                requestRender:                () => {},
+                globe:                        {getHeight: () => 120},
+            },
+        }
+
+        try {
+            const mode = new JourneyReplayMode({
+                                                    controller: new JourneyReplayPlaybackController({
+                                                                                                     requestFrame: () => 1,
+                                                                                                     cancelFrame:  () => {},
+                                                                                                     now:          () => performance.now(),
+                                                                                                 }),
+                                                    renderer:   {clear: () => {}, show: () => {}, update: () => {}},
+                                                })
+            mode.configure({duration: 10})
+            mode.refreshCamera({
+                                   sample:   mode.controller.sampler.atProgress(0),
+                                   progress: 0,
+                                   source:   'playback',
+                               })
+
+            expect(flyTo).not.toHaveBeenCalled()
+            vi.advanceTimersByTime(3000)
+            expect(setView).toHaveBeenCalled()
+        }
+        finally {
+            vi.useRealTimers()
+            globalThis.lgs = previousLgs
+        }
+    })
+
     it('recenters tolerance tracking after a user zoom even when the marker was still inside the zone', () => {
         vi.useFakeTimers()
         const journey = makeJourney([
@@ -6991,6 +7076,14 @@ describe('replay settings normalization', () => {
                                                        width:  0.3,
                                                        height: 0.3,
                                                    })
+    })
+
+    it('reduces the navigation ratio from 30 to 15 percent on narrow crops', () => {
+        const horizontalZone = replayRuntimeTrackingSettings({}, {width: 1920, height: 1080}).navigation.triggerZone
+        expect(horizontalZone.width).toBeCloseTo(0.15, 6)
+
+        const verticalZone = replayRuntimeTrackingSettings({}, {width: 1080, height: 1920}).navigation.triggerZone
+        expect(verticalZone.height).toBeCloseTo(0.15, 6)
     })
 
     it('places dynamic target inside Z2 opposite to screen movement direction', () => {

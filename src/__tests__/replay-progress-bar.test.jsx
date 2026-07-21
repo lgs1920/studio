@@ -38,11 +38,13 @@ describe('JourneyReplayProgressBar', () => {
                     direction: 1,
                     elapsedMillis: null,
                     durationMillis: null,
+                    recordingSync: false,
                 }),
                 ui: proxy({
                     drawers: proxy({
                         open: null,
                     }),
+                    video: proxy({recording: false}),
                 }),
             },
         }
@@ -113,4 +115,5 @@ describe('JourneyReplayProgressBar', () => {
 
         expect(screen.getByRole('button', {name: 'Take replay snapshot'})).not.toBeNull()
     })
+
 })

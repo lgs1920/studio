@@ -1465,21 +1465,12 @@ export const runReplayDeferredMp4Export = async ({
                     }
 
                     if (replayComposer) {
-                        const traceOverlay = typeof replayMode?.createReplayExportTraceOverlay === 'function'
-                                             ? replayMode.createReplayExportTraceOverlay({
-                                                 phase,
-                                                 cropRect,
-                                                 outputDpr: composerOutputDpr,
-                                                 sourceCanvas: frameSource,
-                                             })
-                                             : null
                         if (phase?.slot === REPLAY_CLIP_SLOT_STOP) {
                             replayVideoTraceDebug('exporter.stop.composer-overlay', {
                                 frameIndex: frame?.index ?? null,
                                 frameTimeMs: frame?.frameTimeMs ?? null,
                                 localProgress: phase?.localProgress ?? null,
                                 hasComposer: Boolean(replayComposer),
-                                hasTraceOverlay: Boolean(traceOverlay),
                                 cropRect,
                                 composerClip,
                                 composerOutputDpr,
@@ -1492,7 +1483,6 @@ export const runReplayDeferredMp4Export = async ({
                         buildReplayVideoComposerOverlays({
                             composer:      replayComposer,
                             cropRect:      cropRect ?? {left: 0, top: 0, width: canvas.width, height: canvas.height},
-                            sceneOverlays: traceOverlay ? [traceOverlay] : [],
                             replay,
                             controller,
                         })

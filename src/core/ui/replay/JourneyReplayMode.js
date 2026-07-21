@@ -85,6 +85,8 @@ const REPLAY_TOLERANCE_OUTER_INSET_RATIO = 0.05
 const REPLAY_TOLERANCE_INNER_INSET_RATIO = 0.2
 const REPLAY_TOLERANCE_RECENTER_REPLACE_DELAY_MS = 300
 const REPLAY_TRACKING_NAVIGATION_ZONE_RATIO = 0.3
+const REPLAY_TRACKING_NAVIGATION_NARROW_CROP_RATIO = 0.75
+const REPLAY_TRACKING_NAVIGATION_NARROW_ZONE_RATIO = 0.15
 const REPLAY_TRACKING_DYNAMIC_TRIGGER_ZONE_RATIO = 0.85
 const REPLAY_TRACKING_DYNAMIC_TARGET_ZONE_RATIO = 0.3
 // Dynamic recentering must lead the marker beyond the nominal easing duration:
@@ -346,13 +348,27 @@ const replayCenteredSquareZone = (ratio, viewportWidth, viewportHeight) => {
     return replayCenteredZone(side / width, side / height)
 }
 
+const replayNavigationZone = (ratio, viewportWidth, viewportHeight) => {
+    const width = finiteNumber(viewportWidth)
+    const height = finiteNumber(viewportHeight)
+    if (width === null || height === null || width <= 0 || height <= 0) {
+        return replayCenteredSquareZone(ratio, viewportWidth, viewportHeight)
+    }
+
+    const shortToLongRatio = Math.min(width, height) / Math.max(width, height)
+    const navigationRatio = shortToLongRatio < REPLAY_TRACKING_NAVIGATION_NARROW_CROP_RATIO
+        ? REPLAY_TRACKING_NAVIGATION_NARROW_ZONE_RATIO
+        : ratio
+    return replayCenteredSquareZone(navigationRatio, width, height)
+}
+
 export const replayRuntimeTrackingSettings = (settings = {}, viewport = {}) => {
     const runtime = settings?.tracking ?? settings?.runtimeTracking ?? {}
     const navigation = runtime?.navigation ?? {}
     const dynamic = runtime?.dynamic ?? {}
     return {
         navigation: {
-            triggerZone: navigation.triggerZone ?? replayCenteredSquareZone(
+            triggerZone: navigation.triggerZone ?? replayNavigationZone(
                 finiteNumber(navigation.zoneRatio) ?? finiteNumber(navigation.width) ?? REPLAY_TRACKING_NAVIGATION_ZONE_RATIO,
                 viewport.width,
                 viewport.height,
@@ -878,11 +894,13 @@ export class JourneyReplayMode {
     #cameraMode = null
     #cameraFlightActive = false
     #replayExportClipFrameState = null
+    #renderingReplayExportFrame = false
     #cameraBezierFrame = null
     #cameraBezierResolve = null
     #deterministicCameraTransition = null
     #savedCameraState = null
     #playbackStartCameraSettings = null
+    #cameraStateRestoredBeforeSceneCleanup = false
     #deferPlaybackCameraRestore = false
     #suppressPlaybackCameraSync = false
     #replayDrawerWasOpenBeforePlayback = false
@@ -1052,6 +1070,7 @@ export class JourneyReplayMode {
         if (!sampler?.hasSamples) {
             return null
         }
+        this.#resetCameraInterpolationState()
 
         const shouldHideOtherJourneys = options.hideOtherJourneys
                                         ?? getJourneyReplayHideOtherJourneys()
@@ -1187,6 +1206,7 @@ export class JourneyReplayMode {
         const sample = sampler?.atProgress?.(safeProgress)
                        ?? this.#controller?.currentSample?.()
                        ?? null
+        this.#resetCameraInterpolationState()
 
         void globalThis.__?.ui?.cameraManager?.stopRotate?.()
         this.#captureCameraState({sample})
@@ -1759,10 +1779,17 @@ export class JourneyReplayMode {
         const anchorProgress = clamp(finiteNumber(phase?.anchorProgress) ?? progress, 0, 1)
 
         if (replayPhase) {
-            const sample = activeController?.seek?.(progress)
-                           ?? this.#sampler?.atProgress?.(progress)
-                           ?? activeController?.currentSample?.()
-                           ?? null
+            this.#renderingReplayExportFrame = true
+            let sample = null
+            try {
+                sample = activeController?.seek?.(progress)
+                         ?? this.#sampler?.atProgress?.(progress)
+                         ?? activeController?.currentSample?.()
+                         ?? null
+            }
+            finally {
+                this.#renderingReplayExportFrame = false
+            }
             if (sample && this.#sampler) {
                 this.#renderer.update({
                     sample,
@@ -1781,10 +1808,17 @@ export class JourneyReplayMode {
             return sample
         }
 
-        const sample = activeController?.seek?.(anchorProgress)
-                       ?? this.#sampler?.atProgress?.(anchorProgress)
-                       ?? activeController?.currentSample?.()
-                       ?? null
+        this.#renderingReplayExportFrame = true
+        let sample = null
+        try {
+            sample = activeController?.seek?.(anchorProgress)
+                     ?? this.#sampler?.atProgress?.(anchorProgress)
+                     ?? activeController?.currentSample?.()
+                     ?? null
+        }
+        finally {
+            this.#renderingReplayExportFrame = false
+        }
         const hideClipCursor = phase?.slot === REPLAY_CLIP_SLOT_START
                                || phase?.slot === REPLAY_CLIP_SLOT_STOP
         // HQ must capture the final Cesium trace after the last scene render.
@@ -1840,17 +1874,6 @@ export class JourneyReplayMode {
         }
         globalThis.lgs?.scene?.requestRender?.()
         return frameSample ?? sample
-    }
-
-    createReplayExportTraceOverlay = ({phase = null, cropRect = null, outputDpr = null, sourceCanvas = null} = {}) => {
-        const slot = phase?.slot ?? 'unknown'
-        replayVideoTraceDebug(`mode.overlay.${slot}.disabled`, {
-            reason: 'trace-must-remain-cesium-terrain-clamped',
-            cropRect,
-            outputDpr,
-            hasSourceCanvas: Boolean(sourceCanvas),
-        })
-        return null
     }
 
     #syncRuntimeNearbyPOIs = (journey = globalThis.lgs?.theJourney ?? null) => {
@@ -2189,6 +2212,7 @@ export class JourneyReplayMode {
         this.#hideCameraAnglePreviewOverlay()
         if (options.emit === false) {
             this.#restorePlaybackCameraSettings()
+            this.#cameraStateRestoredBeforeSceneCleanup = true
             this.#restoreCameraState()
         }
         if (shouldDeferSceneRestore) {
@@ -2264,12 +2288,18 @@ export class JourneyReplayMode {
         })
     }
 
-    #currentReplayClipCameraState = () => {
+    #currentReplayClipCameraState = ({initial = false} = {}) => {
         const camera = globalThis.lgs?.viewer?.camera
+        const saved = initial ? this.#savedCameraState : null
         return {
-            heading: finiteNumber(camera?.heading) ?? 0,
-            pitch:   finiteNumber(camera?.pitch) ?? SAFE_TOP_DOWN_PITCH,
-            height:  finiteNumber(camera?.positionCartographic?.height)
+            heading: finiteNumber(saved?.orientation?.heading)
+                     ?? finiteNumber(camera?.heading)
+                     ?? 0,
+            pitch:   finiteNumber(saved?.orientation?.pitch)
+                     ?? finiteNumber(camera?.pitch)
+                     ?? SAFE_TOP_DOWN_PITCH,
+            height:  finiteNumber(saved?.destination?.height)
+                     ?? finiteNumber(camera?.positionCartographic?.height)
                      ?? finiteNumber(camera?.positionCartographic?.altitude)
                      ?? null,
         }
@@ -2575,7 +2605,7 @@ export class JourneyReplayMode {
         if (!this.#replayExportClipFrameState || this.#replayExportClipFrameState.key !== phaseKey) {
             this.#replayExportClipFrameState = {
                 key:     phaseKey,
-                ...this.#currentReplayClipCameraState(),
+                ...this.#currentReplayClipCameraState({initial: slot === REPLAY_CLIP_SLOT_START}),
             }
         }
         const plan = await this.#resolveJourneyReplayClipCameraPlan({
@@ -2973,6 +3003,13 @@ export class JourneyReplayMode {
             snapDistance: 50000,
         }).finally(() => {
             this.#deferPlaybackCameraRestore = false
+            // Restoring the journey focus above changes the live Cesium view.
+            // Reapply the exact camera captured before Draft/HQ playback so a
+            // subsequent export does not inherit the focus angle.
+            if (!this.#cameraStateRestoredBeforeSceneCleanup) {
+                this.#restoreCameraState()
+            }
+            this.#cameraStateRestoredBeforeSceneCleanup = false
             this.#restorePlaybackCameraSettings({force: true})
         })
     }
@@ -3561,6 +3598,14 @@ export class JourneyReplayMode {
     #rememberNominalCameraView = view => {
         this.#lastNominalCameraHeading = finiteNumber(view?.heading) ?? this.#lastNominalCameraHeading
         this.#lastNominalCameraPitch = finiteNumber(view?.pitch) ?? this.#lastNominalCameraPitch
+    }
+
+    #resetCameraInterpolationState = () => {
+        this.#lastCameraHeading = null
+        this.#lastCameraPitch = null
+        this.#lastNominalCameraHeading = null
+        this.#lastNominalCameraPitch = null
+        this.#lastAppliedCameraView = null
     }
 
     #cameraRedirectPitchLimits = () => ({
@@ -4944,11 +4989,12 @@ export class JourneyReplayMode {
             // flyTo may never invoke complete/cancel, leaving the replay
             // permanently locked in #cameraApplyingView. Use the same frame
             // interpolation as HQ while a Draft is being captured.
-            const replayStore = globalThis.lgs?.stores?.replay
             const videoStore = globalThis.lgs?.stores?.ui?.video
+            // `recordingSync` is true for the Draft launched from the replay
+            // progress bar as well. It must not route through flyTo: Draft
+            // capture does not reliably deliver flyTo callbacks, which leaves
+            // collision/recenter state locked after the first correction.
             const draftRecording = videoStore?.recording === true
-                                    && replayStore?.recordingSync !== true
-                                    && !globalThis.lgs?.settings?.ui?.replay?.recordingSync
             if (draftRecording) {
                 const startFrame = this.#currentCameraFrame(frame)
                 if (!startFrame) {
@@ -5274,7 +5320,11 @@ export class JourneyReplayMode {
         const recenterDuration = replayCameraRecenterDuration(cameraSettings.hysteresis.easing)
         const futureSample = this.#cameraLookaheadSample(anchorSample, {lookaheadSeconds: recenterDuration})
         const predictedSample = futureSample ?? anchorSample
-        const deterministicCamera = exportMode || globalThis.lgs?.stores?.replay?.recordingSync === true
+        // `recordingSync` identifies the live Draft linked to replay controls;
+        // it is not an HQ frame export. Treating it as deterministic creates a
+        // transition that no Draft export clock advances, so collision
+        // recenters remain stuck on their first frame.
+        const deterministicCamera = exportMode
         // Playback progress is not a reliable wall clock in Draft (it can be
         // quantized or remain unchanged between two render ticks). Use it only
         // for deterministic HQ frames; live transitions use monotonic time.
@@ -5354,18 +5404,6 @@ export class JourneyReplayMode {
         const draftLiveCamera = !exportMode
                                  && globalThis.lgs?.stores?.ui?.video?.recording === true
         if (draftLiveCamera && source === 'playback') {
-            if (marker.mode === REPLAY_MARKER_MODE_NAVIGATION) {
-                this.#applyCameraView({
-                    anchor: anchorSample,
-                    heading: smoothHeading,
-                    pitch: smoothPitch,
-                    cameraSettings,
-                })
-                this.#lastCameraHeading = smoothHeading
-                this.#lastCameraPitch = smoothPitch
-                return
-            }
-
             if (marker.mode === REPLAY_MARKER_MODE_HYSTERESIS) {
                 const runtimeTracking = replayRuntimeTrackingSettings(globalThis.lgs?.settings?.ui?.replay?.camera ?? cameraSettings, viewportRect)
                 const dynamicCameraSettings = normalizeJourneyReplayCamera({
@@ -5815,6 +5853,13 @@ export class JourneyReplayMode {
             }),
             this.#controller.on(REPLAY_EVENT_UPDATE, detail => {
                 try {
+                    // `seek()` is also used to publish each deterministic HQ
+                    // frame. The export renderer applies that frame below;
+                    // running the live listener here would update the camera a
+                    // second time with a different clock and create jitter.
+                    if (this.#renderingReplayExportFrame) {
+                        return
+                    }
                     const playbackProgress = finiteNumber(detail?.progress ?? detail?.sample?.progress)
                     const playbackProgressKey = Math.round((playbackProgress ?? 0) / CAMERA_UPDATE_MIN_PROGRESS_DELTA)
                     this.#renderer.update({
@@ -5896,25 +5941,6 @@ export class JourneyReplayMode {
                     })
                 }
                 const notifyStopClipsComplete = () => {
-                    // Rebuild the complete final replay path immediately
-                    // before Draft capture. The controller END notification
-                    // can otherwise leave the renderer on its previous live
-                    // geometry when the last playback tick was skipped.
-                    if (sample && this.#sampler) {
-                        this.#renderer.update({
-                            sample,
-                            sampler:               this.#sampler,
-                            forceGeometry:         true,
-                            freezeDynamic:         false,
-                            hideCursor:            true,
-                            hideRemainingTrace:   true,
-                            staticCompletedTrace: true,
-                        })
-                    }
-                    // Draft captures the source canvas immediately after this
-                    // event. Flush the final terrain-clamped trace first so
-                    // the recorder cannot read the previous Cesium frame.
-                    globalThis.lgs?.scene?.render?.()
                     globalThis.window?.dispatchEvent?.(new CustomEvent(REPLAY_EVENT_STOP_CLIPS_COMPLETE, {
                         detail: {
                             sample,
@@ -5923,6 +5949,18 @@ export class JourneyReplayMode {
                     }))
                 }
                 const notifyStopClipsCompleteAfterFinalWidgetFrame = (afterFrame = null) => {
+                    const recorder = globalThis.__?.recorder ?? null
+                    const recordingSync = replayStore()?.recordingSync === true || recorder?.isRecording?.() === true
+                    if (recordingSync) {
+                        if (token === this.#clipSequenceToken) {
+                            notifyStopClipsComplete()
+                            if (typeof afterFrame === 'function') {
+                                afterFrame()
+                            }
+                        }
+                        return
+                    }
+
                     const raf = globalThis.requestAnimationFrame
                                 ?? globalThis.window?.requestAnimationFrame?.bind(globalThis.window)
                                 ?? (callback => setTimeout(callback, 0))

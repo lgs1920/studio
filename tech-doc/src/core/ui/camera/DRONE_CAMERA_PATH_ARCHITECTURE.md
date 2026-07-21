@@ -414,6 +414,26 @@ For target groups, the effective target may be:
 
 The camera always looks at `effectiveTarget`.
 
+### Journey Replay target and angle continuity
+
+Journey Replay must preserve the current camera semantics when it is represented
+as a `DroneCameraPath`. The path engine does not replace the replay target with
+new POIs by default. It receives the same replay sample or marker position that
+the current camera implementation follows, including the rendered terrain
+height when that is part of the existing behavior.
+
+The generated replay pose keeps the existing angle rules:
+
+- `navigation` derives heading from the replay route and its look-ahead;
+- `hysteresis` keeps the existing smoothed heading, pitch, and tolerance state;
+- `system` keeps the user-defined heading and pitch;
+- the target track follows the current replay sample or marker unless an
+  explicit target or target group is configured.
+
+This makes the path model an extraction of the current camera calculation, not
+an implicit change of what the replay looks at. New target behaviors such as a
+POI sequence, a group centroid, or an orbit are opt-in path definitions.
+
 ## Target Visibility and Dynamic Correction
 
 The drone must react if the looked-at point becomes hidden. The user-defined path
@@ -465,6 +485,41 @@ appliedPose = blend(nominalPose, correctedPose, correctionWeight)
 ```
 
 `correctionWeight` must be eased. It must never jump instantly from `0` to `1`.
+
+Z1/Z2 tracking is a screen-space tracking policy layered on top of this loop;
+it is not a second camera path. The nominal path first produces the current and
+predicted poses, then the tracking policy decides whether a recenter is needed:
+
+```js
+const nominalPose = path.poseAtProgress(progress)
+const predictedPose = path.poseAtTime(time + lookaheadSeconds)
+
+const tracking = trackingResolver.evaluate({
+  nominalPose,
+  predictedPose,
+  z1: triggerZone,
+  z2: targetZone,
+  crop: videoCropRect,
+})
+
+const appliedPose = tracking.correction
+  ? blend(nominalPose, tracking.correction, tracking.correctionWeight)
+  : nominalPose
+```
+
+Z1 remains the trigger zone. Leaving Z1, or predicting that the target will
+leave it, can start a recenter. Z2 remains the promised landing zone for
+dynamic tracking. The extended look-ahead between Z1 and Z2 must not perturb a
+target that is already safely inside Z2. This preserves the current navigation
+and hysteresis behavior while keeping the path evaluator independent of screen
+projection and Cesium state.
+
+The same tracking decision must be used by Draft and deterministic HQ export.
+Draft may use live wall-clock time and HQ may use the export frame timestamp,
+but both must evaluate the same nominal path, target, crop, zones, look-ahead,
+and correction state. If Cesium visibility or terrain loading can produce
+different results, the correction must either be baked into the export path or
+be explicitly treated as runtime-only behavior.
 
 ### Occlusion Detection
 
@@ -663,6 +718,41 @@ Recommended integration:
 
 Later, `track-follow` and `bezier-camera` can become generated
 `DroneCameraPath` definitions.
+
+### Replay, start clips, and stop clips
+
+The complete camera sequence is one logical timeline composed of three ordered
+phases:
+
+```text
+start clips -> replay -> stop clips
+```
+
+Each phase has a local path and an exact duration. A timeline evaluator maps the
+global time to the active phase and evaluates that phase with its local
+progress:
+
+```js
+const phase = timeline.phaseAtTime(time)
+const pose = phase.path.poseAtProgress(phase.localProgress)
+```
+
+The phase boundaries are explicit continuity contracts:
+
+- the last pose of the final start clip equals the replay pose at `progress: 0`;
+- the first pose of the first stop clip equals the replay pose at `progress: 1`;
+- heading, pitch, roll, position, target, and target distance must not jump at a
+  boundary.
+
+Clip operations such as `take-off`, `landing`, and `focus` must eventually be
+represented by path definitions or sampled poses. They must not rely on an
+independent imperative `flyTo`, `focus`, or camera animation that can produce a
+different live trajectory from the deterministic export trajectory.
+
+The replay controller remains the owner of replay progress. The same timeline
+and pose evaluator are used by the interactive preview, live Draft recording,
+and frame-by-frame HQ export. Cesium only applies the resulting pose through
+the adapter.
 
 ## Later Three.js Path Preview and 3D Bezier Drone Path
 
@@ -976,8 +1066,35 @@ package is proposed for this architecture.
 - Drone target can follow the replay sample.
 - Existing `trace`, `navigation`, and `hysteresis` modes remain unchanged.
 - Start and stop clips can be expressed as generated drone path definitions.
+- Start clips, replay, and stop clips share one ordered phase timeline with
+  continuous pose boundaries.
+- Draft preview, live recording, and HQ export evaluate the same phase pose at
+  the same logical time or frame timestamp.
 - Deterministic frame-by-frame video export uses the same path evaluation.
 - Minimal preset selection for replay use, without a 3D editor.
+
+### Navigation Z1/Z2 and narrow crops
+
+Navigation recentering uses a centered Z1 trigger zone. For a standard crop,
+the navigation zone keeps the existing 30% ratio. When the video crop is narrow
+(its short axis is less than 75% of its long axis), the navigation ratio is
+reduced to 15%. This applies to both horizontal and vertical narrow crops.
+Dynamic tracking keeps its separate Z1/Z2 configuration.
+
+Draft recording and replay/HQ navigation use the same Z1 collision path: both
+test the current and predicted marker samples against the runtime zone before
+starting a recenter. Draft keeps its live Cesium timing, while replay/HQ keeps
+deterministic frame timing; this timing difference must not change the
+collision decision.
+
+After HQ cleanup, the exact Cesium camera state captured before playback is
+restored after the journey focus cleanup. This prevents the focus angle from
+becoming the starting angle of a subsequent video export.
+
+The first HQ start-clip frame also uses that captured initial heading, pitch,
+and height, rather than the live camera state after export preparation. Stop
+clips continue to use the live end-of-replay camera state.
+
 
 ### V3 - Advanced Timing and Native Spatial Curves
 

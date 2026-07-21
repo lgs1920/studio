@@ -105,12 +105,13 @@ export class JourneyReplayVideoSync {
         replay.setVideoSafeMode?.(true)
     }
 
-    #stopRecorderAfterStopClips = () => {
+    #stopRecorderAfterStopClips = ({sample = null} = {}) => {
         if (!this.#armed || !this.#autoStopRecording) {
             return
         }
 
         const recorder = this.#resolveRecorder()
+        const replay = this.#resolveJourneyReplay()
         const stopRecorder = async () => {
             if (!recorder?.isRecording?.()) {
                 this.#setVideoSafeMode(false)
@@ -194,8 +195,8 @@ export class JourneyReplayVideoSync {
             this.#resolveJourneyReplay()?.restorePlaybackScene?.({force: true})
         }
 
-        const handleStopClipsComplete = () => {
-            this.#stopRecorderAfterStopClips()
+        const handleStopClipsComplete = event => {
+            this.#stopRecorderAfterStopClips(event?.detail ?? {})
         }
 
         recorder.addEventListener?.(ScreenMediaRecorder.events.START, handleRecorderStart)
