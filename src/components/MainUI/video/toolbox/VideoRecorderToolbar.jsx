@@ -330,7 +330,7 @@ export const VideoRecorderToolbar = ({toolbar, widgetsReady = false, onStartReco
                             <WaIcon name="clapperboard-play" variant="regular"/>
                         </WaButton>
                     </>
-                ) : <div className="blinking">Starting...</div>
+                ) : <div className="blinking">Preparing...</div>
             ) : state.finalizing ? (
                 <div className="blinking">Finalisation...</div>
             ) : (
