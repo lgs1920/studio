@@ -52,15 +52,20 @@ placed after a correction.
 ## 3. Trigger algorithm
 
 For each replay update, the implementation projects the current and predicted
-marker samples into Cesium window coordinates.
+marker samples into Cesium window coordinates, then converts them into the
+active video-crop coordinate space. This crop-local conversion is mandatory for
+every video format, including landscape, square, and portrait 9:16 crops.
 
-1. Convert the configured normalized zone into pixel bounds.
-2. Treat a point on or beyond any bound as outside the zone.
-3. In navigation mode, leave Z1 when the current or predicted point is outside
+1. Project the marker into Cesium window coordinates.
+2. Subtract the active crop's `left` and `top` offsets when a crop is active.
+3. Convert the configured normalized zone into pixel bounds using the crop's
+   width and height.
+4. Treat a point on or beyond any bound as outside the zone.
+5. In navigation mode, leave Z1 when the current or predicted point is outside
    the navigation zone.
-4. In dynamic mode, use the same test against dynamic Z1. Z2 is not used as
+6. In dynamic mode, use the same test against dynamic Z1. Z2 is not used as
    the initial trigger condition.
-5. If a point cannot be projected, it is treated as outside the zone so that
+7. If a point cannot be projected, it is treated as outside the zone so that
    visibility is not silently lost.
 
 The current and predicted samples are both checked because Cesium projection
@@ -232,16 +237,16 @@ surface rectangle, so it remains meaningful when the video crop or viewport
 changes. It has `pointer-events: none`, which means it cannot interfere with
 camera controls or replay interaction.
 
-The overlay is hidden by default during normal Draft playback and HQ export so
-it does not appear in the user interface or in recorded frames. Its DOM
-structure and `data-zone` attributes are still generated for future diagnostics.
-It can be re-enabled at runtime with:
+The overlay is visible by default during replay, Draft playback, and HQ preview
+so the active crop-local Z1/Z2 decision can be inspected directly. It remains
+non-interactive and is excluded from captured output through the existing
+overlay/capture rules. It can be hidden at runtime with:
 
 ```js
-globalThis.__?.ui?.replay?.setToleranceZoneOverlayVisible?.(true)
+globalThis.__?.ui?.replay?.setToleranceZoneOverlayVisible?.(false)
 ```
 
-and hidden again with the same method called with `false`.
+and shown again with the same method called with `true`.
 
 For future debugging, the overlay can be extended with diagnostic attributes or
 additional layers such as:
