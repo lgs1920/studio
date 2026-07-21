@@ -179,8 +179,6 @@ describe('ReplayDeferredExporter', () => {
         const replay = {journeySlug: 'replay-journey'}
         const journey = {slug: 'journey-a'}
         const controller = {duration: 12.5, direction: -1}
-        const uiToast = {success: vi.fn()}
-
         const result = prepareReplayDeferredExportPlan({
             replay,
             journey,
@@ -191,7 +189,6 @@ describe('ReplayDeferredExporter', () => {
             captureMode: 'quality',
             metadata: {quality: 'ultra'},
             mediaMetadata: {artist: 'LGS1920', date: '2026-07-18', album: 'Studio'},
-            uiToast,
         })
 
         expect(result.plan.label).toBe('deferred-master')
@@ -215,10 +212,6 @@ describe('ReplayDeferredExporter', () => {
             dimensions: {width: 1920, height: 1080},
         })
         expect(replay.deferredExportPlan).toBe(result.plan)
-        expect(uiToast.success).toHaveBeenCalledWith({
-            caption: 'Replay export',
-            text:    'Master export plan prepared.',
-        })
     })
 
     it('builds the shared draft and HQ video render spec from crop, fps, quality, and dpr', () => {

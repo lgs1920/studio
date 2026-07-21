@@ -7,35 +7,48 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-07-14
- * Last modified on: 2026-07-14
+ * Created on: 2026-07-21
+ * Last modified: 2026-07-21
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { ReplayFrameTimeline } from '@Core/ui/replay/ReplayFrameTimeline'
-import { ReplayVideoRenderSession } from '@Core/ui/replay/ReplayVideoRenderSession'
-import { resolveVideoOverlayVisibility } from '@Core/ui/replay/ReplayOverlayResolver'
-import { REPLAY_CLIP_SLOT_START, REPLAY_CLIP_SLOT_STOP, normalizeJourneyReplayClips } from '@Core/ui/replay/JourneyReplayClips'
-import { buildReplayVideoComposerOverlays, isReplayVideoWidgetReady } from '@Core/ui/replay/ReplayVideoOverlayComposer'
-import { buildReplayVideoRenderSpec, normalizeReplayVideoCropRect, replayVideoComposerClipFromCropRect } from '@Core/ui/replay/ReplayVideoRenderSpec'
-import { replayVideoTraceDebug } from '@Core/ui/replay/ReplayVideoTraceDebug'
-import { CanvasOverlayComposer } from '@Core/ui/screen-media-recorder/composer/CanvasOverlayComposer'
 import { VIDEO_WIDGETS_BOARD } from '@Core/constants'
-import { ScreenMediaRecorder } from '@Core/ui/screen-media-recorder/recorder/ScreenMediaRecorder'
-import { UIToast } from '@Utils/UIToast'
 import {
-    BufferTarget,
-    canEncodeVideo,
-    CanvasSource,
-    getEncodableVideoCodecs,
-    Mp4OutputFormat,
-    Output,
-    QUALITY_HIGH,
-    QUALITY_MEDIUM,
-    QUALITY_VERY_HIGH,
-} from 'mediabunny'
+    normalizeJourneyReplayClips, REPLAY_CLIP_SLOT_START, REPLAY_CLIP_SLOT_STOP,
+}                              from '@Core/ui/replay/JourneyReplayClips'
+import {
+    ReplayFrameTimeline,
+}                              from '@Core/ui/replay/ReplayFrameTimeline'
+import {
+    resolveVideoOverlayVisibility,
+}                              from '@Core/ui/replay/ReplayOverlayResolver'
+import {
+    buildReplayVideoComposerOverlays, isReplayVideoWidgetReady,
+}                              from '@Core/ui/replay/ReplayVideoOverlayComposer'
+import {
+    ReplayVideoRenderSession,
+}                              from '@Core/ui/replay/ReplayVideoRenderSession'
+import {
+    buildReplayVideoRenderSpec, normalizeReplayVideoCropRect, replayVideoComposerClipFromCropRect,
+}                              from '@Core/ui/replay/ReplayVideoRenderSpec'
+import {
+    replayVideoTraceDebug,
+}                              from '@Core/ui/replay/ReplayVideoTraceDebug'
+import {
+    CanvasOverlayComposer,
+}                              from '@Core/ui/screen-media-recorder/composer/CanvasOverlayComposer'
+import {
+    ScreenMediaRecorder,
+}                              from '@Core/ui/screen-media-recorder/recorder/ScreenMediaRecorder'
+import {
+    UIToast,
+}                              from '@Utils/UIToast'
+import {
+    BufferTarget, canEncodeVideo, CanvasSource, getEncodableVideoCodecs, Mp4OutputFormat, Output, QUALITY_HIGH,
+    QUALITY_MEDIUM, QUALITY_VERY_HIGH,
+}                              from 'mediabunny'
 
 const VIDEO_CODEC_PROBE_TIMEOUT_MS = 2500
 const EXPORT_PROGRESS_UPDATE_FRAME_STEP = 1
@@ -228,6 +241,10 @@ const resolveReplayVideoFramePhase = ({timeline = null, frame = null} = {}) => {
 
     return {
         ...phase,
+        // Keep the absolute export clock available to deterministic camera
+        // transitions. `localMillis` resets at every clip/replay phase and
+        // must not be used as the camera transition clock.
+        frameTimeMs: timeMs,
         progress: replayProgress,
         localProgress,
         localMillis,
@@ -1116,11 +1133,6 @@ export const prepareReplayDeferredExportPlan = ({
     if (replay) {
         replay.deferredExportPlan = plan
     }
-
-    uiToast?.success?.({
-        caption: 'Replay export',
-        text:    'Master export plan prepared.',
-    })
 
     return {
         exporter,
