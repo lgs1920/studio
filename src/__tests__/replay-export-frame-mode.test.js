@@ -22,6 +22,8 @@ import {
     REPLAY_CAMERA_POSITION_AHEAD,
     REPLAY_CAMERA_POSITION_BEHIND,
     REPLAY_CAMERA_POSITION_SYSTEM,
+    REPLAY_MARKER_MODE_HYSTERESIS,
+    REPLAY_MARKER_MODE_NAVIGATION,
 } from '@Core/ui/replay/JourneyReplayProgressionStyle'
 import { Cartesian3, Cartographic } from 'cesium'
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -489,6 +491,96 @@ describe('JourneyReplayMode HQ export frames', () => {
         })
 
         expect(renderer.update).toHaveBeenCalledTimes(1)
+    })
+
+    it('uses the corrected up vector for deterministic HQ navigation following', async () => {
+        const journey = makeJourney([
+            makeTrack({
+                slug:        'track#journey#gpx#main',
+                coordinates: [[2, 48, 120], [2.001, 48.001, 130]],
+            }),
+        ])
+        installReplayGlobals(journey)
+        globalThis.lgs.settings.ui.replay.marker.mode = REPLAY_MARKER_MODE_NAVIGATION
+        globalThis.lgs.stores.replay.marker = globalThis.lgs.settings.ui.replay.marker
+        globalThis.lgs.viewer.camera.setView = vi.fn()
+
+        const mode = new JourneyReplayMode({
+            controller: new JourneyReplayPlaybackController({
+                requestFrame: () => 1,
+                cancelFrame:  () => {},
+                now:          () => 0,
+            }),
+        })
+
+        mode.configure({duration: 1})
+
+        await expect(mode.renderReplayExportFrame({
+            frame: {
+                frameTimeMs: 500,
+            },
+            phase: {
+                kind:        'replay',
+                slot:        'replay',
+                progress:    0.5,
+                localMillis: 500,
+            },
+        })).resolves.toBeTruthy()
+
+        expect(globalThis.lgs.viewer.camera.setView).toHaveBeenCalledWith(expect.objectContaining({
+            orientation: expect.objectContaining({
+                up: expect.objectContaining({
+                    x: expect.any(Number),
+                    y: expect.any(Number),
+                    z: expect.any(Number),
+                }),
+            }),
+        }))
+    })
+
+    it('uses the corrected up vector for deterministic HQ dynamic following', async () => {
+        const journey = makeJourney([
+            makeTrack({
+                slug:        'track#journey#gpx#main',
+                coordinates: [[2, 48, 120], [2.001, 48.001, 130]],
+            }),
+        ])
+        installReplayGlobals(journey)
+        globalThis.lgs.settings.ui.replay.marker.mode = REPLAY_MARKER_MODE_HYSTERESIS
+        globalThis.lgs.stores.replay.marker = globalThis.lgs.settings.ui.replay.marker
+        globalThis.lgs.viewer.camera.setView = vi.fn()
+
+        const mode = new JourneyReplayMode({
+            controller: new JourneyReplayPlaybackController({
+                requestFrame: () => 1,
+                cancelFrame:  () => {},
+                now:          () => 0,
+            }),
+        })
+
+        mode.configure({duration: 1})
+
+        await expect(mode.renderReplayExportFrame({
+            frame: {
+                frameTimeMs: 500,
+            },
+            phase: {
+                kind:        'replay',
+                slot:        'replay',
+                progress:    0.5,
+                localMillis: 500,
+            },
+        })).resolves.toBeTruthy()
+
+        expect(globalThis.lgs.viewer.camera.setView).toHaveBeenCalledWith(expect.objectContaining({
+            orientation: expect.objectContaining({
+                up: expect.objectContaining({
+                    x: expect.any(Number),
+                    y: expect.any(Number),
+                    z: expect.any(Number),
+                }),
+            }),
+        }))
     })
 
     it('keeps the replay trace visible on the final HQ scene frame after stop clips', async () => {

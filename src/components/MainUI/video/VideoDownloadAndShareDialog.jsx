@@ -538,7 +538,7 @@ export const VideoDownloadAndShareDialog = () => {
                 setHqExportStatus('idle')
             }
             else {
-                console.error('HQ export failed:', error?.message)
+                console.error('HQ export failed:', error?.message, error?.stack)
                 UIToast.error({
                     caption: 'Replay export',
                     text:    'Unable to create the HQ video.',

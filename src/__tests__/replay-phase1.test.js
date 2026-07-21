@@ -7078,12 +7078,12 @@ describe('replay settings normalization', () => {
                                                    })
     })
 
-    it('reduces the navigation ratio from 30 to 15 percent on narrow crops', () => {
+    it('reduces the navigation ratio from 30 to 22 percent on narrow crops', () => {
         const horizontalZone = replayRuntimeTrackingSettings({}, {width: 1920, height: 1080}).navigation.triggerZone
-        expect(horizontalZone.width).toBeCloseTo(0.15, 6)
+        expect(horizontalZone.width).toBeCloseTo(0.22, 6)
 
         const verticalZone = replayRuntimeTrackingSettings({}, {width: 1080, height: 1920}).navigation.triggerZone
-        expect(verticalZone.height).toBeCloseTo(0.15, 6)
+        expect(verticalZone.height).toBeCloseTo(0.22, 6)
     })
 
     it('places dynamic target inside Z2 opposite to screen movement direction', () => {

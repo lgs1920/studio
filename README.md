@@ -36,6 +36,7 @@ The repository already contains the main product surface used by the studio:
 - Geocoding tools and coordinate utilities
 - Journey Replay playback and replay-aware video synchronization
 - Video recording, deferred HQ export, and image snapshot workflows
+- Deterministic HQ camera following for navigation and dynamic corrections, including 1.5-second transitions
 - IndexedDB persistence for editor state and loaded content
 - Privacy-first local workspace for imported journeys and generated media
 - PWA support and offline-friendly caching

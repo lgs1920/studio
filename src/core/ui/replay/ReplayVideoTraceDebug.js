@@ -75,5 +75,9 @@ export const replayVideoTraceDebug = (event, payload = {}) => {
         buffer.shift()
     }
 
+    if (root[TRACE_CONSOLE_FLAG] === true || event.startsWith('camera.')) {
+        root.console?.info?.(`[LGS replay trace] ${event}`, entry.data)
+    }
+
     return entry
 }

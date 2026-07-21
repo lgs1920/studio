@@ -1128,7 +1128,7 @@ stabilization layer for this existing architecture:
 | Concern | Existing behavior | Current change | Consequence for the drone architecture |
 | --- | --- | --- | --- |
 | Camera transition in HQ | Deterministic recentering interpolated camera position and orientation with a smooth scalar easing. | Deterministic transitions use cubic Hermite interpolation and carry the previous frame velocity into the next transition. | Preserve this continuity rule in `DroneCameraPathController`; it is still implemented inside replay today. |
-| Navigation correction in HQ | A deterministic recenter could be replaced by successive export-frame transitions and appear stepped. | A deterministic follower with persistent velocity accelerates toward the predicted frame and decelerates as it approaches it. | This is a correction/follow policy, not a path definition; it belongs behind a future correction resolver. |
+| Navigation and dynamic correction in HQ | A deterministic recenter could be replaced by successive export-frame transitions and appear stepped. | Both tracking modes use the same deterministic follower with persistent velocity and a `1.5 s` response. | This is a correction/follow policy, not a path definition; it belongs behind a future correction resolver. |
 | HQ timing input | Camera updates could fall back to phase or sample time. | Updates use the actual export frame timestamp and normalize heading/pitch smoothing against elapsed video time. | The future path engine should receive one explicit logical timestamp and never infer export time from wall-clock state. |
 | HQ recenter duration | Navigation recentering used the normal replay duration. | HQ multiplies the recenter duration by `1.8` to make offline movement less abrupt. | Make this an explicit export or motion-profile parameter instead of a replay-only multiplier. |
 | Narrow crop navigation zone | The narrow-crop trigger ratio was `15%`. | The ratio is now `22%`; standard crops remain at `30%`. | This screen-space collision policy stays in replay tracking settings, outside the pure drone path model. |
@@ -1706,6 +1706,45 @@ test the current and predicted marker samples against the runtime zone before
 starting a recenter. Draft keeps its live Cesium timing, while replay/HQ keeps
 deterministic frame timing; this timing difference must not change the
 collision decision.
+
+### Deterministic HQ camera ownership
+
+During deferred HQ export, the video timeline is the only clock that advances
+the replay camera. Each encoded frame supplies an explicit logical timestamp
+and the camera is evaluated at that timestamp. The wall-clock duration of the
+Cesium render, widget composition, or video encoding does not change the camera
+trajectory.
+
+The normal live replay update remains active in the application, but its camera
+application is ignored while HQ owns the export camera. This prevents a delayed
+live callback from overwriting the camera pose selected for the current video
+frame and causing jitter or non-deterministic transitions.
+
+Camera transitions and navigation/dynamic followers must use complete Cartesian frames:
+`destination`, `direction`, and `up`. Before interpolation or
+`camera.setView`, the runtime validates that every component is finite. If a
+transition endpoint is incomplete, the runtime keeps the valid endpoint rather
+than passing an undefined vector to Cesium. This is required because Cesium
+rejects invalid interpolation operands and aborts the whole HQ export.
+
+`cameraRecenterFrame` exposes its orthogonalized vertical vector as
+`correctedUp`. The deterministic follower must normalize this external frame
+shape to its internal `up` field before integrating the spring state. Reading
+`endFrame.up` directly leaves the follower target undefined and causes Cesium's
+`Cartesian3.subtract` validation to abort the export.
+
+Navigation and dynamic tracking share a `1.5 s` deterministic follower response
+during HQ export. This value controls the spring response toward a moving
+target; it does not change start/stop clip durations or Draft camera easing.
+
+The same validation applies to the smoothed replay trace used by the renderer.
+An incomplete left or right trace position is skipped or replaced by the
+available valid position before interpolation.
+
+HQ may render more slowly than real time. A large wall-clock delta between two
+successive frames is therefore a performance signal, not a camera timing
+change, as long as the logical frame timestamps remain monotonic and use the
+configured frame interval.
 
 After HQ cleanup, the exact Cesium camera state captured before playback is
 restored after the journey focus cleanup. This prevents the focus angle from

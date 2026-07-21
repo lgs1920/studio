@@ -402,7 +402,10 @@ const resolveReplayExportVideoOutput = async ({width, height, browser = globalTh
             height:               safe.height,
             bitrate,
             alpha:                'discard',
-            latencyMode:          'realtime',
+            // HQ is an offline export. Realtime mode may drop frames when the
+            // encoder is temporarily overloaded, which makes camera motion
+            // appear stepped even though the rendered timeline is smooth.
+            latencyMode:          'quality',
             hardwareAcceleration,
         }),
         VIDEO_CODEC_PROBE_TIMEOUT_MS,
@@ -936,7 +939,9 @@ export class ReplayDeferredExporter {
             codec:                outputConfig.codec,
             bitrate:              outputConfig.bitrate,
             alpha:                'discard',
-            latencyMode:          'realtime',
+            // HQ is an offline, timestamped export. Realtime mode may drop
+            // frames while the encoder is slower than the requested FPS.
+            latencyMode:          'quality',
             hardwareAcceleration: outputConfig.hardwareAcceleration,
             ...(outputConfig.fullCodecString ? {fullCodecString: outputConfig.fullCodecString} : {}),
             transform:            {
@@ -1368,6 +1373,8 @@ export const runReplayDeferredMp4Export = async ({
     let replayComposerFallback = false
     let playbackScenePrepared = false
 
+    replayMode?.beginReplayCameraExport?.()
+
     if (plan.runtime) {
         plan.runtime.status = 'exporting'
         plan.runtime.abortController = abortController ?? null
@@ -1414,6 +1421,15 @@ export const runReplayDeferredMp4Export = async ({
                 const phase = resolveReplayVideoFramePhase({
                     timeline: plan.videoTimeline,
                     frame,
+                })
+                replayVideoTraceDebug('camera.export-frame', {
+                    frameIndex:    frame?.index ?? null,
+                    frameTimeMs:   frame?.frameTimeMs ?? null,
+                    frameIntervalMs: frame?.frameIntervalMs ?? null,
+                    phase:         phase?.kind ?? null,
+                    localMillis:   phase?.localMillis ?? null,
+                    progress:      phase?.progress ?? null,
+                    fps:            plan.videoTimeline?.fps ?? null,
                 })
                 let frameSample = frame?.sample ?? null
                 if (typeof replayMode?.renderReplayExportFrame === 'function') {
@@ -1545,6 +1561,7 @@ export const runReplayDeferredMp4Export = async ({
         }
     }
     finally {
+        replayMode?.endReplayCameraExport?.()
         if (controller?.seek && originalProgress !== null) {
             controller.seek(originalProgress)
         }

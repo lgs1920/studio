@@ -62,6 +62,20 @@ const finiteNumber = value => {
     return Number.isFinite(number) ? number : null
 }
 
+const isUsableCartesian3 = value => Boolean(value)
+    && [value.x, value.y, value.z].every(component => Number.isFinite(component))
+
+const safeCartesian3Lerp = (left, right, ratio, result = new Cartesian3()) => {
+    if (!isUsableCartesian3(left)) {
+        return isUsableCartesian3(right) ? Cartesian3.clone(right, result) : null
+    }
+    if (!isUsableCartesian3(right)) {
+        return Cartesian3.clone(left, result)
+    }
+
+    return Cartesian3.lerp(left, right, ratio, result)
+}
+
 export class JourneyReplayCesiumRenderer {
     #source = null
     #cursor = null
@@ -616,15 +630,15 @@ export class JourneyReplayCesiumRenderer {
         const left = guide[leftIndex]?.position
         const right = guide[rightIndex]?.position
 
-        if (!left) {
+        if (!isUsableCartesian3(left)) {
             return null
         }
 
-        if (!right || leftIndex === rightIndex || ratio <= 0) {
+        if (!isUsableCartesian3(right) || leftIndex === rightIndex || ratio <= 0) {
             return left
         }
 
-        return Cartesian3.lerp(left, right, ratio, new Cartesian3())
+        return safeCartesian3Lerp(left, right, ratio)
     }
 
     #completedSmoothedPositions = () => {

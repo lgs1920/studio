@@ -307,8 +307,10 @@ same frame produces visible camera jitter.
 
 Consequently:
 
-- navigation uses Z1 = 30% normally, or 15% for a narrow crop, in both Draft and HQ;
+- navigation uses Z1 = 30% normally, or 22% for a narrow crop, in both Draft and HQ;
 - dynamic mode uses Z1 = 85% and Z2 = 30% in both Draft and HQ;
+- navigation and dynamic HQ corrections use the same deterministic follower
+  with a `1.5 s` response;
 - no free-running widget timer is required during HQ export;
 - the same marker sample, projection, collision, and recentering decisions are
   reproduced from the export timeline.

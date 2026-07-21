@@ -73,6 +73,9 @@ const CAMERA_HEADING_LOOKAHEAD_PROGRESS = 0.16
 const CAMERA_HEADING_MIN_CHANGE_RADIANS = CesiumMath.toRadians(5)
 const CAMERA_VIEW_POSITION_EPSILON_METERS = 0.5
 const CAMERA_VIEW_ANGLE_EPSILON_RADIANS = CesiumMath.toRadians(0.25)
+const CAMERA_TIMING_START_ANGLE_RADIANS = CesiumMath.toRadians(2)
+const CAMERA_TIMING_SETTLE_ANGLE_RADIANS = CesiumMath.toRadians(0.75)
+const CAMERA_DETERMINISTIC_FOLLOW_RESPONSE_SECONDS = 1.5
 const CAMERA_UPDATE_MIN_PROGRESS_DELTA = 0.0005
 const CAMERA_REDIRECT_MAX_TRANSITION_SECONDS = 1
 const CAMERA_REDIRECT_LOOKAHEAD_DISTANCE_METERS = 120
@@ -86,7 +89,7 @@ const REPLAY_TOLERANCE_INNER_INSET_RATIO = 0.2
 const REPLAY_TOLERANCE_RECENTER_REPLACE_DELAY_MS = 300
 const REPLAY_TRACKING_NAVIGATION_ZONE_RATIO = 0.3
 const REPLAY_TRACKING_NAVIGATION_NARROW_CROP_RATIO = 0.75
-const REPLAY_TRACKING_NAVIGATION_NARROW_ZONE_RATIO = 0.15
+const REPLAY_TRACKING_NAVIGATION_NARROW_ZONE_RATIO = 0.22
 const REPLAY_TRACKING_DYNAMIC_TRIGGER_ZONE_RATIO = 0.85
 const REPLAY_TRACKING_DYNAMIC_TARGET_ZONE_RATIO = 0.3
 // Dynamic recentering must lead the marker beyond the nominal easing duration:
@@ -124,6 +127,29 @@ const CAMERA_REDIRECT_CANDIDATES = Object.freeze([
 const finiteNumber = value => {
     const number = Number(value)
     return Number.isFinite(number) ? number : null
+}
+
+const isUsableCartesian3 = value => Boolean(value)
+    && [value.x, value.y, value.z].every(component => Number.isFinite(component))
+    && Cartesian3.magnitudeSquared(value) > CARTESIAN_EPSILON
+
+const safeCartesian3Normalize = (value, fallback) => {
+    if (isUsableCartesian3(value)) {
+        return Cartesian3.normalize(value, new Cartesian3())
+    }
+
+    return isUsableCartesian3(fallback) ? Cartesian3.clone(fallback, new Cartesian3()) : null
+}
+
+const safeCartesian3Lerp = (left, right, ratio, result = new Cartesian3()) => {
+    if (!isUsableCartesian3(left)) {
+        return isUsableCartesian3(right) ? Cartesian3.clone(right, result) : null
+    }
+    if (!isUsableCartesian3(right)) {
+        return Cartesian3.clone(left, result)
+    }
+
+    return Cartesian3.lerp(left, right, ratio, result)
 }
 
 const makeFontAwesomeIconDataUri = (definition, color, size = 24) => {
@@ -898,6 +924,14 @@ export class JourneyReplayMode {
     #cameraBezierFrame = null
     #cameraBezierResolve = null
     #deterministicCameraTransition = null
+    #deterministicCameraFollowerAt = null
+    #deterministicCameraFollowerActive = false
+    #deterministicCameraFollowerVelocity = null
+    #cameraSmoothingDeltaSeconds = null
+    #lastCameraLogicalNow = null
+    #lastCameraTimingLogicalNow = null
+    #lastCameraTimingWallNow = null
+    #cameraTimingChange = null
     #savedCameraState = null
     #playbackStartCameraSettings = null
     #cameraStateRestoredBeforeSceneCleanup = false
@@ -912,6 +946,7 @@ export class JourneyReplayMode {
     #cameraRedirectState = null
     #cameraUserAdjusting = false
     #cameraApplyingView = false
+    #replayExportCameraActive = false
     #cameraPointerActive = false
     #cameraManualInteractionTimer = null
     #cameraAutoTrackingIgnoreUntil = 0
@@ -1772,6 +1807,21 @@ export class JourneyReplayMode {
         return sample
     }
 
+    beginReplayCameraExport = () => {
+        this.#replayExportCameraActive = true
+        this.#cameraUserAdjusting = false
+        this.#cameraPointerActive = false
+        if (this.#cameraManualInteractionTimer !== null) {
+            globalThis.clearTimeout?.(this.#cameraManualInteractionTimer)
+            this.#cameraManualInteractionTimer = null
+        }
+        this.#cancelCameraBezierTransition(false)
+    }
+
+    endReplayCameraExport = () => {
+        this.#replayExportCameraActive = false
+    }
+
     renderReplayExportFrame = async ({phase = null, frame = null, controller = this.#controller} = {}) => {
         const activeController = controller ?? this.#controller
         const replayPhase = phase?.kind === 'replay' || !phase?.clip
@@ -1801,7 +1851,9 @@ export class JourneyReplayMode {
                 this.#updateCamera({
                     sample,
                     progress,
-                    frameTimeMs: finiteNumber(phase?.frameTimeMs) ?? finiteNumber(phase?.localMillis),
+                    frameTimeMs: finiteNumber(frame?.frameTimeMs)
+                                 ?? finiteNumber(phase?.frameTimeMs)
+                                 ?? 0,
                     exportMode:  true,
                 })
             }
@@ -3578,11 +3630,18 @@ export class JourneyReplayMode {
                               : this.#smoothRadians(
                 previousHeading,
                 heading,
-                this.#headingEasingFactor(cameraSettings, heading),
+                this.#timeNormalizedSmoothingFactor(
+                    this.#headingEasingFactor(cameraSettings, heading),
+                    this.#cameraSmoothingDeltaSeconds,
+                ),
             )
         const smoothPitch = source === 'drawer'
                             ? pitch
-                            : this.#smoothRadians(previousPitch, pitch, 0.08)
+                            : this.#smoothRadians(
+                                previousPitch,
+                                pitch,
+                                this.#timeNormalizedSmoothingFactor(0.08, this.#cameraSmoothingDeltaSeconds),
+                            )
         const anchorSample = this.#markerPositionForSample(sample, markerSettings)
         return {
             sample:       anchorSample,
@@ -3606,6 +3665,14 @@ export class JourneyReplayMode {
         this.#lastNominalCameraHeading = null
         this.#lastNominalCameraPitch = null
         this.#lastAppliedCameraView = null
+        this.#deterministicCameraFollowerAt = null
+        this.#deterministicCameraFollowerActive = false
+        this.#deterministicCameraFollowerVelocity = null
+        this.#cameraSmoothingDeltaSeconds = null
+        this.#lastCameraLogicalNow = null
+        this.#lastCameraTimingLogicalNow = null
+        this.#lastCameraTimingWallNow = null
+        this.#cameraTimingChange = null
     }
 
     #cameraRedirectPitchLimits = () => ({
@@ -4232,6 +4299,91 @@ export class JourneyReplayMode {
         return prev + delta * clamp(factor, 0, 1)
     }
 
+    #timeNormalizedSmoothingFactor = (factor, deltaSeconds = null) => {
+        const baseFactor = clamp(factor, 0, 1)
+        const delta = finiteNumber(deltaSeconds)
+        if (delta === null || delta <= 0) {
+            return baseFactor
+        }
+
+        // Smoothing factors are calibrated for one 60 FPS update. Rebase them
+        // on elapsed replay time so HQ at 30 FPS keeps the same video duration.
+        const referenceFrameSeconds = 1 / 60
+        return 1 - Math.pow(1 - baseFactor, delta / referenceFrameSeconds)
+    }
+
+    #traceCameraTiming = ({logicalNow, exportMode, source, markerMode} = {}) => {
+        const wallNow = this.#now()
+        const logicalDelta = this.#lastCameraTimingLogicalNow === null
+                             ? null
+                             : logicalNow - this.#lastCameraTimingLogicalNow
+        const wallDelta = this.#lastCameraTimingWallNow === null
+                          ? null
+                          : wallNow - this.#lastCameraTimingWallNow
+        replayVideoTraceDebug('camera.timing', {
+            clock:          exportMode ? 'video' : 'recording',
+            logicalTimeMs:  logicalNow,
+            wallTimeMs:     wallNow,
+            logicalDeltaMs: logicalDelta,
+            wallDeltaMs:    wallDelta,
+            effectiveFps:   logicalDelta > 0 ? 1000 / logicalDelta : null,
+            source,
+            markerMode,
+            exportMode,
+        })
+        this.#lastCameraTimingLogicalNow = logicalNow
+        this.#lastCameraTimingWallNow = wallNow
+    }
+
+    #traceCameraChangeTiming = ({logicalNow, exportMode, source, markerMode, desiredHeading, desiredPitch} = {}) => {
+        const camera = globalThis.lgs?.viewer?.camera
+        const currentHeading = finiteNumber(camera?.heading)
+        const currentPitch = finiteNumber(camera?.pitch)
+        const headingError = currentHeading === null || finiteNumber(desiredHeading) === null
+                            ? 0
+                            : Math.abs(replayAngularDelta(currentHeading, desiredHeading) ?? 0)
+        const pitchError = currentPitch === null || finiteNumber(desiredPitch) === null
+                          ? 0
+                          : Math.abs(currentPitch - desiredPitch)
+        const wallNow = this.#now()
+        const isChanging = headingError >= CAMERA_TIMING_START_ANGLE_RADIANS
+                           || pitchError >= CAMERA_TIMING_START_ANGLE_RADIANS
+        const isSettled = headingError <= CAMERA_TIMING_SETTLE_ANGLE_RADIANS
+                          && pitchError <= CAMERA_TIMING_SETTLE_ANGLE_RADIANS
+
+        if (!this.#cameraTimingChange && isChanging) {
+            this.#cameraTimingChange = {
+                logicalStart: logicalNow,
+                wallStart:    wallNow,
+            }
+            replayVideoTraceDebug('camera.change.start', {
+                clock: exportMode ? 'video' : 'recording',
+                logicalTimeMs: logicalNow,
+                wallTimeMs: wallNow,
+                headingErrorRadians: headingError,
+                pitchErrorRadians: pitchError,
+                source,
+                markerMode,
+            })
+        }
+
+        if (this.#cameraTimingChange && isSettled) {
+            const change = this.#cameraTimingChange
+            replayVideoTraceDebug('camera.change.end', {
+                clock: exportMode ? 'video' : 'recording',
+                logicalTimeMs: logicalNow,
+                wallTimeMs: wallNow,
+                durationVideoMs: logicalNow - change.logicalStart,
+                durationWallMs: wallNow - change.wallStart,
+                headingErrorRadians: headingError,
+                pitchErrorRadians: pitchError,
+                source,
+                markerMode,
+            })
+            this.#cameraTimingChange = null
+        }
+    }
+
     #cancelCameraBezierTransition = (resolveValue = false) => {
         const hadActiveTransition = this.#cameraBezierFrame !== null
             || this.#cameraBezierResolve !== null
@@ -4251,13 +4403,24 @@ export class JourneyReplayMode {
         this.#cameraApplyingView = false
         this.#cameraFlightActive = false
         this.#deterministicCameraTransition = null
+        this.#deterministicCameraFollowerAt = null
+        this.#deterministicCameraFollowerActive = false
+        this.#deterministicCameraFollowerVelocity = null
+        this.#cameraSmoothingDeltaSeconds = null
+        this.#lastCameraLogicalNow = null
+        this.#lastCameraTimingLogicalNow = null
+        this.#lastCameraTimingWallNow = null
+        this.#cameraTimingChange = null
     }
 
     #currentCameraFrame = fallbackFrame => {
         const camera = globalThis.lgs?.viewer?.camera
-        const destination = camera?.positionWC ?? camera?.position ?? fallbackFrame?.destination
-        const direction = camera?.directionWC ?? camera?.direction ?? fallbackFrame?.direction
-        const up = camera?.upWC ?? camera?.up ?? fallbackFrame?.correctedUp
+        const destination = [camera?.positionWC, camera?.position, fallbackFrame?.destination]
+            .find(isUsableCartesian3)
+        const direction = [camera?.directionWC, camera?.direction, fallbackFrame?.direction]
+            .find(isUsableCartesian3)
+        const up = [camera?.upWC, camera?.up, fallbackFrame?.correctedUp, fallbackFrame?.up]
+            .find(isUsableCartesian3)
         if (!destination || !direction || !up) {
             return null
         }
@@ -4271,7 +4434,10 @@ export class JourneyReplayMode {
 
     #applyCameraFrame = frame => {
         const camera = globalThis.lgs?.viewer?.camera
-        if (!camera || !frame?.destination || !frame?.direction || !frame?.up) {
+        if (!camera
+            || !isUsableCartesian3(frame?.destination)
+            || !isUsableCartesian3(frame?.direction)
+            || !isUsableCartesian3(frame?.up)) {
             return false
         }
 
@@ -4291,17 +4457,164 @@ export class JourneyReplayMode {
         }
     }
 
-    #interpolateCameraFrame = (start, end, ratio = 1) => {
-        const t = smoothClipProgress(ratio)
+    #interpolateCameraFrame = (
+        start,
+        end,
+        ratio = 1,
+        {startVelocity = null, endVelocity = null, durationMs = 0} = {},
+    ) => {
+        if (!start
+            || !end
+            || !isUsableCartesian3(start.destination)
+            || !isUsableCartesian3(start.direction)
+            || !isUsableCartesian3(start.up)
+            || !isUsableCartesian3(end.destination)
+            || !isUsableCartesian3(end.direction)
+            || !isUsableCartesian3(end.up)) {
+            return null
+        }
+        const rawRatio = clamp(ratio, 0, 1)
+        const hasVelocity = startVelocity || endVelocity
+        if (!hasVelocity) {
+            const t = smoothClipProgress(rawRatio)
+            return {
+                destination: safeCartesian3Lerp(start.destination, end.destination, t),
+                direction:   safeCartesian3Normalize(
+                    safeCartesian3Lerp(start.direction, end.direction, t),
+                    start.direction,
+                ),
+                up:          safeCartesian3Normalize(
+                    safeCartesian3Lerp(start.up, end.up, t),
+                    start.up,
+                ),
+            }
+        }
+
+        const t2 = rawRatio * rawRatio
+        const t3 = t2 * rawRatio
+        const h00 = (2 * t3) - (3 * t2) + 1
+        const h10 = t3 - (2 * t2) + rawRatio
+        const h01 = (-2 * t3) + (3 * t2)
+        const h11 = t3 - t2
+        const span = Math.max(1, finiteNumber(durationMs) ?? 0)
+        const interpolate = (startValue, endValue, startSpeed, endSpeed) => {
+            const result = new Cartesian3()
+            Cartesian3.multiplyByScalar(startValue, h00, result)
+            Cartesian3.add(
+                result,
+                Cartesian3.multiplyByScalar(startSpeed ?? Cartesian3.ZERO, h10 * span, new Cartesian3()),
+                result,
+            )
+            Cartesian3.add(
+                result,
+                Cartesian3.multiplyByScalar(endValue, h01, new Cartesian3()),
+                result,
+            )
+            Cartesian3.add(
+                result,
+                Cartesian3.multiplyByScalar(endSpeed ?? Cartesian3.ZERO, h11 * span, new Cartesian3()),
+                result,
+            )
+            return result
+        }
+
         return {
-            destination: Cartesian3.lerp(start.destination, end.destination, t, new Cartesian3()),
-            direction:   Cartesian3.normalize(
-                Cartesian3.lerp(start.direction, end.direction, t, new Cartesian3()),
-                new Cartesian3(),
+            destination: interpolate(
+                start.destination,
+                end.destination,
+                startVelocity?.destination,
+                endVelocity?.destination,
             ),
-            up:          Cartesian3.normalize(
-                Cartesian3.lerp(start.up, end.up, t, new Cartesian3()),
+            direction: safeCartesian3Normalize(interpolate(
+                start.direction,
+                end.direction,
+                startVelocity?.direction,
+                endVelocity?.direction,
+            ), start.direction),
+            up: safeCartesian3Normalize(interpolate(
+                start.up,
+                end.up,
+                startVelocity?.up,
+                endVelocity?.up,
+            ), start.up),
+        }
+    }
+
+    #cameraTransitionVelocity = (transition, logicalNow) => {
+        if (!transition) {
+            return null
+        }
+
+        const span = Math.max(1, transition.endAt - transition.startAt)
+        const ratio = clamp(((finiteNumber(logicalNow) ?? transition.endAt) - transition.startAt) / span, 0, 1)
+        const t2 = ratio * ratio
+
+        let coefficients
+        if (transition.startVelocity || transition.endVelocity) {
+            coefficients = {
+                start:   (6 * t2) - (6 * ratio),
+                startV:  (3 * t2) - (4 * ratio) + 1,
+                end:     (-6 * t2) + (6 * ratio),
+                endV:    (3 * t2) - (2 * ratio),
+            }
+        }
+        else {
+            const factor = (6 * ratio * (1 - ratio)) / span
+            return {
+                destination: Cartesian3.multiplyByScalar(
+                    Cartesian3.subtract(transition.end.destination, transition.start.destination, new Cartesian3()),
+                    factor,
+                    new Cartesian3(),
+                ),
+                direction: Cartesian3.multiplyByScalar(
+                    Cartesian3.subtract(transition.end.direction, transition.start.direction, new Cartesian3()),
+                    factor,
+                    new Cartesian3(),
+                ),
+                up: Cartesian3.multiplyByScalar(
+                    Cartesian3.subtract(transition.end.up, transition.start.up, new Cartesian3()),
+                    factor,
+                    new Cartesian3(),
+                ),
+            }
+        }
+
+        const velocity = (startValue, endValue, startSpeed, endSpeed) => {
+            const result = new Cartesian3()
+            Cartesian3.multiplyByScalar(startValue, coefficients.start, result)
+            Cartesian3.add(result, Cartesian3.multiplyByScalar(
+                startSpeed ?? Cartesian3.ZERO,
+                coefficients.startV * span,
                 new Cartesian3(),
+            ), result)
+            Cartesian3.add(result, Cartesian3.multiplyByScalar(endValue, coefficients.end, new Cartesian3()), result)
+            Cartesian3.add(result, Cartesian3.multiplyByScalar(
+                endSpeed ?? Cartesian3.ZERO,
+                coefficients.endV * span,
+                new Cartesian3(),
+            ), result)
+            Cartesian3.divideByScalar(result, span, result)
+            return result
+        }
+
+        return {
+            destination: velocity(
+                transition.start.destination,
+                transition.end.destination,
+                transition.startVelocity?.destination,
+                transition.endVelocity?.destination,
+            ),
+            direction: velocity(
+                transition.start.direction,
+                transition.end.direction,
+                transition.startVelocity?.direction,
+                transition.endVelocity?.direction,
+            ),
+            up: velocity(
+                transition.start.up,
+                transition.end.up,
+                transition.startVelocity?.up,
+                transition.endVelocity?.up,
             ),
         }
     }
@@ -4320,16 +4633,23 @@ export class JourneyReplayMode {
         }
 
         const durationMs = Math.max(0, Math.round((finiteNumber(duration) ?? 0) * 1000))
+        const transitionStartAt = finiteNumber(logicalNow) ?? 0
+        const previousVelocity = this.#cameraTransitionVelocity(
+            this.#deterministicCameraTransition,
+            transitionStartAt,
+        )
         const end = {
             destination: Cartesian3.clone(endFrame.destination, new Cartesian3()),
             direction:   Cartesian3.clone(endFrame.direction, new Cartesian3()),
             up:          Cartesian3.clone(endFrame.correctedUp, new Cartesian3()),
         }
         this.#deterministicCameraTransition = {
-            startAt: finiteNumber(logicalNow) ?? 0,
-            endAt:   (finiteNumber(logicalNow) ?? 0) + durationMs,
+            startAt: transitionStartAt,
+            endAt:   transitionStartAt + durationMs,
             start:   startFrame,
             end,
+            startVelocity: previousVelocity,
+            endVelocity:   null,
             sample,
             heading,
             pitch,
@@ -4347,13 +4667,102 @@ export class JourneyReplayMode {
         const now = finiteNumber(logicalNow) ?? transition.endAt
         const span = Math.max(1, transition.endAt - transition.startAt)
         const ratio = clamp((now - transition.startAt) / span, 0, 1)
-        const applied = this.#applyCameraFrame(this.#interpolateCameraFrame(transition.start, transition.end, ratio))
+        const applied = this.#applyCameraFrame(this.#interpolateCameraFrame(
+            transition.start,
+            transition.end,
+            ratio,
+            {
+                startVelocity: transition.startVelocity,
+                endVelocity:   transition.endVelocity,
+                durationMs:     span,
+            },
+        ))
         if (ratio >= 1) {
             this.#deterministicCameraTransition = null
             this.#lastCameraHeading = finiteNumber(transition.heading) ?? this.#lastCameraHeading
             this.#lastCameraPitch = finiteNumber(transition.pitch) ?? this.#lastCameraPitch
         }
         return applied
+    }
+
+    #applyDeterministicCameraFollower = ({
+                                             endFrame = null,
+                                             logicalNow = 0,
+                                             responseSeconds = CAMERA_DETERMINISTIC_FOLLOW_RESPONSE_SECONDS,
+                                         } = {}) => {
+        const startFrame = this.#currentCameraFrame(endFrame)
+        const targetFrame = {
+            destination: endFrame?.destination,
+            direction:   endFrame?.direction,
+            up:          endFrame?.correctedUp ?? endFrame?.up,
+        }
+        if (!startFrame
+            || !isUsableCartesian3(targetFrame.destination)
+            || !isUsableCartesian3(targetFrame.direction)
+            || !isUsableCartesian3(targetFrame.up)) {
+            return false
+        }
+
+        const now = finiteNumber(logicalNow) ?? 0
+        const previousNow = finiteNumber(this.#deterministicCameraFollowerAt)
+        const deltaSeconds = previousNow === null
+                             ? (1 / 30)
+                             : clamp((now - previousNow) / 1000, 0, 0.25)
+        const response = Math.max(
+            0.1,
+            finiteNumber(responseSeconds) ?? CAMERA_DETERMINISTIC_FOLLOW_RESPONSE_SECONDS,
+        )
+        const stiffness = 4 / (response * response)
+        const damping = 4 / response
+        const previousVelocity = this.#deterministicCameraFollowerVelocity ?? {
+            destination: new Cartesian3(),
+            direction:   new Cartesian3(),
+            up:          new Cartesian3(),
+        }
+        const integrate = (current, target, velocity) => {
+            const acceleration = Cartesian3.subtract(target, current, new Cartesian3())
+            Cartesian3.multiplyByScalar(acceleration, stiffness, acceleration)
+            const dampedVelocity = Cartesian3.multiplyByScalar(velocity, damping, new Cartesian3())
+            Cartesian3.subtract(acceleration, dampedVelocity, acceleration)
+            const nextVelocity = Cartesian3.add(
+                velocity,
+                Cartesian3.multiplyByScalar(acceleration, deltaSeconds, new Cartesian3()),
+                new Cartesian3(),
+            )
+            const nextValue = Cartesian3.add(
+                current,
+                Cartesian3.multiplyByScalar(nextVelocity, deltaSeconds, new Cartesian3()),
+                new Cartesian3(),
+            )
+            return {nextValue, nextVelocity}
+        }
+        const destination = integrate(
+            startFrame.destination,
+            targetFrame.destination,
+            previousVelocity.destination,
+        )
+        const direction = integrate(
+            startFrame.direction,
+            targetFrame.direction,
+            previousVelocity.direction,
+        )
+        const up = integrate(
+            startFrame.up,
+            targetFrame.up,
+            previousVelocity.up,
+        )
+        const frame = {
+            destination: destination.nextValue,
+            direction:   safeCartesian3Normalize(direction.nextValue, startFrame.direction),
+            up:          safeCartesian3Normalize(up.nextValue, startFrame.up),
+        }
+        this.#deterministicCameraFollowerVelocity = {
+            destination: destination.nextVelocity,
+            direction:   direction.nextVelocity,
+            up:          up.nextVelocity,
+        }
+        this.#deterministicCameraFollowerAt = now
+        return this.#applyCameraFrame(frame)
     }
 
     #cameraRecenterFrame = ({
@@ -5268,20 +5677,55 @@ export class JourneyReplayMode {
                          frameTimeMs = null,
                          exportMode = false,
                      } = {}) => {
+        if (!exportMode && this.#replayExportCameraActive) {
+            replayVideoTraceDebug('camera.update-skip', {
+                reason:        'live-update-during-export',
+                logicalTimeMs: null,
+                source,
+            })
+            return
+        }
         const settings = getJourneyReplaySettings()
         const viewportRect = this.#viewportRectForCesiumSurface()
         const marker = normalizeJourneyReplayMarker(globalThis.lgs?.settings?.ui?.replay?.marker
                                                     ?? globalThis.lgs?.stores?.replay?.marker
                                                     ?? settings.marker)
         if (!sample) {
+            if (exportMode) {
+                replayVideoTraceDebug('camera.update-skip', {
+                    reason:        'no-sample',
+                    logicalTimeMs: finiteNumber(frameTimeMs),
+                    source,
+                })
+            }
             return
         }
 
         if (this.#cameraApplyingView) {
-            return
+            // HQ owns the camera at each export timestamp. A live Cesium
+            // flyTo left over from playback must not block subsequent video
+            // frames while its wall-clock callback is pending.
+            if (exportMode) {
+                this.#cancelCameraBezierTransition(false)
+                replayVideoTraceDebug('camera.update-skip', {
+                    reason:        'camera-applying-view-cancelled',
+                    logicalTimeMs: finiteNumber(frameTimeMs),
+                    source,
+                })
+            }
+            else {
+                return
+            }
         }
 
         if (this.#cameraUserAdjusting) {
+            if (exportMode) {
+                replayVideoTraceDebug('camera.update-skip', {
+                    reason:        'camera-user-adjusting',
+                    logicalTimeMs: finiteNumber(frameTimeMs),
+                    source,
+                })
+            }
             return
         }
 
@@ -5293,6 +5737,9 @@ export class JourneyReplayMode {
             this.#cameraMode = marker.mode
             this.#cameraFlightActive = false
             this.#cameraRedirectState = null
+            this.#deterministicCameraFollowerAt = null
+            this.#deterministicCameraFollowerActive = false
+            this.#deterministicCameraFollowerVelocity = null
             this.#removeToleranceZoneOverlay()
             return
         }
@@ -5303,6 +5750,28 @@ export class JourneyReplayMode {
         const markerSettings = normalizeJourneyReplayMarker(globalThis.lgs?.settings?.ui?.replay?.marker
                                                             ?? globalThis.lgs?.stores?.replay?.marker
                                                             ?? settings.marker)
+        const deterministicCamera = exportMode
+        // Use the export timeline as the smoothing clock. Camera orientation
+        // must not advance once per callback independently of video time.
+        const logicalNow = deterministicCamera
+                           ? finiteNumber(frameTimeMs)
+                             ?? finiteNumber(sample?.journeyElapsedMillis)
+                             ?? this.#now()
+                           : this.#now()
+        this.#cameraSmoothingDeltaSeconds = deterministicCamera
+                                            ? this.#lastCameraLogicalNow === null
+                                              ? (1 / 30)
+                                              : clamp((logicalNow - this.#lastCameraLogicalNow) / 1000, 0, 0.25)
+                                            : null
+        this.#lastCameraLogicalNow = deterministicCamera ? logicalNow : null
+        if (exportMode || globalThis.lgs?.stores?.ui?.video?.recording === true) {
+            this.#traceCameraTiming({
+                logicalNow,
+                exportMode,
+                source,
+                markerMode: marker.mode,
+            })
+        }
         const nominalView = this.#cameraViewForSample({
                                                           sample,
                                                           progress,
@@ -5313,26 +5782,24 @@ export class JourneyReplayMode {
         if (!nominalView) {
             return
         }
+        if (exportMode || globalThis.lgs?.stores?.ui?.video?.recording === true) {
+            this.#traceCameraChangeTiming({
+                logicalNow,
+                exportMode,
+                source,
+                markerMode:     marker.mode,
+                desiredHeading: nominalView.heading,
+                desiredPitch:   nominalView.pitch,
+            })
+        }
         this.#rememberNominalCameraView(nominalView)
         const anchorSample = nominalView.sample
         const smoothHeading = nominalView.heading
         const smoothPitch = nominalView.pitch
         const recenterDuration = replayCameraRecenterDuration(cameraSettings.hysteresis.easing)
+                                 * (exportMode ? 1.8 : 1)
         const futureSample = this.#cameraLookaheadSample(anchorSample, {lookaheadSeconds: recenterDuration})
         const predictedSample = futureSample ?? anchorSample
-        // `recordingSync` identifies the live Draft linked to replay controls;
-        // it is not an HQ frame export. Treating it as deterministic creates a
-        // transition that no Draft export clock advances, so collision
-        // recenters remain stuck on their first frame.
-        const deterministicCamera = exportMode
-        // Playback progress is not a reliable wall clock in Draft (it can be
-        // quantized or remain unchanged between two render ticks). Use it only
-        // for deterministic HQ frames; live transitions use monotonic time.
-        const logicalNow = deterministicCamera
-                           ? finiteNumber(frameTimeMs)
-                             ?? finiteNumber(anchorSample?.journeyElapsedMillis)
-                             ?? this.#now()
-                           : this.#now()
         if (deterministicCamera && this.#deterministicCameraTransition) {
             this.#applyDeterministicCameraTransition(logicalNow)
         }
@@ -5379,6 +5846,9 @@ export class JourneyReplayMode {
             this.#lastNavigationRecenterAt = null
             this.#lastNavigationRecenterProgress = null
             this.#deterministicCameraTransition = null
+            this.#deterministicCameraFollowerAt = null
+            this.#deterministicCameraFollowerActive = false
+            this.#deterministicCameraFollowerVelocity = null
             this.#cameraRedirectState = null
         }
 
@@ -5478,15 +5948,28 @@ export class JourneyReplayMode {
                 && !immediateToleranceRecenter
                 && outsideNavigationZone
                 && (sameNavigationProgressRecenter || navigationRecenterStillRunning)
+                && !deterministicCamera
             ) {
                 this.#lastCameraHeading = smoothHeading
                 this.#lastCameraPitch = smoothPitch
                 return
             }
-            if (outsideNavigationZone || forceToleranceRecenter || immediateToleranceRecenter) {
+            const navigationFollowerActive = deterministicCamera && this.#deterministicCameraFollowerActive
+            if (outsideNavigationZone || forceToleranceRecenter || immediateToleranceRecenter || navigationFollowerActive) {
                 const navigationTargetSample = !immediateToleranceRecenter && (source === 'playback' || exportMode)
                                                ? predictedSample
                                                : anchorSample
+                const navigationTargetView = !immediateToleranceRecenter && navigationTargetSample
+                                             ? this.#cameraViewForSample({
+                                                 sample:         navigationTargetSample,
+                                                 progress:       navigationTargetSample.progress ?? progress,
+                                                 source,
+                                                 cameraSettings,
+                                                 markerSettings,
+                                                 previousHeading: smoothHeading,
+                                                 previousPitch:   smoothPitch,
+                                             })
+                                             : null
                 if (immediateToleranceRecenter) {
                     this.#applyCameraView({
                         anchor: anchorSample,
@@ -5495,11 +5978,27 @@ export class JourneyReplayMode {
                         cameraSettings,
                     })
                 }
+                else if (deterministicCamera) {
+                    const frame = this.#cameraRecenterFrame({
+                        sample:         navigationTargetSample,
+                        heading:        navigationTargetView?.heading ?? smoothHeading,
+                        pitch:          this.#liveCameraPitch(navigationTargetView?.pitch ?? smoothPitch),
+                        cameraSettings,
+                    })
+                    if (frame) {
+                        this.#deterministicCameraTransition = null
+                        this.#deterministicCameraFollowerActive = true
+                        this.#applyDeterministicCameraFollower({
+                            endFrame:       frame,
+                            logicalNow,
+                        })
+                    }
+                }
                 else {
                     this.#recenterCameraToSample({
                         sample:         navigationTargetSample,
-                        heading:        smoothHeading,
-                        pitch:          smoothPitch,
+                        heading:        navigationTargetView?.heading ?? smoothHeading,
+                        pitch:          this.#liveCameraPitch(navigationTargetView?.pitch ?? smoothPitch),
                         cameraSettings,
                         duration:       recenterDuration,
                         deterministic:  deterministicCamera,
@@ -5554,6 +6053,30 @@ export class JourneyReplayMode {
                                              : predictedSample ?? anchorSample
                                            : anchorSample
             const trackingSample = dynamicPredictedSample
+            const dynamicFollowerActive = deterministicCamera
+                                         && this.#deterministicCameraFollowerActive
+                                         && !this.#cameraRedirectState
+            if (dynamicFollowerActive) {
+                const dynamicTargetView = this.#cameraViewForSample({
+                    sample:         trackingSample,
+                    progress:       trackingSample?.progress ?? progress,
+                    source,
+                    cameraSettings,
+                    markerSettings,
+                    previousHeading: smoothHeading,
+                    previousPitch:   smoothPitch,
+                })
+                const frame = this.#cameraRecenterFrame({
+                    sample:         trackingSample,
+                    heading:        dynamicTargetView?.heading ?? smoothHeading,
+                    pitch:          this.#liveCameraPitch(dynamicTargetView?.pitch ?? smoothPitch),
+                    cameraSettings,
+                })
+                this.#applyDeterministicCameraFollower({
+                    endFrame:       frame,
+                    logicalNow,
+                })
+            }
             const currentCollision = this.#cameraCollisionForSample(anchorSample, dynamicCameraSettings)
             const predictedCollision = this.#cameraCollisionForSample(trackingSample, dynamicCameraSettings)
             const outsideTolerance = Boolean(currentCollision?.hard || predictedCollision?.hard)
@@ -5645,6 +6168,7 @@ export class JourneyReplayMode {
                 && (sameProgressRecenter || activeRecenterStillFresh)
                 && (outsideTolerance || needsVisibilityCorrection)
                 && !targetCorrectionDue
+                && !deterministicCamera
             ) {
                 this.#lastCameraHeading = smoothHeading
                 this.#lastCameraPitch = smoothPitch
@@ -5655,15 +6179,30 @@ export class JourneyReplayMode {
                 if (!needsVisibilityCorrection) {
                     if (this.#cameraRedirectState && nominalVisible) {
                         this.#cameraRedirectState = null
-                        this.#recenterCameraToSample({
-                                                         sample:   anchorSample,
-                                                         heading:  nominalView.heading,
-                                                         pitch:    nominalView.pitch,
-                                                         cameraSettings,
-                                                         duration: CAMERA_REDIRECT_MAX_TRANSITION_SECONDS,
-                                                         deterministic: deterministicCamera,
-                                                         logicalNow,
-                                                     })
+                        if (deterministicCamera) {
+                            const frame = this.#cameraRecenterFrame({
+                                sample:         anchorSample,
+                                heading:        nominalView.heading,
+                                pitch:          nominalView.pitch,
+                                cameraSettings,
+                            })
+                            this.#deterministicCameraFollowerActive = true
+                            this.#applyDeterministicCameraFollower({
+                                endFrame:       frame,
+                                logicalNow,
+                            })
+                        }
+                        else {
+                            this.#recenterCameraToSample({
+                                                             sample:   anchorSample,
+                                                             heading:  nominalView.heading,
+                                                             pitch:    nominalView.pitch,
+                                                             cameraSettings,
+                                                             duration: CAMERA_REDIRECT_MAX_TRANSITION_SECONDS,
+                                                             deterministic: deterministicCamera,
+                                                             logicalNow,
+                                                         })
+                        }
                     }
                     this.#lastCameraHeading = smoothHeading
                     this.#lastCameraPitch = smoothPitch
@@ -5767,7 +6306,47 @@ export class JourneyReplayMode {
 
                 const useRedirectTransition = nextRedirectState !== null
                 this.#cameraRedirectState = nextRedirectState
-                this.#recenterCameraToSample({
+                const targetSample = (outsideTolerance || targetCorrectionDue) && !useRedirectTransition
+                                     ? trackingSample
+                                     : targetView.sample
+                const targetNominalView = !useRedirectTransition
+                                          ? this.#cameraViewForSample({
+                                              sample:         targetSample,
+                                              progress:       targetSample?.progress ?? progress,
+                                              source,
+                                              cameraSettings,
+                                              markerSettings,
+                                              previousHeading: smoothHeading,
+                                              previousPitch:   smoothPitch,
+                                          })
+                                          : null
+                const targetHeading = useRedirectTransition
+                                      ? targetView.heading
+                                      : targetNominalView?.heading ?? targetView.heading
+                const targetPitch = useRedirectTransition
+                                    ? targetView.pitch
+                                    : this.#liveCameraPitch(targetNominalView?.pitch ?? smoothPitch)
+                if (deterministicCamera && !useRedirectTransition && !immediateToleranceRecenter) {
+                    const frame = this.#cameraRecenterFrame({
+                        sample:         targetSample,
+                        heading:        targetHeading,
+                        pitch:          targetPitch,
+                        cameraSettings,
+                    })
+                    this.#deterministicCameraTransition = null
+                    this.#deterministicCameraFollowerActive = true
+                    this.#applyDeterministicCameraFollower({
+                        endFrame:       frame,
+                        logicalNow,
+                    })
+                }
+                else {
+                    if (useRedirectTransition) {
+                        this.#deterministicCameraFollowerActive = false
+                        this.#deterministicCameraFollowerAt = null
+                        this.#deterministicCameraFollowerVelocity = null
+                    }
+                    this.#recenterCameraToSample({
                                                  // Predictive target: when Z1 is
                                                  // crossed, place the future
                                                  // marker inside Z2 (the centre
@@ -5775,13 +6354,9 @@ export class JourneyReplayMode {
                                                  // the next few frames do not
                                                  // immediately trigger another
                                                  // correction.
-                                                 sample:  (outsideTolerance || targetCorrectionDue) && !useRedirectTransition
-                                                          ? trackingSample
-                                                          : targetView.sample,
+                                                 sample:  targetSample,
                                                  heading: targetView.heading,
-                                                 pitch:   useRedirectTransition
-                                                          ? targetView.pitch
-                                                          : this.#liveCameraPitch(smoothPitch),
+                                                 pitch:   targetPitch,
                     cameraSettings,
                     duration: immediateToleranceRecenter
                               ? 0
@@ -5793,7 +6368,8 @@ export class JourneyReplayMode {
                                 : replayCameraRecenterDuration(cameraSettings.hysteresis.easing),
                     deterministic: deterministicCamera,
                     logicalNow,
-                })
+                    })
+                }
                 this.#lastToleranceRecenterProgress = currentProgress
                 this.#lastToleranceRecenterAt = now
                 this.#lastDynamicTargetScreen = dynamicTargetScreen
@@ -5949,6 +6525,21 @@ export class JourneyReplayMode {
                     }))
                 }
                 const notifyStopClipsCompleteAfterFinalWidgetFrame = (afterFrame = null) => {
+                    const recorder = globalThis.__?.recorder ?? null
+                    const recordingSync = replayStore()?.recordingSync === true || recorder?.isRecording?.() === true
+                    if (recordingSync) {
+                        if (token === this.#clipSequenceToken) {
+                            // The draft recorder captures the final Cesium frame
+                            // asynchronously from this notification. Keep the
+                            // completed trace rendered while that capture runs.
+                            notifyStopClipsComplete()
+                            if (typeof afterFrame === 'function') {
+                                afterFrame()
+                            }
+                        }
+                        return
+                    }
+
                     const raf = globalThis.requestAnimationFrame
                                 ?? globalThis.window?.requestAnimationFrame?.bind(globalThis.window)
                                 ?? (callback => setTimeout(callback, 0))
