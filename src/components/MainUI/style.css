@@ -79,7 +79,7 @@ html {
     flex-direction: column;
     margin: var(--lgs-gutter-s) var(--lgs-gutter-s) 0 var(--lgs-gutter-s);
     pointer-events: auto;
-    --sync-linked-actions-border-width: 4px;
+    --sync-linked-actions-border-width: 2px;
     gap: var(--lgs-gutter-xs);
 
 }

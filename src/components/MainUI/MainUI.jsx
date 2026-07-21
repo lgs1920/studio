@@ -259,7 +259,6 @@ export const MainUI = memo(() => {
                                             <VideoButton
                                                 tooltip={toolBar.fromStart ? 'left' : 'right'}
                                                 className="square-button sync-linked-video-button"
-                                                variant="brand"
                                                 appearance="filled"
                                             />
                                             <SyncLinkBadge visible={Boolean(theJourney)} className="sync-linked-actions-badge"/>
