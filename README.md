@@ -98,35 +98,42 @@ The repository already contains the main product surface used by the studio:
 - Shared shortcut catalog displayed in the information drawer, with PDF export
 - PWA service worker and version-aware caching
 
-## Upcoming Evolutions
+## Roadmap
 
-### Drone Mode
+### 1.0 — Current Studio
 
-Drone mode is the next camera evolution. The goal is to model the camera as an actual drone path with GPS positions,
-duration, motion profiles, look-at targets, and optional 360-degree maneuvers. This is intentionally separate from
-Journey Replay: the drone path engine should be reusable, deterministic, and testable without a live Cesium scene, while
-Cesium remains the runtime adapter that applies the final camera pose.
+LGS1920 Studio is a privacy-first, local-first geospatial editor for importing and managing outdoor journeys,
+tracks, and points of interest. It provides Cesium 2D/3D visualization, journey editing, elevation-aware statistics,
+camera controls, widgets, replay, snapshots, video recording, and PDF/HTML journey reports. Projects and imported data
+are persisted locally in the browser, with explicit export and sharing actions.
 
-The first version focuses on a path model, target model, easing, runtime controller, and Cesium adapter. It also defines
-deterministic clip transitions, immediate or animated fly-to moves, variable-speed take-off and landing, and directly
-editable 3D Bezier camera paths. A later authoring version is planned around a Three.js preview/editor so users can shape
-a camera path visually before running it in the main scene.
+### 1.1 — Extended Activity Imports
 
-Technical spec: [Drone camera path architecture](tech-doc/src/core/ui/camera/DRONE_CAMERA_PATH_ARCHITECTURE.md).
+Expand journey imports with FIT and TCX files from Garmin and Strava, while preserving activity metadata and sensor
+data such as altitude, heart rate, cadence, and power. Add optional authenticated Strava activity import through its
+API, independently from local file parsing. This milestone also adds cloud access for browsing, importing, exporting,
+and synchronizing project files through connected providers ([#372 — Add Cloud access](https://github.com/lgs1920/studio/issues/372)).
+Garmin Connect cloud synchronization remains outside this milestone.
 
-### Video Editor
+Technical spec: [Journey import formats](tech-doc/JOURNEY_IMPORT_FORMATS_SPEC.md).
 
-The video editor evolution replaces the current separated Replay `start` / `replay` / `stop` clip UI with a track-based
-timeline inside the Replay drawer. The replay clip remains mandatory, but it becomes part of a video-editor-like timeline
-where start clips, the locked replay, stop clips, and widget clips are edited together.
+### 1.2 — Timeline Video Editor
 
-Widget tracks are capped at 120, can be reordered by dragging their track headers, and never allow overlapping clips on
-the same track. The replay track stays locked as the lowest visual track so it does not hide the widget tracks. Widget
-clips control when a widget appears in the video; the existing widget manager still owns screen position, scale, bounds,
-and export capture. Enter and exit effects are deterministic so live preview, draft recording, and HQ export can render
-the same result.
+Replace the current separate Replay `start` / `replay` / `stop` clip UI with a track-based timeline inside the Replay
+drawer. The timeline will combine start clips, the locked journey replay, stop clips, and widget clips while keeping
+preview, recording, and HQ export deterministic.
 
 Technical spec: [Replay track timeline editor evolution](tech-doc/src/core/ui/replay/REPLAY_TRACK_TIMELINE_EDITOR_EVOLUTION.md).
+
+### 1.3 — 3D Drone Path Editor
+
+The drone editor will let users author an actual 3D camera path with GPS positions, altitude, duration, motion
+profiles, look-at targets, easing, and optional 360-degree maneuvers. It will support directly editable 3D Bezier paths
+with a dedicated visual preview/editor, while keeping the path engine deterministic and reusable independently from
+Journey Replay. The engine will be testable without a live Cesium scene, while Cesium remains the runtime adapter that
+applies the final camera pose.
+
+Technical spec: [Drone camera 3D path editor](tech-doc/src/core/ui/camera/DRONE_CAMERA_3D_PATH_EDITOR_SPEC.md).
 
 ## Technical Documentation
 

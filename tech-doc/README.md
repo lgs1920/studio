@@ -27,6 +27,7 @@ This directory centralizes the repository technical documentation. Paths mirror 
 - [Panels](src/core/ui/panels/README.md)
 - [Context menu](src/core/ui/context-menu/README.md)
 - [Drone camera path architecture](src/core/ui/camera/DRONE_CAMERA_PATH_ARCHITECTURE.md)
+- [Drone camera 3D path editor](src/core/ui/camera/DRONE_CAMERA_3D_PATH_EDITOR_SPEC.md)
 
 ## Replay And Video
 

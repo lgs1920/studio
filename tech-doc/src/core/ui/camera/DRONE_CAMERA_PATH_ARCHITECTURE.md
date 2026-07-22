@@ -31,10 +31,6 @@ live Cesium scene. Cesium should only be used by adapters and runtime services.
   local curvature and uses easing when entering and leaving the turn.
 - V1 uses `bezier-easing` for CSS-like cubic-bezier temporal easing. The public
   API can accept both named easing values and `[x1, y1, x2, y2]` easing curves.
-- A later authoring phase can add a simple Three.js preview/editor outside
-  Cesium. It must render both the Cesium route/reference path and the drone
-  camera path, and it must allow the drone path to be traced dynamically with 3D
-  Bezier segments. Cesium remains the runtime map and camera engine.
 
 ## Core Concepts
 
@@ -251,70 +247,6 @@ and remains the orientation baseline for the whole clip. It is not recomputed
 from the destination point and cannot accidentally turn the camera toward a
 POI.
 
-### Direct 3D Bezier Camera Path
-
-The same free-orientation behavior is available with a directly editable 3D
-Bezier path. The path controls the camera position; orientation is independent
-unless the definition selects `follow-tangent`.
-
-```js
-{
-  type: "bezier-camera",
-  duration: 10,
-  positionPath: {
-    frame: "local-enu",
-    points: [
-      {
-        at: 0,
-        position: { x: 0, y: 0, z: 900 },
-        controlOut: { x: 180, y: 0, z: 980 }
-      },
-      {
-        at: 0.5,
-        position: { x: 520, y: 260, z: 1450 },
-        controlIn: { x: 340, y: 100, z: 1250 },
-        controlOut: { x: 700, y: 420, z: 1600 }
-      },
-      {
-        at: 1,
-        position: { x: 1100, y: 600, z: 1800 },
-        controlIn: { x: 920, y: 560, z: 1780 }
-      }
-    ]
-  },
-  orientation: {
-    mode: "preserve-current",
-    pitch: -0.9,
-    heading: 1.2,
-    roll: 0
-  },
-  easing: [0.22, 1, 0.36, 1]
-}
-```
-
-The editor must allow the user to move anchors and handles directly. The
-runtime samples the cubic Bezier position at eased progress and combines it
-with the orientation policy:
-
-```js
-const easedProgress = ease(progress, path.easing)
-const position = bezierPositionAt(path.positionPath, easedProgress)
-const orientation = orientationAt(path.orientation, easedProgress, position)
-return {position, orientation}
-```
-
-With `preserve-current`, the camera follows the Bezier movement while keeping
-its current heading/pitch/roll. With `follow-tangent`, it follows the direction
-of the curve without requiring a fixed target. In both cases, the camera
-orientation is part of the deterministic pose and must be interpolated across
-clip boundaries.
-
-The public editor may expose local ENU coordinates for comfortable 3D editing,
-but exported runtime definitions must convert positions back to GPS with
-absolute heights. The local `z` coordinate is an editing coordinate only; it
-must resolve to the public absolute `height` before serialization for runtime
-playback.
-
 ## 360-Degree Maneuver During Travel
 
 A 360-degree move around a point should be modeled as a maneuver overlaid on the
@@ -518,8 +450,8 @@ Recommended V1 values:
 - cubic-bezier `[x1, y1, x2, y2]`, evaluated with `bezier-easing`
 
 `bezier-easing` is only a temporal easing tool. It maps a normalized segment
-progress to another normalized progress. It does not define the spatial 3D
-Bezier geometry used later for the drone path preview/editor.
+progress to another normalized progress. Spatial path geometry belongs to the
+separate 3D editor specification.
 
 ### Global Time Remapping
 
@@ -1061,8 +993,6 @@ src/core/ui/camera/DroneCameraPath.js
 src/core/ui/camera/DroneCameraPathController.js
 src/core/ui/camera/DroneCameraPathCesiumAdapter.js
 src/core/ui/camera/DroneCameraVisibilityResolver.js
-src/core/ui/camera/DroneCameraBezier3DPath.js        // later authoring helper
-src/core/ui/camera/DroneCameraPathThreePreview.js    // later preview surface
 src/core/ui/camera/DRONE_CAMERA_PATH_ARCHITECTURE.md
 src/__tests__/drone-camera-path.test.js
 src/__tests__/drone-camera-visibility.test.js
@@ -1372,111 +1302,12 @@ and pose evaluator are used by the interactive preview, live Draft recording,
 and frame-by-frame HQ export. Cesium only applies the resulting pose through
 the adapter.
 
-## Later Three.js Path Preview and 3D Bezier Drone Path
+## 3D Path Editor
 
-The Three.js preview/editor should be the last major phase, after the runtime,
-Journey Replay integration, timing controls, and visibility behavior are
-stable. This environment is an editing surface, not the authoritative runtime.
-The core path definition remains independent and the Cesium adapter remains
-responsible for applying the final camera pose in the real scene.
-
-The preview must render:
-
-- the Cesium route or journey path as a reference line;
-- the drone camera path as a separate line;
-- target points and target groups;
-- 360 maneuver pivots, radii, and blend windows;
-- optional debug overlays for visibility correction candidates.
-
-### Simplest 3D Editor Shape
-
-The first useful 3D editor should stay deliberately small. It should be a single
-Three.js view using a local ENU meter frame, with a gray reference journey path,
-a colored drone path, visible target points, and handles only for the selected
-segment. The user can drag the segment start/end points and the two cubic
-Bezier handles, while a compact side panel edits exact values: GPS position,
-height, duration, easing curve, target policy, and orbit parameters when the
-segment is an `orbit360`. There should be no embedded Cesium scene, no terrain
-mesh, no full video timeline, and no separate animation package in the first
-version. The editor simply regenerates preview samples from the same
-`DroneCameraPath` model and exports a path definition back to the runtime.
-
-### Coordinate Frame
-
-The Three.js scene should use a local ENU frame in meters:
-
-- choose an origin from the journey path centroid, the first drone point, or the
-  main target point;
-- convert GPS `latitude`/`longitude`/`height` to ENU for editing;
-- render all reference paths, targets, and drone points in that local frame;
-- keep the public path source in WGS84 GPS coordinates;
-- convert edited ENU points back to GPS when exporting a `DroneCameraPath`
-  definition.
-
-This avoids editing directly in longitude/latitude degrees and gives predictable
-control handles in a standard 3D scene.
-
-### Dynamic 3D Bezier Authoring
-
-The drone path can be authored as cubic Bezier segments in the local ENU frame.
-The editor updates the rendered path dynamically whenever a point or handle
-moves.
-
-```js
-{
-  authoring: {
-    mode: "bezier-3d",
-    frame: "local-enu",
-    origin: { latitude, longitude, height },
-    segments: [
-      {
-        from: { x: 0, y: 0, z: 120 },
-        control1: { x: 180, y: 30, z: 180 },
-        control2: { x: 420, y: 260, z: 220 },
-        to: { x: 680, y: 320, z: 160 },
-        easing: [0.42, 0, 0.58, 1]
-      }
-    ]
-  }
-}
-```
-
-`x`, `y`, and `z` are local meters. `z` is height in the local up direction.
-The segment `easing` is temporal and is evaluated by `bezier-easing`; the 3D
-curve itself is spatial geometry.
-
-Implementation options:
-
-- use Three.js `CubicBezierCurve3` for preview rendering;
-- keep a small local cubic Bezier evaluator for deterministic export and tests;
-- resample the curve by arc length for visual markers and speed analysis;
-- export either sampled GPS keyframes for V1 runtime compatibility or preserve
-  Bezier control points for a later native curve runtime.
-
-### Cesium Path Versus Drone Path
-
-The preview must show both paths because they answer different questions:
-
-- the Cesium path is the subject, replay, or reference route being filmed;
-- the drone path is the camera/drone trajectory;
-- the target track defines what the drone looks at over time.
-
-A simple journey replay may therefore display three related curves: the subject
-path, the drone path, and the target interpolation path. They should not be
-merged in the data model.
-
-### Runtime Boundary
-
-The Three.js layer should not call `viewer.camera` directly. It should emit a
-`DroneCameraPath` definition and preview samples. Runtime playback still goes
-through:
-
-```text
-DroneCameraPath -> DroneCameraPathController -> DroneCameraPathCesiumAdapter
-```
-
-This keeps Cesium-specific scene state out of the editor and keeps video export
-deterministic.
+The dedicated [Drone camera 3D path editor specification](DRONE_CAMERA_3D_PATH_EDITOR_SPEC.md)
+covers the later Three.js authoring surface, local ENU editing, dynamic Bezier
+paths, preview boundaries, and runtime export. This architecture document only
+defines the reusable runtime path model and its Cesium adapter.
 
 ## Useful Presets
 
@@ -1597,8 +1428,7 @@ Decision date: 2026-07-16.
 
 The dependency decision is intentionally narrow. The project keeps Cesium for
 runtime map/camera work, uses `bezier-easing` for temporal cubic-bezier easing,
-keeps Three.js for the final external 3D preview/editor phase, and owns the
-drone-camera path model in custom code.
+and owns the drone-camera path model in custom code.
 
 ### Selected Building Blocks
 
@@ -1609,8 +1439,7 @@ are:
 | --- | --- | --- |
 | `cesium` | Already installed, Apache-2.0 | Runtime camera application, WGS84 conversions, local ENU frames, terrain/tile visibility probes, scene picking, and optional spline primitives. |
 | Turf modules | Already installed, MIT | Simple geospatial helpers when useful: bearing, distance, nearest point, and centroid helpers. |
-| `bezier-easing` | Selected V1 dependency, MIT | CSS-like cubic-bezier temporal easing for public `[x1, y1, x2, y2]` easing curves. It does not define spatial 3D Bezier geometry. |
-| `three` | Selected final-phase dependency, MIT | External 3D preview/editor, rendering of the Cesium reference path and drone path, and dynamic 3D Bezier curve authoring. |
+| `bezier-easing` | Selected V1 dependency, MIT | CSS-like cubic-bezier temporal easing for public `[x1, y1, x2, y2]` easing curves. |
 
 Everything else should be custom project code.
 
@@ -1626,8 +1455,6 @@ The following parts should remain owned by this project:
 - line-of-sight visibility correction state;
 - return to nominal trajectory;
 - Cesium adapter and controller lifecycle;
-- future Three.js authoring/export logic;
-- 3D Bezier path serialization and deterministic sampling.
 
 No additional animation, timeline, tweening, camera-control, or drone-path
 package is proposed for this architecture.
@@ -1755,15 +1582,13 @@ and height, rather than the live camera state after export preparation. Stop
 clips continue to use the live end-of-replay camera state.
 
 
-### V3 - Advanced Timing and Native Spatial Curves
+### V3 - Advanced Timing
 
 - Global `timeRemap`.
 - Explicit speed points.
 - Holds and pauses.
 - JSON import/export for presets.
 - Catmull-Rom or Hermite interpolation in local ENU.
-- Native 3D Bezier runtime evaluation if sampled V1 keyframes are not enough.
-- Tangent control.
 - Height smoothing.
 - Optional `lookAtTarget: false`.
 
@@ -1782,17 +1607,6 @@ clips continue to use the live end-of-replay camera state.
 - Numeric editing for duration, easing, altitude, and target policy.
 - Preset library: orbit, reveal, pass, follow, pull-away.
 - Import/export of reusable path presets.
-- No Three.js dependency required at this phase.
-
-### V6 - Three.js Path Preview and 3D Bezier Authoring
-
-- External Three.js scene outside Cesium.
-- Render the Cesium route/reference path.
-- Render the drone camera path separately.
-- Render target points, target groups, and orbit pivots.
-- Dynamic 3D Bezier curve drawing in local ENU coordinates.
-- Convert Bezier preview samples back to GPS path definitions.
-- Optional visibility-correction debug overlays.
 
 ## Open Questions
 
@@ -1808,13 +1622,6 @@ clips continue to use the live end-of-replay camera state.
   deterministic export path?
 - What maximum correction is acceptable before declaring that a target cannot be
   shown without changing the shot?
-- Should the final Three.js editor persist 3D Bezier control points as
-  first-class path data, or export only sampled GPS keyframes for runtime
-  compatibility?
-- How should the final Three.js editor choose its local ENU origin for long
-  journeys: first drone point, journey centroid, main target, or
-  segment-by-segment origins?
-
 ## Sources
 
 - Cesium Camera documentation:
@@ -1833,7 +1640,3 @@ clips continue to use the live end-of-replay camera state.
   https://turfjs.org/docs/api/bearing
 - bezier-easing:
   https://github.com/gre/bezier-easing
-- three.js CatmullRomCurve3:
-  https://threejs.org/docs/#api/en/extras/curves/CatmullRomCurve3
-- three.js CubicBezierCurve3:
-  https://threejs.org/docs/pages/CubicBezierCurve3.html
