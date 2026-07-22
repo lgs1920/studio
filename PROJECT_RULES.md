@@ -40,3 +40,4 @@ This is the canonical source for the project's AI-agent and development rules.
 - **Commit Messages:** Must follow the key-based format: `feat`, `fix`, `refactor`, `docs`, `style`, `test`, `chore`.
 - **Commit Logic:** Never create commits automatically. Only create a commit when the user explicitly requests it.
 - **Changelog:** Update `README.md` and `CHANGELOG.md` (with current date title) on every commit.
+- **Commit Changelog Entry:** Record every commit in `CHANGELOG.md` with its date, exact commit message, and a GitHub link in the format `https://github.com/lgs1920/studio/commit/<commit-id>`.

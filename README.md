@@ -177,6 +177,7 @@ The Skills are stored in [.aiassistant/skills/](.aiassistant/skills/) and cover:
 
 Commit preparation and release work are also covered by the [Git commit quality](.aiassistant/skills/lgs-1920-studio-git-commit-quality/SKILL.md)
 and [release changelog](.aiassistant/skills/lgs-1920-studio-release-changelog/SKILL.md) Skills.
+Each commit must also be recorded in [CHANGELOG.md](CHANGELOG.md) with its date, exact message, and GitHub commit link.
 
 ## Technology Stack
 
