@@ -206,7 +206,7 @@ html {
     /* Opacity shared by widget snap grid and centering guidelines. */
     --lgs-widget-snap-guideline-opacity: 0.4;
     /* Higher opacity used by widget centering guidelines. */
-    --lgs-widget-snap-center-opacity: 0.8;
+    --lgs-widget-snap-center-opacity: 1;
 
     --lgs-warning-bg-color: hsla(24 100% 50%/ 0.8);
     --lgs-warning-border-color: hsla(32.1 97.7% 83.1% / 0.25);

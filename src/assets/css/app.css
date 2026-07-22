@@ -444,6 +444,14 @@ body.lgs-app-booting #cesium-viewer {
     opacity: var(--lgs-widget-snap-center-opacity);
 }
 
+.lgs-widget-control-box .moveable-bold.lgs-widget-snap-element-guideline,
+.lgs-widget-control-box .moveable-dashed.lgs-widget-snap-element-guideline,
+.lgs-widget-control-box .moveable-guideline.lgs-widget-snap-element-guideline {
+    display: block !important;
+    background: var(--wa-color-brand) !important;
+    opacity: 1 !important;
+}
+
 /* snap inside a target */
 .lgs-widget-control-box .moveable-bold:not(.moveable-bounds) {
     display: none;

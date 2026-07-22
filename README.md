@@ -33,6 +33,7 @@ The repository already contains the main product surface used by the studio:
 - Camera interaction hints and an exportable shortcuts reference panel for app, map, and widget controls
 - Elevation-aware metrics and profile widgets
 - Widget rendering, placement, ordering, reduction, locking, and export-aware capture
+- Widget grid, edge, and center snapping across widgets during video composition
 - Geocoding tools and coordinate utilities
 - Journey Replay playback and replay-aware video synchronization
 - Replay Draft final-frame synchronization and bounded trace rendering

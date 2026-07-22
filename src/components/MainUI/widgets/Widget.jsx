@@ -55,6 +55,7 @@ const SNAPSHOT_MIN_PADDING = 80
 const SNAPSHOT_MAX_PADDING = 220
 const WIDGET_SNAP_GRID_GUIDELINE_CLASS = 'lgs-widget-snap-grid-guideline'
 const WIDGET_SNAP_CENTER_GUIDELINE_CLASS = 'lgs-widget-snap-center-guideline'
+const WIDGET_SNAP_ELEMENT_GUIDELINE_CLASS = 'lgs-widget-snap-element-guideline'
 
 /**
  * Converts numeric positions into Moveable guidelines with a visual class.
@@ -79,6 +80,55 @@ const mergeStyledGuidelines = (...guidelineGroups) => {
         return true
     }).sort((a, b) => a.pos - b.pos)
 }
+
+/**
+ * Resolves the rendered widgets that can be used as Moveable snap targets.
+ * @param {Object} options - Resolution options
+ * @param {HTMLElement|null} options.board - Active widget board
+ * @param {string} options.currentWidgetId - ID of the widget being moved
+ * @param {string|null|undefined} options.widgetsBoard - Active board ID
+ * @param {Object} options.widgetListSnapshot - Reactive widget list snapshot
+ * @returns {HTMLElement[]} Rendered widgets on the active board
+ */
+const resolveWidgetElementGuidelines = ({board, currentWidgetId, widgetsBoard, widgetListSnapshot}) => {
+    if (!board || typeof document === 'undefined') {
+        return []
+    }
+
+    const boardWidgetIds = new Set(Array.from(widgetListSnapshot.entries())
+        .filter(([, entry]) => entry?.widgetsBoard === widgetsBoard || (!entry?.widgetsBoard && !widgetsBoard && board === lgs.canvas))
+        .map(([id]) => id))
+
+    return Array.from(document.querySelectorAll('.lgs-widget-container[data-widget] .lgs-widget'))
+        .filter(element => {
+            const widgetId = element.parentElement?.dataset.widget
+            const runtimeConfig = widgetId ? __.ui.widgetManager.getWidgetConfig(widgetId) : null
+            const belongsToBoard = boardWidgetIds.has(widgetId) || runtimeConfig?.widgetsBoard === widgetsBoard
+            return element !== board && widgetId !== currentWidgetId && belongsToBoard
+        })
+}
+
+/**
+ * Builds independent center guidelines for widgets on the active board.
+ * @param {HTMLElement[]} widgetElements - Rendered peer widgets
+ * @returns {{verticalGuidelines: Array<{pos: number, className: string}>, horizontalGuidelines: Array<{pos: number, className: string}>}}
+ */
+const buildWidgetCenterGuidelines = widgetElements => widgetElements.reduce((result, element) => {
+    const rect = element.getBoundingClientRect()
+    if (rect.width <= 0 || rect.height <= 0) {
+        return result
+    }
+
+    result.verticalGuidelines.push({
+        pos: rect.left + (rect.width / 2),
+        className: WIDGET_SNAP_ELEMENT_GUIDELINE_CLASS,
+    })
+    result.horizontalGuidelines.push({
+        pos: rect.top + (rect.height / 2),
+        className: WIDGET_SNAP_ELEMENT_GUIDELINE_CLASS,
+    })
+    return result
+}, {verticalGuidelines: [], horizontalGuidelines: []})
 
 export const WidgetPreviewContext = createContext(false)
 
@@ -325,6 +375,7 @@ export const Widget = ({isVisible, className = '', moveableClassName = '', conta
     const [, setPosition] = useState({left: 0, top: 0})
     const [controlBox, setControlBox] = useState({renderDirections: [], zoom: 0, opacity: 0})
     const [guidelines, setGuidelines] = useState({verticalGuidelines: [], horizontalGuidelines: []})
+    const [guidelineRevision, setGuidelineRevision] = useState(0)
     const [isMouseOver, setIsMouseOver] = useState(false)
     const [isDragging, setIsDragging] = useState(false)
     const [boardContainer, setBoardContainer] = useState(null)
@@ -499,6 +550,26 @@ export const Widget = ({isVisible, className = '', moveableClassName = '', conta
     const canSnapWidget = isVisualWidget && (config?.snappable ?? true)
     const gridSnapEnabled = canSnapWidget && widgetGrid.enabled && widgetGrid.snap
 
+    const elementGuidelines = useMemo(() => {
+        if (!canSnapWidget) {
+            return []
+        }
+
+        const board = actualContainer ?? lgs.canvas
+        const peerWidgets = resolveWidgetElementGuidelines({
+            board,
+            currentWidgetId: widgetId,
+            widgetsBoard: config.widgetsBoard,
+            widgetListSnapshot,
+        })
+        const elementGuidelines = peerWidgets.map(element => ({
+            element,
+            className: WIDGET_SNAP_ELEMENT_GUIDELINE_CLASS,
+            refresh: true,
+        }))
+        return board ? [board, ...elementGuidelines] : elementGuidelines
+    }, [actualContainer, canSnapWidget, config.widgetsBoard, guidelineRevision, widgetId, widgetListSnapshot])
+
     const buildGuidelines = useCallback(() => {
         const container = actualContainer ?? lgs.canvas
         if (!container) {
@@ -511,6 +582,15 @@ export const Widget = ({isVisible, className = '', moveableClassName = '', conta
                                       horizontalGuidelines: createStyledGuidelines([rect.top + (rect.height / 2)], WIDGET_SNAP_CENTER_GUIDELINE_CLASS),
                                   }
                                   : {verticalGuidelines: [], horizontalGuidelines: []}
+        const peerWidgets = canSnapWidget
+                            ? resolveWidgetElementGuidelines({
+                                board: container,
+                                currentWidgetId: widgetId,
+                                widgetsBoard: config.widgetsBoard,
+                                widgetListSnapshot,
+                            })
+                            : []
+        const peerCenterGuidelines = buildWidgetCenterGuidelines(peerWidgets)
         const gridGuidelines = gridSnapEnabled
                                ? buildCenteredGridLines(rect, widgetGrid.size)
                                : {verticalGuidelines: [], horizontalGuidelines: []}
@@ -520,16 +600,18 @@ export const Widget = ({isVisible, className = '', moveableClassName = '', conta
         return {
             verticalGuidelines:   mergeStyledGuidelines(
                 centerGuidelines.verticalGuidelines,
+                peerCenterGuidelines.verticalGuidelines,
                 createStyledGuidelines(gridGuidelines.verticalGuidelines, WIDGET_SNAP_GRID_GUIDELINE_CLASS),
                 createStyledGuidelines(localGridGuidelines.verticalGuidelines, WIDGET_SNAP_GRID_GUIDELINE_CLASS),
             ),
             horizontalGuidelines: mergeStyledGuidelines(
                 centerGuidelines.horizontalGuidelines,
+                peerCenterGuidelines.horizontalGuidelines,
                 createStyledGuidelines(gridGuidelines.horizontalGuidelines, WIDGET_SNAP_GRID_GUIDELINE_CLASS),
                 createStyledGuidelines(localGridGuidelines.horizontalGuidelines, WIDGET_SNAP_GRID_GUIDELINE_CLASS),
             ),
         }
-    }, [actualContainer, canSnapWidget, config.snapGrid, gridSnapEnabled, widgetGrid.size])
+    }, [actualContainer, canSnapWidget, config.snapGrid, config.widgetsBoard, gridSnapEnabled, widgetGrid.size, widgetId, widgetListSnapshot])
 
     useEffect(() => {
         const update = () => {
@@ -543,7 +625,16 @@ export const Widget = ({isVisible, className = '', moveableClassName = '', conta
         }
         const observer = new ResizeObserver(update)
         observer.observe(container)
-        return () => observer.unobserve(container)
+        const widgetsObserver = typeof MutationObserver === 'undefined' ? null : new MutationObserver(eventRecords => {
+            if (eventRecords.some(eventRecord => eventRecord.type === 'childList')) {
+                setGuidelineRevision(revision => revision + 1)
+            }
+        })
+        widgetsObserver?.observe(document.body, {childList: true, subtree: true})
+        return () => {
+            observer.unobserve(container)
+            widgetsObserver?.disconnect()
+        }
     }, [actualContainer, buildGuidelines])
 
     // Pre-render snapshotting
@@ -1485,7 +1576,7 @@ export const Widget = ({isVisible, className = '', moveableClassName = '', conta
                 onRotateEnd={handleRotateEnd}
                 rotationPosition={'bottom'}
                 bounds={bounds}
-                elementGuidelines={canSnapWidget ? [lgs.canvas] : []}
+                elementGuidelines={elementGuidelines}
                 horizontalGuidelines={guidelines.horizontalGuidelines}
                 verticalGuidelines={guidelines.verticalGuidelines}
                 snapCenter={canSnapWidget}

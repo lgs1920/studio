@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-07-22 — [`fix: improve widget snapping during video composition`](https://github.com/lgs1920/studio/commit/COMMIT_ID)
+
+- Snap widgets to one another on the active video board, including center alignment when widgets do not touch.
+- Refresh snapping targets as widgets are added or removed and improve snap guideline visibility.
+
 ## 2026-07-22 — [`fix: start recording after video preparation`](https://github.com/lgs1920/studio/commit/COMMIT_ID)
 
 - Start recording automatically when the video widgets are ready after launching Record from the tunnel.

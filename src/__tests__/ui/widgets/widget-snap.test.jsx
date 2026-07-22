@@ -193,8 +193,8 @@ describe('Widget snap behavior', () => {
         renderWidget({type: LGS_VISUAL_WIDGET})
 
         await waitFor(() => {
-            expect(latestMoveableProps().verticalGuidelines).toEqual([110])
-            expect(latestMoveableProps().horizontalGuidelines).toEqual([70])
+            expect(latestMoveableProps().verticalGuidelines.map(guideline => guideline.pos)).toEqual([110])
+            expect(latestMoveableProps().horizontalGuidelines.map(guideline => guideline.pos)).toEqual([70])
         })
         expect(latestMoveableProps().snappable).toBe(true)
     })
@@ -205,9 +205,50 @@ describe('Widget snap behavior', () => {
         renderWidget({type: LGS_VISUAL_WIDGET})
 
         await waitFor(() => {
-            expect(latestMoveableProps().verticalGuidelines).toEqual([10, 60, 110, 160, 210])
-            expect(latestMoveableProps().horizontalGuidelines).toEqual([20, 70, 120])
+            expect(latestMoveableProps().verticalGuidelines.map(guideline => guideline.pos)).toEqual([10, 60, 110, 160, 210])
+            expect(latestMoveableProps().horizontalGuidelines.map(guideline => guideline.pos)).toEqual([20, 70, 120])
         })
         expect(latestMoveableProps().snappable).toBe(true)
+    })
+
+    it('snaps video widgets to other widgets on the same board', async () => {
+        installGlobals()
+        const videoBoard = document.createElement('div')
+        videoBoard.dataset.widgetsBoard = 'video-crop-zone'
+        videoBoard.getBoundingClientRect = vi.fn(() => rect)
+        document.body.appendChild(videoBoard)
+        const peer = document.createElement('div')
+        peer.className = 'lgs-widget'
+        const peerContainer = document.createElement('div')
+        peerContainer.className = 'lgs-widget-container'
+        peerContainer.dataset.widget = 'peer-widget#test'
+        peerContainer.appendChild(peer)
+        document.body.appendChild(peerContainer)
+        lgs.stores.ui.widget.list.set('peer-widget#test', {widgetsBoard: 'video-crop-zone'})
+        __.ui.widgetManager.resolveWidgetsBoardContainer.mockReturnValue(videoBoard)
+        __.ui.widgetManager.resolveWidgetsBoardReferenceContainer.mockReturnValue(videoBoard)
+
+        renderWidget({type: LGS_VISUAL_WIDGET, widgetsBoard: 'video-crop-zone'})
+
+        await waitFor(() => expect(latestMoveableProps().elementGuidelines).toEqual([
+            videoBoard,
+            {element: peer, className: 'lgs-widget-snap-element-guideline', refresh: true},
+        ]))
+    })
+
+    it('does not snap a visual widget to widgets on another board', async () => {
+        installGlobals()
+        const otherBoardWidget = document.createElement('div')
+        otherBoardWidget.className = 'lgs-widget'
+        const otherContainer = document.createElement('div')
+        otherContainer.className = 'lgs-widget-container'
+        otherContainer.dataset.widget = 'other-widget#test'
+        otherContainer.appendChild(otherBoardWidget)
+        document.body.appendChild(otherContainer)
+        lgs.stores.ui.widget.list.set('other-widget#test', {widgetsBoard: 'other-board'})
+
+        renderWidget({type: LGS_VISUAL_WIDGET, widgetsBoard: 'video-crop-zone'})
+
+        await waitFor(() => expect(latestMoveableProps().elementGuidelines).toEqual([lgs.canvas]))
     })
 })
