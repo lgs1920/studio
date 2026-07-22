@@ -36,6 +36,7 @@ The repository already contains the main product surface used by the studio:
 - Geocoding tools and coordinate utilities
 - Journey Replay playback and replay-aware video synchronization
 - Replay Draft final-frame synchronization and bounded trace rendering
+- Replay diagnostics remain available internally without writing console trace logs
 - Video recording, deferred HQ export, and image snapshot workflows
 - Linked replay video editing temporarily hides the Journey toolbar without changing its saved visibility setting
 - Recording indicators show preparation, ready, recording, and finalization states for Draft and HQ workflows

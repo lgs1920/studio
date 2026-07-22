@@ -15,7 +15,6 @@
 
 const TRACE_BUFFER_LIMIT = 1000
 const TRACE_GLOBAL_KEY = '__lgsReplayVideoTrace'
-const TRACE_CONSOLE_FLAG = '__lgsReplayVideoTraceConsole'
 
 const safeValue = (value, depth = 0) => {
     if (value === null || value === undefined) {
@@ -73,10 +72,6 @@ export const replayVideoTraceDebug = (event, payload = {}) => {
     buffer.push(entry)
     while (buffer.length > TRACE_BUFFER_LIMIT) {
         buffer.shift()
-    }
-
-    if (root[TRACE_CONSOLE_FLAG] === true || event.startsWith('camera.')) {
-        root.console?.info?.(`[LGS replay trace] ${event}`, entry.data)
     }
 
     return entry

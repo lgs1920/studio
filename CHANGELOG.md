@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-07-22 — [`fix: remove replay trace console logs`](https://github.com/lgs1920/studio/commit/COMMIT_ID)
+
+- Stop emitting `[LGS replay trace]` messages to the browser console while preserving internal replay diagnostics.
+- Add a regression test for camera timing diagnostics.
+
 ## 2026-07-22 — [`fix: correct widget text rendering`](https://github.com/lgs1920/studio/commit/COMMIT_ID)
 
 - Preserve text widget scale state during editing.
