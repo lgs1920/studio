@@ -38,6 +38,7 @@ The repository already contains the main product surface used by the studio:
 - Replay Draft final-frame synchronization and bounded trace rendering
 - Replay diagnostics remain available internally without writing console trace logs
 - Video recording, deferred HQ export, and image snapshot workflows
+- Tunnel recording starts automatically after video widgets finish preparing, without a second Record action
 - Linked replay video editing temporarily hides the Journey toolbar without changing its saved visibility setting
 - Recording indicators show preparation, ready, recording, and finalization states for Draft and HQ workflows
 - Deterministic HQ camera following for navigation and dynamic corrections, including 1.5-second transitions

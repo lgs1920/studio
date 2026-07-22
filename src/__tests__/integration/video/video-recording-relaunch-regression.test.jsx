@@ -323,9 +323,9 @@ describe('video recording relaunch regression', () => {
         expect(lgs.stores.ui.video.finalizing).toBe(true)
     })
 
-    it('uses the requested appearances for video recording progress actions', () => {
+    it('keeps the preparation state free of a second record action', () => {
         globalThis.lgs.stores.replay.recordingSync = true
-        const view = render(<VideoRecorderToolbar widgetsReady onStartRecording={vi.fn()}/>)
+        const view = render(<VideoRecorderToolbar/>)
 
         expect(document.getElementById('video-recorder-play-pause')?.getAttribute('appearance')).toBe('plain')
         expect(document.getElementById('video-recorder-stop')?.getAttribute('appearance')).toBe('plain')
@@ -336,8 +336,9 @@ describe('video recording relaunch regression', () => {
             globalThis.lgs.stores.ui.video.recording = false
             globalThis.lgs.stores.ui.video.preRecording = true
         })
-        view.rerender(<VideoRecorderToolbar widgetsReady onStartRecording={vi.fn()}/>)
+        view.rerender(<VideoRecorderToolbar/>)
 
-        expect(document.getElementById('video-recorder-start-recording')?.getAttribute('appearance')).toBe('plain')
+        expect(document.getElementById('video-recorder-start-recording')).toBeNull()
+        expect(screen.getByText('Preparing...')).not.toBeNull()
     })
 })

@@ -66,7 +66,6 @@ export const VideoRecordingScreenArea = memo(() => {
     const [mountTimeoutOpen, setMountTimeoutOpen] = useState(false)
     const [mountTimeoutError] = useState({missing: [], timeoutMs: WIDGET_MOUNT_TIMEOUT})
     const [mountTimeoutAction] = useState('record')
-    const [widgetsMounted, setWidgetsMounted] = useState(false)
 
     const updateJourneyReplayVideoCropRect = useCallback((cropRect = null) => {
         const replayStore = lgs.stores?.replay
@@ -391,7 +390,6 @@ export const VideoRecordingScreenArea = memo(() => {
     }, [$video, initializeRecorder, markRecordingStarted, disposeComposer, stopOverlaysRefresh])
 
     const handleStartRecording = useCallback(async () => {
-        setWidgetsMounted(false)
         await handleVideoRecording()
     }, [handleVideoRecording])
 
@@ -472,7 +470,7 @@ export const VideoRecordingScreenArea = memo(() => {
         const keys = [...__.ui.widgetCache.getAll({widgetsBoard: VIDEO_WIDGETS_BOARD}).keys()]
         if (!keys.length) {
             if ($video.preRecording) {
-                setWidgetsMounted(true)
+                void handleStartRecording()
             }
             else if ($video.snapshot) {
                 void handlePhotoSnapshot()
@@ -486,7 +484,7 @@ export const VideoRecordingScreenArea = memo(() => {
             }
             done = true
             if ($video.preRecording) {
-                setWidgetsMounted(true)
+                void handleStartRecording()
             }
             else if ($video.snapshot) {
                 await handlePhotoSnapshot()
@@ -513,7 +511,7 @@ export const VideoRecordingScreenArea = memo(() => {
                 _pendingFinish.current = null
             }
         }
-    }, [handleVideoRecording, handlePhotoSnapshot, $video.preRecording, $video.snapshot, isWidgetReadyForRecording, waitingForAllWidgets])
+    }, [handleStartRecording, handlePhotoSnapshot, $video.preRecording, $video.snapshot, isWidgetReadyForRecording, waitingForAllWidgets])
 
     useEffect(() => {
         const hStopped = () => {
@@ -586,8 +584,6 @@ export const VideoRecordingScreenArea = memo(() => {
             {(video.preRecording || video.recording) && (
                 <VideoRecorderWidget
                     id="video-recorder-widget"
-                    widgetsReady={video.preRecording && widgetsMounted}
-                    onStartRecording={handleStartRecording}
                 />
             )}
             <WidgetMountErrorDialog open={mountTimeoutOpen} error={mountTimeoutError} action={mountTimeoutAction}

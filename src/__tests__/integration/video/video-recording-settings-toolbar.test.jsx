@@ -192,7 +192,7 @@ describe('VideoRecordingSettingsToolbar', () => {
         render(<VideoRecordingSettingsToolbar/>)
 
         expect(screen.getByTestId('default-step-index').textContent).toBe('0')
-        expect(lastTunnelProps.steps[0].icon).toBe('camera-viewfinder')
+        expect(lastTunnelProps.steps[0].icon).toBe('paintbrush-pencil')
         expect(lastTunnelProps.steps[0].done).toBe(true)
         expect(__.ui.widgetManager.syncCropDimensionsFromElement).not.toHaveBeenCalled()
     })

@@ -90,7 +90,7 @@ const finiteNumber = value => {
 /**
  * VideoRecorderToolbar component
  */
-export const VideoRecorderToolbar = ({toolbar, widgetsReady = false, onStartRecording}) => {
+export const VideoRecorderToolbar = ({toolbar}) => {
     const $video = lgs.stores.ui.video
     const replay = useSnapshot(lgs.stores.replay)
     const video = useSnapshot($video)
@@ -110,7 +110,7 @@ export const VideoRecorderToolbar = ({toolbar, widgetsReady = false, onStartReco
                                : null
     const indicatorState = video.finalizing
                           ? 'finalizing'
-                          : (video.preRecording ? (widgetsReady ? 'ready' : 'preparing') : 'recording')
+                          : (video.preRecording ? 'preparing' : 'recording')
     const indicatorAnimation = indicatorState === 'ready' || indicatorState === 'finalizing'
                                ? 'beat-fade'
                                : undefined
@@ -319,24 +319,7 @@ export const VideoRecorderToolbar = ({toolbar, widgetsReady = false, onStartReco
                 )
             )}
             {video.preRecording ? (
-                widgetsReady ? (
-                    <>
-                        <WaTooltip for="video-recorder-start-recording" placement="top">
-                            {'Record'}
-                        </WaTooltip>
-                        <WaButton
-                            id="video-recorder-start-recording"
-                            variant="brand"
-                            appearance="plain"
-                            size="s"
-                            className="video-recorder-action video-recorder-start-recording"
-                            aria-label="Record"
-                            onClick={onStartRecording}
-                        >
-                            <WaIcon name="clapperboard-play" variant="regular"/>
-                        </WaButton>
-                    </>
-                ) : <div className="blinking">Preparing...</div>
+                <div className="blinking">Preparing...</div>
             ) : state.finalizing ? (
                 <div className="blinking">Finalisation...</div>
             ) : (

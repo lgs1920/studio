@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-07-22 — [`fix: start recording after video preparation`](https://github.com/lgs1920/studio/commit/COMMIT_ID)
+
+- Start recording automatically when the video widgets are ready after launching Record from the tunnel.
+- Remove the duplicate Record button from the Video Recorder widget and cover the flow with integration tests.
+
 ## 2026-07-22 — [`fix: remove replay trace console logs`](https://github.com/lgs1920/studio/commit/COMMIT_ID)
 
 - Stop emitting `[LGS replay trace]` messages to the browser console while preserving internal replay diagnostics.
