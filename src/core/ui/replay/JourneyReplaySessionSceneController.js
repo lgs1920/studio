@@ -213,7 +213,7 @@ export const stop = (mode, options = {}) => {
         if (options.emit === false) {
             call.restorePlaybackCameraSettings()
             state.cameraStateRestoredBeforeSceneCleanup = true
-            call.restoreCameraState()
+            call.restoreCameraState({clear: false})
         }
         if (shouldDeferSceneRestore) {
             state.sceneRestoreDeferred = true
@@ -221,7 +221,7 @@ export const stop = (mode, options = {}) => {
             return sample
         }
 
-        call.restorePlaybackScene()
+        state.sceneRestorePromise = call.restorePlaybackScene()
         return sample
     }
 
@@ -233,13 +233,16 @@ export const restorePlaybackScene = (mode, {force = false} = {}) => {
         }
 
         state.renderer.clear()
-        return call.restorePlaybackScene().then(() => true)
+        const restorePromise = call.restorePlaybackScene().then(() => true)
+        state.sceneRestorePromise = restorePromise
+        return restorePromise
     }
 
 export const dispose = (mode, ) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
         call.stop({emit: false})
+        state.replayEntryCameraState = null
         if (state.profileHoverTimeout !== null) {
             clearTimeout(state.profileHoverTimeout)
             state.profileHoverTimeout = null
@@ -412,7 +415,8 @@ export const restorePlaybackSceneInternal = (mode, ) => {
         call.restoreCurrentJourneyVisibility()
         call.resetCameraController({preserveSavedCameraState: true})
         state.suppressPlaybackCameraSync = true
-        return call.focusJourneyAfterPlayback({
+        let restorePromise
+        restorePromise = call.focusJourneyAfterPlayback({
             snapDistance: 50000,
         }).finally(() => {
             state.deferPlaybackCameraRestore = false
@@ -424,15 +428,22 @@ export const restorePlaybackSceneInternal = (mode, ) => {
             }
             state.cameraStateRestoredBeforeSceneCleanup = false
             call.restorePlaybackCameraSettings({force: true})
+            if (state.sceneRestorePromise === restorePromise) {
+                state.sceneRestorePromise = null
+            }
         })
+        state.sceneRestorePromise = restorePromise
+        return restorePromise
     }
 
-export const restoreCameraState = (mode, ) => {
+export const restoreCameraState = (mode, {clear = true} = {}) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
         const camera = globalThis.lgs?.viewer?.camera
         const savedCameraState = state.savedCameraState
-        state.savedCameraState = null
+        if (clear) {
+            state.savedCameraState = null
+        }
         if (!camera || !savedCameraState) {
             return
         }
@@ -794,7 +805,7 @@ export const bindRenderer = (mode, ) => {
                     state.renderer.clear()
                     call.setJourneyReplayOrbitAllowed(true)
                     resetRuntimeProgress(replayStore())
-                    call.restorePlaybackScene()
+                    state.sceneRestorePromise = call.restorePlaybackScene()
                 }
 
                 try {

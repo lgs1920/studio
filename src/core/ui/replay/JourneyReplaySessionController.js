@@ -217,6 +217,7 @@ export class JourneyReplaySessionController {
     #lastCameraTimingWallNow = null
     #cameraTimingChange = null
     #savedCameraState = null
+    #replayEntryCameraState = null
     #playbackStartCameraSettings = null
     #cameraStateRestoredBeforeSceneCleanup = false
     #deferPlaybackCameraRestore = false
@@ -255,6 +256,7 @@ export class JourneyReplaySessionController {
     #cameraLiveSyncFrame = null
     #clipSequenceToken = 0
     #sceneRestoreDeferred = false
+    #sceneRestorePromise = null
     #replayPoiExpandedState = new Map()
     #replayPoiCollapseTimers = new Map()
     #replayPoiTriggered = new Set()
@@ -737,6 +739,20 @@ export class JourneyReplaySessionController {
             get: () => this.#sceneRestoreDeferred,
             set: value => {
                 this.#sceneRestoreDeferred = value
+            },
+        })
+        Object.defineProperty(this[JOURNEY_REPLAY_INTERNAL_STATE], 'sceneRestorePromise', {
+            configurable: true,
+            get: () => this.#sceneRestorePromise,
+            set: value => {
+                this.#sceneRestorePromise = value
+            },
+        })
+        Object.defineProperty(this[JOURNEY_REPLAY_INTERNAL_STATE], 'replayEntryCameraState', {
+            configurable: true,
+            get: () => this.#replayEntryCameraState,
+            set: value => {
+                this.#replayEntryCameraState = value
             },
         })
         Object.defineProperty(this[JOURNEY_REPLAY_INTERNAL_STATE], 'replayPoiExpandedState', {

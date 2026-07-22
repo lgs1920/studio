@@ -185,10 +185,14 @@ export const configure = (mode, options = {}) => {
 export const start = (mode, options = {}) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
+        if (state.sceneRestorePromise) {
+            return state.sceneRestorePromise.then(() => start(mode, options))
+        }
         state.renderer.clear()
         call.bindCesiumCameraBridge()
         state.deferPlaybackCameraRestore = false
         state.suppressPlaybackCameraSync = false
+        state.cameraStateRestoredBeforeSceneCleanup = false
         state.replayExportClipFrameState = null
         const sampler = call.configure(options)
         if (!sampler?.hasSamples) {
@@ -209,10 +213,30 @@ export const start = (mode, options = {}) => {
             call.hideOtherJourneysVisibility()
         }
         const startSample = sampler.atProgress?.(options.progress ?? 0)
-        call.captureCameraState({sample: startSample})
+        const hasReplayEntryCameraState = Boolean(state.replayEntryCameraState)
+        if (!hasReplayEntryCameraState) {
+            call.captureCameraState({sample: startSample})
+        }
+        else {
+            state.savedCameraState = {
+                destination: {...state.replayEntryCameraState.destination},
+                orientation: {...state.replayEntryCameraState.orientation},
+                altitude: state.replayEntryCameraState.altitude,
+            }
+            call.restoreCameraState({clear: false})
+        }
         call.captureJourneyReplayDrawerStateBeforePlayback()
         call.capturePlaybackCameraSettings()
         const startList = call.clipListForSlot(REPLAY_CLIP_SLOT_START)
+        if (!hasReplayEntryCameraState && startList.length > 0) {
+            state.replayEntryCameraState = state.savedCameraState
+                ? {
+                    destination: {...state.savedCameraState.destination},
+                    orientation: {...state.savedCameraState.orientation},
+                    altitude: state.savedCameraState.altitude,
+                }
+                : null
+        }
         state.deferStartCameraRecenter = startList.length > 0
         const introLeadSeconds = 1
         const introStartAt = call.now() + Math.max(
@@ -283,7 +307,19 @@ export const start = (mode, options = {}) => {
         }
         else {
             state.deferStartCameraRecenter = false
-            state.skipNextImmediateStartRecenter = call.placeCameraAtPlaybackStart(startSample, options.progress ?? 0) === true
+            state.skipNextImmediateStartRecenter = hasReplayEntryCameraState
+                ? false
+                : call.placeCameraAtPlaybackStart(startSample, options.progress ?? 0) === true
+            if (!hasReplayEntryCameraState) {
+                call.captureCameraState({sample: startSample})
+                state.replayEntryCameraState = state.savedCameraState
+                    ? {
+                        destination: {...state.savedCameraState.destination},
+                        orientation: {...state.savedCameraState.orientation},
+                        altitude: state.savedCameraState.altitude,
+                    }
+                    : null
+            }
             startResult = state.controller.start({
                 progress: options.progress ?? 0,
             })
@@ -341,7 +377,19 @@ export const preparePlaybackSceneForExport = async (mode, {
         call.resetCameraInterpolationState()
 
         void globalThis.__?.ui?.cameraManager?.stopRotate?.()
-        call.captureCameraState({sample})
+        const startClips = call.clipListForSlot(REPLAY_CLIP_SLOT_START)
+        const hasReplayEntryCameraState = Boolean(state.replayEntryCameraState)
+        if (hasReplayEntryCameraState) {
+            state.savedCameraState = {
+                destination: {...state.replayEntryCameraState.destination},
+                orientation: {...state.replayEntryCameraState.orientation},
+                altitude: state.replayEntryCameraState.altitude,
+            }
+            call.restoreCameraState({clear: false})
+        }
+        else {
+            call.captureCameraState({sample})
+        }
         call.captureJourneyReplayDrawerStateBeforePlayback()
         call.capturePlaybackCameraSettings()
 
@@ -349,16 +397,20 @@ export const preparePlaybackSceneForExport = async (mode, {
             journey.visible = true
             journey.updateVisibility?.(true)
 
-            // Keep HQ on the same initial camera path as Draft. A generic
-            // journey focus uses the journey bounding sphere/centroid and can
-            // leave the camera much farther away than the replay start view.
-            // Draft only places the camera directly when there is no start
-            // clip; start clips deliberately keep the current camera as
-            // their source view.
-            const startClips = call.clipListForSlot(REPLAY_CLIP_SLOT_START)
-            if (startClips.length === 0) {
+            if (!hasReplayEntryCameraState && startClips.length === 0) {
                 call.placeCameraAtPlaybackStart(sample, safeProgress)
+                call.captureCameraState({sample})
             }
+        }
+
+        if (!hasReplayEntryCameraState) {
+            state.replayEntryCameraState = state.savedCameraState
+                ? {
+                    destination: {...state.savedCameraState.destination},
+                    orientation: {...state.savedCameraState.orientation},
+                    altitude: state.savedCameraState.altitude,
+                }
+                : null
         }
 
         call.setJourneyReplayOrbitAllowed(false)
