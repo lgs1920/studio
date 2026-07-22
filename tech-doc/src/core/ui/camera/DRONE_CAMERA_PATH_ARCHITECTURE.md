@@ -1526,13 +1526,16 @@ Navigation recentering uses a centered Z1 trigger zone. For a standard crop,
 the navigation zone keeps the existing 30% ratio. When the video crop is narrow
 (its short axis is less than 75% of its long axis), the navigation ratio is
 reduced to 22%. This applies to both horizontal and vertical narrow crops.
-Dynamic tracking keeps its separate Z1/Z2 configuration.
+The ratio applies independently to width and height: on a `1080 × 1920` crop,
+the narrow navigation zone is `237.6 × 422.4` pixels, not a square. Dynamic
+tracking keeps its separate Z1/Z2 configuration, with both zones using the
+same independent width and height ratios.
 
-Draft recording and replay/HQ navigation use the same Z1 collision path: both
-test the current and predicted marker samples against the runtime zone before
-starting a recenter. Draft keeps its live Cesium timing, while replay/HQ keeps
-deterministic frame timing; this timing difference must not change the
-collision decision.
+Draft recording and replay/HQ navigation and dynamic tracking use the same
+collision path: both test the current and predicted marker samples against the
+runtime zones before starting a recenter. Draft keeps its live Cesium timing,
+while replay/HQ keeps deterministic frame timing; this timing difference must
+not change the Z1/Z2 collision decision.
 
 ### Deterministic HQ camera ownership
 

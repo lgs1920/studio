@@ -4,7 +4,7 @@
 
 
 import {ArcType, Cartesian2, Cartesian3, Cartographic, CatmullRomSpline, Color, ExtrapolationType, JulianDate, EasingFunction, HeightReference, HorizontalOrigin, LinearApproximation, Matrix4, PolylineDashMaterialProperty, SampledPositionProperty, SceneTransforms, Transforms, VerticalOrigin, Math as CesiumMath} from 'cesium'
-import {REPLAY_DRAWER} from '@Core/constants'
+import {REPLAY_DRAWER, VIDEO_CROP_ZONE} from '@Core/constants'
 import {Journey} from '@Core/Journey'
 import {CameraUtils} from '@Utils/cesium/CameraUtils'
 import {POIUtils} from '@Utils/cesium/POIUtils'
@@ -414,8 +414,9 @@ export const videoCropRect = (mode) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
 
+        const configuredCrop = globalThis.__?.ui?.widgetManager?.getWidgetConfig?.(VIDEO_CROP_ZONE)?.cropDimensions
         const replayStore = globalThis.lgs?.stores?.replay
-        const cropRect = replayStore.videoCropRect
+        const cropRect = configuredCrop ?? replayStore?.videoCropRect
         const left = finiteNumber(cropRect?.left)
         const top = finiteNumber(cropRect?.top)
         const width = finiteNumber(cropRect?.width)
@@ -532,14 +533,13 @@ export const updateToleranceZoneOverlay =  (mode, hysteresis) => {
             inner.className = 'replay-tolerance-zone-overlay-inner'
             inner.dataset.zone = 'z2'
             inner.style.position = 'absolute'
-            inner.style.left = `${((innerBounds.left - outerBounds.left) / (outerBounds.right - outerBounds.left)) * 100}%`
-            inner.style.top = `${((innerBounds.top - outerBounds.top) / (outerBounds.bottom - outerBounds.top)) * 100}%`
-            inner.style.width = `${((innerBounds.right - innerBounds.left) / (outerBounds.right - outerBounds.left)) * 100}%`
-            inner.style.height = `${((innerBounds.bottom - innerBounds.top) / (outerBounds.bottom - outerBounds.top)) * 100}%`
+            inner.style.left = `${(innerBounds.left - outerBounds.left) * rect.width}px`
+            inner.style.top = `${(innerBounds.top - outerBounds.top) * rect.height}px`
+            inner.style.width = `${(innerBounds.right - innerBounds.left) * rect.width}px`
+            inner.style.height = `${(innerBounds.bottom - innerBounds.top) * rect.height}px`
             inner.style.border = '1px dashed rgba(255, 255, 255, 0.45)'
             overlay.append(inner)
         }
         container.appendChild(overlay)
         state.toleranceZoneOverlay = overlay
     }
-

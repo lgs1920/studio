@@ -1395,8 +1395,10 @@ describe('replay camera tracking', () => {
             expect(overlay.lastElementChild?.className).toBe('replay-tolerance-zone-overlay-inner')
             expect(overlay.lastElementChild?.dataset.zone).toBe('z2')
             expect(overlay.lastElementChild?.style.border).toContain('dashed')
-            expect(Number.parseFloat(overlay.lastElementChild.style.left)).toBeCloseTo(32.35294, 5)
-            expect(Number.parseFloat(overlay.lastElementChild.style.width)).toBeCloseTo(35.29412, 5)
+            expect(Number.parseFloat(overlay.lastElementChild.style.left)).toBeCloseTo(275, 6)
+            expect(Number.parseFloat(overlay.lastElementChild.style.top)).toBeCloseTo(220, 6)
+            expect(Number.parseFloat(overlay.lastElementChild.style.width)).toBeCloseTo(300, 6)
+            expect(Number.parseFloat(overlay.lastElementChild.style.height)).toBeCloseTo(240, 6)
 
             mode.stop({emit: false})
         }

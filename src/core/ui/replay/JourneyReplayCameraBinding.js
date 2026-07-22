@@ -775,39 +775,6 @@ export const updateCamera = (mode, {
             return
         }
 
-        // Draft playback is driven by the live Cesium render loop. Keep its
-        // historical follow path: applying the current frame on each playback
-        // tick is what made Draft responsive. HQ is advanced by export frame
-        // time and must keep its deterministic path below.
-        const draftLiveCamera = !exportMode
-                                 && globalThis.lgs?.stores?.ui?.video?.recording === true
-        if (draftLiveCamera && source === 'playback') {
-            if (marker.mode === REPLAY_MARKER_MODE_HYSTERESIS) {
-                const runtimeTracking = replayRuntimeTrackingSettings(globalThis.lgs?.settings?.ui?.replay?.camera ?? cameraSettings, viewportRect)
-                const dynamicCameraSettings = normalizeJourneyReplayCamera({
-                    ...cameraSettings,
-                    hysteresis: {
-                        ...(cameraSettings.hysteresis ?? {}),
-                        zone: runtimeTracking.dynamic.triggerZone,
-                    },
-                })
-                const trackingSample = predictedSample ?? anchorSample
-                const currentCollision = call.cameraCollisionForSample(anchorSample, dynamicCameraSettings)
-                const predictedCollision = call.cameraCollisionForSample(trackingSample, dynamicCameraSettings)
-                if (currentCollision?.hard || predictedCollision?.hard) {
-                    call.applyCameraView({
-                        anchor: trackingSample,
-                        heading: smoothHeading,
-                        pitch: call.liveCameraPitch(smoothPitch),
-                        cameraSettings,
-                    })
-                }
-                state.lastCameraHeading = smoothHeading
-                state.lastCameraPitch = smoothPitch
-                return
-            }
-        }
-
         if (marker.mode === REPLAY_MARKER_MODE_NAVIGATION) {
             const runtimeTracking = replayRuntimeTrackingSettings(globalThis.lgs?.settings?.ui?.replay?.camera ?? cameraSettings, viewportRect)
             const navigationCameraSettings = normalizeJourneyReplayCamera({
@@ -1288,5 +1255,4 @@ export const updateCamera = (mode, {
             state.lastCameraPitch = smoothPitch
         }
     }
-
 

@@ -375,7 +375,6 @@ export const preserveCurrentJourneyPOIVisibility =  (mode, journey) => {
 
 export const restoreCurrentJourneyPolylineVisibility = (mode) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
-    const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
 
         if (state.hiddenCurrentJourneyPolylines.size === 0) {
             return
@@ -386,9 +385,9 @@ export const restoreCurrentJourneyPolylineVisibility = (mode) => {
             return
         }
 
-        for (const [entityId, state] of state.hiddenCurrentJourneyPolylines.entries()) {
-            const namedSource = state?.sourceName
-                ? TrackUtils.getDataSourcesByName(state.sourceName, true)?.[0]
+        for (const [entityId, visibility] of state.hiddenCurrentJourneyPolylines.entries()) {
+            const namedSource = visibility?.sourceName
+                ? TrackUtils.getDataSourcesByName(visibility.sourceName, true)?.[0]
                 : null
             const source = namedSource ?? TrackUtils.getDataSourceNameByEntityId(entityId)
             const entity = source?.entities?.getById?.(entityId)
@@ -396,7 +395,7 @@ export const restoreCurrentJourneyPolylineVisibility = (mode) => {
                 continue
             }
 
-            TrackUtils.setPolylineVisibility(entity, state?.visible !== false)
+            TrackUtils.setPolylineVisibility(entity, visibility?.visible !== false)
         }
 
         state.hiddenCurrentJourneyPolylines.clear()

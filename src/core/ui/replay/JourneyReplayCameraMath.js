@@ -251,7 +251,7 @@ export const replayNavigationZone = (ratio, viewportWidth, viewportHeight) => {
     const navigationRatio = shortToLongRatio < REPLAY_TRACKING_NAVIGATION_NARROW_CROP_RATIO
         ? REPLAY_TRACKING_NAVIGATION_NARROW_ZONE_RATIO
         : ratio
-    return replayCenteredSquareZone(navigationRatio, width, height)
+    return replayCenteredZone(navigationRatio, navigationRatio)
 }
 
 export const replayRuntimeTrackingSettings = (settings = {}, viewport = {}) => {
@@ -271,10 +271,14 @@ export const replayRuntimeTrackingSettings = (settings = {}, viewport = {}) => {
                 finiteNumber(dynamic.triggerRatio) ?? finiteNumber(dynamic.width) ?? REPLAY_TRACKING_DYNAMIC_TRIGGER_ZONE_RATIO,
                 finiteNumber(dynamic.height) ?? finiteNumber(dynamic.triggerRatio) ?? REPLAY_TRACKING_DYNAMIC_TRIGGER_ZONE_RATIO,
             ),
-            targetZone:  dynamic.targetZone ?? replayCenteredSquareZone(
-                finiteNumber(dynamic.targetRatio) ?? finiteNumber(dynamic.targetWidth) ?? REPLAY_TRACKING_DYNAMIC_TARGET_ZONE_RATIO,
-                viewport.width,
-                viewport.height,
+            targetZone:  dynamic.targetZone ?? replayCenteredZone(
+                finiteNumber(dynamic.targetWidth)
+                    ?? finiteNumber(dynamic.targetRatio)
+                    ?? REPLAY_TRACKING_DYNAMIC_TARGET_ZONE_RATIO,
+                finiteNumber(dynamic.targetHeight)
+                    ?? finiteNumber(dynamic.targetRatio)
+                    ?? finiteNumber(dynamic.targetWidth)
+                    ?? REPLAY_TRACKING_DYNAMIC_TARGET_ZONE_RATIO,
             ),
         },
     }
@@ -666,4 +670,3 @@ export const cartographicToLonLat = (cartographic) => {
         altitude:  finiteNumber(cartographic?.height) ?? 0,
     }
 }
-

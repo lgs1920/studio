@@ -25,6 +25,10 @@ width  = r
 height = r
 ```
 
+The ratio applies independently to the viewport width and height. The zone is
+not forced to be square in pixels. For example, a `30% × 30%` zone on a
+`1080 × 1920` portrait crop is `324 × 576` pixels.
+
 ### Navigation mode
 
 Navigation uses one zone only:
@@ -34,7 +38,9 @@ Navigation uses one zone only:
 | Z1 | 30% × 30% | `left=35%`, `top=35%`, `right=65%`, `bottom=65%` | Trigger zone for camera recentering |
 
 There is no Z2 in navigation mode. When the marker leaves Z1, the camera aims
-at the predicted marker position.
+at the predicted marker position. On a narrow crop, Z1 uses `22% × 22%`; its
+pixel dimensions therefore follow the crop aspect ratio instead of becoming a
+square.
 
 ### Dynamic mode
 
@@ -69,7 +75,9 @@ every video format, including landscape, square, and portrait 9:16 crops.
    visibility is not silently lost.
 
 The current and predicted samples are both checked because Cesium projection
-can be updated asynchronously while Draft playback is running.
+can be updated asynchronously while Draft playback is running. Draft and HQ
+use the same normalized Z1/Z2 definitions and collision decisions; only their
+camera clocks differ.
 
 ## 4. Predictive processing
 
@@ -312,8 +320,9 @@ same frame produces visible camera jitter.
 
 Consequently:
 
-- navigation uses Z1 = 30% normally, or 22% for a narrow crop, in both Draft and HQ;
-- dynamic mode uses Z1 = 85% and Z2 = 30% in both Draft and HQ;
+- navigation uses Z1 = 30% × 30% normally, or 22% × 22% for a narrow crop, in
+  both Draft and HQ;
+- dynamic mode uses Z1 = 85% × 85% and Z2 = 30% × 30% in both Draft and HQ;
 - navigation and dynamic HQ corrections use the same deterministic follower
   with a `1.5 s` response;
 - no free-running widget timer is required during HQ export;

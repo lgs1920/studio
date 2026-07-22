@@ -240,9 +240,22 @@ describe('replay settings normalization', () => {
     it('reduces the navigation ratio from 30 to 22 percent on narrow crops', () => {
         const horizontalZone = replayRuntimeTrackingSettings({}, {width: 1920, height: 1080}).navigation.triggerZone
         expect(horizontalZone.width).toBeCloseTo(0.22, 6)
+        expect(horizontalZone.height).toBeCloseTo(0.22, 6)
 
         const verticalZone = replayRuntimeTrackingSettings({}, {width: 1080, height: 1920}).navigation.triggerZone
+        expect(verticalZone.width).toBeCloseTo(0.22, 6)
         expect(verticalZone.height).toBeCloseTo(0.22, 6)
+        expect(verticalZone.width * 1080).toBeCloseTo(237.6, 6)
+        expect(verticalZone.height * 1920).toBeCloseTo(422.4, 6)
+    })
+
+    it('keeps dynamic Z2 proportional to both viewport dimensions', () => {
+        const targetZone = replayRuntimeTrackingSettings({}, {width: 1920, height: 1080}).dynamic.targetZone
+
+        expect(targetZone.width).toBeCloseTo(0.3, 6)
+        expect(targetZone.height).toBeCloseTo(0.3, 6)
+        expect(targetZone.width * 1080).toBeCloseTo(324, 6)
+        expect(targetZone.height * 1920).toBeCloseTo(576, 6)
     })
 
     it('increases look-ahead for grazing camera pitches', () => {
@@ -375,4 +388,3 @@ describe('replay settings normalization', () => {
         expect(highEasing).toBeLessThan(lowEasing)
     })
 })
-
