@@ -256,8 +256,10 @@ export const Tunnel = memo(({
                                                     appearance={step.appearance ?? 'plain'}
                                                     aria-label={step.text}
                                                     aria-disabled={isBlocked}
+                                                    aria-selected={index === currentContainer}
                                                     className={classNames({
                                                         'lgs-tunnel-button-disabled': isBlocked,
+                                                        'is-selected': index === currentContainer,
                                                     }, step.className)}
                                                     onPointerEnter={() => setHoveredStep(index)}
                                                     onPointerLeave={() => setHoveredStep(current => current === index ? null : current)}
@@ -269,7 +271,7 @@ export const Tunnel = memo(({
                                           </div>
                                       )
                                   }),
-                              [steps, handleStepClick, tunnelId])
+                              [steps, currentContainer, handleStepClick, tunnelId])
 
     return (
         <div className={classNames('lgs-tunnel-container', className)} ref={_tunnelContainer}>

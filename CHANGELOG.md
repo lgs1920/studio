@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-07-22 — [`fix: style selected tunnel step`](https://github.com/lgs1920/studio/commit/330b9fcf)
+
+- Highlight the active Tunnel step with the on-map theme and compact spacing.
+
 ## 2026-07-22 — [`fix: stabilize journey toolbar replay controls`](https://github.com/lgs1920/studio/commit/0f981d6f)
 
 - Stop Journey toolbar orbit controls without relaunching the camera rotation.

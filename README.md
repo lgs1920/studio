@@ -46,6 +46,7 @@ The repository already contains the main product surface used by the studio:
 - Privacy-first local workspace for imported journeys and generated media
 - PWA support and offline-friendly caching
 - Boot splash video loading uses browser-supported video element preloading
+- Tunnel controls highlight the current step with the on-map theme and compact spacing
 
 ## Main Features
 

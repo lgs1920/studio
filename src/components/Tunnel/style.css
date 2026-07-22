@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-29
- * Last modified: 2026-04-29
+ * Created on: 2026-07-22
+ * Last modified: 2026-07-22
  *
  *
  * Copyright © 2026 LGS1920
@@ -50,7 +50,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 0;
+    gap: var(--lgs-gutter-xs);
 }
 
 .lgs-tunnel-bar-item {
@@ -74,6 +74,20 @@
 
 .lgs-tunnel-button-disabled wa-icon {
     color: var(--lgs-card-on-map-disabled-color, var(--lgs-disabled-color)) !important;
+}
+
+.lgs-tunnel-bar wa-button::part(base) {
+    padding: var(--lgs-gutter-xs);
+}
+
+.wa-theme-lgs1920-on-map .lgs-tunnel-bar wa-button.is-selected::part(base),
+.wa-theme-lgs1920-on-map .lgs-tunnel-bar wa-button[aria-selected="true"]::part(base) {
+    color: var(--lgs-card-on-map-selected-color, var(--lgs-text-on-color));
+    border-color: var(--lgs-card-on-map-selected-border-color, var(--lgs-card-on-map-border-color));
+    background-color: var(--lgs-card-on-map-selected-bg-color, var(--lgs-card-on-map-bg-color)) !important;
+    background-image: var(--lgs-card-on-map-selected-bg-image, none) !important;
+    box-shadow: 0 0 0 1px color-mix(in oklab, var(--lgs-card-on-map-selected-border-color, currentColor) 48%, transparent);
+    background-blend-mode: var(--lgs-card-on-map-selected-bg-blend-mode, normal);
 }
 
 .lgs-tunnel-tooltip-popup {
