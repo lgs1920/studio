@@ -20,6 +20,13 @@ import { hasJourneyReplayStopClips } from '@Core/ui/replay/ReplayOverlayResolver
 
 const defaultJourneyReplayStore = () => globalThis.lgs?.stores?.replay ?? null
 
+const waitForAnimationFrame = () => new Promise(resolve => {
+    const requestFrame = globalThis.requestAnimationFrame
+                         ?? globalThis.window?.requestAnimationFrame?.bind(globalThis.window)
+                         ?? (callback => setTimeout(callback, 0))
+    requestFrame(() => resolve())
+})
+
 /**
  * Bridge the recorder lifecycle with the replay playback.
  *
@@ -119,6 +126,12 @@ export class JourneyReplayVideoSync {
             }
 
             try {
+                // Publish the exact terminal sample before the recorder reads
+                // the composited canvas for its final Draft frame.
+                replay?.seek?.(1)
+                await waitForAnimationFrame()
+                await waitForAnimationFrame()
+                replay?.seek?.(1)
                 await recorder.stopVideo({captureFinalFrame: true})
             }
             finally {
@@ -157,7 +170,6 @@ export class JourneyReplayVideoSync {
                 return
             }
 
-            this.#setVideoCaptureCadence()
             this.#cancelPendingStart()
             if (!this.#armed) {
                 this.#setVideoSafeMode(false)
@@ -170,6 +182,7 @@ export class JourneyReplayVideoSync {
         }
 
         const handleRecorderStart = () => {
+            this.#setVideoCaptureCadence()
             startJourneyReplay()
         }
 

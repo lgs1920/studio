@@ -105,6 +105,9 @@ export class JourneyReplayCesiumRenderer {
         this.#options = {...this.#options, ...options}
         this.#journeySlug = this.#sampler?.journey?.slug ?? globalThis.lgs?.theJourney?.slug ?? 'current'
         this.#ensureSource()
+        if (this.#source) {
+            this.#source.show = false
+        }
         this.#raiseSourceToTop()
         this.#maskOriginalTrackSources()
         return this
@@ -117,6 +120,7 @@ export class JourneyReplayCesiumRenderer {
                   freezeDynamic = false,
                   hideCursor = false,
                   hideTrace = false,
+                  showTrace = true,
                   hideRemainingTrace = false,
                   staticCompletedTrace = false,
                   completedTraceMode = staticCompletedTrace ? 'static' : 'dynamic',
@@ -156,12 +160,15 @@ export class JourneyReplayCesiumRenderer {
         if (freezeDynamic && !staticCompletedTrace) {
             this.#freezeDynamicLines()
         }
-        if (hideTrace) {
+        if (hideTrace || !showTrace) {
             this.#hideLineEntities(() => true)
         }
-        this.#traceHidden = hideTrace
+        if (this.#source) {
+            this.#source.show = !hideTrace && showTrace
+        }
+        this.#traceHidden = hideTrace || !showTrace
         this.#updateCursor(sample)
-        this.#syncCursorVisibilityWithTrace({hideCursor})
+        this.#syncCursorVisibilityWithTrace({hideCursor: hideCursor || !showTrace})
         if (stopCompletedTrace) {
             replayVideoTraceDebug('renderer.update.stop.end', {
                 progress: sample.progress,
@@ -280,7 +287,6 @@ export class JourneyReplayCesiumRenderer {
 
     #ensureSource = () => {
         if (this.#source && (this.#sourceInCollection() || this.#sourceAddPending)) {
-            this.#source.show = true
             return this.#source
         }
 
@@ -317,8 +323,6 @@ export class JourneyReplayCesiumRenderer {
                 this.#sourceAddPending = false
             })
         }
-        this.#source.show = true
-
         return this.#source
     }
 
@@ -641,11 +645,33 @@ export class JourneyReplayCesiumRenderer {
         return safeCartesian3Lerp(left, right, ratio)
     }
 
+    #limitTracePositions = positions => {
+        if (!Array.isArray(positions) || positions.length <= LIVE_PROGRESS_MAX_POINTS) {
+            return positions ?? []
+        }
+
+        const lastIndex = positions.length - 1
+        const selected = []
+        for (let index = 0; index < LIVE_PROGRESS_MAX_POINTS; index += 1) {
+            const sourceIndex = Math.round((index * lastIndex) / (LIVE_PROGRESS_MAX_POINTS - 1))
+            const position = positions[sourceIndex]
+            if (position && position !== selected[selected.length - 1]) {
+                selected.push(position)
+            }
+        }
+
+        return selected
+    }
+
     #completedSmoothedPositions = () => {
         const {guide, leftIndex} = this.#smoothedProgressCursor()
         const positions = guide.map(entry => entry.position)
         if (positions.length < 2) {
             return positions
+        }
+
+        if ((Number(this.#sample?.progress) || 0) >= 1) {
+            return this.#limitTracePositions(positions)
         }
 
         const completed = positions.slice(0, leftIndex + 1)
@@ -656,7 +682,7 @@ export class JourneyReplayCesiumRenderer {
             completed.push(interpolated)
         }
 
-        return completed
+        return this.#limitTracePositions(completed)
     }
 
     #liveCompletedSmoothedPositions = () => {
@@ -665,17 +691,11 @@ export class JourneyReplayCesiumRenderer {
             return guide.map(entry => entry.position)
         }
 
-        const stride = Math.max(1, Math.ceil(guide.length / Math.max(2, LIVE_PROGRESS_MAX_POINTS - 1)))
-        const completed = [guide[0].position]
-        for (let index = stride; index <= leftIndex; index += stride) {
-            completed.push(guide[index].position)
+        if ((Number(this.#sample?.progress) || 0) >= 1) {
+            return this.#limitTracePositions(guide.map(entry => entry.position))
         }
 
-        const anchor = guide[leftIndex]?.position
-        const lastCompleted = completed[completed.length - 1]
-        if (anchor && anchor !== lastCompleted) {
-            completed.push(anchor)
-        }
+        const completed = guide.slice(0, leftIndex + 1).map(entry => entry.position)
 
         const interpolated = this.#interpolatedSmoothedPosition()
         const lastWithAnchor = completed[completed.length - 1]
@@ -686,7 +706,7 @@ export class JourneyReplayCesiumRenderer {
             completed.push(guide[1].position)
         }
 
-        return completed
+        return this.#limitTracePositions(completed)
     }
 
     #remainingSmoothedPositions = () => {
@@ -699,7 +719,7 @@ export class JourneyReplayCesiumRenderer {
         const interpolated = this.#interpolatedSmoothedPosition()
         const remaining = positions.slice(rightIndex)
 
-        return interpolated ? [interpolated, ...remaining] : remaining
+        return this.#limitTracePositions(interpolated ? [interpolated, ...remaining] : remaining)
     }
 
     #liveRemainingSmoothedPositions = () => {
@@ -733,7 +753,7 @@ export class JourneyReplayCesiumRenderer {
             remaining.push(lastGuidePosition)
         }
 
-        return remaining
+        return this.#limitTracePositions(remaining)
     }
 
     #style = () => {
@@ -1077,7 +1097,8 @@ export class JourneyReplayCesiumRenderer {
             const fillWidth = style.fillWidth
             const borderWidth = Math.max(fillWidth + (style.borderWidth * 2), fillWidth + 2)
             const activeKeys = new Set(['smoothed#border', 'smoothed#fill'])
-            const playing = globalThis.lgs?.stores?.replay?.playing === true
+            const replayStore = globalThis.lgs?.stores?.replay
+            const playing = replayStore?.playing === true && replayStore?.recordingSync !== true
 
             if (staticGeometry) {
                 const positions = this.#completedSmoothedPositions()
@@ -1224,7 +1245,8 @@ export class JourneyReplayCesiumRenderer {
             const remainingMaterial = style.remainingUseDefinedTrackStyle && trackStyle
                                       ? TrackUtils.createTrackMaterial(trackStyle, trackStyle.color)
                                       : style.remainingColor
-            const playing = globalThis.lgs?.stores?.replay?.playing === true
+            const replayStore = globalThis.lgs?.stores?.replay
+            const playing = replayStore?.playing === true && replayStore?.recordingSync !== true
             if (playing) {
                 this.#upsertDynamicPolyline({
                     key:       `${REMAINING_KEY_PREFIX}smoothed#fill`,

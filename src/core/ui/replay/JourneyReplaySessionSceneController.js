@@ -28,8 +28,8 @@ import {
 }                                                                                          from './JourneyReplayCesiumRenderer'
 import { REPLAY_CLIP_SLOT_START, REPLAY_CLIP_SLOT_STOP, normalizeJourneyReplayClips } from './JourneyReplayClips'
 import {
-    currentJourneyReplayPoiBehavior, currentJourneyReplaySample, finiteNumber, publishReplayClipFrameState,
-    replayStore, resetRuntimeProgress, resolveJourneyReplayRuntimeClips,
+    currentJourneyReplayPoiBehavior, currentJourneyReplaySample, finiteNumber, isJourneyReplayVideoCaptureActive,
+    publishReplayClipFrameState, replayStore, resetRuntimeProgress, resolveJourneyReplayRuntimeClips,
 } from './JourneyReplayRuntime'
 import * as JourneyReplayCameraController from './JourneyReplayCameraController'
 import {JOURNEY_REPLAY_INTERNAL_CALL, JOURNEY_REPLAY_INTERNAL_STATE} from './JourneyReplayInternal'
@@ -607,6 +607,7 @@ export const bindRenderer = (mode, ) => {
                         ...detail,
                         forceGeometry: true,
                         hideTrace: true,
+                        showTrace: isJourneyReplayVideoCaptureActive(),
                     })
                     void call.syncNearbyPOIsForSample(startSample ?? detail.sample ?? null)
                     if (!state.deferStartCameraRecenter) {
@@ -648,6 +649,7 @@ export const bindRenderer = (mode, ) => {
                     state.renderer.update({
                         ...detail,
                         sampler: state.sampler,
+                        showTrace: isJourneyReplayVideoCaptureActive(),
                     })
                     void call.syncNearbyPOIsForSample(detail.sample ?? null)
                     if (state.lastPlaybackUpdateProgressKey === playbackProgressKey) {
@@ -668,7 +670,7 @@ export const bindRenderer = (mode, ) => {
                 state.lastPlaybackUpdateProgressKey = null
                 call.setContinuousRender(false)
                 try {
-                    state.renderer.update({...detail, freezeDynamic: true})
+                    state.renderer.update({...detail, freezeDynamic: true, showTrace: isJourneyReplayVideoCaptureActive()})
                 }
                 catch (error) {
                     call.abortPlaybackAfterListenerError(error)
@@ -678,7 +680,7 @@ export const bindRenderer = (mode, ) => {
                 try {
                     state.lastPlaybackUpdateProgressKey = null
                     call.setContinuousRender(true)
-                    state.renderer.update({...detail, forceGeometry: true})
+                    state.renderer.update({...detail, forceGeometry: true, showTrace: isJourneyReplayVideoCaptureActive()})
                     call.updateCamera(detail)
                 }
                 catch (error) {
@@ -798,6 +800,7 @@ export const bindRenderer = (mode, ) => {
                         hideCursor:            true,
                         hideRemainingTrace:    true,
                         staticCompletedTrace:  true,
+                        showTrace:              isJourneyReplayVideoCaptureActive(),
                     })
                     call.startStopClipPOIMaskLoop()
 

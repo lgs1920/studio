@@ -66,6 +66,7 @@ const makeJourneyReplay = () => {
     return {
         controller,
         start: vi.fn(),
+        seek: vi.fn(),
         pause: vi.fn(),
         resume: vi.fn(),
         stop: vi.fn(),
@@ -116,7 +117,7 @@ describe('JourneyReplayVideoSync', () => {
         expect(replay.setVideoSafeMode).not.toHaveBeenCalledWith(true)
     })
 
-    it('stops the recorder immediately after stop clips complete when stop clips exist', async () => {
+    it('stops the recorder after the final composed frames when stop clips exist', async () => {
         const recorder = new FakeRecorder()
         recorder.recording = true
         const replay = makeJourneyReplay()
@@ -129,12 +130,13 @@ describe('JourneyReplayVideoSync', () => {
         expect(recorder.stopVideo).not.toHaveBeenCalled()
 
         window.dispatchEvent(new CustomEvent(REPLAY_EVENT_STOP_CLIPS_COMPLETE))
+        await new Promise(resolve => setTimeout(resolve, 10))
 
         expect(recorder.stopVideo).toHaveBeenCalledTimes(1)
         expect(recorder.stopVideo).toHaveBeenCalledWith({captureFinalFrame: true})
     })
 
-    it('stops the recorder immediately without stop clips after the final frame is ready', async () => {
+    it('stops the recorder after the final composed frames without stop clips', async () => {
         const recorder = new FakeRecorder()
         recorder.recording = true
         const replay = makeJourneyReplay()
@@ -144,9 +146,11 @@ describe('JourneyReplayVideoSync', () => {
 
         sync.arm({autoStopRecording: true})
         window.dispatchEvent(new CustomEvent(REPLAY_EVENT_STOP_CLIPS_COMPLETE))
+        await new Promise(resolve => setTimeout(resolve, 10))
 
         expect(recorder.stopVideo).toHaveBeenCalledTimes(1)
         expect(recorder.stopVideo).toHaveBeenCalledWith({captureFinalFrame: true})
+        expect(replay.seek).toHaveBeenCalledWith(1)
     })
 
     it('captures the final frame before stopping the recorder', async () => {
@@ -159,9 +163,11 @@ describe('JourneyReplayVideoSync', () => {
 
         sync.arm({autoStopRecording: true})
         window.dispatchEvent(new CustomEvent(REPLAY_EVENT_STOP_CLIPS_COMPLETE))
+        await new Promise(resolve => setTimeout(resolve, 10))
 
         expect(recorder.stopVideo).toHaveBeenCalledTimes(1)
         expect(recorder.stopVideo).toHaveBeenCalledWith({captureFinalFrame: true})
+        expect(replay.seek).toHaveBeenCalledWith(1)
     })
 
     it('stops the replay when the recorder stops', () => {

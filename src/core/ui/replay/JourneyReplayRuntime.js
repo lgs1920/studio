@@ -24,6 +24,17 @@ export const finiteNumber = value => {
 export const replayStore = () => globalThis.lgs?.stores?.replay
 
 /**
+ * Returns whether the replay trace is currently being captured for video.
+ *
+ * @returns {boolean} Whether the video scene should display the replay trace.
+ */
+export const isJourneyReplayVideoCaptureActive = () => {
+    const store = replayStore()
+    const settings = globalThis.lgs?.settings?.ui?.replay
+    return store?.recordingSync === true || settings?.recordingSync === true
+}
+
+/**
  * Resolves the clips that should be used by the current replay.
  *
  * @param {Object} options - Clip resolution options.

@@ -28,8 +28,8 @@ import {
 }                                                                                          from './JourneyReplayCesiumRenderer'
 import { REPLAY_CLIP_SLOT_START, REPLAY_CLIP_SLOT_STOP, normalizeJourneyReplayClips } from './JourneyReplayClips'
 import {
-    currentJourneyReplayPoiBehavior, currentJourneyReplaySample, finiteNumber, publishReplayClipFrameState,
-    replayStore, resetRuntimeProgress, resolveJourneyReplayRuntimeClips,
+    currentJourneyReplayPoiBehavior, currentJourneyReplaySample, finiteNumber, isJourneyReplayVideoCaptureActive,
+    publishReplayClipFrameState, replayStore, resetRuntimeProgress, resolveJourneyReplayRuntimeClips,
 } from './JourneyReplayRuntime'
 import * as JourneyReplayCameraController from './JourneyReplayCameraController'
 import {JOURNEY_REPLAY_INTERNAL_CALL, JOURNEY_REPLAY_INTERNAL_STATE} from './JourneyReplayInternal'
@@ -433,6 +433,7 @@ export const refresh = (mode, {
                 sample,
                 sampler: state.sampler,
                 forceGeometry,
+                showTrace: exportMode || isJourneyReplayVideoCaptureActive(),
             })
             if (camera) {
                 if (suppressMoveEvents) {
@@ -517,6 +518,7 @@ export const renderReplayExportFrame = async (mode, {phase = null, frame = null,
                     sampler:       state.sampler,
                     forceGeometry: false,
                     hideTrace:     phase?.slot === REPLAY_CLIP_SLOT_START,
+                    showTrace:     true,
                 })
                 state.cameraAutoTrackingIgnoreUntil = call.now() + 180
                 call.updateCamera({
@@ -573,6 +575,7 @@ export const renderReplayExportFrame = async (mode, {phase = null, frame = null,
                 freezeDynamic:         false,
                 hideCursor:            hideClipCursor,
                 hideTrace:              phase?.slot === REPLAY_CLIP_SLOT_START,
+                showTrace:              true,
                 hideRemainingTrace:    stopClip,
                 staticCompletedTrace,
                 completedTraceMode:    staticCompletedTrace ? 'static' : (stopClip ? 'stop-dynamic' : 'dynamic'),

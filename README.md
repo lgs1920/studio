@@ -35,6 +35,7 @@ The repository already contains the main product surface used by the studio:
 - Widget rendering, placement, ordering, reduction, locking, and export-aware capture
 - Geocoding tools and coordinate utilities
 - Journey Replay playback and replay-aware video synchronization
+- Replay Draft final-frame synchronization and bounded trace rendering
 - Video recording, deferred HQ export, and image snapshot workflows
 - Deterministic HQ camera following for navigation and dynamic corrections, including 1.5-second transitions
 - Crop-aware Z1/Z2 collision tracking and visible diagnostic overlays across video formats
