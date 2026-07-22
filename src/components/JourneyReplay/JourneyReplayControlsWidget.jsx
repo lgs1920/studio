@@ -98,6 +98,11 @@ export const JourneyReplayControlsWidget = memo(() => {
     const hqElapsedMillis = finiteNumber(hqExportRuntime?.exportElapsedMillis, null)
     const hqPaused = hqExportRuntime?.exportPaused === true
     const hqFileSizeLabel = formatFileSize(hqExportRuntime?.exportFileSize)
+    const hqExportPreparing = finiteNumber(hqExportRuntime?.exportFrameIndex, null) === null
+    const hqIndicatorState = hqProgress >= 1
+                              ? 'finalizing'
+                              : (hqExportPreparing ? 'preparing' : 'recording')
+    const hqIndicatorAnimation = hqIndicatorState === 'finalizing' ? 'beat-fade' : undefined
     const hqTimeLabel = hqRemainingMillis !== null
                         ? formatCountdownTime(hqRemainingMillis)
                         : (hqElapsedMillis !== null ? formatCountdownTime(hqElapsedMillis) : null)
@@ -163,10 +168,9 @@ export const JourneyReplayControlsWidget = memo(() => {
                             name="circle"
                             family="duotone"
                             variant="regular"
-                            animation={hqPaused ? 'fade' : undefined}
-                            className={hqPaused ? 'video-recorder-indicator paused' : 'video-recorder-indicator'}
+                            animation={hqPaused ? 'fade' : hqIndicatorAnimation}
+                            className={`video-recorder-indicator ${hqIndicatorState}${hqPaused ? ' paused' : ''}`}
                         />
-                        <span className="replay-controls-hq-label">{'Recording...'}</span>
                         <span className="replay-controls-hq-file">
                             <WaIcon name="films" variant="regular"/>
                             <span>{hqFileSizeLabel} / {`${hqVideoDurationSeconds}s`}</span>

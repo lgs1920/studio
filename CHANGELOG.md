@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-07-22 — [`fix: improve recording indicators`](https://github.com/lgs1920/studio/commit/76aac6eb)
+
+- Use duotone recording indicators with white and state-specific colors.
+- Distinguish preparation, ready, recording, and finalization phases for Draft and HQ workflows.
+- Simplify recording labels and align progress metadata colors with the action icons.
+
 ## 2026-07-22 — [`fix: reset replay Z1/Z2 diagnostic overlay lifecycle`](https://github.com/lgs1920/studio/commit/370ed572)
 
 - Show the Z1/Z2 diagnostic overlay at the start of every replay.

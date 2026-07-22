@@ -108,6 +108,12 @@ export const VideoRecorderToolbar = ({toolbar, widgetsReady = false, onStartReco
                                && videoTimelineDurationMillis > 0
                                ? clampProgress(state.recordedDuration / videoTimelineDurationMillis)
                                : null
+    const indicatorState = video.finalizing
+                          ? 'finalizing'
+                          : (video.preRecording ? (widgetsReady ? 'ready' : 'preparing') : 'recording')
+    const indicatorAnimation = indicatorState === 'ready' || indicatorState === 'finalizing'
+                               ? 'beat-fade'
+                               : undefined
 
     const _toolbar = useRef(toolbar || null)
     const caption = 'Video Recording'
@@ -280,8 +286,8 @@ export const VideoRecorderToolbar = ({toolbar, widgetsReady = false, onStartReco
                 name="circle"
                 family="duotone"
                 variant="regular"
-                animation={video.paused ? 'fade' : undefined}
-                className={video.paused ? 'video-recorder-indicator paused' : 'video-recorder-indicator'}
+                animation={video.paused ? 'fade' : indicatorAnimation}
+                className={`video-recorder-indicator ${indicatorState}${video.paused ? ' paused' : ''}`}
             />
             <span className="duration">{formatDuration(state.recordedDuration)}</span>
             <span className="size">{formatSize(state.recordedSize)}</span>
@@ -316,7 +322,7 @@ export const VideoRecorderToolbar = ({toolbar, widgetsReady = false, onStartReco
                 widgetsReady ? (
                     <>
                         <WaTooltip for="video-recorder-start-recording" placement="top">
-                            {'Start recording'}
+                            {'Record'}
                         </WaTooltip>
                         <WaButton
                             id="video-recorder-start-recording"
@@ -324,7 +330,7 @@ export const VideoRecorderToolbar = ({toolbar, widgetsReady = false, onStartReco
                             appearance="plain"
                             size="s"
                             className="video-recorder-action video-recorder-start-recording"
-                            aria-label="Start"
+                            aria-label="Record"
                             onClick={onStartRecording}
                         >
                             <WaIcon name="clapperboard-play" variant="regular"/>

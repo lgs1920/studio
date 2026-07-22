@@ -188,12 +188,12 @@ export const VideoRecordingSettingsToolbar = memo(() => {
             },
             {
                 icon: 'clapperboard-play',
-                text:       'Start Recording',
+                text:       'Record',
                 variant:    'brand',
                 appearance: 'plain',
                 className:  'video-recorder-start-recording wa-theme-lgs1920',
                 tooltip: {
-                    title: 'Start recording',
+                    title: 'Record',
                     text: 'Record the selected zone.',
                 },
                 done:       false,

@@ -585,6 +585,8 @@ wa-select[label-at-start].half-width::part(base) {
     justify-content: center;
     max-width: calc(100vw - var(--lgs-gutter-s, 0.75rem) - var(--lgs-gutter-s, 0.75rem));
     position: relative;
+    /* Color used by progress bar labels and metadata */
+    --replay-progress-text-color: var(--lgs-button-plain-color);
 }
 
 .replay-controls::part(body) {
@@ -603,15 +605,10 @@ wa-select[label-at-start].half-width::part(base) {
 .replay-controls .video-recorder-indicator {
     font-size: var(--lgs-font-size);
     margin: 0 var(--lgs-gutter) 0 var(--lgs-gutter-s);
-    --primary-color: var(--lgs-video-recorder-color, var(--lgs-error-color));
+    --primary-color: white;
     --primary-opacity: 1;
-    --secondary-color: var(--lgs-video-recorder-bg-color, var(--lgs-error-bg-color));
+    --secondary-color: var(--lgs-video-recorder-color, var(--lgs-error-color));
     --secondary-opacity: 1;
-}
-
-.replay-controls .video-recorder-indicator.paused {
-    --primary-color: var(--lgs-video-warning-color, var(--lgs-warning-color));
-    --secondary-color: var(--lgs-video-warning-bg-color, var(--lgs-warning-bg-color));
 }
 
 .replay-controls-hq-row {
@@ -623,16 +620,11 @@ wa-select[label-at-start].half-width::part(base) {
     white-space: nowrap;
 }
 
-.replay-controls-hq-label {
-    font-size: var(--lgs-font-size-s);
-    font-weight: 600;
-    letter-spacing: 0;
-}
-
 .replay-controls-hq-file,
 .replay-controls-hq-time {
     display: inline-flex;
     align-items: center;
+    color: var(--replay-progress-text-color);
     min-width: 0;
     gap: var(--lgs-gutter-xs);
 }
@@ -668,6 +660,8 @@ wa-select[label-at-start].half-width::part(base) {
     gap: 0;
     max-width: 100%;
     min-height: calc(var(--lgs-dimension-s) - 2 * var(--lgs-gutter-xxs));
+    /* Color used by progress bar labels */
+    --replay-progress-text-color: var(--lgs-button-plain-color);
 }
 
 .replay-progress-segment,
@@ -681,6 +675,7 @@ wa-select[label-at-start].half-width::part(base) {
 
 .replay-progress-segment {
     border-right: 1px solid var(--lgs-card-on-map-border-color);
+    color: var(--replay-progress-text-color);
     font-variant-numeric: tabular-nums;
     margin-right: var(--lgs-gutter-s);
     padding-inline-end: var(--lgs-gutter-s);

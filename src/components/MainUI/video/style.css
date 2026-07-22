@@ -59,8 +59,14 @@
     padding-inline-end: var(--lgs-gutter-s);
 }
 
+.video-recorder-widget {
+    /* Color used by video progress metadata */
+    --replay-progress-text-color: var(--lgs-button-plain-color);
+}
+
 .video-recorder-widget .duration,
 .video-recorder-widget .size {
+    color: var(--replay-progress-text-color);
     white-space: nowrap;
 }
 
@@ -98,15 +104,20 @@
 .video-recorder-indicator {
     font-size: var(--lgs-font-size);
     margin: 0 var(--lgs-gutter) 0 var(--lgs-gutter-s);
-    --primary-color: var(--lgs-video-recorder-color, var(--lgs-error-color));
+    --primary-color: white;
     --primary-opacity: 1;
-    --secondary-color: var(--lgs-video-recorder-bg-color, var(--lgs-error-bg-color));
+    --secondary-color: var(--lgs-video-recorder-color, var(--lgs-error-color));
     --secondary-opacity: 1;
 }
 
-.video-recorder-indicator.paused {
-    --primary-color: var(--lgs-video-warning-color, var(--lgs-warning-color));
-    --secondary-color: var(--lgs-video-warning-bg-color, var(--lgs-warning-bg-color));
+.video-recorder-indicator.preparing,
+.video-recorder-indicator.finalizing {
+    --secondary-color: var(--lgs-video-warning-color, var(--lgs-warning-color));
+}
+
+.video-recorder-indicator.ready,
+.video-recorder-indicator.recording {
+    --secondary-color: var(--lgs-video-recorder-color, var(--lgs-error-color));
 }
 
 .video-pre-recording-in-progress, .video-recording-in-progress, .video-finalizing-in-progress, .photo-snapshot-in-progress {
