@@ -195,6 +195,12 @@ This README only highlights the main runtime pieces. Technical documentation is 
 - **Build tooling**: Vite, `@vitejs/plugin-react`, `vite-plugin-cesium`, `vite-plugin-pwa`
 - **Tests**: Vitest, Testing Library React
 
+Tests are organized under `src/__tests__/` by responsibility:
+
+- `unit/`: isolated camera, data, journey, replay, utility, and widget tests
+- `integration/`: cross-module journey, replay, report, and video tests
+- `ui/`: component and interface interaction tests
+
 ## Project Layout
 
 - `src/core/`: application core, stores, camera / scene managers, DB layer, widget manager, media recorder
