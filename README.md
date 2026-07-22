@@ -47,6 +47,7 @@ The repository already contains the main product surface used by the studio:
 - PWA support and offline-friendly caching
 - Boot splash video loading uses browser-supported video element preloading
 - Tunnel controls highlight the current step with the on-map theme and compact spacing
+- Text widgets preserve their scale state and render shadows consistently
 
 ## Main Features
 

@@ -532,9 +532,9 @@ export const JourneyStats = memo(({id, metrics, units, style = {}, mode = 'journ
         return {
             ...style,
             color:          __.ui.ui.resolveItemColor(element.text, true),
-            textShadow:     element.text?.shadow?.show ? (
+            '--journey-stats-text-shadow': element.text?.shadow?.show ? (
                 `${shadowSize[0]}px ${shadowSize[1]}px ${shadowSize[2]}px ${textShadowColor}`
-            ) : undefined,
+            ) : 'none',
             border:         element.border.show ? `${scaleValue(element.border.thickness, borderCorrection)}px solid ${__.ui.ui.resolveItemColor(element.border, true)}` : 'none',
             padding:        resolvePadding(element, scaleCorrection),
             background:     element.background?.show

@@ -199,6 +199,10 @@ export const EditableText = ({id}) => {
 
         const $target = $configuration.elements[id]
 
+        if ($target.scaled === undefined) {
+            $target.scaled = true
+        }
+
         // Fix: If 'text' is a string or invalid, convert it to the expected object structure
         if (typeof $target.text !== 'object' || $target.text === null) {
             const existingContent = typeof $target.text === 'string' ? $target.text : ''

@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-07-22 — [`fix: correct widget text rendering`](https://github.com/lgs1920/studio/commit/COMMIT_ID)
+
+- Preserve text widget scale state during editing.
+- Render Journey Stats text shadows consistently and clip overflowing content.
+
 ## 2026-07-22 — [`fix: style selected tunnel step`](https://github.com/lgs1920/studio/commit/330b9fcf)
 
 - Highlight the active Tunnel step with the on-map theme and compact spacing.

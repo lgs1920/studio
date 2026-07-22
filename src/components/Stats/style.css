@@ -43,6 +43,7 @@
     color: var(--track-widget-text-color);
     border: var(--track-widget-border) solid var(--track-widget-border);
     gap: var(--lgs-gutter-s);
+    overflow: hidden;
 }
 
 .journey-stats-widget wa-divider {
@@ -93,7 +94,9 @@
 .journey-stats-value,
 .journey-stats-val-huge,
 .journey-stats-label-bold,
-.journey-stats-unit-sub {
+.journey-stats-unit-sub,
+.journey-stats-date,
+.journey-stats-location {
     font-family: var(--track-widget-font);
     line-height: 1;
     display: flex;
@@ -101,6 +104,7 @@
     text-transform: uppercase;
     --data: calc(4 * var(--lgs-gutter));
     gap: var(--lgs-gutter-xs);
+    text-shadow: var(--journey-stats-text-shadow, none);
 }
 
 .journey-stats-label,
