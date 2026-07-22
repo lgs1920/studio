@@ -8,6 +8,8 @@
 
 ## 2026-07-22 — [`d35db5b`](https://github.com/lgs1920/site/commit/d35db5b) — Update bilingual homepage roadmap and access copy
 
+- [2026-07-22 — `fix: make replay lookahead FPS aware`](https://github.com/lgs1920/studio/commit/42eb8c69)
+- Replay camera look-ahead now accounts for the output frame interval in Draft and HQ.
 - [2026-07-22 — `refactor: split journey replay responsibilities`](https://github.com/lgs1920/studio/commit/98a0e462)
 - Split the journey replay facade from camera, session, runtime, visibility, and clip responsibilities.
 - [2026-07-22 — `refactor: organize tests by responsibility`](https://github.com/lgs1920/studio/commit/387db846)
