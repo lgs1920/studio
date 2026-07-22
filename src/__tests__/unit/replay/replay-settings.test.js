@@ -225,10 +225,10 @@ describe('replay settings normalization', () => {
                                                             width:  0.3,
                                                             height: 0.3,
                                                         })
-        expect(tracking.dynamic.triggerZone.top).toBeCloseTo(0.075, 6)
-        expect(tracking.dynamic.triggerZone.left).toBeCloseTo(0.075, 6)
-        expect(tracking.dynamic.triggerZone.width).toBeCloseTo(0.85, 6)
-        expect(tracking.dynamic.triggerZone.height).toBeCloseTo(0.85, 6)
+        expect(tracking.dynamic.triggerZone.top).toBeCloseTo(0.125, 6)
+        expect(tracking.dynamic.triggerZone.left).toBeCloseTo(0.125, 6)
+        expect(tracking.dynamic.triggerZone.width).toBeCloseTo(0.75, 6)
+        expect(tracking.dynamic.triggerZone.height).toBeCloseTo(0.75, 6)
         expect(tracking.dynamic.targetZone).toEqual({
                                                        top:    0.35,
                                                        left:   0.35,

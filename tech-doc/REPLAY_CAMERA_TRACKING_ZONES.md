@@ -48,7 +48,7 @@ Dynamic mode uses two nested concepts:
 
 | Zone | Ratio | Normalized bounds | Meaning |
 | --- | ---: | --- | --- |
-| Z1 | 85% × 85% | `left=7.5%`, `top=7.5%`, `right=92.5%`, `bottom=92.5%` | Outer trigger zone |
+| Z1 | 75% × 75% | `left=12.5%`, `top=12.5%`, `right=87.5%`, `bottom=87.5%` | Outer trigger zone |
 | Z2 | 30% × 30% | `left=35%`, `top=35%`, `right=65%`, `bottom=65%` | Recenter landing zone |
 
 Z1 is deliberately large: dynamic tracking starts early, before the marker
@@ -322,7 +322,7 @@ Consequently:
 
 - navigation uses Z1 = 30% × 30% normally, or 22% × 22% for a narrow crop, in
   both Draft and HQ;
-- dynamic mode uses Z1 = 85% × 85% and Z2 = 30% × 30% in both Draft and HQ;
+- dynamic mode uses Z1 = 75% × 75% and Z2 = 30% × 30% in both Draft and HQ;
 - navigation and dynamic HQ corrections use the same deterministic follower
   with a `1.5 s` response;
 - no free-running widget timer is required during HQ export;

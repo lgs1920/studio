@@ -92,7 +92,7 @@ export const REPLAY_TOLERANCE_RECENTER_REPLACE_DELAY_MS = 300
 export const REPLAY_TRACKING_NAVIGATION_ZONE_RATIO = 0.3
 export const REPLAY_TRACKING_NAVIGATION_NARROW_CROP_RATIO = 0.75
 export const REPLAY_TRACKING_NAVIGATION_NARROW_ZONE_RATIO = 0.22
-export const REPLAY_TRACKING_DYNAMIC_TRIGGER_ZONE_RATIO = 0.85
+export const REPLAY_TRACKING_DYNAMIC_TRIGGER_ZONE_RATIO = 0.75
 export const REPLAY_TRACKING_DYNAMIC_TARGET_ZONE_RATIO = 0.3
 // Dynamic recentering must lead the marker beyond the nominal easing duration:
 // a closed pitch can keep the marker moving toward the crop edge while the
@@ -172,5 +172,4 @@ export const resolveJourneyActivityIcon = (journey = null) => {
 
 export {replayPitchLookaheadFactor} from './JourneyReplayCameraMath'
 export * from './JourneyReplayCameraMath'
-
 
