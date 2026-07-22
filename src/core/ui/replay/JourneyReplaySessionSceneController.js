@@ -208,6 +208,7 @@ export const stop = (mode, options = {}) => {
         call.setJourneyReplayOrbitAllowed(true)
         call.setContinuousRender(false)
         call.removeToleranceZoneOverlay()
+        call.setToleranceZoneOverlayVisible(false)
         call.hideCameraAnglePreviewOverlay()
         if (options.emit === false) {
             call.restorePlaybackCameraSettings()
@@ -397,10 +398,12 @@ export const restorePlaybackSceneInternal = (mode, ) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
         state.sceneRestoreDeferred = false
+        call.removeToleranceZoneOverlay()
         call.restoreOtherJourneysVisibility()
         call.restoreCurrentJourneyVisibility({restorePOIs: false})
         call.setJourneyReplayOrbitAllowed(true)
         state.deferStartCameraRecenter = false
+        call.setToleranceZoneOverlayVisible(false)
         call.restoreJourneyToolbarVisibility()
         call.restoreJourneyReplayDrawerAfterPlayback()
         call.restoreMainUI()
@@ -591,6 +594,7 @@ export const bindRenderer = (mode, ) => {
             state.controller.on(REPLAY_EVENT_START, detail => {
                 try {
                     state.lastPlaybackUpdateProgressKey = null
+                    call.setToleranceZoneOverlayVisible(true)
                     if (call.isReplayVideoLinked()) {
                         call.hideJourneyToolbarVisibility()
                     }
@@ -775,6 +779,8 @@ export const bindRenderer = (mode, ) => {
                     }
 
                     call.stopStopClipPOIMaskLoop()
+                    call.removeToleranceZoneOverlay()
+                    call.setToleranceZoneOverlayVisible(false)
                     call.setContinuousRender(false)
                     const recorder = globalThis.__?.recorder ?? null
                     if (replayStore()?.recordingSync === true || recorder?.isRecording?.() === true) {

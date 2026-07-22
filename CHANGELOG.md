@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-07-22 — [`fix: reset replay Z1/Z2 diagnostic overlay lifecycle`](https://github.com/lgs1920/studio/commit/370ed572)
+
+- Show the Z1/Z2 diagnostic overlay at the start of every replay.
+- Remove it at replay completion, stop, and video-dialog restoration.
+
 ## 2026-07-22 — [`fix: synchronize replay draft final frame`](https://github.com/lgs1920/studio/commit/7ddff621)
 
 - Keep the replay trace scoped to the video scene.

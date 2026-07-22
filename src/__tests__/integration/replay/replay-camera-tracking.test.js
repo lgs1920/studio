@@ -1401,6 +1401,10 @@ describe('replay camera tracking', () => {
             expect(Number.parseFloat(overlay.lastElementChild.style.height)).toBeCloseTo(240, 6)
 
             mode.stop({emit: false})
+            expect(document.querySelector('.replay-tolerance-zone-overlay')).toBeNull()
+
+            mode.start()
+            expect(document.querySelector('.replay-tolerance-zone-overlay')).not.toBeNull()
         }
         finally {
             document.querySelector('.replay-tolerance-zone-overlay')?.remove()

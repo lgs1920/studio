@@ -39,6 +39,7 @@ The repository already contains the main product surface used by the studio:
 - Video recording, deferred HQ export, and image snapshot workflows
 - Deterministic HQ camera following for navigation and dynamic corrections, including 1.5-second transitions
 - Crop-aware Z1/Z2 collision tracking and visible diagnostic overlays across video formats
+- Replay Z1/Z2 diagnostic overlays are shown only during playback and cleared after replay completion
 - IndexedDB persistence for editor state and loaded content
 - Privacy-first local workspace for imported journeys and generated media
 - PWA support and offline-friendly caching
