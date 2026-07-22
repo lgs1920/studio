@@ -285,16 +285,17 @@ export class WidgetCoreControls {
         if (!moveable?.current?.target) {
             return
         }
+        const controlBoxTimer = _controlBoxTimer ?? {current: null}
         const elementId = this.#registry.retrieveElementId(moveable.current.target)
         const config = this.#registry.getWidgetConfig(elementId)
-        const mv = this.#registry.getMoveable(elementId)
+        const moveableInstance = this.#registry.getMoveable(elementId)?.current ?? moveable.current
         if (!config || !config.showControlBox) {
             setControlBoxProps({renderDirections: [], zoom: 0, opacity: 0})
-            clearTimeout(_controlBoxTimer.current)
+            clearTimeout(controlBoxTimer.current)
             this.#registry.controlBoxTimers.delete(elementId)
             return
         }
-        clearTimeout(_controlBoxTimer.current)
+        clearTimeout(controlBoxTimer.current)
         this.#registry.controlBoxTimers.delete(elementId)
         if (show) {
             this.#registry.current = elementId
@@ -305,9 +306,9 @@ export class WidgetCoreControls {
                                })
         }
         else {
-            _controlBoxTimer.current = this.#hideControlBoxWithTimer(mv.current, config, setControlBoxProps, isMouseOver)
-            if (_controlBoxTimer.current) {
-                this.#registry.controlBoxTimers.set(elementId, _controlBoxTimer.current)
+            controlBoxTimer.current = this.#hideControlBoxWithTimer(moveableInstance, config, setControlBoxProps, isMouseOver)
+            if (controlBoxTimer.current) {
+                this.#registry.controlBoxTimers.set(elementId, controlBoxTimer.current)
             }
         }
     }

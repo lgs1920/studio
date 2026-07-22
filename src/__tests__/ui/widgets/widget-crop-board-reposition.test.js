@@ -35,6 +35,28 @@ describe('crop board widget repositioning', () => {
         controls = new WidgetCoreControls(registry)
     })
 
+    it('manages the control box when the moveable is not registered yet', () => {
+        const moveable = {current: {target: widget}}
+        const controlBoxTimer = {current: null}
+        const setControlBoxProps = vi.fn()
+        const config = {
+            id: 'menu#control-box',
+            type: LGS_WIDGET,
+            showControlBox: true,
+        }
+
+        registry.setConfig(config.id, config)
+
+        expect(() => controls.manageControlBox(
+            moveable,
+            setControlBoxProps,
+            controlBoxTimer,
+            false,
+            false,
+        )).not.toThrow()
+        expect(setControlBoxProps).toHaveBeenCalledWith({renderDirections: [], zoom: 0, opacity: 0})
+    })
+
     it('does not move a widget that fits in the new crop', () => {
         widget.style.left = '400px'
         widget.style.top = '250px'
