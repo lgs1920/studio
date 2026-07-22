@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-07-22 — [`fix: preserve replay widget opacity and UI layering`](https://github.com/lgs1920/studio/commit/COMMIT_ID)
+
+- Preserve configured widget opacity during replay previews.
+- Keep widget toolbars and menus above video widgets.
+
+## 1.0.0-beta.3
+
+- Add grid snapping and widget-to-widget snapping, including center alignment during video composition.
+
 ## 2026-07-22 — [`fix: improve widget snapping during video composition`](https://github.com/lgs1920/studio/commit/COMMIT_ID)
 
 - Snap widgets to one another on the active video board, including center alignment when widgets do not touch.

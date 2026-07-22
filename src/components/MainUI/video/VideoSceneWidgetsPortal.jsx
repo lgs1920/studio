@@ -109,7 +109,7 @@ export const VideoSceneWidgetsPortal = memo(({context, hidden = false}) => {
             return
         }
 
-        const key = `${video.editing}-${boardReady}-${widgetIds}`
+        const key = `${video.editing}-${video.preRecording}-${boardReady}-${widgetIds}`
         if (_rehydrateKey.current === key) {
             return
         }
@@ -138,7 +138,7 @@ export const VideoSceneWidgetsPortal = memo(({context, hidden = false}) => {
                 _rehydrateFrame.current = null
             }
         }
-    }, [boardReady, hidden, videoCaptureActive, widgetIds, widgets.length])
+    }, [boardReady, hidden, videoCaptureActive, video.preRecording, widgetIds, widgets.length])
 
     useEffect(() => {
         if (!videoCaptureActive) {
@@ -163,7 +163,7 @@ export const VideoSceneWidgetsPortal = memo(({context, hidden = false}) => {
                 position: 'fixed',
                 inset: '0',
                 pointerEvents: 'none',
-                zIndex: 'calc(var(--crop-zindex) + 2)',
+                zIndex: 'var(--lgs-video-widgets-zindex)',
             }}
         >
             {widgets.map(([key, props]) => (

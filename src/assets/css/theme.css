@@ -99,6 +99,10 @@ html {
     --lgs-main-ui-zindex: 800;
     --lgs-ui-layer-zindex: 5000;
     --lgs-tools-ui-zindex: calc(var(--lgs-ui-layer-zindex) - 1);
+    /* Layer reserved for rendered video widgets below the widget UI controls. */
+    --lgs-video-widgets-zindex: calc(var(--lgs-tools-ui-zindex) - 1);
+    /* Layer reserved for widget menus and manipulation controls. */
+    --lgs-widget-ui-zindex: calc(var(--lgs-ui-layer-zindex) + 1);
     --lgs-toast-zindex: 2147483647;
     --lgs-drop-zone-zindex: 10;
     --lgs-context-menu-zindex: calc(var(--lgs-ui-layer-zindex) + 9000);

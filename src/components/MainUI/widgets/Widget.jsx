@@ -435,7 +435,7 @@ export const Widget = ({isVisible, className = '', moveableClassName = '', conta
     const liveOpacity = config.type === LGS_TOOLBAR
                         ? (effectiveCollapsed ? 1 : (toolbars.opacity ?? config.opacity ?? 1))
                         : (config.opacity ?? 1)
-    const displayOpacity = previewOnly ? 0.5 : liveOpacity
+    const displayOpacity = liveOpacity
 
     // Reactive depth resolution: priority to Store, fallback to initial Config.
     // Credits and Logo are composition infrastructure and must stay above ordinary widgets.

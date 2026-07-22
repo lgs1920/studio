@@ -334,13 +334,12 @@ body.lgs-app-booting #cesium-viewer {
  ******************************************************************************/
 
 .lgs-widget-control-box {
-    z-index: var(--lgs-above-widgets) !important;
+    z-index: var(--lgs-widget-ui-zindex) !important;
 }
 
 /* Video widget preview: visible at its persisted position, never interactive. */
 .video-scene-widgets-portal-preview .lgs-widget-preview-only {
     cursor: not-allowed !important;
-    opacity: 0.5 !important;
 }
 
 .video-scene-widgets-portal-preview .lgs-widget-preview-only ~ .lgs-widget-control-box {
@@ -620,7 +619,7 @@ body.lgs-app-booting #cesium-viewer {
 
 .widget-deck-panel {
     position: relative;
-    z-index: var(--lgs-above-widgets);
+    z-index: var(--lgs-widget-ui-zindex);
     overflow: hidden;
     align-items: stretch;
     flex-direction: column;

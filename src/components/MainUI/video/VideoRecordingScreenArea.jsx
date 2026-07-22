@@ -443,7 +443,14 @@ export const VideoRecordingScreenArea = memo(() => {
             return () => {
             }
         }
+        let timeoutId = null
+        let stopped = false
+        let attempts = 0
+        const MAX_READY_CHECKS = 60
         const notifyIfReady = () => {
+            if (stopped) {
+                return true
+            }
             if (widgets.every(isWidgetReadyForRecording)) {
                 onReady?.(widgets)
                 return true
@@ -453,20 +460,34 @@ export const VideoRecordingScreenArea = memo(() => {
         const observer = new MutationObserver(() => {
             if (notifyIfReady()) {
                 observer.disconnect()
+                clearTimeout(timeoutId)
             }
         })
-        observer.observe(document.body, {childList: true, subtree: true})
-        if (notifyIfReady()) {
-            observer.disconnect()
+        const checkLater = () => {
+            if (stopped || attempts >= MAX_READY_CHECKS || notifyIfReady()) {
+                observer.disconnect()
+                return
+            }
+            attempts += 1
+            timeoutId = setTimeout(checkLater, 100)
         }
-        return () => observer.disconnect()
+
+        observer.observe(document.body, {childList: true, subtree: true})
+        if (!notifyIfReady()) {
+            timeoutId = setTimeout(checkLater, 100)
+        }
+
+        return () => {
+            stopped = true
+            observer.disconnect()
+            clearTimeout(timeoutId)
+        }
     }, [isWidgetReadyForRecording])
 
     useEffect(() => {
         if (!$video.preRecording && !$video.snapshot) {
             return
         }
-        setWidgetsMounted(false)
         const keys = [...__.ui.widgetCache.getAll({widgetsBoard: VIDEO_WIDGETS_BOARD}).keys()]
         if (!keys.length) {
             if ($video.preRecording) {
