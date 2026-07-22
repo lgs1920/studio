@@ -49,6 +49,23 @@ The bounds container is the DOM rect used to clamp widgets so they stay inside t
 
 In practice, the reference container and the bounds container usually resolve to the same DOM node.
 
+## Snapping and Alignment
+
+Visual widgets use Moveable snapping on their active board. The following targets are available:
+
+- board edges and the board center
+- configured grid lines when grid snapping is enabled
+- edges of other widgets on the same `widgetsBoard`
+- horizontal and vertical centers of other widgets on the same `widgetsBoard`
+
+Center alignment is independent from physical contact. Two widgets can align their horizontal or vertical centers while remaining separated by a gap.
+
+Widget-to-widget targets are resolved from the rendered DOM and the runtime widget configuration. This keeps snapping scoped to the active board and prevents scene widgets from becoming targets during video composition.
+
+The target list is refreshed when widgets are mounted or removed. Widget rectangles are also refreshed during movement so snapping follows widgets whose position or size changed during the composition session.
+
+Snapping is disabled for non-visual widgets and for widgets whose `snappable` configuration is explicitly disabled. Grid visibility and grid snapping remain separate settings: the grid can be visible without forcing widget positions onto its lines.
+
 ## Core Files
 
 - `WidgetManager.js`
