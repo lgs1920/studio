@@ -15,7 +15,7 @@
  ******************************************************************************/
 
 import { describe, expect, it }                                                  from 'vitest'
-import { changelogFileName, changelogVersionFromFile, normalizeChangelogFile } from '../core/ui/ChangelogManager'
+import { changelogFileName, changelogVersionFromFile, normalizeChangelogFile } from '../../../core/ui/ChangelogManager'
 
 describe('Changelog version parsing', () => {
     it('keeps prerelease suffixes from changelog filenames', () => {

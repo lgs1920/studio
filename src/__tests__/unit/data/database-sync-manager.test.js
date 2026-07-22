@@ -9,15 +9,15 @@ vi.mock('idb', () => ({
     openDB,
 }))
 
-vi.mock('../core/db/DatabaseExportImportUtils.js', async () => {
-    const actual = await vi.importActual('../core/db/DatabaseExportImportUtils.js')
+vi.mock('../../../core/db/DatabaseExportImportUtils.js', async () => {
+    const actual = await vi.importActual('../../../core/db/DatabaseExportImportUtils.js')
     return {
         ...actual,
         exportDatabaseBundleToFiles,
     }
 })
 
-import { DatabaseSyncManager } from '../core/db/DatabaseSyncManager.js'
+import { DatabaseSyncManager } from '../../../core/db/DatabaseSyncManager.js'
 
 const createWritable = () => {
     const write = vi.fn(async () => undefined)

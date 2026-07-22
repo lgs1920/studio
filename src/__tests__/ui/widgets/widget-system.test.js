@@ -18,10 +18,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
     JOURNEY_STATS_WIDGET, JOURNEY_WIDGETS, LGS_VISUAL_WIDGET, PROFILE_WIDGET, SCENE_WIDGETS, SCENE_WIDGETS_BOARD,
     WIDGET_LAYER_START, WIDGETS_STORE,
-}                                               from '../core/constants'
-import { WidgetDynamicRenderer }                from '../core/ui/widget-manager/dynamic-render/WidgetDynamicRender'
-import { WidgetCache }                          from '../core/ui/widget-manager/WidgetCache'
-import { WidgetCoreRegistry }                   from '../core/ui/widget-manager/WidgetCoreRegistry'
+}                                               from '../../../core/constants'
+import { WidgetDynamicRenderer }                from '../../../core/ui/widget-manager/dynamic-render/WidgetDynamicRender'
+import { WidgetCache }                          from '../../../core/ui/widget-manager/WidgetCache'
+import { WidgetCoreRegistry }                   from '../../../core/ui/widget-manager/WidgetCoreRegistry'
 
 const widgetCacheStore = new Map()
 const widgetListStore = new Map()

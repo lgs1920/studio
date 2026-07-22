@@ -16,7 +16,7 @@
 
 import { JSDOM }                               from 'jsdom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { addShortcut, ShortcutManager }        from '../core/events/ShortcutManager'
+import { addShortcut, ShortcutManager }        from '../../../core/events/ShortcutManager'
 
 let manager
 

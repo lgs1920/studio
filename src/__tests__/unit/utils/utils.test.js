@@ -16,7 +16,7 @@
 
 // Test suite for utility functions
 import { describe, expect, it }            from 'vitest'
-import { add, divide, multiply, subtract } from '../Utils/testUtils'
+import { add, divide, multiply, subtract } from '../../../Utils/testUtils'
 
 describe('Utility Functions', () => {
     it('should add two numbers correctly', () => {

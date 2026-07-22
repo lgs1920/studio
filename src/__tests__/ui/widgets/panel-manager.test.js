@@ -14,8 +14,8 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { ui } from '../core/stores/ui.js'
-import { PanelManager } from '../core/ui/panels/PanelManager.js'
+import { ui } from '../../../core/stores/ui.js'
+import { PanelManager } from '../../../core/ui/panels/PanelManager.js'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const createTabGroup = (id, active) => {

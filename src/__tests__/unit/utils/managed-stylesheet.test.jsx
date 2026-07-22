@@ -16,8 +16,8 @@
 
 import { cleanup, render }       from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vitest'
-import { CSSUtils }              from '../Utils/CSSUtils'
-import { useManagedStylesheet }  from '../Utils/useManagedStylesheet'
+import { CSSUtils }              from '../../../Utils/CSSUtils'
+import { useManagedStylesheet }  from '../../../Utils/useManagedStylesheet'
 
 const STYLESHEET_ID = 'journey-stats-widget'
 const STYLESHEET_HREF = '/assets/css/journey-stats-widget.css'

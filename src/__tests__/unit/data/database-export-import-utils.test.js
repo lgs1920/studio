@@ -3,7 +3,7 @@ import { zipSync, strToU8 } from 'fflate'
 import {
     exportDatabaseBundleToFiles,
     importDatabaseBundleFromZip,
-} from '../core/db/DatabaseExportImportUtils.js'
+} from '../../../core/db/DatabaseExportImportUtils.js'
 
 const createDb = ({dbName = 'lgs1920', stores = {}} = {}) => ({
     dbName,
