@@ -19,6 +19,8 @@ This is the canonical source for the project's AI-agent and development rules.
   - **DOM/Events:** Use full words `element` and `event` (never `el` or `ev`).
   - **Private Members:** Use `#` prefix for private class fields and methods.
 - **Code Structure:** Provide full file content in every response.
+- **File size:** If the file exceeds 1500 lines, divide the code into multiple files, each dedicated to a specific set
+  of responsibilities.
 
 ## 3. Architecture & Tech Stack
 
