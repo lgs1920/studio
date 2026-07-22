@@ -1371,7 +1371,6 @@ export const runReplayDeferredMp4Export = async ({
     let exportSucceeded = false
     let replayComposer = null
     let replayComposerFallback = false
-    let playbackScenePrepared = false
 
     replayMode?.beginReplayCameraExport?.()
 
@@ -1383,9 +1382,16 @@ export const runReplayDeferredMp4Export = async ({
     installReplayExportRuntimeControls({plan, abortController})
 
     try {
+        // Always leave a previous Draft scene before preparing HQ. This restores
+        // the original track and camera focus when the user switches modes or
+        // aborts between the two exports.
+        if (typeof replayMode?.restorePlaybackScene === 'function') {
+            await replayMode.restorePlaybackScene({force: true})
+        }
+
         if (typeof replayMode?.preparePlaybackSceneForExport === 'function') {
             const firstTimelinePhase = plan.videoTimeline?.phases?.[0] ?? null
-            playbackScenePrepared = await replayMode.preparePlaybackSceneForExport({
+            await replayMode.preparePlaybackSceneForExport({
                 journey,
                 progress: originalProgress ?? 0,
                 hideReplayMarker: firstTimelinePhase?.slot === REPLAY_CLIP_SLOT_START && Boolean(firstTimelinePhase?.clip),
@@ -1592,7 +1598,7 @@ export const runReplayDeferredMp4Export = async ({
             plan.runtime.exportPausedAt = null
         }
         clearReplayExportFrameState(plan)
-        if (playbackScenePrepared && typeof replayMode?.restorePlaybackScene === 'function') {
+        if (typeof replayMode?.restorePlaybackScene === 'function') {
             await replayMode.restorePlaybackScene({force: true})
         }
         if (replay && originalReplayState) {

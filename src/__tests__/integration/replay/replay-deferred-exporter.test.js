@@ -791,7 +791,9 @@ describe('ReplayDeferredExporter', () => {
                 progress: 0,
                 hideReplayMarker: true,
             }))
-            expect(restorePlaybackScene).toHaveBeenCalledWith({force: true})
+            expect(restorePlaybackScene).toHaveBeenCalledTimes(2)
+            expect(restorePlaybackScene).toHaveBeenNthCalledWith(1, {force: true})
+            expect(restorePlaybackScene).toHaveBeenNthCalledWith(2, {force: true})
             expect(result.plan.runtime.exportElapsedMillis).toBe(result.plan.manifest.frameCount * 40)
             expect(result.plan.runtime.exportAverageFrameMillis).toBeCloseTo(40, 1)
             expect(result.plan.runtime.exportEstimatedTotalMillis).toBeCloseTo(result.plan.runtime.exportElapsedMillis, 1)
@@ -799,5 +801,56 @@ describe('ReplayDeferredExporter', () => {
         finally {
             performanceNow.mockRestore()
         }
+    })
+
+    it('restores the Draft scene when HQ preparation fails', async () => {
+        const restorePlaybackScene = vi.fn(() => Promise.resolve())
+        const preparePlaybackSceneForExport = vi.fn(async () => {
+            throw new Error('HQ preparation failed')
+        })
+
+        globalThis.lgs = {
+            canvas: {width: 320, height: 180},
+            stores: {ui: {video: {fps: 30, quality: 0}}},
+            theJourney: {slug: 'journey-a'},
+        }
+        globalThis.__ = {
+            ui: {
+                replay: {
+                    preparePlaybackSceneForExport,
+                    restorePlaybackScene,
+                },
+                widgetCache: {getAll: vi.fn(() => new Map())},
+                widgetManager: {
+                    getElementById: vi.fn(() => null),
+                    getWidgetConfig: vi.fn(() => ({})),
+                },
+            },
+        }
+
+        await expect(runReplayDeferredMp4Export({
+            replay: {
+                progress: 0,
+                durationMillis: 1000,
+                clips: {catalog: {}, start: [], stop: []},
+            },
+            journey: {slug: 'journey-a'},
+            controller: {
+                duration: 1,
+                progress: 0,
+                currentSample: () => ({progress: 0}),
+            },
+            sourceCanvas: globalThis.lgs.canvas,
+            buildCanvas: () => ({
+                width: 320,
+                height: 180,
+                getContext: () => ({clearRect: vi.fn(), drawImage: vi.fn()}),
+            }),
+            download: vi.fn(),
+        })).rejects.toThrow('HQ preparation failed')
+
+        expect(restorePlaybackScene).toHaveBeenCalledTimes(2)
+        expect(restorePlaybackScene).toHaveBeenNthCalledWith(1, {force: true})
+        expect(restorePlaybackScene).toHaveBeenNthCalledWith(2, {force: true})
     })
 })
