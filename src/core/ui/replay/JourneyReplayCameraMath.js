@@ -106,6 +106,22 @@ export const replayCameraRecenterDuration = (easing = 0.18) => {
     return Math.max(0.5, 0.95 + (1.6 * safeEasing))
 }
 
+/**
+ * Resolve the temporal lead needed to cover one rendered frame.
+ *
+ * @param {{fps?: number|null, frameIntervalMs?: number|null}} options
+ * @returns {number} Frame lead in seconds.
+ */
+export const replayFrameLeadSeconds = ({fps = 30, frameIntervalMs = null} = {}) => {
+    const interval = finiteNumber(frameIntervalMs)
+    if (interval !== null && interval > 0) {
+        return interval / 1000
+    }
+
+    const safeFps = finiteNumber(fps)
+    return 1 / (safeFps !== null && safeFps > 0 ? safeFps : 30)
+}
+
 export const replayTargetSampleForClip = ({
                                               sample,
                                               clipId,

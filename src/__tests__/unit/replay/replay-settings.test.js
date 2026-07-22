@@ -18,7 +18,7 @@ import { REPLAY_DRAWER }                                           from '@Core/c
 import { createJourneyReplayClipInstance }                                from '@Core/ui/replay/JourneyReplayClips'
 import {
     replayAngularDelta, replayCameraHeadingForPositionMode, replayCameraHeadingWithHysteresis,
-    replayCameraRangeFromPitch, replayCameraRecenterDuration, replayCameraRecenterHeight,
+    replayCameraRangeFromPitch, replayCameraRecenterDuration, replayFrameLeadSeconds, replayCameraRecenterHeight,
     replayCameraRecenterHorizontalDistance, replayHeadingEasingFactor, replayHeadingFromLocalAxisAngle,
     replayIsWindowPointOutsideToleranceZone, replayPitchLookaheadFactor, JourneyReplayMode, replayTargetSampleForClip,
     replayToleranceZoneBounds, replayCenteredZone, replayRuntimeTrackingSettings, replayDynamicTargetPointInZone,
@@ -256,6 +256,12 @@ describe('replay settings normalization', () => {
         expect(targetZone.height).toBeCloseTo(0.3, 6)
         expect(targetZone.width * 1080).toBeCloseTo(324, 6)
         expect(targetZone.height * 1920).toBeCloseTo(576, 6)
+    })
+
+    it('adds one frame of temporal lead according to the capture FPS', () => {
+        expect(replayFrameLeadSeconds({fps: 15})).toBeCloseTo(1 / 15, 6)
+        expect(replayFrameLeadSeconds({fps: 60})).toBeCloseTo(1 / 60, 6)
+        expect(replayFrameLeadSeconds({fps: 15, frameIntervalMs: 1000 / 60})).toBeCloseTo(1 / 60, 6)
     })
 
     it('increases look-ahead for grazing camera pitches', () => {

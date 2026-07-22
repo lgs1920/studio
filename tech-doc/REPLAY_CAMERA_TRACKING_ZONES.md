@@ -79,6 +79,12 @@ can be updated asynchronously while Draft playback is running. Draft and HQ
 use the same normalized Z1/Z2 definitions and collision decisions; only their
 camera clocks differ.
 
+The look-ahead also includes one output-frame interval. Draft resolves that
+interval from `replay.captureFps`; HQ resolves it from the export timeline FPS.
+Therefore a 15 FPS capture anticipates `66.67 ms`, while a 60 FPS capture
+anticipates `16.67 ms`. This compensates for the larger position jump between
+low-FPS frames without changing the visual size of Z1 or Z2.
+
 ## 4. Predictive processing
 
 Predictive processing is used to compensate for camera movement, easing and
@@ -323,6 +329,7 @@ Consequently:
 - navigation uses Z1 = 30% × 30% normally, or 22% × 22% for a narrow crop, in
   both Draft and HQ;
 - dynamic mode uses Z1 = 75% × 75% and Z2 = 30% × 30% in both Draft and HQ;
+- camera look-ahead includes one output-frame interval in both Draft and HQ;
 - navigation and dynamic HQ corrections use the same deterministic follower
   with a `1.5 s` response;
 - no free-running widget timer is required during HQ export;

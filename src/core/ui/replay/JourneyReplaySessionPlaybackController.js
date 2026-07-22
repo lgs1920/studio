@@ -412,6 +412,7 @@ export const refresh = (mode, {
                    rebuildSampler = false,
                    forceGeometry = true,
                    frameTimeMs = null,
+                   frameIntervalMs = null,
                    exportMode = false,
                } = {}) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
@@ -443,6 +444,7 @@ export const refresh = (mode, {
                                        sample,
                                        progress: state.controller.progress ?? sample.progress ?? 0,
                                        frameTimeMs,
+                                       frameIntervalMs,
                                        exportMode,
                                    })
             }
@@ -527,6 +529,9 @@ export const renderReplayExportFrame = async (mode, {phase = null, frame = null,
                     frameTimeMs: finiteNumber(frame?.frameTimeMs)
                                  ?? finiteNumber(phase?.frameTimeMs)
                                  ?? 0,
+                    frameIntervalMs: finiteNumber(frame?.frameIntervalMs)
+                                     ?? finiteNumber(phase?.frameIntervalMs)
+                                     ?? null,
                     exportMode:  true,
                 })
             }

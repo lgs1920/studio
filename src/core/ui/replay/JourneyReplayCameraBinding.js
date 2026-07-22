@@ -14,7 +14,7 @@ import {faPersonHiking} from '@fortawesome/pro-regular-svg-icons'
 import {replayVideoTraceDebug} from './ReplayVideoTraceDebug'
 import {finiteNumber, replayStore} from './JourneyReplayRuntime'
 import {
-    clamp, lerp, hasFiniteLonLat, sanitizeOrientationRadians, replayHeadingFromLocalAxisAngle, replayPitchLookaheadFactor, replayCameraHeadingForPositionMode, replayAngularDelta, replayHeadingEasingFactor, replayCameraRecenterDuration, replayTargetSampleForClip, replayCameraRangeFromPitch, replayCameraRecenterHeight, replayCameraRecenterHorizontalDistance, replayToleranceZoneBounds, replayCenteredZone, replayCenteredSquareZone, replayNavigationZone, replayRuntimeTrackingSettings, replayDynamicTargetPointInZone, replayIsWindowPointOutsideToleranceZone, replayInnerToleranceZoneBounds, replayInsetBounds, replayWindowCollisionFromPoint, interpolateRadians, smoothClipProgress, replayCameraHeadingWithHysteresis, degreesToRadians, radiansToDegrees, safeCartesianFromLonLat, safeCartographicFromCartesian, cameraGuideSampleFromRawSamples, projectToLocalMeters, cartographicToLonLat
+    clamp, lerp, hasFiniteLonLat, sanitizeOrientationRadians, replayHeadingFromLocalAxisAngle, replayPitchLookaheadFactor, replayCameraHeadingForPositionMode, replayAngularDelta, replayHeadingEasingFactor, replayCameraRecenterDuration, replayFrameLeadSeconds, replayTargetSampleForClip, replayCameraRangeFromPitch, replayCameraRecenterHeight, replayCameraRecenterHorizontalDistance, replayToleranceZoneBounds, replayCenteredZone, replayCenteredSquareZone, replayNavigationZone, replayRuntimeTrackingSettings, replayDynamicTargetPointInZone, replayIsWindowPointOutsideToleranceZone, replayInnerToleranceZoneBounds, replayInsetBounds, replayWindowCollisionFromPoint, interpolateRadians, smoothClipProgress, replayCameraHeadingWithHysteresis, degreesToRadians, radiansToDegrees, safeCartesianFromLonLat, safeCartographicFromCartesian, cameraGuideSampleFromRawSamples, projectToLocalMeters, cartographicToLonLat
 } from './JourneyReplayCameraMath'
 import {
     REPLAY_CAMERA_ALTITUDE_CONSTANT, REPLAY_CAMERA_ALTITUDE_GROUND_OFFSET, REPLAY_CAMERA_POSITION_AHEAD,
@@ -580,6 +580,7 @@ export const updateCamera = (mode, {
                          immediateToleranceRecenter = false,
                          source = null,
                          frameTimeMs = null,
+                         frameIntervalMs = null,
                          exportMode = false,
                      } = {}) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
@@ -706,7 +707,12 @@ export const updateCamera = (mode, {
         const smoothPitch = nominalView.pitch
         const recenterDuration = replayCameraRecenterDuration(cameraSettings.hysteresis.easing)
                                  * (exportMode ? 1.8 : 1)
-        const futureSample = call.cameraLookaheadSample(anchorSample, {lookaheadSeconds: recenterDuration})
+        const frameLeadSeconds = replayFrameLeadSeconds({
+            fps:             globalThis.lgs?.stores?.replay?.captureFps,
+            frameIntervalMs,
+        })
+        const lookaheadSeconds = recenterDuration + frameLeadSeconds
+        const futureSample = call.cameraLookaheadSample(anchorSample, {lookaheadSeconds})
         const predictedSample = futureSample ?? anchorSample
         if (deterministicCamera && state.deterministicCameraTransition) {
             call.applyDeterministicCameraTransition(logicalNow)
@@ -924,7 +930,7 @@ export const updateCamera = (mode, {
             const dynamicPredictedSample = (source === 'playback' || exportMode)
                                            ? useExtendedDynamicLookahead
                                              ? call.cameraLookaheadSample(anchorSample, {
-                                                 lookaheadSeconds: recenterDuration * REPLAY_TRACKING_DYNAMIC_LOOKAHEAD_FACTOR,
+                                                 lookaheadSeconds: lookaheadSeconds * REPLAY_TRACKING_DYNAMIC_LOOKAHEAD_FACTOR,
                                              }) ?? predictedSample
                                              : predictedSample ?? anchorSample
                                            : anchorSample
@@ -1255,4 +1261,3 @@ export const updateCamera = (mode, {
             state.lastCameraPitch = smoothPitch
         }
     }
-
