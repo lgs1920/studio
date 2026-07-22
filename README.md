@@ -37,6 +37,7 @@ The repository already contains the main product surface used by the studio:
 - Journey Replay playback and replay-aware video synchronization
 - Replay Draft final-frame synchronization and bounded trace rendering
 - Video recording, deferred HQ export, and image snapshot workflows
+- Linked replay video editing temporarily hides the Journey toolbar without changing its saved visibility setting
 - Recording indicators show preparation, ready, recording, and finalization states for Draft and HQ workflows
 - Deterministic HQ camera following for navigation and dynamic corrections, including 1.5-second transitions
 - Crop-aware Z1/Z2 collision tracking and visible diagnostic overlays across video formats

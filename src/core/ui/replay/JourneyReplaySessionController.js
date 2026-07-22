@@ -1051,5 +1051,6 @@ export class JourneyReplaySessionController {
     restorePlaybackScene = (...args) => JourneyReplaySessionSceneController.restorePlaybackScene(this, ...args)
     dispose = (...args) => JourneyReplaySessionSceneController.dispose(this, ...args)
     restoreJourneyToolbarVisibility = (...args) => JourneyReplaySessionSceneController.restoreJourneyToolbarVisibility(this, ...args)
+    hideJourneyToolbarVisibility = (...args) => JourneyReplaySessionSceneController.hideJourneyToolbarVisibility(this, ...args)
     isJourneyToolbarTemporarilyHidden = (...args) => JourneyReplaySessionSceneController.isJourneyToolbarTemporarilyHidden(this, ...args)
 }

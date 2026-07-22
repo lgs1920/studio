@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-07-22 — [`fix: stabilize journey toolbar replay controls`](https://github.com/lgs1920/studio/commit/0f981d6f)
+
+- Stop Journey toolbar orbit controls without relaunching the camera rotation.
+- Temporarily hide the Journey toolbar while linked replay video editing is open, then restore it without persistence.
+
 ## 2026-07-22 — [`fix: improve recording indicators`](https://github.com/lgs1920/studio/commit/76aac6eb)
 
 - Use duotone recording indicators with white and state-specific colors.

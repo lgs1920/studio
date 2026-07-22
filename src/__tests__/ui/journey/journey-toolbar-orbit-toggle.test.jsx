@@ -125,4 +125,13 @@ describe('JourneyToolbar orbit toggle', () => {
         await waitFor(() => expect(globalThis.__.ui.cameraManager.stopRotate).toHaveBeenCalled())
         expect(globalThis.lgs.theJourney.focus).not.toHaveBeenCalled()
     })
+
+    it('stops the running orbit from the focus button without relaunching it', async () => {
+        const {container} = render(<JourneyToolbar/>)
+
+        fireEvent.click(container.querySelector('#rotate-journey-toolbar'))
+
+        await waitFor(() => expect(globalThis.__.ui.cameraManager.stopRotate).toHaveBeenCalled())
+        expect(globalThis.lgs.theJourney.focus).not.toHaveBeenCalled()
+    })
 })

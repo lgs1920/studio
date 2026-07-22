@@ -131,6 +131,12 @@ export const JourneyToolbar = (props) => {
      * @param {Event} event - The click event
      */
     const forceRotate = async () => {
+        if ($rotate.running) {
+            rotationAllowed.current = false
+            await stopRotate()
+            return
+        }
+
         if (!rotationAllowedByJourneyReplay) {
             return
         }
