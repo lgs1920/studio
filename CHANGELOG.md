@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-07-23 — [`docs: specify arrow widget`](https://github.com/lgs1920/studio/commit/105c9bb6)
+
+- Specify the Arrow widget UI, Solid icon variants, circle markers, independent colors, scaling, rotation, and handle interactions.
+
 ## 2026-07-23 — [`docs: specify replay video widget`](https://github.com/lgs1920/studio/commit/COMMIT_ID)
 
 - Document the Arrow widget and the replay video widget architecture.

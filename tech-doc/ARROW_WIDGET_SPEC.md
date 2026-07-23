@@ -81,18 +81,27 @@ The renderer uses a local horizontal coordinate system from `(0, 0)` to `(length
 - `location`: location arrow using the Font Awesome location-arrow shape
 - `circle`: circular marker with a configurable diameter
 
-The UI must use only the following Font Awesome Solid icons:
+The UI must use only the following Font Awesome Solid icons. The SVG preview table below is illustrative only; the effective React contract is the compact table that follows it.
 
-| Preview | Widget option | Font Awesome icon name | Package export | Variant | Orientation |
-| --- | --- | --- | --- | --- | --- |
-| <svg aria-label="Caret right" viewBox="0 0 256 512" width="18" height="18" role="img"><path fill="currentColor" d="M249.3 235.8c10.2 12.6 9.5 31.1-2.2 42.8l-128 128c-9.2 9.2-22.9 11.9-34.9 6.9S64.5 396.9 64.5 384l0-256c0-12.9 7.8-24.6 19.8-29.6s25.7-2.2 34.9 6.9l128 128 2.2 2.4z"/></svg> | Caret arrow | `caret-right` | `faCaretRight` | `solid` | `0deg` |
+| Preview | Widget option | Font Awesome icon name | Variant | Rotation |
+| --- | --- | --- | --- | --- |
+| <svg aria-label="Caret right" viewBox="0 0 256 512" width="18" height="18" role="img"><path fill="currentColor" d="M249.3 235.8c10.2 12.6 9.5 31.1-2.2 42.8l-128 128c-9.2 9.2-22.9 11.9-34.9 6.9S64.5 396.9 64.5 384l0-256c0-12.9 7.8-24.6 19.8-29.6s25.7-2.2 34.9 6.9l128 128 2.2 2.4z"/></svg> | Caret arrow | `caret-right` | `solid` | `0deg` |
 | <svg aria-label="Chevrons right" viewBox="0 0 448 512" width="18" height="18" role="img"><path fill="currentColor" d="M438.6 278.6c12.5-12.5 12.5-32.8 0-45.3l-192-192c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3L370.7 256 201.4 425.4c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0l192-192zm-384 192l192-192c12.5-12.5 12.5-32.8 0-45.3l-192-192c-12.5-12.5-45.3 0-45.3 0s-12.5 32.8 0 45.3L178.7 256 9.4 425.4c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0z"/></svg> | Double chevron arrow | `chevrons-right` | `faChevronsRight` | `solid` | `0deg` |
 | <svg aria-label="Location arrow up rotated minus 90 degrees" viewBox="0 0 448 512" width="18" height="18" role="img"><g transform="rotate(-90 224 256)"><path fill="currentColor" d="M253.1 18.6C247.8 7.3 236.5 0 224 0s-23.8 7.3-29.1 18.6l-192 416c-5.6 12.2-3.1 26.5 6.4 36s23.8 12.1 36 6.5L224 395.2 402.7 477.1c12.2 5.6 23.8 3 36-6.5s12-23.8 6.4-36l-192-416z"/></g></svg> | Location arrow | `location-arrow-up` | `faLocationArrowUp` | `solid` | `-90deg` |
-| <svg aria-label="Circle" viewBox="0 0 512 512" width="18" height="18" role="img"><path fill="currentColor" d="M256 8C119 8 8 119 8 256s111 248 248 248 248-111 248-248S393 8 256 8z"/></svg> | Circle marker | `circle` | `faCircle` | `solid` | `0deg` |
+| <svg aria-label="Circle" viewBox="0 0 512 512" width="18" height="18" role="img"><path fill="currentColor" d="M256 8C119 8 8 119 8 256s111 248 248 248 248-111 248-248S393 8 256 8z"/></svg> | Circle marker | `circle` | `solid` | `0deg` |
 
-These icons are imported from `@fortawesome/pro-solid-svg-icons`. The start-cap preview may rotate the selected icon to face the opposite direction, but the stored widget geometry remains independent from the preview orientation. The `none` cap is represented by the text label “None” and does not require an icon.
+The effective UI contract is icon name, variant, and rotation only. Package-export names are not part of the React contract and must not be exposed or required:
 
-### SVG references
+| Icon | Variant | Rotation |
+| --- | --- | --- |
+| `caret-right` | `solid` | `0deg` |
+| `chevrons-right` | `solid` | `0deg` |
+| `location-arrow-up` | `solid` | `90deg` |
+| `circle` | `solid` | `0deg` |
+
+All icons use `variant="solid"`. The location arrow uses a `90deg` rotation. The start-cap preview may rotate the selected icon to face the opposite direction, but the stored widget geometry remains independent from the preview orientation. The `none` cap is represented by the text label “None” and does not require an icon.
+
+<!-- Inline SVG reference previews are intentionally omitted from the rendered specification.
 
 The following inline SVGs are visual references for the exact Solid icons used by the editor. They are not a second rendering implementation for the widget.
 
@@ -103,6 +112,8 @@ The following inline SVGs are visual references for the exact Solid icons used b
 <svg aria-label="Location arrow up rotated minus 90 degrees" viewBox="0 0 448 512" width="64" height="64" role="img"><g transform="rotate(-90 224 256)"><path fill="currentColor" d="M253.1 18.6C247.8 7.3 236.5 0 224 0s-23.8 7.3-29.1 18.6l-192 416c-5.6 12.2-3.1 26.5 6.4 36s23.8 12.1 36 6.5L224 395.2 402.7 477.1c12.2 5.6 26.5 3 36-6.5s12-23.8 6.4-36l-192-416z"/></g></svg>
 
 <svg aria-label="Circle" viewBox="0 0 512 512" width="32" height="32" role="img"><path fill="currentColor" d="M256 8C119 8 8 119 8 256s111 248 248 248 248-111 248-248S393 8 256 8z"/></svg>
+
+-->
 
 Both ends are independently configurable through `startCap` and `endCap`:
 
