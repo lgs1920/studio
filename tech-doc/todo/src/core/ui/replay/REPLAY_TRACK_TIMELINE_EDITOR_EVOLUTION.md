@@ -14,7 +14,7 @@ The replay itself must remain mandatory. The main replay track should contain:
 - one locked replay clip;
 - optional stop clips after the replay.
 
-Additional tracks, capped at 120, should contain widget clips. A widget track may contain a single widget clip or multiple widget clips. Moving and resizing a widget clip controls its visible time range. Widget screen position, scale, and bounds should continue to use the existing video widget board and widget manager. Each widget clip may define an enter effect and an exit effect. The default effect is an immediate cut with no animation.
+Additional tracks, capped at 20, should contain widget clips. A widget track may contain a single widget clip or multiple widget clips. Moving and resizing a widget clip controls its visible time range. Widget screen position, scale, and bounds should continue to use the existing video widget board and widget manager. Each widget clip may define an enter effect and an exit effect. The default effect is an immediate cut with no animation.
 
 The editor must work in the existing Replay drawer, including the stacked/mobile drawer mode.
 
@@ -34,6 +34,12 @@ The current replay/video implementation already has several useful building bloc
 
 This means the hard part is not drawing rectangles on a timeline. The hard part is defining a stable timeline data model and making live preview, draft recording, and HQ export consume the same clip state.
 
+The normalized timeline is the single source of truth for both video workflows:
+
+- Draft recording uses the timeline for replay synchronization, phase changes, and widget visibility during live capture.
+- HQ export uses the same timeline for deterministic frame generation, replay phases, and widget visibility.
+- Both workflows contain the same single replay clip; they may differ only in capture quality, FPS, and encoding path.
+
 ## Product Model
 
 ### Track Types
@@ -51,7 +57,7 @@ This means the hard part is not drawing rectangles on a timeline. The hard part 
 `widget`
 
 - User-created.
-- Maximum count: 120 widget tracks.
+- Maximum count: 20 widget tracks.
 - Can be reordered by dragging the track header.
 - Contains zero or more widget clips.
 - Never allows overlapping clips on the same track.
@@ -61,10 +67,10 @@ This means the hard part is not drawing rectangles on a timeline. The hard part 
 
 `replay`
 
-- Mandatory, locked by default.
-- Duration maps to `lgs.settings.ui.replay.duration`.
-- Moving should be disabled in V1; the replay starts after the ordered start clips.
-- Resizing may update replay duration, but only when replay is not playing, recording, or exporting.
+- Mandatory and locked by default. Exactly one replay clip must exist.
+- Its duration defaults to `lgs.settings.ui.replay.duration`.
+- Moving should be disabled in V1. The replay starts after the ordered start clips.
+- Resizing may update the replay duration, but only when replay is not playing, recording, or exporting.
 
 `start`
 
@@ -161,6 +167,7 @@ Recommended derived values:
 
 - `replayStartSeconds`: sum of enabled start clip durations.
 - `replayEndSeconds`: `replayStartSeconds + replayDurationSeconds`.
+- `replayDurationSeconds`: duration of the enabled replay clip.
 - `totalDurationSeconds`: max of replay track end and all enabled widget clip ends.
 - `visualTracks`: widget tracks sorted by `order`, followed by the replay-main track.
 - `activeClipsAt(timeSeconds)`: all enabled clips whose `[start, end]` contains the current time.
@@ -169,7 +176,7 @@ Recommended derived values:
 
 The migration should be additive.
 
-1. If `journey.replay.timeline` is absent, build it from `journey.replay.start`, `journey.replay.stop`, and `lgs.settings.ui.replay.duration`.
+1. If `journey.replay.timeline` is absent, build it from `journey.replay.start`, `journey.replay.stop`, and one replay clip using `lgs.settings.ui.replay.duration`.
 2. For one release, write both formats:
    - timeline is the source of truth for the new UI;
    - `journey.replay.start` and `journey.replay.stop` are generated from the replay-main track for existing runtime code.
@@ -296,12 +303,12 @@ Build the timeline editor in the project, using the existing stack:
 
 Optional additions:
 
-- `react-window` if rendering all tracks and clips becomes costly. With only 120 tracks, this is probably not needed in V1 unless each track contains many clips.
+- `react-window` if rendering all tracks and clips becomes costly. With only 20 tracks, this is probably not needed in V1 unless each track contains many clips.
 - `@dnd-kit/core` / `@dnd-kit/sortable` if SortableJS becomes limiting for accessible, touch-friendly track reordering. It should not be required for clip resizing.
 
 Advantages:
 
-- Exact fit with replay phases, mandatory replay clip, widget visibility, mobile drawer, and HQ export.
+- Exact fit with the mandatory replay phase, widget visibility, mobile drawer, Draft recording, and HQ export.
 - No calendar/date model translation.
 - No imperative third-party timeline state fighting React/Valtio.
 - Smaller visual integration cost with the current drawer and Web Awesome style.
@@ -325,7 +332,7 @@ Package metadata was checked on 2026-07-16.
 | `react-calendar-timeline` | Medium | MIT. npm reports `0.30.0-beta.4`; README says the beta targets React 18/19 and Vite. | Mature group/item model, move/resize/group change, headers, markers. | Calendar/date semantics are awkward for a seconds-based video editor. Current React 19 support is beta. Styling a video-editor drawer may be expensive. | Possible, but too calendar-shaped for this feature. |
 | `vis-timeline` | Low-medium | MIT or Apache-2.0. npm reports `8.5.2`. | Powerful standalone groups/items/ranges editor with create/edit/delete support. | Imperative DOM library, not React-native. Adds more non-React state, moment-era dependencies, and styling isolation work. | Avoid for this React drawer. |
 | `@dnd-kit/core`, `@dnd-kit/sortable`, `@dnd-kit/react` | Building block | MIT. `@dnd-kit/react` supports React 18/19; `@dnd-kit/core` is widely used but older API. | Accessible drag/drop, touch and keyboard sensors, extensible collision rules. | Not a timeline. We still build time math, trim handles, snapping, and rendering. | Good optional dependency for custom implementation, especially track reordering and future keyboard DnD. |
-| `react-window` | Building block | MIT. npm reports `2.2.7`, React 18/19. | Efficient list/grid virtualization. | Not an editor. Adds complexity if used too early. | Keep as optional; probably not needed for 120 tracks in V1. |
+| `react-window` | Building block | MIT. npm reports `2.2.7`, React 18/19. | Efficient list/grid virtualization. | Not an editor. Adds complexity if used too early. | Keep as optional; probably not needed for 20 tracks in V1. |
 | `@twick/*` | Low | Twick uses a Sustainable Use License with SaaS/commercial restrictions. | Rich media editor SDK with timeline/canvas packages. | License is not a clean permissive open-source fit for this AGPL project. It overlaps with existing replay/export architecture. | Do not use. |
 | `react-video-editor-timeline` | Low | MIT, but npm package depends on React 17, React DOM 17, React Scripts 4, and Ant Design 4. | Video/audio timeline intent. | Incompatible dependency profile for this React 19/Vite project. | Do not use. |
 
@@ -358,11 +365,12 @@ The normalizer should enforce these rules:
 - Widget track order is user-controlled and must remain stable after drag reorder.
 - Exactly one replay clip.
 - Replay clip duration must be greater than 0.
-- Widget track count must be between 0 and 120.
+- The replay clip must remain between the start and stop clips on the replay-main track.
+- Widget track count must be between 0 and 20.
 - Clip start and duration must be finite and non-negative.
 - Clip end must be greater than clip start, except disabled clips may be retained with zero duration for repair.
-- Start clips must end at or before replay start.
-- Stop clips must start at or after replay end.
+- Start clips must end at or before the replay clip.
+- Stop clips must start at or after the replay clip.
 - Replay-main track must not contain widget clips.
 - Widget tracks must not contain start/stop/replay clips.
 - Clips must not overlap within the same track.
@@ -421,7 +429,7 @@ Effects must be deterministic and based only on frame time. They must not use in
   - empty timeline creation;
   - migration from `journey.replay.start/stop`;
   - replay-main constraints;
-  - 120 widget track cap;
+  - 20 widget track cap;
   - overlap rejection;
   - active widget clips by timestamp.
 - Update drawer runtime setup to expose `replayRuntime.timeline`.
@@ -476,7 +484,7 @@ Component:
 - add widget track;
 - move/resize widget clip;
 - reject overlap;
-- reject more than 120 widget tracks;
+- reject more than 20 widget tracks;
 - mobile stacked drawer selection and inspector.
 
 Integration:
@@ -492,7 +500,7 @@ Manual:
 
 - desktop wide drawer;
 - mobile/stacked drawer;
-- 120 tracks;
+- 20 tracks;
 - dense clip layout;
 - 30 FPS and 60 FPS export;
 - pause/resume/stop cleanup.

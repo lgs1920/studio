@@ -132,8 +132,8 @@ Technical spec: [Journey import formats](tech-doc/todo/JOURNEY_IMPORT_FORMATS_SP
 ### 1.2 — Timeline Video Editor
 
 Replace the current separate Replay `start` / `replay` / `stop` clip UI with a track-based timeline inside the Replay
-drawer. The timeline will combine start clips, the locked journey replay, stop clips, and widget clips while keeping
-preview, recording, and HQ export deterministic.
+drawer. The timeline will combine start clips, one locked journey replay, stop clips, and widget clips across up to 20
+widget tracks. The same timeline state will drive Draft recording and HQ export deterministically.
 
 Technical spec: [Replay track timeline editor evolution](tech-doc/todo/src/core/ui/replay/REPLAY_TRACK_TIMELINE_EDITOR_EVOLUTION.md).
 
