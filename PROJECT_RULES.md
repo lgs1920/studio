@@ -5,7 +5,7 @@ This is the canonical source for the project's AI-agent and development rules.
 ## 1. Core Directives
 
 - **Language:** All conversational responses must be in **French**.
-- **Documentation:** All JSDoc blocks, inline comments, and code documentation must be strictly in **English**.
+- **Documentation:** All JSDoc blocks, inline comments, and code documentation must be strictly in **English**. Any project documentation requested by the user must also be written in **English**.
 - **Autonomy:** If a choice is ambiguous, stop and ask. **Important**: Final decisions are made by the user.
 
 ## 2. Coding Syntax & Style
