@@ -1,4 +1,8 @@
-# Changelog
+# Commit History
+
+## 2026-07-23 — [`docs: update AI rules and skills for commit history`](https://github.com/lgs1920/studio/commit/b48f4893)
+
+- Update the project rules and AI skills for commit history and technical-documentation organization.
 
 ## 2026-07-23 — [`docs: specify arrow widget`](https://github.com/lgs1920/studio/commit/105c9bb6)
 

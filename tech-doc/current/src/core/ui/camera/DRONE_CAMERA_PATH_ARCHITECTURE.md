@@ -1304,7 +1304,7 @@ the adapter.
 
 ## 3D Path Editor
 
-The dedicated [Drone camera 3D path editor specification](DRONE_CAMERA_3D_PATH_EDITOR_SPEC.md)
+The dedicated [Drone camera 3D path editor specification](../../../../../todo/src/core/ui/camera/DRONE_CAMERA_3D_PATH_EDITOR_SPEC.md)
 covers the later Three.js authoring surface, local ENU editing, dynamic Bezier
 paths, preview boundaries, and runtime export. This architecture document only
 defines the reusable runtime path model and its Cesium adapter.

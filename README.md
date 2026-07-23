@@ -127,7 +127,7 @@ API, independently from local file parsing. This milestone also adds cloud acces
 and synchronizing project files through connected providers ([#372 — Add Cloud access](https://github.com/lgs1920/studio/issues/372)).
 Garmin Connect cloud synchronization remains outside this milestone.
 
-Technical spec: [Journey import formats](tech-doc/JOURNEY_IMPORT_FORMATS_SPEC.md).
+Technical spec: [Journey import formats](tech-doc/todo/JOURNEY_IMPORT_FORMATS_SPEC.md).
 
 ### 1.2 — Timeline Video Editor
 
@@ -135,7 +135,7 @@ Replace the current separate Replay `start` / `replay` / `stop` clip UI with a t
 drawer. The timeline will combine start clips, the locked journey replay, stop clips, and widget clips while keeping
 preview, recording, and HQ export deterministic.
 
-Technical spec: [Replay track timeline editor evolution](tech-doc/src/core/ui/replay/REPLAY_TRACK_TIMELINE_EDITOR_EVOLUTION.md).
+Technical spec: [Replay track timeline editor evolution](tech-doc/todo/src/core/ui/replay/REPLAY_TRACK_TIMELINE_EDITOR_EVOLUTION.md).
 
 ### 1.3 — 3D Drone Path Editor
 
@@ -145,20 +145,23 @@ with a dedicated visual preview/editor, while keeping the path engine determinis
 Journey Replay. The engine will be testable without a live Cesium scene, while Cesium remains the runtime adapter that
 applies the final camera pose.
 
-Technical spec: [Drone camera 3D path editor](tech-doc/src/core/ui/camera/DRONE_CAMERA_3D_PATH_EDITOR_SPEC.md).
+Technical spec: [Drone camera 3D path editor](tech-doc/todo/src/core/ui/camera/DRONE_CAMERA_3D_PATH_EDITOR_SPEC.md).
 
 ## Technical Documentation
 
 All technical specifications and architecture notes are centralized in [tech-doc/](tech-doc/README.md). Important entry
 points include:
 
-- [Replay video architecture](tech-doc/src/core/ui/replay/REPLAY_VIDEO_ARCHITECTURE.md)
-- [Replay track timeline editor evolution](tech-doc/src/core/ui/replay/REPLAY_TRACK_TIMELINE_EDITOR_EVOLUTION.md)
-- [Drone camera path architecture](tech-doc/src/core/ui/camera/DRONE_CAMERA_PATH_ARCHITECTURE.md)
+- [Current technical documentation](tech-doc/current/)
+- [Implementation work to do](tech-doc/todo/)
+- [Replay video architecture](tech-doc/todo/src/core/ui/replay/REPLAY_VIDEO_ARCHITECTURE.md)
+- [Journey replay/video issues](tech-doc/current/JOURNEY_REPLAY_VIDEO_ISSUES.md)
+- [Replay track timeline editor evolution](tech-doc/todo/src/core/ui/replay/REPLAY_TRACK_TIMELINE_EDITOR_EVOLUTION.md)
+- [Drone camera path architecture](tech-doc/current/src/core/ui/camera/DRONE_CAMERA_PATH_ARCHITECTURE.md)
 - [Widget manager](tech-doc/src/core/ui/widget-manager/README.md)
 - [Screen media recorder](tech-doc/src/core/ui/screen-media-recorder/recorder/README.md)
 - [Canvas overlay composer](tech-doc/src/core/ui/screen-media-recorder/composer/README.md)
-- [Tracks editor spec](tech-doc/src/components/TracksEditor/spec.md)
+- [Tracks editor spec](tech-doc/todo/src/components/TracksEditor/spec.md)
 - [All technical docs](tech-doc/README.md)
 
 ## Internal Skills
@@ -189,7 +192,7 @@ The Skills are stored in [.aiassistant/skills/](.aiassistant/skills/) and cover:
 
 Commit preparation and release work are also covered by the [Git commit quality](.aiassistant/skills/lgs-1920-studio-git-commit-quality/SKILL.md)
 and [release changelog](.aiassistant/skills/lgs-1920-studio-release-changelog/SKILL.md) Skills.
-Each commit must also be recorded in [CHANGELOG.md](CHANGELOG.md) with its date, exact message, and GitHub commit link.
+Each commit must also be recorded in [COMMIT_HISTORY.md](COMMIT_HISTORY.md) with its date, exact message, and GitHub commit link.
 
 ## Technology Stack
 
