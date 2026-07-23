@@ -24,7 +24,8 @@ Implementation-document status is organized into two directories:
 - [Events](src/core/events/README.md)
 - [Elevation design](src/core/Elevation/design.md)
 - [Cache](src/core/cache/README.md)
-- [Database](src/core/db/README.md)
+- [Internal database architecture](current/src/core/db/INTERNAL_DATABASE_ARCHITECTURE.md)
+- [LocalDB API reference](src/core/db/README.md)
 - [Panels](src/core/ui/panels/README.md)
 - [Context menu](src/core/ui/context-menu/README.md)
 - [Drone camera path architecture](current/src/core/ui/camera/DRONE_CAMERA_PATH_ARCHITECTURE.md)
@@ -59,6 +60,7 @@ Implementation-document status is organized into two directories:
 
 - [Replay camera tracking zones](current/REPLAY_CAMERA_TRACKING_ZONES.md)
 - [Journey replay/video issues](current/JOURNEY_REPLAY_VIDEO_ISSUES.md)
+- [Internal database architecture](current/src/core/db/INTERNAL_DATABASE_ARCHITECTURE.md)
 - [Drone camera path architecture](current/src/core/ui/camera/DRONE_CAMERA_PATH_ARCHITECTURE.md)
 
 ## Implementation TODO documentation

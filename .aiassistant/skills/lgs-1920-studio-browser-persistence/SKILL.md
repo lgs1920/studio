@@ -1,11 +1,13 @@
 ---
 name: lgs-1920-studio-browser-persistence
-description: Design or debug LGS1920 browser persistence using IndexedDB, local synchronization, widget positions, settings, migrations, hydration, and recovery from storage failures.
+description: Design or debug feature-level LGS1920 browser persistence for settings, widget positions, hydration, legacy payload normalization, and recovery from storage failures. Use when a product feature consumes the existing persistence APIs. Use the lgs-1920-studio-internal-database skill instead for LocalDB internals, database schemas, export/import, or linked-folder synchronization.
 ---
 
 # Browser Persistence
 
-Use for IndexedDB, local settings, widget positions, profile persistence, synchronization, and migrations. Inspect `src/core/ui/widget-manager/WidgetDBManager.js`, stores, initialization, and contract tests first.
+Use for feature-owned persisted state such as local settings, widget positions, profile hydration, and consumer-side migrations. Inspect the owning module, initialization order, and contract tests first.
+
+For changes under `src/core/db/`, database inventory or versions, JSON/ZIP formats, and persistent-folder synchronization, use `$lgs-1920-studio-internal-database`.
 
 Workflow:
 

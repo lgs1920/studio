@@ -1,446 +1,271 @@
-# LocalDB
+# LocalDB API Reference
 
-A modern, feature-rich wrapper around IndexedDB for JavaScript/TypeScript applications, providing simplified database
-operations with advanced caching, TTL support, robust transaction management, and index-based search capabilities.
+`LocalDB` is the browser-side IndexedDB wrapper used by LGS1920 Studio. It owns store creation, the persisted record envelope, key and index reads, optional record TTL, a short-lived memory cache, transaction retries, diagnostics, and mutation notifications.
 
-## Features
+For the application database inventory, backup formats, and persistent-folder synchronization, read the [internal database architecture](../../../current/src/core/db/INTERNAL_DATABASE_ARCHITECTURE.md).
 
-- **High Performance**: Built-in memory caching with automatic expiration
-- **TTL Support**: Automatic data expiration with Time-To-Live functionality
-- **Transaction Management**: Automatic retry logic and transaction handling
-- **Multiple Stores**: Support for multiple object stores with optional indexes
-- **Index-Based Search**: Efficient querying of data by indexed attributes
-- **Transient Data**: Optional support for temporary data storage
-- **Diagnostics**: Built-in database inspection and debugging tools
-- **Memory Efficient**: Configurable cache size with automatic cleanup
-
-## Installation
-
-Ensure you have the `idb` library installed, as it is a dependency for `LocalDB.js`. You can include it via a CDN or
-install it using npm:
-
-```bash
-npm install idb
-```
-
-Include `LocalDB.js` in your project:
+## Construction
 
 ```javascript
-import { LocalDB } from './LocalDB.js'
-```
+import { LocalDB } from '@Core/db/LocalDB'
 
-Or, if using a module bundler, ensure `idb` is available in your environment.
-
-## Usage
-
-### Initialization
-
-Create an instance of `LocalDB` with optional configuration, including support for stores with indexes:
-
-```javascript
 const db = new LocalDB({
-                           name:             'myDatabase', // Database name (default: 'mydb')
-                           stores: [
-                               {name: 'store1', indexes: [{name: 'group', keyPath: 'group'}]}, // Store with index
-                               'store2' // Store without index
-                           ],
-                           manageTransients: true, // Enable transient store (default: false)
-                           version:          1 // Database version (default: 1)
-                       })
+    name: 'example',
+    stores: [
+        'records',
+        {
+            name: 'indexed-records',
+            indexes: [
+                {
+                    name: 'group',
+                    keyPath: 'data.group'
+                }
+            ]
+        }
+    ],
+    manageTransients: false,
+    version: 1
+})
 ```
 
-### Basic Operations
+Constructor options:
 
-#### Storing Data
+| Option | Default | Meaning |
+|---|---|---|
+| `name` | `mydb` | Physical IndexedDB name |
+| `stores` | `mystore` | Store name or array of store descriptors |
+| `manageTransients` | `false` | Add a `transients` store |
+| `version` | `1` | IndexedDB schema version |
 
-Use `put` (or its aliases `set` and `update`) to store data:
+Stores use out-of-line keys. Index paths must include the `data.` prefix when they target payload fields because `LocalDB` wraps each value.
 
-```javascript
-await db.put('key1', {data: 'value', group: 'group1'}, 'store1', 60) // Stores with 60-second TTL
-```
-
-#### Retrieving Data
-
-Use `get` to retrieve data:
-
-```javascript
-const value = await db.get('key1', 'store1') // Returns the data: { data: 'value', group: 'group1' }
-const fullValue = await db.get('key1', 'store1', true) // Returns full object with metadata
-```
-
-#### Deleting Data
-
-Delete a specific key:
+## Persisted Envelope
 
 ```javascript
-const deleted = await db.delete('key1', 'store1') // Returns true if deleted, false if not found
-```
-
-#### Clearing a Store
-
-Clear all keys in a store:
-
-```javascript
-await db.clear('store1')
-```
-
-#### Listing Keys
-
-Retrieve all keys in a store:
-
-```javascript
-const keys = await db.keys('store1') // Returns array of keys
-```
-
-#### Checking Key Existence
-
-Check if a key exists:
-
-```javascript
-const exists = await db.hasKey('key1', 'store1') // Returns true/false
-```
-
-#### Searching by Index
-
-Find items in a store by an indexed attribute:
-
-```javascript
-const items = await db.findByIndex('group', 'group1', 'store1') // Returns [{ data: 'value', group: 'group1' }, ...]
-const fullItems = await db.findByIndex('group', 'group1', 'store1', true) // Returns full objects with metadata
-```
-
-#### Deleting the Database
-
-Delete the entire database:
-
-```javascript
-const result = await db.deleteDB() // Returns 1 (success), 0 (error), or 2 (blocked)
-```
-
-### Advanced Features
-
-#### Cache Management
-
-- **Clear Memory Cache**:
-  ```javascript
-  db.clearMemoryCache()
-  ```
-- **Get Cache Statistics**:
-  ```javascript
-  const stats = db.getCacheStats() // Returns size, maxSize, and sample entries
-  ```
-- **Clean Expired Cache Entries**:
-  ```javascript
-  db.cleanExpiredCache()
-  ```
-
-#### Diagnostics
-
-Retrieve diagnostic information about the database, including store and index details:
-
-```javascript
-const diagnostics = await db.diagnose()
-console.log(diagnostics)
-// Example output:
-// {
-//   name: 'myDatabase',
-//   version: 1,
-//   stores: {
-//     store1: { count: 5, keys: ['key1', 'key2', ...], indexes: ['group'] },
-//     store2: { count: 0, keys: [], indexes: [] }
-//   },
-//   cacheState: { writing: 0, deleting: 0, memory: 2 }
-// }
-```
-
-#### Transient Store
-
-If `manageTransients` is enabled, a transient store is available:
-
-```javascript
-const transientStore = db.transientStore // Returns 'transients' or null
-await db.put('tempKey', 'tempValue', transientStore, 30) // Store with 30-second TTL
-```
-
-## Public Methods
-
-Below is a detailed list of all public methods available in the `LocalDB` class, including their parameters, return
-values, and usage examples.
-
-### set(key, value, store, ttl = null)
-
-Alias for the `put` method, provided for API compatibility.
-
-- **Parameters**:
-    - `key` (string): The key to store the data under.
-    - `value` (any): The data to store.
-    - `store` (string): The name of the store to use.
-    - `ttl` (number|null, optional): Time-to-live in seconds; null for no expiration.
-- **Returns**: `Promise<void>` - Resolves when the operation completes.
-- **Throws**: Error if the key or store is invalid, or if the operation fails.
-- **Example**:
-  ```javascript
-  await db.set('user1', { name: 'John' }, 'users', 60)
-  ```
-
-### update(key, value, store, ttl = null)
-
-Alias for the `put` method, provided for API compatibility.
-
-- **Parameters**: Same as `set`.
-- **Returns**: Same as `set`.
-- **Throws**: Same as `set`.
-- **Example**:
-  ```javascript
-  await db.update('user1', { name: 'John Updated' }, 'users', 60)
-  ```
-
-### get(key, store, full = false)
-
-Retrieves a value from the specified store.
-
-- **Parameters**:
-    - `key` (string): The key to retrieve.
-    - `store` (string): The name of the store.
-    - `full` (boolean, optional): If true, returns the full object with metadata (`_ct_`, `_mt_`, `_ttl_`, `_exp_`);
-      otherwise, returns only the data.
-- **Returns**: `Promise<any>` - The stored value or null if not found or expired.
-- **Throws**: Error if the key or store is invalid, or if the operation fails.
-- **Example**:
-  ```javascript
-  const value = await db.get('user1', 'users') // { name: 'John' }
-  const fullValue = await db.get('user1', 'users', true) // { data: { name: 'John' }, _ct_: 1697054700000, _mt_: 1697054700000, _ttl_: 60000, _exp_: 1697054760000 }
-  ```
-
-### put(key, value, store, ttl = null)
-
-Stores a key-value pair in the specified store with an optional TTL.
-
-- **Parameters**:
-    - `key` (string): The key to store the data under.
-    - `value` (any): The data to store.
-    - `store` (string): The name of the store.
-    - `ttl` (number|null, optional): Time-to-live in seconds; null for no expiration.
-- **Returns**: `Promise<void>` - Resolves when the operation completes.
-- **Throws**: Error if the key or store is invalid, or if the operation fails.
-- **Example**:
-  ```javascript
-  await db.put('user1', { name: 'John', group: 'admin' }, 'users', 60)
-  ```
-
-### delete(key, store)
-
-Deletes a key from the specified store.
-
-- **Parameters**:
-    - `key` (string): The key to delete.
-    - `store` (string): The name of the store.
-- **Returns**: `Promise<boolean>` - True if the key was deleted, false if it didn’t exist or was already being deleted.
-- **Throws**: Error if the key or store is invalid, or if the operation fails.
-- **Example**:
-  ```javascript
-  const deleted = await db.delete('user1', 'users') // true
-  ```
-
-### clear(store)
-
-Clears all keys from the specified store.
-
-- **Parameters**:
-    - `store` (string): The name of the store to clear.
-- **Returns**: `Promise<void>` - Resolves when the operation completes.
-- **Throws**: Error if the store is invalid or the operation fails.
-- **Example**:
-  ```javascript
-  await db.clear('users')
-  ```
-
-### keys(store)
-
-Retrieves all keys in the specified store.
-
-- **Parameters**:
-    - `store` (string): The name of the store.
-- **Returns**: `Promise<string[]>` - Array of keys in the store.
-- **Throws**: Error if the store is invalid or the operation fails.
-- **Example**:
-  ```javascript
-  const keys = await db.keys('users') // ['user1', 'user2']
-  ```
-
-### hasKey(key, store)
-
-Checks if a key exists in the specified store.
-
-- **Parameters**:
-    - `key` (string): The key to check.
-    - `store` (string): The name of the store.
-- **Returns**: `Promise<boolean>` - True if the key exists and is valid, false otherwise.
-- **Throws**: Error if the key or store is invalid.
-- **Example**:
-  ```javascript
-  const exists = await db.hasKey('user1', 'users') // true
-  ```
-
-### findByIndex(indexName, indexValue, store, full = false)
-
-Finds items in a store by an indexed attribute.
-
-- **Parameters**:
-    - `indexName` (string): The name of the index to search.
-    - `indexValue` (any): The value to match in the index.
-    - `store` (string): The name of the store.
-    - `full` (boolean, optional): If true, returns full objects with metadata; otherwise, returns only the data.
-- **Returns**: `Promise<Object[]>` - Array of matching items.
-- **Throws**: Error if the store or index is invalid, or if the operation fails.
-- **Example**:
-  ```javascript
-  const admins = await db.findByIndex('group', 'admin', 'users') // [{ name: 'John', group: 'admin' }, { name: 'Jane', group: 'admin' }]
-  const fullAdmins = await db.findByIndex('group', 'admin', 'users', true) // [{ data: { name: 'John', group: 'admin' }, _ct_: ..., ... }, ...]
-  ```
-
-### deleteDB()
-
-Deletes the entire database.
-
-- **Parameters**: None.
-- **Returns**: `Promise<number>` - 0 (error), 1 (success), or 2 (blocked).
-- **Throws**: Error if the operation fails.
-- **Example**:
-  ```javascript
-  const result = await db.deleteDB() // 1
-  ```
-
-### diagnose()
-
-Diagnoses the database state and returns diagnostic information.
-
-- **Parameters**: None.
-- **Returns**: `Promise<Object>` - Diagnostic information including database name, version, store details (key count and
-  indexes), and cache state.
-- **Throws**: Error if the operation fails.
-- **Example**:
-  ```javascript
-  const diagnostics = await db.diagnose()
-  console.log(diagnostics)
-  // {
-  //   name: 'myDatabase',
-  //   version: 1,
-  //   stores: {
-  //     users: { count: 2, keys: ['user1', 'user2'], indexes: ['group'] },
-  //     other: { count: 0, keys: [], indexes: [] }
-  //   },
-  //   cacheState: { writing: 0, deleting: 0, memory: 2 }
-  // }
-  ```
-
-### clearMemoryCache()
-
-Clears the in-memory cache.
-
-- **Parameters**: None.
-- **Returns**: None.
-- **Example**:
-  ```javascript
-  db.clearMemoryCache() // Logs: "Memory cache cleared"
-  ```
-
-### getCacheStats()
-
-Retrieves statistics about the in-memory cache.
-
-- **Parameters**: None.
-- **Returns**: `Object` - Cache statistics including size, max size, and sample entries.
-- **Example**:
-  ```javascript
-  const stats = db.getCacheStats()
-  console.log(stats) // { size: 2, maxSize: 1000, entries: ['users:user1', 'users:user2'] }
-  ```
-
-### cleanExpiredCache()
-
-Removes expired entries from the in-memory cache.
-
-- **Parameters**: None.
-- **Returns**: None.
-- **Example**:
-  ```javascript
-  db.cleanExpiredCache()
-  ```
-
-## Configuration
-
-- **CACHE_TTL**: Cache entries expire after 60 seconds (configurable via `CACHE_TTL` constant).
-- **DEFAULT_RETRY_DELAY**: 10ms delay between transaction retries.
-- **DEFAULT_MAX_RETRIES**: Up to 3 retries for failed transactions.
-- **cacheMaxSize**: Maximum of 1000 entries in the in-memory cache.
-
-## Example
-
-```javascript
-const db = new LocalDB({
-                           name:             'exampleDB',
-                           stores: [
-                               {name: 'data', indexes: [{name: 'group', keyPath: 'group'}]},
-                               'otherData'
-                           ],
-                           manageTransients: true
-                       })
-
-// Store data with indexable attribute
-await db.put('user1', {name: 'John', group: 'admin'}, 'data', 120)
-await db.put('user2', {name: 'Jane', group: 'admin'}, 'data', 120)
-await db.put('user3', {name: 'Bob', group: 'user'}, 'data', 120)
-
-// Retrieve data by key
-const user = await db.get('user1', 'data')
-console.log(user) // { name: 'John', group: 'admin' }
-
-// Find data by index
-const adminUsers = await db.findByIndex('group', 'admin', 'data')
-console.log(adminUsers) // [{ name: 'John', group: 'admin' }, { name: 'Jane', group: 'admin' }]
-
-// Check if key exists
-const exists = await db.hasKey('user1', 'data')
-console.log(exists) // true
-
-// Delete data
-await db.delete('user1', 'data')
-
-// Clear store
-await db.clear('data')
-
-// Delete database
-await db.deleteDB()
-```
-
-## Error Handling
-
-All methods throw errors if operations fail (e.g., invalid key, store, or index). Use try-catch blocks:
-
-```javascript
-try {
-    await db.findByIndex('invalidIndex', 'value', 'data')
-}
-catch (error) {
-    console.error(error.message) // "Index 'invalidIndex' does not exist in store 'data'."
+{
+    data: value,
+    _ct_: Date.now(),
+    _mt_: Date.now(),
+    _ttl_: ttlInMilliseconds,
+    _exp_: expirationTimestamp
 }
 ```
 
-## Notes
+`_ttl_` and `_exp_` are omitted when no positive TTL is supplied. The public TTL parameter is expressed in seconds. Both timestamps are recreated on every `put`.
 
-- Ensure `idb` is loaded before using `LocalDB`.
-- The library uses an in-memory cache to improve performance but respects TTLs.
-- Transient stores are useful for temporary data with automatic expiration.
-- Always validate store names, keys, and index names to avoid errors.
-- Indexes must be defined at store creation and cannot be modified without incrementing the database version.
-- Mixed store configurations (with and without indexes) are supported, e.g.,
-  `[{ name: 'store1', indexes: [...] }, 'store2']`.
+## Properties
 
-## License
+### `dbName`
 
-Copyright © 2025 LGS1920. All rights reserved.
+Return the physical IndexedDB name.
 
-## Contact
+```javascript
+const name = db.dbName
+```
 
-For issues or inquiries, contact the LGS1920 Team at contact@lgs1920.fr.
+### `storeNames`
+
+Return a copy of the configured store names.
+
+```javascript
+const stores = db.storeNames
+```
+
+### `transientStore`
+
+Return `transients` when `manageTransients` is enabled, otherwise `null`.
+
+## CRUD API
+
+### `put(key, value, store, ttl = null)`
+
+Write a payload under a non-empty string key. A positive TTL is interpreted as seconds.
+
+```javascript
+await db.put('record-1', {group: 'primary'}, 'indexed-records', 60)
+```
+
+`put` resolves after the transaction succeeds and emits a mutation event.
+
+Use `put` directly. The currently declared `set` and `update` aliases are initialized before the arrow-field implementation of `put` and are therefore undefined.
+
+### `get(key, store, full = false)`
+
+Return the payload, the complete envelope when `full` is true, or `null` when the record is missing or expired.
+
+```javascript
+const value = await db.get('record-1', 'indexed-records')
+const envelope = await db.get('record-1', 'indexed-records', true)
+```
+
+Expired key reads attempt to delete the stored record.
+
+### `delete(key, store)`
+
+Delete an existing record and return `true`. Return `false` when the record does not exist or another deletion of the same key is already in progress.
+
+```javascript
+const deleted = await db.delete('record-1', 'indexed-records')
+```
+
+An effective deletion emits a mutation event.
+
+### `clear(store)`
+
+Remove every record from a store, clear matching key-cache entries, and emit a `clear` mutation.
+
+```javascript
+await db.clear('records')
+```
+
+### `keys(store)`
+
+Return all IndexedDB keys from the store.
+
+```javascript
+const keys = await db.keys('records')
+```
+
+Application callers should use string keys even though IndexedDB can return other valid key types.
+
+### `hasKey(key, store)`
+
+Return whether `get` resolves to a non-null value.
+
+```javascript
+const exists = await db.hasKey('record-1', 'records')
+```
+
+This method converts read failures to `false`.
+
+## Index API
+
+### `findByIndex(indexName, indexValue, store, full = false)`
+
+Return matching payloads, or complete envelopes when `full` is true.
+
+```javascript
+const records = await db.findByIndex('group', 'primary', 'indexed-records')
+```
+
+Null or undefined index values return an empty array.
+
+The implementation attempts a one-time record rewrite when an index is missing, has the wrong key path, or contains no indexed records. A rewrite cannot create an index outside an IndexedDB version upgrade. Always increment the database version when adding or changing an index.
+
+## Mutation API
+
+### `subscribeMutations(listener)`
+
+Register a listener and return an unsubscribe function.
+
+```javascript
+const unsubscribe = db.subscribeMutations(mutation => {
+    console.log(mutation)
+})
+
+unsubscribe()
+```
+
+Mutation payload:
+
+```javascript
+{
+    database,
+    timestamp,
+    action: 'put' | 'delete' | 'clear',
+    store,
+    key,
+    value
+}
+```
+
+`key` and `value` are included only when relevant. Listener failures are logged and do not fail the completed database operation.
+
+Persistent-folder synchronization depends on these events. Do not bypass `LocalDB` for application writes unless the synchronization consequences are intentional.
+
+## Maintenance API
+
+### `forceOneTimeRebuild(store)`
+
+Rewrite every record in a store so configured indexes are repopulated.
+
+```javascript
+await db.forceOneTimeRebuild('indexed-records')
+```
+
+This is a repair tool. It does not replace a versioned schema upgrade.
+
+### `diagnose()`
+
+Return database version, store counts, sample keys, index definitions and counts, and cache activity.
+
+```javascript
+const diagnostic = await db.diagnose()
+```
+
+Failures are returned as `{error: message}` instead of being thrown.
+
+### `clearMemoryCache()`
+
+Remove every cached read.
+
+```javascript
+db.clearMemoryCache()
+```
+
+### `deleteDB()`
+
+Close the wrapper connection and request complete IndexedDB deletion.
+
+```javascript
+const result = await db.deleteDB()
+```
+
+Return codes:
+
+| Code | Meaning |
+|---:|---|
+| `0` | Error |
+| `1` | Success |
+| `2` | Deletion blocked by another connection |
+
+## Transactions And Validation
+
+- Keys must be non-empty strings.
+- Store names must be declared at construction.
+- Each operation creates its own transaction.
+- Failed transactions are attempted up to three times.
+- Retry delay is 10 milliseconds multiplied by the attempt number.
+- There is no public transaction spanning multiple operations, stores, or databases.
+
+## Cache And TTL Constraints
+
+The memory cache has a 60-second lifetime and a maximum size of 1,000 entries.
+
+Current constraints:
+
+- A cached key read checks cache age before checking the record expiry timestamp.
+- Index cache entries are not invalidated by `put` or `delete`.
+- A recently expired record or changed index result can therefore remain visible until the cache entry expires.
+- `findByIndex` omits expired envelopes but does not delete them.
+
+Clear the memory cache when a maintenance or migration path requires an immediate uncached read.
+
+## Schema Upgrade Rules
+
+The IndexedDB upgrade callback:
+
+- Creates missing stores.
+- Creates missing configured indexes.
+- Replaces an index whose key path changed.
+- Schedules a post-upgrade record rewrite for affected stores.
+
+It does not remove obsolete stores or indexes and does not migrate domain payloads based on `oldVersion`. Domain owners such as `Journey`, `SettingsSection`, `WidgetCache`, and `IonTokenManager` normalize legacy records when reading them.
+
+For every store or index change:
+
+1. Update the constructor configuration.
+2. Increment the database version.
+3. Add an upgrade test with pre-existing records.
+4. Verify JSON and ZIP round trips.
+5. Update the [internal database architecture](../../../current/src/core/db/INTERNAL_DATABASE_ARCHITECTURE.md).

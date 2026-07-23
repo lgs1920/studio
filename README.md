@@ -154,6 +154,7 @@ points include:
 
 - [Current technical documentation](tech-doc/current/)
 - [Implementation work to do](tech-doc/todo/)
+- [Internal database architecture](tech-doc/current/src/core/db/INTERNAL_DATABASE_ARCHITECTURE.md)
 - [Replay video architecture](tech-doc/todo/src/core/ui/replay/REPLAY_VIDEO_ARCHITECTURE.md)
 - [Journey replay/video issues](tech-doc/current/JOURNEY_REPLAY_VIDEO_ISSUES.md)
 - [Replay track timeline editor evolution](tech-doc/todo/src/core/ui/replay/REPLAY_TRACK_TIMELINE_EDITOR_EVOLUTION.md)
@@ -179,6 +180,7 @@ The Skills are stored in [.aiassistant/skills/](.aiassistant/skills/) and cover:
 - [CSS theme system](.aiassistant/skills/lgs-1920-studio-css-theme-system/SKILL.md)
 - [Documentation maintenance](.aiassistant/skills/lgs-1920-studio-documentation-maintenance/SKILL.md)
 - [GPX journey import](.aiassistant/skills/lgs-1920-studio-gpx-journey-import/SKILL.md)
+- [Internal database](.aiassistant/skills/lgs-1920-studio-internal-database/SKILL.md)
 - [Journey statistics](.aiassistant/skills/lgs-1920-studio-journey-statistics/SKILL.md)
 - [Map layer providers](.aiassistant/skills/lgs-1920-studio-map-layer-provider/SKILL.md)
 - [Map POI management](.aiassistant/skills/lgs-1920-studio-map-poi-management/SKILL.md)
