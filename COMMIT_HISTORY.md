@@ -1,5 +1,10 @@
 # Commit History
 
+## 2026-07-23 — [`docs: refine replay timeline constraints`](https://github.com/lgs1920/studio/commit/fc61a8ad)
+
+- Document the single replay clip shared by Draft recording and HQ export.
+- Reduce the widget track limit from 120 to 20.
+
 ## 2026-07-23 — [`docs: update AI rules and skills for commit history`](https://github.com/lgs1920/studio/commit/b48f4893)
 
 - Update the project rules and AI skills for commit history and technical-documentation organization.
