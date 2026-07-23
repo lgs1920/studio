@@ -1,5 +1,11 @@
 # Commit History
 
+## 2026-07-23 — [`docs: add internal database skill and architecture`](https://github.com/lgs1920/studio/commit/a095213c)
+
+- Add the internal database Skill and separate its scope from feature-level browser persistence.
+- Document IndexedDB schemas, JavaScript APIs, backup formats, local folder synchronization, security, and current limitations.
+- Refresh the LocalDB API reference and synchronization guide against the implementation.
+
 ## 2026-07-23 — [`docs: refine replay timeline constraints`](https://github.com/lgs1920/studio/commit/fc61a8ad)
 
 - Document the single replay clip shared by Draft recording and HQ export.
