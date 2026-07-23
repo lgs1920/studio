@@ -131,6 +131,9 @@ export class WidgetCropper {
         const container = config.container ?? lgs.canvas
 
         const readPx = value => {
+            if (!value) {
+                return null
+            }
             const px = __.app.parsePx(value || '')
             return Number.isFinite(px) ? px : null
         }
@@ -144,11 +147,13 @@ export class WidgetCropper {
                            ? elementRect.top - containerRect.top
                            : elementRect?.top
         const persistedCrop = config.cropDimensions ?? {}
+        // Inline dimensions are the untransformed logical crop size. DOMRect
+        // can still reflect a historical transform while the editor is closing.
         const crop = {
             left:   Math.round(elementLeft ?? readPx(element?.style?.left) ?? config.position?.left ?? persistedCrop.left),
             top:    Math.round(elementTop ?? readPx(element?.style?.top) ?? config.position?.top ?? persistedCrop.top),
-            width:  Math.round(elementRect?.width ?? readPx(element?.style?.width) ?? persistedCrop.width ?? 0),
-            height: Math.round(elementRect?.height ?? readPx(element?.style?.height) ?? persistedCrop.height ?? 0),
+            width:  Math.round(readPx(element?.style?.width) ?? elementRect?.width ?? persistedCrop.width ?? 0),
+            height: Math.round(readPx(element?.style?.height) ?? elementRect?.height ?? persistedCrop.height ?? 0),
         }
 
         if (!Number.isFinite(crop.left) ||

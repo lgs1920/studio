@@ -588,7 +588,7 @@ export class WidgetCoreControls {
             }
 
             let scaleWasAdapted = false
-            if (allowAutoAdapt && !skipInitialAutoAdapt && config.type === LGS_VISUAL_WIDGET &&
+            if (allowAutoAdapt && !skipInitialAutoAdapt && !config.isCropper && config.type === LGS_VISUAL_WIDGET &&
                 config.widgetsBoard !== VIDEO_WIDGETS_BOARD) {
                 const oldScale = {...config.scale}
                 config.scale = this.adaptScaleToContainer(config, boundsRect)
@@ -913,9 +913,9 @@ export class WidgetCoreControls {
         this.applyPosition(element, newPosition, moveable, false, setPosition)
 
         if (config.isCropper) {
-            const rect = element.getBoundingClientRect()
-            const width = Number.isFinite(config.cropDimensions?.width) ? config.cropDimensions.width : (rect.width || 200)
-            const height = Number.isFinite(config.cropDimensions?.height) ? config.cropDimensions.height : (rect.height || 200)
+            const initialRect = element.getBoundingClientRect()
+            const width = Number.isFinite(config.cropDimensions?.width) ? config.cropDimensions.width : (initialRect.width || 200)
+            const height = Number.isFinite(config.cropDimensions?.height) ? config.cropDimensions.height : (initialRect.height || 200)
             config.cropDimensions = {
                 left: newPosition.left,
                 top:  newPosition.top,
@@ -925,12 +925,8 @@ export class WidgetCoreControls {
             element.style.width = `${width}px`
             element.style.height = `${height}px`
             __.ui.widgetManager.applyCropToOverlay(config)
-
-            moveable.current.request('resizable', {
-                keepRatio:   !!config.ratio?.locked || false,
-                deltaWidth:  0,
-                deltaHeight: 0,
-            }, true)
+            // A synthetic Moveable resize here emits onResizeEnd during mount
+            // and can overwrite the dimensions that were just restored.
         }
         else if ((config.fromDB || config.fromRuntime) &&
             Number.isFinite(config.dimensions?.width) &&

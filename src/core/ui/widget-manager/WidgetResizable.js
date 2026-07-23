@@ -44,7 +44,6 @@ export class WidgetResizable {
     #resizeStartPosition = {left: 0, top: 0}
     #pendingCropUpdateFrame = null
     #pendingCropUpdateConfig = null
-    #pendingCropUpdatePrevious = null
     /**
      * Creates or returns the singleton instance of WidgetResizable.
      * @param {WidgetManager} widgetManager - The WidgetManager instance
@@ -62,21 +61,19 @@ export class WidgetResizable {
     #runPendingCropUpdate = () => {
         this.#pendingCropUpdateFrame = null
         const config = this.#pendingCropUpdateConfig
-        const previousCrop = this.#pendingCropUpdatePrevious
         this.#pendingCropUpdateConfig = null
-        this.#pendingCropUpdatePrevious = null
 
         if (!config?.isCropper || !config.cropDimensions) {
             return
         }
 
+        // Keep the outside overlay responsive without dispatching a crop event
+        // that could feed geometry back into Moveable during the same gesture.
         this.#widgetCropper.applyCropToOverlay(config)
-        this.#widgetCropper.dispatchCropUpdate(config, 'resize', previousCrop)
     }
 
-    #schedulePendingCropUpdate = (config, previousCrop = null) => {
+    #schedulePendingCropUpdate = config => {
         this.#pendingCropUpdateConfig = config
-        this.#pendingCropUpdatePrevious = previousCrop
         if (this.#pendingCropUpdateFrame !== null) {
             return
         }
@@ -99,7 +96,6 @@ export class WidgetResizable {
         }
         this.#pendingCropUpdateFrame = null
         this.#pendingCropUpdateConfig = null
-        this.#pendingCropUpdatePrevious = null
     }
 
     /**
@@ -189,7 +185,7 @@ export class WidgetResizable {
                 prevCropDimensions.top !== after.top ||
                 prevCropDimensions.width !== after.width ||
                 prevCropDimensions.height !== after.height) {
-                this.#schedulePendingCropUpdate(config, prevCropDimensions)
+                this.#schedulePendingCropUpdate(config)
             }
         }
         else {
@@ -251,7 +247,9 @@ export class WidgetResizable {
         this.#flushPendingCropUpdate()
 
         event.target.classList.remove('resizing', LGS_ANIMATION_RESIZING, `direction-${this.#cardinalDirections[this.#resizeDirection]}`)
-        const config = await this.#widgetManager.retrieveConfig(event.target)
+        const widgetId = this.#widgetManager.retrieveElementId(event.target)
+        const config = this.#widgetManager.getWidgetConfig(widgetId)
+                     ?? await this.#widgetManager.retrieveConfig(event.target)
         config.runtimeReady = true
         if (config?.isCropper) {
             config.element = event.target

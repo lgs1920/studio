@@ -69,6 +69,7 @@ export const CropZoneWidget = memo(({
             isCropper:        true,
             resizable:        true,
             draggable:        !lockToCenter,
+            snappable:        true,
             outsideOverlay:   overlay,
             margin:           lgs?.gutter?.xs ?? 8,
             resizeFromCenter: true,

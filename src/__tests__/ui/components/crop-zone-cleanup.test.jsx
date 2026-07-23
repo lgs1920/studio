@@ -38,7 +38,7 @@ describe('CropZone cleanup', () => {
             stores: {
                 ui: {
                     video: proxy({
-                        editing: false,
+                        editing: true,
                     }),
                 },
             },
@@ -51,7 +51,7 @@ describe('CropZone cleanup', () => {
         globalThis.lgs = undefined
     })
 
-    it('does not persist crop dimensions on unmount after cancel', () => {
+    it('does not persist crop dimensions on unmount because the toolbar owns exit persistence', () => {
         const {unmount} = render(<CropZone context={{id: 'video-crop-zone'}}/>)
 
         unmount()

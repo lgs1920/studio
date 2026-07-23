@@ -548,6 +548,7 @@ export const Widget = ({isVisible, className = '', moveableClassName = '', conta
     }, [config?.snapSensitivity])
     const {threshold: snapThreshold, gap: snapGap} = snapSettings
     const canSnapWidget = isVisualWidget && (config?.snappable ?? true)
+    const canSnapCenter = canSnapWidget && !config.isCropper
     const gridSnapEnabled = canSnapWidget && widgetGrid.enabled && widgetGrid.snap
 
     const elementGuidelines = useMemo(() => {
@@ -556,19 +557,21 @@ export const Widget = ({isVisible, className = '', moveableClassName = '', conta
         }
 
         const board = actualContainer ?? lgs.canvas
-        const peerWidgets = resolveWidgetElementGuidelines({
-            board,
-            currentWidgetId: widgetId,
-            widgetsBoard: config.widgetsBoard,
-            widgetListSnapshot,
-        })
+        const peerWidgets = config.isCropper
+                            ? []
+                            : resolveWidgetElementGuidelines({
+                                  board,
+                                  currentWidgetId: widgetId,
+                                  widgetsBoard: config.widgetsBoard,
+                                  widgetListSnapshot,
+                              })
         const elementGuidelines = peerWidgets.map(element => ({
             element,
             className: WIDGET_SNAP_ELEMENT_GUIDELINE_CLASS,
             refresh: true,
         }))
         return board ? [board, ...elementGuidelines] : elementGuidelines
-    }, [actualContainer, canSnapWidget, config.widgetsBoard, guidelineRevision, widgetId, widgetListSnapshot])
+    }, [actualContainer, canSnapWidget, config.isCropper, config.widgetsBoard, guidelineRevision, widgetId, widgetListSnapshot])
 
     const buildGuidelines = useCallback(() => {
         const container = actualContainer ?? lgs.canvas
@@ -576,13 +579,13 @@ export const Widget = ({isVisible, className = '', moveableClassName = '', conta
             return {verticalGuidelines: [], horizontalGuidelines: []}
         }
         const rect = container.getBoundingClientRect()
-        const centerGuidelines = canSnapWidget
+        const centerGuidelines = canSnapCenter
                                   ? {
                                       verticalGuidelines:   createStyledGuidelines([rect.left + (rect.width / 2)], WIDGET_SNAP_CENTER_GUIDELINE_CLASS),
                                       horizontalGuidelines: createStyledGuidelines([rect.top + (rect.height / 2)], WIDGET_SNAP_CENTER_GUIDELINE_CLASS),
                                   }
                                   : {verticalGuidelines: [], horizontalGuidelines: []}
-        const peerWidgets = canSnapWidget
+        const peerWidgets = canSnapWidget && !config.isCropper
                             ? resolveWidgetElementGuidelines({
                                 board: container,
                                 currentWidgetId: widgetId,
@@ -591,10 +594,10 @@ export const Widget = ({isVisible, className = '', moveableClassName = '', conta
                             })
                             : []
         const peerCenterGuidelines = buildWidgetCenterGuidelines(peerWidgets)
-        const gridGuidelines = gridSnapEnabled
+        const gridGuidelines = gridSnapEnabled && !config.isCropper
                                ? buildCenteredGridLines(rect, widgetGrid.size)
                                : {verticalGuidelines: [], horizontalGuidelines: []}
-        const localGridGuidelines = canSnapWidget && config?.snapGrid
+        const localGridGuidelines = canSnapWidget && !config.isCropper && config?.snapGrid
                                     ? buildCenteredGridLines(rect, config.snapGrid)
                                     : {verticalGuidelines: [], horizontalGuidelines: []}
         return {
@@ -611,7 +614,7 @@ export const Widget = ({isVisible, className = '', moveableClassName = '', conta
                 createStyledGuidelines(localGridGuidelines.horizontalGuidelines, WIDGET_SNAP_GRID_GUIDELINE_CLASS),
             ),
         }
-    }, [actualContainer, canSnapWidget, config.snapGrid, config.widgetsBoard, gridSnapEnabled, widgetGrid.size, widgetId, widgetListSnapshot])
+    }, [actualContainer, canSnapCenter, canSnapWidget, config.isCropper, config.snapGrid, config.widgetsBoard, gridSnapEnabled, widgetGrid.size, widgetId, widgetListSnapshot])
 
     useEffect(() => {
         const update = () => {
@@ -1579,15 +1582,15 @@ export const Widget = ({isVisible, className = '', moveableClassName = '', conta
                 elementGuidelines={elementGuidelines}
                 horizontalGuidelines={guidelines.horizontalGuidelines}
                 verticalGuidelines={guidelines.verticalGuidelines}
-                snapCenter={canSnapWidget}
+                snapCenter={canSnapCenter}
                 snapElement={canSnapWidget}
                 snapGap={snapGap}
                 snapThreshold={snapThreshold}
                 snapRotationThreshold={5}
                 snapRotationDegrees={[0, -30, -45, -60, -90, -120, -135, -150, -180]}
                 snappable={canSnapWidget}
-                snapDirections={canSnapWidget ? {top: true, right: true, bottom: true, left: true, center: true, middle: true} : false}
-                elementSnapDirections={canSnapWidget ? {top: true, left: true, bottom: true, right: true, center: true, middle: true} : false}
+                snapDirections={canSnapWidget ? {top: true, right: true, bottom: true, left: true, center: canSnapCenter, middle: canSnapCenter} : false}
+                elementSnapDirections={canSnapWidget ? {top: true, left: true, bottom: true, right: true, center: canSnapCenter, middle: canSnapCenter} : false}
                 maxSnapElementGuidelineDistance={canSnapWidget ? 10 : 0}
                 renderDirections={controlBox.renderDirections}
                 zoom={controlBox.zoom}

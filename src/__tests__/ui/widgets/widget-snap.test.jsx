@@ -199,6 +199,40 @@ describe('Widget snap behavior', () => {
         expect(latestMoveableProps().snappable).toBe(true)
     })
 
+    it('limits crop snapping to the board edges', async () => {
+        installGlobals({grid: {enabled: true, size: 50, snap: true}})
+
+        renderWidget({
+            type:      LGS_VISUAL_WIDGET,
+            isCropper: true,
+            snappable: true,
+        })
+
+        await waitFor(() => {
+            expect(latestMoveableProps().elementGuidelines).toEqual([lgs.canvas])
+            expect(latestMoveableProps().verticalGuidelines).toEqual([])
+            expect(latestMoveableProps().horizontalGuidelines).toEqual([])
+        })
+        expect(latestMoveableProps().snapCenter).toBe(false)
+        expect(latestMoveableProps().snapElement).toBe(true)
+        expect(latestMoveableProps().snapDirections).toEqual({
+            top:    true,
+            right:  true,
+            bottom: true,
+            left:   true,
+            center: false,
+            middle: false,
+        })
+        expect(latestMoveableProps().elementSnapDirections).toEqual({
+            top:    true,
+            left:   true,
+            bottom: true,
+            right:  true,
+            center: false,
+            middle: false,
+        })
+    })
+
     it('adds grid guidelines for visual widgets only when grid snap is enabled', async () => {
         installGlobals({grid: {enabled: true, size: 50, snap: true}})
 

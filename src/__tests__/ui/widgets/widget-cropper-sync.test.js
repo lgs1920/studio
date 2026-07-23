@@ -111,6 +111,19 @@ describe('WidgetCropper syncCropDimensionsFromElement', () => {
         expect(widgetManager.setConfig).toHaveBeenCalledWith('video-crop-zone', config)
     })
 
+    it('persists the logical inline size when the rendered rect is transformed', async () => {
+        const cropper = new WidgetCropper(widgetManager)
+        config.persist = true
+        config.element.style.width = '720px'
+        config.element.style.height = '405px'
+
+        const crop = await cropper.syncCropDimensionsFromElement('video-crop-zone', true, 'editing-exit')
+
+        expect(crop.width).toBe(720)
+        expect(crop.height).toBe(405)
+        expect(widgetManager.saveWidgetPosition).toHaveBeenCalledWith('video-crop-zone', config)
+    })
+
     it('does not apply the previous crop twice during deferred layout', () => {
         const cropper = new WidgetCropper(widgetManager)
         widgetManager.repositionWidgetsForBoard = vi.fn()

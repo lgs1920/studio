@@ -235,9 +235,14 @@ export class WidgetCoreRegistry {
     disposeByGroup = (groupId, usePersist = false) => {
         const elementsToDispose = []
         for (const [elementId, config] of this.#widgets) {
-            if (config.group === groupId && (!usePersist || !config.persist)) {
-                elementsToDispose.push(elementId)
+            if (config.group !== groupId) {
+                continue
             }
+            if (usePersist && config.persist) {
+                this.#invalidateRuntimeConfig(elementId, config)
+                continue
+            }
+            elementsToDispose.push(elementId)
         }
         for (const elementId of elementsToDispose) {
             const config = this.getWidgetConfig(elementId)
@@ -257,6 +262,41 @@ export class WidgetCoreRegistry {
     }
 
     /**
+     * Releases runtime resources while preserving the widget configuration and persistence record.
+     * @param {string} elementId - Widget identifier
+     * @param {Object} config - Widget runtime configuration
+     */
+    #invalidateRuntimeConfig = (elementId, config) => {
+        if (config.observer) {
+            const observedTargets = config.observedTargets ?? [config.boundsContainer ?? config.container]
+            try {
+                observedTargets.filter(Boolean).forEach(target => config.observer.unobserve(target))
+            }
+            catch {
+                void 0
+            }
+            config.observer.disconnect()
+            config.observer = null
+        }
+        if (config.elementObserver) {
+            config.elementObserver.disconnect()
+            config.elementObserver = null
+        }
+        if (config.windowResizeHandler) {
+            window.removeEventListener('resize', config.windowResizeHandler)
+            config.windowResizeHandler = null
+        }
+        config.element = null
+        config.observedTargets = []
+        config.fromDB = false
+        config.fromRuntime = false
+        config.runtimeReady = false
+        config.skipInitialElementResizeSync = false
+        __.ui.widgetCache?.unmount?.(elementId)
+        this.#moveables.delete(elementId)
+    }
+
+    /**
      * Invalidates the runtime state of all widgets attached to a board without touching persistence.
      * This is used when a board is temporarily unmounted and needs to be reloaded from DB on the next mount.
      *
@@ -273,34 +313,7 @@ export class WidgetCoreRegistry {
             if (config.widgetsBoard !== widgetsBoard) {
                 continue
             }
-
-            if (config.observer) {
-                const observedTargets = config.observedTargets ?? [config.boundsContainer ?? config.container]
-                try {
-                    observedTargets.filter(Boolean).forEach(target => config.observer.unobserve(target))
-                }
-                catch {
-                    void 0
-                }
-                config.observer.disconnect()
-                config.observer = null
-            }
-            if (config.elementObserver) {
-                config.elementObserver.disconnect()
-                config.elementObserver = null
-            }
-            if (config.windowResizeHandler) {
-                window.removeEventListener('resize', config.windowResizeHandler)
-                config.windowResizeHandler = null
-            }
-            config.element = null
-            config.observedTargets = []
-            config.fromDB = false
-            config.fromRuntime = false
-            config.runtimeReady = false
-            config.skipInitialElementResizeSync = false
-            __.ui.widgetCache?.unmount?.(elementId)
-            this.#moveables.delete(elementId)
+            this.#invalidateRuntimeConfig(elementId, config)
             invalidated += 1
         }
 
@@ -664,6 +677,12 @@ export class WidgetCoreRegistry {
             }
         }
 
+        // Crop dimensions are the rendered dimensions. Unlike regular visual
+        // widgets, a crop must never combine its width/height with a scale.
+        if (config.isCropper) {
+            config.scale = {x: 1, y: 1}
+        }
+
         this.#widgets.set(elementId, config)
         return config
     }
@@ -762,12 +781,14 @@ export class WidgetCoreRegistry {
         const fallbackTopRatio = config.savedRatios?.topRatio
         const leftRatio = Number.isFinite(computedLeftRatio) ? computedLeftRatio : (Number.isFinite(fallbackLeftRatio) ? fallbackLeftRatio : 0)
         const topRatio = Number.isFinite(computedTopRatio) ? computedTopRatio : (Number.isFinite(fallbackTopRatio) ? fallbackTopRatio : 0)
-        const scale = config.scale
-                     ? {
-                         x: Number.isFinite(Number(config.scale.x)) ? Number(config.scale.x) : 1,
-                         y: Number.isFinite(Number(config.scale.y)) ? Number(config.scale.y) : 1,
-                     }
-                     : {x: 1, y: 1}
+        const scale = config.isCropper
+                      ? {x: 1, y: 1}
+                      : config.scale
+                        ? {
+                            x: Number.isFinite(Number(config.scale.x)) ? Number(config.scale.x) : 1,
+                            y: Number.isFinite(Number(config.scale.y)) ? Number(config.scale.y) : 1,
+                        }
+                        : {x: 1, y: 1}
         const ratio = config.ratio
                       ? {
                           value: config.ratio.value ?? null,

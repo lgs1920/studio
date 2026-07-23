@@ -66,14 +66,15 @@ export const VideoRecordingSettingsToolbar = memo(() => {
 
     // --- Handlers ---
 
-    const syncCropFrame = useCallback((phase = 'sync') => {
-        void __.ui.widgetManager.syncCropDimensionsFromElement(VIDEO_CROP_ZONE, true, phase)
-    }, [])
+    const syncCropFrame = useCallback((phase = 'sync') => (
+        __.ui.widgetManager.syncCropDimensionsFromElement(VIDEO_CROP_ZONE, true, phase)
+    ), [])
 
-    /** Cancels the video editing process and restores widgets immediately. */
-    const handleCancel = useCallback(() => {
+    /** Persists the live crop before closing the video editor. */
+    const handleCancel = useCallback(async () => {
+        await syncCropFrame('editing-exit')
         cancelVideoEditing()
-    }, [])
+    }, [syncCropFrame])
 
     const leadingAction = replay.recordingSync === true && Boolean(lgs.theJourney) ? (
         <JourneyReplayButton
@@ -99,8 +100,10 @@ export const VideoRecordingSettingsToolbar = memo(() => {
         prepareVideoCaptureUi()
         const toolbarPosition = resolveRecorderToolbarPosition(event)
         Object.assign($video, {
+            editing:      false,
             preRecording: true,
             recording:    false,
+            finalizing:   false,
             paused:       false,
             position: toolbarPosition,
             toolbarPosition,
@@ -140,7 +143,7 @@ export const VideoRecordingSettingsToolbar = memo(() => {
             }
 
             __.ui.widgetManager.toCenter(element, 0)
-            syncCropFrame('replay-sync-center')
+            void syncCropFrame('replay-sync-center')
         }
 
         raf = requestAnimationFrame(centerCropZone)
@@ -176,7 +179,7 @@ export const VideoRecordingSettingsToolbar = memo(() => {
                     return true
                 },
                 afterStep:  () => {
-                    syncCropFrame('composition-exit')
+                    void syncCropFrame('composition-exit')
                     Object.assign($video.cropper, {
                         ratioEditor:   false,
                         presetEditor: false,
@@ -211,12 +214,8 @@ export const VideoRecordingSettingsToolbar = memo(() => {
                     return true
                 },
                 onClick: async (_index, event) => {
-                    syncCropFrame('before-recording')
+                    await syncCropFrame('before-recording')
                     await handleVideoRecording(event)
-                    Object.assign($video, {
-                        editing:    false,
-                        finalizing: false,
-                    })
                     return true
                 },
             },

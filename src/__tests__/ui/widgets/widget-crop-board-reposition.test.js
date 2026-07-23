@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { LGS_VISUAL_WIDGET, LGS_WIDGET, VIDEO_WIDGETS_BOARD } from '@Core/constants'
+import { LGS_VISUAL_WIDGET, LGS_WIDGET, VIDEO_CROP_ZONE, VIDEO_WIDGETS_BOARD } from '@Core/constants'
 import { WidgetCoreControls } from '@Core/ui/widget-manager/WidgetCoreControls'
 import { WidgetCoreRegistry } from '@Core/ui/widget-manager/WidgetCoreRegistry'
 
@@ -29,6 +29,9 @@ describe('crop board widget repositioning', () => {
             saveWidgetPosition: vi.fn(),
             refreshEditorPreviewSnapshot: vi.fn(),
             getWidgetConfig: vi.fn(),
+            applyCropToOverlay: vi.fn(),
+            dispatchCropUpdate: vi.fn(),
+            setConfig: vi.fn(),
         }
         globalThis.__ = {ui: {widgetManager: manager}}
         globalThis.lgs = {gutter: {xs: 5}}
@@ -252,5 +255,55 @@ describe('crop board widget repositioning', () => {
         expect(config.position.top).toBeCloseTo(-(600 - (600 * (2 / 3))) / 2)
         expect(config.savedRatios.leftEdgeRatio).toBe(0)
         expect(config.savedRatios.topEdgeRatio).toBe(0)
+    })
+
+    it('resizes crop dimensions without applying the generic visual scale', () => {
+        const originalResizeObserver = globalThis.ResizeObserver
+        globalThis.ResizeObserver = class {
+            observe = vi.fn()
+            unobserve = vi.fn()
+            disconnect = vi.fn()
+        }
+        board.getBoundingClientRect = vi.fn(() => ({
+            left: 0, top: 0, width: 545, height: 681, right: 545, bottom: 681,
+        }))
+        widget.setAttribute('data-widget-id', VIDEO_CROP_ZONE)
+        widget.getBoundingClientRect = vi.fn(() => ({
+            left: 0, top: 0, width: 813, height: 1016, right: 813, bottom: 1016,
+        }))
+        const config = {
+            id: VIDEO_CROP_ZONE,
+            type: LGS_VISUAL_WIDGET,
+            isCropper: true,
+            container: board,
+            boundsContainer: board,
+            bounds: {left: 0, top: 0, right: 813, bottom: 1016},
+            position: {left: 0, top: 0},
+            dimensions: {width: 813, height: 1016},
+            cropDimensions: {left: 0, top: 0, width: 813, height: 1016},
+            scale: {x: 1, y: 1},
+            margin: 0,
+            persist: false,
+        }
+        const setBounds = vi.fn()
+        const setPosition = vi.fn()
+        registry.setConfig(config.id, config)
+        manager.getWidgetConfig.mockReturnValue(config)
+
+        try {
+            controls.monitorContainerResize(config, setBounds, {current: null}, widget, setPosition)
+
+            expect(config.scale).toEqual({x: 1, y: 1})
+            expect(manager.transform.setScale).not.toHaveBeenCalled()
+            expect(config.cropDimensions.width).toBe(545)
+            expect(config.cropDimensions.height).toBe(681)
+        }
+        finally {
+            config.observer?.disconnect()
+            if (config.windowResizeHandler) {
+                window.removeEventListener('resize', config.windowResizeHandler)
+            }
+            globalThis.ResizeObserver = originalResizeObserver
+        }
     })
 })

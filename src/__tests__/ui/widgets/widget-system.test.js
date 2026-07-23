@@ -16,7 +16,7 @@
 
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
-    JOURNEY_STATS_WIDGET, JOURNEY_WIDGETS, LGS_VISUAL_WIDGET, PROFILE_WIDGET, SCENE_WIDGETS, SCENE_WIDGETS_BOARD,
+    CROP_TOOLS_WIDGETS, JOURNEY_STATS_WIDGET, JOURNEY_WIDGETS, LGS_VISUAL_WIDGET, PROFILE_WIDGET, SCENE_WIDGETS, SCENE_WIDGETS_BOARD,
     WIDGET_LAYER_START, WIDGETS_STORE,
 }                                               from '../../../core/constants'
 import { WidgetDynamicRenderer }                from '../../../core/ui/widget-manager/dynamic-render/WidgetDynamicRender'
@@ -373,6 +373,150 @@ describe('Widget registry ratio resolution', () => {
             x: 1.25,
             y: 1.25,
         })
+    })
+
+    it('persists crop dimensions without a visual scale', () => {
+        const registry = new WidgetCoreRegistry()
+        const container = {
+            getBoundingClientRect: vi.fn(() => ({
+                left:   0,
+                top:    0,
+                width:  800,
+                height: 450,
+            })),
+        }
+        const element = {
+            style: {
+                left: '80px',
+                top:  '45px',
+            },
+            getBoundingClientRect: vi.fn(() => ({
+                left:   80,
+                top:    45,
+                width:  640,
+                height: 360,
+            })),
+        }
+        vi.spyOn(registry, 'getElementById').mockReturnValue(element)
+
+        const positionData = registry.preparePositionDataForStorage('video-crop-zone', {
+            container,
+            isCropper: true,
+            cropDimensions: {
+                left:   80,
+                top:    45,
+                width:  640,
+                height: 360,
+            },
+            position: {left: 80, top: 45},
+            scale:    {x: 0.67, y: 0.67},
+        })
+
+        expect(positionData.width).toBe(640)
+        expect(positionData.height).toBe(360)
+        expect(positionData.scale).toEqual({x: 1, y: 1})
+    })
+})
+
+describe('Widget registry runtime cleanup', () => {
+    beforeEach(() => {
+        installGlobals()
+    })
+
+    it('detaches persistent group observers without deleting the saved configuration', () => {
+        const registry = new WidgetCoreRegistry()
+        const observedTarget = {}
+        const observer = {
+            unobserve:  vi.fn(),
+            disconnect: vi.fn(),
+        }
+        const elementObserver = {
+            disconnect: vi.fn(),
+        }
+        const config = {
+            group:                        CROP_TOOLS_WIDGETS,
+            persist:                      true,
+            element:                      document.createElement('div'),
+            observer,
+            observedTargets:              [observedTarget],
+            elementObserver,
+            fromDB:                       true,
+            fromRuntime:                  true,
+            runtimeReady:                 true,
+            skipInitialElementResizeSync: true,
+        }
+        const widgetId = 'video-crop-zone'
+        __.ui.widgetCache.unmount = vi.fn()
+        registry.setConfig(widgetId, config)
+        registry.setMoveable(widgetId, {current: {}})
+
+        registry.disposeByGroup(CROP_TOOLS_WIDGETS, true)
+
+        expect(registry.getWidgetConfig(widgetId)).toBe(config)
+        expect(config.element).toBeNull()
+        expect(config.runtimeReady).toBe(false)
+        expect(config.fromDB).toBe(false)
+        expect(config.fromRuntime).toBe(false)
+        expect(config.observedTargets).toEqual([])
+        expect(observer.unobserve).toHaveBeenCalledWith(observedTarget)
+        expect(observer.disconnect).toHaveBeenCalled()
+        expect(elementObserver.disconnect).toHaveBeenCalled()
+        expect(__.ui.widgetCache.unmount).toHaveBeenCalledWith(widgetId)
+        expect(registry.getMoveable(widgetId)).toBeUndefined()
+    })
+
+    it('reloads the persisted crop dimensions after the editor runtime is detached', async () => {
+        const registry = new WidgetCoreRegistry()
+        const widgetId = 'video-crop-zone'
+        const container = {
+            getBoundingClientRect: vi.fn(() => ({
+                left:   0,
+                top:    0,
+                right:  800,
+                bottom: 450,
+                width:  800,
+                height: 450,
+            })),
+        }
+        const config = await registry.retrieveConfig(document.createElement('div'), {
+            id:              widgetId,
+            group:           CROP_TOOLS_WIDGETS,
+            isCropper:       true,
+            persist:         true,
+            container,
+            boundsContainer: container,
+            ratio:           '16x9',
+        })
+        config.runtimeReady = true
+        config.cropDimensions = {left: 80, top: 45, width: 640, height: 360}
+        config.position = {left: 80, top: 45}
+        __.ui.widgetCache.unmount = vi.fn()
+
+        registry.disposeByGroup(CROP_TOOLS_WIDGETS, true)
+        __.ui.widgetManager.getWidgetPosition = vi.fn(async () => ({
+            leftRatio:  50,
+            topRatio:   50,
+            width:      640,
+            height:     360,
+            scale:      {x: 0.67, y: 0.67},
+            group:      CROP_TOOLS_WIDGETS,
+            ratio:      '16x9',
+        }))
+
+        const reopened = await registry.retrieveConfig(document.createElement('div'), {
+            id:              widgetId,
+            group:           CROP_TOOLS_WIDGETS,
+            isCropper:       true,
+            persist:         true,
+            container,
+            boundsContainer: container,
+            ratio:           '16x9',
+        })
+
+        expect(reopened.fromDB).toBe(true)
+        expect(reopened.fromRuntime).toBe(false)
+        expect(reopened.cropDimensions).toEqual({left: 80, top: 45, width: 640, height: 360})
+        expect(reopened.scale).toEqual({x: 1, y: 1})
     })
 })
 

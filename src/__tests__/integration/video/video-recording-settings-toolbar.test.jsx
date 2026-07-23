@@ -48,7 +48,11 @@ vi.mock('@Components/MainUI/video/videoEditingCleanup', () => ({
     prepareVideoEditingUi: vi.fn(),
 }))
 
-import { prepareVideoCaptureUi, prepareVideoEditingUi } from '@Components/MainUI/video/videoEditingCleanup'
+import {
+    cancelVideoEditing,
+    prepareVideoCaptureUi,
+    prepareVideoEditingUi,
+} from '@Components/MainUI/video/videoEditingCleanup'
 import { VideoRecordingSettingsToolbar } from '@Components/MainUI/video/toolbox/VideoRecordingSettingsToolbar'
 
 describe('VideoRecordingSettingsToolbar', () => {
@@ -153,6 +157,35 @@ describe('VideoRecordingSettingsToolbar', () => {
         expect(prepareVideoCaptureUi).toHaveBeenCalledTimes(1)
         expect(prepareVideoEditingUi).not.toHaveBeenCalled()
         expect(globalThis.lgs.stores.ui.video.preRecording).toBe(true)
+    })
+
+    it('waits for crop persistence before atomically leaving editing for pre-recording', async () => {
+        let resolveCropSync = null
+        globalThis.__.ui.widgetManager.syncCropDimensionsFromElement = vi.fn(() => new Promise(resolve => {
+            resolveCropSync = resolve
+        }))
+        render(<VideoRecordingSettingsToolbar/>)
+
+        const transition = lastTunnelProps.steps[1].onClick(1, {
+            currentTarget: {
+                getBoundingClientRect: () => ({left: 10, top: 20, width: 100, height: 40}),
+            },
+            nativeEvent: {
+                clientX: 40,
+                clientY: 60,
+            },
+        })
+
+        expect(globalThis.lgs.stores.ui.video.editing).toBe(true)
+        expect(globalThis.lgs.stores.ui.video.preRecording).toBe(false)
+        expect(prepareVideoCaptureUi).not.toHaveBeenCalled()
+
+        resolveCropSync()
+        await transition
+
+        expect(globalThis.lgs.stores.ui.video.editing).toBe(false)
+        expect(globalThis.lgs.stores.ui.video.preRecording).toBe(true)
+        expect(prepareVideoCaptureUi).toHaveBeenCalledTimes(1)
     })
 
     it('hides the tunnel while an HQ export is finalizing', () => {
@@ -264,6 +297,28 @@ describe('VideoRecordingSettingsToolbar', () => {
             true,
             'composition-exit',
         )
+    })
+
+    it('waits for crop persistence before closing the video editor', async () => {
+        let resolveCropSync = null
+        globalThis.__.ui.widgetManager.syncCropDimensionsFromElement = vi.fn(() => new Promise(resolve => {
+            resolveCropSync = resolve
+        }))
+        render(<VideoRecordingSettingsToolbar/>)
+
+        const closing = lastTunnelProps.onCancel()
+
+        expect(__.ui.widgetManager.syncCropDimensionsFromElement).toHaveBeenCalledWith(
+            expect.any(String),
+            true,
+            'editing-exit',
+        )
+        expect(cancelVideoEditing).not.toHaveBeenCalled()
+
+        resolveCropSync()
+        await closing
+
+        expect(cancelVideoEditing).toHaveBeenCalledTimes(1)
     })
 
     it('still starts on the crop zone when no dimensions are defined', () => {

@@ -14,26 +14,17 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { useCallback, useEffect, useRef } from 'react'
+import { useCallback, useRef } from 'react'
 
 /**
  * CropZone component for rendering the crop zone content with imperative API.
  */
-export const CropZone = ({onDoubleClick, infoComponent, infoPosition, children, context}) => {
+export const CropZone = ({onDoubleClick, children}) => {
     const _cropZone = useRef(null)
     const handleContextMenu = useCallback((e) => {
         e.preventDefault()
         e.stopPropagation()
     }, [])
-
-    useEffect(() => {
-        return () => {
-            if (!lgs.stores.ui.video.editing) {
-                return
-            }
-            void __.ui.widgetManager.syncCropDimensionsFromElement(context.id, true, 'unmount')
-        }
-    }, [context.id])
 
     return (
         <>
