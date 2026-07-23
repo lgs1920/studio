@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-07-23 — [`docs: specify replay video widget`](https://github.com/lgs1920/studio/commit/COMMIT_ID)
+
+- Document the Arrow widget and the replay video widget architecture.
+- Define video source, replay timing, audio, trimming, end-of-video hiding, and HQ export behavior.
+
 ## 2026-07-22 — [`fix: preserve replay widget opacity and UI layering`](https://github.com/lgs1920/studio/commit/COMMIT_ID)
 
 - Preserve configured widget opacity during replay previews.
