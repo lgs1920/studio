@@ -1,3 +1,3 @@
 interface:
-  display_name: "Release Changelog"
-  short_description: "Help with Release Changelog tasks"
+  display_name: "Release Notes and Commit History"
+  short_description: "Help with release notes and commit history tasks"

@@ -37,9 +37,18 @@ This is the canonical source for the project's AI-agent and development rules.
 - **Shortcuts:** Any introduced UI shortcut must be added to the dedicated shortcuts documentation.
 - **Testing:** Every feature or fix must be accompanied by relevant tests.
 
+### Technical documentation status
+
+- Keep implementation documentation under `tech-doc/`.
+- Put specifications that are proposed, pending validation, explicitly TODO, or describe future implementation work under `tech-doc/todo/`.
+- Put specifications and architecture documents that describe the current implementation under `tech-doc/current/`.
+- Keep general reference documentation in its existing module path unless it is an implementation specification.
+- Update links in `README.md`, `tech-doc/README.md`, and nearby technical documents when moving a document.
+- Do not use `COMMIT_HISTORY.md` as the source of truth for documentation status; determine status from the document and the implementation.
+
 ## 5. Git & Release Workflow
 
 - **Commit Messages:** Must follow the key-based format: `feat`, `fix`, `refactor`, `docs`, `style`, `test`, `chore`.
 - **Commit Logic:** Never create commits automatically. Only create a commit when the user explicitly requests it.
-- **Changelog:** Update `README.md` and `CHANGELOG.md` (with current date title) on every commit.
-- **Commit Changelog Entry:** Record every commit in `CHANGELOG.md` with its date, exact commit message, and a GitHub link in the format `https://github.com/lgs1920/studio/commit/<commit-id>`.
+- **Commit history:** Update `README.md` and `COMMIT_HISTORY.md` when preparing a commit.
+- **Commit history entry:** Record every commit in `COMMIT_HISTORY.md` with its date, exact commit message, and a GitHub link in the format `https://github.com/lgs1920/studio/commit/<commit-id>`.
