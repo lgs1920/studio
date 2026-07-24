@@ -1,5 +1,11 @@
 # Commit History
 
+## 2026-07-24 — [`fix: keep theme swatches reactive and Safari-safe`](https://github.com/lgs1920/studio/commit/COMMIT_ID)
+
+- Add a Safari-compatible fallback for `matchMedia('(prefers-color-scheme: dark)')` listeners.
+- Replace frozen swatch memoization in color editors with reactive swatch reads.
+- Cover the listener fallback and reactive swatch behavior with tests.
+
 ## 2026-07-24 — [`fix: stabilize poi snapdom rendering in firefox`](https://github.com/lgs1920/studio/commit/COMMIT_ID)
 
 - Add a regression test for the POI map card CSS.

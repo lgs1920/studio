@@ -18,6 +18,7 @@ import { WaButton, WaDivider, WaDropdown, WaDropdownItem, WaIcon } from '@web.aw
 import { useEffect, useState } from 'react'
 import { useSnapshot }         from 'valtio'
 import { AppUtils }            from '@Utils/AppUtils'
+import { attachMediaQueryChangeListener } from '@Utils/mediaQuery'
 
 const BRAND_OPTIONS = [
     {value: 'yellow', label: 'Yellow', swatch: 'var(--wa-color-yellow)'},
@@ -54,10 +55,11 @@ const getSystemThemeIcon = (device) => {
 }
 
 /**
- * Theme Selector component
+ * Theme Selector component.
+ *
  * @returns {JSX.Element}
  */
-const ThemeSelector = () => {
+export const ThemeSelector = () => {
     const device = useSnapshot(lgs.stores.ui.device)
     const [theme, setTheme] = useState(localStorage.getItem(AppUtils.THEME_STORAGE_KEY) || 'system')
     const [brandColor, setBrandColor] = useState(AppUtils.resolveBrandColor())
@@ -80,8 +82,7 @@ const ThemeSelector = () => {
         localStorage.setItem(AppUtils.ON_MAP_THEME_STORAGE_KEY, onMapTheme)
 
         if (theme === 'system') {
-            mediaQuery.addEventListener('change', updateTheme)
-            return () => mediaQuery.removeEventListener('change', updateTheme)
+            return attachMediaQueryChangeListener(mediaQuery, updateTheme)
         }
     }, [theme, brandColor, onMapTheme])
 
@@ -154,5 +155,3 @@ const ThemeSelector = () => {
         </div>
     )
 }
-
-export default ThemeSelector

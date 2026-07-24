@@ -282,7 +282,7 @@ export const JourneyReplayDrawer = memo(() => {
     useOptionalSnapshot(lgs.settings.journey)
     const {current: unitSystem} = useSnapshot(lgs.settings.unitSystem)
     const {drawer: drawerPlacement} = useSnapshot(lgs.editorSettingsProxy.menu)
-    const swatches = useMemo(() => lgs.settings.getSwatches.list.join(';'), [])
+    const swatches = useOptionalSnapshot(lgs.settings.swatches, {list: []}).list.join(';')
     const altitudeUnit = ELEVATION_UNITS[unitSystem] ?? ELEVATION_UNITS[0]
     const journeySlug = currentJourney?.slug
     const hasJourney = Boolean(journeySlug)

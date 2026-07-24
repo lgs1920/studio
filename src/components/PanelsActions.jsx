@@ -14,7 +14,7 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import ThemeSelector        from '@Components/ThemeSelector'
+import { ThemeSelector }    from '@Components/ThemeSelector'
 import { WaButton, WaIcon } from '@web.awesome.me/webawesome-pro/dist/react'
 
 /**

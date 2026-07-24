@@ -104,7 +104,7 @@ export const JourneyStatsWidgetEditor = ({
         $configuration,
         {default: {}, user: {}, elements: {}},
     )
-    const swatches = useMemo(() => lgs.settings.getSwatches.list.join(';'), [])
+    const swatches = useOptionalSnapshot(lgs.settings.swatches, {list: []}).list.join(';')
     const allowedTextItemIds = useMemo(() => (
         mode === 'dynamic' ? new Set(['distance', 'elevation', 'duration']) : null
     ), [mode])

@@ -32,6 +32,7 @@ import { TypefaceElement }      from '@Components/MainUI/widgets/editor/elements
 import { WaCard, WaDivider } from '@web.awesome.me/webawesome-pro/dist/react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useSnapshot }          from 'valtio'
+import { useOptionalSnapshot }  from '@Utils/ValtioUtils'
 import './style.css'
 
 /**
@@ -100,7 +101,7 @@ export const TextWidgetEditor = ({entity}) => {
         }
     }, [$widget, currentWidgetId, currentWidgetRotate, element?.rotate, entity, isTextWidget])
 
-    const swatches = useMemo(() => lgs.settings.getSwatches.list.join(';'), [])
+    const swatches = useOptionalSnapshot(lgs.settings.swatches, {list: []}).list.join(';')
 
     /**
      * persistent value updater

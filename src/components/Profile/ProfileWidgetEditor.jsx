@@ -38,6 +38,7 @@ import {
 import { colord }                      from 'colord'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSnapshot }                 from 'valtio'
+import { useOptionalSnapshot }         from '@Utils/ValtioUtils'
 
 const PROFILE_WIDGET_RATIO_CUSTOM_VALUE = 'custom'
 const PROFILE_WIDGET_RATIO_PRESETS = [
@@ -241,7 +242,7 @@ export const ProfileWidgetEditor = ({entity}) => {
         return configuration.elements?.[entity] ?? configuration.user ?? configuration.default
     }, [configuration, entity])
 
-    const swatches = useMemo(() => lgs.settings.getSwatches.list.join(';'), [])
+    const swatches = useOptionalSnapshot(lgs.settings.swatches, {list: []}).list.join(';')
     const replayProfileInfo = useMemo(
         () => normalizeJourneyReplayProfileInfo(replaySettings.profileInfo),
         [replaySettings.profileInfo],

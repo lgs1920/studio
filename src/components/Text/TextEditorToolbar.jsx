@@ -26,6 +26,7 @@ import {
 import { colord } from 'colord'
 import { useCallback, useEffect, useMemo }                from 'react'
 import { useSnapshot }                                    from 'valtio'
+import { useOptionalSnapshot }                            from '@Utils/ValtioUtils'
 
 /**
  * Complete Text formatting toolbar
@@ -39,7 +40,7 @@ export const TextEditorToolbar = ({id, fonts = false, color = true, align = true
     /** @type {Object} Snapshot of the specific text element */
     const element = configuration?.elements?.[id] ?? configuration.user ?? configuration.default
 
-    const swatches = useMemo(() => lgs.settings.getSwatches.list.join(';'), [])
+    const swatches = useOptionalSnapshot(lgs.settings.swatches, {list: []}).list.join(';')
     const _moveable = __.ui.widgetManager.getMoveable(id)
 
     /**
