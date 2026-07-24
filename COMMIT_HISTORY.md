@@ -1,5 +1,11 @@
 # Commit History
 
+## 2026-07-24 — [`fix: stabilize poi snapdom rendering in firefox`](https://github.com/lgs1920/studio/commit/COMMIT_ID)
+
+- Add a regression test for the POI map card CSS.
+- Contain the POI snapshot background in a positioned stacking context.
+- Replace the shrinked POI inset shadow with a real border so Firefox renders the marker consistently.
+
 ## 2026-07-24 — [`test: update profile widget preview dimensions`](https://github.com/lgs1920/studio/commit/505c9226)
 
 - Update the profile widget preview test expectations for the current rendered dimensions.

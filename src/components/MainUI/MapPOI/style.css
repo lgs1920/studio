@@ -8,7 +8,7 @@
  * email: contact@lgs1920.fr
  *
  * Created on: 2026-05-08
- * Last modified: 2026-05-08
+ * Last modified: 2026-07-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -54,7 +54,7 @@
     line-height: 1;
     width: var(--dimension);
     height: var(--dimension);
-    transform: rotate(-45deg)
+    transform: rotate(-45deg);
     --poi-delta-x: 0;
     --dimension: var(--poi-reduce-dimension);
 }
@@ -115,6 +115,8 @@
 }
 
 .poi-card-inner {
+    position: relative;
+    z-index: 0;
     display: flex;
     flex-direction: column;
     flex-wrap: nowrap;
@@ -135,9 +137,10 @@
     height: var(--dimension);
     margin: 0;
     transform: rotate(45deg);
-    border: none;
+    box-sizing: border-box;
+    border: var(--poi-border-width) solid var(--lgs-poi-color);
     border-radius: 50% 50% 20% 50%;
-    box-shadow: inset 0 0 0 var(--poi-border-width) var(--lgs-poi-color);
+    box-shadow: none;
 
 
 }
