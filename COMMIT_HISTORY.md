@@ -1,5 +1,13 @@
 # Commit History
 
+## 2026-07-24 — [`test: update profile widget preview dimensions`](https://github.com/lgs1920/studio/commit/505c9226)
+
+- Update the profile widget preview test expectations for the current rendered dimensions.
+
+## 2026-07-24 — [`test: fix store proxy contract path`](https://github.com/lgs1920/studio/commit/420c57b0)
+
+- Fix the `test:stores` script path and keep the store proxy contract test aligned with the current layout.
+
 ## 2026-07-24 — [`docs: add brand and season swatch reactivity spec`](https://github.com/lgs1920/studio/commit/COMMIT_ID)
 
 - Add the brand and season swatch reactivity technical specification.
