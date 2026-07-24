@@ -139,8 +139,8 @@ describe('ProfileWidgetPreview', () => {
 
         expect(surface.style.height).toBe('100%')
         expect(surface.style.width).toBe('100%')
-        expect(chart.dataset.width).toBe('800')
-        expect(chart.dataset.height).toBe('450')
+        expect(chart.dataset.width).toBe('640')
+        expect(chart.dataset.height).toBe('360')
     })
 
     it('fits portrait ratios on height first', async () => {
@@ -154,7 +154,7 @@ describe('ProfileWidgetPreview', () => {
         const {findByTestId} = render(<ProfileWidgetPreview entity="profile-widget#1"/>)
         const chart = await findByTestId('profile-chart')
 
-        expect(chart.dataset.width).toBe('300')
-        expect(chart.dataset.height).toBe('600')
+        expect(chart.dataset.width).toBe('240')
+        expect(chart.dataset.height).toBe('480')
     })
 })
