@@ -1,5 +1,9 @@
 # Commit History
 
+## 2026-07-24 — [`docs: add weekly count api specs and issues`](https://github.com/lgs1920/studio/commit/e3b26a01)
+
+- Add the weekly count API spec and separate backend and studio issue drafts.
+
 ## 2026-07-23 — [`docs: add internal database skill and architecture`](https://github.com/lgs1920/studio/commit/a095213c)
 
 - Add the internal database Skill and separate its scope from feature-level browser persistence.
