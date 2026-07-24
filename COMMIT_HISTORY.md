@@ -1,5 +1,20 @@
 # Commit History
 
+## 2026-07-24 — [`docs: document video crop behavior`](https://github.com/lgs1920/studio/commit/5a869824)
+
+- Document the editable crop's persisted dimensions, edge-only snapping, and normalized scale contract.
+- Clarify that leaving the video editor persists the mounted crop before the UI state changes.
+
+## 2026-07-24 — [`fix: preserve replay focus restoration`](https://github.com/lgs1920/studio/commit/d725a4ea)
+
+- Return the scene focus promise from `Journey.focus` so replay restoration can await it.
+- Ensure replay focus restoration finishes even when the focus callback itself returns no value.
+
+## 2026-07-24 — [`fix: stabilize video crop persistence`](https://github.com/lgs1920/studio/commit/ddb89962)
+
+- Preserve logical video crop dimensions across editor sessions.
+- Normalize crop scale, remove resize feedback, and snap the crop only to composition bounds.
+
 ## 2026-07-24 — [`docs: add weekly count api specs and issues`](https://github.com/lgs1920/studio/commit/e3b26a01)
 
 - Add the weekly count API spec and separate backend and studio issue drafts.
