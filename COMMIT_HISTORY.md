@@ -1,5 +1,11 @@
 # Commit History
 
+## 2026-07-24 — [`docs: add brand and season swatch reactivity spec`](https://github.com/lgs1920/studio/commit/COMMIT_ID)
+
+- Add the brand and season swatch reactivity technical specification.
+- Describe the `CHANGE_BRAND_COLOR` and `CHANGE_SEASON_COLOR` event contract, provenance tracking, and redraw batching rules.
+- Link the new specification from the technical documentation README and the root README.
+
 ## 2026-07-24 — [`docs: document video crop behavior`](https://github.com/lgs1920/studio/commit/5a869824)
 
 - Document the editable crop's persisted dimensions, edge-only snapping, and normalized scale contract.
