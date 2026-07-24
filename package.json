@@ -13,7 +13,7 @@
     "logo:import": "bun scripts/logo-tool.mjs import",
     "preview": "bunx --bun vite preview",
     "test": "vitest run",
-    "test:stores": "vitest run src/__tests__/store-proxy-contracts.test.js",
+    "test:stores": "vitest run src/__tests__/unit/data/store-proxy-contracts.test.js",
     "test:watch": "vitest"
   },
   "dependencies": {

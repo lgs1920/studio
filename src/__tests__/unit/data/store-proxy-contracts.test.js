@@ -27,7 +27,7 @@ import { unstable_getInternalStates } from 'valtio/vanilla'
 import { describe, expect, it }       from 'vitest'
 
 const {proxyStateMap} = unstable_getInternalStates()
-const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
+const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../..')
 const sourceRoots = ['src/core', 'src/components', 'src/Utils']
 const sourceExtensions = new Set(['.js', '.jsx', '.ts', '.tsx'])
 
