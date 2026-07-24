@@ -34,6 +34,7 @@ The repository already contains the main product surface used by the studio:
 - Elevation-aware metrics and profile widgets
 - Widget rendering, placement, ordering, reduction, locking, and export-aware capture
 - Widget grid, edge, and center snapping across widgets during video composition
+- Video crop dimensions persist across editor sessions, with crop snapping limited to the composition bounds
 - Geocoding tools and coordinate utilities
 - Journey Replay playback and replay-aware video synchronization
 - Replay Draft final-frame synchronization and bounded trace rendering

@@ -66,6 +66,12 @@ The target list is refreshed when widgets are mounted or removed. Widget rectang
 
 Snapping is disabled for non-visual widgets and for widgets whose `snappable` configuration is explicitly disabled. Grid visibility and grid snapping remain separate settings: the grid can be visible without forcing widget positions onto its lines.
 
+The editable video crop is a deliberate exception to regular visual-widget snapping:
+
+- its edges snap only to the active crop container edges
+- board-center, grid, and peer-widget guidelines are disabled
+- its own center is never used as a snap target
+
 ## Core Files
 
 - `WidgetManager.js`
@@ -181,6 +187,13 @@ This separation matters:
 
 For dynamic widgets such as text or compass, the element resize observer updates `config.dimensions` when the underlying rendered size changes.
 
+The editable crop uses a stricter contract:
+
+- `cropDimensions.width/height` are its rendered logical dimensions
+- inline width and height are persisted before transformed `DOMRect` values
+- crop scale is always normalized to `{x: 1, y: 1}`, including legacy records
+- generic visual-widget scale adaptation never runs for the crop
+
 ## Board Resize Behavior
 
 When a board resizes:
@@ -208,6 +221,10 @@ Key rules:
 - the video widget portal does not mount until `#video-crop-zone.defined` exists
 - the editable crop zone does not display the widgets themselves
 - persisted video widgets are restored against `defined crop-zone`, not the full scene
+- leaving video editing first persists the mounted crop, then changes the video UI state
+- crop unmount does not start a competing asynchronous persistence write
+- closing the editor invalidates crop runtime resources while preserving the IndexedDB record
+- reopening the editor reloads the persisted crop dimensions and normalizes scale to one
 
 This is critical for keeping:
 
@@ -267,5 +284,7 @@ With the current implementation, the widget system is designed to guarantee:
 - widgets are reduced only when they no longer fit
 - video widgets restore inside `defined crop-zone`
 - runtime state does not override persisted state for the wrong board
+- the editable crop preserves its resized dimensions across editor sessions
+- the editable crop snaps only to the crop container edges
 
 That is the contract the rest of the video and cropper UI should rely on.
