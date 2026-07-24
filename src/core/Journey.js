@@ -902,7 +902,7 @@ export class Journey extends MapElement {
         }
         props.journey = this
         props.target = this
-        __.ui.sceneManager.focusOnJourney(props)
+        return __.ui.sceneManager.focusOnJourney(props)
     }
 
     showAfterHeightSimulation = async () => {

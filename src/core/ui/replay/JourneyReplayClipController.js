@@ -677,9 +677,7 @@ export const focusJourneyAfterPlayback = (mode, {snapDistance = 50000} = {}) => 
                     snapDistance,
                     callback:     finish,
                 })
-                if (focusResult !== undefined) {
-                    void Promise.resolve(focusResult).finally(finish)
-                }
+                void Promise.resolve(focusResult).finally(finish)
                 return
             }
 
