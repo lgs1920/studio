@@ -29,10 +29,10 @@
     </mask>
     <symbol id="logo-symbol" viewBox="-5 -5 414.246 414.804" overflow="visible">
       <g id="logo-mark" class="lgs--logo-mark" transform="translate(-312.136 -350.958)">
-        <use id="logo-primary-layer" href="#logo-body-shape" class="lgs--logo-part lgs--logo-primary-layer" fill="#0d426d" mask="url(#logo-cutout-mask)" style="fill:var(--lgs--logo-primary, #0d426d)"/>
+        <use id="logo-primary-layer" href="#logo-body-shape" class="lgs--logo-part lgs--logo-primary-layer" fill="#f3bb35" mask="url(#logo-cutout-mask)" style="fill:var(--lgs--logo-primary, #f3bb35)"/>
         <use id="logo-play-arrow-fill" href="#logo-play-arrow-outline" class="lgs--logo-primary-layer" transform="translate(528 651) scale(0.75) translate(-528 -651)"/>
-        <use id="logo-secondary-layer" href="#logo-secondary-shapes" class="lgs--logo-part lgs--logo-secondary-layer" fill="#bfa062" style="fill:var(--lgs--logo-secondary, #bfa062)"/>
-        <use id="logo-play-arrow-border" href="#logo-play-arrow-outline" class="lgs--logo-secondary-layer lgs--logo-play-arrow-border" fill="none" stroke="#bfa062" style="stroke:var(--lgs--logo-secondary, #bfa062)"/>
+        <use id="logo-secondary-layer" href="#logo-secondary-shapes" class="lgs--logo-part lgs--logo-secondary-layer" fill="#000000" style="fill:var(--lgs--logo-secondary, #000000)"/>
+        <use id="logo-play-arrow-border" href="#logo-play-arrow-outline" class="lgs--logo-secondary-layer lgs--logo-play-arrow-border" fill="none" stroke="#000000" style="stroke:var(--lgs--logo-secondary, #000000)"/>
       </g>
     </symbol>
   </defs>

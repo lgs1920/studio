@@ -1,5 +1,9 @@
 # Commit History
 
+## 2026-07-24 — [`docs: add direct logging rule`](https://github.com/lgs1920/studio/commit/COMMIT_ID)
+
+- Add a direct logging rule to `PROJECT_RULES.md` so explicit logging requests use native console methods without wrappers.
+
 ## 2026-07-24 — [`fix: keep theme swatches reactive and Safari-safe`](https://github.com/lgs1920/studio/commit/COMMIT_ID)
 
 - Add a Safari-compatible fallback for `matchMedia('(prefers-color-scheme: dark)')` listeners.

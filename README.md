@@ -50,6 +50,7 @@ The repository already contains the main product surface used by the studio:
 - IndexedDB persistence for editor state and loaded content
 - Privacy-first local workspace for imported journeys and generated media
 - PWA support and offline-friendly caching
+- The app favicon and PWA icon set are derived from the logo SVG with transparent cutouts
 - Boot splash video loading uses browser-supported video element preloading
 - Tunnel controls highlight the current step with the on-map theme and compact spacing
 - Text widgets preserve their scale state and render shadows consistently
