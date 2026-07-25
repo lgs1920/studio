@@ -438,7 +438,7 @@ providers:
     url: 'https://livingatlas.arcgis.com//'
     layers:
       # Tracks
-      - name: Spring (2022)
+      - name: Summer\(20260630)
         id: arcgis-normal
         image: arcgis-normal.png
         usage:
@@ -446,14 +446,14 @@ providers:
           doc: ''
 
         tile: wayback
-        url: 'https://wayback-b.maptiles.arcgis.com/arcgis/rest/services/World_Imagery/WMTS/1.0.0/default028mm/MapServer/tile/16245/'
+        url: 'https://wayback.maptiles.arcgis.com/arcgis/rest/services/World_Imagery/WMTS/1.0.0/default028mm/MapServer/tile/22869/'
         minimumLevel: 0
         maximumLevel: 23
         doc: ''
         type: base
 
 
-      - name: Winter (2024)
+      - name: Winter\(20260226)
         id: arcgis-winter
         image: arcgis-winter.png
         usage:
@@ -461,7 +461,7 @@ providers:
           doc: ''
 
         tile: wayback
-        url: 'https://wayback-b.maptiles.arcgis.com/arcgis/rest/services/World_Imagery/WMTS/1.0.0/default028mm/MapServer/tile/60013/'
+        url: 'https://wayback.maptiles.arcgis.com/arcgis/rest/services/World_Imagery/WMTS/1.0.0/default028mm/MapServer/tile/64001/'
         minimumLevel: 0
         maximumLevel: 23
         doc: ''
