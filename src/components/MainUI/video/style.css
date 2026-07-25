@@ -227,6 +227,11 @@
     margin: 0;
 }
 
+#video-preview-dialog .video-preview-create-hq-action {
+    display: inline-flex;
+    align-items: center;
+}
+
 #video-preview-dialog .video-file-actions {
     position: relative;
     width: 100%;
@@ -538,8 +543,17 @@
 }
 
 @media (max-width: 640px) {
+    #video-preview-dialog #video-preview-dialog-footer .buttons-bar {
+        flex-wrap: wrap;
+    }
+
     #video-preview-dialog .video-preview-close-action {
         display: none;
+    }
+
+    #video-preview-dialog .video-preview-create-hq-action {
+        flex: 0 0 100%;
+        justify-content: flex-end;
     }
 
     .video-recorder-widget .video-recorder-replay-progress {

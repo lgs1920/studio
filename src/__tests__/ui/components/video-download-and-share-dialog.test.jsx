@@ -373,6 +373,7 @@ describe('VideoDownloadAndShareDialog', () => {
 
         expect(screen.getByTestId('recording-info').getAttribute('data-dimensions')).toBe('640x360')
         expect(screen.getByTestId('recording-info').getAttribute('data-quality')).toBe('HD')
+        expect(screen.getByRole('button', {name: 'Create HQ video'}).closest('.video-preview-create-hq-action')).not.toBeNull()
 
         await act(async () => {
             fireEvent.click(screen.getByRole('button', {name: 'Create HQ video'}))

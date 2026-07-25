@@ -977,7 +977,7 @@ export const VideoDownloadAndShareDialog = () => {
                         </>
                     )}
                     {!hasHqMedia && isReplayVideoLinked && (
-                        <>
+                        <div className="video-preview-create-hq-action">
                             <WaTooltip for="video-preview-create-hq">{isHqExporting ? 'Creating HQ video' : 'Create an HQ version'}</WaTooltip>
                             <WaButton
                                 id="video-preview-create-hq"
@@ -985,11 +985,12 @@ export const VideoDownloadAndShareDialog = () => {
                                 variant="neutral"
                                 disabled={!__?.recorder.isVideo() || isHqExporting}
                                 onClick={() => void startHqExport()}
+                                aria-label="Create HQ video"
                             >
                                 <WaIcon slot="start" className="video-preview-action-icon" name={isHqExporting ? 'spinner-third' : 'film'} variant="regular"/>
                                 {isHqExporting ? 'Creating HQ...' : 'Create HQ'}
                             </WaButton>
-                        </>
+                        </div>
                     )}
                 </div>
             </div>
