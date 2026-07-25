@@ -45,6 +45,7 @@ The repository already contains the main product surface used by the studio:
 - Tunnel recording starts automatically after video widgets finish preparing, without a second Record action
 - Linked replay video editing temporarily hides the Journey toolbar without changing its saved visibility setting
 - Recording indicators show preparation, ready, recording, and finalization states for Draft and HQ workflows
+- Repeated video codec errors are throttled to one notification every 30 seconds per recording session
 - Deterministic HQ camera following for navigation and dynamic corrections, including 1.5-second transitions
 - Crop-aware Z1/Z2 collision tracking and visible diagnostic overlays across video formats
 - Replay Z1/Z2 diagnostic overlays are shown only during playback and cleared after replay completion

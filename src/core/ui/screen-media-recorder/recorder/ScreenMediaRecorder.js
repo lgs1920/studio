@@ -34,6 +34,7 @@ const VIDEO_FIRST_PACKET_MAX_WAIT_MS = Math.max(VIDEO_START_TIMEOUT_MS, 10000)
 const VIDEO_START_CLEANUP_TIMEOUT_MS = 2000
 const VIDEO_EMPTY_OUTPUT_MAX_BYTES = 256
 const VIDEO_START_SETTLE_FRAMES = 2
+const FRAME_ENCODING_ERROR_REPORT_INTERVAL_MS = 30 * SECOND
 
 /**
  * Singleton class responsible for screen/canvas/stream recording using mediabunny
@@ -166,7 +167,7 @@ export class ScreenMediaRecorder extends EventTarget {
     #currentFps = 0
     #lastInfoSampleTimeMs = null
     #lastInfoFrameCount = 0
-    #frameEncodingErrorReported = false
+    #lastFrameEncodingErrorReportedAt = null
     #firstEncodedPacketMonitorId = 0
     #lifecycleToken = 0
 
@@ -581,10 +582,12 @@ export class ScreenMediaRecorder extends EventTarget {
         if (!this.#isRecording) {
             return
         }
-        if (this.#frameEncodingErrorReported) {
+        const now = performance.now()
+        if (this.#lastFrameEncodingErrorReportedAt !== null
+            && now - this.#lastFrameEncodingErrorReportedAt < FRAME_ENCODING_ERROR_REPORT_INTERVAL_MS) {
             return
         }
-        this.#frameEncodingErrorReported = true
+        this.#lastFrameEncodingErrorReportedAt = now
         if (this.#encodedPackets === 0) {
             void this.#failActiveRecording(error)
             return
@@ -775,7 +778,7 @@ export class ScreenMediaRecorder extends EventTarget {
         this.#currentFps = 0
         this.#lastInfoSampleTimeMs = null
         this.#lastInfoFrameCount = 0
-        this.#frameEncodingErrorReported = false
+        this.#lastFrameEncodingErrorReportedAt = null
         this.#firstEncodedPacketMonitorId += 1
     }
 

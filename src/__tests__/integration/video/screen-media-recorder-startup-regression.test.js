@@ -165,7 +165,7 @@ describe('ScreenMediaRecorder startup', () => {
         expect(recorder.isRecording()).toBe(false)
     })
 
-    it('reports repeated frame encoding errors only once per recording', async () => {
+    it('reports repeated frame encoding errors at most once every 30 seconds', async () => {
         await recorder.startVideo()
         globalThis.__screenRecorderTestFrameError = new DOMException('Codec Reclaimed', 'QuotaExceededError')
 
@@ -173,6 +173,14 @@ describe('ScreenMediaRecorder startup', () => {
 
         expect(errorHandler).toHaveBeenCalledTimes(1)
         expect(errorHandler.mock.calls[0][0].detail.error.message).toBe('Codec Reclaimed')
+
+        await vi.advanceTimersByTimeAsync(29000)
+
+        expect(errorHandler).toHaveBeenCalledTimes(1)
+
+        await vi.advanceTimersByTimeAsync(1000)
+
+        expect(errorHandler).toHaveBeenCalledTimes(2)
     })
 
     it('falls back to a timer when the post-start animation frame is suspended', async () => {
