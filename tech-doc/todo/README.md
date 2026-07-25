@@ -19,3 +19,4 @@ This directory contains proposed, pending-validation, explicitly TODO, or future
 - [Arrow widget](ARROW_WIDGET_SPEC.md)
 - [Video widget](VIDEO_WIDGET_SPEC.md)
 - [Replay video architecture](src/core/ui/replay/REPLAY_VIDEO_ARCHITECTURE.md)
+- [Clip altitude data alignment](src/core/ui/replay/CLIP_ALTITUDE_DATA_ALIGNMENT_SPEC.md)
