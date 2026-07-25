@@ -33,6 +33,7 @@ The repository already contains the main product surface used by the studio:
 - Camera interaction hints and an exportable shortcuts reference panel for app, map, and widget controls
 - Elevation-aware metrics and profile widgets
 - Widget rendering, placement, ordering, reduction, locking, and export-aware capture
+- Credits widget dimensions and scale persist across editor rehydration
 - Widget grid, edge, and center snapping across widgets during video composition
 - Video crop dimensions persist across editor sessions, with crop snapping limited to the composition bounds
 - Geocoding tools and coordinate utilities

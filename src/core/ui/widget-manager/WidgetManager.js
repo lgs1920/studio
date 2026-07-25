@@ -960,6 +960,7 @@ export class WidgetManager {
 
             config.container = referenceContainer
             config.boundsContainer = referenceContainer
+            config.element = element
             config.fromDB = true
             config.fromRuntime = false
             config.runtimeReady = true
@@ -972,12 +973,21 @@ export class WidgetManager {
             }
             else {
                 config.dimensions = {width, height}
+                const savedScale = saved.scale
+                const scaleX = Number(savedScale?.x)
+                const scaleY = Number(savedScale?.y)
+                config.scale = Number.isFinite(scaleX) && scaleX > 0 && Number.isFinite(scaleY) && scaleY > 0
+                    ? {x: scaleX, y: scaleY}
+                    : config.scale ?? {x: 1, y: 1}
             }
 
             element.style.left = `${left}px`
             element.style.top = `${top}px`
             element.style.width = `${width}px`
             element.style.height = `${height}px`
+            if (!config.isCropper) {
+                this.setScale(element, config.scale.x, config.scale.y)
+            }
 
             const moveable = this.getMoveable(widgetId)
             moveable?.current?.updateRect?.()

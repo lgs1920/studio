@@ -93,6 +93,36 @@ describe('crop board widget repositioning', () => {
         expect(widget.style.left).toBe('400px')
     })
 
+    it('does not persist a widget that fits without a real layout change', () => {
+        widget.style.left = '400px'
+        widget.style.top = '250px'
+        widget.getBoundingClientRect = vi.fn(() => ({left: 400, top: 250, width: 200, height: 100, right: 600, bottom: 350}))
+        const config = {
+            id: 'menu#video-persist',
+            type: LGS_WIDGET,
+            widgetsBoard: VIDEO_WIDGETS_BOARD,
+            element: widget,
+            container: board,
+            position: {left: 400, top: 250},
+            dimensions: {width: 200, height: 100},
+            scale: {x: 1, y: 1},
+            savedRatios: {leftRatio: 50, topRatio: 50},
+            attachTo: 'center',
+            persist: true,
+        }
+        registry.setConfig(config.id, config)
+        manager.getWidgetConfig.mockReturnValue(config)
+
+        const changed = controls.repositionWidgetsForBoard(
+            VIDEO_WIDGETS_BOARD,
+            {left: 0, top: 0, width: 600, height: 400},
+            {left: 0, top: 0, width: 1000, height: 600},
+        )
+
+        expect(changed).toBe(0)
+        expect(manager.saveWidgetPosition).not.toHaveBeenCalled()
+    })
+
     it('converts local crop coordinates to the screen board only once', () => {
         const canvas = document.createElement('div')
         document.body.appendChild(canvas)
@@ -210,12 +240,14 @@ describe('crop board widget repositioning', () => {
             VIDEO_WIDGETS_BOARD,
             {left: 0, top: 0, width: 600, height: 400},
         )).toBe(1)
-        expect(config.position.left).toBeCloseTo(5)
+        // The logical position includes the center-origin transform offset;
+        // the rendered rectangle remains anchored at the crop bottom-left.
+        expect(config.position.left).toBeCloseTo(-45)
         // The logical top includes the center-origin transform offset; the
         // rendered rectangle is anchored at the crop bottom-left.
-        expect(config.position.top).toBeCloseTo(270)
-        expect(config.scale).toEqual({x: 1, y: 1})
-        expect(manager.transform.setScale).toHaveBeenCalledWith(widget, 1, 1)
+        expect(config.position.top).toBeCloseTo(295)
+        expect(config.scale).toEqual({x: 0.5, y: 0.5})
+        expect(manager.transform.setScale).not.toHaveBeenCalled()
     })
 
     it('resizes only a widget larger than the crop', () => {

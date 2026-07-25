@@ -42,6 +42,10 @@
     --lgs-credits-hover-bg: color-mix(in oklab, var(--lgs-card-on-map-bg-color) 72%, transparent);
 }
 
+.lgs-widget.lgs-credits-widget {
+    min-width: max-content;
+}
+
 .credits-bar.credits-bar-widget-mode {
     align-items: center;
     justify-content: center;

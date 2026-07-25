@@ -124,7 +124,7 @@ export const CreditsWidget = ({id, context, zIndex, widgetsBoard: persistedWidge
     }
 
     return (
-        <Widget isVisible={true} config={config}>
+        <Widget isVisible={true} className="lgs-credits-widget" config={config}>
             <CreditsBar contentRef={_content} widgetMode showMainLogo={false}/>
         </Widget>
     )

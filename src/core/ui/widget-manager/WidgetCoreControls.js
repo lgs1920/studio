@@ -115,9 +115,15 @@ export class WidgetCoreControls {
                 boardRect.width / (fixedWidget ? baseWidth : rect.width),
                 boardRect.height / (fixedWidget ? baseHeight : rect.height),
             ), 0, 1)
+            const fixedScale = Math.max(0, Math.min(
+                currentScaleX,
+                currentScaleY,
+                boardRect.width / baseWidth,
+                boardRect.height / baseHeight,
+            ))
             const nextScale = {
-                x: fixedWidget ? scaleFactor : currentScaleX * scaleFactor,
-                y: fixedWidget ? scaleFactor : currentScaleY * scaleFactor,
+                x: fixedWidget ? fixedScale : currentScaleX * scaleFactor,
+                y: fixedWidget ? fixedScale : currentScaleY * scaleFactor,
             }
             const scaleChanged = Number.isFinite(nextScale.x) && Number.isFinite(nextScale.y) &&
                 (nextScale.x !== currentScaleX || nextScale.y !== currentScaleY)
@@ -170,7 +176,7 @@ export class WidgetCoreControls {
             }
             this.#registry.setConfig(config.id, config)
             this.#registry.getMoveable(config.id)?.current?.updateRect?.()
-            if (config.persist || scaleChanged || positionChanged) {
+            if (config.persist && (scaleChanged || positionChanged)) {
                 void __.ui.widgetManager.saveWidgetPosition(config.id, config)
             }
             __.ui.widgetManager.refreshEditorPreviewSnapshot(config.id)
