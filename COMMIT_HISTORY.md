@@ -1,5 +1,11 @@
 # Commit History
 
+## 2026-07-25 — [`fix: persist credits widget dimensions and scale`](https://github.com/lgs1920/studio/commit/1fc34739)
+
+- Restore persisted Credits widget dimensions and scale during video-board rehydration.
+- Keep fixed widgets at their saved scale when they still fit the crop and make the Credits target span its intrinsic width.
+- Add regression coverage for rehydration and crop-board repositioning.
+
 ## 2026-07-25 — [`fix: align video creation action on mobile`](https://github.com/lgs1920/studio/commit/89f323d5)
 
 - Move the HQ video creation action to a dedicated right-aligned row on mobile video previews.
