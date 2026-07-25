@@ -191,6 +191,8 @@ The quality setting must still be passed to the encoder for explicit profiles. M
 
 These are estimates from the current Mediabunny quality model. The effective bitrate remains codec-dependent and must be measured from the encoded output. For square and portrait profiles, the bitrate scales with the actual pixel count, not only the profile name.
 
+For the Instagram publishing target `1080 × 1350`, the same model gives approximately `2.1 Mbps` Medium, `4.3 Mbps` High, and `8.6 Mbps` Ultra High. This is the quality setting applied to the Instagram-ready output; exporting a `1536 × 1920` generic master would require a higher bitrate and would still be reduced by Instagram on upload.
+
 The current `ScreenMediaRecorder.VIDEO_PRESETS` are not resolution presets:
 
 | Preset | FPS | Quality | Current role |
