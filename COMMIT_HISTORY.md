@@ -1,5 +1,19 @@
 # Commit History
 
+## 2026-07-25 — [`docs: specify POI replay animation`](https://github.com/lgs1920/studio/commit/122be7ee)
+
+- Add the proposed POI replay animation specification, including endpoint pairing, field selection, pause ownership, duration validation, cancellation, and export synchronization.
+- Link the specification from the root and TODO technical documentation indexes.
+
+## 2026-07-25 — [`docs: specify clip altitude alignment`](https://github.com/lgs1920/studio/commit/3b5c651c)
+
+- Add the proposed clip altitude continuity, absolute-value, reorder validation, warning, and dynamic boundary specification.
+- Link the specification from the root and TODO technical documentation indexes.
+
+## 2026-07-25 — [`docs: define issue creation workflow`](https://github.com/lgs1920/studio/commit/de27140f)
+
+- Document the required fields, assignee, milestone, and backlog confirmation workflow for issue creation.
+
 ## 2026-07-25 — [`docs: note app icon refresh in beta changelog`](https://github.com/lgs1920/studio/commit/COMMIT_ID)
 
 - Add a short release-note line stating that the app icons and favicon have been updated.
