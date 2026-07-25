@@ -20,3 +20,4 @@ This directory contains proposed, pending-validation, explicitly TODO, or future
 - [Video widget](VIDEO_WIDGET_SPEC.md)
 - [Replay video architecture](src/core/ui/replay/REPLAY_VIDEO_ARCHITECTURE.md)
 - [Clip altitude data alignment](src/core/ui/replay/CLIP_ALTITUDE_DATA_ALIGNMENT_SPEC.md)
+- [POI animation during replay](src/core/ui/replay/POI_ANIMATION_DURING_REPLAY_SPEC.md)

@@ -164,6 +164,7 @@ points include:
 - [Drone camera path architecture](tech-doc/current/src/core/ui/camera/DRONE_CAMERA_PATH_ARCHITECTURE.md)
 - [Brand and season swatch reactivity](tech-doc/todo/BRAND_SEASON_SWATCH_REACTIVITY_SPEC.md)
 - [Clip altitude data alignment](tech-doc/todo/src/core/ui/replay/CLIP_ALTITUDE_DATA_ALIGNMENT_SPEC.md)
+- [POI animation during replay](tech-doc/todo/src/core/ui/replay/POI_ANIMATION_DURING_REPLAY_SPEC.md)
 - [Widget manager](tech-doc/src/core/ui/widget-manager/README.md)
 - [Screen media recorder](tech-doc/src/core/ui/screen-media-recorder/recorder/README.md)
 - [Canvas overlay composer](tech-doc/src/core/ui/screen-media-recorder/composer/README.md)
