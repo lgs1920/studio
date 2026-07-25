@@ -7,6 +7,7 @@ This is the canonical source for the project's AI-agent and development rules.
 - **Language:** All conversational responses must be in **French**.
 - **Documentation:** All JSDoc blocks, inline comments, and code documentation must be strictly in **English**. Any project documentation requested by the user must also be written in **English**.
 - **Autonomy:** If a choice is ambiguous, stop and ask. **Important**: Final decisions are made by the user.
+- **Direct logging:** When the user explicitly asks for direct logging, use the appropriate built-in console method in the function body (`console.log`, `console.error`, or `console.table`) and do not route it through helper methods or wrappers.
 
 ## 2. Coding Syntax & Style
 
