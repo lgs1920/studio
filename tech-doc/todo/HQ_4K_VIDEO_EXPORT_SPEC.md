@@ -129,6 +129,16 @@ The product should use a consistent definition for all ratios: the profile sets 
 
 `Free` uses the same long-side rule while preserving the actual crop ratio. `Automatic` does not use a fixed target and continues to use the existing pixel budget.
 
+For example, a free crop of `1654 × 976` has an aspect ratio of approximately `1.695:1`. The explicit generic profiles resolve to:
+
+| Profile | Output for `1654 × 976` |
+| --- | ---: |
+| 720-class | 1280 × 754 |
+| 1080-class | 1920 × 1132 |
+| 4K-class | 3840 × 2264 |
+
+The dimensions are rounded down to even values because the video encoders require even dimensions. The resulting ratio differs by less than one pixel from the source ratio. `Automatic` may produce another size because it also considers FPS, quality, DPR, browser, and device limits. These generic `Free` outputs are not Instagram-specific; an Instagram publication should use the dedicated `4:5` or another Instagram-compatible format.
+
 ### Instagram 4:5 output
 
 The configured `4x5` format is intended for Instagram Feed. It must therefore have a platform-aware publishing profile instead of relying only on the generic long-side rule above. Instagram's official guidance keeps uploads up to 1080 pixels wide and supports portrait ratios down to 3:4; a 4:5 publication is therefore best exported at `1080 × 1350`. [Instagram image resolution guidance](https://www.facebook.com/help/1631821640426723/)
