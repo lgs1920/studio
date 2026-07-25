@@ -129,11 +129,11 @@ TunnelTooltip.displayName = 'TunnelTooltip'
  * @property {string} [variant='neutral'] - Web Awesome button variant
  * @property {string} [appearance='plain'] - Web Awesome button appearance
  * @property {string} [hoverVariant] - Web Awesome button variant while hovered
- * @property {(index: number, event?: PointerEvent) => boolean} [beforeStep] - Called before navigating to this step,
+ * @property {(index: number, event?: PointerEvent) => boolean|Promise<boolean>} [beforeStep] - Called before navigating to this step,
  *     return false to cancel
- * @property {(index: number) => void} [afterStep] - Called after navigating to this step
- * @property {(index: number, event: PointerEvent) => boolean} [onClick] - Optional click handler, return false to
- *     cancel
+ * @property {(index: number) => void|Promise<void>} [afterStep] - Called after navigating to this step
+ * @property {(index: number, event: PointerEvent) => boolean|Promise<boolean>} [onClick] - Optional click handler,
+ *     return false to cancel
  */
 
 /**
@@ -164,6 +164,7 @@ export const Tunnel = memo(({
     const tunnelId = useId().replace(/:/g, '')
     // Ref for the tunnel container
     const _tunnelContainer = useRef(null)
+    const _stepActionPending = useRef(false)
 
     /**
      * Validates if the default step is not blocked by mandatory steps
@@ -187,35 +188,50 @@ export const Tunnel = memo(({
      * @param {number} index - Target step index
      * @param {PointerEvent} event - Pointer event
      */
-    const handleStepClick = useCallback((index, event) => {
+    const handleStepClick = useCallback(async (index, event) => {
+        if (_stepActionPending.current) {
+            return
+        }
+
+        _stepActionPending.current = true
         const targetStep = steps[index]
 
-        // Clicking the current step should still trigger its action, if any.
-        if (index === currentContainer) {
-            targetStep?.onClick?.(index, event)
-            return
+        try {
+            // Clicking the current step should still trigger its action, if any.
+            if (index === currentContainer) {
+                await targetStep?.onClick?.(index, event)
+                return
+            }
+            // Check if navigation is blocked by mandatory steps
+            const isBlocked = steps
+                .slice(0, index)
+                .some(step => step.mandatory && !step.done)
+            if (isBlocked) {
+                return
+            }
+            // Trigger afterStep for the current step if it exists
+            if (steps[currentContainer]?.afterStep) {
+                await steps[currentContainer].afterStep(currentContainer)
+            }
+            // Start the target action before the synchronous navigation guard.
+            // The action may be asynchronous, but navigation must wait for it.
+            const onClickResult = targetStep.onClick?.(index, event)
+            // Trigger beforeStep for the target step if defined
+            if (await targetStep.beforeStep?.(index, event) === false) {
+                return
+            }
+            if (await onClickResult === false) {
+                return
+            }
+            // Update the current step index
+            setCurrentStepIndex(index)
         }
-        // Check if navigation is blocked by mandatory steps
-        const isBlocked = steps
-            .slice(0, index)
-            .some(step => step.mandatory && !step.done)
-        if (isBlocked) {
-            return
+        catch (error) {
+            console.error('[Tunnel] Step action failed', error)
         }
-        // Trigger afterStep for the current step if it exists
-        if (steps[currentContainer]?.afterStep) {
-            steps[currentContainer].afterStep(currentContainer)
+        finally {
+            _stepActionPending.current = false
         }
-        // Trigger onClick for the target step if defined
-        if (targetStep.onClick?.(index, event) === false) {
-            return
-        }
-        // Trigger beforeStep for the target step if defined
-        if (targetStep.beforeStep?.(index, event) === false) {
-            return
-        }
-        // Update the current step index
-        setCurrentStepIndex(index)
     }, [steps, currentContainer])
 
     // Execute beforeStep for the default step on initial render
@@ -263,7 +279,7 @@ export const Tunnel = memo(({
                                                     }, step.className)}
                                                     onPointerEnter={() => setHoveredStep(index)}
                                                     onPointerLeave={() => setHoveredStep(current => current === index ? null : current)}
-                                                    onClick={event => handleStepClick(index, event)}
+                                                    onClick={event => void handleStepClick(index, event)}
                                                 >
                                                       <WaIcon name={step.icon} variant="regular"/>
                                                   </WaButton>

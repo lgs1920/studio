@@ -100,6 +100,25 @@ describe('JourneyReplayVideoSync', () => {
         })
     })
 
+    it('stops a replay whose start clips are still pending when recording is cancelled', async () => {
+        const recorder = new FakeRecorder()
+        const replay = makeJourneyReplay()
+        const store = {recordingSync: false}
+        globalThis.lgs = {settings: {ui: {replay: {recordingSync: false}}}}
+        const sync = new JourneyReplayVideoSync({recorder, replay, store})
+
+        sync.arm()
+        recorder.dispatchEvent(new CustomEvent(ScreenMediaRecorder.events.START))
+        await new Promise(resolve => setTimeout(resolve, 0))
+        recorder.dispatchEvent(new CustomEvent(ScreenMediaRecorder.events.CANCEL))
+
+        expect(replay.start).toHaveBeenCalledWith({progress: 0})
+        expect(replay.stop).toHaveBeenCalledWith({
+            emit:              false,
+            deferSceneRestore: false,
+        })
+    })
+
     it('uses a tighter publication cadence in quality capture mode', () => {
         const recorder = new FakeRecorder()
         const replay = makeJourneyReplay()
@@ -205,6 +224,113 @@ describe('JourneyReplayVideoSync', () => {
         expect(store.recordingSync).toBe(false)
         expect(globalThis.lgs.settings.ui.replay.recordingSync).toBe(false)
         expect(replay.setVideoSafeMode).toHaveBeenCalledWith(false)
+        expect(recorder.stopVideo).not.toHaveBeenCalled()
+    })
+
+    it('ignores stop-clips-complete from the previous replay session', async () => {
+        const recorder = new FakeRecorder()
+        recorder.recording = true
+        const replay = makeJourneyReplay()
+        replay.clipSequenceToken = 2
+        const store = {recordingSync: false}
+        globalThis.lgs = {settings: {ui: {replay: {recordingSync: false}}}}
+        const sync = new JourneyReplayVideoSync({recorder, replay, store})
+
+        sync.arm({autoStopRecording: true})
+        recorder.dispatchEvent(new CustomEvent(ScreenMediaRecorder.events.START))
+        await new Promise(resolve => setTimeout(resolve, 0))
+        window.dispatchEvent(new CustomEvent(REPLAY_EVENT_STOP_CLIPS_COMPLETE, {
+            detail: {clipSequenceToken: 1},
+        }))
+
+        await new Promise(resolve => setTimeout(resolve, 10))
+
+        expect(recorder.stopVideo).not.toHaveBeenCalled()
+    })
+
+    it('waits for an asynchronous replay start before accepting its stop token', async () => {
+        const recorder = new FakeRecorder()
+        recorder.recording = true
+        const replay = makeJourneyReplay()
+        replay.clipSequenceToken = 1
+        let resolveStart
+        replay.start = vi.fn(() => new Promise(resolve => {
+            resolveStart = resolve
+        }))
+        const store = {recordingSync: false}
+        globalThis.lgs = {settings: {ui: {replay: {recordingSync: false}}}}
+        const sync = new JourneyReplayVideoSync({recorder, replay, store})
+
+        sync.arm({autoStopRecording: true})
+        recorder.dispatchEvent(new CustomEvent(ScreenMediaRecorder.events.START))
+        await new Promise(resolve => setTimeout(resolve, 0))
+        window.dispatchEvent(new CustomEvent(REPLAY_EVENT_STOP_CLIPS_COMPLETE, {
+            detail: {clipSequenceToken: 1},
+        }))
+
+        expect(recorder.stopVideo).not.toHaveBeenCalled()
+
+        replay.clipSequenceToken = 2
+        resolveStart()
+        await Promise.resolve()
+        await Promise.resolve()
+
+        window.dispatchEvent(new CustomEvent(REPLAY_EVENT_STOP_CLIPS_COMPLETE, {
+            detail: {clipSequenceToken: 1},
+        }))
+        expect(recorder.stopVideo).not.toHaveBeenCalled()
+
+        window.dispatchEvent(new CustomEvent(REPLAY_EVENT_STOP_CLIPS_COMPLETE, {
+            detail: {clipSequenceToken: 2},
+        }))
+        await new Promise(resolve => setTimeout(resolve, 10))
+
+        expect(recorder.stopVideo).toHaveBeenCalledTimes(1)
+    })
+
+    it('ignores a replay start that resolves after the recording was disarmed', async () => {
+        const recorder = new FakeRecorder()
+        const replay = makeJourneyReplay()
+        let resolveStart
+        replay.start = vi.fn(() => new Promise(resolve => {
+            resolveStart = resolve
+        }))
+        const store = {recordingSync: false}
+        globalThis.lgs = {settings: {ui: {replay: {recordingSync: false}}}}
+        const sync = new JourneyReplayVideoSync({recorder, replay, store})
+
+        sync.arm()
+        recorder.dispatchEvent(new CustomEvent(ScreenMediaRecorder.events.START))
+        await new Promise(resolve => setTimeout(resolve, 0))
+        sync.disarm()
+        replay.clipSequenceToken = 4
+        resolveStart()
+
+        await Promise.resolve()
+        await Promise.resolve()
+
+        expect(store.recordingSync).toBe(false)
+        expect(replay.clipSequenceToken).toBe(4)
+    })
+
+    it('cancels a pending auto-stop when the previous replay is aborted', async () => {
+        const recorder = new FakeRecorder()
+        recorder.recording = true
+        const replay = makeJourneyReplay()
+        replay.clipSequenceToken = 1
+        const store = {recordingSync: false}
+        globalThis.lgs = {settings: {ui: {replay: {recordingSync: false}}}}
+        const sync = new JourneyReplayVideoSync({recorder, replay, store})
+
+        sync.arm({autoStopRecording: true})
+        recorder.dispatchEvent(new CustomEvent(ScreenMediaRecorder.events.START))
+        window.dispatchEvent(new CustomEvent(REPLAY_EVENT_STOP_CLIPS_COMPLETE, {
+            detail: {clipSequenceToken: 1},
+        }))
+        sync.stopJourneyReplay()
+
+        await new Promise(resolve => setTimeout(resolve, 20))
+
         expect(recorder.stopVideo).not.toHaveBeenCalled()
     })
 })

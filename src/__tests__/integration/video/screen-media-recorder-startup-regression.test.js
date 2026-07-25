@@ -29,7 +29,13 @@ vi.mock('mediabunny', () => {
         constructor(canvas, config) {
             this.canvas = canvas
             this.config = config
-            this.add = vi.fn(() => Promise.resolve())
+            this.add = vi.fn(() => {
+                if (globalThis.__screenRecorderTestFrameError) {
+                    return Promise.reject(globalThis.__screenRecorderTestFrameError)
+                }
+                config.onEncodedPacket?.()
+                return Promise.resolve()
+            })
             this.close = vi.fn(() => Promise.resolve())
         }
     }
@@ -58,7 +64,7 @@ vi.mock('mediabunny', () => {
         QUALITY_HIGH: 1,
         QUALITY_MEDIUM: 1,
         QUALITY_VERY_HIGH: 1,
-        canEncodeVideo: vi.fn(() => Promise.resolve(true)),
+        canEncodeVideo: vi.fn(() => globalThis.__screenRecorderTestCodecProbe ?? Promise.resolve(true)),
         getEncodableVideoCodecs: vi.fn(() => Promise.resolve([])),
     }
 })
@@ -82,6 +88,8 @@ describe('ScreenMediaRecorder startup', () => {
                 ],
             },
         }
+        globalThis.__screenRecorderTestCodecProbe = null
+        globalThis.__screenRecorderTestFrameError = null
         let rafCalls = 0
         globalThis.requestAnimationFrame = vi.fn((callback) => {
             rafCalls += 1
@@ -121,6 +129,8 @@ describe('ScreenMediaRecorder startup', () => {
         vi.useRealTimers()
         globalThis.__ = undefined
         globalThis.lgs = undefined
+        globalThis.__screenRecorderTestCodecProbe = undefined
+        globalThis.__screenRecorderTestFrameError = undefined
         globalThis.requestAnimationFrame = undefined
         globalThis.cancelAnimationFrame = undefined
     })
@@ -134,6 +144,54 @@ describe('ScreenMediaRecorder startup', () => {
 
         expect(errorHandler).not.toHaveBeenCalled()
         expect(recorder.isRecording()).toBe(true)
+    })
+
+    it('does not resurrect a cancelled recorder after codec startup resolves', async () => {
+        let resolveCodecProbe
+        globalThis.__screenRecorderTestCodecProbe = new Promise(resolve => {
+            resolveCodecProbe = resolve
+        })
+
+        const started = vi.fn()
+        recorder.addEventListener(ScreenMediaRecorder.events.START, started)
+        const startPromise = recorder.startVideo()
+
+        await Promise.resolve()
+        await recorder.cancelVideo()
+        resolveCodecProbe(true)
+        await startPromise
+
+        expect(started).not.toHaveBeenCalled()
+        expect(recorder.isRecording()).toBe(false)
+    })
+
+    it('reports repeated frame encoding errors only once per recording', async () => {
+        await recorder.startVideo()
+        globalThis.__screenRecorderTestFrameError = new DOMException('Codec Reclaimed', 'QuotaExceededError')
+
+        await vi.advanceTimersByTimeAsync(1000)
+
+        expect(errorHandler).toHaveBeenCalledTimes(1)
+        expect(errorHandler.mock.calls[0][0].detail.error.message).toBe('Codec Reclaimed')
+    })
+
+    it('falls back to a timer when the post-start animation frame is suspended', async () => {
+        const frameCaptureReady = vi.fn(async () => undefined)
+        recorder.initialize({
+            fps:         30,
+            quality:     1,
+            maxDuration: 60,
+            maxSize:     1000000,
+            ratio:       '16:9',
+            captureMode: 'speed',
+            frameCaptureReady,
+        })
+
+        await recorder.startVideo()
+        await vi.advanceTimersByTimeAsync(50)
+
+        expect(frameCaptureReady).toHaveBeenCalled()
+        expect(errorHandler).not.toHaveBeenCalled()
     })
 
     it('runs frameCaptureReady before speed-mode encoded frames when provided', async () => {

@@ -66,7 +66,7 @@ Implementation-document status is organized into two directories:
 ## Implementation TODO documentation
 
 - [Cloud sync](todo/CLOUD-SYNC-TODO.md)
-- [HQ 4K video export](todo/HQ_4K_VIDEO_EXPORT_SPEC.md)
+- [HQ video resolution profiles](todo/HQ_4K_VIDEO_EXPORT_SPEC.md)
 - [Journey import formats](todo/JOURNEY_IMPORT_FORMATS_SPEC.md)
 - [Translation notes](todo/Translate.md)
 - [Drone camera 3D path editor](todo/src/core/ui/camera/DRONE_CAMERA_3D_PATH_EDITOR_SPEC.md)
@@ -77,4 +77,5 @@ Implementation-document status is organized into two directories:
 - [Main UI TODO](todo/src/components/MainUI/TODO.md)
 - [Arrow widget](todo/ARROW_WIDGET_SPEC.md)
 - [Video widget](todo/VIDEO_WIDGET_SPEC.md)
+- [Oxlint TypeScript 7 migration](todo/OXLINT_TYPESCRIPT_7_MIGRATION_SPEC.md)
 - [Replay video architecture](todo/src/core/ui/replay/REPLAY_VIDEO_ARCHITECTURE.md)

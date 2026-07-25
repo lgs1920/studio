@@ -14,7 +14,7 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('@Components/LGSPopup', () => ({
@@ -124,5 +124,34 @@ describe('Tunnel', () => {
         fireEvent.click(screen.getByRole('button', {name: 'Record'}))
 
         expect(handleRecord).toHaveBeenCalledTimes(1)
+    })
+
+    it('waits for an asynchronous step action before navigating', async () => {
+        let resolveAction
+        const handleRecord = vi.fn(() => new Promise(resolve => {
+            resolveAction = resolve
+        }))
+
+        render(
+            <Tunnel
+                steps={[
+                    {icon: 'gear', text: 'Setup'},
+                    {icon: 'camera', text: 'Record', onClick: handleRecord},
+                ]}
+                onCancel={vi.fn()}
+            />,
+        )
+
+        const record = screen.getByRole('button', {name: 'Record'})
+        fireEvent.click(record)
+
+        expect(handleRecord).toHaveBeenCalledTimes(1)
+        expect(record.getAttribute('aria-selected')).toBe('false')
+
+        await act(async () => {
+            resolveAction()
+        })
+
+        expect(record.getAttribute('aria-selected')).toBe('true')
     })
 })

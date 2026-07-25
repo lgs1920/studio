@@ -47,6 +47,10 @@ export class JourneyReplayVideoSync {
     #store = null
     #bound = false
     #pendingStartTimeout = null
+    #replayCaptureActive = false
+    #replayCaptureToken = null
+    #replayStartPending = false
+    #captureGeneration = 0
 
     constructor({recorder = globalThis.__?.recorder ?? null, replay = globalThis.__?.ui?.replay ?? null, store = defaultJourneyReplayStore()} = {}) {
         this.#recorder = recorder
@@ -75,18 +79,26 @@ export class JourneyReplayVideoSync {
     }
 
     stopJourneyReplay = ({deferSceneRestore = false} = {}) => {
+        this.#captureGeneration += 1
         const replay = this.#resolveJourneyReplay()
         if (!replay) {
             return
         }
 
         this.#cancelPendingStart()
-        if (replay.running || replay.paused || replay.playing) {
+        const replayWasActive = Boolean(this.#replayCaptureActive || replay.running || replay.paused || replay.playing)
+        if (replayWasActive) {
             replay.stop?.({
                 emit:              false,
                 deferSceneRestore: deferSceneRestore === true,
             })
         }
+        if (replayWasActive) {
+            replay.setContinuousRender?.(false)
+        }
+        this.#replayCaptureActive = false
+        this.#replayCaptureToken = null
+        this.#replayStartPending = false
     }
 
     #setVideoSafeMode = (enabled) => {
@@ -119,6 +131,8 @@ export class JourneyReplayVideoSync {
 
         const recorder = this.#resolveRecorder()
         const replay = this.#resolveJourneyReplay()
+        const generation = this.#captureGeneration
+        const captureToken = this.#replayCaptureToken
         const stopRecorder = async () => {
             if (!recorder?.isRecording?.()) {
                 this.#setVideoSafeMode(false)
@@ -132,6 +146,11 @@ export class JourneyReplayVideoSync {
                 await waitForAnimationFrame()
                 await waitForAnimationFrame()
                 replay?.seek?.(1)
+                if (!this.#armed
+                    || generation !== this.#captureGeneration
+                    || captureToken !== this.#replayCaptureToken) {
+                    return
+                }
                 await recorder.stopVideo({captureFinalFrame: true})
             }
             finally {
@@ -165,25 +184,44 @@ export class JourneyReplayVideoSync {
         this.#recorder = recorder
         this.#replay = replay
 
-        const startJourneyReplay = () => {
+        const startJourneyReplay = async () => {
             if (!this.#armed) {
                 return
             }
 
+            const startGeneration = this.#captureGeneration
             this.#cancelPendingStart()
-            if (!this.#armed) {
+            if (!this.#armed || startGeneration !== this.#captureGeneration) {
                 this.#setVideoSafeMode(false)
                 return
             }
+            this.#replay?.cancelPendingSceneRestore?.()
             if (this.#resetToStart && this.#replay?.running) {
                 this.#replay.stop?.({emit: false})
             }
-            this.#replay?.start?.({progress: 0})
+            this.#replayCaptureActive = true
+            this.#replayStartPending = true
+            try {
+                const startResult = this.#replay?.start?.({progress: 0})
+                await startResult
+                if (!this.#armed || startGeneration !== this.#captureGeneration) {
+                    return
+                }
+                this.#replayCaptureToken = Number.isFinite(this.#replay?.clipSequenceToken)
+                                          ? this.#replay.clipSequenceToken
+                                          : null
+            }
+            catch {
+                return
+            }
+            finally {
+                this.#replayStartPending = false
+            }
         }
 
         const handleRecorderStart = () => {
             this.#setVideoCaptureCadence()
-            startJourneyReplay()
+            void startJourneyReplay()
         }
 
         const handleRecorderPause = () => {
@@ -209,6 +247,15 @@ export class JourneyReplayVideoSync {
         }
 
         const handleStopClipsComplete = event => {
+            const eventToken = event?.detail?.clipSequenceToken
+            if (this.#replayStartPending) {
+                return
+            }
+            if (this.#replayCaptureToken !== null
+                && Number.isFinite(eventToken)
+                && eventToken !== this.#replayCaptureToken) {
+                return
+            }
             this.#stopRecorderAfterStopClips(event?.detail ?? {})
         }
 
@@ -235,6 +282,7 @@ export class JourneyReplayVideoSync {
         captureMode = 'speed',
         captureFps = null,
     } = {}) => {
+        this.#captureGeneration += 1
         if (recorder) {
             this.#recorder = recorder
         }
@@ -258,6 +306,7 @@ export class JourneyReplayVideoSync {
     disarm = () => {
         this.#armed = false
         this.#cancelPendingStart()
+        this.stopJourneyReplay()
         this.#setVideoSafeMode(false)
         this.#captureMode = 'speed'
         this.#captureFps = null

@@ -24,19 +24,19 @@ import { useSnapshot } from 'valtio'
 export const VideoSceneWidgetsPortal = memo(({context, hidden = false}) => {
     const list = useSnapshot(lgs.stores.ui.widget.list)
     const video = useSnapshot(lgs.stores.ui.video)
-    // The editor is closed as soon as recording starts, but the video widgets
-    // must remain mounted so the recorder can wait for and capture them.
-    const videoCaptureActive = video.editing === true
-                              || video.preRecording === true
+    // The editor can stay open while the video widgets are shown in preview.
+    // Rehydration and invalidation must only run while an actual capture phase
+    // is active, otherwise the portal loops during normal editor use.
+    const videoCaptureActive = video.preRecording === true
                               || video.recording === true
+                              || video.snapshot === true
                               || video.finalizing === true
     const previewOnly = video.editing === true && video.cropper?.widgetEditor === false
     const _rehydrateKey = useRef('')
-    const _rehydrateFrame = useRef(null)
-    const widgets = Array.from(list.entries())
+    const widgetEntries = Array.from(list.entries())
         .filter(([, props]) => props?.widgetsBoard === VIDEO_WIDGETS_BOARD)
         .sort(([, a], [, b]) => (b.zIndex || 0) - (a.zIndex || 0))
-    const widgetIds = widgets.map(([key]) => key).join('|')
+    const widgetIds = widgetEntries.map(([key]) => key).join('|')
 
     const [boardElement, setBoardElement] = useState(null)
     const [boardReady, setBoardReady] = useState(false)
@@ -72,7 +72,7 @@ export const VideoSceneWidgetsPortal = memo(({context, hidden = false}) => {
                 cancelAnimationFrame(frame)
             }
         }
-    }, [hidden, videoCaptureActive, widgetIds])
+    }, [hidden])
 
     useEffect(() => {
         if (!boardElement || typeof document === 'undefined') {
@@ -105,43 +105,26 @@ export const VideoSceneWidgetsPortal = memo(({context, hidden = false}) => {
     }, [boardElement])
 
     useEffect(() => {
-        if (!boardReady || hidden || !videoCaptureActive || widgets.length === 0) {
+        if (!boardReady || hidden || !videoCaptureActive || widgetEntries.length === 0) {
             return
         }
 
-        const key = `${video.editing}-${video.preRecording}-${boardReady}-${widgetIds}`
+        // Une session de capture possède un seul cycle de vie du tableau.
+        // Les étapes d'enregistrement et de finalisation ne doivent pas
+        // reconstruire les mêmes widgets.
+        const key = `${videoCaptureActive}-${boardReady}-${widgetIds}`
         if (_rehydrateKey.current === key) {
             return
         }
         _rehydrateKey.current = key
 
         __.ui.widgetManager.invalidateRuntimeByBoard(VIDEO_WIDGETS_BOARD)
-        let cancelled = false
-        let attempts = 0
-        const expectedWidgets = widgets.length
-
-        const rehydrate = async () => {
-            const refreshed = Number(await __.ui.widgetManager.rehydrateWidgetsByBoard(VIDEO_WIDGETS_BOARD)) || 0
-            if (cancelled || refreshed >= expectedWidgets || attempts >= 30) {
-                return
-            }
-            attempts += 1
-            _rehydrateFrame.current = requestAnimationFrame(rehydrate)
-        }
-
-        _rehydrateFrame.current = requestAnimationFrame(rehydrate)
-
-        return () => {
-            cancelled = true
-            if (_rehydrateFrame.current) {
-                cancelAnimationFrame(_rehydrateFrame.current)
-                _rehydrateFrame.current = null
-            }
-        }
-    }, [boardReady, hidden, videoCaptureActive, video.preRecording, widgetIds, widgets.length])
+        void __.ui.widgetManager.rehydrateWidgetsByBoard(VIDEO_WIDGETS_BOARD)
+    }, [boardReady, hidden, videoCaptureActive, widgetIds])
 
     useEffect(() => {
         if (!videoCaptureActive) {
+            _rehydrateKey.current = ''
             return undefined
         }
 
@@ -150,7 +133,7 @@ export const VideoSceneWidgetsPortal = memo(({context, hidden = false}) => {
         }
     }, [videoCaptureActive])
 
-    if (hidden || typeof document === 'undefined' || widgets.length === 0 || !boardElement || !boardReady) {
+    if (hidden || typeof document === 'undefined' || widgetEntries.length === 0 || !boardElement || !boardReady) {
         return null
     }
 
@@ -166,7 +149,7 @@ export const VideoSceneWidgetsPortal = memo(({context, hidden = false}) => {
                 zIndex: 'var(--lgs-video-widgets-zindex)',
             }}
         >
-            {widgets.map(([key, props]) => (
+            {widgetEntries.map(([key, props]) => (
                 <div key={key} style={{pointerEvents: 'auto'}}>
                     <DynamicWidget
                         id={key}

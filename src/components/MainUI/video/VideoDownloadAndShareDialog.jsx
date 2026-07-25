@@ -737,10 +737,7 @@ export const VideoDownloadAndShareDialog = () => {
             return
         }
 
-        const source = event?.detail?.source
-        const dialogElement = event?.currentTarget ?? event?.target ?? null
-        const isDialogSelfHide = Boolean(source && dialogElement && source === dialogElement)
-        if (_dialogHiddenForHqExport.current || _hqExportAbortController.current || _suppressNextDialogHideCleanup.current || isDialogSelfHide) {
+        if (_dialogHiddenForHqExport.current || _hqExportAbortController.current || _suppressNextDialogHideCleanup.current) {
             _suppressNextDialogHideCleanup.current = false
             return
         }

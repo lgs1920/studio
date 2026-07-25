@@ -186,7 +186,13 @@ export const start = (mode, options = {}) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
         if (state.sceneRestorePromise) {
-            return state.sceneRestorePromise.then(() => start(mode, options))
+            const restoreToken = state.clipSequenceToken
+            return state.sceneRestorePromise.then(() => {
+                if (restoreToken !== state.clipSequenceToken) {
+                    return null
+                }
+                return start(mode, options)
+            })
         }
         state.renderer.clear()
         call.bindCesiumCameraBridge()

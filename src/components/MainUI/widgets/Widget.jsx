@@ -682,8 +682,16 @@ export const Widget = ({isVisible, className = '', moveableClassName = '', conta
         return path.some(target => target instanceof ElementClass && Boolean(target.closest?.('.lgs-widget-no-drag')))
     }
 
+    /**
+     * Updates the reactive widget entry only when a persisted field changes.
+     * @param {Object} patch - Reactive fields to merge into the widget entry
+     */
     const updateWidgetStoreEntry = useCallback((patch) => {
         const currentEntry = $widget.list.get(widgetId) ?? {}
+        const hasChanges = Object.entries(patch).some(([key, value]) => currentEntry[key] !== value)
+        if (!hasChanges) {
+            return
+        }
         $widget.list.set(widgetId, {...currentEntry, ...patch})
     }, [$widget.list, widgetId])
 
@@ -1434,6 +1442,10 @@ export const Widget = ({isVisible, className = '', moveableClassName = '', conta
         return () => {
             cancelled = true
             clearTimeout(_controlBoxTimer.current)
+            if (_w2c.current) {
+                _w2c.current.destroy()
+                _w2c.current = null
+            }
             if (_initialized.current && _widget.current && !config?.persist) {
                 try {
                     __.ui.widgetManager.disposeElement(_widget.current)
@@ -1446,7 +1458,7 @@ export const Widget = ({isVisible, className = '', moveableClassName = '', conta
             __.recorder.removeEventListener(ScreenMediaRecorder.events.STOP, clean)
             __.recorder.removeEventListener(ScreenMediaRecorder.events.CANCEL, clean)
         }
-    }, [isVisible, config, widgetId, video.preRecording, video.recording, video.snapshot, video.finalizing, actualContainer])
+    }, [isVisible, config, widgetId, actualContainer])
 
     useEffect(() => {
         if (!_initialized.current || !_widget.current) {

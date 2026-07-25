@@ -47,6 +47,10 @@ vi.mock('@Components/MainUI/widgets/DynamicWidget', () => ({
     DynamicWidget: () => <div data-testid="dynamic-widget"/>,
 }))
 
+vi.mock('@Core/ui/replay/ReplayVideoOverlayComposer', () => ({
+    isReplayVideoWidgetReady: vi.fn(() => true),
+}))
+
 vi.mock('@web.awesome.me/webawesome-pro/dist/react', () => ({
     WaButton: ({children, ...props}) => <button type="button" {...props}>{children}</button>,
     WaCard: ({children, ...props}) => <div {...props}>{children}</div>,
@@ -190,7 +194,8 @@ describe('video recording relaunch regression', () => {
         expect(widgetManager.invalidateRuntimeByBoard).not.toHaveBeenCalled()
         expect(widgetManager.rehydrateWidgetsByBoard).not.toHaveBeenCalled()
 
-        lgs.stores.ui.video.step = 1
+        lgs.stores.ui.video.editing = false
+        lgs.stores.ui.video.preRecording = true
         portal.rerender(<VideoSceneWidgetsPortal context={lgs.stores.ui.video.cropper}/>)
 
         await waitFor(() => {
@@ -215,18 +220,54 @@ describe('video recording relaunch regression', () => {
         })
     })
 
-    it('rehydrates video widgets when a second replay starts without changing the widget list', async () => {
+    it('keeps the editor preview mounted without rehydrating while capture is inactive', async () => {
+        globalThis.lgs.stores.ui.video.editing = true
+        globalThis.lgs.stores.ui.video.recording = false
+        globalThis.lgs.stores.ui.video.preRecording = false
+        globalThis.lgs.stores.ui.video.snapshot = false
+        globalThis.lgs.stores.ui.video.finalizing = false
+
+        render(<VideoSceneWidgetsPortal context={lgs.stores.ui.video.cropper}/>)
+
+        await waitFor(() => {
+            expect(screen.getByTestId('dynamic-widget')).not.toBeNull()
+        })
+
+        expect(widgetManager.invalidateRuntimeByBoard).not.toHaveBeenCalled()
+        expect(widgetManager.rehydrateWidgetsByBoard).not.toHaveBeenCalled()
+    })
+
+    it('rehydrates video widgets when capture actually starts and stays stable across editor state changes', async () => {
         globalThis.lgs.stores.ui.video.editing = true
         globalThis.lgs.stores.ui.video.recording = false
 
         const view = render(<VideoSceneWidgetsPortal context={lgs.stores.ui.video.cropper}/>)
 
+        expect(widgetManager.rehydrateWidgetsByBoard).not.toHaveBeenCalled()
+
+        globalThis.lgs.stores.ui.video.preRecording = true
+
         await waitFor(() => {
             expect(widgetManager.rehydrateWidgetsByBoard).toHaveBeenCalledTimes(1)
         })
 
-        globalThis.lgs.stores.ui.video.preRecording = true
+        globalThis.lgs.stores.ui.video.editing = false
+        view.rerender(<VideoSceneWidgetsPortal context={lgs.stores.ui.video.cropper}/>)
 
+        expect(widgetManager.rehydrateWidgetsByBoard).toHaveBeenCalledTimes(1)
+
+        globalThis.lgs.stores.ui.video.recording = true
+        await waitFor(() => {
+            expect(widgetManager.rehydrateWidgetsByBoard).toHaveBeenCalledTimes(1)
+        })
+
+        globalThis.lgs.stores.ui.video.recording = false
+        globalThis.lgs.stores.ui.video.preRecording = false
+        await waitFor(() => {
+            expect(widgetManager.invalidateRuntimeByBoard).toHaveBeenCalledTimes(1)
+        })
+
+        globalThis.lgs.stores.ui.video.preRecording = true
         await waitFor(() => {
             expect(widgetManager.rehydrateWidgetsByBoard).toHaveBeenCalledTimes(2)
         })
@@ -300,11 +341,11 @@ describe('video recording relaunch regression', () => {
 
         render(<VideoRecorderToolbar/>)
 
-        expect(screen.getByText('00:01')).not.toBeNull()
-        expect(screen.getByText('50.0 km')).not.toBeNull()
+        expect(screen.queryByText('00:01')).toBeNull()
+        expect(screen.queryByText('50.0 km')).toBeNull()
         expect(screen.queryByText('00:01 / 00:02')).toBeNull()
         expect(screen.queryByText('50.0 / 100.0 km')).toBeNull()
-        expect(screen.queryByText('50%')).toBeNull()
+        expect(screen.getByText('50%')).not.toBeNull()
     })
 
     it('keeps the mobile replay summary rendered inline', () => {
@@ -324,10 +365,9 @@ describe('video recording relaunch regression', () => {
 
         render(<VideoRecorderToolbar/>)
 
-        const time = screen.getByText('00:01')
-        const distance = screen.getByText('50.0 km')
-        expect(time.parentElement).toBe(distance.parentElement)
-        expect(time.parentElement.className).toContain('video-recorder-widget')
+        const percent = screen.getByText('50%')
+        expect(percent.closest('.video-recorder-replay-progress')).not.toBeNull()
+        expect(percent.closest('.video-recorder-widget')).not.toBeNull()
     })
 
     it('keeps the stop action available while recording is paused', () => {
@@ -340,6 +380,26 @@ describe('video recording relaunch regression', () => {
 
         expect(recorder.stopVideo).toHaveBeenCalledTimes(1)
         expect(lgs.stores.ui.video.finalizing).toBe(true)
+    })
+
+    it('restores the capture UI when the recording is aborted from the toolbar', async () => {
+        globalThis.lgs.stores.ui.video.recording = true
+        globalThis.lgs.stores.ui.video.editing = false
+        globalThis.lgs.stores.replay.mainUiHidden = true
+
+        render(<VideoRecorderToolbar/>)
+
+        await fireEvent.pointerDown(document.getElementById('video-recorder-cancel'))
+
+        await waitFor(() => {
+            expect(recorder.cancelVideo).toHaveBeenCalledTimes(1)
+        })
+
+        expect(widgetCache.restoreAllHiddenWidgetsExcept).toHaveBeenCalledWith(VIDEO_WIDGETS_BOARD)
+        expect(lgs.stores.replay.mainUiHidden).toBe(false)
+        expect(lgs.stores.ui.video.recording).toBe(false)
+        expect(lgs.stores.ui.video.preRecording).toBe(false)
+        expect(lgs.stores.ui.video.editing).toBe(true)
     })
 
     it('keeps the preparation state free of a second record action', () => {

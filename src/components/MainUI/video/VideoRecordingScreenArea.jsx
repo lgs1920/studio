@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-05-01
- * Last modified: 2026-05-01
+ * Created on: 2026-07-24
+ * Last modified: 2026-07-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -64,8 +64,8 @@ export const VideoRecordingScreenArea = memo(() => {
     const _wakeLock = useRef(null)
     const _recordingStartToken = useRef(0)
     const [mountTimeoutOpen, setMountTimeoutOpen] = useState(false)
-    const [mountTimeoutError] = useState({missing: [], timeoutMs: WIDGET_MOUNT_TIMEOUT})
-    const [mountTimeoutAction] = useState('record')
+    const [mountTimeoutError, setMountTimeoutError] = useState({missing: [], timeoutMs: WIDGET_MOUNT_TIMEOUT})
+    const [mountTimeoutAction, setMountTimeoutAction] = useState('record')
 
     const updateJourneyReplayVideoCropRect = useCallback((cropRect = null) => {
         const replayStore = lgs.stores?.replay
@@ -193,20 +193,6 @@ export const VideoRecordingScreenArea = memo(() => {
         return isReplayVideoWidgetReady(widgetId)
     }, [])
 
-    // rAF-based refresh loop to keep overlays in sync with the recording frames.
-    const startOverlaysRefresh = useCallback((composer, cropRect) => {
-        stopOverlaysRefresh()
-        const tick = () => {
-            if (!_composer.current) {
-                _overlaysRefreshRafId.current = null
-                return
-            }
-            buildComposerOverlays(composer, cropRect)
-            _overlaysRefreshRafId.current = requestAnimationFrame(tick)
-        }
-        _overlaysRefreshRafId.current = requestAnimationFrame(tick)
-    }, [buildComposerOverlays, stopOverlaysRefresh])
-
     const requestWakeLock = useCallback(async () => {
         try {
             if (!('wakeLock' in navigator)) {
@@ -255,6 +241,14 @@ export const VideoRecordingScreenArea = memo(() => {
         })
         const selectedFps = renderSpec.fps
         if (!prepareJourneyReplayForRecording(renderSpec)) {
+            return false
+        }
+        await withTimeout(
+            Promise.resolve(__.ui.replay?.waitForSceneRestore?.()),
+            VIDEO_RECORDER_INITIALIZE_TIMEOUT_MS,
+            'Replay scene restoration timed out before video recording.',
+        )
+        if (startToken !== _recordingStartToken.current) {
             return false
         }
         const recordingMetadata = {
@@ -336,9 +330,9 @@ export const VideoRecordingScreenArea = memo(() => {
             return false
         }
         __.recorder.setCanvas(composer.getCanvas())
-        startOverlaysRefresh(composer, renderSpec.cropRect)
+        composer.setContinuousRendering?.(false)
         return true
-    }, [maxDuration, maxSize, disposeComposer, stopOverlaysRefresh, buildComposerOverlays, buildFinalComposerOverlays, startOverlaysRefresh, syncVideoCropFrame, prepareJourneyReplayForRecording, isJourneyReplaySyncRequested, $video])
+    }, [maxDuration, maxSize, disposeComposer, stopOverlaysRefresh, buildComposerOverlays, buildFinalComposerOverlays, syncVideoCropFrame, prepareJourneyReplayForRecording, isJourneyReplaySyncRequested, $video])
 
     const markRecordingStarted = useCallback(() => {
         if (!$video.preRecording && $video.recording) {
@@ -373,10 +367,13 @@ export const VideoRecordingScreenArea = memo(() => {
                 })
                 return
             }
+
             if (startToken !== _recordingStartToken.current) {
                 return
             }
+
             await __.recorder.startVideo()
+
             markRecordingStarted()
         }
         catch (e) {
@@ -518,13 +515,18 @@ export const VideoRecordingScreenArea = memo(() => {
             }
             const missing = keys.filter(k => !isWidgetReadyForRecording(k))
             _pendingFinish.current = finish
+            const action = $video.preRecording ? 'record' : 'snapshot'
+            setMountTimeoutError({missing, timeoutMs: WIDGET_MOUNT_TIMEOUT})
+            setMountTimeoutAction(action)
+            setMountTimeoutOpen(true)
             window.dispatchEvent(new CustomEvent('widget-mount-timeout', {
                 detail: {
                     missing,
-                    action: $video.preRecording ? 'record' : 'snapshot',
+                    action,
                 },
             }))
         }, WIDGET_MOUNT_TIMEOUT)
+
         return () => {
             cleanup?.()
             clearTimeout(tid)
@@ -546,9 +548,6 @@ export const VideoRecordingScreenArea = memo(() => {
             releaseWakeLock()
         }
         const hResumed = () => {
-            if (_composer.current) {
-                startOverlaysRefresh(_composer.current, __.ui.widgetManager.getWidgetConfig(VIDEO_CROP_ZONE)?.cropDimensions)
-            }
             requestWakeLock()
         }
         const hStarted = () => {
@@ -577,7 +576,7 @@ export const VideoRecordingScreenArea = memo(() => {
             document.removeEventListener('visibilitychange', handleVisibility)
             updateJourneyReplayVideoCropRect(null)
         }
-    }, [disposeComposer, stopOverlaysRefresh, startOverlaysRefresh, requestWakeLock, releaseWakeLock, markRecordingStarted, updateJourneyReplayVideoCropRect])
+    }, [disposeComposer, stopOverlaysRefresh, requestWakeLock, releaseWakeLock, markRecordingStarted, updateJourneyReplayVideoCropRect])
 
     useEffect(() => {
         __.ui.widgetManager.windowResizing = false
@@ -610,9 +609,13 @@ export const VideoRecordingScreenArea = memo(() => {
             <WidgetMountErrorDialog open={mountTimeoutOpen} error={mountTimeoutError} action={mountTimeoutAction}
                                     onConfirm={() => {
                                         setMountTimeoutOpen(false)
-                                        _pendingFinish.current?.()
+                                        const finish = _pendingFinish.current
+                                        _pendingFinish.current = null
+                                        finish?.()
                                     }} onCancel={() => {
                 setMountTimeoutOpen(false)
+                _pendingFinish.current = null
+                void __.recorder?.cancelVideo?.()
                 $video.preRecording = false
                 $video.finalizing = false
                 $video.editing = true

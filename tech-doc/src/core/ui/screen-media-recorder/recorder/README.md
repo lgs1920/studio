@@ -83,7 +83,12 @@ Video recording in the studio path uses the composed canvas.
 
 ### Frame scheduling
 
-The recorder uses `requestAnimationFrame` and a target frame interval:
+The recorder uses `requestAnimationFrame` when available and keeps a timer
+fallback for environments where animation frames are throttled or unavailable.
+Both paths share one settled callback, so a frame is processed once even when
+the animation-frame callback and the fallback timer race.
+
+The target frame interval is:
 
 - `#frameIntervalMs = 1000 / fps`
 - `#nextFrameDueMs` tracks when the next frame may be submitted
@@ -96,6 +101,18 @@ Instead, the resulting promise is stored in `#pendingFrameWrites`.
 
 This avoids stalling the main capture loop on encoder backpressure, while still allowing the recorder to wait for all
 pending writes during finalization.
+
+### Repeated start and cancellation
+
+`startVideo()` performs asynchronous codec probing and encoder startup. Each
+start receives a lifecycle token. `cancelVideo()` invalidates that token and
+stops both the animation-frame and timer schedulers. Every asynchronous start
+step checks the token before activating recording, dispatching `START`, or
+waiting for the first frame.
+
+This is required when a user aborts a recording and starts another one quickly:
+the cancelled start must not dispatch a late `START`, attach a stale encoder,
+or schedule frames into the new recording.
 
 ### Stop / finalize
 

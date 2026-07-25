@@ -132,6 +132,7 @@ export class ScreenMediaRecorder extends EventTarget {
     #stream = null
     #videoElement = null
     #rafId = null
+    #frameTimeoutId = null
     #infoInterval = null
     #isRecording = false
     #isPaused = false
@@ -165,7 +166,9 @@ export class ScreenMediaRecorder extends EventTarget {
     #currentFps = 0
     #lastInfoSampleTimeMs = null
     #lastInfoFrameCount = 0
+    #frameEncodingErrorReported = false
     #firstEncodedPacketMonitorId = 0
+    #lifecycleToken = 0
 
     constructor() {
         super()
@@ -411,7 +414,36 @@ export class ScreenMediaRecorder extends EventTarget {
             return
         }
         this.#frameLoopActive = true
-        this.#rafId = requestAnimationFrame(this.#processFrame)
+        let settled = false
+        const runFrame = (time = performance.now()) => {
+            if (settled) {
+                return
+            }
+            settled = true
+            if (this.#frameTimeoutId !== null) {
+                clearTimeout(this.#frameTimeoutId)
+                this.#frameTimeoutId = null
+            }
+            this.#rafId = null
+            void this.#processFrame(time)
+        }
+        const runAnimationFrame = (time) => {
+            runFrame(time)
+        }
+        const requestFrame = globalThis.requestAnimationFrame
+        if (typeof requestFrame === 'function') {
+            this.#rafId = requestFrame(runAnimationFrame)
+        }
+        this.#frameTimeoutId = setTimeout(
+            () => {
+                if (this.#rafId !== null) {
+                    cancelAnimationFrame(this.#rafId)
+                    this.#rafId = null
+                }
+                runFrame()
+            },
+            Math.max(16, Math.min(250, this.#frameIntervalMs || 16)),
+        )
     }
 
     #prepareFrameCapture = async () => {
@@ -470,7 +502,6 @@ export class ScreenMediaRecorder extends EventTarget {
 
         const now = performance.now()
         const elapsedMs = now - this.#startTime + this.#pausedTime
-
         if (this.#captureMode !== 'quality' && elapsedMs + 0.5 < this.#nextFrameDueMs) {
             this.#scheduleNextFrame()
             return
@@ -506,7 +537,14 @@ export class ScreenMediaRecorder extends EventTarget {
 
     #stopScheduling = () => {
         this.#frameLoopActive = false
-        cancelAnimationFrame(this.#rafId)
+        if (this.#rafId !== null) {
+            cancelAnimationFrame(this.#rafId)
+            this.#rafId = null
+        }
+        if (this.#frameTimeoutId !== null) {
+            clearTimeout(this.#frameTimeoutId)
+            this.#frameTimeoutId = null
+        }
         clearInterval(this.#infoInterval)
     }
 
@@ -543,6 +581,10 @@ export class ScreenMediaRecorder extends EventTarget {
         if (!this.#isRecording) {
             return
         }
+        if (this.#frameEncodingErrorReported) {
+            return
+        }
+        this.#frameEncodingErrorReported = true
         if (this.#encodedPackets === 0) {
             void this.#failActiveRecording(error)
             return
@@ -592,6 +634,7 @@ export class ScreenMediaRecorder extends EventTarget {
 
     /** Abort recording and discard data */
     cancelVideo = async () => {
+        this.#lifecycleToken += 1
         this.#isRecording = this.#isPaused = false
         this.#stopScheduling()
 
@@ -627,10 +670,15 @@ export class ScreenMediaRecorder extends EventTarget {
             throw this.error('No source set')
         }
 
+        const lifecycleToken = ++this.#lifecycleToken
+        const isStartCancelled = () => lifecycleToken !== this.#lifecycleToken
         try {
             this.#reset()
             const safe = this.#dimensions
             const outputConfig = await this.#resolveVideoOutput(safe)
+            if (isStartCancelled()) {
+                return
+            }
             if (!outputConfig) {
                 throw this.error(`No supported video codec for ${safe.width}x${safe.height} on this browser.`)
             }
@@ -662,6 +710,9 @@ export class ScreenMediaRecorder extends EventTarget {
                 'Video recording start timed out on this browser.',
                 true,
             )
+            if (isStartCancelled()) {
+                return
+            }
             this.#isRecording = true
             this.#isPaused = false
             this.#pausedTime = 0
@@ -669,6 +720,10 @@ export class ScreenMediaRecorder extends EventTarget {
             document.body.classList.add(ScreenMediaRecorder.CLASSES.RECORDING)
 
             await this.#waitForStartFrameReady()
+
+            if (isStartCancelled()) {
+                return
+            }
 
             this.dispatchEvent(new CustomEvent(ScreenMediaRecorder.events.START))
             this.#startTime = performance.now()
@@ -720,6 +775,7 @@ export class ScreenMediaRecorder extends EventTarget {
         this.#currentFps = 0
         this.#lastInfoSampleTimeMs = null
         this.#lastInfoFrameCount = 0
+        this.#frameEncodingErrorReported = false
         this.#firstEncodedPacketMonitorId += 1
     }
 

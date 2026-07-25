@@ -63,12 +63,39 @@ export const VideoRecordingSettingsToolbar = memo(() => {
         videoCropConfig.cropDimensions.height > 0
 
     const _steps = useRef([])
+    const _cropSyncPromise = useRef(null)
 
     // --- Handlers ---
 
-    const syncCropFrame = useCallback((phase = 'sync') => (
-        __.ui.widgetManager.syncCropDimensionsFromElement(VIDEO_CROP_ZONE, true, phase)
-    ), [])
+    const syncCropFrame = useCallback((phase = 'sync') => {
+        if (_cropSyncPromise.current) {
+            return _cropSyncPromise.current
+        }
+
+        let promise
+        try {
+            promise = Promise.resolve(__.ui.widgetManager.syncCropDimensionsFromElement(VIDEO_CROP_ZONE, true, phase))
+        }
+        catch (error) {
+            promise = Promise.reject(error)
+        }
+
+        _cropSyncPromise.current = promise
+        promise.then(
+            () => {
+                if (_cropSyncPromise.current === promise) {
+                    _cropSyncPromise.current = null
+                }
+            },
+            () => {
+                if (_cropSyncPromise.current === promise) {
+                    _cropSyncPromise.current = null
+                }
+            },
+        )
+
+        return promise
+    }, [])
 
     /** Persists the live crop before closing the video editor. */
     const handleCancel = useCallback(async () => {

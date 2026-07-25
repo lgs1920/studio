@@ -879,6 +879,7 @@ export class JourneyReplaySessionController {
             restorePlaybackCameraSettings: (...args) => JourneyReplaySessionSceneController.restorePlaybackCameraSettings(this, ...args),
             restoreJourneyReplayDrawerAfterPlayback: (...args) => JourneyReplaySessionSceneController.restoreJourneyReplayDrawerAfterPlayback(this, ...args),
             restorePlaybackScene: (...args) => JourneyReplaySessionSceneController.restorePlaybackSceneInternal(this, ...args),
+            cancelPendingSceneRestore: (...args) => JourneyReplaySessionSceneController.cancelPendingSceneRestore(this, ...args),
             restoreCameraState: (...args) => JourneyReplaySessionSceneController.restoreCameraState(this, ...args),
             setContinuousRender: (...args) => JourneyReplaySessionSceneController.setContinuousRender(this, ...args),
             abortPlaybackAfterListenerError: (...args) => JourneyReplaySessionSceneController.abortPlaybackAfterListenerError(this, ...args),
@@ -1028,6 +1029,10 @@ export class JourneyReplaySessionController {
         return this.#controller.paused
     }
 
+    get clipSequenceToken() {
+        return this[JOURNEY_REPLAY_INTERNAL_STATE].clipSequenceToken
+    }
+
     #samplerConfigurationKey = ({
                                     journey = null,
                                     scope = REPLAY_SCOPE_ALL_TRACKS,
@@ -1065,6 +1070,8 @@ export class JourneyReplaySessionController {
     hideCameraAnglePreview = (...args) => JourneyReplaySessionSceneController.hideCameraAnglePreview(this, ...args)
     stop = (...args) => JourneyReplaySessionSceneController.stop(this, ...args)
     restorePlaybackScene = (...args) => JourneyReplaySessionSceneController.restorePlaybackScene(this, ...args)
+    waitForSceneRestore = (...args) => JourneyReplaySessionSceneController.waitForSceneRestore(this, ...args)
+    cancelPendingSceneRestore = (...args) => JourneyReplaySessionSceneController.cancelPendingSceneRestore(this, ...args)
     dispose = (...args) => JourneyReplaySessionSceneController.dispose(this, ...args)
     restoreJourneyToolbarVisibility = (...args) => JourneyReplaySessionSceneController.restoreJourneyToolbarVisibility(this, ...args)
     hideJourneyToolbarVisibility = (...args) => JourneyReplaySessionSceneController.hideJourneyToolbarVisibility(this, ...args)

@@ -232,11 +232,40 @@ export const restorePlaybackScene = (mode, {force = false} = {}) => {
             return false
         }
 
+        if (state.sceneRestorePromise) {
+            return state.sceneRestorePromise
+        }
+
         state.renderer.clear()
         const restorePromise = call.restorePlaybackScene().then(() => true)
         state.sceneRestorePromise = restorePromise
         return restorePromise
     }
+
+export const waitForSceneRestore = (mode) => {
+    const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
+        return state.sceneRestorePromise ?? Promise.resolve()
+    }
+
+/**
+ * Invalidates a pending scene restoration from a previous replay lifecycle.
+ * @param {Object} mode - Replay session instance
+ * @returns {boolean} Whether a pending restoration was invalidated
+ */
+export const cancelPendingSceneRestore = (mode) => {
+    const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
+    const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
+    if (!state.sceneRestorePromise) {
+        return false
+    }
+
+    call.cancelActiveCameraFlight()
+    state.sceneRestorePromise = null
+    state.sceneRestoreDeferred = false
+    state.deferPlaybackCameraRestore = false
+    state.cameraStateRestoredBeforeSceneCleanup = true
+    return true
+}
 
 export const dispose = (mode, ) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
@@ -400,6 +429,10 @@ export const restoreJourneyReplayDrawerAfterPlayback = (mode, ) => {
 export const restorePlaybackSceneInternal = (mode, ) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
+        if (state.sceneRestorePromise) {
+            return state.sceneRestorePromise
+        }
+
         state.sceneRestoreDeferred = false
         call.removeToleranceZoneOverlay()
         call.restoreOtherJourneysVisibility()
@@ -419,6 +452,9 @@ export const restorePlaybackSceneInternal = (mode, ) => {
         restorePromise = call.focusJourneyAfterPlayback({
             snapDistance: 50000,
         }).finally(() => {
+            if (state.sceneRestorePromise !== restorePromise) {
+                return
+            }
             state.deferPlaybackCameraRestore = false
             // Restoring the journey focus above changes the live Cesium view.
             // Reapply the exact camera captured before Draft/HQ playback so a
@@ -428,9 +464,7 @@ export const restorePlaybackSceneInternal = (mode, ) => {
             }
             state.cameraStateRestoredBeforeSceneCleanup = false
             call.restorePlaybackCameraSettings({force: true})
-            if (state.sceneRestorePromise === restorePromise) {
-                state.sceneRestorePromise = null
-            }
+            state.sceneRestorePromise = null
         })
         state.sceneRestorePromise = restorePromise
         return restorePromise
@@ -745,6 +779,7 @@ export const bindRenderer = (mode, ) => {
                         detail: {
                             sample,
                             progress: detail.progress ?? null,
+                            clipSequenceToken: token,
                         },
                     }))
                 }

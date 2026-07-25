@@ -126,6 +126,18 @@ vi.mock('@web.awesome.me/webawesome-pro/dist/react', async () => {
                 />
                 <button
                     type="button"
+                    aria-label="Forced dialog self close"
+                    onClick={() => {
+                        manualHideDispatched.current = true
+                        onWaHide?.({
+                            target:        dialogElement,
+                            currentTarget: dialogElement,
+                            detail:        {source: dialogElement},
+                        })
+                    }}
+                />
+                <button
+                    type="button"
                     aria-label="Nested component hide"
                     onClick={() => onWaHide?.({
                         target:        nestedElement,
@@ -315,6 +327,14 @@ describe('VideoDownloadAndShareDialog', () => {
         openDialog()
 
         fireEvent.click(screen.getByRole('button', {name: 'Escape dialog close'}))
+
+        expectDialogCleanup()
+    })
+
+    it('cleans up when the dialog itself reports an external forced close', () => {
+        openDialog()
+
+        fireEvent.click(screen.getByRole('button', {name: 'Forced dialog self close'}))
 
         expectDialogCleanup()
     })

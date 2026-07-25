@@ -212,7 +212,7 @@ describe('crop board widget repositioning', () => {
         expect(config.position.top).toBeCloseTo(292)
         expect(parseFloat(widget.style.left)).toBeCloseTo(392)
         expect(widget.style.top).toBe('292px')
-        expect(manager.saveWidgetPosition).toHaveBeenCalledWith(config.id, config)
+        expect(manager.saveWidgetPosition).not.toHaveBeenCalled()
     })
 
     it('forces credits to the bottom-left crop corner', () => {

@@ -57,6 +57,30 @@ remaining in the "starting" state when the board is already hydrated.
 
 This keeps the draft responsive while also preparing the later HQ export.
 
+### Repeated draft recordings
+
+A second recording is a new capture lifecycle. It must not inherit asynchronous
+work from the previous recording or from an aborted dialog:
+
+1. abort and user dialog-close paths may schedule an asynchronous replay-scene
+   restoration;
+2. before initializing the recorder, `VideoRecordingScreenArea` waits for that
+   restoration and verifies that its recording start token is still current;
+3. when the new recorder starts, `JourneyReplayVideoSync` invalidates any
+   pending scene restoration and camera flight from the previous lifecycle;
+4. replay start is awaited and guarded by a capture generation, so a stale
+   start cannot activate a newer recording;
+5. stop-clips completion is associated with the replay `clipSequenceToken` and
+   cannot stop a later recording;
+6. when the replay has no stop clips, the recorder stops directly after the
+   terminal frames are published instead of waiting for a clip event that will
+   never arrive.
+
+Recorder cancellation also invalidates an in-flight asynchronous start. A
+`startVideo()` continuation must therefore verify its lifecycle token before
+dispatching `START` or scheduling frames. This prevents the first recording's
+encoder setup from turning into a second recording after an abort.
+
 ### Deferred HQ flow
 
 When the user opens the final dialog:
@@ -323,6 +347,41 @@ Responsibilities:
 - warm the deferred export plan at draft start.
 
 This file is the live draft entry point.
+
+The start gate is lifecycle-aware: it waits for pending scene restoration,
+checks the current recording start token after each asynchronous preparation
+step, and cancels the pending finish action when the mount-timeout dialog is
+cancelled. This keeps a cancelled first attempt from completing during a later
+recording.
+
+### `JourneyReplayVideoSync.js`
+
+Responsibilities:
+
+- mirror recorder start, pause, resume, stop, and cancel to the replay;
+- maintain a capture generation for each arm/start/stop lifecycle;
+- ignore stale replay starts and stale stop-clip completion events;
+- stop immediately after terminal frames when the active replay has no stop
+  clips;
+- disable replay continuous rendering when capture ends.
+
+The sync object is deliberately stateful, but it must not become a second
+timeline. The recorder remains the owner of capture lifecycle events and the
+replay controller remains the owner of replay state.
+
+### `JourneyReplaySessionSceneController.js`
+
+Responsibilities:
+
+- serialize scene restoration requests;
+- expose `waitForSceneRestore()` to capture initialization;
+- expose `cancelPendingSceneRestore()` when a new capture supersedes a pending
+  restoration;
+- ignore a stale restoration finalizer after a newer replay lifecycle starts.
+
+Scene restoration is therefore reusable between dialog close and the next
+recording without allowing an old camera restore to overwrite the new replay
+scene.
 
 ### `VideoDownloadAndShareDialog.jsx`
 

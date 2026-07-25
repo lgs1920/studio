@@ -84,6 +84,7 @@ vi.mock('@Core/ui/screen-media-recorder/composer/CanvasOverlayComposer', () => (
         this.renderFrame = vi.fn(async () => canvas)
         this.getCanvas = vi.fn(() => canvas)
         this.setFps = vi.fn()
+        this.setContinuousRendering = vi.fn()
         this.dispose = vi.fn()
     }),
 }))
@@ -104,6 +105,7 @@ vi.mock('@Core/ui/screen-media-recorder/recorder/ScreenMediaRecorder', () => ({
 }))
 
 import { VideoRecordingScreenArea } from '@Components/MainUI/video/VideoRecordingScreenArea'
+import { CanvasOverlayComposer } from '@Core/ui/screen-media-recorder/composer/CanvasOverlayComposer'
 
 describe('VideoRecordingScreenArea start flow', () => {
     let recorder
@@ -216,5 +218,6 @@ describe('VideoRecordingScreenArea start flow', () => {
         })
         expect(globalThis.lgs.stores.ui.video.preRecording).toBe(false)
         expect(globalThis.lgs.stores.ui.video.recording).toBe(true)
+        expect(CanvasOverlayComposer.mock.instances[0].setContinuousRendering).toHaveBeenCalledWith(false)
     })
 })

@@ -6,7 +6,7 @@ This directory contains proposed, pending-validation, explicitly TODO, or future
 - [Weekly count API](COUNT_API_SPEC.md)
 - [Weekly count API — backend issue](COUNT_API_SERVER_ISSUE.md)
 - [Weekly count API — studio issue](COUNT_API_STUDIO_ISSUE.md)
-- [HQ 4K video export](HQ_4K_VIDEO_EXPORT_SPEC.md)
+- [HQ video resolution profiles](HQ_4K_VIDEO_EXPORT_SPEC.md)
 - [Journey import formats](JOURNEY_IMPORT_FORMATS_SPEC.md)
 - [Translation notes](Translate.md)
 - [Drone camera 3D path editor](src/core/ui/camera/DRONE_CAMERA_3D_PATH_EDITOR_SPEC.md)
@@ -21,3 +21,4 @@ This directory contains proposed, pending-validation, explicitly TODO, or future
 - [Replay video architecture](src/core/ui/replay/REPLAY_VIDEO_ARCHITECTURE.md)
 - [Clip altitude data alignment](src/core/ui/replay/CLIP_ALTITUDE_DATA_ALIGNMENT_SPEC.md)
 - [POI animation during replay](src/core/ui/replay/POI_ANIMATION_DURING_REPLAY_SPEC.md)
+- [Oxlint TypeScript 7 migration](OXLINT_TYPESCRIPT_7_MIGRATION_SPEC.md)

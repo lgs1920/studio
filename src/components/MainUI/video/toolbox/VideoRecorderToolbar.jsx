@@ -18,6 +18,7 @@
  * VideoRecorderToolbar.jsx - Displays video recording controls and stats
  ******************************************************************************/
 import { JourneyReplayProgressBar } from '@Components/JourneyReplay/JourneyReplayProgressBar'
+import { restoreVideoCaptureUi } from '@Components/MainUI/video/videoEditingCleanup'
 import { ScreenMediaRecorder } from '@Core/ui/screen-media-recorder/recorder/ScreenMediaRecorder'
 import { UIToast }                          from '@Utils/UIToast'
 import { UnitUtils }                        from '@Utils/UnitUtils'
@@ -264,6 +265,7 @@ export const VideoRecorderToolbar = ({toolbar}) => {
         if (__.recorder) {
             await __.recorder.cancelVideo()
         }
+        restoreVideoCaptureUi()
         updateState({
                         preRecording: false,
                         recording:    false,

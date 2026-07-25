@@ -22,6 +22,34 @@ The correct reading is therefore no longer “everything has to be invented”, 
 
 **the foundation is in place; the target architecture and export path still need to be decided.**
 
+### 0.1. Repeated-recording stabilization
+
+The second-recording freeze was narrowed to a lifecycle race rather than a
+missing replay frame:
+
+- the previous abort or dialog close could still be restoring the replay scene;
+- a new recording could start while that restoration was still pending;
+- a delayed replay start or stop-clips completion could then affect the newer
+  recording;
+- the recorder could also finish an asynchronous start after cancellation.
+
+The stabilization now gives each capture a generation and each replay run a
+sequence token. Scene restoration is shared and awaited, pending restoration
+can be superseded by the next capture, and stale start/stop callbacks are
+ignored. A replay without stop clips stops directly after its terminal frames.
+The recorder also has a timer fallback for frame scheduling and invalidates
+asynchronous starts on cancellation.
+
+The focused regression coverage currently includes:
+
+- replay video sync with and without stop clips;
+- recorder startup cancellation and restart;
+- recording-screen-area initialization and widget readiness;
+- recorder and replay trace-buffer behavior.
+
+The full repository suite still contains unrelated failing UI/replay tests and
+is tracked separately from this lifecycle correction.
+
 ## 1. Subject
 
 The visible problem is a synchronization gap between:
