@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-06-02
- * Last modified: 2026-06-02
+ * Created on: 2026-07-25
+ * Last modified: 2026-07-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -939,7 +939,7 @@ export const VideoDownloadAndShareDialog = () => {
                                     onClick={() => void handleDownload('hq')}
                                 >
                                     <WaIcon slot="start" className="video-preview-action-icon" name="download" variant="regular"/>
-                                    {'Download HQ'}
+                                    {'Download'}
                                 </WaButton>
                                 <WaDropdown placement="bottom-end" onWaSelect={handleDownloadVariantSelect}>
                                     <WaButton
@@ -952,11 +952,11 @@ export const VideoDownloadAndShareDialog = () => {
                                     </WaButton>
                                     <WaDropdownItem value="hq">
                                         <WaIcon slot="icon" name="film" variant="regular"/>
-                                        {'Download HQ video'}
+                                        {'Download HQ'}
                                     </WaDropdownItem>
                                     <WaDropdownItem value="draft">
                                         <WaIcon slot="icon" name="file-video" variant="regular"/>
-                                        {'Download draft video'}
+                                        {'Download draft'}
                                     </WaDropdownItem>
                                 </WaDropdown>
                             </WaButtonGroup>
@@ -987,7 +987,7 @@ export const VideoDownloadAndShareDialog = () => {
                                 onClick={() => void startHqExport()}
                             >
                                 <WaIcon slot="start" className="video-preview-action-icon" name={isHqExporting ? 'spinner-third' : 'film'} variant="regular"/>
-                                {isHqExporting ? 'Creating HQ...' : 'Create HQ video'}
+                                {isHqExporting ? 'Creating HQ...' : 'Create HQ'}
                             </WaButton>
                         </>
                     )}
