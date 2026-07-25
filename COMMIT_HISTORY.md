@@ -1,5 +1,10 @@
 # Commit History
 
+## 2026-07-25 — [`fix: align video creation action on mobile`](https://github.com/lgs1920/studio/commit/89f323d5)
+
+- Move the HQ video creation action to a dedicated right-aligned row on mobile video previews.
+- Add a regression assertion for the grouped action and expose its accessible label.
+
 ## 2026-07-25 — [`docs: specify POI replay animation`](https://github.com/lgs1920/studio/commit/122be7ee)
 
 - Add the proposed POI replay animation specification, including endpoint pairing, field selection, pause ownership, duration validation, cancellation, and export synchronization.
