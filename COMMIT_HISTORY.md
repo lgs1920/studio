@@ -1,5 +1,10 @@
 # Commit History
 
+## 2026-07-25 — [`fix: throttle repeated codec error toasts`](https://github.com/lgs1920/studio/commit/3ef787f5)
+
+- Throttle repeated video codec error notifications to one toast every 30 seconds per recording session.
+- Add regression coverage for the notification interval.
+
 ## 2026-07-25 — [`fix: persist credits widget dimensions and scale`](https://github.com/lgs1920/studio/commit/1fc34739)
 
 - Restore persisted Credits widget dimensions and scale during video-board rehydration.
