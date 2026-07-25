@@ -53,3 +53,9 @@ This is the canonical source for the project's AI-agent and development rules.
 - **Commit Logic:** Never create commits automatically. Only create a commit when the user explicitly requests it.
 - **Commit history:** Update `README.md` and `COMMIT_HISTORY.md` when preparing a commit.
 - **Commit history entry:** Record every commit in `COMMIT_HISTORY.md` with its date, exact commit message, and a GitHub link in the format `https://github.com/lgs1920/studio/commit/<commit-id>`.
+
+## 6. Issue Creation Workflow
+
+- **Complete fields:** Every created issue must have all available fields filled in, including title, description, assignee, labels, type, milestone, backlog, and any other fields required by the issue tracker.
+- **Assignee:** Assign the issue to the user requesting its creation unless the user explicitly specifies another assignee.
+- **Milestone and backlog:** Before creating an issue, ask the user which milestone and backlog it belongs to. Do not create the issue until both choices have been confirmed.
