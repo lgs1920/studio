@@ -60,6 +60,7 @@ Implementation-document status is organized into two directories:
 
 - [Replay camera tracking zones](current/REPLAY_CAMERA_TRACKING_ZONES.md)
 - [Journey replay/video issues](current/JOURNEY_REPLAY_VIDEO_ISSUES.md)
+- [Video/replay test-suite failures — 2026-07-25](current/VIDEO_TEST_SUITE_FAILURES_2026-07-25.md)
 - [Internal database architecture](current/src/core/db/INTERNAL_DATABASE_ARCHITECTURE.md)
 - [Drone camera path architecture](current/src/core/ui/camera/DRONE_CAMERA_PATH_ARCHITECTURE.md)
 
