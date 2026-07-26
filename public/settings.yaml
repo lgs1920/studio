@@ -93,6 +93,7 @@ camera:
   maximumHeight: 9000
   pitchAdjustHeight: 5000
   flyingTime: 3   # seconds
+  transferDistanceThresholdKm: 50  # Distance threshold for camera transfer presets
   rpm: 4          # rotation per minute
   rotations: 1    # total rotation
 

@@ -410,6 +410,120 @@ export const buildCameraGuide = (mode) => {
         return guide
     }
 
+const smoothstep = value => {
+    const t = clamp(finiteNumber(value) ?? 0, 0, 1)
+    return t * t * (3 - (2 * t))
+}
+
+/**
+ * Locate the nearest guide point for a normalized replay progress.
+ *
+ * @param {object[]} guide - Sorted replay camera guide.
+ * @param {number} progress - Normalized replay progress.
+ * @returns {number} Nearest guide index.
+ */
+const nearestCameraGuideIndex = (guide, progress) => {
+    let low = 0
+    let high = Math.max(0, guide.length - 1)
+    while (low < high) {
+        const middle = Math.floor((low + high) / 2)
+        const middleProgress = finiteNumber(guide[middle]?.progress) ?? 0
+        if (middleProgress < progress) {
+            low = middle + 1
+        }
+        else {
+            high = middle
+        }
+    }
+
+    const rightIndex = low
+    const leftIndex = Math.max(0, rightIndex - 1)
+    const leftDistance = Math.abs((finiteNumber(guide[leftIndex]?.progress) ?? 0) - progress)
+    const rightDistance = Math.abs((finiteNumber(guide[rightIndex]?.progress) ?? 0) - progress)
+    return leftDistance <= rightDistance ? leftIndex : rightIndex
+}
+
+/**
+ * Estimate turn drift from an already compiled camera guide.
+ *
+ * @param {object[]} guide - Sorted replay camera guide.
+ * @param {number} progress - Normalized journey progress.
+ * @param {object} [options] - Drift tuning options.
+ * @param {number} [options.maxHeadingOffsetDeg=10] - Maximum horizontal heading drift in degrees.
+ * @param {number} [options.maxLateralOffsetMeters=60] - Maximum lateral drift in meters.
+ * @returns {{turnAngleRadians: number, headingOffsetRadians: number, lateralOffsetMeters: number}|null} Drift envelope.
+ */
+export const replayTurnDriftForGuideProgress = (guide, progress, {
+    maxHeadingOffsetDeg = 10,
+    maxLateralOffsetMeters = 60,
+} = {}) => {
+    if (!Array.isArray(guide) || guide.length < 3) {
+        return null
+    }
+
+    const safeProgress = clamp(Number(progress) || 0, 0, 1)
+    const currentIndex = nearestCameraGuideIndex(guide, safeProgress)
+    const previous = guide[Math.max(0, currentIndex - 1)]
+    const current = guide[currentIndex]
+    const next = guide[Math.min(guide.length - 1, currentIndex + 1)]
+    if (!previous || !current || !next) {
+        return null
+    }
+
+    const incoming = projectToLocalMeters(previous, current)
+    const outgoing = projectToLocalMeters(current, next)
+    if (!incoming || !outgoing) {
+        return null
+    }
+
+    const incomingMagnitude = Math.hypot(incoming.x, incoming.y)
+    const outgoingMagnitude = Math.hypot(outgoing.x, outgoing.y)
+    if (incomingMagnitude <= 1e-6 || outgoingMagnitude <= 1e-6) {
+        return null
+    }
+
+    const dot = (incoming.x * outgoing.x) + (incoming.y * outgoing.y)
+    const cross = (incoming.x * outgoing.y) - (incoming.y * outgoing.x)
+    const turnAngleRadians = Math.atan2(cross, dot)
+    const turnStrength = smoothstep(
+        (Math.abs(turnAngleRadians) - CesiumMath.toRadians(4)) / Math.max(CesiumMath.toRadians(50), Number.EPSILON),
+    )
+    if (turnStrength <= 0) {
+        return null
+    }
+
+    const turnSign = Math.sign(turnAngleRadians) || 1
+    return {
+        turnAngleRadians,
+        headingOffsetRadians: turnSign * CesiumMath.toRadians(maxHeadingOffsetDeg) * turnStrength,
+        lateralOffsetMeters:  turnSign * Math.max(0, finiteNumber(maxLateralOffsetMeters) ?? 0) * turnStrength,
+    }
+}
+
+/**
+ * Estimate a turn-based drift envelope for the current replay progress.
+ *
+ * The result is used to widen the replay camera angle and optionally its
+ * lateral motion when the journey enters a bend.
+ *
+ * @param {object} mode - Replay mode.
+ * @param {number} progress - Normalized journey progress.
+ * @param {object} [options] - Drift tuning options.
+ * @param {number} [options.maxHeadingOffsetDeg=10] - Maximum horizontal heading drift in degrees.
+ * @param {number} [options.maxLateralOffsetMeters=60] - Maximum lateral drift in meters.
+ * @returns {{turnAngleRadians: number, headingOffsetRadians: number, lateralOffsetMeters: number}|null} Drift envelope.
+ */
+export const replayTurnDriftForProgress = (mode, progress, {
+    maxHeadingOffsetDeg = 10,
+    maxLateralOffsetMeters = 60,
+} = {}) => {
+    const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
+    return replayTurnDriftForGuideProgress(call.buildCameraGuide(), progress, {
+        maxHeadingOffsetDeg,
+        maxLateralOffsetMeters,
+    })
+}
+
 export const smoothedGuide = (mode) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
@@ -561,6 +675,7 @@ export const cameraViewForSample = (mode, {
                                 cameraSettings,
                                 markerSettings,
                                 collision = false,
+                                motionProfile = null,
                                 previousHeading = mode[JOURNEY_REPLAY_INTERNAL_STATE].lastNominalCameraHeading ?? mode[JOURNEY_REPLAY_INTERNAL_STATE].lastCameraHeading,
                                 previousPitch = mode[JOURNEY_REPLAY_INTERNAL_STATE].lastNominalCameraPitch ?? mode[JOURNEY_REPLAY_INTERNAL_STATE].lastCameraPitch,
                             } = {}) => {
@@ -635,4 +750,3 @@ export const cameraViewForSample = (mode, {
             cameraHeight: call.cameraAltitudeForSample(anchorSample, cameraSettings),
         }
     }
-

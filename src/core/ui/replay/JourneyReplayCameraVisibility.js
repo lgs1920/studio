@@ -147,15 +147,31 @@ export const rememberNominalCameraView =  (mode, view) => {
         state.lastNominalCameraPitch = finiteNumber(view?.pitch) ?? state.lastNominalCameraPitch
     }
 
-export const resetCameraInterpolationState = (mode) => {
+/**
+ * Reset transient camera interpolation state.
+ *
+ * The compiled constrained path is preserved by default so Draft and HQ can
+ * consume the exact same in-memory path. Sampler replacement explicitly
+ * invalidates it through the full camera-controller reset.
+ *
+ * @param {object} mode - Replay camera mode.
+ * @param {object} [options] - Reset options.
+ * @param {boolean} [options.preserveConstrainedPath=true] - Preserve the compiled replay path.
+ * @returns {void}
+ */
+export const resetCameraInterpolationState = (mode, {
+    preserveConstrainedPath = true,
+} = {}) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
-    const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
 
         state.lastCameraHeading = null
         state.lastCameraPitch = null
         state.lastNominalCameraHeading = null
         state.lastNominalCameraPitch = null
         state.lastAppliedCameraView = null
+        if (!preserveConstrainedPath) {
+            state.constrainedReplayCameraPath = null
+        }
         state.deterministicCameraFollowerAt = null
         state.deterministicCameraFollowerActive = false
         state.deterministicCameraFollowerVelocity = null
@@ -537,4 +553,3 @@ export const findCameraRedirectState = (mode, {
 
         return bestCandidate
     }
-
