@@ -52,6 +52,9 @@ import {
     startDeterministicCameraTransition,
 } from '@Core/ui/replay/JourneyReplayCameraTransition'
 import {
+    cancelCameraBezierTransition,
+} from '@Core/ui/replay/JourneyReplayCameraState'
+import {
     resetCameraInterpolationState,
 } from '@Core/ui/replay/JourneyReplayCameraVisibility'
 import {
@@ -186,6 +189,67 @@ describe('Journey replay camera paths', () => {
         finally {
             vi.useRealTimers()
         }
+    })
+
+    it('uses time cadence when requested for camera transfers', async () => {
+        vi.useFakeTimers()
+        const requestAnimationFrameSpy = vi.fn()
+        vi.stubGlobal('requestAnimationFrame', requestAnimationFrameSpy)
+        vi.stubGlobal('cancelAnimationFrame', handle => globalThis.clearTimeout(handle))
+
+        try {
+            const destination = Cartesian3.fromDegrees(1, 2, 1300)
+            const orientation = {
+                heading: 0.5,
+                pitch:   -0.25,
+                roll:    0,
+            }
+            const camera = {
+                setView: vi.fn(),
+            }
+            const complete = vi.fn()
+            const path = buildCameraTransferPath({
+                start: new Cartesian3(destination.x + 100, destination.y, destination.z),
+                end:   destination,
+                mode:  'direct',
+            })
+
+            path.flyTo({
+                camera,
+                orientation,
+                cadence: 'time',
+                duration: 0.016,
+                complete,
+            })
+            await vi.advanceTimersByTimeAsync(16)
+
+            expect(requestAnimationFrameSpy).not.toHaveBeenCalled()
+            expect(complete).toHaveBeenCalledTimes(1)
+            expect(camera.setView).toHaveBeenLastCalledWith({
+                destination,
+                orientation,
+            })
+        }
+        finally {
+            vi.useRealTimers()
+        }
+    })
+
+    it('invokes callable cancellation handles for camera transitions', () => {
+        const mode = makeMode()
+        const cancelHandle = vi.fn()
+        const resolve = vi.fn()
+
+        mode.state.cameraBezierFrame = cancelHandle
+        mode.state.cameraBezierResolve = resolve
+        mode.state.cameraFlightActive = true
+
+        cancelCameraBezierTransition(mode.mode, false)
+
+        expect(cancelHandle).toHaveBeenCalledTimes(1)
+        expect(resolve).toHaveBeenCalledWith(false)
+        expect(mode.state.cameraBezierFrame).toBeNull()
+        expect(mode.state.cameraFlightActive).toBe(false)
     })
 
     it('adds turn drift on a sharp bend', () => {

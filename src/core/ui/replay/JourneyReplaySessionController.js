@@ -240,6 +240,7 @@ export class JourneyReplaySessionController {
     #lastToleranceRecenterProgress = null
     #lastNavigationRecenterAt = null
     #lastNavigationRecenterProgress = null
+    #toleranceZoneOverlayCanvas = null
     #lastDynamicTargetScreen = null
     #skipNextImmediateStartRecenter = false
     #toleranceZoneOverlay = null
@@ -649,6 +650,13 @@ export class JourneyReplaySessionController {
             get: () => this.#toleranceZoneOverlay,
             set: value => {
                 this.#toleranceZoneOverlay = value
+            },
+        })
+        Object.defineProperty(this[JOURNEY_REPLAY_INTERNAL_STATE], 'toleranceZoneOverlayCanvas', {
+            configurable: true,
+            get: () => this.#toleranceZoneOverlayCanvas,
+            set: value => {
+                this.#toleranceZoneOverlayCanvas = value
             },
         })
         Object.defineProperty(this[JOURNEY_REPLAY_INTERNAL_STATE], 'toleranceZoneOverlayVisible', {

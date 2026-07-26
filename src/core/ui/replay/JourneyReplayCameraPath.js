@@ -365,6 +365,7 @@ export const buildCameraTransferPath = ({
                     cancel = null,
                     beforeFrame = null,
                     afterFrame = null,
+                    cadence = 'frame',
                 } = {}) => {
             if (!camera?.setView) {
                 return false
@@ -372,9 +373,12 @@ export const buildCameraTransferPath = ({
 
             let cancelled = false
             let frameHandle = null
-            const requestFrame = globalThis.requestAnimationFrame
-                ? callback => globalThis.requestAnimationFrame(callback)
-                : callback => globalThis.setTimeout?.(callback, 16) ?? null
+            const useTimeCadence = cadence === 'time'
+            const requestFrame = useTimeCadence
+                ? callback => globalThis.setTimeout?.(callback, 16) ?? null
+                : globalThis.requestAnimationFrame
+                  ? callback => globalThis.requestAnimationFrame(callback)
+                  : callback => globalThis.setTimeout?.(callback, 16) ?? null
             const cancelFrame = handle => {
                 if (handle === null) {
                     return
@@ -383,7 +387,7 @@ export const buildCameraTransferPath = ({
                 globalThis.cancelAnimationFrame?.(handle)
                 globalThis.clearTimeout?.(handle)
             }
-            const startTime = Date.now()
+            const startTime = globalThis.performance?.now?.() ?? Date.now()
             const durationMs = Math.max(1, Math.round((finiteNumber(duration) ?? 1) * 1000))
 
             const tick = () => {
@@ -391,7 +395,7 @@ export const buildCameraTransferPath = ({
                     return
                 }
 
-                const ratio = clamp((Date.now() - startTime) / durationMs, 0, 1)
+                const ratio = clamp(((globalThis.performance?.now?.() ?? Date.now()) - startTime) / durationMs, 0, 1)
                 const view = cameraTransferViewAt(path, target, ratio, orientation)
                 if (view) {
                     beforeFrame?.(view)

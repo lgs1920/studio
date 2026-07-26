@@ -141,6 +141,9 @@ import {
     resolveConstrainedReplayCameraPath,
 } from './JourneyReplayCameraConstraintBinding'
 import {
+    buildReplayAntiCollisionBounds,
+} from './JourneyReplayCameraCollision'
+import {
     removeToleranceZoneOverlay,
     setToleranceZoneOverlayVisible,
     cameraAnglePreviewEntityCollection,
@@ -295,7 +298,6 @@ export const startCameraTransition = (mode, {
                 done(result)
             }
 
-            const startFrame = call.currentCameraFrame(frame)
             const transferThresholdKm = finiteNumber(globalThis.lgs?.settings?.camera?.transferDistanceThresholdKm) ?? 50
             const cameraWorldPosition = viewer.camera?.positionWC ?? viewer.camera?.position
             const transferDistance = cameraWorldPosition
@@ -310,44 +312,34 @@ export const startCameraTransition = (mode, {
                     sampleCount: transferMode === 'blur-jump-refocus' ? 64 : 48,
                     liftMeters:  Math.max(120, finiteNumber(globalThis.lgs?.settings?.camera?.pitchAdjustHeight) ?? 500),
                     antiCollisionBounds: buildReplayAntiCollisionBounds(globalThis.lgs?.theJourney, {
+                        trackingMode:        getJourneyReplaySettings().marker.mode,
+                        cameraSettings,
+                        viewport:            call.viewportRectForCesiumSurface(),
                         clearanceMeters: Math.max(100, finiteNumber(globalThis.lgs?.settings?.camera?.pitchAdjustHeight) ?? 500),
                     }),
                 })
                 : null
 
-            const runPathTransition = () => {
-                if (!startFrame || !transferPath) {
-                    return false
-                }
-
-                const startedAt = call.now()
-                const transitionDuration = Math.max(1, (Number(duration) || 0) * 1000)
-                const tick = () => {
-                    if (state.cameraBezierResolve === null) {
+            const draftTiming = globalThis.lgs?.stores?.ui?.video?.recording === true
+                                || globalThis.lgs?.stores?.ui?.video?.preRecording === true
+            if (transferPath) {
+                try {
+                    const cancelTransition = transferPath.flyTo({
+                        camera: viewer.camera,
+                        target: frame.target,
+                        duration: Math.max(0, Number(duration) || 0),
+                        cadence: draftTiming ? 'time' : 'frame',
+                        complete: () => settle(true),
+                        cancel:   () => settle(false),
+                    })
+                    if (typeof cancelTransition === 'function') {
+                        state.cameraBezierFrame = cancelTransition
                         return
                     }
-
-                    const ratio = clamp((call.now() - startedAt) / transitionDuration, 0, 1)
-                    call.applyCameraFrame(call.interpolateCameraFrame(startFrame, {
-                        destination: endPosition,
-                        direction:   endDirection,
-                        up:          endUp,
-                    }, ratio, {
-                        durationMs: transitionDuration,
-                        path:       transferPath,
-                    }))
-                    if (ratio >= 1) {
-                        settle(true)
-                        return
-                    }
-                    state.cameraBezierFrame = globalThis.setTimeout?.(tick, 16) ?? null
                 }
-                tick()
-                return true
-            }
-
-            if (runPathTransition()) {
-                return
+                catch (error) {
+                    console.error('[JourneyReplayMode] Camera path transition failed.', error)
+                }
             }
 
             if (typeof viewer.camera.setView === 'function') {

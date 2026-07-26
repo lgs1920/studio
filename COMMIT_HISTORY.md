@@ -1,5 +1,10 @@
 # Commit History
 
+## 2026-07-26 — [`fix: align replay camera path cadence and cancellation`](https://github.com/lgs1920/studio/commit/4b28cdd6)
+
+- Allow replay camera transfers to run on a time cadence when draft capture needs it.
+- Make camera transition cancellation handle function-based cancel tokens safely.
+
 ## 2026-07-26 — [`fix: scope panorama transfer to the widget`](https://github.com/lgs1920/studio/commit/6f30bf95)
 
 - Keep the panorama flight local to `PanoramaWidget` and its transfer helper.
