@@ -1,4 +1,4 @@
-# Map Provider Configuration
+# How To Add Providers And Layers
 
 Map, overlay, terrain, and 3D providers are declared in `public/layers-terrains.yaml`.
 The file is loaded as runtime settings, indexed by `LayersAndTerrainManager`, and rendered by Cesium through

@@ -1,4 +1,4 @@
-# Journey Settings Memo
+# Journey Settings README
 
 This note summarizes the `Journey` settings that matter for metrics, profile cleaning, and rendering.
 
@@ -162,4 +162,3 @@ For `bike`, the same shape usually needs looser values:
 ## Important rule
 
 Keep raw geometry untouched. The settings should clean the derived metrics and the rendered profile, not rewrite the source track data.
-

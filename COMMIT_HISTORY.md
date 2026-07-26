@@ -1,5 +1,11 @@
 # Commit History
 
+## 2026-07-26 — [`docs: rename provider and settings docs`](https://github.com/lgs1920/studio/commit/4325fd5b)
+
+- Rename the provider reference to `tech-doc/specs/HOW_TO_ADD_PROVIDERS_LAYERS.md`.
+- Rename the journey settings note to `tech-doc/specs/JOURNEY_SETTINGS_README.md`.
+- Update the technical documentation indexes and root README links to the new names.
+
 ## 2026-07-26 — [`docs: rename current docs to specs`](https://github.com/lgs1920/studio/commit/31fa0eaf)
 
 - Rename `tech-doc/current/` to `tech-doc/specs/` and move the dependency, provider, and sync guide references into the new specs tree.

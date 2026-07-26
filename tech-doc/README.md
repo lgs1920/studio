@@ -8,10 +8,9 @@ Proposed work, pending validation, or future implementation work lives under `to
 ## Specs
 
 - [Dependencies](specs/README_DEPENDENCIES.md)
-- [Providers](specs/README_PROVIDERS.md)
+- [Providers](specs/HOW_TO_ADD_PROVIDERS_LAYERS.md)
 - [Settings sync guide](specs/SETTINGS_SYNC_GUIDE.md)
-- [Provider list](PROVIDERS-LIST.md)
-- [Journey settings memo](JOURNEY_SETTINGS_MEMO.md)
+- [Journey settings readme](specs/JOURNEY_SETTINGS_README.md)
 - [Deployment](specs/DEPLOYMENT-README.md)
 - [Internal database architecture](specs/CORE-INTERNAL-DATABASE-ARCHITECTURE.md)
 - [Drone camera path architecture](specs/CORE-DRONE-CAMERA-PATH-ARCHITECTURE.md)
