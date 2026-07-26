@@ -1,5 +1,11 @@
 # Commit History
 
+## 2026-07-26 — [`fix: smooth replay camera pitch and capture cadence`](https://github.com/lgs1920/studio/commit/e7e49f78f616da9733d7f8951029f24394158bde)
+
+- Keep the nominal replay pitch when corrections rebuild camera frames.
+- Bypass the small progress-key throttle while replay video capture is active so the camera follows every frame.
+- Add regression coverage for the capture-active update cadence.
+
 ## 2026-07-26 — [`fix: preserve replay camera pitch through corrections`](https://github.com/lgs1920/studio/commit/e06a6451)
 
 - Keep the nominal replay pitch when corrections rebuild camera frames.
