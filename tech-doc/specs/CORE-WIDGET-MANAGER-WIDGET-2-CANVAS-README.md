@@ -1,4 +1,4 @@
-Here is the complete Markdown code for the `tech-doc/current/CORE-WIDGET-MANAGER-WIDGET-2-CANVAS-README.md` file.
+Here is the complete Markdown code for the `tech-doc/specs/CORE-WIDGET-MANAGER-WIDGET-2-CANVAS-README.md` file.
 
 # Widget2Canvas — High-Performance DOM-to-Canvas Mirroring
 

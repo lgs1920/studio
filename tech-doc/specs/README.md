@@ -1,6 +1,12 @@
-# Current implementation documentation
+# Specifications and implementation documentation
 
 This directory contains technical specifications and architecture documents that describe behavior already implemented in the application.
+
+## Reference docs
+
+- [Dependencies](README_DEPENDENCIES.md)
+- [Providers](README_PROVIDERS.md)
+- [Settings sync guide](SETTINGS_SYNC_GUIDE.md)
 
 ## Deployment
 
@@ -42,7 +48,7 @@ This directory contains technical specifications and architecture documents that
 - [Flags assets](PUBLIC-FLAGS-README.md)
 - [Logo assets](PUBLIC-LOGO-README.md)
 
-## Other current documents
+## Other specs
 
 - [Replay camera tracking zones](REPLAY_CAMERA_TRACKING_ZONES.md)
 - [Journey replay/video issues](JOURNEY-REPLAY-VIDEO-ISSUES.md)

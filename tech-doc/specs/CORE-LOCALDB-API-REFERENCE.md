@@ -2,7 +2,7 @@
 
 `LocalDB` is the browser-side IndexedDB wrapper used by LGS1920 Studio. It owns store creation, the persisted record envelope, key and index reads, optional record TTL, a short-lived memory cache, transaction retries, diagnostics, and mutation notifications.
 
-For the application database inventory, backup formats, and persistent-folder synchronization, read the [internal database architecture](../../../current/CORE-INTERNAL-DATABASE-ARCHITECTURE.md).
+For the application database inventory, backup formats, and persistent-folder synchronization, read the [internal database architecture](CORE-INTERNAL-DATABASE-ARCHITECTURE.md).
 
 ## Construction
 
@@ -268,4 +268,4 @@ For every store or index change:
 2. Increment the database version.
 3. Add an upgrade test with pre-existing records.
 4. Verify JSON and ZIP round trips.
-5. Update the [internal database architecture](../../../current/CORE-INTERNAL-DATABASE-ARCHITECTURE.md).
+5. Update the [internal database architecture](CORE-INTERNAL-DATABASE-ARCHITECTURE.md).

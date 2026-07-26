@@ -42,9 +42,10 @@ This is the canonical source for the project's AI-agent and development rules.
 
 - Keep implementation documentation under `tech-doc/`.
 - Put specifications that are proposed, pending validation, explicitly TODO, or describe future implementation work under `tech-doc/todo/`.
-- Put specifications and architecture documents that describe the current implementation under `tech-doc/current/`.
+- Put specifications and architecture documents that describe the current implementation under `tech-doc/specs/`.
 - Keep general reference documentation in its existing module path unless it is an implementation specification.
 - Update links in `README.md`, `tech-doc/README.md`, and nearby technical documents when moving a document.
+- Every change to documentation under `tech-doc/` must be delivered through a pull request and merged to `main`.
 - Do not use `COMMIT_HISTORY.md` as the source of truth for documentation status; determine status from the document and the implementation.
 
 ## 5. Git & Release Workflow

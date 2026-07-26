@@ -142,19 +142,19 @@ Technical spec: [Camera 3D path editor](tech-doc/todo/CORE-DRONE-CAMERA-3D-PATH-
 All technical specifications and architecture notes are centralized in [tech-doc/](tech-doc/README.md). Important entry
 points include:
 
-- [Current technical documentation](tech-doc/current/)
+- [Specs technical documentation](tech-doc/specs/)
 - [Implementation work to do](tech-doc/todo/)
-- [Internal database architecture](tech-doc/current/CORE-INTERNAL-DATABASE-ARCHITECTURE.md)
+- [Internal database architecture](tech-doc/specs/CORE-INTERNAL-DATABASE-ARCHITECTURE.md)
 - [Replay video architecture](tech-doc/todo/CORE-REPLAY-VIDEO-ARCHITECTURE.md)
-- [Journey replay/video issues](tech-doc/current/JOURNEY-REPLAY-VIDEO-ISSUES.md)
+- [Journey replay/video issues](tech-doc/specs/JOURNEY-REPLAY-VIDEO-ISSUES.md)
 - [Replay track timeline editor evolution](tech-doc/todo/CORE-REPLAY-TRACK-TIMELINE-EDITOR-EVOLUTION.md)
-- [Drone camera path architecture](tech-doc/current/CORE-DRONE-CAMERA-PATH-ARCHITECTURE.md)
+- [Drone camera path architecture](tech-doc/specs/CORE-DRONE-CAMERA-PATH-ARCHITECTURE.md)
 - [Brand and season swatch reactivity](tech-doc/todo/BRAND_SEASON_SWATCH_REACTIVITY_SPEC.md)
 - [Clip altitude data alignment](tech-doc/todo/CORE-CLIP-ALTITUDE-DATA-ALIGNMENT-SPEC.md)
 - [POI animation during replay](tech-doc/todo/CORE-POI-ANIMATION-DURING-REPLAY-SPEC.md)
-- [Widget manager](tech-doc/current/CORE-WIDGET-MANAGER-README.md)
-- [Screen media recorder](tech-doc/current/CORE-SCREEN-MEDIA-RECORDER-RECORDER-README.md)
-- [Canvas overlay composer](tech-doc/current/CORE-SCREEN-MEDIA-RECORDER-COMPOSER-README.md)
+- [Widget manager](tech-doc/specs/CORE-WIDGET-MANAGER-README.md)
+- [Screen media recorder](tech-doc/specs/CORE-SCREEN-MEDIA-RECORDER-RECORDER-README.md)
+- [Canvas overlay composer](tech-doc/specs/CORE-SCREEN-MEDIA-RECORDER-COMPOSER-README.md)
 - [Tracks editor spec](tech-doc/todo/TRACKSEDITOR-SPEC.md)
 - [All technical docs](tech-doc/README.md)
 
