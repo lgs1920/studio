@@ -1,5 +1,9 @@
 # Commit History
 
+## 2026-07-26 — [`merge: sync main into 1.0.0-beta.4`](https://github.com/lgs1920/studio/commit/ebc72195)
+
+- Merge the documentation changes from `main` into the `1.0.0-beta.4` branch.
+
 ## 2026-07-26 — [`chore: new beta version 1.0.0-beta.4`](https://github.com/lgs1920/studio/commit/3383ea30)
 
 - Start the `1.0.0-beta.4` branch line with the new beta version marker.
