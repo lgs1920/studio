@@ -708,15 +708,16 @@ export const bindRenderer = (mode, ) => {
                     if (state.renderingReplayExportFrame) {
                         return
                     }
+                    const videoCaptureActive = isJourneyReplayVideoCaptureActive()
                     const playbackProgress = finiteNumber(detail?.progress ?? detail?.sample?.progress)
                     const playbackProgressKey = Math.round((playbackProgress ?? 0) / CAMERA_UPDATE_MIN_PROGRESS_DELTA)
                     state.renderer.update({
                         ...detail,
                         sampler: state.sampler,
-                        showTrace: isJourneyReplayVideoCaptureActive(),
+                        showTrace: videoCaptureActive,
                     })
                     void call.syncNearbyPOIsForSample(detail.sample ?? null)
-                    if (state.lastPlaybackUpdateProgressKey === playbackProgressKey) {
+                    if (!videoCaptureActive && state.lastPlaybackUpdateProgressKey === playbackProgressKey) {
                         return
                     }
 

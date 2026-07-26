@@ -34,6 +34,9 @@ import {
     buildReplayTransferSafetyProfile,
 } from '@Core/ui/replay/JourneyReplayCameraCollision'
 import {
+    updateCamera,
+} from '@Core/ui/replay/JourneyReplayCameraBinding'
+import {
     replayTurnDriftForProgress,
 } from '@Core/ui/replay/JourneyReplayCameraGuide'
 import {
@@ -57,6 +60,9 @@ import {
 import {
     resetCameraInterpolationState,
 } from '@Core/ui/replay/JourneyReplayCameraVisibility'
+import {
+    REPLAY_MARKER_MODE_HYSTERESIS,
+} from '@Core/ui/replay/JourneyReplayProgressionStyle'
 import {
     JOURNEY_REPLAY_INTERNAL_CALL,
     JOURNEY_REPLAY_INTERNAL_STATE,
@@ -82,12 +88,15 @@ const makeMode = () => {
         buildCameraGuide: vi.fn(() => []),
         replayTurnDriftForProgress: vi.fn(() => null),
         markerPositionForSample: vi.fn(sample => sample),
+        now: vi.fn(() => 0),
         cameraAltitudeForSample: vi.fn(() => 1000),
         headingFromPositionProperty: vi.fn(() => 0),
         smoothRadians: vi.fn((previous, next) => next),
         timeNormalizedSmoothingFactor: vi.fn(() => 1),
         headingEasingFactor: vi.fn(() => 1),
         liveCameraPitch: vi.fn(pitch => pitch),
+        applyCameraView: vi.fn(() => null),
+        applyDeterministicCameraFollower: vi.fn(() => null),
         cameraRecenterFrame: vi.fn(() => ({
             destination: new Cartesian3(0, 0, 1000),
             direction:   new Cartesian3(0, 1, 0),
@@ -96,7 +105,18 @@ const makeMode = () => {
             safePitch:   -1,
         })),
         cameraLineOfSightVisibleForFrame: vi.fn(() => true),
+        cancelCameraBezierTransition: vi.fn(() => null),
+        removeToleranceZoneOverlay: vi.fn(() => null),
         renderedTraceVisibleForSample: vi.fn(() => true),
+        resolveConstrainedReplayCameraPath: vi.fn(() => null),
+        traceCameraTiming: vi.fn(() => null),
+        traceCameraChangeTiming: vi.fn(() => null),
+        trackingWindowPositionForSample: vi.fn(() => null),
+        updateToleranceZoneOverlay: vi.fn(() => null),
+        viewportRectForCesiumSurface: vi.fn(() => ({
+            width:  1920,
+            height: 1080,
+        })),
     }
     const mode = {}
     mode[JOURNEY_REPLAY_INTERNAL_STATE] = state
@@ -470,12 +490,12 @@ describe('Journey replay camera paths', () => {
         }
 
         startDeterministicCameraTransition(mode, {
-            sample:       {id: 'sample', progress: 0.5},
-            heading:      0,
-            pitch:        0,
+            sample:         {id: 'sample', progress: 0.5},
+            heading:        0,
+            pitch:          0,
             endFrame,
-            duration:     1,
-            logicalNow:   10,
+            duration:       1,
+            logicalNow:     10,
             cameraSettings: {
                 hysteresis: {
                     zone: {
@@ -507,6 +527,100 @@ describe('Journey replay camera paths', () => {
         expect(call.cameraRecenterFrame).toHaveBeenCalledWith(expect.objectContaining({
             pitch: -0.5,
         }))
+    })
+
+    it('releases the redirect state once the nominal current view is visible again', () => {
+        vi.stubGlobal('lgs', {
+            viewer: {},
+            theJourney: makeJourney(),
+            settings: {
+                ui: {
+                    replay: {
+                        camera: {
+                            hysteresis: {
+                                easing:      0.18,
+                                marginRatio: 0.12,
+                                zone: {
+                                    top:    0.2,
+                                    left:   0.2,
+                                    width:  0.6,
+                                    height: 0.6,
+                                },
+                            },
+                        },
+                        marker: {
+                            mode: REPLAY_MARKER_MODE_HYSTERESIS,
+                        },
+                    },
+                },
+                camera: {
+                    transferDistanceThresholdKm: 50,
+                    pitchAdjustHeight:           600,
+                },
+            },
+            stores: {
+                replay: {
+                    captureFps: 30,
+                },
+                ui: {
+                    video: {
+                        recording: false,
+                    },
+                },
+            },
+        })
+
+        const {mode, state, call} = makeMode()
+        state.cameraMode = REPLAY_MARKER_MODE_HYSTERESIS
+        const nominalSample = {
+            distanceFromStart: 100,
+            progress:          0.4,
+            longitude:         1,
+            latitude:          2,
+            altitude:          120,
+            height:            120,
+        }
+        const nominalView = {
+            sample:       nominalSample,
+            heading:      0.35,
+            pitch:        -0.55,
+            cameraHeight:  800,
+        }
+        state.cameraRedirectState = {
+            headingOffset: 0.25,
+            pitchOffset:   -0.2,
+        }
+        call.viewportRectForCesiumSurface = vi.fn(() => ({
+            width:  1920,
+            height: 1080,
+        }))
+        call.cameraViewForSample = vi.fn(() => nominalView)
+        call.cameraLookaheadSample = vi.fn(() => ({
+            distanceFromStart: 160,
+            progress:          0.52,
+            longitude:         1.1,
+            latitude:          2.1,
+            altitude:          120,
+            height:            120,
+        }))
+        call.cameraCollisionForSample = vi.fn(() => ({hard: false}))
+        call.renderedTraceVisibleForSample = vi.fn(() => true)
+        call.cameraViewVisibilityForSample = vi.fn(({futureSample}) => !futureSample)
+        call.cameraViewWithRedirectState = vi.fn(view => view)
+        call.findCameraRedirectState = vi.fn(() => null)
+        call.recenterCameraToSample = vi.fn()
+        call.rememberNominalCameraView = vi.fn()
+
+        updateCamera(mode, {
+            sample:   nominalSample,
+            progress: nominalSample.progress,
+            source:   'playback',
+        })
+        expect(state.cameraRedirectState).toBeNull()
+        const visibilityModes = call.cameraViewVisibilityForSample.mock.calls.map(([payload]) => (
+            payload.futureSample === null ? 'current' : 'future'
+        ))
+        expect(visibilityModes).toEqual(expect.arrayContaining(['current', 'future']))
     })
 
     it('projects a replay marker from a candidate frame without using the live Cesium camera', () => {

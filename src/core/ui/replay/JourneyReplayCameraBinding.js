@@ -1127,7 +1127,9 @@ export const updateCamera = (mode, {
             if (!outsideTolerance && !targetCorrectionDue && !forceToleranceRecenter && !immediateToleranceRecenter) {
                 state.lastToleranceRecenterProgress = null
                 if (!needsVisibilityCorrection) {
-                    if (state.cameraRedirectState && nominalVisible) {
+                    if (state.cameraRedirectState && nominalCurrentVisible) {
+                        // Release the redirect as soon as the nominal view is
+                        // visible again so the pitch can recover to nominal.
                         state.cameraRedirectState = null
                         if (deterministicCamera) {
                             const frame = call.cameraRecenterFrame({
