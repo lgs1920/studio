@@ -61,3 +61,4 @@ This is the canonical source for the project's AI-agent and development rules.
 - **Milestone and backlog:** Before creating an issue, ask the user which milestone and backlog it belongs to. Do not create the issue until both choices have been confirmed.
 - **Issue body structure:** Write every issue body in the same structure: short context, requested behavior, acceptance criteria, and optional notes or questions. Keep the scope to one request per issue and prefer bullet lists for requirements.
 - **Issue templates:** Use `.github/ISSUE_TEMPLATE/bug_report.md` for bugs and `.github/ISSUE_TEMPLATE/feature_request.md` for new features or improvements. Keep the sections consistent with the issue type and use the reproduction section only for bugs.
+- **Issue type mapping:** When creating an issue from `bug_report.md`, set the GitHub issue type to `bug`. When creating an issue from `feature_request.md`, set the GitHub issue type to `feature`.
